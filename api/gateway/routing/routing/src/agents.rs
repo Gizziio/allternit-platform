@@ -1673,8 +1673,8 @@ async fn list_capabilities() -> impl IntoResponse {
 async fn list_plugins() -> impl IntoResponse {
     let plugins = serde_json::json!({
         "items": [
-            { "id": "github", "name": "GitHub Connector", "description": "Access repositories and issues", "version": "1.2.0", "author": "A2R" },
-            { "id": "slack", "name": "Slack Bridge", "description": "Send and receive messages", "version": "0.9.5", "author": "A2R" },
+            { "id": "github", "name": "GitHub Connector", "description": "Access repositories and issues", "version": "1.2.0", "author": "Allternit" },
+            { "id": "slack", "name": "Slack Bridge", "description": "Send and receive messages", "version": "0.9.5", "author": "Allternit" },
             { "id": "docker", "name": "Docker Manager", "description": "Manage containers", "version": "2.1.0", "author": "System" }
         ]
     });

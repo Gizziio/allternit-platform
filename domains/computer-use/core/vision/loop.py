@@ -1,5 +1,5 @@
 """
-A2R Computer Use — Vision Loop
+Allternit Computer Use — Vision Loop
 
 Implements the observe → decide → act → verify cycle used when deterministic
 paths fail or when only a screenshot is available.

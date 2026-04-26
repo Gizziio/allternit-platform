@@ -1,0 +1,14 @@
+{
+  "template_path": "/Users/macbook/Downloads/Course Academic Status Notification - 11-2025 (2) Fillable.pdf",
+  "output_path": "/Users/macbook/Desktop/allternit-workspace/allternit/domains/governance/tenants/summit_oic/poc/academic_notices/output/notices/avery-bennett/academic_notice.pdf",
+  "student_name": "Avery Bennett",
+  "term_start": "2026-08-03",
+  "department": "Technology",
+  "course_name": "IT Fundamentals Phase 1",
+  "notice_date": "2026-08-17",
+  "grade_attendance": "58.2% grade, 91% attendance",
+  "actions": "Complete all missing assignments within 5 calendar days. Meet with the course instructor during the next available support block. Review feedback in Canvas before resubmitting eligible work.",
+  "course_instructor": "Jordan Reyes",
+  "stage": "week_3",
+  "status": "risk"
+}

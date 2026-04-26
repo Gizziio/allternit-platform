@@ -1,13 +1,13 @@
-# A2R Gateway v1
+# Allternit Gateway v1
 
-**Transport-agnostic API Gateway for A2R Platform**
+**Transport-agnostic API Gateway for Allternit Platform**
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/a2rchitech/gateway)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/allternit/gateway)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 ## Overview
 
-A2R Gateway is a **pluggable, transport-multiplexed gateway** that exposes a stable contract while supporting multiple transports:
+Allternit Gateway is a **pluggable, transport-multiplexed gateway** that exposes a stable contract while supporting multiple transports:
 
 - **stdio** - JSON-RPC 2.0 over stdin/stdout (MCP-compatible)
 - **HTTP** - REST + SSE streaming (MCP-compatible streamable HTTP)
@@ -86,7 +86,7 @@ curl http://localhost:3210/v1/events
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      A2R Gateway Core                           │
+│                      Allternit Gateway Core                           │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
 │  │   Routing   │  │  Event Bus  │  │   Session   │             │
 │  │   Engine    │  │   (SSE)     │  │    Store    │             │
@@ -147,14 +147,14 @@ npm test -- tests/smoke.test.ts
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `A2R_API_URL` | API service URL | `http://127.0.0.1:3000` |
-| `A2R_KERNEL_URL` | Kernel service URL | `http://127.0.0.1:3004` |
-| `A2R_VOICE_URL` | Voice service URL | `http://127.0.0.1:8001` |
-| `A2R_OPERATOR_URL` | Operator service URL | `http://127.0.0.1:3010` |
-| `A2R_RAILS_URL` | Rails service URL | `http://127.0.0.1:3011` |
-| `A2R_HTTP_PORT` | HTTP port | `3210` |
-| `A2R_HTTP_HOST` | HTTP host | `0.0.0.0` |
-| `A2R_CORS_ORIGINS` | CORS allowed origins | `http://localhost:*` |
+| `Allternit_API_URL` | API service URL | `http://127.0.0.1:3000` |
+| `Allternit_KERNEL_URL` | Kernel service URL | `http://127.0.0.1:3004` |
+| `Allternit_VOICE_URL` | Voice service URL | `http://127.0.0.1:8001` |
+| `Allternit_OPERATOR_URL` | Operator service URL | `http://127.0.0.1:3010` |
+| `Allternit_RAILS_URL` | Rails service URL | `http://127.0.0.1:3011` |
+| `Allternit_HTTP_PORT` | HTTP port | `3210` |
+| `Allternit_HTTP_HOST` | HTTP host | `0.0.0.0` |
+| `Allternit_CORS_ORIGINS` | CORS allowed origins | `http://localhost:*` |
 | `LOG_LEVEL` | Logging level | `info` |
 
 ## Protocol Specification
@@ -176,4 +176,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 ---
 
 **Version:** 1.0.0  
-**Maintainer:** A2R Platform Team
+**Maintainer:** Allternit Platform Team

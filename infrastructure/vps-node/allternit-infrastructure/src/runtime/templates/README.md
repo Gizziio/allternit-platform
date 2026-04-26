@@ -1,4 +1,4 @@
-# A2R Runtime Environment Templates
+# Allternit Runtime Environment Templates
 
 This directory contains pre-built environment templates for Railway-style one-click environment provisioning.
 
@@ -205,5 +205,5 @@ Templates can be loaded from:
 All templates support these standard variables:
 
 - `DEVCONTAINER`: Set to `true` when running in a devcontainer
-- `A2R_ENV_ID`: The ID of the provisioned environment
-- `A2R_ENV_TYPE`: The type of environment (devcontainer/nix/sandbox)
+- `Allternit_ENV_ID`: The ID of the provisioned environment
+- `Allternit_ENV_TYPE`: The type of environment (devcontainer/nix/sandbox)

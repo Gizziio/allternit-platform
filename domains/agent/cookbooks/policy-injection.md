@@ -64,7 +64,7 @@ policy_bundle:
       ═══════════════════════════════════════════
       POLICY INJECTION
       
-      You are operating under A2R Agent Law v{version}
+      You are operating under Allternit Agent Law v{version}
       
       Role: {role}
       Execution Mode: {execution_mode}

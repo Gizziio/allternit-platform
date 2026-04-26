@@ -212,8 +212,8 @@ fn default_settings() -> RuntimeSettings {
         },
         versioning: VersioningConfig {
             auto_commit: false,
-            commit_message_template: "[a2r] {description}".to_string(),
-            branch_prefix: "a2r-session-".to_string(),
+            commit_message_template: "[allternit] {description}".to_string(),
+            branch_prefix: "allternit-session-".to_string(),
         },
     }
 }

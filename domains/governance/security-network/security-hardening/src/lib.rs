@@ -1,6 +1,6 @@
-//! A2R Security Hardening
+//! Allternit Security Hardening
 //!
-//! Provides security controls and hardening mechanisms for the A2R platform.
+//! Provides security controls and hardening mechanisms for the Allternit platform.
 //! Includes input validation, security headers, rate limiting, audit logging,
 //! and threat detection.
 
@@ -94,7 +94,7 @@ impl Clone for SecurityHardening {
 ///
 /// Usage example:
 /// ```rust,ignore
-/// use a2r_security_hardening::{SecurityHardening, SecureConfig, security_middleware};
+/// use allternit_security_hardening::{SecurityHardening, SecureConfig, security_middleware};
 /// use axum::{Router, middleware};
 ///
 /// let hardening = SecurityHardening::new(SecureConfig::default());

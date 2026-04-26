@@ -1,6 +1,6 @@
-//! A2R Harness Engineering
+//! Allternit Harness Engineering
 //!
-//! Implements the Harness Engineering layer for A2rchitech, including:
+//! Implements the Harness Engineering layer for Allternit, including:
 //! - RiskPolicy Contract (LAW-GRD-008, LAW-ENF-004)
 //! - Preflight Risk Evaluation (Stage 0)
 //! - Deterministic Remediation Loop (LAW-OPS-003)
@@ -8,7 +8,7 @@
 //! - Merge Governance (LAW-ENF-003, LAW-CHG-001)
 //! - Entropy Compression Engine (LAW-ENF-005, LAW-QLT-002)
 
-use a2rchitech_system_law::{SystemLawEngine, ViolationSeverity};
+use allternit_system_law::{SystemLawEngine, ViolationSeverity};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};

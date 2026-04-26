@@ -1,7 +1,7 @@
 {
-  "name": "@a2rchitech/browser-runtime",
+  "name": "@allternit/browser-runtime-service",
   "version": "1.0.0",
-  "description": "Browser runtime service for A2rchitech - Playwright-based automation for agent computer-use",
+  "description": "Browser runtime service for Allternitchitech - Playwright-based automation for agent computer-use",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -9,7 +9,7 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@a2r/runtime": "workspace:*",
+    "@allternit/runtime": "workspace:*",
     "express": "^4.18.2",
     "ws": "^8.14.2",
     "cors": "^2.8.5",
@@ -23,7 +23,13 @@
     "tsx": "^4.7.0",
     "typescript": "^5.3.0"
   },
-  "keywords": ["browser", "playwright", "automation", "a2rchitech", "agent"],
-  "author": "A2rchitech",
+  "keywords": [
+    "browser",
+    "playwright",
+    "automation",
+    "allternit",
+    "agent"
+  ],
+  "author": "Allternitchitech",
   "license": "MIT"
 }

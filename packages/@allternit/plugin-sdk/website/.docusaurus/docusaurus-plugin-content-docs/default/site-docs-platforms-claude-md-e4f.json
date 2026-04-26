@@ -1,0 +1,24 @@
+{
+  "id": "platforms/claude",
+  "title": "Claude Desktop Setup",
+  "description": "Overview",
+  "source": "@site/docs/platforms/claude.md",
+  "sourceDirName": "platforms",
+  "slug": "/platforms/claude",
+  "permalink": "/docs/platforms/claude",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/allternit/plugin-sdk/tree/main/website/docs/platforms/claude.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docsSidebar",
+  "previous": {
+    "title": "Quick Start",
+    "permalink": "/docs/quickstart"
+  },
+  "next": {
+    "title": "OpenAI Codex Setup",
+    "permalink": "/docs/platforms/codex"
+  }
+}

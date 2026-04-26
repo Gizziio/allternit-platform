@@ -1,4 +1,4 @@
-# A2R Node Implementation - Gap Analysis
+# Allternit Node Implementation - Gap Analysis
 
 **Date:** 2026-02-24
 **Status:** Backend 100% Complete, UI Integration 90% Complete
@@ -33,11 +33,11 @@
 Files modified with PLACEHOLDER_APPROVED metadata per LAW-GRD-009:
 - `7-apps/api/src/workflow_routes.rs` - 8 TODOs marked with metadata
 - `7-apps/api/src/tools_routes.rs` - 7 TODOs marked with metadata  
-- `8-cloud/a2r-node/src/websocket.rs` - 1 TODO marked with metadata
+- `8-cloud/allternit-node/src/websocket.rs` - 1 TODO marked with metadata
 - `1-kernel/control-plane/unified-registry/artifact-registry/src/lib.rs` - 4 TODOs marked with metadata
 - `7-apps/api/src/environment_routes.rs` - 1 TODO marked with metadata
 - `7-apps/api/src/provider_discovery.rs` - 1 TODO marked with metadata
-- `3-adapters/ts/a2r-ix/src/renderer/renderer.ts` - 1 TODO marked with metadata
+- `3-adapters/ts/allternit-ix/src/renderer/renderer.ts` - 1 TODO marked with metadata
 
 **Total:** 23 placeholder comments marked with PLACEHOLDER_APPROVED metadata
 
@@ -48,13 +48,13 @@ Files modified with PLACEHOLDER_APPROVED metadata per LAW-GRD-009:
 - Documented remaining warnings that require API changes
 
 **Remaining Warnings (Documented for Future Refactoring):**
-- `a2rchitech-sdk-transport`: 1 warning (should_implement_trait - requires API change)
-- `a2r-parity`: 3 warnings (ptr_arg, borrowed_box - require signature changes)
-- `a2rchitech-runtime-core`: 5 warnings (unused variables, dead_code, too_many_arguments)
+- `allternit-sdk-transport`: 1 warning (should_implement_trait - requires API change)
+- `allternit-parity`: 3 warnings (ptr_arg, borrowed_box - require signature changes)
+- `allternit-runtime-core`: 5 warnings (unused variables, dead_code, too_many_arguments)
 - `mcp-client`: 3 warnings (dead_code, match_like_matches_macro)
-- `a2r-terminal`: Compilation errors due to absurd_extreme_comparisons (port > 65535)
-- `a2r-gc-agents`: Compilation errors (missing imports, type mismatches)
-- `a2r-executor`: Compilation error (never_loop)
+- `allternit-terminal`: Compilation errors due to absurd_extreme_comparisons (port > 65535)
+- `allternit-gc-agents`: Compilation errors (missing imports, type mismatches)
+- `allternit-executor`: Compilation error (never_loop)
 - Other modules: Various dead_code and unused_variable warnings
 
 **Note:** Some warnings require significant API changes and are documented for future refactoring. Compilation errors in unrelated modules (terminal, gc-agents, executor) are pre-existing and not part of this GAP.
@@ -65,7 +65,7 @@ Files modified with PLACEHOLDER_APPROVED metadata per LAW-GRD-009:
 - Fixed trailing whitespace issue in `tools_routes.rs`
 
 **TypeScript Formatting:**
-**Package:** `3-adapters/ts/a2r-ix`
+**Package:** `3-adapters/ts/allternit-ix`
 **Actions:**
 - Ran `pnpm lint --fix` successfully
 - Fixed auto-fixable ESLint errors
@@ -129,7 +129,7 @@ Files modified with PLACEHOLDER_APPROVED metadata per LAW-GRD-009:
 
 **Issue:** JobsView component exists but is not wired into main app navigation
 
-**Location:** `6-ui/a2r-platform/src/a2r-usage/ui/App.tsx`
+**Location:** `6-ui/allternit-platform/src/allternit-usage/ui/App.tsx`
 
 **What's Missing:**
 ```tsx
@@ -178,7 +178,7 @@ if (activeView === "jobs") {
 
 **Issue:** PTY output captured but not threaded through WebSocket sender
 
-**Location:** `8-cloud/a2r-node/src/websocket.rs`
+**Location:** `8-cloud/allternit-node/src/websocket.rs`
 
 **Current State:**
 - PTY output is captured
@@ -194,7 +194,7 @@ if (activeView === "jobs") {
 
 **Issue:** Heartbeat reports `running_jobs: 0` (hardcoded)
 
-**Location:** `8-cloud/a2r-node/src/websocket.rs` line 201
+**Location:** `8-cloud/allternit-node/src/websocket.rs` line 201
 
 **TODO:**
 ```rust
@@ -216,7 +216,7 @@ running_jobs: 0, // TODO: Track actual jobs
 
 **Issue:** Config update/restart/shutdown handlers are stubs
 
-**Location:** `8-cloud/a2r-node/src/websocket.rs` lines 430-440
+**Location:** `8-cloud/allternit-node/src/websocket.rs` lines 430-440
 
 **TODOs:**
 ```rust
@@ -261,7 +261,7 @@ running_jobs: 0, // TODO: Track actual jobs
 
 **Status:** ✅ Fixed in latest commit
 
-**Location:** `8-cloud/a2r-node/src/websocket.rs` line 1064
+**Location:** `8-cloud/allternit-node/src/websocket.rs` line 1064
 
 **Was:** `total_disk_gb: 100, // TODO: Detect actual disk`  
 **Now:** Uses `sysinfo::Disks` to detect actual disk space

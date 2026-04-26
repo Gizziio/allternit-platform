@@ -1,7 +1,7 @@
 //! MCP Policy Integration Module
 //!
 //! This module provides integration between MCP (Model Context Protocol)
-//! tool calls and the A2R policy engine, enabling:
+//! tool calls and the Allternit policy engine, enabling:
 //!
 //! - **Security**: Block dangerous operations before execution
 //! - **Compliance**: Enforce organizational policies on tool usage
@@ -29,7 +29,7 @@
 //! ```rust,no_run
 //! use mcp::policy::client::PolicyEnforcingMcpClient;
 //! use mcp::transport::StdioTransport;
-//! use a2rchitech_sdk_policy::PolicyEngine;
+//! use allternit_sdk_policy::PolicyEngine;
 //! use std::sync::Arc;
 //!
 //! #[tokio::main]
@@ -72,7 +72,7 @@ pub use rules::{
 };
 
 use crate::types::CallToolRequest;
-use a2rchitech_sdk_policy::{PolicyDecision, PolicyEngine, PolicyRequest, SafetyTier};
+use allternit_sdk_policy::{PolicyDecision, PolicyEngine, PolicyRequest, SafetyTier};
 
 /// Evaluate a single MCP tool call against the policy engine
 ///
@@ -81,7 +81,7 @@ use a2rchitech_sdk_policy::{PolicyDecision, PolicyEngine, PolicyRequest, SafetyT
 ///
 /// # Arguments
 ///
-/// * `policy_engine` - The A2R policy engine
+/// * `policy_engine` - The Allternit policy engine
 /// * `server_id` - Unique identifier for the MCP server
 /// * `server_name` - Human-readable name of the server
 /// * `identity_id` - Identity making the request
@@ -96,7 +96,7 @@ use a2rchitech_sdk_policy::{PolicyDecision, PolicyEngine, PolicyRequest, SafetyT
 /// ```rust
 /// use mcp::policy::evaluate_tool_call;
 /// use mcp::types::CallToolRequest;
-/// use a2rchitech_sdk_policy::PolicyEngine;
+/// use allternit_sdk_policy::PolicyEngine;
 /// use std::sync::Arc;
 ///
 /// # fn main() {
@@ -147,7 +147,7 @@ pub fn evaluate_tool_call(
 /// ```rust
 /// use mcp::policy::is_tool_allowed;
 /// use mcp::types::CallToolRequest;
-/// use a2rchitech_sdk_policy::PolicyEngine;
+/// use allternit_sdk_policy::PolicyEngine;
 /// use std::sync::Arc;
 ///
 /// # fn main() {
@@ -184,7 +184,7 @@ pub fn is_tool_allowed(
 ///
 /// ```rust
 /// use mcp::policy::get_tool_safety_tier;
-/// use a2rchitech_sdk_policy::SafetyTier;
+/// use allternit_sdk_policy::SafetyTier;
 ///
 /// # fn main() {
 /// let tier = get_tool_safety_tier("exec_shell");
@@ -213,7 +213,7 @@ pub fn get_tool_safety_tier(tool_name: &str) -> SafetyTier {
 /// ```rust
 /// use mcp::policy::evaluate_tool_calls_batch;
 /// use mcp::types::CallToolRequest;
-/// use a2rchitech_sdk_policy::PolicyEngine;
+/// use allternit_sdk_policy::PolicyEngine;
 /// use std::sync::Arc;
 ///
 /// # fn main() {
@@ -256,7 +256,7 @@ pub fn evaluate_tool_calls_batch(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use a2rchitech_sdk_policy::SafetyTier;
+    use allternit_sdk_policy::SafetyTier;
 
     #[test]
     fn test_evaluate_tool_call() {

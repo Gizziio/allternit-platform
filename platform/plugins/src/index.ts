@@ -1,7 +1,7 @@
 /**
- * A2R Plugin System
+ * Allternit Plugin System
  * 
- * Extensible plugin framework for A2R
+ * Extensible plugin framework for Allternit
  */
 
 export { BasePlugin } from './plugin.js';

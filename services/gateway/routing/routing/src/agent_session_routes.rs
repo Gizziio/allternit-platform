@@ -17,7 +17,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::AppState;
-use a2r_openclaw_host::{
+use allternit_openclaw_host::{
     native_session_manager::{SessionId, SessionManagerError, SessionMessage, SessionState},
     session_sync::SessionChanges,
 };
@@ -278,16 +278,16 @@ async fn create_session(
     
     // Core agent identity
     if let Some(agent_id) = agent_id {
-        metadata_patch.insert("a2r_agent_id".to_string(), serde_json::Value::String(agent_id));
+        metadata_patch.insert("allternit_agent_id".to_string(), serde_json::Value::String(agent_id));
     }
     if let Some(agent_name) = agent_name {
-        metadata_patch.insert("a2r_agent_name".to_string(), serde_json::Value::String(agent_name));
+        metadata_patch.insert("allternit_agent_name".to_string(), serde_json::Value::String(agent_name));
     }
     
     // Runtime model
     if let Some(model) = model {
         metadata_patch.insert(
-            "a2r_runtime_model".to_string(),
+            "allternit_runtime_model".to_string(),
             serde_json::Value::String(model),
         );
     }
@@ -301,7 +301,7 @@ async fn create_session(
             AgentSessionSurface::Browser => "browser",
         };
         metadata_patch.insert(
-            "a2r_origin_surface".to_string(),
+            "allternit_origin_surface".to_string(),
             serde_json::Value::String(surface_str.to_string()),
         );
     }
@@ -312,17 +312,17 @@ async fn create_session(
             AgentSessionMode::Agent => "agent",
         };
         metadata_patch.insert(
-            "a2r_session_mode".to_string(),
+            "allternit_session_mode".to_string(),
             serde_json::Value::String(mode_str.to_string()),
         );
     }
     
     // Project and workspace context
     if let Some(pid) = project_id {
-        metadata_patch.insert("a2r_project_id".to_string(), serde_json::Value::String(pid));
+        metadata_patch.insert("allternit_project_id".to_string(), serde_json::Value::String(pid));
     }
     if let Some(scope) = workspace_scope {
-        metadata_patch.insert("a2r_workspace_scope".to_string(), serde_json::Value::String(scope));
+        metadata_patch.insert("allternit_workspace_scope".to_string(), serde_json::Value::String(scope));
     }
     
     // Agent features
@@ -332,7 +332,7 @@ async fn create_session(
             "tools": features.tools.unwrap_or(false),
             "automation": features.automation.unwrap_or(false),
         });
-        metadata_patch.insert("a2r_agent_features".to_string(), features_obj);
+        metadata_patch.insert("allternit_agent_features".to_string(), features_obj);
     }
 
     if !metadata_patch.is_empty() || tags.is_some() {
@@ -404,7 +404,7 @@ async fn update_session(
             AgentSessionSurface::Browser => "browser",
         };
         metadata_patch.insert(
-            "a2r_origin_surface".to_string(),
+            "allternit_origin_surface".to_string(),
             serde_json::Value::String(surface_str.to_string()),
         );
     }
@@ -416,19 +416,19 @@ async fn update_session(
             AgentSessionMode::Agent => "agent",
         };
         metadata_patch.insert(
-            "a2r_session_mode".to_string(),
+            "allternit_session_mode".to_string(),
             serde_json::Value::String(mode_str.to_string()),
         );
     }
     
     // Update project id if provided
     if let Some(pid) = &request.project_id {
-        metadata_patch.insert("a2r_project_id".to_string(), serde_json::Value::String(pid.clone()));
+        metadata_patch.insert("allternit_project_id".to_string(), serde_json::Value::String(pid.clone()));
     }
     
     // Update workspace scope if provided
     if let Some(scope) = &request.workspace_scope {
-        metadata_patch.insert("a2r_workspace_scope".to_string(), serde_json::Value::String(scope.clone()));
+        metadata_patch.insert("allternit_workspace_scope".to_string(), serde_json::Value::String(scope.clone()));
     }
     
     // Update agent features if provided
@@ -438,7 +438,7 @@ async fn update_session(
             "tools": features.tools.unwrap_or(false),
             "automation": features.automation.unwrap_or(false),
         });
-        metadata_patch.insert("a2r_agent_features".to_string(), features_obj);
+        metadata_patch.insert("allternit_agent_features".to_string(), features_obj);
     }
     
     // Use merged metadata or None if empty

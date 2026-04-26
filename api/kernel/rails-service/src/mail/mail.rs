@@ -6,7 +6,7 @@ use chrono::Utc;
 use serde_json::{json, Value};
 
 use crate::core::ids::create_event_id;
-use crate::core::types::{A2REvent, Actor, ActorType, LedgerQuery};
+use crate::core::types::{AllternitEvent, Actor, ActorType, LedgerQuery};
 use crate::ledger::Ledger;
 use crate::mail::projection::append_thread_event;
 
@@ -44,7 +44,7 @@ impl Mail {
         &self,
         thread_id: Option<&str>,
         limit: usize,
-    ) -> Result<Vec<A2REvent>> {
+    ) -> Result<Vec<AllternitEvent>> {
         let mut events = self
             .ledger
             .query(LedgerQuery::default())
@@ -205,8 +205,8 @@ impl Mail {
         Ok(())
     }
 
-    fn event(&self, event_type: &str, payload: serde_json::Value) -> A2REvent {
-        A2REvent {
+    fn event(&self, event_type: &str, payload: serde_json::Value) -> AllternitEvent {
+        AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: self.actor.clone(),
@@ -217,7 +217,7 @@ impl Mail {
         }
     }
 
-    async fn emit(&self, event: A2REvent) -> Result<()> {
+    async fn emit(&self, event: AllternitEvent) -> Result<()> {
         self.ledger.append(event.clone()).await?;
         append_thread_event(&self.root_dir, &event)?;
         Ok(())

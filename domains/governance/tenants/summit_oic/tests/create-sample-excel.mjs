@@ -8,7 +8,7 @@ import * as XLSX from 'xlsx';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const OUTPUT_DIR = '/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/tenants/summit_oic/tests/test-data';
+const OUTPUT_DIR = '/Users/macbook/Desktop/allternit-workspace/allternit/tenants/summit_oic/tests/test-data';
 const OUTPUT_FILE = path.join(OUTPUT_DIR, 'sample_sales_data.xlsx');
 
 // Sample sales data

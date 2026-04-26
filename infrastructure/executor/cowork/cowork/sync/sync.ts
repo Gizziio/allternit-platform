@@ -1,5 +1,5 @@
 /**
- * @fileoverview A2R File Sync System - Main Orchestrator
+ * @fileoverview Allternit File Sync System - Main Orchestrator
  *
  * Bidirectional file synchronization between host and VM with support for
  * multiple sync modes: VirtioFS (macOS), 9P (Linux), rsync, and inotify/polling.

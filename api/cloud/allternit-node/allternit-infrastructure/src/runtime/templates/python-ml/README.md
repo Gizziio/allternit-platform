@@ -53,7 +53,7 @@ python-ml/
 │   └── init-project.sh     # Initialization script
 ├── Dockerfile              # Main container image
 ├── docker-compose.yml      # Multi-service orchestration
-├── template.json           # A2R template metadata
+├── template.json           # Allternit template metadata
 └── README.md              # This file
 ```
 
@@ -64,11 +64,11 @@ python-ml/
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `ENABLE_GPU` | Enable NVIDIA GPU support | `true` |
-| `JUPYTER_TOKEN` | Jupyter access token | `a2r-ml-dev` |
+| `JUPYTER_TOKEN` | Jupyter access token | `allternit-ml-dev` |
 | `INCLUDE_TENSORFLOW` | Include TensorFlow (large) | `false` |
 | `CUDA_VISIBLE_DEVICES` | GPU device selection | `0` |
 
-### Template Variables (A2R)
+### Template Variables (Allternit)
 
 The following variables can be customized when creating a project from this template:
 
@@ -141,12 +141,12 @@ The following variables can be customized when creating a project from this temp
 docker-compose up -d python-ml
 
 # Direct container
-docker run -p 8888:8888 a2r/python-ml:latest
+docker run -p 8888:8888 allternit/python-ml:latest
 ```
 
 Access at: http://localhost:8888
 
-Default token: `a2r-ml-dev`
+Default token: `allternit-ml-dev`
 
 ### Using Poetry
 
@@ -235,7 +235,7 @@ docker-compose down -v
 docker-compose exec python-ml bash
 
 # Run GPU-enabled container
-docker run --gpus all -p 8888:8888 a2r/python-ml:latest
+docker run --gpus all -p 8888:8888 allternit/python-ml:latest
 ```
 
 ## 🔌 VS Code Extensions
@@ -361,4 +361,4 @@ Contributions are welcome! Please submit issues and pull requests.
 
 ---
 
-**Maintained by A2R** | Built for ML Engineers and Data Scientists
+**Maintained by Allternit** | Built for ML Engineers and Data Scientists

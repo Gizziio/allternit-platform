@@ -18,7 +18,7 @@ The Environment Specification API (N5) provides a unified interface for defining
 ### Rust API
 
 ```rust
-use a2r_environment_spec::{EnvironmentSpecLoader, EnvironmentSource};
+use allternit_environment_spec::{EnvironmentSpecLoader, EnvironmentSource};
 
 // Create loader with caching
 let loader = EnvironmentSpecLoader::new()?;
@@ -55,7 +55,7 @@ Content-Type: application/json
     "mounts": [],
     "post_create_commands": [],
     "resources": {},
-    "a2r_config": {"enable_prewarm": false}
+    "allternit_config": {"enable_prewarm": false}
   },
   "cached": false,
   "resolve_time_ms": 1234
@@ -103,8 +103,8 @@ pub struct EnvironmentSpec {
     /// Resource requirements
     pub resources: ResourceRequirements,
     
-    /// A2R-specific configuration
-    pub a2r_config: A2rEnvironmentConfig,
+    /// Allternit-specific configuration
+    pub allternit_config: AllternitEnvironmentConfig,
 }
 ```
 
@@ -218,7 +218,7 @@ Check environment service health.
   },
   "postCreateCommand": "npm install",
   "customizations": {
-    "a2r": {
+    "allternit": {
       "driver": "process",
       "enablePrewarm": true
     }
@@ -264,8 +264,8 @@ const resolved = useEnvironmentStore((state) => state.environment.resolved);
 ## Caching
 
 The loader maintains a cache directory at:
-- Linux/macOS: `~/.cache/a2r/environments/`
-- Windows: `%LOCALAPPDATA%/a2r/environments/`
+- Linux/macOS: `~/.cache/allternit/environments/`
+- Windows: `%LOCALAPPDATA%/allternit/environments/`
 
 Cache contents:
 - Resolved OCI image manifests
@@ -308,7 +308,7 @@ let result = driver.exec(&handle, cmd).await?;
 
 Run integration tests:
 ```bash
-cargo test -p a2r-environment-spec --test integration_test
+cargo test -p allternit-environment-spec --test integration_test
 ```
 
 Test fixtures are in `tests/fixtures/`.
@@ -336,5 +336,5 @@ Test fixtures are in `tests/fixtures/`.
 ## See Also
 
 - [Architecture](../ARCHITECTURE.md)
-- [Driver Interface](../a2r-driver-interface/README.md)
-- [Process Driver](../../execution/a2r-process-driver/README.md)
+- [Driver Interface](../allternit-driver-interface/README.md)
+- [Process Driver](../../execution/allternit-process-driver/README.md)

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://allternit.local/spec/contracts/ReplayManifest.schema.json",
   "title": "Replay Manifest",
-  "description": "Schema for run replay manifests in the A2R system",
+  "description": "Schema for run replay manifests in the Allternit system",
   "type": "object",
   "properties": {
     "manifest_version": {

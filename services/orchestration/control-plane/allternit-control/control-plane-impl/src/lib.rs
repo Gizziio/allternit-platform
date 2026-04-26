@@ -1,24 +1,24 @@
-use a2rchitech_context_router::ContextRouter;
-use a2rchitech_control_plane::{
+use allternit_context_router::ContextRouter;
+use allternit_control_plane::{
     AuditLevel, ComplianceRequirement, ControlFeature, ControlPlane, ControlPlaneConfig,
     NetworkIsolation, SecurityProfile,
 };
-use a2rchitech_embodiment::EmbodimentControlPlane;
-use a2rchitech_evals::EvaluationEngine;
-use a2rchitech_history::HistoryLedger;
-use a2rchitech_hooks::HookBus;
-use a2rchitech_memory::v2::memory_policy::DefaultMemoryPolicy;
-use a2rchitech_memory::MemoryFabric;
-use a2rchitech_messaging::{MessagingSystem, TaskQueue};
-use a2rchitech_packaging::PackageManager;
-use a2rchitech_policy::PolicyEngine;
-use a2rchitech_providers::ProviderRouter;
-use a2rchitech_registry::{agents::AgentRegistry, tools::ToolRegistry, UnifiedRegistry};
-use a2rchitech_rlm::{RLMConfig, RLMRouter};
-use a2rchitech_runtime_core::RuntimeCore;
-use a2rchitech_skills::SkillRegistry;
-use a2rchitech_tools_gateway::ToolGateway;
-use a2rchitech_workflows::WorkflowEngine;
+use allternit_embodiment::EmbodimentControlPlane;
+use allternit_evals::EvaluationEngine;
+use allternit_history::HistoryLedger;
+use allternit_hooks::HookBus;
+use allternit_memory::v2::memory_policy::DefaultMemoryPolicy;
+use allternit_memory::MemoryFabric;
+use allternit_messaging::{MessagingSystem, TaskQueue};
+use allternit_packaging::PackageManager;
+use allternit_policy::PolicyEngine;
+use allternit_providers::ProviderRouter;
+use allternit_registry::{agents::AgentRegistry, tools::ToolRegistry, UnifiedRegistry};
+use allternit_rlm::{RLMConfig, RLMRouter};
+use allternit_runtime_core::RuntimeCore;
+use allternit_skills::SkillRegistry;
+use allternit_tools_gateway::ToolGateway;
+use allternit_workflows::WorkflowEngine;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use sqlx::{AnyPool, SqlitePool};
@@ -41,7 +41,7 @@ impl ControlPlaneServiceConfig {
             ledger_path,
             database_url,
             control_plane_id: None,
-            control_plane_name: "A2rchitech Control Plane".to_string(),
+            control_plane_name: "Allternitchitech Control Plane".to_string(),
             control_plane_description: "Local control plane service".to_string(),
         }
     }
@@ -116,7 +116,7 @@ impl ControlPlaneService {
         tool_registry.initialize_schema().await?;
 
         let registry_fabric = Arc::new(
-            a2rchitech_registry::fabric::DataFabric::new(
+            allternit_registry::fabric::DataFabric::new(
                 any_pool_arc.clone(),
                 None,
                 agent_registry.clone(),

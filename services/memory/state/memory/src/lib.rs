@@ -1,7 +1,7 @@
-use a2rchitech_context_router::{ContextBundle, ContextRouter};
-use a2rchitech_history::{HistoryError, HistoryLedger};
-use a2rchitech_messaging::{EventEnvelope, MessagingSystem};
-use a2rchitech_policy::{PolicyEffect, PolicyEngine, PolicyRequest};
+use allternit_context_router::{ContextBundle, ContextRouter};
+use allternit_history::{HistoryError, HistoryLedger};
+use allternit_messaging::{EventEnvelope, MessagingSystem};
+use allternit_policy::{PolicyEffect, PolicyEngine, PolicyRequest};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -144,7 +144,7 @@ pub enum MemoryError {
     #[error("History error: {0}")]
     History(#[from] HistoryError),
     #[error("Policy error: {0}")]
-    Policy(#[from] a2rchitech_policy::PolicyError),
+    Policy(#[from] allternit_policy::PolicyError),
     #[error("Memory not found: {0}")]
     NotFound(String),
     #[error("Access denied: {0}")]
@@ -221,11 +221,11 @@ impl MemoryFabric {
                 "requesting_agent": requesting_agent_id,
             }),
             requested_tier: match memory.sensitivity_tier {
-                0..=1 => a2rchitech_policy::SafetyTier::T0,
-                2 => a2rchitech_policy::SafetyTier::T1,
-                3 => a2rchitech_policy::SafetyTier::T2,
-                4 => a2rchitech_policy::SafetyTier::T3,
-                _ => a2rchitech_policy::SafetyTier::T4,
+                0..=1 => allternit_policy::SafetyTier::T0,
+                2 => allternit_policy::SafetyTier::T1,
+                3 => allternit_policy::SafetyTier::T2,
+                4 => allternit_policy::SafetyTier::T3,
+                _ => allternit_policy::SafetyTier::T4,
             },
         };
 
@@ -319,11 +319,11 @@ impl MemoryFabric {
                 "requesting_agent": requesting_agent_id,
             }),
             requested_tier: match memory.sensitivity_tier {
-                0..=1 => a2rchitech_policy::SafetyTier::T0,
-                2 => a2rchitech_policy::SafetyTier::T1,
-                3 => a2rchitech_policy::SafetyTier::T2,
-                4 => a2rchitech_policy::SafetyTier::T3,
-                _ => a2rchitech_policy::SafetyTier::T4,
+                0..=1 => allternit_policy::SafetyTier::T0,
+                2 => allternit_policy::SafetyTier::T1,
+                3 => allternit_policy::SafetyTier::T2,
+                4 => allternit_policy::SafetyTier::T3,
+                _ => allternit_policy::SafetyTier::T4,
             },
         };
 
@@ -364,7 +364,7 @@ impl MemoryFabric {
                 "query": &query,
                 "requesting_agent": requesting_agent_id,
             }),
-            requested_tier: a2rchitech_policy::SafetyTier::T0,
+            requested_tier: allternit_policy::SafetyTier::T0,
         };
 
         let policy_decision = self.policy_engine.evaluate(policy_request).await?;

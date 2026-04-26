@@ -2,7 +2,7 @@
  * GitHub Webhook Normalizer
  * 
  * Transforms raw GitHub webhook payloads into normalized events.
- * Reverse engineered from IDE Agent Kit pattern, implemented for a2rchitech Rails.
+ * Reverse engineered from IDE Agent Kit pattern, implemented for allternit Rails.
  */
 
 import type {

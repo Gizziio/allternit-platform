@@ -1,5 +1,5 @@
 // =============================================================================
-// @allternit/replies-contract — Canonical type contract for the A2R Replies API
+// @allternit/replies-contract — Canonical type contract for the Allternit Replies API
 //
 // Public primitive:  Reply
 // Internal primitive: Run (id convention: `run_${replyId}`)

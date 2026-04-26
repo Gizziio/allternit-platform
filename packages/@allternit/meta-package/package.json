@@ -1,0 +1,50 @@
+{
+  "name": "@allternit/sdk-meta",
+  "version": "1.0.0",
+  "description": "Allternit SDK - Complete AI platform SDK for building intelligent applications",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "type": "module",
+  "scripts": {
+    "postinstall": "echo 'Allternit SDK installed. Import specific packages as needed.'"
+  },
+  "keywords": [
+    "allternit",
+    "sdk",
+    "ai",
+    "platform",
+    "workflow",
+    "agents"
+  ],
+  "author": "Allternit",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@allternit/types": "^1.0.0",
+    "@allternit/adapters": "^1.0.0",
+    "@allternit/provider-adapters": "^1.0.0",
+    "@allternit/workflow-engine": "^0.1.0",
+    "@allternit/executor-core": "^1.0.0",
+    "@allternit/executor-superconductor": "^1.0.0",
+    "@allternit/capsule-sdk": "^0.1.0",
+    "@allternit/form-surfaces": "^1.0.0",
+    "@allternit/visual-state": "^1.0.0",
+    "@allternit/viz": "^0.1.0",
+    "@allternit/avatar-adapters": "^1.0.0",
+    "@allternit/browser-tools": "^0.1.0",
+    "@allternit/parallel-run": "^1.0.0",
+    "@allternit/ix": "^0.1.0",
+    "@allternit/replies-contract": "^1.0.0",
+    "@allternit/replies-reducer": "^1.0.0",
+    "@allternit/plugin-sdk": "^1.0.0",
+    "@allternit/api-client": "^1.0.0"
+  },
+  "optionalDependencies": {
+    "@allternit/gizzi-code": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

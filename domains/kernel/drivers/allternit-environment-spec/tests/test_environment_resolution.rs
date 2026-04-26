@@ -2,7 +2,7 @@
 //!
 //! Tests the full flow from source URI → EnvironmentSpec → Rootfs
 
-use a2r_environment_spec::{
+use allternit_environment_spec::{
     EnvironmentSource, EnvironmentSpec, EnvironmentSpecLoader, FeatureSpec, MountSpec, MountType,
     ResourceRequirements,
 };
@@ -11,7 +11,7 @@ use std::collections::HashMap;
 /// Test helper to create a temporary cache directory
 fn temp_cache_dir() -> std::path::PathBuf {
     std::env::temp_dir()
-        .join("a2r_test")
+        .join("allternit_test")
         .join(format!("test_{}", std::process::id()))
 }
 
@@ -121,7 +121,7 @@ async fn test_environment_spec_builder_pattern() {
             memory_gb: Some(8.0),
             disk_gb: Some(20.0),
         },
-        a2r_config: Default::default(),
+        allternit_config: Default::default(),
     };
 
     // Verify all fields
@@ -196,7 +196,7 @@ async fn test_serialization_roundtrip() {
             memory_gb: Some(4.0),
             disk_gb: Some(10.0),
         },
-        a2r_config: Default::default(),
+        allternit_config: Default::default(),
     };
 
     // Serialize to JSON
@@ -239,7 +239,7 @@ async fn test_env_var_handling() {
         mounts: vec![],
         post_create_commands: vec![],
         resources: ResourceRequirements::default(),
-        a2r_config: Default::default(),
+        allternit_config: Default::default(),
     };
 
     // Add environment variables

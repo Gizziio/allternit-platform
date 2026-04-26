@@ -1,10 +1,10 @@
 //! Skill Registry - OC-006
 //!
-//! Bridge between OpenClaw skills and A2R native skills.
+//! Bridge between OpenClaw skills and Allternit native skills.
 //!
 //! Responsibilities:
 //! - Load OpenClaw SKILL.md metadata
-//! - Map OpenClaw skills to A2R skills
+//! - Map OpenClaw skills to Allternit skills
 //! - Track skill availability (OpenClaw vs Native vs Bridge)
 //! - Provide unified skill lookup
 
@@ -47,7 +47,7 @@ pub struct SkillInfo {
 pub struct SkillRegistry {
     /// Skills loaded from OpenClaw SKILL.md files
     openclaw_skills: HashMap<String, ParsedSkill>,
-    /// Skills natively implemented in A2R
+    /// Skills natively implemented in Allternit
     native_skills: HashMap<String, SkillManifest>,
     /// Availability checker
     availability_checker: AvailabilityChecker,
@@ -87,7 +87,7 @@ impl SkillRegistry {
         Ok(count)
     }
 
-    /// Register a native A2R skill
+    /// Register a native Allternit skill
     pub fn register_native_skill(&mut self, manifest: SkillManifest) {
         self.native_skills.insert(manifest.name.clone(), manifest);
     }

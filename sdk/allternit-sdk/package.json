@@ -24,7 +24,74 @@
     "./computer-use": {
       "import": "./dist/computer-use.js",
       "types": "./dist/computer-use.d.ts"
+    },
+    "./ai-runtime": {
+      "import": "./dist/ai-runtime.js",
+      "types": "./dist/ai-runtime.d.ts"
+    },
+    "./harness": {
+      "import": "./dist/harness/index.js",
+      "types": "./dist/harness/index.d.ts"
+    },
+    "./providers": {
+      "import": "./dist/providers/registry.js",
+      "types": "./dist/providers/registry.d.ts"
+    },
+    "./providers/anthropic": {
+      "import": "./dist/providers/anthropic/index.js",
+      "types": "./dist/providers/anthropic/index.d.ts"
+    },
+    "./providers/openai": {
+      "import": "./dist/providers/openai/index.js",
+      "types": "./dist/providers/openai/index.d.ts"
+    },
+    "./providers/google": {
+      "import": "./dist/providers/google/index.js",
+      "types": "./dist/providers/google/index.d.ts"
+    },
+    "./providers/ollama": {
+      "import": "./dist/providers/ollama/index.js",
+      "types": "./dist/providers/ollama/index.d.ts"
+    },
+    "./providers/mistral": {
+      "import": "./dist/providers/mistral/index.js",
+      "types": "./dist/providers/mistral/index.d.ts"
+    },
+    "./providers/cohere": {
+      "import": "./dist/providers/cohere/index.js",
+      "types": "./dist/providers/cohere/index.d.ts"
+    },
+    "./providers/groq": {
+      "import": "./dist/providers/groq/index.js",
+      "types": "./dist/providers/groq/index.d.ts"
+    },
+    "./providers/together": {
+      "import": "./dist/providers/together/index.js",
+      "types": "./dist/providers/together/index.d.ts"
+    },
+    "./providers/azure": {
+      "import": "./dist/providers/azure/index.js",
+      "types": "./dist/providers/azure/index.d.ts"
+    },
+    "./providers/bedrock": {
+      "import": "./dist/providers/bedrock/index.js",
+      "types": "./dist/providers/bedrock/index.d.ts"
+    },
+    "./acp": {
+      "import": "./dist/acp/index.js",
+      "types": "./dist/acp/index.d.ts"
+    },
+    "./meta": {
+      "import": "./dist/meta.js",
+      "types": "./dist/meta.d.ts"
     }
   },
-  "files": ["dist"]
+  "files": [
+    "dist",
+    "src",
+    "docs-ai-runtime",
+    "examples-ai-runtime",
+    "tsconfig.ai-runtime.json",
+    "README-meta.md"
+  ]
 }

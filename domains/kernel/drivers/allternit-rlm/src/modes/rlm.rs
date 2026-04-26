@@ -1,19 +1,19 @@
 use crate::modes::base::{ExecutionMode, ModeExecutor};
 pub use crate::RLMConfig; // Re-export for modes::rlm
 use crate::{RLMOrchestrator, RLMTask};
-use a2rchitech_history::HistoryLedger;
-use a2rchitech_memory::MemoryFabric;
-use a2rchitech_messaging::MessagingSystem;
-use a2rchitech_policy::PolicyEngine;
-use a2rchitech_registry::UnifiedRegistry;
-use a2rchitech_skills::SkillRegistry;
-use a2rchitech_tools_gateway::ToolGateway;
+use allternit_history::HistoryLedger;
+use allternit_memory::MemoryFabric;
+use allternit_messaging::MessagingSystem;
+use allternit_policy::PolicyEngine;
+use allternit_registry::UnifiedRegistry;
+use allternit_skills::SkillRegistry;
+use allternit_tools_gateway::ToolGateway;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use std::sync::{Arc, Mutex};
 
-use a2rchitech_providers::ProviderRouter;
+use allternit_providers::ProviderRouter;
 
 /// RLM mode executor implementing recursive language model execution
 pub struct RLMModeExecutor {

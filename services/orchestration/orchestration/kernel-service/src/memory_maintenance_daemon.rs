@@ -1,5 +1,5 @@
 /*
-PATCH TARGET: /a2rchitech/services/kernel/src/main.rs
+PATCH TARGET: /allternit/services/kernel/src/main.rs
 
 Audit: DecayScheduler exists but is DEAD CODE; no cron/background worker exists.
 This daemon schedules the decay+maintenance tasks.
@@ -12,7 +12,7 @@ TODO(INTEGRATE):
   - dedupe
   - consolidation promotion
 */
-use a2rchitech_memory::MemoryFabric;
+use allternit_memory::MemoryFabric;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::interval;

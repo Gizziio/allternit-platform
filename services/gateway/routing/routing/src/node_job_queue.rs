@@ -3,7 +3,7 @@
 //!
 //! Manages job queue with priority scheduling for node assignment.
 
-use a2r_protocol::{JobResult, JobSpec};
+use allternit_protocol::{JobResult, JobSpec};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -362,9 +362,9 @@ pub struct JobQueueStats {
 #[derive(Debug, Deserialize)]
 pub struct CreateJobRequest {
     pub name: String,
-    pub wih: a2r_protocol::WIHDefinition,
+    pub wih: allternit_protocol::WIHDefinition,
     #[serde(default)]
-    pub resources: a2r_protocol::ResourceRequirements,
+    pub resources: allternit_protocol::ResourceRequirements,
     #[serde(default)]
     pub env: std::collections::HashMap<String, String>,
     #[serde(default)]

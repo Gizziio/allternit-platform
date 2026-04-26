@@ -1,4 +1,4 @@
-//! A2R-IX (Interface eXecution) API Routes
+//! Allternit-IX (Interface eXecution) API Routes
 //!
 //! Provides REST API endpoints for LLM-generated UI:
 //! - POST /ix/capsules - Create IX capsule from UI definition

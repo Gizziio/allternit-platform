@@ -1,8 +1,8 @@
 [package]
-name = "a2rchitech-system-law"
+name = "allternit-system-law"
 version = "0.1.0"
 edition = "2021"
-description = "A2R SYSTEM_LAW enforcement engine - constitutional authority for agentic OS"
+description = "Allternit SYSTEM_LAW enforcement engine - constitutional authority for agentic OS"
 
 [dependencies]
 serde = { workspace = true }

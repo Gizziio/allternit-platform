@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * A2R Gateway - stdio Transport Verification Script
+ * Allternit Gateway - stdio Transport Verification Script
  * 
  * Verifies the stdio transport is working correctly:
  * 1. Spawns gateway as subprocess
@@ -36,7 +36,7 @@ function log(message, color = 'reset') {
 }
 
 async function verifyStdio() {
-  log('\n🔍 A2R Gateway stdio Verification', 'blue');
+  log('\n🔍 Allternit Gateway stdio Verification', 'blue');
   log('=' .repeat(50), 'gray');
   log('Transport: JSON-RPC 2.0 over stdin/stdout', 'gray');
   log('');

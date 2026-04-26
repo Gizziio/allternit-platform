@@ -1,8 +1,8 @@
 //! Provider Router Bridge - OC-010
 //!
-//! Bridge between OpenClaw's provider system and A2R's native provider management.
+//! Bridge between OpenClaw's provider system and Allternit's native provider management.
 //! Implements the adapter pattern to translate between OpenClaw provider operations
-//! and A2R provider operations while maintaining A2R interface.
+//! and Allternit provider operations while maintaining Allternit interface.
 
 use crate::{HostError, OpenClawHost};
 use serde::{Deserialize, Serialize};

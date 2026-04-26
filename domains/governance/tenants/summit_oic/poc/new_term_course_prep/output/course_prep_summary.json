@@ -1,0 +1,41 @@
+{
+  "workflow": "new_term_course_prep",
+  "generated_at": "2026-04-10T15:06:30.627Z",
+  "source_course_id": 50101,
+  "destination_course_id": 50188,
+  "destination_published": false,
+  "shifted_assignments": [
+    {
+      "name": "Week 1 Orientation Quiz",
+      "points": 10,
+      "relative_day": 4,
+      "raw_due_date": "2027-04-02",
+      "adjusted_due_date": "2027-04-02",
+      "shifted_for_calendar": false
+    },
+    {
+      "name": "Hardware Components Lab",
+      "points": 20,
+      "relative_day": 11,
+      "raw_due_date": "2027-04-09",
+      "adjusted_due_date": "2027-04-09",
+      "shifted_for_calendar": false
+    },
+    {
+      "name": "Operating Systems Project",
+      "points": 40,
+      "relative_day": 25,
+      "raw_due_date": "2027-04-23",
+      "adjusted_due_date": "2027-04-23",
+      "shifted_for_calendar": false
+    },
+    {
+      "name": "Final Skills Check",
+      "points": 30,
+      "relative_day": 60,
+      "raw_due_date": "2027-05-28",
+      "adjusted_due_date": "2027-05-28",
+      "shifted_for_calendar": false
+    }
+  ]
+}

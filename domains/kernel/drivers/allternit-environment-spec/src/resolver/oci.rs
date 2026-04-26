@@ -33,7 +33,7 @@ impl OciResolver {
         let client = Client::new(config);
         let cache_dir = dirs::cache_dir()
             .unwrap_or_else(std::env::temp_dir)
-            .join("a2r")
+            .join("allternit")
             .join("oci-images");
 
         Self {

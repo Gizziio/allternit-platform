@@ -1,6 +1,6 @@
-//! A2R Platform Single-Binary Launcher
+//! Allternit Platform Single-Binary Launcher
 //! 
-//! This launcher embeds the entire A2R Platform (Rust API + UI assets) as bytes
+//! This launcher embeds the entire Allternit Platform (Rust API + UI assets) as bytes
 //! and self-extracts to a temp directory on first run. This gives users a true
 //! single-file executable that "just works" when double-clicked.
 
@@ -30,7 +30,7 @@ struct LauncherState {
 #[tokio::main]
 async fn main() -> Result<()> {
     println!("╔══════════════════════════════════════╗");
-    println!("║     A2R Platform Launcher v0.1.0     ║");
+    println!("║     Allternit Platform Launcher v0.1.0     ║");
     println!("╚══════════════════════════════════════╝");
     println!();
 
@@ -49,7 +49,7 @@ async fn main() -> Result<()> {
     println!("   ✓ UI ready");
 
     // Start API server
-    println!("🚀 Starting A2R Platform...");
+    println!("🚀 Starting Allternit Platform...");
     let api_process = start_api_server(&api_path).context("Failed to start API")?;
     
     let state = Arc::new(LauncherState {
@@ -68,7 +68,7 @@ async fn main() -> Result<()> {
     println!("   ✓ UI server online");
 
     println!();
-    println!("✅ A2R Platform is ready!");
+    println!("✅ Allternit Platform is ready!");
     println!();
     println!("   API:  http://127.0.0.1:{}", API_PORT);
     println!("   UI:   http://127.0.0.1:{}", UI_PORT);

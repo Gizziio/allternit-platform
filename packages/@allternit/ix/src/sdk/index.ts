@@ -1,7 +1,7 @@
 /**
- * A2R-IX SDK
+ * Allternit-IX SDK
  * 
- * Client SDK for A2R-IX integration.
+ * Client SDK for Allternit-IX integration.
  */
 
 // API Client

@@ -1,17 +1,17 @@
 /**
- * A2R Law Layer - Types
+ * Allternit Law Layer - Types
  * 
  * Type definitions for the governance and policy engine.
  */
 
 import type {
-  A2RKernel,
+  AllternitKernel,
   WihItem,
   Receipt,
   RoutingDecision,
   ToolContext,
   FileContext,
-} from '@a2r/governor';
+} from '@allternit/governor';
 
 // ============================================================================
 // Policy Types
@@ -142,7 +142,7 @@ export interface Policy {
  * Law Layer configuration
  */
 export interface LawLayerConfig {
-  kernel: A2RKernel;
+  kernel: AllternitKernel;
   
   /**
    * Default policy for all evaluations
@@ -358,7 +358,7 @@ export interface BeadsFilter {
  * Receipt generator configuration
  */
 export interface ReceiptGeneratorConfig {
-  kernel: A2RKernel;
+  kernel: AllternitKernel;
   
   /**
    * Auto-generate receipts on WIH completion

@@ -6,8 +6,8 @@ use std::sync::{Arc, Mutex};
 use tokio::sync::RwLock;
 use uuid::Uuid;
 
-use a2rchitech_history::{HistoryError, HistoryLedger};
-use a2rchitech_messaging::{EventEnvelope, MessagingError, MessagingSystem};
+use allternit_history::{HistoryError, HistoryLedger};
+use allternit_messaging::{EventEnvelope, MessagingError, MessagingSystem};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum IdentityKind {

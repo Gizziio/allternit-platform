@@ -12,7 +12,7 @@ use capsule_runtime::registry::FrameworkRegistry;
 use capsule_runtime::error::{CapsuleError, Result};
 use capsule_runtime::schema::{CapsuleSpec, CapsuleId, SandboxPolicy, Bindings, PersistenceMode, RunRef, ToolScope, Lifecycle, Provenance};
 use capsule_runtime::CapsuleService;
-use a2rchitech_kernel_contracts::FrameworkSpec;
+use allternit_kernel_contracts::FrameworkSpec;
 use capsule_runtime::marketplace_routes::MarketplaceAppState;
 
 fn build_router() -> Router<CapsuleService> {

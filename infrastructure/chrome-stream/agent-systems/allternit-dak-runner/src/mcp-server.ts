@@ -122,11 +122,11 @@ interface ServerConfig {
 
 function getServerConfig(): ServerConfig {
   return {
-    railsCliPath: process.env.A2R_RAILS_CLI || 'a2r',
-    projectPath: process.env.A2R_PROJECT_PATH || process.cwd(),
-    outputDir: process.env.A2R_OUTPUT_DIR || '.a2r/runner',
-    railsHttpUrl: process.env.A2R_RAILS_HTTP_URL,
-    railsApiKey: process.env.A2R_RAILS_API_KEY,
+    railsCliPath: process.env.Allternit_RAILS_CLI || 'allternit',
+    projectPath: process.env.Allternit_PROJECT_PATH || process.cwd(),
+    outputDir: process.env.Allternit_OUTPUT_DIR || '.allternit/runner',
+    railsHttpUrl: process.env.Allternit_RAILS_HTTP_URL,
+    railsApiKey: process.env.Allternit_RAILS_API_KEY,
   };
 }
 

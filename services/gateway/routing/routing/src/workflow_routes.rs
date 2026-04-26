@@ -22,8 +22,8 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::AppState;
-use a2r_driver_interface::DriverType;
-use a2rchitech_workflows::{
+use allternit_driver_interface::DriverType;
+use allternit_workflows::{
     engine::WorkflowExecutor, NodeConstraints, NodeStatus, WorkflowDefinition, WorkflowEdge,
     WorkflowExecution, WorkflowNode, WorkflowPhase, WorkflowStatus,
 };

@@ -185,7 +185,7 @@ pub enum ApprovalResult {
 /// Approval hook trait - implemented by RunService for requesting human approval
 ///
 /// This trait allows the runtime to request approval before executing sensitive actions.
-/// It integrates with the A2R kernel hooks to provide human-in-the-loop decision making
+/// It integrates with the Allternit kernel hooks to provide human-in-the-loop decision making
 /// for autonomous agents.
 #[async_trait]
 pub trait ApprovalHook: Send + Sync {

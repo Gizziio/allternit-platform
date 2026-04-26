@@ -11,7 +11,7 @@
 ### Step 1: Run Configuration Script
 
 ```bash
-cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/4-services/memory/agent
+cd /Users/macbook/Desktop/allternit-workspace/allternit/4-services/memory/agent
 
 # Replace with your actual VPS IP
 ./scripts/configure-vps.sh <YOUR_VPS_IP>
@@ -239,9 +239,9 @@ export OLLAMA_QUERY_MODEL=qwen3.5:0.8b
 ### CLI Commands
 
 ```bash
-a2r memory query "What do we know about DAG validation?"
-a2r memory stats
-a2r memory consolidate
+allternit memory query "What do we know about DAG validation?"
+allternit memory stats
+allternit memory consolidate
 ```
 
 ### Gateway API

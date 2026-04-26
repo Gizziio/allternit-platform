@@ -1,8 +1,8 @@
 [package]
-name = "a2rchitech-hooks"
+name = "allternit-hooks"
 version = "0.1.0"
 edition = "2021"
-description = "A2rchitech event-driven lifecycle hooks middleware"
+description = "Allternitchitech event-driven lifecycle hooks middleware"
 
 [dependencies]
 axum = { workspace = true }
@@ -22,11 +22,11 @@ reqwest = { workspace = true }
 
 
 # Layer dependencies
-a2rchitech-sdk-core = { workspace = true }
-a2rchitech-sdk-policy = { workspace = true }
-a2rchitech-sdk-transport = { workspace = true }
-a2rchitech-messaging = { workspace = true }
-a2rchitech-policy = { workspace = true }
+allternit-sdk-core = { workspace = true }
+allternit-sdk-policy = { workspace = true }
+allternit-sdk-transport = { workspace = true }
+allternit-messaging = { workspace = true }
+allternit-policy = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

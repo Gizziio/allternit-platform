@@ -1,5 +1,5 @@
 // =============================================================================
-// @a2r/provider-adapters/gizzi — Gizzi bus event → canonical ReplyEvent
+// @allternit/provider-adapters/gizzi — Gizzi bus event → canonical ReplyEvent
 //
 // Gizzi emits raw bus events over SSE (message.part.updated, message.part.delta,
 // message.updated). This adapter normalises them to canonical ReplyEvents.
@@ -9,7 +9,7 @@
 //   adapter.process(rawBusEvent);
 // =============================================================================
 
-import type { ReplyEvent } from "@a2r/replies-contract";
+import type { ReplyEvent } from "@allternit/replies-contract";
 
 // ---------------------------------------------------------------------------
 // Raw gizzi bus event shapes

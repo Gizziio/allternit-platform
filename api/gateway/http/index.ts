@@ -1,5 +1,5 @@
 /**
- * A2R Gateway - Main Entry Point
+ * Allternit Gateway - Main Entry Point
  * 
  * Launches either stdio or HTTP transport based on command-line arguments.
  * 
@@ -9,7 +9,7 @@
  *   node index.js --transport http   # HTTP mode
  *   node index.js --transport http --port 3210  # HTTP mode with custom port
  * 
- * @module @allternit/a2r-gateway
+ * @module @allternit/allternit-gateway
  */
 
 import { StdioTransport, DEFAULT_CONFIG as STDIO_CONFIG } from './transports/stdio/index.js';
@@ -46,7 +46,7 @@ function parseArgs(): { transport: string; port?: number; host?: string } {
         process.exit(0);
       case '--version':
       case '-v':
-        console.log('a2r-gateway/1.0.0');
+        console.log('allternit-gateway/1.0.0');
         process.exit(0);
     }
   }
@@ -56,7 +56,7 @@ function parseArgs(): { transport: string; port?: number; host?: string } {
 
 function printHelp(): void {
   console.log(`
-A2R Gateway - Transport-agnostic API Gateway
+Allternit Gateway - Transport-agnostic API Gateway
 
 Usage:
   node index.js [options]
@@ -97,8 +97,8 @@ Environment Variables:
 async function main(): Promise<void> {
   const args = parseArgs();
 
-  console.error('[A2R Gateway] Starting...');
-  console.error(`[A2R Gateway] Transport: ${args.transport}`);
+  console.error('[Allternit Gateway] Starting...');
+  console.error(`[Allternit Gateway] Transport: ${args.transport}`);
 
   if (args.transport === 'http') {
     const options = {
@@ -107,20 +107,20 @@ async function main(): Promise<void> {
       host: args.host || DEFAULT_HTTP_OPTIONS.host,
     };
 
-    console.error(`[A2R Gateway] HTTP Port: ${options.port}`);
-    console.error(`[A2R Gateway] HTTP Host: ${options.host}`);
+    console.error(`[Allternit Gateway] HTTP Port: ${options.port}`);
+    console.error(`[Allternit Gateway] HTTP Host: ${options.host}`);
 
     const transport = new HttpTransport(HTTP_CONFIG, options);
 
     // Handle shutdown signals
     process.on('SIGINT', async () => {
-      console.error('[A2R Gateway] Received SIGINT');
+      console.error('[Allternit Gateway] Received SIGINT');
       await transport.stop();
       process.exit(0);
     });
 
     process.on('SIGTERM', async () => {
-      console.error('[A2R Gateway] Received SIGTERM');
+      console.error('[Allternit Gateway] Received SIGTERM');
       await transport.stop();
       process.exit(0);
     });
@@ -132,13 +132,13 @@ async function main(): Promise<void> {
 
     // Handle shutdown signals
     process.on('SIGINT', async () => {
-      console.error('[A2R Gateway] Received SIGINT');
+      console.error('[Allternit Gateway] Received SIGINT');
       await transport.stop();
       process.exit(0);
     });
 
     process.on('SIGTERM', async () => {
-      console.error('[A2R Gateway] Received SIGTERM');
+      console.error('[Allternit Gateway] Received SIGTERM');
       await transport.stop();
       process.exit(0);
     });
@@ -149,6 +149,6 @@ async function main(): Promise<void> {
 
 // Run main
 main().catch((err) => {
-  console.error('[A2R Gateway] Fatal error:', err);
+  console.error('[Allternit Gateway] Fatal error:', err);
   process.exit(1);
 });

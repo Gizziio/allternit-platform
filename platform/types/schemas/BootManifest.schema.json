@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2rchitech.local/spec/contracts/BootManifest.schema.json",
+  "$id": "https://allternit.local/spec/contracts/BootManifest.schema.json",
   "title": "Deterministic Boot Manifest",
   "type": "object",
   "additionalProperties": false,

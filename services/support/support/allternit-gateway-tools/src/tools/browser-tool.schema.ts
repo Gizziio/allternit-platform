@@ -88,7 +88,7 @@ export const BrowserToolSchema = {
     },
     profile: {
       type: 'string',
-      description: 'Browser profile (chrome, a2r)',
+      description: 'Browser profile (chrome, allternit)',
     },
     targetId: {
       type: 'string',

@@ -1,8 +1,8 @@
 [package]
-name = "a2r-dag-wih-integration"
+name = "allternit-dag-wih-integration"
 version = "0.1.0"
 edition = "2021"
-description = "A2R DAG/WIH Integration - Links task graphs with work item headers"
+description = "Allternit DAG/WIH Integration - Links task graphs with work item headers"
 
 [dependencies]
 serde = { workspace = true }
@@ -15,8 +15,8 @@ tracing = { workspace = true }
 chrono = { workspace = true }
 serde_with = { version = "3.0", features = ["chrono"] }
 
-a2r-policy-tier-gating = { path = "../../../2-governance/identity-access-control/policy-tier-gating" }
-a2r-browser-runtime = { path = "../../../3-adapters/browser-runtime" }
+allternit-policy-tier-gating = { path = "../../../2-governance/identity-access-control/policy-tier-gating" }
+allternit-browser-runtime = { path = "../../../3-adapters/browser-runtime" }
 
 [dev-dependencies]
 tokio-test = "0.4"

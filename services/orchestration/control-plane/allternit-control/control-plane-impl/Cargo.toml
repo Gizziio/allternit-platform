@@ -1,5 +1,5 @@
 [package]
-name = "a2rchitech-control-plane-service"
+name = "allternit-control-plane-service"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -11,20 +11,20 @@ serde = { workspace = true }
 tokio = { workspace = true }
 uuid = { workspace = true }
 sqlx = { workspace = true }
-a2rchitech-history = { workspace = true }
-a2rchitech-messaging = { workspace = true }
-a2rchitech-policy = { workspace = true }
-a2rchitech-tools-gateway = { workspace = true }
-a2rchitech-skills = { workspace = true }
-a2rchitech-workflows = { workspace = true }
-a2rchitech-runtime-core = { workspace = true }
-a2rchitech-context-router = { workspace = true }
-a2rchitech-memory = { workspace = true }
-a2rchitech-providers = { workspace = true }
-a2rchitech-packaging = { workspace = true }
-a2rchitech-embodiment = { workspace = true }
-a2rchitech-evals = { workspace = true }
-a2rchitech-control-plane = { path = "../control-plane" }
-a2rchitech-registry = { path = "../../unified-registry/registry" }
-a2rchitech-hooks = { path = "../../a2r-agent-orchestration/hooks" }
-a2rchitech-rlm = { path = "../../../infrastructure/a2r-rlm" }
+allternit-history = { workspace = true }
+allternit-messaging = { workspace = true }
+allternit-policy = { workspace = true }
+allternit-tools-gateway = { workspace = true }
+allternit-skills = { workspace = true }
+allternit-workflows = { workspace = true }
+allternit-runtime-core = { workspace = true }
+allternit-context-router = { workspace = true }
+allternit-memory = { workspace = true }
+allternit-providers = { workspace = true }
+allternit-packaging = { workspace = true }
+allternit-embodiment = { workspace = true }
+allternit-evals = { workspace = true }
+allternit-control-plane = { path = "../control-plane" }
+allternit-registry = { path = "../../unified-registry/registry" }
+allternit-hooks = { path = "../../allternit-agent-orchestration/hooks" }
+allternit-rlm = { path = "../../../infrastructure/allternit-rlm" }

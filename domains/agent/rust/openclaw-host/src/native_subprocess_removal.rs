@@ -3,7 +3,7 @@
 //! Final removal of OpenClaw subprocess dependencies.
 //! This module represents the final step in the OpenClaw absorption project,
 //! completely removing all OpenClaw subprocess dependencies and transitioning
-//! fully to native A2R implementations.
+//! fully to native Allternit implementations.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -195,14 +195,14 @@ impl Default for SubprocessRemovalConfig {
             ],
             native_equivalents: {
                 let mut map = HashMap::new();
-                map.insert("openclaw_skills".to_string(), "a2r_skills".to_string());
-                map.insert("openclaw_sessions".to_string(), "a2r_sessions".to_string());
-                map.insert("openclaw_gateway".to_string(), "a2r_gateway".to_string());
+                map.insert("openclaw_skills".to_string(), "allternit_skills".to_string());
+                map.insert("openclaw_sessions".to_string(), "allternit_sessions".to_string());
+                map.insert("openclaw_gateway".to_string(), "allternit_gateway".to_string());
                 map.insert(
                     "openclaw_providers".to_string(),
-                    "a2r_providers".to_string(),
+                    "allternit_providers".to_string(),
                 );
-                map.insert("openclaw_tools".to_string(), "a2r_tools".to_string());
+                map.insert("openclaw_tools".to_string(), "allternit_tools".to_string());
                 map
             },
             verification_commands: vec![
@@ -1199,7 +1199,7 @@ impl SubprocessRemovalService {
                 "Remaining Channels Native".to_string(),
                 "Final Cleanup".to_string(),
             ],
-            notes: "All OpenClaw subprocess dependencies successfully removed. System now fully operates with native A2R implementations.".to_string(),
+            notes: "All OpenClaw subprocess dependencies successfully removed. System now fully operates with native Allternit implementations.".to_string(),
         })
     }
 

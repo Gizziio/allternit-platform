@@ -238,13 +238,13 @@ pnpm run daemon stop
 
 ```bash
 # Query memory
-a2r memory query "What do we know about DAG validation?"
+allternit memory query "What do we know about DAG validation?"
 
 # Show stats
-a2r memory stats
+allternit memory stats
 
 # Trigger consolidation
-a2r memory consolidate
+allternit memory consolidate
 ```
 
 ### Gateway API

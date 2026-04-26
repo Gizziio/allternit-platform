@@ -2,12 +2,12 @@
  * Beads Adapter
  * 
  * Integrates with the beads (bd) command-line tool for issue tracking.
- * Provides bidirectional sync between beads issues and A2R WIH items.
+ * Provides bidirectional sync between beads issues and Allternit WIH items.
  */
 
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
-import type { WihItem, A2RKernel } from '@a2r/governor';
+import type { WihItem, AllternitKernel } from '@allternit/governor';
 import {
   type BeadsIssue,
   type BeadsAdapterConfig,
@@ -24,15 +24,15 @@ const execAsync = promisify(exec);
  */
 export class BeadsAdapter {
   private config: Required<BeadsAdapterConfig>;
-  private kernel: A2RKernel;
+  private kernel: AllternitKernel;
 
-  constructor(kernel: A2RKernel, config: BeadsAdapterConfig = {}) {
+  constructor(kernel: AllternitKernel, config: BeadsAdapterConfig = {}) {
     this.kernel = kernel;
     this.config = {
       dbPath: '.beads/issues.db',
       jsonlMode: false,
       autoSync: true,
-      actor: 'a2r-lawlayer',
+      actor: 'allternit-lawlayer',
       ...config,
     };
   }
@@ -323,7 +323,7 @@ export class BeadsAdapter {
  * Create beads adapter instance
  */
 export function createBeadsAdapter(
-  kernel: A2RKernel,
+  kernel: AllternitKernel,
   config?: BeadsAdapterConfig
 ): BeadsAdapter {
   return new BeadsAdapter(kernel, config);

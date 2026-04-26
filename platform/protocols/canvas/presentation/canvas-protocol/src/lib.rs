@@ -1,6 +1,6 @@
-//! A2R Canvas Protocol
+//! Allternit Canvas Protocol
 //!
-//! Implements the Canvas Protocol for A2rchitech:
+//! Implements the Canvas Protocol for Allternit:
 //! - CanvasSpec - declarative task surface definition
 //! - Canvas Runtime - canvas instantiation and management
 //! - Canvas State Manager - deterministic state sync
@@ -8,8 +8,8 @@
 //!
 //! Based on CanvasProtocol.md specification
 
-use a2r_capsule_sdk::{CanvasBundle, CanvasBindings as CapsuleCanvasBindings};
-use a2rchitech_system_law::SystemLawEngine;
+use allternit_capsule_sdk::{CanvasBundle, CanvasBindings as CapsuleCanvasBindings};
+use allternit_system_law::SystemLawEngine;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

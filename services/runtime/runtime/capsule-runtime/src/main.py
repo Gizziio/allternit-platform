@@ -27,11 +27,11 @@ class CapsuleRuntime:
     def __init__(self):
         self.registry: Dict[str, Any] = {}
         self.receipt_schema: Dict[str, Any] = {}
-        self.run_id: str = os.environ.get("A2R_RUN_ID", "dev-session")
+        self.run_id: str = os.environ.get("Allternit_RUN_ID", "dev-session")
         self.load_registry()
         self.load_receipt_schema()
         
-        self.receipt_dir = f".a2r/receipts/{self.run_id}"
+        self.receipt_dir = f".allternit/receipts/{self.run_id}"
         os.makedirs(self.receipt_dir, exist_ok=True)
 
     def load_registry(self):

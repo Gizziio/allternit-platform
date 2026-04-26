@@ -6,11 +6,11 @@
 //! - Resource leak detection
 //! - Test driver setup/teardown
 
-use a2r_driver_interface::{
+use allternit_driver_interface::{
     CommandSpec, DriverError, EnvironmentSpec, ExecutionDriver, ExecutionHandle, ExecutionId,
     NetworkPolicy, PolicySpec, ResourceSpec, SpawnSpec, TenantId,
 };
-use a2r_firecracker_driver::{FirecrackerConfig, FirecrackerDriver};
+use allternit_firecracker_driver::{FirecrackerConfig, FirecrackerDriver};
 use std::collections::HashMap;
 use std::net::Ipv4Addr;
 use std::path::PathBuf;
@@ -253,7 +253,7 @@ pub async fn count_network_namespaces() -> usize {
             let stdout = String::from_utf8_lossy(&output.stdout);
             stdout
                 .lines()
-                .filter(|line| !line.is_empty() && line.contains("a2r-"))
+                .filter(|line| !line.is_empty() && line.contains("allternit-"))
                 .count()
         }
         _ => {
@@ -264,7 +264,7 @@ pub async fn count_network_namespaces() -> usize {
                     let stdout = String::from_utf8_lossy(&output.stdout);
                     stdout
                         .lines()
-                        .filter(|line| line.starts_with("a2r-"))
+                        .filter(|line| line.starts_with("allternit-"))
                         .count()
                 }
                 _ => 0,
@@ -283,14 +283,14 @@ pub async fn count_iptables_rules() -> usize {
     match output {
         Ok(output) if output.status.success() => {
             let stdout = String::from_utf8_lossy(&output.stdout);
-            // Count lines that contain A2R- chain references
-            stdout.lines().filter(|line| line.contains("A2R-")).count()
+            // Count lines that contain Allternit- chain references
+            stdout.lines().filter(|line| line.contains("Allternit-")).count()
         }
         _ => 0,
     }
 }
 
-/// Count A2R-specific iptables chains
+/// Count Allternit-specific iptables chains
 pub async fn count_iptables_chains() -> usize {
     let output = Command::new("iptables").args(["-L", "-n"]).output().await;
 
@@ -299,7 +299,7 @@ pub async fn count_iptables_chains() -> usize {
             let stdout = String::from_utf8_lossy(&output.stdout);
             stdout
                 .lines()
-                .filter(|line| line.starts_with("Chain A2R-"))
+                .filter(|line| line.starts_with("Chain Allternit-"))
                 .count()
         }
         _ => 0,
@@ -470,7 +470,7 @@ impl Default for TestConfig {
                 dns_allowed: true,
             },
             env_spec: EnvironmentSpec {
-                spec_type: a2r_driver_interface::EnvSpecType::Oci,
+                spec_type: allternit_driver_interface::EnvSpecType::Oci,
                 image: "alpine:latest".to_string(),
                 version: None,
                 packages: vec![],
@@ -516,7 +516,7 @@ pub async fn spawn_test_vm(
 /// Create a test driver with temporary directories
 pub async fn create_test_driver() -> (FirecrackerDriver, TestDirs, FirecrackerConfig) {
     let test_id = uuid::Uuid::new_v4().to_string();
-    let temp_base = std::env::temp_dir().join(format!("a2r-firecracker-stress-{}", test_id));
+    let temp_base = std::env::temp_dir().join(format!("allternit-firecracker-stress-{}", test_id));
 
     let vm_root_dir = temp_base.join("vms");
     let chroot_base_dir = temp_base.join("chroot");
@@ -541,7 +541,7 @@ pub async fn create_test_driver() -> (FirecrackerDriver, TestDirs, FirecrackerCo
         gid: 1000,
         max_open_fds: 1024,
         vm_root_dir: vm_root_dir.clone(),
-        kernel_image: PathBuf::from("/var/lib/a2r/vmlinux"),
+        kernel_image: PathBuf::from("/var/lib/allternit/vmlinux"),
         bridge_iface: "fcbridge0".to_string(),
         vm_subnet: "172.16.0.0/24".to_string(),
         vsock_port_start: 10000,
@@ -683,7 +683,7 @@ pub fn generate_network_policy(index: usize) -> NetworkPolicy {
     patterns[index % patterns.len()].clone()
 }
 
-/// Cleanup all A2R resources (emergency cleanup for tests)
+/// Cleanup all Allternit resources (emergency cleanup for tests)
 pub async fn emergency_cleanup(config: &FirecrackerConfig) {
     info!("Performing emergency cleanup");
 
@@ -695,7 +695,7 @@ pub async fn emergency_cleanup(config: &FirecrackerConfig) {
         for line in stdout.lines() {
             let parts: Vec<&str> = line.split_whitespace().collect();
             if let Some(ns_name) = parts.first() {
-                if ns_name.starts_with("a2r-") {
+                if ns_name.starts_with("allternit-") {
                     let _ = Command::new("ip")
                         .args(["netns", "delete", ns_name])
                         .output()
@@ -729,7 +729,7 @@ pub async fn emergency_cleanup(config: &FirecrackerConfig) {
     if let Ok(output) = output {
         let stdout = String::from_utf8_lossy(&output.stdout);
         for line in stdout.lines() {
-            if line.starts_with("Chain A2R-") {
+            if line.starts_with("Chain Allternit-") {
                 let parts: Vec<&str> = line.split_whitespace().collect();
                 if let Some(chain_name) = parts.get(1) {
                     // Flush chain

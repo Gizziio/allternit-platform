@@ -14,10 +14,10 @@ describe('GitHub Normalizer', () => {
     timestamp: '2026-03-08T12:00:00.000Z',
     rawPayload: {},
     repository: {
-      fullName: 'a2rchitech/platform',
+      fullName: 'allternit/platform',
       name: 'platform',
-      owner: 'a2rchitech',
-      url: 'https://github.com/a2rchitech/platform',
+      owner: 'allternit',
+      url: 'https://github.com/allternit/platform',
       private: false,
     },
     sender: {
@@ -29,7 +29,7 @@ describe('GitHub Normalizer', () => {
       number: 42,
       title: 'Add new feature',
       state: 'open',
-      url: 'https://github.com/a2rchitech/platform/pull/42',
+      url: 'https://github.com/allternit/platform/pull/42',
       author: 'alice',
       body: 'This PR adds a new feature',
       labels: ['enhancement'],
@@ -51,7 +51,7 @@ describe('GitHub Normalizer', () => {
         type: 'pull_request',
         id: '42',
         name: 'Add new feature',
-        url: 'https://github.com/a2rchitech/platform/pull/42',
+        url: 'https://github.com/allternit/platform/pull/42',
       });
       expect(normalized.action?.type).toBe('opened');
       expect(normalized.idempotencyKey).toMatch(/^gh_[a-f0-9]{16}$/);
@@ -66,7 +66,7 @@ describe('GitHub Normalizer', () => {
           number: 10,
           title: 'Bug report',
           state: 'open',
-          url: 'https://github.com/a2rchitech/platform/issues/10',
+          url: 'https://github.com/allternit/platform/issues/10',
           author: 'bob',
           body: 'Found a bug',
           labels: ['bug'],
@@ -75,7 +75,7 @@ describe('GitHub Normalizer', () => {
           id: 999,
           body: 'I can reproduce this',
           author: 'alice',
-          url: 'https://github.com/a2rchitech/platform/issues/10#issuecomment-999',
+          url: 'https://github.com/allternit/platform/issues/10#issuecomment-999',
         },
       };
 
@@ -99,7 +99,7 @@ describe('GitHub Normalizer', () => {
               sha: 'def456',
               message: 'Add new feature',
               author: 'alice',
-              url: 'https://github.com/a2rchitech/platform/commit/def456',
+              url: 'https://github.com/allternit/platform/commit/def456',
             },
           ],
           pushedBy: 'alice',
@@ -124,11 +124,11 @@ describe('GitHub Normalizer', () => {
       const normalized = normalizeGitHubWebhook(basePayload);
 
       expect(normalized.context).toEqual({
-        repository: 'a2rchitech/platform',
-        repositoryUrl: 'https://github.com/a2rchitech/platform',
+        repository: 'allternit/platform',
+        repositoryUrl: 'https://github.com/allternit/platform',
         eventType: 'pull_request.opened',
         pullRequestNumber: '42',
-        pullRequestUrl: 'https://github.com/a2rchitech/platform/pull/42',
+        pullRequestUrl: 'https://github.com/allternit/platform/pull/42',
       });
     });
   });
@@ -147,7 +147,7 @@ describe('GitHub Normalizer', () => {
           number: 10,
           title: 'Bug',
           state: 'open',
-          url: 'https://github.com/a2rchitech/platform/issues/10',
+          url: 'https://github.com/allternit/platform/issues/10',
           author: 'bob',
           body: 'Bug found',
           labels: ['bug'],

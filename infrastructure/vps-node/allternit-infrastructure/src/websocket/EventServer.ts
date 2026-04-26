@@ -1,7 +1,7 @@
 /**
  * EventServer.ts
  * 
- * WebSocket server implementation for A2R Infrastructure.
+ * WebSocket server implementation for Allternit Infrastructure.
  * Handles client connections, authentication, channel subscriptions,
  * heartbeats, reconnection logic, and event distribution.
  */

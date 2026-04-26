@@ -8,7 +8,7 @@
 
 import http from 'http';
 
-const GATEWAY_URL = process.env.A2R_GATEWAY_URL || 'http://127.0.0.1:3210';
+const GATEWAY_URL = process.env.Allternit_GATEWAY_URL || 'http://127.0.0.1:3210';
 
 // Colors for output
 const colors = {

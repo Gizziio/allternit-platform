@@ -38,7 +38,7 @@ impl SshKeyManager {
         // Convert public key to OpenSSH format
         let public_key_bytes = verifying_key.as_bytes();
         let public_key_base64 = BASE64.encode(public_key_bytes);
-        let public_key_openssh = format!("ssh-ed25519 {} a2r-deployment", public_key_base64);
+        let public_key_openssh = format!("ssh-ed25519 {} allternit-deployment", public_key_base64);
 
         Ok(SshKeypair {
             public_key: public_key_openssh,

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2rchitech.local/schemas/computer-use/plugin.manifest.schema.json",
-  "title": "A2R Computer Use Plugin Manifest",
+  "$id": "https://allternit.local/schemas/computer-use/plugin.manifest.schema.json",
+  "title": "Allternit Computer Use Plugin Manifest",
   "description": "Schema for domain-specific workflow plugin manifests. Each plugin bundles golden paths, cookbooks, prompts, and policy overrides for a particular integration target (GitHub, Gmail, Notion, etc).",
   "type": "object",
   "additionalProperties": false,
@@ -180,7 +180,7 @@
     },
     "min_computer_use_version": {
       "type": "string",
-      "description": "Minimum A2R computer-use package version required to run this plugin"
+      "description": "Minimum Allternit computer-use package version required to run this plugin"
     },
     "prompts": {
       "type": "array",

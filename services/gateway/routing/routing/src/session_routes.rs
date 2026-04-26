@@ -21,9 +21,9 @@ use tokio_stream::wrappers::BroadcastStream;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-use a2r_openclaw_host::native_session_manager::{SessionId, SessionManagerService, SessionMessage};
-use a2r_openclaw_host::native_tool_streaming::ToolStreamerService;
-use a2r_openclaw_host::session_sync::SessionSyncService;
+use allternit_openclaw_host::native_session_manager::{SessionId, SessionManagerService, SessionMessage};
+use allternit_openclaw_host::native_tool_streaming::ToolStreamerService;
+use allternit_openclaw_host::session_sync::SessionSyncService;
 
 // SSE imports
 use axum::response::sse::{Event, KeepAlive, Sse};
@@ -814,7 +814,7 @@ async fn patch_session(
     {
         Ok(session) => {
             // Emit sync event for real-time updates
-            use a2r_openclaw_host::session_sync::SessionChanges;
+            use allternit_openclaw_host::session_sync::SessionChanges;
             let changes = SessionChanges {
                 name: req.get("name").map(|v| v.as_str().map(|s| s.to_string())),
                 description: req

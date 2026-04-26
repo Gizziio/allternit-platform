@@ -499,20 +499,20 @@ async fn create_workflow(
     let now = Utc::now();
 
     // Map DTO nodes to core nodes
-    let core_nodes: Vec<a2rchitech_workflows::WorkflowNode> = request
+    let core_nodes: Vec<allternit_workflows::WorkflowNode> = request
         .nodes
         .iter()
-        .map(|n| a2rchitech_workflows::WorkflowNode {
+        .map(|n| allternit_workflows::WorkflowNode {
             id: n.id.clone(),
             name: n.name.clone(),
             phase: match n.node_type.to_lowercase().as_str() {
-                "observe" => a2rchitech_workflows::WorkflowPhase::Observe,
-                "think" => a2rchitech_workflows::WorkflowPhase::Think,
-                "plan" => a2rchitech_workflows::WorkflowPhase::Plan,
-                "build" => a2rchitech_workflows::WorkflowPhase::Build,
-                "verify" => a2rchitech_workflows::WorkflowPhase::Verify,
-                "learn" => a2rchitech_workflows::WorkflowPhase::Learn,
-                _ => a2rchitech_workflows::WorkflowPhase::Execute,
+                "observe" => allternit_workflows::WorkflowPhase::Observe,
+                "think" => allternit_workflows::WorkflowPhase::Think,
+                "plan" => allternit_workflows::WorkflowPhase::Plan,
+                "build" => allternit_workflows::WorkflowPhase::Build,
+                "verify" => allternit_workflows::WorkflowPhase::Verify,
+                "learn" => allternit_workflows::WorkflowPhase::Learn,
+                _ => allternit_workflows::WorkflowPhase::Execute,
             },
             skill_id: n
                 .config
@@ -522,7 +522,7 @@ async fn create_workflow(
                 .to_string(),
             inputs: n.inputs.clone(),
             outputs: n.outputs.clone(),
-            constraints: a2rchitech_workflows::NodeConstraints {
+            constraints: allternit_workflows::NodeConstraints {
                 time_budget: n.config.get("timeout").and_then(|v| v.as_u64()),
                 resource_limits: None,
                 allowed_tools: vec![],
@@ -532,17 +532,17 @@ async fn create_workflow(
         .collect();
 
     // Map DTO connections to core edges
-    let core_edges: Vec<a2rchitech_workflows::WorkflowEdge> = request
+    let core_edges: Vec<allternit_workflows::WorkflowEdge> = request
         .connections
         .iter()
-        .map(|c| a2rchitech_workflows::WorkflowEdge {
+        .map(|c| allternit_workflows::WorkflowEdge {
             from: c.from.clone(),
             to: c.to.clone(),
             condition: c.condition.clone(),
         })
         .collect();
 
-    let workflow_def = a2rchitech_workflows::WorkflowDefinition {
+    let workflow_def = allternit_workflows::WorkflowDefinition {
         workflow_id: workflow_id.clone(),
         version: request
             .version
@@ -550,8 +550,8 @@ async fn create_workflow(
             .unwrap_or_else(|| "1.0.0".to_string()),
         description: request.description.clone().unwrap_or_default(),
         required_roles: vec!["user".to_string()],
-        allowed_skill_tiers: vec![a2rchitech_policy::SafetyTier::T0],
-        phases_used: vec![a2rchitech_workflows::WorkflowPhase::Execute], // Simplified
+        allowed_skill_tiers: vec![allternit_policy::SafetyTier::T0],
+        phases_used: vec![allternit_workflows::WorkflowPhase::Execute], // Simplified
         success_criteria: "Execution completed".to_string(),
         failure_modes: vec!["Execution failed".to_string()],
         nodes: core_nodes,
@@ -723,21 +723,21 @@ async fn update_workflow(
     }
 
     // Map DTO to core
-    let core_nodes: Vec<a2rchitech_workflows::WorkflowNode> = request
+    let core_nodes: Vec<allternit_workflows::WorkflowNode> = request
         .nodes
         .unwrap_or_default()
         .iter()
-        .map(|n| a2rchitech_workflows::WorkflowNode {
+        .map(|n| allternit_workflows::WorkflowNode {
             id: n.id.clone(),
             name: n.name.clone(),
             phase: match n.node_type.to_lowercase().as_str() {
-                "observe" => a2rchitech_workflows::WorkflowPhase::Observe,
-                "think" => a2rchitech_workflows::WorkflowPhase::Think,
-                "plan" => a2rchitech_workflows::WorkflowPhase::Plan,
-                "build" => a2rchitech_workflows::WorkflowPhase::Build,
-                "verify" => a2rchitech_workflows::WorkflowPhase::Verify,
-                "learn" => a2rchitech_workflows::WorkflowPhase::Learn,
-                _ => a2rchitech_workflows::WorkflowPhase::Execute,
+                "observe" => allternit_workflows::WorkflowPhase::Observe,
+                "think" => allternit_workflows::WorkflowPhase::Think,
+                "plan" => allternit_workflows::WorkflowPhase::Plan,
+                "build" => allternit_workflows::WorkflowPhase::Build,
+                "verify" => allternit_workflows::WorkflowPhase::Verify,
+                "learn" => allternit_workflows::WorkflowPhase::Learn,
+                _ => allternit_workflows::WorkflowPhase::Execute,
             },
             skill_id: n
                 .config
@@ -747,7 +747,7 @@ async fn update_workflow(
                 .to_string(),
             inputs: n.inputs.clone(),
             outputs: n.outputs.clone(),
-            constraints: a2rchitech_workflows::NodeConstraints {
+            constraints: allternit_workflows::NodeConstraints {
                 time_budget: n.config.get("timeout").and_then(|v| v.as_u64()),
                 resource_limits: None,
                 allowed_tools: vec![],
@@ -756,24 +756,24 @@ async fn update_workflow(
         })
         .collect();
 
-    let core_edges: Vec<a2rchitech_workflows::WorkflowEdge> = request
+    let core_edges: Vec<allternit_workflows::WorkflowEdge> = request
         .connections
         .unwrap_or_default()
         .iter()
-        .map(|c| a2rchitech_workflows::WorkflowEdge {
+        .map(|c| allternit_workflows::WorkflowEdge {
             from: c.from.clone(),
             to: c.to.clone(),
             condition: c.condition.clone(),
         })
         .collect();
 
-    let workflow_def = a2rchitech_workflows::WorkflowDefinition {
+    let workflow_def = allternit_workflows::WorkflowDefinition {
         workflow_id: id.clone(),
         version: request.version.unwrap_or_else(|| "1.0.0".to_string()),
         description: request.description.unwrap_or_default(),
         required_roles: vec!["user".to_string()],
-        allowed_skill_tiers: vec![a2rchitech_policy::SafetyTier::T0],
-        phases_used: vec![a2rchitech_workflows::WorkflowPhase::Execute],
+        allowed_skill_tiers: vec![allternit_policy::SafetyTier::T0],
+        phases_used: vec![allternit_workflows::WorkflowPhase::Execute],
         success_criteria: "Updated".to_string(),
         failure_modes: vec![],
         nodes: core_nodes,
@@ -838,7 +838,7 @@ async fn delete_workflow(
             info!(workflow_id = %id, "Deleted workflow");
             Ok(StatusCode::NO_CONTENT)
         }
-        Err(a2rchitech_workflows::WorkflowError::WorkflowNotFound(_)) => Err((
+        Err(allternit_workflows::WorkflowError::WorkflowNotFound(_)) => Err((
             StatusCode::NOT_FOUND,
             Json(WorkflowErrorResponse {
                 code: "WORKFLOW_NOT_FOUND".to_string(),
@@ -846,7 +846,7 @@ async fn delete_workflow(
                 details: None,
             }),
         )),
-        Err(a2rchitech_workflows::WorkflowError::WorkflowInProgress(reason)) => Err((
+        Err(allternit_workflows::WorkflowError::WorkflowInProgress(reason)) => Err((
             StatusCode::CONFLICT,
             Json(WorkflowErrorResponse {
                 code: "WORKFLOW_IN_PROGRESS".to_string(),
@@ -1035,11 +1035,11 @@ async fn get_execution(
                 node_id: node_id.clone(),
                 node_name: node_id.clone(),
                 status: match res.status {
-                    a2rchitech_workflows::NodeStatus::Pending => "pending".to_string(),
-                    a2rchitech_workflows::NodeStatus::Running => "running".to_string(),
-                    a2rchitech_workflows::NodeStatus::Completed => "completed".to_string(),
-                    a2rchitech_workflows::NodeStatus::Failed => "failed".to_string(),
-                    a2rchitech_workflows::NodeStatus::Skipped => "skipped".to_string(),
+                    allternit_workflows::NodeStatus::Pending => "pending".to_string(),
+                    allternit_workflows::NodeStatus::Running => "running".to_string(),
+                    allternit_workflows::NodeStatus::Completed => "completed".to_string(),
+                    allternit_workflows::NodeStatus::Failed => "failed".to_string(),
+                    allternit_workflows::NodeStatus::Skipped => "skipped".to_string(),
                 },
                 start_time: Some(
                     chrono::DateTime::from_timestamp(res.timestamp as i64, 0)
@@ -1058,11 +1058,11 @@ async fn get_execution(
             execution_id: e.execution_id,
             workflow_id: e.workflow_id,
             status: match e.status {
-                a2rchitech_workflows::WorkflowStatus::Pending => ExecutionStatus::Pending,
-                a2rchitech_workflows::WorkflowStatus::Running => ExecutionStatus::Running,
-                a2rchitech_workflows::WorkflowStatus::Completed => ExecutionStatus::Succeeded,
-                a2rchitech_workflows::WorkflowStatus::Failed => ExecutionStatus::Failed,
-                a2rchitech_workflows::WorkflowStatus::Stopped => ExecutionStatus::Cancelled,
+                allternit_workflows::WorkflowStatus::Pending => ExecutionStatus::Pending,
+                allternit_workflows::WorkflowStatus::Running => ExecutionStatus::Running,
+                allternit_workflows::WorkflowStatus::Completed => ExecutionStatus::Succeeded,
+                allternit_workflows::WorkflowStatus::Failed => ExecutionStatus::Failed,
+                allternit_workflows::WorkflowStatus::Stopped => ExecutionStatus::Cancelled,
             },
             start_time: chrono::DateTime::from_timestamp(e.start_time as i64, 0)
                 .map(|dt| dt.to_rfc3339())
@@ -1278,7 +1278,7 @@ async fn list_workflows(State(state): State<Arc<AppState>>) -> Json<ListWorkflow
 // ============================================================================
 
 /// Generate Mermaid diagram from workflow definition
-fn generate_mermaid_diagram(workflow: &a2rchitech_workflows::WorkflowDefinition) -> String {
+fn generate_mermaid_diagram(workflow: &allternit_workflows::WorkflowDefinition) -> String {
     let mut mermaid = "graph TD\n".to_string();
 
     // Style definitions based on workflow phase
@@ -1294,13 +1294,13 @@ fn generate_mermaid_diagram(workflow: &a2rchitech_workflows::WorkflowDefinition)
     // Add nodes with phase-based styling
     for node in &workflow.nodes {
         let phase_class = match node.phase {
-            a2rchitech_workflows::WorkflowPhase::Observe => "observe",
-            a2rchitech_workflows::WorkflowPhase::Think => "think",
-            a2rchitech_workflows::WorkflowPhase::Plan => "plan",
-            a2rchitech_workflows::WorkflowPhase::Build => "build",
-            a2rchitech_workflows::WorkflowPhase::Execute => "execute",
-            a2rchitech_workflows::WorkflowPhase::Verify => "verify",
-            a2rchitech_workflows::WorkflowPhase::Learn => "learn",
+            allternit_workflows::WorkflowPhase::Observe => "observe",
+            allternit_workflows::WorkflowPhase::Think => "think",
+            allternit_workflows::WorkflowPhase::Plan => "plan",
+            allternit_workflows::WorkflowPhase::Build => "build",
+            allternit_workflows::WorkflowPhase::Execute => "execute",
+            allternit_workflows::WorkflowPhase::Verify => "verify",
+            allternit_workflows::WorkflowPhase::Learn => "learn",
         };
         mermaid.push_str(&format!(
             "    {}[\"{}\"]:::{}\n",
@@ -1324,7 +1324,7 @@ fn generate_mermaid_diagram(workflow: &a2rchitech_workflows::WorkflowDefinition)
 }
 
 /// Generate DOT (Graphviz) format from workflow definition
-fn generate_dot_graph(workflow: &a2rchitech_workflows::WorkflowDefinition) -> String {
+fn generate_dot_graph(workflow: &allternit_workflows::WorkflowDefinition) -> String {
     let mut dot = String::new();
     dot.push_str("digraph Workflow {\n");
     dot.push_str("    rankdir=TB;\n");
@@ -1334,16 +1334,16 @@ fn generate_dot_graph(workflow: &a2rchitech_workflows::WorkflowDefinition) -> St
     // Node definitions with phase-based colors
     for node in &workflow.nodes {
         let color = match node.phase {
-            a2rchitech_workflows::WorkflowPhase::Observe => "#e3f2fd",
-            a2rchitech_workflows::WorkflowPhase::Think => "#f3e5f5",
-            a2rchitech_workflows::WorkflowPhase::Plan => "#e8f5e9",
-            a2rchitech_workflows::WorkflowPhase::Build => "#fff3e0",
-            a2rchitech_workflows::WorkflowPhase::Execute => "#ffebee",
-            a2rchitech_workflows::WorkflowPhase::Verify => "#f1f8e9",
-            a2rchitech_workflows::WorkflowPhase::Learn => "#fce4ec",
+            allternit_workflows::WorkflowPhase::Observe => "#e3f2fd",
+            allternit_workflows::WorkflowPhase::Think => "#f3e5f5",
+            allternit_workflows::WorkflowPhase::Plan => "#e8f5e9",
+            allternit_workflows::WorkflowPhase::Build => "#fff3e0",
+            allternit_workflows::WorkflowPhase::Execute => "#ffebee",
+            allternit_workflows::WorkflowPhase::Verify => "#f1f8e9",
+            allternit_workflows::WorkflowPhase::Learn => "#fce4ec",
         };
         let fontcolor = match node.phase {
-            a2rchitech_workflows::WorkflowPhase::Execute => "darkred",
+            allternit_workflows::WorkflowPhase::Execute => "darkred",
             _ => "black",
         };
         dot.push_str(&format!(
@@ -1383,13 +1383,13 @@ struct LayoutPosition {
 
 /// Calculate node positions using layered layout algorithm
 fn calculate_node_positions(
-    nodes: &[a2rchitech_workflows::WorkflowNode],
-    edges: &[a2rchitech_workflows::WorkflowEdge],
+    nodes: &[allternit_workflows::WorkflowNode],
+    edges: &[allternit_workflows::WorkflowEdge],
 ) -> HashMap<String, LayoutPosition> {
     use std::collections::{HashMap, HashSet, VecDeque};
 
     let mut positions: HashMap<String, LayoutPosition> = HashMap::new();
-    let mut node_map: HashMap<String, &a2rchitech_workflows::WorkflowNode> = HashMap::new();
+    let mut node_map: HashMap<String, &allternit_workflows::WorkflowNode> = HashMap::new();
     let mut in_degree: HashMap<String, usize> = HashMap::new();
     let mut adj: HashMap<String, Vec<String>> = HashMap::new();
 
@@ -1477,7 +1477,7 @@ fn calculate_node_positions(
 }
 
 /// Generate SVG diagram from workflow definition
-fn generate_svg_diagram(workflow: &a2rchitech_workflows::WorkflowDefinition) -> String {
+fn generate_svg_diagram(workflow: &allternit_workflows::WorkflowDefinition) -> String {
     use std::collections::HashMap;
 
     let positions = calculate_node_positions(&workflow.nodes, &workflow.edges);
@@ -1556,13 +1556,13 @@ fn generate_svg_diagram(workflow: &a2rchitech_workflows::WorkflowDefinition) -> 
     for node in &workflow.nodes {
         if let Some(pos) = positions.get(&node.id) {
             let color = match node.phase {
-                a2rchitech_workflows::WorkflowPhase::Observe => "#e3f2fd",
-                a2rchitech_workflows::WorkflowPhase::Think => "#f3e5f5",
-                a2rchitech_workflows::WorkflowPhase::Plan => "#e8f5e9",
-                a2rchitech_workflows::WorkflowPhase::Build => "#fff3e0",
-                a2rchitech_workflows::WorkflowPhase::Execute => "#ffebee",
-                a2rchitech_workflows::WorkflowPhase::Verify => "#f1f8e9",
-                a2rchitech_workflows::WorkflowPhase::Learn => "#fce4ec",
+                allternit_workflows::WorkflowPhase::Observe => "#e3f2fd",
+                allternit_workflows::WorkflowPhase::Think => "#f3e5f5",
+                allternit_workflows::WorkflowPhase::Plan => "#e8f5e9",
+                allternit_workflows::WorkflowPhase::Build => "#fff3e0",
+                allternit_workflows::WorkflowPhase::Execute => "#ffebee",
+                allternit_workflows::WorkflowPhase::Verify => "#f1f8e9",
+                allternit_workflows::WorkflowPhase::Learn => "#fce4ec",
             };
 
             svg.push_str(&format!(
@@ -1594,7 +1594,7 @@ fn generate_svg_diagram(workflow: &a2rchitech_workflows::WorkflowDefinition) -> 
 
 /// Generate enhanced SVG diagram with execution status overlay and interactivity
 async fn generate_enhanced_svg_with_execution(
-    workflow: &a2rchitech_workflows::WorkflowDefinition,
+    workflow: &allternit_workflows::WorkflowDefinition,
     execution_id: &str,
     state: &Arc<AppState>,
 ) -> String {
@@ -1614,11 +1614,11 @@ async fn generate_enhanced_svg_with_execution(
     if let Some(ref exec) = execution_data {
         for (node_id, node_result) in &exec.node_results {
             let (status, color) = match node_result.status {
-                a2rchitech_workflows::NodeStatus::Completed => ("success", "#4CAF50"),
-                a2rchitech_workflows::NodeStatus::Failed => ("failed", "#F44336"),
-                a2rchitech_workflows::NodeStatus::Running => ("running", "#2196F3"),
-                a2rchitech_workflows::NodeStatus::Pending => ("pending", "#9E9E9E"),
-                a2rchitech_workflows::NodeStatus::Skipped => ("skipped", "#BDBDBD"),
+                allternit_workflows::NodeStatus::Completed => ("success", "#4CAF50"),
+                allternit_workflows::NodeStatus::Failed => ("failed", "#F44336"),
+                allternit_workflows::NodeStatus::Running => ("running", "#2196F3"),
+                allternit_workflows::NodeStatus::Pending => ("pending", "#9E9E9E"),
+                allternit_workflows::NodeStatus::Skipped => ("skipped", "#BDBDBD"),
             };
             node_status_map.insert(node_id.clone(), (status, color));
         }
@@ -1749,13 +1749,13 @@ async fn generate_enhanced_svg_with_execution(
     for node in &workflow.nodes {
         if let Some(pos) = positions.get(&node.id) {
             let base_color = match node.phase {
-                a2rchitech_workflows::WorkflowPhase::Observe => "#e3f2fd",
-                a2rchitech_workflows::WorkflowPhase::Think => "#f3e5f5",
-                a2rchitech_workflows::WorkflowPhase::Plan => "#e8f5e9",
-                a2rchitech_workflows::WorkflowPhase::Build => "#fff3e0",
-                a2rchitech_workflows::WorkflowPhase::Execute => "#ffebee",
-                a2rchitech_workflows::WorkflowPhase::Verify => "#f1f8e9",
-                a2rchitech_workflows::WorkflowPhase::Learn => "#fce4ec",
+                allternit_workflows::WorkflowPhase::Observe => "#e3f2fd",
+                allternit_workflows::WorkflowPhase::Think => "#f3e5f5",
+                allternit_workflows::WorkflowPhase::Plan => "#e8f5e9",
+                allternit_workflows::WorkflowPhase::Build => "#fff3e0",
+                allternit_workflows::WorkflowPhase::Execute => "#ffebee",
+                allternit_workflows::WorkflowPhase::Verify => "#f1f8e9",
+                allternit_workflows::WorkflowPhase::Learn => "#fce4ec",
             };
 
             // Override color with execution status if available
@@ -1832,7 +1832,7 @@ async fn generate_enhanced_svg_with_execution(
 }
 
 /// Generate JSON representation with layout positions
-fn generate_json_representation(workflow: &a2rchitech_workflows::WorkflowDefinition) -> String {
+fn generate_json_representation(workflow: &allternit_workflows::WorkflowDefinition) -> String {
     use std::collections::HashMap;
 
     let positions = calculate_node_positions(&workflow.nodes, &workflow.edges);

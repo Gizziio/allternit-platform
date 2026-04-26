@@ -1,36 +1,36 @@
 /**
- * A2R Runtime Bridge
+ * Allternit Runtime Bridge
  * 
- * Runtime bridge for integrating A2R Kernel with the runtime.
+ * Runtime bridge for integrating Allternit Kernel with the runtime.
  * Provides adapters, wrappers, and hooks for seamless governance.
  * 
  * @example
  * ```typescript
- * import { A2RKernelImpl } from '@a2r/governor';
+ * import { AllternitKernelImpl } from '@allternit/governor';
  * import { 
  *   RuntimeBridge,
  *   wrapGatewayClient,
  *   createWrappedToolExecutor 
- * } from '@a2r/runtime';
+ * } from '@allternit/runtime';
  * 
- * const kernel = new A2RKernelImpl(storage);
+ * const kernel = new AllternitKernelImpl(storage);
  * const bridge = new RuntimeBridge({ kernel });
  * 
  * // Wrap GatewayClient
- * const A2RGatewayClient = wrapGatewayClient(GatewayClient, kernel);
+ * const AllternitGatewayClient = wrapGatewayClient(GatewayClient, kernel);
  * ```
  */
 
 // Re-export from kernel
 export type {
-  A2RKernel,
+  AllternitKernel,
   WihItem,
   Receipt,
   ToolContext,
   FileContext,
   RoutingResult,
   RoutingDecision,
-} from '@a2r/governor';
+} from '@allternit/governor';
 
 // Types
 export type {
@@ -72,9 +72,9 @@ export {
   cleanupSession,
   getSessionContext,
   getActiveSessions,
-  createA2RGatewayOptions,
+  createAllternitGatewayOptions,
   wrapGatewayClient,
-  type A2RGatewayOptions,
+  type AllternitGatewayOptions,
   type SessionAdapterOptions,
   
   // Plugin
@@ -114,7 +114,7 @@ export {
 
 // Hooks
 export {
-  A2RHookManager,
+  AllternitHookManager,
   globalHookManager,
   type PreSessionStartContext,
   type PostSessionStartContext,
@@ -128,20 +128,20 @@ export {
 // Runtime Bridge Class
 // ============================================================================
 
-import type { A2RKernel } from '@a2r/governor';
+import type { AllternitKernel } from '@allternit/governor';
 import type { RuntimeBridgeConfig, AuditLogEntry } from './types.js';
-import { A2RHookManager } from './hooks/index.js';
+import { AllternitHookManager } from './hooks/index.js';
 import { PluginAdapter } from './adapters/plugin-adapter.js';
 
 /**
  * Main Runtime Bridge class
  * 
- * Provides unified interface for A2R runtime integration
+ * Provides unified interface for Allternit runtime integration
  */
 export class RuntimeBridge {
-  public readonly kernel: A2RKernel;
+  public readonly kernel: AllternitKernel;
   public readonly config: Required<RuntimeBridgeConfig>;
-  public readonly hooks: A2RHookManager;
+  public readonly hooks: AllternitHookManager;
   public readonly plugins: PluginAdapter;
   
   private auditLogs: AuditLogEntry[] = [];
@@ -157,7 +157,7 @@ export class RuntimeBridge {
       ...config,
     };
     
-    this.hooks = new A2RHookManager();
+    this.hooks = new AllternitHookManager();
     this.plugins = new PluginAdapter({
       kernel: this.kernel,
       requireWih: this.config.enforceWih,
@@ -213,7 +213,7 @@ export class RuntimeBridge {
       const data = JSON.stringify(this.auditLogs, null, 2);
       await writeFile(filePath, data, 'utf-8');
     } else {
-      console.warn('[A2R Runtime] exportAuditLogs is not supported in this environment.');
+      console.warn('[Allternit Runtime] exportAuditLogs is not supported in this environment.');
     }
   }
 
@@ -228,7 +228,7 @@ export class RuntimeBridge {
 
       // Console output
       if (destination === 'console' || !destination) {
-        console.log(`[A2R Audit] ${entry.operation}: ${entry.decision}`);
+        console.log(`[Allternit Audit] ${entry.operation}: ${entry.decision}`);
       }
 
       // File output
@@ -313,42 +313,42 @@ export function createRuntimeBridge(
 }
 
 /**
- * Check if running in A2R-governed environment
+ * Check if running in Allternit-governed environment
  */
-export function isA2RGoverned(): boolean {
-  return process.env.A2R_GOVERNED === 'true' ||
-         !!process.env.A2R_WIH_ID;
+export function isAllternitGoverned(): boolean {
+  return process.env.Allternit_GOVERNED === 'true' ||
+         !!process.env.Allternit_WIH_ID;
 }
 
 /**
  * Get current WIH ID from environment
  */
 export function getCurrentWihId(): string | undefined {
-  return process.env.A2R_WIH_ID;
+  return process.env.Allternit_WIH_ID;
 }
 
 /**
  * Set current WIH ID in environment
  */
 export function setCurrentWihId(wihId: string): void {
-  process.env.A2R_WIH_ID = wihId;
-  process.env.A2R_GOVERNED = 'true';
+  process.env.Allternit_WIH_ID = wihId;
+  process.env.Allternit_GOVERNED = 'true';
 }
 
 /**
  * Clear current WIH ID from environment
  */
 export function clearCurrentWihId(): void {
-  delete process.env.A2R_WIH_ID;
-  delete process.env.A2R_GOVERNED;
+  delete process.env.Allternit_WIH_ID;
+  delete process.env.Allternit_GOVERNED;
 }
 
 export * from "./client.js";
 
-// First-party A2R implementations
-export { RuntimeBridge as A2RRuntimeBridge } from './runtime-bridge.js';
-export { GatewayAdapter as A2RGatewayAdapter } from './gateway-adapter.js';
-export { ToolAdapters as A2RToolAdapters } from './tool-adapters.js';
+// First-party Allternit implementations
+export { RuntimeBridge as AllternitRuntimeBridge } from './runtime-bridge.js';
+export { GatewayAdapter as AllternitGatewayAdapter } from './gateway-adapter.js';
+export { ToolAdapters as AllternitToolAdapters } from './tool-adapters.js';
 
 export { AnthropicPlugin } from './adapters/anthropic-plugin.js';
 export { OpenAIPlugin } from './adapters/openai-plugin.js';

@@ -1,7 +1,7 @@
 //! Strangler Component Trait
 //!
 //! Defines the interface for components undergoing strangler migration.
-//! Every component that migrates from OpenClaw to native A2R must implement this trait.
+//! Every component that migrates from OpenClaw to native Allternit must implement this trait.
 //!
 //! Migration phases:
 //! - Q (Quarantine): reference_execute only (OpenClaw subprocess)
@@ -21,7 +21,7 @@ use uuid::Uuid;
 pub enum MigrationPhase {
     /// Q: Quarantine - OpenClaw subprocess only
     Quarantine,
-    /// B: Bridge - A2R wraps OpenClaw calls
+    /// B: Bridge - Allternit wraps OpenClaw calls
     Bridge,
     /// D: Dual-Run - Both implementations, parity testing
     DualRun,
@@ -46,7 +46,7 @@ impl MigrationPhase {
         )
     }
 
-    /// Can we run the native (A2R) implementation?
+    /// Can we run the native (Allternit) implementation?
     pub fn can_run_native(&self) -> bool {
         matches!(
             self,
@@ -99,7 +99,7 @@ pub struct ParityResult {
     pub matches: bool,
     /// The reference output (from OpenClaw)
     pub reference_output: ComponentOutput,
-    /// The native output (from A2R)
+    /// The native output (from Allternit)
     pub native_output: ComponentOutput,
     /// Any differences found
     pub differences: Vec<Difference>,
@@ -130,7 +130,7 @@ pub trait StranglerComponent: Send + Sync + Debug {
     /// This should call OpenClaw via the host subprocess
     async fn reference_execute(&self, input: ComponentInput) -> anyhow::Result<ComponentOutput>;
 
-    /// Execute using the native implementation (A2R)
+    /// Execute using the native implementation (Allternit)
     ///
     /// In early phases (Q, B), this may be a stub that returns an error
     async fn native_execute(&self, input: ComponentInput) -> anyhow::Result<ComponentOutput>;

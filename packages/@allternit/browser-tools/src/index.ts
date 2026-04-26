@@ -1,7 +1,7 @@
 /**
  * Browser Tools Package
  * 
- * Browser automation toolkit for A2R agent task execution.
+ * Browser automation toolkit for Allternit agent task execution.
  * Provides type-safe browser control, DOM extraction, and action execution.
  * 
  * @example

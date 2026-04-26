@@ -1,6 +1,6 @@
-//! A2R Capsule SDK
+//! Allternit Capsule SDK
 //!
-//! Implements the Capsule System for A2rchitech:
+//! Implements the Capsule System for Allternit:
 //! - Capsule definition and lifecycle
 //! - Capsule Protocol (IPC)
 //! - Capsule Registry
@@ -8,8 +8,8 @@
 //!
 //! Based on CapsuleProtocol.md specification
 
-use a2rchitech_harness_engineering::{EvidenceManifest, RiskTier};
-use a2rchitech_system_law::SystemLawEngine;
+use allternit_harness_engineering::{EvidenceManifest, RiskTier};
+use allternit_system_law::SystemLawEngine;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

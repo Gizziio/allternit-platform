@@ -10,7 +10,7 @@
 use std::time::Duration;
 use tokio::time::timeout;
 
-use a2r_meta_swarm::{
+use allternit_meta_swarm::{
     initialize, 
     MetaSwarmConfig, 
     SwarmConfig, 
@@ -214,7 +214,7 @@ async fn test_dashboard_state() -> Result<()> {
 
 #[tokio::test]
 async fn test_file_lock_management() -> Result<()> {
-    use a2r_meta_swarm::utils::FileLockManager;
+    use allternit_meta_swarm::utils::FileLockManager;
 
     let lock_manager = FileLockManager::new();
 

@@ -1,10 +1,10 @@
-//! Run Manager - Run lifecycle management for A2R Node
+//! Run Manager - Run lifecycle management for Allternit Node
 //!
 //! Handles run execution on the node, bridging between the control plane
 //! and local container/VM execution.
 
 use anyhow::{Context, Result};
-use a2r_protocol::{Message, MessagePayload, RunConfig, RunStatus, RunEvent, RunEventType, JobResult};
+use allternit_protocol::{Message, MessagePayload, RunConfig, RunStatus, RunEvent, RunEventType, JobResult};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
@@ -330,13 +330,13 @@ async fn execute_run(
     let _ = event_tx.send(running_event).await;
     
     // Convert RunConfig to JobSpec for executor
-    let job = a2r_protocol::JobSpec {
+    let job = allternit_protocol::JobSpec {
         id: run_id.to_string(),
         name: config.name.clone(),
-        wih: a2r_protocol::WIHDefinition {
+        wih: allternit_protocol::WIHDefinition {
             handler: "docker".to_string(),
             version: "1.0".to_string(),
-            task: a2r_protocol::TaskDefinition::Docker {
+            task: allternit_protocol::TaskDefinition::Docker {
                 image: config.image.clone(),
                 command: config.command.clone(),
                 volumes: vec![],

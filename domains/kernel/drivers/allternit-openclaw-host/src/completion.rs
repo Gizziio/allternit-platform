@@ -1,7 +1,7 @@
 //! Phase 4: Complete - OpenClaw Removal
 //!
 //! Final phase of the strangler migration where OpenClaw is completely removed
-//! for graduated components. Native A2R implementations are the sole authority.
+//! for graduated components. Native Allternit implementations are the sole authority.
 //!
 //! Completion Checklist:
 //! - All components in Complete phase

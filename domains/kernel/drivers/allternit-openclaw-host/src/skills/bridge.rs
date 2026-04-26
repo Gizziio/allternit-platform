@@ -1,7 +1,7 @@
 //! Skill Registry Bridge - OC-007
 //!
 //! Implements the adapter pattern to bridge OpenClaw's skill registry
-//! with A2R's native skill registry interface.
+//! with Allternit's native skill registry interface.
 
 use crate::skills::{RegistryError, SkillRegistry};
 use serde::{Deserialize, Serialize};

@@ -1,6 +1,6 @@
 # @allternit/browser-tools
 
-Browser automation toolkit for A2R agent task execution. Built on Playwright with integrated safety controls.
+Browser automation toolkit for Allternit agent task execution. Built on Playwright with integrated safety controls.
 
 ## Features
 

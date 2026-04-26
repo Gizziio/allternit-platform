@@ -1,6 +1,6 @@
 //! Rails Client
 //!
-//! HTTP client for communicating with A2R Rails service.
+//! HTTP client for communicating with Allternit Rails service.
 
 use anyhow::Result;
 use reqwest::Client;

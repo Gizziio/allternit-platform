@@ -1,7 +1,7 @@
 # =============================================================================
-# A2R Platform Development Task Runner
+# Allternit Platform Development Task Runner
 # =============================================================================
-# This Taskfile defines common development tasks for the A2R platform.
+# This Taskfile defines common development tasks for the Allternit platform.
 # Install Task from https://taskfile.dev/
 # =============================================================================
 
@@ -63,7 +63,7 @@ tasks:
   # ===========================================================================
   deps:ui:
     desc: Install UI dependencies
-    dir: 6-ui/a2r-platform
+    dir: 6-ui/allternit-platform
     cmds:
       - pnpm install
 
@@ -76,7 +76,7 @@ tasks:
 
   deps:rust:
     desc: Install Rust dependencies
-    dir: 1-kernel/a2r-infrastructure
+    dir: 1-kernel/allternit-infrastructure
     cmds:
       - cargo fetch
 
@@ -90,25 +90,25 @@ tasks:
 
   dev:ui:
     desc: Start UI development server only
-    dir: 6-ui/a2r-platform
+    dir: 6-ui/allternit-platform
     cmds:
       - pnpm dev
 
   dev:api:
     desc: Start API gateway with hot reload
-    dir: 1-kernel/a2r-cloud
+    dir: 1-kernel/allternit-cloud
     cmds:
       - air
 
   dev:kernel:
     desc: Start kernel services with hot reload
-    dir: 1-kernel/a2r-kernel
+    dir: 1-kernel/allternit-kernel
     cmds:
       - air
 
   dev:infra:
     desc: Start infrastructure services with hot reload
-    dir: 1-kernel/a2r-infrastructure
+    dir: 1-kernel/allternit-infrastructure
     cmds:
       - cargo watch -x run
 
@@ -124,28 +124,28 @@ tasks:
 
   build:ui:
     desc: Build UI for production
-    dir: 6-ui/a2r-platform
+    dir: 6-ui/allternit-platform
     cmds:
       - pnpm build
     generates:
-      - 6-ui/a2r-platform/dist/**/*
+      - 6-ui/allternit-platform/dist/**/*
 
   build:go:
     desc: Build Go services
     dir: 1-kernel
     cmds:
-      - go build -o {{.BUILD_DIR}}/a2r-cloud ./a2r-cloud
-      - go build -o {{.BUILD_DIR}}/a2r-kernel ./a2r-kernel
+      - go build -o {{.BUILD_DIR}}/allternit-cloud ./allternit-cloud
+      - go build -o {{.BUILD_DIR}}/allternit-kernel ./allternit-kernel
     generates:
-      - '{{.BUILD_DIR}}/a2r-*'
+      - '{{.BUILD_DIR}}/allternit-*'
 
   build:rust:
     desc: Build Rust services
-    dir: 1-kernel/a2r-infrastructure
+    dir: 1-kernel/allternit-infrastructure
     cmds:
       - cargo build --release
     generates:
-      - 1-kernel/a2r-infrastructure/target/release/a2r-infrastructure
+      - 1-kernel/allternit-infrastructure/target/release/allternit-infrastructure
 
   # ===========================================================================
   # Test Tasks
@@ -165,19 +165,19 @@ tasks:
 
   test:rust:
     desc: Run Rust tests
-    dir: 1-kernel/a2r-infrastructure
+    dir: 1-kernel/allternit-infrastructure
     cmds:
       - cargo test --all-features
 
   test:ui:
     desc: Run UI tests
-    dir: 6-ui/a2r-platform
+    dir: 6-ui/allternit-platform
     cmds:
       - pnpm test
 
   test:e2e:
     desc: Run end-to-end tests
-    dir: 6-ui/a2r-platform
+    dir: 6-ui/allternit-platform
     cmds:
       - pnpm test:e2e
 
@@ -199,13 +199,13 @@ tasks:
 
   lint:rust:
     desc: Run Rust linter
-    dir: 1-kernel/a2r-infrastructure
+    dir: 1-kernel/allternit-infrastructure
     cmds:
       - cargo clippy --all-features -- -D warnings
 
   lint:ui:
     desc: Run UI linter
-    dir: 6-ui/a2r-platform
+    dir: 6-ui/allternit-platform
     cmds:
       - pnpm lint
 
@@ -224,14 +224,14 @@ tasks:
 
   lint:rust:fix:
     desc: Fix Rust linting issues
-    dir: 1-kernel/a2r-infrastructure
+    dir: 1-kernel/allternit-infrastructure
     cmds:
       - cargo clippy --all-features --fix --allow-dirty
       - cargo fmt
 
   lint:ui:fix:
     desc: Fix UI linting issues
-    dir: 6-ui/a2r-platform
+    dir: 6-ui/allternit-platform
     cmds:
       - pnpm lint:fix
       - pnpm format
@@ -248,21 +248,21 @@ tasks:
 
   db:migrate:goose:
     desc: Run Goose migrations
-    dir: 1-kernel/a2r-infrastructure/migrations
+    dir: 1-kernel/allternit-infrastructure/migrations
     cmds:
       - goose up
     ignore_error: true
 
   db:migrate:sqlx:
     desc: Run SQLx migrations
-    dir: 1-kernel/a2r-kernel
+    dir: 1-kernel/allternit-kernel
     cmds:
       - sqlx migrate run
     ignore_error: true
 
   db:migrate:prisma:
     desc: Run Prisma migrations
-    dir: 6-ui/a2r-platform
+    dir: 6-ui/allternit-platform
     cmds:
       - pnpm prisma migrate deploy
     ignore_error: true
@@ -275,14 +275,14 @@ tasks:
 
   db:rollback:goose:
     desc: Rollback Goose migrations
-    dir: 1-kernel/a2r-infrastructure/migrations
+    dir: 1-kernel/allternit-infrastructure/migrations
     cmds:
       - goose down
     ignore_error: true
 
   db:rollback:sqlx:
     desc: Rollback SQLx migrations
-    dir: 1-kernel/a2r-kernel
+    dir: 1-kernel/allternit-kernel
     cmds:
       - sqlx migrate revert
     ignore_error: true
@@ -307,7 +307,7 @@ tasks:
 
   db:studio:
     desc: Open Prisma Studio
-    dir: 6-ui/a2r-platform
+    dir: 6-ui/allternit-platform
     cmds:
       - pnpm prisma studio
 
@@ -347,7 +347,7 @@ tasks:
 
   generate:prisma:
     desc: Generate Prisma client
-    dir: 6-ui/a2r-platform
+    dir: 6-ui/allternit-platform
     cmds:
       - pnpm prisma generate
 
@@ -360,7 +360,7 @@ tasks:
 
   generate:swagger:
     desc: Generate Swagger documentation
-    dir: 1-kernel/a2r-cloud
+    dir: 1-kernel/allternit-cloud
     cmds:
       - swag init
     ignore_error: true
@@ -373,16 +373,16 @@ tasks:
     cmds:
       - rm -rf {{.BUILD_DIR}}
       - rm -rf {{.DIST_DIR}}
-      - rm -rf 6-ui/a2r-platform/.next
-      - rm -rf 6-ui/a2r-platform/dist
-      - rm -rf 1-kernel/a2r-infrastructure/target
+      - rm -rf 6-ui/allternit-platform/.next
+      - rm -rf 6-ui/allternit-platform/dist
+      - rm -rf 1-kernel/allternit-infrastructure/target
 
   clean:all:
     desc: Deep clean (including dependencies)
     cmds:
       - task: clean
-      - rm -rf 6-ui/a2r-platform/node_modules
-      - rm -rf 1-kernel/a2r-infrastructure/target
+      - rm -rf 6-ui/allternit-platform/node_modules
+      - rm -rf 1-kernel/allternit-infrastructure/target
 
   # ===========================================================================
   # Utility Tasks
@@ -404,13 +404,13 @@ tasks:
 
   format:rust:
     desc: Format Rust code
-    dir: 1-kernel/a2r-infrastructure
+    dir: 1-kernel/allternit-infrastructure
     cmds:
       - cargo fmt
 
   format:ui:
     desc: Format UI code
-    dir: 6-ui/a2r-platform
+    dir: 6-ui/allternit-platform
     cmds:
       - pnpm format
 
@@ -437,13 +437,13 @@ tasks:
 
   update:rust:
     desc: Update Rust dependencies
-    dir: 1-kernel/a2r-infrastructure
+    dir: 1-kernel/allternit-infrastructure
     cmds:
       - cargo update
 
   update:ui:
     desc: Update UI dependencies
-    dir: 6-ui/a2r-platform
+    dir: 6-ui/allternit-platform
     cmds:
       - pnpm update
 

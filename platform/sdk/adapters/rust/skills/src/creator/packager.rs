@@ -70,7 +70,7 @@ impl SkillPackager {
         let file = File::create(output_path).map_err(CreatorError::Io)?;
         let mut zip = zip::ZipWriter::new(file);
 
-        let options: FileOptions<()> = FileOptions::default()
+        let options = FileOptions::default()
             .compression_method(zip::CompressionMethod::Deflated)
             .compression_level(Some(self.compression_level));
 
@@ -204,7 +204,7 @@ impl SkillPackager {
     /// * `Err(CreatorError)` if listing failed
     pub fn list_contents(&self, skill_file: &Path) -> Result<Vec<String>, CreatorError> {
         let file = File::open(skill_file).map_err(CreatorError::Io)?;
-        let archive = zip::ZipArchive::new(file).map_err(|e| {
+        let mut archive = zip::ZipArchive::new(file).map_err(|e| {
             CreatorError::Validation(format!("Failed to open skill archive: {}", e))
         })?;
 
@@ -311,7 +311,7 @@ impl SkillPackager {
 
         // Try to open as ZIP
         let file = File::open(skill_file).map_err(CreatorError::Io)?;
-        let archive = zip::ZipArchive::new(file).map_err(|e| {
+        let mut archive = zip::ZipArchive::new(file).map_err(|e| {
             CreatorError::Validation(format!("Package is not a valid ZIP archive: {}", e))
         })?;
 

@@ -5,13 +5,13 @@
 //! ## Components
 //!
 //! - `parser`: SKILL.md YAML frontmatter parser
-//! - `registry`: Skill registry for managing OpenClaw and A2R skills
-//! - `bridge`: Adapter pattern bridge between OpenClaw and A2R skill registries
+//! - `registry`: Skill registry for managing OpenClaw and Allternit skills
+//! - `bridge`: Adapter pattern bridge between OpenClaw and Allternit skill registries
 //!
 //! ## Usage
 //!
 //! ```rust,ignore
-//! use a2r_openclaw_host::skills::{SkillRegistry, parse_skill_md, SkillRegistryBridge};
+//! use allternit_openclaw_host::skills::{SkillRegistry, parse_skill_md, SkillRegistryBridge};
 //! use std::path::Path;
 //!
 //! # fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -23,7 +23,7 @@
 //! let mut registry = SkillRegistry::new();
 //! registry.load_openclaw_skills(Path::new("3-adapters/vendor/openclaw/skills"))?;
 //!
-//! // Create bridge for interfacing with A2R
+//! // Create bridge for interfacing with Allternit
 //! let bridge = SkillRegistryBridge::with_vendor_dir(Path::new("3-adapters/vendor/openclaw"))?;
 //! # Ok(())
 //! # }

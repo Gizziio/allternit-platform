@@ -2,7 +2,7 @@ pub mod agents;
 pub mod fabric;
 pub mod tools;
 
-use a2rchitech_skills::SkillRegistry;
+use allternit_skills::SkillRegistry;
 use serde::Serialize;
 use std::sync::Arc;
 
@@ -17,7 +17,7 @@ pub enum RegistryError {
     #[error("Validation failed: {0}")]
     Validation(String),
     #[error("Skill registry error: {0}")]
-    Skill(#[from] a2rchitech_skills::SkillsError),
+    Skill(#[from] allternit_skills::SkillsError),
 }
 
 /// The Unified Registry aggregates Agents, Skills, and Tools through the Data Fabric.
@@ -162,7 +162,7 @@ impl UnifiedRegistry {
     /// Register a skill with the registry
     pub async fn register_skill(
         &self,
-        skill: a2rchitech_skills::Skill,
+        skill: allternit_skills::Skill,
     ) -> Result<String, RegistryError> {
         // Use the data fabric to register the skill
         self.fabric
@@ -174,7 +174,7 @@ impl UnifiedRegistry {
     /// Register a tool with the registry
     pub async fn register_tool(
         &self,
-        tool: a2rchitech_tools_gateway::ToolDefinition,
+        tool: allternit_tools_gateway::ToolDefinition,
     ) -> Result<String, RegistryError> {
         // Use the data fabric to register the tool
         self.fabric
@@ -199,7 +199,7 @@ impl UnifiedRegistry {
     pub async fn get_skill(
         &self,
         id: String,
-    ) -> Result<Option<a2rchitech_skills::Skill>, RegistryError> {
+    ) -> Result<Option<allternit_skills::Skill>, RegistryError> {
         // Use the data fabric to get the skill
         self.fabric
             .get_skill(id)
@@ -211,7 +211,7 @@ impl UnifiedRegistry {
     pub async fn get_tool(
         &self,
         id: &str,
-    ) -> Result<Option<a2rchitech_tools_gateway::ToolDefinition>, RegistryError> {
+    ) -> Result<Option<allternit_tools_gateway::ToolDefinition>, RegistryError> {
         // Use the data fabric to get the tool
         self.fabric
             .get_tool(id)
@@ -224,8 +224,8 @@ impl UnifiedRegistry {
 #[derive(Debug, Clone, Serialize)]
 pub struct TenantCapabilities {
     pub agents: Vec<agents::AgentDefinition>,
-    pub skills: Vec<a2rchitech_skills::Skill>,
-    pub tools: Vec<a2rchitech_tools_gateway::ToolDefinition>,
+    pub skills: Vec<allternit_skills::Skill>,
+    pub tools: Vec<allternit_tools_gateway::ToolDefinition>,
 }
 
 /// Summary of capabilities for a tenant
@@ -242,6 +242,6 @@ pub struct CapabilitySummary {
 #[derive(Debug, Clone, Serialize)]
 pub struct SearchResults {
     pub agents: Vec<agents::AgentDefinition>,
-    pub skills: Vec<a2rchitech_skills::Skill>,
-    pub tools: Vec<a2rchitech_tools_gateway::ToolDefinition>,
+    pub skills: Vec<allternit_skills::Skill>,
+    pub tools: Vec<allternit_tools_gateway::ToolDefinition>,
 }

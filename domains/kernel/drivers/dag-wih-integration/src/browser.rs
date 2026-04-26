@@ -3,7 +3,7 @@
 //! Integration of browser runtime with DAG execution
 
 use crate::{DagWihError, WorkItemHeader};
-use a2r_browser_runtime::{
+use allternit_browser_runtime::{
     BrowserAction, BrowserPolicyTier, BrowserRuntime, ReceiptQuery, ScrollDirection,
 };
 use serde::{Deserialize, Serialize};
@@ -128,7 +128,7 @@ impl BrowserRunExecutor {
 
         // Get receipts
         let receipts = self.runtime.get_session_receipts(&session_id);
-        let receipt_data: Vec<a2r_browser_runtime::receipts::ActionReceipt> = receipts.iter().map(|r| (*r).clone()).collect();
+        let receipt_data: Vec<allternit_browser_runtime::receipts::ActionReceipt> = receipts.iter().map(|r| (*r).clone()).collect();
 
         // Close session
         let summary = self.runtime.close_session(&session_id);
@@ -161,7 +161,7 @@ impl BrowserRunExecutor {
     }
 
     /// Query receipts for a task
-    pub fn query_receipts(&self, _task_id: &str, query: &ReceiptQuery) -> Vec<&a2r_browser_runtime::receipts::ActionReceipt> {
+    pub fn query_receipts(&self, _task_id: &str, query: &ReceiptQuery) -> Vec<&allternit_browser_runtime::receipts::ActionReceipt> {
         self.runtime.query_receipts(&query)
     }
 }
@@ -180,8 +180,8 @@ pub struct BrowserRunResult {
     pub actions_completed: usize,
     pub total_actions: usize,
     pub errors: Vec<String>,
-    pub receipts: Option<Vec<a2r_browser_runtime::receipts::ActionReceipt>>,
-    pub session_summary: Option<a2r_browser_runtime::SessionSummary>,
+    pub receipts: Option<Vec<allternit_browser_runtime::receipts::ActionReceipt>>,
+    pub session_summary: Option<allternit_browser_runtime::SessionSummary>,
 }
 
 /// DAG node type for browser automation
@@ -236,7 +236,7 @@ mod tests {
             tier: BrowserPolicyTier::Standard,
             actions: vec![
                 BrowserActionConfig::Navigate {
-                    url: "https://docs.a2r.systems".to_string(),
+                    url: "https://docs.allternit.systems".to_string(),
                 },
                 BrowserActionConfig::Screenshot,
             ],

@@ -1,4 +1,4 @@
-//! A2rchitech Registry Server
+//! Allternitchitech Registry Server
 //!
 //! Centralized service for publishing, searching, and indexing skills, tools, and agents.
 //! Provides marketplace-grade functionality with channel promotion flows and
@@ -18,7 +18,7 @@ use tokio::sync::RwLock;
 use tracing::{error, info};
 use uuid::Uuid;
 
-use a2rchitech_policy::{PolicyEffect, PolicyEngine, PolicyRequest, SafetyTier};
+use allternit_policy::{PolicyEffect, PolicyEngine, PolicyRequest, SafetyTier};
 use registry_server::{
     IndexRequest, InstallRequest, Registry, RegistryId, RegistryItem, RegistryType,
     RollbackRequest, SearchQuery,
@@ -111,7 +111,7 @@ async fn main() -> Result<()> {
     let host = std::env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
     let port = std::env::var("PORT").unwrap_or_else(|_| "8080".to_string());
     config.bind_addr = format!("{}:{}", host, port);
-    info!("Starting A2rchitech Registry Server");
+    info!("Starting Allternitchitech Registry Server");
 
     // Initialize registry
     let registry = Arc::new(RwLock::new(Registry::new(&config.db_url).await?));

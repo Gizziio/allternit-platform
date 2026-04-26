@@ -1,4 +1,4 @@
-# Claude Code tools + hooks (official baseline) — Delta for A2R (v2)
+# Claude Code tools + hooks (official baseline) — Delta for Allternit (v2)
 
 This updates the previously-locked list using **Claude Docs** pages for:
 - Claude Code **tools** table in Settings
@@ -9,7 +9,7 @@ This updates the previously-locked list using **Claude Docs** pages for:
 
 From Claude Code Settings → “Tools available to Claude”:
 
-| Tool | Permission required | Notes for A2R ToolRegistry |
+| Tool | Permission required | Notes for Allternit ToolRegistry |
 |---|---:|---|
 | Bash | Yes | treat as high-risk; always gate via PolicyEngine + path guard |
 | Edit | Yes | write-like; enforce allowed_paths + protected paths |
@@ -38,8 +38,8 @@ From Claude Code Hooks reference, supported events include:
 - PreCompact
 - SessionEnd
 
-### A2R mapping rule
-A2R should treat these as *kernel stages* around every agent action:
+### Allternit mapping rule
+Allternit should treat these as *kernel stages* around every agent action:
 - PreToolUse is the **hard choke point** (policy + schema + WIH scope + leases)
 - PostToolUse is evidence capture + postconditions
 - PreCompact triggers ContextPack sealing before any summarization
@@ -50,16 +50,16 @@ Claude Code headless mode shows:
 - `--allowedTools` for tool allowlist
 - `--permission-mode` (e.g. acceptEdits / bypassPermissions) for fast paths
 
-### A2R translation
+### Allternit translation
 - Replace “sandbox” with explicit `execution_mode`:
   - `PLAN_ONLY` (no tools)
   - `REQUIRE_APPROVAL` (ask / gating)
   - `ACCEPT_EDITS` (fast dev, but still through hooks/policy)
   - `BYPASS_PERMISSIONS` (YOLO; still runs hooks; intended only for isolated workspaces)
 
-## 4) What A2R should add beyond Claude baseline
+## 4) What Allternit should add beyond Claude baseline
 
-A2R extended tools (runner-native; do not assume Claude has them):
+Allternit extended tools (runner-native; do not assume Claude has them):
 - KillProcess / KillShell (orchestrator-only)
 - TaskOutput (read captured logs deterministically)
 - AskUserQuestion (typed UI question tool)

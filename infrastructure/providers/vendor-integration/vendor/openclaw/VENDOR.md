@@ -115,7 +115,7 @@ See `.migration/openclaw-absorption/` for:
 ## Contact
 
 For questions about vendor boundary:
-- Architecture review: @a2r-core-team
+- Architecture review: @allternit-core-team
 - Migration lead: [TBD]
 - Emergency: #incident-response
 

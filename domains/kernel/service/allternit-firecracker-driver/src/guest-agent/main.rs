@@ -1,4 +1,4 @@
-//! # A2R Guest Agent
+//! # Allternit Guest Agent
 //!
 //! Runs inside Firecracker MicroVMs to provide:
 //! - Command execution
@@ -89,10 +89,10 @@ fn main() {
     // Record start time for uptime calculation
     let _ = START_TIME.set(Instant::now());
     
-    eprintln!("A2R Guest Agent v{} starting...", AGENT_VERSION);
+    eprintln!("Allternit Guest Agent v{} starting...", AGENT_VERSION);
 
     // VSOCK socket path (provided by Firecracker)
-    let vsock_path = std::env::var("A2R_VSOCK_PATH")
+    let vsock_path = std::env::var("Allternit_VSOCK_PATH")
         .unwrap_or_else(|_| "/dev/vsock".to_string());
 
     // CID 3 is the host

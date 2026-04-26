@@ -2,7 +2,7 @@
 name = "multimodal-streaming-execution"
 version = "0.1.0"
 edition = "2021"
-authors = ["T2-A1 <audio-team@a2rchitech.ai>"]
+authors = ["T2-A1 <audio-team@allternit.ai>"]
 description = "WebRTC audio pipeline and streaming execution module"
 
 [dependencies]

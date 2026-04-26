@@ -1,4 +1,4 @@
-import { ToolExecutor } from '@a2r/engine';
+import { ToolExecutor } from '@allternit/engine';
 
 export class ToolAdapters {
   constructor(private executor: ToolExecutor) {}

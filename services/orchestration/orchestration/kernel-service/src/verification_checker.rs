@@ -1,4 +1,4 @@
-use a2rchitech_kernel_contracts::{
+use allternit_kernel_contracts::{
     VerificationIssue, VerificationResults, VerificationSeverity, VerifyArtifact,
 };
 use std::sync::Arc;

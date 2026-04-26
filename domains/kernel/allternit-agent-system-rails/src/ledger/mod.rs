@@ -1,3 +1,3 @@
 pub mod ledger;
 
-pub use ledger::Ledger;
+pub use ledger::{Ledger, LedgerOptions};

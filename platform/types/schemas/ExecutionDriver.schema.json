@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://a2rchitech.dev/schemas/ExecutionDriver.schema.json",
-  "title": "A2R Execution Driver Interface",
-  "description": "Core contract for all execution drivers in the A2R platform",
+  "$id": "https://allternit.dev/schemas/ExecutionDriver.schema.json",
+  "title": "Allternit Execution Driver Interface",
+  "description": "Core contract for all execution drivers in the Allternit platform",
   "version": "0.1.0",
   
   "definitions": {

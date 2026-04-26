@@ -1,0 +1,317 @@
+- generic [ref=e1]:
+  - link "Skip to main content" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - banner [ref=e5]:
+        - generic [ref=e7]:
+          - generic [ref=e9]:
+            - navigation "Utility-inst" [ref=e10]:
+              - heading "Utility-inst" [level=2] [ref=e11]
+              - list [ref=e12]:
+                - listitem [ref=e13] [cursor=pointer]:
+                  - button "Partners" [ref=e14]
+                - listitem [ref=e15]:
+                  - link "Support" [ref=e16] [cursor=pointer]:
+                    - /url: /support/canvas-support-faq
+                - listitem [ref=e17] [cursor=pointer]:
+                  - button "Login" [ref=e18]
+                - listitem [ref=e19]:
+                  - link "Explore Canvas" [ref=e20] [cursor=pointer]:
+                    - /url: /resources/videos/exploring-canvas
+            - button "EN - Select your location" [ref=e24] [cursor=pointer]: EN
+          - generic [ref=e26]:
+            - link "Home" [ref=e28] [cursor=pointer]:
+              - /url: /
+              - img "Home" [ref=e29]
+            - navigation "Main - inst" [ref=e30]:
+              - heading "Main - inst" [level=2] [ref=e31]
+              - generic [ref=e32]: Main Menu
+              - menubar "Main Menu" [ref=e33]:
+                - menuitem "Why Instructure" [ref=e34] [cursor=pointer]
+                - menuitem "Solutions" [ref=e35] [cursor=pointer]
+                - menuitem "Products" [ref=e36] [cursor=pointer]
+                - menuitem "Resources" [active] [ref=e37] [cursor=pointer]
+                - menubar "Resources" [ref=e260]:
+                  - generic [ref=e262]:
+                    - generic [ref=e264]:
+                      - paragraph [ref=e266]: The Resource Center
+                      - paragraph [ref=e268]: Find answers and education inspiration in our Resource Center.
+                      - menuitem "Learn more" [ref=e270] [cursor=pointer]
+                      - generic [ref=e271]:
+                        - menuitem "AI Resources" [ref=e273] [cursor=pointer]:
+                          - generic [ref=e275]: AI Resources
+                        - menuitem "Blogs" [ref=e277] [cursor=pointer]:
+                          - generic [ref=e279]: Blogs
+                        - menuitem "Case Studies" [ref=e281] [cursor=pointer]:
+                          - generic [ref=e283]: Case Studies
+                        - menuitem "Ebooks & Buyer’s Guides" [ref=e285] [cursor=pointer]:
+                          - generic [ref=e287]: Ebooks & Buyer’s Guides
+                        - menuitem "Infographics" [ref=e289] [cursor=pointer]:
+                          - generic [ref=e291]: Infographics
+                        - menuitem "Podcast" [ref=e293] [cursor=pointer]:
+                          - generic [ref=e295]: Podcast
+                        - menuitem "Product Overviews" [ref=e297] [cursor=pointer]:
+                          - generic [ref=e299]: Product Overviews
+                        - menuitem "Research" [ref=e301] [cursor=pointer]:
+                          - generic [ref=e303]: Research
+                        - menuitem "Videos" [ref=e305] [cursor=pointer]:
+                          - generic [ref=e307]: Videos
+                    - generic [ref=e309]:
+                      - paragraph [ref=e311]: Connect
+                      - paragraph [ref=e313]: Drop us a line, give us a call, or get in touch with one of our regional offices.
+                      - generic [ref=e314]:
+                        - menuitem "Newsroom" [ref=e316] [cursor=pointer]:
+                          - generic [ref=e318]: Newsroom
+                        - menuitem "Press Releases" [ref=e320] [cursor=pointer]:
+                          - generic [ref=e322]: Press Releases
+                        - menuitem "Canvas Network" [ref=e324] [cursor=pointer]:
+                          - generic [ref=e326]: Canvas Network
+                        - menuitem "Events" [ref=e328] [cursor=pointer]:
+                          - generic [ref=e330]: Events
+                        - menuitem "On-Demand Webinars" [ref=e332] [cursor=pointer]:
+                          - generic [ref=e334]: On-Demand Webinars
+                        - menuitem "InstructureCon 2026" [ref=e336] [cursor=pointer]:
+                          - generic [ref=e338]: InstructureCon 2026
+                - menuitem "About Us" [ref=e38] [cursor=pointer]
+            - button "Apply" [ref=e43] [cursor=pointer]
+            - link "Let's Connect" [ref=e51] [cursor=pointer]:
+              - /url: /request-demo
+      - main [ref=e52]:
+        - generic [ref=e54]:
+          - article [ref=e56]:
+            - generic [ref=e59]:
+              - img [ref=e61]
+              - heading "Account Login" [level=1] [ref=e62]:
+                - paragraph [ref=e63]: Account Login
+              - generic [ref=e64]:
+                - tablist [ref=e65]:
+                  - tab "Students and Educators" [ref=e66] [cursor=pointer]:
+                    - generic [ref=e67]: Students and Educators
+                  - tab "Free Canvas Account" [selected] [ref=e68] [cursor=pointer]:
+                    - generic [ref=e69]: Free Canvas Account
+                  - tab "Canvas Network" [ref=e70] [cursor=pointer]:
+                    - generic [ref=e71]: Canvas Network
+                - generic [ref=e72]:
+                  - tabpanel [ref=e73]:
+                    - generic [ref=e74]:
+                      - heading [level=2] [ref=e75]:
+                        - paragraph [ref=e76]: Students and Educators
+                      - paragraph [ref=e78]: If you're an educator or student at a school that uses Canvas, search for your school here and tap the link to access the login page.
+                      - generic [ref=e82]:
+                        - generic [ref=e83]: Search School/District
+                        - searchbox [ref=e84]
+                  - tabpanel "Free Canvas Account" [ref=e85]:
+                    - generic [ref=e86]:
+                      - heading "Free Canvas Account" [level=2] [ref=e87]:
+                        - paragraph [ref=e88]: Free Canvas Account
+                      - paragraph [ref=e90]: If you're a teacher, student, or parent using a free (non-school-associated) Canvas account, log in here. Make sure that your free account is for canvas.instructure.com or k12.instructure.com.
+                      - link "Canvas Login" [ref=e94] [cursor=pointer]:
+                        - /url: https://canvas.instructure.com/login/canvas
+                        - text: Canvas Login
+                        - generic [ref=e95]: (opens in a new tab)
+                      - link "K12 Login" [ref=e99] [cursor=pointer]:
+                        - /url: https://k12.instructure.com/login/canvas
+                        - text: K12 Login
+                        - generic [ref=e100]: (opens in a new tab)
+                  - tabpanel [ref=e101]:
+                    - generic [ref=e102]:
+                      - heading [level=2] [ref=e103]:
+                        - paragraph [ref=e104]: Canvas Network
+                      - paragraph [ref=e106]: Lifelong learning for educators go hand-in-hand with Canvas Network’s open and online courses, taught by experts and institutions worldwide.
+                      - generic [ref=e109]:
+                        - generic [ref=e110]:
+                          - generic [ref=e111]: Email Address
+                          - textbox [ref=e112]
+                        - generic [ref=e113]:
+                          - generic [ref=e114]: Password
+                          - textbox [ref=e115]
+                        - button [ref=e117] [cursor=pointer]: Login
+          - paragraph [ref=e126]:
+            - text: Don't have a Canvas account?
+            - link "Create a free basic Canvas account here." [ref=e127] [cursor=pointer]:
+              - /url: https://www.instructure.com/node/2281
+            - text: Need help logging in, creating an account, or using a join or pairing code?
+            - link "View these Canvas Support FAQs." [ref=e128] [cursor=pointer]:
+              - /url: https://www.instructure.com/node/5401
+    - contentinfo [ref=e129]:
+      - generic [ref=e131]:
+        - link "Home" [ref=e132] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e136]:
+          - paragraph [ref=e137]:
+            - strong [ref=e138]: North America
+            - text: 6330 S 3000 E, Suite 700
+            - text: Salt Lake City, UT 84121, USA
+          - paragraph [ref=e139]:
+            - strong [ref=e140]: Europe
+            - text: Rivington House, 82 Great Eastern Street
+            - text: London, England
+          - paragraph [ref=e141]:
+            - strong [ref=e142]: Asia Pacific
+            - text: Bridgetowne, C-5 Road
+            - text: Ugong Norte, Quezon City, Philippines
+        - navigation "Social" [ref=e143]:
+          - heading "Social" [level=2] [ref=e144]
+          - list [ref=e145]:
+            - listitem [ref=e146]:
+              - link "LinkedIn (opens in a new tab)" [ref=e147] [cursor=pointer]:
+                - /url: https://www.linkedin.com/company/instructure-inc-/mycompany/
+                - text: LinkedIn
+                - generic [ref=e148]: (opens in a new tab)
+            - listitem [ref=e149]:
+              - link "Twitter (opens in a new tab)" [ref=e150] [cursor=pointer]:
+                - /url: https://twitter.com/Instructure
+                - text: Twitter
+                - generic [ref=e151]: (opens in a new tab)
+            - listitem [ref=e152]:
+              - link "Facebook (opens in a new tab)" [ref=e153] [cursor=pointer]:
+                - /url: https://www.facebook.com/Instructure
+                - text: Facebook
+                - generic [ref=e154]: (opens in a new tab)
+            - listitem [ref=e155]:
+              - link "Instagram (opens in a new tab)" [ref=e156] [cursor=pointer]:
+                - /url: https://www.instagram.com/instructure/
+                - text: Instagram
+                - generic [ref=e157]: (opens in a new tab)
+            - listitem [ref=e158]:
+              - link "Youtube (opens in a new tab)" [ref=e159] [cursor=pointer]:
+                - /url: https://www.youtube.com/@CanvasLMS
+                - text: Youtube
+                - generic [ref=e160]: (opens in a new tab)
+        - paragraph [ref=e163]: ©2026 Instructure, Inc. All rights reserved.
+        - navigation "Footer Utility" [ref=e164]:
+          - heading "Footer Utility" [level=2] [ref=e165]
+          - list [ref=e166]:
+            - listitem [ref=e167]:
+              - link "Privacy" [ref=e168] [cursor=pointer]:
+                - /url: /privacy-security
+            - listitem [ref=e169]:
+              - link "California Privacy Notice" [ref=e170] [cursor=pointer]:
+                - /url: /policies/california-privacy-policy
+            - listitem [ref=e171]:
+              - generic [ref=e172] [cursor=pointer]: Cookies Settings
+            - listitem [ref=e173]:
+              - link "Do Not Sell or Share My Personal Information" [ref=e174] [cursor=pointer]:
+                - /url: /policies/california-opt-out
+            - listitem [ref=e175]:
+              - link "Modern Slavery Act" [ref=e176] [cursor=pointer]:
+                - /url: /policies/modern-slavery-act
+            - listitem [ref=e177]:
+              - link "Acceptable Use" [ref=e178] [cursor=pointer]:
+                - /url: /policies/acceptable-use
+            - listitem [ref=e179]:
+              - link "Data Processing" [ref=e180] [cursor=pointer]:
+                - /url: /policies/data-processing-addendum
+            - listitem [ref=e181]:
+              - link "Status (opens in a new tab)" [ref=e182] [cursor=pointer]:
+                - /url: https://status.instructure.com/
+                - text: Status
+                - generic [ref=e183]: (opens in a new tab)
+        - navigation "Footer - Inst" [ref=e184]:
+          - heading "Footer - Inst" [level=2] [ref=e185]
+          - list [ref=e186]:
+            - listitem [ref=e187]:
+              - text: Why Instructure
+              - list [ref=e188]:
+                - listitem [ref=e189]:
+                  - link "Why Instructure" [ref=e190] [cursor=pointer]:
+                    - /url: /why-instructure
+                - listitem [ref=e191]:
+                  - link "Instructure Ecosystem" [ref=e192] [cursor=pointer]:
+                    - /url: /why-instructure/ecosystem
+                - listitem [ref=e193]:
+                  - link "Our Partners" [ref=e194] [cursor=pointer]:
+                    - /url: /partners
+                - listitem [ref=e195]:
+                  - link "Our Community" [ref=e196] [cursor=pointer]:
+                    - /url: /community
+                - listitem [ref=e197]:
+                  - link "Our Customers" [ref=e198] [cursor=pointer]:
+                    - /url: /why-instructure/customers
+                - listitem [ref=e199]:
+                  - link "Security" [ref=e200] [cursor=pointer]:
+                    - /url: /trust-center
+                - listitem [ref=e201]:
+                  - link "Accessibility" [ref=e202] [cursor=pointer]:
+                    - /url: /accessibility
+                - listitem [ref=e203]:
+                  - link "Privacy" [ref=e204] [cursor=pointer]:
+                    - /url: /privacy-security
+            - listitem [ref=e205]:
+              - text: Customers
+              - list [ref=e206]:
+                - listitem [ref=e207]:
+                  - link "Advocacy" [ref=e208] [cursor=pointer]:
+                    - /url: /why-instructure/advocacy
+                - listitem [ref=e209]:
+                  - link "Case Studies" [ref=e210] [cursor=pointer]:
+                    - /url: /resources/case-studies
+                - listitem [ref=e211]:
+                  - link "Community" [ref=e212] [cursor=pointer]:
+                    - /url: /community
+            - listitem [ref=e213]:
+              - text: Products
+              - list [ref=e214]:
+                - listitem [ref=e215]:
+                  - link "Canvas" [ref=e216] [cursor=pointer]:
+                    - /url: /canvas
+                - listitem [ref=e217]:
+                  - link "Mastery" [ref=e218] [cursor=pointer]:
+                    - /url: /mastery
+                - listitem [ref=e219]:
+                  - link "Parchment" [ref=e220] [cursor=pointer]:
+                    - /url: /parchment
+                - listitem [ref=e221]:
+                  - link "All Products" [ref=e222] [cursor=pointer]:
+                    - /url: /products
+                - listitem [ref=e223]:
+                  - link "Services" [ref=e224] [cursor=pointer]:
+                    - /url: /services
+            - listitem [ref=e225]:
+              - text: Solutions
+              - list [ref=e226]:
+                - listitem [ref=e227]:
+                  - link "K-12" [ref=e228] [cursor=pointer]:
+                    - /url: /k12
+                - listitem [ref=e229]:
+                  - link "Higher Ed" [ref=e230] [cursor=pointer]:
+                    - /url: /higher-education
+                - listitem [ref=e231]:
+                  - link "Business and Government" [ref=e232] [cursor=pointer]:
+                    - /url: /business
+            - listitem [ref=e233]:
+              - text: About Us
+              - list [ref=e234]:
+                - listitem [ref=e235]:
+                  - link "Company Overview" [ref=e236] [cursor=pointer]:
+                    - /url: /about
+                - listitem [ref=e237]:
+                  - link "Leadership" [ref=e238] [cursor=pointer]:
+                    - /url: /about/leadership
+                - listitem [ref=e239]:
+                  - link "Careers" [ref=e240] [cursor=pointer]:
+                    - /url: /about/careers
+                - listitem [ref=e241]:
+                  - link "AI Principles" [ref=e242] [cursor=pointer]:
+                    - /url: /about/ai-guiding-principles
+            - listitem [ref=e243]:
+              - link "Contact Us" [ref=e244] [cursor=pointer]:
+                - /url: /contact-us
+  - generic:
+    - region "Cookie Settings" [ref=e246]:
+      - dialog "Cookie Settings" [ref=e247]:
+        - generic [ref=e248]:
+          - generic [ref=e249]:
+            - generic:
+              - heading "Cookie Settings" [level=2] [ref=e250]
+              - generic [ref=e251]:
+                - text: We and third parties use cookies and other technologies to operate our site, enhance and personalize your browsing experience, perform analytics, and improve marketing. For more information, visit our
+                - link "Privacy Policy (opens in a new tab), opens in a new tab" [ref=e252] [cursor=pointer]:
+                  - /url: https://www.instructure.com/policies/marketing-privacy
+                  - text: Privacy Policy ↗
+          - generic [ref=e254]:
+            - button "Accept" [ref=e256] [cursor=pointer]
+            - button "Cookies Settings, Opens the preference center dialog" [ref=e257] [cursor=pointer]: Cookies Settings
+          - button "Close" [ref=e259] [cursor=pointer]
+    - text: ↗

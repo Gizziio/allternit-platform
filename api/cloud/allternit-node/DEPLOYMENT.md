@@ -1,6 +1,6 @@
-# A2R Node Deployment Guide
+# Allternit Node Deployment Guide
 
-This guide covers deploying the A2R Node Agent in various environments and configurations.
+This guide covers deploying the Allternit Node Agent in various environments and configurations.
 
 ## Table of Contents
 
@@ -43,7 +43,7 @@ This guide covers deploying the A2R Node Agent in various environments and confi
 ```bash
 # Create server via Hetzner CLI
 hcloud server create \
-  --name a2r-node-1 \
+  --name allternit-node-1 \
   --type cx21 \
   --image ubuntu-22.04 \
   --location fsn1 \
@@ -65,7 +65,7 @@ runcmd:
 
 ```bash
 # Create droplet via doctl
-doctl compute droplet create a2r-node-1 \
+doctl compute droplet create allternit-node-1 \
   --size s-2vcpu-2gb \
   --image ubuntu-22-04-x64 \
   --region nyc3 \
@@ -90,7 +90,7 @@ aws ec2 run-instances \
 
 ```bash
 # Create instance via gcloud
-gcloud compute instances create a2r-node-1 \
+gcloud compute instances create allternit-node-1 \
   --machine-type=e2-medium \
   --zone=us-central1-a \
   --image-family=ubuntu-2204-lts \
@@ -107,11 +107,11 @@ gcloud compute instances create a2r-node-1 \
 curl -fsSL https://get.docker.com | sh
 usermod -aG docker $USER
 
-# Install A2R Node
+# Install Allternit Node
 curl -s https://allternit.com/install.sh | ALLTERNIT_TOKEN=your_token bash
 
 # Verify installation
-sudo systemctl status a2r-node
+sudo systemctl status allternit-node
 docker ps
 ```
 
@@ -121,11 +121,11 @@ docker ps
 # Install Docker Desktop
 # Download from: https://docs.docker.com/desktop/install/mac-install/
 
-# Install A2R Node
+# Install Allternit Node
 sudo curl -s https://allternit.com/install.sh | ALLTERNIT_TOKEN=your_token bash
 
 # Verify installation
-launchctl list | grep a2r
+launchctl list | grep allternit
 docker ps
 ```
 
@@ -135,11 +135,11 @@ docker ps
 # Install Docker Desktop
 # Download from: https://docs.docker.com/desktop/install/windows-install/
 
-# Install A2R Node (Run as Administrator)
+# Install Allternit Node (Run as Administrator)
 .\install-windows.ps1 -Token "your_token"
 
 # Verify installation
-Get-Service a2r-node
+Get-Service allternit-node
 docker ps
 ```
 
@@ -164,37 +164,37 @@ done
 
 ```bash
 # 1. Download binary on connected machine
-curl -L https://github.com/a2r/node/releases/latest/download/a2r-node-linux-x86_64 \
-  -o a2r-node
+curl -L https://github.com/allternit/node/releases/latest/download/allternit-node-linux-x86_64 \
+  -o allternit-node
 
 # 2. Transfer to air-gapped machine
-scp a2r-node user@airgapped-host:/tmp/
+scp allternit-node user@airgapped-host:/tmp/
 
 # 3. Install manually
-sudo mkdir -p /opt/a2r/bin
-sudo mv /tmp/a2r-node /opt/a2r/bin/
-sudo chmod +x /opt/a2r/bin/a2r-node
+sudo mkdir -p /opt/allternit/bin
+sudo mv /tmp/allternit-node /opt/allternit/bin/
+sudo chmod +x /opt/allternit/bin/allternit-node
 
 # 4. Create config
-sudo mkdir -p /etc/a2r
-sudo cat > /etc/a2r/node.env << EOF
+sudo mkdir -p /etc/allternit
+sudo cat > /etc/allternit/node.env << EOF
 ALLTERNIT_NODE_ID=airgap-node-1
 ALLTERNIT_TOKEN=your_token
 ALLTERNIT_CONTROL_PLANE=wss://internal-control-plane.local
 EOF
 
 # 5. Install service
-sudo cp /opt/a2r/bin/a2r-node.service /etc/systemd/system/
+sudo cp /opt/allternit/bin/allternit-node.service /etc/systemd/system/
 sudo systemctl daemon-reload
-sudo systemctl enable a2r-node
-sudo systemctl start a2r-node
+sudo systemctl enable allternit-node
+sudo systemctl start allternit-node
 ```
 
 ### Proxy Configuration
 
 ```bash
 # Create config with proxy
-cat > /etc/a2r/node.env << EOF
+cat > /etc/allternit/node.env << EOF
 ALLTERNIT_NODE_ID=proxy-node-1
 ALLTERNIT_TOKEN=your_token
 ALLTERNIT_CONTROL_PLANE=wss://control.allternit.com
@@ -214,7 +214,7 @@ EOF
 
 sudo systemctl daemon-reload
 sudo systemctl restart docker
-sudo systemctl restart a2r-node
+sudo systemctl restart allternit-node
 ```
 
 ## Security Hardening
@@ -225,7 +225,7 @@ sudo systemctl restart a2r-node
 # UFW (Ubuntu)
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
-sudo ufw allow out 443/tcp comment "A2R Control Plane"
+sudo ufw allow out 443/tcp comment "Allternit Control Plane"
 sudo ufw allow out 53/udp comment "DNS"
 sudo ufw enable
 
@@ -238,9 +238,9 @@ sudo firewall-cmd --reload
 ### SELinux Policy
 
 ```bash
-# Create SELinux policy for a2r-node
-sudo cat > /etc/selinux/targeted/src/policy/services/a2r-node.te << EOF
-policy_module(a2r-node, 1.0)
+# Create SELinux policy for allternit-node
+sudo cat > /etc/selinux/targeted/src/policy/services/allternit-node.te << EOF
+policy_module(allternit-node, 1.0)
 
 type allternit_node_t;
 type allternit_node_exec_t;
@@ -259,10 +259,10 @@ make load
 
 ```bash
 # Enable audit logging
-sudo cat > /etc/audit/rules.d/a2r-node.rules << EOF
--w /etc/a2r/ -p wa -k allternit_config
--w /opt/a2r/ -p wa -k allternit_binary
--w /var/log/a2r/ -p wa -k allternit_logs
+sudo cat > /etc/audit/rules.d/allternit-node.rules << EOF
+-w /etc/allternit/ -p wa -k allternit_config
+-w /opt/allternit/ -p wa -k allternit_binary
+-w /var/log/allternit/ -p wa -k allternit_logs
 EOF
 
 sudo augenrules --load
@@ -291,12 +291,12 @@ allternit_node_total_jobs{node_id="node-xxx"}  # Total jobs executed
 
 ### Grafana Dashboard
 
-Import the A2R dashboard (ID: XXXX) or create custom:
+Import the Allternit dashboard (ID: XXXX) or create custom:
 
 ```json
 {
   "dashboard": {
-    "title": "A2R Node Status",
+    "title": "Allternit Node Status",
     "panels": [
       {
         "title": "Node Status",
@@ -333,18 +333,18 @@ Import the A2R dashboard (ID: XXXX) or create custom:
 # /etc/fluentd/fluent.conf
 <source>
   @type systemd
-  filters [{ "_SYSTEMD_UNIT": "a2r-node.service" }]
+  filters [{ "_SYSTEMD_UNIT": "allternit-node.service" }]
   <parse>
     @type systemd
   </parse>
-  tag a2r.node
+  tag allternit.node
 </source>
 
-<match a2r.node>
+<match allternit.node>
   @type elasticsearch
   host elasticsearch.company.com
   port 9200
-  index_name a2r-logs
+  index_name allternit-logs
 </match>
 ```
 
@@ -353,10 +353,10 @@ Import the A2R dashboard (ID: XXXX) or create custom:
 ```yaml
 # promtail config
 scrape_configs:
-  - job_name: a2r-node
+  - job_name: allternit-node
     systemd:
       units:
-        - a2r-node.service
+        - allternit-node.service
     relabel_configs:
       - source_labels: ['__journal__systemd_unit']
         target_label: 'unit'
@@ -368,13 +368,13 @@ scrape_configs:
 
 ```bash
 # Check service status
-sudo systemctl status a2r-node
+sudo systemctl status allternit-node
 
 # View recent logs
-sudo journalctl -u a2r-node -n 100 --no-pager
+sudo journalctl -u allternit-node -n 100 --no-pager
 
 # Follow logs in real-time
-sudo journalctl -u a2r-node -f
+sudo journalctl -u allternit-node -f
 
 # Check Docker connectivity
 docker ps
@@ -385,8 +385,8 @@ curl -I https://control.allternit.com
 curl -I wss://control.allternit.com
 
 # Check resource usage
-top -p $(pgrep a2r-node)
-cat /proc/$(pgrep a2r-node)/status
+top -p $(pgrep allternit-node)
+cat /proc/$(pgrep allternit-node)/status
 ```
 
 ### Common Issues
@@ -395,17 +395,17 @@ cat /proc/$(pgrep a2r-node)/status
 
 ```bash
 # Check config file
-sudo cat /etc/a2r/node.env
+sudo cat /etc/allternit/node.env
 
 # Validate config syntax
-source /etc/a2r/node.env && echo "Config valid"
+source /etc/allternit/node.env && echo "Config valid"
 
 # Check binary
-sudo /opt/a2r/bin/a2r-node --version
+sudo /opt/allternit/bin/allternit-node --version
 
 # Check permissions
-ls -la /etc/a2r/node.env
-ls -la /opt/a2r/bin/a2r-node
+ls -la /etc/allternit/node.env
+ls -la /opt/allternit/bin/allternit-node
 ```
 
 #### Docker Issues
@@ -444,11 +444,11 @@ dig control.allternit.com
 
 ```bash
 # Increase file descriptor limit
-echo "a2r-node soft nofile 65536" >> /etc/security/limits.conf
-echo "a2r-node hard nofile 65536" >> /etc/security/limits.conf
+echo "allternit-node soft nofile 65536" >> /etc/security/limits.conf
+echo "allternit-node hard nofile 65536" >> /etc/security/limits.conf
 
 # Adjust systemd limits
-sudo systemctl edit a2r-node
+sudo systemctl edit allternit-node
 # Add:
 # [Service]
 # LimitNOFILE=131072
@@ -456,7 +456,7 @@ sudo systemctl edit a2r-node
 
 # Reload and restart
 sudo systemctl daemon-reload
-sudo systemctl restart a2r-node
+sudo systemctl restart allternit-node
 ```
 
 ## Support
@@ -464,6 +464,6 @@ sudo systemctl restart a2r-node
 For additional help:
 
 - **Documentation**: https://docs.allternit.com
-- **Discord**: https://discord.gg/a2r
-- **GitHub Issues**: https://github.com/a2r/node/issues
+- **Discord**: https://discord.gg/allternit
+- **GitHub Issues**: https://github.com/allternit/node/issues
 - **Email**: support@allternit.com

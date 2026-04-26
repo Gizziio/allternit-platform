@@ -407,14 +407,14 @@ function loadNativeBinding(): VirtualizationNativeBinding {
     return nativeBinding;
   } catch (error) {
     // In development/testing without native module, use mock implementation
-    if (process.env.A2R_MOCK_VIRTUALIZATION === '1') {
+    if (process.env.Allternit_MOCK_VIRTUALIZATION === '1') {
       nativeBinding = createMockBinding();
       return nativeBinding;
     }
     
     throw new PlatformError(
       'Failed to load Virtualization.framework native binding. ' +
-      'Ensure the native module is compiled or set A2R_MOCK_VIRTUALIZATION=1 for testing.',
+      'Ensure the native module is compiled or set Allternit_MOCK_VIRTUALIZATION=1 for testing.',
       error as Error
     );
   }
@@ -681,9 +681,9 @@ function isAppleSilicon(): boolean {
  * const vm = await driver.createVM({
  *   id: "vm-001",
  *   name: "Ubuntu 22.04",
- *   kernelPath: "~/.a2r/images/vmlinux-6.5.0-a2r-arm64",
- *   initrdPath: "~/.a2r/images/initrd.img-6.5.0-a2r-arm64",
- *   rootfsPath: "~/.a2r/images/ubuntu-22.04.ext4",
+ *   kernelPath: "~/.allternit/images/vmlinux-6.5.0-allternit-arm64",
+ *   initrdPath: "~/.allternit/images/initrd.img-6.5.0-allternit-arm64",
+ *   rootfsPath: "~/.allternit/images/ubuntu-22.04.ext4",
  *   cpuCount: 4,
  *   memorySize: 8 * 1024 * 1024 * 1024,
  * });

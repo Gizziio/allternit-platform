@@ -1,4 +1,4 @@
-# A2R Agent System Rails — Spec Overview (Locked Invariants)
+# Allternit Agent System Rails — Spec Overview (Locked Invariants)
 
 ## Layers (Unified System)
 

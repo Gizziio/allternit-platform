@@ -1,0 +1,30 @@
+{
+  "name": "@allternit/udemy-downloader",
+  "version": "1.0.0",
+  "description": "Udemy course downloader and storage manager for A://Labs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "lint": "eslint src/**/*.ts"
+  },
+  "dependencies": {
+    "axios": "^1.7.9"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  },
+  "peerDependencies": {},
+  "keywords": [
+    "udemy",
+    "course-downloader",
+    "allternit",
+    "labs"
+  ],
+  "author": "Allternit",
+  "license": "MIT"
+}

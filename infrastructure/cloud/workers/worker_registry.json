@@ -18,7 +18,7 @@
       },
       "fs_policy": {
         "must_be_run_scoped": true,
-        "allowed_output_roots": ["/.a2r/tmp"]
+        "allowed_output_roots": ["/.allternit/tmp"]
       }
     }
   ]

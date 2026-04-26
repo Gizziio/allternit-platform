@@ -1,7 +1,7 @@
 {
   "name": "@allternit/browser-runtime",
   "version": "1.0.0",
-  "description": "Browser runtime service for A2rchitech - Playwright-based automation for agent computer-use",
+  "description": "Browser runtime service for Allternitchitech - Playwright-based automation for agent computer-use",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -23,7 +23,13 @@
     "tsx": "^4.7.0",
     "typescript": "^5.3.0"
   },
-  "keywords": ["browser", "playwright", "automation", "allternit", "agent"],
-  "author": "A2rchitech",
+  "keywords": [
+    "browser",
+    "playwright",
+    "automation",
+    "allternit",
+    "agent"
+  ],
+  "author": "Allternitchitech",
   "license": "MIT"
 }

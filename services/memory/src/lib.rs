@@ -4,7 +4,7 @@ use tracing::{info, error, debug};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 use async_trait::async_trait;
-use a2rchitech_memory_provider::{
+use allternit_memory_provider::{
     MemoryProvider, MemoryError, MemoryCapabilities, QueryCapabilities,
     PerformanceCharacteristics, BackendType, MemoryQuery, MemoryEntry
 };

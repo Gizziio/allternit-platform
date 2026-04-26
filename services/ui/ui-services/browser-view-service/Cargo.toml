@@ -1,8 +1,8 @@
 [package]
-name = "a2r-browser-view-service"
+name = "allternit-browser-view-service"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Browser View Service - Resource browsing and viewing for ShellUI"
+description = "Allternit Browser View Service - Resource browsing and viewing for ShellUI"
 
 [dependencies]
 serde = { workspace = true }
@@ -16,8 +16,8 @@ anyhow = { workspace = true }
 tracing = { workspace = true }
 chrono = { workspace = true }
 async-trait = "0.1"
-a2r-dag-wih-integration = { path = "../../../1-kernel/infrastructure/dag-wih-integration" }
-a2r-ontology-runtime = { path = "../../../1-kernel/infrastructure/ontology-runtime" }
+allternit-dag-wih-integration = { path = "../../../1-kernel/infrastructure/dag-wih-integration" }
+allternit-ontology-runtime = { path = "../../../1-kernel/infrastructure/ontology-runtime" }
 
 [dev-dependencies]
 tokio-test = "0.4"

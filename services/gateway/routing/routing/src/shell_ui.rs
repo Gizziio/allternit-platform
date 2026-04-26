@@ -1,8 +1,8 @@
 #![allow(dead_code, unused_variables, unused_imports)]
-//! A2R Shell UI Routes
+//! Allternit Shell UI Routes
 //!
 //! Root-level routes that match the OpenCode SDK interface,
-//! allowing the A2R Shell TUI to connect directly to A2R backend.
+//! allowing the Allternit Shell TUI to connect directly to Allternit backend.
 
 use axum::{
     extract::{Path, Query, State},
@@ -22,7 +22,7 @@ use tokio::time::{interval, Duration};
 use uuid::Uuid;
 
 use crate::AppState;
-use a2r_openclaw_host::native_session_manager::{SessionId, SessionMessage};
+use allternit_openclaw_host::native_session_manager::{SessionId, SessionMessage};
 
 /// Kernel session binding - maps shell session to kernel session
 #[derive(Clone, Debug)]
@@ -58,7 +58,7 @@ pub fn create_shell_ui_routes() -> Router<Arc<crate::AppState>> {
         .route("/session/:session_id/messages", get(get_messages))
         .route("/session/:session_id/todo", get(get_todos))
         .route("/session/:session_id/diff", get(get_diff))
-        .route("/session/:session_id/a2r-native/state", get(get_a2r_native_state))
+        .route("/session/:session_id/allternit-native/state", get(get_allternit_native_state))
         .route("/event/subscribe", get(subscribe_events))
         .route("/global/config", get(get_global_config))
         .route("/global/health", get(global_health))
@@ -210,7 +210,7 @@ async fn get_current_project(_state: State<Arc<AppState>>) -> Json<serde_json::V
         "id": "default",
         "worktree": "/workspace",
         "vcs": "git",
-        "name": "A2R Workspace",
+        "name": "Allternit Workspace",
         "time": {
             "created": 1700000000,
             "updated": 1700000000
@@ -272,8 +272,8 @@ async fn get_vcs_info(_state: State<Arc<AppState>>) -> Json<serde_json::Value> {
 async fn get_path_info(_state: State<Arc<AppState>>) -> Json<serde_json::Value> {
     Json(serde_json::json!({
         "home": "/root",
-        "state": "/workspace/.a2r/state",
-        "config": "/workspace/.a2r/config.json",
+        "state": "/workspace/.allternit/state",
+        "config": "/workspace/.allternit/config.json",
         "worktree": "/workspace",
         "directory": "/workspace"
     }))
@@ -443,11 +443,11 @@ async fn send_message(
 
     // Trigger kernel execution - get or create kernel session
     let kernel_url = state.kernel_url.clone();
-    let kernel_auth_token = std::env::var("A2R_KERNEL_AUTH_TOKEN")
-        .or_else(|_| std::env::var("A2R_KERNEL_TOKEN"))
-        .or_else(|_| std::env::var("A2R_GATEWAY_TOKEN"))
+    let kernel_auth_token = std::env::var("Allternit_KERNEL_AUTH_TOKEN")
+        .or_else(|_| std::env::var("Allternit_KERNEL_TOKEN"))
+        .or_else(|_| std::env::var("Allternit_GATEWAY_TOKEN"))
         .or_else(|_| std::env::var("OPENCLAW_GATEWAY_TOKEN"))
-        .unwrap_or_else(|_| "api-a2r-local-dev".to_string());
+        .unwrap_or_else(|_| "api-allternit-local-dev".to_string());
 
     let model_id = "claude-3-5-sonnet"; // Default model for shell
 
@@ -666,7 +666,7 @@ async fn get_diff(
     Json(vec![])
 }
 
-async fn get_a2r_native_state(
+async fn get_allternit_native_state(
     Path(session_id): Path<String>,
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
@@ -687,13 +687,13 @@ async fn get_a2r_native_state(
     };
 
     let kernel_url = state.kernel_url.clone();
-    let kernel_auth_token = std::env::var("A2R_KERNEL_AUTH_TOKEN")
-        .or_else(|_| std::env::var("A2R_KERNEL_TOKEN"))
-        .or_else(|_| std::env::var("A2R_GATEWAY_TOKEN"))
+    let kernel_auth_token = std::env::var("Allternit_KERNEL_AUTH_TOKEN")
+        .or_else(|_| std::env::var("Allternit_KERNEL_TOKEN"))
+        .or_else(|_| std::env::var("Allternit_GATEWAY_TOKEN"))
         .or_else(|_| std::env::var("OPENCLAW_GATEWAY_TOKEN"))
-        .unwrap_or_else(|_| "api-a2r-local-dev".to_string());
+        .unwrap_or_else(|_| "api-allternit-local-dev".to_string());
 
-    let url = format!("{}/v1/sessions/{}/a2r-native/state", kernel_url, kid);
+    let url = format!("{}/v1/sessions/{}/allternit-native/state", kernel_url, kid);
 
     match state
         .kernel_client
@@ -709,11 +709,11 @@ async fn get_a2r_native_state(
             }
         }
         Ok(response) => {
-            tracing::warn!("Kernel A2R Native state fetch failed: {}", response.status());
+            tracing::warn!("Kernel Allternit Native state fetch failed: {}", response.status());
             Err(StatusCode::from_u16(response.status().as_u16()).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR))
         }
         Err(e) => {
-            tracing::error!("Failed to fetch A2R Native state from kernel: {}", e);
+            tracing::error!("Failed to fetch Allternit Native state from kernel: {}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
@@ -729,11 +729,11 @@ async fn subscribe_events(
     Query(query): Query<SubscribeQuery>,
 ) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     // Get kernel auth token
-    let kernel_auth_token = std::env::var("A2R_KERNEL_AUTH_TOKEN")
-        .or_else(|_| std::env::var("A2R_KERNEL_TOKEN"))
-        .or_else(|_| std::env::var("A2R_GATEWAY_TOKEN"))
+    let kernel_auth_token = std::env::var("Allternit_KERNEL_AUTH_TOKEN")
+        .or_else(|_| std::env::var("Allternit_KERNEL_TOKEN"))
+        .or_else(|_| std::env::var("Allternit_GATEWAY_TOKEN"))
         .or_else(|_| std::env::var("OPENCLAW_GATEWAY_TOKEN"))
-        .unwrap_or_else(|_| "api-a2r-local-dev".to_string());
+        .unwrap_or_else(|_| "api-allternit-local-dev".to_string());
 
     // Create channel for streaming - both paths need to return same type
     let (tx, rx) = tokio::sync::mpsc::channel::<Result<Event, Infallible>>(32);

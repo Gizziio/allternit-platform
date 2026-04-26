@@ -1,4 +1,4 @@
-//! A2R Ontology Runtime Binding
+//! Allternit Ontology Runtime Binding
 //!
 //! Implements a typed object graph for domain-constrained reasoning.
 //!
@@ -20,7 +20,7 @@
 //! Agent reasoning is constrained by the ontology. Agents cannot make
 //! assumptions or perform operations that violate the ontology.
 
-use a2rchitech_system_law::SystemLawEngine;
+use allternit_system_law::SystemLawEngine;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

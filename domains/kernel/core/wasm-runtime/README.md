@@ -1,6 +1,6 @@
-# A2rchitech WASM Runtime
+# Allternit WASM Runtime
 
-Secure WASM runtime for executing A2rchitech tools with capability-based security and comprehensive IO/network enforcement.
+Secure WASM runtime for executing Allternit tools with capability-based security and comprehensive IO/network enforcement.
 
 ## Features
 
@@ -11,7 +11,7 @@ Secure WASM runtime for executing A2rchitech tools with capability-based securit
 - **Sandboxing**: Isolated execution environment
 - **Component Model**: Support for WASM component model
 - **Policy Logging**: Comprehensive audit trail for capability checks
-- **API Integration**: Direct connection to A2rchitech control plane services
+- **API Integration**: Direct connection to Allternit control plane services
 
 ## Security Model
 
@@ -83,7 +83,7 @@ let instance = runtime.instantiate_tool(component, grant, context).await?;
 
 ## API Integration
 
-The runtime connects to the A2rchitech control plane for:
+The runtime connects to the Allternit control plane for:
 - Policy evaluation and enforcement
 - Capability grant validation
 - Audit logging

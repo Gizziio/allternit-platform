@@ -209,7 +209,7 @@ export class DigitalOceanProvider extends BaseProvider {
       region: options.region,
       size: options.instanceType,
       image: options.image,
-      tags: ['a2r', ...(options.tags ? Object.entries(options.tags).map(([k, v]) => `${k}:${v}`) : [])],
+      tags: ['allternit', ...(options.tags ? Object.entries(options.tags).map(([k, v]) => `${k}:${v}`) : [])],
       monitoring: true,
     };
 

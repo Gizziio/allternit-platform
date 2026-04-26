@@ -1,7 +1,7 @@
 /**
- * A2R Data Visualization
+ * Allternit Data Visualization
  * 
- * Charts, graphs, and dashboards for A2R platform.
+ * Charts, graphs, and dashboards for Allternit platform.
  * 
  * @example
  * ```typescript

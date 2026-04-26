@@ -1,4 +1,4 @@
-//! Configuration management for A2R Node
+//! Configuration management for Allternit Node
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};

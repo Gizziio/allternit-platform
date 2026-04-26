@@ -47,7 +47,7 @@ Security architecture and threat model for the Firecracker driver.
 ### Layer 2: cgroups Resource Limits
 
 ```
-/sys/fs/cgroup/a2r/
+/sys/fs/cgroup/allternit/
 ├── global/              # All VMs combined
 └── vms/
     └── {vm_id}/        # Per-VM limits
@@ -88,7 +88,7 @@ FirecrackerConfig {
     
     // Secure paths
     chroot_base_dir: PathBuf::from("/srv/jailer"),
-    vm_root_dir: PathBuf::from("/var/lib/a2r/vms"),
+    vm_root_dir: PathBuf::from("/var/lib/allternit/vms"),
 }
 ```
 
@@ -111,9 +111,9 @@ PolicySpec {
 
 ### Log Locations
 
-- **Driver logs**: `journalctl -u a2r-firecracker-driver`
+- **Driver logs**: `journalctl -u allternit-firecracker-driver`
 - **Audit logs**: `/var/log/audit/audit.log` (if auditd enabled)
-- **Resource usage**: `/sys/fs/cgroup/a2r/vms/{id}/`)
+- **Resource usage**: `/sys/fs/cgroup/allternit/vms/{id}/`)
 
 ### Security Events
 
@@ -128,7 +128,7 @@ Events logged at ERROR level:
 - [ ] Firecracker/jailer binaries owned by root, mode 755
 - [ ] Kernel image owned by root, mode 644
 - [ ] Chroot base directory owned by root, mode 755
-- [ ] VM root directory owned by a2r user
+- [ ] VM root directory owned by allternit user
 - [ ] Socket directories mode 0700
 - [ ] cgroups v2 mounted with all controllers
 - [ ] iptables rules persisted across reboots

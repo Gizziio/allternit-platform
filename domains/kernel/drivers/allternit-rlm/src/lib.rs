@@ -1,4 +1,4 @@
-//! # A2rchitech Recursive Language Model (RLM) Framework
+//! # Allternit Recursive Language Model (RLM) Framework
 //!
 //! Implements the RLM paradigm for long-horizon reasoning tasks following research from
 //! https://www.primeintellect.ai/blog/rlm and https://arxiv.org/abs/2512.24601.
@@ -17,14 +17,14 @@
 //! - Using code to slice, filter, and call sub-LLMs on chunks
 //! - Aggregating results programmatically
 
-use a2rchitech_context_router::ContextRouter;
-use a2rchitech_history::HistoryLedger;
-use a2rchitech_memory::MemoryFabric;
-use a2rchitech_messaging::MessagingSystem;
-use a2rchitech_policy::PolicyEngine;
-use a2rchitech_registry::UnifiedRegistry;
-use a2rchitech_skills::SkillRegistry;
-use a2rchitech_tools_gateway::{
+use allternit_context_router::ContextRouter;
+use allternit_history::HistoryLedger;
+use allternit_memory::MemoryFabric;
+use allternit_messaging::MessagingSystem;
+use allternit_policy::PolicyEngine;
+use allternit_registry::UnifiedRegistry;
+use allternit_skills::SkillRegistry;
+use allternit_tools_gateway::{
     run_scoped_write_scope, FilesystemAccess, NetworkAccess, ResourceLimits, ToolDefinition,
     ToolExecutionRequest, ToolExecutionResult, ToolGateway, ToolType,
 };
@@ -59,19 +59,19 @@ pub enum RLMError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
     #[error("Policy error: {0}")]
-    Policy(#[from] a2rchitech_policy::PolicyError),
+    Policy(#[from] allternit_policy::PolicyError),
     #[error("Memory error: {0}")]
-    Memory(#[from] a2rchitech_memory::MemoryError),
+    Memory(#[from] allternit_memory::MemoryError),
     #[error("History error: {0}")]
-    History(#[from] a2rchitech_history::HistoryError),
+    History(#[from] allternit_history::HistoryError),
     #[error("Messaging error: {0}")]
-    Messaging(#[from] a2rchitech_messaging::MessagingError),
+    Messaging(#[from] allternit_messaging::MessagingError),
     #[error("Registry error: {0}")]
-    Registry(#[from] a2rchitech_registry::RegistryError),
+    Registry(#[from] allternit_registry::RegistryError),
     #[error("Skills error: {0}")]
-    Skills(#[from] a2rchitech_skills::SkillsError),
+    Skills(#[from] allternit_skills::SkillsError),
     #[error("Tools gateway error: {0}")]
-    Tools(#[from] a2rchitech_tools_gateway::ToolGatewayError),
+    Tools(#[from] allternit_tools_gateway::ToolGatewayError),
     #[error("Not found: {0}")]
     NotFound(String),
     #[error("Validation failed: {0}")]
@@ -146,7 +146,7 @@ impl Default for RLMmemorySettings {
     }
 }
 
-use a2rchitech_providers::{
+use allternit_providers::{
     Capability, Modality, Persona, ProviderBudget, ProviderRequest, ProviderRouter,
 };
 
@@ -210,7 +210,7 @@ impl RLMOrchestrator {
             idempotency_behavior: "non-idempotent".to_string(),
             retryable: false,
             failure_classification: "execution".to_string(),
-            safety_tier: a2rchitech_policy::SafetyTier::T1,
+            safety_tier: allternit_policy::SafetyTier::T1,
             resource_limits: ResourceLimits {
                 cpu: Some("1".to_string()),
                 memory: Some("512MB".to_string()),
@@ -395,26 +395,26 @@ answer = "\n".join(summaries)
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_secs();
-        let context_bundle = a2rchitech_context_router::ContextBundle {
+        let context_bundle = allternit_context_router::ContextBundle {
             bundle_id: Uuid::new_v4().to_string(),
             tenant_id: task.tenant_id.clone(),
             session_id: Some(task.session_id.clone()),
             created_at: now,
             expires_at: None,
             context_entries: vec![],
-            provenance: a2rchitech_context_router::ContextProvenance {
+            provenance: allternit_context_router::ContextProvenance {
                 origin_session: Some(task.session_id.clone()),
                 origin_agent: "rlm-root".to_string(),
                 derivation_chain: vec![],
                 integrity_hash: "placeholder".to_string(),
                 signature: None,
             },
-            access_control: a2rchitech_context_router::ContextAccessControl {
+            access_control: allternit_context_router::ContextAccessControl {
                 allowed_agents: std::collections::HashSet::new(),
                 allowed_skills: std::collections::HashSet::new(),
                 allowed_phases: std::collections::HashSet::new(),
                 time_window: None,
-                access_policy: a2rchitech_context_router::ContextAccessPolicy::ExplicitAllowList,
+                access_policy: allternit_context_router::ContextAccessPolicy::ExplicitAllowList,
             },
             size_bytes: 0,
             last_accessed: now,
@@ -856,8 +856,8 @@ mod tests {
         let memory_fabric = Arc::new(MemoryFabric::new());
         let unified_registry = Arc::new(UnifiedRegistry::new(
             Arc::new(SkillRegistry::new()),
-            Arc::new(a2rchitech_registry::agents::AgentRegistry::new()),
-            Arc::new(a2rchitech_registry::tools::ToolRegistry::new()),
+            Arc::new(allternit_registry::agents::AgentRegistry::new()),
+            Arc::new(allternit_registry::tools::ToolRegistry::new()),
         ));
         let tool_gateway = Arc::new(ToolGateway::new(Arc::new(PolicyEngine::new())));
 
@@ -896,8 +896,8 @@ mod tests {
         let memory_fabric = Arc::new(MemoryFabric::new());
         let unified_registry = Arc::new(UnifiedRegistry::new(
             Arc::new(SkillRegistry::new()),
-            Arc::new(a2rchitech_registry::agents::AgentRegistry::new()),
-            Arc::new(a2rchitech_registry::tools::ToolRegistry::new()),
+            Arc::new(allternit_registry::agents::AgentRegistry::new()),
+            Arc::new(allternit_registry::tools::ToolRegistry::new()),
         ));
         let skill_registry = Arc::new(SkillRegistry::new());
         let tool_gateway = Arc::new(ToolGateway::new(Arc::new(PolicyEngine::new())));

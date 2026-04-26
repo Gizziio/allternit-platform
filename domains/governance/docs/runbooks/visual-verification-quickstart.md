@@ -25,26 +25,26 @@ export VERIFICATION_MODE=file
 
 ```bash
 # Capture evidence for a specific WIH
-npx a2r verify-visual --wih-id wih_abc123
+npx allternit verify-visual --wih-id wih_abc123
 
 # With verbose output
-npx a2r verify-visual --wih-id wih_abc123 --verbose
+npx allternit verify-visual --wih-id wih_abc123 --verbose
 
 # Specify output directory
-npx a2r verify-visual --wih-id wih_abc123 --output ./my-evidence/
+npx allternit verify-visual --wih-id wih_abc123 --output ./my-evidence/
 ```
 
 ### View results
 
 ```bash
 # List captured evidence
-ls .a2r/evidence/
+ls .allternit/evidence/
 
 # View JSON result
-cat .a2r/evidence/wih_abc123.json | jq
+cat .allternit/evidence/wih_abc123.json | jq
 
 # Open screenshots
-open .a2r/evidence/wih_abc123_ui_state.png
+open .allternit/evidence/wih_abc123_ui_state.png
 ```
 
 ---
@@ -55,7 +55,7 @@ open .a2r/evidence/wih_abc123_ui_state.png
 
 ```bash
 # Get confidence for a WIH
-npx a2r verify-visual --wih-id wih_abc123 --check-only
+npx allternit verify-visual --wih-id wih_abc123 --check-only
 
 # Output: Confidence: 0.85 (threshold: 0.80) - PASSED
 ```
@@ -78,7 +78,7 @@ curl http://localhost:50052/evidence/wih_abc123
 
 ```bash
 # Check what artifacts were captured
-npx a2r verify-visual --wih-id wih_abc123 --diagnose
+npx allternit verify-visual --wih-id wih_abc123 --diagnose
 
 # Expected output:
 # ✓ UI State: 0.95 confidence
@@ -137,7 +137,7 @@ governance request-bypass --wih-id wih_abc123 --reason "Hotfix, verified manuall
 governance approve-bypass --wih-id wih_abc123 --approver admin@example.com
 
 # 3. Proceed with autoland
-a2r autoland --wih-id wih_abc123 --force
+allternit autoland --wih-id wih_abc123 --force
 ```
 
 ### Disable verification (system-wide)
@@ -217,7 +217,7 @@ governance audit-log --type GateAutolandFailed --reason "visual" --limit 10
 
 ```bash
 # Full verification flow
-npx a2r verify-visual --wih-id <id> --verbose
+npx allternit verify-visual --wih-id <id> --verbose
 
 # Check health
 curl http://localhost:50052/health
@@ -236,6 +236,6 @@ governance audit-log --type GateVisualVerified
 
 ## Support
 
-- Slack: #a2r-visual-verification
-- Docs: https://docs.a2r.io/visual-verification
-- Issues: https://github.com/a2rchitech/a2r/issues
+- Slack: #allternit-visual-verification
+- Docs: https://docs.allternit.io/visual-verification
+- Issues: https://github.com/allternit/allternit/issues

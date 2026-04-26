@@ -204,7 +204,7 @@ pub fn generate_registration_token() -> String {
         })
         .collect();
 
-    format!("a2r_node_{}", token)
+    format!("allternit_node_{}", token)
 }
 
 #[cfg(test)]

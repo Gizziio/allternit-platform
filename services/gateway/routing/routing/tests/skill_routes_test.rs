@@ -6,13 +6,13 @@
 //! - POST /api/v1/local/skills/install
 //! - POST /api/v1/local/skills/{id}/uninstall
 
-use a2rchitech_policy::SafetyTier;
-use a2rchitech_skills::{
+use allternit_policy::SafetyTier;
+use allternit_skills::{
     Environment, FilesystemAccess, NetworkAccess, PublisherInfo, ResourceHints, RuntimeMode,
     SignatureInfo, Skill, SkillEnvironment, SkillIO, SkillManifest, SkillRuntime, SkillTimeouts,
     SkillWorkflow, WorkflowEdge, WorkflowNode, WorkflowPhase,
 };
-use a2rchitech_tools_gateway::{ResourceLimits, ToolDefinition, ToolType};
+use allternit_tools_gateway::{ResourceLimits, ToolDefinition, ToolType};
 use chrono::Utc;
 use serde_json;
 use uuid::Uuid;
@@ -167,8 +167,8 @@ fn test_skill_serializable() {
         resource_limits: ResourceLimits {
             cpu: Some("100m".to_string()),
             memory: Some("64Mi".to_string()),
-            network: a2rchitech_tools_gateway::NetworkAccess::None,
-            filesystem: a2rchitech_tools_gateway::FilesystemAccess::None,
+            network: allternit_tools_gateway::NetworkAccess::None,
+            filesystem: allternit_tools_gateway::FilesystemAccess::None,
             time_limit: 10,
         },
         subprocess: None,

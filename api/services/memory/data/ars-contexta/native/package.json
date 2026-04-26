@@ -25,6 +25,11 @@
   "devDependencies": {
     "@napi-rs/cli": "^2.18"
   },
-  "keywords": ["nlp", "bert", "embeddings", "rust"],
+  "keywords": [
+    "nlp",
+    "bert",
+    "embeddings",
+    "rust"
+  ],
   "license": "MIT"
 }

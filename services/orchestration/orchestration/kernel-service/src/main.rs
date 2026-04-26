@@ -1,4 +1,4 @@
-use a2rchitech_artifact_registry::{
+use allternit_artifact_registry::{
     ArtifactFilters, ArtifactMetadata, ArtifactQuery, ArtifactQueryResponse, ArtifactRegistry,
     ArtifactRegistryConfig, ArtifactRegistryError, ArtifactType, AuditLevel, BackupConfig,
     ComplianceRequirement, LicenseCompliance, NetworkConfiguration, NetworkIsolation,
@@ -6,17 +6,17 @@ use a2rchitech_artifact_registry::{
     ReviewStatus, SecurityProfile, SortDirection, SortField, StorageConfig, StorageType,
     VerificationStatus,
 };
-use a2rchitech_history::HistoryLedger;
-use a2rchitech_kernel_contracts;
-use a2rchitech_memory::v2::memory_policy::{
+use allternit_history::HistoryLedger;
+use allternit_kernel_contracts;
+use allternit_memory::v2::memory_policy::{
     DefaultMemoryPolicy, MemoryPolicy as MemoryPolicyTrait,
 };
-use a2rchitech_messaging::MessagingSystem;
-use a2rchitech_policy::{
+use allternit_messaging::MessagingSystem;
+use allternit_policy::{
     Identity, IdentityType, PolicyEffect, PolicyEngine, PolicyRule, SafetyTier,
 };
-use a2rchitech_skills::{PublisherKey, Skill, SkillRegistry, SkillsError};
-use a2rchitech_tools_gateway::{
+use allternit_skills::{PublisherKey, Skill, SkillRegistry, SkillsError};
+use allternit_tools_gateway::{
     FilesystemAccess, NetworkAccess, ResourceLimits, ToolDefinition as GatewayToolDefinition,
     ToolExecutionReporter, ToolExecutionRequest, ToolExecutionResult, ToolGateway,
     ToolGatewayError, ToolType, WriteScope,
@@ -74,7 +74,7 @@ fn ensure_boot_anchors() -> anyhow::Result<()> {
         }
     }
 
-    for dir in ["./.a2r/graphs", "./.a2r/wih"] {
+    for dir in ["./.allternit/graphs", "./.allternit/wih"] {
         let dir_path = StdPath::new(dir);
         if !dir_path.exists() {
             anyhow::bail!("Boot gate failed: missing {}", dir);
@@ -196,14 +196,14 @@ fn collect_boot_files() -> anyhow::Result<Vec<StdPathBuf>> {
             files.push(path);
         }
     }
-    for entry in fs::read_dir(".a2r/graphs")? {
+    for entry in fs::read_dir(".allternit/graphs")? {
         let entry = entry?;
         let path = entry.path();
         if path.extension().map(|ext| ext == "json").unwrap_or(false) {
             files.push(path);
         }
     }
-    for entry in fs::read_dir(".a2r/wih")? {
+    for entry in fs::read_dir(".allternit/wih")? {
         let entry = entry?;
         let path = entry.path();
         if path.extension().map(|ext| ext == "json").unwrap_or(false) {
@@ -230,7 +230,7 @@ fn write_boot_manifest() -> anyhow::Result<()> {
     }
 
     let mut env = HashMap::new();
-    let profile = std::env::var("A2R_PROFILE").unwrap_or_else(|_| "default".to_string());
+    let profile = std::env::var("Allternit_PROFILE").unwrap_or_else(|_| "default".to_string());
     env.insert("profile".to_string(), profile);
 
     let manifest = BootManifest {
@@ -241,9 +241,9 @@ fn write_boot_manifest() -> anyhow::Result<()> {
         env,
     };
 
-    let boot_dir = StdPath::new(".a2r/boot");
+    let boot_dir = StdPath::new(".allternit/boot");
     fs::create_dir_all(boot_dir)
-        .map_err(|e| anyhow::anyhow!("Boot manifest failed to create .a2r/boot: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Boot manifest failed to create .allternit/boot: {}", e))?;
     let receipt_path = boot_dir.join("boot_manifest.json");
     let payload = serde_json::to_string_pretty(&manifest)?;
     fs::write(&receipt_path, payload).map_err(|e| {
@@ -257,13 +257,13 @@ fn write_boot_manifest() -> anyhow::Result<()> {
     info!("Boot manifest written to {}", receipt_path.display());
     Ok(())
 }
-use a2rchitech_context_router::ContextRouter;
-use a2rchitech_embodiment::EmbodimentControlPlane;
-// use a2rchitech_evals::EvaluationEngine; // TODO: Re-enable after fixing evals package
-use a2rchitech_memory::MemoryFabric;
-use a2rchitech_packaging::PackageManager;
-use a2rchitech_providers::ProviderRouter;
-use a2rchitech_runtime_core::SessionManager as RuntimeSessionManager;
+use allternit_context_router::ContextRouter;
+use allternit_embodiment::EmbodimentControlPlane;
+// use allternit_evals::EvaluationEngine; // TODO: Re-enable after fixing evals package
+use allternit_memory::MemoryFabric;
+use allternit_packaging::PackageManager;
+use allternit_providers::ProviderRouter;
+use allternit_runtime_core::SessionManager as RuntimeSessionManager;
 use chrono::Utc;
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -431,9 +431,9 @@ use types::{
     SessionLogResponse, SessionResetResponse, SkillPackage, Suggestion, Task, ToolDefinition,
 };
 mod session_manager;
-use a2rchitech_workflows::engine::compiler::{KernelCompilationContext, YamlCompiler};
-use a2rchitech_workflows::engine::validator::{ValidationError, YamlValidator};
-use a2rchitech_workflows::{
+use allternit_workflows::engine::compiler::{KernelCompilationContext, YamlCompiler};
+use allternit_workflows::engine::validator::{ValidationError, YamlValidator};
+use allternit_workflows::{
     NodeResult, WorkflowDefinition, WorkflowEngine, WorkflowError, WorkflowExecution,
 };
 use embodiment::desktop::DesktopDevice;
@@ -578,8 +578,8 @@ struct ValidateWorkflowResponse {
 #[derive(Debug, Serialize)]
 struct CompileWorkflowResponse {
     workflow_definition: WorkflowDefinition,
-    run_model: a2rchitech_kernel_contracts::RunModel,
-    compilation_event: a2rchitech_kernel_contracts::EventEnvelope,
+    run_model: allternit_kernel_contracts::RunModel,
+    compilation_event: allternit_kernel_contracts::EventEnvelope,
 }
 
 #[derive(Debug, Clone)]
@@ -645,7 +645,7 @@ mod taskgraph;
 mod vision_config;
 use brain::runtime_management::*;
 use brain::{BrainManager, BrainProvider, BrainStore, RuntimeRegistry, AcpProtocolDriver, JsonlProtocolDriver, TerminalAppDriver};
-use a2rchitech_evals::EvaluationEngine;
+use allternit_evals::EvaluationEngine;
 use gui_tools::*;
 use vision_config::*;
 
@@ -683,8 +683,8 @@ struct AppState {
     brain_manager: Arc<BrainManager>,
     model_router: Arc<brain::ModelRouter>,
     runtime_registry: brain::RuntimeRegistry,
-    provider_auth_registry: Arc<a2rchitech_providers::runtime::ProviderAuthRegistry>,
-    model_adapter_registry: Arc<a2rchitech_providers::runtime::ModelAdapterRegistry>,
+    provider_auth_registry: Arc<allternit_providers::runtime::ProviderAuthRegistry>,
+    model_adapter_registry: Arc<allternit_providers::runtime::ModelAdapterRegistry>,
 }
 
 impl BrainProvider for AppState {
@@ -704,11 +704,11 @@ impl BrainProvider for AppState {
         self.runtime_registry.clone()
     }
 
-    fn provider_auth_registry(&self) -> Arc<a2rchitech_providers::runtime::ProviderAuthRegistry> {
+    fn provider_auth_registry(&self) -> Arc<allternit_providers::runtime::ProviderAuthRegistry> {
         self.provider_auth_registry.clone()
     }
 
-    fn model_adapter_registry(&self) -> Arc<a2rchitech_providers::runtime::ModelAdapterRegistry> {
+    fn model_adapter_registry(&self) -> Arc<allternit_providers::runtime::ModelAdapterRegistry> {
         self.model_adapter_registry.clone()
     }
 }
@@ -835,11 +835,11 @@ async fn dispatch_intent(
     }
 
     // Generate verification artifact for the dispatched intent
-    let verify_artifact = a2rchitech_kernel_contracts::VerifyArtifact::new(
+    let verify_artifact = allternit_kernel_contracts::VerifyArtifact::new(
         response.capsule.capsule_id.clone(),
         "dispatch_step".to_string(),
         format!("hash_{}", response.capsule.capsule_id),
-        a2rchitech_kernel_contracts::VerificationResults {
+        allternit_kernel_contracts::VerificationResults {
             passed: true,
             details: serde_json::json!({
                 "dispatched_intent": &req.intent_text,
@@ -1539,8 +1539,8 @@ async fn compile_capsule_with_context(
 async fn get_run_model(
     State(_state): State<AppState>,
     Path(run_id): Path<String>,
-) -> Result<Json<a2rchitech_kernel_contracts::RunModel>, StatusCode> {
-    let mut run_model = a2rchitech_kernel_contracts::RunModel::new(
+) -> Result<Json<allternit_kernel_contracts::RunModel>, StatusCode> {
+    let mut run_model = allternit_kernel_contracts::RunModel::new(
         "default_tenant".to_string(),
         "default_session".to_string(),
         "system".to_string(),
@@ -1551,15 +1551,15 @@ async fn get_run_model(
 
 async fn validate_tool_request(
     State(_state): State<AppState>,
-    Json(_tool_request): Json<a2rchitech_kernel_contracts::ToolRequest>,
+    Json(_tool_request): Json<allternit_kernel_contracts::ToolRequest>,
 ) -> Result<Json<bool>, StatusCode> {
     Ok(Json(true))
 }
 
 async fn create_event_envelope(
     State(_state): State<AppState>,
-    Json(envelope): Json<a2rchitech_kernel_contracts::EventEnvelope>,
-) -> Result<Json<a2rchitech_kernel_contracts::EventEnvelope>, StatusCode> {
+    Json(envelope): Json<allternit_kernel_contracts::EventEnvelope>,
+) -> Result<Json<allternit_kernel_contracts::EventEnvelope>, StatusCode> {
     match envelope.validate() {
         Ok(_) => Ok(Json(envelope)),
         Err(_) => Err(StatusCode::BAD_REQUEST),
@@ -1568,8 +1568,8 @@ async fn create_event_envelope(
 
 async fn verify_artifact_handler(
     State(_state): State<AppState>,
-    Json(artifact): Json<a2rchitech_kernel_contracts::VerifyArtifact>,
-) -> Result<Json<a2rchitech_kernel_contracts::VerifyArtifact>, StatusCode> {
+    Json(artifact): Json<allternit_kernel_contracts::VerifyArtifact>,
+) -> Result<Json<allternit_kernel_contracts::VerifyArtifact>, StatusCode> {
     match artifact.validate() {
         Ok(_) => Ok(Json(artifact)),
         Err(_) => Err(StatusCode::BAD_REQUEST),
@@ -2985,8 +2985,8 @@ async fn create_router() -> Result<Router, anyhow::Error> {
         brain_manager,
         model_router,
         runtime_registry: brain::RuntimeRegistry::new(),
-        provider_auth_registry: Arc::new(a2rchitech_providers::runtime::ProviderAuthRegistry::new()),
-        model_adapter_registry: Arc::new(a2rchitech_providers::runtime::ModelAdapterRegistry::new()),
+        provider_auth_registry: Arc::new(allternit_providers::runtime::ProviderAuthRegistry::new()),
+        model_adapter_registry: Arc::new(allternit_providers::runtime::ModelAdapterRegistry::new()),
     };
     let protected_routes = Router::new()
         .route(
@@ -3056,8 +3056,8 @@ async fn create_router() -> Result<Router, anyhow::Error> {
             post(brain::gateway::send_brain_input::<AppState>),
         )
         .route(
-            "/v1/sessions/:id/a2r-native/state",
-            get(brain::gateway::get_a2r_native_state::<AppState>),
+            "/v1/sessions/:id/allternit-native/state",
+            get(brain::gateway::get_allternit_native_state::<AppState>),
         )
         // Provider Authentication Endpoints
         .route(
@@ -3891,16 +3891,16 @@ fn map_workflow_validation_error(err: ValidationError) -> (StatusCode, String) {
 }
 
 fn map_workflow_compile_error(
-    err: a2rchitech_workflows::engine::compiler::CompilerError,
+    err: allternit_workflows::engine::compiler::CompilerError,
 ) -> (StatusCode, String) {
     let status = match err {
-        a2rchitech_workflows::engine::compiler::CompilerError::ParseError(_) => {
+        allternit_workflows::engine::compiler::CompilerError::ParseError(_) => {
             StatusCode::BAD_REQUEST
         }
-        a2rchitech_workflows::engine::compiler::CompilerError::ValidationError(_) => {
+        allternit_workflows::engine::compiler::CompilerError::ValidationError(_) => {
             StatusCode::BAD_REQUEST
         }
-        a2rchitech_workflows::engine::compiler::CompilerError::ReferenceError(_) => {
+        allternit_workflows::engine::compiler::CompilerError::ReferenceError(_) => {
             StatusCode::BAD_REQUEST
         }
     };
@@ -4892,8 +4892,8 @@ async fn create_kernel_services() -> Result<KernelServices, anyhow::Error> {
         brain_manager,
         model_router,
         runtime_registry: brain::RuntimeRegistry::new(),
-        provider_auth_registry: Arc::new(a2rchitech_providers::runtime::ProviderAuthRegistry::new()),
-        model_adapter_registry: Arc::new(a2rchitech_providers::runtime::ModelAdapterRegistry::new()),
+        provider_auth_registry: Arc::new(allternit_providers::runtime::ProviderAuthRegistry::new()),
+        model_adapter_registry: Arc::new(allternit_providers::runtime::ModelAdapterRegistry::new()),
     };
     let protected_routes = Router::new()
         .route(
@@ -4963,8 +4963,8 @@ async fn create_kernel_services() -> Result<KernelServices, anyhow::Error> {
             post(brain::gateway::send_brain_input::<AppState>),
         )
         .route(
-            "/v1/sessions/:id/a2r-native/state",
-            get(brain::gateway::get_a2r_native_state::<AppState>),
+            "/v1/sessions/:id/allternit-native/state",
+            get(brain::gateway::get_allternit_native_state::<AppState>),
         )
         // Provider Authentication Endpoints
         .route(

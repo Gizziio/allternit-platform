@@ -1,6 +1,6 @@
 //! Test Control Plane Server
 //!
-//! Minimal WebSocket server for testing the A2R Node.
+//! Minimal WebSocket server for testing the Allternit Node.
 //! Run this alongside the node to verify connectivity.
 //!
 //! Usage:

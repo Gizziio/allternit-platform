@@ -1,7 +1,7 @@
 /**
  * LLM-to-IX Pipeline
  *
- * Converts LLM-generated UI descriptions to A2R-IX format.
+ * Converts LLM-generated UI descriptions to Allternit-IX format.
  *
  * Supports multiple input formats:
  * - Natural language descriptions
@@ -55,7 +55,7 @@ export interface LLMToIXResult {
 }
 
 /**
- * A2R-IX Theme Configuration
+ * Allternit-IX Theme Configuration
  */
 export interface IxTheme {
   /** Theme name */
@@ -179,7 +179,7 @@ export interface LlmToIxPipelineOptions {
     validate?: boolean;
     /** Infer state from bindings */
     inferState?: boolean;
-    /** Apply A2R-IX styling */
+    /** Apply Allternit-IX styling */
     applyStyling?: boolean;
     /** Theme to use */
     theme?: 'default' | 'minimal' | 'compact' | IxTheme;
@@ -214,7 +214,7 @@ export interface LlmToIxPipelineResult {
 }
 
 /**
- * Convert LLM output to A2R-IX
+ * Convert LLM output to Allternit-IX
  */
 export function convertLLMToIX(
   input: unknown,
@@ -708,7 +708,7 @@ function createEmptyUI(version?: string): UIRoot {
 }
 
 /**
- * A2R-IX Built-in Themes
+ * Allternit-IX Built-in Themes
  */
 const IX_THEMES: Record<string, IxTheme> = {
   default: {
@@ -871,7 +871,7 @@ function getTheme(theme: string | IxTheme): IxTheme {
 }
 
 /**
- * Apply A2R-IX styling to component tree
+ * Apply Allternit-IX styling to component tree
  */
 function applyStylingToTree(
   components: UIComponent[],
@@ -881,7 +881,7 @@ function applyStylingToTree(
 }
 
 /**
- * Apply A2R-IX styling to a single node
+ * Apply Allternit-IX styling to a single node
  */
 function applyStylingToNode(comp: UIComponent, theme: IxTheme): IxRenderNode {
   const baseStyle: Record<string, string | number> = {};
@@ -1150,7 +1150,7 @@ function parseMarkdownToComponents(markdown: string): UIComponent[] {
  * Main pipeline function that:
  * 1. Parses LLM output (JSON or markdown)
  * 2. Transforms to IX component tree
- * 3. Applies A2R-IX styling
+ * 3. Applies Allternit-IX styling
  * 4. Returns IxRenderTree
  */
 export function llmToIxPipeline(options: LlmToIxPipelineOptions): LlmToIxPipelineResult {

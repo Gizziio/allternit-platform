@@ -1,5 +1,5 @@
 /**
- * Simple Logger Utility for A2R Infrastructure
+ * Simple Logger Utility for Allternit Infrastructure
  */
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';

@@ -1,7 +1,7 @@
 import { ProviderPlugin } from './provider-plugin.js';
 import { AnthropicPlugin } from './anthropic-plugin.js';
 import { OpenAIPlugin } from './openai-plugin.js';
-import type { A2RKernel } from "@a2r/governor";
+import type { AllternitKernel } from "@allternit/governor";
 
 export interface ModelCapability {
   vision?: boolean;
@@ -47,18 +47,18 @@ export interface RoutingResult {
 export class RouterAdapter {
   private plugins: Map<string, ProviderPlugin> = new Map();
   // @ts-ignore
-  private kernel: A2RKernel;
+  private kernel: AllternitKernel;
   // @ts-ignore
   private policy: any; // Will load G0200 contract
 
-  constructor(kernel: A2RKernel) {
+  constructor(kernel: AllternitKernel) {
     this.plugins.set('anthropic', new AnthropicPlugin());
     this.plugins.set('openai', new OpenAIPlugin());
     this.kernel = kernel;
   }
 
   async loadPolicy(): Promise<void> {
-    // In a real impl, this would load from .a2r/artifacts/G0200/router-policy-contract.json
+    // In a real impl, this would load from .allternit/artifacts/G0200/router-policy-contract.json
     // via the kernel filesystem access
     this.policy = {
       allowlists: { global: ["claude-3-5-sonnet", "gpt-4o"] }

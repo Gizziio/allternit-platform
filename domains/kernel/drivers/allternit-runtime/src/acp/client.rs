@@ -127,7 +127,7 @@ impl AcpClient {
                     logging: None,
                 },
                 client_info: ClientInfo {
-                    name: "a2r-runtime".to_string(),
+                    name: "allternit-runtime".to_string(),
                     version: env!("CARGO_PKG_VERSION").to_string(),
                 },
             },

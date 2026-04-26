@@ -1,5 +1,5 @@
 """
-A2R Computer Use Observability - Cookbook
+Allternit Computer Use Observability - Cookbook
 
 Promote successful runs to reusable cookbook entries.
 Capture patterns, golden paths, and failure modes.

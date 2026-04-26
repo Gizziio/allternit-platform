@@ -1,8 +1,8 @@
 [package]
-name = "a2r-gc-agents"
+name = "allternit-gc-agents"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Garbage Collection Agents - Entropy compression automation"
+description = "Allternit Garbage Collection Agents - Entropy compression automation"
 
 [dependencies]
 serde = { workspace = true }
@@ -16,7 +16,7 @@ chrono = { workspace = true }
 glob = "0.3"
 walkdir = "2.4"
 regex = { workspace = true }
-a2rchitech-system-law = { workspace = true }
+allternit-system-law = { workspace = true }
 async-trait = "0.1"
 
 # Tree-sitter for AST-based code analysis

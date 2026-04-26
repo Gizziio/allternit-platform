@@ -40,7 +40,7 @@ pub enum SkillStatus {
 /// Skill source
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SkillSource {
-    A2rRegistry,
+    AllternitRegistry,
     OpenClawRegistry,
     Local,
     Remote,
@@ -110,7 +110,7 @@ impl Default for SkillInstallerConfig {
     fn default() -> Self {
         Self {
             skills_dir: PathBuf::from("./skills"),
-            registry_url: "https://registry.a2r.example.com".to_string(),
+            registry_url: "https://registry.allternit.example.com".to_string(),
             allow_remote_installs: true,
             allow_local_installs: true,
             verify_signatures: true,
@@ -396,13 +396,13 @@ impl SkillInstallerService {
             name: request.skill_id.clone(), // In a real implementation, we'd get this from the registry
             description: format!("Skill {}", request.skill_id),
             version: version.clone(),
-            author: "A2R Team".to_string(),
+            author: "Allternit Team".to_string(),
             status: SkillStatus::Installing,
             installed_version: Some(version), // Fixed: wrap in Some()
             category: "misc".to_string(),
-            tags: vec!["a2r".to_string()],
+            tags: vec!["allternit".to_string()],
             requires: vec![],
-            source: SkillSource::A2rRegistry,
+            source: SkillSource::AllternitRegistry,
             download_url: None,
             license: "MIT".to_string(),
             last_updated: chrono::Utc::now().to_rfc3339(),

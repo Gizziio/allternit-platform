@@ -1,5 +1,5 @@
 [package]
-name = "a2r-tambo-integration"
+name = "allternit-tambo-integration"
 version = "0.1.0"
 edition = "2021"
 description = "Tambo Integration: UI generation from specifications and canvas protocol"
@@ -13,7 +13,7 @@ chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["v4"] }
 tracing = "0.1"
 thiserror = "1"
-presentation-kernel = { path = "../../../0-substrate/a2r-presentation-kernel" }
+presentation-kernel = { path = "../../allternit-presentation-kernel" }
 
 [dev-dependencies]
 tokio-test = "0.4"

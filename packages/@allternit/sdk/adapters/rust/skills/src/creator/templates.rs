@@ -293,11 +293,11 @@ Describe how to use this skill effectively.
 // Template constants
 
 const MINIMAL_MANIFEST_TEMPLATE: &str = r#"{
-    "id": "a2r.skill.{{SKILL_NAME}}",
+    "id": "allternit.skill.{{SKILL_NAME}}",
     "name": "{{SKILL_NAME}}",
     "version": "0.1.0",
     "description": "{{DESCRIPTION}}",
-    "author": "A2R Developer",
+    "author": "Allternit Developer",
     "license": "MIT"
 }"#;
 
@@ -320,11 +320,11 @@ Add examples here.
 "#;
 
 const TOOL_INTEGRATION_MANIFEST_TEMPLATE: &str = r#"{
-    "id": "a2r.skill.{{SKILL_NAME}}",
+    "id": "allternit.skill.{{SKILL_NAME}}",
     "name": "{{SKILL_NAME}}",
     "version": "0.1.0",
     "description": "{{DESCRIPTION}}",
-    "author": "A2R Developer",
+    "author": "Allternit Developer",
     "license": "MIT",
     "side_effects": ["network"]
 }"#;
@@ -428,11 +428,11 @@ Create a new resource.
 "#;
 
 const DATA_PROCESSING_MANIFEST_TEMPLATE: &str = r#"{
-    "id": "a2r.skill.{{SKILL_NAME}}",
+    "id": "allternit.skill.{{SKILL_NAME}}",
     "name": "{{SKILL_NAME}}",
     "version": "0.1.0",
     "description": "{{DESCRIPTION}}",
-    "author": "A2R Developer",
+    "author": "Allternit Developer",
     "license": "MIT"
 }"#;
 
@@ -520,11 +520,11 @@ Describe the output data format.
 "#;
 
 const WORKFLOW_MANIFEST_TEMPLATE: &str = r#"{
-    "id": "a2r.skill.{{SKILL_NAME}}",
+    "id": "allternit.skill.{{SKILL_NAME}}",
     "name": "{{SKILL_NAME}}",
     "version": "0.1.0",
     "description": "{{DESCRIPTION}}",
-    "author": "A2R Developer",
+    "author": "Allternit Developer",
     "license": "MIT"
 }"#;
 

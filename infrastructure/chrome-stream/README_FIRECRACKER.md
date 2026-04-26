@@ -2,13 +2,13 @@
 
 ## Overview
 
-Real Chrome browser streaming via Firecracker microVMs with WebRTC embedding in A2R Browser Capsule.
+Real Chrome browser streaming via Firecracker microVMs with WebRTC embedding in Allternit Browser Capsule.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  A2R Electron App                                           │
+│  Allternit Electron App                                           │
 │  ┌───────────────────────────────────────────────────────┐  │
 │  │  Browser Capsule                                      │  │
 │  │  ┌─────────────────────────────────────────────────┐  │  │
@@ -24,7 +24,7 @@ Real Chrome browser streaming via Firecracker microVMs with WebRTC embedding in 
 │  │  ┌─────────────────────────────────────────────────┐  │  │
 │  │  │  Google Chrome (real, full Web Store)           │  │  │
 │  │  │  selkies-gstreamer (WebRTC streaming)           │  │  │
-│  │  │  A2R Sidecar (CDP control via VSOCK)            │  │  │
+│  │  │  Allternit Sidecar (CDP control via VSOCK)            │  │  │
 │  │  └─────────────────────────────────────────────────┘  │  │
 │  └───────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
@@ -48,7 +48,7 @@ This starts:
 ### 1. Start Platform
 
 ```bash
-cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech
+cd /Users/macbook/Desktop/allternit-workspace/allternit
 ./start-platform.sh
 ```
 
@@ -102,7 +102,7 @@ curl -X POST http://localhost:3000/api/v1/chrome-sessions/{session_id}/navigate 
 | Component | Status | Notes |
 |-----------|--------|-------|
 | API Routes | ✅ Complete | Session broker ready |
-| Firecracker Driver | ✅ Available | `a2r-firecracker-driver` crate |
+| Firecracker Driver | ✅ Available | `allternit-firecracker-driver` crate |
 | WebRTC Streaming | ✅ Complete | selkies-gstreamer |
 | Sidecar (CDP) | ✅ Complete | VSOCK communication |
 | Frontend | ✅ Complete | ChromeStreamView |
@@ -139,7 +139,7 @@ To complete Firecracker integration:
 ### Backend
 - `8-cloud/chrome-stream/` - Chrome rootfs + sidecar
 - `7-apps/api/src/chrome_session_routes.rs` - Session broker (Firecracker-ready)
-- `1-kernel/execution/a2r-firecracker-driver/` - Firecracker driver
+- `1-kernel/execution/allternit-firecracker-driver/` - Firecracker driver
 - `start-platform.sh` - Startup integration
 
 ### Frontend

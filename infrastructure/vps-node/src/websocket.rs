@@ -1,4 +1,4 @@
-//! WebSocket client for A2R Node
+//! WebSocket client for Allternit Node
 //!
 //! Manages connection to control plane:
 //! - Handles authentication
@@ -8,7 +8,7 @@
 //! - File operations support
 
 use anyhow::{Context, Result};
-use a2r_protocol::{Message, MessagePayload, NodeCapabilities, NodeStatus, ResourceUsage, FileOperation, FileEntry, FileData, FileInfo, RunEvent, RunEventType};
+use allternit_protocol::{Message, MessagePayload, NodeCapabilities, NodeStatus, ResourceUsage, FileOperation, FileEntry, FileData, FileInfo, RunEvent, RunEventType};
 use futures::{SinkExt, StreamExt};
 use std::collections::HashMap;
 use std::path::Path;
@@ -414,7 +414,7 @@ impl WebSocketClient {
                                 // Send error as job completion
                                 let failed_msg = Message::new(MessagePayload::JobCompleted {
                                     job_id: job.id.clone(),
-                                    result: a2r_protocol::JobResult {
+                                    result: allternit_protocol::JobResult {
                                         success: false,
                                         exit_code: -1,
                                         stdout: String::new(),
@@ -1064,7 +1064,7 @@ impl WebSocketClient {
         rows: u16,
         env: std::collections::HashMap<String, String>,
         working_dir: Option<String>,
-        sandbox: Option<a2r_protocol::SandboxConfig>,
+        sandbox: Option<allternit_protocol::SandboxConfig>,
         ws_tx: mpsc::Sender<Message>,
     ) -> Result<()> {
 
@@ -1155,7 +1155,7 @@ impl WebSocketClient {
         rows: u16,
         env: std::collections::HashMap<String, String>,
         working_dir: Option<String>,
-        sandbox_config: a2r_protocol::SandboxConfig,
+        sandbox_config: allternit_protocol::SandboxConfig,
         ws_tx: mpsc::Sender<Message>,
     ) -> Result<()> {
         use crate::container_pty::ContainerPtyOutput;
@@ -1333,7 +1333,7 @@ mod tests {
     #[test]
     fn test_websocket_config() {
         let config = WebSocketConfig {
-            url: "wss://test.a2r.io".to_string(),
+            url: "wss://test.allternit.io".to_string(),
             node_id: "test-node".to_string(),
             auth_token: "test-token".to_string(),
             heartbeat_interval: Duration::from_secs(30),

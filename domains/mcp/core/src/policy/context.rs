@@ -1,7 +1,7 @@
 //! Policy context extraction for MCP tool calls
 //!
 //! This module provides functionality to extract policy context from MCP tool
-//! requests, enabling the A2R policy engine to make informed decisions about
+//! requests, enabling the Allternit policy engine to make informed decisions about
 //! tool execution.
 //!
 //! # Example
@@ -24,7 +24,7 @@
 //! assert_eq!(context.tool_category, McpToolCategory::FileSystem);
 //! ```
 
-use a2rchitech_sdk_policy::SafetyTier;
+use allternit_sdk_policy::SafetyTier;
 use serde::{Deserialize, Serialize};
 
 use crate::types::CallToolRequest;
@@ -117,7 +117,7 @@ impl McpPolicyContext {
         }
     }
 
-    /// Map MCP tool category to A2R SafetyTier
+    /// Map MCP tool category to Allternit SafetyTier
     ///
     /// # Returns
     ///
@@ -130,7 +130,7 @@ impl McpPolicyContext {
     ///
     /// ```rust
     /// use mcp::policy::context::{McpPolicyContext, McpToolCategory};
-    /// use a2rchitech_sdk_policy::SafetyTier;
+    /// use allternit_sdk_policy::SafetyTier;
     ///
     /// let context = McpPolicyContext {
     ///     server_id: "test".to_string(),

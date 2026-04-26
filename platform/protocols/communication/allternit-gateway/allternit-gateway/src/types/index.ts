@@ -1,5 +1,5 @@
 /**
- * A2R Gateway Types
+ * Allternit Gateway Types
  * Shared types for gateway commands and tool invocations
  */
 

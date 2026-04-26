@@ -2,8 +2,8 @@
 //! Testing the enhanced dispatch_intent, compile_capsule_with_context, and recompile_capsule endpoints
 //! with verification artifact checking and security enhancements
 
-use a2rchitech_kernel_contracts::{ContextBudgets, ContextBundle, ContextInputs};
-use a2rchitech_kernel_contracts::{VerificationResults, VerifyArtifact};
+use allternit_kernel_contracts::{ContextBudgets, ContextBundle, ContextInputs};
+use allternit_kernel_contracts::{VerificationResults, VerifyArtifact};
 use axum::http::{HeaderMap, StatusCode};
 use axum::Json;
 use serde_json::json;

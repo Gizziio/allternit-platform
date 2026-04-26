@@ -85,9 +85,9 @@ describe("VMImageManager", () => {
       const metadata = {
         version,
         architecture: arch,
-        kernel: `vmlinux-6.5.0-a2r-${arch}`,
-        initrd: `initrd.img-6.5.0-a2r-${arch}`,
-        rootfs: `ubuntu-22.04-a2r-v${version}.${arch}.ext4.zst`,
+        kernel: `vmlinux-6.5.0-allternit-${arch}`,
+        initrd: `initrd.img-6.5.0-allternit-${arch}`,
+        rootfs: `ubuntu-22.04-allternit-v${version}.${arch}.ext4.zst`,
         checksums: {},
         size: {},
         createdAt: new Date().toISOString(),

@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2rchitech.local/spec/contracts/CodePlan.schema.json",
+  "$id": "https://allternit.local/spec/contracts/CodePlan.schema.json",
   "title": "Code Plan — Structured Execution Plan Contract",
   "description": "A structured plan artifact produced in PLAN mode. Separates cognitive planning from action execution.",
   "type": "object",

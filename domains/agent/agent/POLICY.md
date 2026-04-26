@@ -1,4 +1,4 @@
-# /agent/POLICY.md — A2R Law Policy (v0)
+# /agent/POLICY.md — Allternit Law Policy (v0)
 
 Generated: 2026-01-28
 
@@ -10,8 +10,8 @@ This policy is boot-gated and enforced by kernel + CI. It is not advisory.
 
 - Tool execution only via ToolRegistry.
 - Tool execution requires full envelope: run_id, graph_id, task_id/node_id, wih_id, write_scope.
-- All outputs are run-scoped under `/.a2r/` only.
-- Forbidden writes: `/.a2r/wih/**`, `/.a2r/graphs/**`, `/.a2r/spec/**`, and other runs' receipts.
+- All outputs are run-scoped under `/.allternit/` only.
+- Forbidden writes: `/.allternit/wih/**`, `/.allternit/graphs/**`, `/.allternit/spec/**`, and other runs' receipts.
 - PreToolUse gating is mandatory before any tool execution.
 - Receipts are proofs: tool + node receipts required for completion and resume.
 - No auth bypass for core endpoints.

@@ -332,4 +332,4 @@ This template is provided under MIT OR Apache-2.0 license.
 
 ---
 
-Built with ❤️ by A2R
+Built with ❤️ by Allternit

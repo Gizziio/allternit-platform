@@ -1,4 +1,4 @@
-# A2R Runtime Environment Templates
+# Allternit Runtime Environment Templates
 
 This directory contains pre-built environment templates for Railway-style one-click environment provisioning.
 

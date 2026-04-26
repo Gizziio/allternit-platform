@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ============================================================================
-// A2R Agent Workspace - Health Check Endpoint
+// Allternit Agent Workspace - Health Check Endpoint
 // Express server providing health status and monitoring information
 // ============================================================================
 
@@ -13,7 +13,7 @@ const os = require('os');
 // Configuration
 const PORT = process.env.HEALTH_PORT || 3000;
 const AGENT_ID = process.env.AGENT_ID || 'default';
-const AGENT_NAME = process.env.AGENT_NAME || 'A2R Agent';
+const AGENT_NAME = process.env.AGENT_NAME || 'Allternit Agent';
 const VERSION = process.env.AGENT_VERSION || '1.0.0';
 const WORKSPACE_DIR = process.env.WORKSPACE_DIR || '/home/agent/workspace';
 const START_TIME = Date.now();
@@ -524,7 +524,7 @@ function handleRequest(req, res) {
     if (pathname === '/' || pathname === '/status') {
         res.writeHead(200);
         res.end(JSON.stringify({
-            service: 'A2R Agent Workspace',
+            service: 'Allternit Agent Workspace',
             agent_id: AGENT_ID,
             agent_name: AGENT_NAME,
             version: VERSION,
@@ -577,7 +577,7 @@ function main() {
     const server = http.createServer(handleRequest);
     
     server.listen(PORT, () => {
-        info(`A2R Agent Workspace Health Check running on port ${PORT}`);
+        info(`Allternit Agent Workspace Health Check running on port ${PORT}`);
         info(`Agent ID: ${AGENT_ID}`);
     });
     

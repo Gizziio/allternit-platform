@@ -1,37 +1,19 @@
-// Hand-authored public SDK facade.
-// The root package stays stable even as the generated transport evolves underneath it.
-import type { Event } from "./gen/entity-types";
-
-export * from "./gen/entity-types";
-export * from "./gen/types.gen";
-export * from "./tools";
-
-export type AssetRef = string | { asset_id: string };
-
-export interface CreateA2RClientConfig {
-  baseUrl?: string;
-  fetch?: typeof fetch;
-  headers?: Record<string, string>;
-  directory?: string;
-  signal?: AbortSignal;
-  responseTransformer?: (value: unknown) => unknown | Promise<unknown>;
-  [key: string]: unknown;
-}
-
-export declare class A2RClient {
-  static readonly __registry: {
-    get(key?: string): A2RClient;
-    set(value: A2RClient, key?: string): void;
-  };
-  constructor(args?: { client?: unknown; key?: string });
-  [key: string]: any;
-  events(options?: { signal?: AbortSignal }): AsyncIterableIterator<Event>;
-  globalEvents(options?: { signal?: AbortSignal }): AsyncIterableIterator<Event>;
-  on<T extends Event["type"]>(
-    type: T,
-    options?: { signal?: AbortSignal },
-  ): AsyncIterableIterator<Extract<Event, { type: T }>>;
-}
-
-export declare function createA2RClient(config?: CreateA2RClientConfig): A2RClient;
-export declare const createA2R: typeof createA2RClient;
+export { AllternitHarness } from './harness/index.js';
+export type { HarnessConfig, StreamRequest, HarnessResponse, HarnessStreamChunk, HarnessMode, } from './harness/types.js';
+export { ALLTERNIT_SYSTEM_PROMPT, injectSystemPrompt, } from './harness/prompts.js';
+export { AllternitAI } from './providers/anthropic/index.js';
+export { AllternitOpenAI } from './providers/openai/index.js';
+export { AllternitGoogleAI } from './providers/google/index.js';
+export { AllternitOllama } from './providers/ollama/index.js';
+export { AllternitMistral } from './providers/mistral/index.js';
+export { AllternitCohere } from './providers/cohere/index.js';
+export { AllternitGroq } from './providers/groq/index.js';
+export { AllternitTogether } from './providers/together/index.js';
+export { AllternitAzureOpenAI } from './providers/azure/index.js';
+export { AllternitBedrock } from './providers/bedrock/index.js';
+export { PROVIDER_REGISTRY, createProvider, listProviders, getProvider, findProvidersByFeature, type ProviderMetadata, type ProviderFeature, type ProviderEntry, } from './providers/registry.js';
+export { acpRegistry, ACPRegistry, } from './acp/registry.js';
+export { ACPMessageSchema, ACPToolSchema, ACPSessionSchema, ACPRegistryEntrySchema, type ACPMessage, type ACPTool, type ACPSession, type ACPRegistryEntry, } from './acp/schema.js';
+export { validateMessage, validateTool, validateSession, validateRegistryEntry, } from './acp/validator.js';
+export { ACPHarnessBridge, } from './acp/harness-bridge.js';
+export declare const VERSION = "1.0.0";

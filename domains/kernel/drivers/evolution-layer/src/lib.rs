@@ -1,4 +1,4 @@
-//! A2R Evolution Layer
+//! Allternit Evolution Layer
 //!
 //! Implements self-improving agent infrastructure with 5 evolution engines:
 //!
@@ -28,8 +28,8 @@
 //!    - State tracking
 //!    - Efficiency reward
 
-use a2rchitech_harness_engineering::HarnessEngineeringEngine;
-use a2rchitech_system_law::SystemLawEngine;
+use allternit_harness_engineering::HarnessEngineeringEngine;
+use allternit_system_law::SystemLawEngine;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

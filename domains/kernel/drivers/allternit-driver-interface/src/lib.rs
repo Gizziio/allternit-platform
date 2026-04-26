@@ -1,6 +1,6 @@
-//! # A2R Execution Driver Interface (N3)
+//! # Allternit Execution Driver Interface (N3)
 //!
-//! Core trait definitions for all execution drivers in the A2R platform.
+//! Core trait definitions for all execution drivers in the Allternit platform.
 //! This crate provides the abstraction layer that separates the control plane
 //! from execution substrate implementations.
 //!
@@ -533,35 +533,41 @@ pub trait ExecutionDriver: Send + Sync + fmt::Debug {
     fn capabilities(&self) -> DriverCapabilities;
 
     /// Spawn a new execution environment
-    async fn spawn(&self, spec: SpawnSpec) -> Result<ExecutionHandle, DriverError>;
+    async fn spawn(&self, spec: SpawnSpec) -> std::result::Result<ExecutionHandle, DriverError>;
+
+    /// Pause the execution environment
+    async fn pause_vm(&self, handle: &ExecutionHandle) -> std::result::Result<(), DriverError>;
+
+    /// Resume the execution environment
+    async fn resume_vm(&self, handle: &ExecutionHandle) -> std::result::Result<(), DriverError>;
 
     /// Execute a command in the environment
     async fn exec(
         &self,
         handle: &ExecutionHandle,
         cmd: CommandSpec,
-    ) -> Result<ExecResult, DriverError>;
+    ) -> std::result::Result<ExecResult, DriverError>;
 
     /// Stream logs from the environment
-    async fn stream_logs(&self, handle: &ExecutionHandle) -> Result<Vec<LogEntry>, DriverError>;
+    async fn stream_logs(&self, handle: &ExecutionHandle) -> std::result::Result<Vec<LogEntry>, DriverError>;
 
     /// Get artifacts produced by the execution
-    async fn get_artifacts(&self, handle: &ExecutionHandle) -> Result<Vec<Artifact>, DriverError>;
+    async fn get_artifacts(&self, handle: &ExecutionHandle) -> std::result::Result<Vec<Artifact>, DriverError>;
 
     /// Destroy the execution environment
-    async fn destroy(&self, handle: &ExecutionHandle) -> Result<(), DriverError>;
+    async fn destroy(&self, handle: &ExecutionHandle) -> std::result::Result<(), DriverError>;
 
     /// Get resource consumption for an execution (N11)
     async fn get_consumption(
         &self,
         handle: &ExecutionHandle,
-    ) -> Result<ResourceConsumption, DriverError>;
+    ) -> std::result::Result<ResourceConsumption, DriverError>;
 
     /// Get execution receipt
-    async fn get_receipt(&self, handle: &ExecutionHandle) -> Result<Option<Receipt>, DriverError>;
+    async fn get_receipt(&self, handle: &ExecutionHandle) -> std::result::Result<Option<Receipt>, DriverError>;
 
     /// Health check
-    async fn health_check(&self) -> Result<DriverHealth, DriverError>;
+    async fn health_check(&self) -> std::result::Result<DriverHealth, DriverError>;
 }
 
 /// Driver health status

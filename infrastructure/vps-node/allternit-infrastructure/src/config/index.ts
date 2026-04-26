@@ -53,11 +53,11 @@ export const config = {
 
   // Database Configuration
   database: {
-    url: getEnvVar('DATABASE_URL', 'postgresql://user:password@localhost:5432/a2r_infrastructure'),
+    url: getEnvVar('DATABASE_URL', 'postgresql://user:password@localhost:5432/allternit_infrastructure'),
     host: getEnvVar('DB_HOST', 'localhost'),
     port: getEnvVarAsInt('DB_PORT', 5432),
-    name: getEnvVar('DB_NAME', 'a2r_infrastructure'),
-    user: getEnvVar('DB_USER', 'a2r_user'),
+    name: getEnvVar('DB_NAME', 'allternit_infrastructure'),
+    user: getEnvVar('DB_USER', 'allternit_user'),
     password: getEnvVar('DB_PASSWORD', 'secure_password'),
     poolSize: getEnvVarAsInt('DB_POOL_SIZE', 20),
     sslMode: getEnvVar('DB_SSL_MODE', 'disable'),
@@ -70,7 +70,7 @@ export const config = {
     port: getEnvVarAsInt('REDIS_PORT', 6379),
     password: getEnvVar('REDIS_PASSWORD', ''),
     db: getEnvVarAsInt('REDIS_DB', 0),
-    keyPrefix: getEnvVar('REDIS_KEY_PREFIX', 'a2r:'),
+    keyPrefix: getEnvVar('REDIS_KEY_PREFIX', 'allternit:'),
   },
 
   // Security Configuration

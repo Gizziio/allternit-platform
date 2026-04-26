@@ -1,4 +1,4 @@
-# A2rchitech Unified Registry & Data Fabric
+# Allternitchitech Unified Registry & Data Fabric
 
 The Unified Registry provides a single source of truth for all tenant capabilities (agents, skills, tools) with a unified data fabric that optimizes access patterns across multiple storage backends.
 
@@ -77,7 +77,7 @@ Strict separation between tenant data:
 ### Basic Operations
 
 ```rust
-use a2rchitech_registry::{UnifiedRegistry, AgentDefinition, DataQuery};
+use allternit_registry::{UnifiedRegistry, AgentDefinition, DataQuery};
 
 // Initialize the registry
 let registry = UnifiedRegistry::new(

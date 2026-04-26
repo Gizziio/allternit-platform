@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2rchitech.local/spec/contracts/PromotionRules.schema.json",
+  "$id": "https://allternit.local/spec/contracts/PromotionRules.schema.json",
   "title": "Deterministic Promotion Rules",
   "type": "object",
   "additionalProperties": false,

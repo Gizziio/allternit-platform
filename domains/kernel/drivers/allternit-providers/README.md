@@ -1,6 +1,6 @@
-# A2rchitech Providers Package
+# Allternit Providers Package
 
-The Providers package implements the provider routing and persona kernel system for A2rchitech.
+The Providers package implements the provider routing and persona kernel system for Allternit.
 
 ## Overview
 
@@ -64,7 +64,7 @@ Durable storage for:
 ## Usage
 
 ```rust
-use a2rchitech_providers::{ProviderRouter, ProviderConfig, Persona, ProviderType};
+use allternit_providers::{ProviderRouter, ProviderConfig, Persona, ProviderType};
 
 // Initialize the provider router
 let provider_router = ProviderRouter::new_with_storage(

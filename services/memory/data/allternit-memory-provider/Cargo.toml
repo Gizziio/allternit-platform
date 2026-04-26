@@ -1,8 +1,8 @@
 [package]
-name = "a2rchitech-memory-provider"
+name = "allternit-memory-provider"
 version = "0.1.0"
 edition = "2021"
-description = "Common interface and traits for memory providers in A2rchitech"
+description = "Common interface and traits for memory providers in Allternitchitech"
 license = "MIT"
 
 [dependencies]

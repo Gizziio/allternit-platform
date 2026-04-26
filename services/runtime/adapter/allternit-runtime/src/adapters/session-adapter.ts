@@ -1,17 +1,17 @@
 /**
  * Session Adapter
  * 
- * Adapts GatewayClient to inject A2R Kernel WIH governance
+ * Adapts GatewayClient to inject Allternit Kernel WIH governance
  * at session initialization time.
  * 
  * Integration Point: upstream/src/gateway/client.ts:GatewayClient constructor
  */
 
 import type {
-  A2RKernel,
+  AllternitKernel,
   WihItem,
   // RoutingDeniedError,
-} from '@a2r/governor';
+} from '@allternit/governor';
 import {
   type AdapterContext,
   type SessionInitResult,
@@ -24,7 +24,7 @@ import {
  * Session adapter options
  */
 export interface SessionAdapterOptions {
-  kernel: A2RKernel;
+  kernel: AllternitKernel;
   
   /**
    * Require WIH for session creation
@@ -46,13 +46,13 @@ export interface SessionAdapterOptions {
 }
 
 /**
- * Extended Gateway options with A2R context
+ * Extended Gateway options with Allternit context
  */
-export interface A2RGatewayOptions extends RuntimeGatewayOptions {
+export interface AllternitGatewayOptions extends RuntimeGatewayOptions {
   /**
-   * A2R Kernel instance (required)
+   * Allternit Kernel instance (required)
    */
-  a2rKernel: A2RKernel;
+  allternitKernel: AllternitKernel;
   
   /**
    * Active WIH item ID (required if enforceWih is true)
@@ -79,7 +79,7 @@ interface SessionContext {
   sessionId: string;
   wihId: string;
   workspaceRoot: string;
-  kernel: A2RKernel;
+  kernel: AllternitKernel;
   wihItem: WihItem;
 }
 
@@ -96,10 +96,10 @@ const activeSessions = new Map<string, SessionContext>();
  * 4. Register session with kernel
  */
 export async function prepareSessionInit(
-  options: A2RGatewayOptions
+  options: AllternitGatewayOptions
 ): Promise<SessionInitResult> {
   const {
-    a2rKernel: kernel,
+    allternitKernel: kernel,
     wihId,
     enforceWih = true,
     workspaceRoot = process.cwd(),
@@ -235,18 +235,18 @@ export function getActiveSessions(): SessionContext[] {
 }
 
 /**
- * Create A2R-aware GatewayClient options
+ * Create Allternit-aware GatewayClient options
  * 
- * Wraps the original gateway options with A2R session management
+ * Wraps the original gateway options with Allternit session management
  */
-export function createA2RGatewayOptions(
+export function createAllternitGatewayOptions(
   baseOptions: RuntimeGatewayOptions,
-  a2rOptions: Omit<A2RGatewayOptions, keyof RuntimeGatewayOptions>
-): A2RGatewayOptions {
+  allternitOptions: Omit<AllternitGatewayOptions, keyof RuntimeGatewayOptions>
+): AllternitGatewayOptions {
   return {
     ...baseOptions,
-    ...a2rOptions,
-    a2rKernel: a2rOptions.a2rKernel,
+    ...allternitOptions,
+    allternitKernel: allternitOptions.allternitKernel,
     onClose: (code, reason) => {
       // Cleanup session on close
       const sessionId = baseOptions.instanceId ?? 'unknown';
@@ -263,10 +263,10 @@ export function createA2RGatewayOptions(
  * 
  * Usage:
  * ```typescript
- * import { wrapGatewayClient } from '@a2r/runtime';
+ * import { wrapGatewayClient } from '@allternit/runtime';
  * 
- * const A2RGatewayClient = wrapGatewayClient(GatewayClient, kernel);
- * const client = new A2RGatewayClient({
+ * const AllternitGatewayClient = wrapGatewayClient(GatewayClient, kernel);
+ * const client = new AllternitGatewayClient({
  *   wihId: 'P3-T0300',
  *   workspaceRoot: '/my/project',
  *   // ... other options
@@ -277,13 +277,13 @@ export function wrapGatewayClient<
   T extends new (opts: RuntimeGatewayOptions) => unknown
 >(
   GatewayClientClass: T,
-  kernel: A2RKernel
-): new (opts: A2RGatewayOptions) => InstanceType<T> & { a2rContext: AdapterContext } {
-  return class A2RGatewayClient extends (GatewayClientClass as any) {
-    public readonly a2rContext: AdapterContext;
+  kernel: AllternitKernel
+): new (opts: AllternitGatewayOptions) => InstanceType<T> & { allternitContext: AdapterContext } {
+  return class AllternitGatewayClient extends (GatewayClientClass as any) {
+    public readonly allternitContext: AdapterContext;
     private sessionInitResult: SessionInitResult | null = null;
 
-    constructor(opts: A2RGatewayOptions) {
+    constructor(opts: AllternitGatewayOptions) {
       // Prepare session before calling parent constructor
       const initResult = prepareSessionInit(opts).then(result => {
         opts.instanceId = result.sessionId;
@@ -295,8 +295,8 @@ export function wrapGatewayClient<
       // Store initialization promise
       this.sessionInitResult = initResult as unknown as SessionInitResult;
 
-      // Create A2R context
-      this.a2rContext = {
+      // Create Allternit context
+      this.allternitContext = {
         kernel,
         wihId: opts.wihId,
         sessionId: opts.instanceId ?? generateSessionId(),
@@ -308,7 +308,7 @@ export function wrapGatewayClient<
     /**
      * Wait for session initialization to complete
      */
-    async a2rReady(): Promise<SessionInitResult> {
+    async allternitReady(): Promise<SessionInitResult> {
       if (!this.sessionInitResult) {
         throw new RuntimeBridgeError(
           'Session not initialized',

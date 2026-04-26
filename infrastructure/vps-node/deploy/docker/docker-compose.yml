@@ -1,9 +1,9 @@
 version: '3.8'
 
-# A2R Node Agent Docker Compose
+# Allternit Node Agent Docker Compose
 #
 # Usage:
-#   A2R_TOKEN=xxx docker-compose up -d
+#   Allternit_TOKEN=xxx docker-compose up -d
 #
 # Or with .env file:
 #   cp .env.example .env
@@ -11,30 +11,30 @@ version: '3.8'
 #   docker-compose up -d
 
 services:
-  a2r-node:
-    image: ghcr.io/a2r/node:latest
+  allternit-node:
+    image: ghcr.io/allternit/node:latest
     # Or build from source:
     # build:
     #   context: .
     #   dockerfile: Dockerfile
     
-    container_name: a2r-node
+    container_name: allternit-node
     
     restart: unless-stopped
     
     # Docker socket access for containerized job execution
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - a2r-config:/etc/a2r
-      - a2r-logs:/var/log/a2r
+      - allternit-config:/etc/allternit
+      - allternit-logs:/var/log/allternit
     
     # Environment variables
     environment:
-      - A2R_NODE_ID=${A2R_NODE_ID:-node-${HOSTNAME}}
-      - A2R_TOKEN=${A2R_TOKEN}
-      - A2R_CONTROL_PLANE=${A2R_CONTROL_PLANE:-wss://control.a2r.io}
-      - A2R_LABELS=${A2R_LABELS:-docker}
-      - A2R_MAX_CONCURRENT_JOBS=${A2R_MAX_CONCURRENT_JOBS:-10}
+      - Allternit_NODE_ID=${Allternit_NODE_ID:-node-${HOSTNAME}}
+      - Allternit_TOKEN=${Allternit_TOKEN}
+      - Allternit_CONTROL_PLANE=${Allternit_CONTROL_PLANE:-wss://control.allternit.io}
+      - Allternit_LABELS=${Allternit_LABELS:-docker}
+      - Allternit_MAX_CONCURRENT_JOBS=${Allternit_MAX_CONCURRENT_JOBS:-10}
       - RUST_LOG=${RUST_LOG:-info}
     
     # Resource limits
@@ -56,7 +56,7 @@ services:
     
     # Health check
     healthcheck:
-      test: ["CMD", "/opt/a2r/bin/a2r-node", "--health"]
+      test: ["CMD", "/opt/allternit/bin/allternit-node", "--health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -76,7 +76,7 @@ services:
 
 # Named volumes
 volumes:
-  a2r-config:
+  allternit-config:
     driver: local
-  a2r-logs:
+  allternit-logs:
     driver: local

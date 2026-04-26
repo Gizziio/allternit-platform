@@ -66,7 +66,7 @@ export class PolicyInjector {
   constructor(config: InjectorConfig) {
     this.config = {
       ...config,
-      marker_output_dir: config.marker_output_dir || '.a2r/markers'
+      marker_output_dir: config.marker_output_dir || '.allternit/markers'
     };
   }
 

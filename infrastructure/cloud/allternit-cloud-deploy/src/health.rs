@@ -2,7 +2,7 @@
 //!
 //! Health check automation for deployed instances.
 
-use a2r_cloud_core::{CloudError, HealthStatus, HealthCheck};
+use allternit_cloud_core::{CloudError, HealthStatus, HealthCheck};
 
 /// Health checker
 pub struct HealthChecker;
@@ -79,7 +79,7 @@ impl HealthChecker {
         HealthCheck {
             name: "service_status".to_string(),
             passed: true,
-            message: "A2R service is running".to_string(),
+            message: "Allternit service is running".to_string(),
         }
     }
     

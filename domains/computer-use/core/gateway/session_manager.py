@@ -1,5 +1,5 @@
 """
-Persistent Browser Session Manager for A2R Computer Use Gateway
+Persistent Browser Session Manager for Allternit Computer Use Gateway
 
 Manages Playwright browser contexts keyed by session_id.
 Provides persistent sessions across multiple actions.

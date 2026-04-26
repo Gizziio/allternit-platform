@@ -1,6 +1,6 @@
 # Message Counter Plugin
 
-An example plugin for the A2R ChatView plugin system that demonstrates how to build and structure plugins.
+An example plugin for the Allternit ChatView plugin system that demonstrates how to build and structure plugins.
 
 ## Features
 

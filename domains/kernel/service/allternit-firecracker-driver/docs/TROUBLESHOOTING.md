@@ -1,4 +1,4 @@
-# A2R Firecracker Driver - Troubleshooting Guide
+# Allternit Firecracker Driver - Troubleshooting Guide
 
 This document provides runbooks for diagnosing and resolving common issues in production.
 
@@ -29,7 +29,7 @@ This document provides runbooks for diagnosing and resolving common issues in pr
 
 1. **Check driver logs**
    ```bash
-   journalctl -u a2r-firecracker-driver -f --since "5 minutes ago"
+   journalctl -u allternit-firecracker-driver -f --since "5 minutes ago"
    ```
 
 2. **Verify Firecracker process**
@@ -43,10 +43,10 @@ This document provides runbooks for diagnosing and resolving common issues in pr
 
 3. **Check network namespace creation**
    ```bash
-   ip netns list | grep a2r-
+   ip netns list | grep allternit-
    
    # Check specific namespace
-   sudo ip netns exec a2r-{vm-id} ip addr
+   sudo ip netns exec allternit-{vm-id} ip addr
    ```
 
 4. **Verify API socket**
@@ -57,7 +57,7 @@ This document provides runbooks for diagnosing and resolving common issues in pr
 
 5. **Check rootfs creation**
    ```bash
-   ls -la /var/lib/a2r/firecracker-vms/{vm-id}/
+   ls -la /var/lib/allternit/firecracker-vms/{vm-id}/
    # Should contain rootfs file
    ```
 
@@ -65,7 +65,7 @@ This document provides runbooks for diagnosing and resolving common issues in pr
 
 | Cause | Check | Solution |
 |-------|-------|----------|
-| Kernel image missing | `ls /var/lib/a2r/vmlinux` | Download/copy kernel image |
+| Kernel image missing | `ls /var/lib/allternit/vmlinux` | Download/copy kernel image |
 | Firecracker binary not found | `which firecracker` | Install Firecracker |
 | Network namespace conflict | `ip netns list` | Delete conflicting namespace |
 | TAP device creation failed | `ip tuntap show` | Check CAP_NET_ADMIN capability |
@@ -79,22 +79,22 @@ This document provides runbooks for diagnosing and resolving common issues in pr
 VM_ID="your-vm-id"
 
 # 2. Check Firecracker logs
-sudo cat /var/lib/a2r/firecracker-vms/$VM_ID/firecracker.log
+sudo cat /var/lib/allternit/firecracker-vms/$VM_ID/firecracker.log
 
 # 3. If process is stuck, kill it
 sudo pkill -f "firecracker.*$VM_ID"
 
 # 4. Clean up network namespace
-sudo ip netns del a2r-$VM_ID 2>/dev/null || true
+sudo ip netns del allternit-$VM_ID 2>/dev/null || true
 
 # 5. Clean up chroot
 sudo rm -rf /srv/jailer/$VM_ID
 
 # 6. Clean up VM directory
-sudo rm -rf /var/lib/a2r/firecracker-vms/$VM_ID
+sudo rm -rf /var/lib/allternit/firecracker-vms/$VM_ID
 
 # 7. Restart driver if needed
-sudo systemctl restart a2r-firecracker-driver
+sudo systemctl restart allternit-firecracker-driver
 ```
 
 ### Prevention
@@ -142,7 +142,7 @@ sudo systemctl restart a2r-firecracker-driver
    ip tuntap show
    
    # IP allocations (check IPAM state)
-   cat /var/lib/a2r/ipam-state.json | jq '.allocated | length'
+   cat /var/lib/allternit/ipam-state.json | jq '.allocated | length'
    ```
 
 ### Common Causes & Solutions
@@ -166,24 +166,24 @@ sudo pkill -9 -f "jailer.*$VM_ID"
 sleep 2
 
 # 3. Clean up network namespace
-sudo ip netns del a2r-$VM_ID 2>/dev/null || true
+sudo ip netns del allternit-$VM_ID 2>/dev/null || true
 
 # 4. Clean up TAP device (if still exists)
 sudo ip tuntap del tap-${VM_ID:0:8} mode tap 2>/dev/null || true
 
 # 5. Remove iptables rules
-sudo iptables -D FORWARD -i tap-${VM_ID:0:8} -j A2R-TAP_${VM_ID:0:8} 2>/dev/null || true
-sudo iptables -F A2R-TAP_${VM_ID:0:8} 2>/dev/null || true
-sudo iptables -X A2R-TAP_${VM_ID:0:8} 2>/dev/null || true
+sudo iptables -D FORWARD -i tap-${VM_ID:0:8} -j Allternit-TAP_${VM_ID:0:8} 2>/dev/null || true
+sudo iptables -F Allternit-TAP_${VM_ID:0:8} 2>/dev/null || true
+sudo iptables -X Allternit-TAP_${VM_ID:0:8} 2>/dev/null || true
 
 # 6. Clean up chroot and directories
 sudo umount /srv/jailer/$VM_ID/root/rootfs/* 2>/dev/null || true
 sudo rm -rf /srv/jailer/$VM_ID
-sudo rm -rf /var/lib/a2r/firecracker-vms/$VM_ID
+sudo rm -rf /var/lib/allternit/firecracker-vms/$VM_ID
 
 # 7. Release IP from IPAM
 # This happens automatically on driver restart
-# Or manually edit /var/lib/a2r/ipam-state.json (not recommended)
+# Or manually edit /var/lib/allternit/ipam-state.json (not recommended)
 ```
 
 ### Automated Cleanup
@@ -192,7 +192,7 @@ The `CleanupCoordinator` automatically handles zombie recovery:
 
 ```rust
 // On driver startup, pending cleanups are loaded and retried
-let coordinator = CleanupCoordinator::new("/var/lib/a2r/cleanup").await?;
+let coordinator = CleanupCoordinator::new("/var/lib/allternit/cleanup").await?;
 ```
 
 ---
@@ -210,19 +210,19 @@ let coordinator = CleanupCoordinator::new("/var/lib/a2r/cleanup").await?;
 
 1. **Check IPAM state**
    ```bash
-   cat /var/lib/a2r/ipam-state.json | jq
+   cat /var/lib/allternit/ipam-state.json | jq
    
    # Count allocations
-   cat /var/lib/a2r/ipam-state.json | jq '.allocated | length'
+   cat /var/lib/allternit/ipam-state.json | jq '.allocated | length'
    
    # Check subnet size
-   cat /var/lib/a2r/ipam-state.json | jq '.subnet'
+   cat /var/lib/allternit/ipam-state.json | jq '.subnet'
    ```
 
 2. **Find orphaned IPs**
    ```bash
    # For each allocated IP, check if VM exists
-   for ip in $(cat /var/lib/a2r/ipam-state.json | jq -r '.allocated[]'); do
+   for ip in $(cat /var/lib/allternit/ipam-state.json | jq -r '.allocated[]'); do
        ping -c 1 -W 1 $ip > /dev/null 2>&1 && echo "$ip: alive" || echo "$ip: orphaned"
    done
    ```
@@ -230,7 +230,7 @@ let coordinator = CleanupCoordinator::new("/var/lib/a2r/cleanup").await?;
 3. **Check active VMs**
    ```bash
    # List active VM directories
-   ls /var/lib/a2r/firecracker-vms/
+   ls /var/lib/allternit/firecracker-vms/
    
    # Compare with IPAM allocations
    ```
@@ -248,13 +248,13 @@ let coordinator = CleanupCoordinator::new("/var/lib/a2r/cleanup").await?;
 
 ```bash
 # Option 1: Restart driver (triggers orphan reclamation)
-sudo systemctl restart a2r-firecracker-driver
+sudo systemctl restart allternit-firecracker-driver
 
 # Option 2: Manual IPAM reset (nuclear option)
 # WARNING: This will lose all IP allocations!
-sudo systemctl stop a2r-firecracker-driver
-sudo mv /var/lib/a2r/ipam-state.json /var/lib/a2r/ipam-state.json.bak
-sudo systemctl start a2r-firecracker-driver
+sudo systemctl stop allternit-firecracker-driver
+sudo mv /var/lib/allternit/ipam-state.json /var/lib/allternit/ipam-state.json.bak
+sudo systemctl start allternit-firecracker-driver
 
 # Option 3: Expand subnet
 # Edit configuration to use larger subnet
@@ -306,18 +306,18 @@ sudo systemctl start a2r-firecracker-driver
    ```bash
    # Requires VM with console access
    # Check systemd status inside VM
-   systemctl status a2r-guest-agent
+   systemctl status allternit-guest-agent
    
    # Check guest agent logs
-   journalctl -u a2r-guest-agent
+   journalctl -u allternit-guest-agent
    ```
 
 5. **Verify guest agent binary**
    ```bash
    # Check if guest agent exists in rootfs
    sudo mkdir -p /mnt/debug
-   sudo mount /var/lib/a2r/firecracker-vms/$VM_ID/*-rootfs.ext4 /mnt/debug
-   ls -la /mnt/debug/usr/local/bin/a2r-guest-agent
+   sudo mount /var/lib/allternit/firecracker-vms/$VM_ID/*-rootfs.ext4 /mnt/debug
+   ls -la /mnt/debug/usr/local/bin/allternit-guest-agent
    sudo umount /mnt/debug
    ```
 
@@ -358,7 +358,7 @@ cd src/guest-agent
 cargo build
 
 # Copy to rootfs and test manually
-sudo cp target/debug/a2r-guest-agent /mnt/debug/usr/local/bin/
+sudo cp target/debug/allternit-guest-agent /mnt/debug/usr/local/bin/
 sudo umount /mnt/debug
 
 # Start VM and check
@@ -380,10 +380,10 @@ sudo umount /mnt/debug
 1. **Check iptables rules**
    ```bash
    # List custom chains
-   sudo iptables -L | grep A2R
+   sudo iptables -L | grep Allternit
    
    # Check specific chain
-   sudo iptables -L A2R-TAP_XXXXXXXX -v -n
+   sudo iptables -L Allternit-TAP_XXXXXXXX -v -n
    
    # Check FORWARD chain
    sudo iptables -L FORWARD -v -n | grep tap-
@@ -402,20 +402,20 @@ sudo umount /mnt/debug
 3. **Test connectivity from VM**
    ```bash
    # Get VM IP
-   VM_IP=$(cat /var/lib/a2r/ipam-state.json | jq -r '.allocated["'$VM_ID'"]')
+   VM_IP=$(cat /var/lib/allternit/ipam-state.json | jq -r '.allocated["'$VM_ID'"]')
    
    # Enter network namespace
-   sudo ip netns exec a2r-$VM_ID ping -c 3 8.8.8.8
+   sudo ip netns exec allternit-$VM_ID ping -c 3 8.8.8.8
    
    # Test DNS
-   sudo ip netns exec a2r-$VM_ID nslookup google.com
+   sudo ip netns exec allternit-$VM_ID nslookup google.com
    ```
 
 4. **Check policy configuration**
    ```bash
    # Check driver logs for policy application
-   grep "Applying network policy" /var/log/a2r/firecracker-driver.log
-   grep "Failed to apply network policy" /var/log/a2r/firecracker-driver.log
+   grep "Applying network policy" /var/log/allternit/firecracker-driver.log
+   grep "Failed to apply network policy" /var/log/allternit/firecracker-driver.log
    ```
 
 ### Common Causes & Solutions
@@ -439,18 +439,18 @@ sudo tc qdisc add dev $TAP_NAME root handle 1: htb default 1
 sudo tc class add dev $TAP_NAME parent 1: classid 1:1 htb rate 10mbit
 
 # Add iptables rules
-sudo iptables -N A2R-TEST
-sudo iptables -A A2R-TEST -d 8.8.8.8 -j DROP
-sudo iptables -A FORWARD -i $TAP_NAME -j A2R-TEST
+sudo iptables -N Allternit-TEST
+sudo iptables -A Allternit-TEST -d 8.8.8.8 -j DROP
+sudo iptables -A FORWARD -i $TAP_NAME -j Allternit-TEST
 
 # 2. Verify rules are working
-sudo ip netns exec a2r-$VM_ID ping -c 3 8.8.8.8
+sudo ip netns exec allternit-$VM_ID ping -c 3 8.8.8.8
 # Should fail
 
 # 3. Clean up test rules
-sudo iptables -D FORWARD -i $TAP_NAME -j A2R-TEST
-sudo iptables -F A2R-TEST
-sudo iptables -X A2R-TEST
+sudo iptables -D FORWARD -i $TAP_NAME -j Allternit-TEST
+sudo iptables -F Allternit-TEST
+sudo iptables -X Allternit-TEST
 ```
 
 ### Kernel Requirements
@@ -504,14 +504,14 @@ zgrep CONFIG_BRIDGE_NETFILTER /boot/config-$(uname -r)
 3. **Check cgroup limits (if enabled)**
    ```bash
    # Check cgroup memory limit
-   cat /sys/fs/cgroup/memory/a2r/$VM_ID/memory.limit_in_bytes
-   cat /sys/fs/cgroup/memory/a2r/$VM_ID/memory.usage_in_bytes
+   cat /sys/fs/cgroup/memory/allternit/$VM_ID/memory.limit_in_bytes
+   cat /sys/fs/cgroup/memory/allternit/$VM_ID/memory.usage_in_bytes
    ```
 
 4. **Check VM memory configuration**
    ```bash
    # Check VM memory settings
-   grep "mem_size_mib" /var/lib/a2r/firecracker-vms/$VM_ID/*.json
+   grep "mem_size_mib" /var/lib/allternit/firecracker-vms/$VM_ID/*.json
    ```
 
 ### Common Causes & Solutions
@@ -537,7 +537,7 @@ done | sort -k3 -n
 sudo kill -9 <highest-pid>
 
 # 2. Adjust OOM killer priority (temporary)
-sudo echo -1000 > /proc/$(pgrep a2r-firecracker-driver)/oom_score_adj
+sudo echo -1000 > /proc/$(pgrep allternit-firecracker-driver)/oom_score_adj
 
 # 3. Configure memory overcommit
 # Edit /etc/sysctl.conf
@@ -587,11 +587,11 @@ sudo sysctl -p
    # List all namespaces
    ip netns list
    
-   # Count a2r namespaces
-   ip netns list | grep a2r- | wc -l
+   # Count allternit namespaces
+   ip netns list | grep allternit- | wc -l
    
    # Check if namespace has running processes
-   for ns in $(ip netns list | grep a2r- | awk '{print $1}'); do
+   for ns in $(ip netns list | grep allternit- | awk '{print $1}'); do
        pids=$(sudo ip netns pids $ns 2>/dev/null | wc -l)
        echo "$ns: $pids processes"
    done
@@ -600,7 +600,7 @@ sudo sysctl -p
 3. **Check for leaked mount points**
    ```bash
    # Show all mounts
-   mount | grep -E '(a2r|firecracker|jailer)'
+   mount | grep -E '(allternit|firecracker|jailer)'
    
    # Count specific mount types
    mount | grep bind | wc -l
@@ -609,11 +609,11 @@ sudo sysctl -p
 4. **Check for leaked sockets**
    ```bash
    # Unix sockets
-   find /run/a2r -type s 2>/dev/null | wc -l
+   find /run/allternit -type s 2>/dev/null | wc -l
    find /srv/jailer -name "*.socket" 2>/dev/null | wc -l
    
    # Check file descriptor usage
-   ls /proc/$(pgrep a2r-firecracker-driver)/fd | wc -l
+   ls /proc/$(pgrep allternit-firecracker-driver)/fd | wc -l
    ```
 
 5. **Check for leaked chroot directories**
@@ -651,7 +651,7 @@ if [ "$TAP_COUNT" -gt "$THRESHOLD" ]; then
 fi
 
 # Check network namespaces
-NS_COUNT=$(ip netns list 2>/dev/null | grep a2r- | wc -l)
+NS_COUNT=$(ip netns list 2>/dev/null | grep allternit- | wc -l)
 if [ "$NS_COUNT" -gt "$THRESHOLD" ]; then
     echo "WARNING: High network namespace count: $NS_COUNT"
 fi
@@ -663,14 +663,14 @@ if [ "$JAILER_COUNT" -gt "$THRESHOLD" ]; then
 fi
 
 # Check mount points
-MOUNT_COUNT=$(mount | grep -E 'a2r|firecracker|jailer' | wc -l)
+MOUNT_COUNT=$(mount | grep -E 'allternit|firecracker|jailer' | wc -l)
 if [ "$MOUNT_COUNT" -gt "$THRESHOLD" ]; then
     echo "WARNING: High mount point count: $MOUNT_COUNT"
 fi
 
 # Check IPAM state file size
-if [ -f /var/lib/a2r/ipam-state.json ]; then
-    IPAM_SIZE=$(cat /var/lib/a2r/ipam-state.json | jq '.allocated | length')
+if [ -f /var/lib/allternit/ipam-state.json ]; then
+    IPAM_SIZE=$(cat /var/lib/allternit/ipam-state.json | jq '.allocated | length')
     if [ "$IPAM_SIZE" -gt "$THRESHOLD" ]; then
         echo "WARNING: High IP allocation count: $IPAM_SIZE"
     fi
@@ -684,7 +684,7 @@ fi
 # emergency-cleanup.sh - USE WITH CAUTION
 
 # Stop driver
-sudo systemctl stop a2r-firecracker-driver
+sudo systemctl stop allternit-firecracker-driver
 
 # Clean up orphaned TAP devices
 for tap in $(ip tuntap show 2>/dev/null | grep tap- | awk '{print $1}'); do
@@ -692,7 +692,7 @@ for tap in $(ip tuntap show 2>/dev/null | grep tap- | awk '{print $1}'); do
 done
 
 # Clean up orphaned namespaces
-for ns in $(ip netns list 2>/dev/null | grep a2r- | awk '{print $1}'); do
+for ns in $(ip netns list 2>/dev/null | grep allternit- | awk '{print $1}'); do
     # Kill any processes in namespace
     for pid in $(ip netns pids $ns 2>/dev/null); do
         kill -9 $pid 2>/dev/null
@@ -701,7 +701,7 @@ for ns in $(ip netns list 2>/dev/null | grep a2r- | awk '{print $1}'); do
 done
 
 # Clean up stale mounts
-for mount in $(mount | grep -E '/srv/jailer|/var/lib/a2r' | awk '{print $3}'); do
+for mount in $(mount | grep -E '/srv/jailer|/var/lib/allternit' | awk '{print $3}'); do
     umount -l $mount 2>/dev/null && echo "Unmounted $mount"
 done
 
@@ -709,10 +709,10 @@ done
 rm -rf /srv/jailer/*
 
 # Reset IPAM
-mv /var/lib/a2r/ipam-state.json /var/lib/a2r/ipam-state.json.bak.$(date +%s)
+mv /var/lib/allternit/ipam-state.json /var/lib/allternit/ipam-state.json.bak.$(date +%s)
 
 # Restart driver
-sudo systemctl start a2r-firecracker-driver
+sudo systemctl start allternit-firecracker-driver
 
 echo "Emergency cleanup complete"
 ```
@@ -725,14 +725,14 @@ echo "Emergency cleanup complete"
 
 ```bash
 # Set environment variable
-export A2R_LOG_LEVEL=debug
-export RUST_LOG=a2r_firecracker_driver=debug
+export Allternit_LOG_LEVEL=debug
+export RUST_LOG=allternit_firecracker_driver=debug
 
 # Or use systemd override
-sudo systemctl edit a2r-firecracker-driver
+sudo systemctl edit allternit-firecracker-driver
 # Add:
 [Service]
-Environment="A2R_LOG_LEVEL=debug"
+Environment="Allternit_LOG_LEVEL=debug"
 ```
 
 ### Firecracker Debugging
@@ -742,7 +742,7 @@ Environment="A2R_LOG_LEVEL=debug"
 # In driver config, set detailed Firecracker logs
 
 # View Firecracker logs
-sudo cat /var/lib/a2r/firecracker-vms/$VM_ID/firecracker.log
+sudo cat /var/lib/allternit/firecracker-vms/$VM_ID/firecracker.log
 
 # Run Firecracker manually for testing
 sudo /usr/bin/firecracker --api-sock /tmp/test.socket --id test-vm
@@ -765,7 +765,7 @@ sudo watch -n 1 'tc -s qdisc show dev tap-$VM_ID'
 
 ```bash
 # Profile driver
-perf record -p $(pgrep a2r-firecracker-driver) -g -- sleep 30
+perf record -p $(pgrep allternit-firecracker-driver) -g -- sleep 30
 perf report
 
 # Check async task usage

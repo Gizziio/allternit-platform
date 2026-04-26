@@ -1,5 +1,5 @@
 /**
- * A2R Vision Action Parser
+ * Allternit Vision Action Parser
  * 
  * Ports the Python action_parser.py logic to TypeScript.
  * Handles coordinate transformation, smart resizing, and structured action parsing.

@@ -1,5 +1,5 @@
 /**
- * A2R Workflow Engine Types
+ * Allternit Workflow Engine Types
  * 
  * Core type definitions for workflow orchestration.
  */

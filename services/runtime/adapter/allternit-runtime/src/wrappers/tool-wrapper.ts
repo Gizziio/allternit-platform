@@ -1,15 +1,15 @@
 /**
  * Tool Execution Wrapper
  * 
- * Wraps runtime tool execution to inject A2R Kernel routing.
+ * Wraps runtime tool execution to inject Allternit Kernel routing.
  */
 
 import type {
-  A2RKernel,
+  AllternitKernel,
   ToolContext,
   RoutingResult,
   RoutingDecision,
-} from '@a2r/governor';
+} from '@allternit/governor';
 import {
   type RuntimeToolPolicy,
   ToolExecutionError,
@@ -27,7 +27,7 @@ type OriginalToolExecutor = (
  * Tool wrapper options
  */
 export interface ToolWrapperOptions {
-  kernel: A2RKernel;
+  kernel: AllternitKernel;
   sessionId: string;
   agentId: string;
   workspaceRoot: string;
@@ -79,7 +79,7 @@ export interface WrappedToolResult {
 }
 
 /**
- * Wrap a single tool execution with A2R routing
+ * Wrap a single tool execution with Allternit routing
  */
 export async function wrapToolExecution(
   options: ToolWrapperOptions,
@@ -149,7 +149,7 @@ export async function wrapToolExecution(
       return {
         decision: 'deny',
         error: new ToolExecutionError(
-          routingResult.reason ?? 'Tool execution denied by A2R Kernel',
+          routingResult.reason ?? 'Tool execution denied by Allternit Kernel',
           'ACCESS_DENIED'
         ),
         auditLog,
@@ -277,7 +277,7 @@ export function wrapToolSet(
  */
 export function wrapToolPolicy(
   originalPolicy: RuntimeToolPolicy,
-  _kernel: A2RKernel,
+  _kernel: AllternitKernel,
   _context: {
     sessionId: string;
     agentId: string;

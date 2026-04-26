@@ -1,20 +1,24 @@
 """
-A2R Computer Use — Receipt Writer
+Allternit Computer Use — Receipt Writer
 G3 receipt guarantee: Every significant action emits a receipt
 with integrity hash, evidence, and policy decision linkage.
 
 Wraps and normalizes the existing receipt generation from
-brain_adapter.py (generate_a2r_receipt).
+brain_adapter.py (generate_allternit_receipt).
 """
 
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
+import asyncio
+import logging
 import uuid
 import hashlib
 import json
 import os
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -92,13 +96,23 @@ class ReceiptWriter:
     Writes receipts to local storage and optionally forwards
     to the governance kernel.
 
-    Storage: ~/.a2r/receipts/{receipt_id}.json (backward compatible
+    Storage: ~/.allternit/receipts/{receipt_id}.json (backward compatible
     with existing brain_adapter.py receipt path).
     """
 
-    def __init__(self, receipts_dir: Optional[str] = None, gateway_url: Optional[str] = None):
-        self._receipts_dir = Path(receipts_dir or os.path.expanduser("~/.a2r/receipts"))
+    def __init__(
+        self,
+        receipts_dir: Optional[str] = None,
+        gateway_url: Optional[str] = None,
+        receipt_forward_url: Optional[str] = None,
+    ):
+        self._receipts_dir = Path(receipts_dir or os.path.expanduser("~/.allternit/receipts"))
         self._gateway_url = gateway_url or os.getenv("BRAIN_GATEWAY_URL", "http://localhost:3000")
+        # Optional forwarding to the computer-use gateway's /v1/receipts endpoint.
+        # Reads from ALLTERNIT_RECEIPT_GATEWAY if not passed explicitly.
+        self._receipt_forward_url: Optional[str] = (
+            receipt_forward_url or os.getenv("ALLTERNIT_RECEIPT_GATEWAY") or None
+        )
         self._receipts: List[ActionReceipt] = []
         self._receipts_dir.mkdir(parents=True, exist_ok=True)
 
@@ -141,6 +155,15 @@ class ReceiptWriter:
         self._write_to_disk(receipt)
         self._receipts.append(receipt)
 
+        # Fire-and-forget forward to gateway if configured
+        if self._receipt_forward_url:
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(self._forward_receipt(receipt.to_dict()))
+            except RuntimeError:
+                # No running event loop — skip forwarding (sync call context)
+                pass
+
         return receipt
 
     def emit_route_decision(
@@ -178,14 +201,50 @@ class ReceiptWriter:
         return list(self._receipts)
 
     def _write_to_disk(self, receipt: ActionReceipt) -> None:
-        """Persist receipt to ~/.a2r/receipts/."""
+        """Persist receipt to ~/.allternit/receipts/."""
         path = self._receipts_dir / f"{receipt.receipt_id}.json"
         try:
             with open(path, "w") as f:
                 json.dump(receipt.to_dict(), f, indent=2)
         except OSError as e:
-            import sys
-            print(f"Failed to write receipt {receipt.receipt_id}: {e}", file=sys.stderr)
+            logger.error("Failed to write receipt %s: %s", receipt.receipt_id, e)
+
+    async def _forward_receipt(self, data: dict) -> None:
+        """
+        Fire-and-forget HTTP POST of a receipt dict to self._receipt_forward_url/v1/receipts.
+        Tries aiohttp first; falls back to urllib.request in an executor if unavailable.
+        """
+        url = f"{self._receipt_forward_url}/v1/receipts"
+        try:
+            import aiohttp
+            async with aiohttp.ClientSession() as s:
+                await s.post(url, json=data, timeout=aiohttp.ClientTimeout(total=5))
+        except ImportError:
+            # aiohttp not available — use urllib.request in executor
+            import urllib.request
+            import urllib.error
+            payload = json.dumps(data).encode()
+
+            def _post() -> None:
+                req = urllib.request.Request(
+                    url,
+                    data=payload,
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                try:
+                    with urllib.request.urlopen(req, timeout=5):
+                        pass
+                except urllib.error.URLError as _err:
+                    logger.debug("Receipt forward (urllib) failed: %s", _err)
+
+            try:
+                loop = asyncio.get_running_loop()
+                await loop.run_in_executor(None, _post)
+            except Exception as e:
+                logger.debug("Receipt forward executor failed: %s", e)
+        except Exception as e:
+            logger.debug("Receipt forward failed: %s", e)
 
     async def forward_to_gateway(self, receipt: ActionReceipt) -> None:
         """Forward receipt to governance kernel (best-effort)."""

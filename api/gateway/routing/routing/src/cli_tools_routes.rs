@@ -719,7 +719,7 @@ fn discover_internal_cli_tools(registry: &mut HashMap<String, CliTool>) {
         }
     }
 
-    let allternit_switch_files = ancestor_candidates("cmd/gizzi-code/src/cli/a2r.ts", 6);
+    let allternit_switch_files = ancestor_candidates("cmd/gizzi-code/src/cli/allternit.ts", 6);
     let mut seen_files = HashSet::new();
     for switch_file in allternit_switch_files {
         if registry.len() >= MAX_INTERNAL_TOOLS {
@@ -747,7 +747,7 @@ fn discover_internal_cli_tools(registry: &mut HashMap<String, CliTool>) {
             let Some(normalized_subcommand) = normalize_cli_literal(&raw_subcommand) else {
                 continue;
             };
-            let allternit_name = format!("a2r:{}", normalized_subcommand);
+            let allternit_name = format!("allternit:{}", normalized_subcommand);
             let Some(normalized_name) = normalize_tool_name(&allternit_name) else {
                 continue;
             };
@@ -758,10 +758,10 @@ fn discover_internal_cli_tools(registry: &mut HashMap<String, CliTool>) {
                 id: to_tool_id(&normalized_name),
                 name: normalized_name.clone(),
                 description: format!(
-                    "Internal a2r subcommand from {}",
+                    "Internal allternit subcommand from {}",
                     switch_file.to_string_lossy()
                 ),
-                command: format!("a2r {}", normalized_subcommand),
+                command: format!("allternit {}", normalized_subcommand),
                 category,
                 installed: true,
                 version: None,

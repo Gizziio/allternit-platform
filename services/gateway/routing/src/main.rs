@@ -1,4 +1,4 @@
-//! A2R IO Service - The ONLY Permitted Side-Effect Path
+//! Allternit IO Service - The ONLY Permitted Side-Effect Path
 //!
 //! Implements SYSTEM_LAW.md:
 //! - LAW-ONT-002: Only IO can execute side effects
@@ -22,7 +22,7 @@ use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 // Re-export tools-gateway library
-use a2rchitech_tools_gateway::{ToolDefinition, ToolExecutionRequest, ToolGateway, WriteScope};
+use allternit_tools_gateway::{ToolDefinition, ToolExecutionRequest, ToolGateway, WriteScope};
 
 /// IO Service state shared across handlers
 #[derive(Clone)]
@@ -32,15 +32,15 @@ pub struct IoServiceState {
 
 impl IoServiceState {
     pub async fn new() -> anyhow::Result<Self> {
-        use a2rchitech_history::HistoryLedger;
-        use a2rchitech_messaging::MessagingSystem;
-        use a2rchitech_policy::{Identity, IdentityType, PolicyEngine};
+        use allternit_history::HistoryLedger;
+        use allternit_messaging::MessagingSystem;
+        use allternit_policy::{Identity, IdentityType, PolicyEngine};
         use sqlx::SqlitePool;
         use std::path::PathBuf;
         use std::sync::Mutex;
 
         // Initialize with file-based storage (same pattern as kernel-service)
-        let data_dir = PathBuf::from("./.a2r/io-service");
+        let data_dir = PathBuf::from("./.allternit/io-service");
         std::fs::create_dir_all(&data_dir)?;
 
         let history_path = data_dir.join("history.jsonl");
@@ -122,7 +122,7 @@ pub struct ToolError {
 async fn health_check() -> impl IntoResponse {
     Json(HealthResponse {
         status: "ok".to_string(),
-        service: "a2r-io-service".to_string(),
+        service: "allternit-io-service".to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
         ontology_compliance: true, // LAW-ONT-002 compliance
     })
@@ -134,7 +134,7 @@ async fn health_check() -> impl IntoResponse {
 
 /// Execute a tool through the IO Service
 ///
-/// This is the ONLY permitted path for side-effect execution in A2R.
+/// This is the ONLY permitted path for side-effect execution in Allternit.
 /// All tool calls MUST go through this endpoint.
 ///
 /// LAW-ONT-002: "Only IO can execute side effects"
@@ -155,10 +155,10 @@ async fn execute_tool(
 
     // Create ToolExecutionRequest with all required fields per LAW-ONT-002
     let write_scope = WriteScope {
-        root: "/.a2r/".to_string(),
+        root: "/.allternit/".to_string(),
         allowed_globs: vec![
-            format!("/.a2r/artifacts/{}/**", req.run_id),
-            format!("/.a2r/receipts/{}/**", req.run_id),
+            format!("/.allternit/artifacts/{}/**", req.run_id),
+            format!("/.allternit/receipts/{}/**", req.run_id),
         ],
     };
 
@@ -268,12 +268,12 @@ async fn main() -> anyhow::Result<()> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    tracing::info!("Starting A2R IO Service");
+    tracing::info!("Starting Allternit IO Service");
     tracing::info!("Ontology Compliance: LAW-ONT-002 (Only IO executes side effects)");
 
     // Get configuration from environment
-    let host = std::env::var("A2R_IO_SERVICE_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
-    let port = std::env::var("A2R_IO_SERVICE_PORT").unwrap_or_else(|_| "3510".to_string());
+    let host = std::env::var("Allternit_IO_SERVICE_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+    let port = std::env::var("Allternit_IO_SERVICE_PORT").unwrap_or_else(|_| "3510".to_string());
     let bind_addr = format!("{}:{}", host, port);
 
     tracing::info!("Bind address: {}", bind_addr);
@@ -288,7 +288,7 @@ async fn main() -> anyhow::Result<()> {
     let app = create_router(state);
 
     let listener = tokio::net::TcpListener::bind(&bind_addr).await?;
-    tracing::info!("A2R IO Service listening on {}", bind_addr);
+    tracing::info!("Allternit IO Service listening on {}", bind_addr);
 
     axum::serve(listener, app).await?;
 

@@ -1,5 +1,5 @@
 [package]
-name = "a2rchitech-io-daemon"
+name = "allternit-io-daemon"
 version = "0.1.0"
 edition = "2021"
 
@@ -15,8 +15,8 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 anyhow = "1.0"
 async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
-a2rchitech-sdk-core = { workspace = true }
-a2rchitech-sdk-transport = { workspace = true }
+allternit-sdk-core = { workspace = true }
+allternit-sdk-transport = { workspace = true }
 
 [dev-dependencies]
 reqwest = { workspace = true, features = ["json"] }

@@ -10,7 +10,7 @@ Key reference points:
 - Design notes and original prompt are in `project_idea_and_guide.md`.
 
 How we use it:
-- We mirror the core semantics (threads, messages, attachments, leases) in A2R
+- We mirror the core semantics (threads, messages, attachments, leases) in Allternit
   without depending on this runtime.
 - We keep message flow as ledger events + derived thread views.
 - File reservations stay authoritative in SQLite leases.

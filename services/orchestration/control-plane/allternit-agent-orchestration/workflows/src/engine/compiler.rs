@@ -2,7 +2,7 @@ use crate::{
     FilesystemAccess, NetworkAccess, NodeConstraints, ResourceLimits, WorkflowDefinition,
     WorkflowEdge, WorkflowNode,
 };
-use a2rchitech_kernel_contracts::{
+use allternit_kernel_contracts::{
     EventEnvelope, ResourceRequirements, RunModel, RunState, ToolABI, VerificationResults,
     VerifyArtifact,
 };
@@ -370,7 +370,7 @@ impl YamlCompiler {
             id: task.id.clone(),
             name: task.name.clone(),
             phase,
-            skill_id: task.persona.clone(), // In A2rchitech, persona maps to skill_id
+            skill_id: task.persona.clone(), // In Allternitchitech, persona maps to skill_id
             inputs: task.inputs.clone(),
             outputs: task.outputs.clone(),
             constraints,
@@ -388,13 +388,13 @@ impl YamlCompiler {
     fn parse_safety_tier(
         &self,
         tier_str: &str,
-    ) -> Result<a2rchitech_policy::SafetyTier, CompilerError> {
+    ) -> Result<allternit_policy::SafetyTier, CompilerError> {
         match tier_str {
-            "T0" => Ok(a2rchitech_policy::SafetyTier::T0),
-            "T1" => Ok(a2rchitech_policy::SafetyTier::T1),
-            "T2" => Ok(a2rchitech_policy::SafetyTier::T2),
-            "T3" => Ok(a2rchitech_policy::SafetyTier::T3),
-            "T4" => Ok(a2rchitech_policy::SafetyTier::T4),
+            "T0" => Ok(allternit_policy::SafetyTier::T0),
+            "T1" => Ok(allternit_policy::SafetyTier::T1),
+            "T2" => Ok(allternit_policy::SafetyTier::T2),
+            "T3" => Ok(allternit_policy::SafetyTier::T3),
+            "T4" => Ok(allternit_policy::SafetyTier::T4),
             _ => Err(CompilerError::ValidationError(format!(
                 "Invalid safety tier: {}",
                 tier_str

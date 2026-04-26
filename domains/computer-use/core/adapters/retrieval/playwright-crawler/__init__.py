@@ -1,5 +1,5 @@
 """
-A2R Computer Use — Playwright Crawler Adapter
+Allternit Computer Use — Playwright Crawler Adapter
 Systematic multi-page crawl and content extraction using Playwright.
 
 Actions:

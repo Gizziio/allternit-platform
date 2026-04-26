@@ -57,10 +57,10 @@ impl ReceiptStore {
             .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")));
         let receipts_dir = opts
             .receipts_dir
-            .unwrap_or_else(|| PathBuf::from(".a2r/receipts"));
+            .unwrap_or_else(|| PathBuf::from(".allternit/receipts"));
         let blobs_dir = opts
             .blobs_dir
-            .unwrap_or_else(|| PathBuf::from(".a2r/blobs"));
+            .unwrap_or_else(|| PathBuf::from(".allternit/blobs"));
 
         let receipts_dir = if receipts_dir.is_absolute() {
             receipts_dir

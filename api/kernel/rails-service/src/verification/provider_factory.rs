@@ -32,7 +32,7 @@ impl ProviderFactory {
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// // Create a file-based provider
-    /// let config = ProviderConfig::file_based(".a2r/evidence", 30);
+    /// let config = ProviderConfig::file_based(".allternit/evidence", 30);
     /// let provider = ProviderFactory::create(ProviderType::FileBased, &config)?;
     /// # Ok(())
     /// # }
@@ -120,7 +120,7 @@ impl ProviderFactory {
             }
             "file" | "file_based" | "file-based" => {
                 let evidences_dir = env::var("ALLTERNIT_VERIFICATION_EVIDENCES_DIR")
-                    .unwrap_or_else(|_| ".a2r/evidence".to_string());
+                    .unwrap_or_else(|_| ".allternit/evidence".to_string());
                 let workspace_root = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
                 Self::create_file_based(evidences_dir, workspace_root, timeout_secs)
             }
@@ -175,7 +175,7 @@ impl AsyncProviderFactory {
             }
             "file" | "file_based" | "file-based" => {
                 let evidences_dir = env::var("ALLTERNIT_VERIFICATION_EVIDENCES_DIR")
-                    .unwrap_or_else(|_| ".a2r/evidence".to_string());
+                    .unwrap_or_else(|_| ".allternit/evidence".to_string());
                 let workspace_root = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
                 ProviderFactory::create_file_based(evidences_dir, workspace_root, timeout_secs)
             }
@@ -221,7 +221,7 @@ mod tests {
     #[test]
     fn test_create_file_based() {
         let temp_dir = TempDir::new().unwrap();
-        let provider = ProviderFactory::create_file_based(".a2r/evidence", temp_dir.path(), 30);
+        let provider = ProviderFactory::create_file_based(".allternit/evidence", temp_dir.path(), 30);
 
         assert!(provider.is_ok());
         assert_eq!(provider.unwrap().provider_type(), ProviderType::FileBased);
@@ -238,7 +238,7 @@ mod tests {
     #[test]
     fn test_create_file_based_with_config() {
         let config = crate::verification::types::FileBasedConfig {
-            evidences_dir: std::path::PathBuf::from(".a2r/evidence"),
+            evidences_dir: std::path::PathBuf::from(".allternit/evidence"),
             timeout_secs: 30,
             poll_interval_ms: 100,
         };
@@ -251,7 +251,7 @@ mod tests {
     fn test_shared_provider_factory() {
         let temp_dir = TempDir::new().unwrap();
         let provider =
-            SharedProviderFactory::create_file_based(".a2r/evidence", temp_dir.path(), 30);
+            SharedProviderFactory::create_file_based(".allternit/evidence", temp_dir.path(), 30);
 
         assert!(provider.is_ok());
     }

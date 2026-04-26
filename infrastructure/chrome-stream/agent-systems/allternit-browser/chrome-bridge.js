@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * A2R Chrome Bridge - Connect A2R Platform to Real Chrome
+ * Allternit Chrome Bridge - Connect Allternit Platform to Real Chrome
  * 
- * This script connects the A2R platform to a real Chrome browser
+ * This script connects the Allternit platform to a real Chrome browser
  * via CDP (Chrome DevTools Protocol) for extension downloads and
  * Chrome Web Store access.
  * 
@@ -11,8 +11,8 @@
 
 import { chromium } from 'playwright';
 
-const CDP_URL = process.env.A2R_CHROME_CDP_URL || 'http://127.0.0.1:9222';
-const PLATFORM_PORT = process.env.A2R_CHROME_PLATFORM_PORT || 9223;
+const CDP_URL = process.env.Allternit_CHROME_CDP_URL || 'http://127.0.0.1:9222';
+const PLATFORM_PORT = process.env.Allternit_CHROME_PLATFORM_PORT || 9223;
 
 let browser = null;
 let context = null;
@@ -20,7 +20,7 @@ let page = null;
 
 async function startChromeBridge() {
   console.log('╔════════════════════════════════════════════════════════════╗');
-  console.log('║           A2R Chrome Bridge                                ║');
+  console.log('║           Allternit Chrome Bridge                                ║');
   console.log('╚════════════════════════════════════════════════════════════╝\n');
 
   try {
@@ -171,7 +171,7 @@ async function startChromeBridge() {
     console.log('   GET /type?selector=...   - Type text');
     console.log('   GET /open-extension-store?id=... - Open Chrome Web Store');
     console.log('\n════════════════════════════════════════════════════════════');
-    console.log('Chrome Bridge is ready for A2R platform integration');
+    console.log('Chrome Bridge is ready for Allternit platform integration');
     console.log('════════════════════════════════════════════════════════════\n');
 
     // Handle cleanup

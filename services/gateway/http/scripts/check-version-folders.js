@@ -91,7 +91,7 @@ function main() {
     log('\n⚠️  Use role-based names instead:', 'yellow');
     log('   runtime/ (not core/v1/)');
     log('   bindings/ui_contract_legacy/ (not bindings/ui_v0/)');
-    log('   adapters/kernel/ (not adapters/a2r-kernel-v1/)');
+    log('   adapters/kernel/ (not adapters/allternit-kernel-v1/)');
     log('   transports/http_server/ (not transports/http-v1/)\n', 'yellow');
     
     process.exit(1);

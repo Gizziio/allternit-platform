@@ -286,4 +286,4 @@ For issues and questions:
 
 ---
 
-**Built with ❤️ by A2R Infrastructure**
+**Built with ❤️ by Allternit Infrastructure**

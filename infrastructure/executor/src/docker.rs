@@ -205,15 +205,15 @@ impl DockerOrchestrator {
 
         // Build container name
         let container_name = format!(
-            "a2r-exec-{}",
+            "allternit-exec-{}",
             uuid::Uuid::new_v4().to_string()[..8].to_string()
         );
 
         // Build labels
         let mut labels = config.labels.clone();
-        labels.insert("a2r.managed".to_string(), "true".to_string());
+        labels.insert("allternit.managed".to_string(), "true".to_string());
         labels.insert(
-            "a2r.created_at".to_string(),
+            "allternit.created_at".to_string(),
             chrono::Utc::now().to_rfc3339(),
         );
 
@@ -609,7 +609,7 @@ impl DockerOrchestrator {
         let client = self.get_client()?;
 
         let mut filters = HashMap::new();
-        filters.insert("label".to_string(), vec!["a2r.managed=true".to_string()]);
+        filters.insert("label".to_string(), vec!["allternit.managed=true".to_string()]);
 
         let options = ListContainersOptions {
             all,

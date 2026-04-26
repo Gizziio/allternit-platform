@@ -126,7 +126,7 @@ UI Platform → Superconductor → Browser-Use → Chromium (CDP)
 ### Service Not Available
 Ensure superconductor is running:
 ```bash
-cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/4-services/runtime/superconductor
+cd /Users/macbook/Desktop/allternit-workspace/allternit/4-services/runtime/superconductor
 python -m uvicorn src.main:app --reload --port 3310
 ```
 

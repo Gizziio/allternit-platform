@@ -24,7 +24,7 @@ services:
       - kernel
       - ui-tars
     networks:
-      - a2rchitect-network
+      - allternitchitect-network
 
   kernel:
     build:
@@ -47,7 +47,7 @@ services:
       retries: 3
     restart: unless-stopped
     networks:
-      - a2rchitect-network
+      - allternitchitect-network
 
   ui-tars:
     build:
@@ -67,27 +67,27 @@ services:
       retries: 3
     restart: unless-stopped
     networks:
-      - a2rchitect-network
+      - allternitchitect-network
 
   # Optional: PostgreSQL database
   db:
     image: postgres:15-alpine
     environment:
-      POSTGRES_USER: a2rchitect
+      POSTGRES_USER: allternitchitect
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: a2rchitect
+      POSTGRES_DB: allternitchitect
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U a2rchitect"]
+      test: ["CMD-SHELL", "pg_isready -U allternitchitect"]
       interval: 10s
       timeout: 3s
       retries: 5
     restart: unless-stopped
     networks:
-      - a2rchitect-network
+      - allternitchitect-network
 
   # Optional: Redis for caching
   redis:
@@ -103,7 +103,7 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - a2rchitect-network
+      - allternitchitect-network
 
 volumes:
   data:
@@ -111,5 +111,5 @@ volumes:
   redis_data:
 
 networks:
-  a2rchitect-network:
+  allternitchitect-network:
     driver: bridge

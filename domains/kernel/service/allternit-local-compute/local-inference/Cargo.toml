@@ -1,5 +1,5 @@
 [package]
-name = "a2rchitech-local-inference"
+name = "allternit-local-inference"
 version = "0.1.0"
 edition = "2021"
 
@@ -21,8 +21,8 @@ uuid = { workspace = true }
 llama-cpp-2 = { version = "0.1.0", optional = true } # Bindings for GGUF
 
 # SDKs
-a2rchitech-sdk-transport = { workspace = true }
-a2rchitech-model-router = { workspace = true }
+allternit-sdk-transport = { workspace = true }
+allternit-model-router = { workspace = true }
 
 [features]
 default = []

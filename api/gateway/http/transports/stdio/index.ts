@@ -1,5 +1,5 @@
 /**
- * A2R Gateway - stdio Transport
+ * Allternit Gateway - stdio Transport
  * 
  * JSON-RPC 2.0 over stdin/stdout for local subprocess-launched usage.
  * MCP-compatible transport.

@@ -1,5 +1,5 @@
 """
-A2R App Discovery — Production-grade application detection for macOS/Windows/Linux
+Allternit App Discovery — Production-grade application detection for macOS/Windows/Linux
 
 Provides robust detection of:
 - Frontmost application (contextual awareness)

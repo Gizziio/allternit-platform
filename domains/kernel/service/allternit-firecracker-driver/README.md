@@ -1,10 +1,10 @@
-# A2R Firecracker Driver
+# Allternit Firecracker Driver
 
-Production-ready MicroVM-based execution driver using AWS Firecracker for the A2R platform.
+Production-ready MicroVM-based execution driver using AWS Firecracker for the Allternit platform.
 
 ## Overview
 
-This driver provides hardware-level isolation for multi-tenant workloads using Firecracker MicroVMs. It implements the `ExecutionDriver` trait from `a2r-driver-interface`.
+This driver provides hardware-level isolation for multi-tenant workloads using Firecracker MicroVMs. It implements the `ExecutionDriver` trait from `allternit-driver-interface`.
 
 ### Key Features
 
@@ -46,7 +46,7 @@ This driver provides hardware-level isolation for multi-tenant workloads using F
 2. **Kernel image** (vmlinux):
    ```bash
    # Build or download a Firecracker-compatible kernel
-   # Place at /var/lib/a2r/vmlinux or configure path
+   # Place at /var/lib/allternit/vmlinux or configure path
    ```
 
 3. **cgroups v2**:
@@ -65,14 +65,14 @@ This driver provides hardware-level isolation for multi-tenant workloads using F
 ### Configuration
 
 ```rust
-use a2r_firecracker_driver::{FirecrackerDriver, FirecrackerConfig};
+use allternit_firecracker_driver::{FirecrackerDriver, FirecrackerConfig};
 
 let config = FirecrackerConfig {
     firecracker_bin: PathBuf::from("/usr/local/bin/firecracker"),
     jailer_bin: PathBuf::from("/usr/local/bin/jailer"),
     chroot_base_dir: PathBuf::from("/srv/jailer"),
-    vm_root_dir: PathBuf::from("/var/lib/a2r/vms"),
-    kernel_image: PathBuf::from("/var/lib/a2r/vmlinux"),
+    vm_root_dir: PathBuf::from("/var/lib/allternit/vms"),
+    kernel_image: PathBuf::from("/var/lib/allternit/vmlinux"),
     bridge_iface: "fcbridge0".to_string(),
     vm_subnet: "172.16.0.0/24".to_string(),
     cgroup_base: PathBuf::from("/sys/fs/cgroup"),
@@ -87,7 +87,7 @@ let driver = FirecrackerDriver::with_config(config);
 ### Spawning a VM
 
 ```rust
-use a2r_driver_interface::*;
+use allternit_driver_interface::*;
 
 let spec = SpawnSpec {
     tenant: TenantId::new("tenant-1").unwrap(),

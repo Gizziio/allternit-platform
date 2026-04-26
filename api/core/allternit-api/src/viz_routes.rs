@@ -438,7 +438,7 @@ pub fn render_to_pdf(
 
     // Create PDF document with title and initial layer
     let (doc, page1, layer1) = PdfDocument::new(
-        "A2R Chart Visualization",
+        "Allternit Chart Visualization",
         Mm(width_mm),
         Mm(height_mm),
         "Chart Layer",

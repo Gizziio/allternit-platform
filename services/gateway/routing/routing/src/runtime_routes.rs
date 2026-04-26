@@ -23,14 +23,14 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::AppState;
-use a2r_driver_interface::{
+use allternit_driver_interface::{
     DriverConfig as InterfaceDriverConfig, DriverType, IsolationLevel, PrewarmPoolConfig,
     ReplayCaptureLevel, ResourceSpec, RuntimeEnvironmentSettings,
 };
-use a2r_prewarm::{PoolConfig, PoolManager};
-use a2r_replay::{CaptureLevel, ReplayEngine};
-use a2r_runtime::changeset::ExecutionMode;
-use a2rchitech_budget_metering::{BudgetMeteringEngine, BudgetQuota};
+use allternit_prewarm::{PoolConfig, PoolManager};
+use allternit_replay::{CaptureLevel, ReplayEngine};
+use allternit_runtime::changeset::ExecutionMode;
+use allternit_budget_metering::{BudgetMeteringEngine, BudgetQuota};
 
 // ============================================================================
 // Request/Response Types
@@ -212,8 +212,8 @@ fn default_settings() -> RuntimeSettings {
         },
         versioning: VersioningConfig {
             auto_commit: false,
-            commit_message_template: "[a2r] {description}".to_string(),
-            branch_prefix: "a2r-session-".to_string(),
+            commit_message_template: "[allternit] {description}".to_string(),
+            branch_prefix: "allternit-session-".to_string(),
         },
     }
 }
@@ -312,7 +312,7 @@ async fn update_settings(
         // Update the driver config in registry
         let mut registry = state.driver_registry.write().await;
         let tenant =
-            a2r_driver_interface::TenantId::new("default").map_err(|_| StatusCode::BAD_REQUEST)?;
+            allternit_driver_interface::TenantId::new("default").map_err(|_| StatusCode::BAD_REQUEST)?;
         let config = InterfaceDriverConfig {
             driver_type,
             default_resources: ResourceSpec {
@@ -324,7 +324,7 @@ async fn update_settings(
             },
             env_vars: std::collections::HashMap::new(),
             default_mounts: vec![],
-            network_policy: a2r_driver_interface::NetworkPolicy::default(),
+            network_policy: allternit_driver_interface::NetworkPolicy::default(),
             default_timeout_seconds: 300,
             enable_prewarm: settings.prewarm.enabled,
         };
@@ -688,7 +688,7 @@ async fn get_replay_session(
     Path(session_id): Path<String>,
     State(state): State<Arc<AppState>>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    use a2r_driver_interface::ExecutionId;
+    use allternit_driver_interface::ExecutionId;
 
     let engine = state.replay_engine.read().await;
 
@@ -728,7 +728,7 @@ async fn execute_replay(
     State(state): State<Arc<AppState>>,
     _request: Json<ExecuteReplayRequest>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    use a2r_driver_interface::ExecutionId;
+    use allternit_driver_interface::ExecutionId;
 
     let engine = state.replay_engine.read().await;
     let run_id = ExecutionId::new(); // Parse from session_id in real implementation

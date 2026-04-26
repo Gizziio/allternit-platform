@@ -20,7 +20,7 @@
 - All writes under lease scope
 - All tool calls gated through PreToolUse
 - Emit receipts for all modifications
-- Never modify protected paths (.a2r/ledger, .a2r/leases, etc.)
+- Never modify protected paths (.allternit/ledger, .allternit/leases, etc.)
 
 ### 3. Reporting
 - Produce build_report receipt

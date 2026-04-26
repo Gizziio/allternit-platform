@@ -1,6 +1,6 @@
 //! File-Based Verification Provider
 //!
-//! Polls `.a2r/evidence/{wih_id}.json` and `.a2r/evidence/{wih_id}.ready`
+//! Polls `.allternit/evidence/{wih_id}.json` and `.allternit/evidence/{wih_id}.ready`
 //! files to gather evidence from the TypeScript verification service.
 
 use crate::verification::types::{
@@ -222,7 +222,7 @@ mod tests {
     async fn test_file_based_provider_paths() {
         let temp_dir = TempDir::new().unwrap();
         let config = FileBasedConfig {
-            evidences_dir: ".a2r/evidence".to_string(),
+            evidences_dir: ".allternit/evidence".to_string(),
             timeout_secs: 5,
             poll_interval_ms: 10,
         };
@@ -231,11 +231,11 @@ mod tests {
 
         assert_eq!(
             provider.evidence_path("test-wih"),
-            temp_dir.path().join(".a2r/evidence/test-wih.json")
+            temp_dir.path().join(".allternit/evidence/test-wih.json")
         );
         assert_eq!(
             provider.ready_path("test-wih"),
-            temp_dir.path().join(".a2r/evidence/test-wih.ready")
+            temp_dir.path().join(".allternit/evidence/test-wih.ready")
         );
     }
 
@@ -243,7 +243,7 @@ mod tests {
     async fn test_health_check() {
         let temp_dir = TempDir::new().unwrap();
         let config = FileBasedConfig {
-            evidences_dir: ".a2r/evidence".to_string(),
+            evidences_dir: ".allternit/evidence".to_string(),
             timeout_secs: 5,
             poll_interval_ms: 100,
         };
@@ -257,7 +257,7 @@ mod tests {
     async fn test_gather_evidence_timeout() {
         let temp_dir = TempDir::new().unwrap();
         let config = FileBasedConfig {
-            evidences_dir: ".a2r/evidence".to_string(),
+            evidences_dir: ".allternit/evidence".to_string(),
             timeout_secs: 1, // Short timeout for test
             poll_interval_ms: 50,
         };
@@ -273,11 +273,11 @@ mod tests {
     #[tokio::test]
     async fn test_gather_evidence_success() {
         let temp_dir = TempDir::new().unwrap();
-        let evidence_dir = temp_dir.path().join(".a2r/evidence");
+        let evidence_dir = temp_dir.path().join(".allternit/evidence");
         tokio::fs::create_dir_all(&evidence_dir).await.unwrap();
 
         let config = FileBasedConfig {
-            evidences_dir: ".a2r/evidence".to_string(),
+            evidences_dir: ".allternit/evidence".to_string(),
             timeout_secs: 5,
             poll_interval_ms: 10,
         };
@@ -320,7 +320,7 @@ mod tests {
     async fn test_invalid_wih_id() {
         let temp_dir = TempDir::new().unwrap();
         let config = FileBasedConfig {
-            evidences_dir: ".a2r/evidence".to_string(),
+            evidences_dir: ".allternit/evidence".to_string(),
             timeout_secs: 1,
             poll_interval_ms: 10,
         };

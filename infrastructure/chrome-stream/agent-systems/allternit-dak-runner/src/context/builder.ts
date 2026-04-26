@@ -168,7 +168,7 @@ export class ContextPackBuilder {
    */
   async writePack(
     pack: ContextPack,
-    outputDir: string = '.a2r/runner/context_packs'
+    outputDir: string = '.allternit/runner/context_packs'
   ): Promise<string> {
     const outputPath = path.join(outputDir, `${pack.contextPackId}.json`);
     
@@ -184,7 +184,7 @@ export class ContextPackBuilder {
   /**
    * Read a context pack from disk
    */
-  async readPack(packId: ContextPackId, inputDir: string = '.a2r/runner/context_packs'): Promise<ContextPack | null> {
+  async readPack(packId: ContextPackId, inputDir: string = '.allternit/runner/context_packs'): Promise<ContextPack | null> {
     const inputPath = path.join(inputDir, `${packId}.json`);
     
     if (!fs.existsSync(inputPath)) {

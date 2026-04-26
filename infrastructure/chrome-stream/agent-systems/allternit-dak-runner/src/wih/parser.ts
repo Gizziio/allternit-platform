@@ -183,7 +183,7 @@ export class WIHParser {
       required_reports: outputs.required_reports || ['build_report.md', 'validator_report.md'],
       artifact_root_policy: {
         durable_outputs_via: outputs.artifact_root_policy?.durable_outputs_via || 'rails',
-        local_workspace_root: outputs.artifact_root_policy?.local_workspace_root || '.a2r/out/{{run_id}}/',
+        local_workspace_root: outputs.artifact_root_policy?.local_workspace_root || '.allternit/out/{{run_id}}/',
         forbid_repo_writes_by_default: outputs.artifact_root_policy?.forbid_repo_writes_by_default ?? true,
       },
     };
@@ -303,7 +303,7 @@ export class WIHParser {
         required_reports: ['build_report.md', 'validator_report.md'],
         artifact_root_policy: {
           durable_outputs_via: 'rails',
-          local_workspace_root: '.a2r/out/{{run_id}}/',
+          local_workspace_root: '.allternit/out/{{run_id}}/',
           forbid_repo_writes_by_default: true,
         },
       },

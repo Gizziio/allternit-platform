@@ -85,7 +85,7 @@ async fn generate_with_ssh_keygen(
             "-t", alg_flag,
             "-f", key_path.to_str().unwrap(),
             "-N", "", // No passphrase (for automation)
-            "-C", &format!("a2r-{}", name),
+            "-C", &format!("allternit-{}", name),
         ])
         .args(bits_flag.split_whitespace())
         .output()
@@ -131,7 +131,7 @@ async fn generate_with_ssh_keygen(
         fingerprint,
         fingerprint_md5,
         created_at: timestamp,
-        comment: format!("a2r-{}", name),
+        comment: format!("allternit-{}", name),
     })
 }
 
@@ -151,7 +151,7 @@ async fn generate_native(name: &str, algorithm: KeyAlgorithm) -> Result<SSHKeyPa
             
             // Format as OpenSSH
             let private_key = format_ed25519_private_key(&private_key_bytes)?;
-            let public_key = format_ed25519_public_key(&public_key_bytes, &format!("a2r-{}", name))?;
+            let public_key = format_ed25519_public_key(&public_key_bytes, &format!("allternit-{}", name))?;
             
             // Calculate fingerprint
             let fingerprint = calculate_fingerprint(&public_key_bytes);
@@ -168,7 +168,7 @@ async fn generate_native(name: &str, algorithm: KeyAlgorithm) -> Result<SSHKeyPa
                     .duration_since(UNIX_EPOCH)
                     .unwrap()
                     .as_secs(),
-                comment: format!("a2r-{}", name),
+                comment: format!("allternit-{}", name),
             })
         }
         KeyAlgorithm::Rsa4096 => {

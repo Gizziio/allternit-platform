@@ -1,7 +1,7 @@
 /**
- * A2R Infrastructure API Server
+ * Allternit Infrastructure API Server
  * 
- * Main entry point for the A2R infrastructure backend service.
+ * Main entry point for the Allternit infrastructure backend service.
  * This service provides:
  * - VPS connection management
  * - Cloud provider deployments (Hetzner, DigitalOcean, AWS)

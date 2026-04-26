@@ -15,7 +15,7 @@
   - Relatively newer codebase
   - Some advanced features still maturing
   - Smaller community than C++ alternatives
-- **Verdict**: ✅ SELECTED - Best fit for Rust-native a2rchitech stack
+- **Verdict**: ✅ SELECTED - Best fit for Rust-native allternit stack
 
 #### 2. livekit
 - **Pros**:
@@ -44,7 +44,7 @@
 Selected: **webrtc-rs** v0.12.0
 
 Rationale:
-1. Native Rust fits a2rchitech architecture
+1. Native Rust fits allternit architecture
 2. No external service dependencies
 3. Suitable for both client and server WebRTC
 4. Clean async API integrates with existing codebase

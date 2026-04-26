@@ -1,8 +1,8 @@
 [package]
-name = "a2rchitech-registry"
+name = "allternit-registry"
 version = "0.1.0"
 edition = "2021"
-description = "A2rchitech Unified Registry & Data Fabric - Single source of truth for tenant capabilities (agents, skills, tools) with multi-backend storage"
+description = "Allternitchitech Unified Registry & Data Fabric - Single source of truth for tenant capabilities (agents, skills, tools) with multi-backend storage"
 
 [dependencies]
 serde = { workspace = true }
@@ -20,11 +20,11 @@ chrono = { workspace = true }
 redis = { workspace = true }
 
 # Layer dependencies
-a2rchitech-skills = { workspace = true }
-a2rchitech-tools-gateway = { workspace = true }
-a2rchitech-policy = { workspace = true }
-a2rchitech-history = { workspace = true }
-a2rchitech-messaging = { workspace = true }
+allternit-skills = { workspace = true }
+allternit-tools-gateway = { workspace = true }
+allternit-policy = { workspace = true }
+allternit-history = { workspace = true }
+allternit-messaging = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

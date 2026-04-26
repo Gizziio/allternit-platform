@@ -1,4 +1,4 @@
-//! MCP (Model Context Protocol) Client for A2R
+//! MCP (Model Context Protocol) Client for Allternit
 //!
 //! This crate provides a Rust implementation of the Model Context Protocol client,
 //! supporting both stdio and HTTP/SSE transports with OAuth 2.1 + PKCE authentication.
@@ -112,7 +112,7 @@ impl McpClient {
             protocol_version: protocol::MCP_PROTOCOL_VERSION.to_string(),
             capabilities: ClientCapabilities::default(),
             client_info: protocol::Implementation {
-                name: "a2r-mcp-client".to_string(),
+                name: "allternit-mcp-client".to_string(),
                 version: env!("CARGO_PKG_VERSION").to_string(),
             },
         };

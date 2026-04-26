@@ -1,0 +1,205 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'domains/computer-use/core/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'domains/computer-use/core/**'
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # Browser automation tests
+  browser-tests:
+    name: Browser Automation Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-asyncio Pillow
+        pip install playwright
+    
+    - name: Install Playwright browsers
+      run: |
+        playwright install chromium
+        playwright install-deps chromium
+    
+    - name: Run browser integration tests
+      run: |
+        pytest domains/computer-use/core/tests/integration/test_browser_automation.py -v -m "integration and requires_browser"
+      timeout-minutes: 10
+    
+    - name: Run mock browser tests (CI fallback)
+      if: failure()
+      run: |
+        pytest domains/computer-use/core/tests/integration/test_browser_automation.py::TestBrowserAutomationMock -v
+
+  # Desktop automation tests (macOS)
+  desktop-tests-macos:
+    name: Desktop Automation Tests (macOS)
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest Pillow
+        pip install pyautogui
+    
+    - name: Grant screen recording permission (macOS)
+      run: |
+        # Note: GitHub Actions macOS runners may not have screen recording enabled
+        # These tests will likely skip, but we include them for completeness
+        echo "Screen recording permission check - may require manual approval"
+    
+    - name: Run desktop integration tests
+      run: |
+        pytest domains/computer-use/core/tests/integration/test_desktop_automation.py -v -m "integration and requires_desktop" || true
+      timeout-minutes: 5
+      continue-on-error: true
+    
+    - name: Run mock desktop tests (CI fallback)
+      run: |
+        pytest domains/computer-use/core/tests/integration/test_desktop_automation.py::TestDesktopAutomationMock -v
+
+  # Desktop automation tests (Ubuntu)
+  desktop-tests-ubuntu:
+    name: Desktop Automation Tests (Ubuntu)
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y python3-tk python3-dev scrot
+        sudo apt-get install -y xvfb  # Virtual display for headless testing
+    
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest Pillow
+        pip install pyautogui
+    
+    - name: Run desktop tests with virtual display
+      run: |
+        export DISPLAY=:99
+        Xvfb :99 -screen 0 1920x1080x24 > /dev/null 2>&1 &
+        sleep 2
+        pytest domains/computer-use/core/tests/integration/test_desktop_automation.py -v -m "integration and requires_desktop" || true
+      timeout-minutes: 5
+      continue-on-error: true
+    
+    - name: Run mock desktop tests (CI fallback)
+      run: |
+        pytest domains/computer-use/core/tests/integration/test_desktop_automation.py::TestDesktopAutomationMock -v
+
+  # Vision model tests (mock only in CI)
+  vision-tests:
+    name: Vision Model Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest Pillow
+    
+    - name: Run mock vision tests (no API keys in CI)
+      run: |
+        pytest domains/computer-use/core/tests/integration/test_vision_models.py::TestVisionModelsMock -v
+        pytest domains/computer-use/core/tests/integration/test_vision_models.py::TestVisionUtilities -v
+
+  # Full workflow tests
+  workflow-tests:
+    name: Full Workflow Tests
+    runs-on: ubuntu-latest
+    needs: [browser-tests]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-asyncio Pillow
+        pip install playwright
+        playwright install chromium
+    
+    - name: Run mock workflow tests
+      run: |
+        pytest domains/computer-use/core/tests/integration/test_full_workflows.py::TestMockWorkflows -v
+        pytest domains/computer-use/core/tests/integration/test_full_workflows.py::TestWorkflowHelpers -v
+    
+    - name: Run browser workflow tests
+      run: |
+        pytest domains/computer-use/core/tests/integration/test_full_workflows.py::TestBrowserWorkflow -v -m "requires_browser" || true
+      timeout-minutes: 10
+      continue-on-error: true
+
+  # Summary report
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [browser-tests, desktop-tests-macos, desktop-tests-ubuntu, vision-tests, workflow-tests]
+    if: always()
+    
+    steps:
+    - name: Test Summary
+      run: |
+        echo "## Integration Test Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+        echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+        echo "| Browser Tests | ${{ needs.browser-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Desktop Tests (macOS) | ${{ needs.desktop-tests-macos.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Desktop Tests (Ubuntu) | ${{ needs.desktop-tests-ubuntu.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Vision Tests | ${{ needs.vision-tests.result }} |" >> $GITHUB_STEP_SUMMARY
+        echo "| Workflow Tests | ${{ needs.workflow-tests.result }} |" >> $GITHUB_STEP_SUMMARY

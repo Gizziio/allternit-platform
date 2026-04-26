@@ -1,4 +1,4 @@
-//! A2R Policy Tier Gating
+//! Allternit Policy Tier Gating
 //!
 //! Provides tiered policy enforcement for different safety levels.
 //! Ensures that operations are appropriate for their assigned policy tier.

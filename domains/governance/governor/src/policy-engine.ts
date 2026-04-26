@@ -7,7 +7,7 @@ export interface PolicyContext {
   securityLevel: 'deny' | 'allowlist' | 'full';
 }
 
-export interface A2RReceipt {
+export interface AllternitReceipt {
   id: string;
   timestamp: number;
   agentId: string;
@@ -17,7 +17,7 @@ export interface A2RReceipt {
 }
 
 export class PolicyEngine {
-  private receipts: A2RReceipt[] = [];
+  private receipts: AllternitReceipt[] = [];
 
   async evaluate(context: PolicyContext): Promise<PolicyDecision> {
     const { tool, securityLevel } = context;
@@ -42,8 +42,8 @@ export class PolicyEngine {
     return 'deny';
   }
 
-  generateReceipt(context: PolicyContext, decision: PolicyDecision, reason?: string): A2RReceipt {
-    const receipt: A2RReceipt = {
+  generateReceipt(context: PolicyContext, decision: PolicyDecision, reason?: string): AllternitReceipt {
+    const receipt: AllternitReceipt = {
       id: Math.random().toString(36).substring(2),
       timestamp: Date.now(),
       agentId: context.agentId,
@@ -55,7 +55,7 @@ export class PolicyEngine {
     return receipt;
   }
 
-  getReceipts(): A2RReceipt[] {
+  getReceipts(): AllternitReceipt[] {
     return this.receipts;
   }
 }

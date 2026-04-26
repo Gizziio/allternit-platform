@@ -1,6 +1,6 @@
 //! Rails Integration
 //!
-//! Integrates with A2R's Rails execution system.
+//! Integrates with Allternit's Rails execution system.
 
 use crate::error::SwarmResult;
 use crate::types::{EntityId, ExecutionResult};

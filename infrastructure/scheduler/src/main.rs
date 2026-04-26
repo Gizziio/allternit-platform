@@ -1,4 +1,4 @@
-//! A2R Scheduler Daemon
+//! Allternit Scheduler Daemon
 //!
 //! Server-side scheduling service that:
 //! - Polls schedules from the control plane database
@@ -39,7 +39,7 @@ pub struct SchedulerConfig {
 impl Default for SchedulerConfig {
     fn default() -> Self {
         Self {
-            database_url: "sqlite://a2r-cloud.db".to_string(),
+            database_url: "sqlite://allternit-cloud.db".to_string(),
             api_url: "http://localhost:3001".to_string(),
             api_key: None,
             poll_interval_secs: 60,
@@ -104,17 +104,17 @@ struct Args {
 async fn main() -> Result<()> {
     // Initialize logging
     tracing_subscriber::fmt()
-        .with_env_filter("info,a2r_scheduler=debug")
+        .with_env_filter("info,allternit_scheduler=debug")
         .with_target(false)
         .init();
 
-    info!("A2R Scheduler Daemon v{}", env!("CARGO_PKG_VERSION"));
+    info!("Allternit Scheduler Daemon v{}", env!("CARGO_PKG_VERSION"));
 
     let args = Args::parse();
 
     // Build configuration
     let config = SchedulerConfig {
-        database_url: args.database_url.unwrap_or_else(|| "sqlite://a2r-cloud.db".to_string()),
+        database_url: args.database_url.unwrap_or_else(|| "sqlite://allternit-cloud.db".to_string()),
         api_url: args.api_url,
         api_key: args.api_key,
         poll_interval_secs: args.poll_interval_secs,

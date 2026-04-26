@@ -14,14 +14,14 @@ use utoipa::{IntoParams, Modify, OpenApi, ToSchema};
 use uuid::Uuid;
 
 use crate::AppState;
-use a2rchitech_messaging::MailMessageEnvelope;
-use a2rchitech_policy::{PolicyEffect, PolicyRequest, SafetyTier};
-use a2rchitech_registry::fabric::{
+use allternit_messaging::MailMessageEnvelope;
+use allternit_policy::{PolicyEffect, PolicyRequest, SafetyTier};
+use allternit_registry::fabric::{
     BridgedCoordinationResult, CoordinatedMessage, TenantCapabilities,
 };
-use a2rchitech_rlm::RLMExecutionMode;
-use a2rchitech_runtime_core::{Embodiment, Environment, Session, SessionMode, SessionStatus};
-use a2rchitech_workflows::WorkflowDefinition;
+use allternit_rlm::RLMExecutionMode;
+use allternit_runtime_core::{Embodiment, Environment, Session, SessionMode, SessionStatus};
+use allternit_workflows::WorkflowDefinition;
 
 #[derive(Deserialize, ToSchema)]
 pub struct ExecuteWorkflowRequest {
@@ -288,7 +288,7 @@ pub fn create_routes() -> Router<Arc<crate::AppState>> {
 #[derive(Deserialize)]
 pub struct BridgeCoordinationRequest {
     pub resource_selector: String,
-    pub message: a2rchitech_messaging::MailMessageEnvelope,
+    pub message: allternit_messaging::MailMessageEnvelope,
 }
 
 #[derive(Serialize)]
@@ -446,7 +446,7 @@ async fn execute_rlm_task(
         resource: "/api/v1/rlm/execute".to_string(),
         action: "POST".to_string(),
         context: policy_context,
-        requested_tier: a2rchitech_policy::SafetyTier::T2,
+        requested_tier: allternit_policy::SafetyTier::T2,
     };
 
     let policy_decision = state
@@ -1563,7 +1563,7 @@ async fn install_skill(
     }
 
     // Parse skill from request
-    let skill: a2rchitech_skills::Skill = serde_json::from_value(request.clone()).map_err(|e| {
+    let skill: allternit_skills::Skill = serde_json::from_value(request.clone()).map_err(|e| {
         tracing::error!("Invalid skill definition: {}", e);
         StatusCode::BAD_REQUEST
     })?;
@@ -1647,7 +1647,7 @@ async fn uninstall_skill(
         .map_err(|e| {
             tracing::error!("Failed to uninstall skill: {}", e);
             match e {
-                a2rchitech_skills::SkillsError::SkillNotFound(_) => StatusCode::NOT_FOUND,
+                allternit_skills::SkillsError::SkillNotFound(_) => StatusCode::NOT_FOUND,
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
             }
         })?;
@@ -1705,14 +1705,14 @@ async fn get_working_memory(
     }
 
     // Query working memory from memory fabric
-    let query = a2rchitech_memory::MemoryQuery {
+    let query = allternit_memory::MemoryQuery {
         query: "".to_string(),
         top_k: 100,
         filter: None,
         tenant_id: state.policy_tenant_id.clone(),
         session_id: None,
         agent_id: Some(state.policy_identity_id.clone()),
-        memory_types: vec![a2rchitech_memory::MemoryType::Working],
+        memory_types: vec![allternit_memory::MemoryType::Working],
         max_sensitivity_tier: None,
         required_tags: vec![],
         time_range: None,
@@ -1792,14 +1792,14 @@ async fn get_episodic_memory(
     }
 
     // Query episodic memory from memory fabric
-    let query = a2rchitech_memory::MemoryQuery {
+    let query = allternit_memory::MemoryQuery {
         query: "".to_string(),
         top_k: 100,
         filter: None,
         tenant_id: state.policy_tenant_id.clone(),
         session_id: None,
         agent_id: Some(state.policy_identity_id.clone()),
-        memory_types: vec![a2rchitech_memory::MemoryType::Episodic],
+        memory_types: vec![allternit_memory::MemoryType::Episodic],
         max_sensitivity_tier: None,
         required_tags: vec![],
         time_range: None,
@@ -1879,14 +1879,14 @@ async fn get_knowledge_memory(
     }
 
     // Query knowledge (semantic) memory from memory fabric
-    let query = a2rchitech_memory::MemoryQuery {
+    let query = allternit_memory::MemoryQuery {
         query: "".to_string(),
         top_k: 100,
         filter: None,
         tenant_id: state.policy_tenant_id.clone(),
         session_id: None,
         agent_id: Some(state.policy_identity_id.clone()),
-        memory_types: vec![a2rchitech_memory::MemoryType::Semantic],
+        memory_types: vec![allternit_memory::MemoryType::Semantic],
         max_sensitivity_tier: None,
         required_tags: vec![],
         time_range: None,
@@ -1972,7 +1972,7 @@ async fn get_memory(
     }
 
     // Query memory from memory fabric for the specified session
-    let query = a2rchitech_memory::MemoryQuery {
+    let query = allternit_memory::MemoryQuery {
         query: "".to_string(),
         top_k: 100,
         filter: None,
@@ -2294,7 +2294,7 @@ async fn list_marketplace_skills(
         resource: "/api/v1/marketplace/skills".to_string(),
         action: "read".to_string(),
         context: serde_json::json!({}),
-        requested_tier: a2rchitech_policy::SafetyTier::T0,
+        requested_tier: allternit_policy::SafetyTier::T0,
     };
 
     let decision = state
@@ -2304,7 +2304,7 @@ async fn list_marketplace_skills(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    if matches!(decision.decision, a2rchitech_policy::PolicyEffect::Deny) {
+    if matches!(decision.decision, allternit_policy::PolicyEffect::Deny) {
         return Err(StatusCode::FORBIDDEN);
     }
 
@@ -2343,7 +2343,7 @@ async fn install_marketplace_skill(
         resource: format!("/api/v1/marketplace/install/{}", skill_id),
         action: "install".to_string(),
         context: serde_json::json!({}),
-        requested_tier: a2rchitech_policy::SafetyTier::T2,
+        requested_tier: allternit_policy::SafetyTier::T2,
     };
 
     let decision = state
@@ -2353,7 +2353,7 @@ async fn install_marketplace_skill(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    if matches!(decision.decision, a2rchitech_policy::PolicyEffect::Deny) {
+    if matches!(decision.decision, allternit_policy::PolicyEffect::Deny) {
         return Err(StatusCode::FORBIDDEN);
     }
 

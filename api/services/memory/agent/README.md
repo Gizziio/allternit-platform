@@ -1,4 +1,4 @@
-# A2rchitech Always-On Memory Agent
+# Allternitchitech Always-On Memory Agent
 
 > **Persistent AI memory powered by local LLM (Ollama)** - Runs 24/7 as a lightweight background process, continuously processing, consolidating, and connecting information.
 
@@ -279,7 +279,7 @@ memory/
 
 ## Logs
 
-- **Daemon logs**: `/tmp/a2r-memory-agent.log`
+- **Daemon logs**: `/tmp/allternit-memory-agent.log`
 - **Launchd stdout**: `~/Library/Logs/allternit/memory-agent.out.log`
 - **Launchd stderr**: `~/Library/Logs/allternit/memory-agent.err.log`
 
@@ -311,10 +311,10 @@ ollama pull mxbai-embed-large
 pnpm daemon status
 
 # Kill stale process
-kill $(cat /tmp/a2r-memory-agent.pid) 2>/dev/null || true
+kill $(cat /tmp/allternit-memory-agent.pid) 2>/dev/null || true
 
 # Remove PID file
-rm /tmp/a2r-memory-agent.pid
+rm /tmp/allternit-memory-agent.pid
 
 # Try starting again
 pnpm daemon start
@@ -339,7 +339,7 @@ The memory agent is designed to integrate seamlessly with the allternit platform
 3. **Knowledge Base**: Build a searchable knowledge base from all ingested content
 
 ```typescript
-// Example: Use in an a2r agent
+// Example: Use in an allternit agent
 import { MemoryOrchestrator } from '@allternit/memory';
 
 const memory = new MemoryOrchestrator();

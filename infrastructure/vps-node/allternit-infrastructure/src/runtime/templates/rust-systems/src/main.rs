@@ -24,7 +24,7 @@ use tracing::{debug, info, warn};
 #[command(
     name = "rust-systems",
     version = "1.0.0",
-    author = "A2R <dev@a2r.systems>",
+    author = "Allternit <dev@allternit.systems>",
     about = "High-performance Rust systems application",
     long_about = "A template for building async Rust applications with Tokio, \
                   structured logging, and comprehensive tooling."

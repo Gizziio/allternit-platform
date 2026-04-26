@@ -10,8 +10,8 @@ import requests
 from quickjs import Context, JSException
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-PLUGIN_ROOT = REPO_ROOT / "5-ui" / "allternit-platform" / "src" / "a2r-usage" / "plugins"
-APP_DATA_DIR = Path.home() / ".a2r" / "a2r-usage"
+PLUGIN_ROOT = REPO_ROOT / "5-ui" / "allternit-platform" / "src" / "allternit-usage" / "plugins"
+APP_DATA_DIR = Path.home() / ".allternit" / "allternit-usage"
 KEYCHAIN_DIR = APP_DATA_DIR / "keychain"
 
 

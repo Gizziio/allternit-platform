@@ -9,9 +9,9 @@
 
 ## Overview
 
-This document specifies the legacy UI contract for the A2R Gateway. This contract is **frozen** — no breaking changes allowed. New contracts should use a new contract ID.
+This document specifies the legacy UI contract for the Allternit Gateway. This contract is **frozen** — no breaking changes allowed. New contracts should use a new contract ID.
 
-**Implementation:** `4-services/a2r-gateway/bindings/ui_contract_legacy/`
+**Implementation:** `4-services/allternit-gateway/bindings/ui_contract_legacy/`
 
 ---
 
@@ -265,9 +265,9 @@ export const UI_CONTRACT_ID = 'ui-contract-legacy@2026-02';
 
 - `/spec/Networking.md` - Protocol v1 specification
 - `/spec/ProtocolMap.md` - Contract mapping reference
-- `4-services/a2r-gateway/REPO_LAW.md` - Version naming and event boundaries
+- `4-services/allternit-gateway/REPO_LAW.md` - Version naming and event boundaries
 
 ---
 
-**Maintainer:** A2R Platform Team  
+**Maintainer:** Allternit Platform Team  
 **Last Updated:** 2026-02-23

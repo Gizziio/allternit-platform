@@ -18,7 +18,7 @@ bun packages/sdk/js/script/build.ts
    - `client/` - Core HTTP client
    - `core/` - Utility functions
 
-3. **Generate Class Wrapper**: Creates `a2r-client.ts` that wraps functional exports in a class-based API matching the existing `A2RClient` interface.
+3. **Generate Class Wrapper**: Creates `allternit-client.ts` that wraps functional exports in a class-based API matching the existing `AllternitClient` interface.
 
 4. **Compile**: Uses Bun to compile TypeScript to JavaScript.
 
@@ -50,10 +50,10 @@ Example:
 
 ```
 packages/sdk/dist/v2/
-├── client.js          # Main entry (re-exports from a2r-client.js)
+├── client.js          # Main entry (re-exports from allternit-client.js)
 ├── client.d.ts        # Type declarations
-├── a2r-client.js      # Class-based wrapper
-├── a2r-client.ts      # Source for wrapper
+├── allternit-client.js      # Class-based wrapper
+├── allternit-client.ts      # Source for wrapper
 ├── sdk.gen.js         # Functional API operations
 ├── types.gen.js       # Type exports
 ├── client/            # Core HTTP client
@@ -63,9 +63,9 @@ packages/sdk/dist/v2/
 ## Usage
 
 ```typescript
-import { createA2RClient } from "@allternit/sdk/v2/client";
+import { createAllternitClient } from "@allternit/sdk/v2/client";
 
-const sdk = createA2RClient({ baseUrl: "http://localhost:4096" });
+const sdk = createAllternitClient({ baseUrl: "http://localhost:4096" });
 
 // Use the class-based API
 const sessions = await sdk.client.session.list();

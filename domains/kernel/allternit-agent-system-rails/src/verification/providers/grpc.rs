@@ -55,8 +55,8 @@ impl GrpcProvider {
         Ok(())
     }
 
-    /// Ensure client is connected
-    async fn ensure_connected(&mut self) -> Result<&mut VerificationProviderClient<Channel>, ProviderError> {
+    /// Ensure gRPC client is connected
+    async fn _ensure_connected(&mut self) -> Result<&mut VerificationProviderClient<Channel>, ProviderError> {
         if self.client.is_none() {
             self.connect().await?;
         }
@@ -191,13 +191,16 @@ impl VerificationProvider for GrpcProvider {
             return Err(ProviderError::Internal("WIH ID cannot be empty".to_string()));
         }
 
-        // Clone self to get mutable access to client
+        // Clone timeout before borrow
+        let timeout_secs = self.config.timeout_secs;
+        
+        // Clone client to avoid mutable borrow requirement
         let mut client = self.client.clone().ok_or(ProviderError::NotInitialized)?;
 
         let request = Request::new(EvidenceRequest {
             wih_id: wih_id.to_string(),
             metadata: std::collections::HashMap::new(),
-            timeout_ms: (self.config.timeout_secs * 1000) as u32,
+            timeout_ms: (timeout_secs * 1000) as u32,
             changed_files: String::new(),
             artifact_types: vec![], // Empty = all types
         });
@@ -205,15 +208,15 @@ impl VerificationProvider for GrpcProvider {
         debug!(wih_id = %wih_id, "Sending GatherEvidence request");
 
         let response = tokio::time::timeout(
-            Duration::from_secs(self.config.timeout_secs),
+            Duration::from_secs(timeout_secs),
             client.gather_evidence(request),
         )
         .await
-        .map_err(|_| ProviderError::Timeout(self.config.timeout_secs))?
+        .map_err(|_| ProviderError::Timeout(timeout_secs))?
         .map_err(|e| match e.code() {
             tonic::Code::Unavailable => ProviderError::DevServerUnavailable(e.to_string()),
             tonic::Code::InvalidArgument => ProviderError::InvalidWih(e.to_string()),
-            tonic::Code::DeadlineExceeded => ProviderError::Timeout(self.config.timeout_secs),
+            tonic::Code::DeadlineExceeded => ProviderError::Timeout(timeout_secs),
             _ => ProviderError::Grpc(e.to_string()),
         })?;
 

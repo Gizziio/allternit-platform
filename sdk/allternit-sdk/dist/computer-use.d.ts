@@ -1,13 +1,23 @@
 export interface ComputerUseRequest {
-  mode: string;
+  mode: 'intent' | 'direct' | 'assist';
   task: string;
-  target_scope?: string;
+  session_id?: string;
+  run_id?: string;
+  target_scope?: 'browser' | 'desktop' | 'hybrid' | 'auto';
+  options?: Record<string, unknown>;
+  context?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
 }
 
 export interface ComputerUseResponse {
   run_id: string;
-  [key: string]: unknown;
+  session_id: string;
+  status: string;
+  mode: string;
+  target_scope: string;
+  summary?: string;
+  result?: Record<string, unknown> | null;
+  error?: string | null;
 }
 
 export interface WatchOptions {
@@ -49,7 +59,7 @@ export interface RequestOptions {
   headers?: Record<string, string>;
 }
 
-export declare class A2RComputerUseClient {
+export declare class AllternitComputerUseClient {
   readonly baseUrl: string;
   readonly fetch: typeof fetch;
   readonly headers: Record<string, string>;
@@ -67,7 +77,7 @@ export declare class A2RComputerUseClient {
   waitForRun(runId: string, options?: WaitForRunOptions): Promise<unknown>;
 }
 
-export declare function createComputerUseClient(config?: RequestOptions): A2RComputerUseClient;
+export declare function createComputerUseClient(config?: RequestOptions): AllternitComputerUseClient;
 export declare function resolveComputerUseBaseUrl(url?: string): string;
 
 export type EngineEventBatch = unknown;

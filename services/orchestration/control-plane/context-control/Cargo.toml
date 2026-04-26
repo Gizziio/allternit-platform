@@ -1,8 +1,8 @@
 [package]
-name = "a2r-context-control"
+name = "allternit-context-control"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Context Control Plane - Git Context Controller (GCC) implementation"
+description = "Allternit Context Control Plane - Git Context Controller (GCC) implementation"
 
 [dependencies]
 serde = { workspace = true }
@@ -14,7 +14,7 @@ anyhow = { workspace = true }
 tracing = { workspace = true }
 chrono = { workspace = true }
 sha2 = "0.10"
-a2r-memory-kernel = { workspace = true }
+allternit-memory-kernel = { workspace = true }
 
 [dev-dependencies]
 tokio-test = "0.4"

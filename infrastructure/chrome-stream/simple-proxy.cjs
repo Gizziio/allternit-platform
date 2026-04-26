@@ -36,7 +36,7 @@ const server = http.createServer((req, res) => {
     req.on('end', () => proxyReq.end());
   } else {
     res.writeHead(200, { 'Content-Type': 'text/html' });
-    res.end(`<html><body><h1>A2R Chrome Proxy</h1><p>Running on port ${PORT}</p><p>Forwarding to ${SIDECAR_URL}</p></body></html>`);
+    res.end(`<html><body><h1>Allternit Chrome Proxy</h1><p>Running on port ${PORT}</p><p>Forwarding to ${SIDECAR_URL}</p></body></html>`);
   }
 });
 

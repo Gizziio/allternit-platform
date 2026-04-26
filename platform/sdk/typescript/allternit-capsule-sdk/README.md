@@ -1,11 +1,11 @@
-# @a2rchitech/capsule-sdk
+# @allternit/capsule-sdk
 
-Headless Capsule SDK for A2rchitech - lifecycle, contracts, and guardrails.
+Headless Capsule SDK for Allternit - lifecycle, contracts, and guardrails.
 
 ## Installation
 
 ```bash
-pnpm add @a2rchitech/capsule-sdk
+pnpm add @allternit/capsule-sdk
 ```
 
 ## Quick Start
@@ -17,7 +17,7 @@ import {
   createRendererController,
   BROWSER_ACTIONS,
   createActionBuilder,
-} from '@a2rchitech/capsule-sdk';
+} from '@allternit/capsule-sdk';
 
 // Create a capsule
 const capsule = createCapsuleController({

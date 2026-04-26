@@ -1,5 +1,5 @@
 """
-A2R Chrome Stream Sidecar
+Allternit Chrome Stream Sidecar
 
 FastAPI control surface for managing Chrome sessions.
 Uses CDP WebSocket for real Chrome control with proper request/response correlation.
@@ -19,14 +19,14 @@ import websockets
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-app = FastAPI(title="A2R Chrome Sidecar")
+app = FastAPI(title="Allternit Chrome Sidecar")
 
 # Constants
 CDP_HTTP = "http://127.0.0.1:9222"
 SUPERVISOR_RPC = "http://localhost:9001/RPC2"
 CONFIG_FILE = "/data/session_config.json"
 PREFERENCES_FILE = "/data/chrome-profile/Default/Preferences"
-AUDIT_WEBHOOK = os.environ.get("A2R_AUDIT_WEBHOOK")
+AUDIT_WEBHOOK = os.environ.get("Allternit_AUDIT_WEBHOOK")
 
 # ============================================================================
 # CDP Connection Manager - Proper request/response correlation
@@ -196,11 +196,11 @@ async def emit_audit(event_type: str, detail: dict):
         "event_type": event_type,
         "detail": detail,
         "timestamp": datetime.utcnow().isoformat(),
-        "session_id": os.environ.get("A2R_SESSION_ID", ""),
-        "tenant_id": os.environ.get("A2R_TENANT_ID", "")
+        "session_id": os.environ.get("Allternit_SESSION_ID", ""),
+        "tenant_id": os.environ.get("Allternit_TENANT_ID", "")
     }
     
-    # Log to stdout (captured by A2R API audit collector)
+    # Log to stdout (captured by Allternit API audit collector)
     print(f"AUDIT: {json.dumps(event)}", flush=True)
     
     # Optional: push to webhook
@@ -266,7 +266,7 @@ async def apply_policy(req: PolicyRequest):
     if req.extra_policies:
         policy.update(req.extra_policies)
     
-    policy_path = "/etc/opt/chrome/policies/managed/a2r-tenant.json"
+    policy_path = "/etc/opt/chrome/policies/managed/allternit-tenant.json"
     with open(policy_path, "w") as f:
         json.dump(policy, f, indent=2)
     
@@ -314,11 +314,11 @@ async def list_extensions():
     Managed Mode: Return catalog (source of truth).
     Power Mode: Parse Chrome Preferences JSON.
     """
-    mode = os.environ.get("A2R_EXTENSION_MODE", "managed")
+    mode = os.environ.get("Allternit_EXTENSION_MODE", "managed")
     
     if mode == "managed":
         # Return catalog from environment or config
-        catalog_path = "/etc/a2r/extension_catalog.json"
+        catalog_path = "/etc/allternit/extension_catalog.json"
         if os.path.exists(catalog_path):
             with open(catalog_path) as f:
                 catalog = json.load(f)

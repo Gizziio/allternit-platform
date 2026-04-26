@@ -1,10 +1,10 @@
 /**
- * A2R Browser Module
+ * Allternit Browser Module
  * 
  * Complete browser automation and canvas hosting system.
  * Ported from OpenClaw architecture.
  * 
- * @module @a2r/browser
+ * @module @allternit/browser
  */
 
 // Types

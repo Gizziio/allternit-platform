@@ -3,15 +3,25 @@
  */
 
 export interface ComputerUseRequest {
-  mode: string
+  mode: 'intent' | 'direct' | 'assist'
   task: string
-  target_scope?: string
+  session_id?: string
+  run_id?: string
+  target_scope?: 'browser' | 'desktop' | 'hybrid' | 'auto'
+  options?: Record<string, unknown>
+  context?: Record<string, unknown>
   metadata?: Record<string, unknown>
 }
 
 export interface ComputerUseResponse {
   run_id: string
-  [key: string]: unknown
+  session_id: string
+  status: string
+  mode: string
+  target_scope: string
+  summary?: string
+  result?: Record<string, unknown> | null
+  error?: string | null
 }
 
 export interface WatchOptions {
@@ -65,7 +75,7 @@ export class AllternitComputerUseClient {
   }
 
   async execute(request: ComputerUseRequest): Promise<ComputerUseResponse> {
-    const response = await this.fetch(`${this.baseUrl}/v1/engine/execute`, {
+    const response = await this.fetch(`${this.baseUrl}/v1/computer-use/execute`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -80,7 +90,7 @@ export class AllternitComputerUseClient {
   }
 
   async watch(options: WatchOptions): Promise<Response> {
-    const response = await this.fetch(`${this.baseUrl}/v1/engine/watch/${options.runId}`, {
+    const response = await this.fetch(`${this.baseUrl}/v1/computer-use/runs/${options.runId}/events`, {
       method: "GET",
       headers: this.headers,
       signal: options.signal,
@@ -92,7 +102,7 @@ export class AllternitComputerUseClient {
   }
 
   async getReceipts(runId: string): Promise<unknown> {
-    const response = await this.fetch(`${this.baseUrl}/v1/engine/receipts/${runId}`, {
+    const response = await this.fetch(`${this.baseUrl}/v1/computer-use/runs/${runId}`, {
       method: "GET",
       headers: this.headers,
     })
@@ -103,7 +113,7 @@ export class AllternitComputerUseClient {
   }
 
   async getSnapshot(runId: string): Promise<unknown> {
-    const response = await this.fetch(`${this.baseUrl}/v1/engine/snapshot/${runId}`, {
+    const response = await this.fetch(`${this.baseUrl}/v1/computer-use/runs/${runId}`, {
       method: "GET",
       headers: this.headers,
     })
@@ -114,7 +124,7 @@ export class AllternitComputerUseClient {
   }
 
   async approveRun(runId: string, options: ApprovalOptions = {}): Promise<unknown> {
-    const response = await this.fetch(`${this.baseUrl}/v1/engine/runs/${runId}/approval`, {
+    const response = await this.fetch(`${this.baseUrl}/v1/computer-use/runs/${runId}/approve`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -132,7 +142,7 @@ export class AllternitComputerUseClient {
   }
 
   async denyRun(runId: string, options: ApprovalOptions = {}): Promise<unknown> {
-    const response = await this.fetch(`${this.baseUrl}/v1/engine/runs/${runId}/approval`, {
+    const response = await this.fetch(`${this.baseUrl}/v1/computer-use/runs/${runId}/approve`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -150,7 +160,7 @@ export class AllternitComputerUseClient {
   }
 
   async cancelRun(runId: string, options: CancelOptions = {}): Promise<unknown> {
-    const response = await this.fetch(`${this.baseUrl}/v1/engine/runs/${runId}/cancel`, {
+    const response = await this.fetch(`${this.baseUrl}/v1/computer-use/runs/${runId}/cancel`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -165,7 +175,7 @@ export class AllternitComputerUseClient {
   }
 
   async pauseRun(runId: string, options: CancelOptions = {}): Promise<unknown> {
-    const response = await this.fetch(`${this.baseUrl}/v1/engine/runs/${runId}/pause`, {
+    const response = await this.fetch(`${this.baseUrl}/v1/computer-use/runs/${runId}/pause`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -180,7 +190,7 @@ export class AllternitComputerUseClient {
   }
 
   async resumeRun(runId: string, options: ResumeOptions = {}): Promise<unknown> {
-    const response = await this.fetch(`${this.baseUrl}/v1/engine/runs/${runId}/resume`, {
+    const response = await this.fetch(`${this.baseUrl}/v1/computer-use/runs/${runId}/resume`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -199,7 +209,7 @@ export class AllternitComputerUseClient {
     let nextIndex = 0
 
     while (!signal?.aborted) {
-      const response = await this.fetch(`${this.baseUrl}/v1/engine/runs/${runId}/events?next_index=${nextIndex}`, {
+      const response = await this.fetch(`${this.baseUrl}/v1/computer-use/runs/${runId}/events?after_index=${nextIndex}`, {
         method: "GET",
         headers: this.headers,
         signal,

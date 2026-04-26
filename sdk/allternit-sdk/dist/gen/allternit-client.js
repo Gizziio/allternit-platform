@@ -1418,7 +1418,7 @@ var globalHealth = (options) => (options?.client ?? client).get({ url: "/global/
 var globalEvent = (options) => (options?.client ?? client).sse.get({ url: "/global/event", ...options });
 var globalVersion = (options) => (options?.client ?? client).get({ url: "/global/version", ...options });
 
-// packages/sdk/dist/gen/a2r-client.ts
+// packages/sdk/dist/gen/allternit-client.ts
 class HeyApiClient {
   client;
   constructor(args) {
@@ -1432,7 +1432,7 @@ class HeyApiRegistry {
   get(key) {
     const instance = this.instances.get(key ?? this.defaultKey);
     if (!instance) {
-      throw new Error(`No SDK client found. Create one with "new A2RClient()" to fix this error.`);
+      throw new Error(`No SDK client found. Create one with "new AllternitClient()" to fix this error.`);
     }
     return instance;
   }
@@ -2318,11 +2318,11 @@ class Workspace extends HeyApiClient {
   }
 }
 
-class A2RClient extends HeyApiClient {
+class AllternitClient extends HeyApiClient {
   static __registry = new HeyApiRegistry;
   constructor(args) {
     super(args);
-    A2RClient.__registry.set(this, args?.key);
+    AllternitClient.__registry.set(this, args?.key);
   }
   _agent;
   get agent() {
@@ -2482,7 +2482,7 @@ class A2RClient extends HeyApiClient {
     }
   }
 }
-function createA2RClient(config) {
+function createAllternitClient(config) {
   if (!config?.fetch) {
     const customFetch = (req) => {
       req.timeout = false;
@@ -2496,9 +2496,9 @@ function createA2RClient(config) {
     config.headers = { ...config.headers, "x-opencode-directory": encodedDirectory };
   }
   const clientInstance = createClient(config);
-  return new A2RClient({ client: clientInstance });
+  return new AllternitClient({ client: clientInstance });
 }
 export {
-  createA2RClient,
-  A2RClient
+  createAllternitClient,
+  AllternitClient
 };

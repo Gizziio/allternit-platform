@@ -1,5 +1,5 @@
 /**
- * A2R Gateway Commands
+ * Allternit Gateway Commands
  * 
  * Gateway commands for canvas and browser control.
  */

@@ -1,9 +1,9 @@
 //! Provider management module
 //!
-//! Thin wiring that re-exports from a2rchitech-providers (1-kernel).
-//! All business logic lives in 1-kernel/infrastructure/a2r-providers.
+//! Thin wiring that re-exports from allternit-providers (1-kernel).
+//! All business logic lives in 1-kernel/infrastructure/allternit-providers.
 
-pub use a2rchitech_providers::runtime::{
+pub use allternit_providers::runtime::{
     // Auth exports
     AuthStatus, ModelsResponse, ProviderAuthConfig, ProviderAuthRegistry, RuntimeModel,
     StatusCheckMode, ValidateModelRequest, ValidateModelResponse,

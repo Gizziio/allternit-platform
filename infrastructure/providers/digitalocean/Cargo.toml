@@ -1,11 +1,11 @@
 [package]
-name = "a2r-cloud-digitalocean"
+name = "allternit-cloud-digitalocean"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Cloud DigitalOcean Provider - Droplet deployment support"
+description = "Allternit Cloud DigitalOcean Provider - Droplet deployment support"
 
 [dependencies]
-a2r-cloud-core = { path = "../../a2r-cloud-core" }
+allternit-cloud-core = { path = "../../allternit-cloud-core" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }

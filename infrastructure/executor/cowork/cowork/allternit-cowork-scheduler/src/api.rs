@@ -6,7 +6,7 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    routing::{delete, get, post},
+    routing::{get, post},
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
@@ -14,26 +14,38 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{error, info};
 
-use crate::{CreateScheduleRequest, Result, Schedule, Scheduler, SchedulerError};
+use crate::{CreateScheduleRequest, Schedule, Scheduler, SchedulerError};
 
 /// API state shared across handlers
 pub struct ApiState {
+    /// The shared scheduler instance
     pub scheduler: Arc<RwLock<Scheduler>>,
 }
 
 /// Schedule response DTO
 #[derive(Debug, Serialize)]
 pub struct ScheduleResponse {
+    /// Unique identifier for the schedule
     pub id: String,
+    /// Human-readable name
     pub name: String,
+    /// Cron expression or interval
     pub schedule: String,
+    /// Command or script to execute
     pub entrypoint: String,
+    /// Current status (active, paused)
     pub status: String,
+    /// Creation timestamp
     pub created_at: String,
+    /// Last update timestamp
     pub updated_at: String,
+    /// When it last ran
     pub last_run_at: Option<String>,
+    /// When it will run next
     pub next_run_at: Option<String>,
+    /// Number of times it has run
     pub run_count: i64,
+    /// Number of failed runs
     pub fail_count: i64,
 }
 
@@ -55,29 +67,40 @@ impl From<Schedule> for ScheduleResponse {
     }
 }
 
-/// Create schedule request
+/// Request to create a new schedule
 #[derive(Debug, Deserialize)]
 pub struct CreateScheduleDto {
+    /// Human-readable name
     pub name: String,
+    /// Cron expression or interval
     pub schedule: String,
+    /// Command or script to execute
     pub entrypoint: String,
+    /// Optional command arguments
     pub args: Option<Vec<String>>,
+    /// Optional environment variables
     pub env: Option<std::collections::HashMap<String, String>>,
+    /// Optional timezone
     pub timezone: Option<String>,
 }
 
-/// Update schedule request
+/// Request to update an existing schedule
 #[derive(Debug, Deserialize)]
 pub struct UpdateScheduleDto {
+    /// Updated name
     pub name: Option<String>,
+    /// Updated cron expression
     pub schedule: Option<String>,
+    /// Updated entrypoint
     pub entrypoint: Option<String>,
+    /// Updated status
     pub status: Option<String>,
 }
 
-/// Error response
+/// Generic error response
 #[derive(Debug, Serialize)]
 pub struct ErrorResponse {
+    /// Error message
     pub error: String,
 }
 
@@ -148,7 +171,7 @@ async fn create_schedule(
         run_mode: Some("scheduled".to_string()),
     };
 
-    let mut scheduler = state.scheduler.write().await;
+    let scheduler = state.scheduler.write().await;
     
     match scheduler.create_schedule("default", req).await {
         Ok(schedule) => {
@@ -176,7 +199,7 @@ async fn update_schedule(
 ) -> impl IntoResponse {
     // Handle status change
     if let Some(status) = dto.status {
-        let mut scheduler = state.scheduler.write().await;
+        let scheduler = state.scheduler.write().await;
         
         let result = match status.as_str() {
             "active" => scheduler.enable_schedule(&id).await,
@@ -231,7 +254,7 @@ async fn delete_schedule(
     State(state): State<Arc<ApiState>>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-    let mut scheduler = state.scheduler.write().await;
+    let scheduler = state.scheduler.write().await;
     
     match scheduler.delete_schedule(&id).await {
         Ok(_) => StatusCode::NO_CONTENT.into_response(),
@@ -257,7 +280,7 @@ async fn trigger_schedule(
     State(state): State<Arc<ApiState>>,
     Path(id): Path<String>,
 ) -> impl IntoResponse {
-    let mut scheduler = state.scheduler.write().await;
+    let scheduler = state.scheduler.write().await;
     
     match scheduler.run_now(&id).await {
         Ok(_) => (
@@ -284,7 +307,7 @@ async fn trigger_schedule(
 
 /// Get scheduler status
 async fn get_status(State(state): State<Arc<ApiState>>) -> impl IntoResponse {
-    let mut scheduler = state.scheduler.write().await;
+    let scheduler = state.scheduler.write().await;
     
     match scheduler.get_stats().await {
         Ok(stats) => {
@@ -307,7 +330,7 @@ async fn get_status(State(state): State<Arc<ApiState>>) -> impl IntoResponse {
 }
 
 /// Wake/Trigger all due schedules
-async fn wake_schedules(State(state): State<Arc<ApiState>>) -> impl IntoResponse {
+async fn wake_schedules(State(_state): State<Arc<ApiState>>) -> impl IntoResponse {
     // This would check for due jobs and trigger them
     // For now, just return a placeholder response
     let response = serde_json::json!({

@@ -1,5 +1,5 @@
 import type {
-  A2RKernel,
+  AllternitKernel,
   WihItem,
   WihFilters,
   Receipt,
@@ -12,12 +12,12 @@ import type {
 } from './types/index.js';
 
 /**
- * In-memory reference implementation of the A2R kernel contract.
+ * In-memory reference implementation of the Allternit kernel contract.
  *
  * Intended for local development, tests, and UI stubs that require
  * a concrete kernel implementation without network dependencies.
  */
-export class A2RKernelImpl implements A2RKernel {
+export class AllternitKernelImpl implements AllternitKernel {
   readonly version = '0.1.0-dev';
 
   private wihStore = new Map<string, WihItem>();
@@ -28,7 +28,7 @@ export class A2RKernelImpl implements A2RKernel {
   private counter = 1;
 
   private nextWihId(): string {
-    return `A2R-${String(this.counter++).padStart(4, '0')}`;
+    return `Allternit-${String(this.counter++).padStart(4, '0')}`;
   }
 
   private nextReceiptId(): string {

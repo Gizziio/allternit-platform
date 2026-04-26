@@ -20,18 +20,18 @@ Successfully extracted the `agent_workspace` module from the CLI into a **standa
    use crate::agent_workspace;
    
    // After
-   use a2r_agent_workspace;
+   use allternit_agent_workspace;
    ```
 3. **Updated Cargo.toml** to depend on shared crate:
    ```toml
-   a2r-agent-workspace = { path = "../../0-substrate/a2r-agent-workspace" }
+   allternit-agent-workspace = { path = "../../0-substrate/allternit-agent-workspace" }
    ```
 4. **Fixed temporary issues** with voice/webvm/marketplace dependencies
 
 ### Verification
 
 ```bash
-$ cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/7-apps/cli && cargo check
+$ cd /Users/macbook/Desktop/allternit-workspace/allternit/7-apps/cli && cargo check
     Finished dev [unoptimized + debug info]
 ```
 
@@ -72,7 +72,7 @@ $ cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/7-apps/cli && cargo 
 ### Verification
 
 ```bash
-$ cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/0-substrate/a2r-agent-workspace
+$ cd /Users/macbook/Desktop/allternit-workspace/allternit/0-substrate/allternit-agent-workspace
 $ cargo check --features wasm
     Finished dev [unoptimized + debug info]
 ```
@@ -98,7 +98,7 @@ wasm-pack build --target bundler --out-dir pkg
 
 ### What Was Done
 
-Created complete TypeScript integration in `6-ui/a2r-platform/src/agent-workspace/`:
+Created complete TypeScript integration in `6-ui/allternit-platform/src/agent-workspace/`:
 
 1. **types.ts** - TypeScript type definitions mirroring Rust types
 2. **wasm-wrapper.ts** - WASM bindings wrapper with React hook
@@ -140,7 +140,7 @@ function WorkspaceComponent({ path }: { path: string }) {
 ### File Structure
 
 ```
-6-ui/a2r-platform/src/agent-workspace/
+6-ui/allternit-platform/src/agent-workspace/
 ├── README.md              # Full documentation
 ├── index.ts               # Main exports
 ├── types.ts               # TypeScript types
@@ -154,7 +154,7 @@ function WorkspaceComponent({ path }: { path: string }) {
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│  SHARED CRATE (0-substrate/a2r-agent-workspace/)                    │
+│  SHARED CRATE (0-substrate/allternit-agent-workspace/)                    │
 ├─────────────────────────────────────────────────────────────────────┤
 │  Source:                                                             │
 │  ├── lib.rs                    # Main exports                        │
@@ -177,10 +177,10 @@ function WorkspaceComponent({ path }: { path: string }) {
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                      │
 │  CLI (7-apps/cli/)                                                   │
-│  └── Uses: a2r-agent-workspace (native)                             │
-│      └── Command: agent create --format a2r                          │
+│  └── Uses: allternit-agent-workspace (native)                             │
+│      └── Command: agent create --format allternit                          │
 │                                                                      │
-│  Shell UI (6-ui/a2r-platform/)                                       │
+│  Shell UI (6-ui/allternit-platform/)                                       │
 │  └── Uses: agent-workspace/ (TypeScript) ⭐                          │
 │      ├── wasm-wrapper.ts       # WASM backend                        │
 │      └── http-client.ts        # HTTP backend                        │
@@ -199,27 +199,27 @@ function WorkspaceComponent({ path }: { path: string }) {
 
 | File | Purpose |
 |------|---------|
-| `0-substrate/a2r-agent-workspace/Cargo.toml` | Crate configuration |
-| `0-substrate/a2r-agent-workspace/README.md` | Documentation |
-| `0-substrate/a2r-agent-workspace/src/lib.rs` | Main exports |
-| `0-substrate/a2r-agent-workspace/src/wasm.rs` | ⭐ WASM bindings |
-| `0-substrate/a2r-agent-workspace/src/boot_sequence.rs` | Boot sequence |
-| `0-substrate/a2r-agent-workspace/src/policy_engine.rs` | Policy engine |
-| `0-substrate/a2r-agent-workspace/src/context_pack.rs` | Context packs |
-| `0-substrate/a2r-agent-workspace/src/skills_registry.rs` | Skills registry |
-| `0-substrate/a2r-agent-workspace/src/checkpoint.rs` | Checkpoints |
-| `0-substrate/a2r-agent-workspace/src/workspace_compiler.rs` | Compiler |
-| `0-substrate/a2r-agent-workspace/src/bin/workspace_cli.rs` | CLI binary |
+| `0-substrate/allternit-agent-workspace/Cargo.toml` | Crate configuration |
+| `0-substrate/allternit-agent-workspace/README.md` | Documentation |
+| `0-substrate/allternit-agent-workspace/src/lib.rs` | Main exports |
+| `0-substrate/allternit-agent-workspace/src/wasm.rs` | ⭐ WASM bindings |
+| `0-substrate/allternit-agent-workspace/src/boot_sequence.rs` | Boot sequence |
+| `0-substrate/allternit-agent-workspace/src/policy_engine.rs` | Policy engine |
+| `0-substrate/allternit-agent-workspace/src/context_pack.rs` | Context packs |
+| `0-substrate/allternit-agent-workspace/src/skills_registry.rs` | Skills registry |
+| `0-substrate/allternit-agent-workspace/src/checkpoint.rs` | Checkpoints |
+| `0-substrate/allternit-agent-workspace/src/workspace_compiler.rs` | Compiler |
+| `0-substrate/allternit-agent-workspace/src/bin/workspace_cli.rs` | CLI binary |
 
 ### New Files (Shell UI Integration) ⭐
 
 | File | Purpose |
 |------|---------|
-| `6-ui/a2r-platform/src/agent-workspace/README.md` | Documentation |
-| `6-ui/a2r-platform/src/agent-workspace/index.ts` | Main exports |
-| `6-ui/a2r-platform/src/agent-workspace/types.ts` | TypeScript types |
-| `6-ui/a2r-platform/src/agent-workspace/wasm-wrapper.ts` | ⭐ WASM wrapper |
-| `6-ui/a2r-platform/src/agent-workspace/http-client.ts` | HTTP client |
+| `6-ui/allternit-platform/src/agent-workspace/README.md` | Documentation |
+| `6-ui/allternit-platform/src/agent-workspace/index.ts` | Main exports |
+| `6-ui/allternit-platform/src/agent-workspace/types.ts` | TypeScript types |
+| `6-ui/allternit-platform/src/agent-workspace/wasm-wrapper.ts` | ⭐ WASM wrapper |
+| `6-ui/allternit-platform/src/agent-workspace/http-client.ts` | HTTP client |
 
 ### Modified Files
 
@@ -228,7 +228,7 @@ function WorkspaceComponent({ path }: { path: string }) {
 | `7-apps/cli/Cargo.toml` | Use shared crate |
 | `7-apps/cli/src/main.rs` | Import shared crate |
 | `7-apps/cli/src/commands/tui/agent_create_wizard.rs` | Use shared crate |
-| `5-agents/templates/a2r_workspace/` | Templates for workspaces |
+| `5-agents/templates/allternit_workspace/` | Templates for workspaces |
 
 ---
 
@@ -237,7 +237,7 @@ function WorkspaceComponent({ path }: { path: string }) {
 ### Rust (Native)
 
 ```rust
-use a2r_agent_workspace::{BootSequence, PolicyEngine};
+use allternit_agent_workspace::{BootSequence, PolicyEngine};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -265,9 +265,9 @@ const result = await api.policy.checkTool('filesystem.write');
 
 ```bash
 # Using workspace-cli from shared crate
-cargo run -p a2r-agent-workspace --bin workspace-cli -- init --name my-agent
-cargo run -p a2r-agent-workspace --bin workspace-cli -- boot
-cargo run -p a2r-agent-workspace --bin workspace-cli -- check filesystem.write
+cargo run -p allternit-agent-workspace --bin workspace-cli -- init --name my-agent
+cargo run -p allternit-agent-workspace --bin workspace-cli -- boot
+cargo run -p allternit-agent-workspace --bin workspace-cli -- check filesystem.write
 ```
 
 ---
@@ -277,29 +277,29 @@ cargo run -p a2r-agent-workspace --bin workspace-cli -- check filesystem.write
 ### Build Shared Crate
 
 ```bash
-cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech
+cd /Users/macbook/Desktop/allternit-workspace/allternit
 
 # Native
-cargo check -p a2r-agent-workspace
+cargo check -p allternit-agent-workspace
 
 # WASM
-cargo check -p a2r-agent-workspace --features wasm
+cargo check -p allternit-agent-workspace --features wasm
 
 # CLI binary
-cargo build -p a2r-agent-workspace --bin workspace-cli
+cargo build -p allternit-agent-workspace --bin workspace-cli
 ```
 
 ### Build CLI
 
 ```bash
-cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/7-apps/cli
+cd /Users/macbook/Desktop/allternit-workspace/allternit/7-apps/cli
 cargo check
 ```
 
 ### Build WASM for Web
 
 ```bash
-cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/0-substrate/a2r-agent-workspace
+cd /Users/macbook/Desktop/allternit-workspace/allternit/0-substrate/allternit-agent-workspace
 wasm-pack build --target web --out-dir pkg
 ```
 
@@ -307,7 +307,7 @@ wasm-pack build --target web --out-dir pkg
 
 ## Verification Checklist
 
-- [x] Shared crate created at `0-substrate/a2r-agent-workspace/`
+- [x] Shared crate created at `0-substrate/allternit-agent-workspace/`
 - [x] All modules moved from CLI
 - [x] CLI updated to use shared crate
 - [x] CLI builds successfully
@@ -342,7 +342,7 @@ wasm-pack build --target web --out-dir pkg
 
 2. **Create CLI server mode**
    ```bash
-   a2r --server --port 8080
+   allternit --server --port 8080
    ```
 
 3. **Integrate into Shell UI components**

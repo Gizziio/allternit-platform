@@ -11,8 +11,8 @@ syntax = "proto3";
 
 package verification;
 
-option go_package = "github.com/a2rchitech/substrate/verification";
-option java_package = "com.a2rchitech.verification";
+option go_package = "github.com/allternit/substrate/verification";
+option java_package = "com.allternit.verification";
 option java_multiple_files = true;
 
 /**

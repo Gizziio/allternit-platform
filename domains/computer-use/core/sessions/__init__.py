@@ -1,5 +1,5 @@
 """
-A2R Computer Use — Session Manager
+Allternit Computer Use — Session Manager
 Unified session lifecycle across all adapter families.
 
 Wraps and normalizes the existing session management from
@@ -64,7 +64,7 @@ class SessionManager:
 
     def __init__(self, sessions_dir: Optional[str] = None):
         self._sessions: Dict[str, Session] = {}
-        self._sessions_dir = Path(sessions_dir or os.path.expanduser("~/.a2r/sessions"))
+        self._sessions_dir = Path(sessions_dir or os.path.expanduser("~/.allternit/sessions"))
         self._sessions_dir.mkdir(parents=True, exist_ok=True)
 
     def create(

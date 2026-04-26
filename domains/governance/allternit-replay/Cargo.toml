@@ -1,12 +1,12 @@
 [package]
-name = "a2r-replay"
+name = "allternit-replay"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "A2R Replay Service - Determinism envelope and replay contract (N12)"
+description = "Allternit Replay Service - Determinism envelope and replay contract (N12)"
 
 [dependencies]
-a2r-driver-interface = { path = "../../1-kernel/infrastructure/a2r-driver-interface" }
+allternit-driver-interface = { path = "../../1-kernel/infrastructure/allternit-driver-interface" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }

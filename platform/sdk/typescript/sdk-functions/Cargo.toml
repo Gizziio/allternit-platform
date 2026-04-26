@@ -1,5 +1,5 @@
 [package]
-name = "a2rchitech-sdk-functions"
+name = "allternit-sdk-functions"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,4 +8,4 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true }
 tracing = { workspace = true }
-a2rchitech-sdk-core = { workspace = true }
+allternit-sdk-core = { workspace = true }

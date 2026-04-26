@@ -86,7 +86,7 @@
     {
       "html": "<button id='btn'>Click me</button>",
       "css": "button { padding: 10px; }",
-      "js": "document.getElementById('btn').onclick = () => a2r.emitEvent('clicked');",
+      "js": "document.getElementById('btn').onclick = () => allternit.emitEvent('clicked');",
       "permissions": [
         {
           "type": "event:emit",

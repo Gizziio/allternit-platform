@@ -1,6 +1,6 @@
 # Bridge Spec — Agent Runner ↔ Rails Runner (v2)
 
-This version reconciles the previously-defined bridge with the actual Rails spec in `/mnt/data/a2r-agent-system-rails.zip`.
+This version reconciles the previously-defined bridge with the actual Rails spec in `/mnt/data/allternit-agent-system-rails.zip`.
 
 ## 0) Non-negotiable separation
 
@@ -73,19 +73,19 @@ Runner can implement richer multi-transport busses, but only mail messages that 
 
 ---
 
-## 5) Where the shared `.a2r/` directory fits
+## 5) Where the shared `.allternit/` directory fits
 
 ### 5.1 Shared on-disk contract
-`.a2r/` is a shared boundary directory, but not automatically authoritative.
+`.allternit/` is a shared boundary directory, but not automatically authoritative.
 
 **Rule:**
 - Rails-owned authoritative state must be **append-only** and validated.
 - Runner may cache derived state, but any “truth” must be backed by Rails ledger/vault.
 
 ### 5.2 Suggested split
-- `.a2r/rails/**` (ledger projections, leases snapshots, gate configs; owned by Rails)
-- `.a2r/runner/**` (context packs, prompt packs index, compaction artifacts; owned by Runner)
-- `.a2r/shared/**` (WIH/DAG inputs, policies; shared but with ownership metadata)
+- `.allternit/rails/**` (ledger projections, leases snapshots, gate configs; owned by Rails)
+- `.allternit/runner/**` (context packs, prompt packs index, compaction artifacts; owned by Runner)
+- `.allternit/shared/**` (WIH/DAG inputs, policies; shared but with ownership metadata)
 
 ---
 

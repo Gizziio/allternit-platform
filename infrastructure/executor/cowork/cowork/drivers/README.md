@@ -22,7 +22,7 @@ npm run build:all
 - **Linux VM Support**: Full support for Linux VMs via VZLinuxBootLoader
 - **Socket Communication**: VZVirtioSocketDevice for host↔VM communication
 - **File Sharing**: VZVirtioFileSystemDevice for directory sharing
-- **Guest Agent Protocol**: Built-in support for a2r-guest-agent
+- **Guest Agent Protocol**: Built-in support for allternit-guest-agent
 - **Console Access**: Real-time log streaming
 - **Rosetta 2 Support**: x86_64 translation on Apple Silicon
 
@@ -41,9 +41,9 @@ console.log(`macOS ${caps.macosVersion}, Virtualization: ${caps.virtualizationAv
 const config: VMConfig = {
   id: "vm-001",
   name: "Ubuntu 22.04",
-  kernelPath: "~/.a2r/images/vmlinux-6.5.0-a2r-arm64",
-  initrdPath: "~/.a2r/images/initrd.img-6.5.0-a2r-arm64",
-  rootfsPath: "~/.a2r/images/ubuntu-22.04.ext4",
+  kernelPath: "~/.allternit/images/vmlinux-6.5.0-allternit-arm64",
+  initrdPath: "~/.allternit/images/initrd.img-6.5.0-allternit-arm64",
+  rootfsPath: "~/.allternit/images/ubuntu-22.04.ext4",
   cpuCount: 4,
   memorySize: 8 * 1024 * 1024 * 1024, // 8GB
   sharedDirectories: [
@@ -236,7 +236,7 @@ driver.on('vm:started', ({ vmId }) => {
 To test without the native module:
 
 ```bash
-A2R_MOCK_VIRTUALIZATION=1 npm test
+Allternit_MOCK_VIRTUALIZATION=1 npm test
 ```
 
 ## Building Native Module

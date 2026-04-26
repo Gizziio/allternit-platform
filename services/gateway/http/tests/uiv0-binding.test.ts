@@ -1,5 +1,5 @@
 /**
- * A2R Gateway - UI v0 Binding Tests
+ * Allternit Gateway - UI v0 Binding Tests
  * 
  * Tests for UI v0 compatibility layer:
  * - /global/health endpoint
@@ -105,7 +105,7 @@ function parseSSEEvents(rawText: string): Array<{ type?: string; data: unknown }
 // Tests
 // =============================================================================
 
-describe('A2R Gateway - UI v0 Binding', () => {
+describe('Allternit Gateway - UI v0 Binding', () => {
   let gateway: ChildProcess;
 
   beforeAll(async () => {

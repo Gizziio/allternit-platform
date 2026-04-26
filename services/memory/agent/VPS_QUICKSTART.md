@@ -19,7 +19,7 @@
 
 ```bash
 # Navigate to memory agent
-cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/4-services/memory/agent
+cd /Users/macbook/Desktop/allternit-workspace/allternit/4-services/memory/agent
 
 # Run configuration script
 ./scripts/configure-vps.sh <YOUR_VPS_IP>
@@ -69,7 +69,7 @@ curl http://<YOUR_VPS_IP>:11434/api/tags
 ### Step 3: Install & Start
 
 ```bash
-cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/4-services/memory/agent
+cd /Users/macbook/Desktop/allternit-workspace/allternit/4-services/memory/agent
 
 pnpm install
 
@@ -243,10 +243,10 @@ pnpm run daemon stop
 Once the memory agent is running:
 
 ```bash
-# From anywhere in a2rchitech
-a2r memory query "What do we know about DAG validation?"
-a2r memory stats
-a2r memory consolidate
+# From anywhere in allternit
+allternit memory query "What do we know about DAG validation?"
+allternit memory stats
+allternit memory consolidate
 ```
 
 ---

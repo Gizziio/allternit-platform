@@ -1,8 +1,8 @@
 //! Pi Agent Bridge - OC-019
 //!
-//! Bridge between OpenClaw's Pi Agent communication protocol and A2R's native agent system.
+//! Bridge between OpenClaw's Pi Agent communication protocol and Allternit's native agent system.
 //! This module provides the adapter pattern to translate between Pi Agent operations
-//! and A2R agent operations while maintaining A2R interface.
+//! and Allternit agent operations while maintaining Allternit interface.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -221,7 +221,7 @@ impl PiAgentBridge {
 
         let execution_time = start_time.elapsed().as_millis() as u64;
 
-        // Convert response back to A2R format
+        // Convert response back to Allternit format
         let response = self.convert_from_openclaw_response(result, execution_time)?;
 
         Ok(response)
@@ -268,7 +268,7 @@ impl PiAgentBridge {
         Ok(())
     }
 
-    /// Convert A2R request to OpenClaw format
+    /// Convert Allternit request to OpenClaw format
     fn convert_to_openclaw_request(
         &self,
         request: PiAgentRequest,
@@ -469,7 +469,7 @@ impl PiAgentBridge {
         }))
     }
 
-    /// Convert OpenClaw response to A2R format
+    /// Convert OpenClaw response to Allternit format
     fn convert_from_openclaw_response(
         &self,
         result: serde_json::Value,

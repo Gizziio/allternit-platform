@@ -1,5 +1,5 @@
 [package]
-name = "a2r-ivkge-advanced"
+name = "allternit-ivkge-advanced"
 version = "0.1.0"
 edition = "2021"
 description = "IVKGE Advanced: Visual diagram extraction with OCR, corrections, and ambiguity handling"

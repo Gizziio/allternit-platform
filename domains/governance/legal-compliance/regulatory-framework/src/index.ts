@@ -1,15 +1,15 @@
 /**
- * A2R Law Layer
+ * Allternit Law Layer
  * 
- * Governance and policy engine for A2rchitect.
+ * Governance and policy engine for allternit.
  * Provides policy-based routing, Beads integration, and receipt generation.
  * 
  * @example
  * ```typescript
- * import { A2RKernelImpl } from '@a2r/governor';
- * import { LawLayer, PolicyTemplates } from '@a2r/lawlayer';
+ * import { AllternitKernelImpl } from '@allternit/governor';
+ * import { LawLayer, PolicyTemplates } from '@allternit/lawlayer';
  * 
- * const kernel = new A2RKernelImpl(storage);
+ * const kernel = new AllternitKernelImpl(storage);
  * const lawLayer = new LawLayer({ kernel });
  * 
  * // Register policies
@@ -82,7 +82,7 @@ export {
 // Main Law Layer Class
 // ============================================================================
 
-import type { A2RKernel } from '@a2r/governor';
+import type { AllternitKernel } from '@allternit/governor';
 import type { LawLayerConfig, PolicyDecision, PolicyEvaluationRequest } from './types.js';
 import { LawPolicyEngine } from './engine/policy-engine.js';
 import { BeadsAdapter } from './adapters/beads-adapter.js';
@@ -100,7 +100,7 @@ export class LawLayer {
   public readonly policies: LawPolicyEngine;
   public readonly beads: BeadsAdapter;
   public readonly receipts: LawReceiptGenerator;
-  public readonly kernel: A2RKernel;
+  public readonly kernel: AllternitKernel;
   public readonly config: LawLayerConfig;
 
   constructor(config: LawLayerConfig) {
@@ -176,7 +176,7 @@ export function createLawLayer(config: LawLayerConfig): LawLayer {
  * 
  * Usage:
  * ```typescript
- * import { checkPolicy, PolicyTemplates } from '@a2r/lawlayer';
+ * import { checkPolicy, PolicyTemplates } from '@allternit/lawlayer';
  * 
  * const allowed = await checkPolicy(kernel, {
  *   toolName: 'deploy',
@@ -187,7 +187,7 @@ export function createLawLayer(config: LawLayerConfig): LawLayer {
  * ```
  */
 export function checkPolicy(
-  kernel: A2RKernel,
+  kernel: AllternitKernel,
   context: PolicyEvaluationRequest['context']
 ): PolicyDecision {
   const layer = new LawLayer({ kernel });

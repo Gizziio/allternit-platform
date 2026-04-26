@@ -1,12 +1,12 @@
 [package]
-name = "a2r-parity"
+name = "allternit-parity"
 version = "0.1.0"
 edition = "2021"
 description = "Parity testing framework for OpenClaw strangler migration"
-authors = ["A2rchitect Team"]
+authors = ["allternit Team"]
 
 [lib]
-name = "a2r_parity"
+name = "allternit_parity"
 path = "src/lib.rs"
 
 [[bin]]

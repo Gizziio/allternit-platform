@@ -1,0 +1,20 @@
+{
+  "name": "@allternit/agent-workspace",
+  "version": "0.1.0",
+  "description": "Allternit Agent Workspace - WASM bindings for browser integration",
+  "main": "allternit_agent_workspace.js",
+  "types": "allternit_agent_workspace.d.ts",
+  "files": [
+    "allternit_agent_workspace.js",
+    "allternit_agent_workspace.d.ts",
+    "allternit_agent_workspace_bg.wasm",
+    "allternit_agent_workspace_bg.wasm.d.ts"
+  ],
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/allternitchitect/allternit"
+  },
+  "license": "MIT OR Apache-2.0",
+  "keywords": ["allternit", "agent", "workspace", "wasm", "ai"]
+}

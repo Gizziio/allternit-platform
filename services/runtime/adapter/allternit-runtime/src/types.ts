@@ -1,7 +1,7 @@
-import type { A2RKernel } from '@a2r/governor';
+import type { AllternitKernel } from '@allternit/governor';
 
 export interface AdapterContext {
-  kernel: A2RKernel;
+  kernel: AllternitKernel;
   wihId?: string;
   sessionId?: string;
   agentId?: string;
@@ -11,7 +11,7 @@ export interface AdapterContext {
 export interface RuntimeSessionContext {
   id: string;
   agentId: string;
-  kernel: A2RKernel;
+  kernel: AllternitKernel;
 }
 
 export interface RuntimeToolContext {
@@ -45,7 +45,7 @@ export interface RuntimeFileResult {
 }
 
 export interface RuntimeGatewayOptions {
-  kernel?: A2RKernel;
+  kernel?: AllternitKernel;
   enforceWih?: boolean;
   instanceId?: string;
   clientName?: string;
@@ -73,7 +73,7 @@ export interface FileWrapperResult {
 }
 
 export interface RuntimeBridgeConfig {
-  kernel: A2RKernel;
+  kernel: AllternitKernel;
   enforceWih?: boolean;
   defaultToolPolicy?: RuntimeToolPolicy;
   fileAccessMode?: 'standard' | 'strict' | 'readonly';

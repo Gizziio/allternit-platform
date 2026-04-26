@@ -34,7 +34,7 @@
 ### 1. Setup Cron Job (Daily Consolidation at 3 AM)
 
 ```bash
-cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/4-services/memory/agent
+cd /Users/macbook/Desktop/allternit-workspace/allternit/4-services/memory/agent
 
 ./scripts/setup-cron.sh
 ```

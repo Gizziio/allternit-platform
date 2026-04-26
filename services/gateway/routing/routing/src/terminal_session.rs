@@ -1,14 +1,14 @@
 #![allow(dead_code, unused_variables, unused_imports)]
 //! Terminal Session Management Module
 //!
-//! This module provides terminal session management functionality for the A2rchitech API,
+//! This module provides terminal session management functionality for the Allternitchitech API,
 //! including session creation, listing, retrieval, and deletion. It integrates with the
 //! policy engine for authorization checks and with the messaging system for secure
 //! terminal operations.
 
-use a2rchitech_control_plane_service::ControlPlaneService;
-use a2rchitech_messaging::MessagingSystem;
-use a2rchitech_policy::{PolicyDecision, PolicyEffect, PolicyEngine, PolicyRequest, SafetyTier};
+use allternit_control_plane_service::ControlPlaneService;
+use allternit_messaging::MessagingSystem;
+use allternit_policy::{PolicyDecision, PolicyEffect, PolicyEngine, PolicyRequest, SafetyTier};
 use axum::{
     extract::{Path, State},
     http::StatusCode,

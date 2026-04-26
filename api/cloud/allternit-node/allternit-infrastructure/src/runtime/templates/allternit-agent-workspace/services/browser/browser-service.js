@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ============================================================================
-// A2R Sandbox Browser Service
+// Allternit Sandbox Browser Service
 // Provides isolated browser automation capabilities
 // ============================================================================
 

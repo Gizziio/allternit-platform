@@ -9,6 +9,8 @@ pub struct AppleVFConfig {
     pub vm_storage_dir: PathBuf,
     /// Directory for VM images (IPSW files)
     pub images_dir: PathBuf,
+    /// Path to the Lume binary
+    pub lume_bin: Option<PathBuf>,
     /// Default number of CPUs for new VMs
     pub default_cpus: u8,
     /// Default memory in MiB for new VMs
@@ -30,12 +32,13 @@ pub struct AppleVFConfig {
 impl Default for AppleVFConfig {
     fn default() -> Self {
         let data_dir = dirs::data_dir()
-            .map(|d| d.join("a2r").join("apple-vf"))
-            .unwrap_or_else(|| PathBuf::from("/tmp/a2r/apple-vf"));
+            .map(|d| d.join("allternit").join("apple-vf"))
+            .unwrap_or_else(|| PathBuf::from("/tmp/allternit/apple-vf"));
 
         Self {
             vm_storage_dir: data_dir.join("vms"),
             images_dir: data_dir.join("images"),
+            lume_bin: None,
             default_cpus: 2,
             default_memory_mib: 4096,
             default_disk_mib: 20480,
@@ -55,8 +58,15 @@ impl AppleVFConfig {
         Self {
             vm_storage_dir: storage_dir.join("vms"),
             images_dir: storage_dir.join("images"),
+            lume_bin: None,
             ..Default::default()
         }
+    }
+
+    /// Set the Lume binary path
+    pub fn with_lume_bin(mut self, path: impl Into<PathBuf>) -> Self {
+        self.lume_bin = Some(path.into());
+        self
     }
 
     /// Set default resource allocation

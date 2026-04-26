@@ -1,5 +1,5 @@
 [package]
-name = "a2rchitech-transport-sms"
+name = "allternit-transport-sms"
 version = "0.1.0"
 edition = "2021"
 
@@ -13,4 +13,4 @@ thiserror = { workspace = true }
 async-trait = { workspace = true }
 reqwest = { workspace = true }
 uuid = { workspace = true }
-a2rchitech-sdk-transport = { workspace = true }
+allternit-sdk-transport = { workspace = true }

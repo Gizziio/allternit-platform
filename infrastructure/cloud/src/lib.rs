@@ -1,4 +1,4 @@
-//! A2R Cloud Core
+//! Allternit Cloud Core
 //!
 //! Core traits, types, and registry for cloud provider integration.
 //! Implements BYOC (Bring Your Own Cloud) deployment model.

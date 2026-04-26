@@ -1,11 +1,11 @@
 [package]
-name = "a2rchitech-platform"
+name = "allternit-platform"
 version = "0.1.0"
 edition = "2021"
-description = "A2rchitech platform orchestrator that starts all services"
+description = "Allternitchitech platform orchestrator that starts all services"
 
 [[bin]]
-name = "a2rchitech-platform"
+name = "allternit-platform"
 path = "src/main.rs"
 
 [dependencies]

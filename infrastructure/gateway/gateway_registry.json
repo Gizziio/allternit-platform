@@ -1,0 +1,32 @@
+{
+  "version": "v0.1",
+  "external_ingress": {
+    "id": "dev-ingress",
+    "protocol": "http",
+    "routes": [
+      {
+        "path_prefix": "/api/computer",
+        "service": "computer-use",
+        "methods": ["GET", "POST", "DELETE", "OPTIONS"],
+        "strip_prefix": "/api",
+        "add_prefix": "/v1"
+      },
+      {
+        "path_prefix": "/api",
+        "service": "allternit-api"
+      }
+    ]
+  },
+  "services": [
+    {
+      "name": "allternit-api",
+      "internal_url": "http://localhost:3004",
+      "exposed": true
+    },
+    {
+      "name": "computer-use",
+      "internal_url": "http://127.0.0.1:8760",
+      "exposed": false
+    }
+  ]
+}

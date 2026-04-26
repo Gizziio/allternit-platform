@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2rchitech.local/spec/contracts/EditorAction.schema.json",
+  "$id": "https://allternit.local/spec/contracts/EditorAction.schema.json",
   "title": "Editor Action — External Editor Bridge Contract",
   "description": "Defines the contract for opening files in external editors from Code Mode UI and diff views.",
   "type": "object",

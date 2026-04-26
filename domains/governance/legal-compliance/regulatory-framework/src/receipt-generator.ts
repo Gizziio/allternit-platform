@@ -8,7 +8,7 @@
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import { createHash } from 'node:crypto';
-import type { WihItem, Receipt, A2RKernel, Attestation } from '@a2r/governor';
+import type { WihItem, Receipt, AllternitKernel, Attestation } from '@allternit/governor';
 import {
   type ReceiptGeneratorConfig,
   type ReceiptGenerationContext,
@@ -24,7 +24,7 @@ const execAsync = promisify(exec);
  */
 export class LawReceiptGenerator {
   private config: Required<ReceiptGeneratorConfig>;
-  private kernel: A2RKernel;
+  private kernel: AllternitKernel;
 
   constructor(config: ReceiptGeneratorConfig) {
     this.kernel = config.kernel;

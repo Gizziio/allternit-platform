@@ -3,7 +3,7 @@ use crate::agent_template_compiler::{
     RoleDefinitionYaml, TraitDefinitionYaml, VoicePersonaDefinitionYaml,
 };
 use crate::agent_template_validator::AgentTemplateValidator;
-use a2rchitech_policy::PolicyEngine;
+use allternit_policy::PolicyEngine;
 use std::sync::Arc;
 use std::path::Path;
 
@@ -297,25 +297,25 @@ agent_templates:
         let pool = sqlx::SqlitePool::connect(&format!("sqlite://{}", temp_db_path)).await.unwrap();
         let temp_history_path = format!("/tmp/test_loader_history_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(std::sync::Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_history_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_history_path).unwrap(),
         ));
         let messaging_system = Arc::new(
-            a2rchitech_messaging::MessagingSystem::new_with_storage(
+            allternit_messaging::MessagingSystem::new_with_storage(
                 history_ledger.clone(),
                 pool.clone(),
             )
             .await
             .unwrap(),
         );
-        let policy_engine = Arc::new(a2rchitech_policy::PolicyEngine::new(
+        let policy_engine = Arc::new(allternit_policy::PolicyEngine::new(
             history_ledger.clone(),
             messaging_system.clone(),
         ));
 
         // Register a default identity for testing
-        let identity = a2rchitech_policy::Identity {
+        let identity = allternit_policy::Identity {
             id: "agent_template_loader".to_string(),
-            identity_type: a2rchitech_policy::IdentityType::AgentIdentity,
+            identity_type: allternit_policy::IdentityType::AgentIdentity,
             name: "Agent Template Loader".to_string(),
             tenant_id: "tenant-123".to_string(),
             created_at: 0,
@@ -363,17 +363,17 @@ agent_templates:
         let pool = sqlx::SqlitePool::connect(&format!("sqlite://{}", temp_db_path)).await.unwrap();
         let temp_history_path = format!("/tmp/test_loader_invalid_history_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(std::sync::Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_history_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_history_path).unwrap(),
         ));
         let messaging_system = Arc::new(
-            a2rchitech_messaging::MessagingSystem::new_with_storage(
+            allternit_messaging::MessagingSystem::new_with_storage(
                 history_ledger.clone(),
                 pool.clone(),
             )
             .await
             .unwrap(),
         );
-        let policy_engine = Arc::new(a2rchitech_policy::PolicyEngine::new(
+        let policy_engine = Arc::new(allternit_policy::PolicyEngine::new(
             history_ledger.clone(),
             messaging_system.clone(),
         ));

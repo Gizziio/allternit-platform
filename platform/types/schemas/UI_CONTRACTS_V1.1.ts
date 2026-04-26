@@ -1,5 +1,5 @@
 /**
- * A2R Production UI Contracts v1.1
+ * Allternit Production UI Contracts v1.1
  * 
  * CORRECTIONS FROM v1.0:
  * - All Date → ISODate (string) for serialization safety

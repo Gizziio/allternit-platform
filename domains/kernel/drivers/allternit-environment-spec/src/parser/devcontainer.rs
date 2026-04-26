@@ -309,9 +309,9 @@ impl DevContainerConfig {
         }
     }
 
-    /// Get A2R-specific configuration from customizations
-    pub fn a2r_config(&self) -> Option<serde_json::Value> {
-        self.customizations.get("a2r").cloned()
+    /// Get Allternit-specific configuration from customizations
+    pub fn allternit_config(&self) -> Option<serde_json::Value> {
+        self.customizations.get("allternit").cloned()
     }
 
     /// Validate the configuration

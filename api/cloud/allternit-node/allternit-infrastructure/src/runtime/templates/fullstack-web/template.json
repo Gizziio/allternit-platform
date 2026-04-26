@@ -3,7 +3,7 @@
   "name": "Full Stack Web App",
   "description": "Complete full-stack application with Next.js 14, TypeScript, PostgreSQL, Prisma ORM, and Redis. Includes auth, API routes, and deployment config.",
   "version": "1.0.0",
-  "author": "A2R",
+  "author": "Allternit",
   "type": "devcontainer",
   "category": "web",
   "language": "typescript",

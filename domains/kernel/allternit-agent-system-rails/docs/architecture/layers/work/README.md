@@ -5,17 +5,17 @@ This layer handles the DAG-centric view of work, where every plan becomes a DAG 
 
 ## Key directories & files
 - `src/dag/` (if present) or `src/domain/dag.rs` – defines DAG nodes, relationships, and the node/sibling metadata (parent_id, blocked_by, related_to).
-- `src/bin/a2r-rails.rs` – entry point; command parsing for `a2r rails plan`, `a2r rails dag`, and `a2r rails wih`.
-- `.a2r/work/dags/<dag_id>/` – derived view snapshots generated after each structural mutation (node create/edit, dependency change).
+- `src/bin/allternit-rails.rs` – entry point; command parsing for `allternit rails plan`, `allternit rails dag`, and `allternit rails wih`.
+- `.allternit/work/dags/<dag_id>/` – derived view snapshots generated after each structural mutation (node create/edit, dependency change).
 
 ## Commands
 | Command | Role | Notes |
 | --- | --- | --- |
-| `a2r rails plan create <description>` | Translates intent to nodes | emits `PromptCreated` + `DagNodeCreated`; anchors prompt ↔ DAG links. |
-| `a2r rails dag node add` | Adds task/subtask | attaches parent/blocking relations and records `MutationProvenance`. |
-| `a2r rails wih pickup <wih_id>` | Claims a WIH | writes `WIHPickedUp`, enforces `Gate` requirements. |
-| `a2r rails wih close <wih_id>` | Initiates close | writes `WIHClosedSigned`, which is the trigger for the autonomous pipeline. |
-| `a2r rails work status` | Observes DAG/WIH | shows the derived WIH view and the Ralph loop state from `.a2r/work`. |
+| `allternit rails plan create <description>` | Translates intent to nodes | emits `PromptCreated` + `DagNodeCreated`; anchors prompt ↔ DAG links. |
+| `allternit rails dag node add` | Adds task/subtask | attaches parent/blocking relations and records `MutationProvenance`. |
+| `allternit rails wih pickup <wih_id>` | Claims a WIH | writes `WIHPickedUp`, enforces `Gate` requirements. |
+| `allternit rails wih close <wih_id>` | Initiates close | writes `WIHClosedSigned`, which is the trigger for the autonomous pipeline. |
+| `allternit rails work status` | Observes DAG/WIH | shows the derived WIH view and the Ralph loop state from `.allternit/work`. |
 
 ## Invariants
 - `dag_id` is the canonical `work_id`; there are no separate ticket IDs. Every WIH/run/transport thread references that `dag_id`.

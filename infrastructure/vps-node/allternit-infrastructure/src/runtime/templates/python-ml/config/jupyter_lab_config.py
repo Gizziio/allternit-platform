@@ -28,7 +28,7 @@ c.ServerApp.default_url = '/lab'
 
 # Disable token authentication for development (set via environment variable)
 import os
-c.ServerApp.token = os.environ.get('JUPYTER_TOKEN', 'a2r-ml-dev')
+c.ServerApp.token = os.environ.get('JUPYTER_TOKEN', 'allternit-ml-dev')
 
 # Allow passwordless access (for development only)
 c.ServerApp.password = ''

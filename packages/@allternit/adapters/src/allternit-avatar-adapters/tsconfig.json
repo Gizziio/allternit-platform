@@ -17,8 +17,8 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@allternit/visual-state": ["../a2r-visual-state/src/index.ts"],
-      "@allternit/visual-state/*": ["../a2r-visual-state/src/*"],
+      "@allternit/visual-state": ["../allternit-visual-state/src/index.ts"],
+      "@allternit/visual-state/*": ["../allternit-visual-state/src/*"],
       "@allternit/avatar-adapters": ["./src/index.ts"],
       "@allternit/avatar-adapters/*": ["./src/*"]
     }

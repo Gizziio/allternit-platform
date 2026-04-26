@@ -1,5 +1,5 @@
 /**
- * A2R Operator Types
+ * Allternit Operator Types
  * 
  * Canonical contracts for the Thin Client Operator.
  */

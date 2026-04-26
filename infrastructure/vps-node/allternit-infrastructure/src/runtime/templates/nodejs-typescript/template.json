@@ -3,7 +3,7 @@
   "name": "Node.js + TypeScript",
   "description": "Modern Node.js development with TypeScript, pnpm, Vitest, ESLint, and Prettier. Perfect for APIs, CLIs, and libraries.",
   "version": "1.0.0",
-  "author": "A2R",
+  "author": "Allternit",
   "type": "devcontainer",
   "category": "web",
   "language": "typescript",

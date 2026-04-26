@@ -1,4 +1,4 @@
-# Claude Code → A2R Tool & Hook Delta (Additions to Locked Baseline)
+# Claude Code → Allternit Tool & Hook Delta (Additions to Locked Baseline)
 
 <SECTION id="meta">
 ---
@@ -7,7 +7,7 @@ sources:
   - "Hooks reference (events, matchers, MCP tool naming)"
   - "Claude Code settings (permission rules, defaultMode, directories)"
 status: additive
-a2r_action: "Extend A2R HookRuntime + PolicyEngine + ToolRegistry to cover Claude Code semantics without coupling to Claude"
+allternit_action: "Extend Allternit HookRuntime + PolicyEngine + ToolRegistry to cover Claude Code semantics without coupling to Claude"
 ---
 </SECTION>
 
@@ -16,9 +16,9 @@ a2r_action: "Extend A2R HookRuntime + PolicyEngine + ToolRegistry to cover Claud
 
 Claude Code defines these hook events and when they fire: SessionStart, UserPromptSubmit, PreToolUse, PermissionRequest, PostToolUse, PostToolUseFailure, Notification, SubagentStart, SubagentStop, Stop, TeammateIdle, TaskCompleted, PreCompact, SessionEnd. citeturn4view0
 
-### A2R mapping rule (locked)
+### Allternit mapping rule (locked)
 - Treat these as **kernel boundary stages** around tool execution and agent lifecycle.
-- A2R MUST be able to emit equivalent events in its own observability stream even when not using Claude.
+- Allternit MUST be able to emit equivalent events in its own observability stream even when not using Claude.
 
 ### Matcher semantics you should copy
 - Tool events match on `tool_name` (regex).
@@ -38,7 +38,7 @@ Claude Code settings supports:
 - `defaultMode` permission modes: `default`, `acceptEdits`, `plan`, `bypassPermissions`. citeturn5search1turn5search6
 - a managed-policy kill-switch for bypass mode (`disableBypassPermissionsMode`). citeturn5search0
 
-### A2R lock
+### Allternit lock
 - WIH scope remains highest authority (narrowest).
 - Map `bypassPermissions` to your explicit execution flag (“dangerously skip permissions”) and allow org-level disable.
 
@@ -50,7 +50,7 @@ Claude Code settings supports:
 The hooks docs and settings docs concretely reference these tool identifiers in matchers and permission rules:
 - `Bash`, `Edit`, `Write`, `Read` and tool group matchers like `Edit|Write`, plus `Notebook.*` patterns. citeturn4view0turn5search0
 
-### A2R action
+### Allternit action
 - Keep your previously-locked “Claude parity baseline list” as the ToolRegistry baseline.
 - Add/lock **tool naming** and **specifier pattern support** exactly as in Claude permissions:
   - `Tool`
@@ -63,7 +63,7 @@ The hooks docs and settings docs concretely reference these tool identifiers in 
 
 Claude supports async hooks and background execution for certain automation flows. citeturn4view0
 
-A2R mapping:
+Allternit mapping:
 - Allow hook handlers to be executed async **only** if:
   - they cannot mutate durable state directly
   - their outputs are emitted as receipts/events and then reconciled via Rails gate

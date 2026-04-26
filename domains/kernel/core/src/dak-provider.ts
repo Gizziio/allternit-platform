@@ -1,7 +1,7 @@
 /**
  * Deterministic Execution Provider (Kernel Port)
  * 
- * Bridges the A2R Kernel to the DAK Ralph Loop.
+ * Bridges the Allternit Kernel to the DAK Ralph Loop.
  * Provides high-integrity, verified execution for critical tools.
  */
 
@@ -27,7 +27,7 @@ export class DeterministicExecutionProvider {
     this.config = {
       useRalphLoop: true,
       maxFixCycles: 3,
-      workDir: process.env.ALLTERNIT_WORK_DIR || './.a2r/work',
+      workDir: process.env.ALLTERNIT_WORK_DIR || './.allternit/work',
       ...config
     };
 

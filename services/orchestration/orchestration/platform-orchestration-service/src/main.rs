@@ -1,6 +1,6 @@
-//! A2rchitech Platform Orchestrator
+//! Allternitchitech Platform Orchestrator
 //!
-//! Starts all platform services from `.a2r/services.json`.
+//! Starts all platform services from `.allternit/services.json`.
 
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -55,10 +55,10 @@ fn logs_dir(root: &Path) -> PathBuf {
 }
 
 fn services_config_path(root: &Path) -> PathBuf {
-    if let Ok(path) = std::env::var("A2R_SERVICES_FILE") {
+    if let Ok(path) = std::env::var("Allternit_SERVICES_FILE") {
         return PathBuf::from(path);
     }
-    root.join(".a2r/services.json")
+    root.join(".allternit/services.json")
 }
 
 fn load_services_config(path: &Path) -> ServicesConfig {
@@ -229,17 +229,17 @@ async fn main() {
     let config = load_services_config(&config_path);
     let vars = build_template_vars(&root, &config);
 
-    println!("🚀 Starting A2rchitech Platform");
+    println!("🚀 Starting Allternitchitech Platform");
     println!("===========================================");
     println!("Using services config: {}", config_path.display());
     println!("Config version: {}", config.version);
 
-    if std::env::var("A2R_IGNORE_PORT_CONFLICTS").is_err() {
+    if std::env::var("Allternit_IGNORE_PORT_CONFLICTS").is_err() {
         let conflicts = detect_port_conflicts(&config);
         if !conflicts.is_empty() {
             eprintln!("❌ Port conflicts detected: {:?}", conflicts);
-            eprintln!("   Stop existing services or run scripts/cleanup-a2r-ports.sh (sudo may be required).");
-            eprintln!("   Set A2R_IGNORE_PORT_CONFLICTS=1 to bypass this check.");
+            eprintln!("   Stop existing services or run scripts/cleanup-allternit-ports.sh (sudo may be required).");
+            eprintln!("   Set Allternit_IGNORE_PORT_CONFLICTS=1 to bypass this check.");
             std::process::exit(1);
         }
     }
@@ -271,7 +271,7 @@ async fn main() {
     println!("💡 Press Ctrl+C to stop the platform.");
 
     ctrlc::set_handler(move || {
-        println!("\n🛑 Stopping A2rchitech Platform...");
+        println!("\n🛑 Stopping Allternitchitech Platform...");
         std::process::exit(0);
     })
     .expect("Error setting Ctrl+C handler");

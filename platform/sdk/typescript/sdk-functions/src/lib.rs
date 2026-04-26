@@ -1,11 +1,11 @@
-//! # A2R SDK Functions
+//! # Allternit SDK Functions
 //!
-//! Function registry and management for the A2R SDK.
+//! Function registry and management for the Allternit SDK.
 //!
 //! ## Overview
 //!
 //! This crate provides the function registry system for managing and
-//! discovering functions within the A2R platform. It handles function
+//! discovering functions within the Allternit platform. It handles function
 //! registration, search, validation, and permission checking.
 //!
 //! The function registry serves as a central catalog of all available
@@ -23,7 +23,7 @@
 //! ## Example
 //!
 //! ```rust
-//! use a2rchitech_sdk_functions::{
+//! use allternit_sdk_functions::{
 //!     FunctionRegistry, FunctionDefinition, PlatformSupport,
 //!     FunctionSearchRequest
 //! };
@@ -71,14 +71,14 @@ use std::collections::HashMap;
 
 /// Complete definition of a function.
 ///
-/// `FunctionDefinition` describes a callable function within the A2R
+/// `FunctionDefinition` describes a callable function within the Allternit
 /// system, including its schema, platform support, risk classification,
 /// and execution metadata.
 ///
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_functions::{FunctionDefinition, PlatformSupport, RateLimitConfig};
+/// use allternit_sdk_functions::{FunctionDefinition, PlatformSupport, RateLimitConfig};
 ///
 /// let function = FunctionDefinition {
 ///     id: "com.example.calculate".to_string(),
@@ -169,7 +169,7 @@ impl FunctionDefinition {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_functions::{FunctionDefinition, PlatformSupport};
+    /// use allternit_sdk_functions::{FunctionDefinition, PlatformSupport};
     ///
     /// let function = FunctionDefinition {
     ///     id: "test".to_string(),
@@ -214,7 +214,7 @@ impl FunctionDefinition {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_functions::{FunctionDefinition, PlatformSupport};
+    /// use allternit_sdk_functions::{FunctionDefinition, PlatformSupport};
     ///
     /// let function = FunctionDefinition {
     ///     id: "test".to_string(),
@@ -242,7 +242,7 @@ impl FunctionDefinition {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_functions::{FunctionDefinition, PlatformSupport};
+    /// use allternit_sdk_functions::{FunctionDefinition, PlatformSupport};
     ///
     /// let high_risk = FunctionDefinition {
     ///     id: "test".to_string(),
@@ -274,7 +274,7 @@ impl FunctionDefinition {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_functions::PlatformSupport;
+/// use allternit_sdk_functions::PlatformSupport;
 ///
 /// // Create support for all platforms
 /// let all_platforms = PlatformSupport::all();
@@ -316,7 +316,7 @@ impl PlatformSupport {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_functions::PlatformSupport;
+    /// use allternit_sdk_functions::PlatformSupport;
     ///
     /// let support = PlatformSupport::all();
     /// assert!(support.ios);
@@ -344,7 +344,7 @@ impl PlatformSupport {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_functions::PlatformSupport;
+    /// use allternit_sdk_functions::PlatformSupport;
     ///
     /// let support = PlatformSupport::mobile();
     /// assert!(support.ios);
@@ -372,7 +372,7 @@ impl PlatformSupport {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_functions::PlatformSupport;
+    /// use allternit_sdk_functions::PlatformSupport;
     ///
     /// let support = PlatformSupport::web_only();
     /// assert!(!support.ios);
@@ -415,7 +415,7 @@ impl PlatformSupport {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_functions::RateLimitConfig;
+/// use allternit_sdk_functions::RateLimitConfig;
 ///
 /// // Allow 100 calls per minute
 /// let rate_limit = RateLimitConfig {
@@ -449,7 +449,7 @@ impl RateLimitConfig {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_functions::RateLimitConfig;
+    /// use allternit_sdk_functions::RateLimitConfig;
     ///
     /// let limit = RateLimitConfig::per_second(10);
     /// assert_eq!(limit.max_calls, 10);
@@ -475,7 +475,7 @@ impl RateLimitConfig {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_functions::RateLimitConfig;
+    /// use allternit_sdk_functions::RateLimitConfig;
     ///
     /// let limit = RateLimitConfig::per_minute(100);
     /// assert_eq!(limit.max_calls, 100);
@@ -513,7 +513,7 @@ impl RateLimitConfig {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_functions::RateLimitConfig;
+    /// use allternit_sdk_functions::RateLimitConfig;
     ///
     /// let limit = RateLimitConfig::per_minute(60);
     /// assert_eq!(limit.calls_per_second(), 1.0);
@@ -531,7 +531,7 @@ impl RateLimitConfig {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_functions::FunctionCall;
+/// use allternit_sdk_functions::FunctionCall;
 ///
 /// let call = FunctionCall {
 ///     function_id: "com.example.add".to_string(),
@@ -567,7 +567,7 @@ pub struct FunctionCall {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_functions::{FunctionExecutionRequest, FunctionCall};
+/// use allternit_sdk_functions::{FunctionExecutionRequest, FunctionCall};
 ///
 /// let request = FunctionExecutionRequest {
 ///     function_call: FunctionCall {
@@ -601,7 +601,7 @@ pub struct FunctionExecutionRequest {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_functions::FunctionExecutionResponse;
+/// use allternit_sdk_functions::FunctionExecutionResponse;
 ///
 /// let response = FunctionExecutionResponse {
 ///     success: true,
@@ -641,7 +641,7 @@ pub struct FunctionExecutionResponse {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_functions::{
+/// use allternit_sdk_functions::{
 ///     FunctionRegistry, FunctionDefinition, PlatformSupport
 /// };
 ///
@@ -683,7 +683,7 @@ impl FunctionRegistry {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_functions::FunctionRegistry;
+    /// use allternit_sdk_functions::FunctionRegistry;
     ///
     /// let registry = FunctionRegistry::new();
     /// assert!(registry.functions.is_empty());
@@ -711,7 +711,7 @@ impl FunctionRegistry {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_functions::{FunctionRegistry, FunctionDefinition, PlatformSupport};
+    /// use allternit_sdk_functions::{FunctionRegistry, FunctionDefinition, PlatformSupport};
     ///
     /// let mut registry = FunctionRegistry::new();
     ///
@@ -755,7 +755,7 @@ impl FunctionRegistry {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_functions::{FunctionRegistry, FunctionDefinition, PlatformSupport};
+    /// use allternit_sdk_functions::{FunctionRegistry, FunctionDefinition, PlatformSupport};
     ///
     /// let mut registry = FunctionRegistry::new();
     /// let function = FunctionDefinition {
@@ -795,7 +795,7 @@ impl FunctionRegistry {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_functions::{
+    /// use allternit_sdk_functions::{
     ///     FunctionRegistry, FunctionDefinition, PlatformSupport, FunctionSearchRequest
     /// };
     ///
@@ -879,7 +879,7 @@ impl FunctionRegistry {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_functions::{
+    /// use allternit_sdk_functions::{
     ///     FunctionRegistry, FunctionDefinition, PlatformSupport
     /// };
     ///
@@ -942,7 +942,7 @@ impl FunctionRegistry {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_functions::{
+    /// use allternit_sdk_functions::{
     ///     FunctionRegistry, FunctionDefinition, PlatformSupport
     /// };
     ///
@@ -994,7 +994,7 @@ impl FunctionRegistry {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_functions::{
+    /// use allternit_sdk_functions::{
     ///     FunctionRegistry, FunctionDefinition, PlatformSupport
     /// };
     ///
@@ -1035,7 +1035,7 @@ impl FunctionRegistry {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_functions::FunctionRegistry;
+    /// use allternit_sdk_functions::FunctionRegistry;
     ///
     /// let registry = FunctionRegistry::new();
     /// assert_eq!(registry.len(), 0);
@@ -1053,7 +1053,7 @@ impl FunctionRegistry {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_functions::FunctionRegistry;
+    /// use allternit_sdk_functions::FunctionRegistry;
     ///
     /// let registry = FunctionRegistry::new();
     /// assert!(registry.is_empty());
@@ -1077,7 +1077,7 @@ impl Default for FunctionRegistry {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_functions::FunctionSearchRequest;
+/// use allternit_sdk_functions::FunctionSearchRequest;
 ///
 /// // Search for math functions on iOS
 /// let request = FunctionSearchRequest {
@@ -1112,7 +1112,7 @@ impl FunctionSearchRequest {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_functions::FunctionSearchRequest;
+    /// use allternit_sdk_functions::FunctionSearchRequest;
     ///
     /// let request = FunctionSearchRequest::new();
     /// assert!(request.category.is_none());
@@ -1140,7 +1140,7 @@ impl FunctionSearchRequest {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_functions::FunctionSearchRequest;
+    /// use allternit_sdk_functions::FunctionSearchRequest;
     ///
     /// let request = FunctionSearchRequest::new()
     ///     .with_category("math");
@@ -1209,7 +1209,7 @@ impl Default for FunctionSearchRequest {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_functions::{FunctionSearchResponse, FunctionDefinition};
+/// use allternit_sdk_functions::{FunctionSearchResponse, FunctionDefinition};
 ///
 /// let response = FunctionSearchResponse {
 ///     functions: vec![],
@@ -1292,7 +1292,7 @@ mod tests {
         let mut registry = FunctionRegistry::new();
         
         let function1 = FunctionDefinition {
-            id: "com.a2rchitech.os.set_alarm".to_string(),
+            id: "com.allternit.os.set_alarm".to_string(),
             name: "Set Alarm".to_string(),
             description: "Sets an alarm on the device".to_string(),
             version: "1.0.0".to_string(),
@@ -1337,7 +1337,7 @@ mod tests {
         };
 
         let function2 = FunctionDefinition {
-            id: "com.a2rchitech.finance.transfer_money".to_string(),
+            id: "com.allternit.finance.transfer_money".to_string(),
             name: "Transfer Money".to_string(),
             description: "Transfers money to another account".to_string(),
             version: "1.0.0".to_string(),
@@ -1403,7 +1403,7 @@ mod tests {
         
         let results = registry.search_functions(&search_request);
         assert_eq!(results.len(), 1);
-        assert_eq!(results[0].id, "com.a2rchitech.os.set_alarm");
+        assert_eq!(results[0].id, "com.allternit.os.set_alarm");
 
         // Test search by platform
         let search_request = FunctionSearchRequest {
@@ -1415,7 +1415,7 @@ mod tests {
         
         let results = registry.search_functions(&search_request);
         assert_eq!(results.len(), 1); // Only the finance function supports web
-        assert_eq!(results[0].id, "com.a2rchitech.finance.transfer_money");
+        assert_eq!(results[0].id, "com.allternit.finance.transfer_money");
 
         // Test search by text
         let search_request = FunctionSearchRequest {
@@ -1427,7 +1427,7 @@ mod tests {
         
         let results = registry.search_functions(&search_request);
         assert_eq!(results.len(), 1);
-        assert_eq!(results[0].id, "com.a2rchitech.os.set_alarm");
+        assert_eq!(results[0].id, "com.allternit.os.set_alarm");
     }
 
     /// Test parameter validation

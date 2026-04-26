@@ -1,4 +1,4 @@
-# A2rchitech Voice Service
+# Allternitchitech Voice Service
 
 Text-to-Speech and Voice Cloning service powered by Chatterbox (Resemble AI).
 
@@ -169,7 +169,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Integration with Kernel
 
-The voice service can be integrated with the A2rchitech kernel as a tool:
+The voice service can be integrated with the Allternitchitech kernel as a tool:
 
 ```rust
 // In kernel's ToolExecutor

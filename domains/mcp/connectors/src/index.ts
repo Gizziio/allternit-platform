@@ -1,7 +1,7 @@
 /**
  * MCP Connectors
  * 
- * External service integrations for A2R agents
+ * External service integrations for Allternit agents
  */
 
 export { BaseConnector } from './connector.js';

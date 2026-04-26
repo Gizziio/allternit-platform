@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * A2R Gateway - HTTP Transport Verification Script
+ * Allternit Gateway - HTTP Transport Verification Script
  * 
  * Verifies the HTTP transport is working correctly:
  * 1. Starts gateway in HTTP mode
@@ -64,7 +64,7 @@ function httpRequest(options) {
 }
 
 async function verifyHttp() {
-  log('\n🔍 A2R Gateway HTTP Verification', 'blue');
+  log('\n🔍 Allternit Gateway HTTP Verification', 'blue');
   log('=' .repeat(50), 'gray');
   log(`Gateway URL: ${BASE_URL}`, 'gray');
   log('Transport: Streamable HTTP', 'gray');

@@ -149,7 +149,7 @@ class CookbookPromoter:
         self,
         repository: 'CookbookRepository',
         criteria: Optional[PromotionCriteria] = None,
-        storage_path: str = "/tmp/a2r-cookbook",
+        storage_path: str = "/tmp/allternit-cookbook",
     ):
         self.repository = repository
         self.criteria = criteria or PromotionCriteria()
@@ -355,7 +355,7 @@ class FailureModeCapture:
     - Regression testing
     """
     
-    def __init__(self, storage_path: str = "/tmp/a2r-failures"):
+    def __init__(self, storage_path: str = "/tmp/allternit-failures"):
         self.storage_path = Path(storage_path)
         self.storage_path.mkdir(parents=True, exist_ok=True)
     

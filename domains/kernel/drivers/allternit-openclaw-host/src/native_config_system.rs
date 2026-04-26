@@ -125,7 +125,7 @@ pub struct ConfigSystemConfig {
 impl Default for ConfigSystemConfig {
     fn default() -> Self {
         Self {
-            config_file: PathBuf::from("./a2r/system/config.json"),
+            config_file: PathBuf::from("./allternit/system/config.json"),
             backup_enabled: true,
             max_history_entries: 100,
             auto_save: true,

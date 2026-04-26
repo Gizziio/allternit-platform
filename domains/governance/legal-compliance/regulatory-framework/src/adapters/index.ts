@@ -1,5 +1,5 @@
 /**
- * A2R Law Layer - Adapters
+ * Allternit Law Layer - Adapters
  */
 
 export {

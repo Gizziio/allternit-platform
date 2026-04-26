@@ -1,0 +1,80 @@
+{
+  "name": "@allternit/plugin-sdk",
+  "version": "1.0.1",
+  "description": "Universal plugin runtime for LLM platforms - build once, run anywhere",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "allternit-plugin": "./bin/allternit-plugin.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "README.md",
+    "LICENSE",
+    "docs"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "lint": "eslint src/**/*.ts",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build",
+    "postversion": "git push && git push --tags"
+  },
+  "keywords": [
+    "llm",
+    "plugins",
+    "mcp",
+    "ai",
+    "allternit",
+    "universal",
+    "cross-platform",
+    "claude",
+    "copilot",
+    "codex",
+    "langchain"
+  ],
+  "author": "Allternit <plugins@allternit.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/allternit/plugin-sdk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/allternit/plugin-sdk/issues"
+  },
+  "homepage": "https://docs.allternit.com/plugin-sdk",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.4.0",
+    "commander": "^11.1.0",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "ws": "^8.14.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.8.0",
+    "@types/express": "^4.17.20",
+    "@types/cors": "^2.8.15",
+    "@types/ws": "^8.5.8",
+    "typescript": "^5.2.2",
+    "vitest": "^0.34.6",
+    "eslint": "^8.51.0"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  }
+}

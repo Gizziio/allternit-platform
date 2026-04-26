@@ -1,7 +1,7 @@
 {
-  "name": "@a2r/gateway",
+  "name": "@allternit/gateway-platform",
   "version": "0.1.0",
-  "description": "A2R Gateway - Routes UI requests to backend services",
+  "description": "Allternit Gateway - Routes UI requests to backend services",
   "type": "module",
   "main": "./dist/index.js",
   "scripts": {
@@ -26,7 +26,7 @@
     "node": ">=18.0.0"
   },
   "keywords": [
-    "a2r",
+    "allternit",
     "gateway",
     "router",
     "api"

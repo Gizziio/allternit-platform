@@ -1,5 +1,5 @@
 /**
- * A2R UI Contracts
+ * Allternit UI Contracts
  * 
  * TypeScript interfaces for core patterns:
  * - Project (Codex-style project management)

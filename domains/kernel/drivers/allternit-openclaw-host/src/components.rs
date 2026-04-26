@@ -2,7 +2,7 @@
 //!
 //! Implements StranglerComponent for each OpenClaw subsystem being migrated.
 //! Each component wraps OpenClaw calls for the reference implementation
-//! and native A2R code for the native implementation.
+//! and native Allternit code for the native implementation.
 //!
 //! Migration Phases:
 //! - Quarantine: reference_execute only (OpenClaw subprocess)
@@ -15,7 +15,7 @@ use async_trait::async_trait;
 use serde_json::Value;
 use tracing::debug;
 
-use a2r_parity::strangler::{
+use allternit_parity::strangler::{
     ComponentInput, ComponentOutput, MigrationPhase, OutputMetadata, StranglerComponent,
 };
 

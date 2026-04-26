@@ -2,7 +2,7 @@
 //!
 //! Executes WIH (Work Item Handler) jobs in containers.
 
-use a2r_protocol::{Artifact, JobResult, JobSpec, TaskDefinition};
+use allternit_protocol::{Artifact, JobResult, JobSpec, TaskDefinition};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
@@ -134,8 +134,8 @@ impl JobExecutor {
             memory_limit: Some((job.resources.memory_gb * 1024.0 * 1024.0 * 1024.0) as u64),
             timeout_secs: Some(job.timeout_secs),
             labels: [
-                ("a2r.job_id".to_string(), job.id.clone()),
-                ("a2r.job_name".to_string(), job.name.clone()),
+                ("allternit.job_id".to_string(), job.id.clone()),
+                ("allternit.job_name".to_string(), job.name.clone()),
             ].into_iter().collect(),
             ..Default::default()
         };
@@ -215,9 +215,9 @@ impl JobExecutor {
             memory_limit: Some((job.resources.memory_gb * 1024.0 * 1024.0 * 1024.0) as u64),
             timeout_secs: Some(job.timeout_secs),
             labels: [
-                ("a2r.job_id".to_string(), job.id.clone()),
-                ("a2r.job_name".to_string(), job.name.clone()),
-                ("a2r.task_type".to_string(), "shell".to_string()),
+                ("allternit.job_id".to_string(), job.id.clone()),
+                ("allternit.job_name".to_string(), job.name.clone()),
+                ("allternit.task_type".to_string(), "shell".to_string()),
             ].into_iter().collect(),
             ..Default::default()
         };

@@ -26,8 +26,8 @@ export interface SSHConnectionRecord {
   os?: string | null;
   architecture?: string | null;
   dockerInstalled?: boolean | null;
-  a2rInstalled?: boolean | null;
-  a2rVersion?: string | null;
+  allternitInstalled?: boolean | null;
+  allternitVersion?: string | null;
   lastConnectedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -56,8 +56,8 @@ export interface UpdateSSHConnectionInput {
   os?: string;
   architecture?: string;
   dockerInstalled?: boolean;
-  a2rInstalled?: boolean;
-  a2rVersion?: string;
+  allternitInstalled?: boolean;
+  allternitVersion?: string;
   lastConnectedAt?: Date;
 }
 
@@ -261,13 +261,13 @@ export class SSHConnectionRepository {
         updates.push(`docker_installed = $${paramIndex++}`);
         values.push(input.dockerInstalled);
       }
-      if (input.a2rInstalled !== undefined) {
+      if (input.allternitInstalled !== undefined) {
         updates.push(`allternit_installed = $${paramIndex++}`);
-        values.push(input.a2rInstalled);
+        values.push(input.allternitInstalled);
       }
-      if (input.a2rVersion !== undefined) {
+      if (input.allternitVersion !== undefined) {
         updates.push(`allternit_version = $${paramIndex++}`);
-        values.push(input.a2rVersion);
+        values.push(input.allternitVersion);
       }
       if (input.lastConnectedAt !== undefined) {
         updates.push(`last_connected_at = $${paramIndex++}`);
@@ -384,8 +384,8 @@ export class SSHConnectionRepository {
       os: row.os,
       architecture: row.architecture,
       dockerInstalled: row.docker_installed,
-      a2rInstalled: row.allternit_installed,
-      a2rVersion: row.allternit_version,
+      allternitInstalled: row.allternit_installed,
+      allternitVersion: row.allternit_version,
       lastConnectedAt: row.last_connected_at,
       createdAt: row.created_at,
       updatedAt: row.updated_at,

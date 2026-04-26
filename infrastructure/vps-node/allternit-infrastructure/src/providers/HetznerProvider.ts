@@ -226,7 +226,7 @@ export class HetznerProvider extends BaseProvider {
       image: options.image,
       location: options.region,
       labels: {
-        'managed-by': 'a2r',
+        'managed-by': 'allternit',
         ...options.tags,
       },
     };

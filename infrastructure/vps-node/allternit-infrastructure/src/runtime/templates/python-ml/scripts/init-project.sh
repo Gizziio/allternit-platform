@@ -5,7 +5,7 @@
 set -e
 
 echo "═══════════════════════════════════════════════════════════════"
-echo "  🚀 A2R Python ML & Data Science Environment"
+echo "  🚀 Allternit Python ML & Data Science Environment"
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
 
@@ -213,8 +213,8 @@ fi
 
 # Configure git if not already configured
 if ! git config user.email > /dev/null 2>&1; then
-    git config --global user.email "developer@a2r.local"
-    git config --global user.name "A2R Developer"
+    git config --global user.email "developer@allternit.local"
+    git config --global user.name "Allternit Developer"
     print_status "Git user configured"
 fi
 
@@ -360,7 +360,7 @@ if [ ! -f "/workspace/README.md" ]; then
     cat > /workspace/README.md << 'EOF'
 # ML Project
 
-This is a Machine Learning project using the A2R Python ML & Data Science Environment.
+This is a Machine Learning project using the Allternit Python ML & Data Science Environment.
 
 ## Quick Start
 

@@ -1,6 +1,6 @@
-# A2R 5-Layer Architecture Mapping
+# Allternit 5-Layer Architecture Mapping
 
-> This document maps the A2R 5-layer living workspace architecture to the existing codebase infrastructure.
+> This document maps the Allternit 5-layer living workspace architecture to the existing codebase infrastructure.
 
 ## Architecture Principle
 
@@ -17,13 +17,13 @@ The kernel enforces deterministically. The markdown files are a **human-readable
 
 | Component | Location | Kernel Integration |
 |-----------|----------|-------------------|
-| BRAIN.md | `.a2r/brain/BRAIN.md` | Mirrors `.a2r/state/taskgraph.json` |
-| MEMORY.md | `.a2r/memory/MEMORY.md` | Index of daily memory files |
-| memory/*.md | `.a2r/memory/YYYY-MM-DD.md` | Session logs synced to HistoryLedger |
-| active-tasks.md | `.a2r/memory/active-tasks.md` | Mirrors task queue from Rails |
-| lessons.md | `.a2r/memory/lessons.md` | Curated learnings from HistoryLedger |
-| self-review.md | `.a2r/memory/self-review.md` | Agent introspection logs |
-| checkpoints/ | `.a2r/state/checkpoints.jsonl` | Checkpoint system for crash recovery |
+| BRAIN.md | `.allternit/brain/BRAIN.md` | Mirrors `.allternit/state/taskgraph.json` |
+| MEMORY.md | `.allternit/memory/MEMORY.md` | Index of daily memory files |
+| memory/*.md | `.allternit/memory/YYYY-MM-DD.md` | Session logs synced to HistoryLedger |
+| active-tasks.md | `.allternit/memory/active-tasks.md` | Mirrors task queue from Rails |
+| lessons.md | `.allternit/memory/lessons.md` | Curated learnings from HistoryLedger |
+| self-review.md | `.allternit/memory/self-review.md` | Agent introspection logs |
+| checkpoints/ | `.allternit/state/checkpoints.jsonl` | Checkpoint system for crash recovery |
 
 **Sync Direction:**
 - Kernel → MD: Task state changes, receipt emissions, session events
@@ -36,12 +36,12 @@ The kernel enforces deterministically. The markdown files are a **human-readable
 
 | Component | Location | Kernel Integration |
 |-----------|----------|-------------------|
-| IDENTITY.md | `.a2r/identity/IDENTITY.md` | Mirrors agent registration in GovernanceEngine |
-| SOUL.md | `.a2r/identity/SOUL.md` | Agent behavior guidelines (distilled from SOT.md) |
-| USER.md | `.a2r/identity/USER.md` | User preferences from session context |
-| VOICE.md | `.a2r/identity/VOICE.md` | Voice config from role envelopes |
+| IDENTITY.md | `.allternit/identity/IDENTITY.md` | Mirrors agent registration in GovernanceEngine |
+| SOUL.md | `.allternit/identity/SOUL.md` | Agent behavior guidelines (distilled from SOT.md) |
+| USER.md | `.allternit/identity/USER.md` | User preferences from session context |
+| VOICE.md | `.allternit/identity/VOICE.md` | Voice config from role envelopes |
 | POLICY.md | `5-agents/POLICY.md` | Dynamic policy overrides (runtime adjustable) |
-| POLICY.md (local) | `.a2r/identity/POLICY.md` | Workspace-specific policy overrides |
+| POLICY.md (local) | `.allternit/identity/POLICY.md` | Workspace-specific policy overrides |
 
 **Sync Direction:**
 - Kernel → MD: Role assignments, policy changes, user pref updates
@@ -58,11 +58,11 @@ The kernel enforces deterministically. The markdown files are a **human-readable
 | SYSTEM_LAW.md | `0-substrate/SYSTEM_LAW.md` | Tier 0 law (loaded into ContextPack) |
 | SOT.md | `0-substrate/SOT.md` | System operating thesis |
 | ARCHITECTURE.md | `ARCHITECTURE.md` | System architecture |
-| PLAYBOOK.md | `.a2r/governance/PLAYBOOK.md` | Procedures distilled from cookbooks/ |
-| TOOLS.md | `.a2r/governance/TOOLS.md` | Tool registry subset (allowed tools) |
-| HEARTBEAT.md | `.a2r/governance/HEARTBEAT.md` | Periodic task config |
-| SYSTEM.md | `.a2r/governance/SYSTEM.md` | Environment constraints |
-| CHANNELS.md | `.a2r/governance/CHANNELS.md` | MCP/external channel config |
+| PLAYBOOK.md | `.allternit/governance/PLAYBOOK.md` | Procedures distilled from cookbooks/ |
+| TOOLS.md | `.allternit/governance/TOOLS.md` | Tool registry subset (allowed tools) |
+| HEARTBEAT.md | `.allternit/governance/HEARTBEAT.md` | Periodic task config |
+| SYSTEM.md | `.allternit/governance/SYSTEM.md` | Environment constraints |
+| CHANNELS.md | `.allternit/governance/CHANNELS.md` | MCP/external channel config |
 | spec/contracts/ | `5-agents/spec/contracts/` | Contract files from ContextPack |
 | spec/deltas/ | `5-agents/spec/deltas/` | Delta files from ContextPack |
 | cookbooks/ | `5-agents/cookbooks/` | Deterministic procedures |
@@ -78,10 +78,10 @@ The kernel enforces deterministically. The markdown files are a **human-readable
 
 | Component | Location | Kernel Integration |
 |-----------|----------|-------------------|
-| skills/ | `.a2r/skills/` | Mirrors `a2r_openclaw_host::skills::SkillRegistry` |
-| SKILL.md | `.a2r/skills/{name}/SKILL.md` | Human-readable skill procedure |
-| contract.json | `.a2r/skills/{name}/contract.json` | Machine-readable skill contract |
-| skills.index.json | `.a2r/contracts/skills.index.json` | Registry index |
+| skills/ | `.allternit/skills/` | Mirrors `allternit_openclaw_host::skills::SkillRegistry` |
+| SKILL.md | `.allternit/skills/{name}/SKILL.md` | Human-readable skill procedure |
+| contract.json | `.allternit/skills/{name}/contract.json` | Machine-readable skill contract |
+| skills.index.json | `.allternit/contracts/skills.index.json` | Registry index |
 
 **Sync Direction:**
 - Kernel → MD: Skill registry exports to skills.index.json
@@ -94,10 +94,10 @@ The kernel enforces deterministically. The markdown files are a **human-readable
 
 | Component | Location | Kernel Integration |
 |-----------|----------|-------------------|
-| CLIENTS.md | `.a2r/business/CLIENTS.md` | Mirrors tenant registry |
-| business/crm/ | `.a2r/business/crm/` | Client contact info |
-| business/projects/ | `.a2r/business/projects/` | Project-specific workspaces |
-| business/content/ | `.a2r/business/content/` | Content templates |
+| CLIENTS.md | `.allternit/business/CLIENTS.md` | Mirrors tenant registry |
+| business/crm/ | `.allternit/business/crm/` | Client contact info |
+| business/projects/ | `.allternit/business/projects/` | Project-specific workspaces |
+| business/content/ | `.allternit/business/content/` | Content templates |
 | packs/ | `5-agents/packs/` | Prompt packs (business layer assets) |
 
 **Sync Direction:**
@@ -106,13 +106,13 @@ The kernel enforces deterministically. The markdown files are a **human-readable
 
 ---
 
-## Runtime Integration (A2R Engine)
+## Runtime Integration (Allternit Engine)
 
-The CLI `a2r_engine/` serves as the **Agent Workspace Runtime**:
+The CLI `allternit_engine/` serves as the **Agent Workspace Runtime**:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    A2R Engine (CLI)                         │
+│                    Allternit Engine (CLI)                         │
 ├─────────────────────────────────────────────────────────────┤
 │  Boot Sequence (21-phase)                                   │
 │  ├── Load AGENTS.md (constitution)                         │
@@ -165,7 +165,7 @@ This ensures **deterministic behavior** - given the same inputs, the agent produ
 - `roles/` - Role envelopes
 - `cookbooks/` - Deterministic procedures
 
-### Per-Workspace (.a2r/)
+### Per-Workspace (.allternit/)
 - `manifest.json` - Workspace metadata
 - `brain/BRAIN.md` - Task graph human view
 - `memory/` - Session logs and lessons
@@ -199,4 +199,4 @@ This ensures **deterministic behavior** - given the same inputs, the agent produ
 
 ---
 
-*This mapping ensures the A2R living workspace architecture integrates seamlessly with the existing kernel infrastructure while maintaining the deterministic, markdown-driven agent experience.*
+*This mapping ensures the Allternit living workspace architecture integrates seamlessly with the existing kernel infrastructure while maintaining the deterministic, markdown-driven agent experience.*

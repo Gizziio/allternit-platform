@@ -353,19 +353,19 @@ function injectMethod(source: string, marker: string, method: string): string {
   return source.replace(marker, marker + method)
 }
 
-let finalA2rClientTs = injectMethod(allternitClientTs, 'class App extends HeyApiClient {', appAgentsMethod)
-finalA2rClientTs = injectMethod(finalA2rClientTs, 'class Instance extends HeyApiClient {', instanceSyncMethod)
-finalA2rClientTs = injectMethod(finalA2rClientTs, 'class Session extends HeyApiClient {', sessionClearMethod)
-finalA2rClientTs = injectMethod(finalA2rClientTs, 'class Event extends HeyApiClient {', eventStreamMethod)
-finalA2rClientTs = injectMethod(finalA2rClientTs, 'class Global extends HeyApiClient {', globalStreamMethod)
+let finalAllternitClientTs = injectMethod(allternitClientTs, 'class App extends HeyApiClient {', appAgentsMethod)
+finalAllternitClientTs = injectMethod(finalAllternitClientTs, 'class Instance extends HeyApiClient {', instanceSyncMethod)
+finalAllternitClientTs = injectMethod(finalAllternitClientTs, 'class Session extends HeyApiClient {', sessionClearMethod)
+finalAllternitClientTs = injectMethod(finalAllternitClientTs, 'class Event extends HeyApiClient {', eventStreamMethod)
+finalAllternitClientTs = injectMethod(finalAllternitClientTs, 'class Global extends HeyApiClient {', globalStreamMethod)
 
 // Inject events()/globalEvents() just before the closing brace of AllternitClient
 const allternitClientPattern = /^(export class AllternitClient[\s\S]*?)(^})/m
-if (!allternitClientPattern.test(finalA2rClientTs)) {
+if (!allternitClientPattern.test(finalAllternitClientTs)) {
   throw new Error('[build] Method injection failed: could not find AllternitClient class closing brace')
 }
-finalA2rClientTs = finalA2rClientTs.replace(allternitClientPattern, `$1${allternitClientEventMethods}\n}`)
-await writeFile(`${OUTPUT_DIR}/allternit-client.ts`, finalA2rClientTs)
+finalAllternitClientTs = finalAllternitClientTs.replace(allternitClientPattern, `$1${allternitClientEventMethods}\n}`)
+await writeFile(`${OUTPUT_DIR}/allternit-client.ts`, finalAllternitClientTs)
 
 // Step 4: Compile to JS using Bun
 console.log("[4/4] Compiling to JavaScript...")

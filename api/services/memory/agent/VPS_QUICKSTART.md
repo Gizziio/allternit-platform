@@ -244,9 +244,9 @@ Once the memory agent is running:
 
 ```bash
 # From anywhere in allternit
-a2r memory query "What do we know about DAG validation?"
-a2r memory stats
-a2r memory consolidate
+allternit memory query "What do we know about DAG validation?"
+allternit memory stats
+allternit memory consolidate
 ```
 
 ---

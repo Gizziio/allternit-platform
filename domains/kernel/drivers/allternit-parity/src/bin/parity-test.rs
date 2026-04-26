@@ -24,7 +24,7 @@ use std::path::PathBuf;
 use tracing::{info, Level};
 use uuid::Uuid;
 
-use a2r_parity::{strangler::MigrationPhase, HarnessConfig, ParityHarness};
+use allternit_parity::{strangler::MigrationPhase, HarnessConfig, ParityHarness};
 
 /// Parity test runner for OpenClaw strangler migration
 #[derive(Parser)]
@@ -127,7 +127,7 @@ async fn run_tests(harness: &ParityHarness, component: Option<String>, format: &
     if let Some(name) = component {
         info!("Running parity test for component: {}", name);
 
-        let input = a2r_parity::strangler::ComponentInput {
+        let input = allternit_parity::strangler::ComponentInput {
             data: serde_json::json!({"test": true}),
             context: serde_json::json!({"source": "cli"}),
         };
@@ -253,7 +253,7 @@ async fn list_graduatable(harness: &ParityHarness) -> Result<()> {
     Ok(())
 }
 
-fn print_test_result(result: &a2r_parity::TestResult) {
+fn print_test_result(result: &allternit_parity::TestResult) {
     let status = if result.passed {
         "✅ PASSED"
     } else {
@@ -289,7 +289,7 @@ fn print_test_result(result: &a2r_parity::TestResult) {
     println!();
 }
 
-fn print_suite_result(result: &a2r_parity::SuiteResult) {
+fn print_suite_result(result: &allternit_parity::SuiteResult) {
     let s = &result.summary;
 
     println!();

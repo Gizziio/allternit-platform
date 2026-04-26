@@ -1,7 +1,7 @@
 /**
  * State Module
  * 
- * JSON Patch engine (RFC 6902) and state store for A2R-IX.
+ * JSON Patch engine (RFC 6902) and state store for Allternit-IX.
  */
 
 export {

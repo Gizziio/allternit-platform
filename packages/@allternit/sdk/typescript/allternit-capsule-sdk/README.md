@@ -1,6 +1,6 @@
 # @allternit/capsule-sdk
 
-Headless Capsule SDK for A2rchitech - lifecycle, contracts, and guardrails.
+Headless Capsule SDK for Allternit - lifecycle, contracts, and guardrails.
 
 ## Installation
 

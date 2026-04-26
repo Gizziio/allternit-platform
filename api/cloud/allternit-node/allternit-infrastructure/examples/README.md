@@ -1,6 +1,6 @@
-# A2R Infrastructure Examples
+# Allternit Infrastructure Examples
 
-This directory contains usage examples for the A2R Infrastructure runtime.
+This directory contains usage examples for the Allternit Infrastructure runtime.
 
 ## Files
 

@@ -1,23 +1,23 @@
 /**
- * A2R Computer Use Engine - TypeScript SDK Tests
+ * Allternit Computer Use Engine - TypeScript SDK Tests
  * 
  * Unit tests for the SDK client.
  */
 
-import { A2RComputerUseClient } from '../src/client';
+import { AllternitComputerUseClient } from '../src/client';
 import { ApprovalHandler, ApprovalPredicates } from '../src/approvals';
-import { normalizeEndpoint, A2RComputerUseError } from '../src/utils';
+import { normalizeEndpoint, AllternitComputerUseError } from '../src/utils';
 
 // Mock fetch for testing
 global.fetch = jest.fn();
 
 const mockedFetch = fetch as jest.MockedFunction<typeof fetch>;
 
-describe('A2RComputerUseClient', () => {
-  let client: A2RComputerUseClient;
+describe('AllternitComputerUseClient', () => {
+  let client: AllternitComputerUseClient;
 
   beforeEach(() => {
-    client = new A2RComputerUseClient({
+    client = new AllternitComputerUseClient({
       endpoint: 'http://localhost:8080',
       timeout: 60000,
     });
@@ -26,22 +26,22 @@ describe('A2RComputerUseClient', () => {
 
   describe('constructor', () => {
     it('should normalize endpoint URL', () => {
-      const client1 = new A2RComputerUseClient({ endpoint: 'localhost:8080' });
+      const client1 = new AllternitComputerUseClient({ endpoint: 'localhost:8080' });
       expect((client1 as unknown as { endpoint: string }).endpoint).toBe('http://localhost:8080/v1');
     });
 
     it('should handle endpoint with trailing slash', () => {
-      const client1 = new A2RComputerUseClient({ endpoint: 'http://localhost:8080/' });
+      const client1 = new AllternitComputerUseClient({ endpoint: 'http://localhost:8080/' });
       expect((client1 as unknown as { endpoint: string }).endpoint).toBe('http://localhost:8080/v1');
     });
 
     it('should handle endpoint with /v1 prefix', () => {
-      const client1 = new A2RComputerUseClient({ endpoint: 'http://localhost:8080/v1' });
+      const client1 = new AllternitComputerUseClient({ endpoint: 'http://localhost:8080/v1' });
       expect((client1 as unknown as { endpoint: string }).endpoint).toBe('http://localhost:8080/v1');
     });
 
     it('should store API key', () => {
-      const client1 = new A2RComputerUseClient({
+      const client1 = new AllternitComputerUseClient({
         endpoint: 'http://localhost:8080',
         apiKey: 'test-key',
       });
@@ -106,7 +106,7 @@ describe('A2RComputerUseClient', () => {
 
       await expect(
         client.execute({ mode: 'intent', task: '' })
-      ).rejects.toThrow(A2RComputerUseError);
+      ).rejects.toThrow(AllternitComputerUseError);
     });
   });
 

@@ -1,7 +1,7 @@
 /**
  * State Store
  * 
- * Scoped state management for A2R-IX with binding support.
+ * Scoped state management for Allternit-IX with binding support.
  */
 
 import type { StateVariable, ComputedValue, Expression } from '../types';
@@ -259,7 +259,7 @@ export function createStateStore(config: StateStoreConfig = {}): StateStore {
     if (typeof localStorage === 'undefined') return;
     
     try {
-      const key = `a2r-ix-state-${config.scopeId}`;
+      const key = `allternit-ix-state-${config.scopeId}`;
       localStorage.setItem(key, JSON.stringify(Object.fromEntries(state)));
     } catch (error) {
       console.error('Failed to persist state:', error);
@@ -271,7 +271,7 @@ export function createStateStore(config: StateStoreConfig = {}): StateStore {
     if (typeof localStorage === 'undefined' || !config.scopeId) return;
     
     try {
-      const key = `a2r-ix-state-${config.scopeId}`;
+      const key = `allternit-ix-state-${config.scopeId}`;
       const data = localStorage.getItem(key);
       if (data) {
         const parsed = JSON.parse(data);

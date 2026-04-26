@@ -1,6 +1,6 @@
 # MCP Apps / Interactive Capsules
 
-Protocol and runtime for interactive tool surfaces in A2R.
+Protocol and runtime for interactive tool surfaces in Allternit.
 
 ## Overview
 
@@ -12,7 +12,7 @@ MCP Apps (Model Context Protocol Apps) enable tools to return interactive UI sur
 
 A containerized UI surface that:
 - Runs in a sandboxed iframe with strict CSP
-- Can invoke tools via `window.a2r.invokeTool()`
+- Can invoke tools via `window.allternit.invokeTool()`
 - Receives real-time updates from the tool via SSE/WebSocket
 - Has a defined lifecycle: pending → active → closed
 
@@ -59,13 +59,13 @@ const surface: ToolUISurface = {
     const countEl = document.getElementById('count');
     
     document.getElementById('increment').onclick = async () => {
-      const result = await a2r.invokeTool('counter:increment', { current: count });
+      const result = await allternit.invokeTool('counter:increment', { current: count });
       count = result.newCount;
       countEl.textContent = count;
     };
     
     // Subscribe to external updates
-    a2r.subscribe('counter:updated', (data) => {
+    allternit.subscribe('counter:updated', (data) => {
       count = data.count;
       countEl.textContent = count;
     });

@@ -1,15 +1,15 @@
 /**
  * File IO Wrapper
  * 
- * Wraps runtime file operations to inject A2R Kernel routing.
+ * Wraps runtime file operations to inject Allternit Kernel routing.
  */
 
 import type {
-  A2RKernel,
+  AllternitKernel,
   FileContext,
   RoutingResult,
   RoutingDecision,
-} from '@a2r/governor';
+} from '@allternit/governor';
 import {
   FileAccessError,
 } from '../types.js';
@@ -28,7 +28,7 @@ export type FileOperation = 'read' | 'write' | 'delete' | 'execute';
  * File wrapper options
  */
 export interface FileWrapperOptions {
-  kernel: A2RKernel;
+  kernel: AllternitKernel;
   sessionId: string;
   agentId: string;
   wihId?: string;
@@ -198,7 +198,7 @@ export async function wrapFileOpen(
     wihId,
   };
 
-  // Route through A2R Kernel
+  // Route through Allternit Kernel
   let routingResult: RoutingResult;
   try {
     routingResult = await kernel.routeFileAccess(fileContext);
@@ -245,7 +245,7 @@ export async function wrapFileOpen(
       return {
         decision: 'deny',
         error: new FileAccessError(
-          routingResult.reason ?? 'File access denied by A2R Kernel',
+          routingResult.reason ?? 'File access denied by Allternit Kernel',
           'ACCESS_DENIED'
         ),
         auditLog,
@@ -403,7 +403,7 @@ export async function wrapFileDelete(
     wihId,
   };
 
-  // Route through A2R Kernel
+  // Route through Allternit Kernel
   const routingResult = await kernel.routeFileAccess(fileContext);
 
   if (routingResult.decision === 'deny') {
@@ -468,7 +468,7 @@ export async function wrapFileDelete(
 }
 
 /**
- * Create A2R-aware file operations object
+ * Create Allternit-aware file operations object
  */
 export function createWrappedFileOperations(
   options: FileWrapperOptions

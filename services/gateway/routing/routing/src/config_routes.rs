@@ -1,7 +1,7 @@
 //! Configuration Routes - Native Config System HTTP API
 //!
 //! Provides REST API endpoints for managing system configuration using the native
-//! Rust implementation in a2r_openclaw_host::native_config_system.
+//! Rust implementation in allternit_openclaw_host::native_config_system.
 
 use axum::{
     extract::{Path, Query, State},
@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use utoipa::ToSchema;
 
-use a2r_openclaw_host::native_config_system::{
+use allternit_openclaw_host::native_config_system::{
     ConfigContext, ConfigManagementRequest, ConfigManagementResponse, ConfigOperation,
     ConfigSystemError, ConfigSystemService, ConfigValue,
 };

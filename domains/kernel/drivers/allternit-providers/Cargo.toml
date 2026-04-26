@@ -1,8 +1,8 @@
 [package]
-name = "a2rchitech-providers"
+name = "allternit-providers"
 version = "0.1.0"
 edition = "2021"
-description = "A2rchitech provider routing and persona kernel system"
+description = "Allternit provider routing and persona kernel system"
 
 [dependencies]
 serde = { workspace = true }
@@ -12,12 +12,12 @@ uuid = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
-a2rchitech-history = { workspace = true }
-a2rchitech-messaging = { workspace = true }
-a2rchitech-policy = { workspace = true }
-a2rchitech-context-router = { workspace = true }
-a2rchitech-memory = { workspace = true }
-a2rchitech-runtime-core = { workspace = true }
+allternit-history = { workspace = true }
+allternit-messaging = { workspace = true }
+allternit-policy = { workspace = true }
+allternit-context-router = { workspace = true }
+allternit-memory = { workspace = true }
+allternit-runtime-core = { workspace = true }
 async-trait = { workspace = true }
 sqlx = { workspace = true }
 futures = "0.3"

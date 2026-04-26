@@ -1,4 +1,4 @@
-# A2R Agent System Rails
+# Allternit Agent System Rails
 
 Unified system for **work execution under policy gates** across DAG/WIH/runs/leases/ledger/vault.
 
@@ -13,7 +13,7 @@ Unified system for **work execution under policy gates** across DAG/WIH/runs/lea
 All code for this system lives under this folder.
 
 ```
-a2r-agent-system-rails/
+allternit-agent-system-rails/
   docs/
     architecture/      # layered breakdown + CLI command mapping
     runner/            # runner mutation catalog + README
@@ -40,4 +40,4 @@ See [spec/agent-system-rails/ALLTERNIT_AGENT_SYSTEM_RAILS_CAPABILITIES.md](../..
 - **OAuth Vault** (Credential management)
 
 See [docs/architecture/README.md](./docs/architecture/README.md) for a full feature/architecture breakdown before you run the test suites.
-Hidden runtime stores (`.a2r/`) are documented in [docs/architecture/README.md](./docs/architecture/README.md#layer-c---ledger-bus-transports) and tracked during `a2r rails init`.
+Hidden runtime stores (`.allternit/`) are documented in [docs/architecture/README.md](./docs/architecture/README.md#layer-c---ledger-bus-transports) and tracked during `allternit rails init`.

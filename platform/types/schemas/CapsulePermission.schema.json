@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2rchitech.local/spec/contracts/CapsulePermission.schema.json",
+  "$id": "https://allternit.local/spec/contracts/CapsulePermission.schema.json",
   "title": "Capsule Permission",
   "type": "object",
   "additionalProperties": false,

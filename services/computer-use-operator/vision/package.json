@@ -1,7 +1,7 @@
 {
   "name": "@allternit/ui-tars",
   "version": "1.0.0",
-  "description": "A2R Computer Vision - UI automation with vision",
+  "description": "Allternit Computer Vision - UI automation with vision",
   "type": "module",
   "main": "./src/index.js",
   "scripts": {

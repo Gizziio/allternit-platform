@@ -13,7 +13,7 @@ use tokio::time::{self};
 
 use crate::core::ids::create_event_id;
 use crate::core::io::ensure_dir;
-use crate::core::types::{A2REvent, Actor, ActorType, LeaseRecord, LeaseRequest};
+use crate::core::types::{AllternitEvent, Actor, ActorType, LeaseRecord, LeaseRequest};
 use crate::core::EventSink;
 
 #[derive(Clone)]
@@ -60,7 +60,7 @@ impl Leases {
             .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")));
         let leases_dir = opts
             .leases_dir
-            .unwrap_or_else(|| PathBuf::from(".a2r/leases"));
+            .unwrap_or_else(|| PathBuf::from(".allternit/leases"));
         let base = if leases_dir.is_absolute() {
             leases_dir
         } else {
@@ -148,7 +148,7 @@ impl Leases {
                             
                             // Emit renewal event if event sink available
                             if let Some(sink) = &event_sink {
-                                let event = A2REvent {
+                                let event = AllternitEvent {
                                     event_id: create_event_id(),
                                     ts: Utc::now().to_rfc3339(),
                                     actor: Actor {
@@ -397,7 +397,7 @@ impl Leases {
         let Some(sink) = &self.event_sink else {
             return Ok(());
         };
-        let event = A2REvent {
+        let event = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: Actor {

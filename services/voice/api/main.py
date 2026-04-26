@@ -1,5 +1,5 @@
 """
-A2rchitech Voice Service
+Allternitchitech Voice Service
 
 FastAPI wrapper around Chatterbox TTS/VC models.
 Provides HTTP API endpoints for text-to-speech and voice cloning.
@@ -25,7 +25,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("voice-service")
 
 app = FastAPI(
-    title="A2rchitech Voice Service",
+    title="Allternitchitech Voice Service",
     description="Text-to-Speech and Voice Cloning powered by Chatterbox",
     version="1.0.0",
 )
@@ -918,7 +918,7 @@ async def get_audio(filename: str):
 
 @app.on_event("startup")
 async def startup_event():
-    logger.info("Starting A2rchitech Voice Service...")
+    logger.info("Starting Allternitchitech Voice Service...")
     logger.info(f"Audio output directory: {AUDIO_OUTPUT_DIR}")
     logger.info(f"Voice presets loaded: {len(VOICE_PRESETS)}")
 

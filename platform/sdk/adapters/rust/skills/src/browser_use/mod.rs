@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use a2rchitech_tools_gateway::{ToolType, ResourceLimits};
+use allternit_tools_gateway::{ToolType, ResourceLimits};
 
 // ============================================================================
 // Tool Definitions
@@ -58,8 +58,8 @@ fn create_browser_tools() -> Vec<ToolDefinition> {
             resource_limits: ResourceLimits {
                 cpu: Some("500m".to_string()),
                 memory: Some("512Mi".to_string()),
-                network: a2rchitech_tools_gateway::NetworkAccess::Unrestricted,
-                filesystem: a2rchitech_tools_gateway::FilesystemAccess::None,
+                network: allternit_tools_gateway::NetworkAccess::Unrestricted,
+                filesystem: allternit_tools_gateway::FilesystemAccess::None,
                 time_limit: 30,
             },
             subprocess: None,
@@ -93,8 +93,8 @@ fn create_browser_tools() -> Vec<ToolDefinition> {
             resource_limits: ResourceLimits {
                 cpu: Some("200m".to_string()),
                 memory: Some("256Mi".to_string()),
-                network: a2rchitech_tools_gateway::NetworkAccess::None,
-                filesystem: a2rchitech_tools_gateway::FilesystemAccess::None,
+                network: allternit_tools_gateway::NetworkAccess::None,
+                filesystem: allternit_tools_gateway::FilesystemAccess::None,
                 time_limit: 10,
             },
             subprocess: None,
@@ -129,8 +129,8 @@ fn create_browser_tools() -> Vec<ToolDefinition> {
             resource_limits: ResourceLimits {
                 cpu: Some("500m".to_string()),
                 memory: Some("512Mi".to_string()),
-                network: a2rchitech_tools_gateway::NetworkAccess::None,
-                filesystem: a2rchitech_tools_gateway::FilesystemAccess::Allowlist(vec!["./screenshots".to_string()]),
+                network: allternit_tools_gateway::NetworkAccess::None,
+                filesystem: allternit_tools_gateway::FilesystemAccess::Allowlist(vec!["./screenshots".to_string()]),
                 time_limit: 15,
             },
             subprocess: None,
@@ -175,8 +175,8 @@ fn create_browser_recording_tools() -> Vec<ToolDefinition> {
             resource_limits: ResourceLimits {
                 cpu: Some("1000m".to_string()),
                 memory: Some("1Gi".to_string()),
-                network: a2rchitech_tools_gateway::NetworkAccess::None,
-                filesystem: a2rchitech_tools_gateway::FilesystemAccess::Allowlist(vec!["./recordings".to_string()]),
+                network: allternit_tools_gateway::NetworkAccess::None,
+                filesystem: allternit_tools_gateway::FilesystemAccess::Allowlist(vec!["./recordings".to_string()]),
                 time_limit: 300,
             },
             subprocess: None,
@@ -216,8 +216,8 @@ fn create_browser_recording_tools() -> Vec<ToolDefinition> {
             resource_limits: ResourceLimits {
                 cpu: Some("2000m".to_string()),
                 memory: Some("2Gi".to_string()),
-                network: a2rchitech_tools_gateway::NetworkAccess::None,
-                filesystem: a2rchitech_tools_gateway::FilesystemAccess::Allowlist(vec!["./recordings".to_string()]),
+                network: allternit_tools_gateway::NetworkAccess::None,
+                filesystem: allternit_tools_gateway::FilesystemAccess::Allowlist(vec!["./recordings".to_string()]),
                 time_limit: 120,
             },
             subprocess: None,
@@ -254,8 +254,8 @@ fn create_browser_recording_tools() -> Vec<ToolDefinition> {
             resource_limits: ResourceLimits {
                 cpu: Some("100m".to_string()),
                 memory: Some("128Mi".to_string()),
-                network: a2rchitech_tools_gateway::NetworkAccess::None,
-                filesystem: a2rchitech_tools_gateway::FilesystemAccess::None,
+                network: allternit_tools_gateway::NetworkAccess::None,
+                filesystem: allternit_tools_gateway::FilesystemAccess::None,
                 time_limit: 5,
             },
             subprocess: None,
@@ -393,7 +393,7 @@ pub fn create_browser_use_skill() -> Skill {
         name: "Browser Use".to_string(),
         version: "1.0.0".to_string(),
         description: "Native browser automation for navigation, interaction, and screen recording".to_string(),
-        author: "A2rchitech".to_string(),
+        author: "Allternit".to_string(),
         license: "MIT".to_string(),
         tags: vec![
             "browser".to_string(),
@@ -401,8 +401,8 @@ pub fn create_browser_use_skill() -> Skill {
             "navigation".to_string(),
             "recording".to_string(),
         ],
-        homepage: Some("https://a2rchitech.com".to_string()),
-        repository: Some("https://github.com/a2rchitech/a2rchitech".to_string()),
+        homepage: Some("https://allternit.com".to_string()),
+        repository: Some("https://github.com/allternit/allternit".to_string()),
 
         inputs: SkillIO {
             schema: r#"{
@@ -498,8 +498,8 @@ pub fn create_browser_use_skill() -> Skill {
         required_permissions: vec!["browser.control".to_string()],
         requires_policy_gate: false,
         publisher: PublisherInfo {
-            publisher_id: "a2rchitech.core".to_string(),
-            public_key_id: "pk_a2rchitech_core_1".to_string(),
+            publisher_id: "allternit.core".to_string(),
+            public_key_id: "pk_allternit_core_1".to_string(),
         },
         signature: SignatureInfo {
             manifest_sig: "".to_string(),
@@ -522,7 +522,7 @@ pub fn create_browser_record_session_skill() -> Skill {
         name: "Browser Record Session".to_string(),
         version: "1.0.0".to_string(),
         description: "Record browser session as GIF or video for review and analysis".to_string(),
-        author: "A2rchitech".to_string(),
+        author: "Allternit".to_string(),
         license: "MIT".to_string(),
         tags: vec![
             "browser".to_string(),
@@ -531,8 +531,8 @@ pub fn create_browser_record_session_skill() -> Skill {
             "video".to_string(),
             "capture".to_string(),
         ],
-        homepage: Some("https://a2rchitech.com".to_string()),
-        repository: Some("https://github.com/a2rchitech/a2rchitech".to_string()),
+        homepage: Some("https://allternit.com".to_string()),
+        repository: Some("https://github.com/allternit/allternit".to_string()),
 
         inputs: SkillIO {
             schema: r#"{
@@ -639,8 +639,8 @@ pub fn create_browser_record_session_skill() -> Skill {
         required_permissions: vec!["browser.record".to_string(), "screen.capture".to_string()],
         requires_policy_gate: false,
         publisher: PublisherInfo {
-            publisher_id: "a2rchitech.core".to_string(),
-            public_key_id: "pk_a2rchitech_core_1".to_string(),
+            publisher_id: "allternit.core".to_string(),
+            public_key_id: "pk_allternit_core_1".to_string(),
         },
         signature: SignatureInfo {
             manifest_sig: "".to_string(),
@@ -663,15 +663,15 @@ pub fn create_browser_stop_recording_skill() -> Skill {
         name: "Browser Stop Recording".to_string(),
         version: "1.0.0".to_string(),
         description: "Stop an active browser recording session and save the output".to_string(),
-        author: "A2rchitech".to_string(),
+        author: "Allternit".to_string(),
         license: "MIT".to_string(),
         tags: vec![
             "browser".to_string(),
             "recording".to_string(),
             "stop".to_string(),
         ],
-        homepage: Some("https://a2rchitech.com".to_string()),
-        repository: Some("https://github.com/a2rchitech/a2rchitech".to_string()),
+        homepage: Some("https://allternit.com".to_string()),
+        repository: Some("https://github.com/allternit/allternit".to_string()),
 
         inputs: SkillIO {
             schema: r#"{
@@ -751,8 +751,8 @@ pub fn create_browser_stop_recording_skill() -> Skill {
         required_permissions: vec!["browser.record".to_string()],
         requires_policy_gate: false,
         publisher: PublisherInfo {
-            publisher_id: "a2rchitech.core".to_string(),
-            public_key_id: "pk_a2rchitech_core_1".to_string(),
+            publisher_id: "allternit.core".to_string(),
+            public_key_id: "pk_allternit_core_1".to_string(),
         },
         signature: SignatureInfo {
             manifest_sig: "".to_string(),

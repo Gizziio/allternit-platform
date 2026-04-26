@@ -51,7 +51,7 @@ pub fn create_ui_tars_propose_skill() -> Skill {
         name: "UI-TARS Propose".to_string(),
         version: "1.0.0".to_string(),
         description: "Vision-Language Model that proposes GUI actions based on screenshots".to_string(),
-        author: "A2rchitech".to_string(),
+        author: "Allternit".to_string(),
         license: "MIT".to_string(),
         tags: vec!["gui".to_string(), "automation".to_string(), "vision".to_string(), "proposal".to_string()],
         homepage: Some("https://allternit.com".to_string()),

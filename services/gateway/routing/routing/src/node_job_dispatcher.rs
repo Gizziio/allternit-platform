@@ -3,7 +3,7 @@
 //! Automatically dequeues jobs from the queue and dispatches them to appropriate nodes.
 //! Runs as a background task in the control plane.
 
-use a2r_protocol::{JobSpec, Message, MessagePayload};
+use allternit_protocol::{JobSpec, Message, MessagePayload};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::time::interval;

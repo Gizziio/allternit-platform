@@ -336,7 +336,7 @@ if (require.main === module) {
       console.error('✗ Rails service is not running');
       console.error(`  Error: ${error.message}`);
       console.error('\nStart Rails service first:');
-      console.error('  cargo run -p a2r-agent-system-rails --bin a2r-rails-service');
+      console.error('  cargo run -p allternit-agent-system-rails --bin allternit-rails-service');
       process.exit(1);
     }
   })();

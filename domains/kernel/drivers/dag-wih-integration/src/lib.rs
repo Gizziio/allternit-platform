@@ -1,4 +1,4 @@
-//! A2R DAG/WIH Integration
+//! Allternit DAG/WIH Integration
 //!
 //! Links task graphs (DAGs) with Work Item Headers (WIH) to enable
 //! dependency-aware task execution with full context.
@@ -502,14 +502,14 @@ mod tests {
                     task_id: "T001".to_string(),
                     title: "Task 1".to_string(),
                     blocked_by: vec![],
-                    wih_path: "/.a2r/wih/T001.wih.json".to_string(),
+                    wih_path: "/.allternit/wih/T001.wih.json".to_string(),
                     wih: None,
                 },
                 GraphNode {
                     task_id: "T002".to_string(),
                     title: "Task 2".to_string(),
                     blocked_by: vec!["T001".to_string()],
-                    wih_path: "/.a2r/wih/T002.wih.json".to_string(),
+                    wih_path: "/.allternit/wih/T002.wih.json".to_string(),
                     wih: None,
                 },
             ],
@@ -539,7 +539,7 @@ mod tests {
                 artifact_paths: vec![],
             },
             write_scope: WriteScope {
-                root: "/.a2r/".to_string(),
+                root: "/.allternit/".to_string(),
                 allowed_globs: vec![],
             },
             tools: Tools {
@@ -562,7 +562,7 @@ mod tests {
         std::fs::write(&graph_path, graph_json).unwrap();
         
         // Create WIH files
-        let wih_dir = temp_dir.path().join(".a2r/wih");
+        let wih_dir = temp_dir.path().join(".allternit/wih");
         std::fs::create_dir_all(&wih_dir).unwrap();
         
         let wih1 = create_test_wih("T001", "test-graph", TaskState::Complete);
@@ -589,7 +589,7 @@ mod tests {
         std::fs::write(&graph_path, graph_json).unwrap();
         
         // Create WIH files
-        let wih_dir = temp_dir.path().join(".a2r/wih");
+        let wih_dir = temp_dir.path().join(".allternit/wih");
         std::fs::create_dir_all(&wih_dir).unwrap();
         
         let wih1 = create_test_wih("T001", "test-graph", TaskState::Complete);

@@ -2,7 +2,7 @@
 name = "allternit-kernel-compat"
 version = "0.1.0"
 edition = "2021"
-description = "A2rchitech kernel compatibility and ABI checking system"
+description = "Allternit kernel compatibility and ABI checking system"
 
 [dependencies]
 serde = { workspace = true }

@@ -1,4 +1,4 @@
-//! A2R Agent System Rails - HTTP Service
+//! Allternit Agent System Rails - HTTP Service
 //!
 //! Provides HTTP API for agent task planning, work execution, and policy gates.
 //! This service wraps the core rails library with an Axum HTTP interface.
@@ -48,13 +48,13 @@ impl ServiceState {
     pub async fn new(root_dir: PathBuf) -> anyhow::Result<Self> {
         let ledger = Arc::new(Ledger::new(LedgerOptions {
             root_dir: Some(root_dir.clone()),
-            ledger_dir: Some(PathBuf::from(".a2r/ledger")),
+            ledger_dir: Some(PathBuf::from(".allternit/ledger")),
         }));
 
         let leases = Arc::new(
             Leases::new(LeasesOptions {
                 root_dir: Some(root_dir.clone()),
-                leases_dir: Some(PathBuf::from(".a2r/leases")),
+                leases_dir: Some(PathBuf::from(".allternit/leases")),
                 event_sink: Some(ledger.clone()),
                 actor_id: Some("gate".to_string()),
                 auto_renewal_enabled: true,
@@ -67,19 +67,19 @@ impl ServiceState {
 
         let receipts = Arc::new(ReceiptStore::new(ReceiptStoreOptions {
             root_dir: Some(root_dir.clone()),
-            receipts_dir: Some(PathBuf::from(".a2r/receipts")),
-            blobs_dir: Some(PathBuf::from(".a2r/blobs")),
+            receipts_dir: Some(PathBuf::from(".allternit/receipts")),
+            blobs_dir: Some(PathBuf::from(".allternit/blobs")),
         })?);
 
         let context_packs = Arc::new(ContextPackStore::new(ContextPackStoreOptions {
             root_dir: Some(root_dir.clone()),
-            context_packs_dir: Some(PathBuf::from(".a2r/context-packs")),
+            context_packs_dir: Some(PathBuf::from(".allternit/context-packs")),
         })?);
 
         let index = Arc::new(
             Index::new(IndexOptions {
                 root_dir: Some(root_dir.clone()),
-                index_dir: Some(PathBuf::from(".a2r/index")),
+                index_dir: Some(PathBuf::from(".allternit/index")),
             })
             .await?,
         );
@@ -108,7 +108,7 @@ impl ServiceState {
 
         let work_ops = Arc::new(WorkOps::new(
             ledger.clone(),
-            Some("a2r work".to_string()),
+            Some("allternit work".to_string()),
             Some(ActorType::Agent),
         ));
 
@@ -678,7 +678,7 @@ pub struct InitResponse {
 async fn health_check() -> impl IntoResponse {
     Json(HealthResponse {
         status: "healthy".to_string(),
-        service: "a2r-agent-system-rails".to_string(),
+        service: "allternit-agent-system-rails".to_string(),
         version: "0.1.0".to_string(),
     })
 }
@@ -1911,15 +1911,15 @@ async fn init_system(
     use crate::core::io::ensure_dir;
 
     let dirs = [
-        ".a2r/ledger/events",
-        ".a2r/leases",
-        ".a2r/receipts",
-        ".a2r/blobs",
-        ".a2r/index",
-        ".a2r/mail/threads",
-        ".a2r/vault",
-        ".a2r/work/dags",
-        ".a2r/wih",
+        ".allternit/ledger/events",
+        ".allternit/leases",
+        ".allternit/receipts",
+        ".allternit/blobs",
+        ".allternit/index",
+        ".allternit/mail/threads",
+        ".allternit/vault",
+        ".allternit/work/dags",
+        ".allternit/wih",
     ];
 
     let mut stores = Vec::new();
@@ -1942,7 +1942,7 @@ async fn init_system(
 // Helper functions
 // ============================================================================
 
-fn collect_dag_ids(events: &[crate::A2REvent]) -> Vec<String> {
+fn collect_dag_ids(events: &[crate::AllternitEvent]) -> Vec<String> {
     use std::collections::HashSet;
     let mut dag_ids = HashSet::new();
     for evt in events {
@@ -1960,7 +1960,7 @@ fn collect_dag_ids(events: &[crate::A2REvent]) -> Vec<String> {
     out
 }
 
-fn active_wih_nodes(events: &[crate::A2REvent]) -> std::collections::HashMap<String, String> {
+fn active_wih_nodes(events: &[crate::AllternitEvent]) -> std::collections::HashMap<String, String> {
     use std::collections::{HashMap, HashSet};
     let mut wih_nodes: HashMap<String, String> = HashMap::new();
     let mut closed: HashSet<String> = HashSet::new();
@@ -1989,7 +1989,7 @@ fn active_wih_nodes(events: &[crate::A2REvent]) -> std::collections::HashMap<Str
 }
 
 fn matches_trace(
-    event: &crate::A2REvent,
+    event: &crate::AllternitEvent,
     node_id: Option<&str>,
     wih_id: Option<&str>,
     prompt_id: Option<&str>,
@@ -2034,10 +2034,10 @@ fn matches_trace(
 }
 
 fn project_wih_from_events(
-    events: &[crate::A2REvent],
+    events: &[crate::AllternitEvent],
     wih_id: &str,
 ) -> Option<crate::wih::types::WihState> {
-    let filtered: Vec<crate::A2REvent> = events
+    let filtered: Vec<crate::AllternitEvent> = events
         .iter()
         .filter(|evt| evt.payload.get("wih_id").and_then(|v| v.as_str()) == Some(wih_id))
         .cloned()
@@ -2516,7 +2516,7 @@ pub async fn run_service(bind_addr: &str, root_dir: PathBuf) -> anyhow::Result<(
 
     let listener = tokio::net::TcpListener::bind(bind_addr).await?;
     tracing::info!(
-        "A2R Agent System Rails HTTP service listening on {}",
+        "Allternit Agent System Rails HTTP service listening on {}",
         bind_addr
     );
 
@@ -2528,16 +2528,16 @@ async fn init_stores(root: &PathBuf) -> anyhow::Result<()> {
     use crate::core::io::ensure_dir;
 
     let dirs = [
-        ".a2r/ledger/events",
-        ".a2r/leases",
-        ".a2r/receipts",
-        ".a2r/blobs",
-        ".a2r/context-packs",
-        ".a2r/index",
-        ".a2r/mail/threads",
-        ".a2r/vault",
-        ".a2r/work/dags",
-        ".a2r/wih",
+        ".allternit/ledger/events",
+        ".allternit/leases",
+        ".allternit/receipts",
+        ".allternit/blobs",
+        ".allternit/context-packs",
+        ".allternit/index",
+        ".allternit/mail/threads",
+        ".allternit/vault",
+        ".allternit/work/dags",
+        ".allternit/wih",
     ];
 
     for rel in dirs {

@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 use anyhow::Result;
-use serde_json::json;
 use crate::core::io::{ensure_dir, write_json_atomic};
 use crate::core::types::OAuthTokenRecord;
 
@@ -14,7 +13,7 @@ impl OAuthVault {
     }
 
     fn tokens_dir(&self) -> PathBuf {
-        self.root_dir.join(".a2r/vault/oauth/tokens")
+        self.root_dir.join(".allternit/vault/oauth/tokens")
     }
 
     pub fn store_token(&self, token: &OAuthTokenRecord) -> Result<()> {

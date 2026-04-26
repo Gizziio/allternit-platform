@@ -160,7 +160,7 @@ export class SessionManager extends EventEmitter {
       sessionTimeoutMs: config.sessionTimeoutMs ?? DEFAULT_SESSION_TIMEOUT_MS,
       cleanupIntervalMs: config.cleanupIntervalMs ?? DEFAULT_CLEANUP_INTERVAL_MS,
       enableSnapshots: config.enableSnapshots ?? false,
-      snapshotDir: config.snapshotDir ?? "/tmp/a2r-sessions",
+      snapshotDir: config.snapshotDir ?? "/tmp/allternit-sessions",
     };
 
     // Initialize isolation manager

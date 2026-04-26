@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2rchitech.local/spec/contracts/ProvenanceTimeline.schema.json",
+  "$id": "https://allternit.local/spec/contracts/ProvenanceTimeline.schema.json",
   "title": "Provenance Timeline",
-  "description": "Schema for provenance timelines in the A2R system",
+  "description": "Schema for provenance timelines in the Allternit system",
   "type": "object",
   "properties": {
     "timeline_version": {

@@ -3,7 +3,7 @@
 **Version:** 1.0.0  
 **Last Updated:** 2026-02-08
 
-This document describes the architecture of the Deterministic Agent Kernel (DAK) Runner and its integration with the broader A2R system.
+This document describes the architecture of the Deterministic Agent Kernel (DAK) Runner and its integration with the broader Allternit system.
 
 ---
 
@@ -20,14 +20,14 @@ This document describes the architecture of the Deterministic Agent Kernel (DAK)
 
 ## 1. System Context
 
-### 1.1 Position in A2R Stack
+### 1.1 Position in Allternit Stack
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                         USER LAYER                                   │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐              │
 │  │   CLI        │  │   Desktop    │  │   Web UI     │              │
-│  │   (a2r)      │  │   (Electron) │  │   (Browser)  │              │
+│  │   (allternit)      │  │   (Electron) │  │   (Browser)  │              │
 │  └──────────────┘  └──────────────┘  └──────────────┘              │
 └─────────────────────────────────────────────────────────────────────┘
                               │
@@ -90,7 +90,7 @@ This document describes the architecture of the Deterministic Agent Kernel (DAK)
 │                  │ Receipts, Gates  │                          │
 ├──────────────────┼──────────────────┼──────────────────────────┤
 │ DAK Runner       │ Runner workspace │ DAGs, WIHs, Policies     │
-│ (Execution)      │ (.a2r/runner/*)  │ Snapshots (own)          │
+│ (Execution)      │ (.allternit/runner/*)  │ Snapshots (own)          │
 │                  │ Snapshots        │ Tool outputs             │
 ├──────────────────┼──────────────────┼──────────────────────────┤
 │ Agents Folder    │ Nothing          │ Reference only           │
@@ -307,7 +307,7 @@ Input: Tool Request + Response
                           ▼
                    ┌──────────────┐
                    │ Store to Disk│
-                   │ (.a2r/snap/) │
+                   │ (.allternit/snap/) │
                    └──────────────┘
 ```
 
@@ -605,7 +605,7 @@ interface RailsAdapter {
 │  │  - Port: 3005                        │   │
 │  └──────────────────────────────────────┘   │
 │                                              │
-│  Storage: .a2r/ directory                    │
+│  Storage: .allternit/ directory                    │
 │                                              │
 └──────────────────────────────────────────────┘
 ```
@@ -617,7 +617,7 @@ interface RailsAdapter {
 │                     Kubernetes Cluster                       │
 │                                                              │
 │  ┌───────────────────────────────────────────────────────┐  │
-│  │  Namespace: a2r-runner                                │  │
+│  │  Namespace: allternit-runner                                │  │
 │  │                                                       │  │
 │  │  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐     │  │
 │  │  │ DAK Runner  │ │ DAK Runner  │ │ DAK Runner  │     │  │
@@ -630,15 +630,15 @@ interface RailsAdapter {
 │  └────────────────────────┬──────────────────────────────┘  │
 │                           │                                  │
 │  ┌────────────────────────┼──────────────────────────────┐  │
-│  │  Namespace: a2r-control                                │  │
+│  │  Namespace: allternit-control                                │  │
 │  │                        │                               │  │
 │  │  ┌─────────────────────┴───────────────────────┐      │  │
 │  │  │           Rails API Cluster                 │      │  │
 │  │  └─────────────────────────────────────────────┘      │  │
 │  │                                                       │  │
 │  │  Storage:                                             │  │
-│  │  - PVC: a2r-snapshots (shared)                        │  │
-│  │  - PVC: a2r-markers (per-pod)                         │  │
+│  │  - PVC: allternit-snapshots (shared)                        │  │
+│  │  - PVC: allternit-markers (per-pod)                         │  │
 │  └───────────────────────────────────────────────────────┘  │
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
@@ -674,13 +674,13 @@ interface RailsAdapter {
 
 | Artifact | Location |
 |----------|----------|
-| DAG definitions | `.a2r/graphs/*.json` |
-| WIH files | `.a2r/wih/*.json` |
-| Snapshots | `.a2r/snapshots/*.json` |
-| Markers | `.a2r/markers/**/*.json` |
-| Receipts | `.a2r/receipts/**/*.json` |
-| Leases | `.a2r/leases/*.json` (Rails-managed) |
-| Ledger | `.a2r/ledger/*.json` (Rails-managed) |
+| DAG definitions | `.allternit/graphs/*.json` |
+| WIH files | `.allternit/wih/*.json` |
+| Snapshots | `.allternit/snapshots/*.json` |
+| Markers | `.allternit/markers/**/*.json` |
+| Receipts | `.allternit/receipts/**/*.json` |
+| Leases | `.allternit/leases/*.json` (Rails-managed) |
+| Ledger | `.allternit/ledger/*.json` (Rails-managed) |
 
 ---
 

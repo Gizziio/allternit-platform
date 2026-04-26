@@ -1,5 +1,5 @@
 /**
- * @fileoverview A2R Guest Agent Protocol - Encoding/Decoding Logic
+ * @fileoverview Allternit Guest Agent Protocol - Encoding/Decoding Logic
  * 
  * Handles JSON serialization/deserialization of protocol messages
  * with validation and error handling.

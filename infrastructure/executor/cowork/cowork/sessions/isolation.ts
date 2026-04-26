@@ -38,7 +38,7 @@ const CGROUP1_MOUNTS: Record<string, string> = {
 };
 
 /** Default cgroup slice */
-const DEFAULT_CGROUP_SLICE = "a2r-sessions";
+const DEFAULT_CGROUP_SLICE = "allternit-sessions";
 
 /** Namespace type to clone flag mapping */
 const NAMESPACE_FLAGS: Record<NamespaceType, number> = {

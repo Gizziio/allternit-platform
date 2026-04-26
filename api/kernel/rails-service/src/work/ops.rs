@@ -6,7 +6,7 @@ use chrono::Utc;
 use serde_json::json;
 
 use crate::core::ids::create_event_id;
-use crate::core::types::{A2REvent, Actor, ActorType, LedgerQuery};
+use crate::core::types::{AllternitEvent, Actor, ActorType, LedgerQuery};
 use crate::ledger::Ledger;
 
 #[derive(Clone)]
@@ -168,8 +168,8 @@ impl WorkOps {
         Ok(out)
     }
 
-    fn event(&self, event_type: &str, payload: serde_json::Value) -> A2REvent {
-        A2REvent {
+    fn event(&self, event_type: &str, payload: serde_json::Value) -> AllternitEvent {
+        AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: self.actor.clone(),

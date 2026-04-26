@@ -1,6 +1,6 @@
 # BRAIN.md — Task Graph Human View
 
-*This is the human-readable canonical task graph. The machine mirror lives in `.a2r/state/taskgraph.json`.*
+*This is the human-readable canonical task graph. The machine mirror lives in `.allternit/state/taskgraph.json`.*
 
 ## Active Tasks
 

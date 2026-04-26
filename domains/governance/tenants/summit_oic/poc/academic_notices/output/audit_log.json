@@ -1,0 +1,20 @@
+{
+  "workflow": "academic_notices",
+  "generated_at": "2026-04-12T14:37:18.526Z",
+  "term": {
+    "program": "IT Support Specialist",
+    "department": "Technology",
+    "course_name": "IT Fundamentals Phase 1",
+    "course_id": 14389375,
+    "term_start": "2026-08-03",
+    "term_end": "2026-10-09",
+    "stage": "week_3",
+    "passing_grade": 70
+  },
+  "students_evaluated": 4,
+  "students_targeted": 2,
+  "targeted_students": [
+    "Avery Bennett",
+    "Remy Lawson"
+  ]
+}

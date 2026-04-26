@@ -1,11 +1,11 @@
-// 0-substrate/a2r-agent-system-rails/src/gate/tests.rs
+// 0-substrate/allternit-agent-system-rails/src/gate/tests.rs
 #[cfg(test)]
 mod autoland_tests {
     use super::super::*;
     use crate::ledger::ledger::{Ledger, LedgerOptions};
     use crate::leases::leases::{Leases, LeasesOptions};
     use crate::receipts::store::{ReceiptStore, ReceiptStoreOptions};
-    use crate::core::types::{A2REvent, Actor, ActorType, EventScope};
+    use crate::core::types::{AllternitEvent, Actor, ActorType, EventScope};
     use tempfile::tempdir;
     use std::sync::Arc;
     use chrono::Utc;
@@ -45,7 +45,7 @@ mod autoland_tests {
         let wih_id = "test_wih";
         
         // 1. Create a "WIHCreated" event
-        let created_evt = A2REvent {
+        let created_evt = AllternitEvent {
             event_id: "evt_0".to_string(),
             ts: Utc::now().to_rfc3339(),
             actor: Actor { r#type: ActorType::Agent, id: "planner".to_string() },
@@ -57,7 +57,7 @@ mod autoland_tests {
         ledger.append(created_evt).await.unwrap();
 
         // 2. Create a "PASS" event in the ledger
-        let pass_evt = A2REvent {
+        let pass_evt = AllternitEvent {
             event_id: "evt_1".to_string(),
             ts: Utc::now().to_rfc3339(),
             actor: Actor { r#type: ActorType::Agent, id: "validator".to_string() },
@@ -69,7 +69,7 @@ mod autoland_tests {
         ledger.append(pass_evt).await.unwrap();
 
         // 3. Create sandbox files
-        let runner_dir = root.path().join(".a2r").join("runner").join(wih_id);
+        let runner_dir = root.path().join(".allternit").join("runner").join(wih_id);
         std::fs::create_dir_all(runner_dir.join("src")).unwrap();
         std::fs::write(runner_dir.join("src/test.rs"), "pub fn test() {}").unwrap();
 
@@ -119,7 +119,7 @@ mod autoland_tests {
         let wih_id = "test_wih_full";
         
         // 1. Create a "WIHCreated" event
-        let created_evt = A2REvent {
+        let created_evt = AllternitEvent {
             event_id: "evt_created_2".to_string(),
             ts: Utc::now().to_rfc3339(),
             actor: Actor { r#type: ActorType::Agent, id: "planner".to_string() },
@@ -131,7 +131,7 @@ mod autoland_tests {
         ledger.append(created_evt).await.unwrap();
 
         // 2. Create a "PASS" event
-        let pass_evt = A2REvent {
+        let pass_evt = AllternitEvent {
             event_id: "evt_2".to_string(),
             ts: Utc::now().to_rfc3339(),
             actor: Actor { r#type: ActorType::Agent, id: "validator".to_string() },
@@ -143,7 +143,7 @@ mod autoland_tests {
         ledger.append(pass_evt).await.unwrap();
 
         // 3. Create sandbox files
-        let runner_dir = root.path().join(".a2r").join("runner").join(wih_id);
+        let runner_dir = root.path().join(".allternit").join("runner").join(wih_id);
         std::fs::create_dir_all(runner_dir.join("src")).unwrap();
         std::fs::write(runner_dir.join("src/landed.rs"), "pub fn landed() {}").unwrap();
 
@@ -160,6 +160,6 @@ mod autoland_tests {
         assert_eq!(content, "pub fn landed() {}");
         
         // 6. Verify backup was created
-        assert!(root.path().join(".a2r").join("backups").exists());
+        assert!(root.path().join(".allternit").join("backups").exists());
     }
 }

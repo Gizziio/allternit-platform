@@ -1,4 +1,9 @@
-use a2rchitech_history::HistoryLedger;
+//! Kernel messaging protocols and durable implementations
+//!
+//! Provides core abstractions for task queues, event buses, agent mail,
+//! and resource leases with durability and validation.
+
+use allternit_history::HistoryLedger;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -7,22 +12,28 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tokio::sync::{broadcast, RwLock};
 
-// Event Schema for validation
+/// Event Schema for validation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EventSchema {
+    /// Type of event this schema validates
     pub event_type: String,
+    /// Fields that must be present in the payload
     pub required_fields: Vec<String>,
+    /// Fields that may optionally be present
     pub optional_fields: Vec<String>,
+    /// Map of field names to their expected JSON types
     pub field_types: HashMap<String, String>, // field_name -> type (string/number/object/array/boolean)
+    /// Version of this schema
     pub version: String,
 }
 
-// Schema registry for event validation
+/// Schema registry for event validation
 pub struct SchemaRegistry {
     schemas: Arc<RwLock<HashMap<String, EventSchema>>>,
 }
 
 impl SchemaRegistry {
+    /// Create a new empty schema registry
     pub fn new() -> Self {
         Self {
             schemas: Arc::new(RwLock::new(HashMap::new())),
@@ -137,8 +148,11 @@ impl Default for SchemaRegistry {
 /// Validation result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ValidationResult {
+    /// Whether the validation was successful
     pub is_valid: bool,
+    /// List of validation errors
     pub errors: Vec<String>,
+    /// List of non-fatal validation warnings
     pub warnings: Vec<String>,
 }
 
@@ -247,142 +261,224 @@ pub fn compute_event_hash(event: &EventEnvelope) -> String {
     format!("{:x}", hasher.finalize())
 }
 
-// Task Envelope as defined in the spec
+/// Task Envelope as defined in the spec
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskEnvelope {
+    /// Unique task identifier
     pub task_id: String,
+    /// Associated session identifier
     pub session_id: String,
+    /// Tenant that owns this task
     pub tenant_id: String,
+    /// Associated workflow identifier
     pub workflow_id: String,
+    /// Specific step identifier within workflow
     pub step_id: String,
+    /// Role required for execution
     pub role: String,
+    /// Goal/intent of the task
     pub intent: String,
-    pub input_refs: Vec<String>,        // artifact pointers
-    pub constraints: serde_json::Value, // time/budget/scope
+    /// Pointers to input artifacts
+    pub input_refs: Vec<String>,
+    /// Time/budget/scope constraints
+    pub constraints: serde_json::Value,
+    /// Key to prevent duplicate execution
     pub idempotency_key: Option<String>,
+    /// Creation timestamp (Unix epoch seconds)
     pub created_at: u64,
-    pub ttl: Option<u64>, // time to live
+    /// Time to live for this task
+    pub ttl: Option<u64>,
+    /// Task retry configuration
     pub retry_policy: RetryPolicy,
+    /// Execution priority
     pub priority: Option<i32>,
+    /// Hard deadline for completion
     pub deadline: Option<u64>,
+    /// Identifier of parent task if nested
     pub parent_task_id: Option<String>,
+    /// Distributed tracing identifier
     pub trace_id: Option<String>,
 }
 
+/// Retry policy for failed tasks
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RetryPolicy {
+    /// Maximum number of execution attempts
     pub max_attempts: u32,
-    pub backoff_base: u64, // base delay in seconds
+    /// Base backoff delay in seconds
+    pub backoff_base: u64,
+    /// Multiplier for exponential backoff
     pub backoff_multiplier: f64,
 }
 
-// Event Envelope as defined in the spec
+/// Event Envelope as defined in the spec
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EventEnvelope {
+    /// Unique event identifier
     pub event_id: String,
+    /// Type/kind of event
     pub event_type: String,
+    /// Associated session identifier
     pub session_id: String,
+    /// Tenant that owns this event
     pub tenant_id: String,
-    pub actor_id: String, // human/agent/service/device
+    /// Actor that emitted the event (human/agent/service/device)
+    pub actor_id: String,
+    /// Role of the emitting actor
     pub role: String,
+    /// Timestamp of emission (Unix epoch seconds)
     pub timestamp: u64,
+    /// Distributed tracing identifier
     pub trace_id: Option<String>,
+    /// Structured event data
     pub payload: serde_json::Value,
 }
 
-// Agent Mail Message Envelope as defined in the spec
+/// Agent Mail Message Envelope as defined in the spec
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MailMessageEnvelope {
+    /// Unique message identifier
     pub message_id: String,
+    /// Tenant identifier
     pub tenant_id: String,
+    /// Conversation thread identifier
     pub thread_id: String,
+    /// Sending identity
     pub from_identity: String,
+    /// List of recipient identities
     pub to_identities: Vec<String>,
+    /// Message subject line
     pub subject: String,
-    pub body_md: String,          // GFM Markdown
-    pub attachments: Vec<String>, // artifact pointers
+    /// Message body in GFM Markdown
+    pub body_md: String,
+    /// Pointers to message attachments
+    pub attachments: Vec<String>,
+    /// Creation timestamp (Unix epoch seconds)
     pub created_at: u64,
+    /// Searchable message tags
     pub tags: Vec<String>,
+    /// Distributed tracing identifier
     pub trace_id: Option<String>,
+    /// Identifier of the message being replied to
     pub reply_to_message_id: Option<String>,
+    /// Message priority
     pub priority: Option<i32>,
+    /// Expiration timestamp
     pub expires_at: Option<u64>,
 }
 
-// Lease Envelope as defined in the spec
+/// Lease Envelope as defined in the spec
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LeaseEnvelope {
+    /// Unique lease identifier
     pub lease_id: String,
+    /// Tenant identifier
     pub tenant_id: String,
+    /// Identity holding the lease
     pub holder_identity: String,
-    pub resource_selector: String, // file/glob/module/device/etc.
+    /// Resource being protected (file/glob/module/device/etc.)
+    pub resource_selector: String,
+    /// Intent for holding the lease
     pub purpose: String,
-    pub scope: LeaseScope, // session/workflow/task
+    /// Lifetime scope of the lease
+    pub scope: LeaseScope,
+    /// Timestamp of acquisition
     pub acquired_at: u64,
+    /// Timestamp of expiration
     pub expires_at: u64,
+    /// Distributed tracing identifier
     pub trace_id: Option<String>,
+    /// Token for renewing the lease
     pub renew_token: Option<String>,
+    /// Policy for handling conflicts
     pub conflict_policy: ConflictPolicy,
 }
 
+/// Lifetime scope of a resource lease
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum LeaseScope {
+    /// Lease tied to session lifetime
     Session,
+    /// Lease tied to workflow lifetime
     Workflow,
+    /// Lease tied to individual task lifetime
     Task,
 }
 
+/// Policy for handling lease acquisition conflicts
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ConflictPolicy {
+    /// Emit warning but allow acquisition
     NotifyOnly,
+    /// Prevent acquisition of busy resource
     Block,
+    /// Allow acquisition in a separate branch
     BranchOnly,
 }
 
-// Artifact Pointer as defined in the spec
+/// Artifact Pointer as defined in the spec
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ArtifactPointer {
+    /// Unique artifact identifier
     pub artifact_id: String,
+    /// Integrity hash of the content
     pub content_hash: String,
+    /// IANA media type of the content
     pub media_type: String,
+    /// Universal identifier for storage location
     pub storage_uri: String,
+    /// Identity that created the artifact
     pub created_by: String,
+    /// Creation timestamp (Unix epoch seconds)
     pub created_at: u64,
 }
 
+/// Error types for messaging operations
 #[derive(Debug, thiserror::Error)]
 pub enum MessagingError {
+    /// Standard I/O error
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
+    /// JSON serialization or deserialization failed
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
+    /// Underlying history ledger error
     #[error("History error: {0}")]
-    History(#[from] a2rchitech_history::HistoryError),
+    History(#[from] allternit_history::HistoryError),
+    /// Database operation failed
     #[error("SQLX error: {0}")]
     Sqlx(#[from] sqlx::Error),
+    /// Requested task not found
     #[error("Task not found: {0}")]
     TaskNotFound(String),
+    /// Requested event not found
     #[error("Event not found: {0}")]
     EventNotFound(String),
+    /// Requested mail message not found
     #[error("Mail message not found: {0}")]
     MailMessageNotFound(String),
+    /// Lease acquisition failed due to conflict
     #[error("Lease conflict: {0}")]
     LeaseConflict(String),
+    /// Message envelope format is invalid
     #[error("Invalid envelope: {0}")]
     InvalidEnvelope(String),
+    /// Internal mutex state is corrupted
     #[error("Mutex poisoned: {0}")]
     MutexPoisoned(String),
+    /// System time operation failed
     #[error("Time error: {0}")]
     TimeError(String),
 }
 
-// Durable TaskQueue implementation using SQLite storage
+/// Durable TaskQueue implementation using SQLite storage
 pub struct TaskQueue {
     storage: Arc<dyn storage::TaskQueueStorage>,
     history_ledger: Arc<Mutex<HistoryLedger>>,
 }
 
 impl TaskQueue {
+    /// Create a new durable task queue
     pub async fn new(
         history_ledger: Arc<Mutex<HistoryLedger>>,
         pool: SqlitePool,
@@ -394,6 +490,7 @@ impl TaskQueue {
         })
     }
 
+    /// Add a task to the queue and log to history
     pub async fn enqueue(&self, task: TaskEnvelope) -> Result<(), MessagingError> {
         self.storage.enqueue(task.clone()).await?;
 
@@ -408,10 +505,12 @@ impl TaskQueue {
         Ok(())
     }
 
+    /// Retrieve the next pending task from the queue
     pub async fn dequeue(&self) -> Result<Option<TaskEnvelope>, MessagingError> {
         self.storage.dequeue().await
     }
 
+    /// Mark a task as successfully completed
     pub async fn complete_task(
         &self,
         task_id: String,
@@ -420,6 +519,7 @@ impl TaskQueue {
         self.storage.complete_task(task_id, task).await
     }
 
+    /// Mark a task as failed with an error message
     pub async fn fail_task(
         &self,
         task_id: String,
@@ -429,19 +529,21 @@ impl TaskQueue {
         self.storage.fail_task(task_id, task, error).await
     }
 
+    /// Get the number of tasks currently awaiting execution
     pub async fn get_pending_count(&self) -> Result<usize, MessagingError> {
         self.storage.get_pending_count().await
     }
 }
 
-// Durable EventBus implementation using SQLite storage
+/// Durable EventBus implementation using SQLite storage
 pub struct EventBus {
     storage: Arc<dyn storage::EventBusStorage>,
     subscribers: Arc<RwLock<std::collections::HashMap<String, broadcast::Sender<EventEnvelope>>>>,
-    history_ledger: Arc<Mutex<HistoryLedger>>,
+    _history_ledger: Arc<Mutex<HistoryLedger>>,
 }
 
 impl EventBus {
+    /// Create a new durable event bus
     pub async fn new(
         history_ledger: Arc<Mutex<HistoryLedger>>,
         pool: SqlitePool,
@@ -450,10 +552,11 @@ impl EventBus {
         Ok(EventBus {
             storage,
             subscribers: Arc::new(RwLock::new(std::collections::HashMap::new())),
-            history_ledger,
+            _history_ledger: history_ledger,
         })
     }
 
+    /// Subscribe to real-time events of a specific type
     pub async fn subscribe(&self, event_type: String) -> broadcast::Receiver<EventEnvelope> {
         let mut subscribers = self.subscribers.write().await;
         if !subscribers.contains_key(&event_type) {
@@ -467,6 +570,7 @@ impl EventBus {
         sender.subscribe()
     }
 
+    /// Publish an event to durable storage and all active subscribers
     pub async fn publish(&self, event: EventEnvelope) -> Result<(), MessagingError> {
         // Store in durable storage
         self.storage.publish(event.clone()).await?;
@@ -480,7 +584,7 @@ impl EventBus {
         Ok(())
     }
 
-    // Method to get historical events
+    /// Retrieve historical events of a specific type
     pub async fn get_events(
         &self,
         event_type: String,
@@ -489,13 +593,14 @@ impl EventBus {
     }
 }
 
-// Durable AgentMail implementation using SQLite storage
+/// Durable AgentMail implementation using SQLite storage
 pub struct AgentMail {
     storage: Arc<dyn storage::AgentMailStorage>,
     history_ledger: Arc<Mutex<HistoryLedger>>,
 }
 
 impl AgentMail {
+    /// Create a new durable agent mail service
     pub async fn new(
         history_ledger: Arc<Mutex<HistoryLedger>>,
         pool: SqlitePool,
@@ -507,6 +612,7 @@ impl AgentMail {
         })
     }
 
+    /// Send a message and log it to the history ledger
     pub async fn send_message(&self, message: MailMessageEnvelope) -> Result<(), MessagingError> {
         self.storage.send_message(message.clone()).await?;
 
@@ -521,6 +627,7 @@ impl AgentMail {
         Ok(())
     }
 
+    /// Retrieve all messages in an agent's inbox
     pub async fn get_inbox(
         &self,
         agent_identity: String,
@@ -528,6 +635,7 @@ impl AgentMail {
         self.storage.get_inbox(agent_identity).await
     }
 
+    /// Retrieve all messages sent by an agent
     pub async fn get_outbox(
         &self,
         agent_identity: String,
@@ -535,6 +643,7 @@ impl AgentMail {
         self.storage.get_outbox(agent_identity).await
     }
 
+    /// Retrieve all messages in a specific conversation thread
     pub async fn get_thread(
         &self,
         thread_id: String,
@@ -543,13 +652,14 @@ impl AgentMail {
     }
 }
 
-// Durable CoordinationLeases implementation using SQLite storage
+/// Durable CoordinationLeases implementation using SQLite storage
 pub struct CoordinationLeases {
     storage: Arc<dyn storage::CoordinationLeasesStorage>,
     history_ledger: Arc<Mutex<HistoryLedger>>,
 }
 
 impl CoordinationLeases {
+    /// Create a new durable coordination lease service
     pub async fn new(
         history_ledger: Arc<Mutex<HistoryLedger>>,
         pool: SqlitePool,
@@ -561,6 +671,7 @@ impl CoordinationLeases {
         })
     }
 
+    /// Attempt to acquire an exclusive lease on a resource
     pub async fn acquire_lease(
         &self,
         lease: LeaseEnvelope,
@@ -578,6 +689,7 @@ impl CoordinationLeases {
         Ok(acquired_lease)
     }
 
+    /// Release a previously held lease
     pub async fn release_lease(
         &self,
         resource_selector: String,
@@ -608,6 +720,7 @@ impl CoordinationLeases {
         Ok(result)
     }
 
+    /// Extend the expiration time of an active lease
     pub async fn renew_lease(
         &self,
         resource_selector: String,
@@ -638,6 +751,7 @@ impl CoordinationLeases {
         Ok(result)
     }
 
+    /// Check the current status of a lease on a resource
     pub async fn check_lease(
         &self,
         resource_selector: String,
@@ -646,14 +760,20 @@ impl CoordinationLeases {
     }
 }
 
+/// Main messaging system coordinating all durable services
 pub struct MessagingSystem {
+    /// Task queue service
     pub task_queue: Arc<TaskQueue>,
+    /// Event bus service
     pub event_bus: Arc<EventBus>,
+    /// Agent mail service
     pub agent_mail: Arc<AgentMail>,
+    /// Coordination leases service
     pub coordination_leases: Arc<CoordinationLeases>,
 }
 
 impl MessagingSystem {
+    /// Create a new messaging system with provided storage pool
     pub async fn new_with_storage(
         history_ledger: Arc<Mutex<HistoryLedger>>,
         pool: SqlitePool,
@@ -666,6 +786,7 @@ impl MessagingSystem {
         })
     }
 
+    /// Create a new messaging system and run database migrations
     pub async fn new_with_migrations(
         history_ledger: Arc<Mutex<HistoryLedger>>,
         pool: SqlitePool,
@@ -696,7 +817,9 @@ impl MessagingSystem {
     }
 }
 
+/// Migration utilities
 pub mod migration;
+/// Storage backend implementations
 pub mod storage;
 
 #[cfg(test)]
@@ -715,7 +838,7 @@ mod tests {
 
         let temp_path = format!("/tmp/test_messaging_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
 
         let task_queue = TaskQueue::new(history_ledger, pool).await.unwrap();
@@ -766,7 +889,7 @@ mod tests {
 
         let temp_path = format!("/tmp/test_event_bus_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
 
         let event_bus = EventBus::new(history_ledger, pool).await.unwrap();
@@ -810,7 +933,7 @@ mod tests {
 
         let temp_path = format!("/tmp/test_agent_mail_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
 
         let agent_mail = AgentMail::new(history_ledger, pool).await.unwrap();
@@ -857,7 +980,7 @@ mod tests {
 
         let temp_path = format!("/tmp/test_leases_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
 
         let coordination_leases = CoordinationLeases::new(history_ledger, pool).await.unwrap();

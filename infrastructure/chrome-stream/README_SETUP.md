@@ -1,8 +1,8 @@
-# A2R Chrome Streaming Gateway - Standard Setup Process
+# Allternit Chrome Streaming Gateway - Standard Setup Process
 
 ## Overview
 
-Chrome Streaming is **automatically integrated** into the A2R Platform. When you run `./start-platform.sh`, it will:
+Chrome Streaming is **automatically integrated** into the Allternit Platform. When you run `./start-platform.sh`, it will:
 
 1. ✅ Check if Chrome Streaming is installed
 2. ❓ Offer to install it if missing (recommended)
@@ -19,8 +19,8 @@ Chrome Streaming is **automatically integrated** into the A2R Platform. When you
 ```bash
 # Clone the platform
 cd ~
-git clone <your-repo-url>/a2rchitech-workspace.git
-cd a2rchitech-workspace
+git clone <your-repo-url>/allternit-workspace.git
+cd allternit-workspace
 
 # Copy environment file
 cp .env.example .env
@@ -106,7 +106,7 @@ This runs the same installer as the automatic prompt.
 | **Docker** | Container runtime | - |
 | **Docker Compose** | Multi-container orchestration | - |
 | **coturn** | WebRTC TURN server | 3478/udp, 3478/tcp, 5349/tcp |
-| **a2r/chrome-stream** | Chrome container | 8080, 8081 |
+| **allternit/chrome-stream** | Chrome container | 8080, 8081 |
 | **systemd services** | Auto-start on boot | - |
 
 ---
@@ -120,7 +120,7 @@ After installation, verify everything is working:
 docker ps | grep chrome
 
 # Expected output:
-# a2r-chrome-stream   Up   0.0.0.0:8080-8081->8080-8081/tcp
+# allternit-chrome-stream   Up   0.0.0.0:8080-8081->8080-8081/tcp
 
 # Check coturn
 sudo systemctl status coturn
@@ -149,11 +149,11 @@ To remove Chrome Streaming:
 docker compose --profile chrome down
 
 # Remove Docker image
-docker rmi a2r/chrome-stream
+docker rmi allternit/chrome-stream
 
 # Remove systemd services
-sudo systemctl disable a2r-chrome-streaming
-sudo rm /etc/systemd/system/a2r-chrome-streaming.service
+sudo systemctl disable allternit-chrome-streaming
+sudo rm /etc/systemd/system/allternit-chrome-streaming.service
 
 # Remove coturn (optional)
 sudo apt-get remove coturn
@@ -190,14 +190,14 @@ sudo nano /etc/turnserver.conf
 
 ```bash
 # Check logs
-docker logs a2r-chrome-stream
+docker logs allternit-chrome-stream
 
 # Restart container
 docker compose --profile chrome restart
 
 # Rebuild image if needed
 cd 8-cloud/chrome-stream
-docker build -t a2r/chrome-stream .
+docker build -t allternit/chrome-stream .
 ```
 
 ### WebRTC connection fails in browser
@@ -244,7 +244,7 @@ User's Browser (Electron App)
         │ WebSocket (signaling)
         ▼
 ┌───────────────────────────────────────┐
-│  A2R API (port 3000)                  │
+│  Allternit API (port 3000)                  │
 │  - Session broker                     │
 │  - TURN credential generation         │
 └──────────────┬────────────────────────┘
@@ -279,7 +279,7 @@ User's Browser (Electron App)
 
 For issues or questions:
 
-1. Check logs: `docker logs a2r-chrome-stream`
+1. Check logs: `docker logs allternit-chrome-stream`
 2. Check coturn: `sudo journalctl -u coturn -n 50`
 3. Check API: `curl http://localhost:3000/health`
 4. Review installer log: `/tmp/chrome-install.log` (if exists)

@@ -1,6 +1,6 @@
-# A2R Platform Development Environment
+# Allternit Platform Development Environment
 
-A complete development environment for working on the A2R platform. This devcontainer template provides everything you need to develop, test, and debug the full A2R stack.
+A complete development environment for working on the Allternit platform. This devcontainer template provides everything you need to develop, test, and debug the full Allternit stack.
 
 ## Features
 
@@ -45,7 +45,7 @@ A complete development environment for working on the A2R platform. This devcont
 2. **Reopen in Container**
    - Press `F1` or `Cmd/Ctrl+Shift+P`
    - Type "Dev Containers: Reopen in Container"
-   - Select "A2R Platform Development"
+   - Select "Allternit Platform Development"
 
 3. **Wait for Setup**
    - The container will build (first time takes ~5-10 minutes)
@@ -64,7 +64,7 @@ A complete development environment for working on the A2R platform. This devcont
 docker compose up -d
 
 # Enter the development container
-docker compose exec a2r-dev bash
+docker compose exec allternit-dev bash
 
 # Run setup script
 ./scripts/setup-dev.sh
@@ -84,17 +84,17 @@ docker compose exec a2r-dev bash
 | Temporal UI | http://localhost:8088 | - |
 | ChromaDB | http://localhost:8000 | - |
 | LocalStack | http://localhost:4566 | - |
-| PostgreSQL | localhost:5432 | postgres / a2r-dev-password |
-| Redis | localhost:6379 | a2r-redis-password |
+| PostgreSQL | localhost:5432 | postgres / allternit-dev-password |
+| Redis | localhost:6379 | allternit-redis-password |
 
 ## Project Structure
 
 ```
 allternit/
 ├── domains/kernel/                   # Backend services
-│   ├── a2r-cloud/             # Go - API Gateway
+│   ├── allternit-cloud/             # Go - API Gateway
 │   ├── allternit-kernel/            # Go - Core services
-│   └── a2r-infrastructure/    # Rust - Infrastructure layer
+│   └── allternit-infrastructure/    # Rust - Infrastructure layer
 ├── surfaces/                       # Frontend
 │   └── allternit-platform/          # Next.js/React application
 ├── cmd/                     # Application shells
@@ -178,7 +178,7 @@ go build -o bin/allternit-kernel
 ### Working with Rust Services
 
 ```bash
-cd domains/kernel/a2r-infrastructure
+cd domains/kernel/allternit-infrastructure
 
 # Build
 cargo build
@@ -216,7 +216,7 @@ Key variables:
 ### Go (Goose)
 
 ```bash
-cd domains/kernel/a2r-infrastructure/migrations
+cd domains/kernel/allternit-infrastructure/migrations
 
 # Create new migration
 goose create add_users_table sql
@@ -273,7 +273,7 @@ pnpm prisma studio
 cd domains/kernel && go test ./...
 
 # Rust tests
-cd domains/kernel/a2r-infrastructure && cargo test
+cd domains/kernel/allternit-infrastructure && cargo test
 
 # UI tests
 cd surfaces/allternit-platform && pnpm test
@@ -318,7 +318,7 @@ All service ports are automatically forwarded when using VS Code Dev Containers:
 docker compose logs -f
 
 # View specific service
-docker compose logs -f a2r-dev
+docker compose logs -f allternit-dev
 docker compose logs -f postgres
 docker compose logs -f redis
 
@@ -415,7 +415,7 @@ Edit `docker-compose.yml` to add new services:
     ports:
       - "8080:8080"
     networks:
-      - a2r-dev-network
+      - allternit-dev-network
 ```
 
 ### Custom Dockerfile
@@ -465,7 +465,7 @@ Run with: `task build` or `task test`
 
 ## Resources
 
-- [A2R Documentation](https://docs.allternit.com)
+- [Allternit Documentation](https://docs.allternit.com)
 - [Go Documentation](https://golang.org/doc)
 - [Rust Documentation](https://doc.rust-lang.org)
 - [Next.js Documentation](https://nextjs.org/docs)

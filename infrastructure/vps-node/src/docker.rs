@@ -144,11 +144,11 @@ impl DockerRuntime {
         }
         
         // Build container config
-        let container_name = format!("a2r-job-{}", job_id);
+        let container_name = format!("allternit-job-{}", job_id);
         
         let mut labels = config.labels.clone();
-        labels.insert("a2r.job_id".to_string(), job_id.to_string());
-        labels.insert("a2r.managed".to_string(), "true".to_string());
+        labels.insert("allternit.job_id".to_string(), job_id.to_string());
+        labels.insert("allternit.managed".to_string(), "true".to_string());
         
         let env_vars: Vec<String> = config.env
             .iter()
@@ -271,11 +271,11 @@ impl DockerRuntime {
         }
         
         // Build container config
-        let container_name = format!("a2r-job-{}", job_id);
+        let container_name = format!("allternit-job-{}", job_id);
         
         let mut labels = config.labels.clone();
-        labels.insert("a2r.job_id".to_string(), job_id.to_string());
-        labels.insert("a2r.managed".to_string(), "true".to_string());
+        labels.insert("allternit.job_id".to_string(), job_id.to_string());
+        labels.insert("allternit.managed".to_string(), "true".to_string());
         
         let env_vars: Vec<String> = config.env
             .iter()
@@ -419,12 +419,12 @@ impl DockerRuntime {
         }
     }
     
-    /// List containers with A2R labels
+    /// List containers with Allternit labels
     pub async fn list_containers(&self) -> Result<Vec<bollard::models::ContainerSummary>> {
         let client = self.client.as_ref().ok_or_else(|| anyhow::anyhow!("Docker not connected"))?;
         
         let mut filters = HashMap::new();
-        filters.insert("label".to_string(), vec!["a2r.managed=true".to_string()]);
+        filters.insert("label".to_string(), vec!["allternit.managed=true".to_string()]);
         
         let options = bollard::container::ListContainersOptions {
             all: true,

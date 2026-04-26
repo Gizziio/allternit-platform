@@ -1,7 +1,7 @@
 {
-  "name": "@a2r/vm-sessions",
+  "name": "@allternit/vm-sessions",
   "version": "1.0.0",
-  "description": "A2R VM Session Manager",
+  "description": "Allternit VM Session Manager",
   "type": "module",
   "main": "./src/index.js",
   "exports": {
@@ -14,8 +14,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@a2r/gizziclaw": "workspace:*",
-    "@a2r/sdk": "workspace:*"
+    "@allternit/gizziclaw": "workspace:*",
+    "@allternit/sdk": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.3.0",

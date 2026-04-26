@@ -1,4 +1,4 @@
-//! A2R BYOC Edge Runner
+//! Allternit BYOC Edge Runner
 //!
 //! Secure tunnel to control plane, worker management, and tool execution.
 //!
@@ -20,41 +20,41 @@ use tokio::sync::RwLock;
 use tracing::{error, info, warn};
 use uuid::Uuid;
 
-/// A2R Edge Runner configuration
+/// Allternit Edge Runner configuration
 #[derive(Debug, Clone, Parser)]
-#[command(name = "a2r-edge-runner")]
-#[command(about = "A2R BYOC Edge Runner - Secure tunnel to control plane")]
+#[command(name = "allternit-edge-runner")]
+#[command(about = "Allternit BYOC Edge Runner - Secure tunnel to control plane")]
 pub struct Config {
     /// Control plane endpoint
-    #[arg(long, env = "A2R_CONTROL_PLANE_URL", default_value = "https://control.a2r.cloud")]
+    #[arg(long, env = "Allternit_CONTROL_PLANE_URL", default_value = "https://control.allternit.cloud")]
     pub control_plane_url: String,
 
     /// Node secret for authentication
-    #[arg(long, env = "A2R_NODE_SECRET")]
+    #[arg(long, env = "Allternit_NODE_SECRET")]
     pub node_secret: String,
 
     /// Node ID (auto-generated if not provided)
-    #[arg(long, env = "A2R_NODE_ID")]
+    #[arg(long, env = "Allternit_NODE_ID")]
     pub node_id: Option<String>,
 
     /// Node name
-    #[arg(long, env = "A2R_NODE_NAME", default_value = "edge-runner")]
+    #[arg(long, env = "Allternit_NODE_NAME", default_value = "edge-runner")]
     pub node_name: String,
 
     /// Heartbeat interval in seconds
-    #[arg(long, env = "A2R_HEARTBEAT_INTERVAL", default_value = "30")]
+    #[arg(long, env = "Allternit_HEARTBEAT_INTERVAL", default_value = "30")]
     pub heartbeat_interval: u64,
 
     /// Maximum workers
-    #[arg(long, env = "A2R_MAX_WORKERS", default_value = "10")]
+    #[arg(long, env = "Allternit_MAX_WORKERS", default_value = "10")]
     pub max_workers: u32,
 
     /// Region
-    #[arg(long, env = "A2R_REGION", default_value = "us-west")]
+    #[arg(long, env = "Allternit_REGION", default_value = "us-west")]
     pub region: String,
 
     /// Zone
-    #[arg(long, env = "A2R_ZONE")]
+    #[arg(long, env = "Allternit_ZONE")]
     pub zone: Option<String>,
 }
 
@@ -140,7 +140,7 @@ impl EdgeRunner {
 
     /// Start the edge runner
     pub async fn start(&self) -> Result<(), anyhow::Error> {
-        info!("Starting A2R Edge Runner");
+        info!("Starting Allternit Edge Runner");
         info!("Node ID: {}", self.node_id);
         info!("Control Plane: {}", self.config.control_plane_url);
 
@@ -198,7 +198,7 @@ impl EdgeRunner {
 
     /// Stop the edge runner
     pub async fn stop(&self) {
-        info!("Stopping A2R Edge Runner");
+        info!("Stopping Allternit Edge Runner");
         let mut running = self.running.write().await;
         *running = false;
     }

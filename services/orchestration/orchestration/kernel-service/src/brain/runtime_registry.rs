@@ -579,7 +579,7 @@ impl RuntimeRegistry {
             run_cmd: "python".to_string(),
             run_args: vec![
                 "-m".to_string(),
-                "a2r_kernel".to_string(),
+                "allternit_kernel".to_string(),
                 "--provider".to_string(),
                 "mistral".to_string(),
             ],
@@ -610,7 +610,7 @@ impl RuntimeRegistry {
             run_cmd: "python".to_string(),
             run_args: vec![
                 "-m".to_string(),
-                "a2r_kernel".to_string(),
+                "allternit_kernel".to_string(),
                 "--provider".to_string(),
                 "qwen".to_string(),
             ],
@@ -641,7 +641,7 @@ impl RuntimeRegistry {
             run_cmd: "python".to_string(),
             run_args: vec![
                 "-m".to_string(),
-                "a2r_kernel".to_string(),
+                "allternit_kernel".to_string(),
                 "--provider".to_string(),
                 "amp".to_string(),
             ],
@@ -672,7 +672,7 @@ impl RuntimeRegistry {
             run_cmd: "python".to_string(),
             run_args: vec![
                 "-m".to_string(),
-                "a2r_kernel".to_string(),
+                "allternit_kernel".to_string(),
                 "--provider".to_string(),
                 "zai".to_string(),
             ],

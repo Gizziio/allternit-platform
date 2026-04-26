@@ -1,10 +1,10 @@
 # OWNER: T1-A1
 
 [package]
-name = "a2r-multi-region"
+name = "allternit-multi-region"
 version = "0.1.0"
 edition = "2021"
-description = "Multi-region infrastructure for A2rchitech - replication, health monitoring, failover"
+description = "Multi-region infrastructure for Allternitchitech - replication, health monitoring, failover"
 
 [workspace]
 

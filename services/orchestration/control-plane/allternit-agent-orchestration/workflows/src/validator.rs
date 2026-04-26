@@ -4,11 +4,11 @@
 use std::sync::Arc;
 
 pub struct WorkflowValidator {
-    policy_engine: Arc<a2rchitech_policy::PolicyEngine>,
+    policy_engine: Arc<allternit_policy::PolicyEngine>,
 }
 
 impl WorkflowValidator {
-    pub fn new(policy_engine: Arc<a2rchitech_policy::PolicyEngine>) -> Self {
+    pub fn new(policy_engine: Arc<allternit_policy::PolicyEngine>) -> Self {
         WorkflowValidator { policy_engine }
     }
 

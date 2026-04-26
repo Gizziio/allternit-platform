@@ -1,5 +1,5 @@
 /**
- * @fileoverview A2R Guest Agent Protocol - Server Implementation
+ * @fileoverview Allternit Guest Agent Protocol - Server Implementation
  * 
  * Protocol server for handling requests from the host.
  * Runs inside the VM and executes commands, reads/writes files.

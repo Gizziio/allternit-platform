@@ -1,4 +1,4 @@
-# A2rchitech Memory Service
+# Allternitchitech Memory Service
 
 **Location**: `services/memory/`  
 **Domain**: Layer 4 - Services (Memory & Persistence)
@@ -157,9 +157,9 @@ async def memory_query(request: MemoryQueryRequest):
 
 ```bash
 # cmd/cli/src/commands/memory.rs
-a2r memory query "What tools were used recently?"
-a2r memory stats
-a2r memory consolidate
+allternit memory query "What tools were used recently?"
+allternit memory stats
+allternit memory consolidate
 ```
 
 ---
@@ -249,7 +249,7 @@ curl -X POST http://localhost:3201/api/query \
   -d '{"question": "What do we know about DAG validation?"}'
 
 # CLI test
-a2r memory stats
+allternit memory stats
 ```
 
 ---

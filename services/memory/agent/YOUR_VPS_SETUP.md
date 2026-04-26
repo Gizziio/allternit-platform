@@ -31,7 +31,7 @@ Models: qwen3.5:0.8b, qwen3.5:2b, qwen3.5:4b
 ### Step 1: Edit .env with Your VPS IP
 
 ```bash
-cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/4-services/memory/agent
+cd /Users/macbook/Desktop/allternit-workspace/allternit/4-services/memory/agent
 
 # Edit .env file - replace <YOUR_VPS_IP> with actual IP
 nano .env
@@ -226,13 +226,13 @@ Once memory agent is running:
 
 ```bash
 # Query memory
-a2r memory query "What do we know about DAG validation?"
+allternit memory query "What do we know about DAG validation?"
 
 # Show stats
-a2r memory stats
+allternit memory stats
 
 # Trigger consolidation
-a2r memory consolidate
+allternit memory consolidate
 ```
 
 ---

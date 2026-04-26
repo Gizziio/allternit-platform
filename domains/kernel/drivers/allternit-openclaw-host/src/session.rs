@@ -1,8 +1,8 @@
 //! Session Manager Bridge - OC-008
 //!
-//! Bridge between OpenClaw's session management and A2R's native session management.
+//! Bridge between OpenClaw's session management and Allternit's native session management.
 //! Implements the adapter pattern to translate between OpenClaw session operations
-//! and A2R session operations while maintaining A2R interface.
+//! and Allternit session operations while maintaining Allternit interface.
 
 use crate::{HostError, OpenClawHost};
 use serde::{Deserialize, Serialize};

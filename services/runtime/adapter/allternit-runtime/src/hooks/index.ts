@@ -4,13 +4,13 @@
  * Provides hook points for runtime integration.
  */
 
-import type { A2RKernel, WihItem } from '@a2r/governor';
+import type { AllternitKernel, WihItem } from '@allternit/governor';
 import type { HookRegistry, HookFunction, HookManager } from '../types.js';
 
 /**
  * Hook manager implementation
  */
-export class A2RHookManager implements HookManager {
+export class AllternitHookManager implements HookManager {
   private registry: HookRegistry = {
     preSessionStart: [],
     postSessionStart: [],
@@ -81,20 +81,20 @@ export class A2RHookManager implements HookManager {
 /**
  * Global hook manager instance
  */
-export const globalHookManager = new A2RHookManager();
+export const globalHookManager = new AllternitHookManager();
 
 /**
  * Hook context types
  */
 export interface PreSessionStartContext {
-  kernel: A2RKernel;
+  kernel: AllternitKernel;
   wihId?: string;
   workspaceRoot: string;
   options: Record<string, unknown>;
 }
 
 export interface PostSessionStartContext {
-  kernel: A2RKernel;
+  kernel: AllternitKernel;
   sessionId: string;
   wihId?: string;
   workspaceRoot: string;
@@ -102,7 +102,7 @@ export interface PostSessionStartContext {
 }
 
 export interface PreToolUseContext {
-  kernel: A2RKernel;
+  kernel: AllternitKernel;
   sessionId: string;
   wihId?: string;
   agentId: string;
@@ -112,7 +112,7 @@ export interface PreToolUseContext {
 }
 
 export interface PostToolUseContext {
-  kernel: A2RKernel;
+  kernel: AllternitKernel;
   sessionId: string;
   wihId?: string;
   agentId: string;
@@ -124,7 +124,7 @@ export interface PostToolUseContext {
 }
 
 export interface PreFileAccessContext {
-  kernel: A2RKernel;
+  kernel: AllternitKernel;
   sessionId: string;
   wihId?: string;
   agentId: string;
@@ -135,7 +135,7 @@ export interface PreFileAccessContext {
 }
 
 export interface PostFileAccessContext {
-  kernel: A2RKernel;
+  kernel: AllternitKernel;
   sessionId: string;
   wihId?: string;
   agentId: string;

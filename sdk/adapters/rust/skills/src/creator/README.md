@@ -1,6 +1,6 @@
 # Skill Creator - Rust Primitive
 
-Core skill creation primitive for the A2R skills system.
+Core skill creation primitive for the Allternit skills system.
 
 ## Overview
 

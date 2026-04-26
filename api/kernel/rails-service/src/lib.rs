@@ -24,7 +24,7 @@ pub use crate::context::{
     SealContextPackResponse, WIH, PolicyBundleRef,
 };
 pub use crate::core::types::{
-    A2REvent, Actor, ActorType, EventProvenance, EventScope, LeaseRecord, LeaseRequest,
+    AllternitEvent, Actor, ActorType, EventProvenance, EventScope, LeaseRecord, LeaseRequest,
     LedgerQuery, ReceiptRecord,
 };
 pub use crate::gate::gate::{DagMutation, MutationProvenance};

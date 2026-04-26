@@ -1,5 +1,5 @@
 """
-A2R Computer Use — Hybrid Orchestrator
+Allternit Computer Use — Hybrid Orchestrator
 Coordinates cross-family workflows: browser ↔ desktop.
 
 A hybrid workflow is a sequence of steps where each step runs on a different

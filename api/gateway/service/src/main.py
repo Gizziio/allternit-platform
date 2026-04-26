@@ -42,7 +42,7 @@ class GatewayRuntime:
         self.load_receipt_schema()
         
         # Ensure receipt dir exists
-        self.receipt_dir = f".a2r/receipts/{self.run_id}"
+        self.receipt_dir = f".allternit/receipts/{self.run_id}"
         os.makedirs(self.receipt_dir, exist_ok=True)
 
     def load_registry(self):
@@ -341,7 +341,7 @@ async def gateway_middleware(request: Request, call_next):
     receipt = {
         "receipt_id": str(uuid.uuid4()),
         "created_at": datetime.datetime.utcnow().isoformat() + "Z",
-        "gateway_id": "a2r-gateway-runtime",
+        "gateway_id": "allternit-gateway-runtime",
         "run_id": runtime.run_id,
         "trace_id": trace_id,
         "route_id": service_def["name"] if service_def else "unknown",

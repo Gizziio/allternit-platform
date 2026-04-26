@@ -635,9 +635,9 @@ function getDomainName(basePath: string): string {
 }
 
 function extractDomainFromImport(importPath: string): string | null {
-  // Extract domain from import path patterns like '@a2r/domain-name' or '../domain-name/...'
+  // Extract domain from import path patterns like '@allternit/domain-name' or '../domain-name/...'
   const patterns = [
-    /@a2r\/([^\/]+)/,
+    /@allternit\/([^\/]+)/,
     /\.{1,2}\/([^\/]+)/,
     /\/([^\/]+)\/src/
   ];
@@ -658,10 +658,10 @@ function getAllowedDependencies(basePath: string): string[] {
       const content = readFileSync(packageJsonPath, 'utf-8');
       const pkg = JSON.parse(content);
       const deps = Object.keys(pkg.dependencies || {});
-      // Extract domain names from @a2r/* packages
+      // Extract domain names from @allternit/* packages
       return deps
-        .filter((d: string) => d.startsWith('@a2r/'))
-        .map((d: string) => d.replace('@a2r/', ''));
+        .filter((d: string) => d.startsWith('@allternit/'))
+        .map((d: string) => d.replace('@allternit/', ''));
     }
   } catch {
     // Ignore errors

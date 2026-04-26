@@ -1,6 +1,6 @@
 # Active Tasks
 
-<!-- Machine-synced with .a2r/state/taskgraph.json -->
+<!-- Machine-synced with .allternit/state/taskgraph.json -->
 
 ## Current Focus
 

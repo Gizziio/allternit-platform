@@ -1,14 +1,14 @@
-# A2rchitech Superconductor Integration Architecture
+# Allternitchitech Superconductor Integration Architecture
 
 ## Overview
 
-This document outlines the integration of Superconductor as both a capability specification and an optional backend provider for A2rchitech. This integration enables parallel agent execution with live previews while maintaining A2rchitech's sovereign agent core and canvas philosophy.
+This document outlines the integration of Superconductor as both a capability specification and an optional backend provider for Allternitchitech. This integration enables parallel agent execution with live previews while maintaining Allternitchitech's sovereign agent core and canvas philosophy.
 
 ## Architecture Components
 
 ### 1. Parallel Execution Backend Configuration
 
-A2rchitech now supports multiple parallel execution backends:
+Allternitchitech now supports multiple parallel execution backends:
 
 ```typescript
 type ParallelExecutionBackend = 'local' | 'selfhosted' | 'superconductor';
@@ -100,7 +100,7 @@ interface ExecutionUpdate {
 
 ### 4. Canvas Event Protocol Mapping
 
-Superconductor outputs are translated into A2rchitech's CanvasEvent protocol:
+Superconductor outputs are translated into Allternitchitech's CanvasEvent protocol:
 
 ```typescript
 type CanvasEventType = 
@@ -139,7 +139,7 @@ interface CanvasEvent {
 - Suitable for development and small runs
 
 ### BackgroundExecutor
-- Runs parallel variants on A2rchitech infrastructure
+- Runs parallel variants on Allternitchitech infrastructure
 - Self-hosted solution
 - Scalable resource allocation
 
@@ -153,16 +153,16 @@ interface CanvasEvent {
 
 ```bash
 # Use Superconductor backend for immediate parallel execution
-a2r bg parallel --backend superconductor "implement responsive navbar"
+allternit bg parallel --backend superconductor "implement responsive navbar"
 
 # Use self-hosted backend
-a2r bg parallel --backend selfhosted "implement responsive navbar"
+allternit bg parallel --backend selfhosted "implement responsive navbar"
 
 # Use local backend (default)
-a2r bg parallel --backend local "implement responsive navbar"
+allternit bg parallel --backend local "implement responsive navbar"
 
 # Generic command that respects config default
-a2r bg parallel "implement responsive navbar"
+allternit bg parallel "implement responsive navbar"
 ```
 
 ## Event Flow
@@ -201,7 +201,7 @@ The Canvas remains optional and empty by default. When parallel runs are initiat
 1. **Immediate Capability**: Access to Superconductor's performance without waiting for self-hosted infrastructure
 2. **A/B Testing**: Compare Superconductor vs self-hosted vs local execution
 3. **Cost Optimization**: Choose backend based on cost/performance requirements
-4. **Sovereign Core**: Maintain A2rchitech's agent core and canvas philosophy
+4. **Sovereign Core**: Maintain Allternitchitech's agent core and canvas philosophy
 5. **Scalable Architecture**: Backend-agnostic design allows for future providers
 
 ## Migration Path
@@ -212,4 +212,4 @@ The Canvas remains optional and empty by default. When parallel runs are initiat
 4. **Phase 4**: Add configuration options and A/B testing capabilities
 5. **Phase 5**: Optimize and iterate based on usage patterns
 
-This architecture maintains A2rchitech's core philosophy while providing immediate access to state-of-the-art parallel execution capabilities.
+This architecture maintains Allternitchitech's core philosophy while providing immediate access to state-of-the-art parallel execution capabilities.

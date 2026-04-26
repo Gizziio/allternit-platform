@@ -1,10 +1,10 @@
 [package]
-name = "a2r-terminal"
+name = "allternit-terminal"
 version = "0.1.0"
 edition = "2021"
-authors = ["A2rchitech Team"]
+authors = ["Allternit Team"]
 license = "MIT"
-description = "Terminal/SSH session management for A2rchitech platform"
+description = "Terminal/SSH session management for Allternit platform"
 
 [dependencies]
 tokio = { version = "1.0", features = ["full"] }

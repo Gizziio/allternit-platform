@@ -1,12 +1,12 @@
-//! MCP Tool Bridge - Converts MCP tools to A2R ToolRequest format
+//! MCP Tool Bridge - Converts MCP tools to Allternit ToolRequest format
 //!
 //! This module provides the core bridging functionality between MCP (Model Context Protocol)
-//! tools and the A2R tools-gateway. It handles:
+//! tools and the Allternit tools-gateway. It handles:
 //!
-//! - Converting MCP tool definitions to A2R ToolGatewayDefinition format
-//! - Transforming A2R tool execution requests to MCP CallToolRequest format
-//! - Converting MCP tool execution results back to A2R ToolResponse format
-//! - JSON Schema to A2R parameter type conversion
+//! - Converting MCP tool definitions to Allternit ToolGatewayDefinition format
+//! - Transforming Allternit tool execution requests to MCP CallToolRequest format
+//! - Converting MCP tool execution results back to Allternit ToolResponse format
+//! - JSON Schema to Allternit parameter type conversion
 //!
 //! # Example
 //!
@@ -16,7 +16,7 @@
 //!
 //! let bridge = McpToolBridge::new("filesystem".to_string());
 //!
-//! // Convert MCP tool definition to A2R format
+//! // Convert MCP tool definition to Allternit format
 //! let mcp_tool = Tool {
 //!     name: "read_file".to_string(),
 //!     description: Some("Read a file".to_string()),
@@ -29,14 +29,14 @@
 //!     }),
 //! };
 //!
-//! let a2r_definition = bridge.convert_tool_definition(&mcp_tool);
+//! let allternit_definition = bridge.convert_tool_definition(&mcp_tool);
 //! ```
 
 use crate::types::{CallToolRequest, Tool, ToolContent, ToolResult};
-use a2rchitech_sdk_core::{SafetyTier, ToolGatewayDefinition, ToolResourceLimits, ToolType};
+use allternit_sdk_core::{SafetyTier, ToolGatewayDefinition, ToolResourceLimits, ToolType};
 use serde_json::Value;
 
-/// Bridge for converting between MCP and A2R tool formats
+/// Bridge for converting between MCP and Allternit tool formats
 #[derive(Debug, Clone)]
 pub struct McpToolBridge {
     /// Prefix for tool names (typically the server name)
@@ -45,7 +45,7 @@ pub struct McpToolBridge {
     default_safety_tier: SafetyTier,
 }
 
-/// Parameter type enumeration for A2R tool schemas
+/// Parameter type enumeration for Allternit tool schemas
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParameterType {
     String,
@@ -72,7 +72,7 @@ impl std::fmt::Display for ParameterType {
     }
 }
 
-/// Tool parameter definition for A2R
+/// Tool parameter definition for Allternit
 #[derive(Debug, Clone)]
 pub struct ToolParameter {
     pub name: String,
@@ -121,9 +121,9 @@ impl McpToolBridge {
         &self.tool_prefix
     }
 
-    /// Convert MCP tool definition to A2R ToolGatewayDefinition
+    /// Convert MCP tool definition to Allternit ToolGatewayDefinition
     ///
-    /// This transforms an MCP Tool into the A2R ToolGatewayDefinition format,
+    /// This transforms an MCP Tool into the Allternit ToolGatewayDefinition format,
     /// prefixing the tool name with the server name for namespacing.
     ///
     /// # Arguments
@@ -132,7 +132,7 @@ impl McpToolBridge {
     ///
     /// # Returns
     ///
-    /// A `ToolGatewayDefinition` compatible with the A2R tools-gateway
+    /// A `ToolGatewayDefinition` compatible with the Allternit tools-gateway
     pub fn convert_tool_definition(&self, mcp_tool: &Tool) -> ToolGatewayDefinition {
         let prefixed_name = format!("{}.{}", self.tool_prefix, mcp_tool.name);
 
@@ -164,14 +164,14 @@ impl McpToolBridge {
             resource_limits: ToolResourceLimits {
                 cpu: None,
                 memory: Some("128MB".to_string()),
-                network: a2rchitech_sdk_core::NetworkAccess::Unrestricted,
-                filesystem: a2rchitech_sdk_core::FilesystemAccess::None,
+                network: allternit_sdk_core::NetworkAccess::Unrestricted,
+                filesystem: allternit_sdk_core::FilesystemAccess::None,
                 time_limit: 30000, // 30 seconds default timeout
             },
         }
     }
 
-    /// Convert multiple MCP tools to A2R definitions
+    /// Convert multiple MCP tools to Allternit definitions
     ///
     /// # Arguments
     ///
@@ -187,7 +187,7 @@ impl McpToolBridge {
             .collect()
     }
 
-    /// Convert A2R tool execution request to MCP CallToolRequest
+    /// Convert Allternit tool execution request to MCP CallToolRequest
     ///
     /// This strips the server prefix from the tool name to get the
     /// original MCP tool name.
@@ -217,7 +217,7 @@ impl McpToolBridge {
         }
     }
 
-    /// Convert MCP CallToolResult to A2R execution result format
+    /// Convert MCP CallToolResult to Allternit execution result format
     ///
     /// # Arguments
     ///
@@ -226,7 +226,7 @@ impl McpToolBridge {
     /// # Returns
     ///
     /// A tuple of (output_json, error_message, execution_time_ms)
-    pub fn to_a2r_result(
+    pub fn to_allternit_result(
         &self,
         result: ToolResult,
         execution_time_ms: u64,
@@ -451,7 +451,7 @@ mod tests {
     }
 
     #[test]
-    fn test_to_a2r_result() {
+    fn test_to_allternit_result() {
         let bridge = McpToolBridge::new("filesystem".to_string());
         let result = ToolResult {
             content: vec![ToolContent::Text {
@@ -460,7 +460,7 @@ mod tests {
             is_error: Some(false),
         };
 
-        let (output, error, time_ms) = bridge.to_a2r_result(result, 100);
+        let (output, error, time_ms) = bridge.to_allternit_result(result, 100);
 
         assert!(error.is_none());
         assert_eq!(time_ms, 100);
@@ -468,7 +468,7 @@ mod tests {
     }
 
     #[test]
-    fn test_to_a2r_result_with_error() {
+    fn test_to_allternit_result_with_error() {
         let bridge = McpToolBridge::new("filesystem".to_string());
         let result = ToolResult {
             content: vec![ToolContent::Text {
@@ -477,7 +477,7 @@ mod tests {
             is_error: Some(true),
         };
 
-        let (output, error, _) = bridge.to_a2r_result(result, 50);
+        let (output, error, _) = bridge.to_allternit_result(result, 50);
 
         assert!(error.is_some());
         assert_eq!(error.unwrap(), "File not found");

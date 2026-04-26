@@ -2,10 +2,10 @@
 name = "allternit-cloud-wizard"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Cloud Deploy Wizard - Enterprise BYOC deployment with preflight, verification, and failure handling"
+description = "Allternit Cloud Deploy Wizard - Enterprise BYOC deployment with preflight, verification, and failure handling"
 
 [dependencies]
-# A2R internal
+# Allternit internal
 allternit-cloud-ssh = { path = "../allternit-cloud-ssh" }
 allternit-cloud-hetzner = { path = "../allternit-cloud-providers/hetzner" }
 

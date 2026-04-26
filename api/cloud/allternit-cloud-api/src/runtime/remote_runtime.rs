@@ -97,7 +97,7 @@ impl RemoteRuntime {
             // Try to get status from remote
             let result = {
                 let ssh = conn.lock().await;
-                ssh.execute("cat /var/log/a2r/run.status 2>/dev/null || echo '{}'").await
+                ssh.execute("cat /var/log/allternit/run.status 2>/dev/null || echo '{}'").await
             };
             
             match result {
@@ -230,7 +230,7 @@ impl Runtime for RemoteRuntime {
             if let Some(ssh_conn) = &conn.ssh_conn {
                 let ssh = ssh_conn.lock().await;
                 // Send stop signal to remote process
-                let _ = ssh.execute("pkill -f 'a2r-run'").await;
+                let _ = ssh.execute("pkill -f 'allternit-run'").await;
             }
             
             conn.status = RuntimeState::Stopped;
@@ -370,7 +370,7 @@ impl Runtime for RemoteRuntime {
         if let Some(conn) = conns.get_mut(runtime_id) {
             if let Some(ssh_conn) = &conn.ssh_conn {
                 let ssh = ssh_conn.lock().await;
-                let _ = ssh.execute("kill -STOP $(pgrep -f 'a2r-run')").await;
+                let _ = ssh.execute("kill -STOP $(pgrep -f 'allternit-run')").await;
             }
             conn.status = RuntimeState::Paused;
             tracing::info!("Paused remote runtime {}", runtime_id);
@@ -386,7 +386,7 @@ impl Runtime for RemoteRuntime {
         if let Some(conn) = conns.get_mut(runtime_id) {
             if let Some(ssh_conn) = &conn.ssh_conn {
                 let ssh = ssh_conn.lock().await;
-                let _ = ssh.execute("kill -CONT $(pgrep -f 'a2r-run')").await;
+                let _ = ssh.execute("kill -CONT $(pgrep -f 'allternit-run')").await;
             }
             conn.status = RuntimeState::Running;
             tracing::info!("Resumed remote runtime {}", runtime_id);

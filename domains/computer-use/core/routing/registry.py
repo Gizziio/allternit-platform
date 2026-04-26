@@ -1,5 +1,5 @@
 """
-A2R Computer Use — Adapter Registry
+Allternit Computer Use — Adapter Registry
 Manages adapter instances and manifest lookup.
 """
 
@@ -25,6 +25,9 @@ class AdapterRegistry:
     def load_manifests(self) -> None:
         """Scan adapter directories and load all adapter.manifest.json files."""
         root = Path(self._adapters_root)
+        if not root.exists():
+            # Fall back to the default location adjacent to routing/
+            root = Path(__file__).resolve().parents[1] / "adapters"
         if not root.exists():
             return
 

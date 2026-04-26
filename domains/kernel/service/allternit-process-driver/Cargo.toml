@@ -1,12 +1,12 @@
 [package]
-name = "a2r-process-driver"
+name = "allternit-process-driver"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "A2R Process Driver - OS process-based execution driver for dev/testing"
+description = "Allternit Process Driver - OS process-based execution driver for dev/testing"
 
 [dependencies]
-a2r-driver-interface = { path = "../../drivers/a2r-driver-interface" }
+allternit-driver-interface = { path = "../../drivers/allternit-driver-interface" }
 async-trait = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }

@@ -1,4 +1,4 @@
-use a2rchitech_simple_memory::{MemoryConfig, MemoryService};
+use allternit_simple_memory::{MemoryConfig, MemoryService};
 use tracing::{info, error};
 use tracing_subscriber;
 

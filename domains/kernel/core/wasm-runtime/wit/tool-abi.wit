@@ -1,12 +1,12 @@
-/// A2rchitech Tool ABI - WebAssembly Interface Types (WIT) Definition
+/// Allternit Tool ABI - WebAssembly Interface Types (WIT) Definition
 ///
-/// This interface defines the contract between the A2rchitech kernel and
+/// This interface defines the contract between the Allternit kernel and
 /// dynamically loaded WASM tools. All tools must implement the `tool` interface.
 ///
 /// Version: 0.1.0
 /// Stability: Experimental
 
-package a2rchitech:tool-abi@0.1.0;
+package allternit:tool-abi@0.1.0;
 
 /// Core types used across the tool interface.
 interface types {
@@ -127,7 +127,7 @@ interface tool {
     validate: func(parameters: string) -> validation-result;
 }
 
-/// Host functions provided by the A2rchitech kernel.
+/// Host functions provided by the Allternit kernel.
 interface host {
     use types.{http-response};
     /// Log a message to the event ledger.

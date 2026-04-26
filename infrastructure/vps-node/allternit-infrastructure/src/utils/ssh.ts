@@ -304,9 +304,9 @@ export async function testSSHConnection(credentials: SSHCredentials): Promise<{
     const latency = Date.now() - start;
     
     // Test with a simple command
-    const result = await execCommand(connection.client, 'echo "A2R SSH Test"');
+    const result = await execCommand(connection.client, 'echo "Allternit SSH Test"');
     
-    if (result.exitCode === 0 && result.stdout === 'A2R SSH Test') {
+    if (result.exitCode === 0 && result.stdout === 'Allternit SSH Test') {
       return {
         success: true,
         message: 'SSH connection successful',
@@ -396,9 +396,9 @@ export async function addAuthorizedKey(
 }
 
 /**
- * Install A2R node on remote server
+ * Install Allternit node on remote server
  */
-export async function installA2RNode(
+export async function installAllternitNode(
   client: Client,
   options: {
     version?: string;
@@ -408,7 +408,7 @@ export async function installA2RNode(
 ): Promise<{ success: boolean; message: string; installPath?: string }> {
   const version = options.version || 'latest';
   const port = options.port || 8080;
-  const installDir = options.installDir || '/opt/a2r';
+  const installDir = options.installDir || '/opt/allternit';
 
   try {
     // Create installation directory
@@ -434,23 +434,23 @@ export async function installA2RNode(
       }
     }
 
-    // Pull and run A2R node
+    // Pull and run Allternit node
     const dockerCompose = `
 version: '3.8'
 services:
-  a2r-node:
-    image: a2r/node:${version}
-    container_name: a2r-node
+  allternit-node:
+    image: allternit/node:${version}
+    container_name: allternit-node
     ports:
       - "${port}:8080"
       - "${port + 1}:8081"
     environment:
       - NODE_ENV=production
     volumes:
-      - a2r-data:/data
+      - allternit-data:/data
     restart: unless-stopped
 volumes:
-  a2r-data:
+  allternit-data:
 `;
 
     await writeRemoteFile(client, `${installDir}/docker-compose.yml`, dockerCompose);
@@ -461,13 +461,13 @@ volumes:
     if (startResult.exitCode !== 0) {
       return {
         success: false,
-        message: `Failed to start A2R node: ${startResult.stderr}`,
+        message: `Failed to start Allternit node: ${startResult.stderr}`,
       };
     }
 
     return {
       success: true,
-      message: 'A2R node installed successfully',
+      message: 'Allternit node installed successfully',
       installPath: installDir,
     };
   } catch (error) {
@@ -493,5 +493,5 @@ export default {
   getSSHPublicKey,
   getSSHPrivateKey,
   addAuthorizedKey,
-  installA2RNode,
+  installAllternitNode,
 };

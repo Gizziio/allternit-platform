@@ -134,7 +134,7 @@ export class SandboxRuntime {
       args.push('--name', containerName);
 
       // Labels
-      args.push('-l', 'managed-by=a2r-sandbox-runtime');
+      args.push('-l', 'managed-by=allternit-sandbox-runtime');
       args.push('-l', `sandbox.id=${config.id}`);
       args.push('-l', `sandbox.runtime=docker`);
 
@@ -434,7 +434,7 @@ export class SandboxRuntime {
    */
   async isolateProcess(pid: number, constraints: ResourceConstraints): Promise<void> {
     // Create cgroup for the process
-    const cgroupPath = `/sys/fs/cgroup/a2r-sandbox/pid-${pid}`;
+    const cgroupPath = `/sys/fs/cgroup/allternit-sandbox/pid-${pid}`;
     
     await fs.mkdir(cgroupPath, { recursive: true });
 

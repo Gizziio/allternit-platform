@@ -1,11 +1,11 @@
-//! A2R Operator Service Client
+//! Allternit Operator Service Client
 //!
-//! Provides integration with the A2R Operator for browser automation,
+//! Provides integration with the Allternit Operator for browser automation,
 //! computer-use, desktop automation, and parallel execution.
 //!
 //! Environment:
-//!   - A2R_OPERATOR_URL: URL of the operator service (default: http://127.0.0.1:3010)
-//!   - A2R_OPERATOR_API_KEY: API key for authentication (default: a2r-operator-key)
+//!   - Allternit_OPERATOR_URL: URL of the operator service (default: http://127.0.0.1:3010)
+//!   - Allternit_OPERATOR_API_KEY: API key for authentication (default: allternit-operator-key)
 
 use axum::{
     extract::{Path, State, Query},
@@ -120,7 +120,7 @@ pub struct ReceiptQueryParams {
 }
 
 
-/// A2R Operator service configuration
+/// Allternit Operator service configuration
 #[derive(Clone)]
 pub struct OperatorClient {
     base_url: String,
@@ -138,10 +138,10 @@ impl OperatorClient {
     }
 
     pub fn from_env() -> Self {
-        let base_url = std::env::var("A2R_OPERATOR_URL")
+        let base_url = std::env::var("Allternit_OPERATOR_URL")
             .unwrap_or_else(|_| "http://127.0.0.1:3010".to_string());
-        let api_key = std::env::var("A2R_OPERATOR_API_KEY")
-            .unwrap_or_else(|_| "a2r-operator-key".to_string());
+        let api_key = std::env::var("Allternit_OPERATOR_API_KEY")
+            .unwrap_or_else(|_| "allternit-operator-key".to_string());
         Self::new(base_url, api_key)
     }
 
@@ -566,7 +566,7 @@ async fn operator_execute(
 ) -> impl IntoResponse {
     info!("[Operator] Received execute request: {}", request.requestId);
     
-    // In a real implementation, this would spawn the a2r-dak-runner process
+    // In a real implementation, this would spawn the allternit-dak-runner process
     // and pipe the request to its stdin. For MVP, we'll proxy to the Kernel.
     
     let kernel_url = format!("{}/api/v1/operator/execute", state.kernel_url);

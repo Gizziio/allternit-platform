@@ -12,7 +12,7 @@ const poolConfig: PoolConfig = {
   max: config.database.poolSize,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
-  application_name: 'a2r-infrastructure',
+  application_name: 'allternit-infrastructure',
 };
 
 // Add SSL configuration if needed

@@ -608,7 +608,7 @@ impl AcpBrainRuntime {
         let init_params = serde_json::to_value(InitializeParams {
             protocol_version: 1,
             client_info: ClientInfo {
-                name: "A2R".to_string(),
+                name: "Allternit".to_string(),
                 version: env!("CARGO_PKG_VERSION").to_string(),
             },
             capabilities: Some(ClientCapabilities {

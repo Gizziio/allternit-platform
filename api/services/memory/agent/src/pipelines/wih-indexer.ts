@@ -1,7 +1,7 @@
 /**
  * WIH (Work Item Handler) Indexer
  * 
- * Indexes all WIH files from a2r-workspace/wih/
+ * Indexes all WIH files from allternit-workspace/wih/
  * to enable task pattern learning and recommendations
  */
 
@@ -232,13 +232,13 @@ export class WIHIndexer {
  */
 async function main(): Promise<void> {
   console.log('╔══════════════════════════════════════════════════════════╗');
-  console.log('║     A2rchitech WIH Pattern Indexer                       ║');
+  console.log('║     Allternitchitech WIH Pattern Indexer                       ║');
   console.log('╚══════════════════════════════════════════════════════════╝');
   console.log('');
 
   // Determine WIH directory
   const workspaceRoot = process.env.ALLTERNIT_WORKSPACE_ROOT 
-    || path.join(process.cwd(), '..', 'a2r-workspace');
+    || path.join(process.cwd(), '..', 'allternit-workspace');
   
   const wihDir = path.join(workspaceRoot, 'wih');
 

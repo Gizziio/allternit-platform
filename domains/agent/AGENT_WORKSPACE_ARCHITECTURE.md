@@ -36,13 +36,13 @@ The Agent Workspace is the **client-side runtime** that provides a 5-layer livin
 
 | File | Location | Kernel Mirror | Sync Direction |
 |------|----------|---------------|----------------|
-| BRAIN.md | `.a2r/brain/BRAIN.md` | `.a2r/state/taskgraph.json` | Kernel → MD |
-| MEMORY.md | `.a2r/memory/MEMORY.md` | Index of daily files | Kernel → MD |
-| memory/*.md | `.a2r/memory/YYYY-MM-DD.md` | HistoryLedger receipts | Kernel → MD |
-| active-tasks.md | `.a2r/memory/active-tasks.md` | Rails task queue | Kernel → MD |
-| lessons.md | `.a2r/memory/lessons.md` | Curated from HistoryLedger | Bidirectional |
-| self-review.md | `.a2r/memory/self-review.md` | Agent introspection logs | Agent → Kernel |
-| checkpoints/ | `.a2r/state/checkpoints.jsonl` | Session state | Kernel → MD |
+| BRAIN.md | `.allternit/brain/BRAIN.md` | `.allternit/state/taskgraph.json` | Kernel → MD |
+| MEMORY.md | `.allternit/memory/MEMORY.md` | Index of daily files | Kernel → MD |
+| memory/*.md | `.allternit/memory/YYYY-MM-DD.md` | HistoryLedger receipts | Kernel → MD |
+| active-tasks.md | `.allternit/memory/active-tasks.md` | Rails task queue | Kernel → MD |
+| lessons.md | `.allternit/memory/lessons.md` | Curated from HistoryLedger | Bidirectional |
+| self-review.md | `.allternit/memory/self-review.md` | Agent introspection logs | Agent → Kernel |
+| checkpoints/ | `.allternit/state/checkpoints.jsonl` | Session state | Kernel → MD |
 
 **Function:**
 - Human-readable view of agent's working memory
@@ -57,11 +57,11 @@ The Agent Workspace is the **client-side runtime** that provides a 5-layer livin
 
 | File | Location | Kernel Mirror | Sync Direction |
 |------|----------|---------------|----------------|
-| IDENTITY.md | `.a2r/identity/IDENTITY.md` | GovernanceEngine agent registry | Kernel → MD |
-| SOUL.md | `.a2r/identity/SOUL.md` | Distilled from SOT.md | Manual edit |
-| USER.md | `.a2r/identity/USER.md` | Session context preferences | Bidirectional |
-| VOICE.md | `.a2r/identity/VOICE.md` | Role envelopes | Kernel → MD |
-| POLICY.md | `.a2r/identity/POLICY.md` | PolicyEngine overrides | Bidirectional |
+| IDENTITY.md | `.allternit/identity/IDENTITY.md` | GovernanceEngine agent registry | Kernel → MD |
+| SOUL.md | `.allternit/identity/SOUL.md` | Distilled from SOT.md | Manual edit |
+| USER.md | `.allternit/identity/USER.md` | Session context preferences | Bidirectional |
+| VOICE.md | `.allternit/identity/VOICE.md` | Role envelopes | Kernel → MD |
+| POLICY.md | `.allternit/identity/POLICY.md` | PolicyEngine overrides | Bidirectional |
 
 **Function:**
 - Who the agent is (name, nature, vibe)
@@ -82,11 +82,11 @@ The Agent Workspace is the **client-side runtime** that provides a 5-layer livin
 | SYSTEM_LAW.md | `0-substrate/SYSTEM_LAW.md` | Tier 0 Law | Loaded into ContextPack |
 | SOT.md | `0-substrate/SOT.md` | System Thesis | Loaded into ContextPack |
 | ARCHITECTURE.md | `ARCHITECTURE.md` | System Design | Loaded into ContextPack |
-| PLAYBOOK.md | `.a2r/governance/PLAYBOOK.md` | cookbooks/ | Procedures distilled from cookbooks |
-| TOOLS.md | `.a2r/governance/TOOLS.md` | ToolRegistry | Allowed tools for this workspace |
-| HEARTBEAT.md | `.a2r/governance/HEARTBEAT.md` | User config | Periodic task configuration |
-| SYSTEM.md | `.a2r/governance/SYSTEM.md` | Environment | System constraints |
-| CHANNELS.md | `.a2r/governance/CHANNELS.md` | User config | MCP/external channel config |
+| PLAYBOOK.md | `.allternit/governance/PLAYBOOK.md` | cookbooks/ | Procedures distilled from cookbooks |
+| TOOLS.md | `.allternit/governance/TOOLS.md` | ToolRegistry | Allowed tools for this workspace |
+| HEARTBEAT.md | `.allternit/governance/HEARTBEAT.md` | User config | Periodic task configuration |
+| SYSTEM.md | `.allternit/governance/SYSTEM.md` | Environment | System constraints |
+| CHANNELS.md | `.allternit/governance/CHANNELS.md` | User config | MCP/external channel config |
 | spec/contracts/ | `5-agents/spec/contracts/` | ContextPack | Contract files |
 | spec/deltas/ | `5-agents/spec/deltas/` | ContextPack | Delta files |
 
@@ -103,10 +103,10 @@ The Agent Workspace is the **client-side runtime** that provides a 5-layer livin
 
 | File | Location | Kernel Mirror | Sync Direction |
 |------|----------|---------------|----------------|
-| skills/ | `.a2r/skills/` | `a2r_openclaw_host::skills::SkillRegistry` | Kernel → MD |
-| SKILL.md | `.a2r/skills/{name}/SKILL.md` | Human-readable procedure | Manual edit |
-| contract.json | `.a2r/skills/{name}/contract.json` | Machine-readable contract | Manual edit |
-| skills.index.json | `.a2r/contracts/skills.index.json` | Registry index | Kernel → MD |
+| skills/ | `.allternit/skills/` | `allternit_openclaw_host::skills::SkillRegistry` | Kernel → MD |
+| SKILL.md | `.allternit/skills/{name}/SKILL.md` | Human-readable procedure | Manual edit |
+| contract.json | `.allternit/skills/{name}/contract.json` | Machine-readable contract | Manual edit |
+| skills.index.json | `.allternit/contracts/skills.index.json` | Registry index | Kernel → MD |
 
 **Function:**
 - Reusable capability packages
@@ -121,10 +121,10 @@ The Agent Workspace is the **client-side runtime** that provides a 5-layer livin
 
 | File | Location | Kernel Mirror | Sync Direction |
 |------|----------|---------------|----------------|
-| CLIENTS.md | `.a2r/business/CLIENTS.md` | Tenant registry | Kernel → MD |
-| business/crm/ | `.a2r/business/crm/` | Contact management | Bidirectional |
-| business/projects/ | `.a2r/business/projects/` | Project workspaces | Bidirectional |
-| business/content/ | `.a2r/business/content/` | Content templates | Bidirectional |
+| CLIENTS.md | `.allternit/business/CLIENTS.md` | Tenant registry | Kernel → MD |
+| business/crm/ | `.allternit/business/crm/` | Contact management | Bidirectional |
+| business/projects/ | `.allternit/business/projects/` | Project workspaces | Bidirectional |
+| business/content/ | `.allternit/business/content/` | Content templates | Bidirectional |
 | packs/ | `5-agents/packs/` | Prompt packs | Manual edit |
 
 **Function:**
@@ -301,9 +301,9 @@ tool_call = kernel.tools.execute(decision) {
 5-agents/
 ├── AGENTS.md                    # Supreme law (LOCKED)
 ├── POLICY.md                    # Base policy
-├── A2R_Layer_Architecture.md    # This document
+├── Allternit_Layer_Architecture.md    # This document
 ├── templates/
-│   └── a2r_workspace/           # Workspace templates
+│   └── allternit_workspace/           # Workspace templates
 │       ├── layer1_cognitive/    # BRAIN.md, MEMORY.md, memory/
 │       ├── layer2_identity/     # IDENTITY.md, SOUL.md, USER.md, etc.
 │       ├── layer3_governance/   # PLAYBOOK.md, TOOLS.md
@@ -317,9 +317,9 @@ tool_call = kernel.tools.execute(decision) {
 └── cookbooks/                   # Deterministic procedures
 ```
 
-### Per-Workspace (.a2r/)
+### Per-Workspace (.allternit/)
 ```
-.a2r/
+.allternit/
 ├── manifest.json                # Workspace metadata
 ├── brain/
 │   └── BRAIN.md                 # Task graph human view
@@ -372,9 +372,9 @@ mod agent_workspace;
 use agent_workspace::{BootSequence, PolicyEngine, ContextPackBuilder};
 
 // Agent creation wizard
-fn create_agent_a2r() {
-    // Copy templates from 5-agents/templates/a2r_workspace/
-    // Initialize .a2r/ structure
+fn create_agent_allternit() {
+    // Copy templates from 5-agents/templates/allternit_workspace/
+    // Initialize .allternit/ structure
     // Run boot sequence
 }
 ```
@@ -400,13 +400,13 @@ interface AgentWorkspaceAPI {
     syncWithKernel(workspaceId: string): Promise<SyncResult>;
 }
 
-// Shell UI uses the same .a2r/ workspace
+// Shell UI uses the same .allternit/ workspace
 // But accesses it via the CLI/kernel API
 ```
 
 ### Shared Principles
 Both CLI and Shell UI:
-1. Use the same 5-layer workspace structure (`.a2r/`)
+1. Use the same 5-layer workspace structure (`.allternit/`)
 2. Read the same markdown files (AGENTS.md, etc.)
 3. Sync with the same kernel infrastructure
 4. Follow the same boot sequence
@@ -458,12 +458,12 @@ User Request
 
 ### Phase 1: CLI (Current)
 - Full agent workspace implementation in CLI
-- Direct file system access to .a2r/
+- Direct file system access to .allternit/
 - Local policy enforcement
 
 ### Phase 2: Shell UI Integration
 - Shell UI accesses workspace via API
-- Same .a2r/ structure
+- Same .allternit/ structure
 - Visual editing of markdown files
 
 ### Phase 3: Shared Runtime

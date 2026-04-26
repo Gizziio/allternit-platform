@@ -1,5 +1,5 @@
 """
-Error handling and normalization for A2R Computer Use Gateway.
+Error handling and normalization for Allternit Computer Use Gateway.
 
 Maps Playwright and Python exceptions to standardized error codes.
 """

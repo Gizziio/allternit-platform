@@ -8,7 +8,7 @@
 
 ## Overview
 
-GizziClaw is a TypeScript implementation of the OpenCLAW agent workspace system, integrated with Gizzi-Code and the A2R platform.
+GizziClaw is a TypeScript implementation of the OpenCLAW agent workspace system, integrated with Gizzi-Code and the Allternit platform.
 
 It provides the "agent.so" - the complete agent definition system with 5-layer workspace architecture.
 
@@ -34,7 +34,7 @@ Workspace/
 - Layer management via CLI
 - Skill installation and execution
 
-**With A2R Platform:**
+**With Allternit Platform:**
 - UI components for workspace visualization
 - Skill installer UI
 - Layer panel in platform UI
@@ -55,7 +55,7 @@ pnpm install
 ### Create Workspace
 
 ```typescript
-import { Workspace } from '@a2r/gizziclaw';
+import { Workspace } from '@allternit/gizziclaw';
 
 const workspace = await Workspace.create('/path/to/workspace', 'My Agent');
 await workspace.run();
@@ -64,7 +64,7 @@ await workspace.run();
 ### Load Workspace
 
 ```typescript
-import { Workspace } from '@a2r/gizziclaw';
+import { Workspace } from '@allternit/gizziclaw';
 
 const workspace = await Workspace.load('/path/to/workspace');
 await workspace.loadSkills();
@@ -73,7 +73,7 @@ await workspace.loadSkills();
 ### Manage Skills
 
 ```typescript
-import { installSkill, uninstallSkill, loadSkills } from '@a2r/gizziclaw';
+import { installSkill, uninstallSkill, loadSkills } from '@allternit/gizziclaw';
 
 // Install skill
 await installSkill('/path/to/workspace', '/path/to/skill-source', 'skill-name');

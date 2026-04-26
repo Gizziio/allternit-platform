@@ -43,5 +43,5 @@
     "supports_local": "yes",
     "supports_user_present": "yes"
   },
-  "notes": "User-present assist adapter. Requires A2R thin-client extension installed and running in browser."
+  "notes": "User-present assist adapter. Requires Allternit thin-client extension installed and running in browser."
 }

@@ -1,7 +1,7 @@
 {
   "name": "@allternit/computer-use",
   "version": "0.1.0",
-  "description": "TypeScript SDK for the A2R Computer Use Engine - thin HTTP client over the canonical engine API",
+  "description": "TypeScript SDK for the Allternit Computer Use Engine - thin HTTP client over the canonical engine API",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
@@ -30,7 +30,7 @@
     "typescript",
     "mcp"
   ],
-  "author": "A2R Team <team@allternit.com>",
+  "author": "Allternit Team <team@allternit.com>",
   "license": "MIT",
   "repository": {
     "type": "git",

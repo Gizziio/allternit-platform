@@ -2,10 +2,10 @@
 name = "ars-contexta-nlp"
 version = "1.0.0"
 edition = "2021"
-authors = ["A2R Team"]
+authors = ["Allternit Team"]
 description = "Native NLP module for Ars Contexta using rust-bert"
 license = "MIT"
-repository = "https://github.com/a2rchitect/ars-contexta"
+repository = "https://github.com/allternitchitect/ars-contexta"
 
 [lib]
 crate-type = ["cdylib"]

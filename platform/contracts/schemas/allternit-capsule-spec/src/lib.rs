@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
-use a2rchitech_kernel_contracts;
+use allternit_kernel_contracts;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct CapsuleSpec {
@@ -298,8 +298,8 @@ impl CapsuleSpec {
     }
 
     pub fn from_kernel_contract(
-        event_envelope: &a2rchitech_kernel_contracts::EventEnvelope,
-        run_model: &a2rchitech_kernel_contracts::RunModel,
+        event_envelope: &allternit_kernel_contracts::EventEnvelope,
+        run_model: &allternit_kernel_contracts::RunModel,
     ) -> Result<Self, CapsuleSpecError> {
         let goal_text = event_envelope.payload.get("goal_text")
             .and_then(|v| v.as_str())
@@ -321,8 +321,8 @@ impl CapsuleSpec {
         Ok(spec)
     }
 
-    pub fn to_kernel_contract_event(&self) -> a2rchitech_kernel_contracts::EventEnvelope {
-        use a2rchitech_kernel_contracts::EventEnvelope;
+    pub fn to_kernel_contract_event(&self) -> allternit_kernel_contracts::EventEnvelope {
+        use allternit_kernel_contracts::EventEnvelope;
 
         EventEnvelope::new(
             "capsule_created".to_string(),
@@ -340,7 +340,7 @@ impl CapsuleSpec {
         )
     }
 
-    pub fn apply_verify_artifact(&mut self, artifact: &a2rchitech_kernel_contracts::VerifyArtifact) {
+    pub fn apply_verify_artifact(&mut self, artifact: &allternit_kernel_contracts::VerifyArtifact) {
         // Apply verification results to the capsule spec
         // This could update the capsule's state based on verification results
         if !artifact.results.passed {

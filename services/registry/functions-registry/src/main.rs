@@ -75,9 +75,9 @@ async fn main() {
     
     // Add the example functions from our spec
     functions.insert(
-        "com.a2rchitech.os.set_alarm".to_string(),
+        "com.allternit.os.set_alarm".to_string(),
         FunctionDefinition {
-            id: "com.a2rchitech.os.set_alarm".to_string(),
+            id: "com.allternit.os.set_alarm".to_string(),
             name: "Set Alarm".to_string(),
             description: "Sets an alarm on the device for a specified time".to_string(),
             version: "1.0.0".to_string(),
@@ -122,9 +122,9 @@ async fn main() {
     );
     
     functions.insert(
-        "com.a2rchitech.os.send_message".to_string(),
+        "com.allternit.os.send_message".to_string(),
         FunctionDefinition {
-            id: "com.a2rchitech.os.send_message".to_string(),
+            id: "com.allternit.os.send_message".to_string(),
             name: "Send Message".to_string(),
             description: "Sends a text message to a contact".to_string(),
             version: "1.0.0".to_string(),
@@ -168,9 +168,9 @@ async fn main() {
     );
     
     functions.insert(
-        "com.a2rchitech.finance.transfer_money".to_string(),
+        "com.allternit.finance.transfer_money".to_string(),
         FunctionDefinition {
-            id: "com.a2rchitech.finance.transfer_money".to_string(),
+            id: "com.allternit.finance.transfer_money".to_string(),
             name: "Transfer Money".to_string(),
             description: "Transfers money to another account".to_string(),
             version: "1.0.0".to_string(),

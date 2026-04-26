@@ -8,7 +8,7 @@
 
 ## Purpose
 
-The Conflict Arbitration Engine detects and resolves conflicts between concurrent changes in the A2R system.
+The Conflict Arbitration Engine detects and resolves conflicts between concurrent changes in the Allternit system.
 
 **Key Capabilities:**
 - Diff overlap detection

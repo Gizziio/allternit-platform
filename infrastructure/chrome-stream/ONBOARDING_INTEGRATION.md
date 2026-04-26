@@ -2,7 +2,7 @@
 
 ## ✅ What Was Integrated
 
-Chrome Streaming Gateway is now **fully integrated** into the A2R Platform onboarding process.
+Chrome Streaming Gateway is now **fully integrated** into the Allternit Platform onboarding process.
 
 ---
 
@@ -39,7 +39,7 @@ If NO:
 
 ```bash
 # 1. Run onboarding
-curl -fsSL https://raw.githubusercontent.com/a2rchitech/a2rchitech/main/scripts/onboarding-setup.sh | bash
+curl -fsSL https://raw.githubusercontent.com/allternit/allternit/main/scripts/onboarding-setup.sh | bash
 
 # 2. Script runs through:
    ✓ Install Node.js
@@ -80,7 +80,7 @@ install_chrome_streaming() {
      → Installs Docker Compose (if missing)
      → Installs coturn (TURN server)
      → Generates TURN secret
-     → Builds a2r/chrome-stream image
+     → Builds allternit/chrome-stream image
      → Configures systemd services
      → Configures firewall
      → Starts services
@@ -133,7 +133,7 @@ sudo ./scripts/install-chrome-streaming.sh
 ```bash
 # 1. Clone and run onboarding
 git clone <repo-url>
-cd a2rchitech-workspace
+cd allternit-workspace
 ./scripts/onboarding-setup.sh
 
 # 2. Answer prompts:
@@ -162,7 +162,7 @@ After onboarding completes:
 ```bash
 # Check Chrome Streaming is installed
 docker image ls | grep chrome
-# Expected: a2r/chrome-stream
+# Expected: allternit/chrome-stream
 
 # Check coturn
 sudo systemctl status coturn

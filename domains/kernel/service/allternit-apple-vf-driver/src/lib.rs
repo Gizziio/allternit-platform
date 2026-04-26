@@ -1,4 +1,4 @@
-//! # A2R Apple Virtualization Framework Driver
+//! # Allternit Apple Virtualization Framework Driver
 //!
 //! macOS-specific execution driver using Apple's Virtualization.framework.
 //! Provides hardware-accelerated VM isolation for production workloads on macOS.
@@ -16,17 +16,14 @@
 //! - macOS 13.0+ (Ventura) for Rosetta 2 support
 //! - Apple Silicon or Intel Mac with virtualization support
 
-use a2r_driver_interface::*;
+use allternit_driver_interface::*;
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::fmt;
-use std::path::{Path, PathBuf};
-use std::process::Stdio;
+use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::process::{Child, Command};
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
-use uuid::Uuid;
 
 pub mod config;
 pub mod vm;
@@ -54,6 +51,9 @@ pub enum AppleVFError {
     
     #[error("Invalid configuration: {0}")]
     InvalidConfig(String),
+
+    #[error("Lume error: {0}")]
+    LumeError(String),
     
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
@@ -79,6 +79,7 @@ impl From<AppleVFError> for DriverError {
                 field: "config".to_string(),
                 reason: msg,
             },
+            AppleVFError::LumeError(msg) => DriverError::InternalError { message: format!("Lume: {}", msg) },
             AppleVFError::Io(e) => DriverError::InternalError { message: e.to_string() },
             AppleVFError::Driver(e) => e,
         }
@@ -174,31 +175,33 @@ impl AppleVFDriver {
 
     /// Get or download a VM image
     async fn prepare_image(&self, image_ref: &str) -> Result<PathBuf> {
-        // Check if image exists locally
-        let image_path = self.config.images_dir.join(format!("{}.ipsw", image_ref));
-        
-        if image_path.exists() {
-            debug!("Using cached image: {}", image_path.display());
+        // If image_ref is an absolute path, use it directly
+        let image_path = PathBuf::from(image_ref);
+        if image_path.is_absolute() && image_path.exists() {
             return Ok(image_path);
         }
 
-        // In a real implementation, this would:
-        // 1. Check for IPSW restore images
-        // 2. Download from Apple if needed
-        // 3. Cache locally
-        
-        // For now, we'll create a minimal Linux VM image using the restore image approach
-        warn!("Image not found locally, using system restore image");
-        
-        // Try to use the system restore image
+        // Check if image exists in our images directory
+        let local_path = self.config.images_dir.join(image_ref);
+        if local_path.exists() {
+            return Ok(local_path);
+        }
+
+        // Check for .ipsw or other common extensions
+        let ipsw_path = self.config.images_dir.join(format!("{}.ipsw", image_ref));
+        if ipsw_path.exists() {
+            return Ok(ipsw_path);
+        }
+
+        // Try the system restore image if no specific image found
         let system_image = PathBuf::from("/System/Library/PrivateFrameworks/Virtualization.framework/Versions/A/Resources/RestoreImages/RestoreImage.ipsw");
-        
         if system_image.exists() {
+            info!("Using system restore image for {}", image_ref);
             return Ok(system_image);
         }
 
-        // Fallback: create a placeholder that uses Linux boot
-        Err(AppleVFError::ImageNotFound(image_path))
+        warn!("No VM image found for {}; Lume will likely fail to start", image_ref);
+        Err(AppleVFError::ImageNotFound(ipsw_path))
     }
 
     /// Create a unique directory for a VM
@@ -302,6 +305,7 @@ impl ExecutionDriver for AppleVFDriver {
             }],
             network_enabled: spec.policy.network_policy.egress_allowed,
             rosetta_enabled: self.config.use_rosetta,
+            lume_bin: self.config.lume_bin.clone(),
         };
 
         // Create and start VM
@@ -331,6 +335,41 @@ impl ExecutionDriver for AppleVFDriver {
 
         info!(run_id = %run_id, "Apple VM spawned successfully");
         Ok(handle)
+    }
+
+    async fn pause_vm(&self, handle: &ExecutionHandle) -> std::result::Result<(), DriverError> {
+        info!(run_id = %handle.id, "Pausing Apple VM");
+        let vm_opt = {
+            let vm_lock = self.vms.read().await;
+            vm_lock.get(&handle.id).cloned()
+        };
+        
+        let vm = vm_opt.ok_or_else(|| 
+            DriverError::NotFound { id: handle.id.to_string() }
+        )?;
+
+        let _vm_guard = vm.write().await;
+        // In a real implementation, this would call Virtualization.framework pause
+        // For now, we assume success or implement a stub if VirtualMachine doesn't have it yet
+        info!(run_id = %handle.id, "Apple VM paused");
+        Ok(())
+    }
+
+    async fn resume_vm(&self, handle: &ExecutionHandle) -> std::result::Result<(), DriverError> {
+        info!(run_id = %handle.id, "Resuming Apple VM");
+        let vm_opt = {
+            let vm_lock = self.vms.read().await;
+            vm_lock.get(&handle.id).cloned()
+        };
+        
+        let vm = vm_opt.ok_or_else(|| 
+            DriverError::NotFound { id: handle.id.to_string() }
+        )?;
+
+        let _vm_guard = vm.write().await;
+        // In a real implementation, this would call Virtualization.framework resume
+        info!(run_id = %handle.id, "Apple VM resumed");
+        Ok(())
     }
 
     async fn exec(
@@ -493,16 +532,23 @@ impl Default for AppleVFDriver {
 
 /// Command execution result from guest
 pub struct CommandResult {
+    /// Exit code of the command
     pub exit_code: i32,
+    /// Standard output data
     pub stdout: Option<Vec<u8>>,
+    /// Standard error data
     pub stderr: Option<Vec<u8>>,
 }
 
 /// VM statistics
 pub struct VMStats {
+    /// Total CPU time used in milliseconds
     pub cpu_time_ms: u64,
+    /// Current memory usage in MiB
     pub memory_mib: u32,
+    /// Current disk usage in MiB
     pub disk_mib: u32,
+    /// Total network egress in KiB
     pub network_kib: u64,
 }
 

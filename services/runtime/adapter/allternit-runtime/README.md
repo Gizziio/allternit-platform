@@ -1,21 +1,21 @@
-# @a2r/runtime
+# @allternit/runtime
 
-A2R Runtime Bridge. Provides adapters, wrappers, and hooks for connecting A2R governance to the runtime.
+Allternit Runtime Bridge. Provides adapters, wrappers, and hooks for connecting Allternit governance to the runtime.
 
 ## Installation
 
 ```bash
-pnpm add @a2r/runtime
+pnpm add @allternit/runtime
 ```
 
 ## Quick Start
 
 ```typescript
-import { A2RKernelImpl } from '@a2r/governor';
-import { RuntimeBridge, wrapGatewayClient } from '@a2r/runtime';
+import { AllternitKernelImpl } from '@allternit/governor';
+import { RuntimeBridge, wrapGatewayClient } from '@allternit/runtime';
 
 // Initialize kernel
-const kernel = new A2RKernelImpl(storage);
+const kernel = new AllternitKernelImpl(storage);
 
 // Create runtime bridge
 const bridge = new RuntimeBridge({ 
@@ -24,10 +24,10 @@ const bridge = new RuntimeBridge({
 });
 
 // Wrap your GatewayClient implementation
-const A2RGatewayClient = wrapGatewayClient(MyGatewayClient, kernel);
+const AllternitGatewayClient = wrapGatewayClient(MyGatewayClient, kernel);
 
 // Create governed session
-const client = new A2RGatewayClient({
+const client = new AllternitGatewayClient({
   wihId: 'P3-T0300',
   workspaceRoot: '/my/project',
   url: 'ws://127.0.0.1:18789',
@@ -55,11 +55,11 @@ const client = new A2RGatewayClient({
 ### Session Management
 
 ```typescript
-import { prepareSessionInit, getSessionContext } from '@a2r/runtime';
+import { prepareSessionInit, getSessionContext } from '@allternit/runtime';
 
 // Initialize session with WIH validation
 const result = await prepareSessionInit({
-  a2rKernel: kernel,
+  allternitKernel: kernel,
   wihId: 'P3-T0300',
   workspaceRoot: '/project',
   enforceWih: true,
@@ -72,7 +72,7 @@ const context = getSessionContext(result.sessionId);
 ### Tool Execution
 
 ```typescript
-import { wrapToolExecution } from '@a2r/runtime';
+import { wrapToolExecution } from '@allternit/runtime';
 
 const result = await wrapToolExecution(
   {
@@ -95,7 +95,7 @@ if (result.decision === 'allow') {
 ### File Operations
 
 ```typescript
-import { createWrappedFileOperations } from '@a2r/runtime';
+import { createWrappedFileOperations } from '@allternit/runtime';
 
 const fileOps = createWrappedFileOperations({
   kernel,
@@ -111,7 +111,7 @@ const { data } = await fileOps.read('/file.txt', 'utf-8');
 ### Plugin Management
 
 ```typescript
-import { PluginAdapter } from '@a2r/runtime';
+import { PluginAdapter } from '@allternit/runtime';
 
 const adapter = new PluginAdapter({
   kernel,
@@ -127,7 +127,7 @@ const tools = adapter.getAllTools();
 
 ```typescript
 interface RuntimeBridgeConfig {
-  kernel: A2RKernel;
+  kernel: AllternitKernel;
   enforceWih?: boolean;           // Default: true
   defaultToolPolicy?: ToolPolicy;
   fileAccessMode?: 'standard' | 'read-only' | 'restricted';
@@ -143,7 +143,7 @@ interface RuntimeBridgeConfig {
 
 ## Integration Points
 
-| Runtime Component | Integration File | A2R Adapter |
+| Runtime Component | Integration File | Allternit Adapter |
 |-------------------|------------------|-------------|
 | GatewayClient | `src/gateway/client.ts:94-99` | Session Adapter |
 | Tool Policy | `src/agents/tool-policy.ts` | Tool Wrapper |

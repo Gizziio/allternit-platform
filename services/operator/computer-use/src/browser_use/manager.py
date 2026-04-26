@@ -1,6 +1,6 @@
 """
-A2R Browser-Use Integration
-Provides agent-based browser automation for A2R Operator
+Allternit Browser-Use Integration
+Provides agent-based browser automation for Allternit Operator
 
 Three modes available:
 - browser-use: Full agent automation with reasoning (Chromium + CDP)
@@ -37,9 +37,9 @@ class BrowserTask:
     completed_at: Optional[datetime] = None
 
 
-class A2RBrowserManager:
+class AllternitBrowserManager:
     """
-    A2R Browser Manager - Handles all browser automation modes
+    Allternit Browser Manager - Handles all browser automation modes
     
     Modes:
     - browser-use: Full agent with LLM reasoning (default)
@@ -73,7 +73,7 @@ class A2RBrowserManager:
         
         # Initialize LLM for agent
         llm = ChatOpenAI(
-            model=os.getenv("A2R_BROWSER_MODEL", "gpt-4o"),
+            model=os.getenv("Allternit_BROWSER_MODEL", "gpt-4o"),
             api_key=os.getenv("OPENAI_API_KEY"),
             temperature=0.1,
         )
@@ -99,7 +99,7 @@ class A2RBrowserManager:
         mode: str = "browser-use"
     ) -> BrowserTask:
         """Create a new browser automation task"""
-        task_id = f"a2r-browser-{datetime.now().timestamp()}"
+        task_id = f"allternit-browser-{datetime.now().timestamp()}"
         
         task = BrowserTask(
             id=task_id,
@@ -233,5 +233,5 @@ class A2RBrowserManager:
         return list(self.tasks.values())
 
 
-# Singleton instance for A2R Operator
-a2r_browser_manager = A2RBrowserManager()
+# Singleton instance for Allternit Operator
+allternit_browser_manager = AllternitBrowserManager()

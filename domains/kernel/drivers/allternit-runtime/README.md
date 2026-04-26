@@ -1,4 +1,4 @@
-# A2R Runtime Brain (MBR)
+# Allternit Runtime Brain (MBR)
 
 Minimal Viable Runtime Brain - a deterministic per-session execution engine.
 
@@ -38,7 +38,7 @@ All transitions are **guarded** - invalid transitions panic in debug, return err
 ## Usage
 
 ```rust
-use a2r_runtime::*;
+use allternit_runtime::*;
 
 // Create runtime with fake provider (for testing)
 let provider = FakeProviderRuntime::new();
@@ -58,7 +58,7 @@ println!("State transitions: {:?}", transcript.transitions);
 ## Running Tests
 
 ```bash
-cargo test -p a2r-runtime
+cargo test -p allternit-runtime
 ```
 
 Required tests (6):

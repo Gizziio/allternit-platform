@@ -11,10 +11,10 @@
 //! - User has permission to access Docker socket
 //! - Sufficient disk space for image pulls
 //!
-//! Run with: cargo test --package a2r-executor --test docker_integration -- --ignored
-//! Or: cargo test --package a2r-executor --test docker_integration --features docker-integration
+//! Run with: cargo test --package allternit-executor --test docker_integration -- --ignored
+//! Or: cargo test --package allternit-executor --test docker_integration --features docker-integration
 
-use a2r_executor::{
+use allternit_executor::{
     ContainerConfig, ContainerStatus, DockerOrchestrator, LogLine, ResourceLimits, VolumeMount,
 };
 use std::collections::HashMap;
@@ -32,7 +32,7 @@ const TEST_TIMEOUT: Duration = Duration::from_secs(300);
 const TEST_IMAGE: &str = "alpine:latest";
 
 /// Test command that exits immediately
-const TEST_COMMAND: &[&str] = &["echo", "hello from a2r executor"];
+const TEST_COMMAND: &[&str] = &["echo", "hello from allternit executor"];
 
 // ============================================================================
 // Connection Tests
@@ -109,7 +109,7 @@ async fn test_image_exists_nonexistent() {
 
         // Check for a definitely non-existent image
         let exists = orchestrator
-            .image_exists("a2r-test-nonexistent-image:latest")
+            .image_exists("allternit-test-nonexistent-image:latest")
             .await;
         assert!(
             exists.is_ok(),
@@ -491,7 +491,7 @@ async fn test_get_logs() {
             .expect("Failed to connect to Docker");
 
         let config = ContainerConfig::new(TEST_IMAGE)
-            .with_command(vec!["echo".to_string(), "hello a2r".to_string()]);
+            .with_command(vec!["echo".to_string(), "hello allternit".to_string()]);
 
         let container_id = orchestrator
             .create_and_start(&config)
@@ -517,7 +517,7 @@ async fn test_get_logs() {
             .join("\n");
 
         assert!(
-            stdout.contains("hello a2r"),
+            stdout.contains("hello allternit"),
             "Logs should contain expected output"
         );
 
@@ -726,7 +726,7 @@ async fn test_container_with_volume_mount() {
             .expect("Failed to connect to Docker");
 
         // Create a temporary directory for the mount
-        let temp_dir = std::env::temp_dir().join(format!("a2r-test-{}", uuid::Uuid::new_v4()));
+        let temp_dir = std::env::temp_dir().join(format!("allternit-test-{}", uuid::Uuid::new_v4()));
         std::fs::create_dir_all(&temp_dir).expect("Failed to create temp directory");
 
         // Create a test file
@@ -790,7 +790,7 @@ async fn test_list_containers() {
             .await
             .expect("Failed to list containers");
 
-        // Should find at least our container (it has the a2r.managed label)
+        // Should find at least our container (it has the allternit.managed label)
         let found = containers.iter().any(|c| {
             c.id.as_ref()
                 .map_or(false, |id| id.starts_with(&container_id))

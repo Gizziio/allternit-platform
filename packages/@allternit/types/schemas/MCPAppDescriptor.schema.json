@@ -29,7 +29,7 @@
           "type": "string",
           "enum": [
             "text/html",
-            "application/vnd.a2r.mcpapp+json"
+            "application/vnd.allternit.mcpapp+json"
           ]
         }
       }

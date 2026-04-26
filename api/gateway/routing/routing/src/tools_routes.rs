@@ -3,7 +3,7 @@
 //! This module provides REST API endpoints for:
 //! - Connecting to and managing MCP servers
 //! - Discovering tools from MCP servers
-//! - Executing MCP tools through the A2R tools-gateway
+//! - Executing MCP tools through the Allternit tools-gateway
 //! - Listing all available tools (native + MCP)
 //!
 //! # Routes
@@ -213,7 +213,7 @@ pub struct ToolExecutionResponse {
 /// List all tools response
 #[derive(Debug, Serialize)]
 pub struct ListToolsResponse {
-    /// Native A2R tools
+    /// Native Allternit tools
     pub native: Vec<ToolDefinitionType>,
     /// MCP-discovered tools
     pub mcp: Vec<ToolDefinitionType>,
@@ -665,7 +665,7 @@ async fn execute_tool(
         // Likely an MCP tool (has server prefix like "filesystem.read_file")
         execute_mcp_tool_internal(&state, &request).await
     } else {
-        // Native A2R tool
+        // Native Allternit tool
         execute_native_tool(&state, &request).await
     };
 
@@ -979,7 +979,7 @@ async fn execute_browser_recording_tool(
 // Internal Functions
 // ============================================================================
 
-/// Execute a native A2R tool with full execution stack integration
+/// Execute a native Allternit tool with full execution stack integration
 ///
 /// This function integrates:
 /// - N5: Environment Specification
@@ -1194,7 +1194,7 @@ async fn execute_native_tool(
     info!(tool = %tool_id, run_id = %handle.id.0, "Driver spawned successfully");
 
     // Convert tool parameters to command
-    let tool_cmd = format!("a2r-tool {} {}", tool_id, request.parameters.to_string());
+    let tool_cmd = format!("allternit-tool {} {}", tool_id, request.parameters.to_string());
 
     let cmd_spec = CommandSpec {
         command: vec!["sh".to_string(), "-c".to_string(), tool_cmd],
@@ -1416,7 +1416,7 @@ async fn execute_mcp_tool_internal(
         .await
         .map_err(|e| format!("MCP tool execution failed: {}", e))?;
 
-    // Convert the result to A2R format
+    // Convert the result to Allternit format
     let output = if let Some(content) = tool_result.content {
         let text_content: Vec<String> = content.into_iter().filter_map(|c| c.text).collect();
         Some(serde_json::json!({

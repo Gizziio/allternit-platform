@@ -165,5 +165,5 @@ if __name__ == "__main__":
     except urllib.error.URLError as e:
         print(f"\n  {FAIL}  Operator not reachable at {OPERATOR}: {e}")
         print("       Start it with:")
-        print("       A2R_COMPUTER_USE_PATH=packages/computer-use python3 -m uvicorn src.main:app --port 3010")
+        print("       Allternit_COMPUTER_USE_PATH=packages/computer-use python3 -m uvicorn src.main:app --port 3010")
         sys.exit(1)

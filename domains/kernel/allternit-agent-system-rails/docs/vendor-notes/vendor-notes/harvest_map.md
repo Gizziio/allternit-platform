@@ -1,6 +1,6 @@
 # Vendor Harvest Map
 
-This lists the vendor behaviors we mirrored in A2R and where they live.
+This lists the vendor behaviors we mirrored in Allternit and where they live.
 
 ## Beads (bd)
 

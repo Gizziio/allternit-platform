@@ -12,7 +12,7 @@ import type { LlmClient, LlmConfig, LlmRequest, LlmResponse, LlmStreamChunk } fr
 
 // Terminal imports (available when running in terminal context)
 // These are dynamically imported to avoid errors when running standalone
-let TerminalProvider: typeof import('@a2rchitect/tui/provider/provider.js').Provider | null = null;
+let TerminalProvider: typeof import('@allternitchitect/tui/provider/provider.js').Provider | null = null;
 let AI: typeof import('ai') | null = null;
 
 /**
@@ -22,7 +22,7 @@ let AI: typeof import('ai') | null = null;
 export async function initTerminalModules(): Promise<boolean> {
   try {
     // Dynamic imports - will fail gracefully if not in terminal context
-    const providerMod = await import('@a2rchitect/tui/provider/provider.js');
+    const providerMod = await import('@allternitchitect/tui/provider/provider.js');
     TerminalProvider = providerMod.Provider;
     
     const aiMod = await import('ai');

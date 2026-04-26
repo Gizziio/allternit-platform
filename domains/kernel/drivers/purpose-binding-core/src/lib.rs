@@ -1,4 +1,4 @@
-//! A2R Purpose Binding
+//! Allternit Purpose Binding
 //!
 //! Implements explicit purpose enforcement for all tool calls.
 //!
@@ -39,8 +39,8 @@
 //! Allow Tool Call
 //! ```
 
-use a2rchitech_harness_engineering::{HarnessEngineeringEngine, RiskTier};
-use a2rchitech_system_law::{SystemLawEngine, ViolationSeverity};
+use allternit_harness_engineering::{HarnessEngineeringEngine, RiskTier};
+use allternit_system_law::{SystemLawEngine, ViolationSeverity};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};

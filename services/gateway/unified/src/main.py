@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-A2rchitech API Gateway - Canonical Enterprise Implementation
+Allternitchitech API Gateway - Canonical Enterprise Implementation
 
-This is the SINGLE entry point for all external traffic to the A2rchitect platform.
+This is the SINGLE entry point for all external traffic to the allternit platform.
 All UI and external client requests MUST go through this gateway.
 
 Responsibilities:
@@ -66,7 +66,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
-logger = logging.getLogger("a2r-gateway")
+logger = logging.getLogger("allternit-gateway")
 
 # =============================================================================
 # Configuration
@@ -101,9 +101,9 @@ logger.info(f"  CORS Origins: {CORS_ORIGINS}")
 # =============================================================================
 
 app = FastAPI(
-    title="A2rchitect Gateway",
+    title="allternit Gateway",
     version="2.0.0",
-    description="Enterprise API Gateway for A2rchitect Platform",
+    description="Enterprise API Gateway for allternit Platform",
     docs_url="/docs" if os.environ.get("DEBUG") else None,
     redoc_url="/redoc" if os.environ.get("DEBUG") else None,
 )
@@ -147,7 +147,7 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):
             # TODO: Implement proper JWT validation
             # For now, accept any token format for development
             if token == "dev-token" or len(token) > 10:
-                request.state.user = {"id": "dev-user", "email": "dev@a2r.local"}
+                request.state.user = {"id": "dev-user", "email": "dev@allternit.local"}
                 request.state.tenant_id = "dev-tenant"
                 request.state.auth_method = "jwt"
             else:
@@ -307,20 +307,20 @@ async def proxy(request: Request, path: str):
     Routing Logic:
         /api/v1/*              → API Service (3000)
         /api/v1/voice/*        → Voice Service (8001)
-        /api/v1/browser/*      → A2R Operator (3010)
-        /api/v1/vision/*       → A2R Operator (3010)
-        /api/v1/parallel/*     → A2R Operator (3010)
-        /api/v1/operator/*     → A2R Operator (3010)
-        /api/v1/plan*          → A2R Rails (3011)
-        /api/v1/dags/*         → A2R Rails (3011)
-        /api/v1/wihs/*         → A2R Rails (3011)
-        /api/v1/leases*        → A2R Rails (3011)
-        /api/v1/ledger/*       → A2R Rails (3011)
-        /api/v1/index/*        → A2R Rails (3011)
-        /api/v1/mail/*         → A2R Rails (3011)
-        /api/v1/gate/*         → A2R Rails (3011)
-        /api/v1/vault/*        → A2R Rails (3011)
-        /api/v1/init           → A2R Rails (3011)
+        /api/v1/browser/*      → Allternit Operator (3010)
+        /api/v1/vision/*       → Allternit Operator (3010)
+        /api/v1/parallel/*     → Allternit Operator (3010)
+        /api/v1/operator/*     → Allternit Operator (3010)
+        /api/v1/plan*          → Allternit Rails (3011)
+        /api/v1/dags/*         → Allternit Rails (3011)
+        /api/v1/wihs/*         → Allternit Rails (3011)
+        /api/v1/leases*        → Allternit Rails (3011)
+        /api/v1/ledger/*       → Allternit Rails (3011)
+        /api/v1/index/*        → Allternit Rails (3011)
+        /api/v1/mail/*         → Allternit Rails (3011)
+        /api/v1/gate/*         → Allternit Rails (3011)
+        /api/v1/vault/*        → Allternit Rails (3011)
+        /api/v1/init           → Allternit Rails (3011)
         /webvm/*               → WebVM Bridge (8002)
         /ws/*                  → WebSocket Service (3001) [future]
         /webhook/*             → Webhook Handler [future]
@@ -726,7 +726,7 @@ async def shutdown():
 # =============================================================================
 
 if __name__ == "__main__":
-    logger.info(f"Starting A2rchitect Gateway on {GATEWAY_HOST}:{GATEWAY_PORT}")
+    logger.info(f"Starting allternit Gateway on {GATEWAY_HOST}:{GATEWAY_PORT}")
     uvicorn.run(
         app,
         host=GATEWAY_HOST,

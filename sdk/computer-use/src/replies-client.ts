@@ -1,7 +1,7 @@
 /**
- * A2R Replies Client
+ * Allternit Replies Client
  *
- * TypeScript SDK for the A2R Replies API.
+ * TypeScript SDK for the Allternit Replies API.
  * Follows Anthropic/OpenAI SDK patterns:
  *   - client.replies.create()  — stream a new reply (SSE, AsyncIterable<ReplyEvent>)
  *   - client.replies.retrieve() — get a reply by ID
@@ -11,7 +11,7 @@
  *   - client.conversations.replies.list() — list replies for a conversation
  *
  * Usage:
- *   const client = new A2RClient({ baseURL: 'http://localhost:3000' });
+ *   const client = new AllternitClient({ baseURL: 'http://localhost:3000' });
  *
  *   // Streaming (Anthropic-style)
  *   const stream = client.replies.stream({
@@ -41,8 +41,8 @@ import {
 // Client config
 // ---------------------------------------------------------------------------
 
-export interface A2RClientConfig {
-  /** Base URL of the A2R platform (e.g. "http://localhost:3000") */
+export interface AllternitClientConfig {
+  /** Base URL of the Allternit platform (e.g. "http://localhost:3000") */
   baseURL: string;
   /** Optional API key sent as Bearer token */
   apiKey?: string;
@@ -178,7 +178,7 @@ export class ReplyStream implements AsyncIterable<ReplyEvent> {
         const res = await this._fetch();
         if (!res.ok) {
           const text = await res.text().catch(() => res.statusText);
-          fail(new Error(`A2R API error ${res.status}: ${text}`));
+          fail(new Error(`Allternit API error ${res.status}: ${text}`));
           return;
         }
         if (!res.body) { finish(); return; }
@@ -240,7 +240,7 @@ export class ReplyStream implements AsyncIterable<ReplyEvent> {
 // ---------------------------------------------------------------------------
 
 class RepliesResource {
-  constructor(private readonly _client: A2RClient) {}
+  constructor(private readonly _client: AllternitClient) {}
 
   /**
    * Create and stream a new Reply.
@@ -280,7 +280,7 @@ class RepliesResource {
       { headers: this._client.buildHeaders() },
     );
     if (res.status === 404) return null;
-    if (!res.ok) throw new A2RAPIError(res.status, await res.text());
+    if (!res.ok) throw new AllternitAPIError(res.status, await res.text());
     return res.json() as Promise<Reply>;
   }
 
@@ -293,7 +293,7 @@ class RepliesResource {
       `${this._client.baseURL}/v1/replies/${encodeURIComponent(replyId)}/cancel`,
       { method: "POST", headers: this._client.buildHeaders() },
     );
-    if (!res.ok) throw new A2RAPIError(res.status, await res.text());
+    if (!res.ok) throw new AllternitAPIError(res.status, await res.text());
     return res.json() as Promise<{ reply_id: string; status: string }>;
   }
 }
@@ -303,14 +303,14 @@ class RepliesResource {
 // ---------------------------------------------------------------------------
 
 class ConversationRepliesResource {
-  constructor(private readonly _client: A2RClient, private readonly _conversationId: string) {}
+  constructor(private readonly _client: AllternitClient, private readonly _conversationId: string) {}
 
   async list(): Promise<ReplyList> {
     const res = await fetch(
       `${this._client.baseURL}/v1/conversations/${encodeURIComponent(this._conversationId)}/replies`,
       { headers: this._client.buildHeaders() },
     );
-    if (!res.ok) throw new A2RAPIError(res.status, await res.text());
+    if (!res.ok) throw new AllternitAPIError(res.status, await res.text());
     return res.json() as Promise<ReplyList>;
   }
 }
@@ -320,7 +320,7 @@ class ConversationRepliesResource {
 // ---------------------------------------------------------------------------
 
 class ConversationsResource {
-  constructor(private readonly _client: A2RClient) {}
+  constructor(private readonly _client: AllternitClient) {}
 
   /** Create a new Conversation (session). */
   async create(request: CreateConversationRequest = {}): Promise<Conversation> {
@@ -332,7 +332,7 @@ class ConversationsResource {
         metadata: request.metadata ?? {},
       }),
     });
-    if (!res.ok) throw new A2RAPIError(res.status, await res.text());
+    if (!res.ok) throw new AllternitAPIError(res.status, await res.text());
     return res.json() as Promise<Conversation>;
   }
 
@@ -343,7 +343,7 @@ class ConversationsResource {
       { headers: this._client.buildHeaders() },
     );
     if (res.status === 404) return null;
-    if (!res.ok) throw new A2RAPIError(res.status, await res.text());
+    if (!res.ok) throw new AllternitAPIError(res.status, await res.text());
     return res.json() as Promise<Conversation>;
   }
 
@@ -354,24 +354,24 @@ class ConversationsResource {
 }
 
 // ---------------------------------------------------------------------------
-// A2RAPIError
+// AllternitAPIError
 // ---------------------------------------------------------------------------
 
-export class A2RAPIError extends Error {
+export class AllternitAPIError extends Error {
   constructor(
     public readonly status: number,
     public readonly body: string,
   ) {
-    super(`A2R API error ${status}: ${body}`);
-    this.name = "A2RAPIError";
+    super(`Allternit API error ${status}: ${body}`);
+    this.name = "AllternitAPIError";
   }
 }
 
 // ---------------------------------------------------------------------------
-// A2RClient — main entry point
+// AllternitClient — main entry point
 // ---------------------------------------------------------------------------
 
-export class A2RClient {
+export class AllternitClient {
   readonly baseURL: string;
   private readonly _apiKey?: string;
   private readonly _headers: Record<string, string>;
@@ -379,7 +379,7 @@ export class A2RClient {
   readonly replies: RepliesResource;
   readonly conversations: ConversationsResource;
 
-  constructor(config: A2RClientConfig) {
+  constructor(config: AllternitClientConfig) {
     this.baseURL = config.baseURL.replace(/\/+$/, "");
     this._apiKey = config.apiKey;
     this._headers = config.headers ?? {};

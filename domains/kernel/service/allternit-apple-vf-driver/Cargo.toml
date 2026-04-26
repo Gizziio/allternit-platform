@@ -1,13 +1,13 @@
 [package]
-name = "a2r-apple-vf-driver"
+name = "allternit-apple-vf-driver"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Apple Virtualization Framework Driver - macOS VM support"
+description = "Allternit Apple Virtualization Framework Driver - macOS VM support"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
 # Internal dependencies
-a2r-driver-interface = { path = "../../drivers/a2r-driver-interface" }
+allternit-driver-interface = { path = "../../drivers/allternit-driver-interface" }
 
 # Core async
 tokio = { version = "1", features = ["full"] }

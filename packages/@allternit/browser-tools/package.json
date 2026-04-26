@@ -1,7 +1,7 @@
 {
   "name": "@allternit/browser-tools",
   "version": "0.1.0",
-  "description": "Browser automation toolkit for A2R agent task execution",
+  "description": "Browser automation toolkit for Allternit agent task execution",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -23,7 +23,7 @@
     "automation",
     "playwright",
     "agent",
-    "a2r"
+    "allternit"
   ],
   "dependencies": {
     "playwright": "^1.42.0"

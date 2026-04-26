@@ -1,7 +1,7 @@
 {
-  "name": "@a2r/browser",
+  "name": "@allternit/browser",
   "version": "0.1.0",
-  "description": "A2R Browser Automation and Canvas Hosting",
+  "description": "Allternit Browser Automation and Canvas Hosting",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -16,7 +16,7 @@
     "demo.ts"
   ],
   "bin": {
-    "a2r-browser-demo": "./demo.ts"
+    "allternit-browser-demo": "./demo.ts"
   },
   "scripts": {
     "build": "tsc",
@@ -50,7 +50,7 @@
     "node": ">=18.0.0"
   },
   "keywords": [
-    "a2r",
+    "allternit",
     "browser",
     "automation",
     "cdp",

@@ -1,8 +1,8 @@
 #
-# A2R Node Agent - Docker Compose Configuration
+# Allternit Node Agent - Docker Compose Configuration
 # 
-# This compose file defines the complete A2R agent stack:
-# - Main A2R agent container
+# This compose file defines the complete Allternit agent stack:
+# - Main Allternit agent container
 # - Traefik reverse proxy
 # - Redis for caching and session storage
 # - Promtail for log shipping
@@ -11,10 +11,10 @@
 version: '3.8'
 
 services:
-  # Main A2R Agent Service
-  a2r-agent:
-    image: a2r/agent:${ALLTERNIT_VERSION:-latest}
-    container_name: a2r-agent
+  # Main Allternit Agent Service
+  allternit-agent:
+    image: allternit/agent:${ALLTERNIT_VERSION:-latest}
+    container_name: allternit-agent
     restart: unless-stopped
     
     ports:
@@ -24,18 +24,18 @@ services:
     volumes:
       # Configuration
       - type: bind
-        source: /etc/a2r/config.json
+        source: /etc/allternit/config.json
         target: /app/config.json
         read_only: true
       
       # Data directories
       - type: bind
-        source: /opt/a2r/data
+        source: /opt/allternit/data
         target: /app/data
       
       # Log directory
       - type: bind
-        source: /var/log/a2r
+        source: /var/log/allternit
         target: /app/logs
       
       # Docker socket for container management
@@ -72,7 +72,7 @@ services:
       - ALLTERNIT_METRICS_ENABLED=${ALLTERNIT_METRICS_ENABLED:-true}
     
     networks:
-      - a2r-network
+      - allternit-network
     
     depends_on:
       redis:
@@ -105,21 +105,21 @@ services:
     labels:
       # Traefik labels
       - "traefik.enable=true"
-      - "traefik.http.routers.a2r-agent.rule=PathPrefix(\`/api\`) || PathPrefix(\`/ws\`)"
-      - "traefik.http.routers.a2r-agent.entrypoints=web,websecure"
-      - "traefik.http.routers.a2r-agent.service=a2r-agent"
-      - "traefik.http.services.a2r-agent.loadbalancer.server.port=8080"
-      - "traefik.http.services.a2r-agent.loadbalancer.healthcheck.path=/health"
-      - "traefik.http.services.a2r-agent.loadbalancer.healthcheck.interval=10s"
+      - "traefik.http.routers.allternit-agent.rule=PathPrefix(\`/api\`) || PathPrefix(\`/ws\`)"
+      - "traefik.http.routers.allternit-agent.entrypoints=web,websecure"
+      - "traefik.http.routers.allternit-agent.service=allternit-agent"
+      - "traefik.http.services.allternit-agent.loadbalancer.server.port=8080"
+      - "traefik.http.services.allternit-agent.loadbalancer.healthcheck.path=/health"
+      - "traefik.http.services.allternit-agent.loadbalancer.healthcheck.interval=10s"
       
       # Prometheus metrics
-      - "prometheus-job=a2r-agent"
+      - "prometheus-job=allternit-agent"
       - "prometheus-port=9090"
 
   # Traefik Reverse Proxy
   traefik:
     image: traefik:v3.0
-    container_name: a2r-traefik
+    container_name: allternit-traefik
     restart: unless-stopped
     
     command:
@@ -135,7 +135,7 @@ services:
       # Providers
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=a2r-network"
+      - "--providers.docker.network=allternit-network"
       
       # Logging
       - "--log.level=${TRAEFIK_LOG_LEVEL:-INFO}"
@@ -167,12 +167,12 @@ services:
       
       # Optional: TLS certificates
       - type: bind
-        source: /opt/a2r/certs
+        source: /opt/allternit/certs
         target: /certs
         read_only: true
     
     networks:
-      - a2r-network
+      - allternit-network
     
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:8081/ping"]
@@ -199,7 +199,7 @@ services:
   # Redis Cache and Session Store
   redis:
     image: redis:7-alpine
-    container_name: a2r-redis
+    container_name: allternit-redis
     restart: unless-stopped
     
     command: >
@@ -211,7 +211,7 @@ services:
       --save 900 1
       --save 300 10
       --save 60 10000
-      --requirepass ${REDIS_PASSWORD:-a2r-redis-password}
+      --requirepass ${REDIS_PASSWORD:-allternit-redis-password}
     
     volumes:
       - type: volume
@@ -219,7 +219,7 @@ services:
         target: /data
     
     networks:
-      - a2r-network
+      - allternit-network
     
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -243,15 +243,15 @@ services:
   # Promtail - Log Shipping
   promtail:
     image: grafana/promtail:latest
-    container_name: a2r-promtail
+    container_name: allternit-promtail
     restart: unless-stopped
     
     command: -config.file=/etc/promtail/config.yml
     
     volumes:
       - type: bind
-        source: /var/log/a2r
-        target: /var/log/a2r
+        source: /var/log/allternit
+        target: /var/log/allternit
         read_only: true
       
       - type: bind
@@ -260,7 +260,7 @@ services:
         read_only: true
       
       - type: bind
-        source: /opt/a2r/config/promtail.yml
+        source: /opt/allternit/config/promtail.yml
         target: /etc/promtail/config.yml
         read_only: true
       
@@ -271,13 +271,13 @@ services:
         read_only: true
     
     environment:
-      - HOSTNAME=${ALLTERNIT_SERVER_ID:-a2r-node}
+      - HOSTNAME=${ALLTERNIT_SERVER_ID:-allternit-node}
     
     networks:
-      - a2r-network
+      - allternit-network
     
     depends_on:
-      - a2r-agent
+      - allternit-agent
     
     deploy:
       resources:
@@ -295,7 +295,7 @@ services:
   # Optional: Node Exporter for host metrics
   node-exporter:
     image: prom/node-exporter:latest
-    container_name: a2r-node-exporter
+    container_name: allternit-node-exporter
     restart: unless-stopped
     
     command:
@@ -319,7 +319,7 @@ services:
         read_only: true
     
     networks:
-      - a2r-network
+      - allternit-network
     
     deploy:
       resources:
@@ -333,7 +333,7 @@ services:
   # Optional: cAdvisor for container metrics
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
-    container_name: a2r-cadvisor
+    container_name: allternit-cadvisor
     restart: unless-stopped
     
     privileged: true
@@ -364,7 +364,7 @@ services:
         read_only: true
     
     networks:
-      - a2r-network
+      - allternit-network
     
     deploy:
       resources:
@@ -377,14 +377,14 @@ services:
 
 # Networks
 networks:
-  a2r-network:
+  allternit-network:
     driver: bridge
     ipam:
       config:
         - subnet: ${ALLTERNIT_DOCKER_SUBNET:-172.20.0.0/16}
           gateway: 172.20.0.1
     driver_opts:
-      com.docker.network.bridge.name: a2r-br0
+      com.docker.network.bridge.name: allternit-br0
 
 # Volumes
 volumes:
@@ -393,4 +393,4 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: /opt/a2r/data/redis
+      device: /opt/allternit/data/redis

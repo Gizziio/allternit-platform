@@ -1,4 +1,4 @@
-//! A2R Skill Portability
+//! Allternit Skill Portability
 //!
 //! This crate provides skill portability across different LLM tools,
 //! including Claude Code, OpenAI Codex, OpenCode, and Kimi.

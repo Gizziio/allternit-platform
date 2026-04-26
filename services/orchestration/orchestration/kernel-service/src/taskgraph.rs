@@ -6,10 +6,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use uuid::Uuid;
 
-const GRAPH_DIR: &str = ".a2r/graphs";
-const RUN_STATE_DIR: &str = ".a2r/run_state";
-const RECEIPTS_DIR: &str = ".a2r/receipts";
-const ARTIFACTS_DIR: &str = ".a2r/artifacts";
+const GRAPH_DIR: &str = ".allternit/graphs";
+const RUN_STATE_DIR: &str = ".allternit/run_state";
+const RECEIPTS_DIR: &str = ".allternit/receipts";
+const ARTIFACTS_DIR: &str = ".allternit/artifacts";
 const AGENT_PROFILES_PATH: &str = "agent/agent_profiles.json";
 
 const BEADS_KEYS: [&str; 8] = [

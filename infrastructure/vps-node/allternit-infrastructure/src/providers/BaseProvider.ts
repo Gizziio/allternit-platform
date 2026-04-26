@@ -212,7 +212,7 @@ export abstract class BaseProvider {
   protected generateInstanceName(baseName: string): string {
     const timestamp = Date.now().toString(36);
     const sanitized = baseName.replace(/[^a-zA-Z0-9-]/g, '-').toLowerCase();
-    return `a2r-${sanitized}-${timestamp}`.substring(0, 63);
+    return `allternit-${sanitized}-${timestamp}`.substring(0, 63);
   }
 
   /**

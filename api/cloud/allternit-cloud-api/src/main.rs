@@ -1,4 +1,4 @@
-//! A2R Cloud API Server
+//! Allternit Cloud API Server
 //!
 //! Main entry point for the cloud deployment API.
 
@@ -39,7 +39,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     
     // Get configuration from environment
     let database_url = std::env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "sqlite://a2r-cloud.db".to_string());
+        .unwrap_or_else(|_| "sqlite://allternit-cloud.db".to_string());
     let bind_addr = std::env::var("BIND_ADDR")
         .unwrap_or_else(|_| "0.0.0.0:3001".to_string());
     
@@ -59,7 +59,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     
-    tracing::info!("Starting A2R Cloud API server");
+    tracing::info!("Starting Allternit Cloud API server");
     tracing::info!("Database: {}", database_url);
     tracing::info!("Bind address: {}", bind_addr);
     

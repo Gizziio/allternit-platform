@@ -2,7 +2,7 @@
  * MCP Proxy
  * 
  * Per-instance MCP proxy that injects sender identity transparently.
- * Reverse engineered from agentchattr pattern, implemented for a2rchitech.
+ * Reverse engineered from agentchattr pattern, implemented for allternit.
  */
 
 import type {

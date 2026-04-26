@@ -299,10 +299,10 @@ impl Tool for WebVMTool {
 }
 
 #[derive(Debug)]
-pub struct A2RNativeInitTool;
+pub struct AllternitNativeInitTool;
 
 #[async_trait::async_trait]
-impl Tool for A2RNativeInitTool {
+impl Tool for AllternitNativeInitTool {
     async fn execute(
         &self,
         parameters: &serde_json::Value,
@@ -316,41 +316,41 @@ impl Tool for A2RNativeInitTool {
             .map(std::path::PathBuf::from)
             .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
 
-        let a2r_dir = workspace_path.join(".a2r");
-        let plans_dir = a2r_dir.join("plans");
+        let allternit_dir = workspace_path.join(".allternit");
+        let plans_dir = allternit_dir.join("plans");
 
         std::fs::create_dir_all(&plans_dir)?;
 
         // Create PROJECT.md
         let project_md = format!(
-            "# A2R Native: PROJECT.md\n\n## What This Is\n\n{}\n\n## Core Value\n\n[The ONE thing that matters most]\n",
+            "# Allternit Native: PROJECT.md\n\n## What This Is\n\n{}\n\n## Core Value\n\n[The ONE thing that matters most]\n",
             project_name
         );
-        std::fs::write(a2r_dir.join("PROJECT.md"), project_md)?;
+        std::fs::write(allternit_dir.join("PROJECT.md"), project_md)?;
 
         // Create STATE.md
-        let state_md = "# A2R Native: STATE.md\n\n## Current Position\n\nPhase: 1 of 3 (Discovery)\nPlan: 0 of 0\nStatus: Initialized\nProgress: [░░░░░░░░░░] 0%\n";
-        std::fs::write(a2r_dir.join("STATE.md"), state_md)?;
+        let state_md = "# Allternit Native: STATE.md\n\n## Current Position\n\nPhase: 1 of 3 (Discovery)\nPlan: 0 of 0\nStatus: Initialized\nProgress: [░░░░░░░░░░] 0%\n";
+        std::fs::write(allternit_dir.join("STATE.md"), state_md)?;
 
         // Create ROADMAP.md
-        let roadmap_md = "# A2R Native: ROADMAP.md\n\n## Milestones\n\n1. [ ] Phase 1: Foundation\n2. [ ] Phase 2: Implementation\n3. [ ] Phase 3: Validation\n";
-        std::fs::write(a2r_dir.join("ROADMAP.md"), roadmap_md)?;
+        let roadmap_md = "# Allternit Native: ROADMAP.md\n\n## Milestones\n\n1. [ ] Phase 1: Foundation\n2. [ ] Phase 2: Implementation\n3. [ ] Phase 3: Validation\n";
+        std::fs::write(allternit_dir.join("ROADMAP.md"), roadmap_md)?;
 
         Ok(serde_json::json!({
             "status": "success",
-            "message": format!("A2R Native protocol initialized for project: {}", project_name),
-            "directory": a2r_dir.to_string_lossy()
+            "message": format!("Allternit Native protocol initialized for project: {}", project_name),
+            "directory": allternit_dir.to_string_lossy()
         }))
     }
 
     fn name(&self) -> &str {
-        "a2r_native_init"
+        "allternit_native_init"
     }
 
     fn definition(&self) -> ToolDefinition {
         ToolDefinition {
-            name: "a2r_native_init".to_string(),
-            description: "Initialize the A2R Native context engineering protocol in the workspace.".to_string(),
+            name: "allternit_native_init".to_string(),
+            description: "Initialize the Allternit Native context engineering protocol in the workspace.".to_string(),
             parameters: serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -369,7 +369,7 @@ impl ToolExecutor {
 
         tools.insert("web.search".to_string(), Box::new(WebSearchTool));
         tools.insert("note.create".to_string(), Box::new(NoteTool));
-        tools.insert("a2r_native_init".to_string(), Box::new(A2RNativeInitTool));
+        tools.insert("allternit_native_init".to_string(), Box::new(AllternitNativeInitTool));
 
         let voice_client = Arc::new(VoiceClient::default());
         tools.insert(

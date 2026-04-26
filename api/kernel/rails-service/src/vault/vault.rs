@@ -7,7 +7,7 @@ use serde_json::json;
 
 use crate::core::ids::create_event_id;
 use crate::core::io::{ensure_dir, write_json_atomic};
-use crate::core::types::{A2REvent, Actor, ActorType, LedgerQuery};
+use crate::core::types::{AllternitEvent, Actor, ActorType, LedgerQuery};
 use crate::ledger::Ledger;
 use crate::wih::projection::project_wih;
 use crate::work::projection::project_dag;
@@ -44,7 +44,7 @@ impl Vault {
         let dag = project_dag(&events, &dag_id);
 
         let year = Utc::now().format("%Y").to_string();
-        let base = self.root_dir.join(".a2r/vault").join(year).join(&dag_id);
+        let base = self.root_dir.join(".allternit/vault").join(year).join(&dag_id);
         let snapshot_dir = base.join("snapshots");
         let closure_dir = base.join("closure");
         ensure_dir(&snapshot_dir)?;
@@ -92,7 +92,7 @@ impl Vault {
     }
 
     async fn emit(&self, event_type: &str, payload: serde_json::Value) -> Result<()> {
-        let event = A2REvent {
+        let event = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: Actor {

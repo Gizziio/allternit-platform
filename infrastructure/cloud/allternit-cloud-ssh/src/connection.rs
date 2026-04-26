@@ -11,9 +11,6 @@ use tokio::sync::Mutex;
 
 /// SSH connection to a remote VPS
 pub struct SshConnection {
-    host: String,
-    port: u16,
-    username: String,
     session: Arc<Mutex<Session>>,
 }
 
@@ -62,9 +59,6 @@ impl SshConnection {
         .map_err(|e| SshError::ConnectionFailed(format!("Task join failed: {}", e)))??;
 
         Ok(Self {
-            host,
-            port,
-            username,
             session: Arc::new(Mutex::new(session)),
         })
     }

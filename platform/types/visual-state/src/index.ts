@@ -1,7 +1,7 @@
 /**
- * @a2r/visual-state
+ * @allternit/visual-state
  * 
- * Visual state management for A2R avatar system.
+ * Visual state management for Allternit avatar system.
  */
 
 export * from './types';

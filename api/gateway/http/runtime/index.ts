@@ -1,5 +1,5 @@
 /**
- * A2R Gateway Core - Extended with UI v0 Events
+ * Allternit Gateway Core - Extended with UI v0 Events
  * 
  * Transport-agnostic core providing:
  * - Request routing (logical operations)
@@ -859,7 +859,7 @@ export class GatewayCore {
 
     return {
       status: 'healthy',
-      service: 'a2r-gateway',
+      service: 'allternit-gateway',
       version: '1.0.0',
       timestamp: new Date().toISOString(),
       backends: Object.fromEntries(

@@ -16,9 +16,12 @@ use crate::types::{Attachment, AttachmentState, ClientType, PermissionSet, RunId
 
 /// Registry for managing client attachments
 pub struct AttachmentRegistry {
-    pool: Pool<Sqlite>,
-    timeout_secs: u64,
-    cleanup_handle: Arc<RwLock<Option<tokio::task::JoinHandle<()>>>>,
+    /// SQLite connection pool
+    pub pool: Pool<Sqlite>,
+    /// Seconds before an inactive attachment is considered stale
+    pub timeout_secs: u64,
+    /// Handle to the background cleanup task
+    pub cleanup_handle: Arc<RwLock<Option<tokio::task::JoinHandle<()>>>>,
 }
 
 impl AttachmentRegistry {

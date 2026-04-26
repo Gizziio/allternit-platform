@@ -1,8 +1,8 @@
 [package]
-name = "a2r-vendor-wrappers"
+name = "allternit-vendor-wrappers"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Vendor Wrappers - Unified interface for vendor library integration"
+description = "Allternit Vendor Wrappers - Unified interface for vendor library integration"
 
 [dependencies]
 serde = { workspace = true }

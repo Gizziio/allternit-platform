@@ -1,7 +1,7 @@
 /**
- * A2R Agent Configuration Management
+ * Allternit Agent Configuration Management
  * 
- * Handles generation, validation, and application of A2R agent configurations
+ * Handles generation, validation, and application of Allternit agent configurations
  * for VPS/cloud deployments.
  */
 
@@ -126,7 +126,7 @@ export class AgentConfigurator {
   }
 
   /**
-   * Generate a complete A2R agent configuration for a VPS
+   * Generate a complete Allternit agent configuration for a VPS
    */
   async generateConfig(
     vps: VPSConnection,
@@ -156,7 +156,7 @@ export class AgentConfigurator {
       apiKey,
       
       // Docker configuration
-      dockerNetwork: customConfig.dockerNetwork || 'a2r-network',
+      dockerNetwork: customConfig.dockerNetwork || 'allternit-network',
       dockerSubnet: customConfig.dockerSubnet || '172.20.0.0/16',
       
       // Resource limits
@@ -204,10 +204,10 @@ export class AgentConfigurator {
       
       // Storage
       storage: {
-        dataDir: '/opt/a2r/data',
-        logDir: '/var/log/a2r',
-        tempDir: '/tmp/a2r',
-        backupDir: '/opt/a2r/backups',
+        dataDir: '/opt/allternit/data',
+        logDir: '/var/log/allternit',
+        tempDir: '/tmp/allternit',
+        backupDir: '/opt/allternit/backups',
         maxLogSize: '100m',
         maxLogAge: 14,
         ...customConfig.storage
@@ -347,11 +347,11 @@ export class AgentConfigurator {
       await this.connectSSH(ssh, target);
 
       // Check if agent is installed
-      const installCheck = await ssh.execCommand('test -d /opt/a2r && echo "installed" || echo "not_installed"');
+      const installCheck = await ssh.execCommand('test -d /opt/allternit && echo "installed" || echo "not_installed"');
       if (installCheck.stdout.trim() !== 'installed') {
         return {
           success: false,
-          message: 'A2R agent is not installed on this host',
+          message: 'Allternit agent is not installed on this host',
           restartRequired: false,
           errors: ['Agent not installed']
         };
@@ -362,14 +362,14 @@ export class AgentConfigurator {
       const configJson = JSON.stringify(config, null, 2);
 
       // Backup existing config
-      await ssh.execCommand('sudo cp /etc/a2r/config.json /etc/a2r/config.json.bak.$(date +%Y%m%d_%H%M%S) 2>/dev/null || true');
+      await ssh.execCommand('sudo cp /etc/allternit/config.json /etc/allternit/config.json.bak.$(date +%Y%m%d_%H%M%S) 2>/dev/null || true');
 
       // Write new config
-      await ssh.execCommand(`cat > /tmp/a2r-config-new.json << 'EOFCFG'
+      await ssh.execCommand(`cat > /tmp/allternit-config-new.json << 'EOFCFG'
 ${configJson}
 EOFCFG`);
-      await ssh.execCommand('sudo mv /tmp/a2r-config-new.json /etc/a2r/config.json');
-      await ssh.execCommand('sudo chmod 600 /etc/a2r/config.json');
+      await ssh.execCommand('sudo mv /tmp/allternit-config-new.json /etc/allternit/config.json');
+      await ssh.execCommand('sudo chmod 600 /etc/allternit/config.json');
 
       // Update docker-compose with new network settings if needed
       await this.updateDockerCompose(ssh, config);
@@ -378,8 +378,8 @@ EOFCFG`);
       const restartRequired = await this.isRestartRequired(ssh, config);
 
       if (restartRequired) {
-        this.logger.info('Restarting A2R services...');
-        await ssh.execCommand('sudo systemctl restart a2r-agent');
+        this.logger.info('Restarting Allternit services...');
+        await ssh.execCommand('sudo systemctl restart allternit-agent');
         
         // Wait for services to be healthy
         await this.waitForServices(ssh, 60000);
@@ -401,7 +401,7 @@ EOFCFG`);
 
       // Attempt to restore backup
       try {
-        await ssh.execCommand('sudo cp /etc/a2r/config.json.bak.* /etc/a2r/config.json 2>/dev/null || true');
+        await ssh.execCommand('sudo cp /etc/allternit/config.json.bak.* /etc/allternit/config.json 2>/dev/null || true');
       } catch {
         // Ignore restore errors
       }
@@ -428,7 +428,7 @@ EOFCFG`);
     try {
       await this.connectSSH(ssh, target);
 
-      const result = await ssh.execCommand('cat /etc/a2r/config.json 2>/dev/null || echo "not_found"');
+      const result = await ssh.execCommand('cat /etc/allternit/config.json 2>/dev/null || echo "not_found"');
       
       if (result.stdout.trim() === 'not_found') {
         return null;
@@ -451,30 +451,30 @@ EOFCFG`);
    */
   generateEnvVars(config: AgentConfig): Record<string, string> {
     return {
-      A2R_SERVER_ID: config.serverId,
-      A2R_DATACENTER: config.datacenter,
-      A2R_REGION: config.region,
-      A2R_API_ENDPOINT: config.apiEndpoint,
-      A2R_INTERNAL_ENDPOINT: config.internalEndpoint,
-      A2R_WEBSOCKET_ENDPOINT: config.websocketEndpoint,
-      A2R_AUTH_TOKEN: config.authToken,
-      A2R_API_KEY: config.apiKey,
-      A2R_DOCKER_NETWORK: config.dockerNetwork,
-      A2R_DOCKER_SUBNET: config.dockerSubnet,
-      A2R_MAX_CONTAINERS: config.maxContainers.toString(),
-      A2R_CPU_PERCENT: config.resourceLimits.cpuPercent.toString(),
-      A2R_MEMORY_LIMIT: config.resourceLimits.memoryLimit,
-      A2R_DISK_LIMIT: config.resourceLimits.diskLimit,
-      A2R_LOG_LEVEL: config.logLevel,
-      A2R_METRICS_ENABLED: config.monitoring.enabled.toString(),
-      A2R_METRICS_PORT: config.monitoring.metricsPort.toString(),
-      A2R_TLS_ENABLED: config.network.tlsEnabled.toString(),
-      A2R_JWT_SECRET: config.security.jwtSecret,
-      A2R_RATE_LIMIT_REQUESTS: config.security.rateLimitRequests.toString(),
-      A2R_RATE_LIMIT_WINDOW: config.security.rateLimitWindow.toString(),
-      A2R_AUTO_UPDATE: config.features.autoUpdate.toString(),
-      A2R_HEALTH_CHECKS: config.features.healthChecks.toString(),
-      A2R_VERSION: config.version
+      Allternit_SERVER_ID: config.serverId,
+      Allternit_DATACENTER: config.datacenter,
+      Allternit_REGION: config.region,
+      Allternit_API_ENDPOINT: config.apiEndpoint,
+      Allternit_INTERNAL_ENDPOINT: config.internalEndpoint,
+      Allternit_WEBSOCKET_ENDPOINT: config.websocketEndpoint,
+      Allternit_AUTH_TOKEN: config.authToken,
+      Allternit_API_KEY: config.apiKey,
+      Allternit_DOCKER_NETWORK: config.dockerNetwork,
+      Allternit_DOCKER_SUBNET: config.dockerSubnet,
+      Allternit_MAX_CONTAINERS: config.maxContainers.toString(),
+      Allternit_CPU_PERCENT: config.resourceLimits.cpuPercent.toString(),
+      Allternit_MEMORY_LIMIT: config.resourceLimits.memoryLimit,
+      Allternit_DISK_LIMIT: config.resourceLimits.diskLimit,
+      Allternit_LOG_LEVEL: config.logLevel,
+      Allternit_METRICS_ENABLED: config.monitoring.enabled.toString(),
+      Allternit_METRICS_PORT: config.monitoring.metricsPort.toString(),
+      Allternit_TLS_ENABLED: config.network.tlsEnabled.toString(),
+      Allternit_JWT_SECRET: config.security.jwtSecret,
+      Allternit_RATE_LIMIT_REQUESTS: config.security.rateLimitRequests.toString(),
+      Allternit_RATE_LIMIT_WINDOW: config.security.rateLimitWindow.toString(),
+      Allternit_AUTO_UPDATE: config.features.autoUpdate.toString(),
+      Allternit_HEALTH_CHECKS: config.features.healthChecks.toString(),
+      Allternit_VERSION: config.version
     };
   }
 
@@ -492,7 +492,7 @@ EOFCFG`);
   private generateServerId(vps: VPSConnection): string {
     const timestamp = Date.now().toString(36);
     const hostHash = Buffer.from(vps.host).toString('base64url').substring(0, 8);
-    return `a2r-${vps.provider || 'node'}-${hostHash}-${timestamp}`;
+    return `allternit-${vps.provider || 'node'}-${hostHash}-${timestamp}`;
   }
 
   private inferRegion(host: string): string {
@@ -565,7 +565,7 @@ EOFCFG`);
   private async updateDockerCompose(ssh: NodeSSH, config: AgentConfig): Promise<void> {
     // Update network configuration in docker-compose
     const networkUpdate = await ssh.execCommand(`
-      sudo sed -i 's/subnet: .*/subnet: ${config.dockerSubnet}/' /opt/a2r/docker-compose.yml 2>/dev/null || true
+      sudo sed -i 's/subnet: .*/subnet: ${config.dockerSubnet}/' /opt/allternit/docker-compose.yml 2>/dev/null || true
     `);
 
     if (networkUpdate.code !== 0) {
@@ -575,7 +575,7 @@ EOFCFG`);
 
   private async isRestartRequired(ssh: NodeSSH, newConfig: AgentConfig): Promise<boolean> {
     // Check if key configuration has changed that requires restart
-    const result = await ssh.execCommand('cat /etc/a2r/config.json 2>/dev/null || echo "{}"');
+    const result = await ssh.execCommand('cat /etc/allternit/config.json 2>/dev/null || echo "{}"');
     
     if (result.code !== 0) {
       return true; // Can't determine, safer to restart
@@ -612,7 +612,7 @@ EOFCFG`);
 
     while (Date.now() - startTime < timeoutMs) {
       const result = await ssh.execCommand(
-        'docker compose -f /opt/a2r/docker-compose.yml ps --format json 2>/dev/null | grep -q "healthy" && echo "healthy" || echo "waiting"'
+        'docker compose -f /opt/allternit/docker-compose.yml ps --format json 2>/dev/null | grep -q "healthy" && echo "healthy" || echo "waiting"'
       );
 
       if (result.stdout.trim() === 'healthy') {

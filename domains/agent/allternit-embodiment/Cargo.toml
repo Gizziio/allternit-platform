@@ -1,8 +1,8 @@
 [package]
-name = "a2rchitech-embodiment"
+name = "allternit-embodiment"
 version = "0.1.0"
 edition = "2021"
-description = "A2rchitech embodiment control plane for robotics and IoT devices"
+description = "Allternit embodiment control plane for robotics and IoT devices"
 
 [dependencies]
 serde = { workspace = true }
@@ -12,15 +12,15 @@ uuid = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
-a2rchitech-history = { workspace = true }
-a2rchitech-messaging = { workspace = true }
-a2rchitech-policy = { workspace = true }
-a2rchitech-context-router = { workspace = true }
-a2rchitech-memory = { workspace = true }
-a2rchitech-providers = { workspace = true }
-a2rchitech-runtime-core = { workspace = true }
-a2rchitech-skills = { workspace = true }
-a2rchitech-workflows = { workspace = true }
+allternit-history = { workspace = true }
+allternit-messaging = { workspace = true }
+allternit-policy = { workspace = true }
+allternit-context-router = { workspace = true }
+allternit-memory = { workspace = true }
+allternit-providers = { workspace = true }
+allternit-runtime-core = { workspace = true }
+allternit-skills = { workspace = true }
+allternit-workflows = { workspace = true }
 async-trait = { workspace = true }
 sqlx = { workspace = true }
 tempfile = { workspace = true }
@@ -29,4 +29,4 @@ chrono = { version = "0.4", features = ["serde"] }
 
 [dev-dependencies]
 tempfile = { workspace = true }
-a2rchitech-tools-gateway = { workspace = true }
+allternit-tools-gateway = { workspace = true }

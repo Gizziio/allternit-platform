@@ -3,7 +3,7 @@
 **Version:** 1.0.0  
 **Status:** ✅ Complete
 
-Core engine for A2R Playground System - interactive visual surfaces for complex agent workflows.
+Core engine for Allternit Playground System - interactive visual surfaces for complex agent workflows.
 
 ---
 
@@ -60,7 +60,7 @@ playgrounds/
 ### Create a Playground
 
 ```typescript
-import { playgroundStore } from '@a2r/playground-core';
+import { playgroundStore } from '@allternit/playground-core';
 
 const playground = await playgroundStore.create({
   title: 'Code Review: Auth Module',
@@ -95,7 +95,7 @@ eventSource.onmessage = (event) => {
 ### Agent Tools
 
 ```typescript
-import { playgroundTools } from '@a2r/playground-core';
+import { playgroundTools } from '@allternit/playground-core';
 
 // Watch playground
 const state = await playgroundTools.watch({ id: 'pg_123' });
@@ -212,6 +212,6 @@ await playgroundTools.approvalGiven('pg_123', {
 
 ## Related
 
-- [Playgrounda2r Spec](../../../../Need%20To%20Finish%20FIles%20A2rchitech/a2rchitech%20brainstorm%20session%20files/playgrounda2r.md)
+- [Playgroundallternit Spec](../../../../Need%20To%20Finish%20FIles%20Allternit/allternit%20brainstorm%20session%20files/playgroundallternit.md)
 - [A2A Review Protocol](../../spec/review-protocol.md)
 - [Living Files Doctrine](../../docs/governance/LIVING_FILES_DOCTRINE.md)

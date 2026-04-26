@@ -1,7 +1,7 @@
 {
-  "name": "@a2r/workflow-engine",
+  "name": "@allternit/workflow-engine-domains",
   "version": "1.0.0",
-  "description": "A2R Workflow Engine - Re-exports from @a2r/governor for backward compatibility",
+  "description": "Allternit Workflow Engine - Re-exports from @allternit/governor for backward compatibility",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -12,18 +12,18 @@
     }
   },
   "scripts": {
-    "build": "echo 'Nothing to build - re-exports from @a2r/governor'",
-    "test": "echo 'Tests moved to @a2r/governor'",
+    "build": "echo 'Nothing to build - re-exports from @allternit/governor'",
+    "test": "echo 'Tests moved to @allternit/governor'",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@a2r/governor": "workspace:*"
+    "@allternit/governor": "workspace:*"
   },
   "keywords": [
-    "a2r",
+    "allternit",
     "workflow",
     "deprecated"
   ],
-  "author": "A2rchitect Team",
+  "author": "allternit Team",
   "license": "MIT"
 }

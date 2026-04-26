@@ -1,4 +1,4 @@
-use a2r_openclaw_host::skills::{SkillRegistry, SkillRegistryBridge};
+use allternit_openclaw_host::skills::{SkillRegistry, SkillRegistryBridge};
 use std::path::Path;
 
 fn main() {
@@ -11,7 +11,7 @@ fn main() {
             let stats = bridge.registry().stats();
             println!("Registry stats: {:?}", stats);
 
-            let request = a2r_openclaw_host::skills::ListSkillsRequest {
+            let request = allternit_openclaw_host::skills::ListSkillsRequest {
                 include_unavailable: false,
             };
 

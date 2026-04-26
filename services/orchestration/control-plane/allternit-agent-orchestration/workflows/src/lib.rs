@@ -1,8 +1,8 @@
-use a2rchitech_history::HistoryLedger;
-use a2rchitech_messaging::{EventEnvelope, MessagingSystem, TaskQueue};
-use a2rchitech_policy::{PolicyEffect, PolicyEngine, PolicyRequest};
-use a2rchitech_skills::SkillRegistry;
-use a2rchitech_tools_gateway::{run_scoped_write_scope, ToolExecutionRequest, ToolGateway};
+use allternit_history::HistoryLedger;
+use allternit_messaging::{EventEnvelope, MessagingSystem, TaskQueue};
+use allternit_policy::{PolicyEffect, PolicyEngine, PolicyRequest};
+use allternit_skills::SkillRegistry;
+use allternit_tools_gateway::{run_scoped_write_scope, ToolExecutionRequest, ToolGateway};
 use petgraph::graph::NodeIndex;
 use petgraph::Graph;
 use serde::{Deserialize, Serialize};
@@ -87,7 +87,7 @@ pub struct WorkflowDefinition {
     pub version: String,
     pub description: String,
     pub required_roles: Vec<String>,
-    pub allowed_skill_tiers: Vec<a2rchitech_policy::SafetyTier>,
+    pub allowed_skill_tiers: Vec<allternit_policy::SafetyTier>,
     pub phases_used: Vec<WorkflowPhase>,
     pub success_criteria: String,
     pub failure_modes: Vec<String>,
@@ -158,7 +158,7 @@ pub enum WorkflowError {
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
     #[error("History error: {0}")]
-    History(#[from] a2rchitech_history::HistoryError),
+    History(#[from] allternit_history::HistoryError),
     #[error("Workflow not found: {0}")]
     WorkflowNotFound(String),
     #[error("Node not found: {0}")]
@@ -170,11 +170,11 @@ pub enum WorkflowError {
     #[error("Phase violation: {0}")]
     PhaseViolation(String),
     #[error("Policy error: {0}")]
-    Policy(#[from] a2rchitech_policy::PolicyError),
+    Policy(#[from] allternit_policy::PolicyError),
     #[error("Tool gateway error: {0}")]
-    ToolGateway(#[from] a2rchitech_tools_gateway::ToolGatewayError),
+    ToolGateway(#[from] allternit_tools_gateway::ToolGatewayError),
     #[error("Skills error: {0}")]
-    Skills(#[from] a2rchitech_skills::SkillsError),
+    Skills(#[from] allternit_skills::SkillsError),
     #[error("Mutex poisoned: {0}")]
     MutexPoisoned(String),
     #[error("Time error: {0}")]
@@ -1038,8 +1038,8 @@ impl WorkflowEngine {
             description: "A sample workflow following the scientific loop".to_string(),
             required_roles: vec!["user".to_string()],
             allowed_skill_tiers: vec![
-                a2rchitech_policy::SafetyTier::T0,
-                a2rchitech_policy::SafetyTier::T1,
+                allternit_policy::SafetyTier::T0,
+                allternit_policy::SafetyTier::T1,
             ],
             phases_used: vec![
                 WorkflowPhase::Observe,
@@ -1153,22 +1153,22 @@ impl WorkflowEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use a2rchitech_messaging::MessagingSystem;
-    use a2rchitech_policy::PolicyEngine;
-    use a2rchitech_skills::SkillRegistry;
-    use a2rchitech_tools_gateway::ToolGateway;
+    use allternit_messaging::MessagingSystem;
+    use allternit_policy::PolicyEngine;
+    use allternit_skills::SkillRegistry;
+    use allternit_tools_gateway::ToolGateway;
     use data_encoding::BASE64;
     use ring::rand::SystemRandom;
     use ring::signature::Ed25519KeyPair;
     use sqlx::SqlitePool;
     use tempfile::NamedTempFile;
 
-    fn create_publisher_key() -> (Ed25519KeyPair, a2rchitech_skills::PublisherKey) {
+    fn create_publisher_key() -> (Ed25519KeyPair, allternit_skills::PublisherKey) {
         let rng = SystemRandom::new();
         let pkcs8 = Ed25519KeyPair::generate_pkcs8(&rng).unwrap();
         let keypair = Ed25519KeyPair::from_pkcs8(pkcs8.as_ref()).unwrap();
         let public_key = BASE64.encode(keypair.public_key().as_ref());
-        let publisher_key = a2rchitech_skills::PublisherKey {
+        let publisher_key = allternit_skills::PublisherKey {
             publisher_id: "test_publisher".to_string(),
             public_key_id: "key1".to_string(),
             public_key,
@@ -1182,9 +1182,9 @@ mod tests {
         (keypair, publisher_key)
     }
 
-    fn sign_skill(skill: &mut a2rchitech_skills::Skill, keypair: &Ed25519KeyPair) {
-        let bundle_digest = a2rchitech_skills::compute_bundle_digest(skill).unwrap();
-        let bundle_hash = a2rchitech_skills::compute_bundle_hash(skill).unwrap();
+    fn sign_skill(skill: &mut allternit_skills::Skill, keypair: &Ed25519KeyPair) {
+        let bundle_digest = allternit_skills::compute_bundle_digest(skill).unwrap();
+        let bundle_hash = allternit_skills::compute_bundle_hash(skill).unwrap();
         let signature = keypair.sign(&bundle_digest);
         skill.manifest.signature.manifest_sig = BASE64.encode(signature.as_ref());
         skill.manifest.signature.bundle_hash = bundle_hash;
@@ -1197,7 +1197,7 @@ mod tests {
         let pool = SqlitePool::connect(&db_url).await.unwrap();
         let temp_path = format!("/tmp/test_workflows_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
         let messaging_system = Arc::new(
             MessagingSystem::new_with_storage(history_ledger.clone(), pool.clone())
@@ -1231,11 +1231,11 @@ mod tests {
             .unwrap();
 
         // Register a test skill
-        let test_tool = a2rchitech_tools_gateway::ToolDefinition {
+        let test_tool = allternit_tools_gateway::ToolDefinition {
             id: "echo_tool".to_string(),
             name: "Echo Tool".to_string(),
             description: "A simple echo tool for testing".to_string(),
-            tool_type: a2rchitech_tools_gateway::ToolType::Local,
+            tool_type: allternit_tools_gateway::ToolType::Local,
             command: "echo".to_string(),
             endpoint: "".to_string(),
             input_schema: serde_json::json!({
@@ -1255,18 +1255,18 @@ mod tests {
             idempotency_behavior: "idempotent".to_string(),
             retryable: true,
             failure_classification: "transient".to_string(),
-            safety_tier: a2rchitech_policy::SafetyTier::T0,
-            resource_limits: a2rchitech_tools_gateway::ResourceLimits {
+            safety_tier: allternit_policy::SafetyTier::T0,
+            resource_limits: allternit_tools_gateway::ResourceLimits {
                 cpu: Some("100m".to_string()),
                 memory: Some("64Mi".to_string()),
-                network: a2rchitech_tools_gateway::NetworkAccess::None,
-                filesystem: a2rchitech_tools_gateway::FilesystemAccess::None,
+                network: allternit_tools_gateway::NetworkAccess::None,
+                filesystem: allternit_tools_gateway::FilesystemAccess::None,
                 time_limit: 10,
             },
             subprocess: None,
         };
 
-        let skill_manifest = a2rchitech_skills::SkillManifest {
+        let skill_manifest = allternit_skills::SkillManifest {
             id: "echo_skill".to_string(),
             name: "Echo Skill".to_string(),
             version: "1.0.0".to_string(),
@@ -1277,59 +1277,59 @@ mod tests {
             homepage: Some("https://example.com".to_string()),
             repository: Some("https://github.com/example/test-skill".to_string()),
 
-            inputs: a2rchitech_skills::SkillIO {
+            inputs: allternit_skills::SkillIO {
                 schema: r#"{"type": "object", "properties": {"message": {"type": "string"}}}"#
                     .to_string(),
                 examples: Some(vec![serde_json::json!({"message": "hello"})]),
             },
-            outputs: a2rchitech_skills::SkillIO {
+            outputs: allternit_skills::SkillIO {
                 schema: r#"{"type": "object", "properties": {"output": {"type": "string"}}}"#
                     .to_string(),
                 examples: Some(vec![serde_json::json!({"output": "hello"})]),
             },
 
-            runtime: a2rchitech_skills::SkillRuntime {
-                mode: a2rchitech_skills::RuntimeMode::Sandbox,
-                timeouts: a2rchitech_skills::SkillTimeouts {
+            runtime: allternit_skills::SkillRuntime {
+                mode: allternit_skills::RuntimeMode::Sandbox,
+                timeouts: allternit_skills::SkillTimeouts {
                     per_step: Some(60),
                     total: Some(300),
                 },
-                resources: Some(a2rchitech_skills::ResourceHints {
+                resources: Some(allternit_skills::ResourceHints {
                     cpu: Some("100m".to_string()),
                     gpu: None,
                     memory: Some("128Mi".to_string()),
                 }),
             },
 
-            environment: a2rchitech_skills::SkillEnvironment {
+            environment: allternit_skills::SkillEnvironment {
                 allowed_envs: vec![
-                    a2rchitech_skills::Environment::Dev,
-                    a2rchitech_skills::Environment::Stage,
+                    allternit_skills::Environment::Dev,
+                    allternit_skills::Environment::Stage,
                 ],
-                network: a2rchitech_skills::NetworkAccess::None,
-                filesystem: a2rchitech_skills::FilesystemAccess::None,
+                network: allternit_skills::NetworkAccess::None,
+                filesystem: allternit_skills::FilesystemAccess::None,
             },
 
             side_effects: vec!["read".to_string()],
 
-            risk_tier: a2rchitech_policy::SafetyTier::T0,
+            risk_tier: allternit_policy::SafetyTier::T0,
             required_permissions: vec!["perm_t0_read".to_string()],
             requires_policy_gate: true,
-            publisher: a2rchitech_skills::PublisherInfo {
+            publisher: allternit_skills::PublisherInfo {
                 publisher_id: "test_publisher".to_string(),
                 public_key_id: "key1".to_string(),
             },
-            signature: a2rchitech_skills::SignatureInfo {
+            signature: allternit_skills::SignatureInfo {
                 manifest_sig: String::new(),
                 bundle_hash: String::new(),
             },
         };
 
-        let workflow = a2rchitech_skills::SkillWorkflow {
-            nodes: vec![a2rchitech_skills::WorkflowNode {
+        let workflow = allternit_skills::SkillWorkflow {
+            nodes: vec![allternit_skills::WorkflowNode {
                 id: "echo_node".to_string(),
                 name: "Echo Node".to_string(),
-                phase: a2rchitech_skills::WorkflowPhase::Observe,
+                phase: allternit_skills::WorkflowPhase::Observe,
                 tool_binding: "echo_tool".to_string(),
                 inputs: vec!["input".to_string()],
                 outputs: vec!["output".to_string()],
@@ -1339,7 +1339,7 @@ mod tests {
             artifact_outputs: vec!["result".to_string()],
         };
 
-        let mut skill = a2rchitech_skills::Skill {
+        let mut skill = allternit_skills::Skill {
             manifest: skill_manifest,
             workflow,
             tools: vec![test_tool],
@@ -1366,7 +1366,7 @@ mod tests {
             version: "1.0.0".to_string(),
             description: "A test workflow".to_string(),
             required_roles: vec!["user".to_string()],
-            allowed_skill_tiers: vec![a2rchitech_policy::SafetyTier::T0],
+            allowed_skill_tiers: vec![allternit_policy::SafetyTier::T0],
             phases_used: vec![WorkflowPhase::Observe],
             success_criteria: "All nodes completed successfully".to_string(),
             failure_modes: vec!["Any node fails".to_string()],
@@ -1410,7 +1410,7 @@ mod tests {
         let pool = SqlitePool::connect(&db_url).await.unwrap();
         let temp_path = format!("/tmp/test_execution_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
         let messaging_system = Arc::new(
             MessagingSystem::new_with_storage(history_ledger.clone(), pool.clone())
@@ -1423,9 +1423,9 @@ mod tests {
         ));
 
         // Register a default identity for testing
-        let identity = a2rchitech_policy::Identity {
+        let identity = allternit_policy::Identity {
             id: "workflow_executor".to_string(), // Use the expected identity ID
-            identity_type: a2rchitech_policy::IdentityType::AgentIdentity,
+            identity_type: allternit_policy::IdentityType::AgentIdentity,
             name: "workflow_executor".to_string(),
             tenant_id: "tenant1".to_string(),
             created_at: 0,
@@ -1437,7 +1437,7 @@ mod tests {
         policy_engine.create_default_permissions().await.unwrap();
         // Skip create_default_rules() since condition evaluation is not implemented
         // Instead, create a simple rule that allows all T0 operations
-        use a2rchitech_policy::{PolicyEffect, PolicyRule};
+        use allternit_policy::{PolicyEffect, PolicyRule};
         let simple_rule = PolicyRule {
             id: "simple_allow_t0".to_string(),
             name: "Simple T0 Allow Rule".to_string(),
@@ -1474,11 +1474,11 @@ mod tests {
             .unwrap();
 
         // Register a test skill
-        let test_tool = a2rchitech_tools_gateway::ToolDefinition {
+        let test_tool = allternit_tools_gateway::ToolDefinition {
             id: "echo_tool".to_string(),
             name: "Echo Tool".to_string(),
             description: "A simple echo tool for testing".to_string(),
-            tool_type: a2rchitech_tools_gateway::ToolType::Local,
+            tool_type: allternit_tools_gateway::ToolType::Local,
             command: "echo".to_string(),
             endpoint: "".to_string(),
             input_schema: serde_json::json!({
@@ -1498,18 +1498,18 @@ mod tests {
             idempotency_behavior: "idempotent".to_string(),
             retryable: true,
             failure_classification: "transient".to_string(),
-            safety_tier: a2rchitech_policy::SafetyTier::T0,
-            resource_limits: a2rchitech_tools_gateway::ResourceLimits {
+            safety_tier: allternit_policy::SafetyTier::T0,
+            resource_limits: allternit_tools_gateway::ResourceLimits {
                 cpu: Some("100m".to_string()),
                 memory: Some("64Mi".to_string()),
-                network: a2rchitech_tools_gateway::NetworkAccess::None,
-                filesystem: a2rchitech_tools_gateway::FilesystemAccess::None,
+                network: allternit_tools_gateway::NetworkAccess::None,
+                filesystem: allternit_tools_gateway::FilesystemAccess::None,
                 time_limit: 10,
             },
             subprocess: None,
         };
 
-        let skill_manifest = a2rchitech_skills::SkillManifest {
+        let skill_manifest = allternit_skills::SkillManifest {
             id: "echo_skill".to_string(),
             name: "Echo Skill".to_string(),
             version: "1.0.0".to_string(),
@@ -1520,59 +1520,59 @@ mod tests {
             homepage: Some("https://example.com".to_string()),
             repository: Some("https://github.com/example/test-skill".to_string()),
 
-            inputs: a2rchitech_skills::SkillIO {
+            inputs: allternit_skills::SkillIO {
                 schema: r#"{"type": "object", "properties": {"message": {"type": "string"}}}"#
                     .to_string(),
                 examples: Some(vec![serde_json::json!({"message": "hello"})]),
             },
-            outputs: a2rchitech_skills::SkillIO {
+            outputs: allternit_skills::SkillIO {
                 schema: r#"{"type": "object", "properties": {"output": {"type": "string"}}}"#
                     .to_string(),
                 examples: Some(vec![serde_json::json!({"output": "hello"})]),
             },
 
-            runtime: a2rchitech_skills::SkillRuntime {
-                mode: a2rchitech_skills::RuntimeMode::Sandbox,
-                timeouts: a2rchitech_skills::SkillTimeouts {
+            runtime: allternit_skills::SkillRuntime {
+                mode: allternit_skills::RuntimeMode::Sandbox,
+                timeouts: allternit_skills::SkillTimeouts {
                     per_step: Some(60),
                     total: Some(300),
                 },
-                resources: Some(a2rchitech_skills::ResourceHints {
+                resources: Some(allternit_skills::ResourceHints {
                     cpu: Some("100m".to_string()),
                     gpu: None,
                     memory: Some("128Mi".to_string()),
                 }),
             },
 
-            environment: a2rchitech_skills::SkillEnvironment {
+            environment: allternit_skills::SkillEnvironment {
                 allowed_envs: vec![
-                    a2rchitech_skills::Environment::Dev,
-                    a2rchitech_skills::Environment::Stage,
+                    allternit_skills::Environment::Dev,
+                    allternit_skills::Environment::Stage,
                 ],
-                network: a2rchitech_skills::NetworkAccess::None,
-                filesystem: a2rchitech_skills::FilesystemAccess::None,
+                network: allternit_skills::NetworkAccess::None,
+                filesystem: allternit_skills::FilesystemAccess::None,
             },
 
             side_effects: vec!["read".to_string()],
 
-            risk_tier: a2rchitech_policy::SafetyTier::T0,
+            risk_tier: allternit_policy::SafetyTier::T0,
             required_permissions: vec!["perm_t0_read".to_string()],
             requires_policy_gate: true,
-            publisher: a2rchitech_skills::PublisherInfo {
+            publisher: allternit_skills::PublisherInfo {
                 publisher_id: "test_publisher".to_string(),
                 public_key_id: "key1".to_string(),
             },
-            signature: a2rchitech_skills::SignatureInfo {
+            signature: allternit_skills::SignatureInfo {
                 manifest_sig: String::new(),
                 bundle_hash: String::new(),
             },
         };
 
-        let workflow = a2rchitech_skills::SkillWorkflow {
-            nodes: vec![a2rchitech_skills::WorkflowNode {
+        let workflow = allternit_skills::SkillWorkflow {
+            nodes: vec![allternit_skills::WorkflowNode {
                 id: "echo_node".to_string(),
                 name: "Echo Node".to_string(),
-                phase: a2rchitech_skills::WorkflowPhase::Observe,
+                phase: allternit_skills::WorkflowPhase::Observe,
                 tool_binding: "echo_tool".to_string(),
                 inputs: vec!["input".to_string()],
                 outputs: vec!["output".to_string()],
@@ -1582,7 +1582,7 @@ mod tests {
             artifact_outputs: vec!["result".to_string()],
         };
 
-        let mut skill = a2rchitech_skills::Skill {
+        let mut skill = allternit_skills::Skill {
             manifest: skill_manifest,
             workflow,
             tools: vec![test_tool],
@@ -1609,7 +1609,7 @@ mod tests {
             version: "1.0.0".to_string(),
             description: "A test workflow".to_string(),
             required_roles: vec!["user".to_string()],
-            allowed_skill_tiers: vec![a2rchitech_policy::SafetyTier::T0],
+            allowed_skill_tiers: vec![allternit_policy::SafetyTier::T0],
             phases_used: vec![WorkflowPhase::Observe],
             success_criteria: "All nodes completed successfully".to_string(),
             failure_modes: vec!["Any node fails".to_string()],
@@ -1661,7 +1661,7 @@ mod tests {
         let pool = SqlitePool::connect(&db_url).await.unwrap();
         let temp_path = format!("/tmp/test_verify_gate_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
         let messaging_system = Arc::new(
             MessagingSystem::new_with_storage(history_ledger.clone(), pool.clone())
@@ -1673,9 +1673,9 @@ mod tests {
             messaging_system.clone(),
         ));
 
-        let identity = a2rchitech_policy::Identity {
+        let identity = allternit_policy::Identity {
             id: "workflow_executor".to_string(),
-            identity_type: a2rchitech_policy::IdentityType::AgentIdentity,
+            identity_type: allternit_policy::IdentityType::AgentIdentity,
             name: "workflow_executor".to_string(),
             tenant_id: "tenant1".to_string(),
             created_at: 0,
@@ -1685,7 +1685,7 @@ mod tests {
         };
         policy_engine.register_identity(identity).await.unwrap();
         policy_engine.create_default_permissions().await.unwrap();
-        use a2rchitech_policy::{PolicyEffect, PolicyRule};
+        use allternit_policy::{PolicyEffect, PolicyRule};
         let allow_execute_rule = PolicyRule {
             id: "allow_execute_t0".to_string(),
             name: "Allow execute for T0".to_string(),
@@ -1722,11 +1722,11 @@ mod tests {
             .await
             .unwrap();
 
-        let test_tool = a2rchitech_tools_gateway::ToolDefinition {
+        let test_tool = allternit_tools_gateway::ToolDefinition {
             id: "verify_skill".to_string(),
             name: "Verify Skill Tool".to_string(),
             description: "Tool used for verify gating test".to_string(),
-            tool_type: a2rchitech_tools_gateway::ToolType::Local,
+            tool_type: allternit_tools_gateway::ToolType::Local,
             command: "echo".to_string(),
             endpoint: "".to_string(),
             input_schema: serde_json::json!({"type": "object"}),
@@ -1735,19 +1735,19 @@ mod tests {
             idempotency_behavior: "idempotent".to_string(),
             retryable: true,
             failure_classification: "transient".to_string(),
-            safety_tier: a2rchitech_policy::SafetyTier::T0,
-            resource_limits: a2rchitech_tools_gateway::ResourceLimits {
+            safety_tier: allternit_policy::SafetyTier::T0,
+            resource_limits: allternit_tools_gateway::ResourceLimits {
                 cpu: Some("100m".to_string()),
                 memory: Some("64Mi".to_string()),
-                network: a2rchitech_tools_gateway::NetworkAccess::None,
-                filesystem: a2rchitech_tools_gateway::FilesystemAccess::None,
+                network: allternit_tools_gateway::NetworkAccess::None,
+                filesystem: allternit_tools_gateway::FilesystemAccess::None,
                 time_limit: 10,
             },
             subprocess: None,
         };
         tool_gateway.register_tool(test_tool.clone()).await.unwrap();
 
-        let skill_manifest = a2rchitech_skills::SkillManifest {
+        let skill_manifest = allternit_skills::SkillManifest {
             id: "verify_skill".to_string(),
             name: "Verify Skill".to_string(),
             version: "1.0.0".to_string(),
@@ -1757,50 +1757,50 @@ mod tests {
             tags: vec!["test".to_string()],
             homepage: None,
             repository: None,
-            inputs: a2rchitech_skills::SkillIO {
+            inputs: allternit_skills::SkillIO {
                 schema: r#"{"type": "object"}"#.to_string(),
                 examples: None,
             },
-            outputs: a2rchitech_skills::SkillIO {
+            outputs: allternit_skills::SkillIO {
                 schema: r#"{"type": "object"}"#.to_string(),
                 examples: None,
             },
-            runtime: a2rchitech_skills::SkillRuntime {
-                mode: a2rchitech_skills::RuntimeMode::Sandbox,
-                timeouts: a2rchitech_skills::SkillTimeouts {
+            runtime: allternit_skills::SkillRuntime {
+                mode: allternit_skills::RuntimeMode::Sandbox,
+                timeouts: allternit_skills::SkillTimeouts {
                     per_step: Some(60),
                     total: Some(300),
                 },
-                resources: Some(a2rchitech_skills::ResourceHints {
+                resources: Some(allternit_skills::ResourceHints {
                     cpu: Some("100m".to_string()),
                     gpu: None,
                     memory: Some("128Mi".to_string()),
                 }),
             },
-            environment: a2rchitech_skills::SkillEnvironment {
-                allowed_envs: vec![a2rchitech_skills::Environment::Dev],
-                network: a2rchitech_skills::NetworkAccess::None,
-                filesystem: a2rchitech_skills::FilesystemAccess::None,
+            environment: allternit_skills::SkillEnvironment {
+                allowed_envs: vec![allternit_skills::Environment::Dev],
+                network: allternit_skills::NetworkAccess::None,
+                filesystem: allternit_skills::FilesystemAccess::None,
             },
             side_effects: vec![],
-            risk_tier: a2rchitech_policy::SafetyTier::T0,
+            risk_tier: allternit_policy::SafetyTier::T0,
             required_permissions: vec![],
             requires_policy_gate: false,
-            publisher: a2rchitech_skills::PublisherInfo {
+            publisher: allternit_skills::PublisherInfo {
                 publisher_id: "test_publisher".to_string(),
                 public_key_id: "test_public_key".to_string(),
             },
-            signature: a2rchitech_skills::SignatureInfo {
+            signature: allternit_skills::SignatureInfo {
                 manifest_sig: String::new(),
                 bundle_hash: String::new(),
             },
         };
 
-        let skill_workflow = a2rchitech_skills::SkillWorkflow {
-            nodes: vec![a2rchitech_skills::WorkflowNode {
+        let skill_workflow = allternit_skills::SkillWorkflow {
+            nodes: vec![allternit_skills::WorkflowNode {
                 id: "node-1".to_string(),
                 name: "Verify Node".to_string(),
-                phase: a2rchitech_skills::WorkflowPhase::Verify,
+                phase: allternit_skills::WorkflowPhase::Verify,
                 tool_binding: "verify_skill".to_string(),
                 inputs: vec!["input".to_string()],
                 outputs: vec!["output".to_string()],
@@ -1810,7 +1810,7 @@ mod tests {
             artifact_outputs: vec!["output".to_string()],
         };
 
-        let mut skill = a2rchitech_skills::Skill {
+        let mut skill = allternit_skills::Skill {
             manifest: skill_manifest,
             workflow: skill_workflow,
             tools: vec![test_tool],
@@ -1835,7 +1835,7 @@ mod tests {
             version: "1.0.0".to_string(),
             description: "Verify-gated workflow".to_string(),
             required_roles: vec!["user".to_string()],
-            allowed_skill_tiers: vec![a2rchitech_policy::SafetyTier::T0],
+            allowed_skill_tiers: vec![allternit_policy::SafetyTier::T0],
             phases_used: vec![WorkflowPhase::Verify],
             success_criteria: "Verify phase complete".to_string(),
             failure_modes: vec!["Missing verify artifacts".to_string()],

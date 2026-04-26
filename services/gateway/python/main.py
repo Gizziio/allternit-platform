@@ -12,7 +12,7 @@ import time
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("python-gateway")
 
-app = FastAPI(title="A2rchitech Python Gateway")
+app = FastAPI(title="Allternitchitech Python Gateway")
 
 class ExecuteRequest(BaseModel):
     code: str

@@ -4,11 +4,10 @@
 //! the objc crate to interface with Apple's native APIs.
 
 use crate::{AppleVFError, CommandResult, Result, VMStats};
-use a2r_driver_interface::{CommandSpec, DriverError};
+use allternit_driver_interface::CommandSpec;
 use std::path::PathBuf;
-use std::process::Stdio;
-use tokio::process::{Child, Command};
-use tracing::{debug, error, info, warn};
+use tokio::process::Command;
+use tracing::{debug, info, warn};
 
 /// VM configuration
 #[derive(Debug, Clone)]
@@ -29,6 +28,8 @@ pub struct VMConfig {
     pub network_enabled: bool,
     /// Enable Rosetta 2
     pub rosetta_enabled: bool,
+    /// Path to Lume binary
+    pub lume_bin: Option<PathBuf>,
 }
 
 /// Shared directory configuration
@@ -58,15 +59,11 @@ pub struct VirtualMachine {
     /// VM configuration
     config: VMConfig,
     /// VM directory
-    vm_dir: PathBuf,
+    _vm_dir: PathBuf,
     /// Current state
     state: VMState,
-    /// Guest agent process (if running)
-    guest_agent: Option<Child>,
-    /// VM process handle (if using external process)
-    vm_process: Option<Child>,
     /// VSOCK socket path
-    vsock_path: PathBuf,
+    _vsock_path: PathBuf,
 }
 
 impl VirtualMachine {
@@ -86,16 +83,12 @@ impl VirtualMachine {
 
         let vsock_path = vm_dir.join("vsock.sock");
 
-        let vm = Self {
+        Ok(Self {
             config,
-            vm_dir,
+            _vm_dir: vm_dir,
             state: VMState::Creating,
-            guest_agent: None,
-            vm_process: None,
-            vsock_path,
-        };
-
-        Ok(vm)
+            _vsock_path: vsock_path,
+        })
     }
 
     /// Start the virtual machine
@@ -146,68 +139,58 @@ impl VirtualMachine {
         restore_image.exists()
     }
 
-    /// Start VM using native Virtualization.framework
+    /// Start VM using Lume CLI
     #[cfg(target_os = "macos")]
     async fn start_native_vm(&mut self) -> Result<()> {
-        info!("Using native Virtualization.framework");
+        info!("Starting Apple VM via Lume");
         
-        // For now, we'll use a subprocess approach since full objc bindings
-        // require significant additional work. In production, this would:
-        //
-        // 1. Create VZVirtualMachineConfiguration
-        // 2. Set boot loader (VZLinuxBootLoader)
-        // 3. Configure memory and CPU
-        // 4. Set up storage (VZDiskImageStorageDeviceAttachment)
-        // 5. Configure network (VZNATNetworkDeviceAttachment)
-        // 6. Set up shared directories (VZVirtioFileSystemDevice)
-        // 7. Create and start VM
-        //
-        // For this implementation, we create a minimal VM wrapper script
-        // that uses the Virtualization.framework via a helper binary
-        
-        // Create a helper script that uses Apple's virt-fw or similar
-        let helper_script = self.vm_dir.join("vm-helper.sh");
-        let script_content = format!(r##"#!/bin/bash
-# VM Helper for {}
-# This would normally use Virtualization.framework
+        let lume_bin = self.config.lume_bin.as_ref()
+            .map(|p| p.display().to_string())
+            .unwrap_or_else(|| "lume".to_string());
 
-echo "VM {} started (Virtualization.framework integration pending)"
-echo "CPU: {} cores"
-echo "Memory: {} MiB"
+        let mut args = vec![
+            "run".to_string(),
+            self.config.image_path.display().to_string(),
+            "--name".to_string(),
+            self.config.id.clone(),
+            "--cpus".to_string(),
+            self.config.cpu_count.to_string(),
+            "--memory".to_string(),
+            self.config.memory_mib.to_string(),
+            "--detach".to_string(),
+        ];
 
-# Keep running until stopped
-while true; do
-    sleep 1
-done
-"##, 
-            self.config.id,
-            self.config.id,
-            self.config.cpu_count,
-            self.config.memory_mib
-        );
-        
-        tokio::fs::write(&helper_script, script_content).await?;
-        
-        // Start the helper as a placeholder for actual VM
-        let child = Command::new("bash")
-            .arg(&helper_script)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()?;
-        
-        self.vm_process = Some(child);
-        
-        // Create a guest agent stub
-        let guest_agent = Command::new("sleep")
-            .arg("3600")
-            .spawn()?;
-        
-        self.guest_agent = Some(guest_agent);
+        // Add shared folders
+        for folder in &self.config.shared_dirs {
+            args.push("--folder".to_string());
+            args.push(format!("{}:{}", folder.host_path, folder.guest_path));
+        }
+
+        if self.config.rosetta_enabled {
+            args.push("--rosetta".to_string());
+        }
+
+        if !self.config.network_enabled {
+            args.push("--no-network".to_string());
+        }
+
+        debug!("Spawning Lume: {} {}", lume_bin, args.join(" "));
+
+        let output = Command::new(&lume_bin)
+            .args(&args)
+            .output()
+            .await
+            .map_err(|e| AppleVFError::VMStartFailed(format!("Failed to spawn lume: {}", e)))?;
+
+        if !output.status.success() {
+            let err = String::from_utf8_lossy(&output.stderr);
+            return Err(AppleVFError::VMStartFailed(format!("Lume failed: {}", err)));
+        }
         
         Ok(())
     }
 
-    /// Execute a command in the VM via guest agent
+    /// Execute a command in the VM via Lume
     pub async fn execute_command(&self, cmd_spec: &CommandSpec) -> Result<CommandResult> {
         if self.state != VMState::Running {
             return Err(AppleVFError::VMStartFailed(
@@ -215,42 +198,36 @@ done
             ));
         }
 
-        debug!(
-            vm_id = %self.config.id,
-            command = ?cmd_spec.command,
-            "Executing command in VM"
-        );
+        let lume_bin = self.config.lume_bin.as_ref()
+            .map(|p| p.display().to_string())
+            .unwrap_or_else(|| "lume".to_string());
 
-        // In a full implementation, this would:
-        // 1. Connect to guest agent via VSOCK
-        // 2. Send command execution request
-        // 3. Stream stdout/stderr
-        // 4. Return result
+        let mut args = vec![
+            "exec".to_string(),
+            self.config.id.clone(),
+        ];
 
-        // For this implementation, we simulate execution
-        // In production, use VZVirtioSocketDevice for guest communication
-        
-        // Execute the command locally (for development)
-        // In production, this would be proxied to the guest
-        let mut command = Command::new(&cmd_spec.command[0]);
-        if cmd_spec.command.len() > 1 {
-            command.args(&cmd_spec.command[1..]);
-        }
-        
-        // Set environment
-        command.envs(&cmd_spec.env_vars);
-        
-        // Set working directory
         if let Some(cwd) = &cmd_spec.working_dir {
-            command.current_dir(cwd);
+            args.push("--workdir".to_string());
+            args.push(cwd.clone());
         }
 
-        // Configure stdio
-        command.stdin(Stdio::null());
-        command.stdout(Stdio::piped());
-        command.stderr(Stdio::piped());
+        // Add environment variables
+        for (key, value) in &cmd_spec.env_vars {
+            args.push("--env".to_string());
+            args.push(format!("{}={}", key, value));
+        }
 
-        let output = command.output().await?;
+        args.push("--".to_string());
+        args.extend(cmd_spec.command.clone());
+
+        debug!("Executing via Lume: {} {}", lume_bin, args.join(" "));
+
+        let output = Command::new(&lume_bin)
+            .args(&args)
+            .output()
+            .await
+            .map_err(|e| AppleVFError::Io(e))?;
 
         Ok(CommandResult {
             exit_code: output.status.code().unwrap_or(-1),
@@ -282,21 +259,27 @@ done
 
     /// Stop the virtual machine
     pub async fn stop(&mut self) -> Result<()> {
-        if self.state == VMState::Stopped || self.state == VMState::Stopped {
+        if self.state == VMState::Stopped {
             return Ok(());
         }
 
-        info!(vm_id = %self.config.id, "Stopping VM");
+        info!(vm_id = %self.config.id, "Stopping VM via Lume");
         self.state = VMState::Stopping;
 
-        // Stop guest agent
-        if let Some(mut agent) = self.guest_agent.take() {
-            let _ = agent.kill().await;
-        }
+        let lume_bin = self.config.lume_bin.as_ref()
+            .map(|p| p.display().to_string())
+            .unwrap_or_else(|| "lume".to_string());
 
-        // Stop VM process
-        if let Some(mut process) = self.vm_process.take() {
-            let _ = process.kill().await;
+        let output = Command::new(&lume_bin)
+            .arg("stop")
+            .arg(&self.config.id)
+            .output()
+            .await
+            .map_err(|e| AppleVFError::Io(e))?;
+
+        if !output.status.success() {
+            let err = String::from_utf8_lossy(&output.stderr);
+            warn!(vm_id = %self.config.id, error = %err, "Lume stop failed");
         }
 
         self.state = VMState::Stopped;

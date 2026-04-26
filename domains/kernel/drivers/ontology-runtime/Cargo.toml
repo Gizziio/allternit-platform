@@ -1,8 +1,8 @@
 [package]
-name = "a2r-ontology-runtime"
+name = "allternit-ontology-runtime"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Ontology Runtime Binding - Typed object graph for domain-constrained reasoning"
+description = "Allternit Ontology Runtime Binding - Typed object graph for domain-constrained reasoning"
 
 [dependencies]
 serde = { workspace = true }
@@ -13,7 +13,7 @@ thiserror = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
 chrono = { workspace = true }
-a2rchitech-system-law = { workspace = true }
+allternit-system-law = { workspace = true }
 
 [dev-dependencies]
 tokio-test = "0.4"

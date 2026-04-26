@@ -9,7 +9,7 @@ description: "Fundamental prompts for DAK kernel operation"
 version: "1.0.0"
 deterministic: true
 
-author: "a2r-platform"
+author: "allternit-platform"
 tags: ["dak", "core", "system", "required"]
 
 # Required variables for all prompts in this pack

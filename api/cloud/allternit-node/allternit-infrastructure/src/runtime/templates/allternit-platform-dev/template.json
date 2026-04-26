@@ -1,9 +1,9 @@
 {
   "id": "allternit-platform-dev",
-  "name": "A2R Platform Development",
-  "description": "Full development environment for working on the A2R platform. Includes Node.js, Go, Rust, PostgreSQL, Redis, and all necessary tools for monorepo development.",
+  "name": "Allternit Platform Development",
+  "description": "Full development environment for working on the Allternit platform. Includes Node.js, Go, Rust, PostgreSQL, Redis, and all necessary tools for monorepo development.",
   "version": "1.0.0",
-  "author": "A2R",
+  "author": "Allternit",
   "type": "devcontainer",
   "category": "infra",
   "tags": [
@@ -41,22 +41,22 @@
   "ports": [
     {
       "port": 3000,
-      "name": "A2R Platform UI",
+      "name": "Allternit Platform UI",
       "description": "Main React frontend development server"
     },
     {
       "port": 3010,
-      "name": "A2R Platform UI (Alt)",
+      "name": "Allternit Platform UI (Alt)",
       "description": "Alternative frontend port"
     },
     {
       "port": 8080,
-      "name": "A2R API Gateway",
-      "description": "Main API gateway for A2R services"
+      "name": "Allternit API Gateway",
+      "description": "Main API gateway for Allternit services"
     },
     {
       "port": 8081,
-      "name": "A2R Kernel Services",
+      "name": "Allternit Kernel Services",
       "description": "Backend kernel service ports"
     },
     {
@@ -125,14 +125,14 @@
       "name": "POSTGRES_PASSWORD",
       "description": "PostgreSQL admin password",
       "type": "secret",
-      "default": "a2r-dev-password",
+      "default": "allternit-dev-password",
       "required": true
     },
     {
       "name": "REDIS_PASSWORD",
       "description": "Redis password for authentication",
       "type": "secret",
-      "default": "a2r-redis-password",
+      "default": "allternit-redis-password",
       "required": true
     },
     {
@@ -146,28 +146,28 @@
       "name": "DATABASE_URL",
       "description": "Full PostgreSQL connection string",
       "type": "string",
-      "default": "postgres://postgres:a2r-dev-password@postgres:5432/allternit_platform?sslmode=disable",
+      "default": "postgres://postgres:allternit-dev-password@postgres:5432/allternit_platform?sslmode=disable",
       "required": false
     },
     {
       "name": "REDIS_URL",
       "description": "Full Redis connection string",
       "type": "string",
-      "default": "redis://:a2r-redis-password@redis:6379/0",
+      "default": "redis://:allternit-redis-password@redis:6379/0",
       "required": false
     },
     {
       "name": "JWT_SECRET",
       "description": "Secret key for JWT token signing",
       "type": "secret",
-      "default": "a2r-dev-jwt-secret-change-in-production",
+      "default": "allternit-dev-jwt-secret-change-in-production",
       "required": true
     },
     {
       "name": "ENCRYPTION_KEY",
       "description": "Key for data encryption at rest",
       "type": "secret",
-      "default": "a2r-dev-encryption-key-32-chars!!",
+      "default": "allternit-dev-encryption-key-32-chars!!",
       "required": true
     },
     {

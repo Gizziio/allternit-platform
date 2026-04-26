@@ -1,4 +1,4 @@
-use a2rchitech_messaging::EventBus;
+use allternit_messaging::EventBus;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -88,7 +88,7 @@ impl HookBus {
         // Publish to distributed bus (fire and forget)
         if let Some(bus) = &self.event_bus {
             // Convert HookEvent to Messaging EventEnvelope
-            let event_envelope = a2rchitech_messaging::EventEnvelope {
+            let event_envelope = allternit_messaging::EventEnvelope {
                 event_id: event.id.clone(),
                 event_type: event_name.clone(),
                 session_id: event.run_id.clone(), // Using run_id as session_id

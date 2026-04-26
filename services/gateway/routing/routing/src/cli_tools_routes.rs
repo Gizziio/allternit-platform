@@ -281,7 +281,7 @@ fn infer_category(name: &str) -> CliToolCategory {
         "docker",
         "kubectl",
         "terraform",
-        "a2r",
+        "allternit",
         "gizzi",
     ]
     .iter()
@@ -719,9 +719,9 @@ fn discover_internal_cli_tools(registry: &mut HashMap<String, CliTool>) {
         }
     }
 
-    let a2r_switch_files = ancestor_candidates("cmd/gizzi-code/src/cli/a2r.ts", 6);
+    let allternit_switch_files = ancestor_candidates("cmd/gizzi-code/src/cli/allternit.ts", 6);
     let mut seen_files = HashSet::new();
-    for switch_file in a2r_switch_files {
+    for switch_file in allternit_switch_files {
         if registry.len() >= MAX_INTERNAL_TOOLS {
             break;
         }
@@ -747,21 +747,21 @@ fn discover_internal_cli_tools(registry: &mut HashMap<String, CliTool>) {
             let Some(normalized_subcommand) = normalize_cli_literal(&raw_subcommand) else {
                 continue;
             };
-            let a2r_name = format!("a2r:{}", normalized_subcommand);
-            let Some(normalized_name) = normalize_tool_name(&a2r_name) else {
+            let allternit_name = format!("allternit:{}", normalized_subcommand);
+            let Some(normalized_name) = normalize_tool_name(&allternit_name) else {
                 continue;
             };
             let category = CliToolCategory::Dev;
             let mut tags = tags_for_category(&category);
-            tags.extend(["internal".to_string(), "a2r".to_string()]);
+            tags.extend(["internal".to_string(), "allternit".to_string()]);
             let tool = CliTool {
                 id: to_tool_id(&normalized_name),
                 name: normalized_name.clone(),
                 description: format!(
-                    "Internal a2r subcommand from {}",
+                    "Internal allternit subcommand from {}",
                     switch_file.to_string_lossy()
                 ),
-                command: format!("a2r {}", normalized_subcommand),
+                command: format!("allternit {}", normalized_subcommand),
                 category,
                 installed: true,
                 version: None,

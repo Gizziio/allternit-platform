@@ -13,7 +13,7 @@ use crate::core::io::{ensure_dir, read_json_file, write_json_atomic};
 use crate::work::graph::ready_nodes;
 use crate::work::projection::project_dag;
 use crate::work::types::{DagNode, DagState};
-use crate::{A2REvent, Actor, ActorType, DagMutation, Gate, Index, Ledger, LedgerQuery, WorkOps};
+use crate::{AllternitEvent, Actor, ActorType, DagMutation, Gate, Index, Ledger, LedgerQuery, WorkOps};
 
 #[derive(Subcommand)]
 pub enum WorkCmd {
@@ -407,7 +407,7 @@ pub async fn run_work_command(ctx: &WorkContext, cmd: WorkCmd) -> Result<()> {
 }
 
 async fn info(ctx: &WorkContext) -> Result<()> {
-    let db_path = ctx.root.join(".a2r/ledger");
+    let db_path = ctx.root.join(".allternit/ledger");
     println!("database_path: {}", db_path.display());
     println!("issue_prefix: {}", "dag");
     Ok(())
@@ -450,14 +450,14 @@ async fn create_issue(
         }];
         let _ = ctx
             .gate
-            .mutate_with_decision(&dag_id, "a2r work create", None, mutations)
+            .mutate_with_decision(&dag_id, "allternit work create", None, mutations)
             .await?;
         if !patch.is_empty() {
             let _ = ctx
                 .gate
                 .mutate_with_decision(
                     &dag_id,
-                    "a2r work update",
+                    "allternit work update",
                     None,
                     vec![DagMutation::UpdateNode {
                         node_id,
@@ -495,7 +495,7 @@ async fn create_issue(
                 .gate
                 .mutate_with_decision(
                     &dag_id,
-                    "a2r work update",
+                    "allternit work update",
                     None,
                     vec![DagMutation::UpdateNode {
                         node_id: node_id.clone(),
@@ -566,7 +566,7 @@ async fn update_issue(
             .gate
             .mutate_with_decision(
                 &dag_id,
-                "a2r work update",
+                "allternit work update",
                 None,
                 vec![DagMutation::UpdateNode {
                     node_id: node_id.clone(),
@@ -581,7 +581,7 @@ async fn update_issue(
             .gate
             .mutate_with_decision(
                 &dag_id,
-                "a2r work status",
+                "allternit work status",
                 None,
                 vec![DagMutation::ChangeStatus {
                     node_id,
@@ -602,7 +602,7 @@ async fn close_issue(ctx: &WorkContext, id: &str, reason: Option<String>) -> Res
         .gate
         .mutate_with_decision(
             &dag_id,
-            "a2r work close",
+            "allternit work close",
             reason.clone(),
             vec![DagMutation::ChangeStatus {
                 node_id,
@@ -622,7 +622,7 @@ async fn reopen_issue(ctx: &WorkContext, id: &str, reason: Option<String>) -> Re
         .gate
         .mutate_with_decision(
             &dag_id,
-            "a2r work reopen",
+            "allternit work reopen",
             reason.clone(),
             vec![DagMutation::ChangeStatus {
                 node_id,
@@ -754,7 +754,7 @@ async fn add_dependency(
         .gate
         .mutate_with_decision(
             &dag_id,
-            "a2r work dep",
+            "allternit work dep",
             None,
             vec![DagMutation::AddBlockedBy {
                 from_node_id: parent_node,
@@ -772,7 +772,7 @@ async fn label_add(ctx: &WorkContext, id: &str, label: &str) -> Result<()> {
         .gate
         .mutate_with_decision(
             &dag_id,
-            "a2r work label add",
+            "allternit work label add",
             None,
             vec![DagMutation::AddLabel {
                 node_id,
@@ -790,7 +790,7 @@ async fn label_remove(ctx: &WorkContext, id: &str, label: &str) -> Result<()> {
         .gate
         .mutate_with_decision(
             &dag_id,
-            "a2r work label remove",
+            "allternit work label remove",
             None,
             vec![DagMutation::RemoveLabel {
                 node_id,
@@ -822,7 +822,7 @@ async fn comment_add(ctx: &WorkContext, id: &str, text: &str) -> Result<()> {
         .gate
         .mutate_with_decision(
             &dag_id,
-            "a2r work comment",
+            "allternit work comment",
             None,
             vec![DagMutation::AddComment {
                 node_id,
@@ -880,7 +880,7 @@ async fn state_set(
         .gate
         .mutate_with_decision(
             &dag_id,
-            "a2r work set-state",
+            "allternit work set-state",
             reason.clone(),
             vec![DagMutation::SetState {
                 node_id,
@@ -969,7 +969,7 @@ async fn import_events(ctx: &WorkContext, file: &Path) -> Result<()> {
         if line.trim().is_empty() {
             continue;
         }
-        let evt: A2REvent = serde_json::from_str(line)?;
+        let evt: AllternitEvent = serde_json::from_str(line)?;
         if seen.contains(&evt.event_id) {
             continue;
         }
@@ -979,7 +979,7 @@ async fn import_events(ctx: &WorkContext, file: &Path) -> Result<()> {
 }
 
 async fn hooks_cmd(ctx: &WorkContext, command: HookCommand) -> Result<()> {
-    let hooks_path = ctx.root.join(".a2r/hooks/hooks.json");
+    let hooks_path = ctx.root.join(".allternit/hooks/hooks.json");
     let mut hooks: HooksFile = read_json_file(&hooks_path, HooksFile::default())?;
     match command {
         HookCommand::Add { name, command } => {
@@ -1008,7 +1008,7 @@ async fn hooks_cmd(ctx: &WorkContext, command: HookCommand) -> Result<()> {
                 println!("exit: {}", status.code().unwrap_or(-1));
             }
             let evt = compat_event(
-                "a2r work",
+                "allternit work",
                 "hook run",
                 json!({"hook": hook.name, "exec": exec}),
             );
@@ -1019,7 +1019,7 @@ async fn hooks_cmd(ctx: &WorkContext, command: HookCommand) -> Result<()> {
 }
 
 async fn templates_cmd(ctx: &WorkContext, command: TemplateCommand) -> Result<()> {
-    let templates_dir = ctx.root.join(".a2r/templates");
+    let templates_dir = ctx.root.join(".allternit/templates");
     ensure_dir(&templates_dir)?;
     match command {
         TemplateCommand::Save { template_id, dag } => {
@@ -1175,7 +1175,7 @@ async fn group_label(
 }
 
 async fn daemon_cmd(ctx: &WorkContext, command: DaemonCommand) -> Result<()> {
-    let path = ctx.root.join(".a2r/daemon/state.json");
+    let path = ctx.root.join(".allternit/daemon/state.json");
     match command {
         DaemonCommand::Start => {
             let state = DaemonState {
@@ -1206,13 +1206,13 @@ async fn daemon_cmd(ctx: &WorkContext, command: DaemonCommand) -> Result<()> {
 }
 
 async fn sync_cmd(ctx: &WorkContext, peer: Option<String>) -> Result<()> {
-    let evt = compat_event("a2r work", "sync", json!({"peer": peer}));
+    let evt = compat_event("allternit work", "sync", json!({"peer": peer}));
     ctx.ledger.append(evt).await?;
     Ok(())
 }
 
 async fn federation_cmd(ctx: &WorkContext, command: FederationCommand) -> Result<()> {
-    let path = ctx.root.join(".a2r/federation/peers.json");
+    let path = ctx.root.join(".allternit/federation/peers.json");
     let mut data: FederationFile = read_json_file(&path, FederationFile::default())?;
     match command {
         FederationCommand::AddPeer { name, url } => {
@@ -1232,13 +1232,13 @@ async fn federation_cmd(ctx: &WorkContext, command: FederationCommand) -> Result
 }
 
 async fn external_cmd(ctx: &WorkContext, args: &[String]) -> Result<()> {
-    let evt = compat_event("a2r work", "external", json!({"args": args}));
+    let evt = compat_event("allternit work", "external", json!({"args": args}));
     ctx.ledger.append(evt).await?;
     Ok(())
 }
 
-fn compat_event(tool: &str, command: &str, payload: serde_json::Value) -> A2REvent {
-    A2REvent {
+fn compat_event(tool: &str, command: &str, payload: serde_json::Value) -> AllternitEvent {
+    AllternitEvent {
         event_id: create_event_id(),
         ts: chrono::Utc::now().to_rfc3339(),
         actor: Actor {
@@ -1252,7 +1252,7 @@ fn compat_event(tool: &str, command: &str, payload: serde_json::Value) -> A2REve
     }
 }
 
-fn collect_dag_ids(events: &[A2REvent]) -> Vec<String> {
+fn collect_dag_ids(events: &[AllternitEvent]) -> Vec<String> {
     let mut out = HashSet::new();
     for evt in events {
         if let Some(dag_id) = evt.payload.get("dag_id").and_then(|v| v.as_str()) {
@@ -1264,7 +1264,7 @@ fn collect_dag_ids(events: &[A2REvent]) -> Vec<String> {
     list
 }
 
-fn events_for_dag(events: &[A2REvent], dag_id: &str) -> Vec<A2REvent> {
+fn events_for_dag(events: &[AllternitEvent], dag_id: &str) -> Vec<AllternitEvent> {
     events
         .iter()
         .filter(|evt| evt.payload.get("dag_id").and_then(|v| v.as_str()) == Some(dag_id))

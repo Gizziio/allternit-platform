@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://allternit.local/spec/contracts/ToolRegistry.schema.json",
-  "title": "A2rchitech Tool Registry",
+  "title": "Allternit Tool Registry",
   "type": "object",
   "additionalProperties": false,
   "required": [

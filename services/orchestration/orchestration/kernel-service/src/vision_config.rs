@@ -4,7 +4,7 @@
 //! Sources (priority order):
 //! 1. CLI flag (passed via request body)
 //! 2. Environment variable: A2_VISION_BRAIN
-//! 3. Config file: ~/.a2rc
+//! 3. Config file: ~/.allternitc
 //! 4. Default: "claude-code"
 
 use serde::{Deserialize, Serialize};
@@ -24,7 +24,7 @@ pub struct VisionConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ConfigSource {
     EnvVar,     // From A2_VISION_BRAIN env var
-    ConfigFile, // From ~/.a2rc
+    ConfigFile, // From ~/.allternitc
     Default,    // Fallback default
     Request,    // Override in API request
 }
@@ -82,7 +82,7 @@ impl VisionConfig {
             "configured_brain": self.brain,
             "source": match self.source {
                 ConfigSource::EnvVar => "A2_VISION_BRAIN environment variable",
-                ConfigSource::ConfigFile => "~/.a2rc config file",
+                ConfigSource::ConfigFile => "~/.allternitc config file",
                 ConfigSource::Default => "default (claude-code)",
                 ConfigSource::Request => "API request override",
             },

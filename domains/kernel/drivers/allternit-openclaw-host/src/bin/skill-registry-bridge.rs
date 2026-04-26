@@ -1,4 +1,4 @@
-use a2r_openclaw_host::skills::{GetSkillRequest, ListSkillsRequest, SkillRegistryBridge};
+use allternit_openclaw_host::skills::{GetSkillRequest, ListSkillsRequest, SkillRegistryBridge};
 use std::path::Path;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

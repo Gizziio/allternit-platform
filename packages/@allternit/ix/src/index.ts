@@ -1,5 +1,5 @@
 /**
- * A2R-IX (A2R Interface eXecution)
+ * Allternit-IX (Allternit Interface eXecution)
  * 
  * Declarative UI generation with Vercel Labs json-render compatibility.
  * 

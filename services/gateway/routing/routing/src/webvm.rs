@@ -4,7 +4,7 @@
 //! Linux virtual machines via WebAssembly.
 //!
 //! Environment:
-//!   - A2R_WEBVM_URL: URL of the WebVM service (default: http://127.0.0.1:8002)
+//!   - Allternit_WEBVM_URL: URL of the WebVM service (default: http://127.0.0.1:8002)
 
 use axum::{
     extract::{Json, Path, Query, State},
@@ -34,7 +34,7 @@ impl WebVmClient {
 
     pub fn from_env() -> Self {
         let base_url =
-            std::env::var("A2R_WEBVM_URL").unwrap_or_else(|_| "http://127.0.0.1:8002".to_string());
+            std::env::var("Allternit_WEBVM_URL").unwrap_or_else(|_| "http://127.0.0.1:8002".to_string());
         Self::new(base_url)
     }
 

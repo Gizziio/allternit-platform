@@ -1,5 +1,5 @@
 """
-A2R Computer Use — Adapter Selector
+Allternit Computer Use — Adapter Selector
 Selects primary adapter and fallback chain from the capability matrix.
 
 Selection pipeline (per RoutingPolicy.md):

@@ -1,4 +1,4 @@
-//! # A2R Process Driver (N4)
+//! # Allternit Process Driver (N4)
 //!
 //! OS process-based execution driver for development and testing.
 //! This is the simplest driver implementation that spawns native OS processes.
@@ -21,7 +21,7 @@
 //! - Isolation Level: "Limited"
 //! - Best for: Local development, fast iteration
 
-use a2r_driver_interface::*;
+use allternit_driver_interface::*;
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::fmt;
@@ -35,8 +35,8 @@ use tracing::{debug, info, warn};
 /// Active process tracking
 struct ActiveProcess {
     child: Child,
-    start_time: Instant,
-    resources: ResourceSpec,
+    _start_time: Instant,
+    _resources: ResourceSpec,
 }
 
 /// Process-based execution driver
@@ -72,7 +72,7 @@ impl ProcessDriver {
 
     /// Apply resource limits to the command (platform-specific)
     #[cfg(target_os = "linux")]
-    fn apply_resource_limits(cmd: &mut Command, resources: &ResourceSpec) {
+    fn apply_resource_limits(_cmd: &mut Command, resources: &ResourceSpec) {
         // On Linux, we could use cgroups for better resource limiting
         // For now, just log the intended limits
         debug!(
@@ -83,7 +83,7 @@ impl ProcessDriver {
     }
 
     #[cfg(not(target_os = "linux"))]
-    fn apply_resource_limits(cmd: &mut Command, resources: &ResourceSpec) {
+    fn apply_resource_limits(_cmd: &mut Command, resources: &ResourceSpec) {
         // On macOS and other platforms, resource limiting is more limited
         debug!(
             cpu_millis = resources.cpu_millis,
@@ -190,6 +190,16 @@ impl ExecutionDriver for ProcessDriver {
         debug!(run_id = %run_id, "Process environment prepared (lazy spawn)");
 
         Ok(handle)
+    }
+
+    async fn pause_vm(&self, handle: &ExecutionHandle) -> Result<(), DriverError> {
+        debug!(run_id = %handle.id, "Pausing process environment (stub)");
+        Ok(())
+    }
+
+    async fn resume_vm(&self, handle: &ExecutionHandle) -> Result<(), DriverError> {
+        debug!(run_id = %handle.id, "Resuming process environment (stub)");
+        Ok(())
     }
 
     async fn exec(

@@ -101,7 +101,7 @@ impl TuiService {
     }
 
     pub async fn initialize(&mut self) -> Result<(), TuiError> {
-        if let Ok(path) = std::env::var("A2R_TUI_CONFIG") {
+        if let Ok(path) = std::env::var("Allternit_TUI_CONFIG") {
             let content = tokio::fs::read_to_string(&path).await.map_err(|e| {
                 TuiError::IoError(format!("Failed to read TUI config {}: {}", path, e))
             })?;
@@ -215,7 +215,7 @@ impl TuiService {
 
         // Draw header
         let header_block = Block::default()
-            .title(" A2R Terminal UI ")
+            .title(" Allternit Terminal UI ")
             .borders(Borders::BOTTOM)
             .border_type(BorderType::Thick);
         let header_text = format!(

@@ -35,7 +35,7 @@ async fn test_autoland_fails_without_visual_evidence() {
 #[tokio::test]
 async fn test_autoland_succeeds_with_passing_visual() {
     let temp_dir = TempDir::new().unwrap();
-    let evidence_dir = temp_dir.path().join(".a2r/evidence");
+    let evidence_dir = temp_dir.path().join(".allternit/evidence");
     std::fs::create_dir_all(&evidence_dir).unwrap();
     
     let gate = create_test_gate(&temp_dir, true).await;
@@ -57,7 +57,7 @@ async fn test_autoland_succeeds_with_passing_visual() {
 #[tokio::test]
 async fn test_autoland_fails_low_confidence() {
     let temp_dir = TempDir::new().unwrap();
-    let evidence_dir = temp_dir.path().join(".a2r/evidence");
+    let evidence_dir = temp_dir.path().join(".allternit/evidence");
     std::fs::create_dir_all(&evidence_dir).unwrap();
     
     let gate = create_test_gate(&temp_dir, true).await;
@@ -239,13 +239,13 @@ async fn test_disabled_policy_always_passes() {
 
 async fn create_test_gate(temp_dir: &TempDir, visual_enabled: bool) -> Gate {
     let root_dir = temp_dir.path().to_path_buf();
-    let evidence_dir = root_dir.join(".a2r/evidence");
+    let evidence_dir = root_dir.join(".allternit/evidence");
     std::fs::create_dir_all(&evidence_dir).unwrap();
     
     // Create minimal ledger, leases, receipts
-    let ledger = Arc::new(Ledger::new(root_dir.join(".a2r/ledger")));
+    let ledger = Arc::new(Ledger::new(root_dir.join(".allternit/ledger")));
     let leases = Arc::new(Leases::new(ledger.clone()));
-    let receipts = Arc::new(ReceiptStore::new(root_dir.join(".a2r/receipts")));
+    let receipts = Arc::new(ReceiptStore::new(root_dir.join(".allternit/receipts")));
     
     let provider_factory = Arc::new(ProviderFactory::new());
     

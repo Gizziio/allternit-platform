@@ -374,7 +374,7 @@ impl ShellNixConfig {
 
         format!(
             r#"{{
-  description = "A2R Environment";
+  description = "Allternit Environment";
 
   inputs = {{
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";

@@ -1,7 +1,7 @@
 {
-  "name": "@a2r/dak-runner",
+  "name": "@allternit/dak-runner",
   "version": "0.1.0",
-  "description": "Deterministic Agent Kernel (DAK) - Execution runtime for A2R agent systems",
+  "description": "Deterministic Agent Kernel (DAK) - Execution runtime for Allternit agent systems",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
@@ -56,7 +56,7 @@
     "typescript": "^5.0.0"
   },
   "keywords": [
-    "a2r",
+    "allternit",
     "agent-runner",
     "dak",
     "deterministic",

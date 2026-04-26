@@ -1,4 +1,4 @@
-# A2rchitech Memory Service
+# Allternitchitech Memory Service
 
 **Location**: `4-services/memory/`  
 **Domain**: Layer 4 - Services (Memory & Persistence)
@@ -62,13 +62,13 @@ pnpm run start:http
 
 **MemoryProvider trait implementation for Rust services**
 
-- Implements `a2rchitech-memory-provider` trait
+- Implements `allternit-memory-provider` trait
 - HTTP client to TypeScript agent
 - Used by kernel-service, gateway, etc.
 
 **Usage:**
 ```rust
-use a2rchitech_memory_provider::MemoryAgentAdapter;
+use allternit_memory_provider::MemoryAgentAdapter;
 
 let adapter = MemoryAgentAdapter::with_url("http://localhost:3201")?;
 let result = adapter.query(&MemoryQuery { query: "Hello".to_string() }).await?;
@@ -127,7 +127,7 @@ async fn retrieve(&self, key: &str) -> Result<Option<Value>, MemoryError>;
 
 ```rust
 // 4-services/orchestration/kernel-service/src/orchestrator/service.rs
-use a2rchitech_memory_provider::MemoryAgentAdapter;
+use allternit_memory_provider::MemoryAgentAdapter;
 
 let memory = MemoryAgentAdapter::with_url("http://localhost:3201")?;
 
@@ -157,9 +157,9 @@ async def memory_query(request: MemoryQueryRequest):
 
 ```bash
 # 7-apps/cli/src/commands/memory.rs
-a2r memory query "What tools were used recently?"
-a2r memory stats
-a2r memory consolidate
+allternit memory query "What tools were used recently?"
+allternit memory stats
+allternit memory consolidate
 ```
 
 ---
@@ -212,7 +212,7 @@ ollama pull qwen3.5:4b
 **VPS:**
 ```bash
 # On VPS
-curl -o setup.sh https://raw.githubusercontent.com/a2rchitech/a2rchitech/main/4-services/memory/agent/scripts/setup-ollama-vps.sh
+curl -o setup.sh https://raw.githubusercontent.com/allternit/allternit/main/4-services/memory/agent/scripts/setup-ollama-vps.sh
 sudo ./setup-ollama.sh
 
 # On local machine
@@ -249,7 +249,7 @@ curl -X POST http://localhost:3201/api/query \
   -d '{"question": "What do we know about DAG validation?"}'
 
 # CLI test
-a2r memory stats
+allternit memory stats
 ```
 
 ---

@@ -4,7 +4,7 @@
 //! voice cloning, and voice model management.
 //!
 //! Environment:
-//!   - A2R_VOICE_URL: URL of the voice service (default: http://127.0.0.1:8001)
+//!   - Allternit_VOICE_URL: URL of the voice service (default: http://127.0.0.1:8001)
 
 use axum::{
     extract::{Json, State},
@@ -33,7 +33,7 @@ impl VoiceClient {
 
     pub fn from_env() -> Self {
         let base_url =
-            std::env::var("A2R_VOICE_URL").unwrap_or_else(|_| "http://127.0.0.1:8001".to_string());
+            std::env::var("Allternit_VOICE_URL").unwrap_or_else(|_| "http://127.0.0.1:8001".to_string());
         Self::new(base_url)
     }
 

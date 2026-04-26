@@ -155,7 +155,7 @@ impl CIReporter {
     fn generate_summary(&self, score: &ExecutionScore, passed: bool) -> String {
         let emoji = if passed { "✅" } else { "❌" };
         format!(
-            "{} A2R Evaluation Results\n\n\
+            "{} Allternit Evaluation Results\n\n\
             **Score**: {:.1}% (Grade: {:?})\n\
             **Status**: {}\n\n\
             **Components**:\n\
@@ -216,15 +216,15 @@ impl CIReporter {
         let mut output = String::new();
 
         output.push_str(&format!(
-            "A2R_SCORE={:.1}\n",
+            "Allternit_SCORE={:.1}\n",
             report.score.overall_score
         ));
         output.push_str(&format!(
-            "A2R_PASSED={}\n",
+            "Allternit_PASSED={}\n",
             report.overall_status == CIStatus::Passed
         ));
         output.push_str(&format!(
-            "A2R_GRADE={:?}\n",
+            "Allternit_GRADE={:?}\n",
             report.score.grade
         ));
 
@@ -258,7 +258,7 @@ impl CIReporter {
         xml.push_str("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
         xml.push_str("<testsuites>\n");
         xml.push_str(&format!(
-            "  <testsuite name=\"A2R Evaluation\" tests=\"5\" failures=\"{}\" errors=\"0\" timestamp=\"{}\">\n",
+            "  <testsuite name=\"Allternit Evaluation\" tests=\"5\" failures=\"{}\" errors=\"0\" timestamp=\"{}\">\n",
             report.gate_results.iter().filter(|(_, r)| !r.passed()).count(),
             report.timestamp
         ));
@@ -354,7 +354,7 @@ impl CIPipeline {
         println!("{}", formatted);
 
         // Write JUnit report
-        let junit_path = std::path::PathBuf::from("a2r-evaluation.xml");
+        let junit_path = std::path::PathBuf::from("allternit-evaluation.xml");
         if let Err(e) = self.reporter.write_junit_report(&report, &junit_path) {
             warn!("Failed to write JUnit report: {}", e);
         }

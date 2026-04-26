@@ -59,8 +59,8 @@ Benchmarks, scaling limits, and optimization guidance.
 1. **Pre-extract OCI images**
    ```bash
    # Cache common images
-   mkdir -p /var/lib/a2r/cache/alpine-latest
-   skopeo copy docker://alpine:latest oci:/var/lib/a2r/cache/alpine-latest
+   mkdir -p /var/lib/allternit/cache/alpine-latest
+   skopeo copy docker://alpine:latest oci:/var/lib/allternit/cache/alpine-latest
    ```
 
 2. **Use smaller rootfs**
@@ -128,17 +128,17 @@ Benchmarks, scaling limits, and optimization guidance.
 
 ```prometheus
 # Spawn latency
-a2r_vm_spawn_duration_ms{quantile="0.99"}
+allternit_vm_spawn_duration_ms{quantile="0.99"}
 
 # Active VMs
-a2r_vm_active
+allternit_vm_active
 
 # Resource usage
-a2r_resources_memory_used_mib
-a2r_resources_ip_available
+allternit_resources_memory_used_mib
+allternit_resources_ip_available
 
 # API latency
-a2r_driver_api_duration_ms
+allternit_driver_api_duration_ms
 ```
 
 ### Debugging Slow Spawns
@@ -151,7 +151,7 @@ a2r_driver_api_duration_ms
 2. **Check OCI extraction**
    ```bash
    # Enable debug logging
-   RUST_LOG=a2r_firecracker_driver=debug
+   RUST_LOG=allternit_firecracker_driver=debug
    ```
 
 3. **Profile resources**

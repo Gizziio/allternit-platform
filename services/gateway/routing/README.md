@@ -1,6 +1,6 @@
-# A2R IO Service
+# Allternit IO Service
 
-**The ONLY Permitted Side-Effect Path in A2R**
+**The ONLY Permitted Side-Effect Path in Allternit**
 
 Implements SYSTEM_LAW.md:
 - **LAW-ONT-002**: Only IO can execute side effects
@@ -11,7 +11,7 @@ Implements SYSTEM_LAW.md:
 
 ## Purpose
 
-The IO Service is the constitutional boundary for all side-effect execution in A2R. No other service may execute tools, write files, make network calls, or perform any IO operations.
+The IO Service is the constitutional boundary for all side-effect execution in Allternit. No other service may execute tools, write files, make network calls, or perform any IO operations.
 
 **Ontology Compliance:**
 ```
@@ -78,7 +78,7 @@ Response:
 ```json
 {
   "status": "ok",
-  "service": "a2r-io-service",
+  "service": "allternit-io-service",
   "version": "0.1.0",
   "ontology_compliance": true
 }
@@ -135,10 +135,10 @@ GET  /v1/workers/:id        # Get worker definition
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `A2R_IO_SERVICE_HOST` | `127.0.0.1` | Bind host (internal only) |
-| `A2R_IO_SERVICE_PORT` | `3510` | Bind port |
-| `A2R_POLICY_URL` | `http://127.0.0.1:3003` | Policy service URL |
-| `A2R_HISTORY_URL` | `http://127.0.0.1:3200` | History service URL |
+| `Allternit_IO_SERVICE_HOST` | `127.0.0.1` | Bind host (internal only) |
+| `Allternit_IO_SERVICE_PORT` | `3510` | Bind port |
+| `Allternit_POLICY_URL` | `http://127.0.0.1:3003` | Policy service URL |
+| `Allternit_HISTORY_URL` | `http://127.0.0.1:3200` | History service URL |
 
 ### Port Assignment
 
@@ -154,7 +154,7 @@ All side effects MUST flow through this service:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    A2R System                            │
+│                    Allternit System                            │
 │                                                          │
 │  ┌──────────────┐    ┌──────────────┐                   │
 │  │ DAK Runner   │───►│ Kernel Svc   │                   │
@@ -189,13 +189,13 @@ All IO operations support:
 
 ```bash
 cd 4-services/io-service
-cargo build --bin a2r-io-service
+cargo build --bin allternit-io-service
 ```
 
 ### Run
 
 ```bash
-cargo run --bin a2r-io-service
+cargo run --bin allternit-io-service
 ```
 
 ### Test
@@ -246,14 +246,14 @@ const response = await axios.post(
 
 ## Startup Configuration
 
-Add to `.a2r/services.json`:
+Add to `.allternit/services.json`:
 
 ```json
 {
   "services": [
     {
       "id": "io-service",
-      "command": "a2r-io-service",
+      "command": "allternit-io-service",
       "port": 3510,
       "host": "127.0.0.1",
       "dependencies": ["policy-service", "history-service"]

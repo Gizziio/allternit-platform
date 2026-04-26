@@ -1,5 +1,5 @@
 [package]
-name = "a2rchitech-api"
+name = "allternit-api"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -40,44 +40,44 @@ reqwest = { workspace = true }
 lazy_static = "1.4"
 serde_yaml = "0.9"
 rand = "0.8"
-a2rchitech-control-plane-service = { path = "../../1-kernel/control-plane/a2r-control/control-plane-impl" }
-a2rchitech-memory = { path = "../../4-services/memory/state/memory" }
-a2rchitech-workflows = { workspace = true }
-a2rchitech-kernel-contracts = { workspace = true }
-a2rchitech-runtime-core = { workspace = true }
-a2r_runtime = { package = "a2r-runtime", path = "../../1-kernel/infrastructure/a2r-runtime" }
-a2rchitech-policy = { workspace = true }
-a2rchitech-skills = { workspace = true }
-a2rchitech-tools-gateway = { workspace = true }
-a2rchitech-registry = { path = "../../1-kernel/control-plane/unified-registry/registry" }
-a2rchitech-capsule = { package = "a2r-capsule", path = "../../1-kernel/capsule-system/a2r-capsule" }
-a2rchitech-rlm = { path = "../../1-kernel/infrastructure/a2r-rlm" }
-a2rchitech-messaging = { workspace = true }
-a2rchitech-sdk-core = { path = "../../0-substrate/sdk/sdk-core" }
-a2rchitech-sdk-policy = { path = "../../0-substrate/sdk/sdk-policy" }
-a2r-security-hardening = { path = "../../2-governance/security-network/security-hardening" }
+allternit-control-plane-service = { path = "../../1-kernel/control-plane/allternit-control/control-plane-impl" }
+allternit-memory = { path = "../../4-services/memory/state/memory" }
+allternit-workflows = { workspace = true }
+allternit-kernel-contracts = { workspace = true }
+allternit-runtime-core = { workspace = true }
+allternit_runtime = { package = "allternit-runtime", path = "../../1-kernel/infrastructure/allternit-runtime" }
+allternit-policy = { workspace = true }
+allternit-skills = { workspace = true }
+allternit-tools-gateway = { workspace = true }
+allternit-registry = { path = "../../1-kernel/control-plane/unified-registry/registry" }
+allternit-capsule = { package = "allternit-capsule", path = "../../1-kernel/capsule-system/allternit-capsule" }
+allternit-rlm = { path = "../../1-kernel/infrastructure/allternit-rlm" }
+allternit-messaging = { workspace = true }
+allternit-sdk-core = { path = "../../../../platform/sdk/typescript/sdk-core" }
+allternit-sdk-policy = { path = "../../../../platform/sdk/typescript/sdk-policy" }
+allternit-security-hardening = { path = "../../2-governance/security-network/security-hardening" }
 # P4 DAG Integration crates
-a2r-swarm-advanced = { path = "../../1-kernel/infrastructure/swarm-advanced" }
-a2r-ivkge-advanced = { path = "../../1-kernel/infrastructure/ivkge-advanced" }
-a2r-multimodal-streaming = { path = "../../1-kernel/infrastructure/multimodal-streaming" }
-a2r-tambo-integration = { path = "../../1-kernel/infrastructure/tambo-integration" }
-a2r-policy-tier-gating = { path = "../../2-governance/identity-access-control/policy-tier-gating" }
-a2r-firecracker-driver = { path = "../../1-kernel/execution/a2r-firecracker-driver" }
-a2r-driver-interface = { path = "../../1-kernel/infrastructure/a2r-driver-interface" }
+allternit-swarm-advanced = { path = "../../1-kernel/infrastructure/swarm-advanced" }
+allternit-ivkge-advanced = { path = "../../1-kernel/infrastructure/ivkge-advanced" }
+allternit-multimodal-streaming = { path = "../../1-kernel/infrastructure/multimodal-streaming" }
+allternit-tambo-integration = { path = "../../1-kernel/infrastructure/tambo-integration" }
+allternit-policy-tier-gating = { path = "../../2-governance/identity-access-control/policy-tier-gating" }
+allternit-firecracker-driver = { path = "../../1-kernel/execution/allternit-firecracker-driver" }
+allternit-driver-interface = { path = "../../1-kernel/infrastructure/allternit-driver-interface" }
 mcp = { path = "../../3-adapters/mcp" }
 
 # Common dependencies used across OSs
 sqlx = { workspace = true, features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
-a2r-openclaw-host = { path = "../../1-kernel/infrastructure/a2r-openclaw-host" }
-a2r_agent_system_rails = { package = "a2r-agent-system-rails", path = "../../0-substrate/a2r-agent-system-rails" }
-a2r-process-driver = { path = "../../1-kernel/execution/a2r-process-driver" }
-a2rchitech-budget-metering = { path = "../../4-services/orchestration/budget-metering" }
-a2r-replay = { path = "../../2-governance/a2r-replay" }
-a2r-prewarm = { path = "../../4-services/orchestration/a2r-prewarm" }
-a2r-environment-spec = { path = "../../1-kernel/infrastructure/a2r-environment-spec" }
+allternit-openclaw-host = { path = "../../1-kernel/infrastructure/allternit-openclaw-host" }
+allternit_agent_system_rails = { package = "allternit-agent-system-rails", path = "../../../../domains/kernel/allternit-agent-system-rails" }
+allternit-process-driver = { path = "../../1-kernel/execution/allternit-process-driver" }
+allternit-budget-metering = { path = "../../4-services/orchestration/budget-metering" }
+allternit-replay = { path = "../../2-governance/allternit-replay" }
+allternit-prewarm = { path = "../../4-services/orchestration/allternit-prewarm" }
+allternit-environment-spec = { path = "../../1-kernel/infrastructure/allternit-environment-spec" }
 mcp-client = { path = "../../crates/mcp-client" }
-a2r-terminal = { path = "../../2-governance/security-network/terminal" }
-a2r-protocol = { path = "../../0-substrate/a2r-protocol" }
+allternit-terminal = { path = "../../2-governance/security-network/terminal" }
+allternit-protocol = { path = "../../../../platform/protocols/allternit-protocol" }
 walkdir = "2.5"
 dirs = "5.0"
 
@@ -116,6 +116,6 @@ cloud-deploy = ["aws-config", "aws-sdk-ec2", "azure_mgmt_compute", "azure_identi
 
 [dev-dependencies]
 tempfile = "3.10"
-a2rchitech-history = { path = "../../1-kernel/data/history-ledger" }
-a2rchitech-messaging = { workspace = true }
+allternit-history = { path = "../../1-kernel/data/history-ledger" }
+allternit-messaging = { workspace = true }
 reqwest = { version = "0.12", features = ["json"] }

@@ -188,7 +188,7 @@ async function demoFetchOptions() {
   console.log('  timeout: 30000ms (30 seconds)');
   console.log('  retries: 3 attempts');
   console.log('  retryDelay: 1000ms (exponential backoff)');
-  console.log('  userAgent: A2R-ContentIngestion/1.0');
+  console.log('  userAgent: Allternit-ContentIngestion/1.0');
   console.log('  followRedirects: true');
   console.log('  maxRedirects: 5');
 

@@ -1,0 +1,73 @@
+{
+  "pluginId": "default",
+  "version": "current",
+  "label": "Next",
+  "banner": null,
+  "badge": false,
+  "noIndex": false,
+  "className": "docs-version-current",
+  "isLast": true,
+  "docsSidebars": {
+    "docsSidebar": [
+      {
+        "type": "link",
+        "label": "Introduction",
+        "href": "/docs/intro",
+        "docId": "intro",
+        "unlisted": false
+      },
+      {
+        "type": "link",
+        "label": "Quick Start",
+        "href": "/docs/quickstart",
+        "docId": "quickstart",
+        "unlisted": false
+      },
+      {
+        "type": "link",
+        "label": "Claude Desktop Setup",
+        "href": "/docs/platforms/claude",
+        "docId": "platforms/claude",
+        "unlisted": false
+      },
+      {
+        "type": "link",
+        "label": "OpenAI Codex Setup",
+        "href": "/docs/platforms/codex",
+        "docId": "platforms/codex",
+        "unlisted": false
+      }
+    ]
+  },
+  "docs": {
+    "intro": {
+      "id": "intro",
+      "title": "Introduction",
+      "description": "The Allternit Universal Plugin SDK allows you to write plugins once and run them on any LLM platform.",
+      "sidebar": "docsSidebar"
+    },
+    "introduction": {
+      "id": "introduction",
+      "title": "Introduction",
+      "description": "What is Allternit Plugin SDK?"
+    },
+    "platforms/claude": {
+      "id": "platforms/claude",
+      "title": "Claude Desktop Setup",
+      "description": "Overview",
+      "sidebar": "docsSidebar"
+    },
+    "platforms/codex": {
+      "id": "platforms/codex",
+      "title": "OpenAI Codex Setup",
+      "description": "Overview",
+      "sidebar": "docsSidebar"
+    },
+    "quickstart": {
+      "id": "quickstart",
+      "title": "Quick Start",
+      "description": "Get your first plugin running in 5 minutes.",
+      "sidebar": "docsSidebar"
+    }
+  }
+}

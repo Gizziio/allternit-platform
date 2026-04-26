@@ -1,7 +1,7 @@
 {
   "name": "@allternit/provider-adapters",
   "version": "1.0.0",
-  "description": "A2R Replies API provider adapters — maps raw provider bus events to canonical ReplyEvents",
+  "description": "Allternit Replies API provider adapters — maps raw provider bus events to canonical ReplyEvents",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",

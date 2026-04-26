@@ -1,11 +1,11 @@
 [package]
-name = "a2rchitech-harness-engineering"
+name = "allternit-harness-engineering"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Harness Engineering - RiskPolicy, Preflight, Remediation, Evidence, Merge Governance"
+description = "Allternit Harness Engineering - RiskPolicy, Preflight, Remediation, Evidence, Merge Governance"
 
 [dependencies]
-a2rchitech-system-law = { workspace = true }
+allternit-system-law = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }

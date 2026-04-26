@@ -1,23 +1,21 @@
 //! Session manager implementation
 
 use crate::types::*;
-use a2r_driver_interface::*;
-use a2r_driver_interface::{EnvironmentSpec, EnvSpecType};
-use a2r_process_driver::ProcessDriver;
-use a2r_firecracker_driver::FirecrackerDriver;
+use allternit_driver_interface::*;
+use allternit_driver_interface::{EnvironmentSpec, EnvSpecType};
+use allternit_process_driver::ProcessDriver;
+use allternit_firecracker_driver::FirecrackerDriver;
 
 #[cfg(target_os = "macos")]
-use a2r_apple_vf_driver::AppleVFDriver;
+use allternit_apple_vf_driver::AppleVFDriver;
 
-use async_trait::async_trait;
-use chrono::{DateTime, Utc};
 use dashmap::DashMap;
+use chrono::{DateTime, Utc};
 use sqlx::sqlite::SqlitePool;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::sync::RwLock;
-use tracing::{debug, error, info, warn};
+use tracing::{error, info, warn};
 
 /// Session manager errors
 #[derive(thiserror::Error, Debug)]
@@ -69,17 +67,17 @@ pub struct ManagerConfig {
     /// Session cleanup interval in seconds
     pub cleanup_interval_secs: u64,
     /// Firecracker configuration (if using MicroVMs)
-    pub firecracker_config: Option<a2r_firecracker_driver::FirecrackerConfig>,
+    pub firecracker_config: Option<allternit_firecracker_driver::FirecrackerConfig>,
     /// Apple VF configuration (macOS only)
     #[cfg(target_os = "macos")]
-    pub apple_vf_config: Option<a2r_apple_vf_driver::AppleVFConfig>,
+    pub apple_vf_config: Option<allternit_apple_vf_driver::AppleVFConfig>,
 }
 
 impl Default for ManagerConfig {
     fn default() -> Self {
         let data_dir = dirs::data_dir()
-            .map(|d| d.join("a2r"))
-            .unwrap_or_else(|| PathBuf::from("/tmp/a2r"));
+            .map(|d| d.join("allternit"))
+            .unwrap_or_else(|| PathBuf::from("/tmp/allternit"));
         
         Self {
             database_url: format!("sqlite:{}", data_dir.join("sessions.db").display()),
@@ -106,10 +104,10 @@ pub enum DriverConfig {
     /// Process-based execution (development)
     Process,
     /// Firecracker MicroVM (Linux production)
-    Firecracker(a2r_firecracker_driver::FirecrackerConfig),
+    Firecracker(allternit_firecracker_driver::FirecrackerConfig),
     /// Apple Virtualization Framework (macOS production)
     #[cfg(target_os = "macos")]
-    AppleVF(a2r_apple_vf_driver::AppleVFConfig),
+    AppleVF(allternit_apple_vf_driver::AppleVFConfig),
 }
 
 /// Session manager - manages session lifecycle using execution drivers
@@ -123,7 +121,7 @@ pub struct SessionManager {
     /// Process driver (always available)
     process_driver: Arc<ProcessDriver>,
     /// Firecracker driver (Linux only)
-    firecracker_driver: Option<Arc<FirecrackerDriver>>,
+    _firecracker_driver: Option<Arc<FirecrackerDriver>>,
     /// Apple VF driver (macOS only)
     #[cfg(target_os = "macos")]
     apple_vf_driver: Option<Arc<AppleVFDriver>>,
@@ -173,7 +171,7 @@ impl SessionManager {
             db,
             config,
             process_driver,
-            firecracker_driver,
+            _firecracker_driver: firecracker_driver,
             #[cfg(target_os = "macos")]
             apple_vf_driver,
         };
@@ -293,7 +291,7 @@ impl SessionManager {
             
             #[cfg(target_os = "linux")]
             {
-                if let Some(driver) = &self.firecracker_driver {
+                if let Some(driver) = &self._firecracker_driver {
                     return Ok((driver.clone() as Arc<dyn ExecutionDriver>, DriverType::MicroVM));
                 }
                 warn!("VM requested but Firecracker driver not available, falling back to process");
@@ -427,7 +425,7 @@ impl SessionManager {
             Some(h) => h.clone(),
             None => {
                 // Reconstruct handle from stored ID
-                let driver_handle_id = state.session.driver_handle_id.as_ref()
+                let _driver_handle_id = state.session.driver_handle_id.as_ref()
                     .ok_or_else(|| SessionManagerError::Internal(
                         "Session has no driver handle ID".to_string()
                     ))?;

@@ -15,8 +15,8 @@ tracing-subscriber = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 async-trait = { workspace = true }
-a2rchitech-sdk-core = { workspace = true }
-a2rchitech-sdk-policy = { workspace = true }
+allternit-sdk-core = { workspace = true }
+allternit-sdk-policy = { workspace = true }
 sqlx = { workspace = true, features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
 chrono = { workspace = true }
 blake3 = { workspace = true }

@@ -1,8 +1,8 @@
 [package]
-name = "a2rchitech-skills"
+name = "allternit-skills"
 version = "0.1.0"
 edition = "2021"
-description = "A2rchitech skills system with manifest parsing and validation"
+description = "Allternit skills system with manifest parsing and validation"
 
 [dependencies]
 serde = { workspace = true }
@@ -13,10 +13,10 @@ thiserror = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
 utoipa = { version = "4.2", features = ["uuid", "chrono"] }
-a2rchitech-history = { workspace = true }
-a2rchitech-messaging = { workspace = true }
-a2rchitech-policy = { workspace = true }
-a2rchitech-tools-gateway = { workspace = true }
+allternit-history = { workspace = true }
+allternit-messaging = { workspace = true }
+allternit-policy = { workspace = true }
+allternit-tools-gateway = { workspace = true }
 async-trait = { workspace = true }
 sqlx = { workspace = true }
 futures = "0.3"

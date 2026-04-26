@@ -1,6 +1,6 @@
-//! A2R Hooks System
+//! Allternit Hooks System
 //!
-//! Implements the Hooks System for A2rchitech:
+//! Implements the Hooks System for Allternit:
 //! - Kernel Hooks (boot injection, tool gates, policy enforcement)
 //! - Workspace Hooks (SYSTEM_LAW validation, spec presence, ADR enforcement)
 //! - Task Hooks (output schema validation, structured formatting)
@@ -9,8 +9,8 @@
 //!
 //! Based on HooksSystem specification from brainstorm sessions
 
-use a2rchitech_harness_engineering::{HarnessEngineeringEngine, RiskTier};
-use a2rchitech_system_law::{SystemLawEngine, ViolationSeverity, LawViolation};
+use allternit_harness_engineering::{HarnessEngineeringEngine, RiskTier};
+use allternit_system_law::{SystemLawEngine, ViolationSeverity, LawViolation};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

@@ -1,4 +1,4 @@
-//! WebSocket client for A2R Node
+//! WebSocket client for Allternit Node
 //!
 //! Manages connection to control plane:
 //! - Handles authentication

@@ -2,7 +2,7 @@
  * Loop Guard
  * 
  * Prevents runaway agent-to-agent communication chains.
- * Reverse engineered from agentchattr pattern, implemented for a2rchitech.
+ * Reverse engineered from agentchattr pattern, implemented for allternit.
  */
 
 import type {

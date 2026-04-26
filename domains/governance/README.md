@@ -1,6 +1,6 @@
 # 2-governance: Policy & Governance Layer
 
-The `2-governance` layer serves as the policy and governance engine for the A2R platform. This layer manages authorization, policy enforcement, audit logging, receipts, and governance mechanisms that ensure secure and compliant operation of the system.
+The `2-governance` layer serves as the policy and governance engine for the Allternit platform. This layer manages authorization, policy enforcement, audit logging, receipts, and governance mechanisms that ensure secure and compliant operation of the system.
 
 ## Purpose & Mission
 
@@ -40,9 +40,9 @@ The 2-governance layer is designed to provide:
 
 ### Audit & Logging Systems
 
-#### `a2r-audit-log/`
+#### `allternit-audit-log/`
 - **Purpose**: Persistent, append-only audit logging system
-- **Location**: `2-governance/a2r-audit-log/`
+- **Location**: `2-governance/allternit-audit-log/`
 - **Key Features**:
   - Immutable audit trails
   - Event streaming and storage
@@ -53,9 +53,9 @@ The 2-governance layer is designed to provide:
 
 ### Governance Systems
 
-#### `a2r-governor/`
+#### `allternit-governor/`
 - **Purpose**: Governance decision-making and workflow engine
-- **Location**: `2-governance/a2r-governor/`
+- **Location**: `2-governance/allternit-governor/`
 - **Key Features**:
   - Decision workflows and approvals
   - Governance rule management
@@ -66,9 +66,9 @@ The 2-governance layer is designed to provide:
 
 ### Legal & Compliance
 
-#### `a2r-lawlayer/`
+#### `allternit-lawlayer/`
 - **Purpose**: Legal compliance and regulatory framework
-- **Location**: `2-governance/a2r-lawlayer/`
+- **Location**: `2-governance/allternit-lawlayer/`
 - **Key Features**:
   - Regulatory compliance checking
   - Legal requirement enforcement

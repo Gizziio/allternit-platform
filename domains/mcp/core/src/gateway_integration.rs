@@ -1,7 +1,7 @@
-//! Integration with A2R tools-gateway
+//! Integration with Allternit tools-gateway
 //!
-//! This module provides integration between MCP servers and the A2R tools-gateway,
-//! enabling MCP tools to be executed through the standard A2R tool execution flow.
+//! This module provides integration between MCP servers and the Allternit tools-gateway,
+//! enabling MCP tools to be executed through the standard Allternit tool execution flow.
 //!
 //! # Architecture
 //!
@@ -48,7 +48,7 @@ use crate::{
     transport::McpTransport,
     types::{CallToolRequest, JsonRpcMessage, JsonRpcRequest, ToolResult},
 };
-use a2rchitech_sdk_core::{ExecuteResponse, ToolGatewayDefinition};
+use allternit_sdk_core::{ExecuteResponse, ToolGatewayDefinition};
 use async_trait::async_trait;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -93,7 +93,7 @@ pub type McpToolProviderResult<T> = Result<T, McpToolProviderError>;
 
 /// Trait for tool providers that can be registered with the tools-gateway
 ///
-/// This trait defines the interface that the A2R tools-gateway uses
+/// This trait defines the interface that the Allternit tools-gateway uses
 /// to discover and execute tools from different sources.
 #[async_trait]
 pub trait ToolProvider: Send + Sync {
@@ -276,7 +276,7 @@ impl Default for McpClientPool {
 /// MCP Tool Provider implementation
 ///
 /// This struct implements the `ToolProvider` trait, allowing MCP tools
-/// to be registered with and executed through the A2R tools-gateway.
+/// to be registered with and executed through the Allternit tools-gateway.
 #[derive(Debug)]
 pub struct McpToolProvider {
     registry: Arc<McpToolsRegistry>,
@@ -356,7 +356,7 @@ impl ToolProvider for McpToolProvider {
             .get_bridge(&registered.server_id, &registered.server_name)
             .await;
 
-        // Convert A2R request to MCP request
+        // Convert Allternit request to MCP request
         let mcp_request = bridge.to_mcp_request(tool_id, parameters);
 
         // Execute via the client pool
@@ -365,9 +365,9 @@ impl ToolProvider for McpToolProvider {
             .call_tool(&registered.server_id, mcp_request)
             .await?;
 
-        // Convert MCP result to A2R response
+        // Convert MCP result to Allternit response
         let (output, error, execution_time_ms) =
-            bridge.to_a2r_result(mcp_result, start.elapsed().as_millis() as u64);
+            bridge.to_allternit_result(mcp_result, start.elapsed().as_millis() as u64);
 
         let success = error.is_none();
 

@@ -1,7 +1,7 @@
 /**
  * DAK Runner - Deterministic Agent Kernel
  * 
- * Execution runtime for A2R that stays entirely execution-plane,
+ * Execution runtime for Allternit that stays entirely execution-plane,
  * proxying all state changes through Rails gates.
  */
 

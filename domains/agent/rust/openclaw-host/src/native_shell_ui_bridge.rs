@@ -1,7 +1,7 @@
 //! Shell UI ↔ Native Service Bridge - IC-001
 //!
 //! Adapter pattern implementation that bridges between Shell UI requests
-//! and native A2R service implementations. This module provides the translation
+//! and native Allternit service implementations. This module provides the translation
 //! layer between the Shell UI interface and the native Rust implementations.
 
 use chrono::{DateTime, Utc};

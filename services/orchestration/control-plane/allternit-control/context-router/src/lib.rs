@@ -1,7 +1,7 @@
-use a2rchitech_history::{HistoryError, HistoryLedger};
-use a2rchitech_messaging::{EventEnvelope, MessagingSystem};
-use a2rchitech_policy::{PolicyEffect, PolicyEngine, PolicyRequest};
-use a2rchitech_runtime_core::SessionManager;
+use allternit_history::{HistoryError, HistoryLedger};
+use allternit_messaging::{EventEnvelope, MessagingSystem};
+use allternit_policy::{PolicyEffect, PolicyEngine, PolicyRequest};
+use allternit_runtime_core::SessionManager;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::{HashMap, HashSet};
@@ -135,7 +135,7 @@ pub enum ContextRouterError {
     #[error("History error: {0}")]
     History(#[from] HistoryError),
     #[error("Policy error: {0}")]
-    Policy(#[from] a2rchitech_policy::PolicyError),
+    Policy(#[from] allternit_policy::PolicyError),
     #[error("Invalid context selector: {0}")]
     InvalidSelector(String),
     #[error("Context bundle not found: {0}")]
@@ -209,7 +209,7 @@ impl ContextRouter {
                 "requesting_agent": &request.requesting_agent_id,
                 "requesting_session": &request.requesting_session_id,
             }),
-            requested_tier: a2rchitech_policy::SafetyTier::T0, // Default to lowest tier for context access
+            requested_tier: allternit_policy::SafetyTier::T0, // Default to lowest tier for context access
         };
 
         let policy_decision = self.policy_engine.evaluate(policy_req).await?;
@@ -784,29 +784,29 @@ mod tests {
         let pool = SqlitePool::connect(&db_url).await.unwrap();
         let temp_path = format!("/tmp/test_context_router_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
         let messaging_system = Arc::new(
-            a2rchitech_messaging::MessagingSystem::new_with_storage(
+            allternit_messaging::MessagingSystem::new_with_storage(
                 history_ledger.clone(),
                 pool.clone(),
             )
             .await
             .unwrap(),
         );
-        let policy_engine = Arc::new(a2rchitech_policy::PolicyEngine::new(
+        let policy_engine = Arc::new(allternit_policy::PolicyEngine::new(
             history_ledger.clone(),
             messaging_system.clone(),
         ));
-        let session_manager = Arc::new(a2rchitech_runtime_core::SessionManager::new(
+        let session_manager = Arc::new(allternit_runtime_core::SessionManager::new(
             history_ledger.clone(),
             messaging_system.clone(),
         ));
 
         // Register a test identity with the policy engine
-        let test_identity = a2rchitech_policy::Identity {
+        let test_identity = allternit_policy::Identity {
             id: "test_agent".to_string(),
-            identity_type: a2rchitech_policy::IdentityType::AgentIdentity,
+            identity_type: allternit_policy::IdentityType::AgentIdentity,
             name: "Test Agent".to_string(),
             tenant_id: "test_tenant".to_string(),
             created_at: 0,
@@ -891,29 +891,29 @@ mod tests {
         let pool = SqlitePool::connect(&db_url).await.unwrap();
         let temp_path = format!("/tmp/test_selection_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
         let messaging_system = Arc::new(
-            a2rchitech_messaging::MessagingSystem::new_with_storage(
+            allternit_messaging::MessagingSystem::new_with_storage(
                 history_ledger.clone(),
                 pool.clone(),
             )
             .await
             .unwrap(),
         );
-        let policy_engine = Arc::new(a2rchitech_policy::PolicyEngine::new(
+        let policy_engine = Arc::new(allternit_policy::PolicyEngine::new(
             history_ledger.clone(),
             messaging_system.clone(),
         ));
-        let session_manager = Arc::new(a2rchitech_runtime_core::SessionManager::new(
+        let session_manager = Arc::new(allternit_runtime_core::SessionManager::new(
             history_ledger.clone(),
             messaging_system.clone(),
         ));
 
         // Register a test identity with the policy engine
-        let test_identity = a2rchitech_policy::Identity {
+        let test_identity = allternit_policy::Identity {
             id: "test_agent".to_string(),
-            identity_type: a2rchitech_policy::IdentityType::AgentIdentity,
+            identity_type: allternit_policy::IdentityType::AgentIdentity,
             name: "Test Agent".to_string(),
             tenant_id: "test_tenant".to_string(),
             created_at: 0,
@@ -1030,21 +1030,21 @@ mod tests {
         let pool = SqlitePool::connect(&db_url).await.unwrap();
         let temp_path = format!("/tmp/test_context_hash_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
         let messaging_system = Arc::new(
-            a2rchitech_messaging::MessagingSystem::new_with_storage(
+            allternit_messaging::MessagingSystem::new_with_storage(
                 history_ledger.clone(),
                 pool.clone(),
             )
             .await
             .unwrap(),
         );
-        let policy_engine = Arc::new(a2rchitech_policy::PolicyEngine::new(
+        let policy_engine = Arc::new(allternit_policy::PolicyEngine::new(
             history_ledger.clone(),
             messaging_system.clone(),
         ));
-        let session_manager = Arc::new(a2rchitech_runtime_core::SessionManager::new(
+        let session_manager = Arc::new(allternit_runtime_core::SessionManager::new(
             history_ledger.clone(),
             messaging_system.clone(),
         ));

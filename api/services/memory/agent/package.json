@@ -33,7 +33,7 @@
     "local-llm",
     "allternit"
   ],
-  "author": "A2rchitect Team",
+  "author": "allternit Team",
   "license": "MIT",
   "dependencies": {
     "better-sqlite3": "^11.6.0",

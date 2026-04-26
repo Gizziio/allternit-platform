@@ -3,7 +3,7 @@
   "name": "Message Counter",
   "version": "1.0.0",
   "description": "Counts messages in session and displays statistics in the sidebar",
-  "author": "A2R Team",
+  "author": "Allternit Team",
   "icon": "🔢",
   "contributions": {
     "sidebar": [
@@ -39,6 +39,6 @@
   },
   "permissions": ["read:messages", "read:session"],
   "main": "./dist/index.js",
-  "homepage": "https://github.com/a2r/example-counter",
+  "homepage": "https://github.com/allternit/example-counter",
   "license": "MIT"
 }

@@ -1,20 +1,20 @@
-//! A2R Installer
+//! Allternit Installer
 //!
-//! Installation scripts and automation for A2R platform.
+//! Installation scripts and automation for Allternit platform.
 
-use a2r_cloud_core::{CloudError, Instance};
+use allternit_cloud_core::{CloudError, Instance};
 
-/// A2R installer
-pub struct A2rInstaller;
+/// Allternit installer
+pub struct AllternitInstaller;
 
-impl A2rInstaller {
+impl AllternitInstaller {
     pub fn new() -> Self {
         Self
     }
     
-    /// Install A2R on instance
+    /// Install Allternit on instance
     pub async fn install(&self, instance: &Instance) -> Result<(), CloudError> {
-        tracing::info!("Installing A2R on instance {}", instance.id);
+        tracing::info!("Installing Allternit on instance {}", instance.id);
         
         // Get installation script
         let _script = self.get_install_script();
@@ -39,56 +39,56 @@ impl A2rInstaller {
     }
 }
 
-impl Default for A2rInstaller {
+impl Default for AllternitInstaller {
     fn default() -> Self {
         Self::new()
     }
 }
 
-/// A2R installation script
+/// Allternit installation script
 pub static INSTALL_SCRIPT: &str = r#"#!/bin/bash
 set -e
 
-echo "=== A2R Platform Installation ==="
+echo "=== Allternit Platform Installation ==="
 
-# Create A2R user
-if ! id -u a2r >/dev/null 2>&1; then
-    useradd -r -s /bin/false a2r
+# Create Allternit user
+if ! id -u allternit >/dev/null 2>&1; then
+    useradd -r -s /bin/false allternit
 fi
 
 # Create directories
-mkdir -p /opt/a2r/bin
-mkdir -p /opt/a2r/config
-mkdir -p /var/log/a2r
+mkdir -p /opt/allternit/bin
+mkdir -p /opt/allternit/config
+mkdir -p /var/log/allternit
 
-# Download A2R (in production, this would be from releases)
-echo "Downloading A2R..."
-# curl -L https://releases.a2r.sh/latest | tar xz -C /opt/a2r
+# Download Allternit (in production, this would be from releases)
+echo "Downloading Allternit..."
+# curl -L https://releases.allternit.sh/latest | tar xz -C /opt/allternit
 
 # Create placeholder binary
-cat > /opt/a2r/bin/a2r-server << 'EOF'
+cat > /opt/allternit/bin/allternit-server << 'EOF'
 #!/bin/bash
-echo "A2R Server running..."
+echo "Allternit Server running..."
 while true; do sleep 60; done
 EOF
-chmod +x /opt/a2r/bin/a2r-server
+chmod +x /opt/allternit/bin/allternit-server
 
 # Set permissions
-chown -R a2r:a2r /opt/a2r
-chown -R a2r:a2r /var/log/a2r
+chown -R allternit:allternit /opt/allternit
+chown -R allternit:allternit /var/log/allternit
 
 # Install systemd service
-cat > /etc/systemd/system/a2r.service << 'EOF'
+cat > /etc/systemd/system/allternit.service << 'EOF'
 [Unit]
-Description=A2R Platform
+Description=Allternit Platform
 After=network.target
 
 [Service]
 Type=simple
-ExecStart=/opt/a2r/bin/a2r-server
+ExecStart=/opt/allternit/bin/allternit-server
 Restart=always
-User=a2r
-Group=a2r
+User=allternit
+Group=allternit
 Environment=RUST_LOG=info
 
 [Install]
@@ -97,16 +97,16 @@ EOF
 
 # Enable and start service
 systemctl daemon-reload
-systemctl enable a2r
-systemctl start a2r
+systemctl enable allternit
+systemctl start allternit
 
 # Verify installation
 sleep 2
-if systemctl is-active --quiet a2r; then
-    echo "✓ A2R installation complete"
+if systemctl is-active --quiet allternit; then
+    echo "✓ Allternit installation complete"
     echo "✓ Service is running"
 else
-    echo "✗ A2R service failed to start"
+    echo "✗ Allternit service failed to start"
     exit 1
 fi
 
@@ -115,27 +115,27 @@ echo "=== Installation Complete ==="
 
 /// Systemd service definition
 pub static SYSTEMD_SERVICE: &str = r#"[Unit]
-Description=A2R Platform
+Description=Allternit Platform
 After=network.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/opt/a2r/bin/a2r-server
+ExecStart=/opt/allternit/bin/allternit-server
 Restart=always
 RestartSec=5
-User=a2r
-Group=a2r
+User=allternit
+Group=allternit
 
 # Environment
 Environment=RUST_LOG=info
-Environment=A2R_CONFIG=/opt/a2r/config
+Environment=Allternit_CONFIG=/opt/allternit/config
 
 # Security hardening
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/var/log/a2r /opt/a2r/config
+ReadWritePaths=/var/log/allternit /opt/allternit/config
 
 # Resource limits
 LimitNOFILE=65536
@@ -151,14 +151,14 @@ mod tests {
     
     #[test]
     fn test_install_script_exists() {
-        let installer = A2rInstaller::new();
+        let installer = AllternitInstaller::new();
         assert!(!installer.get_install_script().is_empty());
         assert!(installer.get_install_script().contains("#!/bin/bash"));
     }
     
     #[test]
     fn test_systemd_service_exists() {
-        let installer = A2rInstaller::new();
+        let installer = AllternitInstaller::new();
         assert!(!installer.get_systemd_service().is_empty());
         assert!(installer.get_systemd_service().contains("[Unit]"));
         assert!(installer.get_systemd_service().contains("[Service]"));

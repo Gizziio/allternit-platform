@@ -1,4 +1,4 @@
-//! # A2R Environment Specification (N5)
+//! # Allternit Environment Specification (N5)
 //!
 //! Hybrid environment definition system supporting:
 //! - Dev Container Specification (primary) - containers.dev
@@ -57,7 +57,7 @@ pub use resolver::{ImageResolution, OciResolver, RegistryAuth};
 #[serde(rename_all = "snake_case")]
 pub enum EnvironmentSource {
     /// Dev Container Specification (devcontainer.json)
-    /// Primary recommendation for A2R users
+    /// Primary recommendation for Allternit users
     DevContainer,
 
     /// Nix Flake (flake.nix)
@@ -133,9 +133,9 @@ pub struct EnvironmentSpec {
     #[serde(default)]
     pub resources: ResourceRequirements,
 
-    /// A2R-specific configuration
+    /// Allternit-specific configuration
     #[serde(default)]
-    pub a2r_config: A2rEnvironmentConfig,
+    pub allternit_config: AllternitEnvironmentConfig,
 }
 
 /// Feature specification (tools/libraries to install)
@@ -198,9 +198,9 @@ pub struct ResourceRequirements {
     pub disk_gb: Option<f32>,
 }
 
-/// A2R-specific environment configuration
+/// Allternit-specific environment configuration
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct A2rEnvironmentConfig {
+pub struct AllternitEnvironmentConfig {
     /// Preferred execution driver
     #[serde(default)]
     pub driver: Option<String>,
@@ -279,7 +279,7 @@ impl EnvironmentSpecLoader {
     pub fn new() -> Result<Self, EnvironmentSpecError> {
         let cache_dir = dirs::cache_dir()
             .unwrap_or_else(std::env::temp_dir)
-            .join("a2r")
+            .join("allternit")
             .join("environments");
 
         std::fs::create_dir_all(&cache_dir)?;
@@ -372,9 +372,9 @@ impl EnvironmentSpecLoader {
                 memory_gb: config.host_requirements.memory.map(|m| m as f32 / 1024.0),
                 disk_gb: config.host_requirements.storage.map(|s| s as f32 / 1024.0),
             },
-            a2r_config: config
+            allternit_config: config
                 .customizations
-                .get("a2r")
+                .get("allternit")
                 .and_then(|v| serde_json::from_value(v.clone()).ok())
                 .unwrap_or_default(),
         };
@@ -420,7 +420,7 @@ impl EnvironmentSpecLoader {
             mounts: vec![],
             post_create_commands: vec![],
             resources: ResourceRequirements::default(),
-            a2r_config: A2rEnvironmentConfig::default(),
+            allternit_config: AllternitEnvironmentConfig::default(),
         };
 
         Ok(spec)
@@ -442,7 +442,7 @@ impl EnvironmentSpecLoader {
             mounts: vec![],
             post_create_commands: vec![],
             resources: ResourceRequirements::default(),
-            a2r_config: A2rEnvironmentConfig::default(),
+            allternit_config: AllternitEnvironmentConfig::default(),
         };
 
         Ok(spec)
@@ -468,7 +468,7 @@ impl EnvironmentSpecLoader {
             mounts: vec![],
             post_create_commands: vec![],
             resources: ResourceRequirements::default(),
-            a2r_config: A2rEnvironmentConfig::default(),
+            allternit_config: AllternitEnvironmentConfig::default(),
         };
 
         Ok(spec)
@@ -560,7 +560,7 @@ mod tests {
             mounts: vec![],
             post_create_commands: vec![],
             resources: ResourceRequirements::default(),
-            a2r_config: A2rEnvironmentConfig::default(),
+            allternit_config: AllternitEnvironmentConfig::default(),
         };
 
         assert_eq!(spec.workspace_folder, "/workspace");

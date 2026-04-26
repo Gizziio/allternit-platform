@@ -11,7 +11,7 @@ interface KeyboardShortcutsOptions {
 }
 
 /**
- * Hook for managing keyboard shortcuts in the A2R Shell
+ * Hook for managing keyboard shortcuts in the Allternit Shell
  *
  * Shortcuts:
  * - Cmd/Ctrl+1 → Chat mode

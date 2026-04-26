@@ -138,7 +138,7 @@ impl BrainManager {
         } else {
             // Default to a folder in projects dir
             let projects_dir = std::env::var("PROJECTS_DIR").unwrap_or_else(|_| ".".to_string());
-            let path = format!("{}/a2rchitech-sessions/{}", projects_dir, session_id);
+            let path = format!("{}/allternit-sessions/{}", projects_dir, session_id);
             std::fs::create_dir_all(&path)?;
             path
         };

@@ -1,5 +1,5 @@
 /**
- * A2R Runtime Bridge - Wrappers
+ * Allternit Runtime Bridge - Wrappers
  * 
  * Wrapper modules for tool execution and file operations.
  */

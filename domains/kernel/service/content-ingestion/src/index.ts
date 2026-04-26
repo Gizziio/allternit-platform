@@ -114,7 +114,7 @@ export class HTMLFetcher {
     timeout: 30000,
     retries: 3,
     retryDelay: 1000,
-    userAgent: 'A2R-ContentIngestion/1.0 (Agent-Native Content Pipeline)',
+    userAgent: 'Allternit-ContentIngestion/1.0 (Agent-Native Content Pipeline)',
     followRedirects: true,
     maxRedirects: 5,
   };
@@ -245,7 +245,7 @@ export class MarkdownNegotiator {
         signal: controller.signal,
         headers: {
           'Accept': 'text/markdown,text/x-markdown,text/html;q=0.9,*/*;q=0.8',
-          'User-Agent': 'A2R-ContentIngestion/1.0',
+          'User-Agent': 'Allternit-ContentIngestion/1.0',
         },
       });
 

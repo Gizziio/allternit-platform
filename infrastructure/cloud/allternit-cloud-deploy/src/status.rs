@@ -2,7 +2,7 @@
 //!
 //! Status tracking for deployments.
 
-use a2r_cloud_core::DeploymentStatus;
+use allternit_cloud_core::DeploymentStatus;
 use std::collections::HashMap;
 use tokio::sync::RwLock;
 use std::sync::Arc;
@@ -59,7 +59,7 @@ impl Default for DeploymentTracker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use a2r_cloud_core::DeploymentPhase;
+    use allternit_cloud_core::DeploymentPhase;
     use chrono::Utc;
     
     #[tokio::test]

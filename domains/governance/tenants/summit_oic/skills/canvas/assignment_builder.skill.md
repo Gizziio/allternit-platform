@@ -390,9 +390,9 @@ Every assignment created follows this **consistent structure**:
 
 ---
 
-## Integration with A2R Operator
+## Integration with Allternit Operator
 
-This skill integrates with the A2R Operator through:
+This skill integrates with the Allternit Operator through:
 
 1. **Canvas Connector** - API calls
 2. **Policy Engine** - Teacher preference enforcement

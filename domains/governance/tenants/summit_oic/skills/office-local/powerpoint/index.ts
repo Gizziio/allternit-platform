@@ -179,7 +179,7 @@ export async function saveDeck(input: SaveDeckInput): Promise<SaveDeckOutput> {
     // Create PowerPoint presentation using pptxgenjs
     const pres = new pptxgen();
     pres.title = deck_handle.title;
-    pres.author = 'A2R Operator';
+    pres.author = 'Allternit Operator';
     
     // Add slides
     for (const slide of deck_handle.slides) {

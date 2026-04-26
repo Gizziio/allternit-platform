@@ -87,7 +87,7 @@ impl CloudRuntime {
             
             // Get status from cloud instance
             let ssh = ssh_conn.lock().await;
-            let result = ssh.execute("systemctl is-active a2r-agent 2>/dev/null || echo 'inactive'").await;
+            let result = ssh.execute("systemctl is-active allternit-agent 2>/dev/null || echo 'inactive'").await;
             drop(ssh);
             
             match result {
@@ -156,7 +156,7 @@ impl Runtime for CloudRuntime {
 
         // Deploy to Hetzner Cloud
         let deploy_config = allternit_cloud_hetzner::DeploymentConfig {
-            instance_name: format!("a2r-run-{}", &runtime_id[..8]),
+            instance_name: format!("allternit-run-{}", &runtime_id[..8]),
             instance_type_id: instance_type.to_string(),
             region_id: region.to_string(),
             storage_gb: config.extra
@@ -212,7 +212,7 @@ impl Runtime for CloudRuntime {
         let cmd = if let Some(command) = &config.command {
             format!(
                 "cd {} && {}",
-                config.working_dir.as_deref().unwrap_or("/opt/a2r"),
+                config.working_dir.as_deref().unwrap_or("/opt/allternit"),
                 command
             )
         } else {
@@ -399,7 +399,7 @@ impl Runtime for CloudRuntime {
             ).await
             .map_err(|e| ApiError::Internal(format!("SSH connection failed: {}", e)))?;
 
-            let _ = ssh_conn.execute("systemctl stop a2r-agent").await;
+            let _ = ssh_conn.execute("systemctl stop allternit-agent").await;
             
             instance.status = RuntimeState::Paused;
             tracing::info!("Paused cloud instance {}", runtime_id);
@@ -422,7 +422,7 @@ impl Runtime for CloudRuntime {
             ).await
             .map_err(|e| ApiError::Internal(format!("SSH connection failed: {}", e)))?;
 
-            let _ = ssh_conn.execute("systemctl start a2r-agent").await;
+            let _ = ssh_conn.execute("systemctl start allternit-agent").await;
             
             instance.status = RuntimeState::Running;
             tracing::info!("Resumed cloud instance {}", runtime_id);

@@ -6,7 +6,7 @@
 //! - Component library
 //! - Template registration
 
-use a2r_tambo_integration::{ComponentTemplate, GeneratedUI, UISpec, UIType};
+use allternit_tambo_integration::{ComponentTemplate, GeneratedUI, UISpec, UIType};
 use axum::{
     extract::{Path, State},
     http::StatusCode,

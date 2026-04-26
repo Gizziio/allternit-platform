@@ -1,8 +1,8 @@
 [package]
-name = "a2rchitech-workflows"
+name = "allternit-workflows"
 version = "0.1.0"
 edition = "2021"
-description = "A2rchitech workflow engine with DAG execution and scientific loop"
+description = "Allternitchitech workflow engine with DAG execution and scientific loop"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
@@ -15,16 +15,16 @@ anyhow = "1.0"
 tracing = "0.1"
 schemars = { version = "0.8", features = ["derive"] }
 sha2 = "0.10"
-a2rchitech-history = { workspace = true }
-a2rchitech-messaging = { workspace = true }
-a2rchitech-policy = { workspace = true }
-a2rchitech-tools-gateway = { workspace = true }
-a2rchitech-skills = { workspace = true }
-a2rchitech-kernel-contracts = { workspace = true }
+allternit-history = { workspace = true }
+allternit-messaging = { workspace = true }
+allternit-policy = { workspace = true }
+allternit-tools-gateway = { workspace = true }
+allternit-skills = { workspace = true }
+allternit-kernel-contracts = { workspace = true }
 async-trait = "0.1"
 futures = "0.3"
 petgraph = "0.6"
-a2r-driver-interface = { path = "../../../infrastructure/a2r-driver-interface" }
+allternit-driver-interface = { workspace = true }
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
 
 [dev-dependencies]

@@ -8,7 +8,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 uuid = { workspace = true }
-capsule_spec = { path = "../../../schemas/a2r-capsule-spec" }
+capsule_spec = { path = "../../../schemas/allternit-capsule-spec" }
 evidence_store = { path = "../../../../../../domains/governance/evidence-management/core-evidence" }
 a2ui-types = { path = "../../../../types/typescript/a2ui_types" }
 allternit-kernel-contracts = { workspace = true }

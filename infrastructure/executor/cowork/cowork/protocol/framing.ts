@@ -1,5 +1,5 @@
 /**
- * @fileoverview A2R Guest Agent Protocol - Message Framing
+ * @fileoverview Allternit Guest Agent Protocol - Message Framing
  * 
  * Implements length-prefixed framing for reliable stream transport.
  * 

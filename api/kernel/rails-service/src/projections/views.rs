@@ -9,7 +9,7 @@ use crate::work::types::DagState;
 
 pub fn write_dag_view(root_dir: &PathBuf, dag: &DagState) -> Result<PathBuf> {
     let base = root_dir
-        .join(".a2r/work/dags")
+        .join(".allternit/work/dags")
         .join(&dag.dag_id)
         .join("view");
     ensure_dir(&base)?;
@@ -25,7 +25,7 @@ pub fn write_wih_view(root_dir: &PathBuf, dag_id: &str, wih: &WihState) -> Resul
         "open"
     };
     let base = root_dir
-        .join(".a2r/work/dags")
+        .join(".allternit/work/dags")
         .join(dag_id)
         .join("wih")
         .join(status_dir);
@@ -36,7 +36,7 @@ pub fn write_wih_view(root_dir: &PathBuf, dag_id: &str, wih: &WihState) -> Resul
 }
 
 pub fn write_prompt_view(root_dir: &PathBuf, prompt: &PromptTimeline) -> Result<PathBuf> {
-    let base = root_dir.join(".a2r/ledger/prompt/view");
+    let base = root_dir.join(".allternit/ledger/prompt/view");
     ensure_dir(&base)?;
     let path = base.join(format!("{}.current.json", prompt.prompt_id));
     write_json_atomic(&path, prompt)?;
@@ -44,7 +44,7 @@ pub fn write_prompt_view(root_dir: &PathBuf, prompt: &PromptTimeline) -> Result<
 }
 
 pub fn write_elicitation_view(root_dir: &PathBuf, elicitation: &crate::core::types::ElicitationRequest) -> Result<PathBuf> {
-    let base = root_dir.join(".a2r/ledger/elicitation/active");
+    let base = root_dir.join(".allternit/ledger/elicitation/active");
     ensure_dir(&base)?;
     let path = base.join(format!("{}.json", elicitation.elicitation_id));
     write_json_atomic(&path, elicitation)?;
@@ -52,7 +52,7 @@ pub fn write_elicitation_view(root_dir: &PathBuf, elicitation: &crate::core::typ
 }
 
 pub fn write_sampling_view(root_dir: &PathBuf, sampling: &crate::core::types::SamplingRequest) -> Result<PathBuf> {
-    let base = root_dir.join(".a2r/ledger/sampling/active");
+    let base = root_dir.join(".allternit/ledger/sampling/active");
     ensure_dir(&base)?;
     let path = base.join(format!("{}.json", sampling.sampling_id));
     write_json_atomic(&path, sampling)?;

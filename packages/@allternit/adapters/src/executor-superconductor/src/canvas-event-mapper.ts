@@ -27,7 +27,7 @@ export interface SuperconductorEvent {
 
 export class CanvasEventMapper {
   /**
-   * Maps Superconductor events to A2rchitech Canvas events
+   * Maps Superconductor events to Allternit Canvas events
    */
   static mapSuperconductorToCanvas(superconductorEvent: SuperconductorEvent): CanvasEvent | null {
     const timestamp = new Date(superconductorEvent.timestamp).getTime();

@@ -1,4 +1,4 @@
-# A2R Gateway - Kernel Wiring Proof Runbook
+# Allternit Gateway - Kernel Wiring Proof Runbook
 
 **Purpose:** Prove end-to-end kernel wiring in <5 minutes
 
@@ -18,15 +18,15 @@
 ## Prerequisites
 
 - Node.js 18+ installed
-- A2R Gateway running on port 3210
-- A2R UI (surfaces/allternit-platform) running on port 5177
+- Allternit Gateway running on port 3210
+- Allternit UI (surfaces/allternit-platform) running on port 5177
 
 ---
 
 ## Step 1: Start Gateway
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/services/a2r-gateway
+cd /Users/macbook/Desktop/allternit-workspace/allternit/services/allternit-gateway
 
 # Install if needed
 npm install
@@ -45,7 +45,7 @@ npm run dev:http
 **Verify:**
 ```bash
 curl http://localhost:3210/health
-# Should return: {"status":"healthy","service":"a2r-gateway",...}
+# Should return: {"status":"healthy","service":"allternit-gateway",...}
 ```
 
 ---
@@ -64,7 +64,7 @@ npm run dev
 
 **Expected Output:**
 ```
-[A2R API Client] Using gateway URL: http://127.0.0.1:3210
+[Allternit API Client] Using gateway URL: http://127.0.0.1:3210
 VITE v5.x.x  ready in xxx ms
 
 ➜  Local:   http://localhost:5177/
@@ -73,7 +73,7 @@ VITE v5.x.x  ready in xxx ms
 **Verify:**
 - Open browser to `http://localhost:5177/`
 - Open DevTools Console
-- Look for: `[A2R API Client] Using gateway URL: http://127.0.0.1:3210`
+- Look for: `[Allternit API Client] Using gateway URL: http://127.0.0.1:3210`
 
 ---
 
@@ -191,7 +191,7 @@ curl http://localhost:3210/session/SESSION_ID/message
 ## Success Criteria Checklist
 
 - [ ] Gateway starts on port 3210
-- [ ] UI connects and shows `[A2R API Client] Using gateway URL: http://127.0.0.1:3210`
+- [ ] UI connects and shows `[Allternit API Client] Using gateway URL: http://127.0.0.1:3210`
 - [ ] KERNEL_RUN log appears for each prompt submit
 - [ ] KERNEL_RUN_COMPLETE log appears after streaming
 - [ ] SSE events show `_source: 'kernel'` in PART_DELTA
@@ -217,5 +217,5 @@ curl -X POST http://localhost:3210/session \
 
 ---
 
-**Maintainer:** A2R Platform Team  
+**Maintainer:** Allternit Platform Team  
 **Last Updated:** 2024-02-23

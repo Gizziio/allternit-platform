@@ -1,5 +1,5 @@
 /**
- * A2R Integrity Service (Kernel Port)
+ * Allternit Integrity Service (Kernel Port)
  * 
  * Implements G0501 (Immutable Receipts) and G0502 (Safety Interception)
  * natively in the Kernel.
@@ -26,7 +26,7 @@ export interface OperatorReceipt {
 }
 
 export class IntegrityService {
-  private static RECEIPTS_DIR = '.a2r/receipts';
+  private static RECEIPTS_DIR = '.allternit/receipts';
   private static policyEngine = createPolicyEngine();
 
   /**

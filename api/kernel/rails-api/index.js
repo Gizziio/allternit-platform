@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * A2R Rails API Server
+ * Allternit Rails API Server
  * 
  * Implements endpoints for:
  * - Agents

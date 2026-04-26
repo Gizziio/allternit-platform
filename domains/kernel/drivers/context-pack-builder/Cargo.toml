@@ -1,8 +1,8 @@
 [package]
-name = "a2r-context-pack-builder"
+name = "allternit-context-pack-builder"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Context Pack Builder - Integrates ontology runtime with deterministic context bundles"
+description = "Allternit Context Pack Builder - Integrates ontology runtime with deterministic context bundles"
 
 [dependencies]
 serde = { workspace = true }
@@ -17,10 +17,10 @@ regex = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
 
-a2r-ontology-runtime = { path = "../ontology-runtime" }
-a2r-dag-wih-integration = { path = "../dag-wih-integration" }
-a2r-security-hardening = { path = "../../../2-governance/security-network/security-hardening" }
-a2rchitech-system-law = { path = "../system-law" }
+allternit-ontology-runtime = { path = "../ontology-runtime" }
+allternit-dag-wih-integration = { path = "../dag-wih-integration" }
+allternit-security-hardening = { path = "../../../2-governance/security-network/security-hardening" }
+allternit-system-law = { path = "../system-law" }
 
 [dev-dependencies]
 tokio-test = "0.4"

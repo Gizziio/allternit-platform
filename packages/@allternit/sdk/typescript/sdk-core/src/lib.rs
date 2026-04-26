@@ -1,14 +1,14 @@
-//! # A2R SDK Core
+//! # Allternit SDK Core
 //!
-//! Core types and traits for the A2R SDK.
+//! Core types and traits for the Allternit SDK.
 //!
 //! ## Overview
 //!
 //! This crate provides foundational types, error handling, and traits
-//! used across all A2R SDK components. It defines the common interfaces
+//! used across all Allternit SDK components. It defines the common interfaces
 //! for applications, functions, policies, and transport layers.
 //!
-//! The SDK Core serves as the foundation of the A2R platform, providing
+//! The SDK Core serves as the foundation of the Allternit platform, providing
 //! serialization-friendly types that can be used across FFI boundaries,
 //! network transports, and language bindings.
 //!
@@ -19,7 +19,7 @@
 //! - **AgentConfig/AgentSpec**: Agent configuration and specification types
 //! - **ToolGatewayDefinition**: Comprehensive tool definitions with safety tiers
 //! - **WorkflowDefinition**: Workflow orchestration with phase-based execution
-//! - **AppDefinition**: Application manifest for A2R-compatible apps
+//! - **AppDefinition**: Application manifest for Allternit-compatible apps
 //! - **SafetyTier**: Security classification system (T0-T4)
 //! - **CoreError**: Unified error type for SDK operations
 //!
@@ -54,7 +54,7 @@ use serde::{Deserialize, Serialize};
 /// Universal message envelope for cross-service communication.
 ///
 /// The `MessageEnvelope` is the standard container for all messages
-/// passing through the A2R system. It provides routing information,
+/// passing through the Allternit system. It provides routing information,
 /// transport metadata, and extensible payload storage.
 ///
 /// # Examples
@@ -93,7 +93,7 @@ pub struct MessageEnvelope {
 /// Represents a function call with its parameters.
 ///
 /// `FunctionCall` encapsulates the invocation of a function or tool
-/// within the A2R system. It contains the function identifier and
+/// within the Allternit system. It contains the function identifier and
 /// the parameters as a JSON value.
 ///
 /// # Examples
@@ -285,7 +285,7 @@ pub struct ActionHandler {
 /// Configuration for an AI agent.
 ///
 /// `AgentConfig` defines the behavior and capabilities of an agent
-/// within the A2R system, including its permissions and confirmation
+/// within the Allternit system, including its permissions and confirmation
 /// thresholds.
 ///
 /// # Examples
@@ -403,7 +403,7 @@ pub struct AgentSignature {
 
 /// Safety tier classification for security levels.
 ///
-/// The A2R platform uses a tiered safety system (T0-T4) where:
+/// The Allternit platform uses a tiered safety system (T0-T4) where:
 /// - T0: No risk (informational only)
 /// - T1: Low risk (read-only operations)
 /// - T2: Medium risk (non-destructive writes)
@@ -512,7 +512,7 @@ pub struct ToolResourceLimits {
 /// Complete definition of a tool gateway.
 ///
 /// `ToolGatewayDefinition` is the comprehensive specification for a tool
-/// that can be registered and executed within the A2R system. It includes
+/// that can be registered and executed within the Allternit system. It includes
 /// all metadata, schemas, safety information, and resource requirements.
 ///
 /// # Examples
@@ -748,7 +748,7 @@ pub struct PublisherKeyRevokeRequest {
 
 /// Phase in a workflow execution.
 ///
-/// `WorkflowPhase` represents the standard phases of the A2R
+/// `WorkflowPhase` represents the standard phases of the Allternit
 /// agent workflow lifecycle.
 ///
 /// # Phases
@@ -1168,10 +1168,10 @@ pub struct ModelSpecificConfig {
     pub endpoint: Option<String>,
 }
 
-/// Definition of an A2R-compatible application.
+/// Definition of an Allternit-compatible application.
 ///
 /// `AppDefinition` describes an application that can be registered
-/// and used within the A2R ecosystem, including its authentication,
+/// and used within the Allternit ecosystem, including its authentication,
 /// capabilities, and tools.
 ///
 /// # Examples
@@ -1258,7 +1258,7 @@ pub struct OAuthConfig {
 /// Definition of a tool provided by an app.
 ///
 /// `ToolDefinition` describes a single tool/function that an app
-/// makes available to the A2R system.
+/// makes available to the Allternit system.
 ///
 /// # Examples
 ///

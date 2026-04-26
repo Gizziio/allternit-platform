@@ -1,5 +1,5 @@
 /**
- * A2R Kernel Routing Functions
+ * Allternit Kernel Routing Functions
  * 
  * Built-in routing functions for tool execution, file access,
  * and session management. These implement the RoutingFunction
@@ -7,7 +7,7 @@
  */
 
 import {
-  A2RKernel,
+  AllternitKernel,
   ToolContext,
   FileContext,
   RoutingResult,
@@ -56,7 +56,7 @@ export const HIGH_RISK_TOOLS = new Set([
  */
 export const preToolUseRouter: PreToolUseFunction = (
   context: ToolContext,
-  _kernel: A2RKernel
+  _kernel: AllternitKernel
 ): RoutingResult => {
   const { toolName, wihId, sessionId } = context;
 
@@ -110,7 +110,7 @@ export const preToolUseRouter: PreToolUseFunction = (
  */
 export const wihGatedRouter: PreToolUseFunction = async (
   context: ToolContext,
-  _kernel: A2RKernel
+  _kernel: AllternitKernel
 ): Promise<RoutingResult> => {
   const { wihId, toolName, sessionId } = context;
 
@@ -186,7 +186,7 @@ export const PROTECTED_PATHS = [
  */
 export const fileAccessRouter: FileAccessFunction = (
   context: FileContext,
-  _kernel: A2RKernel
+  _kernel: AllternitKernel
 ): RoutingResult => {
   const { operation, path: filePath, resolvedPath } = context; const workspaceRoot = (context as any).workspaceRoot;
 
@@ -244,7 +244,7 @@ export const fileAccessRouter: FileAccessFunction = (
  */
 export const readOnlyFileRouter: FileAccessFunction = (
   context: FileContext,
-  _kernel: A2RKernel
+  _kernel: AllternitKernel
 ): RoutingResult => {
   const { operation, path: filePath } = context;
 
@@ -270,7 +270,7 @@ export const readOnlyFileRouter: FileAccessFunction = (
 export function createCompositeRouter(
   ...routers: PreToolUseFunction[]
 ): PreToolUseFunction {
-  return async (context: ToolContext, _kernel: A2RKernel): Promise<RoutingResult> => {
+  return async (context: ToolContext, _kernel: AllternitKernel): Promise<RoutingResult> => {
     const auditLogs: Record<string, unknown>[] = [];
 
     for (const router of routers) {

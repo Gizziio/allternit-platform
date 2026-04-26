@@ -1,6 +1,6 @@
 # API Robustness Upgrades Documentation
 
-This document details the improvements made to enhance the A2rchitech API's robustness, integration capabilities, and production readiness.
+This document details the improvements made to enhance the Allternitchitech API's robustness, integration capabilities, and production readiness.
 
 ## 1. OpenAPI Documentation Support
 
@@ -147,13 +147,13 @@ struct ValidateWorkflowRequest {
 
 ### Environment Variables
 The API continues to use the same environment variables:
-- `A2RCHITECH_API_BIND` - Server binding address
-- `A2RCHITECH_LEDGER_PATH` - Ledger storage path
-- `A2RCHITECH_DB_PATH` - Database path
-- `A2RCHITECH_API_IDENTITY` - API identity
-- `A2RCHITECH_API_TENANT` - Default tenant
-- `A2RCHITECH_API_BOOTSTRAP_POLICY` - Policy bootstrapping
-- `A2RCHITECH_API_POLICY_ENFORCE` - Policy enforcement
+- `Allternit_API_BIND` - Server binding address
+- `Allternit_LEDGER_PATH` - Ledger storage path
+- `Allternit_DB_PATH` - Database path
+- `Allternit_API_IDENTITY` - API identity
+- `Allternit_API_TENANT` - Default tenant
+- `Allternit_API_BOOTSTRAP_POLICY` - Policy bootstrapping
+- `Allternit_API_POLICY_ENFORCE` - Policy enforcement
 
 ## 11. Integration Guidelines
 

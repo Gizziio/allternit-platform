@@ -1,6 +1,6 @@
 # Skill Creator - Rust Primitive
 
-Core skill creation primitive for the A2R skills system.
+Core skill creation primitive for the Allternit skills system.
 
 ## Overview
 
@@ -16,7 +16,7 @@ This module provides the foundational capability for creating skills with a stru
 ## Usage
 
 ```rust
-use a2rchitech_skills::creator::*;
+use allternit_skills::creator::*;
 
 // Create a skill creator
 let config = SkillCreationConfig {

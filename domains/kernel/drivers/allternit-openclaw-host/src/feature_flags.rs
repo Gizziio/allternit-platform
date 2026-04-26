@@ -1,6 +1,6 @@
 //! Feature Flag System for OpenClaw Strangler Migration
 //!
-//! Phase 3 (Graduate): Feature flags control whether native A2R or OpenClaw
+//! Phase 3 (Graduate): Feature flags control whether native Allternit or OpenClaw
 //! is the primary implementation. This allows gradual rollout and easy rollback.
 //!
 //! Architecture LOCK 4: Feature flags gate all graduated components.

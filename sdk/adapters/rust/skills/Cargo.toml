@@ -2,7 +2,7 @@
 name = "allternit-skills"
 version = "0.1.0"
 edition = "2021"
-description = "A2rchitech skills system with manifest parsing and validation"
+description = "Allternit skills system with manifest parsing and validation"
 
 [dependencies]
 serde = { workspace = true }

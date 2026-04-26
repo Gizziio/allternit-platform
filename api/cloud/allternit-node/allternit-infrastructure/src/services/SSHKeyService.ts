@@ -353,7 +353,7 @@ export class SSHKeyService {
       const naclUtil = require('tweetnacl-util');
       
       const keyPair = nacl.sign.keyPair();
-      const publicKey = `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA${naclUtil.encodeBase64(keyPair.publicKey)} a2r-generated`;
+      const publicKey = `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA${naclUtil.encodeBase64(keyPair.publicKey)} allternit-generated`;
       
       // Create OpenSSH format private key
       const privateKeyBase64 = naclUtil.encodeBase64(keyPair.secretKey);
@@ -418,7 +418,7 @@ ${this.wrapBase64(privateKeyBase64)}
     const sshPrefix = Buffer.from('ssh-rsa');
     const combined = Buffer.concat([sshPrefix, keyData]);
     
-    return `ssh-rsa ${combined.toString('base64')} a2r-generated`;
+    return `ssh-rsa ${combined.toString('base64')} allternit-generated`;
   }
 
   /**

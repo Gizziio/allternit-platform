@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 use tracing::{info, warn, error};
 
-use a2rchitech_memory_provider::{
+use allternit_memory_provider::{
     MemoryProvider, MemoryEntry, MemoryQuery, MemoryError, MemoryCapabilities,
     QueryCapabilities, PerformanceCharacteristics, BackendType,
 };

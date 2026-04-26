@@ -220,7 +220,7 @@ export const defaultCollabConfig: CollabConfig = {
   yjs: {
     signalingUrls: [],
     iceServers: [],
-    roomPrefix: 'a2r',
+    roomPrefix: 'allternit',
     maxPeers: 20,
     debug: false,
   },

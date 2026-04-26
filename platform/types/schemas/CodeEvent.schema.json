@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2rchitech.local/spec/contracts/CodeEvent.schema.json",
+  "$id": "https://allternit.local/spec/contracts/CodeEvent.schema.json",
   "title": "Code Event — Structured Event for Code Mode Sessions",
   "description": "Every state change, action, approval, and receipt in a Code Mode session emits a CodeEvent. This is the single source of truth for both terminal and GUI rendering.",
   "type": "object",

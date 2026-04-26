@@ -60,11 +60,11 @@ describe("Cowork Runtime E2E", () => {
     const mockArch = "arm64";
 
     // Create mock image files
-    const kernelPath = join(imageCacheDir, `vmlinux-6.5.0-a2r-${mockArch}`);
-    const initrdPath = join(imageCacheDir, `initrd.img-6.5.0-a2r-${mockArch}`);
+    const kernelPath = join(imageCacheDir, `vmlinux-6.5.0-allternit-${mockArch}`);
+    const initrdPath = join(imageCacheDir, `initrd.img-6.5.0-allternit-${mockArch}`);
     const rootfsPath = join(
       imageCacheDir,
-      `ubuntu-22.04-a2r-v${mockImageVersion}.${mockArch}.ext4.zst`
+      `ubuntu-22.04-allternit-v${mockImageVersion}.${mockArch}.ext4.zst`
     );
 
     // Write dummy files
@@ -78,9 +78,9 @@ describe("Cowork Runtime E2E", () => {
       JSON.stringify({
         version: mockImageVersion,
         architecture: mockArch,
-        kernel: `vmlinux-6.5.0-a2r-${mockArch}`,
-        initrd: `initrd.img-6.5.0-a2r-${mockArch}`,
-        rootfs: `ubuntu-22.04-a2r-v${mockImageVersion}.${mockArch}.ext4.zst`,
+        kernel: `vmlinux-6.5.0-allternit-${mockArch}`,
+        initrd: `initrd.img-6.5.0-allternit-${mockArch}`,
+        rootfs: `ubuntu-22.04-allternit-v${mockImageVersion}.${mockArch}.ext4.zst`,
         checksums: {},
         size: {},
         createdAt: new Date().toISOString(),

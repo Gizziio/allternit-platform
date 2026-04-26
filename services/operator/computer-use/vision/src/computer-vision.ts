@@ -1,7 +1,7 @@
 /**
- * A2R Computer Vision
+ * Allternit Computer Vision
  * 
- * Vision-based UI automation for A2R Computer Operator
+ * Vision-based UI automation for Allternit Computer Operator
  */
 
 export interface ScreenElement {
@@ -24,13 +24,13 @@ export interface Screenshot {
   timestamp: number;
 }
 
-export class A2RComputerVision {
+export class AllternitComputerVision {
   private initialized: boolean = false;
 
   async initialize(): Promise<void> {
-    console.log('Initializing A2R Computer Vision...');
+    console.log('Initializing Allternit Computer Vision...');
     this.initialized = true;
-    console.log('A2R Computer Vision initialized');
+    console.log('Allternit Computer Vision initialized');
   }
 
   async capture(): Promise<Screenshot> {
@@ -100,4 +100,4 @@ export class A2RComputerVision {
   }
 }
 
-export default A2RComputerVision;
+export default AllternitComputerVision;

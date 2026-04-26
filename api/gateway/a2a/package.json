@@ -1,7 +1,7 @@
 {
   "name": "@allternit/a2a-gateway",
   "version": "1.0.0",
-  "description": "A2A Gateway for A2rchitech",
+  "description": "A2A Gateway for Allternitchitech",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -26,6 +26,6 @@
     "discovery",
     "allternit"
   ],
-  "author": "A2rchitech",
+  "author": "Allternitchitech",
   "license": "MIT"
 }

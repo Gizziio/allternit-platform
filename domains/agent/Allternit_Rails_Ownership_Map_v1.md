@@ -1,6 +1,6 @@
-# A2R Agent Rails — Ownership Map (v1)
+# Allternit Agent Rails — Ownership Map (v1)
 
-**Source:** extracted from `/mnt/data/a2r-agent-system-rails.zip` (spec + CLI docs)
+**Source:** extracted from `/mnt/data/allternit-agent-system-rails.zip` (spec + CLI docs)
 
 ## 0) What Rails *is*
 
@@ -135,7 +135,7 @@ All events are appended to the Ledger as JSON objects with:
 # Gate Rules (Enforcement)
 
 ## Gate 0 — Plan creation
-Trigger: `a2r plan new` or equivalent.
+Trigger: `allternit plan new` or equivalent.
 Checks:
 - PromptCreated exists (raw intent immutable)
 - Create DagCreated + root node
@@ -152,7 +152,7 @@ Emits:
 - PromptLinkedToWork
 
 ## Gate 1 — WIH pickup/open
-Trigger: `a2r wih pickup <node>`
+Trigger: `allternit wih pickup <node>`
 Checks:
 - target node status is READY
 - role matches owner_role (unless override policy)
@@ -182,7 +182,7 @@ Checks:
 - update derived status/evidence flags
 
 ## Gate 4 — WIH close
-Trigger: `a2r wih close`
+Trigger: `allternit wih close`
 Checks:
 - required evidence satisfied
 - leases released or compatible with close policy
@@ -211,23 +211,23 @@ Emits:
 # Storage Layout (Locked)
 
 Authoritative truth (append-only):
-- `.a2r/ledger/events/YYYY-MM-DD.jsonl`
+- `.allternit/ledger/events/YYYY-MM-DD.jsonl`
 
 Atomic correctness (transactional):
-- `.a2r/leases/leases.db`
+- `.allternit/leases/leases.db`
 
 Immutable evidence blobs (generated IDs):
-- `.a2r/receipts/<receipt_id>/receipt.json`
-- `.a2r/blobs/<blob_id>`
+- `.allternit/receipts/<receipt_id>/receipt.json`
+- `.allternit/blobs/<blob_id>`
 
 Fast retrieval (derived, rebuildable):
-- `.a2r/index/index.db` (SQLite FTS)
+- `.allternit/index/index.db` (SQLite FTS)
 
 Mail threads (derived view):
-- `.a2r/mail/threads/<thread_id>.jsonl` (projection from ledger events)
+- `.allternit/mail/threads/<thread_id>.jsonl` (projection from ledger events)
 
 Context packs (derived view):
-- `.a2r/work/dags/<dag_id>/wih/context/<wih_id>.context.json`
+- `.allternit/work/dags/<dag_id>/wih/context/<wih_id>.context.json`
 
 Notes:
 - Ledger is the single source of truth for state transitions.
@@ -296,14 +296,14 @@ Cold (Vault):
 
 ## 6) CLI surface (Rails runner)
 ```
-# A2R CLI Contract (v1)
+# Allternit CLI Contract (v1)
 
 This file defines **commands → gate checks → required emitted events**.
 Implementations may vary, but the semantic contract must hold.
 
 ## Planning / Intent
 
-### `a2r plan new "<text>" [--project <id>]`
+### `allternit plan new "<text>" [--project <id>]`
 Gate: Gate 0  
 Required events:
 - PromptCreated
@@ -312,7 +312,7 @@ Required events:
 - DagNodeCreated (root + initial structure)
 - PromptLinkedToWork
 
-### `a2r plan refine <dag_id> --delta "<text>" [--mutations <file>|--mutations-json <json>]`
+### `allternit plan refine <dag_id> --delta "<text>" [--mutations <file>|--mutations-json <json>]`
 Required events:
 - PromptDeltaAppended
 - (0..N) DagNodeCreated / DagNodeUpdated / DagEdgeAdded / DagRelationAdded
@@ -355,18 +355,18 @@ Mutations JSON format:
 ]
 ```
 
-### `a2r plan show <dag_id>`
+### `allternit plan show <dag_id>`
 Reads projection (no events).
 
-### `a2r dag render <dag_id> [--format md|json]`
+### `allternit dag render <dag_id> [--format md|json]`
 Reads projection; may emit no-op events only if you choose to log reads (optional).
 
 ## Work / WIH
 
-### `a2r wih list --ready [--dag <dag_id>]`
+### `allternit wih list --ready [--dag <dag_id>]`
 Uses DAG projection readiness derivation (no events).
 
-### `a2r wih pickup <node_id> --dag <dag_id> --agent <agent_id> [--role <role>] [--fresh]`
+### `allternit wih pickup <node_id> --dag <dag_id> --agent <agent_id> [--role <role>] [--fresh]`
 Gate: Gate 1  
 Required events:
 - WIHCreated (if absent)
@@ -377,14 +377,14 @@ Notes:
 - `--fresh` forces `execution_mode: fresh` and writes a ContextPack for the WIH.
 - `--role` must match `owner_role` when set on the node.
 
-### `a2r wih sign-open <wih_id>`
+### `allternit wih sign-open <wih_id>`
 Required events:
 - WIHOpenSigned
 
-### `a2r wih context <wih_id>`
+### `allternit wih context <wih_id>`
 Reads ContextPack if available (no events).
 
-### `a2r wih close <wih_id> --status DONE|FAILED --evidence <ref...>`
+### `allternit wih close <wih_id> --status DONE|FAILED --evidence <ref...>`
 Gate: Gate 4 → Gate 5  
 Required events:
 - WIHCloseRequested
@@ -395,48 +395,48 @@ Required events:
 
 ## Leases / Reservations
 
-### `a2r lease request <wih_id> --paths "<glob>" [--ttl <sec>]`
+### `allternit lease request <wih_id> --paths "<glob>" [--ttl <sec>]`
 Required events:
 - LeaseRequested
 Followed by:
 - LeaseGranted or LeaseDenied
 
-### `a2r lease release <lease_id>`
+### `allternit lease release <lease_id>`
 Required events:
 - LeaseReleased
 
 ## Mail / Logistics
 
-### `a2r mail thread ensure --topic dag:<dag_id>|wih:<wih_id>`
+### `allternit mail thread ensure --topic dag:<dag_id>|wih:<wih_id>`
 Required events:
 - ThreadCreated (if missing)
 
 Notes:
 - `thread_id` is deterministic from topic: `dag:<dag_id>` or `wih:<wih_id>`.
 
-### `a2r mail send <thread_id> --body <file> [--attach <ref...>]`
+### `allternit mail send <thread_id> --body <file> [--attach <ref...>]`
 Required events:
 - MessageSent
 
-### `a2r mail request-review <thread_id> --wih <wih_id> --diff <ref>`
+### `allternit mail request-review <thread_id> --wih <wih_id> --diff <ref>`
 Required events:
 - ReviewRequested
 
-### `a2r mail decide <thread_id> --approve|--reject --notes <file>`
+### `allternit mail decide <thread_id> --approve|--reject --notes <file>`
 Required events:
 - ReviewDecision
 
 ## Ledger / Audit
 
-### `a2r ledger tail [--n 50]`
+### `allternit ledger tail [--n 50]`
 Reads events.
 
-### `a2r ledger trace --node <node_id>|--wih <wih_id>|--prompt <prompt_id>`
+### `allternit ledger trace --node <node_id>|--wih <wih_id>|--prompt <prompt_id>`
 Reads events and correlates provenance.
 
 ## Vault
 
-### `a2r vault status`
+### `allternit vault status`
 Reads vault jobs projection.
 
 Flags:
@@ -444,25 +444,25 @@ Flags:
 
 ## Gate
 
-### `a2r gate status`
+### `allternit gate status`
 Returns gate configuration and active policy constraints.
 
-### `a2r gate check <wih|run>`
+### `allternit gate check <wih|run>`
 Runs gate checks and returns pass/fail with reasons.
 
-### `a2r gate rules`
+### `allternit gate rules`
 Lists active gate rules.
 
-### `a2r gate verify`
+### `allternit gate verify`
 Runs invariant verification (optional).
 
 Flags:
 - `--json` outputs a machine-readable summary.
 
-### `a2r gate decision "<note>" [--reason <text>] --link <event_id>...`
+### `allternit gate decision "<note>" [--reason <text>] --link <event_id>...`
 Records an explicit agent decision with linked mutation event IDs and returns a `decision_id`.
 
-### `a2r gate mutate --dag <dag_id> "<note>" [--reason <text>] --mutations <file>|--mutations-json <json>`
+### `allternit gate mutate --dag <dag_id> "<note>" [--reason <text>] --mutations <file>|--mutations-json <json>`
 Creates an AgentDecisionRecorded event (with linked mutation IDs) and then emits the
 mutations using that decision as provenance.
 ```

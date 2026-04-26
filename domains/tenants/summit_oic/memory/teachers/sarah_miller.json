@@ -1,0 +1,9 @@
+{
+  "teacher_id": "summit_math_001",
+  "name": "Sarah Miller",
+  "canvas_user_id": 5001,
+  "preferred_grade_band": "9-12",
+  "style": { "tone": "academic", "format": "detailed" },
+  "auth": { "canvas_api_token_ref": "secret://summit_oic/teachers/miller/canvas_token" },
+  "desktop": { "endpoint_ref": "ws://127.0.0.1:3008/session/miller_ws_1" }
+}

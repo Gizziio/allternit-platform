@@ -1,7 +1,7 @@
 /**
- * A2R Agent Health Check Module
+ * Allternit Agent Health Check Module
  * 
- * Provides comprehensive health checking for the A2R agent and its dependencies.
+ * Provides comprehensive health checking for the Allternit agent and its dependencies.
  * Can be used as an endpoint handler or standalone health checker.
  */
 
@@ -77,15 +77,15 @@ export class HealthChecker {
   private startTime: number;
   private configPath: string;
 
-  constructor(configPath: string = '/etc/a2r/config.json') {
+  constructor(configPath: string = '/etc/allternit/config.json') {
     this.logger = new Logger('HealthChecker');
-    this.version = process.env.A2R_VERSION || '1.0.0';
+    this.version = process.env.Allternit_VERSION || '1.0.0';
     this.startTime = Date.now();
     this.configPath = configPath;
   }
 
   /**
-   * Perform complete health check of the A2R agent
+   * Perform complete health check of the Allternit agent
    */
   async checkHealth(): Promise<HealthCheckResult> {
     const startTime = Date.now();
@@ -147,28 +147,28 @@ export class HealthChecker {
   }
 
   /**
-   * Check if the A2R agent service is running properly
+   * Check if the Allternit agent service is running properly
    */
   async checkAgentService(): Promise<ComponentHealth> {
     const startTime = Date.now();
     
     try {
       // Check systemd service status
-      const { stdout } = await execAsync('systemctl is-active a2r-agent');
+      const { stdout } = await execAsync('systemctl is-active allternit-agent');
       const isActive = stdout.trim() === 'active';
 
       // Check if main container is running
       const containerResult = await execAsync(
-        'docker ps --filter "name=a2r-agent" --filter "status=running" --format "{{.Names}}"'
+        'docker ps --filter "name=allternit-agent" --filter "status=running" --format "{{.Names}}"'
       );
-      const containerRunning = containerResult.stdout.trim() === 'a2r-agent';
+      const containerRunning = containerResult.stdout.trim() === 'allternit-agent';
 
       if (isActive && containerRunning) {
         return {
           name: 'agent-service',
           status: 'healthy',
           responseTime: Date.now() - startTime,
-          message: 'A2R agent service and container are running',
+          message: 'Allternit agent service and container are running',
           lastChecked: new Date().toISOString()
         };
       } else {
@@ -240,11 +240,11 @@ export class HealthChecker {
     const startTime = Date.now();
     
     try {
-      const { stdout } = await execAsync('docker exec a2r-redis redis-cli ping');
+      const { stdout } = await execAsync('docker exec allternit-redis redis-cli ping');
       
       if (stdout.trim() === 'PONG') {
         // Get Redis info
-        const { stdout: infoOutput } = await execAsync('docker exec a2r-redis redis-cli info memory');
+        const { stdout: infoOutput } = await execAsync('docker exec allternit-redis redis-cli info memory');
         const memoryInfo = this.parseRedisInfo(infoOutput);
         
         const usedMemory = parseInt(memoryInfo['used_memory'] || '0');
@@ -485,9 +485,9 @@ export class HealthChecker {
     const startTime = Date.now();
     
     try {
-      // Get all A2R containers
+      // Get all Allternit containers
       const { stdout } = await execAsync(
-        'docker ps --filter "name=a2r-" --format "{{.Names}}|{{.Status}}|{{.State}}"'
+        'docker ps --filter "name=allternit-" --format "{{.Names}}|{{.Status}}|{{.State}}"'
       );
 
       const containers = stdout.trim().split('\n').filter(Boolean).map(line => {
@@ -495,7 +495,7 @@ export class HealthChecker {
         return { name, status, state };
       });
 
-      const expectedContainers = ['a2r-agent', 'a2r-redis', 'a2r-traefik'];
+      const expectedContainers = ['allternit-agent', 'allternit-redis', 'allternit-traefik'];
       const runningContainers = containers.filter(c => c.state === 'running').map(c => c.name);
       const missingContainers = expectedContainers.filter(c => !runningContainers.includes(c));
 
@@ -595,7 +595,7 @@ export class HealthChecker {
   async getContainerInfo(): Promise<DockerContainerInfo[]> {
     try {
       const { stdout } = await execAsync(
-        'docker ps --filter "name=a2r-" --format "{{.ID}}|{{.Names}}|{{.Image}}|{{.Status}}|{{.State}}"'
+        'docker ps --filter "name=allternit-" --format "{{.ID}}|{{.Names}}|{{.Image}}|{{.Status}}|{{.State}}"'
       );
 
       const lines = stdout.trim().split('\n').filter(Boolean);

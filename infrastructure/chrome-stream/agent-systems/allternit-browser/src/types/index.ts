@@ -1,5 +1,5 @@
 /**
- * A2R Browser & Canvas Types
+ * Allternit Browser & Canvas Types
  * Ported from OpenClaw dist/browser/ and dist/canvas-host/
  */
 

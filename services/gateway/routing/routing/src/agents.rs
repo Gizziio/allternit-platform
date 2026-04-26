@@ -1070,9 +1070,9 @@ async fn start_run(
     let input = request.input;
     let agent_model = agent.model;
     let agent_system_prompt = agent.system_prompt.clone();
-    let kernel_auth_token = std::env::var("A2R_KERNEL_AUTH_TOKEN")
-        .or_else(|_| std::env::var("A2R_KERNEL_TOKEN"))
-        .or_else(|_| std::env::var("A2R_GATEWAY_TOKEN"))
+    let kernel_auth_token = std::env::var("Allternit_KERNEL_AUTH_TOKEN")
+        .or_else(|_| std::env::var("Allternit_KERNEL_TOKEN"))
+        .or_else(|_| std::env::var("Allternit_GATEWAY_TOKEN"))
         .or_else(|_| std::env::var("OPENCLAW_GATEWAY_TOKEN"))
         .unwrap_or_else(|_| "api-internal-service-token".to_string());
 
@@ -1204,7 +1204,7 @@ async fn execute_via_kernel(
     input: &str,
     model: &str,
     system_prompt: Option<&str>,
-    gate: Option<&std::sync::Arc<a2r_agent_system_rails::Gate>>,
+    gate: Option<&std::sync::Arc<allternit_agent_system_rails::Gate>>,
 ) -> Result<String, String> {
     // === N0: Gate Plan Generation (if Gate available) ===
     if let Some(gate) = gate {
@@ -1673,8 +1673,8 @@ async fn list_capabilities() -> impl IntoResponse {
 async fn list_plugins() -> impl IntoResponse {
     let plugins = serde_json::json!({
         "items": [
-            { "id": "github", "name": "GitHub Connector", "description": "Access repositories and issues", "version": "1.2.0", "author": "A2R" },
-            { "id": "slack", "name": "Slack Bridge", "description": "Send and receive messages", "version": "0.9.5", "author": "A2R" },
+            { "id": "github", "name": "GitHub Connector", "description": "Access repositories and issues", "version": "1.2.0", "author": "Allternit" },
+            { "id": "slack", "name": "Slack Bridge", "description": "Send and receive messages", "version": "0.9.5", "author": "Allternit" },
             { "id": "docker", "name": "Docker Manager", "description": "Manage containers", "version": "2.1.0", "author": "System" }
         ]
     });

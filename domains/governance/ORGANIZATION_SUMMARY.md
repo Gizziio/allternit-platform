@@ -36,10 +36,10 @@ The previous confusing structure has been reorganized as follows:
 
 - `policy/` → `identity-access-control/core-policy/`
 - `policy-engine/` → `identity-access-control/policy-engine/`
-- `a2r-audit-log/` → `audit-logging/core-audit/`
+- `allternit-audit-log/` → `audit-logging/core-audit/`
 - `security-governance/` → `governance-workflows/core-governance/`
-- `a2r-governor/` → `governance-workflows/workflow-engine/`
-- `a2r-lawlayer/` → `legal-compliance/regulatory-framework/`
+- `allternit-governor/` → `governance-workflows/workflow-engine/`
+- `allternit-lawlayer/` → `legal-compliance/regulatory-framework/`
 - `rust/evidence_store/` → `evidence-management/core-evidence/`
 - `security/federation/` → `security-network/`
 - `security/policy/` → `security-policy-controls/`

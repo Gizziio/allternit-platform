@@ -1,10 +1,10 @@
 #![allow(dead_code, unused_variables, unused_imports)]
-//! Security Middleware Integration for A2R API
+//! Security Middleware Integration for Allternit API
 //!
 //! This module integrates the security-hardening crate with the Axum API,
 //! providing request validation, rate limiting, threat detection, and security headers.
 
-use a2r_security_hardening::{
+use allternit_security_hardening::{
     InputValidator, SecureConfig, SecurityAuditEvent, SecurityHardening, Severity, ValidationRule,
 };
 use axum::{
@@ -98,7 +98,7 @@ pub async fn security_middleware(
     let threats = state.hardening.detect_threats(&request).await;
     let critical_threats: Vec<_> = threats
         .iter()
-        .filter(|t| matches!(t.level, a2r_security_hardening::ThreatLevel::Critical))
+        .filter(|t| matches!(t.level, allternit_security_hardening::ThreatLevel::Critical))
         .collect();
 
     if !critical_threats.is_empty() {

@@ -1278,8 +1278,8 @@ mod tests {
 
     type TestHmacSha256 = Hmac<Sha256>;
 
-    const TEST_JWT_SECRET: &str = "a2r-terminal-test-secret";
-    const TEST_JWT_AUDIENCE: &str = "a2r-terminal-tests";
+    const TEST_JWT_SECRET: &str = "allternit-terminal-test-secret";
+    const TEST_JWT_AUDIENCE: &str = "allternit-terminal-tests";
 
     fn init_auth_env() {
         static AUTH_ENV: Once = Once::new();
@@ -1369,7 +1369,7 @@ mod tests {
 
     async fn spawn_terminal_app() -> (String, tokio::task::JoinHandle<()>) {
         spawn_terminal_app_with_root(
-            std::env::temp_dir().join(format!("a2r-api-terminal-test-{}", Uuid::new_v4())),
+            std::env::temp_dir().join(format!("allternit-api-terminal-test-{}", Uuid::new_v4())),
         )
         .await
     }
@@ -1540,7 +1540,7 @@ mod tests {
     #[tokio::test]
     async fn terminal_session_survives_server_restart_and_reconnects() {
         let root_dir =
-            std::env::temp_dir().join(format!("a2r-api-terminal-restart-test-{}", Uuid::new_v4()));
+            std::env::temp_dir().join(format!("allternit-api-terminal-restart-test-{}", Uuid::new_v4()));
         let client = reqwest::Client::new();
 
         let (base_url_1, server_1) = spawn_terminal_app_with_root(root_dir.clone()).await;
@@ -1682,7 +1682,7 @@ mod tests {
                 "{}/terminal/{}/files/mkdir?path={}",
                 base_url,
                 session_id,
-                urlencoding::encode("a2r-terminal-test")
+                urlencoding::encode("allternit-terminal-test")
             ))
             .header(reqwest::header::AUTHORIZATION, bearer_auth("owner-a"))
             .send()
@@ -1698,7 +1698,7 @@ mod tests {
                 "{}/terminal/{}/files/upload?path={}",
                 base_url,
                 session_id,
-                urlencoding::encode("a2r-terminal-test/hello.txt")
+                urlencoding::encode("allternit-terminal-test/hello.txt")
             ))
             .header(reqwest::header::AUTHORIZATION, bearer_auth("owner-a"))
             .body("hello from file api")
@@ -1715,7 +1715,7 @@ mod tests {
                 "{}/terminal/{}/files/list?path={}",
                 base_url,
                 session_id,
-                urlencoding::encode("a2r-terminal-test")
+                urlencoding::encode("allternit-terminal-test")
             ))
             .header(reqwest::header::AUTHORIZATION, bearer_auth("owner-a"))
             .send()
@@ -1733,7 +1733,7 @@ mod tests {
                 "{}/terminal/{}/files/stat?path={}",
                 base_url,
                 session_id,
-                urlencoding::encode("a2r-terminal-test/hello.txt")
+                urlencoding::encode("allternit-terminal-test/hello.txt")
             ))
             .header(reqwest::header::AUTHORIZATION, bearer_auth("owner-a"))
             .send()
@@ -1748,7 +1748,7 @@ mod tests {
                 "{}/terminal/{}/files/download?path={}",
                 base_url,
                 session_id,
-                urlencoding::encode("a2r-terminal-test/hello.txt")
+                urlencoding::encode("allternit-terminal-test/hello.txt")
             ))
             .header(reqwest::header::AUTHORIZATION, bearer_auth("owner-a"))
             .send()
@@ -1763,7 +1763,7 @@ mod tests {
                 "{}/terminal/{}/files?path={}",
                 base_url,
                 session_id,
-                urlencoding::encode("a2r-terminal-test")
+                urlencoding::encode("allternit-terminal-test")
             ))
             .header(reqwest::header::AUTHORIZATION, bearer_auth("owner-a"))
             .send()
@@ -1790,7 +1790,7 @@ mod tests {
     #[tokio::test]
     async fn terminal_file_routes_reject_paths_outside_session_root() {
         let session_root =
-            std::env::temp_dir().join(format!("a2r-api-terminal-path-test-{}", Uuid::new_v4()));
+            std::env::temp_dir().join(format!("allternit-api-terminal-path-test-{}", Uuid::new_v4()));
         let (base_url, server) = spawn_terminal_app_with_root(session_root.clone()).await;
         let client = reqwest::Client::new();
 
@@ -1966,7 +1966,7 @@ mod tests {
     #[tokio::test]
     async fn terminal_backend_unavailable_returns_degraded_health_and_503() {
         let root_dir =
-            std::env::temp_dir().join(format!("a2r-api-terminal-degraded-test-{}", Uuid::new_v4()));
+            std::env::temp_dir().join(format!("allternit-api-terminal-degraded-test-{}", Uuid::new_v4()));
         let (base_url, server) = spawn_terminal_app_with_options(
             root_dir,
             crate::pty::PtyConfig::default(),
@@ -2010,7 +2010,7 @@ mod tests {
     #[tokio::test]
     async fn terminal_websocket_denies_read_only_writes() {
         let root_dir =
-            std::env::temp_dir().join(format!("a2r-api-terminal-timeout-test-{}", Uuid::new_v4()));
+            std::env::temp_dir().join(format!("allternit-api-terminal-timeout-test-{}", Uuid::new_v4()));
         let (base_url, server) = spawn_terminal_app_with_root_and_config(
             root_dir,
             crate::pty::PtyConfig {
@@ -2085,7 +2085,7 @@ mod tests {
     #[tokio::test]
     async fn terminal_file_operations_are_audited() {
         let root_dir =
-            std::env::temp_dir().join(format!("a2r-api-terminal-audit-test-{}", Uuid::new_v4()));
+            std::env::temp_dir().join(format!("allternit-api-terminal-audit-test-{}", Uuid::new_v4()));
         let (base_url, server) = spawn_terminal_app_with_root(root_dir.clone()).await;
         let client = reqwest::Client::new();
 

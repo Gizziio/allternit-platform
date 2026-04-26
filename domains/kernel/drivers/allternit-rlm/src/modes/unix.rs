@@ -1,5 +1,5 @@
 use crate::modes::base::{ExecutionMode, ModeExecutor};
-use a2rchitech_providers::{
+use allternit_providers::{
     Capability, Modality, Persona, ProviderBudget, ProviderRequest, ProviderRouter,
 };
 use async_trait::async_trait;
@@ -107,26 +107,26 @@ impl UnixExecutor {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_secs();
-        let context_bundle = a2rchitech_context_router::ContextBundle {
+        let context_bundle = allternit_context_router::ContextBundle {
             bundle_id: Uuid::new_v4().to_string(),
             tenant_id: "unix-mode".to_string(),
             session_id: Some(session_id.clone()),
             created_at: now,
             expires_at: None,
             context_entries: vec![],
-            provenance: a2rchitech_context_router::ContextProvenance {
+            provenance: allternit_context_router::ContextProvenance {
                 origin_session: Some(session_id.clone()),
                 origin_agent: "unix-agent".to_string(),
                 derivation_chain: vec![],
                 integrity_hash: "placeholder".to_string(),
                 signature: None,
             },
-            access_control: a2rchitech_context_router::ContextAccessControl {
+            access_control: allternit_context_router::ContextAccessControl {
                 allowed_agents: std::collections::HashSet::new(),
                 allowed_skills: std::collections::HashSet::new(),
                 allowed_phases: std::collections::HashSet::new(),
                 time_window: None,
-                access_policy: a2rchitech_context_router::ContextAccessPolicy::ExplicitAllowList,
+                access_policy: allternit_context_router::ContextAccessPolicy::ExplicitAllowList,
             },
             size_bytes: 0,
             last_accessed: now,

@@ -1,12 +1,12 @@
 #[cfg(test)]
 mod v2_truth_preservation_tests {
-    use a2rchitech_memory::storage::{MemoryStorage, SqliteMemoryStorage};
-    use a2rchitech_memory::v2::conflict::{choose_strategy, ConflictStrategy};
-    use a2rchitech_memory::v2::truth_engine::TruthEngine;
-    use a2rchitech_memory::v2::types::{
+    use allternit_memory::storage::{MemoryStorage, SqliteMemoryStorage};
+    use allternit_memory::v2::conflict::{choose_strategy, ConflictStrategy};
+    use allternit_memory::v2::truth_engine::TruthEngine;
+    use allternit_memory::v2::types::{
         MemoryAuthority as V2MemoryAuthority, MemoryStatus as V2MemoryStatus, MemoryTimeline,
     };
-    use a2rchitech_memory::{
+    use allternit_memory::{
         ConsolidationState, ConsolidationTrigger, DeletionPolicy, MemoryDecayFunction, MemoryEntry,
         MemoryProvenance, MemoryRetentionPolicy, MemoryType,
     };
@@ -138,8 +138,8 @@ mod v2_truth_preservation_tests {
 
     #[tokio::test]
     async fn test_truth_preservation_supersedes_not_overwrites() {
-        use a2rchitech_memory::storage::SqliteMemoryStorage;
-        use a2rchitech_memory::{
+        use allternit_memory::storage::SqliteMemoryStorage;
+        use allternit_memory::{
             ConsolidationState, ConsolidationTrigger, DeletionPolicy, MemoryDecayFunction,
             MemoryEntry, MemoryProvenance, MemoryRetentionPolicy, MemoryType,
         };
@@ -252,7 +252,7 @@ mod v2_truth_preservation_tests {
         // Now we should have both the old (superseded) and new (active) versions
         // Query for all versions of this memory
         let all_memories = storage
-            .query_memory(&a2rchitech_memory::storage::MemoryQuery {
+            .query_memory(&allternit_memory::storage::MemoryQuery {
                 tenant_id: "tenant_1".to_string(),
                 session_id: Some("session_1".to_string()),
                 agent_id: Some("agent_1".to_string()),
@@ -295,11 +295,11 @@ mod v2_truth_preservation_tests {
 
     #[tokio::test]
     async fn test_decay_archives_inactive_memories_without_deleting() {
-        use a2rchitech_memory::storage::SqliteMemoryStorage;
-        use a2rchitech_memory::v2::decay::{
+        use allternit_memory::storage::SqliteMemoryStorage;
+        use allternit_memory::v2::decay::{
             decay_status, DecayPolicy, MemoryStatus as V2MemoryStatus,
         };
-        use a2rchitech_memory::{
+        use allternit_memory::{
             ConsolidationState, ConsolidationTrigger, DeletionPolicy, MemoryDecayFunction,
             MemoryEntry, MemoryProvenance, MemoryRetentionPolicy, MemoryType,
         };
@@ -423,7 +423,7 @@ mod v2_truth_preservation_tests {
 
     #[test]
     fn test_context_routing_logic() {
-        use a2rchitech_memory::v2::context_tree::{decide, ContextRoute};
+        use allternit_memory::v2::context_tree::{decide, ContextRoute};
 
         // Test explicit recall request
         let recall_decision = decide("What did I tell you about the project?");
@@ -443,7 +443,7 @@ mod v2_truth_preservation_tests {
 
     #[test]
     fn test_memory_timeline_creation() {
-        use a2rchitech_memory::v2::types::{MemoryAuthority, MemoryStatus, MemoryTimeline};
+        use allternit_memory::v2::types::{MemoryAuthority, MemoryStatus, MemoryTimeline};
 
         let now = 1234567890;
         let timeline = MemoryTimeline::new_active(now, MemoryAuthority::User, 0.9);

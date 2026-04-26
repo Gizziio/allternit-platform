@@ -8,7 +8,7 @@ description: "Prompts for planning, loops, worker management, and context operat
 version: "1.0.0"
 deterministic: true
 
-author: "a2r-platform"
+author: "allternit-platform"
 tags: ["dak", "orchestration", "planning", "loops"]
 
 dependencies:

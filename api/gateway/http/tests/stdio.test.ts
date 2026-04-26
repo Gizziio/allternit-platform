@@ -1,5 +1,5 @@
 /**
- * A2R Gateway - stdio Transport Contract Tests
+ * Allternit Gateway - stdio Transport Contract Tests
  * 
  * Tests for JSON-RPC 2.0 over stdin/stdout.
  * Verifies protocol conformance and message handling.
@@ -123,7 +123,7 @@ class StdioClient {
 // Tests
 // =============================================================================
 
-describe('A2R Gateway stdio Transport', () => {
+describe('Allternit Gateway stdio Transport', () => {
   let client: StdioClient;
 
   beforeAll(async () => {
@@ -158,7 +158,7 @@ describe('A2R Gateway stdio Transport', () => {
       
       const result = response.result as Record<string, unknown>;
       expect(result.status).toBe('healthy');
-      expect(result.service).toBe('a2r-gateway');
+      expect(result.service).toBe('allternit-gateway');
       expect(result.version).toBe('1.0.0');
     });
 

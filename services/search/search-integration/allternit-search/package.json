@@ -1,7 +1,7 @@
 {
-  "name": "@a2r/search",
+  "name": "@allternit/search-integration",
   "version": "1.0.0",
-  "description": "A2Rchitech Web Search & Fetch Adapters",
+  "description": "Allternit Web Search & Fetch Adapters",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

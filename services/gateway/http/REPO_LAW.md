@@ -3,7 +3,7 @@
 ## Law ID: RL-001
 
 **Effective:** 2026-02-23  
-**Scope:** All gateway code under `4-services/a2r-gateway/`
+**Scope:** All gateway code under `4-services/allternit-gateway/`
 
 ---
 
@@ -85,7 +85,7 @@ bindings/ui_contract_legacy/  →  /spec/contracts/ui-contract-legacy.md
 npm run lint:determinism || exit 1
 
 # Check for version folder naming
-if find 4-services/a2r-gateway -type d -name '*v[0-9]*' | grep -q .; then
+if find 4-services/allternit-gateway -type d -name '*v[0-9]*' | grep -q .; then
   echo "❌ Version folder naming detected. Use role-based names."
   exit 1
 fi
@@ -128,5 +128,5 @@ Exceptions require:
 
 ---
 
-**Maintainer:** A2R Platform Team  
+**Maintainer:** Allternit Platform Team  
 **Review Cycle:** Quarterly

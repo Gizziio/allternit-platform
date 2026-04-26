@@ -4,7 +4,7 @@
  * This module defines the contract ID for the legacy UI binding.
  * Versions live in constants, not folder names.
  * 
- * @module @a2rchitech/gateway-contracts
+ * @module @allternit/gateway-contracts
  */
 
 /**

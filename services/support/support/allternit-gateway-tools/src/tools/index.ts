@@ -1,5 +1,5 @@
 /**
- * A2R Kernel Tools
+ * Allternit Kernel Tools
  * 
  * Agent-facing tools for browser and canvas control.
  */

@@ -1,4 +1,4 @@
-# A2R Agent System Rails
+# Allternit Agent System Rails
 
 Unified system for **work execution under policy gates** across DAG/WIH/runs/leases/ledger/vault.
 
@@ -13,7 +13,7 @@ Unified system for **work execution under policy gates** across DAG/WIH/runs/lea
 All code for this system lives under this folder.
 
 ```
-a2r-agent-system-rails/
+allternit-agent-system-rails/
   docs/
     architecture/      # layered breakdown + CLI command mapping
     runner/            # runner mutation catalog + README
@@ -31,7 +31,7 @@ We reference their behavior for correctness but **do not** depend on them at run
 
 ### Advanced Capabilities (V2)
 The system has been enhanced with enterprise-grade features for swarm coordination, human-in-the-loop interaction, and deep observability.
-See [spec/agent-system-rails/A2R_AGENT_SYSTEM_RAILS_CAPABILITIES.md](../../../spec/agent-system-rails/A2R_AGENT_SYSTEM_RAILS_CAPABILITIES.md) for details on:
+See [spec/agent-system-rails/Allternit_AGENT_SYSTEM_RAILS_CAPABILITIES.md](../../../spec/agent-system-rails/Allternit_AGENT_SYSTEM_RAILS_CAPABILITIES.md) for details on:
 - **Elicitation Protocol** (Interactive forms/prompts)
 - **Swarm Handoffs** (Dynamic agent transitions)
 - **Execution Sampling** (Pass-through LLM generation)
@@ -40,4 +40,4 @@ See [spec/agent-system-rails/A2R_AGENT_SYSTEM_RAILS_CAPABILITIES.md](../../../sp
 - **OAuth Vault** (Credential management)
 
 See [docs/architecture/README.md](./docs/architecture/README.md) for a full feature/architecture breakdown before you run the test suites.
-Hidden runtime stores (`.a2r/`) are documented in [docs/architecture/README.md](./docs/architecture/README.md#layer-c---ledger-bus-transports) and tracked during `a2r rails init`.
+Hidden runtime stores (`.allternit/`) are documented in [docs/architecture/README.md](./docs/architecture/README.md#layer-c---ledger-bus-transports) and tracked during `allternit rails init`.

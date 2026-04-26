@@ -409,7 +409,7 @@ export async function createMemoryOrchestrator(
 if (import.meta.url === `file://${process.argv[1]}`) {
   (async () => {
     console.log('╔══════════════════════════════════════════════════════════╗');
-    console.log('║     A2rchitech Always-On Memory Agent                    ║');
+    console.log('║     Allternitchitech Always-On Memory Agent                    ║');
     console.log('║     Local LLM Powered (Ollama)                           ║');
     console.log('╚══════════════════════════════════════════════════════════╝');
     console.log('');

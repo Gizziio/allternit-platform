@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-A2R Resource Monitor Service
+Allternit Resource Monitor Service
 Monitors agent containers and enforces resource limits
 """
 
@@ -31,7 +31,7 @@ logging.basicConfig(
     format='%(asctime)s [%(levelname)s] [monitor] %(message)s',
     stream=sys.stderr
 )
-logger = logging.getLogger('a2r-monitor')
+logger = logging.getLogger('allternit-monitor')
 
 class ResourceMonitor:
     def __init__(self):
@@ -53,13 +53,13 @@ class ResourceMonitor:
     def find_agent_container(self) -> Optional[docker.models.containers.Container]:
         """Find the agent container to monitor"""
         try:
-            container_name = f"a2r-agent-{AGENT_ID}"
+            container_name = f"allternit-agent-{AGENT_ID}"
             try:
                 return self.client.containers.get(container_name)
             except docker.errors.NotFound:
                 # Try to find by label
                 containers = self.client.containers.list(
-                    filters={'label': f'a2r.agent.id={AGENT_ID}'}
+                    filters={'label': f'allternit.agent.id={AGENT_ID}'}
                 )
                 return containers[0] if containers else None
         except Exception as e:

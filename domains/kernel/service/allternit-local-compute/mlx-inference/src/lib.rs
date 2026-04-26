@@ -1,6 +1,6 @@
-//! # A2R MLX Inference
+//! # Allternit MLX Inference
 //!
-//! Apple MLX-based local inference for A2R.
+//! Apple MLX-based local inference for Allternit.
 //!
 //! ## Overview
 //!
@@ -22,7 +22,7 @@
 //! ## Example
 //!
 //! ```rust,no_run
-//! use a2rchitech_mlx_inference::{InferenceRequest, InferenceResponse};
+//! use allternit_mlx_inference::{InferenceRequest, InferenceResponse};
 //!
 //! let request = InferenceRequest {
 //!     prompt: "Explain quantum computing".to_string(),

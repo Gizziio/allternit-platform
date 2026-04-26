@@ -146,16 +146,16 @@ async fn main() {
             permissions: Permissions {
                 functions: FunctionPermissions {
                     allowed: vec![
-                        "com.a2rchitech.os.set_alarm".to_string(),
-                        "com.a2rchitech.os.create_note".to_string(),
-                        "com.a2rchitech.web.search".to_string(),
+                        "com.allternit.os.set_alarm".to_string(),
+                        "com.allternit.os.create_note".to_string(),
+                        "com.allternit.web.search".to_string(),
                     ],
                     denied: vec![
-                        "com.a2rchitech.finance.transfer_money".to_string(),
+                        "com.allternit.finance.transfer_money".to_string(),
                     ],
                     scoped: vec![
                         ScopedFunctionPermission {
-                            function_id: "com.a2rchitech.os.send_message".to_string(),
+                            function_id: "com.allternit.os.send_message".to_string(),
                             constraints: FunctionConstraints {
                                 parameter_restrictions: {
                                     let mut map = HashMap::new();
@@ -230,9 +230,9 @@ async fn main() {
     // Initialize function registry
     let mut functions = HashMap::new();
     functions.insert(
-        "com.a2rchitech.os.set_alarm".to_string(),
+        "com.allternit.os.set_alarm".to_string(),
         FunctionDefinition {
-            id: "com.a2rchitech.os.set_alarm".to_string(),
+            id: "com.allternit.os.set_alarm".to_string(),
             name: "Set Alarm".to_string(),
             description: "Sets an alarm on the device for a specified time".to_string(),
             risk_level: "low".to_string(),
@@ -254,9 +254,9 @@ async fn main() {
         },
     );
     functions.insert(
-        "com.a2rchitech.finance.transfer_money".to_string(),
+        "com.allternit.finance.transfer_money".to_string(),
         FunctionDefinition {
-            id: "com.a2rchitech.finance.transfer_money".to_string(),
+            id: "com.allternit.finance.transfer_money".to_string(),
             name: "Transfer Money".to_string(),
             description: "Transfers money to another account".to_string(),
             risk_level: "critical".to_string(),

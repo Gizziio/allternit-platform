@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://allternit.local/spec/contracts/UIRegistry.schema.json",
   "title": "UI Registry Schema",
-  "description": "Schema for UI action registry in the A2R system",
+  "description": "Schema for UI action registry in the Allternit system",
   "type": "object",
   "properties": {
     "version": {

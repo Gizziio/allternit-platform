@@ -49,10 +49,10 @@ block the autoland pipeline.
    curl http://localhost:50052/health
    
    # Check substrate logs
-   kubectl logs -n a2r deployment/substrate --tail=100 | grep -i verification
+   kubectl logs -n allternit deployment/substrate --tail=100 | grep -i verification
    
    # Check provider registry
-   a2r provider-status verification
+   allternit provider-status verification
    ```
 
 3. **Escalate if needed**
@@ -67,7 +67,7 @@ block the autoland pipeline.
    governance set-verification-policy --provider file
    
    # Verify switch worked
-   a2r provider-status verification
+   allternit provider-status verification
    ```
 
 2. **OR disable verification (last resort)**
@@ -79,7 +79,7 @@ block the autoland pipeline.
 3. **Verify autoland resumes**
    ```bash
    # Check recent autoland attempts
-   a2r gate-status --last 5
+   allternit gate-status --last 5
    ```
 
 #### Root Cause Investigation (< 1 hour)
@@ -90,7 +90,7 @@ block the autoland pipeline.
    kubectl logs -n gizzi deployment/verification-server --since=1h
    
    # Substrate verification logs
-   kubectl logs -n a2r deployment/substrate --since=1h | grep verification
+   kubectl logs -n allternit deployment/substrate --since=1h | grep verification
    
    # Network connectivity
    kubectl exec -it deployment/substrate -- nc -zv verification-server 50052
@@ -123,7 +123,7 @@ block the autoland pipeline.
 3. **Verify system health**
    ```bash
    # Run smoke test
-   a2r verify-visual --wih-id smoke-test --dry-run
+   allternit verify-visual --wih-id smoke-test --dry-run
    
    # Check metrics
    curl http://localhost:9090/metrics | grep visual_verification
@@ -148,10 +148,10 @@ block the autoland pipeline.
 2. **Identify affected WIHs**
    ```bash
    # List recent failures
-   a2r list-wihs --status failed --since "1 hour ago"
+   allternit list-wihs --status failed --since "1 hour ago"
    
    # Check common patterns
-   a2r analyze-failures --since "1 hour ago"
+   allternit analyze-failures --since "1 hour ago"
    ```
 
 #### Mitigation
@@ -178,13 +178,13 @@ block the autoland pipeline.
    curl http://localhost:9090/metrics | grep visual_verification_latency
    
    # Provider health
-   a2r provider-health verification
+   allternit provider-health verification
    ```
 
 2. **Review artifact capture**
    ```bash
    # Check artifact success rates
-   a2r verify-stats --since "1 hour ago"
+   allternit verify-stats --since "1 hour ago"
    ```
 
 ---
@@ -195,10 +195,10 @@ block the autoland pipeline.
 
 ```bash
 # Get detailed failure info
-a2r verify-visual --wih-id <id> --diagnose
+allternit verify-visual --wih-id <id> --diagnose
 
 # Check specific artifact
-a2r get-artifact --wih-id <id> --type console_output
+allternit get-artifact --wih-id <id> --type console_output
 ```
 
 #### Resolution

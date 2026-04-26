@@ -1,5 +1,5 @@
 """
-A2R Computer Use — Retrieval Family Adapter
+Allternit Computer Use — Retrieval Family Adapter
 HTTP-based content retrieval: fetch, scrape, search, download.
 No browser required — pure async HTTP via httpx/requests.
 """

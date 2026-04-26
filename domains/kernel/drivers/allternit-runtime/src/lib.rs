@@ -1,4 +1,4 @@
-//! A2rchitech Runtime Interface
+//! Allternit Runtime Interface
 //!
 //! Core abstraction for brain runtimes. Alternate harnesses can implement
 //! BrainRuntime to plug into the system without adopting the kernel wiring.
@@ -31,7 +31,7 @@ pub mod provider;
 pub use changeset::{ChangeSet, ChangeSetId, Plan, PlanId, PlanStep, PlanStepType, ExecutionMode, Patch, VerificationResult};
 
 // Re-export normalized types from providers
-pub use a2rchitech_providers::runtime::{
+pub use allternit_providers::runtime::{
     FinishReason, NormalizedDelta, NormalizedModelInfo, NormalizedModelsResponse,
     NormalizedResponse, NormalizedToolCall, NormalizedToolResult, NormalizedUsage,
     NormalizedValidateResponse, ProviderError, ProviderErrorKind,
@@ -98,17 +98,17 @@ pub enum EventMode {
     Terminal,
 }
 
-/// A2R Native Project State
+/// Allternit Native Project State
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct A2RNativeState {
-    pub project: Option<A2RNativeProject>,
-    pub roadmap: Option<A2RNativeRoadmap>,
-    pub current_state: A2RNativeCurrentState,
-    pub active_plan: Option<A2RNativePlan>,
+pub struct AllternitNativeState {
+    pub project: Option<AllternitNativeProject>,
+    pub roadmap: Option<AllternitNativeRoadmap>,
+    pub current_state: AllternitNativeCurrentState,
+    pub active_plan: Option<AllternitNativePlan>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct A2RNativeProject {
+pub struct AllternitNativeProject {
     pub name: String,
     pub description: String,
     pub core_value: String,
@@ -116,12 +116,12 @@ pub struct A2RNativeProject {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct A2RNativeRoadmap {
-    pub milestones: Vec<A2RNativeMilestone>,
+pub struct AllternitNativeRoadmap {
+    pub milestones: Vec<AllternitNativeMilestone>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct A2RNativeMilestone {
+pub struct AllternitNativeMilestone {
     pub id: String,
     pub title: String,
     pub status: String, // pending, active, completed
@@ -129,7 +129,7 @@ pub struct A2RNativeMilestone {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct A2RNativeCurrentState {
+pub struct AllternitNativeCurrentState {
     pub phase: String,
     pub plan_index: u32,
     pub total_plans_in_phase: u32,
@@ -139,15 +139,15 @@ pub struct A2RNativeCurrentState {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct A2RNativePlan {
+pub struct AllternitNativePlan {
     pub id: String,
     pub objective: String,
     pub wave: u32,
-    pub tasks: Vec<A2RNativeTask>,
+    pub tasks: Vec<AllternitNativeTask>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct A2RNativeTask {
+pub struct AllternitNativeTask {
     pub id: String,
     pub name: String,
     pub status: String, // pending, in_progress, completed, failed
@@ -364,7 +364,7 @@ pub enum StreamEvent {
 /// BrainRuntime trait - core abstraction for all brain runtimes
 ///
 /// Implement this trait to create alternate harnesses that can plug
-/// into the A2rchitech system without adopting the UI or kernel wiring.
+/// into the Allternit system without adopting the UI or kernel wiring.
 #[async_trait]
 pub trait BrainRuntime: Send + Sync {
     /// Create a new session
@@ -425,15 +425,15 @@ pub trait BrainRuntime: Send + Sync {
     /// List active sessions for a tenant
     async fn list_sessions(&self, tenant_id: &str) -> Result<Vec<SessionHandle>, RuntimeError>;
 
-    /// Get A2R Native state (GSD context)
+    /// Get Allternit Native state (GSD context)
     async fn get_native_state(
         &self,
         tenant_id: &str,
         session: &SessionHandle,
-    ) -> Result<A2RNativeState, RuntimeError> {
+    ) -> Result<AllternitNativeState, RuntimeError> {
         // Default implementation returns empty state
         let _ = (tenant_id, session);
-        Ok(A2RNativeState::default())
+        Ok(AllternitNativeState::default())
     }
 
     // ========================================================================

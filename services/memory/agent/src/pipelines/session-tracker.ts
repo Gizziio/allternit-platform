@@ -1,7 +1,7 @@
 /**
  * Session State Tracker
  * 
- * Indexes run state from a2r-workspace/run_state/
+ * Indexes run state from allternit-workspace/run_state/
  * for session continuity and recovery
  */
 
@@ -277,13 +277,13 @@ export class SessionTracker {
  */
 async function main(): Promise<void> {
   console.log('╔══════════════════════════════════════════════════════════╗');
-  console.log('║     A2rchitech Session State Tracker                     ║');
+  console.log('║     Allternitchitech Session State Tracker                     ║');
   console.log('╚══════════════════════════════════════════════════════════╝');
   console.log('');
 
   // Determine run state directory
-  const workspaceRoot = process.env.A2R_WORKSPACE_ROOT 
-    || path.join(process.cwd(), '..', 'a2r-workspace');
+  const workspaceRoot = process.env.Allternit_WORKSPACE_ROOT 
+    || path.join(process.cwd(), '..', 'allternit-workspace');
   
   const runStateDir = path.join(workspaceRoot, 'run_state');
 
@@ -292,7 +292,7 @@ async function main(): Promise<void> {
     await fs.access(runStateDir);
   } catch {
     console.error(`Error: Run state directory not found: ${runStateDir}`);
-    console.error('Please set A2R_WORKSPACE_ROOT environment variable or run from the correct directory');
+    console.error('Please set Allternit_WORKSPACE_ROOT environment variable or run from the correct directory');
     process.exit(1);
   }
 

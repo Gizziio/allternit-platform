@@ -33,7 +33,7 @@ pub struct EventProvenance {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct A2REvent {
+pub struct AllternitEvent {
     pub event_id: String,
     pub ts: String,
     pub actor: Actor,

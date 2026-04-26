@@ -3,10 +3,10 @@
 //! This module provides network isolation and traffic control for MicroVM TAP devices
 //! using Linux Traffic Control (tc) for rate limiting and iptables for firewall rules.
 
-use a2r_driver_interface::{DriverError, NetworkPolicy};
+use allternit_driver_interface::{DriverError, NetworkPolicy};
 use tokio::process::Command;
 use tracing::Instrument;
-use tracing::{debug, error, info, info_span, instrument, warn};
+use tracing::{debug, error, info, info_span, warn};
 
 /// Network policy enforcer for a TAP device
 ///
@@ -42,7 +42,7 @@ impl NetworkPolicyEnforcer {
     }
 
     /// Get the TAP device name
-    pub fn tap_name(&self) -> &str {
+    pub fn _tap_name(&self) -> &str {
         &self.tap_name
     }
 
@@ -490,7 +490,7 @@ impl NetworkPolicyEnforcer {
 
     /// Generate a unique chain name for this TAP device
     fn iptables_chain_name(&self) -> String {
-        format!("A2R-{}", self.tap_name.to_uppercase().replace("-", "_"))
+        format!("Allternit-{}", self.tap_name.to_uppercase().replace("-", "_"))
     }
 
     /// Create a custom iptables chain
@@ -611,7 +611,7 @@ mod tests {
     fn test_chain_name_generation() {
         let policy = NetworkPolicy::default();
         let enforcer = NetworkPolicyEnforcer::new("tap-1234".to_string(), policy);
-        assert_eq!(enforcer.iptables_chain_name(), "A2R-TAP_1234");
+        assert_eq!(enforcer.iptables_chain_name(), "Allternit-TAP_1234");
     }
 
     #[test]

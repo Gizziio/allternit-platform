@@ -3,7 +3,7 @@
 //! This module provides REST API endpoints for:
 //! - Connecting to and managing MCP servers
 //! - Discovering tools from MCP servers
-//! - Executing MCP tools through the A2R tools-gateway
+//! - Executing MCP tools through the Allternit tools-gateway
 //! - Listing all available tools (native + MCP)
 //!
 //! # Routes
@@ -36,11 +36,11 @@ use uuid::Uuid;
 
 use crate::AppState;
 use crate::{McpServerEntry, McpToolEntry};
-use a2r_driver_interface::{CommandSpec, DriverError, DriverRegistry, SpawnSpec};
-use a2r_environment_spec::EnvironmentSpecLoader;
-use a2rchitech_policy::SafetyTier;
-use a2rchitech_sdk_core::ExecuteResponse;
-use a2rchitech_tools_gateway::{
+use allternit_driver_interface::{CommandSpec, DriverError, DriverRegistry, SpawnSpec};
+use allternit_environment_spec::EnvironmentSpecLoader;
+use allternit_policy::SafetyTier;
+use allternit_sdk_core::ExecuteResponse;
+use allternit_tools_gateway::{
     FilesystemAccess, NetworkAccess, ResourceLimits, ToolDefinition, ToolType,
 };
 
@@ -213,7 +213,7 @@ pub struct ToolExecutionResponse {
 /// List all tools response
 #[derive(Debug, Serialize)]
 pub struct ListToolsResponse {
-    /// Native A2R tools
+    /// Native Allternit tools
     pub native: Vec<ToolDefinitionType>,
     /// MCP-discovered tools
     pub mcp: Vec<ToolDefinitionType>,
@@ -614,7 +614,7 @@ async fn execute_tool(
         // Likely an MCP tool (has server prefix like "filesystem.read_file")
         execute_mcp_tool_internal(&state, &request).await
     } else {
-        // Native A2R tool
+        // Native Allternit tool
         execute_native_tool(&state, &request).await
     };
 
@@ -892,7 +892,7 @@ async fn execute_browser_recording_tool(
 // Internal Functions
 // ============================================================================
 
-/// Execute a native A2R tool with full execution stack integration
+/// Execute a native Allternit tool with full execution stack integration
 ///
 /// This function integrates:
 /// - N5: Environment Specification
@@ -923,7 +923,7 @@ async fn execute_native_tool(
         .tenant_id
         .clone()
         .unwrap_or_else(|| "default".to_string());
-    let run_id = a2r_driver_interface::ExecutionId::new();
+    let run_id = allternit_driver_interface::ExecutionId::new();
 
     // === Check Execution Mode ===
     // In SAFE mode, require approval for destructive operations
@@ -951,8 +951,8 @@ async fn execute_native_tool(
         }
     } else {
         info!(tool = %tool_id, "Using default environment");
-        a2r_environment_spec::EnvironmentSpec {
-            source: a2r_environment_spec::EnvironmentSource::Oci,
+        allternit_environment_spec::EnvironmentSpec {
+            source: allternit_environment_spec::EnvironmentSource::Oci,
             source_uri: "docker.io/library/alpine:latest".to_string(),
             image: "docker.io/library/alpine:latest".to_string(),
             image_digest: None,
@@ -962,8 +962,8 @@ async fn execute_native_tool(
             features: vec![],
             mounts: vec![],
             post_create_commands: vec![],
-            resources: a2r_environment_spec::ResourceRequirements::default(),
-            a2r_config: Default::default(),
+            resources: allternit_environment_spec::ResourceRequirements::default(),
+            allternit_config: Default::default(),
         }
     };
 
@@ -993,7 +993,7 @@ async fn execute_native_tool(
         .await
     {
         Ok(result) => match &result.admission {
-            a2rchitech_budget_metering::AdmissionDecision::Deny { reason } => {
+            allternit_budget_metering::AdmissionDecision::Deny { reason } => {
                 warn!(tool = %tool_id, tenant = %tenant_id, reason = %reason, "Budget check failed");
                 return Ok(ExecuteResponse {
                     success: false,
@@ -1003,10 +1003,10 @@ async fn execute_native_tool(
                     ui_card: None,
                 });
             }
-            a2rchitech_budget_metering::AdmissionDecision::AllowWithWarning { warning } => {
+            allternit_budget_metering::AdmissionDecision::AllowWithWarning { warning } => {
                 warn!(tool = %tool_id, tenant = %tenant_id, warning = %warning, "Budget check passed with warning");
             }
-            a2rchitech_budget_metering::AdmissionDecision::Allow => {
+            allternit_budget_metering::AdmissionDecision::Allow => {
                 info!(tool = %tool_id, "Budget check passed");
             }
         },
@@ -1025,14 +1025,14 @@ async fn execute_native_tool(
         .get_driver(
             driver_type
                 .parse()
-                .unwrap_or(a2r_driver_interface::DriverType::Process),
+                .unwrap_or(allternit_driver_interface::DriverType::Process),
         )
         .ok_or_else(|| format!("Driver not found: {}", driver_type))?;
 
     info!(tool = %tool_id, driver = %driver_type, environment = %env_spec.image, "Spawning execution environment");
 
     // === N12: Start Replay Capture ===
-    let envelope = a2r_driver_interface::DeterminismEnvelope {
+    let envelope = allternit_driver_interface::DeterminismEnvelope {
         env_spec_hash: compute_hash(&env_spec.image),
         tool_versions: std::collections::HashMap::new(),
         policy_hash: "default".to_string(),
@@ -1059,12 +1059,12 @@ async fn execute_native_tool(
 
     // Spawn driver with environment
     let spawn_spec = SpawnSpec {
-        tenant: a2r_driver_interface::TenantId(tenant_id.clone()),
+        tenant: allternit_driver_interface::TenantId(tenant_id.clone()),
         project: None,
         workspace: None,
         run_id: Some(run_id),
-        env: a2r_driver_interface::EnvironmentSpec {
-            spec_type: a2r_driver_interface::EnvSpecType::Oci,
+        env: allternit_driver_interface::EnvironmentSpec {
+            spec_type: allternit_driver_interface::EnvSpecType::Oci,
             image: env_spec.image.clone(),
             version: env_spec.image_digest.clone(),
             packages: env_spec.packages.clone(),
@@ -1072,8 +1072,8 @@ async fn execute_native_tool(
             working_dir: Some(env_spec.workspace_folder.clone()),
             mounts: vec![],
         },
-        policy: a2r_driver_interface::PolicySpec::default_permissive(),
-        resources: a2r_driver_interface::ResourceSpec {
+        policy: allternit_driver_interface::PolicySpec::default_permissive(),
+        resources: allternit_driver_interface::ResourceSpec {
             cpu_millis: request
                 .resources
                 .as_ref()
@@ -1107,7 +1107,7 @@ async fn execute_native_tool(
     info!(tool = %tool_id, run_id = %handle.id.0, "Driver spawned successfully");
 
     // Convert tool parameters to command
-    let tool_cmd = format!("a2r-tool {} {}", tool_id, request.parameters.to_string());
+    let tool_cmd = format!("allternit-tool {} {}", tool_id, request.parameters.to_string());
 
     let cmd_spec = CommandSpec {
         command: vec!["sh".to_string(), "-c".to_string(), tool_cmd],
@@ -1228,7 +1228,7 @@ async fn execute_native_tool(
         .and_then(|r| r.memory_mib)
         .unwrap_or(256) as u64;
 
-    let measurement = a2rchitech_budget_metering::ResourceMeasurement {
+    let measurement = allternit_budget_metering::ResourceMeasurement {
         measurement_id: format!("meas-{}", run_id.0),
         run_id: run_id.0.to_string(),
         worker_id: format!("worker-{}", run_id.0),
@@ -1329,7 +1329,7 @@ async fn execute_mcp_tool_internal(
         .await
         .map_err(|e| format!("MCP tool execution failed: {}", e))?;
 
-    // Convert the result to A2R format
+    // Convert the result to Allternit format
     let output = if let Some(content) = tool_result.content {
         let text_content: Vec<String> = content.into_iter().filter_map(|c| c.text).collect();
         Some(serde_json::json!({

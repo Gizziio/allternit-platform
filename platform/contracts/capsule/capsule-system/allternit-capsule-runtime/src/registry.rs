@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use uuid::Uuid;
 use crate::schema::{CapsuleSpec};
-use a2rchitech_kernel_contracts::FrameworkSpec;
+use allternit_kernel_contracts::FrameworkSpec;
 use crate::error::{CapsuleError, Result};
 
 pub struct FrameworkRegistry {

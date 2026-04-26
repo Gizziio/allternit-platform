@@ -2,7 +2,7 @@
  * VM Image Manager
  *
  * Production-ready image management system for downloading, building, and caching
- * VM images for the a2r-platform VM executor.
+ * VM images for the allternit-platform VM executor.
  *
  * @module VMImageManager
  * @version 1.0.0
@@ -23,13 +23,13 @@ const pipeline = util.promisify(stream.pipeline);
 // =============================================================================
 
 /** Base URL for GitHub releases */
-export const RELEASES_URL = "https://github.com/a2r-platform/vm-images/releases";
+export const RELEASES_URL = "https://github.com/allternit-platform/vm-images/releases";
 
 /** API URL for GitHub releases */
-export const GITHUB_API_URL = "https://api.github.com/repos/a2r-platform/vm-images/releases";
+export const GITHUB_API_URL = "https://api.github.com/repos/allternit-platform/vm-images/releases";
 
 /** Default cache directory */
-export const DEFAULT_CACHE_DIR = path.join(os.homedir(), ".a2r", "images");
+export const DEFAULT_CACHE_DIR = path.join(os.homedir(), ".allternit", "images");
 
 /** Minimum free space required (2GB) */
 export const MIN_FREE_SPACE = 2 * 1024 * 1024 * 1024;
@@ -78,7 +78,7 @@ export interface ImageMetadata {
   checksums: Record<ImageComponent, string>;
   /** Build timestamp */
   builtAt: string;
-  /** a2r-vm-executor version included */
+  /** allternit-vm-executor version included */
   executorVersion: string;
   /** Included toolchains */
   toolchains: string[];
@@ -380,12 +380,12 @@ function detectArchitecture(): Architecture {
 /**
  * VM Image Manager
  *
- * Manages downloading, building, and caching of VM images for the a2r-platform.
+ * Manages downloading, building, and caching of VM images for the allternit-platform.
  *
  * @example
  * ```typescript
  * const manager = new VMImageManager({
- *   cacheDir: "~/.a2r/images",
+ *   cacheDir: "~/.allternit/images",
  *   debug: true,
  * });
  *
@@ -405,7 +405,7 @@ function detectArchitecture(): Architecture {
  *   architecture: "arm64",
  *   packages: ["nodejs", "npm", "python3"],
  *   includeToolchains: true,
- *   outputDir: "~/.a2r/images",
+ *   outputDir: "~/.allternit/images",
  * });
  * ```
  */
@@ -477,17 +477,17 @@ export class VMImageManager {
    * Get the file name for a rootfs image
    *
    * @param ubuntuVersion - Ubuntu version
-   * @param a2rVersion - a2r version
+   * @param allternitVersion - allternit version
    * @param arch - Architecture
    * @returns File name
    */
   private getRootfsFileName(
     ubuntuVersion: UbuntuVersion,
-    a2rVersion: string,
+    allternitVersion: string,
     arch: Architecture
   ): string {
     const archSuffix = arch === "x86_64" ? "x86_64" : "arm64";
-    return `ubuntu-${ubuntuVersion}-a2r-v${a2rVersion}.${archSuffix}.ext4.zst`;
+    return `ubuntu-${ubuntuVersion}-allternit-v${allternitVersion}.${archSuffix}.ext4.zst`;
   }
 
   /**
@@ -801,7 +801,7 @@ export class VMImageManager {
         return this.getInitrdFileName(version, architecture);
       case "rootfs":
         // Rootfs includes Ubuntu version in name, use generic pattern
-        return `ubuntu-*-a2r-v${version}.${architecture === "x86_64" ? "x86_64" : "arm64"}.ext4.zst`;
+        return `ubuntu-*-allternit-v${version}.${architecture === "x86_64" ? "x86_64" : "arm64"}.ext4.zst`;
     }
   }
 
@@ -822,7 +822,7 @@ export class VMImageManager {
       case "rootfs":
         return (
           assetName.startsWith("ubuntu-") &&
-          assetName.includes(`-a2r-v${version}`) &&
+          assetName.includes(`-allternit-v${version}`) &&
           (assetName.includes(architecture === "x86_64" ? "x86_64" : "arm64"))
         );
     }
@@ -849,7 +849,7 @@ export class VMImageManager {
     const url = `${GITHUB_API_URL}/tags/v${version}`;
     const headers: Record<string, string> = {
       Accept: "application/vnd.github.v3+json",
-      "User-Agent": "a2r-vm-image-manager/1.0.0",
+      "User-Agent": "allternit-vm-image-manager/1.0.0",
     };
 
     if (this.githubToken) {
@@ -871,7 +871,7 @@ export class VMImageManager {
   ): Promise<string[]> {
     const headers: Record<string, string> = {
       Accept: "application/vnd.github.v3+json",
-      "User-Agent": "a2r-vm-image-manager/1.0.0",
+      "User-Agent": "allternit-vm-image-manager/1.0.0",
     };
 
     if (this.githubToken) {
@@ -923,7 +923,7 @@ export class VMImageManager {
    *   architecture: "arm64",
    *   packages: ["nodejs", "npm", "python3"],
    *   includeToolchains: true,
-   *   outputDir: "~/.a2r/images",
+   *   outputDir: "~/.allternit/images",
    * });
    * ```
    */
@@ -942,7 +942,7 @@ export class VMImageManager {
       includeToolchains = false,
       outputDir,
       version = this.generateVersion(),
-      kernelVersion = "6.5.0-a2r",
+      kernelVersion = "6.5.0-allternit",
     } = options;
 
     const expandedOutputDir = expandPath(outputDir);
@@ -962,7 +962,7 @@ export class VMImageManager {
 
     // Create build workspace
     const buildId = `build-${Date.now()}`;
-    const workspaceDir = path.join(os.tmpdir(), "a2r-build", buildId);
+    const workspaceDir = path.join(os.tmpdir(), "allternit-build", buildId);
     fs.mkdirSync(workspaceDir, { recursive: true });
 
     try {
@@ -975,7 +975,7 @@ export class VMImageManager {
         await this.installPackages(rootfsDir, packages, includeToolchains);
       }
 
-      // Install a2r-vm-executor
+      // Install allternit-vm-executor
       await this.installExecutor(rootfsDir);
 
       // Create initrd
@@ -1244,31 +1244,31 @@ export class VMImageManager {
   }
 
   /**
-   * Install a2r-vm-executor into rootfs
+   * Install allternit-vm-executor into rootfs
    */
   private async installExecutor(rootfsDir: string): Promise<void> {
-    this.log("Installing a2r-vm-executor...");
+    this.log("Installing allternit-vm-executor...");
 
     // Create executor directory
-    const executorDir = path.join(rootfsDir, "opt", "a2r-executor");
+    const executorDir = path.join(rootfsDir, "opt", "allternit-executor");
     fs.mkdirSync(executorDir, { recursive: true });
 
     // TODO: Download actual executor binary
     // For now, create a placeholder script
     const executorScript = `#!/bin/bash
-echo "a2r-vm-executor v1.0.0"
+echo "allternit-vm-executor v1.0.0"
 `;
     fs.writeFileSync(path.join(executorDir, "executor"), executorScript);
     fs.chmodSync(path.join(executorDir, "executor"), 0o755);
 
     // Create systemd service
     const serviceFile = `[Unit]
-Description=A2R VM Executor
+Description=Allternit VM Executor
 After=network.target
 
 [Service]
 Type=simple
-ExecStart=/opt/a2r-executor/executor
+ExecStart=/opt/allternit-executor/executor
 Restart=always
 
 [Install]
@@ -1277,7 +1277,7 @@ WantedBy=multi-user.target
     const serviceDir = path.join(rootfsDir, "etc", "systemd", "system");
     fs.mkdirSync(serviceDir, { recursive: true });
     fs.writeFileSync(
-      path.join(serviceDir, "a2r-executor.service"),
+      path.join(serviceDir, "allternit-executor.service"),
       serviceFile
     );
 
@@ -1289,7 +1289,7 @@ WantedBy=multi-user.target
         rootfsDir,
         "systemctl",
         "enable",
-        "a2r-executor.service",
+        "allternit-executor.service",
       ]);
     } finally {
       await this.teardownChroot(rootfsDir);
@@ -1600,7 +1600,7 @@ exec switch_root /mnt/root /sbin/init
     for (const file of files) {
       if (
         file.startsWith("ubuntu-") &&
-        file.includes(`-a2r-v${version}`) &&
+        file.includes(`-allternit-v${version}`) &&
         file.includes(suffix)
       ) {
         return this.getCachePath(file);
@@ -1675,7 +1675,7 @@ exec switch_root /mnt/root /sbin/init
    * @example
    * ```typescript
    * const image = manager.getImage("1.1.0", "arm64");
-   * console.log(image.kernelPath); // ~/.a2r/images/vmlinux-6.5.0-a2r-arm64
+   * console.log(image.kernelPath); // ~/.allternit/images/vmlinux-6.5.0-allternit-arm64
    * ```
    */
   public getImage(

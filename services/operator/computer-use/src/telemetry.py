@@ -12,9 +12,9 @@ from .plugin_engine import run_probe
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 VENDOR_PLUGINS_DIR = (
-    REPO_ROOT / "5-ui" / "a2r-platform" / "src" / "a2r-usage" / "plugins"
+    REPO_ROOT / "5-ui" / "allternit-platform" / "src" / "allternit-usage" / "plugins"
 )
-RECEIPTS_DIR = Path(__file__).resolve().parents[1].resolve().parents[0] / ".a2r" / "receipts"
+RECEIPTS_DIR = Path(__file__).resolve().parents[1].resolve().parents[0] / ".allternit" / "receipts"
 PROVIDER_STATUS_CACHE: Dict[str, Dict[str, float]] = {}
 
 
@@ -193,7 +193,7 @@ def build_snapshot(session_id: str, provider: Optional[TelemetryProviderInfo]) -
             "output": 1200 + (base * 2) % 2400,
             "total": 1600 + base % 2200,
         }
-        metadata["source"] = "a2r-usage-plugin"
+        metadata["source"] = "allternit-usage-plugin"
         cost = round((token_usage["total"] / 1000) * 0.02, 4)
         status = "idle"
         tool_usage = None

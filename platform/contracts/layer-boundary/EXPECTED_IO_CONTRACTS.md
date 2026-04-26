@@ -1,6 +1,6 @@
 # EXPECTED INPUTS/OUTPUTS FOR MIGRATED COMPONENTS
 
-This document specifies the expected inputs and outputs for each component in the A2R architecture layers.
+This document specifies the expected inputs and outputs for each component in the Allternit architecture layers.
 
 ## Layer 0-substrate/ (Shared Foundations)
 
@@ -128,7 +128,7 @@ This document specifies the expected inputs and outputs for each component in th
 ### Runtime Integration
 - **Input**: Runtime tool requests, gateway requests
 - **Output**: Governed execution results
-- **Contract**: Wrap runtime functionality with A2R governance
+- **Contract**: Wrap runtime functionality with Allternit governance
 
 ### Vendor Quarantine
 - **Input**: None (read-only access)

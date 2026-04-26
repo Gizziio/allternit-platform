@@ -101,7 +101,7 @@ END;
 INSERT OR IGNORE INTO users (id, email, name, role, status, created_at, updated_at)
 VALUES (
     'admin-0000-0000-0000-000000000000',
-    'admin@a2r.local',
+    'admin@allternit.local',
     'System Administrator',
     'admin',
     'active',

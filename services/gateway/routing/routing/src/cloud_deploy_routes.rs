@@ -457,7 +457,7 @@ async fn advance_wizard(
 
     let (next_step, guidance, progress) = match current_step.as_str() {
         "AgentAssistedSignup" => {
-            let ssh_key_name = format!("a2r-{}-key", id[..8].to_string());
+            let ssh_key_name = format!("allternit-{}-key", id[..8].to_string());
             context.ssh_key_name = Some(ssh_key_name.clone());
             (
                 "HumanCheckpoint".to_string(),
@@ -480,7 +480,7 @@ async fn advance_wizard(
         ),
         "Provisioning" => (
             "Complete".to_string(),
-            vec!["Deployment complete - A2R runtime installed".to_string()],
+            vec!["Deployment complete - Allternit runtime installed".to_string()],
             100,
         ),
         _ => (
@@ -591,7 +591,7 @@ async fn create_deployment(
     let deployment_id = Uuid::new_v4().to_string();
     let now = Utc::now();
 
-    let ssh_key_name = format!("a2r-{}-key", &deployment_id[..8]);
+    let ssh_key_name = format!("allternit-{}-key", &deployment_id[..8]);
     let ssh_key_name_clone = ssh_key_name.clone();
     let ssh_key_pair = generate_ssh_key(&ssh_key_name);
     let cloud_init_script = generate_cloud_init_script(&ssh_key_pair.public_key);
@@ -1139,7 +1139,7 @@ struct SshKeyPair {
 
 fn generate_ssh_key(name: &str) -> SshKeyPair {
     let public_key = format!(
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI{} {}@a2r",
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAI{} {}@allternit",
         Uuid::new_v4().to_string().replace("-", "").to_uppercase(),
         name
     );
@@ -1174,9 +1174,9 @@ async fn store_ssh_key(db: &sqlx::SqlitePool, key: &SshKey) -> Result<i64, sqlx:
 fn generate_cloud_init_script(public_key: &str) -> String {
     format!(
         r#"#cloud-config
-hostname: a2r-instance
+hostname: allternit-instance
 users:
-  - name: a2r
+  - name: allternit
     sudo: ALL=(ALL) NOPASSWD:ALL
     ssh_authorized_keys:
       - {}
@@ -1188,9 +1188,9 @@ packages:
   - wget
 
 runcmd:
-  - curl -fsSL https://raw.githubusercontent.com/a2rchitech/a2r/main/install.sh | sh
-  - systemctl enable a2r-runtime
-  - systemctl start a2r-runtime
+  - curl -fsSL https://raw.githubusercontent.com/allternit/allternit/main/install.sh | sh
+  - systemctl enable allternit-runtime
+  - systemctl start allternit-runtime
   - ufw allow 22/tcp
   - ufw allow 3000/tcp
   - ufw allow 8013/tcp
@@ -1232,8 +1232,8 @@ async fn create_hetzner_server_inner(
     let ssh_key_name = deployment
         .cloud_init_script
         .as_ref()
-        .map(|_| format!("a2r-{}-key", &deployment.deployment_id[..8]))
-        .unwrap_or_else(|| "a2r-key".to_string());
+        .map(|_| format!("allternit-{}-key", &deployment.deployment_id[..8]))
+        .unwrap_or_else(|| "allternit-key".to_string());
 
     let ssh_key_response = client
         .post(format!("{}/ssh_keys", api_base))
@@ -1480,7 +1480,7 @@ async fn create_digitalocean_server(
     let api_base = "https://api.digitalocean.com/v2";
 
     // Step 1: Upload SSH key
-    let ssh_key_name = format!("a2r-{}-key", &deployment.deployment_id[..8]);
+    let ssh_key_name = format!("allternit-{}-key", &deployment.deployment_id[..8]);
     let public_key = extract_ssh_key_from_cloud_init(cloud_init_script);
 
     let ssh_key_response = client
@@ -1524,7 +1524,7 @@ async fn create_digitalocean_server(
         backups: Some(false),
         ipv6: Some(true),
         monitoring: Some(true),
-        tags: Some(vec!["a2rchitech".to_string(), "auto-deployed".to_string()]),
+        tags: Some(vec!["allternit".to_string(), "auto-deployed".to_string()]),
     };
 
     let droplet_response = client
@@ -1691,7 +1691,7 @@ async fn create_aws_server(
             .value(&deployment.instance_name)
             .build(),
         Tag::builder()
-            .key("A2rchitech")
+            .key("Allternitchitech")
             .value("auto-deployed")
             .build(),
         Tag::builder()
@@ -1761,7 +1761,7 @@ async fn create_aws_server(
 }
 
 async fn find_aws_key_pair(client: &aws_sdk_ec2::Client, deployment_id: &str) -> Option<String> {
-    let key_name = format!("a2r-{}-key", &deployment_id[..8]);
+    let key_name = format!("allternit-{}-key", &deployment_id[..8]);
 
     match client
         .describe_key_pairs()
@@ -1912,7 +1912,7 @@ async fn create_gcp_server(
         zone: zone.to_string(),
         tags: Some(GcpTags {
             items: vec![
-                "a2rchitech".to_string(),
+                "allternit".to_string(),
                 "http-server".to_string(),
                 "https-server".to_string(),
             ],
@@ -1948,7 +1948,7 @@ async fn create_gcp_server(
         }]),
         labels: Some({
             let mut labels = std::collections::HashMap::new();
-            labels.insert("a2rchitech".to_string(), "auto-deployed".to_string());
+            labels.insert("allternit".to_string(), "auto-deployed".to_string());
             labels.insert(
                 "deployment".to_string(),
                 sanitize_gcp_label(&deployment.deployment_id[..8]),
@@ -2121,7 +2121,7 @@ fn sanitize_gcp_name(name: &str) -> String {
         .to_string();
 
     if sanitized.is_empty() {
-        "a2r-instance".to_string()
+        "allternit-instance".to_string()
     } else {
         sanitized
     }
@@ -2296,7 +2296,7 @@ async fn create_azure_server(
     let custom_data = base64_encode(cloud_init_script);
 
     let mut tags = std::collections::HashMap::new();
-    tags.insert("a2rchitech".to_string(), "auto-deployed".to_string());
+    tags.insert("allternit".to_string(), "auto-deployed".to_string());
     tags.insert(
         "deployment".to_string(),
         deployment.deployment_id[..8].to_string(),
@@ -2326,13 +2326,13 @@ async fn create_azure_server(
             },
             os_profile: AzureOsProfile {
                 computer_name: vm_name.clone(),
-                admin_username: "a2r".to_string(),
+                admin_username: "allternit".to_string(),
                 admin_password: generate_temp_password(),
                 custom_data,
                 linux_configuration: Some(AzureLinuxConfiguration {
                     ssh: AzureSshConfiguration {
                         public_keys: vec![AzureSshPublicKey {
-                            key_path: "/home/a2r/.ssh/authorized_keys".to_string(),
+                            key_path: "/home/allternit/.ssh/authorized_keys".to_string(),
                             key_data: public_key,
                         }],
                     },
@@ -2590,7 +2590,7 @@ fn sanitize_azure_name(name: &str) -> String {
     if sanitized.len() > 64 {
         sanitized[..64].to_string()
     } else if sanitized.is_empty() {
-        "a2r-vm".to_string()
+        "allternit-vm".to_string()
     } else {
         sanitized
     }
@@ -2599,7 +2599,7 @@ fn sanitize_azure_name(name: &str) -> String {
 fn generate_temp_password() -> String {
     // Generate a secure temporary password for Azure VM
     format!(
-        "A2r{}",
+        "Allternit{}",
         uuid::Uuid::new_v4().to_string().replace("-", "")[..12].to_string()
     )
 }

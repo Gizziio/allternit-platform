@@ -54,7 +54,7 @@ pub struct Receipt {
 /// Metadata about the receipt environment
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReceiptMetadata {
-    /// A2R version
+    /// Allternit version
     pub version: String,
 
     /// OpenClaw version

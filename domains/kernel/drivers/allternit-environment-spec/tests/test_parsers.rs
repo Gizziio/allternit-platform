@@ -1,6 +1,6 @@
 //! Integration tests for Environment Parsers
 
-use a2r_environment_spec::parser::{
+use allternit_environment_spec::parser::{
     CommandSpec, DevContainerConfig, EnvSpecType, ResourceRequirements,
 };
 use serde_json::json;
@@ -115,7 +115,7 @@ fn test_devcontainer_with_features() {
 
 #[test]
 fn test_devcontainer_with_mounts() {
-    use a2r_environment_spec::parser::devcontainer::MountConfig;
+    use allternit_environment_spec::parser::devcontainer::MountConfig;
 
     let config = DevContainerConfig {
         name: Some("With Mounts".to_string()),
@@ -205,7 +205,7 @@ fn test_devcontainer_json_parsing() {
 
 #[test]
 fn test_devcontainer_with_build_config() {
-    use a2r_environment_spec::parser::devcontainer::BuildConfig;
+    use allternit_environment_spec::parser::devcontainer::BuildConfig;
 
     let mut build_args = HashMap::new();
     build_args.insert("RUST_VERSION".to_string(), "1.75".to_string());
@@ -282,7 +282,7 @@ fn test_resource_requirements_with_values() {
 
 #[test]
 fn test_host_requirements_parsing() {
-    use a2r_environment_spec::parser::devcontainer::HostRequirements;
+    use allternit_environment_spec::parser::devcontainer::HostRequirements;
 
     let json_content = r#"{
         "cpus": 4,
@@ -302,7 +302,7 @@ fn test_host_requirements_parsing() {
 
 #[test]
 fn test_port_forward_parsing() {
-    use a2r_environment_spec::parser::devcontainer::PortForward;
+    use allternit_environment_spec::parser::devcontainer::PortForward;
 
     // Test numeric port
     let port_num: PortForward = serde_json::from_str("8080").unwrap();
@@ -385,7 +385,7 @@ fn test_full_devcontainer_config() {
             "memory": 8192
         },
         "customizations": {
-            "a2r": {
+            "allternit": {
                 "driver": "process",
                 "enablePrewarm": true
             }

@@ -1,6 +1,6 @@
-# A2R Infrastructure Examples
+# Allternit Infrastructure Examples
 
-This directory contains usage examples for the A2R Infrastructure runtime.
+This directory contains usage examples for the Allternit Infrastructure runtime.
 
 ## Files
 
@@ -27,7 +27,7 @@ npx tsx examples/basic-usage.ts
 ### Quick Start - Local Dev Container
 
 ```typescript
-import { EnvironmentEngine } from '@a2r/infrastructure';
+import { EnvironmentEngine } from '@allternit/infrastructure';
 
 const engine = new EnvironmentEngine();
 

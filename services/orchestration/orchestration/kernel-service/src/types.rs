@@ -1,4 +1,4 @@
-use a2rchitech_tools_gateway::WriteScope;
+use allternit_tools_gateway::WriteScope;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

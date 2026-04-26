@@ -1,7 +1,7 @@
 # Gate Rules (Enforcement)
 
 ## Gate 0 — Plan creation
-Trigger: `a2r plan new` or equivalent.
+Trigger: `allternit plan new` or equivalent.
 Checks:
 - PromptCreated exists (raw intent immutable)
 - Create DagCreated + root node
@@ -18,7 +18,7 @@ Emits:
 - PromptLinkedToWork
 
 ## Gate 1 — WIH pickup/open
-Trigger: `a2r wih pickup <node>`
+Trigger: `allternit wih pickup <node>`
 Checks:
 - target node status is READY
 - role matches owner_role (unless override policy)
@@ -48,7 +48,7 @@ Checks:
 - update derived status/evidence flags
 
 ## Gate 4 — WIH close
-Trigger: `a2r wih close`
+Trigger: `allternit wih close`
 Checks:
 - required evidence satisfied
 - leases released or compatible with close policy

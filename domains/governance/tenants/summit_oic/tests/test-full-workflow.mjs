@@ -10,8 +10,8 @@ import * as path from 'path';
 
 const excelToPptReport = excelToPptReportModule.excelToPptReport || excelToPptReportModule.default;
 
-const TEST_DATA_DIR = '/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/tenants/summit_oic/tests/test-data';
-const OUTPUT_DIR = '/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/tenants/summit_oic/tests/test-output';
+const TEST_DATA_DIR = '/Users/macbook/Desktop/allternit-workspace/allternit/tenants/summit_oic/tests/test-data';
+const OUTPUT_DIR = '/Users/macbook/Desktop/allternit-workspace/allternit/tenants/summit_oic/tests/test-output';
 
 async function runTest() {
   console.log('=== Excel to PowerPoint - Full Workflow Test ===\n');

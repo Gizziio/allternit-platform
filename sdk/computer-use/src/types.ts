@@ -1,5 +1,5 @@
 /**
- * A2R Computer Use Engine - TypeScript SDK Types
+ * Allternit Computer Use Engine - TypeScript SDK Types
  * 
  * TypeScript interfaces and types matching the canonical engine contracts.
  * Derived from:
@@ -90,11 +90,28 @@ export interface EngineAttachment {
   metadata?: Record<string, unknown>;
 }
 
+export type EngineActionKind =
+  | 'click'
+  | 'type'
+  | 'scroll'
+  | 'navigate'
+  | 'key'
+  | 'hover'
+  | 'drag'
+  | 'wait'
+  | 'screenshot'
+  | 'assert'
+  | 'select'
+  | 'focus'
+  | 'clear'
+  | 'upload'
+  | 'download';
+
 /**
  * Single executable action for direct mode.
  */
 export interface EngineAction {
-  kind: string;
+  kind: EngineActionKind | string;
   action_id?: string;
   target?: Record<string, unknown>;
   input?: Record<string, unknown>;
@@ -417,6 +434,180 @@ export interface PendingApprovalResponse {
   reason?: string;
   requested_at?: string;
   expires_at?: string;
+}
+
+// =============================================================================
+// Service Layer Types (browser, vision, desktop, parallel, telemetry)
+// =============================================================================
+
+export type BrowserTaskMode = 'browser-use' | 'playwright' | 'computer-use';
+export type BrowserTaskStatus = 'pending' | 'running' | 'completed' | 'failed';
+
+export interface BrowserTaskRequest {
+  goal: string;
+  url?: string;
+  mode?: BrowserTaskMode;
+}
+
+export interface BrowserTaskResponse {
+  task_id: string;
+  status: BrowserTaskStatus;
+  mode: BrowserTaskMode;
+  created_at: string;
+}
+
+export interface BrowserTaskDetailResponse extends BrowserTaskResponse {
+  goal: string;
+  url?: string;
+  result?: string;
+  error?: string;
+  completed_at?: string;
+}
+
+export interface BrowserTaskExecuteRequest {
+  llm_config?: {
+    base_url?: string;
+    api_key?: string;
+    model?: string;
+    [key: string]: unknown;
+  };
+}
+
+export interface BrowserTaskExecuteResponse {
+  task_id: string;
+  status: BrowserTaskStatus;
+  result?: string;
+  error?: string;
+  completed_at?: string;
+}
+
+export interface BrowserSearchRequest {
+  query: string;
+  search_engine?: string;
+  llm_config?: Record<string, unknown>;
+}
+
+export interface BrowserRetrieveRequest {
+  url: string;
+  llm_config?: Record<string, unknown>;
+}
+
+export interface BrowserHealthResponse {
+  available: boolean;
+  service: string;
+  modes: BrowserTaskMode[];
+  chromium: boolean;
+  cdp_protocol: boolean;
+}
+
+export interface VisionViewport {
+  w: number;
+  h: number;
+}
+
+export interface VisionProposeRequest {
+  session_id: string;
+  task: string;
+  screenshot: string;
+  viewport: VisionViewport;
+  constraints?: Record<string, unknown>;
+}
+
+export interface ActionProposal {
+  type: string;
+  x?: number;
+  y?: number;
+  text?: string;
+  confidence: number;
+  target?: string;
+  thought?: string;
+}
+
+export interface VisionProposeResponse {
+  proposals: ActionProposal[];
+  model: string;
+  latency_ms: number;
+}
+
+export interface VisionScreenshotResponse {
+  screenshot: string;
+}
+
+export interface DesktopExecuteRequest {
+  session_id: string;
+  instruction: string;
+  app?: string;
+}
+
+export interface DesktopExecuteResponse {
+  success: boolean;
+  actions_taken: number;
+  summary: string;
+  error?: string;
+}
+
+export interface ParallelVariantConfig {
+  variantId: string;
+  model: string;
+  agentType?: string;
+  params?: Record<string, unknown>;
+  priority?: number;
+}
+
+export interface ParallelVerificationProfile {
+  tests?: boolean;
+  linting?: boolean;
+  typechecking?: boolean;
+  customChecks?: unknown[];
+}
+
+export interface ParallelRunRequest {
+  jobId: string;
+  goal: string;
+  beadsIssueId?: string;
+  variants: ParallelVariantConfig[];
+  verificationProfile?: ParallelVerificationProfile;
+  snapshotId?: string;
+  createdAt?: string;
+  llm_config?: Record<string, unknown>;
+}
+
+export interface ParallelRunStatus {
+  status: string;
+  progress: number;
+  activeVariants: number;
+  completedVariants: number;
+  totalVariants: number;
+  updatedAt: string;
+}
+
+export interface ParallelVariantResult {
+  variantId: string;
+  status: string;
+  output?: string;
+  previewUrl?: string;
+  diff?: string;
+  verificationResults: Record<string, unknown>[];
+  error?: string;
+}
+
+export interface ParallelRunResults {
+  status: string;
+  variants: ParallelVariantResult[];
+  createdAt: string;
+  completedAt?: string;
+}
+
+export interface TelemetryProviderInfo {
+  id: string;
+  name: string;
+  type: string;
+  [key: string]: unknown;
+}
+
+export interface TelemetrySnapshot {
+  session_id: string;
+  [key: string]: unknown;
 }
 
 /**

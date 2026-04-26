@@ -1,17 +1,17 @@
 /**
  * Skill Registry Bridge - OC-007
  * 
- * Bridge between OpenClaw's skill registry and A2R's native skill registry.
+ * Bridge between OpenClaw's skill registry and Allternit's native skill registry.
  * Implements the adapter pattern to translate between OpenClaw skill format 
- * and A2R skill format while maintaining A2R interface.
+ * and Allternit skill format while maintaining Allternit interface.
  * Communicates with Rust binary for reliable parsing and availability checking.
  */
 
 import { spawn, execFileSync, ExecFileSyncOptions } from 'child_process';
 import { join } from 'path';
 
-// Types for A2R skill format
-export interface A2RSkill {
+// Types for Allternit skill format
+export interface AllternitSkill {
   id: string;
   name: string;
   description: string;
@@ -30,14 +30,14 @@ export interface SkillRegistryBridgeOptions {
 }
 
 /**
- * Bridge that adapts OpenClaw's skill registry to A2R's interface
+ * Bridge that adapts OpenClaw's skill registry to Allternit's interface
  */
 export class SkillRegistryBridge {
   private openclawPath: string;
   private binaryPath: string;
   private timeoutMs: number;
   private cacheEnabled: boolean;
-  private cache: Map<string, A2RSkill> = new Map();
+  private cache: Map<string, AllternitSkill> = new Map();
   private lastCacheUpdate: number = 0;
   private cacheTtl: number = 5 * 60 * 1000; // 5 minutes
 
@@ -80,9 +80,9 @@ export class SkillRegistryBridge {
   }
 
   /**
-   * List all skills from OpenClaw, adapted to A2R format
+   * List all skills from OpenClaw, adapted to Allternit format
    */
-  async listSkills(): Promise<A2RSkill[]> {
+  async listSkills(): Promise<AllternitSkill[]> {
     if (this.cacheEnabled && Date.now() - this.lastCacheUpdate < this.cacheTtl) {
       return Array.from(this.cache.values());
     }
@@ -94,8 +94,8 @@ export class SkillRegistryBridge {
 
       const response = this.executeBinary('list_skills', requestPayload);
       
-      // Convert from Rust format to A2R format
-      const a2rSkills: A2RSkill[] = response.skills.map((skill: any) => ({
+      // Convert from Rust format to Allternit format
+      const allternitSkills: AllternitSkill[] = response.skills.map((skill: any) => ({
         id: skill.id,
         name: skill.name,
         description: skill.description,
@@ -108,11 +108,11 @@ export class SkillRegistryBridge {
       // Update cache
       if (this.cacheEnabled) {
         this.cache.clear();
-        a2rSkills.forEach(skill => this.cache.set(skill.id, skill));
+        allternitSkills.forEach(skill => this.cache.set(skill.id, skill));
         this.lastCacheUpdate = Date.now();
       }
       
-      return a2rSkills;
+      return allternitSkills;
     } catch (error) {
       console.error('Error in SkillRegistryBridge.listSkills:', error);
       throw error;
@@ -122,7 +122,7 @@ export class SkillRegistryBridge {
   /**
    * Get a specific skill by ID
    */
-  async getSkill(id: string): Promise<A2RSkill | null> {
+  async getSkill(id: string): Promise<AllternitSkill | null> {
     if (this.cacheEnabled && this.cache.has(id)) {
       return this.cache.get(id) || null;
     }
@@ -139,7 +139,7 @@ export class SkillRegistryBridge {
       }
 
       const skill = response.skill;
-      const a2rSkill: A2RSkill = {
+      const allternitSkill: AllternitSkill = {
         id: skill.id,
         name: skill.name,
         description: skill.description,
@@ -151,10 +151,10 @@ export class SkillRegistryBridge {
 
       // Update cache
       if (this.cacheEnabled) {
-        this.cache.set(a2rSkill.id, a2rSkill);
+        this.cache.set(allternitSkill.id, allternitSkill);
       }
       
-      return a2rSkill;
+      return allternitSkill;
     } catch (error) {
       console.error(`Error getting skill ${id}:`, error);
       throw error;

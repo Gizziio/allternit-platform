@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 pub struct PostInstallVerifier {
     /// Target host
     pub host: String,
-    /// A2R port
+    /// Allternit port
     pub port: u16,
     /// Verification timeout
     pub timeout: std::time::Duration,
@@ -73,7 +73,7 @@ impl PostInstallVerifier {
     /// Check if service process is alive
     async fn check_service_alive(&self) -> Result<(), VerificationError> {
         // In production, would SSH to host and run:
-        // systemctl is-active a2r-agent
+        // systemctl is-active allternit-agent
         // For now, simulate
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
         Ok(())

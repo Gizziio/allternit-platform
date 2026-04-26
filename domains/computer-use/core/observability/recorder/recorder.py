@@ -20,7 +20,7 @@ class RecorderConfig:
     """Configuration for session recorder."""
     
     # Storage
-    storage_path: str = "/tmp/a2r-recordings"
+    storage_path: str = "/tmp/allternit-recordings"
     storage_backend: str = "filesystem"  # or "memory"
     
     # Capture settings

@@ -1,5 +1,5 @@
 /**
- * A2R Production UI Contracts
+ * Allternit Production UI Contracts
  * 
  * Edge-case hardened TypeScript interfaces for:
  * - Project (Codex-style session management)

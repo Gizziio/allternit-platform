@@ -1,6 +1,6 @@
 # Security Policy Controls
 
-Security policy controls implement a defense-in-depth model for the A2R platform. This component is part of the Security Controls system within the 2-governance layer.
+Security policy controls implement a defense-in-depth model for the Allternit platform. This component is part of the Security Controls system within the 2-governance layer.
 
 **Status:** Implemented baseline
 

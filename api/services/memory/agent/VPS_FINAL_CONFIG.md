@@ -239,9 +239,9 @@ export OLLAMA_QUERY_MODEL=qwen3.5:0.8b
 ### CLI Commands
 
 ```bash
-a2r memory query "What do we know about DAG validation?"
-a2r memory stats
-a2r memory consolidate
+allternit memory query "What do we know about DAG validation?"
+allternit memory stats
+allternit memory consolidate
 ```
 
 ### Gateway API

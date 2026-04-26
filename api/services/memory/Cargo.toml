@@ -2,7 +2,7 @@
 name = "allternit-simple-memory"
 version = "0.1.0"
 edition = "2021"
-description = "Simple memory service for the A2rchitech platform"
+description = "Simple memory service for the Allternitchitech platform"
 license = "MIT"
 
 [dependencies]

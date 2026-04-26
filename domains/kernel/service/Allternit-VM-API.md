@@ -1,6 +1,6 @@
-# A2R VM API Reference
+# Allternit VM API Reference
 
-Complete API reference for the A2R VM execution system.
+Complete API reference for the Allternit VM execution system.
 
 ## Table of Contents
 
@@ -14,14 +14,14 @@ Complete API reference for the A2R VM execution system.
 
 ## Rust API
 
-### a2r-vm-executor
+### allternit-vm-executor
 
 Guest agent that runs inside the VM.
 
 #### Command Line
 
 ```bash
-a2r-vm-executor [OPTIONS]
+allternit-vm-executor [OPTIONS]
 
 Options:
     -c, --config <FILE>     Configuration file path
@@ -34,7 +34,7 @@ Options:
 #### Configuration File
 
 ```toml
-# /etc/a2r/vm-executor.toml
+# /etc/allternit/vm-executor.toml
 vsock_port = 8080
 log_level = "info"
 max_sessions = 50
@@ -47,7 +47,7 @@ max_memory_mb = 2048
 max_cpu_percent = 100
 ```
 
-### a2r-vm-image-builder
+### allternit-vm-image-builder
 
 Downloads or builds VM images.
 
@@ -55,36 +55,36 @@ Downloads or builds VM images.
 
 ```bash
 # Download pre-built images
-a2r-vm-image-builder download [OPTIONS]
+allternit-vm-image-builder download [OPTIONS]
     --version <VER>    Image version (default: 1.1.0)
     --no-verify        Skip checksum verification
 
 # Build locally (Linux only)
-a2r-vm-image-builder build [OPTIONS]
+allternit-vm-image-builder build [OPTIONS]
     --ubuntu-version <VER>  Ubuntu version (default: 22.04)
     --packages <PKGS>       Additional packages to install
     --no-toolchains         Skip toolchain installation
 
 # Check for updates
-a2r-vm-image-builder check-update
+allternit-vm-image-builder check-update
 
 # Verify existing images
-a2r-vm-image-builder verify
+allternit-vm-image-builder verify
 
 # Clean up images
-a2r-vm-image-builder clean
+allternit-vm-image-builder clean
 ```
 
 #### Library API
 
 ```rust
-use a2r_vm_image_builder::{ImageDownloader, ImageConfig, LocalBuilder};
+use allternit_vm_image_builder::{ImageDownloader, ImageConfig, LocalBuilder};
 
 // Download images
 let downloader = ImageDownloader::new(
-    "Gizziio/a2rchitech",
+    "Gizziio/allternit",
     "1.1.0",
-    Path::new("~/.a2r/vm-images")
+    Path::new("~/.allternit/vm-images")
 );
 downloader.download(true).await?;
 
@@ -93,7 +93,7 @@ let config = ImageConfig {
     ubuntu_version: "22.04".to_string(),
     additional_packages: vec!["nodejs".to_string()],
     include_toolchains: true,
-    output_dir: PathBuf::from("~/.a2r/vm-images"),
+    output_dir: PathBuf::from("~/.allternit/vm-images"),
 };
 let builder = LocalBuilder::new(config);
 builder.build().await?;
@@ -103,23 +103,23 @@ builder.build().await?;
 
 ## Swift API
 
-### A2RVMManager
+### AllternitVMManager
 
 Main class for managing VMs on macOS.
 
 ```swift
-import A2RVMManager
+import AllternitVMManager
 
 // Configuration
-let config = A2RVMConfiguration(
-    vmName: "a2r-vm",
-    kernelPath: "/Users/.../.a2r/vm-images/vmlinux-6.5.0-a2r",
-    initrdPath: "/Users/.../.a2r/vm-images/initrd.img-6.5.0-a2r",
-    rootfsPath: "/Users/.../.a2r/vm-images/ubuntu-22.04-a2r-v1.1.0.ext4",
+let config = AllternitVMConfiguration(
+    vmName: "allternit-vm",
+    kernelPath: "/Users/.../.allternit/vm-images/vmlinux-6.5.0-allternit",
+    initrdPath: "/Users/.../.allternit/vm-images/initrd.img-6.5.0-allternit",
+    rootfsPath: "/Users/.../.allternit/vm-images/ubuntu-22.04-allternit-v1.1.0.ext4",
     cpuCount: 4,
     memorySize: 4 * 1024 * 1024 * 1024,  // 4 GB
     vsockPort: 8080,
-    socketPath: "/Users/.../.a2r/desktop-vm.sock"
+    socketPath: "/Users/.../.allternit/desktop-vm.sock"
 )
 
 // Create manager
@@ -145,7 +145,7 @@ Task {
 ### VMConfiguration
 
 ```swift
-public struct A2RVMConfiguration: Codable, Sendable {
+public struct AllternitVMConfiguration: Codable, Sendable {
     public let vmName: String
     public let kernelPath: String
     public let initrdPath: String
@@ -216,14 +216,14 @@ let response = try await channel.sendRequest(request)
 
 ## TypeScript/JavaScript API
 
-### A2RVMManager
+### AllternitVMManager
 
 ```typescript
-import { A2RVMManager } from '@a2r/vm-manager';
+import { AllternitVMManager } from '@allternit/vm-manager';
 
 // Create manager
-const manager = new A2RVMManager({
-  vmName: 'a2r-vm',
+const manager = new AllternitVMManager({
+  vmName: 'allternit-vm',
   cpuCount: 4,
   memorySizeMB: 4096,
 });
@@ -414,7 +414,7 @@ Host (macOS)                    Guest (Linux)
          │                               │
          ▼                               ▼
 ┌─────────────────┐             ┌─────────────────┐
-│  vm-manager-cli │             │  a2r-vm-executor│
+│  vm-manager-cli │             │  allternit-vm-executor│
 └─────────────────┘             └─────────────────┘
 ```
 
@@ -549,16 +549,16 @@ interface VSOCKResponse {
 ### Full Workflow (Rust)
 
 ```rust
-use a2r_vm_image_builder::ImageDownloader;
+use allternit_vm_image_builder::ImageDownloader;
 use std::path::Path;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 1. Download images
     let downloader = ImageDownloader::new(
-        "Gizziio/a2rchitech",
+        "Gizziio/allternit",
         "1.1.0",
-        Path::new("~/.a2r/vm-images")
+        Path::new("~/.allternit/vm-images")
     );
     
     if !downloader.check_existing().await? {
@@ -576,11 +576,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ### Full Workflow (TypeScript)
 
 ```typescript
-import { A2RVMManager } from '@a2r/vm-manager';
+import { AllternitVMManager } from '@allternit/vm-manager';
 
 async function main() {
   // 1. Create manager
-  const manager = new A2RVMManager();
+  const manager = new AllternitVMManager();
   
   // 2. Check/download images
   const imagesExist = await manager.checkImages();
@@ -608,6 +608,6 @@ main().catch(console.error);
 
 ## See Also
 
-- [A2R VM README](./A2R-VM-README.md) - Overview and quick start
+- [Allternit VM README](./Allternit-VM-README.md) - Overview and quick start
 - [Architecture Documentation](../../docs/architecture/vm-execution.md)
 - [Troubleshooting Guide](../../docs/troubleshooting/vm-issues.md)

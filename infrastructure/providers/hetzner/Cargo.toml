@@ -1,12 +1,12 @@
 [package]
-name = "a2r-cloud-hetzner"
+name = "allternit-cloud-hetzner"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Cloud Hetzner Provider - Real Hetzner Cloud API integration"
+description = "Allternit Cloud Hetzner Provider - Real Hetzner Cloud API integration"
 
 [dependencies]
-a2r-cloud-core = { path = "../../a2r-cloud-core" }
-a2r-cloud-ssh = { path = "../../a2r-cloud-ssh" }
+allternit-cloud-core = { path = "../../cloud" }
+allternit-cloud-ssh = { path = "../../cloud/allternit-cloud-ssh" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }

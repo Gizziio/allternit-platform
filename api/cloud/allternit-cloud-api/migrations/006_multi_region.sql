@@ -1,4 +1,4 @@
--- Multi-Region Scheduling for A2R Cloud API
+-- Multi-Region Scheduling for Allternit Cloud API
 -- Adds region awareness to runs and schedules
 
 -- ============================================================================

@@ -3,7 +3,7 @@
 //! Events emitted by the visual verification system for audit trails
 //! and observability.
 
-use crate::core::types::{A2REvent, Actor};
+use crate::core::types::{AllternitEvent, Actor};
 use chrono::Utc;
 use serde_json::json;
 
@@ -12,8 +12,8 @@ pub fn visual_verification_requested(
     wih_id: &str,
     provider_type: &str,
     timeout_seconds: u64,
-) -> A2REvent {
-    A2REvent {
+) -> AllternitEvent {
+    AllternitEvent {
         event_id: create_event_id(),
         ts: Utc::now().to_rfc3339(),
         actor: system_actor("visual-verification"),
@@ -32,8 +32,8 @@ pub fn visual_verification_requested(
 pub fn visual_verification_started(
     wih_id: &str,
     provider_type: &str,
-) -> A2REvent {
-    A2REvent {
+) -> AllternitEvent {
+    AllternitEvent {
         event_id: create_event_id(),
         ts: Utc::now().to_rfc3339(),
         actor: system_actor("visual-verification"),
@@ -54,8 +54,8 @@ pub fn visual_verification_completed(
     confidence: f64,
     artifact_count: usize,
     duration_ms: u64,
-) -> A2REvent {
-    A2REvent {
+) -> AllternitEvent {
+    AllternitEvent {
         event_id: create_event_id(),
         ts: Utc::now().to_rfc3339(),
         actor: system_actor("visual-verification"),
@@ -77,8 +77,8 @@ pub fn visual_verification_failed(
     wih_id: &str,
     error: &str,
     error_code: &str,
-) -> A2REvent {
-    A2REvent {
+) -> AllternitEvent {
+    AllternitEvent {
         event_id: create_event_id(),
         ts: Utc::now().to_rfc3339(),
         actor: system_actor("visual-verification"),
@@ -98,8 +98,8 @@ pub fn visual_verification_bypassed(
     wih_id: &str,
     actor_id: &str,
     reason: &str,
-) -> A2REvent {
-    A2REvent {
+) -> AllternitEvent {
+    AllternitEvent {
         event_id: create_event_id(),
         ts: Utc::now().to_rfc3339(),
         actor: Actor {
@@ -123,8 +123,8 @@ pub fn gate_visual_verified(
     confidence: f64,
     threshold: f64,
     artifact_count: usize,
-) -> A2REvent {
-    A2REvent {
+) -> AllternitEvent {
+    AllternitEvent {
         event_id: create_event_id(),
         ts: Utc::now().to_rfc3339(),
         actor: system_actor("gate"),
@@ -147,8 +147,8 @@ pub fn gate_visual_rejected(
     confidence: f64,
     threshold: f64,
     reason: &str,
-) -> A2REvent {
-    A2REvent {
+) -> AllternitEvent {
+    AllternitEvent {
         event_id: create_event_id(),
         ts: Utc::now().to_rfc3339(),
         actor: system_actor("gate"),

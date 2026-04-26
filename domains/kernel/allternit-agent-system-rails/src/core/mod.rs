@@ -3,7 +3,7 @@ pub mod io;
 pub mod types;
 
 pub mod telemetry {
-    use crate::core::types::{A2REvent, Actor, EventScope, semconv};
+    use crate::core::types::{AllternitEvent, Actor, EventScope, semconv};
     use crate::core::ids::create_event_id;
     use chrono::Utc;
     use serde_json::{json, Value};
@@ -15,7 +15,7 @@ pub mod telemetry {
         scope: Option<EventScope>,
         agent_name: Option<&str>,
         model_name: Option<&str>,
-    ) -> A2REvent {
+    ) -> AllternitEvent {
         let mut final_payload = payload;
         if let Some(obj) = final_payload.as_object_mut() {
             if let Some(name) = agent_name {
@@ -26,7 +26,7 @@ pub mod telemetry {
             }
         }
 
-        A2REvent {
+        AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor,
@@ -49,10 +49,10 @@ pub mod telemetry {
     }
 }
 
-use crate::core::types::A2REvent;
+use crate::core::types::AllternitEvent;
 use async_trait::async_trait;
 
 #[async_trait]
 pub trait EventSink: Send + Sync {
-    async fn append(&self, event: A2REvent) -> anyhow::Result<String>;
+    async fn append(&self, event: AllternitEvent) -> anyhow::Result<String>;
 }

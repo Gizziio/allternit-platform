@@ -1,7 +1,7 @@
 /**
  * UI Renderer
  * 
- * Core renderer for A2R-IX UI IR. Platform-agnostic base that delegates
+ * Core renderer for Allternit-IX UI IR. Platform-agnostic base that delegates
 to platform-specific renderers (React, Vue, etc.).
  */
 

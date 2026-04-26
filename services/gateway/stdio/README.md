@@ -4,7 +4,7 @@ The IO Bridge provides a communication interface using standard input/output (st
 
 ## Purpose
 
-The IO Bridge serves as a transport mechanism that allows external processes to communicate with the A2rchitech system through standard input/output streams. It follows the JSON-RPC 2.0 protocol for structured communication.
+The IO Bridge serves as a transport mechanism that allows external processes to communicate with the Allternitchitech system through standard input/output streams. It follows the JSON-RPC 2.0 protocol for structured communication.
 
 ## Architecture
 

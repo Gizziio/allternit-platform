@@ -1,7 +1,7 @@
 //! Log Routes - Native Log Service HTTP API
 //!
 //! Provides REST API endpoints for querying and streaming logs using the native
-//! Rust implementation in a2r_openclaw_host::native_log_service.
+//! Rust implementation in allternit_openclaw_host::native_log_service.
 
 use axum::{
     extract::{Query, State},
@@ -18,7 +18,7 @@ use std::sync::Arc;
 use tokio_stream::wrappers::BroadcastStream;
 use utoipa::ToSchema;
 
-use a2r_openclaw_host::native_log_service::{LogOperation, LogQuery};
+use allternit_openclaw_host::native_log_service::{LogOperation, LogQuery};
 
 /// Log entry response
 #[derive(Debug, Serialize, ToSchema)]

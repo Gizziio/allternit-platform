@@ -127,7 +127,7 @@
   "remoteUser": "root",
   "containerEnv": {
     "PYTHONPATH": "/workspace/src:${PYTHONPATH}",
-    "JUPYTER_TOKEN": "${localEnv:JUPYTER_TOKEN:a2r-ml-dev}",
+    "JUPYTER_TOKEN": "${localEnv:JUPYTER_TOKEN:allternit-ml-dev}",
     "MLFLOW_TRACKING_URI": "http://mlflow:5000"
   },
 

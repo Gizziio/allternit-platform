@@ -6,18 +6,18 @@
 
 mod gateway_ws_api;
 
-use a2r_openclaw_host::native_bash_executor::BashExecutionParams;
-use a2r_openclaw_host::native_channel_abstraction_native::{
+use allternit_openclaw_host::native_bash_executor::BashExecutionParams;
+use allternit_openclaw_host::native_channel_abstraction_native::{
     ChannelAbstractionRequest, ChannelConfig, ChannelContext, ChannelId, ChannelMessage,
     ChannelOperation, ChannelType, MessageFormat, MessageType,
 };
-use a2r_openclaw_host::native_provider_management::{
+use allternit_openclaw_host::native_provider_management::{
     ProviderConfig, ProviderId, ProviderManagementRequest, ProviderOperation, ProviderType,
 };
-use a2r_openclaw_host::native_session_manager::{SessionId, SessionManagerError, SessionMessage};
-use a2r_openclaw_host::native_tool_registry::ToolExecutionRequest;
-use a2r_openclaw_host::skills::bridge::{GetSkillRequest, ListSkillsRequest};
-use a2r_openclaw_host::{
+use allternit_openclaw_host::native_session_manager::{SessionId, SessionManagerError, SessionMessage};
+use allternit_openclaw_host::native_tool_registry::ToolExecutionRequest;
+use allternit_openclaw_host::skills::bridge::{GetSkillRequest, ListSkillsRequest};
+use allternit_openclaw_host::{
     // Additional types needed
     skills::SkillRegistry,
     ApiGatewayRouterService,
@@ -258,27 +258,27 @@ fn resolve_bind_address() -> String {
     let env_file = read_openclaw_env_file();
 
     let host_from_file = env_file.as_deref().and_then(|content| {
-        read_env_key_from_file(content, "A2R_OPENCLAW_HOST_BIND")
+        read_env_key_from_file(content, "Allternit_OPENCLAW_HOST_BIND")
             .or_else(|| read_env_key_from_file(content, "OPENCLAW_HOST_BIND"))
             .or_else(|| read_env_key_from_file(content, "OPENCLAW_HOST"))
     });
 
     let port_from_file = env_file.as_deref().and_then(|content| {
-        read_env_key_from_file(content, "A2R_OPENCLAW_HOST_PORT")
-            .or_else(|| read_env_key_from_file(content, "A2R_PORT"))
+        read_env_key_from_file(content, "Allternit_OPENCLAW_HOST_PORT")
+            .or_else(|| read_env_key_from_file(content, "Allternit_PORT"))
             .or_else(|| read_env_key_from_file(content, "OPENCLAW_PORT"))
     });
 
-    let host = std::env::var("A2R_OPENCLAW_HOST_BIND")
+    let host = std::env::var("Allternit_OPENCLAW_HOST_BIND")
         .ok()
         .or_else(|| std::env::var("OPENCLAW_HOST_BIND").ok())
         .or_else(|| std::env::var("OPENCLAW_HOST").ok())
         .or(host_from_file)
         .unwrap_or_else(|| "127.0.0.1".to_string());
 
-    let raw_port = std::env::var("A2R_OPENCLAW_HOST_PORT")
+    let raw_port = std::env::var("Allternit_OPENCLAW_HOST_PORT")
         .ok()
-        .or_else(|| std::env::var("A2R_PORT").ok())
+        .or_else(|| std::env::var("Allternit_PORT").ok())
         .or_else(|| std::env::var("OPENCLAW_PORT").ok())
         .or(port_from_file)
         .unwrap_or_else(|| "8080".to_string());
@@ -303,7 +303,7 @@ async fn health_check(
 ) -> Result<AxumJson<Value>, StatusCode> {
     Ok(AxumJson(serde_json::json!({
         "status": "healthy",
-        "service": "a2r-openclaw-host",
+        "service": "allternit-openclaw-host",
         "version": env!("CARGO_PKG_VERSION"),
         "timestamp": chrono::Utc::now().to_rfc3339()
     })))
@@ -823,7 +823,7 @@ async fn send_channel_message(
     let message = ChannelMessage {
         id: Uuid::new_v4().to_string(),
         channel_id: ChannelId::new(payload.channel_id),
-        sender_id: payload.sender_id.unwrap_or_else(|| "a2r-ui".to_string()),
+        sender_id: payload.sender_id.unwrap_or_else(|| "allternit-ui".to_string()),
         sender_name: payload.sender_name,
         content: payload.content,
         message_type: MessageType::Text,
@@ -843,7 +843,7 @@ async fn send_channel_message(
             context: Some(ChannelContext {
                 session_id: None,
                 agent_id: None,
-                user_id: Some("a2r-ui".to_string()),
+                user_id: Some("allternit-ui".to_string()),
                 metadata: None,
             }),
         })
@@ -980,7 +980,7 @@ async fn count_active_services(state: &ServiceState) -> usize {
 }
 
 fn build_cors_layer() -> CorsLayer {
-    let configured_origins = std::env::var("A2R_CORS_ORIGINS").unwrap_or_else(|_| {
+    let configured_origins = std::env::var("Allternit_CORS_ORIGINS").unwrap_or_else(|_| {
         "http://localhost:5177,http://127.0.0.1:5177,http://localhost:3000,http://127.0.0.1:3000"
             .to_string()
     });
@@ -1019,7 +1019,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tracing::subscriber::set_global_default(subscriber).expect("Setting default subscriber failed");
 
-    info!("Starting A2R OpenClaw Absorption Host Service...");
+    info!("Starting Allternit OpenClaw Absorption Host Service...");
 
     // Create a mock OpenClawHost instance for the bridge services
     // Since we're transitioning away from OpenClaw subprocesses, we'll create a minimal mock
@@ -1158,9 +1158,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Bind address is configurable to keep UI and host aligned across environments.
     let bind_addr = resolve_bind_address();
     let listener = tokio::net::TcpListener::bind(&bind_addr).await?;
-    info!("A2R OpenClaw Host Service listening on {}", bind_addr);
+    info!("Allternit OpenClaw Host Service listening on {}", bind_addr);
 
-    info!("A2R OpenClaw Absorption Host Service started successfully");
+    info!("Allternit OpenClaw Absorption Host Service started successfully");
 
     // Run the server
     let server_task = tokio::spawn(async move {

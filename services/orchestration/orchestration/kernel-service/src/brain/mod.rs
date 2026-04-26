@@ -1,4 +1,4 @@
-pub mod a2r_runtime_adapter;
+pub mod allternit_runtime_adapter;
 // pub mod acp_client;
 // pub mod acp_runtime;
 pub mod drivers;
@@ -26,7 +26,7 @@ pub use types::*;
 // Re-export for backward compatibility
 pub use drivers::terminal::TerminalAppDriver as CliBrainDriver;
 
-use a2rchitech_providers::runtime::{ModelAdapterRegistry, ProviderAuthRegistry};
+use allternit_providers::runtime::{ModelAdapterRegistry, ProviderAuthRegistry};
 use std::sync::Arc;
 
 pub trait BrainProvider {

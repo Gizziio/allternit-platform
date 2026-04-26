@@ -17,7 +17,7 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use tracing::{info, Level};
 
-use a2r_openclaw_host::feature_flags::{
+use allternit_openclaw_host::feature_flags::{
     global_registry, ComponentFeatureFlag, FeatureFlagRegistry,
 };
 

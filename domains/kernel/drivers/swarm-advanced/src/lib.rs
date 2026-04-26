@@ -1,4 +1,4 @@
-//! A2R Swarm Advanced Features
+//! Allternit Swarm Advanced Features
 //!
 //! Implements advanced swarm scheduler capabilities:
 //! - Inter-agent message bus with typed messages

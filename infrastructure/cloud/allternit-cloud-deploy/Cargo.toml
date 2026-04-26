@@ -1,11 +1,11 @@
 [package]
-name = "a2r-cloud-deploy"
+name = "allternit-cloud-deploy"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Cloud Deploy - Deployment automation and orchestration"
+description = "Allternit Cloud Deploy - Deployment automation and orchestration"
 
 [dependencies]
-a2r-cloud-core = { path = "../a2r-cloud-core" }
+allternit-cloud-core = { path = "../allternit-cloud-core" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }

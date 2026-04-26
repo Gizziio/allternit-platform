@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Test script for A2R Node <-> Control Plane connection
+# Test script for Allternit Node <-> Control Plane connection
 #
 # This script:
 # 1. Starts the test server
@@ -18,7 +18,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 echo -e "${GREEN}═══════════════════════════════════════════════════${NC}"
-echo -e "${GREEN}   A2R Node Connection Test${NC}"
+echo -e "${GREEN}   Allternit Node Connection Test${NC}"
 echo -e "${GREEN}═══════════════════════════════════════════════════${NC}"
 echo ""
 
@@ -45,7 +45,7 @@ trap cleanup EXIT
 
 # Build the project first
 echo "🔨 Building project..."
-cargo build --bin a2r-node --quiet 2>&1 | grep -v "^warning:" || true
+cargo build --bin allternit-node --quiet 2>&1 | grep -v "^warning:" || true
 cargo build --bin test-server --quiet 2>&1 | grep -v "^warning:" || true
 echo -e "${GREEN}✓ Build complete${NC}"
 echo ""
@@ -71,16 +71,16 @@ for i in {1..30}; do
 done
 
 echo ""
-echo "🚀 Starting A2R Node..."
+echo "🚀 Starting Allternit Node..."
 echo "   Node ID: $NODE_ID"
 echo "   Control Plane: ws://localhost:$PORT"
 echo ""
 
 # Start node with test configuration
-A2R_NODE_ID=$NODE_ID \
-A2R_TOKEN=$TOKEN \
-A2R_CONTROL_PLANE="ws://localhost:$PORT" \
-cargo run --bin a2r-node -- --once &
+Allternit_NODE_ID=$NODE_ID \
+Allternit_TOKEN=$TOKEN \
+Allternit_CONTROL_PLANE="ws://localhost:$PORT" \
+cargo run --bin allternit-node -- --once &
 NODE_PID=$!
 
 echo "⏳ Running test for $TEST_DURATION seconds..."
@@ -119,7 +119,7 @@ if [ $SUCCESS -eq 1 ]; then
     echo -e "${GREEN}   ✓ Connection test PASSED${NC}"
     echo -e "${GREEN}═══════════════════════════════════════════════════${NC}"
     echo ""
-    echo "The A2R Node successfully:"
+    echo "The Allternit Node successfully:"
     echo "  1. Connected to the control plane"
     echo "  2. Registered itself"
     echo "  3. Sent heartbeat messages"

@@ -1,8 +1,8 @@
 [package]
-name = "a2r-security-hardening"
+name = "allternit-security-hardening"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Security Hardening - Security controls and hardening for the A2R platform"
+description = "Allternit Security Hardening - Security controls and hardening for the Allternit platform"
 
 [dependencies]
 serde = { workspace = true }

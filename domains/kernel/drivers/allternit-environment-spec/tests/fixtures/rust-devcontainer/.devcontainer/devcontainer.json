@@ -25,7 +25,7 @@
         "rust-analyzer.checkOnSave.command": "clippy"
       }
     },
-    "a2r": {
+    "allternit": {
       "driver": "process",
       "enablePrewarm": true,
       "isolation": "standard"

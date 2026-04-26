@@ -2,7 +2,7 @@
  * IX Capsule Runtime
  * 
  * Integration with P3.9 MCP Apps capsule infrastructure for sandboxed
- * execution of A2R-IX UI capsules.
+ * execution of Allternit-IX UI capsules.
  */
 
 import type { UIRoot } from '../types';

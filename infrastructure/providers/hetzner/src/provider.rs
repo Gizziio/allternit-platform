@@ -3,7 +3,7 @@
 //! Real Hetzner Cloud API integration for automated deployments.
 
 use crate::{HetznerClient, CreateServerRequest, HetznerError};
-use a2r_cloud_ssh::SshExecutor;
+use allternit_cloud_ssh::SshExecutor;
 use tracing::{info, warn};
 
 /// Hetzner provider for automated deployments
@@ -26,7 +26,7 @@ impl HetznerProvider {
         self.client.validate_token().await
     }
     
-    /// Deploy A2R to Hetzner Cloud
+    /// Deploy Allternit to Hetzner Cloud
     pub async fn deploy(&self, config: &DeploymentConfig) -> Result<DeploymentResult, HetznerError> {
         info!("Deploying to Hetzner: {:?}", config);
         
@@ -54,9 +54,9 @@ impl HetznerProvider {
         info!("Waiting for server {} to be ready", server.id);
         self.wait_for_server_ready(server.id).await?;
         
-        // Install A2R runtime via SSH
-        info!("Installing A2R runtime on {}", server.name);
-        let install_result = self.ssh_executor.install_a2r_runtime(
+        // Install Allternit runtime via SSH
+        info!("Installing Allternit runtime on {}", server.name);
+        let install_result = self.ssh_executor.install_allternit_runtime(
             &server.public_net.ipv4.ip,
             22,
             "root",
@@ -67,11 +67,11 @@ impl HetznerProvider {
         
         match install_result {
             Ok(output) => {
-                info!("A2R runtime installed successfully");
+                info!("Allternit runtime installed successfully");
                 info!("Installation output: {}", output.stdout);
             }
             Err(e) => {
-                warn!("A2R installation failed: {}", e);
+                warn!("Allternit installation failed: {}", e);
                 return Err(HetznerError::ApiError(format!("Installation failed: {}", e)));
             }
         }

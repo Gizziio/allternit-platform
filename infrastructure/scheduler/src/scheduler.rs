@@ -97,12 +97,12 @@ impl From<Schedule> for ScheduleResponse {
 /// Calculate next run time from a cron expression
 pub fn calculate_next_run(cron_expr: &str, after: Option<DateTime<Utc>>) -> Option<DateTime<Utc>> {
     // Use the cron parser to get next occurrence
-    a2r_cron_parser::next_occurrence(cron_expr, after)
+    allternit_cron_parser::next_occurrence(cron_expr, after)
 }
 
 /// Parse natural language schedule
 pub fn parse_schedule(input: &str) -> Result<(String, String), String> {
-    let parsed = a2r_cron_parser::parse(input)
+    let parsed = allternit_cron_parser::parse(input)
         .map_err(|e| format!("Failed to parse schedule: {}", e))?;
     
     Ok((parsed.expression, parsed.description))

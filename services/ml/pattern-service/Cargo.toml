@@ -2,7 +2,7 @@
 name = "pattern-service"
 version = "0.1.0"
 edition = "2021"
-description = "Pattern service for the A2rchitech platform"
+description = "Pattern service for the Allternitchitech platform"
 license = "MIT"
 
 [dependencies]

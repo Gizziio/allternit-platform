@@ -1,10 +1,10 @@
 # @allternit/ix
 
-A2R Interface eXecution - Declarative UI generation with Vercel Labs json-render compatibility.
+Allternit Interface eXecution - Declarative UI generation with Vercel Labs json-render compatibility.
 
 ## Overview
 
-A2R-IX enables LLM-generated UI through a JSON Intermediate Representation (IR) with full compatibility for Vercel Labs json-render patterns. This allows AI agents to generate user interfaces declaratively, which are then rendered by the platform.
+Allternit-IX enables LLM-generated UI through a JSON Intermediate Representation (IR) with full compatibility for Vercel Labs json-render patterns. This allows AI agents to generate user interfaces declaratively, which are then rendered by the platform.
 
 ## Features
 
@@ -139,7 +139,7 @@ store.set('shared.value', 42); // Syncs to all connected clients
 ```typescript
 import { jsonRenderAdapter, llmToIX } from '@allternit/ix';
 
-// From json-render to A2R-IX
+// From json-render to Allternit-IX
 const jsonRenderSchema = {
   version: '1.0.0',
   root: {
@@ -150,7 +150,7 @@ const jsonRenderSchema = {
   },
 };
 
-const a2rUi = jsonRenderAdapter.fromJsonRender(jsonRenderSchema);
+const allternitUi = jsonRenderAdapter.fromJsonRender(jsonRenderSchema);
 
 // Auto-detect and convert
 const result = llmToIX.convert(jsonRenderSchema);
@@ -169,7 +169,7 @@ import {
 // Create capsule with security policies
 const capsule = globalCapsuleRegistry.create({
   id: 'my-capsule',
-  ui: a2rUi,
+  ui: allternitUi,
   stateStore: createStateStore(),
   policyGates: [
     createRateLimitGate({ maxActionsPerMinute: 60 }),
@@ -191,7 +191,7 @@ capsule.applyPatch([
 ## Architecture
 
 ```
-A2R-IX
+Allternit-IX
 ├── types/           # TypeScript interfaces
 ├── schema/          # UI IR schema definitions
 ├── catalog/         # Component registry with semver

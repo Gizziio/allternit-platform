@@ -1,5 +1,5 @@
 {
-  "name": "@a2r/quality-score",
+  "name": "@allternit/quality-score",
   "version": "1.0.0",
   "description": "Quality Score System - Domain grades, trend tracking, agent-visible metrics",
   "type": "module",
@@ -14,7 +14,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
-  "keywords": ["a2r", "quality", "score", "metrics"],
+  "keywords": ["allternit", "quality", "score", "metrics"],
   "license": "MIT",
   "dependencies": {},
   "devDependencies": {

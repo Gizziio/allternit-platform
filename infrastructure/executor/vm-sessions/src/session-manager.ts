@@ -1,4 +1,4 @@
-import { Workspace } from '@a2r/gizziclaw';
+import { Workspace } from '@allternit/gizziclaw';
 
 export interface VMSessionConfig {
   workspacePath: string;

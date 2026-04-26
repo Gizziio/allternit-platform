@@ -1,11 +1,11 @@
-//! # A2R Evals
+//! # Allternit Evals
 //!
-//! Evaluation framework for A2R components.
+//! Evaluation framework for Allternit components.
 //!
 //! ## Overview
 //!
 //! This crate provides a comprehensive evaluation system for testing
-//! A2R components including skills, workflows, providers, and embodiments.
+//! Allternit components including skills, workflows, providers, and embodiments.
 //! It supports various evaluation types including unit tests, integration
 //! tests, regression tests, performance tests, security tests, and
 //! compliance tests.
@@ -30,7 +30,7 @@
 //! ## Example
 //!
 //! ```rust,no_run
-//! use a2rchitech_evals::{
+//! use allternit_evals::{
 //!     EvaluationConfig, EvaluationType, TargetComponent, TestSuite, TestCase,
 //!     TestCaseType, ExecutionContext, SecurityContext, SuccessCriteria
 //! };
@@ -89,15 +89,15 @@
 //! };
 //! ```
 
-use a2rchitech_context_router::{ContextBundle, ContextRouter};
-use a2rchitech_history::{HistoryError, HistoryLedger};
-use a2rchitech_memory::MemoryFabric;
-use a2rchitech_messaging::{EventEnvelope, MessagingSystem};
-use a2rchitech_policy::{PolicyEffect, PolicyEngine, PolicyRequest};
-use a2rchitech_providers::ProviderRouter;
-use a2rchitech_runtime_core::SessionManager;
-use a2rchitech_skills::SkillRegistry;
-use a2rchitech_workflows::WorkflowEngine;
+use allternit_context_router::{ContextBundle, ContextRouter};
+use allternit_history::{HistoryError, HistoryLedger};
+use allternit_memory::MemoryFabric;
+use allternit_messaging::{EventEnvelope, MessagingSystem};
+use allternit_policy::{PolicyEffect, PolicyEngine, PolicyRequest};
+use allternit_providers::ProviderRouter;
+use allternit_runtime_core::SessionManager;
+use allternit_skills::SkillRegistry;
+use allternit_workflows::WorkflowEngine;
 use serde::{Deserialize, Serialize};
 use sqlx::{SqlitePool, Row};
 use std::collections::HashMap;
@@ -382,7 +382,7 @@ pub enum EvaluationError {
     #[error("SQLX error: {0}")]
     Sqlx(#[from] sqlx::Error),
     #[error("Policy error: {0}")]
-    Policy(#[from] a2rchitech_policy::PolicyError),
+    Policy(#[from] allternit_policy::PolicyError),
     #[error("Evaluation not found: {0}")]
     EvaluationNotFound(String),
     #[error("Test case failed: {0}")]
@@ -1104,7 +1104,7 @@ impl EvaluationEngine {
                 "target_component": &evaluation.target_component,
                 "execution_config": &evaluation.execution_config,
             }),
-            requested_tier: a2rchitech_policy::SafetyTier::T0, // Default to lowest tier for evaluation
+            requested_tier: allternit_policy::SafetyTier::T0, // Default to lowest tier for evaluation
         };
 
         let policy_decision = self.policy_engine.evaluate(policy_request).await?;
@@ -1554,12 +1554,12 @@ mod tests {
         // Create temporary history ledger
         let temp_path = format!("/tmp/test_evals_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
 
         // Create messaging system
         let messaging_system = Arc::new(
-            a2rchitech_messaging::MessagingSystem::new_with_storage(
+            allternit_messaging::MessagingSystem::new_with_storage(
                 history_ledger.clone(),
                 pool.clone(),
             )
@@ -1568,13 +1568,13 @@ mod tests {
         );
 
         // Create policy engine
-        let policy_engine = Arc::new(a2rchitech_policy::PolicyEngine::new(
+        let policy_engine = Arc::new(allternit_policy::PolicyEngine::new(
             history_ledger.clone(),
             messaging_system.clone(),
         ));
-        let system_identity = a2rchitech_policy::Identity {
+        let system_identity = allternit_policy::Identity {
             id: "system".to_string(),
-            identity_type: a2rchitech_policy::IdentityType::ServiceAccount,
+            identity_type: allternit_policy::IdentityType::ServiceAccount,
             name: "System".to_string(),
             tenant_id: "system".to_string(),
             created_at: 0,
@@ -1588,12 +1588,12 @@ mod tests {
             .unwrap();
         policy_engine.create_default_permissions().await.unwrap();
         policy_engine.create_default_rules().await.unwrap();
-        let execute_rule = a2rchitech_policy::PolicyRule {
+        let execute_rule = allternit_policy::PolicyRule {
             id: "rule_allow_execute".to_string(),
             name: "Allow Execute Operations".to_string(),
             description: "Allow evaluation execution in tests".to_string(),
             condition: "identity.active".to_string(),
-            effect: a2rchitech_policy::PolicyEffect::Allow,
+            effect: allternit_policy::PolicyEffect::Allow,
             resource: "*".to_string(),
             actions: vec!["execute".to_string()],
             priority: 150,
@@ -1602,11 +1602,11 @@ mod tests {
         policy_engine.add_rule(execute_rule).await.unwrap();
 
         // Create context router
-        let context_router = Arc::new(a2rchitech_context_router::ContextRouter::new(
+        let context_router = Arc::new(allternit_context_router::ContextRouter::new(
             history_ledger.clone(),
             messaging_system.clone(),
             policy_engine.clone(),
-            Arc::new(a2rchitech_runtime_core::SessionManager::new(
+            Arc::new(allternit_runtime_core::SessionManager::new(
                 history_ledger.clone(),
                 messaging_system.clone(),
             )),
@@ -1614,7 +1614,7 @@ mod tests {
 
         // Create memory fabric
         let memory_fabric = Arc::new(
-            a2rchitech_memory::MemoryFabric::new_with_storage(
+            allternit_memory::MemoryFabric::new_with_storage(
                 history_ledger.clone(),
                 messaging_system.clone(),
                 policy_engine.clone(),
@@ -1627,13 +1627,13 @@ mod tests {
 
         // Create provider router
         let provider_router = Arc::new(
-            a2rchitech_providers::ProviderRouter::new_with_storage(
+            allternit_providers::ProviderRouter::new_with_storage(
                 history_ledger.clone(),
                 messaging_system.clone(),
                 policy_engine.clone(),
                 context_router.clone(),
                 memory_fabric.clone(),
-                Arc::new(a2rchitech_runtime_core::SessionManager::new(
+                Arc::new(allternit_runtime_core::SessionManager::new(
                     history_ledger.clone(),
                     messaging_system.clone(),
                 )),
@@ -1644,7 +1644,7 @@ mod tests {
         );
 
         // Create tool gateway
-        let tool_gateway = Arc::new(a2rchitech_tools_gateway::ToolGateway::new(
+        let tool_gateway = Arc::new(allternit_tools_gateway::ToolGateway::new(
             policy_engine.clone(),
             history_ledger.clone(),
             messaging_system.clone(),
@@ -1652,7 +1652,7 @@ mod tests {
 
         // Create skill registry
         let skill_registry = Arc::new(
-            a2rchitech_skills::SkillRegistry::new_with_storage(
+            allternit_skills::SkillRegistry::new_with_storage(
                 history_ledger.clone(),
                 messaging_system.clone(),
                 policy_engine.clone(),
@@ -1666,12 +1666,12 @@ mod tests {
         // Create workflow engine
         // Create task queue
         let task_queue = Arc::new(
-            a2rchitech_messaging::TaskQueue::new(history_ledger.clone(), pool.clone())
+            allternit_messaging::TaskQueue::new(history_ledger.clone(), pool.clone())
                 .await
                 .unwrap(),
         );
 
-        let workflow_engine = Arc::new(a2rchitech_workflows::WorkflowEngine::new(
+        let workflow_engine = Arc::new(allternit_workflows::WorkflowEngine::new(
             history_ledger.clone(),
             messaging_system.clone(),
             policy_engine.clone(),
@@ -1681,7 +1681,7 @@ mod tests {
         ));
 
         // Create session manager
-        let session_manager = Arc::new(a2rchitech_runtime_core::SessionManager::new(
+        let session_manager = Arc::new(allternit_runtime_core::SessionManager::new(
             history_ledger.clone(),
             messaging_system.clone(),
         ));
@@ -1708,7 +1708,7 @@ mod tests {
         let evaluation_config = EvaluationConfig {
             eval_id: "test-eval-001".to_string(),
             name: "Test Evaluation".to_string(),
-            description: "A test evaluation for A2rchitech".to_string(),
+            description: "A test evaluation for Allternit".to_string(),
             eval_type: EvaluationType::Regression,
             target_component: TargetComponent::Skill {
                 skill_id: "test-skill".to_string(),

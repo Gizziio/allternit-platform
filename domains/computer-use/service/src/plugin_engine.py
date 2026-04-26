@@ -10,8 +10,8 @@ import requests
 from quickjs import Context, JSException
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-PLUGIN_ROOT = REPO_ROOT / "5-ui" / "a2r-platform" / "src" / "a2r-usage" / "plugins"
-APP_DATA_DIR = Path.home() / ".a2r" / "a2r-usage"
+PLUGIN_ROOT = REPO_ROOT / "5-ui" / "allternit-platform" / "src" / "allternit-usage" / "plugins"
+APP_DATA_DIR = Path.home() / ".allternit" / "allternit-usage"
 KEYCHAIN_DIR = APP_DATA_DIR / "keychain"
 
 
@@ -312,7 +312,7 @@ ctx.fmt = {{
     return Math.round(seconds / 60) + "m";
   }},
 }};
-__a2r_usage_ctx = ctx;
+__allternit_usage_ctx = ctx;
 """
 
 
@@ -342,7 +342,7 @@ def run_probe(plugin_id: str) -> Optional[Dict[str, Any]]:
         [
             _compose_host_js(plugin_id, str(plugin_data_dir)),
             script,
-            "JSON.stringify(__a2r_usage_plugin.probe(__a2r_usage_ctx));",
+            "JSON.stringify(__allternit_usage_plugin.probe(__allternit_usage_ctx));",
         ]
     )
 

@@ -1,6 +1,6 @@
 """
 Brain Runtime Adapter
-Integration layer between the A2R Operator and the A2R governance/brain system.
+Integration layer between the Allternit Operator and the Allternit governance/brain system.
 
 Responsibilities:
   - Real-time event streaming to the brain gateway (observability)
@@ -100,7 +100,7 @@ class ToolDefinition(BaseModel):
 
 DESKTOP_CONTROL_TOOL = ToolDefinition(
     name="desktop_control",
-    description="Control native desktop applications using A2R Vision automation.",
+    description="Control native desktop applications using Allternit Vision automation.",
     parameters={
         "type": "object",
         "properties": {
@@ -211,14 +211,14 @@ async def evaluate_safety_policy(session_id: str, action: Dict[str, Any]) -> boo
 # Receipt generation
 # ---------------------------------------------------------------------------
 
-async def generate_a2r_receipt(
+async def generate_allternit_receipt(
     session_id: str,
     action: Dict[str, Any],
     result: Dict[str, Any],
 ) -> Dict[str, Any]:
     """
-    Generate an immutable A2R receipt for a completed action.
-    Persisted locally under .a2r/receipts/ and submitted to the governance kernel.
+    Generate an immutable Allternit receipt for a completed action.
+    Persisted locally under .allternit/receipts/ and submitted to the governance kernel.
     """
     receipt_id = f"rcpt_{uuid.uuid4().hex[:12]}"
     action_json = json.dumps(action, sort_keys=True, default=str)
@@ -259,8 +259,8 @@ async def generate_a2r_receipt(
     }
 
     try:
-        os.makedirs(".a2r/receipts", exist_ok=True)
-        with open(f".a2r/receipts/{receipt_id}.json", "w") as f:
+        os.makedirs(".allternit/receipts", exist_ok=True)
+        with open(f".allternit/receipts/{receipt_id}.json", "w") as f:
             json.dump(receipt, f, indent=2)
     except Exception:
         pass
@@ -286,6 +286,6 @@ class ModelRouter:
     @staticmethod
     async def get_vision_model_config(user_id: Optional[str] = None) -> Dict[str, Any]:
         return {
-            "model_id": os.getenv("A2R_VISION_MODEL_NAME", "a2r-vision-7b"),
+            "model_id": os.getenv("Allternit_VISION_MODEL_NAME", "allternit-vision-7b"),
             "auto_switch": True,
         }

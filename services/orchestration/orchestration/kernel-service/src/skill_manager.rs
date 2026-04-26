@@ -35,7 +35,7 @@ impl SkillManager {
                 name: "Web Research".to_string(),
                 version: "1.0.0".to_string(),
                 description: "Deep research using web search and browser simulation.".to_string(),
-                author: "A2rchitech Team".to_string(),
+                author: "Allternitchitech Team".to_string(),
                 installed: true,
             },
         );
@@ -46,7 +46,7 @@ impl SkillManager {
                 name: "Code Analysis".to_string(),
                 version: "0.5.0".to_string(),
                 description: "Advanced semantic analysis of codebases.".to_string(),
-                author: "A2rchitech Team".to_string(),
+                author: "Allternitchitech Team".to_string(),
                 installed: false,
             },
         );

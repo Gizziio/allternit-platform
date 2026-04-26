@@ -1,4 +1,4 @@
-# A2rchitech API
+# Allternitchitech API
 
 Thin HTTP adapter over `packages/orchestration/control-plane-service` with comprehensive observability.
 
@@ -89,13 +89,13 @@ The API includes structured tracing spans for:
 - WebSocket terminal connections
 
 ## Environment
-- `A2RCHITECH_API_BIND` (default `0.0.0.0:3000`)
-- `A2RCHITECH_LEDGER_PATH` (default `./allternit.jsonl`)
-- `A2RCHITECH_DB_PATH` (default `./allternit.db`)
-- `A2RCHITECH_API_IDENTITY` (default `api-service`)
-- `A2RCHITECH_API_TENANT` (default `default`)
-- `A2RCHITECH_API_BOOTSTRAP_POLICY` (default `true`)
-- `A2RCHITECH_API_POLICY_ENFORCE` (default `true`)
+- `Allternit_API_BIND` (default `0.0.0.0:3000`)
+- `Allternit_LEDGER_PATH` (default `./allternit.jsonl`)
+- `Allternit_DB_PATH` (default `./allternit.db`)
+- `Allternit_API_IDENTITY` (default `api-service`)
+- `Allternit_API_TENANT` (default `default`)
+- `Allternit_API_BOOTSTRAP_POLICY` (default `true`)
+- `Allternit_API_POLICY_ENFORCE` (default `true`)
 
 ## API Versioning
 The API supports versioned endpoints under `/api/v1/` with backward compatibility for non-versioned routes.

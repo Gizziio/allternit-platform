@@ -28,7 +28,7 @@ impl AssistantManager {
     fn default_identity() -> AssistantIdentity {
         AssistantIdentity {
             id: "asst_default".to_string(),
-            name: "A2rchitech".to_string(),
+            name: "Allternitchitech".to_string(),
             persona: "You are a sovereign agentic operating system.".to_string(),
             preferences: serde_json::json!({}),
         }

@@ -22,10 +22,10 @@ describe('Key Generator', () => {
     timestamp: '2026-03-08T12:00:00.000Z',
     rawPayload: {},
     repository: {
-      fullName: 'a2rchitech/platform',
+      fullName: 'allternit/platform',
       name: 'platform',
-      owner: 'a2rchitech',
-      url: 'https://github.com/a2rchitech/platform',
+      owner: 'allternit',
+      url: 'https://github.com/allternit/platform',
       private: false,
     },
     sender: {
@@ -37,7 +37,7 @@ describe('Key Generator', () => {
       number: 42,
       title: 'Add feature',
       state: 'open',
-      url: 'https://github.com/a2rchitech/platform/pull/42',
+      url: 'https://github.com/allternit/platform/pull/42',
       author: 'alice',
       body: 'PR body',
       labels: ['enhancement'],

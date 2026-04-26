@@ -148,4 +148,4 @@ The devcontainer includes these pre-configured extensions:
 
 ## 📝 License
 
-MIT - Part of the A2R Infrastructure templates.
+MIT - Part of the Allternit Infrastructure templates.

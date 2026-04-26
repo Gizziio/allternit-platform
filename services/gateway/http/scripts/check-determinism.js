@@ -38,7 +38,7 @@ const FORBIDDEN_DIRS = [
 
 // Directories where eventBus.publish() is ALLOWED
 const ALLOWED_DIRS = [
-  'adapters/a2r-kernel',
+  'adapters/allternit-kernel',
   'core',
 ];
 
@@ -161,7 +161,7 @@ function main() {
     }
     
     log('\n⚠️  All canonical event emission must originate from:', 'yellow');
-    log('   adapters/a2r-kernel/* only\n', 'yellow');
+    log('   adapters/allternit-kernel/* only\n', 'yellow');
     
     process.exit(1);
   }

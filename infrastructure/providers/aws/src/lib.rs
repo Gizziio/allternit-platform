@@ -1,8 +1,8 @@
-//! A2R Cloud AWS Provider
+//! Allternit Cloud AWS Provider
 //!
-//! AWS EC2 provider implementation for A2R cloud deployment.
+//! AWS EC2 provider implementation for Allternit cloud deployment.
 
-use a2r_cloud_core::{
+use allternit_cloud_core::{
     CloudProvider, CloudError, DeploymentConfig, Instance, InstanceType, 
     Region, PricingInfo, HealthStatus, InstanceStatus, DeploymentStatus,
     DeploymentPhase,
@@ -101,16 +101,16 @@ impl CloudProvider for AwsProvider {
         Ok(PricingInfo {
             currency: "USD".to_string(),
             instances: pricing::AWS_INSTANCE_TYPES.iter().map(|t| {
-                a2r_cloud_core::InstancePricing {
+                allternit_cloud_core::InstancePricing {
                     instance_type: t.id.to_string(),
                     price_monthly: t.price_monthly,
                     price_hourly: t.price_hourly,
                 }
             }).collect(),
-            storage: a2r_cloud_core::StoragePricing {
+            storage: allternit_cloud_core::StoragePricing {
                 price_per_gb_month: 0.10,
             },
-            network: a2r_cloud_core::NetworkPricing {
+            network: allternit_cloud_core::NetworkPricing {
                 price_per_gb: 0.09,
                 free_gb_monthly: 100,
             },
@@ -149,12 +149,12 @@ impl CloudProvider for AwsProvider {
             healthy: true,
             status: "running".to_string(),
             checks: vec![
-                a2r_cloud_core::HealthCheck {
+                allternit_cloud_core::HealthCheck {
                     name: "instance_status".to_string(),
                     passed: true,
                     message: "Instance is running".to_string(),
                 },
-                a2r_cloud_core::HealthCheck {
+                allternit_cloud_core::HealthCheck {
                     name: "system_status".to_string(),
                     passed: true,
                     message: "System checks passed".to_string(),
@@ -169,7 +169,7 @@ impl CloudProvider for AwsProvider {
         
         Ok(Instance {
             id,
-            name: "a2r-instance".to_string(),
+            name: "allternit-instance".to_string(),
             public_ip: Some("54.123.45.67".to_string()),
             private_ip: Some("10.0.1.100".to_string()),
             region: "us-west-2".to_string(),

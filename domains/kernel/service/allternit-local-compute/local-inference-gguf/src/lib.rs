@@ -1,6 +1,6 @@
-//! # A2R Local Inference GGUF
+//! # Allternit Local Inference GGUF
 //!
-//! GGUF-based local inference for A2R using llama.cpp.
+//! GGUF-based local inference for Allternit using llama.cpp.
 //!
 //! ## Overview
 //!

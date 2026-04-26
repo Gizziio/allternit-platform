@@ -1,4 +1,4 @@
-//! A2R Memory Kernel
+//! Allternit Memory Kernel
 //!
 //! Three-layer memory system:
 //! 1. Events Layer - Append-only event log (traces.ndjson)
@@ -7,7 +7,7 @@
 //!
 //! Based on memora.md and MemoryKernel specification
 
-use a2r_evolution_layer::MemoryEvolutionEngine;
+use allternit_evolution_layer::MemoryEvolutionEngine;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};

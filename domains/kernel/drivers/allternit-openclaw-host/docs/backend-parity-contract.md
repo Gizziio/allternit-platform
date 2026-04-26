@@ -1,9 +1,9 @@
-# A2R Backend Parity Contract (OpenClaw Control Gateway)
+# Allternit Backend Parity Contract (OpenClaw Control Gateway)
 
 ## Scope
 
 This contract defines the required native backend behavior for running the
-native A2R OpenClaw Control UI without relying on the vendored OpenClaw backend.
+native Allternit OpenClaw Control UI without relying on the vendored OpenClaw backend.
 
 Primary source baseline:
 

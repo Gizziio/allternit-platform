@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2rchitech.local/spec/contracts/CapsuleManifest.schema.json",
+  "$id": "https://allternit.local/spec/contracts/CapsuleManifest.schema.json",
   "title": "Capsule Manifest",
   "type": "object",
   "additionalProperties": false,
@@ -104,9 +104,9 @@
           "type": "string",
           "enum": [
             "none",
-            "a2r_scoped"
+            "allternit_scoped"
           ],
-          "default": "a2r_scoped"
+          "default": "allternit_scoped"
         },
         "clipboard": {
           "type": "boolean",

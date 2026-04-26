@@ -389,4 +389,4 @@ export interface Path {
 }
 
 // Legacy alias
-export type GIZZIClient = import('./a2r-client.js').A2RClient;
+export type GIZZIClient = import('./allternit-client.js').AllternitClient;

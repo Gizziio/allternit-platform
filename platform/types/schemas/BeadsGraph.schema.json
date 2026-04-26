@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2rchitech.local/spec/contracts/BeadsGraph.schema.json",
-  "title": "A2rchitech Beads Graph",
+  "$id": "https://allternit.local/spec/contracts/BeadsGraph.schema.json",
+  "title": "Allternit Beads Graph",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -71,7 +71,7 @@
           },
           "wih_path": {
             "type": "string",
-            "pattern": "^/\\.a2r/wih/.+\\.json$"
+            "pattern": "^/\\.allternit/wih/.+\\.json$"
           }
         }
       }

@@ -11,12 +11,12 @@ Gate is the WIH policy enforcer that runs before any tool use, mutation, or loop
 
 ## Implementation notes
 - `src/gate/gate.rs` implements the gate checks and turn closeout hooks.
-- `src/policy.rs` builds the policy bundle from `AGENTS.md`, `.a2r/agents/**`, and `.a2r/spec/**`, then emits `AgentsPolicyInjected` events and stores the marker per scope.
-- `a2r rails gate` commands (`pre-tool`, `mutate`, `turn-closeout`, `rules`) expose CLI hooks for policy enforcement and introspection.
-- Gate uses `.a2r/meta/agents_policy_history.jsonl` (or ledger events) to prove injection happened before every mutation.
+- `src/policy.rs` builds the policy bundle from `AGENTS.md`, `.allternit/agents/**`, and `.allternit/spec/**`, then emits `AgentsPolicyInjected` events and stores the marker per scope.
+- `allternit rails gate` commands (`pre-tool`, `mutate`, `turn-closeout`, `rules`) expose CLI hooks for policy enforcement and introspection.
+- Gate uses `.allternit/meta/agents_policy_history.jsonl` (or ledger events) to prove injection happened before every mutation.
 
 ## Key files
 - `src/policy.rs` – hashing, ULID generation, injection markers.
 - `src/gate/turn_closeout.rs` (or functions in `gate.rs`) – lease verification, receipt validation, emission of `GateTurnCloseout` events.
-- `.a2r/meta/gate_cursor.json` – tracks the last ledger event the gate processed for turn closeout enforcement.
-- `.a2r/ledgers/events/` – gate reads ledger events to validate constraints; `GateTurnCloseout` is stored here.
+- `.allternit/meta/gate_cursor.json` – tracks the last ledger event the gate processed for turn closeout enforcement.
+- `.allternit/ledgers/events/` – gate reads ledger events to validate constraints; `GateTurnCloseout` is stored here.

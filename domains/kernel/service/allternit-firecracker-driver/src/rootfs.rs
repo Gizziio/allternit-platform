@@ -12,7 +12,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::SystemTime;
 use tokio::fs;
 use tokio::process::Command;
-use tracing::{debug, error, info, info_span, instrument, warn, Instrument};
+use tracing::{debug, error, info, info_span, warn, Instrument};
 use walkdir::WalkDir;
 
 use crate::{DriverError, MicroVM};
@@ -159,7 +159,7 @@ impl RootfsBuilder {
     }
 
     /// Generate a unique container name
-    /// Format: a2r-{vm_id_short}-{timestamp}-{counter}
+    /// Format: allternit-{vm_id_short}-{timestamp}-{counter}
     fn generate_unique_container_name(vm_id: &str) -> String {
         let vm_id_short = &vm_id[..vm_id.len().min(12)];
         let timestamp = std::time::SystemTime::now()
@@ -167,7 +167,7 @@ impl RootfsBuilder {
             .unwrap_or_default()
             .as_millis();
         let counter = CONTAINER_COUNTER.fetch_add(1, Ordering::SeqCst);
-        format!("a2r-{}-{}-{}", vm_id_short, timestamp, counter)
+        format!("allternit-{}-{}-{}", vm_id_short, timestamp, counter)
     }
 
     /// Verify that a container name is available (not in use)
@@ -239,6 +239,9 @@ impl RootfsBuilder {
     ///
     /// When `base_time` is provided, normalizes all file timestamps after extraction
     /// to ensure reproducible rootfs hashes across different runs.
+    /// 
+    /// First checks for packaged VM images (ALLTERNIT_VM_DIR env var) before pulling
+    /// from registries.
     #[tracing::instrument(
         skip(self, rootfs_path, base_time),
         fields(image = %image_ref, vm_id)
@@ -256,6 +259,47 @@ impl RootfsBuilder {
             vm_id = %vm_id,
             "Extracting OCI image"
         );
+
+        // Check for packaged VM first (desktop app bundles VMs in resources/vm/)
+        if let Ok(packaged_vm_dir) = std::env::var("ALLTERNIT_VM_DIR") {
+            let packaged_rootfs = std::path::PathBuf::from(&packaged_vm_dir).join("rootfs.ext4");
+            if packaged_rootfs.exists() {
+                info!(
+                    event = "rootfs.using_packaged",
+                    image = %image_ref,
+                    path = %packaged_rootfs.display(),
+                    "Using packaged VM rootfs"
+                );
+                
+                // Copy packaged rootfs to destination
+                let output = Command::new("cp")
+                    .args([
+                        "--sparse=auto",
+                        &packaged_rootfs.to_string_lossy(),
+                        &rootfs_path.to_string_lossy(),
+                    ])
+                    .output()
+                    .await
+                    .map_err(|e| DriverError::InternalError {
+                        message: format!("Failed to copy packaged rootfs: {}", e),
+                    })?;
+                
+                if output.status.success() {
+                    info!(
+                        event = "rootfs.packaged.complete",
+                        image = %image_ref,
+                        "Packaged VM rootfs copied successfully"
+                    );
+                    return Ok(());
+                } else {
+                    warn!(
+                        event = "rootfs.packaged_copy_failed",
+                        error = %String::from_utf8_lossy(&output.stderr),
+                        "Failed to copy packaged rootfs, falling back to OCI pull"
+                    );
+                }
+            }
+        }
 
         let extract_dir = self
             .cache_dir
@@ -836,7 +880,7 @@ impl RootfsBuilder {
         }
 
         // Mount and copy
-        let mount_point = format!("/tmp/a2r-mount-{}", uuid::Uuid::new_v4());
+        let mount_point = format!("/tmp/allternit-mount-{}", uuid::Uuid::new_v4());
         fs::create_dir_all(&mount_point)
             .await
             .map_err(|e| DriverError::InternalError {
@@ -1057,7 +1101,7 @@ impl RootfsBuilder {
         }
 
         // Mount
-        let mount_point = format!("/tmp/a2r-mount-{}", uuid::Uuid::new_v4());
+        let mount_point = format!("/tmp/allternit-mount-{}", uuid::Uuid::new_v4());
         fs::create_dir_all(&mount_point)
             .await
             .map_err(|e| DriverError::InternalError {

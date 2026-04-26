@@ -1,10 +1,10 @@
-//! A2R Agent System Rails Client
+//! Allternit Agent System Rails Client
 //!
 //! Provides integration with the Agent System Rails for agent task planning,
 //! work execution, and policy gates (DAG/WIH/leases/ledger/vault/mail/gate).
 //!
 //! Environment:
-//!   - A2R_RAILS_URL: URL of the rails service (default: http://127.0.0.1:3011)
+//!   - Allternit_RAILS_URL: URL of the rails service (default: http://127.0.0.1:3011)
 
 use axum::{
     extract::{Json, Path, Query, State},
@@ -34,7 +34,7 @@ impl RailsClient {
 
     pub fn from_env() -> Self {
         let base_url =
-            std::env::var("A2R_RAILS_URL").unwrap_or_else(|_| "http://127.0.0.1:3011".to_string());
+            std::env::var("Allternit_RAILS_URL").unwrap_or_else(|_| "http://127.0.0.1:3011".to_string());
         Self::new(base_url)
     }
 

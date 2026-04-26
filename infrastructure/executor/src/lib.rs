@@ -1,10 +1,10 @@
 // OWNER: T1-A4
 
-//! A2R Executor
+//! Allternit Executor
 //!
 //! Docker container orchestration for job execution.
 //! Provides container lifecycle management, resource allocation,
-//! and job queuing for the A2R platform.
+//! and job queuing for the Allternit platform.
 
 pub mod docker;
 pub mod executor;

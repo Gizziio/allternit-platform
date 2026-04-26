@@ -11,8 +11,8 @@ import os
 from pathlib import Path
 
 # Set up paths
-os.environ["A2R_ENABLE_OBSERVABILITY"] = "true"
-os.environ["A2R_RECORDINGS_PATH"] = "/tmp/a2r-test-recordings"
+os.environ["Allternit_ENABLE_OBSERVABILITY"] = "true"
+os.environ["Allternit_RECORDINGS_PATH"] = "/tmp/allternit-test-recordings"
 
 import sys
 OBSERVABILITY_PATH = str(Path(__file__).parent.parent.parent / "observability")
@@ -31,7 +31,7 @@ def test_recorder_frame():
     
     async def run():
         config = RecorderConfig(
-            storage_path="/tmp/a2r-test-recordings",
+            storage_path="/tmp/allternit-test-recordings",
             storage_backend="memory",
             async_save=False,
         )
@@ -137,7 +137,7 @@ def test_replay_builder():
             return True
         
         # Create test frames
-        test_dir = Path("/tmp/a2r-test-frames")
+        test_dir = Path("/tmp/allternit-test-frames")
         test_dir.mkdir(exist_ok=True)
         
         frame_paths = []
@@ -154,7 +154,7 @@ def test_replay_builder():
         )
         builder = MultiFormatBuilder(config)
         
-        output_dir = "/tmp/a2r-test-replays"
+        output_dir = "/tmp/allternit-test-replays"
         artifacts = await builder.build_from_frames(
             frames=frame_paths,
             output_dir=output_dir,

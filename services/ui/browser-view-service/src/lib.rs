@@ -1,4 +1,4 @@
-//! A2R Browser View Service
+//! Allternit Browser View Service
 //!
 //! Provides resource browsing and viewing capabilities for the ShellUI.
 //! Enables users to explore graphs, tasks, artifacts, and system state.

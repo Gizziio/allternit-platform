@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-pub use a2rchitech_kernel_contracts::{
+pub use allternit_kernel_contracts::{
     FrameworkSpec, FrameworkStatus, CapsuleTemplate, CanvasSpec, LayoutSpec, 
     SectionSpec, ColumnSpec, ActionSpec, ToolRequirementSpec
 };

@@ -1,5 +1,5 @@
 {
-  "name": "@a2r/legacy-spec-audit",
+  "name": "@allternit/legacy-spec-audit",
   "version": "1.0.0",
   "description": "Legacy Spec Audit - Categorization, migration, implementation planning",
   "type": "module",
@@ -14,6 +14,6 @@
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
-  "keywords": ["a2r", "audit", "specs", "migration"],
+  "keywords": ["allternit", "audit", "specs", "migration"],
   "license": "MIT"
 }

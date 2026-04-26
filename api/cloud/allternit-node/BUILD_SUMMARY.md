@@ -1,4 +1,4 @@
-# A2R Node - Production Build Summary
+# Allternit Node - Production Build Summary
 
 ## ✅ Tested & Working Components
 
@@ -40,7 +40,7 @@
 cargo build --release  # ✅ Success
 
 target/release/
-├── a2r-node      (7.1 MB) - Production node agent
+├── allternit-node      (7.1 MB) - Production node agent
 └── test-server   (3.5 MB) - Test control plane
 ```
 
@@ -48,7 +48,7 @@ target/release/
 
 ### WebSocket Connectivity Test
 ```
-2026-02-24T14:26:41 INFO A2R Node Agent v0.1.0
+2026-02-24T14:26:41 INFO Allternit Node Agent v0.1.0
 2026-02-24T14:26:41 INFO Node ID: test-node-1771943192
 2026-02-24T14:26:41 INFO 🔌 Connecting to ws://localhost:8013/ws/nodes/test-node-1771943192...
 2026-02-24T14:26:41 INFO test_server: 🔄 WebSocket upgrade request from node
@@ -96,7 +96,7 @@ thread::spawn(move || { /* write loop */ });
 ## 📁 Production Code Locations
 
 ```
-cloud/a2r-node/
+cloud/allternit-node/
 ├── src/
 │   ├── main.rs         # Integrated all components
 │   ├── docker.rs       # Full Docker runtime (bollard)
@@ -126,7 +126,7 @@ These are production-ready implementations that compile and will work when deplo
 
 ## 🚀 Deployment Readiness
 
-The A2R Node is ready for deployment to:
+The Allternit Node is ready for deployment to:
 - Linux VPS with Docker installed
 - macOS with Docker Desktop
 - Any system with Docker daemon accessible

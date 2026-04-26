@@ -1,7 +1,7 @@
 {
-  "name": "@a2r/plugins",
+  "name": "@allternit/plugins",
   "version": "1.0.0",
-  "description": "A2R Plugin System",
+  "description": "Allternit Plugin System",
   "type": "module",
   "main": "./src/index.js",
   "exports": {
@@ -14,8 +14,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@a2r/sdk": "workspace:*",
-    "@a2r/types": "workspace:*"
+    "@allternit/sdk": "workspace:*",
+    "@allternit/types": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.3.0",

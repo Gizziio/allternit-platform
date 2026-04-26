@@ -1,8 +1,8 @@
 [package]
-name = "a2rchitech-messaging"
+name = "allternit-messaging"
 version = "0.1.0"
 edition = "2021"
-description = "A2rchitech messaging layer with task queue, event bus, and agent mail"
+description = "Allternit messaging layer with task queue, event bus, and agent mail"
 
 [dependencies]
 serde = { workspace = true }
@@ -12,7 +12,7 @@ uuid = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
-a2rchitech-history = { workspace = true }
+allternit-history = { workspace = true }
 async-trait = { workspace = true }
 sqlx = { workspace = true }
 futures = "0.3"

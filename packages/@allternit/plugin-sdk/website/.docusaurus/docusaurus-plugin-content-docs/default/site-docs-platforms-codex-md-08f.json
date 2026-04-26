@@ -1,0 +1,20 @@
+{
+  "id": "platforms/codex",
+  "title": "OpenAI Codex Setup",
+  "description": "Overview",
+  "source": "@site/docs/platforms/codex.md",
+  "sourceDirName": "platforms",
+  "slug": "/platforms/codex",
+  "permalink": "/docs/platforms/codex",
+  "draft": false,
+  "unlisted": false,
+  "editUrl": "https://github.com/allternit/plugin-sdk/tree/main/website/docs/platforms/codex.md",
+  "tags": [],
+  "version": "current",
+  "frontMatter": {},
+  "sidebar": "docsSidebar",
+  "previous": {
+    "title": "Claude Desktop Setup",
+    "permalink": "/docs/platforms/claude"
+  }
+}

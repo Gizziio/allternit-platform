@@ -1,7 +1,7 @@
 {
   "version": "v0.1.0",
   "external_ingress": {
-    "id": "a2r-gateway",
+    "id": "allternit-gateway",
     "host": "127.0.0.1",
     "port": 8013,
     "protocol": "http",
@@ -52,6 +52,18 @@
         ],
         "strip_prefix": "/api/v1",
         "add_prefix": "/api"
+      },
+      {
+        "path_prefix": "/api/computer",
+        "service": "computer-use",
+        "methods": [
+          "GET",
+          "POST",
+          "DELETE",
+          "OPTIONS"
+        ],
+        "strip_prefix": "/api",
+        "add_prefix": "/v1"
       }
     ]
   },
@@ -74,6 +86,11 @@
     {
       "name": "api",
       "internal_url": "http://127.0.0.1:3000",
+      "exposed": false
+    },
+    {
+      "name": "computer-use",
+      "internal_url": "http://127.0.0.1:8760",
       "exposed": false
     }
   ]

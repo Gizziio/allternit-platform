@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# A2R Agent Workspace - Initialization Script
+# Allternit Agent Workspace - Initialization Script
 # Sets up the isolated environment for agent execution
 # ============================================================================
 
@@ -8,7 +8,7 @@ set -euo pipefail
 
 # Configuration
 readonly AGENT_ID="${AGENT_ID:-default}"
-readonly AGENT_NAME="${AGENT_NAME:-A2R Agent}"
+readonly AGENT_NAME="${AGENT_NAME:-Allternit Agent}"
 readonly MAX_CPU="${MAX_CPU:-2}"
 readonly MAX_MEMORY="${MAX_MEMORY:-4G}"
 readonly ENABLE_NETWORK="${ENABLE_NETWORK:-true}"
@@ -144,7 +144,7 @@ EOF
     mkdir -p "${firefox_profile}"
     
     cat > "${CONFIG_DIR}/firefox/profiles/agent/prefs.js" << 'EOF'
-// A2R Agent Firefox Preferences
+// Allternit Agent Firefox Preferences
 user_pref("app.update.enabled", false);
 user_pref("browser.tabs.firefox-view", false);
 user_pref("browser.startup.homepage", "about:blank");
@@ -267,7 +267,7 @@ setup_security() {
     
     # Create .bashrc with restricted PATH
     cat > /home/agent/.bashrc << 'EOF'
-# A2R Agent Workspace - Restricted Environment
+# Allternit Agent Workspace - Restricted Environment
 export PATH="/home/agent/.local/bin:/usr/local/bin:/usr/bin:/bin"
 export HOME=/home/agent
 export USER=agent
@@ -293,7 +293,7 @@ EOF
     
     # Create restricted .profile
     cat > /home/agent/.profile << 'EOF'
-# A2R Agent Workspace Profile
+# Allternit Agent Workspace Profile
 if [ -n "$BASH_VERSION" ]; then
     if [ -f "$HOME/.bashrc" ]; then
         . "$HOME/.bashrc"
@@ -324,7 +324,7 @@ setup_sandbox() {
     fi
     
     # Verify firejail profile exists
-    if [[ ! -f "/etc/firejail/a2r-agent.profile" ]]; then
+    if [[ ! -f "/etc/firejail/allternit-agent.profile" ]]; then
         warn "Firejail profile not found, using default"
     fi
     
@@ -412,7 +412,7 @@ EOF
 # Main Initialization
 # ============================================================================
 main() {
-    info "Starting A2R Agent Workspace initialization..."
+    info "Starting Allternit Agent Workspace initialization..."
     info "Agent ID: ${AGENT_ID}"
     info "Configuration: CPU=${MAX_CPU}, Memory=${MAX_MEMORY}, Network=${ENABLE_NETWORK}"
     

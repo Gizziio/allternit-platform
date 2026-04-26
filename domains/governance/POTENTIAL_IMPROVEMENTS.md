@@ -1,6 +1,6 @@
 # Potential Improvements for 2-Governance Layer
 
-This document outlines potential improvements for the 2-governance layer of the A2R platform.
+This document outlines potential improvements for the 2-governance layer of the Allternit platform.
 
 ## 1. Enhanced Policy Engine
 - Implement advanced policy DSL with temporal and contextual conditions

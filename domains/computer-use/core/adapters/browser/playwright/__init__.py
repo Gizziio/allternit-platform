@@ -1,6 +1,6 @@
 """
-A2R Computer Use — Playwright Adapter
-Wraps the existing Playwright path from A2R Operator browser manager.
+Allternit Computer Use — Playwright Adapter
+Wraps the existing Playwright path from Allternit Operator browser manager.
 """
 
 from core import BaseAdapter, ActionRequest, ResultEnvelope, Receipt

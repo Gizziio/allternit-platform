@@ -1,5 +1,5 @@
 [package]
-name = "a2rchitech-agent-router"
+name = "allternit-agent-router"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,9 +8,9 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true }
 tracing = { workspace = true }
-a2rchitech-sdk-core = { workspace = true }
-a2rchitech-sdk-policy = { workspace = true }
-a2rchitech-sdk-transport = { workspace = true }
+allternit-sdk-core = { workspace = true }
+allternit-sdk-policy = { workspace = true }
+allternit-sdk-transport = { workspace = true }
 chrono = { workspace = true }
 anyhow = { workspace = true }
 async-trait = { workspace = true }

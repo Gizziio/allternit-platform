@@ -1,6 +1,6 @@
 """
-A2R Computer Use Operator — Runtime Entrypoint
-Re-housed from 4-services/a2r-operator/
+Allternit Computer Use Operator — Runtime Entrypoint
+Re-housed from 4-services/allternit-operator/
 Launches as package to support relative imports.
 """
 import uvicorn
@@ -20,6 +20,6 @@ SERVICE_HOST = getattr(mod, "SERVICE_HOST", "0.0.0.0")
 SERVICE_PORT = getattr(mod, "SERVICE_PORT", 3010)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("A2R_OPERATOR_PORT", SERVICE_PORT))
-    host = os.environ.get("A2R_OPERATOR_HOST", SERVICE_HOST)
+    port = int(os.environ.get("Allternit_OPERATOR_PORT", SERVICE_PORT))
+    host = os.environ.get("Allternit_OPERATOR_HOST", SERVICE_HOST)
     uvicorn.run(app, host=host, port=port)

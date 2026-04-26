@@ -3,7 +3,7 @@
   "tools": [
     {
       "id": "autoland",
-      "title": "A2R Autoland",
+      "title": "Allternit Autoland",
       "kind": "write",
       "safety_level": "danger",
       "entrypoint": "tools/autoland/mod.ts",
@@ -1014,7 +1014,7 @@
       "preconditions": [
         "WIH_VALID",
         "TASK_RUNNING",
-        "PATH_UNDER_A2R",
+        "PATH_UNDER_Allternit",
         "PATH_MATCHES_GLOBS"
       ]
     },
@@ -1259,11 +1259,26 @@
       "entrypoint": "tools/agent-browser/mod.ts",
       "inputs_schema": {
         "type": "object",
-        "required": ["action"],
+        "required": [
+          "action"
+        ],
         "properties": {
           "action": {
             "type": "string",
-            "enum": ["open", "snapshot", "click", "fill", "type", "screenshot", "get_text", "get_html", "get_value", "wait", "find", "close"],
+            "enum": [
+              "open",
+              "snapshot",
+              "click",
+              "fill",
+              "type",
+              "screenshot",
+              "get_text",
+              "get_html",
+              "get_value",
+              "wait",
+              "find",
+              "close"
+            ],
             "description": "Browser action to perform"
           },
           "url": {
@@ -1332,10 +1347,18 @@
                 "items": {
                   "type": "object",
                   "properties": {
-                    "ref": { "type": "string" },
-                    "role": { "type": "string" },
-                    "text": { "type": "string" },
-                    "label": { "type": "string" }
+                    "ref": {
+                      "type": "string"
+                    },
+                    "role": {
+                      "type": "string"
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    }
                   }
                 }
               }
@@ -1347,7 +1370,271 @@
           }
         }
       },
-      "preconditions": ["WIH_VALID", "TASK_RUNNING"]
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING"
+      ]
+    },
+    {
+      "id": "computer",
+      "title": "Computer Use",
+      "kind": "write",
+      "safety_level": "danger",
+      "entrypoint": "http://localhost:8760/v1/computer",
+      "description": "Control the computer: take screenshots, click, type, scroll, navigate browser, extract page content. Routes through the ACU executor waterfall (extension → CDP → Playwright → desktop).",
+      "inputs_schema": {
+        "type": "object",
+        "required": ["action", "session_id"],
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "screenshot",
+              "left_click",
+              "right_click",
+              "middle_click",
+              "double_click",
+              "left_click_drag",
+              "type",
+              "key",
+              "scroll",
+              "cursor_position",
+              "navigate",
+              "extract",
+              "fill",
+              "wait",
+              "tabs"
+            ],
+            "description": "Action to perform. screenshot/cursor_position require no coordinates."
+          },
+          "session_id": {
+            "type": "string",
+            "description": "Browser or desktop session ID to act on"
+          },
+          "run_id": {
+            "type": "string",
+            "description": "Unique run ID for tracing (auto-generated if omitted)"
+          },
+          "coordinate": {
+            "type": "array",
+            "items": {"type": "integer"},
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "[x, y] screen coordinates for click/scroll/drag actions"
+          },
+          "text": {
+            "type": "string",
+            "description": "Text to type (for type and fill actions)"
+          },
+          "key": {
+            "type": "string",
+            "description": "Key name or combo to press, e.g. 'Return', 'ctrl+c' (for key action)"
+          },
+          "delta": {
+            "type": "array",
+            "items": {"type": "integer"},
+            "minItems": 2,
+            "maxItems": 2,
+            "description": "[deltaX, deltaY] scroll delta in pixels (for scroll action)"
+          },
+          "url": {
+            "type": "string",
+            "description": "URL to navigate to (for navigate action)"
+          },
+          "selector": {
+            "type": "string",
+            "description": "CSS selector or text selector (for fill/extract actions)"
+          },
+          "adapter_preference": {
+            "type": "string",
+            "enum": ["browser.extension", "browser.cdp", "browser.playwright", "desktop.pyautogui", "desktop.accessibility"],
+            "description": "Pin a specific adapter (skips waterfall). Omit to use automatic waterfall."
+          }
+        }
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "run_id": {"type": "string"},
+          "session_id": {"type": "string"},
+          "adapter_id": {"type": "string"},
+          "status": {"type": "string", "enum": ["completed", "failed", "cancelled"]},
+          "extracted_content": {},
+          "artifacts": {"type": "array"},
+          "error": {"type": "object", "nullable": true}
+        }
+      },
+      "preconditions": [
+        "WIH_VALID",
+        "TASK_RUNNING",
+        "APPROVAL_TOKEN_VALID"
+      ]
+    },
+    {
+      "id": "document-generator",
+      "title": "Document Generator",
+      "kind": "write",
+      "safety_level": "safe",
+      "entrypoint": "tools/document-generator/mod.ts",
+      "inputs_schema": {
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "generatePhotoCardDeck",
+              "generateStudyGuide",
+              "generateRubricSpreadsheet",
+              "createCanvasModule",
+              "healthCheck"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "topic": {
+            "type": "string"
+          },
+          "slide_count": {
+            "type": "number"
+          },
+          "key_points": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "deck_style": {
+            "type": "string"
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "learning_objectives": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "key_terms": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "include_self_check": {
+            "type": "boolean"
+          },
+          "examples": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "docx",
+              "pdf",
+              "pptx",
+              "xlsx"
+            ]
+          },
+          "length": {
+            "type": "string",
+            "enum": [
+              "short",
+              "medium"
+            ]
+          },
+          "template_type": {
+            "type": "string",
+            "enum": [
+              "rubric",
+              "tracker",
+              "study_plan",
+              "grade_calc"
+            ]
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "formulas": {
+            "type": "object"
+          },
+          "validation": {
+            "type": "object"
+          },
+          "course_id": {
+            "type": "string"
+          },
+          "module_name": {
+            "type": "string"
+          },
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "sharepoint_target": {
+            "type": "object"
+          },
+          "file_name_hint": {
+            "type": "string"
+          },
+          "include_timestamp_in_filename": {
+            "type": "boolean"
+          },
+          "include_citations_slide_or_section": {
+            "type": "boolean"
+          }
+        }
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean"
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "artifact_type": {
+            "type": "string"
+          },
+          "file_name": {
+            "type": "string"
+          },
+          "sharepoint_file_url": {
+            "type": "string"
+          },
+          "local_file_path": {
+            "type": "string"
+          },
+          "error": {
+            "type": "string"
+          }
+        }
+      }
     }
   ]
 }

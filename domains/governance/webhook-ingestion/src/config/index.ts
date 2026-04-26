@@ -23,8 +23,8 @@ export const envSchema = z.object({
   WEBHOOK_MOLTBOOK_SECRET: z.string().optional(),
   
   // Rails
-  A2R_RAILS_URL: z.string().default('http://127.0.0.1:3011'),
-  A2R_RAILS_API_KEY: z.string().optional(),
+  Allternit_RAILS_URL: z.string().default('http://127.0.0.1:3011'),
+  Allternit_RAILS_API_KEY: z.string().optional(),
   
   // Rate limiting
   RATE_LIMIT_MAX_REQUESTS: z.string().default('60'),
@@ -127,8 +127,8 @@ export function parseConfig(env: Record<string, string | undefined>): ServiceCon
     ),
     sources,
     rails: {
-      url: parsed.A2R_RAILS_URL,
-      apiKey: parsed.A2R_RAILS_API_KEY,
+      url: parsed.Allternit_RAILS_URL,
+      apiKey: parsed.Allternit_RAILS_API_KEY,
     },
     rateLimit: {
       maxRequests: parseInt(parsed.RATE_LIMIT_MAX_REQUESTS),

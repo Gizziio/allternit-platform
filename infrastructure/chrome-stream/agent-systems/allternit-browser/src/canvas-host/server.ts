@@ -26,7 +26,7 @@ function defaultIndexHTML(): string {
   return `<!doctype html>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>A2R Canvas</title>
+<title>Allternit Canvas</title>
 <style>
   html, body { height: 100%; margin: 0; background: #000; color: #fff; font: 16px/1.4 -apple-system, BlinkMacSystemFont, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
   .wrap { min-height: 100%; display: grid; place-items: center; padding: 24px; }
@@ -44,7 +44,7 @@ function defaultIndexHTML(): string {
 <div class="wrap">
   <div class="card">
     <div class="title">
-      <h1>A2R Canvas</h1>
+      <h1>Allternit Canvas</h1>
       <div class="sub">Interactive workspace (auto-reload enabled)</div>
     </div>
 
@@ -64,7 +64,7 @@ function defaultIndexHTML(): string {
   const statusEl = document.getElementById("status");
   const log = (msg) => { logEl.textContent = String(msg); };
 
-  const hasBridge = () => typeof window.a2rSendUserAction === "function";
+  const hasBridge = () => typeof window.allternitSendUserAction === "function";
   statusEl.innerHTML = "Bridge: " + (hasBridge() ? "<span class='ok'>ready</span>" : "<span class='bad'>missing</span>");
 
   function send(name, sourceId) {
@@ -72,7 +72,7 @@ function defaultIndexHTML(): string {
       log("No action bridge found.");
       return;
     }
-    const ok = a2rSendUserAction({
+    const ok = allternitSendUserAction({
       name,
       surfaceId: "main",
       sourceComponentId: sourceId,
@@ -156,7 +156,7 @@ async function prepareCanvasRoot(rootDir: string): Promise<string> {
 
 function resolveDefaultCanvasRoot(): string {
   const candidates = [
-    path.join(os.homedir(), '.a2r', 'canvas'),
+    path.join(os.homedir(), '.allternit', 'canvas'),
     path.join(process.cwd(), 'canvas-root'),
   ];
   
@@ -278,7 +278,7 @@ export async function createCanvasHostHandler(opts: {
         if (urlPath === '/' || urlPath.endsWith('/')) {
           res.statusCode = 404;
           res.setHeader('Content-Type', 'text/html; charset=utf-8');
-          res.end(`<!doctype html><meta charset="utf-8" /><title>A2R Canvas</title><pre>Missing file.\nCreate ${rootDir}/index.html</pre>`);
+          res.end(`<!doctype html><meta charset="utf-8" /><title>Allternit Canvas</title><pre>Missing file.\nCreate ${rootDir}/index.html</pre>`);
           return true;
         }
         res.statusCode = 404;

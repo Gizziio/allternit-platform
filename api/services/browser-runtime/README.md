@@ -1,6 +1,6 @@
 # Browser Runtime Service
 
-Playwright-based browser automation service for A2rchitech agent computer-use.
+Playwright-based browser automation service for Allternitchitech agent computer-use.
 
 ## Features
 

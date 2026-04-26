@@ -17,10 +17,10 @@ import { createWebhookServer } from '../server/webhook-server.js';
  */
 function printUsage(): void {
   console.log(`
-A2R Webhook Ingestion Service
+Allternit Webhook Ingestion Service
 
 Usage:
-  a2r-webhook <command> [options]
+  allternit-webhook <command> [options]
 
 Commands:
   serve              Start webhook server
@@ -34,9 +34,9 @@ Options:
   --log-level <lvl>  Log level: debug, info, warn, error (default: info)
 
 Examples:
-  a2r-webhook serve --port 8787 --log-level debug
-  a2r-webhook list
-  a2r-webhook trigger --source github --event pull_request.opened
+  allternit-webhook serve --port 8787 --log-level debug
+  allternit-webhook list
+  allternit-webhook trigger --source github --event pull_request.opened
 `);
 }
 
@@ -91,7 +91,7 @@ async function serveCommand(args: string[]): Promise<void> {
   
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
-║     A2R Webhook Ingestion Service                        ║
+║     Allternit Webhook Ingestion Service                        ║
 ╠══════════════════════════════════════════════════════════╣
 ║  Server:   http://${config.server.host}:${String(config.server.port).padEnd(5)}                     ║
 ║  Log Level: ${config.server.logLevel.padEnd(44)}║
@@ -142,7 +142,7 @@ async function triggerCommand(args: string[]): Promise<void> {
   
   if (sourceIdx === -1 || !args[sourceIdx + 1]) {
     console.error('Error: --source is required');
-    console.error('Usage: a2r-webhook trigger --source <source> --event <event> [--payload <file>]');
+    console.error('Usage: allternit-webhook trigger --source <source> --event <event> [--payload <file>]');
     process.exit(1);
   }
   

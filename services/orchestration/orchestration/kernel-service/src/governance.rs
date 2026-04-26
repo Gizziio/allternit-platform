@@ -5,8 +5,8 @@ use std::fs;
 use std::path::Path;
 use uuid::Uuid;
 
-use a2r_governor::PolicyEngine as NativePolicyEngine;
-use a2r_substrate::PolicyContext;
+use allternit_governor::PolicyEngine as NativePolicyEngine;
+use allternit_substrate::PolicyContext;
 
 #[derive(Debug, Deserialize)]
 pub struct GovernanceEvaluateRequest {
@@ -38,7 +38,7 @@ pub async fn evaluate_policy(
     match engine.evaluate(&context).await {
         Ok(decision) => Ok(Json(GovernanceEvaluateResponse {
             decision,
-            reason: "Evaluated by a2r-governor native engine".to_string(),
+            reason: "Evaluated by allternit-governor native engine".to_string(),
         })),
         Err(err) => Err((StatusCode::INTERNAL_SERVER_ERROR, err.to_string())),
     }
@@ -57,7 +57,7 @@ pub async fn submit_receipt(
         .and_then(|v| v.as_str())
         .unwrap_or("unknown");
 
-    let receipt_dir = Path::new(".a2r/receipts").join(run_id);
+    let receipt_dir = Path::new(".allternit/receipts").join(run_id);
     fs::create_dir_all(&receipt_dir)
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 

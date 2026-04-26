@@ -1,7 +1,7 @@
 {
-  "name": "@a2r/communication",
+  "name": "@allternit/communication",
   "version": "1.0.0",
-  "description": "Agent communication primitives for a2rchitech - @mention routing, MCP proxy, terminal injection",
+  "description": "Agent communication primitives for allternit - @mention routing, MCP proxy, terminal injection",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -15,8 +15,8 @@
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit"
   },
-  "keywords": ["a2rchitech", "agent", "communication", "mcp"],
-  "author": "a2rchitech",
+  "keywords": ["allternit", "agent", "communication", "mcp"],
+  "author": "allternit",
   "license": "MIT",
   "dependencies": {
     "uuid": "^9.0.1"

@@ -16,13 +16,13 @@
  *   dak-daemon --budget-max 80     # Stop at 80% budget usage
  *
  * Environment:
- *   A2R_RAILS_CLI        Rails CLI path (default: a2r)
- *   A2R_RAILS_HTTP_URL   Rails HTTP API URL
- *   A2R_RAILS_API_KEY    Rails API key
- *   A2R_PROJECT_PATH     Project root (default: cwd)
- *   A2R_OUTPUT_DIR       Output directory (default: .a2r/runner)
- *   A2R_MAX_CONCURRENT   Max parallel nodes (default: 3)
- *   A2R_BUDGET_MAX       Max budget percentage (default: 90)
+ *   Allternit_RAILS_CLI        Rails CLI path (default: allternit)
+ *   Allternit_RAILS_HTTP_URL   Rails HTTP API URL
+ *   Allternit_RAILS_API_KEY    Rails API key
+ *   Allternit_PROJECT_PATH     Project root (default: cwd)
+ *   Allternit_OUTPUT_DIR       Output directory (default: .allternit/runner)
+ *   Allternit_MAX_CONCURRENT   Max parallel nodes (default: 3)
+ *   Allternit_BUDGET_MAX       Max budget percentage (default: 90)
  */
 
 import { RailsHttpAdapter, createRailsHttpAdapter } from './adapters/rails_http';
@@ -47,14 +47,14 @@ interface DaemonConfig {
 function parseDaemonArgs(): DaemonConfig {
   const args = process.argv.slice(2);
   const config: DaemonConfig = {
-    maxConcurrent: parseInt(process.env.A2R_MAX_CONCURRENT || '3', 10),
-    budgetMax: parseInt(process.env.A2R_BUDGET_MAX || '90', 10),
+    maxConcurrent: parseInt(process.env.Allternit_MAX_CONCURRENT || '3', 10),
+    budgetMax: parseInt(process.env.Allternit_BUDGET_MAX || '90', 10),
     budgetCheckIntervalMs: 5000,
-    railsCliPath: process.env.A2R_RAILS_CLI || 'a2r',
-    railsHttpUrl: process.env.A2R_RAILS_HTTP_URL,
-    railsApiKey: process.env.A2R_RAILS_API_KEY,
-    projectPath: process.env.A2R_PROJECT_PATH || process.cwd(),
-    outputDir: process.env.A2R_OUTPUT_DIR || '.a2r/runner',
+    railsCliPath: process.env.Allternit_RAILS_CLI || 'allternit',
+    railsHttpUrl: process.env.Allternit_RAILS_HTTP_URL,
+    railsApiKey: process.env.Allternit_RAILS_API_KEY,
+    projectPath: process.env.Allternit_PROJECT_PATH || process.cwd(),
+    outputDir: process.env.Allternit_OUTPUT_DIR || '.allternit/runner',
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -95,13 +95,13 @@ Options:
   -h, --help             Show this help
 
 Environment:
-  A2R_RAILS_CLI          Rails CLI path
-  A2R_RAILS_HTTP_URL     Rails HTTP API URL
-  A2R_RAILS_API_KEY      Rails API key
-  A2R_PROJECT_PATH       Project root
-  A2R_OUTPUT_DIR         Output directory
-  A2R_MAX_CONCURRENT     Max parallel nodes
-  A2R_BUDGET_MAX         Max budget percentage
+  Allternit_RAILS_CLI          Rails CLI path
+  Allternit_RAILS_HTTP_URL     Rails HTTP API URL
+  Allternit_RAILS_API_KEY      Rails API key
+  Allternit_PROJECT_PATH       Project root
+  Allternit_OUTPUT_DIR         Output directory
+  Allternit_MAX_CONCURRENT     Max parallel nodes
+  Allternit_BUDGET_MAX         Max budget percentage
 `);
 }
 

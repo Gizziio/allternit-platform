@@ -1,11 +1,11 @@
-//! # A2R SDK Policy
+//! # Allternit SDK Policy
 //!
-//! Policy engine interface and types for the A2R SDK.
+//! Policy engine interface and types for the Allternit SDK.
 //!
 //! ## Overview
 //!
 //! This crate provides the policy engine abstraction and types for
-//! security policy evaluation within the A2R platform. It defines
+//! security policy evaluation within the Allternit platform. It defines
 //! the interface for checking permissions, evaluating policies,
 //! and enforcing security constraints.
 //!
@@ -26,7 +26,7 @@
 //! ## Example
 //!
 //! ```rust
-//! use a2rchitech_sdk_policy::{PolicyEngine, PolicyRequest, SafetyTier};
+//! use allternit_sdk_policy::{PolicyEngine, PolicyRequest, SafetyTier};
 //!
 //! // Create a policy engine
 //! let engine = PolicyEngine::new();
@@ -53,7 +53,7 @@ use serde::{Deserialize, Serialize};
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_policy::PolicyEngine;
+/// use allternit_sdk_policy::PolicyEngine;
 ///
 /// let engine = PolicyEngine::new();
 /// ```
@@ -73,7 +73,7 @@ impl PolicyEngine {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_policy::PolicyEngine;
+    /// use allternit_sdk_policy::PolicyEngine;
     ///
     /// let engine = PolicyEngine::new();
     /// ```
@@ -98,7 +98,7 @@ impl PolicyEngine {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_policy::{PolicyEngine, PolicyRequest, SafetyTier};
+    /// use allternit_sdk_policy::{PolicyEngine, PolicyRequest, SafetyTier};
     ///
     /// let engine = PolicyEngine::new();
     ///
@@ -145,7 +145,7 @@ impl PolicyEngine {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_policy::{PolicyEngine, PolicyRequest, SafetyTier};
+    /// use allternit_sdk_policy::{PolicyEngine, PolicyRequest, SafetyTier};
     ///
     /// let engine = PolicyEngine::new();
     ///
@@ -188,7 +188,7 @@ impl Default for PolicyEngine {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_policy::{PolicyRequest, SafetyTier};
+/// use allternit_sdk_policy::{PolicyRequest, SafetyTier};
 ///
 /// let request = PolicyRequest {
 ///     identity_id: "user-123".to_string(),
@@ -196,7 +196,7 @@ impl Default for PolicyEngine {
 ///     action: "execute".to_string(),
 ///     context: serde_json::json!({
 ///         "ip_address": "192.168.1.1",
-///         "user_agent": "A2R Client/1.0"
+///         "user_agent": "Allternit Client/1.0"
 ///     }),
 ///     requested_tier: SafetyTier::T3,
 /// };
@@ -235,7 +235,7 @@ impl PolicyRequest {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_policy::PolicyRequest;
+    /// use allternit_sdk_policy::PolicyRequest;
     ///
     /// let request = PolicyRequest::new(
     ///     "user-123".to_string(),
@@ -269,7 +269,7 @@ impl PolicyRequest {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_policy::{PolicyRequest, SafetyTier};
+    /// use allternit_sdk_policy::{PolicyRequest, SafetyTier};
     ///
     /// let request = PolicyRequest::new(
     ///     "user-123".to_string(),
@@ -308,7 +308,7 @@ impl PolicyRequest {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_policy::{PolicyDecision, PolicyEffect, SafetyTier, Constraint};
+/// use allternit_sdk_policy::{PolicyDecision, PolicyEffect, SafetyTier, Constraint};
 ///
 /// let decision = PolicyDecision {
 ///     decision: PolicyEffect::Allow,
@@ -344,7 +344,7 @@ impl PolicyDecision {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_policy::{PolicyDecision, PolicyEffect, SafetyTier};
+    /// use allternit_sdk_policy::{PolicyDecision, PolicyEffect, SafetyTier};
     ///
     /// let allow = PolicyDecision {
     ///     decision: PolicyEffect::Allow,
@@ -372,7 +372,7 @@ impl PolicyDecision {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_policy::{PolicyDecision, PolicyEffect, SafetyTier};
+    /// use allternit_sdk_policy::{PolicyDecision, PolicyEffect, SafetyTier};
     ///
     /// let deny = PolicyDecision {
     ///     decision: PolicyEffect::Deny,
@@ -392,7 +392,7 @@ impl PolicyDecision {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_policy::{PolicyDecision, PolicyEffect, SafetyTier, Constraint};
+    /// use allternit_sdk_policy::{PolicyDecision, PolicyEffect, SafetyTier, Constraint};
     ///
     /// let decision = PolicyDecision {
     ///     decision: PolicyEffect::Allow,
@@ -474,7 +474,7 @@ impl SafetyTier {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_policy::SafetyTier;
+    /// use allternit_sdk_policy::SafetyTier;
     ///
     /// assert_eq!(SafetyTier::T0.as_number(), 0);
     /// assert_eq!(SafetyTier::T2.as_number(), 2);
@@ -499,7 +499,7 @@ impl SafetyTier {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_policy::SafetyTier;
+    /// use allternit_sdk_policy::SafetyTier;
     ///
     /// assert!(SafetyTier::T2.is_at_least(SafetyTier::T0));
     /// assert!(SafetyTier::T2.is_at_least(SafetyTier::T2));
@@ -514,7 +514,7 @@ impl SafetyTier {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_policy::SafetyTier;
+    /// use allternit_sdk_policy::SafetyTier;
     ///
     /// assert_eq!(SafetyTier::T0.description(), "No risk - informational only");
     /// assert_eq!(SafetyTier::T4.description(), "Critical risk - irreversible operations");

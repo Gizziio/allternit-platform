@@ -70,7 +70,7 @@ export const config = {
     port: getEnvVarAsInt('REDIS_PORT', 6379),
     password: getEnvVar('REDIS_PASSWORD', ''),
     db: getEnvVarAsInt('REDIS_DB', 0),
-    keyPrefix: getEnvVar('REDIS_KEY_PREFIX', 'a2r:'),
+    keyPrefix: getEnvVar('REDIS_KEY_PREFIX', 'allternit:'),
   },
 
   // Security Configuration

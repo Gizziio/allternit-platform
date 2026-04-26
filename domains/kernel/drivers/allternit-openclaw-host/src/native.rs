@@ -1,20 +1,20 @@
-//! Native A2R Implementations for Strangler Components
+//! Native Allternit Implementations for Strangler Components
 //!
-//! This module provides the native A2R implementations that strangler components
+//! This module provides the native Allternit implementations that strangler components
 //! delegate to during DualRun and Graduate phases.
 //!
 //! Phase 2 (Control Plane Native): These implementations replace OpenClaw calls
-//! with native A2R kernel services.
+//! with native Allternit kernel services.
 
 use async_trait::async_trait;
 use serde_json::Value;
 use std::sync::Arc;
 
-use a2r_parity::strangler::{ComponentInput, ComponentOutput, OutputMetadata};
+use allternit_parity::strangler::{ComponentInput, ComponentOutput, OutputMetadata};
 
 /// Native skill registry implementation
 pub struct NativeSkillRegistry {
-    // This would be a reference to the actual a2rchitech-skills crate
+    // This would be a reference to the actual allternit-skills crate
     // For now, we'll implement the interface
     storage: Arc<dyn SkillStorage>,
 }

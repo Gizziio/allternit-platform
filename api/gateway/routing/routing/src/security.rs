@@ -1,5 +1,5 @@
 #![allow(dead_code, unused_variables, unused_imports)]
-//! Security Middleware Integration for A2R API
+//! Security Middleware Integration for Allternit API
 //!
 //! This module integrates the security-hardening crate with the Axum API,
 //! providing request validation, rate limiting, threat detection, and security headers.

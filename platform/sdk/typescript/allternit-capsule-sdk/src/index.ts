@@ -1,14 +1,14 @@
 /**
  * Capsule SDK v0.1
  *
- * Headless SDK for A2rchitech capsules.
+ * Headless SDK for Allternit capsules.
  *
  * Principles:
  * - Defines WHERE and WHEN UI happens, never WHAT it looks like
  * - A2UI / AG-UI remains the source of visual truth
  * - SDK only enforces: lifecycle, capabilities, event semantics, containment, UX minimums
  *
- * @module @a2rchitech/capsule-sdk
+ * @module @allternit/capsule-sdk
  */
 
 // Core modules

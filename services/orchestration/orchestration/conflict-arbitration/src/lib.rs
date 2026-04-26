@@ -1,4 +1,4 @@
-//! A2R Conflict Arbitration Engine
+//! Allternit Conflict Arbitration Engine
 //!
 //! Implements SYSTEM_LAW.md LAW-SWM-003 (Conflict Arbitration)
 //!

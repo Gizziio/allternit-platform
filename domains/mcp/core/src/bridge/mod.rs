@@ -1,4 +1,4 @@
-//! Tool bridge for integrating MCP with A2R tool registry
+//! Tool bridge for integrating MCP with Allternit tool registry
 
 /// Format an MCP tool name with server prefix
 ///

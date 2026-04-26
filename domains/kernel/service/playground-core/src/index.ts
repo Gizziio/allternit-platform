@@ -1,7 +1,7 @@
 /**
  * Playground Core
  *
- * Core engine for A2R Playground System.
+ * Core engine for Allternit Playground System.
  * Provides storage, relay, and tool integration for interactive playgrounds.
  */
 

@@ -1,4 +1,4 @@
-//! A2R Node Registry
+//! Allternit Node Registry
 //!
 //! Implements node registration, capability tracking, health monitoring, and discovery.
 //!

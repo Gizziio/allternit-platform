@@ -1,11 +1,11 @@
-//! # A2R SDK Transport
+//! # Allternit SDK Transport
 //!
-//! Transport layer abstractions and types for the A2R SDK.
+//! Transport layer abstractions and types for the Allternit SDK.
 //!
 //! ## Overview
 //!
 //! This crate provides transport layer types and abstractions for
-//! message passing across different communication channels in the A2R
+//! message passing across different communication channels in the Allternit
 //! platform. It supports multiple transport protocols including
 //! iMessage, SMS, Web, and System channels.
 //!
@@ -54,7 +54,7 @@ use uuid::Uuid;
 /// Universal message envelope for transport layer communication.
 ///
 /// `TransportEnvelope` is the standard container for all messages
-/// passing through the A2R transport layer. It provides protocol-agnostic
+/// passing through the Allternit transport layer. It provides protocol-agnostic
 /// routing, source identification, and extensible metadata storage.
 ///
 /// # Examples
@@ -415,7 +415,7 @@ impl TransportSource {
 /// Content types for transport messages.
 ///
 /// `MessageContent` represents the different types of content
-/// that can be transported through the A2R system.
+/// that can be transported through the Allternit system.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", content = "data")]
 pub enum MessageContent {

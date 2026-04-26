@@ -150,11 +150,11 @@ export class PolicyBundleBuilder {
         mode: profile.write_scope_policy.mode,
         allowed_globs: this.expandGlobs(profile.write_scope_policy.allowed_globs, runId),
         forbidden_globs: [
-          '.a2r/ledger/**',
-          '.a2r/leases/**',
-          '.a2r/wih/**',
-          '.a2r/graphs/**',
-          '.a2r/spec/**',
+          '.allternit/ledger/**',
+          '.allternit/leases/**',
+          '.allternit/wih/**',
+          '.allternit/graphs/**',
+          '.allternit/spec/**',
         ],
       },
       network_policy: profile.network_policy,
@@ -244,7 +244,7 @@ export class PolicyBundleBuilder {
    */
   async writeBundle(
     bundle: PolicyBundle, 
-    outputDir: string = '.a2r/runner/policy_bundles'
+    outputDir: string = '.allternit/runner/policy_bundles'
   ): Promise<string> {
     const outputPath = path.join(outputDir, `${bundle.bundle_id}.json`);
     

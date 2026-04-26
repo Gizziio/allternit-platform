@@ -1,12 +1,12 @@
 //! # Allternit Stdio Gateway
 //!
-//! Stdio-based NDJSON-RPC gateway for A2R.
+//! Stdio-based NDJSON-RPC gateway for Allternit.
 //!
 //! ## Overview
 //!
 //! This crate provides an IO bridge implementation using NDJSON-RPC
 //! (Newline Delimited JSON-RPC) over stdin/stdout. It enables
-//! communication between the A2R system and external processes
+//! communication between the Allternit system and external processes
 //! through a simple, language-agnostic protocol.
 //!
 //! ## Protocol

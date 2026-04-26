@@ -6,9 +6,9 @@
 //! - GET /api/v1/local/policy/{id}
 //! - POST /api/v1/local/policy/evaluate
 
-use a2rchitech_history::HistoryLedger;
-use a2rchitech_messaging::MessagingSystem;
-use a2rchitech_policy::{
+use allternit_history::HistoryLedger;
+use allternit_messaging::MessagingSystem;
+use allternit_policy::{
     Identity, IdentityType, PolicyEffect, PolicyEngine, PolicyRequest, PolicyRule, SafetyTier,
 };
 use chrono::Utc;

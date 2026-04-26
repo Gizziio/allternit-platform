@@ -1,5 +1,5 @@
 """
-A2R Computer Use Gateway - Conformance Test Suite
+Allternit Computer Use Gateway - Conformance Test Suite
 
 Tests the gateway contract including:
 - Health endpoint

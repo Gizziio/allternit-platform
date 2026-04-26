@@ -9,7 +9,7 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 uuid = { workspace = true }
 chrono = { workspace = true }
-a2rchitech-kernel-contracts = { workspace = true }
+allternit-kernel-contracts = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }

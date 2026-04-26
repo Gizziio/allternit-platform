@@ -1,5 +1,5 @@
 /**
- * A2R Kernel Types
+ * Allternit Kernel Types
  * 
  * Core type definitions for Work-In-Hand (WIH) management,
  * Receipt generation, and routing functions.
@@ -142,14 +142,14 @@ export interface RoutingResult {
 }
 
 /**
- * Routing function interface for A2R Kernel
+ * Routing function interface for Allternit Kernel
  * 
  * All routing functions must implement this signature.
  * They receive context about the operation and return a routing decision.
  */
 export type RoutingFunction<TContext, TResult extends RoutingResult> = (
   context: TContext,
-  kernel: A2RKernel
+  kernel: AllternitKernel
 ) => TResult | Promise<TResult>;
 
 export type PreToolUseFunction = RoutingFunction<ToolContext, RoutingResult>;
@@ -160,7 +160,7 @@ export type FileAccessFunction = RoutingFunction<FileContext, RoutingResult>;
 // Kernel Interface
 // ============================================================================
 
-export interface A2RKernel {
+export interface AllternitKernel {
   readonly version: string;
   
   // WIH operations
@@ -196,32 +196,32 @@ export interface WihFilters {
 // Error Types
 // ============================================================================
 
-export class A2RKernelError extends Error {
+export class AllternitKernelError extends Error {
   constructor(
     message: string,
     public readonly code: string,
     public readonly context?: Record<string, unknown>
   ) {
     super(message);
-    this.name = 'A2RKernelError';
+    this.name = 'AllternitKernelError';
   }
 }
 
-export class WihNotFoundError extends A2RKernelError {
+export class WihNotFoundError extends AllternitKernelError {
   constructor(id: string) {
     super(`WIH item not found: ${id}`, 'WIH_NOT_FOUND', { id });
     this.name = 'WihNotFoundError';
   }
 }
 
-export class InvalidReceiptError extends A2RKernelError {
+export class InvalidReceiptError extends AllternitKernelError {
   constructor(message: string, context?: Record<string, unknown>) {
     super(message, 'INVALID_RECEIPT', context);
     this.name = 'InvalidReceiptError';
   }
 }
 
-export class RoutingDeniedError extends A2RKernelError {
+export class RoutingDeniedError extends AllternitKernelError {
   constructor(
     operation: string,
     reason: string,

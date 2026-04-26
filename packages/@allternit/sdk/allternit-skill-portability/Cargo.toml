@@ -1,5 +1,5 @@
 [package]
-name = "a2r-skill-portability"
+name = "allternit-skill-portability"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

@@ -1,28 +1,28 @@
 # LAYER BOUNDARY CONTRACTS
 
-TypeScript interfaces defining the contracts between each layer in the A2R architecture.
+TypeScript interfaces defining the contracts between each layer in the Allternit architecture.
 
 ## Layer 0-substrate/ Contracts
 **Purpose**: Shared foundations, types, utilities, protocols
 
 ```typescript
 // 0-substrate/types/contracts.ts
-export interface A2RPrimitive {
+export interface AllternitPrimitive {
   id: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface A2RProtocol {
+export interface AllternitProtocol {
   version: string;
   validate(data: any): boolean;
 }
 
-export interface A2RConfig {
+export interface AllternitConfig {
   [key: string]: any;
 }
 
-export interface A2RLogger {
+export interface AllternitLogger {
   info(message: string, meta?: any): void;
   warn(message: string, meta?: any): void;
   error(message: string, meta?: any): void;
@@ -35,7 +35,7 @@ export interface A2RLogger {
 
 ```typescript
 // 1-kernel/contracts/execution.ts
-import type { A2RPrimitive } from '../../0-substrate/types/contracts';
+import type { AllternitPrimitive } from '../../0-substrate/types/contracts';
 
 export interface ExecutionRequest {
   id: string;
@@ -88,7 +88,7 @@ export interface FileOperationResult {
 
 ```typescript
 // 2-governance/contracts/policy.ts
-import type { A2RPrimitive } from '../../0-substrate/types/contracts';
+import type { AllternitPrimitive } from '../../0-substrate/types/contracts';
 import type { ExecutionRequest, ExecutionResult } from '../../1-kernel/contracts/execution';
 
 export interface PolicyRule {
@@ -148,7 +148,7 @@ export interface PolicyDecision {
 
 ```typescript
 // 3-adapters/contracts/runtime.ts
-import type { A2RPrimitive } from '../../0-substrate/types/contracts';
+import type { AllternitPrimitive } from '../../0-substrate/types/contracts';
 import type { ExecutionRequest, ExecutionResult } from '../../1-kernel/contracts/execution';
 import type { WorkItem, PolicyDecision, Receipt } from '../../2-governance/contracts/policy';
 
@@ -258,7 +258,7 @@ export interface AuditLogFilter {
 
 ```typescript
 // 4-services/contracts/orchestration.ts
-import type { A2RPrimitive } from '../../0-substrate/types/contracts';
+import type { AllternitPrimitive } from '../../0-substrate/types/contracts';
 import type { RuntimeBridge } from '../../3-adapters/contracts/runtime';
 
 export interface ServiceConfig {
@@ -353,7 +353,7 @@ export interface TaskResult {
 
 ```typescript
 // 5-ui/contracts/platform.ts
-import type { A2RPrimitive } from '../../0-substrate/types/contracts';
+import type { AllternitPrimitive } from '../../0-substrate/types/contracts';
 import type { RuntimeBridge } from '../../3-adapters/contracts/runtime';
 
 export interface ShellConfig {
@@ -444,7 +444,7 @@ export interface UIComponent {
 
 ```typescript
 // 6-apps/contracts/entrypoints.ts
-import type { A2RPrimitive } from '../../0-substrate/types/contracts';
+import type { AllternitPrimitive } from '../../0-substrate/types/contracts';
 import type { ShellPlatform } from '../../5-ui/contracts/platform';
 
 export interface AppManifest {
@@ -469,7 +469,7 @@ export interface AppEnvironment {
   platform: ShellPlatform;
   runtime: RuntimeBridge;
   config: any;
-  logger: A2RLogger;
+  logger: AllternitLogger;
 }
 
 export interface App {
@@ -529,4 +529,4 @@ export interface UIRuntimeInterface {
 }
 ```
 
-These interfaces establish the proper boundaries between layers while maintaining the architectural integrity of the A2R system. Each layer can only import from lower layers (0-substrate, 1-kernel, 2-governance, etc.) and must use the defined contracts to communicate across layer boundaries.
+These interfaces establish the proper boundaries between layers while maintaining the architectural integrity of the Allternit system. Each layer can only import from lower layers (0-substrate, 1-kernel, 2-governance, etc.) and must use the defined contracts to communicate across layer boundaries.

@@ -1,6 +1,6 @@
 //! WIH (Work Item Handling) Integration
 //!
-//! Integrates with A2R's WIH system for task tracking and receipts.
+//! Integrates with Allternit's WIH system for task tracking and receipts.
 
 use crate::error::SwarmResult;
 use crate::types::{EntityId, WIHReceipt, WIHWorkItem};

@@ -6,7 +6,7 @@ import {
   getActiveSessions,
   _clearActiveSessions,
 } from '../src/adapters/session-adapter.js';
-import { A2RKernelImpl } from '@a2r/governor';
+import { AllternitKernelImpl } from '@allternit/governor';
 import { SessionInitError } from '../src/types.js';
 
 // Mock storage
@@ -47,11 +47,11 @@ class MockStorage {
 
 describe('Session Adapter', () => {
   let storage: MockStorage;
-  let kernel: A2RKernelImpl;
+  let kernel: AllternitKernelImpl;
 
   beforeEach(() => {
     storage = new MockStorage();
-    kernel = new A2RKernelImpl(storage);
+    kernel = new AllternitKernelImpl(storage);
     _clearActiveSessions();
   });
 
@@ -59,7 +59,7 @@ describe('Session Adapter', () => {
     it('should require WIH when enforceWih is true', async () => {
       await expect(
         prepareSessionInit({
-          a2rKernel: kernel,
+          allternitKernel: kernel,
           enforceWih: true,
         })
       ).rejects.toThrow(SessionInitError);
@@ -67,7 +67,7 @@ describe('Session Adapter', () => {
 
     it('should create session without WIH when not enforced', async () => {
       const result = await prepareSessionInit({
-        a2rKernel: kernel,
+        allternitKernel: kernel,
         enforceWih: false,
         workspaceRoot: '/test',
       });
@@ -80,7 +80,7 @@ describe('Session Adapter', () => {
     it('should validate WIH exists', async () => {
       await expect(
         prepareSessionInit({
-          a2rKernel: kernel,
+          allternitKernel: kernel,
           enforceWih: true,
           wihId: 'NONEXISTENT-001',
           workspaceRoot: '/test',
@@ -102,7 +102,7 @@ describe('Session Adapter', () => {
 
       await expect(
         prepareSessionInit({
-          a2rKernel: kernel,
+          allternitKernel: kernel,
           enforceWih: true,
           wihId: wih.id,
           workspaceRoot: '/test',
@@ -124,7 +124,7 @@ describe('Session Adapter', () => {
 
       await expect(
         prepareSessionInit({
-          a2rKernel: kernel,
+          allternitKernel: kernel,
           enforceWih: true,
           wihId: wih.id,
           workspaceRoot: '/test',
@@ -158,7 +158,7 @@ describe('Session Adapter', () => {
 
       await expect(
         prepareSessionInit({
-          a2rKernel: kernel,
+          allternitKernel: kernel,
           enforceWih: true,
           wihId: wih.id,
           workspaceRoot: '/test',
@@ -179,7 +179,7 @@ describe('Session Adapter', () => {
       });
 
       const result = await prepareSessionInit({
-        a2rKernel: kernel,
+        allternitKernel: kernel,
         enforceWih: true,
         wihId: wih.id,
         workspaceRoot: '/test',
@@ -196,7 +196,7 @@ describe('Session Adapter', () => {
 
     it('should use provided instanceId as sessionId', async () => {
       const result = await prepareSessionInit({
-        a2rKernel: kernel,
+        allternitKernel: kernel,
         enforceWih: false,
         instanceId: 'my-custom-session',
         workspaceRoot: '/test',
@@ -209,7 +209,7 @@ describe('Session Adapter', () => {
   describe('Session Context', () => {
     it('should track active sessions', async () => {
       const result = await prepareSessionInit({
-        a2rKernel: kernel,
+        allternitKernel: kernel,
         enforceWih: false,
         instanceId: 'test-session-1',
         workspaceRoot: '/test',
@@ -223,14 +223,14 @@ describe('Session Adapter', () => {
 
     it('should list all active sessions', async () => {
       await prepareSessionInit({
-        a2rKernel: kernel,
+        allternitKernel: kernel,
         enforceWih: false,
         instanceId: 'session-1',
         workspaceRoot: '/test',
       });
 
       await prepareSessionInit({
-        a2rKernel: kernel,
+        allternitKernel: kernel,
         enforceWih: false,
         instanceId: 'session-2',
         workspaceRoot: '/test',
@@ -244,7 +244,7 @@ describe('Session Adapter', () => {
 
     it('should cleanup session', async () => {
       await prepareSessionInit({
-        a2rKernel: kernel,
+        allternitKernel: kernel,
         enforceWih: false,
         instanceId: 'cleanup-test',
         workspaceRoot: '/test',

@@ -1,7 +1,7 @@
 {
-  "name": "A2R Platform Development",
+  "name": "Allternit Platform Development",
   "dockerComposeFile": "docker-compose.yml",
-  "service": "a2r-dev",
+  "service": "allternit-dev",
   "workspaceFolder": "/workspace",
   "shutdownAction": "stopCompose",
   "overrideCommand": false,
@@ -101,19 +101,19 @@
   ],
   "portsAttributes": {
     "3000": {
-      "label": "A2R Platform UI",
+      "label": "Allternit Platform UI",
       "onAutoForward": "notify"
     },
     "3010": {
-      "label": "A2R Platform UI (Alt)",
+      "label": "Allternit Platform UI (Alt)",
       "onAutoForward": "silent"
     },
     "8080": {
-      "label": "A2R API Gateway",
+      "label": "Allternit API Gateway",
       "onAutoForward": "silent"
     },
     "8081": {
-      "label": "A2R Kernel Services",
+      "label": "Allternit Kernel Services",
       "onAutoForward": "silent"
     },
     "9000": {
@@ -162,9 +162,9 @@
   "updateRemoteUserUID": true,
   "mounts": [
     "source=${localWorkspaceFolder}/.git,target=/workspace/.git,type=bind,consistency=cached",
-    "source=a2r-dev-node_modules,target=/workspace/6-ui/allternit-platform/node_modules,type=volume",
-    "source=a2r-dev-go-cache,target=/go/pkg,type=volume",
-    "source=a2r-dev-rust-cache,target=/usr/local/cargo/registry,type=volume",
-    "source=a2r-dev-pnpm-store,target=/root/.local/share/pnpm,type=volume"
+    "source=allternit-dev-node_modules,target=/workspace/6-ui/allternit-platform/node_modules,type=volume",
+    "source=allternit-dev-go-cache,target=/go/pkg,type=volume",
+    "source=allternit-dev-rust-cache,target=/usr/local/cargo/registry,type=volume",
+    "source=allternit-dev-pnpm-store,target=/root/.local/share/pnpm,type=volume"
   ]
 }

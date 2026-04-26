@@ -1,6 +1,6 @@
 //! MCP Tool Bridge for tools-gateway (N12)
 //!
-//! Integrates MCP (Model Context Protocol) tools with the A2R tool registry.
+//! Integrates MCP (Model Context Protocol) tools with the Allternit tool registry.
 //! Enables policy enforcement, result sanitization, and audit logging for MCP calls.
 
 use crate::{
@@ -307,7 +307,7 @@ impl McpToolBridge {
 
         let execution_time_ms = start_time.elapsed().as_millis() as u64;
 
-        // Convert MCP result to A2R result
+        // Convert MCP result to Allternit result
         let output = if result.is_error.unwrap_or(false) {
             serde_json::json!({
                 "error": true,

@@ -1,6 +1,6 @@
 //! API Gateway ↔ Native Service Router - IC-002
 //!
-//! API Gateway router that connects API endpoints to native A2R service implementations.
+//! API Gateway router that connects API endpoints to native Allternit service implementations.
 //! This module provides routing functionality that directs API requests to the appropriate
 //! native service implementations instead of OpenClaw subprocesses.
 
@@ -211,7 +211,7 @@ impl Default for ApiGatewayConfig {
             enable_rate_limiting: true,
             requests_per_minute: Some(1000),
             enable_authentication: true,
-            auth_token: Some("a2r-default-token".to_string()),
+            auth_token: Some("allternit-default-token".to_string()),
             enable_logging: true,
             log_level: "info".to_string(),
             enable_compression: true,

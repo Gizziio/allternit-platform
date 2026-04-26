@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# A2R Node Agent Installation Script
+# Allternit Node Agent Installation Script
 #
 # Usage: 
 #   curl -s https://allternit.com/install.sh | ALLTERNIT_TOKEN=xxx bash
@@ -11,8 +11,8 @@
 #   ALLTERNIT_NODE_ID       - Optional: Custom node ID (auto-generated if not provided)
 #   ALLTERNIT_CONTROL_PLANE - Optional: Control plane URL (default: wss://control.allternit.com)
 #   ALLTERNIT_VERSION       - Optional: Version to install (default: latest)
-#   ALLTERNIT_INSTALL_DIR   - Optional: Installation directory (default: /opt/a2r)
-#   ALLTERNIT_CONFIG_DIR    - Optional: Config directory (default: /etc/a2r)
+#   ALLTERNIT_INSTALL_DIR   - Optional: Installation directory (default: /opt/allternit)
+#   ALLTERNIT_CONFIG_DIR    - Optional: Config directory (default: /etc/allternit)
 #
 
 set -e
@@ -27,10 +27,10 @@ NC='\033[0m' # No Color
 
 # Configuration defaults
 ALLTERNIT_VERSION="${ALLTERNIT_VERSION:-latest}"
-ALLTERNIT_INSTALL_DIR="${ALLTERNIT_INSTALL_DIR:-/opt/a2r}"
-ALLTERNIT_CONFIG_DIR="${ALLTERNIT_CONFIG_DIR:-/etc/a2r}"
-ALLTERNIT_SERVICE_NAME="a2r-node"
-ALLTERNIT_LOG_DIR="${ALLTERNIT_LOG_DIR:-/var/log/a2r}"
+ALLTERNIT_INSTALL_DIR="${ALLTERNIT_INSTALL_DIR:-/opt/allternit}"
+ALLTERNIT_CONFIG_DIR="${ALLTERNIT_CONFIG_DIR:-/etc/allternit}"
+ALLTERNIT_SERVICE_NAME="allternit-node"
+ALLTERNIT_LOG_DIR="${ALLTERNIT_LOG_DIR:-/var/log/allternit}"
 
 # Track installation
 INSTALL_START_TIME=$(date +%s)
@@ -64,7 +64,7 @@ print_banner() {
     echo "/_/  |_/_/  /_/_/  |_| |___/_/"
     echo "                      Node Agent"
     echo -e "${NC}"
-    echo "Installing A2R Node Agent v${ALLTERNIT_VERSION}..."
+    echo "Installing Allternit Node Agent v${ALLTERNIT_VERSION}..."
     echo ""
 }
 
@@ -237,36 +237,36 @@ install_dependencies() {
 
 download_binary() {
     echo ""
-    log_info "Downloading A2R Node Agent..."
+    log_info "Downloading Allternit Node Agent..."
 
     mkdir -p "$ALLTERNIT_INSTALL_DIR/bin"
 
     # Determine download URL
     if [ "$ALLTERNIT_VERSION" = "latest" ]; then
-        DOWNLOAD_URL="https://github.com/a2r/node/releases/latest/download/a2r-node-linux-${ALLTERNIT_ARCH}"
+        DOWNLOAD_URL="https://github.com/allternit/node/releases/latest/download/allternit-node-linux-${ALLTERNIT_ARCH}"
     else
-        DOWNLOAD_URL="https://github.com/a2r/node/releases/download/${ALLTERNIT_VERSION}/a2r-node-linux-${ALLTERNIT_ARCH}"
+        DOWNLOAD_URL="https://github.com/allternit/node/releases/download/${ALLTERNIT_VERSION}/allternit-node-linux-${ALLTERNIT_ARCH}"
     fi
 
     log_info "Downloading from: $DOWNLOAD_URL"
 
-    if ! $DOWNLOADER "$DOWNLOAD_URL" -o "$ALLTERNIT_INSTALL_DIR/bin/a2r-node" 2>/dev/null; then
+    if ! $DOWNLOADER "$DOWNLOAD_URL" -o "$ALLTERNIT_INSTALL_DIR/bin/allternit-node" 2>/dev/null; then
         log_warn "Binary download failed, building from source..."
         build_from_source
     else
-        chmod +x "$ALLTERNIT_INSTALL_DIR/bin/a2r-node"
+        chmod +x "$ALLTERNIT_INSTALL_DIR/bin/allternit-node"
         log_success "Binary downloaded"
     fi
 
     # Create symlink in /usr/local/bin
     if [ -w /usr/local/bin ]; then
-        ln -sf "$ALLTERNIT_INSTALL_DIR/bin/a2r-node" /usr/local/bin/a2r-node
+        ln -sf "$ALLTERNIT_INSTALL_DIR/bin/allternit-node" /usr/local/bin/allternit-node
         log_success "Symlink created in /usr/local/bin"
     fi
 
     # Show binary info
-    if [ -x "$ALLTERNIT_INSTALL_DIR/bin/a2r-node" ]; then
-        BINARY_SIZE=$(du -h "$ALLTERNIT_INSTALL_DIR/bin/a2r-node" | cut -f1)
+    if [ -x "$ALLTERNIT_INSTALL_DIR/bin/allternit-node" ]; then
+        BINARY_SIZE=$(du -h "$ALLTERNIT_INSTALL_DIR/bin/allternit-node" | cut -f1)
         log_info "Binary size: $BINARY_SIZE"
     fi
 }
@@ -287,7 +287,7 @@ build_from_source() {
     TEMP_DIR=$(mktemp -d)
     log_info "Cloning repository to $TEMP_DIR..."
     
-    if ! git clone --depth 1 https://github.com/a2r/node.git "$TEMP_DIR" 2>/dev/null; then
+    if ! git clone --depth 1 https://github.com/allternit/node.git "$TEMP_DIR" 2>/dev/null; then
         log_error "Failed to clone repository"
         rm -rf "$TEMP_DIR"
         exit 1
@@ -299,8 +299,8 @@ build_from_source() {
     cargo build --release
 
     # Install
-    cp target/release/a2r-node "$ALLTERNIT_INSTALL_DIR/bin/"
-    chmod +x "$ALLTERNIT_INSTALL_DIR/bin/a2r-node"
+    cp target/release/allternit-node "$ALLTERNIT_INSTALL_DIR/bin/"
+    chmod +x "$ALLTERNIT_INSTALL_DIR/bin/allternit-node"
 
     # Cleanup
     rm -rf "$TEMP_DIR"
@@ -331,7 +331,7 @@ setup_config() {
 
     # Create config file
     cat > "$ALLTERNIT_CONFIG_DIR/node.env" << EOF
-# A2R Node Agent Configuration
+# Allternit Node Agent Configuration
 # Generated: $(date -Iseconds)
 
 # Node identification
@@ -365,7 +365,7 @@ install_systemd_service() {
 
     # Get the script directory to find the service file
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    SERVICE_FILE="$SCRIPT_DIR/services/a2r-node.service"
+    SERVICE_FILE="$SCRIPT_DIR/services/allternit-node.service"
 
     # Check if service file exists, otherwise create it
     if [ -f "$SERVICE_FILE" ]; then
@@ -374,20 +374,20 @@ install_systemd_service() {
         # Create service file inline
         cat > "/etc/systemd/system/$ALLTERNIT_SERVICE_NAME.service" << 'EOF'
 [Unit]
-Description=A2R Node Agent
+Description=Allternit Node Agent
 Documentation=https://docs.allternit.com
 After=network.target docker.service
 Requires=docker.service
 
 [Service]
 Type=simple
-EnvironmentFile=/etc/a2r/node.env
-ExecStart=/opt/a2r/bin/a2r-node
+EnvironmentFile=/etc/allternit/node.env
+ExecStart=/opt/allternit/bin/allternit-node
 Restart=always
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=a2r-node
+SyslogIdentifier=allternit-node
 
 # Security hardening
 NoNewPrivileges=true
@@ -415,7 +415,7 @@ install_launchd_service() {
     echo ""
     log_info "Installing launchd service..."
 
-    LAUNCHD_PLIST="/Library/LaunchDaemons/io.a2r.node.plist"
+    LAUNCHD_PLIST="/Library/LaunchDaemons/io.allternit.node.plist"
 
     cat > "$LAUNCHD_PLIST" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -423,11 +423,11 @@ install_launchd_service() {
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>io.a2r.node</string>
+    <string>io.allternit.node</string>
     
     <key>ProgramArguments</key>
     <array>
-        <string>/opt/a2r/bin/a2r-node</string>
+        <string>/opt/allternit/bin/allternit-node</string>
     </array>
     
     <key>EnvironmentVariables</key>
@@ -443,10 +443,10 @@ install_launchd_service() {
     <true/>
     
     <key>StandardOutPath</key>
-    <string>/var/log/a2r/node.log</string>
+    <string>/var/log/allternit/node.log</string>
     
     <key>StandardErrorPath</key>
-    <string>/var/log/a2r/node.err</string>
+    <string>/var/log/allternit/node.err</string>
 </dict>
 </plist>
 EOF
@@ -467,7 +467,7 @@ EOF
 
 start_service() {
     echo ""
-    log_info "Starting A2R Node Agent..."
+    log_info "Starting Allternit Node Agent..."
 
     case $INIT_SYSTEM in
         systemd)
@@ -475,7 +475,7 @@ start_service() {
             sleep 2
             
             if systemctl is-active --quiet "$ALLTERNIT_SERVICE_NAME"; then
-                log_success "A2R Node Agent is running"
+                log_success "Allternit Node Agent is running"
             else
                 log_error "Failed to start service"
                 echo ""
@@ -485,11 +485,11 @@ start_service() {
             fi
             ;;
         launchd)
-            launchctl kickstart -k system/io.a2r.node
+            launchctl kickstart -k system/io.allternit.node
             sleep 2
             
-            if launchctl list | grep -q "io.a2r.node"; then
-                log_success "A2R Node Agent is running"
+            if launchctl list | grep -q "io.allternit.node"; then
+                log_success "Allternit Node Agent is running"
             else
                 log_error "Failed to start service"
                 exit 1
@@ -497,8 +497,8 @@ start_service() {
             ;;
         *)
             log_warn "Unknown init system, starting manually..."
-            "$ALLTERNIT_INSTALL_DIR/bin/a2r-node" &
-            log_success "A2R Node Agent started in background"
+            "$ALLTERNIT_INSTALL_DIR/bin/allternit-node" &
+            log_success "Allternit Node Agent started in background"
             ;;
     esac
 }
@@ -514,7 +514,7 @@ verify_installation() {
     local errors=0
 
     # Check binary
-    if [ -x "$ALLTERNIT_INSTALL_DIR/bin/a2r-node" ]; then
+    if [ -x "$ALLTERNIT_INSTALL_DIR/bin/allternit-node" ]; then
         log_success "Binary installed"
     else
         log_error "Binary not found"
@@ -540,7 +540,7 @@ verify_installation() {
             fi
             ;;
         launchd)
-            if [ -f "/Library/LaunchDaemons/io.a2r.node.plist" ]; then
+            if [ -f "/Library/LaunchDaemons/io.allternit.node.plist" ]; then
                 log_success "Launchd service installed"
             else
                 log_error "Launchd service not found"
@@ -583,7 +583,7 @@ print_summary() {
     echo ""
     echo "Installation Paths:"
     echo "  ┌─────────────────────────────────────────┐"
-    printf "  │ %-14s %s\n" "Binary:" "$ALLTERNIT_INSTALL_DIR/bin/a2r-node"
+    printf "  │ %-14s %s\n" "Binary:" "$ALLTERNIT_INSTALL_DIR/bin/allternit-node"
     printf "  │ %-14s %s\n" "Config:" "$ALLTERNIT_CONFIG_DIR/node.env"
     printf "  │ %-14s %s\n" "Logs:" "$ALLTERNIT_LOG_DIR"
     printf "  │ %-14s %s\n" "Service:" "$ALLTERNIT_SERVICE_NAME"
@@ -605,19 +605,19 @@ print_summary() {
             ;;
         launchd)
             echo "  │ # Check status"
-            echo "  │ launchctl list | grep a2r"
+            echo "  │ launchctl list | grep allternit"
             echo "  │"
             echo "  │ # View logs"
-            echo "  │ tail -f /var/log/a2r/node.log"
+            echo "  │ tail -f /var/log/allternit/node.log"
             echo "  │"
             echo "  │ # Restart service"
-            echo "  │ sudo launchctl kickstart -k system/io.a2r.node"
+            echo "  │ sudo launchctl kickstart -k system/io.allternit.node"
             ;;
     esac
     
     echo "  │"
     echo "  │ # Check version"
-    echo "  │ a2r-node --version"
+    echo "  │ allternit-node --version"
     echo "  └─────────────────────────────────────────┘"
     echo ""
     echo "Next Steps:"
@@ -627,8 +627,8 @@ print_summary() {
     echo ""
     echo "Support:"
     echo "  Documentation: https://docs.allternit.com"
-    echo "  Discord:       https://discord.gg/a2r"
-    echo "  GitHub:        https://github.com/a2r/node"
+    echo "  Discord:       https://discord.gg/allternit"
+    echo "  GitHub:        https://github.com/allternit/node"
     echo ""
     echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
@@ -648,7 +648,7 @@ print_troubleshooting() {
             echo "   sudo systemctl status $ALLTERNIT_SERVICE_NAME"
             ;;
         launchd)
-            echo "   launchctl list | grep a2r"
+            echo "   launchctl list | grep allternit"
             ;;
     esac
     echo ""
@@ -658,7 +658,7 @@ print_troubleshooting() {
             echo "   sudo journalctl -u $ALLTERNIT_SERVICE_NAME -n 50"
             ;;
         launchd)
-            echo "   tail -f /var/log/a2r/node.log"
+            echo "   tail -f /var/log/allternit/node.log"
             ;;
     esac
     echo ""
@@ -679,7 +679,7 @@ print_troubleshooting() {
 
 cleanup() {
     # Remove any temporary files
-    rm -f /tmp/a2r-node-* 2>/dev/null || true
+    rm -f /tmp/allternit-node-* 2>/dev/null || true
 }
 
 #------------------------------------------------------------------------------
@@ -726,7 +726,7 @@ main() {
 # Handle command line arguments
 case "${1:-}" in
     --help|-h)
-        echo "A2R Node Agent Installation Script"
+        echo "Allternit Node Agent Installation Script"
         echo ""
         echo "Usage:"
         echo "  $0                    # Run installation"
@@ -738,13 +738,13 @@ case "${1:-}" in
         echo "  ALLTERNIT_NODE_ID       Custom node ID (optional, auto-generated)"
         echo "  ALLTERNIT_CONTROL_PLANE Control plane URL (default: wss://control.allternit.com)"
         echo "  ALLTERNIT_VERSION       Version to install (default: latest)"
-        echo "  ALLTERNIT_INSTALL_DIR   Installation directory (default: /opt/a2r)"
-        echo "  ALLTERNIT_CONFIG_DIR    Config directory (default: /etc/a2r)"
+        echo "  ALLTERNIT_INSTALL_DIR   Installation directory (default: /opt/allternit)"
+        echo "  ALLTERNIT_CONFIG_DIR    Config directory (default: /etc/allternit)"
         echo ""
         exit 0
         ;;
     --uninstall)
-        echo "Uninstalling A2R Node Agent..."
+        echo "Uninstalling Allternit Node Agent..."
         case $INIT_SYSTEM in
             systemd)
                 systemctl stop "$ALLTERNIT_SERVICE_NAME" 2>/dev/null || true
@@ -753,13 +753,13 @@ case "${1:-}" in
                 systemctl daemon-reload
                 ;;
             launchd)
-                launchctl unload -w "/Library/LaunchDaemons/io.a2r.node.plist" 2>/dev/null || true
-                rm -f "/Library/LaunchDaemons/io.a2r.node.plist"
+                launchctl unload -w "/Library/LaunchDaemons/io.allternit.node.plist" 2>/dev/null || true
+                rm -f "/Library/LaunchDaemons/io.allternit.node.plist"
                 ;;
         esac
         rm -rf "$ALLTERNIT_INSTALL_DIR"
         rm -rf "$ALLTERNIT_CONFIG_DIR"
-        rm -f /usr/local/bin/a2r-node
+        rm -f /usr/local/bin/allternit-node
         echo "Uninstallation complete"
         exit 0
         ;;

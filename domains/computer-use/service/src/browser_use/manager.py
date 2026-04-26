@@ -1,5 +1,5 @@
 """
-A2R Browser-Use Integration
+Allternit Browser-Use Integration
 Agent-based browser automation using the browser-use library.
 
 The LLM driving the agent is provided by the caller (the operator).
@@ -22,6 +22,71 @@ except ImportError:
     BROWSER_USE_AVAILABLE = False
 
 
+def _build_llm_from_config(llm_config: Dict) -> Any:
+    """Build an LLM instance from an explicit config dict."""
+    provider = llm_config.get("provider", "").lower()
+    model = llm_config.get("model", "")
+    api_key = llm_config.get("api_key")
+
+    if provider == "anthropic":
+        from langchain_anthropic import ChatAnthropic
+        return ChatAnthropic(model=model or "claude-sonnet-4-6", api_key=api_key, max_tokens=4096)
+    elif provider == "openai":
+        from langchain_openai import ChatOpenAI
+        return ChatOpenAI(model=model or "gpt-4o", api_key=api_key)
+    elif provider in ("google", "gemini"):
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        return ChatGoogleGenerativeAI(model=model or "gemini-2.0-flash-exp", google_api_key=api_key)
+    raise ValueError(f"Unknown LLM provider: {provider!r}")
+
+
+def llm_from_env(llm_config: Optional[Dict] = None) -> Optional[Any]:
+    """
+    Build an LLM instance from environment variables or caller-supplied config.
+    Priority: explicit llm_config > ANTHROPIC_API_KEY > OPENAI_API_KEY > GOOGLE_API_KEY.
+    Returns None if no provider is available.
+    """
+    import os
+
+    # Caller-supplied config takes priority
+    if llm_config:
+        return _build_llm_from_config(llm_config)
+
+    # Auto-detect from environment
+    if os.getenv("ANTHROPIC_API_KEY"):
+        try:
+            from langchain_anthropic import ChatAnthropic
+            return ChatAnthropic(
+                model=os.getenv("ALLTERNIT_BROWSER_LLM_MODEL", "claude-sonnet-4-6"),
+                api_key=os.getenv("ANTHROPIC_API_KEY"),
+                max_tokens=4096,
+            )
+        except ImportError:
+            pass
+
+    if os.getenv("OPENAI_API_KEY"):
+        try:
+            from langchain_openai import ChatOpenAI
+            return ChatOpenAI(
+                model=os.getenv("ALLTERNIT_BROWSER_LLM_MODEL", "gpt-4o"),
+                api_key=os.getenv("OPENAI_API_KEY"),
+            )
+        except ImportError:
+            pass
+
+    if os.getenv("GOOGLE_API_KEY"):
+        try:
+            from langchain_google_genai import ChatGoogleGenerativeAI
+            return ChatGoogleGenerativeAI(
+                model=os.getenv("ALLTERNIT_BROWSER_LLM_MODEL", "gemini-2.0-flash-exp"),
+                google_api_key=os.getenv("GOOGLE_API_KEY"),
+            )
+        except ImportError:
+            pass
+
+    return None
+
+
 @dataclass
 class BrowserTask:
     goal: str
@@ -38,7 +103,7 @@ class BrowserTask:
     completed_at: Optional[datetime] = None
 
 
-class A2RBrowserManager:
+class AllternitBrowserManager:
     """
     Browser automation manager wrapping the browser-use library.
     The caller supplies the LLM; this class owns only browser lifecycle and task execution.
@@ -88,11 +153,16 @@ class A2RBrowserManager:
         self._tasks[task_id] = task
         return task
 
-    async def execute_task(self, task_id: str, llm: Any) -> BrowserTask:
+    async def execute_task(self, task_id: str, llm=None) -> BrowserTask:
         """
         Execute a previously created task with the provided LLM.
-        Raises ValueError if the task does not exist.
+        If llm is None, auto-detects from environment variables.
+        Raises ValueError if the task does not exist or no LLM is available.
         """
+        if llm is None:
+            llm = llm_from_env()
+        if llm is None:
+            raise ValueError("No LLM available. Set ANTHROPIC_API_KEY, OPENAI_API_KEY, or GOOGLE_API_KEY")
         task = self._tasks.get(task_id)
         if task is None:
             raise ValueError(f"Task {task_id!r} not found")
@@ -243,4 +313,4 @@ class A2RBrowserManager:
 
 
 # Singleton instance
-a2r_browser_manager = A2RBrowserManager()
+allternit_browser_manager = AllternitBrowserManager()

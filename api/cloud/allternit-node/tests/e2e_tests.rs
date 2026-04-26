@@ -1,4 +1,4 @@
-//! A2R Node End-to-End Integration Tests
+//! Allternit Node End-to-End Integration Tests
 //!
 //! Tests the full flow: node connects → job queued → job executed → result returned
 
@@ -138,7 +138,7 @@ impl E2ETestHarness {
                 handler: "shell".to_string(),
                 version: "1.0".to_string(),
                 task: TaskDefinition::Shell {
-                    command: "echo 'Hello from A2R'".to_string(),
+                    command: "echo 'Hello from Allternit'".to_string(),
                     working_dir: None,
                 },
                 tools: vec![],
@@ -209,7 +209,7 @@ impl E2ETestHarness {
             self.config.node_id
         );
 
-        let test_content = "Hello from A2R test";
+        let test_content = "Hello from Allternit test";
         let response = client
             .post(&upload_url)
             .multipart(reqwest::multipart::Form::new()
@@ -452,7 +452,7 @@ async fn main() {
         .with_env_filter("info,e2e_tests=debug")
         .init();
 
-    info!("🚀 Starting A2R Node End-to-End Tests");
+    info!("🚀 Starting Allternit Node End-to-End Tests");
 
     let harness = E2ETestHarness::new();
     let results = harness.run_all_tests().await;

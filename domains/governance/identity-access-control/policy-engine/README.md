@@ -1,6 +1,6 @@
-# A2rchitech Policy Engine
+# Allternit Policy Engine
 
-The policy engine provides the central decision authority for A2rchitech, implementing a deny-by-default approach with explicit allowlists. This component is part of the Identity & Access Control system within the 2-governance layer.
+The policy engine provides the central decision authority for Allternit, implementing a deny-by-default approach with explicit allowlists. This component is part of the Identity & Access Control system within the 2-governance layer.
 
 ## Features
 

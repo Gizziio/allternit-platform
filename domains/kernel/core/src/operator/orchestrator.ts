@@ -1,5 +1,5 @@
 /**
- * A2R Operator Orchestrator (Kernel Port)
+ * Allternit Operator Orchestrator (Kernel Port)
  * 
  * Manages the high-level task lifecycle for the Thin Client Operator.
  * Integrates Vision, Browser-Use, and DAK execution.
@@ -45,7 +45,7 @@ export class OperatorOrchestrator {
       
       try {
         const screenshot = await this.captureScreenshot(request.sessionId);
-        yield { type: 'status', message: 'Reasoning with A2R Vision...' };
+        yield { type: 'status', message: 'Reasoning with Allternit Vision...' };
         
         const modelOutput = await this.performVlmInference(request.intent, screenshot);
         const actions = VisionParser.parseActionToStructure(modelOutput, 1080, 1920);
@@ -53,7 +53,7 @@ export class OperatorOrchestrator {
         for (const action of actions) {
           const allowed = await IntegrityService.evaluateSafety(request.sessionId, action);
           if (!allowed) {
-            yield { type: 'error', message: 'Action blocked by A2R Policy' };
+            yield { type: 'error', message: 'Action blocked by Allternit Policy' };
             return;
           }
 

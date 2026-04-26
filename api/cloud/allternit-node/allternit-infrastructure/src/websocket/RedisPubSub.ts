@@ -47,7 +47,7 @@ export class RedisPubSub extends EventEmitter {
       port: parseInt(process.env.REDIS_PORT || '6379', 10),
       password: process.env.REDIS_PASSWORD,
       db: parseInt(process.env.REDIS_DB || '0', 10),
-      keyPrefix: 'a2r:ws:',
+      keyPrefix: 'allternit:ws:',
       enableOfflineQueue: false,
       maxRetriesPerRequest: 3,
       retryStrategy: (times: number) => {

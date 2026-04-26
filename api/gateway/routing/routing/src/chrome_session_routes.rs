@@ -221,7 +221,7 @@ async fn create_session(
 ) -> impl IntoResponse {
     let session_id = Uuid::new_v4().to_string();
     let session_token = Uuid::new_v4().to_string();
-    let container_id = format!("a2r-chrome-{}", session_id[..8].to_string());
+    let container_id = format!("allternit-chrome-{}", session_id[..8].to_string());
 
     let tenant_id = "default".to_string();
     let resolution = req.resolution.unwrap_or_else(|| "1920x1080".to_string());
@@ -346,7 +346,7 @@ async fn create_firecracker_session(
             workspace: None,
             env: EnvironmentSpec {
                 spec_type: EnvSpecType::Oci,
-                image: "a2r/chrome-rootfs:latest".to_string(),
+                image: "allternit/chrome-rootfs:latest".to_string(),
                 version: None,
                 packages: vec![],
                 env_vars: std::collections::HashMap::new(),
@@ -433,7 +433,7 @@ async fn create_docker_session(
         "ALLTERNIT_EXTENSION_MODE=power".to_string(),
     ];
     let config = Config {
-        image: Some("a2r/chrome-stream:latest"),
+        image: Some("allternit/chrome-stream:latest"),
         env: Some(env_vars.iter().map(|s| s.as_str()).collect()),
         host_config: Some(HostConfig {
             shm_size: Some(2 * 1024 * 1024 * 1024), // 2GB

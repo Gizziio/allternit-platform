@@ -1,5 +1,5 @@
 """
-A2R Computer Use Observability - Recorder
+Allternit Computer Use Observability - Recorder
 
 Event-driven session recording for debugging, replay, and analysis.
 Adapter-agnostic: works with Playwright, browser-use, CDP, desktop.

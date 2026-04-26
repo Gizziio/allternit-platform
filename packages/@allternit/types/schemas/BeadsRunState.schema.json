@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://allternit.local/spec/contracts/BeadsRunState.schema.json",
-  "title": "A2rchitech Beads Run State",
+  "title": "Allternit Beads Run State",
   "type": "object",
   "additionalProperties": false,
   "required": [

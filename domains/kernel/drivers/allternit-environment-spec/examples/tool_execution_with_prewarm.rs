@@ -7,11 +7,11 @@
 //! 4. Release instances back to the pool
 //! 5. Compare execution times
 
-use a2r_driver_interface::{
+use allternit_driver_interface::{
     CommandSpec, EnvSpecType, ExecutionDriver, ExecutionId, PolicySpec, ResourceSpec, SpawnSpec,
 };
-use a2r_prewarm::{PoolConfig, PoolInstance, PoolManager};
-use a2r_process_driver::ProcessDriver;
+use allternit_prewarm::{PoolConfig, PoolInstance, PoolManager};
+use allternit_process_driver::ProcessDriver;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
@@ -39,7 +39,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pool_config = PoolConfig {
         name: pool_name.to_string(),
         pool_size: 3,
-        env_spec: a2r_driver_interface::EnvironmentSpec {
+        env_spec: allternit_driver_interface::EnvironmentSpec {
             spec_type: EnvSpecType::Oci,
             image: environment_image.to_string(),
             version: None,
@@ -72,11 +72,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .warmup(|| async {
             // Create a prewarmed instance
             let spawn_spec = SpawnSpec {
-                tenant: a2r_driver_interface::TenantId("prewarm".to_string()),
+                tenant: allternit_driver_interface::TenantId("prewarm".to_string()),
                 project: None,
                 workspace: None,
                 run_id: Some(ExecutionId::new()),
-                env: a2r_driver_interface::EnvironmentSpec {
+                env: allternit_driver_interface::EnvironmentSpec {
                     spec_type: EnvSpecType::Oci,
                     image: environment_image.to_string(),
                     version: None,
@@ -101,7 +101,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             driver
                 .spawn(spawn_spec)
                 .await
-                .map_err(|e| a2r_prewarm::PrewarmError::InstanceCreationFailed(e.to_string()))
+                .map_err(|e| allternit_prewarm::PrewarmError::InstanceCreationFailed(e.to_string()))
         })
         .await?;
 
@@ -146,11 +146,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cold_start = Instant::now();
 
     let spawn_spec = SpawnSpec {
-        tenant: a2r_driver_interface::TenantId("cold-start".to_string()),
+        tenant: allternit_driver_interface::TenantId("cold-start".to_string()),
         project: None,
         workspace: None,
         run_id: Some(ExecutionId::new()),
-        env: a2r_driver_interface::EnvironmentSpec {
+        env: allternit_driver_interface::EnvironmentSpec {
             spec_type: EnvSpecType::Oci,
             image: environment_image.to_string(),
             version: None,

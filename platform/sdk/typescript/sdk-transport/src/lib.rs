@@ -1,11 +1,11 @@
-//! # A2R SDK Transport
+//! # Allternit SDK Transport
 //!
-//! Transport layer abstractions and types for the A2R SDK.
+//! Transport layer abstractions and types for the Allternit SDK.
 //!
 //! ## Overview
 //!
 //! This crate provides transport layer types and abstractions for
-//! message passing across different communication channels in the A2R
+//! message passing across different communication channels in the Allternit
 //! platform. It supports multiple transport protocols including
 //! iMessage, SMS, Web, and System channels.
 //!
@@ -25,7 +25,7 @@
 //! ## Example
 //!
 //! ```rust
-//! use a2rchitech_sdk_transport::{
+//! use allternit_sdk_transport::{
 //!     TransportEnvelope, TransportSource, MessageContent
 //! };
 //!
@@ -54,13 +54,13 @@ use uuid::Uuid;
 /// Universal message envelope for transport layer communication.
 ///
 /// `TransportEnvelope` is the standard container for all messages
-/// passing through the A2R transport layer. It provides protocol-agnostic
+/// passing through the Allternit transport layer. It provides protocol-agnostic
 /// routing, source identification, and extensible metadata storage.
 ///
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_transport::{
+/// use allternit_sdk_transport::{
 ///     TransportEnvelope, TransportSource, MessageContent
 /// };
 ///
@@ -118,7 +118,7 @@ impl TransportEnvelope {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_transport::TransportEnvelope;
+    /// use allternit_sdk_transport::TransportEnvelope;
     ///
     /// let envelope = TransportEnvelope::new_imessage(
     ///     "msg-001".to_string(),
@@ -157,7 +157,7 @@ impl TransportEnvelope {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_transport::TransportEnvelope;
+    /// use allternit_sdk_transport::TransportEnvelope;
     ///
     /// let envelope = TransportEnvelope::new_sms(
     ///     "msg-002".to_string(),
@@ -244,7 +244,7 @@ impl TransportEnvelope {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_transport::TransportEnvelope;
+    /// use allternit_sdk_transport::TransportEnvelope;
     ///
     /// let id = TransportEnvelope::generate_id();
     /// assert!(!id.is_empty());
@@ -272,7 +272,7 @@ impl TransportEnvelope {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_transport::TransportEnvelope;
+    /// use allternit_sdk_transport::TransportEnvelope;
     ///
     /// let mut envelope = TransportEnvelope::new_imessage(
     ///     "msg-001".to_string(),
@@ -365,7 +365,7 @@ impl TransportSource {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_transport::TransportSource;
+    /// use allternit_sdk_transport::TransportSource;
     ///
     /// let imessage = TransportSource::IMessage { apple_id: None };
     /// assert_eq!(imessage.transport_type(), "imessage");
@@ -415,7 +415,7 @@ impl TransportSource {
 /// Content types for transport messages.
 ///
 /// `MessageContent` represents the different types of content
-/// that can be transported through the A2R system.
+/// that can be transported through the Allternit system.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", content = "data")]
 pub enum MessageContent {
@@ -444,7 +444,7 @@ impl MessageContent {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_transport::MessageContent;
+    /// use allternit_sdk_transport::MessageContent;
     ///
     /// let content = MessageContent::text("Hello, world!");
     /// assert!(matches!(content, MessageContent::Text(_)));
@@ -463,7 +463,7 @@ impl MessageContent {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_transport::MessageContent;
+    /// use allternit_sdk_transport::MessageContent;
     ///
     /// let content = MessageContent::media("https://example.com/image.jpg", "image/jpeg");
     /// assert!(matches!(content, MessageContent::Media { .. }));
@@ -484,7 +484,7 @@ impl MessageContent {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_transport::MessageContent;
+    /// use allternit_sdk_transport::MessageContent;
     ///
     /// let content = MessageContent::card(serde_json::json!({
     ///     "title": "My Card",
@@ -501,7 +501,7 @@ impl MessageContent {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_transport::MessageContent;
+    /// use allternit_sdk_transport::MessageContent;
     ///
     /// let text = MessageContent::text("Hello");
     /// assert_eq!(text.content_type(), "text");
@@ -542,7 +542,7 @@ impl MessageContent {
 /// # Examples
 ///
 /// ```rust,ignore
-/// use a2rchitech_sdk_transport::{Transport, TransportEnvelope};
+/// use allternit_sdk_transport::{Transport, TransportEnvelope};
 /// use async_trait::async_trait;
 ///
 /// struct MyTransport;
@@ -651,7 +651,7 @@ impl TransportConfig {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_transport::TransportConfig;
+    /// use allternit_sdk_transport::TransportConfig;
     ///
     /// let config = TransportConfig::default();
     /// assert_eq!(config.connection_timeout_ms, 5000);

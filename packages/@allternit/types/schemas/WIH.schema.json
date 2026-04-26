@@ -121,7 +121,7 @@
           "type": "array",
           "items": {
             "type": "string",
-            "pattern": "^/\\.a2r/"
+            "pattern": "^/\\.allternit/"
           },
           "minItems": 1
         }
@@ -137,7 +137,7 @@
       "properties": {
         "root": {
           "type": "string",
-          "const": "/.a2r/"
+          "const": "/.allternit/"
         },
         "allowed_globs": {
           "type": "array",

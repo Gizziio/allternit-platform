@@ -1,8 +1,8 @@
 [package]
-name = "a2r-cron-parser"
+name = "allternit-cron-parser"
 version = "0.1.0"
 edition = "2021"
-description = "Natural language schedule parser for A2R - converts human-readable descriptions to cron expressions"
+description = "Natural language schedule parser for Allternit - converts human-readable descriptions to cron expressions"
 
 [dependencies]
 chrono = { workspace = true }

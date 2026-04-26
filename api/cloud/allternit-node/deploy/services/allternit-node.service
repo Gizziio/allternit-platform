@@ -1,14 +1,14 @@
 [Unit]
-Description=A2R Node Agent - Connect your infrastructure to A2R Control Plane
-Documentation=https://docs.a2r.io
+Description=Allternit Node Agent - Connect your infrastructure to Allternit Control Plane
+Documentation=https://docs.allternit.io
 After=network.target network-online.target docker.service
 Requires=docker.service
 Wants=network-online.target
 
 [Service]
 Type=simple
-EnvironmentFile=/etc/a2r/node.env
-ExecStart=/opt/a2r/bin/a2r-node
+EnvironmentFile=/etc/allternit/node.env
+ExecStart=/opt/allternit/bin/allternit-node
 ExecReload=/bin/kill -HUP $MAINPID
 
 # Restart policy
@@ -20,14 +20,14 @@ TimeoutStopSec=30
 # Logging
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=a2r-node
+SyslogIdentifier=allternit-node
 
 # User/Group
 User=root
 Group=root
 
 # Working directory
-WorkingDirectory=/opt/a2r
+WorkingDirectory=/opt/allternit
 
 # Security hardening
 NoNewPrivileges=true

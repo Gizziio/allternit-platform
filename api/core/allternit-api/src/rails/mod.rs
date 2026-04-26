@@ -1,7 +1,7 @@
 //! Rails System Integration
 //!
 //! This crate now delegates to the canonical rails HTTP service implementation
-//! from `a2r-agent-system-rails` instead of carrying a stale local copy.
+//! from `allternit-agent-system-rails` instead of carrying a stale local copy.
 
 use std::sync::Arc;
 

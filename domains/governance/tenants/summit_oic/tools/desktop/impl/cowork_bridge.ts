@@ -1,63 +1,58 @@
 /**
- * Cowork Bridge for A2Rchitech
- * Routes visual grounding tasks to the UI-TARS-Operator on port 3008.
+ * Cowork Bridge for Allternit
+ * Routes desktop automation tasks to the ACU gateway (port 8760).
  */
-const UI_TARS_URL = 'http://127.0.0.1:3008';
+const ACU_URL = process.env.ACU_GATEWAY_URL ?? 'http://127.0.0.1:8760';
+
+function makeRunId(): string {
+  return `cb-${Math.random().toString(36).slice(2, 14)}`;
+}
+
+async function acuPost(session_id: string, action: string, extra: Record<string, unknown> = {}) {
+  const res = await fetch(`${ACU_URL}/v1/computer`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, session_id, run_id: makeRunId(), parameters: {}, ...extra }),
+  });
+  if (!res.ok) throw new Error(`ACU ${res.status}: ${await res.text().catch(() => res.statusText)}`);
+  return res.json();
+}
 
 export const desktop_tools = {
-  connect: async (args: { endpoint_ref: string, display_name?: string }) => {
-    const res = await fetch(`${UI_TARS_URL}/connect`, {
+  connect: async (_args: { endpoint_ref: string; display_name?: string }) => {
+    const session_id = `sess-${Math.random().toString(36).slice(2, 10)}`;
+    const res = await fetch(`${ACU_URL}/v1/computer-use/sessions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ endpoint: args.endpoint_ref, display_name: args.display_name })
     });
-    return await res.json(); // Returns { session_id: "...", status: "connected" }
+    const data = res.ok ? await res.json() : { session_id };
+    return { session_id: data.session_id ?? session_id, status: 'connected' };
   },
 
-  screenshot: async (args: { session_id: string, scope: string }) => {
-    const res = await fetch(`${UI_TARS_URL}/screenshot`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ session_id: args.session_id, scope: args.scope })
+  screenshot: async (args: { session_id: string; scope?: string }) => {
+    const data = await acuPost(args.session_id, 'screenshot', {
+      parameters: { full_page: args.scope === 'full' },
     });
-    return await res.json(); // Returns { artifact_path: "...", timestamp: "..." }
+    const dataUrl: string = data.extracted_content?.data_url ?? '';
+    return { artifact_path: dataUrl, timestamp: new Date().toISOString() };
   },
 
-  click: async (args: { session_id: string, x: number, y: number, button: string }) => {
-    // Policy Check: This tool is 'high risk'. The Kernel wrapper should have already 
-    // verified the 'confirmed_steps' flag in the plan before calling this.
-    const res = await fetch(`${UI_TARS_URL}/click`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(args)
-    });
-    return await res.json();
+  click: async (args: { session_id: string; x: number; y: number; button?: string }) => {
+    const action = args.button === 'right' ? 'right_click'
+      : args.button === 'middle' ? 'middle_click'
+      : 'left_click';
+    return acuPost(args.session_id, action, { coordinate: [args.x, args.y] });
   },
 
-  type: async (args: { session_id: string, text: string }) => {
-    const res = await fetch(`${UI_TARS_URL}/type`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(args)
-    });
-    return await res.json();
+  type: async (args: { session_id: string; text: string }) => {
+    return acuPost(args.session_id, 'type', { text: args.text });
   },
 
-  wait: async (args: { session_id: string, seconds: number }) => {
-    const res = await fetch(`${UI_TARS_URL}/wait`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(args)
-    });
-    return await res.json();
+  wait: async (args: { session_id: string; seconds: number }) => {
+    return acuPost(args.session_id, 'wait', { parameters: { ms: Math.round(args.seconds * 1000) } });
   },
 
-  hotkey: async (args: { session_id: string, keys: string[] }) => {
-    const res = await fetch(`${UI_TARS_URL}/hotkey`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(args)
-    });
-    return await res.json();
-  }
+  hotkey: async (args: { session_id: string; keys: string[] }) => {
+    return acuPost(args.session_id, 'key', { key: args.keys.join('+') });
+  },
 };

@@ -1,5 +1,5 @@
 {
-  "$schema": "https://raw.githubusercontent.com/a2rchitech/brain-presets/main/schema.json",
+  "$schema": "https://raw.githubusercontent.com/allternit/brain-presets/main/schema.json",
   "title": "Brain Runtime Preset",
   "type": "object",
   "required": ["id", "name", "vendor", "type", "logo_asset", "install", "verify", "launch", "event_mode"],

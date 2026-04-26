@@ -1,7 +1,7 @@
 // =============================================================================
-// @a2r/replies-reducer — Pure reducer for ConversationReplyState
+// @allternit/replies-reducer — Pure reducer for ConversationReplyState
 //
-// No side effects. No framework deps. Only depends on @a2r/replies-contract.
+// No side effects. No framework deps. Only depends on @allternit/replies-contract.
 // =============================================================================
 
 import type {
@@ -10,7 +10,7 @@ import type {
   ReplyEvent,
   ReplyItem,
   ReplyItemKind,
-} from "@a2r/replies-contract";
+} from "@allternit/replies-contract";
 
 export type {
   ConversationReplyState,
@@ -18,7 +18,7 @@ export type {
   ReplyEvent,
   ReplyItem,
   ReplyItemKind,
-} from "@a2r/replies-contract";
+} from "@allternit/replies-contract";
 
 // ---------------------------------------------------------------------------
 // Factory

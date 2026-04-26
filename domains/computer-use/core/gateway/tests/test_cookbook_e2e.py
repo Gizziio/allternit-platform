@@ -17,7 +17,7 @@ from pathlib import Path
 from datetime import datetime
 
 BASE_URL = "http://127.0.0.1:8080"
-COOKBOOK_PATH = Path("/tmp/a2r-cookbook-test")
+COOKBOOK_PATH = Path("/tmp/allternit-cookbook-test")
 
 
 class CookbookE2ETest:
@@ -146,7 +146,7 @@ class CookbookE2ETest:
         from datetime import datetime
         
         # Load timeline from storage
-        recordings_path = Path("/tmp/a2r-recordings")
+        recordings_path = Path("/tmp/allternit-recordings")
         date_dir = recordings_path / datetime.now().strftime("%Y-%m-%d")
         run_dir = date_dir / self.run_id
         timeline_path = run_dir / "timeline.json"

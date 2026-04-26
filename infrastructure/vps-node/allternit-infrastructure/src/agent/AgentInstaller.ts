@@ -1,7 +1,7 @@
 /**
- * A2R Node Agent Installer
+ * Allternit Node Agent Installer
  * 
- * Main installation orchestrator for deploying A2R agents to VPS/cloud instances.
+ * Main installation orchestrator for deploying Allternit agents to VPS/cloud instances.
  * Provides fully automated installation, uninstallation, upgrade, and status checking.
  */
 
@@ -98,7 +98,7 @@ export class AgentInstaller {
     const warnings: string[] = [];
     const errors: string[] = [];
 
-    this.logger.info(`Starting A2R agent installation on ${target.host}`);
+    this.logger.info(`Starting Allternit agent installation on ${target.host}`);
     logs.push(`[${new Date().toISOString()}] Starting installation on ${target.host}`);
 
     const ssh = new NodeSSH();
@@ -129,7 +129,7 @@ export class AgentInstaller {
         logs.push('[Docker] Skipping Docker installation');
       }
 
-      this.logger.info('Creating A2R directories...');
+      this.logger.info('Creating Allternit directories...');
       await this.createDirectories(ssh);
       logs.push('[FS] Directories created');
 
@@ -157,9 +157,9 @@ export class AgentInstaller {
       }
       logs.push('[Verify] Installation verified successfully');
 
-      this.logger.info('Starting A2R services...');
+      this.logger.info('Starting Allternit services...');
       await this.startServices(ssh);
-      logs.push('[Service] A2R services started');
+      logs.push('[Service] Allternit services started');
 
       this.logger.info('Running final health check...');
       await this.waitForHealthy(ssh, 60000);
@@ -170,7 +170,7 @@ export class AgentInstaller {
 
       return {
         success: true,
-        message: `A2R agent v${this.version} installed successfully on ${target.host}`,
+        message: `Allternit agent v${this.version} installed successfully on ${target.host}`,
         version: this.version,
         installTime,
         config,
@@ -209,22 +209,22 @@ export class AgentInstaller {
   }
 
   async uninstall(target: VPSConnection): Promise<void> {
-    this.logger.info(`Starting A2R agent uninstallation from ${target.host}`);
+    this.logger.info(`Starting Allternit agent uninstallation from ${target.host}`);
     
     const ssh = new NodeSSH();
     
     try {
       await this.connectSSH(ssh, target);
       
-      await ssh.execCommand('docker compose -f /opt/a2r/docker-compose.yml down --volumes --remove-orphans 2>/dev/null || true');
-      await ssh.execCommand('systemctl stop a2r-agent 2>/dev/null || true');
-      await ssh.execCommand('systemctl disable a2r-agent 2>/dev/null || true');
-      await ssh.execCommand('rm -f /etc/systemd/system/a2r-agent.service');
+      await ssh.execCommand('docker compose -f /opt/allternit/docker-compose.yml down --volumes --remove-orphans 2>/dev/null || true');
+      await ssh.execCommand('systemctl stop allternit-agent 2>/dev/null || true');
+      await ssh.execCommand('systemctl disable allternit-agent 2>/dev/null || true');
+      await ssh.execCommand('rm -f /etc/systemd/system/allternit-agent.service');
       await ssh.execCommand('systemctl daemon-reload 2>/dev/null || true');
-      await ssh.execCommand('rm -rf /opt/a2r');
-      await ssh.execCommand('rm -rf /var/log/a2r');
-      await ssh.execCommand('rm -rf /etc/a2r');
-      await ssh.execCommand('id -u a2r >/dev/null 2>&1 && userdel -r a2r 2>/dev/null || true');
+      await ssh.execCommand('rm -rf /opt/allternit');
+      await ssh.execCommand('rm -rf /var/log/allternit');
+      await ssh.execCommand('rm -rf /etc/allternit');
+      await ssh.execCommand('id -u allternit >/dev/null 2>&1 && userdel -r allternit 2>/dev/null || true');
       
       this.logger.info('Uninstallation completed successfully');
     } catch (error) {
@@ -237,7 +237,7 @@ export class AgentInstaller {
   }
 
   async upgrade(target: VPSConnection, newVersion?: string): Promise<InstallResult> {
-    this.logger.info(`Starting A2R agent upgrade on ${target.host}`);
+    this.logger.info(`Starting Allternit agent upgrade on ${target.host}`);
     
     const ssh = new NodeSSH();
     const logs: string[] = [];
@@ -247,14 +247,14 @@ export class AgentInstaller {
       
       const status = await this.checkStatus(target);
       if (!status.installed) {
-        throw new Error('A2R agent is not installed on this host');
+        throw new Error('Allternit agent is not installed on this host');
       }
       
       logs.push(`[Upgrade] Current version: ${status.version || 'unknown'}`);
       logs.push(`[Upgrade] Target version: ${newVersion || 'latest'}`);
       
       const versionTag = newVersion || 'latest';
-      const pullResult = await ssh.execCommand(`docker pull a2r/agent:${versionTag}`);
+      const pullResult = await ssh.execCommand(`docker pull allternit/agent:${versionTag}`);
       
       if (pullResult.code !== 0) {
         throw new Error(`Failed to pull new image: ${pullResult.stderr}`);
@@ -262,9 +262,9 @@ export class AgentInstaller {
       
       logs.push('[Docker] New image pulled successfully');
       
-      await ssh.execCommand(`sed -i 's/image: a2r\\/agent:.*/image: a2r\\/agent:${versionTag}/' /opt/a2r/docker-compose.yml`);
+      await ssh.execCommand(`sed -i 's/image: allternit\\/agent:.*/image: allternit\\/agent:${versionTag}/' /opt/allternit/docker-compose.yml`);
       
-      const upResult = await ssh.execCommand('cd /opt/a2r && docker compose up -d --force-recreate');
+      const upResult = await ssh.execCommand('cd /opt/allternit && docker compose up -d --force-recreate');
       
       if (upResult.code !== 0) {
         throw new Error(`Failed to recreate containers: ${upResult.stderr}`);
@@ -277,7 +277,7 @@ export class AgentInstaller {
       
       return {
         success: true,
-        message: `A2R agent upgraded to ${newVersion || 'latest'}`,
+        message: `Allternit agent upgraded to ${newVersion || 'latest'}`,
         version: newVersion || this.version,
         installTime: 0,
         config: null as any,
@@ -305,7 +305,7 @@ export class AgentInstaller {
         errors: []
       };
       
-      const installCheck = await ssh.execCommand('test -f /opt/a2r/docker-compose.yml && echo "installed" || echo "not_installed"');
+      const installCheck = await ssh.execCommand('test -f /opt/allternit/docker-compose.yml && echo "installed" || echo "not_installed"');
       status.installed = installCheck.stdout.trim() === 'installed';
       
       if (!status.installed) {
@@ -314,10 +314,10 @@ export class AgentInstaller {
       
       status.systemInfo = await this.getSystemInfo(ssh);
       
-      const serviceResult = await ssh.execCommand('systemctl is-active a2r-agent 2>/dev/null || echo "inactive"');
+      const serviceResult = await ssh.execCommand('systemctl is-active allternit-agent 2>/dev/null || echo "inactive"');
       const isActive = serviceResult.stdout.trim() === 'active';
       
-      const containerResult = await ssh.execCommand('docker compose -f /opt/a2r/docker-compose.yml ps --format json 2>/dev/null || docker compose -f /opt/a2r/docker-compose.yml ps 2>/dev/null');
+      const containerResult = await ssh.execCommand('docker compose -f /opt/allternit/docker-compose.yml ps --format json 2>/dev/null || docker compose -f /opt/allternit/docker-compose.yml ps 2>/dev/null');
       
       if (containerResult.code === 0) {
         status.containers = this.parseContainerStatus(containerResult.stdout);
@@ -336,13 +336,13 @@ export class AgentInstaller {
           status.status = 'error';
         }
         
-        const uptimeResult = await ssh.execCommand('docker compose -f /opt/a2r/docker-compose.yml ps -q | xargs -I {} docker inspect --format="{{.State.StartedAt}}" {} 2>/dev/null | head -1');
+        const uptimeResult = await ssh.execCommand('docker compose -f /opt/allternit/docker-compose.yml ps -q | xargs -I {} docker inspect --format="{{.State.StartedAt}}" {} 2>/dev/null | head -1');
         if (uptimeResult.code === 0 && uptimeResult.stdout.trim()) {
           const startedAt = new Date(uptimeResult.stdout.trim());
           status.uptime = Date.now() - startedAt.getTime();
         }
         
-        const versionResult = await ssh.execCommand('docker inspect --format="{{.Config.Image}}" a2r-agent 2>/dev/null | grep -oE ":[^:]+$" | tr -d ":" || echo "unknown"');
+        const versionResult = await ssh.execCommand('docker inspect --format="{{.Config.Image}}" allternit-agent 2>/dev/null | grep -oE ":[^:]+$" | tr -d ":" || echo "unknown"');
         status.version = versionResult.stdout.trim();
       } else {
         status.status = 'error';
@@ -523,14 +523,14 @@ systemctl start docker 2>/dev/null || true`;
   }
 
   private async createDirectories(ssh: NodeSSH): Promise<void> {
-    const dirs = ['/opt/a2r', '/opt/a2r/config', '/opt/a2r/data', '/opt/a2r/logs', '/var/log/a2r', '/etc/a2r'];
+    const dirs = ['/opt/allternit', '/opt/allternit/config', '/opt/allternit/data', '/opt/allternit/logs', '/var/log/allternit', '/etc/allternit'];
     
     for (const dir of dirs) {
       await ssh.execCommand(`sudo mkdir -p ${dir} && sudo chmod 755 ${dir}`);
     }
     
-    await ssh.execCommand('id -u a2r >/dev/null 2>&1 || sudo useradd -r -s /bin/false -d /opt/a2r a2r');
-    await ssh.execCommand('sudo chown -R a2r:a2r /opt/a2r /var/log/a2r /etc/a2r 2>/dev/null || true');
+    await ssh.execCommand('id -u allternit >/dev/null 2>&1 || sudo useradd -r -s /bin/false -d /opt/allternit allternit');
+    await ssh.execCommand('sudo chown -R allternit:allternit /opt/allternit /var/log/allternit /etc/allternit 2>/dev/null || true');
   }
 
   private async uploadConfig(ssh: NodeSSH, config: AgentConfig): Promise<void> {
@@ -538,7 +538,7 @@ systemctl start docker 2>/dev/null || true`;
     await ssh.execCommand(`cat > /tmp/agent-config.json << 'EOFCFG'
 ${configJson}
 EOFCFG`);
-    await ssh.execCommand('sudo mv /tmp/agent-config.json /etc/a2r/config.json && sudo chmod 600 /etc/a2r/config.json');
+    await ssh.execCommand('sudo mv /tmp/agent-config.json /etc/allternit/config.json && sudo chmod 600 /etc/allternit/config.json');
   }
 
   private async uploadInstallScripts(ssh: NodeSSH, osInfo: { os: string }): Promise<void> {
@@ -546,10 +546,10 @@ EOFCFG`);
       const scriptPath = join(__dirname, 'install-scripts', 'install.sh');
       const scriptContent = readFileSync(scriptPath, 'utf-8');
       
-      await ssh.execCommand(`cat > /tmp/a2r-install.sh << 'ENDSCRIPT'
+      await ssh.execCommand(`cat > /tmp/allternit-install.sh << 'ENDSCRIPT'
 ${scriptContent}
 ENDSCRIPT`);
-      await ssh.execCommand('sudo mv /tmp/a2r-install.sh /opt/a2r/install.sh && sudo chmod +x /opt/a2r/install.sh');
+      await ssh.execCommand('sudo mv /tmp/allternit-install.sh /opt/allternit/install.sh && sudo chmod +x /opt/allternit/install.sh');
     } else {
       throw new Error(`Unsupported OS for script upload: ${osInfo.os}`);
     }
@@ -562,12 +562,12 @@ ENDSCRIPT`);
     await ssh.execCommand(`cat > /tmp/docker-compose.yml << 'ENDCOMPOSE'
 ${composeContent}
 ENDCOMPOSE`);
-    await ssh.execCommand('sudo mv /tmp/docker-compose.yml /opt/a2r/docker-compose.yml');
+    await ssh.execCommand('sudo mv /tmp/docker-compose.yml /opt/allternit/docker-compose.yml');
   }
 
   private async runInstallScript(ssh: NodeSSH, osInfo: { os: string }, timeout: number): Promise<string> {
     if (osInfo.os === 'linux') {
-      const result = await ssh.execCommand('sudo /opt/a2r/install.sh', {
+      const result = await ssh.execCommand('sudo /opt/allternit/install.sh', {
         execOptions: { timeout }
       });
       
@@ -582,17 +582,17 @@ ENDCOMPOSE`);
   }
 
   private async verifyInstallation(ssh: NodeSSH): Promise<{ success: boolean; error?: string }> {
-    const serviceCheck = await ssh.execCommand('test -f /etc/systemd/system/a2r-agent.service && echo "exists" || echo "missing"');
+    const serviceCheck = await ssh.execCommand('test -f /etc/systemd/system/allternit-agent.service && echo "exists" || echo "missing"');
     if (serviceCheck.stdout.trim() !== 'exists') {
       return { success: false, error: 'Systemd service file not found' };
     }
     
-    const composeCheck = await ssh.execCommand('test -f /opt/a2r/docker-compose.yml && echo "exists" || echo "missing"');
+    const composeCheck = await ssh.execCommand('test -f /opt/allternit/docker-compose.yml && echo "exists" || echo "missing"');
     if (composeCheck.stdout.trim() !== 'exists') {
       return { success: false, error: 'Docker Compose file not found' };
     }
     
-    const validateResult = await ssh.execCommand('cd /opt/a2r && docker compose config > /dev/null 2>&1 && echo "valid" || echo "invalid"');
+    const validateResult = await ssh.execCommand('cd /opt/allternit && docker compose config > /dev/null 2>&1 && echo "valid" || echo "invalid"');
     if (validateResult.stdout.trim() !== 'valid') {
       return { success: false, error: 'Docker Compose configuration is invalid' };
     }
@@ -602,8 +602,8 @@ ENDCOMPOSE`);
 
   private async startServices(ssh: NodeSSH): Promise<void> {
     await ssh.execCommand('sudo systemctl daemon-reload');
-    await ssh.execCommand('sudo systemctl enable a2r-agent');
-    await ssh.execCommand('sudo systemctl start a2r-agent');
+    await ssh.execCommand('sudo systemctl enable allternit-agent');
+    await ssh.execCommand('sudo systemctl start allternit-agent');
     await new Promise(resolve => setTimeout(resolve, 3000));
   }
 
@@ -612,15 +612,15 @@ ENDCOMPOSE`);
     const checkInterval = 5000;
     
     while (Date.now() - startTime < timeoutMs) {
-      const result = await ssh.execCommand('docker compose -f /opt/a2r/docker-compose.yml ps --format json 2>/dev/null | grep -q "healthy" && echo "healthy" || echo "waiting"');
+      const result = await ssh.execCommand('docker compose -f /opt/allternit/docker-compose.yml ps --format json 2>/dev/null | grep -q "healthy" && echo "healthy" || echo "waiting"');
       
       if (result.stdout.trim() === 'healthy') {
         return;
       }
       
-      const errorCheck = await ssh.execCommand('docker compose -f /opt/a2r/docker-compose.yml ps 2>/dev/null | grep -q "Exit" && echo "error" || echo "ok"');
+      const errorCheck = await ssh.execCommand('docker compose -f /opt/allternit/docker-compose.yml ps 2>/dev/null | grep -q "Exit" && echo "error" || echo "ok"');
       if (errorCheck.stdout.trim() === 'error') {
-        const logs = await ssh.execCommand('docker compose -f /opt/a2r/docker-compose.yml logs --tail 50 2>&1');
+        const logs = await ssh.execCommand('docker compose -f /opt/allternit/docker-compose.yml logs --tail 50 2>&1');
         throw new Error(`Containers failed to start. Logs:\n${logs.stdout}`);
       }
       
@@ -632,10 +632,10 @@ ENDCOMPOSE`);
 
   private async rollback(ssh: NodeSSH): Promise<void> {
     try {
-      await ssh.execCommand('sudo systemctl stop a2r-agent 2>/dev/null || true');
-      await ssh.execCommand('cd /opt/a2r && docker compose down --volumes 2>/dev/null || true');
-      await ssh.execCommand('sudo rm -rf /opt/a2r');
-      await ssh.execCommand('sudo rm -f /etc/systemd/system/a2r-agent.service');
+      await ssh.execCommand('sudo systemctl stop allternit-agent 2>/dev/null || true');
+      await ssh.execCommand('cd /opt/allternit && docker compose down --volumes 2>/dev/null || true');
+      await ssh.execCommand('sudo rm -rf /opt/allternit');
+      await ssh.execCommand('sudo rm -f /etc/systemd/system/allternit-agent.service');
       await ssh.execCommand('sudo systemctl daemon-reload 2>/dev/null || true');
     } catch (error) {
       this.logger.warn(`Rollback encountered issues: ${error}`);

@@ -56,6 +56,8 @@ function buildTenantContext(context?: ToolRequest['context']): TenantToolContext
   };
 }
 
+const ACU_GATEWAY_URL = process.env.ACU_GATEWAY_URL ?? 'http://127.0.0.1:8760';
+
 export class ToolExecutor {
   private engine: ExecutionEngine;
 
@@ -74,10 +76,6 @@ export class ToolExecutor {
     if (tool.startsWith('office.')) {
       return this.executeOfficeTool(tool, args, context);
     }
-    // Desktop tools
-    if (tool.startsWith('desktop') || tool === 'cowork_connect') {
-      return this.executeDesktopTool(tool, args, context);
-    }
 
     switch (tool) {
       case 'shell':
@@ -85,8 +83,8 @@ export class ToolExecutor {
         return this.executeShell(args.command, context);
       case 'ls':
         return this.executeShell('ls ' + (args.path || '.'), context);
-      case 'desktop_control':
-        return this.executeDesktopControl(args, context);
+      case 'computer':
+        return this.executeComputerTool(args, context);
       default:
         return {
           success: false,
@@ -227,55 +225,44 @@ print(json.dumps({"original_hash": oh, "new_hash": nh}))
     }
   }
 
-  private async executeDesktopTool(tool: string, args: any, context?: any): Promise<ToolResponse> {
-    const UI_TARS_URL = process.env.UI_TARS_URL || 'http://127.0.0.1:3008';
+  private async executeComputerTool(args: any, context?: any): Promise<ToolResponse> {
     try {
-      let endpoint: string;
-      let body: any;
+      const body: Record<string, any> = {
+        action: args.action,
+        session_id: args.session_id ?? context?.sessionId ?? `sess-${Date.now()}`,
+        run_id: args.run_id ?? `ku-${Math.random().toString(36).slice(2, 14)}`,
+        parameters: {},
+      };
+      if (args.coordinate != null) body.coordinate = args.coordinate;
+      if (args.text != null) body.text = args.text;
+      if (args.key != null) body.key = args.key;
+      if (args.delta != null) body.delta = args.delta;
+      if (args.url != null) body.url = args.url;
+      if (args.selector != null) body.selector = args.selector;
+      if (args.ms != null) body.parameters = { ms: args.ms };
+      if (args.adapter_preference != null) body.adapter_preference = args.adapter_preference;
 
-      switch (tool) {
-        case 'cowork_connect':
-          endpoint = '/connect';
-          body = { endpoint: args.endpoint_ref, display_name: args.display_name };
-          break;
-        case 'desktop_screenshot':
-          endpoint = '/screenshot';
-          body = { session_id: args.session_id, scope: args.scope || 'full' };
-          break;
-        case 'desktop_click':
-          endpoint = '/click';
-          body = args;
-          break;
-        case 'desktop_type':
-          endpoint = '/type';
-          body = { session_id: args.session_id, text: args.text };
-          break;
-        case 'desktop_wait':
-          endpoint = '/wait';
-          body = { session_id: args.session_id, seconds: args.seconds };
-          break;
-        case 'desktop_hotkey':
-          endpoint = '/hotkey';
-          body = { session_id: args.session_id, keys: args.keys };
-          break;
-        default:
-          return { success: false, output: '', error: `Unknown desktop tool: ${tool}` };
-      }
-
-      const res = await fetch(`${UI_TARS_URL}${endpoint}`, {
+      const res = await fetch(`${ACU_GATEWAY_URL}/v1/computer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
       });
 
       if (!res.ok) {
-        return { success: false, output: '', error: `Desktop agent ${res.status}: ${await res.text()}` };
+        const text = await res.text().catch(() => res.statusText);
+        return { success: false, output: '', error: `ACU gateway ${res.status}: ${text}` };
       }
 
-      const data = await res.json();
-      return { success: true, output: JSON.stringify(data), metadata: data };
+      const data = await res.json() as Record<string, any>;
+      const ok = data.status === 'completed';
+      return {
+        success: ok,
+        output: JSON.stringify(data.extracted_content ?? {}),
+        error: ok ? undefined : (data.error?.message ?? data.status),
+        metadata: data,
+      };
     } catch (e: any) {
-      return { success: false, output: '', error: e.message };
+      return { success: false, output: '', error: `ACU unreachable: ${e.message}` };
     }
   }
 
@@ -299,45 +286,4 @@ print(json.dumps({"original_hash": oh, "new_hash": nh}))
     };
   }
 
-  private async executeDesktopControl(args: any, context?: any): Promise<ToolResponse> {
-    const sessionId = context?.sessionId || 'default-session';
-    const uiTarsUrl = process.env.UI_TARS_URL || 'http://localhost:3007';
-
-    try {
-      console.log(`[ToolExecutor] Calling UI-TARS for desktop control: ${args.instruction}`);
-      
-      const response = await fetch(`${uiTarsUrl}/v1/sessions/${sessionId}/desktop/execute`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          app: args.app,
-          instruction: args.instruction,
-          use_vision: args.useVision ?? true,
-          confirmation_required: args.confirmationRequired ?? false,
-          session_id: sessionId
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`UI-TARS error: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      return {
-        success: result.success,
-        output: result.summary,
-        error: result.error,
-        metadata: {
-          actionsTaken: result.actions_taken,
-          finalScreenshot: result.final_screenshot
-        }
-      };
-    } catch (e: any) {
-      return {
-        success: false,
-        output: '',
-        error: `Failed to execute desktop control: ${e.message}`
-      };
-    }
-  }
 }

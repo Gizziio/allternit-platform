@@ -7,7 +7,7 @@ use sqlx::{
 };
 
 use crate::core::io::ensure_dir;
-use crate::core::types::A2REvent;
+use crate::core::types::AllternitEvent;
 
 #[derive(Debug, Clone)]
 pub struct IndexOptions {
@@ -26,7 +26,7 @@ impl Index {
             .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")));
         let index_dir = opts
             .index_dir
-            .unwrap_or_else(|| PathBuf::from(".a2r/index"));
+            .unwrap_or_else(|| PathBuf::from(".allternit/index"));
         let base = if index_dir.is_absolute() {
             index_dir
         } else {
@@ -46,7 +46,7 @@ impl Index {
         Ok(index)
     }
 
-    pub async fn index_event(&self, event: &A2REvent) -> Result<()> {
+    pub async fn index_event(&self, event: &AllternitEvent) -> Result<()> {
         let payload_text = serde_json::to_string(&event.payload).unwrap_or_default();
         let scope_text = event
             .scope

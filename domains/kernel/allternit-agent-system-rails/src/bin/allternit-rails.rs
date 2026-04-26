@@ -9,21 +9,21 @@ use clap::{Parser, Subcommand};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-use a2r_agent_system_rails::bus::{Bus, BusMessage, BusOptions, NewBusMessage};
-use a2r_agent_system_rails::cli::work::{run_work_command, WorkCmd, WorkContext};
-use a2r_agent_system_rails::core::ids::{create_event_id, create_lease_id};
-use a2r_agent_system_rails::core::io::{ensure_dir, write_json_atomic};
-use a2r_agent_system_rails::gate::gate::{GateOptions, WihPickupOptions};
-use a2r_agent_system_rails::leases::leases::LeasesOptions;
-use a2r_agent_system_rails::ledger::ledger::LedgerOptions;
-use a2r_agent_system_rails::policy;
-use a2r_agent_system_rails::wih::projection::project_wih;
-use a2r_agent_system_rails::wih::types::LoopPolicy;
-use a2r_agent_system_rails::work::graph::{has_cycle_edges, ready_nodes};
-use a2r_agent_system_rails::work::projection::project_dag;
-use a2r_agent_system_rails::work::types::DagState;
-use a2r_agent_system_rails::{
-    A2REvent, Actor, ActorType, DagMutation, EventScope, Gate, Index, IndexOptions, LeaseRequest,
+use allternit_agent_system_rails::bus::{Bus, BusMessage, BusOptions, NewBusMessage};
+use allternit_agent_system_rails::cli::work::{run_work_command, WorkCmd, WorkContext};
+use allternit_agent_system_rails::core::ids::{create_event_id, create_lease_id};
+use allternit_agent_system_rails::core::io::{ensure_dir, write_json_atomic};
+use allternit_agent_system_rails::gate::gate::{GateOptions, WihPickupOptions};
+use allternit_agent_system_rails::leases::leases::LeasesOptions;
+use allternit_agent_system_rails::ledger::ledger::LedgerOptions;
+use allternit_agent_system_rails::policy;
+use allternit_agent_system_rails::wih::projection::project_wih;
+use allternit_agent_system_rails::wih::types::LoopPolicy;
+use allternit_agent_system_rails::work::graph::{has_cycle_edges, ready_nodes};
+use allternit_agent_system_rails::work::projection::project_dag;
+use allternit_agent_system_rails::work::types::DagState;
+use allternit_agent_system_rails::{
+    AllternitEvent, Actor, ActorType, DagMutation, EventScope, Gate, Index, IndexOptions, LeaseRequest,
     Leases, Ledger, LedgerQuery, Mail, MailOptions, ReceiptStore, ReceiptStoreOptions, Vault,
     VaultOptions, WorkOps,
 };
@@ -33,8 +33,8 @@ use tokio::process::Command;
 use tokio::time::{sleep, Duration as TokioDuration};
 
 #[derive(Parser)]
-#[command(name = "a2r-rails")]
-#[command(about = "A2R Agent System Rails CLI", long_about = None)]
+#[command(name = "allternit-rails")]
+#[command(about = "Allternit Agent System Rails CLI", long_about = None)]
 struct Cli {
     #[arg(long)]
     root: Option<PathBuf>,
@@ -358,13 +358,13 @@ async fn main() -> Result<()> {
 
     let ledger = Arc::new(Ledger::new(LedgerOptions {
         root_dir: Some(root.clone()),
-        ledger_dir: Some(PathBuf::from(".a2r/ledger")),
+        ledger_dir: Some(PathBuf::from(".allternit/ledger")),
     }));
 
     let lease_store = Arc::new(
         Leases::new(LeasesOptions {
             root_dir: Some(root.clone()),
-            leases_dir: Some(PathBuf::from(".a2r/leases")),
+            leases_dir: Some(PathBuf::from(".allternit/leases")),
             event_sink: Some(ledger.clone()),
             actor_id: Some("gate".to_string()),
             auto_renewal_enabled: true,
@@ -377,14 +377,14 @@ async fn main() -> Result<()> {
 
     let receipts = Arc::new(ReceiptStore::new(ReceiptStoreOptions {
         root_dir: Some(root.clone()),
-        receipts_dir: Some(PathBuf::from(".a2r/receipts")),
-        blobs_dir: Some(PathBuf::from(".a2r/blobs")),
+        receipts_dir: Some(PathBuf::from(".allternit/receipts")),
+        blobs_dir: Some(PathBuf::from(".allternit/blobs")),
     })?);
 
     let index = Arc::new(
         Index::new(IndexOptions {
             root_dir: Some(root.clone()),
-            index_dir: Some(PathBuf::from(".a2r/index")),
+            index_dir: Some(PathBuf::from(".allternit/index")),
         })
         .await?,
     );
@@ -421,7 +421,7 @@ async fn main() -> Result<()> {
 
     let work_ops = Arc::new(WorkOps::new(
         ledger.clone(),
-        Some("a2r work".to_string()),
+        Some("allternit work".to_string()),
         Some(ActorType::Agent),
     ));
     let work_ctx = WorkContext {
@@ -1068,17 +1068,17 @@ async fn init_system(
     _index: &Index,
 ) -> Result<()> {
     let dirs = [
-        ".a2r/ledger/events",
-        ".a2r/leases",
-        ".a2r/receipts",
-        ".a2r/blobs",
-        ".a2r/index",
-        ".a2r/mail/threads",
-        ".a2r/vault",
-        ".a2r/work/dags",
-        ".a2r/wih",
-        ".a2r/transports/tmux",
-        ".a2r/transports/socket",
+        ".allternit/ledger/events",
+        ".allternit/leases",
+        ".allternit/receipts",
+        ".allternit/blobs",
+        ".allternit/index",
+        ".allternit/mail/threads",
+        ".allternit/vault",
+        ".allternit/work/dags",
+        ".allternit/wih",
+        ".allternit/transports/tmux",
+        ".allternit/transports/socket",
     ];
     for rel in dirs {
         ensure_dir(&root.join(rel))?;
@@ -1087,23 +1087,23 @@ async fn init_system(
     println!("Initialized workspace stores:");
     println!(
         "  - Ledger JSONL events: {}",
-        root.join(".a2r/ledger/events").display()
+        root.join(".allternit/ledger/events").display()
     );
     println!(
         "  - Leases SQLite: {}",
-        root.join(".a2r/leases/leases.db").display()
+        root.join(".allternit/leases/leases.db").display()
     );
     println!(
         "  - Receipt store: {}",
-        root.join(".a2r/receipts").display()
+        root.join(".allternit/receipts").display()
     );
-    println!("  - Blob store: {}", root.join(".a2r/blobs").display());
-    println!("  - Index DB: {}", root.join(".a2r/index").display());
+    println!("  - Blob store: {}", root.join(".allternit/blobs").display());
+    println!("  - Index DB: {}", root.join(".allternit/index").display());
     println!(
         "  - Mail threads: {}",
-        root.join(".a2r/mail/threads").display()
+        root.join(".allternit/mail/threads").display()
     );
-    println!("  - Vault root: {}", root.join(".a2r/vault").display());
+    println!("  - Vault root: {}", root.join(".allternit/vault").display());
     println!(
         "Ledger, leases, and receipts will automatically log events when you run the CLI commands."
     );
@@ -1239,7 +1239,7 @@ async fn run_socket_transport(
     let recipient = format!("socket:{}", socket.display());
     let root_path = root.as_ref();
     let socket_dir = root_path
-        .join(".a2r")
+        .join(".allternit")
         .join("transports")
         .join("socket")
         .join(socket.display().to_string());
@@ -1320,7 +1320,7 @@ async fn run_socket_transport(
 }
 
 fn transport_state_dir(root: &Path, pane: &str, iteration: &str) -> PathBuf {
-    root.join(".a2r")
+    root.join(".allternit")
         .join("transports")
         .join("tmux")
         .join(pane)
@@ -1350,7 +1350,7 @@ fn persist_transport_state(
 }
 
 fn socket_transport_state_dir(root: &Path, socket: &str, iteration: &str) -> PathBuf {
-    root.join(".a2r")
+    root.join(".allternit")
         .join("transports")
         .join("socket")
         .join(socket)
@@ -1384,7 +1384,7 @@ fn persist_socket_transport_state(
 }
 
 fn inspect_tmux_transports(root: &Path, session: Option<&str>) -> Result<()> {
-    let base = root.join(".a2r").join("transports").join("tmux");
+    let base = root.join(".allternit").join("transports").join("tmux");
     if !base.exists() {
         println!("No tmux transport contexts found.");
         return Ok(());
@@ -1424,7 +1424,7 @@ fn inspect_tmux_transports(root: &Path, session: Option<&str>) -> Result<()> {
 }
 
 fn inspect_socket_transports(root: &Path, socket_filter: Option<&str>) -> Result<()> {
-    let base = root.join(".a2r").join("transports").join("socket");
+    let base = root.join(".allternit").join("transports").join("socket");
     if !base.exists() {
         println!("No socket transport contexts found.");
         return Ok(());
@@ -1496,7 +1496,7 @@ async fn start_runner(
     bus: Arc<Bus>,
     persistent: bool,
 ) -> Result<()> {
-    let meta_dir = root.join(".a2r/meta");
+    let meta_dir = root.join(".allternit/meta");
     ensure_dir(&meta_dir)?;
     let state_path = meta_dir.join("rails_runner_state.json");
     let mut state = RunnerState::load(&state_path)?;
@@ -1603,7 +1603,7 @@ async fn handle_wih_closed(
     wih_id: &str,
 ) -> Result<()> {
     println!("Autopipeline: vaulting {}", wih_id);
-    let start_event = A2REvent {
+    let start_event = AllternitEvent {
         event_id: create_event_id(),
         ts: Utc::now().to_rfc3339(),
         actor: Actor {
@@ -1618,7 +1618,7 @@ async fn handle_wih_closed(
     ledger.append(start_event).await?;
     let path = vault.archive_wih(wih_id).await?;
     println!("Autopipeline: vaulted {} -> {}", wih_id, path.display());
-    let completed_event = A2REvent {
+    let completed_event = AllternitEvent {
         event_id: create_event_id(),
         ts: Utc::now().to_rfc3339(),
         actor: Actor {
@@ -1644,7 +1644,7 @@ async fn process_loop_iterations(
     root: &Path,
     ledger: &Ledger,
     gate: &Gate,
-    events: &[A2REvent],
+    events: &[AllternitEvent],
     state: &mut RunnerState,
     state_path: &Path,
 ) -> Result<()> {
@@ -1735,7 +1735,7 @@ async fn process_loop_iterations(
     Ok(())
 }
 
-fn collect_active_wih_ids(events: &[A2REvent]) -> Vec<String> {
+fn collect_active_wih_ids(events: &[AllternitEvent]) -> Vec<String> {
     let mut created = HashSet::new();
     let mut closed = HashSet::new();
     for evt in events {
@@ -1757,14 +1757,14 @@ fn collect_active_wih_ids(events: &[A2REvent]) -> Vec<String> {
         .collect()
 }
 
-fn is_wih_closed(events: &[A2REvent], wih_id: &str) -> bool {
+fn is_wih_closed(events: &[AllternitEvent], wih_id: &str) -> bool {
     events.iter().any(|evt| {
         evt.payload.get("wih_id").and_then(|v| v.as_str()) == Some(wih_id)
             && (evt.r#type == "WIHClosedSigned" || evt.r#type == "WIHArchived")
     })
 }
 
-fn loop_policy_from_events(events: &[A2REvent], wih_id: &str) -> LoopPolicy {
+fn loop_policy_from_events(events: &[AllternitEvent], wih_id: &str) -> LoopPolicy {
     for evt in events.iter().rev() {
         if evt.r#type != "WIHCreated" {
             continue;
@@ -1793,7 +1793,7 @@ async fn emit_loop_started(
         "started_at": Utc::now().to_rfc3339(),
         "policy": serde_json::to_value(policy).unwrap_or_else(|_| json!({}))
     });
-    let event = A2REvent {
+    let event = AllternitEvent {
         event_id: create_event_id(),
         ts: Utc::now().to_rfc3339(),
         actor: Actor {
@@ -1827,7 +1827,7 @@ async fn emit_loop_completed(
         "evidence_count": evidence_count,
         "acceptance_refs": acceptance_triggered
     });
-    let event = A2REvent {
+    let event = AllternitEvent {
         event_id: create_event_id(),
         ts: Utc::now().to_rfc3339(),
         actor: Actor {
@@ -1855,7 +1855,7 @@ async fn emit_loop_spawn_requested(
         "iteration": iteration,
         "requested_at": Utc::now().to_rfc3339(),
     });
-    let event = A2REvent {
+    let event = AllternitEvent {
         event_id: create_event_id(),
         ts: Utc::now().to_rfc3339(),
         actor: Actor {
@@ -1873,7 +1873,7 @@ async fn emit_loop_spawn_requested(
     ledger.append(event).await
 }
 
-fn collect_receipts_after(events: &[A2REvent], wih_id: &str, since: &str) -> Vec<String> {
+fn collect_receipts_after(events: &[AllternitEvent], wih_id: &str, since: &str) -> Vec<String> {
     let since_ts = parse_ts(since);
     events
         .iter()
@@ -1896,7 +1896,7 @@ fn collect_receipts_after(events: &[A2REvent], wih_id: &str, since: &str) -> Vec
         .collect()
 }
 
-fn collect_all_receipts_for_wih(events: &[A2REvent], wih_id: &str) -> Vec<String> {
+fn collect_all_receipts_for_wih(events: &[AllternitEvent], wih_id: &str) -> Vec<String> {
     events
         .iter()
         .filter(|evt| evt.r#type == "ReceiptWritten")
@@ -1935,7 +1935,7 @@ fn evidence_satisfied(receipts_count: usize, policy: &LoopPolicy) -> bool {
     true
 }
 
-fn acceptance_refs_satisfied(events: &[A2REvent], wih_id: &str, refs: &[String]) -> bool {
+fn acceptance_refs_satisfied(events: &[AllternitEvent], wih_id: &str, refs: &[String]) -> bool {
     if refs.is_empty() {
         return true;
     }
@@ -1980,7 +1980,7 @@ async fn log_bus_message(ledger: &Ledger, message: &BusMessage) -> Result<String
         "created_at": message.created_at,
         "payload": message.payload
     });
-    let event = A2REvent {
+    let event = AllternitEvent {
         event_id: create_event_id(),
         ts: Utc::now().to_rfc3339(),
         actor: Actor {
@@ -2036,7 +2036,7 @@ async fn emit_loop_escalated(
         "reason": reason,
         "escalated_at": Utc::now().to_rfc3339()
     });
-    let event = A2REvent {
+    let event = AllternitEvent {
         event_id: create_event_id(),
         ts: Utc::now().to_rfc3339(),
         actor: Actor {
@@ -2065,7 +2065,7 @@ async fn resolve_dag(ledger: &Ledger, root: &Path, dag_id: &str) -> Result<DagSt
 
 fn load_dag_view(root: &Path, dag_id: &str) -> Option<DagState> {
     let path = root
-        .join(".a2r/work/dags")
+        .join(".allternit/work/dags")
         .join(dag_id)
         .join("view")
         .join("dag.current.json");
@@ -2102,7 +2102,7 @@ fn render_dag_markdown(dag: &DagState) -> String {
     out
 }
 
-fn collect_dag_ids(events: &[A2REvent]) -> Vec<String> {
+fn collect_dag_ids(events: &[AllternitEvent]) -> Vec<String> {
     let mut dag_ids = HashSet::new();
     for evt in events {
         if let Some(dag_id) = evt.payload.get("dag_id").and_then(|v| v.as_str()) {
@@ -2119,7 +2119,7 @@ fn collect_dag_ids(events: &[A2REvent]) -> Vec<String> {
     out
 }
 
-fn events_for_dag(events: &[A2REvent], dag_id: &str) -> Vec<A2REvent> {
+fn events_for_dag(events: &[AllternitEvent], dag_id: &str) -> Vec<AllternitEvent> {
     events
         .iter()
         .filter(|evt| evt.payload.get("dag_id").and_then(|v| v.as_str()) == Some(dag_id))
@@ -2127,7 +2127,7 @@ fn events_for_dag(events: &[A2REvent], dag_id: &str) -> Vec<A2REvent> {
         .collect()
 }
 
-fn active_wih_nodes(events: &[A2REvent]) -> HashMap<String, String> {
+fn active_wih_nodes(events: &[AllternitEvent]) -> HashMap<String, String> {
     let mut wih_nodes: HashMap<String, String> = HashMap::new();
     let mut closed: HashSet<String> = HashSet::new();
     for evt in events {
@@ -2155,7 +2155,7 @@ fn active_wih_nodes(events: &[A2REvent]) -> HashMap<String, String> {
 }
 
 fn matches_trace(
-    event: &A2REvent,
+    event: &AllternitEvent,
     node_id: Option<&str>,
     wih_id: Option<&str>,
     prompt_id: Option<&str>,
@@ -2200,10 +2200,10 @@ fn matches_trace(
 }
 
 fn project_wih_from_events(
-    events: &[A2REvent],
+    events: &[AllternitEvent],
     wih_id: &str,
-) -> Option<a2r_agent_system_rails::wih::types::WihState> {
-    let filtered: Vec<A2REvent> = events
+) -> Option<allternit_agent_system_rails::wih::types::WihState> {
+    let filtered: Vec<AllternitEvent> = events
         .iter()
         .filter(|evt| evt.payload.get("wih_id").and_then(|v| v.as_str()) == Some(wih_id))
         .cloned()

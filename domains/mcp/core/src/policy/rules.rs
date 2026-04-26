@@ -1,7 +1,7 @@
 //! Default policy rules for MCP tools
 //!
 //! This module provides pre-built policy rules for common MCP tool
-//! security scenarios. These rules can be registered with the A2R
+//! security scenarios. These rules can be registered with the Allternit
 //! policy engine to enforce security constraints on MCP tool calls.
 //!
 //! # Example

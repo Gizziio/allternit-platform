@@ -406,7 +406,7 @@ export class EnvironmentEngine extends EventEmitter {
     config: ProvisionConfig, 
     conn: Connection
   ): Promise<Partial<Environment>> {
-    const flakeUri = config.template || 'github:a2rchitech/templates#node-typescript';
+    const flakeUri = config.template || 'github:allternit/templates#node-typescript';
     const env = await this.nixRuntime.provision(flakeUri, config.target, conn);
     
     return {

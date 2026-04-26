@@ -1,5 +1,5 @@
 /**
- * A2R Gateway Core - Extended with UI v0 Events
+ * Allternit Gateway Core - Extended with UI v0 Events
  * 
  * Transport-agnostic core providing:
  * - Request routing (logical operations)
@@ -11,7 +11,7 @@
  * 
  * NO transport logic in core.
  * 
- * @module @a2rchitech/gateway-core
+ * @module @allternit/gateway-core
  */
 
 import { EventEmitter } from 'events';
@@ -859,7 +859,7 @@ export class GatewayCore {
 
     return {
       status: 'healthy',
-      service: 'a2r-gateway',
+      service: 'allternit-gateway',
       version: '1.0.0',
       timestamp: new Date().toISOString(),
       backends: Object.fromEntries(
@@ -991,12 +991,12 @@ export class GatewayCore {
 
 export const DEFAULT_CONFIG: GatewayConfig = {
   services: {
-    api: process.env.A2R_API_URL || 'http://127.0.0.1:3000',
-    kernel: process.env.A2R_KERNEL_URL || 'http://127.0.0.1:3004',
-    voice: process.env.A2R_VOICE_URL || 'http://127.0.0.1:8001',
-    operator: process.env.A2R_OPERATOR_URL || 'http://127.0.0.1:3010',
-    rails: process.env.A2R_RAILS_URL || 'http://127.0.0.1:3011',
-    webvm: process.env.A2R_WEBVM_URL || 'http://127.0.0.1:8002',
+    api: process.env.Allternit_API_URL || 'http://127.0.0.1:3000',
+    kernel: process.env.Allternit_KERNEL_URL || 'http://127.0.0.1:3004',
+    voice: process.env.Allternit_VOICE_URL || 'http://127.0.0.1:8001',
+    operator: process.env.Allternit_OPERATOR_URL || 'http://127.0.0.1:3010',
+    rails: process.env.Allternit_RAILS_URL || 'http://127.0.0.1:3011',
+    webvm: process.env.Allternit_WEBVM_URL || 'http://127.0.0.1:8002',
   },
   rateLimit: {
     max: 120,

@@ -1,5 +1,5 @@
 /**
- * @fileoverview A2R Guest Agent Protocol - Client Implementation
+ * @fileoverview Allternit Guest Agent Protocol - Client Implementation
  * 
  * Protocol client for making requests to the VM guest agent.
  * Handles request/response correlation, timeouts, and streaming.

@@ -1,5 +1,5 @@
 """
-A2R Computer Use Observability - Analyzer
+Allternit Computer Use Observability - Analyzer
 
 Post-run analysis:
 - Action timeline

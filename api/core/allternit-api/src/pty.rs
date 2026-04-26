@@ -14,7 +14,7 @@ use tokio::{process::Command, sync::RwLock};
 
 const RECONNECTION_WINDOW_SECONDS: i64 = 300;
 const BACKLOG_BYTES: usize = 256 * 1024;
-const SESSION_PREFIX: &str = "a2r-pty-";
+const SESSION_PREFIX: &str = "allternit-pty-";
 const IDLE_TIMEOUT_SECONDS: i64 = 30 * 60;
 const WARNING_WINDOW_SECONDS: i64 = 5 * 60;
 
@@ -818,7 +818,7 @@ mod tests {
     #[tokio::test]
     async fn timeout_warning_uses_configured_idle_window() {
         let state_dir =
-            std::env::temp_dir().join(format!("a2r-pty-timeout-test-{}", uuid::Uuid::new_v4()));
+            std::env::temp_dir().join(format!("allternit-pty-timeout-test-{}", uuid::Uuid::new_v4()));
         let manager = PtyManager::new_with_config(
             state_dir.clone(),
             PtyConfig {

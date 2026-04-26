@@ -1,7 +1,7 @@
 //! Rails HTTP client implementation
 //!
-//! Implements the RailsClient trait from a2r-cowork-runtime
-//! to communicate with the A2R Rails service.
+//! Implements the RailsClient trait from allternit-cowork-runtime
+//! to communicate with the Allternit Rails service.
 
 use async_trait::async_trait;
 use allternit_cowork_runtime::{

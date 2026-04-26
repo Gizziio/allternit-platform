@@ -1,19 +1,19 @@
-# A2R VM Execution System
+# Allternit VM Execution System
 
-Complete virtual machine execution environment for A2R, providing sandboxed Linux environments on macOS using Apple Virtualization.framework.
+Complete virtual machine execution environment for Allternit, providing sandboxed Linux environments on macOS using Apple Virtualization.framework.
 
 ## Overview
 
-The A2R VM system consists of multiple components working together to provide secure, isolated execution environments:
+The Allternit VM system consists of multiple components working together to provide secure, isolated execution environments:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           A2R VM Architecture                                │
+│                           Allternit VM Architecture                                │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  ┌─────────────┐    ┌─────────────┐    ┌─────────────────────────────────┐  │
-│  │  CLI Tool   │    │ Desktop App │    │         a2r-vm-executor         │  │
-│  │  (a2r vm)   │◄──►│  (Electron) │◄──►│       (runs inside VM)          │  │
+│  │  CLI Tool   │    │ Desktop App │    │         allternit-vm-executor         │  │
+│  │  (allternit vm)   │◄──►│  (Electron) │◄──►│       (runs inside VM)          │  │
 │  └─────────────┘    └──────┬──────┘    └─────────────────────────────────┘  │
 │                            │                          │                      │
 │                            ▼                          ▼                      │
@@ -34,7 +34,7 @@ The A2R VM system consists of multiple components working together to provide se
 ## Components
 
 ### 1. VM Executor (Rust)
-**Location:** `1-kernel/execution/a2r-vm-executor/`
+**Location:** `1-kernel/execution/allternit-vm-executor/`
 
 The guest agent that runs inside the Linux VM:
 - Listens on VSOCK port 8080 for commands
@@ -43,31 +43,31 @@ The guest agent that runs inside the Linux VM:
 
 ```bash
 # Build
-cargo build --release -p a2r-vm-executor
+cargo build --release -p allternit-vm-executor
 
 # Run (inside VM)
-./a2r-vm-executor
+./allternit-vm-executor
 ```
 
 ### 2. VM Image Builder (Rust)
-**Location:** `1-kernel/execution/a2r-vm-image-builder/`
+**Location:** `1-kernel/execution/allternit-vm-image-builder/`
 
 Downloads or builds VM images:
 
 ```bash
 # Download pre-built images
-a2r-vm-image-builder download --version 1.1.0
+allternit-vm-image-builder download --version 1.1.0
 
 # Build locally (Linux only)
-a2r-vm-image-builder build --ubuntu-version 22.04
+allternit-vm-image-builder build --ubuntu-version 22.04
 ```
 
 **Image Locations:**
 ```
-~/.a2r/vm-images/
-├── vmlinux-6.5.0-a2r              # Linux kernel
-├── initrd.img-6.5.0-a2r           # Initial ramdisk
-├── ubuntu-22.04-a2r-v1.1.0.ext4   # Root filesystem
+~/.allternit/vm-images/
+├── vmlinux-6.5.0-allternit              # Linux kernel
+├── initrd.img-6.5.0-allternit           # Initial ramdisk
+├── ubuntu-22.04-allternit-v1.1.0.ext4   # Root filesystem
 └── version.json                   # Metadata
 ```
 
@@ -94,9 +94,9 @@ swift build -c release
 TypeScript wrapper for the Swift CLI:
 
 ```typescript
-import { A2RVMManager } from '@a2r/vm-manager';
+import { AllternitVMManager } from '@allternit/vm-manager';
 
-const manager = new A2RVMManager();
+const manager = new AllternitVMManager();
 await manager.start();
 const result = await manager.execute({
   command: "npm",
@@ -128,12 +128,12 @@ React components for VM management:
 
 ```bash
 # Using the image builder
-cargo run --release -p a2r-vm-image-builder -- download --version 1.1.0
+cargo run --release -p allternit-vm-image-builder -- download --version 1.1.0
 
 # Or manually from GitHub Releases
-curl -L -o ubuntu-22.04-a2r-v1.1.0.ext4.zst \
-  https://github.com/Gizziio/a2rchitech/releases/download/v1.1.0/ubuntu-22.04-a2r-v1.1.0.ext4.zst
-zstd -d ubuntu-22.04-a2r-v1.1.0.ext4.zst
+curl -L -o ubuntu-22.04-allternit-v1.1.0.ext4.zst \
+  https://github.com/Gizziio/allternit/releases/download/v1.1.0/ubuntu-22.04-allternit-v1.1.0.ext4.zst
+zstd -d ubuntu-22.04-allternit-v1.1.0.ext4.zst
 ```
 
 ### 2. Build VM Manager
@@ -156,7 +156,7 @@ swift build -c release
 ./vm-manager-cli exec "ls -la"
 
 # Or via desktop app
-# Open A2R Desktop → VM tab → Command Executor
+# Open Allternit Desktop → VM tab → Command Executor
 ```
 
 ## Configuration
@@ -165,7 +165,7 @@ swift build -c release
 
 ```typescript
 interface VMConfiguration {
-  vmName?: string;           // Default: "a2r-vm"
+  vmName?: string;           // Default: "allternit-vm"
   kernelPath?: string;       // Path to vmlinux
   initrdPath?: string;       // Path to initrd
   rootfsPath?: string;       // Path to ext4 rootfs
@@ -179,10 +179,10 @@ interface VMConfiguration {
 ### Environment Variables
 
 ```bash
-export A2R_VM_KERNEL="$HOME/.a2r/vm-images/vmlinux-6.5.0-a2r"
-export A2R_VM_INITRD="$HOME/.a2r/vm-images/initrd.img-6.5.0-a2r"
-export A2R_VM_ROOTFS="$HOME/.a2r/vm-images/ubuntu-22.04-a2r-v1.1.0.ext4"
-export A2R_VM_SOCKET="$HOME/.a2r/desktop-vm.sock"
+export Allternit_VM_KERNEL="$HOME/.allternit/vm-images/vmlinux-6.5.0-allternit"
+export Allternit_VM_INITRD="$HOME/.allternit/vm-images/initrd.img-6.5.0-allternit"
+export Allternit_VM_ROOTFS="$HOME/.allternit/vm-images/ubuntu-22.04-allternit-v1.1.0.ext4"
+export Allternit_VM_SOCKET="$HOME/.allternit/desktop-vm.sock"
 ```
 
 ## Architecture Details
@@ -195,7 +195,7 @@ The host and VM communicate over VSOCK (virtual socket):
 ┌──────────────┐                    ┌──────────────┐
 │     Host     │  VSOCK Port 8080   │      VM      │
 │              │◄──────────────────►│              │
-│  vm-manager  │     JSON RPC       │  a2r-vm-     │
+│  vm-manager  │     JSON RPC       │  allternit-vm-     │
 │    -cli      │                    │   executor   │
 └──────────────┘                    └──────────────┘
 ```
@@ -263,7 +263,7 @@ window.electronAPI.vm.onStatusChanged((state) => {
 ### 1. Build VM Executor (for Linux)
 
 ```bash
-cargo build --release -p a2r-vm-image-builder
+cargo build --release -p allternit-vm-image-builder
 ```
 
 ### 2. Build Swift VM Manager (macOS)
@@ -295,8 +295,8 @@ npm run build
 
 ```bash
 # Rust components
-cargo test -p a2r-vm-executor
-cargo test -p a2r-vm-image-builder
+cargo test -p allternit-vm-executor
+cargo test -p allternit-vm-image-builder
 
 # Swift components
 cd native/vm-manager
@@ -320,7 +320,7 @@ npm test
 
 1. Check if images exist:
    ```bash
-   ls -la ~/.a2r/vm-images/
+   ls -la ~/.allternit/vm-images/
    ```
 
 2. Check system requirements:
@@ -350,14 +350,14 @@ npm test
 3. Check executor logs:
    ```bash
    # In VM
-   journalctl -u a2r-vm-executor
+   journalctl -u allternit-vm-executor
    ```
 
 ### Image Download Issues
 
 1. Check GitHub release exists:
    ```bash
-   curl -I https://github.com/Gizziio/a2rchitech/releases/download/v1.1.0/ubuntu-22.04-a2r-v1.1.0.ext4.zst
+   curl -I https://github.com/Gizziio/allternit/releases/download/v1.1.0/ubuntu-22.04-allternit-v1.1.0.ext4.zst
    ```
 
 2. Verify disk space:
@@ -386,9 +386,9 @@ Pre-built VM images are available on GitHub Releases:
 
 | File | Size | Description |
 |------|------|-------------|
-| `vmlinux-6.5.0-a2r` | 11 MB | Linux kernel |
-| `initrd.img-6.5.0-a2r` | 32 MB | Initial ramdisk |
-| `ubuntu-22.04-a2r-v1.1.0.ext4.zst` | 21 MB | Compressed rootfs |
+| `vmlinux-6.5.0-allternit` | 11 MB | Linux kernel |
+| `initrd.img-6.5.0-allternit` | 32 MB | Initial ramdisk |
+| `ubuntu-22.04-allternit-v1.1.0.ext4.zst` | 21 MB | Compressed rootfs |
 | `version-1.1.0-amd64.json` | <1 KB | Metadata & checksums |
 
 ## Contributing

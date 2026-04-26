@@ -1,5 +1,5 @@
 """
-A2R Computer Use — Capability Matrix Loader
+Allternit Computer Use — Capability Matrix Loader
 Loads and validates adapter manifests against the capability matrix rules.
 Provides ranked adapter lists for the adapter selector.
 """

@@ -230,7 +230,7 @@ async fn handle_multimodal_socket(socket: WebSocket, _state: Arc<crate::AppState
 
 async fn list_streams_engine(
     State(state): State<Arc<crate::AppState>>,
-) -> Json<Vec<a2r_multimodal_streaming::ActiveStreamInfo>> {
+) -> Json<Vec<allternit_multimodal_streaming::ActiveStreamInfo>> {
     let streams = state.multimodal_engine.get_active_streams().await;
     Json(streams)
 }
@@ -238,7 +238,7 @@ async fn list_streams_engine(
 async fn get_stream_engine(
     State(state): State<Arc<crate::AppState>>,
     Path(id): Path<String>,
-) -> Result<Json<a2r_multimodal_streaming::StreamConfig>, StatusCode> {
+) -> Result<Json<allternit_multimodal_streaming::StreamConfig>, StatusCode> {
     state
         .multimodal_engine
         .get_stream(&id)

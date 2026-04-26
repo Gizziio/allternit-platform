@@ -1,6 +1,6 @@
 //! Intent Graph Integration
 //!
-//! Stores swarm execution data in A2R's Intent Graph for persistence and querying.
+//! Stores swarm execution data in Allternit's Intent Graph for persistence and querying.
 
 use crate::error::SwarmResult;
 use crate::types::EntityId;
@@ -22,13 +22,13 @@ impl IntentGraphClient {
 
     /// Store a node in the Intent Graph
     pub async fn store_node(&self, node: IntentNode) -> SwarmResult<EntityId> {
-        // Would call actual A2R Intent Graph API
+        // Would call actual Allternit Intent Graph API
         Ok(node.id)
     }
 
     /// Query nodes by type
     pub async fn query_nodes(&self, node_type: &str) -> SwarmResult<Vec<IntentNode>> {
-        // Would query actual A2R Intent Graph API
+        // Would query actual Allternit Intent Graph API
         Ok(vec![])
     }
 }

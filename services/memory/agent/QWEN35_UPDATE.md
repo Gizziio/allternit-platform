@@ -47,7 +47,7 @@ ollama pull mxbai-embed-large
 ### 3. Start Memory Agent
 
 ```bash
-cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/memory
+cd /Users/macbook/Desktop/allternit-workspace/allternit/memory
 pnpm install
 pnpm run start:http
 ```
@@ -118,7 +118,7 @@ The following files have been updated to use Qwen 3.5:
 
 3. **Test CLI**:
    ```bash
-   a2r memory query "What do we know about DAG validation?"
+   allternit memory query "What do we know about DAG validation?"
    ```
 
 ---

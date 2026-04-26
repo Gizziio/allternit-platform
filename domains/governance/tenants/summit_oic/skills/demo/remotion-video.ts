@@ -1,7 +1,7 @@
 /**
  * Remotion Demo Video System
  * 
- * Programmatic video generation for A2R Operator demos.
+ * Programmatic video generation for Allternit Operator demos.
  * Creates professional demo videos from scripts and screen recordings.
  * 
  * @module summit.demo.remotion
@@ -88,9 +88,9 @@ export interface VideoExport {
 // Demo Video Templates
 // ============================================================================
 
-export const A2R_DEMO_TEMPLATE: VideoComposition = {
-  id: 'a2r_demo_2min',
-  title: 'A2R Operator - 2 Minute Demo',
+export const Allternit_DEMO_TEMPLATE: VideoComposition = {
+  id: 'allternit_demo_2min',
+  title: 'Allternit Operator - 2 Minute Demo',
   duration: 3600, // 2 minutes at 30fps
   width: 1920,
   height: 1080,
@@ -142,7 +142,7 @@ export const A2R_DEMO_TEMPLATE: VideoComposition = {
       type: 'logo',
       content: {
         type: 'image',
-        src: 'logos/a2r_logo.png',
+        src: 'logos/allternit_logo.png',
       },
       transitions: [{ type: 'fade', duration: 30 }],
     },
@@ -297,7 +297,7 @@ export const A2R_DEMO_TEMPLATE: VideoComposition = {
       type: 'logo',
       content: {
         type: 'image',
-        src: 'logos/a2r_logo_final.png',
+        src: 'logos/allternit_logo_final.png',
       },
     },
     {
@@ -309,7 +309,7 @@ export const A2R_DEMO_TEMPLATE: VideoComposition = {
       type: 'text_overlay',
       content: {
         type: 'text',
-        text: 'A2R Operator\nBecause teachers deserve to go home at 3 PM.',
+        text: 'Allternit Operator\nBecause teachers deserve to go home at 3 PM.',
         style: {
           fontSize: 48,
           fontFamily: 'Montserrat',

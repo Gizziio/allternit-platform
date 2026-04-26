@@ -1,0 +1,95 @@
+{
+  "term": {
+    "program": "IT Support Specialist",
+    "department": "Technology",
+    "course_name": "IT Fundamentals Phase 1",
+    "course_id": 14389375,
+    "term_start": "2026-08-03",
+    "term_end": "2026-10-09",
+    "stage": "week_3",
+    "passing_grade": 70
+  },
+  "staff": {
+    "course_instructor": "Jordan Reyes",
+    "program_manager": "Avery Brooks",
+    "advisor": "Casey Morgan",
+    "registrar": "Registrar Office"
+  },
+  "students": [
+    {
+      "student_id": "S3001",
+      "first_name": "Avery",
+      "last_name": "Bennett",
+      "email": "avery.bennett@example.edu",
+      "current_grade": 58.2,
+      "attendance": "91%",
+      "missing_assignments": [
+        {
+          "title": "Networking Fundamentals Lab 1",
+          "due_date": "2026-08-20",
+          "points_possible": 25
+        },
+        {
+          "title": "System Configuration Project 2",
+          "due_date": "2026-08-12",
+          "points_possible": 29
+        }
+      ]
+    },
+    {
+      "student_id": "S3002",
+      "first_name": "Hayden",
+      "last_name": "Irving",
+      "email": "hayden.irving@example.edu",
+      "current_grade": 86.6,
+      "attendance": "96%",
+      "missing_assignments": [
+        {
+          "title": "Command Line Basics Checkpoint 1",
+          "due_date": "2026-08-16",
+          "points_possible": 27
+        }
+      ]
+    },
+    {
+      "student_id": "S3003",
+      "first_name": "Remy",
+      "last_name": "Lawson",
+      "email": "remy.lawson@example.edu",
+      "current_grade": 56,
+      "attendance": "72%",
+      "missing_assignments": [
+        {
+          "title": "Documentation Assignment 1",
+          "due_date": "2026-08-10",
+          "points_possible": 23
+        },
+        {
+          "title": "Safety and ESD Discussion Post 2",
+          "due_date": "2026-08-15",
+          "points_possible": 21
+        }
+      ]
+    },
+    {
+      "student_id": "S3004",
+      "first_name": "Casey",
+      "last_name": "Donovan",
+      "email": "casey.donovan@example.edu",
+      "current_grade": 81.3,
+      "attendance": "85%",
+      "missing_assignments": [
+        {
+          "title": "Troubleshooting Reflection 1",
+          "due_date": "2026-08-15",
+          "points_possible": 18
+        },
+        {
+          "title": "Operating Systems Quiz 2",
+          "due_date": "2026-08-20",
+          "points_possible": 29
+        }
+      ]
+    }
+  ]
+}

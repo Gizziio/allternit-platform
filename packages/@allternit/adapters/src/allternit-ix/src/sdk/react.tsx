@@ -1,7 +1,7 @@
 /**
- * A2R-IX React SDK
+ * Allternit-IX React SDK
  * 
- * React hooks and components for A2R-IX integration.
+ * React hooks and components for Allternit-IX integration.
  */
 
 import React, { useState, useEffect, useCallback, useRef, createContext, useContext } from 'react';

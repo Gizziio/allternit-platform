@@ -15,10 +15,10 @@ tracing-subscriber = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 async-trait = { workspace = true }
-a2rchitech-sdk-core = { workspace = true }
-a2rchitech-sdk-functions = { workspace = true }
-a2rchitech-sdk-policy = { workspace = true }
-a2rchitech-registry-apps = { path = "../../../../4-services/registry/apps-registry" }
-a2rchitech-registry-functions = { path = "../../../../4-services/registry/functions-registry" }
+allternit-sdk-core = { workspace = true }
+allternit-sdk-functions = { workspace = true }
+allternit-sdk-policy = { workspace = true }
+allternit-registry-apps = { path = "../../../../4-services/registry/apps-registry" }
+allternit-registry-functions = { path = "../../../../4-services/registry/functions-registry" }
 sqlx = { workspace = true }
 reqwest = { workspace = true }

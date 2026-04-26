@@ -1,7 +1,7 @@
 {
-  "name": "@a2r/replies-contract",
+  "name": "@allternit/replies-contract-v2",
   "version": "1.0.0",
-  "description": "A2R Replies API canonical type contract — Reply, ReplyItem, ReplyEvent, ConversationReplyState",
+  "description": "Allternit Replies API canonical type contract \u2014 Reply, ReplyItem, ReplyEvent, ConversationReplyState",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",

@@ -31,7 +31,7 @@ Status: Ready to configure
 ### Step 1: Configure VPS Connection
 
 ```bash
-cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/4-services/memory/agent
+cd /Users/macbook/Desktop/allternit-workspace/allternit/4-services/memory/agent
 
 # Run the configuration script
 ./scripts/configure-vps.sh <YOUR_VPS_IP>
@@ -232,19 +232,19 @@ pnpm run daemon stop
 
 ---
 
-## Integration with a2rchitech
+## Integration with allternit
 
 ### CLI Commands
 
 ```bash
 # Query memory
-a2r memory query "What do we know about DAG validation?"
+allternit memory query "What do we know about DAG validation?"
 
 # Show stats
-a2r memory stats
+allternit memory stats
 
 # Trigger consolidation
-a2r memory consolidate
+allternit memory consolidate
 ```
 
 ### Gateway API

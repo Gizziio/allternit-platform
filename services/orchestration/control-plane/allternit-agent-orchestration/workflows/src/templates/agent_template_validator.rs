@@ -3,7 +3,7 @@ use crate::agent_template_compiler::{
     ProjectTemplatesYaml, RoleDefinitionYaml, RolesYaml, TraitDefinitionYaml, TraitsYaml,
     VoicePersonaDefinitionYaml, VoicePersonaYaml,
 };
-use a2rchitech_policy::PolicyEngine;
+use allternit_policy::PolicyEngine;
 use std::sync::Arc;
 
 pub struct AgentTemplateValidator {
@@ -286,26 +286,26 @@ pub enum ValidationError {
 mod tests {
     use super::*;
     use std::sync::Arc;
-    use a2rchitech_history::HistoryLedger;
-    use a2rchitech_messaging::MessagingSystem;
+    use allternit_history::HistoryLedger;
+    use allternit_messaging::MessagingSystem;
     use uuid::Uuid;
 
     #[tokio::test]
     async fn test_validate_valid_agent_template() {
         let temp_path = format!("/tmp/test_validator_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(std::sync::Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
         let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
         let messaging_system = Arc::new(
-            a2rchitech_messaging::MessagingSystem::new_with_storage(
+            allternit_messaging::MessagingSystem::new_with_storage(
                 history_ledger.clone(),
                 pool,
             )
             .await
             .unwrap(),
         );
-        let policy_engine = Arc::new(a2rchitech_policy::PolicyEngine::new(
+        let policy_engine = Arc::new(allternit_policy::PolicyEngine::new(
             history_ledger.clone(),
             messaging_system.clone(),
         ));
@@ -349,18 +349,18 @@ agent_templates:
     async fn test_validate_invalid_tenant() {
         let temp_path = format!("/tmp/test_validator2_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(std::sync::Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
         let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
         let messaging_system = Arc::new(
-            a2rchitech_messaging::MessagingSystem::new_with_storage(
+            allternit_messaging::MessagingSystem::new_with_storage(
                 history_ledger.clone(),
                 pool,
             )
             .await
             .unwrap(),
         );
-        let policy_engine = Arc::new(a2rchitech_policy::PolicyEngine::new(
+        let policy_engine = Arc::new(allternit_policy::PolicyEngine::new(
             history_ledger.clone(),
             messaging_system.clone(),
         ));
@@ -408,18 +408,18 @@ agent_templates:
     async fn test_validate_valid_traits() {
         let temp_path = format!("/tmp/test_traits_validator_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(std::sync::Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
         let pool = sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap();
         let messaging_system = Arc::new(
-            a2rchitech_messaging::MessagingSystem::new_with_storage(
+            allternit_messaging::MessagingSystem::new_with_storage(
                 history_ledger.clone(),
                 pool,
             )
             .await
             .unwrap(),
         );
-        let policy_engine = Arc::new(a2rchitech_policy::PolicyEngine::new(
+        let policy_engine = Arc::new(allternit_policy::PolicyEngine::new(
             history_ledger.clone(),
             messaging_system.clone(),
         ));

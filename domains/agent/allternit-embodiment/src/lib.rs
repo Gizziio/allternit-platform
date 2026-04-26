@@ -1,12 +1,12 @@
-use a2rchitech_context_router::ContextRouter;
-use a2rchitech_history::{HistoryError, HistoryLedger};
-use a2rchitech_memory::MemoryFabric;
-use a2rchitech_messaging::{EventEnvelope, MessagingSystem};
-use a2rchitech_policy::{PolicyEffect, PolicyEngine, PolicyRequest};
-use a2rchitech_providers::ProviderRouter;
-use a2rchitech_runtime_core::SessionManager;
-use a2rchitech_skills::SkillRegistry;
-use a2rchitech_workflows::WorkflowEngine;
+use allternit_context_router::ContextRouter;
+use allternit_history::{HistoryError, HistoryLedger};
+use allternit_memory::MemoryFabric;
+use allternit_messaging::{EventEnvelope, MessagingSystem};
+use allternit_policy::{PolicyEffect, PolicyEngine, PolicyRequest};
+use allternit_providers::ProviderRouter;
+use allternit_runtime_core::SessionManager;
+use allternit_skills::SkillRegistry;
+use allternit_workflows::WorkflowEngine;
 use serde::{Deserialize, Serialize};
 use sqlx::{Row, SqlitePool};
 use std::collections::HashMap;
@@ -267,9 +267,9 @@ pub enum EmbodimentError {
     #[error("SQLX error: {0}")]
     Sqlx(#[from] sqlx::Error),
     #[error("Policy error: {0}")]
-    Policy(#[from] a2rchitech_policy::PolicyError),
+    Policy(#[from] allternit_policy::PolicyError),
     #[error("Provider error: {0}")]
-    Provider(#[from] a2rchitech_providers::ProviderError),
+    Provider(#[from] allternit_providers::ProviderError),
     #[error("Embodiment not found: {0}")]
     EmbodimentNotFound(String),
     #[error("Embodiment offline: {0}")]
@@ -1527,9 +1527,9 @@ impl EmbodimentControlPlane {
 
         let is_physical = Self::is_physical_embodiment(&embodiment.embodiment_type);
         let requested_tier = if is_physical {
-            a2rchitech_policy::SafetyTier::T4
+            allternit_policy::SafetyTier::T4
         } else {
-            a2rchitech_policy::SafetyTier::T2
+            allternit_policy::SafetyTier::T2
         };
 
         // Validate access through policy
@@ -1865,7 +1865,7 @@ impl EmbodimentControlPlane {
                 "session_id": session_id,
                 "tenant_id": tenant_id,
             }),
-            requested_tier: a2rchitech_policy::SafetyTier::T4,
+            requested_tier: allternit_policy::SafetyTier::T4,
         };
         let policy_decision = self.policy_engine.evaluate(policy_request).await?;
         if matches!(policy_decision.decision, PolicyEffect::Deny) {
@@ -1939,7 +1939,7 @@ impl EmbodimentControlPlane {
                 "tenant_id": tenant_id,
                 "enabled": enabled,
             }),
-            requested_tier: a2rchitech_policy::SafetyTier::T4,
+            requested_tier: allternit_policy::SafetyTier::T4,
         };
         let policy_decision = self.policy_engine.evaluate(policy_request).await?;
         if matches!(policy_decision.decision, PolicyEffect::Deny) {
@@ -2025,7 +2025,7 @@ impl EmbodimentControlPlane {
                 "session_id": request.session_id,
                 "tenant_id": request.tenant_id,
             }),
-            requested_tier: a2rchitech_policy::SafetyTier::T4,
+            requested_tier: allternit_policy::SafetyTier::T4,
         };
         let policy_decision = self.policy_engine.evaluate(policy_request).await?;
         if matches!(policy_decision.decision, PolicyEffect::Deny) {
@@ -2129,7 +2129,7 @@ impl EmbodimentControlPlane {
                 "session_id": update.session_id,
                 "tenant_id": update.tenant_id,
             }),
-            requested_tier: a2rchitech_policy::SafetyTier::T4,
+            requested_tier: allternit_policy::SafetyTier::T4,
         };
         let policy_decision = self.policy_engine.evaluate(policy_request).await?;
         if matches!(policy_decision.decision, PolicyEffect::Deny) {
@@ -2221,7 +2221,7 @@ impl EmbodimentControlPlane {
                 "session_id": update.session_id,
                 "tenant_id": update.tenant_id,
             }),
-            requested_tier: a2rchitech_policy::SafetyTier::T4,
+            requested_tier: allternit_policy::SafetyTier::T4,
         };
         let policy_decision = self.policy_engine.evaluate(policy_request).await?;
         if matches!(policy_decision.decision, PolicyEffect::Deny) {
@@ -2294,7 +2294,7 @@ impl EmbodimentControlPlane {
                 "session_id": update.session_id,
                 "tenant_id": update.tenant_id,
             }),
-            requested_tier: a2rchitech_policy::SafetyTier::T4,
+            requested_tier: allternit_policy::SafetyTier::T4,
         };
         let policy_decision = self.policy_engine.evaluate(policy_request).await?;
         if matches!(policy_decision.decision, PolicyEffect::Deny) {
@@ -2552,12 +2552,12 @@ mod tests {
         // Create temporary history ledger
         let temp_path = format!("/tmp/test_embodiment_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
 
         // Create messaging system
         let messaging_system = Arc::new(
-            a2rchitech_messaging::MessagingSystem::new_with_storage(
+            allternit_messaging::MessagingSystem::new_with_storage(
                 history_ledger.clone(),
                 pool.clone(),
             )
@@ -2566,13 +2566,13 @@ mod tests {
         );
 
         // Create policy engine
-        let policy_engine = Arc::new(a2rchitech_policy::PolicyEngine::new(
+        let policy_engine = Arc::new(allternit_policy::PolicyEngine::new(
             history_ledger.clone(),
             messaging_system.clone(),
         ));
-        let agent_identity = a2rchitech_policy::Identity {
+        let agent_identity = allternit_policy::Identity {
             id: "agent-001".to_string(),
-            identity_type: a2rchitech_policy::IdentityType::AgentIdentity,
+            identity_type: allternit_policy::IdentityType::AgentIdentity,
             name: "Test Agent".to_string(),
             tenant_id: "tenant-001".to_string(),
             created_at: 0,
@@ -2586,12 +2586,12 @@ mod tests {
             .unwrap();
         policy_engine.create_default_permissions().await.unwrap();
         policy_engine.create_default_rules().await.unwrap();
-        let execute_rule = a2rchitech_policy::PolicyRule {
+        let execute_rule = allternit_policy::PolicyRule {
             id: "rule_allow_execute".to_string(),
             name: "Allow Execute Operations".to_string(),
             description: "Allow embodiment command execution in tests".to_string(),
             condition: "identity.active".to_string(),
-            effect: a2rchitech_policy::PolicyEffect::Allow,
+            effect: allternit_policy::PolicyEffect::Allow,
             resource: "*".to_string(),
             actions: vec![
                 "execute".to_string(),
@@ -2609,18 +2609,18 @@ mod tests {
         policy_engine.add_rule(execute_rule).await.unwrap();
 
         // Create tool gateway
-        let tool_gateway = Arc::new(a2rchitech_tools_gateway::ToolGateway::new(
+        let tool_gateway = Arc::new(allternit_tools_gateway::ToolGateway::new(
             policy_engine.clone(),
             history_ledger.clone(),
             messaging_system.clone(),
         ));
 
         // Create context router
-        let context_router = Arc::new(a2rchitech_context_router::ContextRouter::new(
+        let context_router = Arc::new(allternit_context_router::ContextRouter::new(
             history_ledger.clone(),
             messaging_system.clone(),
             policy_engine.clone(),
-            Arc::new(a2rchitech_runtime_core::SessionManager::new(
+            Arc::new(allternit_runtime_core::SessionManager::new(
                 history_ledger.clone(),
                 messaging_system.clone(),
             )),
@@ -2628,7 +2628,7 @@ mod tests {
 
         // Create memory fabric
         let memory_fabric = Arc::new(
-            a2rchitech_memory::MemoryFabric::new_with_storage(
+            allternit_memory::MemoryFabric::new_with_storage(
                 history_ledger.clone(),
                 messaging_system.clone(),
                 policy_engine.clone(),
@@ -2641,13 +2641,13 @@ mod tests {
 
         // Create provider router
         let provider_router = Arc::new(
-            a2rchitech_providers::ProviderRouter::new_with_storage(
+            allternit_providers::ProviderRouter::new_with_storage(
                 history_ledger.clone(),
                 messaging_system.clone(),
                 policy_engine.clone(),
                 context_router.clone(),
                 memory_fabric.clone(),
-                Arc::new(a2rchitech_runtime_core::SessionManager::new(
+                Arc::new(allternit_runtime_core::SessionManager::new(
                     history_ledger.clone(),
                     messaging_system.clone(),
                 )),
@@ -2659,7 +2659,7 @@ mod tests {
 
         // Create skill registry
         let skill_registry = Arc::new(
-            a2rchitech_skills::SkillRegistry::new_with_storage(
+            allternit_skills::SkillRegistry::new_with_storage(
                 history_ledger.clone(),
                 messaging_system.clone(),
                 policy_engine.clone(),
@@ -2673,12 +2673,12 @@ mod tests {
         // Create workflow engine
         // Create task queue
         let task_queue = Arc::new(
-            a2rchitech_messaging::TaskQueue::new(history_ledger.clone(), pool.clone())
+            allternit_messaging::TaskQueue::new(history_ledger.clone(), pool.clone())
                 .await
                 .unwrap(),
         );
 
-        let workflow_engine = Arc::new(a2rchitech_workflows::WorkflowEngine::new(
+        let workflow_engine = Arc::new(allternit_workflows::WorkflowEngine::new(
             history_ledger.clone(),
             messaging_system.clone(),
             policy_engine.clone(),
@@ -2688,7 +2688,7 @@ mod tests {
         ));
 
         // Create session manager
-        let session_manager = Arc::new(a2rchitech_runtime_core::SessionManager::new(
+        let session_manager = Arc::new(allternit_runtime_core::SessionManager::new(
             history_ledger.clone(),
             messaging_system.clone(),
         ));

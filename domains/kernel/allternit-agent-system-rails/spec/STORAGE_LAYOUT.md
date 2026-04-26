@@ -1,23 +1,23 @@
 # Storage Layout (Locked)
 
 Authoritative truth (append-only):
-- `.a2r/ledger/events/YYYY-MM-DD.jsonl`
+- `.allternit/ledger/events/YYYY-MM-DD.jsonl`
 
 Atomic correctness (transactional):
-- `.a2r/leases/leases.db`
+- `.allternit/leases/leases.db`
 
 Immutable evidence blobs (generated IDs):
-- `.a2r/receipts/<receipt_id>/receipt.json`
-- `.a2r/blobs/<blob_id>`
+- `.allternit/receipts/<receipt_id>/receipt.json`
+- `.allternit/blobs/<blob_id>`
 
 Fast retrieval (derived, rebuildable):
-- `.a2r/index/index.db` (SQLite FTS)
+- `.allternit/index/index.db` (SQLite FTS)
 
 Mail threads (derived view):
-- `.a2r/mail/threads/<thread_id>.jsonl` (projection from ledger events)
+- `.allternit/mail/threads/<thread_id>.jsonl` (projection from ledger events)
 
 Context packs (derived view):
-- `.a2r/work/dags/<dag_id>/wih/context/<wih_id>.context.json`
+- `.allternit/work/dags/<dag_id>/wih/context/<wih_id>.context.json`
 
 Notes:
 - Ledger is the single source of truth for state transitions.

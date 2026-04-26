@@ -1,15 +1,15 @@
 #!/bin/bash
 set -e
 
-# A2R Runtime Installation Script
-# Installs A2R agent on fresh VPS (Ubuntu/Debian)
+# Allternit Runtime Installation Script
+# Installs Allternit agent on fresh VPS (Ubuntu/Debian)
 
-echo "=== A2R Runtime Installation ==="
+echo "=== Allternit Runtime Installation ==="
 echo ""
 
 # Configuration (passed via environment)
-A2R_VERSION="${A2R_VERSION:-latest}"
-CONTROL_PLANE_URL="${CONTROL_PLANE_URL:-wss://console.a2r.sh}"
+Allternit_VERSION="${Allternit_VERSION:-latest}"
+CONTROL_PLANE_URL="${CONTROL_PLANE_URL:-wss://console.allternit.sh}"
 DEPLOYMENT_TOKEN="${DEPLOYMENT_TOKEN:-}"
 
 # Colors for output
@@ -66,22 +66,22 @@ case $OS in
         ;;
 esac
 
-# 1. Create A2R user
-log_info "Creating a2r user..."
-if ! id -u a2r >/dev/null 2>&1; then
-    useradd -r -s /bin/false a2r
-    log_info "Created a2r user"
+# 1. Create Allternit user
+log_info "Creating allternit user..."
+if ! id -u allternit >/dev/null 2>&1; then
+    useradd -r -s /bin/false allternit
+    log_info "Created allternit user"
 else
-    log_info "a2r user already exists"
+    log_info "allternit user already exists"
 fi
 
 # 2. Create directories
 log_info "Creating directories..."
-mkdir -p /opt/a2r/bin
-mkdir -p /opt/a2r/config
-mkdir -p /var/log/a2r
-chown -R a2r:a2r /opt/a2r
-chown -R a2r:a2r /var/log/a2r
+mkdir -p /opt/allternit/bin
+mkdir -p /opt/allternit/config
+mkdir -p /var/log/allternit
+chown -R allternit:allternit /opt/allternit
+chown -R allternit:allternit /var/log/allternit
 log_info "Created directories"
 
 # 3. Install dependencies
@@ -90,40 +90,40 @@ apt-get update -qq
 apt-get install -y -qq curl systemd >/dev/null 2>&1
 log_info "Installed dependencies"
 
-# 4. Download A2R runtime
-log_info "Downloading A2R runtime..."
-RELEASE_URL="https://releases.a2r.sh/${A2R_VERSION}/a2r-agent-x86_64-unknown-linux-gnu.tar.gz"
+# 4. Download Allternit runtime
+log_info "Downloading Allternit runtime..."
+RELEASE_URL="https://releases.allternit.sh/${Allternit_VERSION}/allternit-agent-x86_64-unknown-linux-gnu.tar.gz"
 
-if ! curl -sLf "$RELEASE_URL" | tar xz -C /opt/a2r/bin --strip-components=1; then
-    log_error "Failed to download A2R runtime from $RELEASE_URL"
+if ! curl -sLf "$RELEASE_URL" | tar xz -C /opt/allternit/bin --strip-components=1; then
+    log_error "Failed to download Allternit runtime from $RELEASE_URL"
     log_warn "Make sure the release URL is accessible"
     exit 1
 fi
 
-chmod +x /opt/a2r/bin/a2r-agent
-log_info "Downloaded A2R runtime"
+chmod +x /opt/allternit/bin/allternit-agent
+log_info "Downloaded Allternit runtime"
 
 # 5. Create systemd service
 log_info "Creating systemd service..."
-cat > /etc/systemd/system/a2r-agent.service << EOF
+cat > /etc/systemd/system/allternit-agent.service << EOF
 [Unit]
-Description=A2R Agent
+Description=Allternit Agent
 After=network.target
 
 [Service]
 Type=simple
-ExecStart=/opt/a2r/bin/a2r-agent --control-plane=${CONTROL_PLANE_URL} --token=${DEPLOYMENT_TOKEN}
+ExecStart=/opt/allternit/bin/allternit-agent --control-plane=${CONTROL_PLANE_URL} --token=${DEPLOYMENT_TOKEN}
 Restart=always
 RestartSec=5
-User=a2r
-Group=a2r
+User=allternit
+Group=allternit
 Environment=RUST_LOG=info
 
 # Security hardening
 NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/var/log/a2r /opt/a2r/config
+ReadWritePaths=/var/log/allternit /opt/allternit/config
 
 [Install]
 WantedBy=multi-user.target
@@ -131,37 +131,37 @@ EOF
 log_info "Created systemd service"
 
 # 6. Enable and start service
-log_info "Starting A2R agent..."
+log_info "Starting Allternit agent..."
 systemctl daemon-reload
-systemctl enable a2r-agent
-systemctl start a2r-agent
-log_info "Started A2R agent"
+systemctl enable allternit-agent
+systemctl start allternit-agent
+log_info "Started Allternit agent"
 
 # 7. Verify installation
 log_info "Verifying installation..."
 sleep 2
 
-if systemctl is-active --quiet a2r-agent; then
-    log_info "A2R installation complete!"
+if systemctl is-active --quiet allternit-agent; then
+    log_info "Allternit installation complete!"
     echo ""
     echo "=== Installation Summary ==="
-    echo "Service: a2r-agent"
+    echo "Service: allternit-agent"
     echo "Status: running"
     echo "Control Plane: $CONTROL_PLANE_URL"
     echo ""
     echo "Useful commands:"
-    echo "  systemctl status a2r-agent    # Check status"
-    echo "  systemctl restart a2r-agent   # Restart service"
-    echo "  journalctl -u a2r-agent -f    # View logs"
+    echo "  systemctl status allternit-agent    # Check status"
+    echo "  systemctl restart allternit-agent   # Restart service"
+    echo "  journalctl -u allternit-agent -f    # View logs"
     echo ""
     exit 0
 else
-    log_error "A2R service failed to start"
+    log_error "Allternit service failed to start"
     echo ""
     echo "Checking service status..."
-    systemctl status a2r-agent --no-pager
+    systemctl status allternit-agent --no-pager
     echo ""
     echo "Recent logs:"
-    journalctl -u a2r-agent --no-pager -n 20
+    journalctl -u allternit-agent --no-pager -n 20
     exit 1
 fi

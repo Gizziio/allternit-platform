@@ -1,0 +1,15 @@
+export default {
+  "08fe90f1": [() => import(/* webpackChunkName: "08fe90f1" */ "@site/docs/platforms/codex.md"), "@site/docs/platforms/codex.md", require.resolveWeak("@site/docs/platforms/codex.md")],
+  "0e384e19": [() => import(/* webpackChunkName: "0e384e19" */ "@site/docs/intro.md"), "@site/docs/intro.md", require.resolveWeak("@site/docs/intro.md")],
+  "17896441": [() => import(/* webpackChunkName: "17896441" */ "@theme/DocItem"), "@theme/DocItem", require.resolveWeak("@theme/DocItem")],
+  "5e95c892": [() => import(/* webpackChunkName: "5e95c892" */ "@theme/DocsRoot"), "@theme/DocsRoot", require.resolveWeak("@theme/DocsRoot")],
+  "5e9f5e1a": [() => import(/* webpackChunkName: "5e9f5e1a" */ "@generated/docusaurus.config"), "@generated/docusaurus.config", require.resolveWeak("@generated/docusaurus.config")],
+  "8070e160": [() => import(/* webpackChunkName: "8070e160" */ "@site/docs/quickstart.md"), "@site/docs/quickstart.md", require.resolveWeak("@site/docs/quickstart.md")],
+  "81e717be": [() => import(/* webpackChunkName: "81e717be" */ "/Users/macbook/allternit-plugin-sdk/website/.docusaurus/docusaurus-plugin-content-docs/default/plugin-route-context-module-100.json"), "/Users/macbook/allternit-plugin-sdk/website/.docusaurus/docusaurus-plugin-content-docs/default/plugin-route-context-module-100.json", require.resolveWeak("/Users/macbook/allternit-plugin-sdk/website/.docusaurus/docusaurus-plugin-content-docs/default/plugin-route-context-module-100.json")],
+  "935f2afb": [() => import(/* webpackChunkName: "935f2afb" */ "~docs/default/version-current-metadata-prop-751.json"), "~docs/default/version-current-metadata-prop-751.json", require.resolveWeak("~docs/default/version-current-metadata-prop-751.json")],
+  "a09c2993": [() => import(/* webpackChunkName: "a09c2993" */ "@site/docs/introduction.md"), "@site/docs/introduction.md", require.resolveWeak("@site/docs/introduction.md")],
+  "a7bd4aaa": [() => import(/* webpackChunkName: "a7bd4aaa" */ "@theme/DocVersionRoot"), "@theme/DocVersionRoot", require.resolveWeak("@theme/DocVersionRoot")],
+  "a94703ab": [() => import(/* webpackChunkName: "a94703ab" */ "@theme/DocRoot"), "@theme/DocRoot", require.resolveWeak("@theme/DocRoot")],
+  "c4b5b3be": [() => import(/* webpackChunkName: "c4b5b3be" */ "/Users/macbook/allternit-plugin-sdk/website/.docusaurus/docusaurus-plugin-content-pages/default/plugin-route-context-module-100.json"), "/Users/macbook/allternit-plugin-sdk/website/.docusaurus/docusaurus-plugin-content-pages/default/plugin-route-context-module-100.json", require.resolveWeak("/Users/macbook/allternit-plugin-sdk/website/.docusaurus/docusaurus-plugin-content-pages/default/plugin-route-context-module-100.json")],
+  "c4f5d8e4": [() => import(/* webpackChunkName: "c4f5d8e4" */ "@site/src/pages/index.js"), "@site/src/pages/index.js", require.resolveWeak("@site/src/pages/index.js")],
+  "e4f33702": [() => import(/* webpackChunkName: "e4f33702" */ "@site/docs/platforms/claude.md"), "@site/docs/platforms/claude.md", require.resolveWeak("@site/docs/platforms/claude.md")],};

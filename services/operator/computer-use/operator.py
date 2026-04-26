@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
 """
-A2R Computer Use Operator
+Allternit Computer Use Operator
 
 Vision-based computer automation operator
 """
 
-from a2r_vision import A2RComputerVision
+from allternit_vision import AllternitComputerVision
 
 class ComputerUseOperator:
     def __init__(self):
-        self.vision = A2RComputerVision()
+        self.vision = AllternitComputerVision()
         self.initialized = False
     
     async def initialize(self):
         """Initialize the operator"""
         await self.vision.initialize()
         self.initialized = True
-        print("A2R Computer Use Operator initialized")
+        print("Allternit Computer Use Operator initialized")
     
     async def click(self, element: str):
         """Click on element using vision"""

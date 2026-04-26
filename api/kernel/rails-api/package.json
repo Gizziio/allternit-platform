@@ -1,7 +1,7 @@
 {
   "name": "@allternit/rails-api",
   "version": "1.0.0",
-  "description": "A2R Rails API - Agents, Providers, Sessions",
+  "description": "Allternit Rails API - Agents, Providers, Sessions",
   "main": "index.js",
   "type": "module",
   "scripts": {

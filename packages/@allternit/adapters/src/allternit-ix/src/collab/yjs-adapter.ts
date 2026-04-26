@@ -1,5 +1,5 @@
 /**
- * Yjs/CRDT Adapter for A2R-IX
+ * Yjs/CRDT Adapter for Allternit-IX
  * 
  * Real-time collaborative state synchronization using Yjs.
  */
@@ -94,7 +94,7 @@ export interface AwarenessState {
  * Create Yjs adapter for collaborative state
  */
 export function createYjsAdapter(config: YjsAdapterConfig): YjsAdapter {
-  const { doc, provider, mapName = 'a2r-ix-state' } = config;
+  const { doc, provider, mapName = 'allternit-ix-state' } = config;
   const ymap = doc.getMap(mapName);
   
   // Local state store wrapper

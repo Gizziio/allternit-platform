@@ -1,5 +1,5 @@
 /**
- * @fileoverview A2R Guest Agent Protocol
+ * @fileoverview Allternit Guest Agent Protocol
  * 
  * Protocol codec for serializing/deserializing messages between host and VM.
  * Uses length-prefixed JSON framing over reliable streams (VSOCK/VZVirtioSocket).
@@ -26,7 +26,7 @@
  * await server.start();
  * ```
  * 
- * @module a2r-guest-agent-protocol
+ * @module allternit-guest-agent-protocol
  */
 
 // ============================================================================
@@ -138,4 +138,4 @@ export type {
 export const PROTOCOL_VERSION = "1.0.0";
 
 /** Protocol name */
-export const PROTOCOL_NAME = "a2r-guest-agent-protocol";
+export const PROTOCOL_NAME = "allternit-guest-agent-protocol";

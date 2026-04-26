@@ -28,7 +28,7 @@ export interface SSHConnectionStatus {
   os?: string;
   architecture?: string;
   dockerInstalled?: boolean;
-  a2rInstalled?: boolean;
+  allternitInstalled?: boolean;
   error?: string;
 }
 
@@ -42,8 +42,8 @@ export interface SystemInfo {
   os: string;
   architecture: string;
   dockerInstalled: boolean;
-  a2rInstalled: boolean;
-  a2rVersion?: string;
+  allternitInstalled: boolean;
+  allternitVersion?: string;
 }
 
 // ============================================================================
@@ -247,22 +247,22 @@ export class SSHService extends EventEmitter {
     const dockerResult = await ssh.execCommand('which docker');
     const dockerInstalled = dockerResult.exitCode === 0;
 
-    // Check A2R Agent
-    const a2rResult = await ssh.execCommand('which a2r-node');
-    const a2rInstalled = a2rResult.exitCode === 0;
+    // Check Allternit Agent
+    const allternitResult = await ssh.execCommand('which allternit-node');
+    const allternitInstalled = allternitResult.exitCode === 0;
 
-    let a2rVersion: string | undefined;
-    if (a2rInstalled) {
-      const versionResult = await ssh.execCommand('a2r-node --version');
-      a2rVersion = versionResult.stdout.trim();
+    let allternitVersion: string | undefined;
+    if (allternitInstalled) {
+      const versionResult = await ssh.execCommand('allternit-node --version');
+      allternitVersion = versionResult.stdout.trim();
     }
 
     return {
       os,
       architecture,
       dockerInstalled,
-      a2rInstalled,
-      a2rVersion,
+      allternitInstalled,
+      allternitVersion,
     };
   }
 
@@ -270,7 +270,7 @@ export class SSHService extends EventEmitter {
   // Agent Installation
   // ========================================================================
 
-  async installA2RAgent(
+  async installAllternitAgent(
     connectionId: string,
     options?: {
       version?: string;
@@ -291,7 +291,7 @@ export class SSHService extends EventEmitter {
     };
 
     try {
-      logAndEmit('Starting A2R Agent installation...');
+      logAndEmit('Starting Allternit Agent installation...');
 
       // Check if Docker is installed
       logAndEmit('Checking Docker installation...');
@@ -303,8 +303,8 @@ export class SSHService extends EventEmitter {
         logAndEmit('Docker is already installed');
       }
 
-      // Download and install A2R
-      logAndEmit(`Downloading A2R Agent (${version})...`);
+      // Download and install Allternit
+      logAndEmit(`Downloading Allternit Agent (${version})...`);
       const installUrl = `https://install.allternit.com/${version}/install.sh`;
       
       const installResult = await ssh.execCommand(
@@ -321,18 +321,18 @@ export class SSHService extends EventEmitter {
 
       // Verify installation
       logAndEmit('Verifying installation...');
-      const verifyResult = await ssh.execCommand('a2r-node --version');
+      const verifyResult = await ssh.execCommand('allternit-node --version');
       if (verifyResult.exitCode === 0) {
-        logAndEmit(`A2R Agent installed successfully: ${verifyResult.stdout.trim()}`);
+        logAndEmit(`Allternit Agent installed successfully: ${verifyResult.stdout.trim()}`);
       }
 
-      // Start A2R service
-      logAndEmit('Starting A2R service...');
-      await ssh.execCommand('systemctl enable a2r-node && systemctl start a2r-node');
+      // Start Allternit service
+      logAndEmit('Starting Allternit service...');
+      await ssh.execCommand('systemctl enable allternit-node && systemctl start allternit-node');
 
       return {
         success: true,
-        message: 'A2R Agent installed and started successfully',
+        message: 'Allternit Agent installed and started successfully',
         log,
       };
     } catch (error) {

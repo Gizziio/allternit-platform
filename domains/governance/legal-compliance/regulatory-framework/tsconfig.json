@@ -20,8 +20,8 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@a2r/governor": ["../../2-governance/a2r-governor/src/index.ts"],
-      "@a2r/runtime": ["../../3-adapters/a2r-runtime/src/index.ts"]
+      "@allternit/governor": ["../../2-governance/allternit-governor/src/index.ts"],
+      "@allternit/runtime": ["../../3-adapters/allternit-runtime/src/index.ts"]
     }
   },
   "include": [

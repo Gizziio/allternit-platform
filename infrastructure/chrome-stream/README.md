@@ -2,13 +2,13 @@
 
 ## Overview
 
-Real Chrome browser streaming embedded in A2R Browser Capsule via WebRTC.
+Real Chrome browser streaming embedded in Allternit Browser Capsule via WebRTC.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  A2R Electron App                                           │
+│  Allternit Electron App                                           │
 │  ┌───────────────────────────────────────────────────────┐  │
 │  │  Browser Capsule                                      │  │
 │  │  ┌─────────────────────────────────────────────────┐  │  │
@@ -22,7 +22,7 @@ Real Chrome browser streaming embedded in A2R Browser Capsule via WebRTC.
 │  ┌───────────────────────────────────────────────────────┐  │
 │  │  Google Chrome (real, full Web Store)                 │  │
 │  │  selkies-gstreamer (WebRTC streaming)                 │  │
-│  │  A2R Sidecar (CDP control)                            │  │
+│  │  Allternit Sidecar (CDP control)                            │  │
 │  └───────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -45,7 +45,7 @@ This starts:
 ### 1. Start Platform
 
 ```bash
-cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech
+cd /Users/macbook/Desktop/allternit-workspace/allternit
 ./start-platform.sh
 ```
 
@@ -126,9 +126,9 @@ let runtime = ChromeRuntime::Firecracker(firecracker_driver);
 - `start-platform.sh` - Startup integration
 
 ### Frontend
-- `6-ui/a2r-platform/src/capsules/browser/ChromeStreamView.tsx` - WebRTC client
-- `6-ui/a2r-platform/src/capsules/browser/useChromeSession.ts` - Session hook
-- `6-ui/a2r-platform/src/capsules/browser/BrowserCapsuleEnhanced.tsx` - Integration
+- `6-ui/allternit-platform/src/capsules/browser/ChromeStreamView.tsx` - WebRTC client
+- `6-ui/allternit-platform/src/capsules/browser/useChromeSession.ts` - Session hook
+- `6-ui/allternit-platform/src/capsules/browser/BrowserCapsuleEnhanced.tsx` - Integration
 
 ## Troubleshooting
 

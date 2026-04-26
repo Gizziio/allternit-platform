@@ -1,0 +1,65 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision">
+  <defs>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="100" height="100" fill="transparent"/>
+  
+  <!-- Structural Extensions (Rays) -->
+  <g stroke="#D4B08C" stroke-width="0.5" opacity="0.2">
+    <!-- Top -->
+    <line x1="50" y1="50" x2="50" y2="20"/>
+    <!-- Bottom -->
+    <line x1="50" y1="50" x2="50" y2="80"/>
+    <!-- Left -->
+    <line x1="50" y1="50" x2="25" y2="50"/>
+    <!-- Right -->
+    <line x1="50" y1="50" x2="75" y2="50"/>
+    <!-- Diagonals -->
+    <line x1="50" y1="50" x2="30" y2="30" opacity="0.1"/>
+    <line x1="50" y1="50" x2="70" y2="30" opacity="0.1"/>
+    <line x1="50" y1="50" x2="30" y2="70" opacity="0.1"/>
+    <line x1="50" y1="50" x2="70" y2="70" opacity="0.1"/>
+  </g>
+  
+  <!-- Terminal markers on rays -->
+  <g fill="#D4B08C" opacity="0.4">
+    <rect x="49" y="19" width="2" height="2"/>
+    <rect x="49" y="79" width="2" height="2"/>
+    <rect x="24" y="49" width="2" height="2"/>
+    <rect x="74" y="49" width="2" height="2"/>
+  </g>
+  
+  <!-- The Construct Blocks (A-shape formation) -->
+  <!-- Left leg -->
+  <rect x="30" y="70" width="10" height="10" fill="#D4B08C" opacity="0.8"/>
+  <rect x="30" y="58" width="10" height="10" fill="#D4B08C" opacity="0.9"/>
+  <rect x="30" y="46" width="10" height="10" fill="#D4B08C"/>
+  <rect x="38" y="36" width="10" height="10" fill="#D4B08C"/>
+  
+  <!-- Right leg -->
+  <rect x="60" y="70" width="10" height="10" fill="#D4B08C" opacity="0.8"/>
+  <rect x="60" y="58" width="10" height="10" fill="#D4B08C" opacity="0.9"/>
+  <rect x="60" y="46" width="10" height="10" fill="#D4B08C"/>
+  <rect x="52" y="36" width="10" height="10" fill="#D4B08C"/>
+  
+  <!-- Cross bar -->
+  <rect x="38" y="46" width="10" height="10" fill="#D4B08C" opacity="0.7"/>
+  <rect x="52" y="46" width="10" height="10" fill="#D4B08C" opacity="0.7"/>
+  
+  <!-- Top/Apex -->
+  <rect x="45" y="24" width="10" height="10" fill="#D4B08C"/>
+  
+  <!-- Center accent block (highlighted) -->
+  <rect x="45" y="58" width="10" height="10" fill="#D97757" opacity="0.9"/>
+  
+  <!-- Center Core Light -->
+  <circle cx="50" cy="50" r="3" fill="#D4B08C" filter="url(#glow)"/>
+</svg>

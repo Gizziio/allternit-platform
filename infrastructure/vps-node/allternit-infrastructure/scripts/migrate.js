@@ -20,8 +20,8 @@ require('dotenv').config();
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432', 10),
-  database: process.env.DB_NAME || 'a2r_infrastructure',
-  user: process.env.DB_USER || 'a2r_user',
+  database: process.env.DB_NAME || 'allternit_infrastructure',
+  user: process.env.DB_USER || 'allternit_user',
   password: process.env.DB_PASSWORD || 'secure_password',
 });
 

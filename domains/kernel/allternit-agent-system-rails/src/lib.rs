@@ -24,16 +24,16 @@ pub use crate::context::{
     SealContextPackResponse, WIH, PolicyBundleRef,
 };
 pub use crate::core::types::{
-    A2REvent, Actor, ActorType, EventProvenance, EventScope, LeaseRecord, LeaseRequest,
+    AllternitEvent, Actor, ActorType, EventProvenance, EventScope, LeaseRecord, LeaseRequest,
     LedgerQuery, ReceiptRecord,
 };
 pub use crate::gate::gate::{DagMutation, MutationProvenance};
 pub use crate::gate::{Gate, GateOptions, GateResult, WihPickupOptions};
 pub use crate::index::{Index, IndexOptions};
-pub use crate::leases::Leases;
-pub use crate::ledger::Ledger;
+pub use crate::leases::{Leases, LeasesOptions};
+pub use crate::ledger::{Ledger, LedgerOptions};
 pub use crate::mail::{Mail, MailOptions};
 pub use crate::prompt::{project_prompt, PromptTimeline};
 pub use crate::receipts::{ReceiptStore, ReceiptStoreOptions};
 pub use crate::vault::{Vault, VaultOptions};
-pub use crate::work::WorkOps;
+pub use crate::work::{project_dag, WorkOps};

@@ -1,5 +1,5 @@
 """
-A2R Computer Use — Policy Rule Definitions
+Allternit Computer Use — Policy Rule Definitions
 Custom rules can be added here or loaded from configuration.
 """
 

@@ -4,19 +4,19 @@
 <dict>
     <!-- Service identification -->
     <key>Label</key>
-    <string>io.a2r.node</string>
+    <string>io.allternit.node</string>
 
     <!-- Program to execute -->
     <key>ProgramArguments</key>
     <array>
-        <string>/opt/a2r/bin/a2r-node</string>
+        <string>/opt/allternit/bin/allternit-node</string>
     </array>
 
     <!-- Environment variables -->
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
-        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/a2r/bin</string>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/allternit/bin</string>
         <key>LANG</key>
         <string>en_US.UTF-8</string>
     </dict>
@@ -36,13 +36,13 @@
 
     <!-- Logging -->
     <key>StandardOutPath</key>
-    <string>/var/log/a2r/node.log</string>
+    <string>/var/log/allternit/node.log</string>
     <key>StandardErrorPath</key>
-    <string>/var/log/a2r/node.err</string>
+    <string>/var/log/allternit/node.err</string>
 
     <!-- Working directory -->
     <key>WorkingDirectory</key>
-    <string>/opt/a2r</string>
+    <string>/opt/allternit</string>
 
     <!-- Resource limits -->
     <key>SoftResourceLimits</key>
@@ -78,7 +78,7 @@
     <!-- Watch paths for changes -->
     <key>WatchPaths</key>
     <array>
-        <string>/etc/a2r/node.env</string>
+        <string>/etc/allternit/node.env</string>
     </array>
 
     <!-- Process type -->

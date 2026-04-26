@@ -1,5 +1,5 @@
 /**
- * A2R Computer Use Engine - TypeScript SDK Utilities
+ * Allternit Computer Use Engine - TypeScript SDK Utilities
  * 
  * Helper functions for the SDK.
  */
@@ -68,7 +68,7 @@ export function buildRequestHeaders(
 /**
  * API error class for typed error handling.
  */
-export class A2RComputerUseError extends Error {
+export class AllternitComputerUseError extends Error {
   /** HTTP status code */
   status: number;
   /** Error code from API */
@@ -83,7 +83,7 @@ export class A2RComputerUseError extends Error {
     details?: Record<string, unknown>
   ) {
     super(message);
-    this.name = 'A2RComputerUseError';
+    this.name = 'AllternitComputerUseError';
     this.status = status;
     this.code = code;
     this.details = details;
@@ -94,7 +94,7 @@ export class A2RComputerUseError extends Error {
  * Handle API error response.
  * 
  * @param response - The fetch response
- * @throws A2RComputerUseError
+ * @throws AllternitComputerUseError
  */
 export async function handleApiError(response: Response): Promise<never> {
   let errorData: ErrorResponse | undefined;
@@ -108,7 +108,7 @@ export async function handleApiError(response: Response): Promise<never> {
   const message = errorData?.detail ?? errorData?.error ?? `HTTP ${response.status}: ${response.statusText}`;
   const code = errorData?.code;
 
-  throw new A2RComputerUseError(
+  throw new AllternitComputerUseError(
     message,
     response.status,
     code,

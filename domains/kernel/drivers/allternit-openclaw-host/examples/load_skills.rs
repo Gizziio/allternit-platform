@@ -1,4 +1,4 @@
-use a2r_openclaw_host::skills::parser::load_skills_dir;
+use allternit_openclaw_host::skills::parser::load_skills_dir;
 use std::path::Path;
 
 fn main() {

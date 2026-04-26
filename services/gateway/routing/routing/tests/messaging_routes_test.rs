@@ -5,9 +5,9 @@
 //! - GET /api/v1/local/agent-mail/{agent_id}
 //! - POST /api/v1/local/agent-mail/{id}/respond
 
-use a2rchitech_api::routes::GetAgentMailResponse;
-use a2rchitech_history::HistoryLedger;
-use a2rchitech_messaging::{AgentMail, MailMessageEnvelope, MessagingSystem};
+use allternit_api::routes::GetAgentMailResponse;
+use allternit_history::HistoryLedger;
+use allternit_messaging::{AgentMail, MailMessageEnvelope, MessagingSystem};
 use sqlx::SqlitePool;
 use std::sync::{Arc, Mutex};
 use tempfile::NamedTempFile;

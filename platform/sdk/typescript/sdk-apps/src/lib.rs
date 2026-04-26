@@ -1,14 +1,14 @@
-//! # A2R SDK Apps
+//! # Allternit SDK Apps
 //!
-//! Application definitions and management for the A2R SDK.
+//! Application definitions and management for the Allternit SDK.
 //!
 //! ## Overview
 //!
 //! This crate provides types and utilities for defining, registering,
-//! and managing A2R-compatible applications. It handles app manifests,
+//! and managing Allternit-compatible applications. It handles app manifests,
 //! tool definitions, UI card templates, and platform support.
 //!
-//! Applications in A2R are self-contained packages that provide tools
+//! Applications in Allternit are self-contained packages that provide tools
 //! and UI components that agents can use to interact with external
 //! services and systems.
 //!
@@ -17,13 +17,13 @@
 //! - **AppDefinition**: Complete application manifest
 //! - **ToolDefinition**: Tools exposed by the application
 //! - **UICardTemplate**: Reusable UI component templates
-//! - **AppAdapter**: Adapter for integrating apps with the A2R system
+//! - **AppAdapter**: Adapter for integrating apps with the Allternit system
 //! - **OAuthConfig**: OAuth 2.0 authentication configuration
 //!
 //! ## Example
 //!
 //! ```rust
-//! use a2rchitech_sdk_apps::{
+//! use allternit_sdk_apps::{
 //!     AppDefinition, ToolDefinition, UICardTemplate,
 //!     CardActionTemplate, ActionHandlerTemplate, OAuthConfig
 //! };
@@ -44,17 +44,17 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-/// Complete application definition for A2R.
+/// Complete application definition for Allternit.
 ///
 /// `AppDefinition` describes an application that can be registered
-/// and used within the A2R ecosystem. It includes metadata about the
+/// and used within the Allternit ecosystem. It includes metadata about the
 /// app, its authentication configuration, supported platforms,
 /// and the tools it provides.
 ///
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_apps::{
+/// use allternit_sdk_apps::{
 ///     AppDefinition, OAuthConfig, ToolDefinition, UICardTemplate
 /// };
 ///
@@ -123,7 +123,7 @@ pub struct AppDefinition {
     
     /// Tools exposed by this application
     /// 
-    /// These tools can be called by agents through the A2R system
+    /// These tools can be called by agents through the Allternit system
     pub tools: Vec<ToolDefinition>,
     
     /// UI card templates provided by the app
@@ -153,7 +153,7 @@ impl AppDefinition {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_apps::AppDefinition;
+    /// use allternit_sdk_apps::AppDefinition;
     ///
     /// let app = AppDefinition::new(
     ///     "com.example.myapp".to_string(),
@@ -200,7 +200,7 @@ impl AppDefinition {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_apps::{AppDefinition, ToolDefinition};
+    /// use allternit_sdk_apps::{AppDefinition, ToolDefinition};
     ///
     /// let mut app = AppDefinition::new(
     ///     "com.example.myapp".to_string(),
@@ -238,7 +238,7 @@ impl AppDefinition {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_apps::{AppDefinition, UICardTemplate};
+    /// use allternit_sdk_apps::{AppDefinition, UICardTemplate};
     ///
     /// let mut app = AppDefinition::new(
     ///     "com.example.myapp".to_string(),
@@ -273,7 +273,7 @@ impl AppDefinition {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_apps::{AppDefinition, OAuthConfig};
+    /// use allternit_sdk_apps::{AppDefinition, OAuthConfig};
     ///
     /// let mut app = AppDefinition::new(
     ///     "com.example.myapp".to_string(),
@@ -302,14 +302,14 @@ impl AppDefinition {
 /// Definition of a tool exposed by an application.
 ///
 /// `ToolDefinition` describes a single function or capability
-/// that an application makes available to agents through the A2R
+/// that an application makes available to agents through the Allternit
 /// system. It includes the tool's schema, risk classification,
 /// and execution metadata.
 ///
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_apps::ToolDefinition;
+/// use allternit_sdk_apps::ToolDefinition;
 ///
 /// let tool = ToolDefinition {
 ///     id: "com.example.create_task".to_string(),
@@ -371,7 +371,7 @@ impl ToolDefinition {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_apps::ToolDefinition;
+    /// use allternit_sdk_apps::ToolDefinition;
     ///
     /// let tool = ToolDefinition {
     ///     id: "test".to_string(),
@@ -398,7 +398,7 @@ impl ToolDefinition {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_apps::ToolDefinition;
+    /// use allternit_sdk_apps::ToolDefinition;
     ///
     /// let high_risk = ToolDefinition {
     ///     id: "test".to_string(),
@@ -422,13 +422,13 @@ impl ToolDefinition {
 /// Template for rendering a UI card.
 ///
 /// `UICardTemplate` defines a reusable template for displaying
-/// rich content cards in the A2R UI. Templates support variable
+/// rich content cards in the Allternit UI. Templates support variable
 /// substitution and can include actions.
 ///
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_apps::{UICardTemplate, CardActionTemplate, ActionHandlerTemplate};
+/// use allternit_sdk_apps::{UICardTemplate, CardActionTemplate, ActionHandlerTemplate};
 ///
 /// let template = UICardTemplate {
 ///     card_type: "info".to_string(),
@@ -479,7 +479,7 @@ pub struct UICardTemplate {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_apps::{CardActionTemplate, ActionHandlerTemplate};
+/// use allternit_sdk_apps::{CardActionTemplate, ActionHandlerTemplate};
 ///
 /// let action = CardActionTemplate {
 ///     id: "submit".to_string(),
@@ -543,7 +543,7 @@ pub struct ActionHandlerTemplate {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_apps::OAuthConfig;
+/// use allternit_sdk_apps::OAuthConfig;
 ///
 /// let oauth = OAuthConfig {
 ///     authorization_url: "https://accounts.google.com/o/oauth2/auth".to_string(),
@@ -570,15 +570,15 @@ pub struct OAuthConfig {
     pub scopes: Vec<String>,
 }
 
-/// Adapter for integrating external apps with A2R.
+/// Adapter for integrating external apps with Allternit.
 ///
 /// `AppAdapter` wraps an `AppDefinition` with additional configuration
-/// needed to integrate it into the A2R system.
+/// needed to integrate it into the Allternit system.
 ///
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_apps::{AppAdapter, AppDefinition};
+/// use allternit_sdk_apps::{AppAdapter, AppDefinition};
 ///
 /// let app = AppDefinition::new(
 ///     "com.example.myapp".to_string(),
@@ -622,7 +622,7 @@ impl AppAdapter {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_apps::{AppAdapter, AppDefinition};
+    /// use allternit_sdk_apps::{AppAdapter, AppDefinition};
     ///
     /// let app = AppDefinition::new(
     ///     "com.example.myapp".to_string(),
@@ -651,7 +651,7 @@ impl AppAdapter {
     /// # Examples
     ///
     /// ```
-    /// use a2rchitech_sdk_apps::{AppAdapter, AppDefinition};
+    /// use allternit_sdk_apps::{AppAdapter, AppDefinition};
     ///
     /// let app = AppDefinition::new(
     ///     "com.example.myapp".to_string(),

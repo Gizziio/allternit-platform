@@ -1,4 +1,4 @@
-//! A2R Purpose Binding
+//! Allternit Purpose Binding
 //!
 //! Provides purpose-based access control and constraints for AI operations.
 //! Ensures that data and tools are only used for explicitly declared purposes.

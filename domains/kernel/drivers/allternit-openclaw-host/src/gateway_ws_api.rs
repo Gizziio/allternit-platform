@@ -17,19 +17,19 @@ use tokio::{
 };
 use uuid::Uuid;
 
-use a2r_openclaw_host::final_integration_verification::{
+use allternit_openclaw_host::final_integration_verification::{
     IntegrationVerificationOperation, IntegrationVerificationRequest,
 };
-use a2r_openclaw_host::native_channel_abstraction_native::{
+use allternit_openclaw_host::native_channel_abstraction_native::{
     ChannelAbstractionRequest, ChannelId, ChannelOperation,
 };
-use a2r_openclaw_host::native_cron_system::{
+use allternit_openclaw_host::native_cron_system::{
     CronJobDefinition, CronJobExecutionRequest, CronJobId, CronJobManagementRequest,
     CronJobOperation,
 };
-use a2r_openclaw_host::native_provider_management::{ProviderManagementRequest, ProviderOperation};
-use a2r_openclaw_host::native_session_manager::{SessionId, SessionMessage};
-use a2r_openclaw_host::skill_installer_service::{
+use allternit_openclaw_host::native_provider_management::{ProviderManagementRequest, ProviderOperation};
+use allternit_openclaw_host::native_session_manager::{SessionId, SessionMessage};
+use allternit_openclaw_host::skill_installer_service::{
     InstallSkillRequest, ListSkillsRequest, UninstallSkillRequest,
 };
 
@@ -343,13 +343,13 @@ fn extract_string_vec(value: &Value, pointer: &str) -> Option<Vec<String>> {
 
 fn default_log_candidates(root: &Path) -> Vec<PathBuf> {
     vec![
-        root.join("a2rchitech.jsonl"),
+        root.join("allternit.jsonl"),
         root.join(".logs").join("openclaw-host.log"),
         root.join("kernel_bin.log"),
         root.join("kernel_run.log"),
         root.join("target")
             .join("debug")
-            .join("a2r-openclaw-host.log"),
+            .join("allternit-openclaw-host.log"),
     ]
 }
 
@@ -397,7 +397,7 @@ fn resolve_log_file(root: &Path, requested: Option<String>) -> Result<PathBuf, G
     }
 
     Err(GatewayMethodError::not_found(
-        "No log file found. Configure one with logs.tail { file: ... } or set A2R_OPENCLAW_LOG_FILE.",
+        "No log file found. Configure one with logs.tail { file: ... } or set Allternit_OPENCLAW_LOG_FILE.",
     ))
 }
 
@@ -519,7 +519,7 @@ async fn handle_connect(
     let provided_token = extract_string(params, "/auth/token");
     let provided_password = extract_string(params, "/auth/password");
     let expected_token = std::env::var("OPENCLAW_GATEWAY_TOKEN")
-        .or_else(|_| std::env::var("A2R_GATEWAY_TOKEN"))
+        .or_else(|_| std::env::var("Allternit_GATEWAY_TOKEN"))
         .ok()
         .map(|v| v.trim().to_string())
         .filter(|v| !v.is_empty());
@@ -569,7 +569,7 @@ async fn handle_connect(
             },
             "presence": [
                 {
-                    "nodeId": "a2r-host-local",
+                    "nodeId": "allternit-host-local",
                     "mode": "native",
                     "role": "gateway",
                     "status": "online",
@@ -1072,7 +1072,7 @@ async fn handle_skills_status(state: &Arc<ServiceState>) -> Result<Value, Gatewa
         .map(|skill| {
             let enabled = matches!(
                 skill.status,
-                a2r_openclaw_host::skill_installer_service::SkillStatus::Installed
+                allternit_openclaw_host::skill_installer_service::SkillStatus::Installed
             );
             json!({
                 "skillKey": skill.id,
@@ -1097,8 +1097,8 @@ fn handle_node_list() -> Value {
     json!({
         "nodes": [
             {
-                "id": "a2r-host-local",
-                "name": "A2R Host Local",
+                "id": "allternit-host-local",
+                "name": "Allternit Host Local",
                 "caps": ["chat", "sessions", "skills", "cron", "channels"],
                 "status": "online",
                 "platform": std::env::consts::OS,
@@ -1612,14 +1612,14 @@ async fn read_or_build_runtime_config(
     config.insert(
         "gateway".to_string(),
         json!({
-            "bind": std::env::var("A2R_OPENCLAW_HOST_BIND")
+            "bind": std::env::var("Allternit_OPENCLAW_HOST_BIND")
                 .or_else(|_| std::env::var("OPENCLAW_HOST_BIND"))
                 .unwrap_or_else(|_| "127.0.0.1".to_string()),
-            "port": std::env::var("A2R_OPENCLAW_HOST_PORT")
+            "port": std::env::var("Allternit_OPENCLAW_HOST_PORT")
                 .or_else(|_| std::env::var("OPENCLAW_PORT"))
                 .unwrap_or_else(|_| "8080".to_string()),
             "authTokenSet": std::env::var("OPENCLAW_GATEWAY_TOKEN")
-                .or_else(|_| std::env::var("A2R_GATEWAY_TOKEN"))
+                .or_else(|_| std::env::var("Allternit_GATEWAY_TOKEN"))
                 .map(|v| !v.trim().is_empty())
                 .unwrap_or(false),
         }),
@@ -1676,7 +1676,7 @@ async fn apply_runtime_config(
     if let Some(token) = extract_string(config, "/gateway/authToken") {
         unsafe {
             std::env::set_var("OPENCLAW_GATEWAY_TOKEN", token.clone());
-            std::env::set_var("A2R_GATEWAY_TOKEN", token);
+            std::env::set_var("Allternit_GATEWAY_TOKEN", token);
         }
         applied.push("gateway.authToken".to_string());
     }
@@ -1908,7 +1908,7 @@ async fn handle_config_schema() -> Result<Value, GatewayMethodError> {
 async fn handle_logs_tail(params: &Value) -> Result<Value, GatewayMethodError> {
     let root = resolve_project_root();
     let requested = extract_string(params, "/file")
-        .or_else(|| std::env::var("A2R_OPENCLAW_LOG_FILE").ok())
+        .or_else(|| std::env::var("Allternit_OPENCLAW_LOG_FILE").ok())
         .or_else(|| std::env::var("OPENCLAW_LOG_FILE").ok());
     let file_path = resolve_log_file(&root, requested)?;
 
@@ -2160,7 +2160,7 @@ async fn handle_request(
         "models.list" => handle_models_list(state).await,
         "system-presence" => Ok(json!([
             {
-                "nodeId": "a2r-host-local",
+                "nodeId": "allternit-host-local",
                 "status": "online",
                 "role": runtime.role,
                 "scopes": runtime.scopes,

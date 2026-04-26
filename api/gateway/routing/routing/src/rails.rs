@@ -1,4 +1,4 @@
-//! A2R Agent System Rails Client
+//! Allternit Agent System Rails Client
 //!
 //! Provides integration with the Agent System Rails for agent task planning,
 //! work execution, and policy gates (DAG/WIH/leases/ledger/vault/mail/gate).

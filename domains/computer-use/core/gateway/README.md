@@ -1,4 +1,4 @@
-# A2R Computer Use Gateway
+# Allternit Computer Use Gateway
 
 FastAPI gateway that bridges GIZZI Code to browser/desktop automation adapters.
 
@@ -69,7 +69,7 @@ Enable the browser tool in GIZZI:
 
 ```bash
 export GIZZI_ENABLE_BROWSER_TOOL=true
-export A2R_COMPUTER_USE_URL=http://localhost:8080
+export Allternit_COMPUTER_USE_URL=http://localhost:8080
 
 gizzi browser goto https://example.com
 ```

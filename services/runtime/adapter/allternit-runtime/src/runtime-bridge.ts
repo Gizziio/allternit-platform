@@ -1,7 +1,7 @@
-import { NativeBridge } from '../bridges/a2r-native-bridge/index.js'; // Assumes compiled bindings
-import { OrchestrationContext } from '@a2r/orchestrator';
+import { NativeBridge } from '../bridges/allternit-native-bridge/index.js'; // Assumes compiled bindings
+import { OrchestrationContext } from '@allternit/orchestrator';
 
-export class A2RRuntimeBridge {
+export class AllternitRuntimeBridge {
   private native: any;
 
   constructor() {

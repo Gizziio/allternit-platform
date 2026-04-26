@@ -6,11 +6,11 @@
 //! 3. Execute a command in the spawned environment
 //! 4. Clean up resources
 
-use a2r_driver_interface::{
+use allternit_driver_interface::{
     CommandSpec, EnvSpecType, ExecutionDriver, PolicySpec, ResourceSpec, SpawnSpec,
 };
-use a2r_environment_spec::{EnvironmentSource, EnvironmentSpecLoader};
-use a2r_process_driver::ProcessDriver;
+use allternit_environment_spec::{EnvironmentSource, EnvironmentSpecLoader};
+use allternit_process_driver::ProcessDriver;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -40,7 +40,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("   ⚠ Could not load environment (expected in tests): {}", e);
             println!("   Using default environment instead\n");
             // Create default environment
-            a2r_environment_spec::EnvironmentSpec {
+            allternit_environment_spec::EnvironmentSpec {
                 source: EnvironmentSource::Oci,
                 source_uri: env_source.to_string(),
                 image: env_source.to_string(),
@@ -51,8 +51,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 features: vec![],
                 mounts: vec![],
                 post_create_commands: vec![],
-                resources: a2r_environment_spec::ResourceRequirements::default(),
-                a2r_config: Default::default(),
+                resources: allternit_environment_spec::ResourceRequirements::default(),
+                allternit_config: Default::default(),
             }
         }
     };
@@ -64,15 +64,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Step 4: Spawn execution environment
     println!("📦 Step 4: Spawning execution environment...");
-    let run_id = a2r_driver_interface::ExecutionId::new();
+    let run_id = allternit_driver_interface::ExecutionId::new();
     let tenant_id = "example-tenant";
 
     let spawn_spec = SpawnSpec {
-        tenant: a2r_driver_interface::TenantId(tenant_id.to_string()),
+        tenant: allternit_driver_interface::TenantId(tenant_id.to_string()),
         project: None,
         workspace: None,
         run_id: Some(run_id),
-        env: a2r_driver_interface::EnvironmentSpec {
+        env: allternit_driver_interface::EnvironmentSpec {
             spec_type: EnvSpecType::Oci,
             image: env_spec.image.clone(),
             version: env_spec.image_digest.clone(),

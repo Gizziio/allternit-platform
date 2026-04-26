@@ -28,12 +28,12 @@ Every tool call MUST:
 
 ### 1.3 Write Discipline
 
-- **Allowed:** Write to `.a2r/runner/{run_id}/` under valid lease
+- **Allowed:** Write to `.allternit/runner/{run_id}/` under valid lease
 - **Forbidden:** Direct writes to protected paths:
-  - `.a2r/ledger/**` (Rails only)
-  - `.a2r/leases/**` (Rails only)
-  - `.a2r/wih/**` (Rails only)
-  - `.a2r/graphs/**` (Rails only)
+  - `.allternit/ledger/**` (Rails only)
+  - `.allternit/leases/**` (Rails only)
+  - `.allternit/wih/**` (Rails only)
+  - `.allternit/graphs/**` (Rails only)
   - Other runs' receipt directories
 
 ### 1.4 Mutual Blocking
@@ -46,7 +46,7 @@ Every tool call MUST:
 ### 1.5 Landing Standard
 
 Structural code changes **MUST** use the Autoland Protocol. Agents are strictly prohibited from writing directly to the project root for implementation tasks.
-1.  **Isolation**: Work MUST happen in `.a2r/runner/{wih_id}/`.
+1.  **Isolation**: Work MUST happen in `.allternit/runner/{wih_id}/`.
 2.  **Landing**: Final commitment to the root MUST be handled by the `autoland` gate.
 3.  **Policy**: Implementation tasks should default to `autoland_on_pass: true`.
 
@@ -343,7 +343,7 @@ agents/
 To verify an agent run complies with this law:
 
 1. Check all tool calls have `PreToolUse` gate receipts
-2. Verify no writes outside `.a2r/runner/` without lease
+2. Verify no writes outside `.allternit/runner/` without lease
 3. Confirm validator PASS before WIH close
 4. Validate context injection at each boundary
 

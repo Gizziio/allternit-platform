@@ -1,9 +1,9 @@
 [package]
-name = "a2r-environment-spec"
+name = "allternit-environment-spec"
 version = "0.1.0"
 edition = "2021"
-description = "Environment specification parser and converter for A2R execution drivers (N5)"
-authors = ["A2R Team"]
+description = "Environment specification parser and converter for Allternit execution drivers (N5)"
+authors = ["Allternit Team"]
 license = "MIT OR Apache-2.0"
 
 [dependencies]
@@ -44,8 +44,8 @@ chrono = { workspace = true }
 uuid = { workspace = true }
 
 # Integration example dependencies
-a2r-driver-interface = { path = "../a2r-driver-interface" }
-a2r-process-driver = { path = "../../execution/a2r-process-driver" }
-a2rchitech-budget-metering = { path = "../../../4-services/orchestration/budget-metering" }
-a2r-replay = { path = "../../../2-governance/a2r-replay" }
-a2r-prewarm = { path = "../../../4-services/orchestration/a2r-prewarm" }
+allternit-driver-interface = { path = "../allternit-driver-interface" }
+allternit-process-driver = { path = "../../execution/allternit-process-driver" }
+allternit-budget-metering = { path = "../../../4-services/orchestration/budget-metering" }
+allternit-replay = { path = "../../../2-governance/allternit-replay" }
+allternit-prewarm = { path = "../../../4-services/orchestration/allternit-prewarm" }

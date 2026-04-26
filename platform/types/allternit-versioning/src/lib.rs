@@ -1,4 +1,4 @@
-//! # A2R Versioning (N14)
+//! # Allternit Versioning (N14)
 //!
 //! Schema versioning and backwards compatibility management.
 //!

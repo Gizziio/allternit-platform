@@ -1,9 +1,9 @@
-//! A2R Scheduler Daemon
+//! Allternit Scheduler Daemon
 //!
 //! This daemon provides cron-based scheduling for cowork runs.
 //! Uses tokio-cron-scheduler for job execution.
 //!
-//! Usage: a2r-scheduler --api-url http://localhost:3000 --port 3031
+//! Usage: allternit-scheduler --api-url http://localhost:3000 --port 3031
 
 use clap::Parser;
 use std::path::PathBuf;
@@ -11,15 +11,15 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{error, info};
 
-use a2r_cowork_scheduler as scheduler_lib;
+use allternit_cowork_scheduler as scheduler_lib;
 
 /// Scheduler daemon configuration
 #[derive(Parser, Debug)]
-#[command(name = "a2r-cowork-scheduler")]
-#[command(about = "A2R Cowork Scheduler - Cron scheduling for cowork runtime")]
+#[command(name = "allternit-cowork-scheduler")]
+#[command(about = "Allternit Cowork Scheduler - Cron scheduling for cowork runtime")]
 struct Config {
     /// Data directory for SQLite database
-    #[arg(long, default_value = "/var/lib/a2r/scheduler")]
+    #[arg(long, default_value = "/var/lib/allternit/scheduler")]
     data_dir: PathBuf,
 
     /// API server URL (for triggering cowork runs)
@@ -47,7 +47,7 @@ async fn main() -> anyhow::Result<()> {
         data_dir = %config.data_dir.display(),
         api_url = %config.api_url,
         port = config.port,
-        "Starting A2R Cowork Scheduler"
+        "Starting Allternit Cowork Scheduler"
     );
 
     // Create data directory
@@ -63,7 +63,7 @@ async fn main() -> anyhow::Result<()> {
     ));
 
     {
-        let mut sched = scheduler.write().await;
+        let sched = scheduler.write().await;
         sched.start()
             .await
             .map_err(|e| anyhow::anyhow!("Failed to start scheduler: {}", e))?;

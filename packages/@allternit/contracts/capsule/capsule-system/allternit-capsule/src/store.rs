@@ -32,7 +32,7 @@ pub struct CapsuleStoreConfig {
 impl Default for CapsuleStoreConfig {
     fn default() -> Self {
         Self {
-            storage_path: PathBuf::from(".a2r/capsules"),
+            storage_path: PathBuf::from(".allternit/capsules"),
             max_cache_mb: 1024, // 1GB
             verify_on_load: true,
             signature_policy: SignaturePolicy::default(),
@@ -287,7 +287,7 @@ impl CapsuleStore {
             .filter(|e| {
                 e.path()
                     .extension()
-                    .map(|ext| ext == "a2r")
+                    .map(|ext| ext == "allternit")
                     .unwrap_or(false)
             })
         {
@@ -322,7 +322,7 @@ impl CapsuleStore {
         self.config
             .storage_path
             .join(&hex[..2])
-            .join(format!("{}.a2r", hex))
+            .join(format!("{}.allternit", hex))
     }
 
     /// Get an index entry for a specific version.

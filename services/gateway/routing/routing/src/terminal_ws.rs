@@ -30,7 +30,7 @@ use tracing::{debug, error, info, trace, warn};
 use uuid::Uuid;
 
 use crate::AppState;
-use a2r_protocol::{FileEntry, FileOperation, Message, MessagePayload};
+use allternit_protocol::{FileEntry, FileOperation, Message, MessagePayload};
 
 /// Maximum file size for upload (100MB)
 const MAX_FILE_SIZE: usize = 100 * 1024 * 1024;

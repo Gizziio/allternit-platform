@@ -1,7 +1,7 @@
 {
   "name": "@allternit/viz",
   "version": "0.1.0",
-  "description": "A2R Data Visualization - Charts, graphs, and dashboards",
+  "description": "Allternit Data Visualization - Charts, graphs, and dashboards",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -31,7 +31,7 @@
     "vitest": "^1.0.0"
   },
   "keywords": [
-    "a2r",
+    "allternit",
     "visualization",
     "charts",
     "dashboards",

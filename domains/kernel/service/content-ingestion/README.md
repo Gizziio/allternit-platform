@@ -36,7 +36,7 @@ npm install
 ### Basic Ingestion
 
 ```typescript
-import { ContentIngestionKernel } from '@a2r/content-ingestion';
+import { ContentIngestionKernel } from '@allternit/content-ingestion';
 
 const kernel = new ContentIngestionKernel({
   outputDir: './living',

@@ -1,4 +1,4 @@
-//! A2R Cloud SSH Executor
+//! Allternit Cloud SSH Executor
 //!
 //! SSH connection management for cloud deployment.
 

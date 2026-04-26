@@ -1,6 +1,6 @@
-//! A2R Cloud Deploy
+//! Allternit Cloud Deploy
 //!
-//! Deployment automation and orchestration for A2R cloud instances.
+//! Deployment automation and orchestration for Allternit cloud instances.
 
 pub mod orchestrator;
 pub mod installer;

@@ -1,4 +1,4 @@
-//! A2R Autonomous Code Factory
+//! Allternit Autonomous Code Factory
 //!
 //! Self-improving code generation and validation system:
 //! - Spec-driven code generation
@@ -6,11 +6,11 @@
 //! - Evidence-based merge decisions
 //! - Continuous improvement through feedback
 
-use a2r_context_control::ContextControlPlane;
-use a2r_evolution_layer::{EvolutionLayer, EvolutionStatus};
-use a2r_memory_kernel::MemoryKernel;
-use a2rchitech_harness_engineering::{HarnessEngineeringEngine, MergeEligibilityReceipt, RiskTier};
-use a2rchitech_system_law::SystemLawEngine;
+use allternit_context_control::ContextControlPlane;
+use allternit_evolution_layer::{EvolutionLayer, EvolutionStatus};
+use allternit_memory_kernel::MemoryKernel;
+use allternit_harness_engineering::{HarnessEngineeringEngine, MergeEligibilityReceipt, RiskTier};
+use allternit_system_law::SystemLawEngine;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -170,7 +170,7 @@ impl AutonomousCodeFactory {
 
         // Log to memory
         self.memory
-            .append_event(a2r_memory_kernel::MemoryEvent::new(
+            .append_event(allternit_memory_kernel::MemoryEvent::new(
                 "code_generated",
                 serde_json::json!({
                     "artifact_id": artifact_id,
@@ -254,7 +254,7 @@ impl AutonomousCodeFactory {
 
         // Log to memory
         self.memory
-            .append_event(a2r_memory_kernel::MemoryEvent::new(
+            .append_event(allternit_memory_kernel::MemoryEvent::new(
                 "code_validated",
                 serde_json::json!({
                     "validation_id": validation_id,
@@ -321,7 +321,7 @@ impl AutonomousCodeFactory {
 
         // Log decision
         self.memory
-            .append_event(a2r_memory_kernel::MemoryEvent::new(
+            .append_event(allternit_memory_kernel::MemoryEvent::new(
                 "merge_decision",
                 serde_json::json!({
                     "decision_id": decision.decision_id,
@@ -428,10 +428,10 @@ pub enum CodeFactoryError {
     SpecNotFound(String),
 
     #[error("Context error: {0}")]
-    Context(#[from] a2r_context_control::ContextError),
+    Context(#[from] allternit_context_control::ContextError),
 
     #[error("Memory error: {0}")]
-    Memory(#[from] a2r_memory_kernel::MemoryError),
+    Memory(#[from] allternit_memory_kernel::MemoryError),
 
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
@@ -443,7 +443,7 @@ pub enum CodeFactoryError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use a2r_evolution_layer::MemoryEvolutionEngine;
+    use allternit_evolution_layer::MemoryEvolutionEngine;
 
     fn create_test_components() -> (
         Arc<ContextControlPlane>,

@@ -1,15 +1,15 @@
-use a2rchitech_context_router::{ContextBundle, ContextRouter};
-use a2rchitech_embodiment::EmbodimentControlPlane;
-use a2rchitech_evals::EvaluationEngine;
-use a2rchitech_history::{HistoryError, HistoryLedger};
-use a2rchitech_memory::MemoryFabric;
-use a2rchitech_messaging::{EventEnvelope, MessagingSystem};
-use a2rchitech_packaging::PackageManager;
-use a2rchitech_policy::{PolicyEffect, PolicyEngine, PolicyRequest};
-use a2rchitech_providers::ProviderRouter;
-use a2rchitech_runtime_core::SessionManager;
-use a2rchitech_skills::SkillRegistry;
-use a2rchitech_workflows::WorkflowEngine;
+use allternit_context_router::{ContextBundle, ContextRouter};
+use allternit_embodiment::EmbodimentControlPlane;
+use allternit_evals::EvaluationEngine;
+use allternit_history::{HistoryError, HistoryLedger};
+use allternit_memory::MemoryFabric;
+use allternit_messaging::{EventEnvelope, MessagingSystem};
+use allternit_packaging::PackageManager;
+use allternit_policy::{PolicyEffect, PolicyEngine, PolicyRequest};
+use allternit_providers::ProviderRouter;
+use allternit_runtime_core::SessionManager;
+use allternit_skills::SkillRegistry;
+use allternit_workflows::WorkflowEngine;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 use std::collections::HashMap;
@@ -430,7 +430,7 @@ pub enum ControlPlaneError {
     #[error("History error: {0}")]
     History(#[from] HistoryError),
     #[error("Policy error: {0}")]
-    Policy(#[from] a2rchitech_policy::PolicyError),
+    Policy(#[from] allternit_policy::PolicyError),
     #[error("Agent not found: {0}")]
     AgentNotFound(String),
     #[error("Inspection failed: {0}")]
@@ -538,7 +538,7 @@ impl ControlPlane {
                 "tenant_id": &request.tenant_id,
                 "inspection_scope": &request.inspection_scope,
             }),
-            requested_tier: a2rchitech_policy::SafetyTier::T0, // Default to lowest tier for inspection
+            requested_tier: allternit_policy::SafetyTier::T0, // Default to lowest tier for inspection
         };
 
         let policy_decision = self.policy_engine.evaluate(policy_request).await?;
@@ -642,7 +642,7 @@ impl ControlPlane {
             InspectionScope::Memory => {
                 // Inspect memory fabric for agent-specific data
                 // This is a simplified implementation
-                let memory_query = a2rchitech_memory::MemoryQuery {
+                let memory_query = allternit_memory::MemoryQuery {
                     query: request.agent_id.clone(),
                     top_k: 50,
                     filter: None,
@@ -730,20 +730,20 @@ impl ControlPlane {
                         .as_secs(),
                     expires_at: None,
                     context_entries: vec![],
-                    provenance: a2rchitech_context_router::ContextProvenance {
+                    provenance: allternit_context_router::ContextProvenance {
                         origin_session: Some("session-1".to_string()),
                         origin_agent: request.agent_id.clone(),
                         derivation_chain: vec!["initial".to_string()],
                         integrity_hash: "placeholder_hash".to_string(),
                         signature: None,
                     },
-                    access_control: a2rchitech_context_router::ContextAccessControl {
+                    access_control: allternit_context_router::ContextAccessControl {
                         allowed_agents: std::collections::HashSet::from([request.agent_id.clone()]),
                         allowed_skills: std::collections::HashSet::new(),
                         allowed_phases: std::collections::HashSet::new(),
                         time_window: None,
                         access_policy:
-                            a2rchitech_context_router::ContextAccessPolicy::ExplicitAllowList,
+                            allternit_context_router::ContextAccessPolicy::ExplicitAllowList,
                     },
                     size_bytes: 0,
                     last_accessed: std::time::SystemTime::now()
@@ -766,7 +766,7 @@ impl ControlPlane {
                 }));
 
                 // Memory
-                let memory_query = a2rchitech_memory::MemoryQuery {
+                let memory_query = allternit_memory::MemoryQuery {
                     query: request.agent_id.clone(),
                     top_k: 50,
                     filter: None,
@@ -845,20 +845,20 @@ impl ControlPlane {
                         .as_secs(),
                     expires_at: None,
                     context_entries: vec![],
-                    provenance: a2rchitech_context_router::ContextProvenance {
+                    provenance: allternit_context_router::ContextProvenance {
                         origin_session: Some("session-1".to_string()),
                         origin_agent: request.agent_id.clone(),
                         derivation_chain: vec!["initial".to_string()],
                         integrity_hash: "placeholder_hash".to_string(),
                         signature: None,
                     },
-                    access_control: a2rchitech_context_router::ContextAccessControl {
+                    access_control: allternit_context_router::ContextAccessControl {
                         allowed_agents: std::collections::HashSet::from([request.agent_id.clone()]),
                         allowed_skills: std::collections::HashSet::new(),
                         allowed_phases: std::collections::HashSet::new(),
                         time_window: None,
                         access_policy:
-                            a2rchitech_context_router::ContextAccessPolicy::ExplicitAllowList,
+                            allternit_context_router::ContextAccessPolicy::ExplicitAllowList,
                     },
                     size_bytes: 0,
                     last_accessed: std::time::SystemTime::now()
@@ -889,7 +889,7 @@ impl ControlPlane {
                 "control_action": &request.control_action,
                 "reason": &request.reason,
             }),
-            requested_tier: a2rchitech_policy::SafetyTier::T0, // Default to lowest tier for control
+            requested_tier: allternit_policy::SafetyTier::T0, // Default to lowest tier for control
         };
 
         let policy_decision = self.policy_engine.evaluate(policy_request).await?;
@@ -1126,7 +1126,7 @@ impl ControlPlane {
                 resource: "placeholder".to_string(),
                 action: "placeholder".to_string(),
                 context: serde_json::json!({}),
-                requested_tier: a2rchitech_policy::SafetyTier::T0,
+                requested_tier: allternit_policy::SafetyTier::T0,
             },
             policy_decision: PolicyEffect::Allow,
             decision_timestamp: std::time::SystemTime::now()
@@ -1321,12 +1321,12 @@ mod tests {
         // Create temporary history ledger
         let temp_path = format!("/tmp/test_control_plane_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
 
         // Create messaging system
         let messaging_system = Arc::new(
-            a2rchitech_messaging::MessagingSystem::new_with_storage(
+            allternit_messaging::MessagingSystem::new_with_storage(
                 history_ledger.clone(),
                 pool.clone(),
             )
@@ -1335,13 +1335,13 @@ mod tests {
         );
 
         // Create policy engine
-        let policy_engine = Arc::new(a2rchitech_policy::PolicyEngine::new(
+        let policy_engine = Arc::new(allternit_policy::PolicyEngine::new(
             history_ledger.clone(),
             messaging_system.clone(),
         ));
-        let agent_identity = a2rchitech_policy::Identity {
+        let agent_identity = allternit_policy::Identity {
             id: "test-agent-001".to_string(),
-            identity_type: a2rchitech_policy::IdentityType::AgentIdentity,
+            identity_type: allternit_policy::IdentityType::AgentIdentity,
             name: "Test Agent".to_string(),
             tenant_id: "test-tenant".to_string(),
             created_at: 0,
@@ -1353,9 +1353,9 @@ mod tests {
             .register_identity(agent_identity)
             .await
             .unwrap();
-        let user_identity = a2rchitech_policy::Identity {
+        let user_identity = allternit_policy::Identity {
             id: "test-user".to_string(),
-            identity_type: a2rchitech_policy::IdentityType::HumanUser,
+            identity_type: allternit_policy::IdentityType::HumanUser,
             name: "Test User".to_string(),
             tenant_id: "test-tenant".to_string(),
             created_at: 0,
@@ -1369,36 +1369,36 @@ mod tests {
             .unwrap();
         policy_engine.create_default_permissions().await.unwrap();
         policy_engine.create_default_rules().await.unwrap();
-        let inspect_rule = a2rchitech_policy::PolicyRule {
+        let inspect_rule = allternit_policy::PolicyRule {
             id: "rule_allow_inspect".to_string(),
             name: "Allow Inspect Operations".to_string(),
             description: "Allow agent inspection in tests".to_string(),
             condition: "identity.active".to_string(),
-            effect: a2rchitech_policy::PolicyEffect::Allow,
+            effect: allternit_policy::PolicyEffect::Allow,
             resource: "*".to_string(),
             actions: vec!["inspect".to_string()],
             priority: 150,
             enabled: true,
         };
         policy_engine.add_rule(inspect_rule).await.unwrap();
-        let control_rule = a2rchitech_policy::PolicyRule {
+        let control_rule = allternit_policy::PolicyRule {
             id: "rule_allow_control".to_string(),
             name: "Allow Control Operations".to_string(),
             description: "Allow agent control in tests".to_string(),
             condition: "identity.active".to_string(),
-            effect: a2rchitech_policy::PolicyEffect::Allow,
+            effect: allternit_policy::PolicyEffect::Allow,
             resource: "*".to_string(),
             actions: vec!["control".to_string()],
             priority: 150,
             enabled: true,
         };
         policy_engine.add_rule(control_rule).await.unwrap();
-        let query_rule = a2rchitech_policy::PolicyRule {
+        let query_rule = allternit_policy::PolicyRule {
             id: "rule_allow_query".to_string(),
             name: "Allow Query Operations".to_string(),
             description: "Allow memory queries in tests".to_string(),
             condition: "identity.active".to_string(),
-            effect: a2rchitech_policy::PolicyEffect::Allow,
+            effect: allternit_policy::PolicyEffect::Allow,
             resource: "*".to_string(),
             actions: vec!["query".to_string()],
             priority: 150,
@@ -1407,11 +1407,11 @@ mod tests {
         policy_engine.add_rule(query_rule).await.unwrap();
 
         // Create context router
-        let context_router = Arc::new(a2rchitech_context_router::ContextRouter::new(
+        let context_router = Arc::new(allternit_context_router::ContextRouter::new(
             history_ledger.clone(),
             messaging_system.clone(),
             policy_engine.clone(),
-            Arc::new(a2rchitech_runtime_core::SessionManager::new(
+            Arc::new(allternit_runtime_core::SessionManager::new(
                 history_ledger.clone(),
                 messaging_system.clone(),
             )),
@@ -1419,7 +1419,7 @@ mod tests {
 
         // Create memory fabric
         let memory_fabric = Arc::new(
-            a2rchitech_memory::MemoryFabric::new_with_storage(
+            allternit_memory::MemoryFabric::new_with_storage(
                 history_ledger.clone(),
                 messaging_system.clone(),
                 policy_engine.clone(),
@@ -1432,13 +1432,13 @@ mod tests {
 
         // Create provider router
         let provider_router = Arc::new(
-            a2rchitech_providers::ProviderRouter::new_with_storage(
+            allternit_providers::ProviderRouter::new_with_storage(
                 history_ledger.clone(),
                 messaging_system.clone(),
                 policy_engine.clone(),
                 context_router.clone(),
                 memory_fabric.clone(),
-                Arc::new(a2rchitech_runtime_core::SessionManager::new(
+                Arc::new(allternit_runtime_core::SessionManager::new(
                     history_ledger.clone(),
                     messaging_system.clone(),
                 )),
@@ -1449,7 +1449,7 @@ mod tests {
         );
 
         // Create tool gateway
-        let tool_gateway = Arc::new(a2rchitech_tools_gateway::ToolGateway::new(
+        let tool_gateway = Arc::new(allternit_tools_gateway::ToolGateway::new(
             policy_engine.clone(),
             history_ledger.clone(),
             messaging_system.clone(),
@@ -1457,7 +1457,7 @@ mod tests {
 
         // Create skill registry
         let skill_registry = Arc::new(
-            a2rchitech_skills::SkillRegistry::new_with_storage(
+            allternit_skills::SkillRegistry::new_with_storage(
                 history_ledger.clone(),
                 messaging_system.clone(),
                 policy_engine.clone(),
@@ -1469,7 +1469,7 @@ mod tests {
         );
 
         // Register native browser-use skills with recording capability
-        let browser_skills = a2rchitech_skills::browser_use::create_all_browser_skills();
+        let browser_skills = allternit_skills::browser_use::create_all_browser_skills();
         for skill in browser_skills {
             if let Err(e) = skill_registry.register_skill(skill).await {
                 tracing::warn!("Failed to register browser skill: {}", e);
@@ -1479,13 +1479,13 @@ mod tests {
 
         // Create task queue
         let task_queue = Arc::new(
-            a2rchitech_messaging::TaskQueue::new(history_ledger.clone(), pool.clone())
+            allternit_messaging::TaskQueue::new(history_ledger.clone(), pool.clone())
                 .await
                 .unwrap(),
         );
 
         // Create workflow engine
-        let workflow_engine = Arc::new(a2rchitech_workflows::WorkflowEngine::new(
+        let workflow_engine = Arc::new(allternit_workflows::WorkflowEngine::new(
             history_ledger.clone(),
             messaging_system.clone(),
             policy_engine.clone(),
@@ -1496,7 +1496,7 @@ mod tests {
 
         // Create embodiment control plane
         let embodiment_control_plane = Arc::new(
-            a2rchitech_embodiment::EmbodimentControlPlane::new_with_storage(
+            allternit_embodiment::EmbodimentControlPlane::new_with_storage(
                 history_ledger.clone(),
                 messaging_system.clone(),
                 policy_engine.clone(),
@@ -1505,7 +1505,7 @@ mod tests {
                 provider_router.clone(),
                 skill_registry.clone(),
                 workflow_engine.clone(),
-                Arc::new(a2rchitech_runtime_core::SessionManager::new(
+                Arc::new(allternit_runtime_core::SessionManager::new(
                     history_ledger.clone(),
                     messaging_system.clone(),
                 )),
@@ -1517,14 +1517,14 @@ mod tests {
 
         // Create package manager
         let package_manager = Arc::new(
-            a2rchitech_packaging::PackageManager::new_with_storage(
+            allternit_packaging::PackageManager::new_with_storage(
                 history_ledger.clone(),
                 messaging_system.clone(),
                 policy_engine.clone(),
                 context_router.clone(),
                 memory_fabric.clone(),
                 provider_router.clone(),
-                Arc::new(a2rchitech_runtime_core::SessionManager::new(
+                Arc::new(allternit_runtime_core::SessionManager::new(
                     history_ledger.clone(),
                     messaging_system.clone(),
                 )),
@@ -1536,7 +1536,7 @@ mod tests {
 
         // Create evaluation engine
         let evaluation_engine = Arc::new(
-            a2rchitech_evals::EvaluationEngine::new_with_storage(
+            allternit_evals::EvaluationEngine::new_with_storage(
                 history_ledger.clone(),
                 messaging_system.clone(),
                 policy_engine.clone(),
@@ -1545,7 +1545,7 @@ mod tests {
                 provider_router.clone(),
                 skill_registry.clone(),
                 workflow_engine.clone(),
-                Arc::new(a2rchitech_runtime_core::SessionManager::new(
+                Arc::new(allternit_runtime_core::SessionManager::new(
                     history_ledger.clone(),
                     messaging_system.clone(),
                 )),
@@ -1556,7 +1556,7 @@ mod tests {
         );
 
         // Create session manager
-        let session_manager = Arc::new(a2rchitech_runtime_core::SessionManager::new(
+        let session_manager = Arc::new(allternit_runtime_core::SessionManager::new(
             history_ledger.clone(),
             messaging_system.clone(),
         ));
@@ -1565,7 +1565,7 @@ mod tests {
         let config = ControlPlaneConfig {
             control_plane_id: "test-control-plane-001".to_string(),
             name: "Test Control Plane".to_string(),
-            description: "A test control plane for A2rchitech".to_string(),
+            description: "A test control plane for Allternitchitech".to_string(),
             version: "1.0.0".to_string(),
             enabled_features: vec![
                 ControlFeature::AgentInspection,

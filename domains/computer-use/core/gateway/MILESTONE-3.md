@@ -139,7 +139,7 @@ The browser tool is a runtime tool (invoked by LLM/planner), not a CLI command. 
 1. **Start GIZZI TUI:**
    ```bash
    export GIZZI_ENABLE_BROWSER_TOOL=true
-   export A2R_COMPUTER_USE_URL=http://localhost:8080
+   export Allternit_COMPUTER_USE_URL=http://localhost:8080
    gizzi
    ```
 
@@ -185,7 +185,7 @@ The browser tool is a runtime tool (invoked by LLM/planner), not a CLI command. 
 
 ## Architecture Proven ✅
 
-The core A2R Computer Use architecture is now materially real:
+The core Allternit Computer Use architecture is now materially real:
 - TypeScript runtime ↔ Python gateway bridge works
 - Playwright automation executes
 - Results normalize correctly

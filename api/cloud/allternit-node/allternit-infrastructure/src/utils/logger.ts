@@ -1,5 +1,5 @@
 /**
- * Simple Logger Utility for A2R Infrastructure
+ * Simple Logger Utility for Allternit Infrastructure
  */
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
@@ -68,4 +68,4 @@ export class Logger {
   }
 }
 
-export const logger = new Logger('a2r-infrastructure');
+export const logger = new Logger('allternit-infrastructure');

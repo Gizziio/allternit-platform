@@ -1,5 +1,5 @@
 """
-A2R Computer Use — Real Adapter Integration Tests
+Allternit Computer Use — Real Adapter Integration Tests
 Actually tests browser automation, desktop automation, and the operator service.
 No mocks. Real Playwright, real pyautogui, real HTTP calls.
 """
@@ -391,9 +391,9 @@ async def test_operator_service():
 
     # Start the operator in background on a test port
     env = os.environ.copy()
-    env["A2R_OPERATOR_PORT"] = "13010"  # Test port to avoid conflicts
-    env["A2R_OPERATOR_HOST"] = "127.0.0.1"
-    env["A2R_OPERATOR_API_KEY"] = "test-key"
+    env["Allternit_OPERATOR_PORT"] = "13010"  # Test port to avoid conflicts
+    env["Allternit_OPERATOR_HOST"] = "127.0.0.1"
+    env["Allternit_OPERATOR_API_KEY"] = "test-key"
     env["PYTHONPATH"] = str(operator_dir / "src")
 
     # Check for run.py wrapper
@@ -450,7 +450,7 @@ async def test_operator_service():
             assert resp.status_code == 200
             data = resp.json()
             assert data["status"] == "healthy"
-            assert data["service"] == "a2r-operator"
+            assert data["service"] == "allternit-operator"
             assert "browser-use" in data["capabilities"]
             assert "desktop-use" in data["capabilities"]
             assert "computer-use" in data["capabilities"]
@@ -460,7 +460,7 @@ async def test_operator_service():
             resp = await client.get(f"{base}/v1/browser/health")
             assert resp.status_code == 200
             data = resp.json()
-            assert data["service"] == "a2r-operator"
+            assert data["service"] == "allternit-operator"
             results.ok(f"GET /v1/browser/health — browser-use available: {data.get('available')}")
 
             # Test 4c: Vision screenshot (desktop capture via operator)
@@ -992,7 +992,7 @@ async def test_hybrid_orchestrator():
 
 def main():
     print("=" * 60)
-    print("A2R Computer Use — Real Adapter Integration Tests")
+    print("Allternit Computer Use — Real Adapter Integration Tests")
     print(f"Python: {sys.version}")
     print(f"Time: {datetime.now().isoformat()}")
     print("=" * 60)

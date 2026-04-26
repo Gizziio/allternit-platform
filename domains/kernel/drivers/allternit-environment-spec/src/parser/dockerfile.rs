@@ -222,7 +222,7 @@ impl DockerfileConfig {
 
     /// Build using Docker
     async fn build_with_docker(&self) -> Result<String, EnvironmentSpecError> {
-        let image_tag = format!("a2r-built:{}", uuid::Uuid::new_v4());
+        let image_tag = format!("allternit-built:{}", uuid::Uuid::new_v4());
 
         let mut cmd = tokio::process::Command::new("docker");
         cmd.arg("build")
@@ -252,7 +252,7 @@ impl DockerfileConfig {
 
     /// Build using Buildah
     async fn build_with_buildah(&self) -> Result<String, EnvironmentSpecError> {
-        let image_tag = format!("a2r-built:{}", uuid::Uuid::new_v4());
+        let image_tag = format!("allternit-built:{}", uuid::Uuid::new_v4());
 
         let output = tokio::process::Command::new("buildah")
             .args(["bud", "-t", &image_tag, "-f", self.path.to_str().unwrap()])
@@ -272,7 +272,7 @@ impl DockerfileConfig {
 
     /// Build using Podman
     async fn build_with_podman(&self) -> Result<String, EnvironmentSpecError> {
-        let image_tag = format!("a2r-built:{}", uuid::Uuid::new_v4());
+        let image_tag = format!("allternit-built:{}", uuid::Uuid::new_v4());
 
         let output = tokio::process::Command::new("podman")
             .args(["build", "-t", &image_tag, "-f", self.path.to_str().unwrap()])
@@ -303,7 +303,7 @@ impl DockerfileConfig {
             r#"{{ pkgs ? import <nixpkgs> {{}} }}:
 
 pkgs.dockerTools.buildLayeredImage {{
-  name = "a2r-dockerfile-build";
+  name = "allternit-dockerfile-build";
   tag = "latest";
   
   contents = with pkgs; [

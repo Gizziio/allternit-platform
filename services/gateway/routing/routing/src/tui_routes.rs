@@ -2,7 +2,7 @@
 //! TUI Compatibility Routes - OpenCode TUI SDK compatibility layer
 //!
 //! Provides REST API endpoints that match the OpenCode SDK interface,
-//! allowing the OpenCode TUI to connect to A2R backend.
+//! allowing the OpenCode TUI to connect to Allternit backend.
 
 use axum::{
     extract::{Path, Query, State},
@@ -467,8 +467,8 @@ async fn get_vcs_info(State(_state): State<Arc<AppState>>) -> Json<VcsInfo> {
 
 async fn get_path_info(State(_state): State<Arc<AppState>>) -> Json<PathInfo> {
     Json(PathInfo {
-        state: "/workspace/.a2r/state".to_string(),
-        config: "/workspace/.a2r/config.json".to_string(),
+        state: "/workspace/.allternit/state".to_string(),
+        config: "/workspace/.allternit/config.json".to_string(),
         worktree: "/workspace".to_string(),
         directory: "/workspace".to_string(),
     })

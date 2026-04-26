@@ -1,4 +1,4 @@
--- A2R Infrastructure Database Schema
+-- Allternit Infrastructure Database Schema
 -- Initial migration for VPS connections, cloud deployments, environments, and SSH keys
 
 -- Enable UUID extension
@@ -279,12 +279,12 @@ CREATE TRIGGER update_ssh_key_distributions_updated_at
 
 -- Insert default environment templates
 INSERT INTO environment_templates (name, description, docker_compose, required_ports, tags) VALUES
-('a2r-node', 'Standard A2R node deployment', 
+('allternit-node', 'Standard Allternit node deployment', 
 'version: "3.8"
 services:
-  a2r-node:
-    image: a2r/node:latest
-    container_name: a2r-node
+  allternit-node:
+    image: allternit/node:latest
+    container_name: allternit-node
     ports:
       - "${NODE_PORT:-8080}:8080"
       - "${WS_PORT:-8081}:8081"
@@ -292,7 +292,7 @@ services:
       - NODE_ENV=production
       - LOG_LEVEL=info
     volumes:
-      - a2r-data:/data
+      - allternit-data:/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
@@ -300,16 +300,16 @@ services:
       timeout: 10s
       retries: 3
 volumes:
-  a2r-data:', 
+  allternit-data:', 
 ARRAY[8080, 8081], 
-ARRAY['a2r', 'node', 'default']),
+ARRAY['allternit', 'node', 'default']),
 
-('a2r-node-ssl', 'A2R node with SSL/TLS termination',
+('allternit-node-ssl', 'Allternit node with SSL/TLS termination',
 'version: "3.8"
 services:
-  a2r-node:
-    image: a2r/node:latest
-    container_name: a2r-node
+  allternit-node:
+    image: allternit/node:latest
+    container_name: allternit-node
     ports:
       - "${NODE_PORT:-8080}:8080"
       - "${WS_PORT:-8081}:8081"
@@ -318,12 +318,12 @@ services:
       - LOG_LEVEL=info
       - SSL_ENABLED=true
     volumes:
-      - a2r-data:/data
+      - allternit-data:/data
       - ./ssl:/ssl:ro
     restart: unless-stopped
   nginx:
     image: nginx:alpine
-    container_name: a2r-nginx
+    container_name: allternit-nginx
     ports:
       - "80:80"
       - "443:443"
@@ -331,38 +331,38 @@ services:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./ssl:/ssl:ro
     depends_on:
-      - a2r-node
+      - allternit-node
     restart: unless-stopped
 volumes:
-  a2r-data:',
+  allternit-data:',
 ARRAY[80, 443, 8080, 8081],
-ARRAY['a2r', 'node', 'ssl', 'nginx']),
+ARRAY['allternit', 'node', 'ssl', 'nginx']),
 
 ('postgres-stack', 'PostgreSQL with pgAdmin',
 'version: "3.8"
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: a2r-postgres
+    container_name: allternit-postgres
     environment:
-      POSTGRES_USER: ${DB_USER:-a2r}
+      POSTGRES_USER: ${DB_USER:-allternit}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME:-a2r}
+      POSTGRES_DB: ${DB_NAME:-allternit}
     ports:
       - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-a2r}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-allternit}"]
       interval: 10s
       timeout: 5s
       retries: 5
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: a2r-pgadmin
+    container_name: allternit-pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@a2r.local}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@allternit.local}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
     ports:
       - "${PGADMIN_PORT:-5050}:80"

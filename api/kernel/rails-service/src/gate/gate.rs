@@ -11,7 +11,7 @@ use crate::verification::types::{ProviderError, VerificationProvider, VisualConf
 use crate::core::ids::{create_event_id, create_lease_id, create_receipt_id};
 use crate::core::io::{ensure_dir, write_json_atomic};
 use crate::core::types::{
-    A2REvent, Actor, ActorType, EventScope, LeaseRequest, LedgerQuery, ReceiptRecord,
+    AllternitEvent, Actor, ActorType, EventScope, LeaseRequest, LedgerQuery, ReceiptRecord,
 };
 use crate::index::Index;
 use crate::leases::Leases;
@@ -152,7 +152,7 @@ impl Gate {
         let node_id = format!("n_{}", rand::random::<u32>() % 10_000);
         let delta_id = format!("d_{}", rand::random::<u32>() % 1_000_000);
 
-        let prompt_event = A2REvent {
+        let prompt_event = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: gate_actor(&self.actor_id),
@@ -178,7 +178,7 @@ impl Gate {
             agent_decision_id: None,
         };
         self.ensure_mutation_provenance(&mutation_prov)?;
-        let dag_created = A2REvent {
+        let dag_created = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: gate_actor(&self.actor_id),
@@ -190,7 +190,7 @@ impl Gate {
         let dag_created_id = dag_created.event_id.clone();
         self.emit(dag_created).await?;
 
-        let node_created = A2REvent {
+        let node_created = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: gate_actor(&self.actor_id),
@@ -208,7 +208,7 @@ impl Gate {
         let node_created_id = node_created.event_id.clone();
         self.emit(node_created).await?;
 
-        let delta_event = A2REvent {
+        let delta_event = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: gate_actor(&self.actor_id),
@@ -227,7 +227,7 @@ impl Gate {
         };
         self.emit(delta_event).await?;
 
-        let link = A2REvent {
+        let link = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: gate_actor(&self.actor_id),
@@ -274,7 +274,7 @@ impl Gate {
                     title,
                     parent_node_id,
                     execution_mode,
-                } => A2REvent {
+                } => AllternitEvent {
                     event_id: create_event_id(),
                     ts: Utc::now().to_rfc3339(),
                     actor: gate_actor(&self.actor_id),
@@ -290,7 +290,7 @@ impl Gate {
                     }),
                     provenance: Some(self.provenance_from(&mutation_prov)),
                 },
-                DagMutation::UpdateNode { node_id, patch } => A2REvent {
+                DagMutation::UpdateNode { node_id, patch } => AllternitEvent {
                     event_id: create_event_id(),
                     ts: Utc::now().to_rfc3339(),
                     actor: gate_actor(&self.actor_id),
@@ -308,7 +308,7 @@ impl Gate {
                 } => {
                     self.ensure_no_cycle(dag_id, &from_node_id, &to_node_id)
                         .await?;
-                    A2REvent {
+                    AllternitEvent {
                         event_id: create_event_id(),
                         ts: Utc::now().to_rfc3339(),
                         actor: gate_actor(&self.actor_id),
@@ -328,7 +328,7 @@ impl Gate {
                     b,
                     note,
                     context_share,
-                } => A2REvent {
+                } => AllternitEvent {
                     event_id: create_event_id(),
                     ts: Utc::now().to_rfc3339(),
                     actor: gate_actor(&self.actor_id),
@@ -343,7 +343,7 @@ impl Gate {
                     }),
                     provenance: Some(self.provenance_from(&mutation_prov)),
                 },
-                DagMutation::AddLabel { node_id, label } => A2REvent {
+                DagMutation::AddLabel { node_id, label } => AllternitEvent {
                     event_id: create_event_id(),
                     ts: Utc::now().to_rfc3339(),
                     actor: gate_actor(&self.actor_id),
@@ -356,7 +356,7 @@ impl Gate {
                     }),
                     provenance: Some(self.provenance_from(&mutation_prov)),
                 },
-                DagMutation::RemoveLabel { node_id, label } => A2REvent {
+                DagMutation::RemoveLabel { node_id, label } => AllternitEvent {
                     event_id: create_event_id(),
                     ts: Utc::now().to_rfc3339(),
                     actor: gate_actor(&self.actor_id),
@@ -374,7 +374,7 @@ impl Gate {
                     dimension,
                     value,
                     reason,
-                } => A2REvent {
+                } => AllternitEvent {
                     event_id: create_event_id(),
                     ts: Utc::now().to_rfc3339(),
                     actor: gate_actor(&self.actor_id),
@@ -393,7 +393,7 @@ impl Gate {
                     node_id,
                     body_ref,
                     author,
-                } => A2REvent {
+                } => AllternitEvent {
                     event_id: create_event_id(),
                     ts: Utc::now().to_rfc3339(),
                     actor: gate_actor(&self.actor_id),
@@ -413,7 +413,7 @@ impl Gate {
                     from,
                     to,
                     reason,
-                } => A2REvent {
+                } => AllternitEvent {
                     event_id: create_event_id(),
                     ts: Utc::now().to_rfc3339(),
                     actor: gate_actor(&self.actor_id),
@@ -435,7 +435,7 @@ impl Gate {
         }
 
         let links = mutation_ids.clone();
-        let delta_event = A2REvent {
+        let delta_event = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: gate_actor(&self.actor_id),
@@ -491,7 +491,7 @@ impl Gate {
         self.ensure_mutation_provenance(&provenance)?;
         self.ensure_no_cycle(dag_id, from_node_id, to_node_id)
             .await?;
-        let evt = A2REvent {
+        let evt = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: gate_actor(&self.actor_id),
@@ -537,7 +537,7 @@ impl Gate {
         provenance: MutationProvenance,
     ) -> Result<()> {
         self.ensure_mutation_provenance(&provenance)?;
-        let evt = A2REvent {
+        let evt = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: gate_actor(&self.actor_id),
@@ -615,7 +615,7 @@ impl Gate {
             None
         };
         let loop_policy = LoopPolicy::default();
-        let created = A2REvent {
+        let created = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: gate_actor(&self.actor_id),
@@ -636,7 +636,7 @@ impl Gate {
         };
         self.emit(created).await?;
 
-        let picked = A2REvent {
+        let picked = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: gate_actor(&self.actor_id),
@@ -667,7 +667,7 @@ impl Gate {
             ..Default::default()
         };
         self.ensure_policy_scope(&scope).await?;
-        let evt = A2REvent {
+        let evt = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: gate_actor(&self.actor_id),
@@ -702,7 +702,7 @@ impl Gate {
         let active_paths = self.leases.active_paths_for_wih(wih_id).await?;
         let released = self.leases.release_for_wih(wih_id).await?;
         let heartbeat = Utc::now().to_rfc3339();
-        let event = A2REvent {
+        let event = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: gate_actor(&self.actor_id),
@@ -819,7 +819,7 @@ impl Gate {
         };
         let _ = self.receipts.write_receipt(&receipt)?;
 
-        let evt = A2REvent {
+        let evt = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: gate_actor(&self.actor_id),
@@ -845,7 +845,7 @@ impl Gate {
     }
 
     pub async fn rollback_wih(&self, wih_id: &str) -> Result<()> {
-        let backups_dir = self.root_dir.join(".a2r").join("backups");
+        let backups_dir = self.root_dir.join(".allternit").join("backups");
         if !backups_dir.exists() {
             return Err(anyhow!("No backups directory found"));
         }
@@ -895,7 +895,7 @@ impl Gate {
             }
         }
 
-        let rolled_back = A2REvent {
+        let rolled_back = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: gate_actor(&self.actor_id),
@@ -955,7 +955,7 @@ impl Gate {
                 );
 
                 // Emit visual verification event for audit trail
-                let verified_event = A2REvent {
+                let verified_event = AllternitEvent {
                     event_id: create_event_id(),
                     ts: Utc::now().to_rfc3339(),
                     actor: gate_actor(&self.actor_id),
@@ -980,7 +980,7 @@ impl Gate {
             deleted: Vec::new(),
         };
 
-        let runner_dir = self.root_dir.join(".a2r").join("runner").join(wih_id);
+        let runner_dir = self.root_dir.join(".allternit").join("runner").join(wih_id);
         let mut backup_path = None;
 
         if runner_dir.exists() && runner_dir.is_dir() {
@@ -1011,7 +1011,7 @@ impl Gate {
 
             if !dry_run {
                 // Prepare backup for rollback
-                let backup_dir = self.root_dir.join(".a2r").join("backups").join(format!("{}_{}", wih_id, Utc::now().timestamp()));
+                let backup_dir = self.root_dir.join(".allternit").join("backups").join(format!("{}_{}", wih_id, Utc::now().timestamp()));
                 crate::core::io::ensure_dir(&backup_dir)?;
                 backup_path = Some(backup_dir.to_string_lossy().to_string());
 
@@ -1041,7 +1041,7 @@ impl Gate {
                     }
                 }
 
-                let landed = A2REvent {
+                let landed = AllternitEvent {
                     event_id: create_event_id(),
                     ts: Utc::now().to_rfc3339(),
                     actor: gate_actor(&self.actor_id),
@@ -1053,7 +1053,7 @@ impl Gate {
                 self.emit(landed).await?;
 
                 // 🤖 A2A Synchronization
-                let sync_evt = A2REvent {
+                let sync_evt = AllternitEvent {
                     event_id: create_event_id(),
                     ts: Utc::now().to_rfc3339(),
                     actor: gate_actor(&self.actor_id),
@@ -1079,7 +1079,7 @@ impl Gate {
                             .current_dir(&self.root_dir)
                             .output();
                         
-                        let commit_msg = format!("autoland: implementation run {} landed\n\nProof of Work: .a2r/autoland/{}.jsonl", wih_id, wih_id);
+                        let commit_msg = format!("autoland: implementation run {} landed\n\nProof of Work: .allternit/autoland/{}.jsonl", wih_id, wih_id);
                         let _ = std::process::Command::new("git")
                             .args(&["commit", "-m", &commit_msg])
                             .current_dir(&self.root_dir)
@@ -1118,7 +1118,7 @@ impl Gate {
         let dag_id = wih_state.dag_id.clone();
         let node_id = wih_state.node_id.clone();
 
-        let close_req = A2REvent {
+        let close_req = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: gate_actor(&self.actor_id),
@@ -1129,7 +1129,7 @@ impl Gate {
         };
         self.emit(close_req).await?;
 
-        let closed = A2REvent {
+        let closed = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: gate_actor(&self.actor_id),
@@ -1140,7 +1140,7 @@ impl Gate {
         };
         self.emit(closed).await?;
 
-        let status_evt = A2REvent {
+        let status_evt = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: gate_actor(&self.actor_id),
@@ -1151,7 +1151,7 @@ impl Gate {
         };
         self.emit(status_evt).await?;
 
-        let archived = A2REvent {
+        let archived = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: gate_actor(&self.actor_id),
@@ -1162,7 +1162,7 @@ impl Gate {
         };
         self.emit(archived).await?;
 
-        let vault_job = A2REvent {
+        let vault_job = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: gate_actor(&self.actor_id),
@@ -1250,7 +1250,7 @@ impl Gate {
             timeout_seconds,
         };
 
-        let evt = A2REvent {
+        let evt = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: gate_actor(&self.actor_id),
@@ -1283,7 +1283,7 @@ impl Gate {
             // Logic could be more sophisticated here, but for now we just log
         }
 
-        let evt = A2REvent {
+        let evt = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: gate_actor(&self.actor_id),
@@ -1303,7 +1303,7 @@ impl Gate {
         self.emit(evt).await?;
         
         // Clean up projection
-        let proj_path = self.root_dir.join(".a2r/ledger/elicitation/active").join(format!("{}.json", elicitation_id));
+        let proj_path = self.root_dir.join(".allternit/ledger/elicitation/active").join(format!("{}.json", elicitation_id));
         if proj_path.exists() {
             let _ = std::fs::remove_file(proj_path);
         }
@@ -1319,7 +1319,7 @@ impl Gate {
         reason: Option<&str>,
         context_variables: Option<serde_json::Value>,
     ) -> Result<()> {
-        let evt = A2REvent {
+        let evt = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: gate_actor(&self.actor_id),
@@ -1368,7 +1368,7 @@ impl Gate {
             stop_sequences,
         };
 
-        let evt = A2REvent {
+        let evt = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: gate_actor(&self.actor_id),
@@ -1396,7 +1396,7 @@ impl Gate {
         content: serde_json::Value,
         model: &str,
     ) -> Result<()> {
-        let evt = A2REvent {
+        let evt = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: gate_actor(&self.actor_id),
@@ -1416,7 +1416,7 @@ impl Gate {
         self.emit(evt).await?;
         
         // Clean up projection
-        let proj_path = self.root_dir.join(".a2r/ledger/sampling/active").join(format!("{}.json", sampling_id));
+        let proj_path = self.root_dir.join(".allternit/ledger/sampling/active").join(format!("{}.json", sampling_id));
         if proj_path.exists() {
             let _ = std::fs::remove_file(proj_path);
         }
@@ -1430,7 +1430,7 @@ impl Gate {
         upstream_actor: crate::core::types::Actor,
         targets: Vec<String>,
     ) -> Result<()> {
-        let evt = A2REvent {
+        let evt = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: gate_actor(&self.actor_id),
@@ -1452,7 +1452,7 @@ impl Gate {
         if let Some(v) = &self.oauth_vault {
             v.store_token(&token)?;
             
-            let evt = A2REvent {
+            let evt = AllternitEvent {
                 event_id: create_event_id(),
                 ts: Utc::now().to_rfc3339(),
                 actor: gate_actor(&self.actor_id),
@@ -1478,7 +1478,7 @@ impl Gate {
         Ok(None)
     }
 
-    async fn events_for_dag(&self, dag_id: &str) -> Result<Vec<A2REvent>> {
+    async fn events_for_dag(&self, dag_id: &str) -> Result<Vec<AllternitEvent>> {
         let all = self.ledger.query(LedgerQuery::default()).await?;
         Ok(all
             .into_iter()
@@ -1489,7 +1489,7 @@ impl Gate {
             .collect())
     }
 
-    async fn events_for_wih(&self, wih_id: &str) -> Result<Vec<A2REvent>> {
+    async fn events_for_wih(&self, wih_id: &str) -> Result<Vec<AllternitEvent>> {
         let all = self.ledger.query(LedgerQuery::default()).await?;
         Ok(all
             .into_iter()
@@ -1500,7 +1500,7 @@ impl Gate {
             .collect())
     }
 
-    async fn emit(&self, event: A2REvent) -> Result<()> {
+    async fn emit(&self, event: AllternitEvent) -> Result<()> {
         self.ledger.append(event.clone()).await?;
         if let Some(index) = &self.index {
             let _ = index.index_event(&event).await;
@@ -1549,7 +1549,7 @@ impl Gate {
             ));
         }
         let decision_id = format!("dec_{}", rand::random::<u32>() % 1_000_000);
-        let evt = A2REvent {
+        let evt = AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: gate_actor(&self.actor_id),
@@ -1591,7 +1591,7 @@ impl Gate {
                     title,
                     parent_node_id,
                     execution_mode,
-                } => A2REvent {
+                } => AllternitEvent {
                     event_id: create_event_id(),
                     ts: Utc::now().to_rfc3339(),
                     actor: gate_actor(&self.actor_id),
@@ -1607,7 +1607,7 @@ impl Gate {
                     }),
                     provenance: None,
                 },
-                DagMutation::UpdateNode { node_id, patch } => A2REvent {
+                DagMutation::UpdateNode { node_id, patch } => AllternitEvent {
                     event_id: create_event_id(),
                     ts: Utc::now().to_rfc3339(),
                     actor: gate_actor(&self.actor_id),
@@ -1625,7 +1625,7 @@ impl Gate {
                 } => {
                     self.ensure_no_cycle(dag_id, &from_node_id, &to_node_id)
                         .await?;
-                    A2REvent {
+                    AllternitEvent {
                         event_id: create_event_id(),
                         ts: Utc::now().to_rfc3339(),
                         actor: gate_actor(&self.actor_id),
@@ -1645,7 +1645,7 @@ impl Gate {
                     b,
                     note,
                     context_share,
-                } => A2REvent {
+                } => AllternitEvent {
                     event_id: create_event_id(),
                     ts: Utc::now().to_rfc3339(),
                     actor: gate_actor(&self.actor_id),
@@ -1660,7 +1660,7 @@ impl Gate {
                     }),
                     provenance: None,
                 },
-                DagMutation::AddLabel { node_id, label } => A2REvent {
+                DagMutation::AddLabel { node_id, label } => AllternitEvent {
                     event_id: create_event_id(),
                     ts: Utc::now().to_rfc3339(),
                     actor: gate_actor(&self.actor_id),
@@ -1673,7 +1673,7 @@ impl Gate {
                     }),
                     provenance: None,
                 },
-                DagMutation::RemoveLabel { node_id, label } => A2REvent {
+                DagMutation::RemoveLabel { node_id, label } => AllternitEvent {
                     event_id: create_event_id(),
                     ts: Utc::now().to_rfc3339(),
                     actor: gate_actor(&self.actor_id),
@@ -1691,7 +1691,7 @@ impl Gate {
                     dimension,
                     value,
                     reason,
-                } => A2REvent {
+                } => AllternitEvent {
                     event_id: create_event_id(),
                     ts: Utc::now().to_rfc3339(),
                     actor: gate_actor(&self.actor_id),
@@ -1710,7 +1710,7 @@ impl Gate {
                     node_id,
                     body_ref,
                     author,
-                } => A2REvent {
+                } => AllternitEvent {
                     event_id: create_event_id(),
                     ts: Utc::now().to_rfc3339(),
                     actor: gate_actor(&self.actor_id),
@@ -1730,7 +1730,7 @@ impl Gate {
                     from,
                     to,
                     reason,
-                } => A2REvent {
+                } => AllternitEvent {
                     event_id: create_event_id(),
                     ts: Utc::now().to_rfc3339(),
                     actor: gate_actor(&self.actor_id),
@@ -1878,7 +1878,7 @@ impl Gate {
         Ok(None)
     }
 
-    fn allowed_tools_for_wih(&self, wih_id: &str, events: &[A2REvent]) -> Option<Vec<String>> {
+    fn allowed_tools_for_wih(&self, wih_id: &str, events: &[AllternitEvent]) -> Option<Vec<String>> {
         for evt in events {
             if evt.r#type == "WIHCreated" {
                 if evt.payload.get("wih_id").and_then(|v| v.as_str()) == Some(wih_id) {
@@ -2023,14 +2023,14 @@ pub enum DagMutation {
 }
 
 fn context_pack_path(root: &PathBuf, dag_id: &str, wih_id: &str) -> PathBuf {
-    root.join(".a2r/work/dags")
+    root.join(".allternit/work/dags")
         .join(dag_id)
         .join("wih")
         .join("context")
         .join(format!("{wih_id}.context.json"))
 }
 
-fn events_for_dag(events: &[A2REvent], dag_id: &str) -> Vec<A2REvent> {
+fn events_for_dag(events: &[AllternitEvent], dag_id: &str) -> Vec<AllternitEvent> {
     events
         .iter()
         .filter(|evt| evt.payload.get("dag_id").and_then(|v| v.as_str()) == Some(dag_id))
@@ -2074,7 +2074,7 @@ fn collect_blocked_by_predecessors(
 }
 
 fn collect_receipts_for_nodes(
-    events: &[A2REvent],
+    events: &[AllternitEvent],
     dag_id: &str,
     node_ids: &std::collections::HashSet<String>,
 ) -> Vec<ContextReceipt> {

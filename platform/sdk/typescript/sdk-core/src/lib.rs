@@ -1,14 +1,14 @@
-//! # A2R SDK Core
+//! # Allternit SDK Core
 //!
-//! Core types and traits for the A2R SDK.
+//! Core types and traits for the Allternit SDK.
 //!
 //! ## Overview
 //!
 //! This crate provides foundational types, error handling, and traits
-//! used across all A2R SDK components. It defines the common interfaces
+//! used across all Allternit SDK components. It defines the common interfaces
 //! for applications, functions, policies, and transport layers.
 //!
-//! The SDK Core serves as the foundation of the A2R platform, providing
+//! The SDK Core serves as the foundation of the Allternit platform, providing
 //! serialization-friendly types that can be used across FFI boundaries,
 //! network transports, and language bindings.
 //!
@@ -19,14 +19,14 @@
 //! - **AgentConfig/AgentSpec**: Agent configuration and specification types
 //! - **ToolGatewayDefinition**: Comprehensive tool definitions with safety tiers
 //! - **WorkflowDefinition**: Workflow orchestration with phase-based execution
-//! - **AppDefinition**: Application manifest for A2R-compatible apps
+//! - **AppDefinition**: Application manifest for Allternit-compatible apps
 //! - **SafetyTier**: Security classification system (T0-T4)
 //! - **CoreError**: Unified error type for SDK operations
 //!
 //! ## Example
 //!
 //! ```rust
-//! use a2rchitech_sdk_core::{
+//! use allternit_sdk_core::{
 //!     MessageEnvelope, FunctionCall, ExecuteRequest,
 //!     ExecuteResponse, SafetyTier, ToolGatewayDefinition, ToolType
 //! };
@@ -54,13 +54,13 @@ use serde::{Deserialize, Serialize};
 /// Universal message envelope for cross-service communication.
 ///
 /// The `MessageEnvelope` is the standard container for all messages
-/// passing through the A2R system. It provides routing information,
+/// passing through the Allternit system. It provides routing information,
 /// transport metadata, and extensible payload storage.
 ///
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::MessageEnvelope;
+/// use allternit_sdk_core::MessageEnvelope;
 ///
 /// let envelope = MessageEnvelope {
 ///     id: "msg-123".to_string(),
@@ -93,16 +93,16 @@ pub struct MessageEnvelope {
 /// Represents a function call with its parameters.
 ///
 /// `FunctionCall` encapsulates the invocation of a function or tool
-/// within the A2R system. It contains the function identifier and
+/// within the Allternit system. It contains the function identifier and
 /// the parameters as a JSON value.
 ///
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::FunctionCall;
+/// use allternit_sdk_core::FunctionCall;
 ///
 /// let call = FunctionCall {
-///     function_id: "com.a2rchitech.os.set_reminder".to_string(),
+///     function_id: "com.allternit.os.set_reminder".to_string(),
 ///     parameters: serde_json::json!({
 ///         "title": "Team meeting",
 ///         "time": "14:00"
@@ -126,7 +126,7 @@ pub struct FunctionCall {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::{ExecuteRequest, FunctionCall};
+/// use allternit_sdk_core::{ExecuteRequest, FunctionCall};
 ///
 /// let request = ExecuteRequest {
 ///     function_call: FunctionCall {
@@ -162,7 +162,7 @@ pub struct ExecuteRequest {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::ExecuteResponse;
+/// use allternit_sdk_core::ExecuteResponse;
 ///
 /// let response = ExecuteResponse {
 ///     success: true,
@@ -195,7 +195,7 @@ pub struct ExecuteResponse {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::{UICard, CardAction, ActionHandler};
+/// use allternit_sdk_core::{UICard, CardAction, ActionHandler};
 ///
 /// let card = UICard {
 ///     card_type: "info".to_string(),
@@ -236,7 +236,7 @@ pub struct UICard {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::{CardAction, ActionHandler};
+/// use allternit_sdk_core::{CardAction, ActionHandler};
 ///
 /// let action = CardAction {
 ///     id: "submit".to_string(),
@@ -285,13 +285,13 @@ pub struct ActionHandler {
 /// Configuration for an AI agent.
 ///
 /// `AgentConfig` defines the behavior and capabilities of an agent
-/// within the A2R system, including its permissions and confirmation
+/// within the Allternit system, including its permissions and confirmation
 /// thresholds.
 ///
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::{AgentConfig, AgentPermissions};
+/// use allternit_sdk_core::{AgentConfig, AgentPermissions};
 ///
 /// let config = AgentConfig {
 ///     id: "assistant-001".to_string(),
@@ -301,8 +301,8 @@ pub struct ActionHandler {
 ///     default: true,
 ///     capabilities: vec!["conversation".to_string(), "scheduling".to_string()],
 ///     permissions: AgentPermissions {
-///         allowed_functions: vec!["com.a2rchitech.os.*".to_string()],
-///         denied_functions: vec!["com.a2rchitech.os.delete_*".to_string()],
+///         allowed_functions: vec!["com.allternit.os.*".to_string()],
+///         denied_functions: vec!["com.allternit.os.delete_*".to_string()],
 ///         confirmation_threshold: "medium".to_string(),
 ///     },
 /// };
@@ -347,7 +347,7 @@ pub struct AgentPermissions {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::{AgentSpec, AgentPublisher, AgentSignature};
+/// use allternit_sdk_core::{AgentSpec, AgentPublisher, AgentSignature};
 ///
 /// let spec = AgentSpec {
 ///     id: "com.example.agent".to_string(),
@@ -403,7 +403,7 @@ pub struct AgentSignature {
 
 /// Safety tier classification for security levels.
 ///
-/// The A2R platform uses a tiered safety system (T0-T4) where:
+/// The Allternit platform uses a tiered safety system (T0-T4) where:
 /// - T0: No risk (informational only)
 /// - T1: Low risk (read-only operations)
 /// - T2: Medium risk (non-destructive writes)
@@ -413,7 +413,7 @@ pub struct AgentSignature {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::SafetyTier;
+/// use allternit_sdk_core::SafetyTier;
 ///
 /// let tier = SafetyTier::T2; // Medium risk
 /// ```
@@ -485,7 +485,7 @@ pub enum FilesystemAccess {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::{ToolResourceLimits, NetworkAccess, FilesystemAccess};
+/// use allternit_sdk_core::{ToolResourceLimits, NetworkAccess, FilesystemAccess};
 ///
 /// let limits = ToolResourceLimits {
 ///     cpu: Some("1 core".to_string()),
@@ -512,13 +512,13 @@ pub struct ToolResourceLimits {
 /// Complete definition of a tool gateway.
 ///
 /// `ToolGatewayDefinition` is the comprehensive specification for a tool
-/// that can be registered and executed within the A2R system. It includes
+/// that can be registered and executed within the Allternit system. It includes
 /// all metadata, schemas, safety information, and resource requirements.
 ///
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::{
+/// use allternit_sdk_core::{
 ///     ToolGatewayDefinition, ToolType, SafetyTier,
 ///     ToolResourceLimits, NetworkAccess, FilesystemAccess
 /// };
@@ -592,7 +592,7 @@ pub struct ToolGatewayDefinition {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::ToolExecutePayload;
+/// use allternit_sdk_core::ToolExecutePayload;
 ///
 /// let payload = ToolExecutePayload {
 ///     input: serde_json::json!({"city": "San Francisco"}),
@@ -630,7 +630,7 @@ pub struct ToolExecutePayload {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::{ToolExecutionResult, ResourceUsage};
+/// use allternit_sdk_core::{ToolExecutionResult, ResourceUsage};
 ///
 /// let result = ToolExecutionResult {
 ///     execution_id: "exec-123".to_string(),
@@ -701,7 +701,7 @@ pub struct ResourceUsage {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::PublisherKey;
+/// use allternit_sdk_core::PublisherKey;
 ///
 /// let key = PublisherKey {
 ///     publisher_id: "pub-123".to_string(),
@@ -748,7 +748,7 @@ pub struct PublisherKeyRevokeRequest {
 
 /// Phase in a workflow execution.
 ///
-/// `WorkflowPhase` represents the standard phases of the A2R
+/// `WorkflowPhase` represents the standard phases of the Allternit
 /// agent workflow lifecycle.
 ///
 /// # Phases
@@ -786,7 +786,7 @@ pub enum WorkflowPhase {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::{WorkflowNode, WorkflowPhase, NodeConstraints};
+/// use allternit_sdk_core::{WorkflowNode, WorkflowPhase, NodeConstraints};
 ///
 /// let node = WorkflowNode {
 ///     id: "node-1".to_string(),
@@ -856,7 +856,7 @@ pub struct WorkflowEdge {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::{
+/// use allternit_sdk_core::{
 ///     WorkflowDefinition, WorkflowNode, WorkflowEdge,
 ///     WorkflowPhase, NodeConstraints, SafetyTier
 /// };
@@ -958,7 +958,7 @@ pub struct NodeResult {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::{WorkflowExecution, WorkflowStatus};
+/// use allternit_sdk_core::{WorkflowExecution, WorkflowStatus};
 /// use std::collections::HashMap;
 ///
 /// let execution = WorkflowExecution {
@@ -1009,7 +1009,7 @@ pub struct WorkflowExecution {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::ArtifactMetadata;
+/// use allternit_sdk_core::ArtifactMetadata;
 ///
 /// let artifact = ArtifactMetadata {
 ///     artifact_id: "art-001".to_string(),
@@ -1102,7 +1102,7 @@ pub struct TemplateIndex {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::{ModelConfig, ModelSpecificConfig};
+/// use allternit_sdk_core::{ModelConfig, ModelSpecificConfig};
 ///
 /// let model = ModelConfig {
 ///     id: "gpt-4".to_string(),
@@ -1168,16 +1168,16 @@ pub struct ModelSpecificConfig {
     pub endpoint: Option<String>,
 }
 
-/// Definition of an A2R-compatible application.
+/// Definition of an Allternit-compatible application.
 ///
 /// `AppDefinition` describes an application that can be registered
-/// and used within the A2R ecosystem, including its authentication,
+/// and used within the Allternit ecosystem, including its authentication,
 /// capabilities, and tools.
 ///
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::{AppDefinition, OAuthConfig, ToolDefinition, UICardTemplate};
+/// use allternit_sdk_core::{AppDefinition, OAuthConfig, ToolDefinition, UICardTemplate};
 ///
 /// let app = AppDefinition {
 ///     id: "com.example.myapp".to_string(),
@@ -1258,12 +1258,12 @@ pub struct OAuthConfig {
 /// Definition of a tool provided by an app.
 ///
 /// `ToolDefinition` describes a single tool/function that an app
-/// makes available to the A2R system.
+/// makes available to the Allternit system.
 ///
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::{ToolDefinition, RateLimitConfig};
+/// use allternit_sdk_core::{ToolDefinition, RateLimitConfig};
 ///
 /// let tool = ToolDefinition {
 ///     id: "com.example.create_task".to_string(),
@@ -1335,7 +1335,7 @@ pub struct RateLimitConfig {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::{UICardTemplate, CardActionTemplate, ActionHandlerTemplate};
+/// use allternit_sdk_core::{UICardTemplate, CardActionTemplate, ActionHandlerTemplate};
 ///
 /// let template = UICardTemplate {
 ///     card_type: "info".to_string(),
@@ -1399,7 +1399,7 @@ pub struct ActionHandlerTemplate {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::{PermissionCheckRequest, FunctionCall};
+/// use allternit_sdk_core::{PermissionCheckRequest, FunctionCall};
 ///
 /// let request = PermissionCheckRequest {
 ///     user_id: "user-123".to_string(),
@@ -1428,7 +1428,7 @@ pub struct PermissionCheckRequest {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::PermissionCheckResponse;
+/// use allternit_sdk_core::PermissionCheckResponse;
 ///
 /// let response = PermissionCheckResponse {
 ///     allowed: true,
@@ -1454,7 +1454,7 @@ pub struct PermissionCheckResponse {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::AuditEvent;
+/// use allternit_sdk_core::AuditEvent;
 ///
 /// let event = AuditEvent {
 ///     id: "evt-001".to_string(),
@@ -1501,7 +1501,7 @@ pub struct AuditEvent {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::AgentRouteRequest;
+/// use allternit_sdk_core::AgentRouteRequest;
 ///
 /// let request = AgentRouteRequest {
 ///     message: "Schedule a meeting tomorrow".to_string(),
@@ -1527,7 +1527,7 @@ pub struct AgentRouteRequest {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::AgentRouteResponse;
+/// use allternit_sdk_core::AgentRouteResponse;
 ///
 /// let response = AgentRouteResponse {
 ///     agent_id: "scheduler-agent".to_string(),
@@ -1553,7 +1553,7 @@ pub struct AgentRouteResponse {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::ModelSelectionRequest;
+/// use allternit_sdk_core::ModelSelectionRequest;
 ///
 /// let request = ModelSelectionRequest {
 ///     agent_id: "agent-123".to_string(),
@@ -1578,7 +1578,7 @@ pub struct ModelSelectionRequest {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::ModelSelectionResponse;
+/// use allternit_sdk_core::ModelSelectionResponse;
 ///
 /// let response = ModelSelectionResponse {
 ///     model_id: "gpt-4".to_string(),
@@ -1609,7 +1609,7 @@ pub struct ModelSelectionResponse {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_sdk_core::CoreError;
+/// use allternit_sdk_core::CoreError;
 ///
 /// // Creating a validation error
 /// let err = CoreError::Validation("Invalid input".to_string());

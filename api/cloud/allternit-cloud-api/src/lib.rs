@@ -1,4 +1,4 @@
-//! A2R Cloud API
+//! Allternit Cloud API
 //!
 //! Backend API for cloud deployment management.
 //! Provides REST endpoints and WebSocket event streaming.

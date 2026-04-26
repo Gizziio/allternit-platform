@@ -41,7 +41,7 @@ async fn e2e_hetzner_provisioning() {
     let driver = HetznerDriver::new(api_token.clone());
     
     let request = CreateServerRequest {
-        name: format!("a2r-e2e-test-{}", uuid::Uuid::new_v4()),
+        name: format!("allternit-e2e-test-{}", uuid::Uuid::new_v4()),
         region: "fsn1".to_string(),
         instance_type: "cx11".to_string(),  // Cheapest option
         image: "ubuntu-22.04".to_string(),
@@ -103,7 +103,7 @@ async fn e2e_digitalocean_provisioning() {
     let driver = DigitalOceanDriver::new(api_token.clone());
     
     let request = CreateServerRequest {
-        name: format!("a2r-e2e-test-{}", uuid::Uuid::new_v4()),
+        name: format!("allternit-e2e-test-{}", uuid::Uuid::new_v4()),
         region: "nyc3".to_string(),
         instance_type: "s-1vcpu-1gb".to_string(),  // Cheapest option
         image: "ubuntu-22-04-x64".to_string(),

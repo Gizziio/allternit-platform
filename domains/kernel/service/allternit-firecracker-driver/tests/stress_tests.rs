@@ -9,11 +9,11 @@
 
 mod common;
 
-use a2r_driver_interface::{
+use allternit_driver_interface::{
     CommandSpec, DriverError, EnvironmentSpec, ExecutionDriver, ExecutionHandle, ExecutionId,
     NetworkPolicy, PolicySpec, ResourceSpec, SpawnSpec, TenantId,
 };
-use a2r_firecracker_driver::{FirecrackerConfig, FirecrackerDriver};
+use allternit_firecracker_driver::{FirecrackerConfig, FirecrackerDriver};
 use common::*;
 use std::collections::HashMap;
 use std::panic::AssertUnwindSafe;
@@ -526,7 +526,7 @@ async fn test_panic_recovery() {
             let policy = PolicySpec::default_permissive();
 
             let env_spec = EnvironmentSpec {
-                spec_type: a2r_driver_interface::EnvSpecType::Oci,
+                spec_type: allternit_driver_interface::EnvSpecType::Oci,
                 image: "nonexistent-image-xyz123:latest".to_string(),
                 version: None,
                 packages: vec![],

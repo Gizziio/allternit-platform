@@ -1,13 +1,13 @@
 use sha2::Digest;
 use std::sync::Arc;
 
-use a2rchitech_context_router::{
+use allternit_context_router::{
     ContextBundle, ContextEntry, ContextEntryType, ContextRouter, DecayFunction, RetentionPolicy,
 };
-use a2rchitech_memory::MemoryFabric;
-use a2rchitech_policy::PolicyEngine;
-use a2rchitech_providers::{Capability, Modality, ProviderRouter as ExistingProviderRouter};
-use a2rchitech_registry::UnifiedRegistry;
+use allternit_memory::MemoryFabric;
+use allternit_policy::PolicyEngine;
+use allternit_providers::{Capability, Modality, ProviderRouter as ExistingProviderRouter};
+use allternit_registry::UnifiedRegistry;
 
 use crate::modes::base::ModeSelectionConfig;
 use crate::modes::session::{EntryType, ExecutionEntry, RLMSession, SessionManager, SessionState};
@@ -196,9 +196,9 @@ impl RLMRouter {
             access_count: 0,
             last_accessed: now,
             size_bytes: context.len(),
-            context_entries: vec![a2rchitech_context_router::ContextEntry {
+            context_entries: vec![allternit_context_router::ContextEntry {
                 entry_id: uuid::Uuid::new_v4().to_string(),
-                entry_type: a2rchitech_context_router::ContextEntryType::Task,
+                entry_type: allternit_context_router::ContextEntryType::Task,
                 content: serde_json::json!({
                     "task": task,
                     "context": context,
@@ -212,20 +212,20 @@ impl RLMRouter {
                     .as_secs(),
                 sensitivity_tier: 0,
                 tags: vec!["rlm".to_string(), "task".to_string(), "input".to_string()],
-                retention_policy: a2rchitech_context_router::RetentionPolicy {
+                retention_policy: allternit_context_router::RetentionPolicy {
                     time_to_live: Some(3600),
                     max_accesses: Some(10),
-                    decay_function: a2rchitech_context_router::DecayFunction::Linear { rate: 0.1 },
+                    decay_function: allternit_context_router::DecayFunction::Linear { rate: 0.1 },
                 },
             }],
-            provenance: a2rchitech_context_router::ContextProvenance {
+            provenance: allternit_context_router::ContextProvenance {
                 origin_session: None,
                 origin_agent: "rlm-router".to_string(),
                 derivation_chain: vec![],
                 integrity_hash: format!("{:x}", sha2::Sha256::digest(context.as_bytes())),
                 signature: None,
             },
-            access_control: a2rchitech_context_router::ContextAccessControl {
+            access_control: allternit_context_router::ContextAccessControl {
                 allowed_agents: std::collections::HashSet::new(),
                 allowed_skills: std::collections::HashSet::new(),
                 allowed_phases: std::collections::HashSet::from_iter([
@@ -235,7 +235,7 @@ impl RLMRouter {
                     "ACT".to_string(),
                 ]),
                 time_window: None,
-                access_policy: a2rchitech_context_router::ContextAccessPolicy::SensitivityTier {
+                access_policy: allternit_context_router::ContextAccessPolicy::SensitivityTier {
                     max_tier: 4,
                 },
             },
@@ -251,7 +251,7 @@ impl RLMRouter {
         model_id: &str,
         context_window: usize,
     ) -> Result<String, RLMError> {
-        use a2rchitech_providers::ProviderRequest as ExistingProviderRequest;
+        use allternit_providers::ProviderRequest as ExistingProviderRequest;
 
         let request = ExistingProviderRequest {
             request_id: uuid::Uuid::new_v4().to_string(),
@@ -261,7 +261,7 @@ impl RLMRouter {
                 .unwrap_or_else(|| "default-session".to_string()),
             tenant_id: context_bundle.tenant_id.clone(),
             agent_id: "rlm-agent".to_string(),
-            persona: a2rchitech_providers::Persona {
+            persona: allternit_providers::Persona {
                 persona_id: "default".to_string(),
                 name: "Default RLM Persona".to_string(),
                 description: "Default persona for RLM operations".to_string(),
@@ -281,7 +281,7 @@ impl RLMRouter {
             context_bundle,
             intent: task.to_string(),
             required_capabilities: self.build_required_capabilities(model_id, context_window),
-            budget_constraints: a2rchitech_providers::ProviderBudget {
+            budget_constraints: allternit_providers::ProviderBudget {
                 daily_limit: None,
                 monthly_limit: None,
                 rate_limit: None,
@@ -331,7 +331,7 @@ impl RLMRouter {
         max_recursion_depth: u32,
         context_slice_size: usize,
     ) -> Result<String, RLMError> {
-        use a2rchitech_providers::ProviderRequest as ExistingProviderRequest;
+        use allternit_providers::ProviderRequest as ExistingProviderRequest;
 
         let mut current_depth = 0;
         let mut final_answer = None;
@@ -352,7 +352,7 @@ impl RLMRouter {
                         .unwrap_or_else(|| format!("rlm-slice-{}-{}", current_depth, slice_index)),
                     tenant_id: slice_bundle.tenant_id.clone(),
                     agent_id: "rlm-agent".to_string(),
-                    persona: a2rchitech_providers::Persona {
+                    persona: allternit_providers::Persona {
                         persona_id: "default".to_string(),
                         name: "Default RLM Persona".to_string(),
                         description: "Default persona for RLM operations".to_string(),
@@ -373,7 +373,7 @@ impl RLMRouter {
                     intent: format!("{} (context slice)", task),
                     required_capabilities: self
                         .build_required_capabilities(model_id, slice_context.len()),
-                    budget_constraints: a2rchitech_providers::ProviderBudget {
+                    budget_constraints: allternit_providers::ProviderBudget {
                         daily_limit: None,
                         monthly_limit: None,
                         rate_limit: None,
@@ -403,9 +403,9 @@ impl RLMRouter {
             if self.is_complete_answer(&aggregated) {
                 final_answer = Some(aggregated);
             } else {
-                let new_entry = a2rchitech_context_router::ContextEntry {
+                let new_entry = allternit_context_router::ContextEntry {
                     entry_id: uuid::Uuid::new_v4().to_string(),
-                    entry_type: a2rchitech_context_router::ContextEntryType::Analysis,
+                    entry_type: allternit_context_router::ContextEntryType::Analysis,
                     content: serde_json::json!({
                         "aggregated_result": &aggregated,
                         "iteration": current_depth,
@@ -422,10 +422,10 @@ impl RLMRouter {
                         "aggregation".to_string(),
                         "iteration".to_string(),
                     ],
-                    retention_policy: a2rchitech_context_router::RetentionPolicy {
+                    retention_policy: allternit_context_router::RetentionPolicy {
                         time_to_live: Some(3600),
                         max_accesses: Some(10),
-                        decay_function: a2rchitech_context_router::DecayFunction::Linear {
+                        decay_function: allternit_context_router::DecayFunction::Linear {
                             rate: 0.1,
                         },
                     },

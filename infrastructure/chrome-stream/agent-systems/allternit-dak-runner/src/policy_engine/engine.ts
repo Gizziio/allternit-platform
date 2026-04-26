@@ -142,11 +142,11 @@ export class PolicyEngine {
         if (!path) return false;
         
         const protectedPaths = [
-          '.a2r/ledger',
-          '.a2r/leases',
-          '.a2r/wih',
-          '.a2r/graphs',
-          '.a2r/spec',
+          '.allternit/ledger',
+          '.allternit/leases',
+          '.allternit/wih',
+          '.allternit/graphs',
+          '.allternit/spec',
         ];
         
         return protectedPaths.some(p => path.includes(p));

@@ -1,5 +1,5 @@
 /**
- * Basic Usage Examples for A2R Infrastructure Runtime
+ * Basic Usage Examples for Allternit Infrastructure Runtime
  */
 
 import {

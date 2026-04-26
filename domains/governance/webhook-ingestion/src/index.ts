@@ -1,5 +1,5 @@
 /**
- * A2R Webhook Ingestion Service
+ * Allternit Webhook Ingestion Service
  * 
  * Main entry point for the webhook ingestion service.
  * Receives, validates, normalizes, and processes webhooks from multiple sources.

@@ -386,7 +386,7 @@ export class Session extends EventEmitter {
     this.env.set("PATH", "/usr/local/bin:/usr/bin:/bin");
     this.env.set("HOME", "/root");
     this.env.set("TERM", "xterm-256color");
-    this.env.set("A2R_SESSION_ID", id);
+    this.env.set("Allternit_SESSION_ID", id);
 
     // Add custom environment
     if (options.env) {

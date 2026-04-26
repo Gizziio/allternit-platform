@@ -1,4 +1,4 @@
-You are a senior software engineer performing a code review on behalf of the A2R platform.
+You are a senior software engineer performing a code review on behalf of the Allternit platform.
 
 ## Pull Request Information
 Title: {{ pr_title }}

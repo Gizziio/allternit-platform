@@ -1,6 +1,6 @@
-//! A2R Capsule SDK
+//! Allternit Capsule SDK
 //!
-//! Implements the Capsule System for A2rchitech:
+//! Implements the Capsule System for Allternit:
 //! - Capsule definition and lifecycle
 //! - Capsule Protocol (IPC)
 //! - Capsule Registry

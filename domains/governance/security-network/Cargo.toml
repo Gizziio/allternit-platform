@@ -1,8 +1,8 @@
 [package]
-name = "a2rchitech-federation"
+name = "allternit-federation"
 version = "0.1.0"
 edition = "2021"
-authors = ["A2rchitech Team"]
+authors = ["Allternit Team"]
 license = "MIT"
 description = "Node identity and trust graph for federation capabilities"
 
@@ -24,25 +24,25 @@ sha2 = "0.10"
 hex = "0.4"
 base64 = "0.22"
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "postgres", "chrono", "uuid"] }
-a2rchitech-policy = { workspace = true }
-a2rchitech-history = { workspace = true }
-a2rchitech-messaging = { workspace = true }
-a2rchitech-data-fabric = { package = "a2rchitech-memory-provider", path = "../../1-kernel/data/a2r-memory-provider" }
-a2rchitech-registry = { path = "../../1-kernel/control-plane/unified-registry/registry" }
-a2rchitech-tools-gateway = { workspace = true }
-a2rchitech-hooks = { path = "../../1-kernel/control-plane/a2r-agent-orchestration/hooks" }
-a2rchitech-context-router = { workspace = true }
-a2rchitech-providers = { workspace = true }
-a2rchitech-memory = { workspace = true }
-a2rchitech-agents = { path = "../../1-kernel/control-plane/a2r-agent-orchestration/agents" }
-a2rchitech-skills = { workspace = true }
-a2rchitech-workflows = { workspace = true }
-a2rchitech-runtime-core = { workspace = true }
-a2rchitech-security-governance = { workspace = true }
-a2rchitech-embodiment = { workspace = true }
-a2rchitech-orchestration = { package = "a2rchitech-control-plane", path = "../../1-kernel/control-plane/a2r-control/control-plane" }
-a2rchitech-kernel-contracts = { workspace = true }
-a2rchitech-capsule = { package = "a2r-capsule", path = "../../1-kernel/capsule-system/a2r-capsule" }
-a2rchitech-wasm-runtime = { package = "a2r-wasm-runtime", path = "../../1-kernel/a2r-kernel/wasm-runtime" }
-a2rchitech-cloud-runner = { package = "a2rchitech-runtime-local", path = "../../1-kernel/a2r-kernel/runtime-local-executor" }
-a2rchitech-control-plane-service = { path = "../../1-kernel/control-plane/a2r-control/control-plane-impl" }
+allternit-policy = { workspace = true }
+allternit-history = { workspace = true }
+allternit-messaging = { workspace = true }
+allternit-data-fabric = { package = "allternit-memory-provider", path = "../../1-kernel/data/allternit-memory-provider" }
+allternit-registry = { path = "../../1-kernel/control-plane/unified-registry/registry" }
+allternit-tools-gateway = { workspace = true }
+allternit-hooks = { path = "../../1-kernel/control-plane/allternit-agent-orchestration/hooks" }
+allternit-context-router = { workspace = true }
+allternit-providers = { workspace = true }
+allternit-memory = { workspace = true }
+allternit-agents = { path = "../../1-kernel/control-plane/allternit-agent-orchestration/agents" }
+allternit-skills = { workspace = true }
+allternit-workflows = { workspace = true }
+allternit-runtime-core = { workspace = true }
+allternit-security-governance = { workspace = true }
+allternit-embodiment = { workspace = true }
+allternit-orchestration = { package = "allternit-control-plane", path = "../../1-kernel/control-plane/allternit-control/control-plane" }
+allternit-kernel-contracts = { workspace = true }
+allternit-capsule = { package = "allternit-capsule", path = "../../1-kernel/capsule-system/allternit-capsule" }
+allternit-wasm-runtime = { package = "allternit-wasm-runtime", path = "../../1-kernel/allternit-kernel/wasm-runtime" }
+allternit-cloud-runner = { package = "allternit-runtime-local", path = "../../1-kernel/allternit-kernel/runtime-local-executor" }
+allternit-control-plane-service = { path = "../../1-kernel/control-plane/allternit-control/control-plane-impl" }

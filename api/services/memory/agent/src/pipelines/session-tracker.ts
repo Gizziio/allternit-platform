@@ -1,7 +1,7 @@
 /**
  * Session State Tracker
  * 
- * Indexes run state from a2r-workspace/run_state/
+ * Indexes run state from allternit-workspace/run_state/
  * for session continuity and recovery
  */
 
@@ -277,13 +277,13 @@ export class SessionTracker {
  */
 async function main(): Promise<void> {
   console.log('╔══════════════════════════════════════════════════════════╗');
-  console.log('║     A2rchitech Session State Tracker                     ║');
+  console.log('║     Allternitchitech Session State Tracker                     ║');
   console.log('╚══════════════════════════════════════════════════════════╝');
   console.log('');
 
   // Determine run state directory
   const workspaceRoot = process.env.ALLTERNIT_WORKSPACE_ROOT 
-    || path.join(process.cwd(), '..', 'a2r-workspace');
+    || path.join(process.cwd(), '..', 'allternit-workspace');
   
   const runStateDir = path.join(workspaceRoot, 'run_state');
 

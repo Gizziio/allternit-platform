@@ -7,11 +7,11 @@ import uvicorn
 import os
 import json
 
-app = FastAPI(title='A2R Model Router')
+app = FastAPI(title='Allternit Model Router')
 
 # Load policy (G0200)
 # Adjust relative path assuming execution from services/router/src
-POLICY_PATH = os.environ.get('ROUTER_POLICY_PATH', '../../../.a2r/artifacts/G0200/router-policy-contract.json')
+POLICY_PATH = os.environ.get('ROUTER_POLICY_PATH', '../../../.allternit/artifacts/G0200/router-policy-contract.json')
 
 def load_policy():
     try:
@@ -67,7 +67,7 @@ async def route_request(intent: str, complexity: str = 'medium'):
     }
     
     # Save receipt (mock persistence)
-    # In real impl, write to .a2r/receipts/
+    # In real impl, write to .allternit/receipts/
     
     return {'model': selected_model, 'reason': reason, 'receipt_id': receipt['receipt_id']}
 

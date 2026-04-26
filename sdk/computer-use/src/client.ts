@@ -1,5 +1,5 @@
 /**
- * A2R Computer Use Engine - TypeScript SDK Client
+ * Allternit Computer Use Engine - TypeScript SDK Client
  * 
  * HTTP client wrapper for the canonical engine HTTP API.
  * Thin transport layer - no business logic, just HTTP transport.
@@ -24,14 +24,32 @@ import {
   SessionsListResponse,
   SessionCreateRequest,
   ControlRequest,
+  BrowserTaskRequest,
+  BrowserTaskResponse,
+  BrowserTaskDetailResponse,
+  BrowserTaskExecuteRequest,
+  BrowserTaskExecuteResponse,
+  BrowserSearchRequest,
+  BrowserRetrieveRequest,
+  BrowserHealthResponse,
+  VisionProposeRequest,
+  VisionProposeResponse,
+  VisionScreenshotResponse,
+  DesktopExecuteRequest,
+  DesktopExecuteResponse,
+  ParallelRunRequest,
+  ParallelRunStatus,
+  ParallelRunResults,
+  TelemetryProviderInfo,
+  TelemetrySnapshot,
 } from './types';
 import { EventStream } from './events';
 import { normalizeEndpoint, buildRequestHeaders, handleApiError } from './utils';
 
 /**
- * Main client for the A2R Computer Use Engine HTTP API.
+ * Main client for the Allternit Computer Use Engine HTTP API.
  */
-export class A2RComputerUseClient {
+export class AllternitComputerUseClient {
   private endpoint: string;
   private apiKey?: string;
   private headers: Record<string, string>;
@@ -86,7 +104,8 @@ export class A2RComputerUseClient {
     context?: Record<string, unknown>;
     metadata?: Record<string, unknown>;
   }): Promise<ExecuteResponse> {
-    const response = await fetch(`${this.endpoint}/execute`, {
+    // Routes to the ACU planning loop + waterfall (extension → CDP → playwright → desktop)
+    const response = await fetch(`${this.endpoint}/computer-use/execute`, {
       method: 'POST',
       headers: buildRequestHeaders(this.headers, this.apiKey),
       body: JSON.stringify(request),
@@ -217,7 +236,7 @@ export class A2RComputerUseClient {
    * @returns Promise resolving to the run status
    */
   async getRun(runId: string): Promise<RunStatusResponse> {
-    const response = await fetch(`${this.endpoint}/runs/${encodeURIComponent(runId)}`, {
+    const response = await fetch(`${this.endpoint}/computer-use/runs/${encodeURIComponent(runId)}`, {
       method: 'GET',
       headers: buildRequestHeaders(this.headers, this.apiKey, false),
     });
@@ -246,7 +265,7 @@ export class A2RComputerUseClient {
     if (sessionId) params.set('session_id', sessionId);
     if (status) params.set('status', status);
 
-    const url = `${this.endpoint}/runs${params.toString() ? `?${params.toString()}` : ''}`;
+    const url = `${this.endpoint}/computer-use/runs${params.toString() ? `?${params.toString()}` : ''}`;
 
     const response = await fetch(url, {
       method: 'GET',
@@ -396,7 +415,7 @@ export class A2RComputerUseClient {
     approval: ApprovalRequest
   ): Promise<ApprovalResponse> {
     const response = await fetch(
-      `${this.endpoint}/approve/${encodeURIComponent(runId)}`,
+      `${this.endpoint}/computer-use/runs/${encodeURIComponent(runId)}/approve`,
       {
         method: 'POST',
         headers: buildRequestHeaders(this.headers, this.apiKey),
@@ -450,7 +469,7 @@ export class A2RComputerUseClient {
   async createSession(
     request?: SessionCreateRequest
   ): Promise<SessionCreateResponse> {
-    const response = await fetch(`${this.endpoint}/sessions`, {
+    const response = await fetch(`${this.endpoint}/computer-use/sessions`, {
       method: 'POST',
       headers: buildRequestHeaders(this.headers, this.apiKey),
       body: request ? JSON.stringify(request) : undefined,
@@ -473,7 +492,7 @@ export class A2RComputerUseClient {
    */
   async getSession(sessionId: string): Promise<SessionResponse> {
     const response = await fetch(
-      `${this.endpoint}/sessions/${encodeURIComponent(sessionId)}`,
+      `${this.endpoint}/computer-use/sessions/${encodeURIComponent(sessionId)}`,
       {
         method: 'GET',
         headers: buildRequestHeaders(this.headers, this.apiKey, false),
@@ -500,7 +519,7 @@ export class A2RComputerUseClient {
     sessionId: string,
     cleanup: boolean = false
   ): Promise<SessionCloseResponse> {
-    const url = `${this.endpoint}/sessions/${encodeURIComponent(sessionId)}?cleanup=${cleanup}`;
+    const url = `${this.endpoint}/computer-use/sessions/${encodeURIComponent(sessionId)}?cleanup=${cleanup}`;
 
     const response = await fetch(url, {
       method: 'DELETE',
@@ -522,7 +541,7 @@ export class A2RComputerUseClient {
    * @returns Promise resolving to the list of sessions
    */
   async listSessions(): Promise<SessionsListResponse> {
-    const response = await fetch(`${this.endpoint}/sessions`, {
+    const response = await fetch(`${this.endpoint}/computer-use/sessions`, {
       method: 'GET',
       headers: buildRequestHeaders(this.headers, this.apiKey, false),
     });
@@ -568,11 +587,226 @@ export class A2RComputerUseClient {
 
   /**
    * Wait for an approval request for a run.
-   * 
+   *
    * @param runId - The run ID
    * @returns Promise that resolves when an approval is requested
    */
   waitForApproval(runId: string): Promise<import('./types').EngineEvent> {
     return this.eventStream.waitForApproval(runId);
+  }
+
+  // ===========================================================================
+  // Browser Automation Endpoints
+  // ===========================================================================
+
+  /** GET /v1/browser/health */
+  async getBrowserHealth(): Promise<BrowserHealthResponse> {
+    const response = await fetch(`${this.endpoint}/browser/health`, {
+      method: 'GET',
+      headers: buildRequestHeaders(this.headers, this.apiKey, false),
+    });
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<BrowserHealthResponse>;
+  }
+
+  /** POST /v1/browser/tasks */
+  async createBrowserTask(request: BrowserTaskRequest): Promise<BrowserTaskResponse> {
+    const response = await fetch(`${this.endpoint}/browser/tasks`, {
+      method: 'POST',
+      headers: buildRequestHeaders(this.headers, this.apiKey),
+      body: JSON.stringify(request),
+    });
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<BrowserTaskResponse>;
+  }
+
+  /** POST /v1/browser/tasks/{task_id}/execute */
+  async executeBrowserTask(
+    taskId: string,
+    request?: BrowserTaskExecuteRequest
+  ): Promise<BrowserTaskExecuteResponse> {
+    const response = await fetch(
+      `${this.endpoint}/browser/tasks/${encodeURIComponent(taskId)}/execute`,
+      {
+        method: 'POST',
+        headers: buildRequestHeaders(this.headers, this.apiKey),
+        body: request ? JSON.stringify(request) : undefined,
+      }
+    );
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<BrowserTaskExecuteResponse>;
+  }
+
+  /** GET /v1/browser/tasks/{task_id} */
+  async getBrowserTask(taskId: string): Promise<BrowserTaskDetailResponse> {
+    const response = await fetch(
+      `${this.endpoint}/browser/tasks/${encodeURIComponent(taskId)}`,
+      {
+        method: 'GET',
+        headers: buildRequestHeaders(this.headers, this.apiKey, false),
+      }
+    );
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<BrowserTaskDetailResponse>;
+  }
+
+  /** POST /v1/browser/search */
+  async browserSearch(request: BrowserSearchRequest): Promise<Record<string, unknown>> {
+    const response = await fetch(`${this.endpoint}/browser/search`, {
+      method: 'POST',
+      headers: buildRequestHeaders(this.headers, this.apiKey),
+      body: JSON.stringify(request),
+    });
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<Record<string, unknown>>;
+  }
+
+  /** POST /v1/browser/retrieve */
+  async browserRetrieve(request: BrowserRetrieveRequest): Promise<Record<string, unknown>> {
+    const response = await fetch(`${this.endpoint}/browser/retrieve`, {
+      method: 'POST',
+      headers: buildRequestHeaders(this.headers, this.apiKey),
+      body: JSON.stringify(request),
+    });
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<Record<string, unknown>>;
+  }
+
+  // ===========================================================================
+  // Vision Endpoints
+  // ===========================================================================
+
+  /** POST /v1/vision/propose */
+  async visionPropose(request: VisionProposeRequest): Promise<VisionProposeResponse> {
+    const response = await fetch(`${this.endpoint}/vision/propose`, {
+      method: 'POST',
+      headers: buildRequestHeaders(this.headers, this.apiKey),
+      body: JSON.stringify(request),
+    });
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<VisionProposeResponse>;
+  }
+
+  /** GET /v1/vision/screenshot */
+  async visionScreenshot(): Promise<VisionScreenshotResponse> {
+    const response = await fetch(`${this.endpoint}/vision/screenshot`, {
+      method: 'GET',
+      headers: buildRequestHeaders(this.headers, this.apiKey, false),
+    });
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<VisionScreenshotResponse>;
+  }
+
+  // ===========================================================================
+  // Desktop Control Endpoints
+  // ===========================================================================
+
+  /** POST /v1/sessions/{session_id}/desktop/execute */
+  async desktopExecute(request: DesktopExecuteRequest): Promise<DesktopExecuteResponse> {
+    const response = await fetch(
+      `${this.endpoint}/sessions/${encodeURIComponent(request.session_id)}/desktop/execute`,
+      {
+        method: 'POST',
+        headers: buildRequestHeaders(this.headers, this.apiKey),
+        body: JSON.stringify(request),
+      }
+    );
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<DesktopExecuteResponse>;
+  }
+
+  /** POST /v1/sessions/{session_id}/computer/execute */
+  async computerExecute(request: DesktopExecuteRequest): Promise<DesktopExecuteResponse> {
+    const response = await fetch(
+      `${this.endpoint}/sessions/${encodeURIComponent(request.session_id)}/computer/execute`,
+      {
+        method: 'POST',
+        headers: buildRequestHeaders(this.headers, this.apiKey),
+        body: JSON.stringify(request),
+      }
+    );
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<DesktopExecuteResponse>;
+  }
+
+  // ===========================================================================
+  // Parallel Runs Endpoints
+  // ===========================================================================
+
+  /** POST /v1/parallel/runs */
+  async createParallelRun(request: ParallelRunRequest): Promise<{ run_id: string }> {
+    const response = await fetch(`${this.endpoint}/parallel/runs`, {
+      method: 'POST',
+      headers: buildRequestHeaders(this.headers, this.apiKey),
+      body: JSON.stringify(request),
+    });
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<{ run_id: string }>;
+  }
+
+  /** GET /v1/parallel/runs/{run_id}/status */
+  async getParallelRunStatus(runId: string): Promise<ParallelRunStatus> {
+    const response = await fetch(
+      `${this.endpoint}/parallel/runs/${encodeURIComponent(runId)}/status`,
+      {
+        method: 'GET',
+        headers: buildRequestHeaders(this.headers, this.apiKey, false),
+      }
+    );
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<ParallelRunStatus>;
+  }
+
+  /** GET /v1/parallel/runs/{run_id}/results */
+  async getParallelRunResults(runId: string): Promise<ParallelRunResults> {
+    const response = await fetch(
+      `${this.endpoint}/parallel/runs/${encodeURIComponent(runId)}/results`,
+      {
+        method: 'GET',
+        headers: buildRequestHeaders(this.headers, this.apiKey, false),
+      }
+    );
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<ParallelRunResults>;
+  }
+
+  /** GET /v1/parallel/runs/{run_id}/events (SSE) — returns raw response for caller to stream */
+  async getParallelRunEvents(runId: string): Promise<Response> {
+    const response = await fetch(
+      `${this.endpoint}/parallel/runs/${encodeURIComponent(runId)}/events`,
+      {
+        method: 'GET',
+        headers: buildRequestHeaders(this.headers, this.apiKey, false),
+      }
+    );
+    if (!response.ok) await handleApiError(response);
+    return response;
+  }
+
+  // ===========================================================================
+  // Telemetry Endpoints
+  // ===========================================================================
+
+  /** GET /v1/telemetry/providers */
+  async getTelemetryProviders(): Promise<TelemetryProviderInfo[]> {
+    const response = await fetch(`${this.endpoint}/telemetry/providers`, {
+      method: 'GET',
+      headers: buildRequestHeaders(this.headers, this.apiKey, false),
+    });
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<TelemetryProviderInfo[]>;
+  }
+
+  /** GET /v1/telemetry/sessions/{session_id} */
+  async getTelemetrySession(sessionId: string): Promise<TelemetrySnapshot> {
+    const response = await fetch(
+      `${this.endpoint}/telemetry/sessions/${encodeURIComponent(sessionId)}`,
+      {
+        method: 'GET',
+        headers: buildRequestHeaders(this.headers, this.apiKey, false),
+      }
+    );
+    if (!response.ok) await handleApiError(response);
+    return response.json() as Promise<TelemetrySnapshot>;
   }
 }

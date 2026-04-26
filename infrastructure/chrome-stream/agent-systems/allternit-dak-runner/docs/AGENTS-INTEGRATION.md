@@ -10,7 +10,7 @@ The DAK Runner is the **execution engine** that implements the specifications, r
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
-│                      A2R SYSTEM                                 │
+│                      Allternit SYSTEM                                 │
 ├────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │   agents/               DAK Runner              Rails           │
@@ -276,7 +276,7 @@ export class ContextPackBuilder {
 | Validate bundle hash | Hash verification in `loadBundle()` |
 | Generate marker | `createInjectionMarker()` |
 | Sign marker | Signature generation in `inject()` |
-| Persist marker | `persistMarker()` to `.a2r/markers/` |
+| Persist marker | `persistMarker()` to `.allternit/markers/` |
 
 #### `ralph-loop.md` → `src/loop/ralph.ts`
 
@@ -371,16 +371,16 @@ SessionEnd         →    src/hooks/runtime.ts
 | `agents/cookbooks/*.md` | Procedures | Never |
 
 **Write Locations (Runner Workspace):**
-- `.a2r/runner/{run_id}/` - Execution artifacts
-- `.a2r/snapshots/` - Tool snapshots
-- `.a2r/markers/` - Policy injection markers
+- `.allternit/runner/{run_id}/` - Execution artifacts
+- `.allternit/snapshots/` - Tool snapshots
+- `.allternit/markers/` - Policy injection markers
 
 **Read-Only Locations (Rails Managed):**
-- `.a2r/ledger/` - Canonical state
-- `.a2r/leases/` - Active leases
-- `.a2r/receipts/` - Emitted receipts
-- `.a2r/graphs/` - DAG definitions
-- `.a2r/wih/` - Work item headers
+- `.allternit/ledger/` - Canonical state
+- `.allternit/leases/` - Active leases
+- `.allternit/receipts/` - Emitted receipts
+- `.allternit/graphs/` - DAG definitions
+- `.allternit/wih/` - Work item headers
 
 ---
 
@@ -404,7 +404,7 @@ describe('AGENTS.md Compliance', () => {
   it('should verify no writes outside runner workspace without lease', async () => {
     const writes = await monitorFileWrites();
     for (const write of writes) {
-      if (write.path.startsWith('.a2r/ledger/')) {
+      if (write.path.startsWith('.allternit/ledger/')) {
         expect(write.source).toBe('rails');
       }
     }

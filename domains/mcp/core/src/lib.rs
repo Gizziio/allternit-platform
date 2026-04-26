@@ -1,8 +1,8 @@
-//! MCP (Model Context Protocol) Client for A2R
+//! MCP (Model Context Protocol) Client for Allternit
 //!
 //! This crate provides a Rust implementation of the Model Context Protocol client,
 //! supporting both stdio and HTTP/SSE transports with OAuth 2.1 + PKCE authentication,
-//! health monitoring, and full A2R tool gateway integration.
+//! health monitoring, and full Allternit tool gateway integration.
 //!
 //! # Architecture
 //!
@@ -20,7 +20,7 @@
 //! │   │  └─────────────┘  └─────────────┘  └─────────────────────────────┘ │   │
 //! │   └─────────────────────────────────────────────────────────────────────┘   │
 //! │                               ↓                                              │
-//! │   A2R Integration                                                            │
+//! │   Allternit Integration                                                            │
 //! │   ┌─────────────────────────────────────────────────────────────────────┐   │
 //! │   │  McpToolBridge ←→ McpToolsRegistry ←→ ToolProvider                │   │
 //! │   │       ↓                    ↓                                         │   │
@@ -71,12 +71,12 @@ pub mod policy;
 pub mod protocol;
 pub mod registry;
 pub mod transport;
-pub mod types_a2r;
+pub mod types_allternit;
 
-// Re-export types_a2r as types for backwards compatibility
-pub use types_a2r as types;
+// Re-export types_allternit as types for backwards compatibility
+pub use types_allternit as types;
 
-// A2R-specific integration modules
+// Allternit-specific integration modules
 pub mod gateway_integration;
 pub mod tool_bridge;
 pub mod tools_registry;
@@ -90,7 +90,7 @@ pub use protocol::{
 pub use transport::sse::{ReconnectConfig, SseConfig};
 pub use transport::stdio::StdioConfig;
 pub use transport::{McpTransport, SseTransport, StdioTransport, TransportConfig, TransportType};
-pub use types_a2r::{CallToolRequest, ToolContent, ToolResult};
+pub use types_allternit::{CallToolRequest, ToolContent, ToolResult};
 
 // Re-export registry types
 pub use registry::{
@@ -138,7 +138,7 @@ impl McpClient {
             protocol_version: protocol::MCP_PROTOCOL_VERSION.to_string(),
             capabilities: ClientCapabilities::default(),
             client_info: protocol::Implementation {
-                name: "a2r-mcp-client".to_string(),
+                name: "allternit-mcp-client".to_string(),
                 version: env!("CARGO_PKG_VERSION").to_string(),
             },
         };

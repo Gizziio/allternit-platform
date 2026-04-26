@@ -1,7 +1,7 @@
 {
-  "name": "@a2r/lawlayer",
+  "name": "@allternit/lawlayer",
   "version": "1.0.0",
-  "description": "A2R Law Layer - Governance and policy engine for A2rchitect",
+  "description": "Allternit Law Layer - Governance and policy engine for allternit",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -31,17 +31,17 @@
     "typecheck": "tsc --noEmit"
   },
   "keywords": [
-    "a2r",
+    "allternit",
     "law",
     "policy",
     "governance",
     "beads"
   ],
-  "author": "A2rchitect Team",
+  "author": "allternit Team",
   "license": "MIT",
   "dependencies": {
-    "@a2r/governor": "workspace:*",
-    "@a2r/runtime": "workspace:*"
+    "@allternit/governor": "workspace:*",
+    "@allternit/runtime": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

@@ -1,4 +1,4 @@
-//! # A2R Replay Service (N12)
+//! # Allternit Replay Service (N12)
 //!
 //! Determinism envelope and replay contract implementation.
 //!
@@ -15,7 +15,7 @@
 //! - Capture Level: None, Minimal, Full
 //! - View replay history
 
-use a2r_driver_interface::{DeterminismEnvelope, ExecutionId};
+use allternit_driver_interface::{DeterminismEnvelope, ExecutionId};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

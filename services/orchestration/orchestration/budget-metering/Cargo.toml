@@ -1,8 +1,8 @@
 [package]
-name = "a2rchitech-budget-metering"
+name = "allternit-budget-metering"
 version = "0.1.0"
 edition = "2021"
-description = "Budget metering system for A2R - CPU/memory metering, quota enforcement, admission control"
+description = "Budget metering system for Allternit - CPU/memory metering, quota enforcement, admission control"
 
 [dependencies]
 serde = { workspace = true }

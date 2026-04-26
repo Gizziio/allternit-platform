@@ -105,7 +105,7 @@ npm run build    # Compiles Rust → Node.js native module
 ### Step 4: TUI Integration ✅
 
 **Files**:
-- `src/ui/a2r/ars-contexta-runtime.ts` - Runtime state manager
+- `src/ui/allternit/ars-contexta-runtime.ts` - Runtime state manager
 - `src/tui/components/ars-contexta-panel.tsx` - Panel component
 - `src/server/routes/ars-contexta-tui-bridge.ts` - Server-TUI bridge
 

@@ -1,10 +1,10 @@
-# A2R Agent Workspace
+# Allternit Agent Workspace
 
 Isolated execution environment for AI agents with browsers, Node.js, Python, and common automation tools. Sandboxed and resource-limited for secure agent execution.
 
 ## Overview
 
-The A2R Agent Workspace provides a secure, containerized environment where AI agents can execute tasks without affecting the host system. It includes:
+The Allternit Agent Workspace provides a secure, containerized environment where AI agents can execute tasks without affecting the host system. It includes:
 
 - **Isolated Execution**: Each agent runs in its own container with restricted resources
 - **Browser Automation**: Chromium, Firefox, and WebKit with Playwright support
@@ -202,7 +202,7 @@ MAX_MEMORY=8G
 ┌─────────────────────────────────────────────────────────────┐
 │                    Host System                               │
 │  ┌─────────────────────────────────────────────────────────┐│
-│  │              A2R Agent Workspace                         ││
+│  │              Allternit Agent Workspace                         ││
 │  │  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐   ││
 │  │  │   Agent     │  │   Sandbox    │  │   Vector     │   ││
 │  │  │  Workspace  │──│   Browser    │──│     DB       │   ││
@@ -218,8 +218,8 @@ MAX_MEMORY=8G
 
 ## License
 
-Copyright (c) 2024 A2R. All rights reserved.
+Copyright (c) 2024 Allternit. All rights reserved.
 
 ## Support
 
-For issues and feature requests, please contact the A2R team.
+For issues and feature requests, please contact the Allternit team.

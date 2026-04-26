@@ -1,7 +1,7 @@
 /**
  * Capsule SDK v0.1
  *
- * Headless SDK for A2rchitech capsules.
+ * Headless SDK for Allternit capsules.
  *
  * Principles:
  * - Defines WHERE and WHEN UI happens, never WHAT it looks like

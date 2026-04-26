@@ -1,5 +1,5 @@
 /**
- * A2R Gateway - HTTP Transport with UI v0 Binding
+ * Allternit Gateway - HTTP Transport with UI v0 Binding
  * 
  * Streamable HTTP endpoints for web/enterprise deployments.
  * Includes UI v0 compatibility layer as pure translation.

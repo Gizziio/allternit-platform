@@ -118,7 +118,7 @@ The following files have been updated to use Qwen 3.5:
 
 3. **Test CLI**:
    ```bash
-   a2r memory query "What do we know about DAG validation?"
+   allternit memory query "What do we know about DAG validation?"
    ```
 
 ---

@@ -1,9 +1,9 @@
 """
-Brain Runtime Adapter for A2R Vision Operator
+Brain Runtime Adapter for Allternit Vision Operator
 
-Integrates A2R Vision with the brain session system as a tool.
+Integrates Allternit Vision with the brain session system as a tool.
 Provides event streaming, tool registration, and model switching hooks.
-Now includes A2R Receipt generation and Safety Interception.
+Now includes Allternit Receipt generation and Safety Interception.
 """
 
 from typing import Dict, Any, List, Optional, AsyncGenerator, Callable
@@ -59,7 +59,7 @@ class SessionContext(BaseModel):
 # Tool Schema for desktop_control
 DESKTOP_CONTROL_TOOL = ToolDefinition(
     name="desktop_control",
-    description="Control native desktop applications using A2R Vision automation.",
+    description="Control native desktop applications using Allternit Vision automation.",
     parameters={
         "type": "object",
         "properties": {
@@ -173,7 +173,7 @@ async def generate_allternit_receipt(session_id: str, action: Dict[str, Any], re
         "receipt_id": receipt_id,
         "created_at": datetime.utcnow().isoformat(),
         "run_id": session_id,  # Using session_id as run_id for now
-        "workflow_id": "a2r-vision-workflow",  # Placeholder
+        "workflow_id": "allternit-vision-workflow",  # Placeholder
         "node_id": f"vision-node-{receipt_id[-8:]}",  # Unique node ID
         "wih_id": f"wih-{session_id}",  # Work-in-hand ID
         "tool_id": "desktop_control",
@@ -184,8 +184,8 @@ async def generate_allternit_receipt(session_id: str, action: Dict[str, Any], re
         "output_hashes": [output_hash],
         "artifact_manifest": artifact_manifest,
         "write_scope_proof": {
-            "declared": ["/.a2r/**"],
-            "actual": ["/.a2r/receipts/**"]  # Where receipts are stored
+            "declared": ["/.allternit/**"],
+            "actual": ["/.allternit/receipts/**"]  # Where receipts are stored
         },
         "execution": {
             "exit_code": 0 if result.get("success", True) else 1,
@@ -199,13 +199,13 @@ async def generate_allternit_receipt(session_id: str, action: Dict[str, Any], re
         "environment_hash": hashlib.sha256(f"session:{session_id}".encode()).hexdigest()
     }
 
-    # Save receipt locally to .a2r/receipts directory
+    # Save receipt locally to .allternit/receipts directory
     try:
         # Create receipts directory if it doesn't exist
-        os.makedirs(".a2r/receipts", exist_ok=True)
+        os.makedirs(".allternit/receipts", exist_ok=True)
 
         # Write receipt to local file
-        with open(f".a2r/receipts/{receipt_id}.json", "w") as f:
+        with open(f".allternit/receipts/{receipt_id}.json", "w") as f:
             json.dump(receipt, f, indent=2)
     except Exception as e:
         print(f"Failed to save receipt locally: {e}")
@@ -233,7 +233,7 @@ async def stream_desktop_automation(session_id: str, instruction: str, app: Opti
         # G0502: Safety Interception
         allowed = await evaluate_safety_policy(session_id, action)
         if not allowed:
-            yield await emit_brain_event(session_id, "tool_call.error", {"error": "Policy Denied: Action blocked by A2R Governor"})
+            yield await emit_brain_event(session_id, "tool_call.error", {"error": "Policy Denied: Action blocked by Allternit Governor"})
             return
 
         yield await emit_brain_event(session_id, "tool_call.action", {"action": action})
@@ -274,7 +274,7 @@ def detect_vision_model_needed(intent: str) -> bool:
 class ModelRouter:
     @staticmethod
     async def get_vision_model_config(user_id: Optional[str] = None) -> Dict[str, Any]:
-        return {"model_id": "a2r-vision-7b", "auto_switch": True}
+        return {"model_id": "allternit-vision-7b", "auto_switch": True}
 # Gateway configuration (route all kernel calls through the gateway)
 BRAIN_GATEWAY_URL = os.getenv("BRAIN_GATEWAY_URL", "http://localhost:3000")
 

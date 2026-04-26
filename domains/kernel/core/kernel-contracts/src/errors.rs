@@ -1,4 +1,4 @@
-//! Unified Error Taxonomy for A2R Kernel (N17)
+//! Unified Error Taxonomy for Allternit Kernel (N17)
 //!
 //! Standardizes error handling across drivers, policy engines,
 //! schedulers, and infrastructure.

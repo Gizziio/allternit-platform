@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# A2R Platform Development Setup Script
+# Allternit Platform Development Setup Script
 # =============================================================================
 # This script runs after the devcontainer is created to set up the development
 # environment, install dependencies, and configure the workspace.
@@ -25,7 +25,7 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_DIR="$(dirname "$SCRIPT_DIR")"
 
-log_info "Starting A2R Platform development environment setup..."
+log_info "Starting Allternit Platform development environment setup..."
 log_info "Workspace: $WORKSPACE_DIR"
 
 # =============================================================================
@@ -92,16 +92,16 @@ else
 fi
 
 # Create .env.local for UI
-if [ -d "6-ui/a2r-platform" ]; then
-    if [ ! -f "6-ui/a2r-platform/.env.local" ]; then
-        cat > 6-ui/a2r-platform/.env.local << 'EOF'
+if [ -d "6-ui/allternit-platform" ]; then
+    if [ ! -f "6-ui/allternit-platform/.env.local" ]; then
+        cat > 6-ui/allternit-platform/.env.local << 'EOF'
 # Local development environment variables
 NEXT_PUBLIC_API_URL=http://localhost:8080
 NEXT_PUBLIC_WS_URL=ws://localhost:8080
-NEXT_PUBLIC_APP_NAME=A2R Platform
+NEXT_PUBLIC_APP_NAME=Allternit Platform
 NEXT_PUBLIC_APP_VERSION=dev
 EOF
-        log_success "Created 6-ui/a2r-platform/.env.local"
+        log_success "Created 6-ui/allternit-platform/.env.local"
     fi
 fi
 
@@ -111,9 +111,9 @@ fi
 log_info "Installing Node.js dependencies..."
 
 # UI workspace
-if [ -d "6-ui/a2r-platform" ]; then
-    log_info "Installing 6-ui/a2r-platform dependencies..."
-    cd "$WORKSPACE_DIR/6-ui/a2r-platform"
+if [ -d "6-ui/allternit-platform" ]; then
+    log_info "Installing 6-ui/allternit-platform dependencies..."
+    cd "$WORKSPACE_DIR/6-ui/allternit-platform"
     
     # Use pnpm for faster installs
     if [ -f "pnpm-lock.yaml" ]; then
@@ -125,7 +125,7 @@ if [ -d "6-ui/a2r-platform" ]; then
     log_success "UI dependencies installed"
     cd "$WORKSPACE_DIR"
 else
-    log_warning "6-ui/a2r-platform directory not found"
+    log_warning "6-ui/allternit-platform directory not found"
 fi
 
 # =============================================================================
@@ -179,7 +179,7 @@ if [ -d ".git" ]; then
     # Create pre-commit hook
     cat > .git/hooks/pre-commit << 'EOF'
 #!/bin/bash
-# Pre-commit hook for A2R Platform
+# Pre-commit hook for Allternit Platform
 
 echo "Running pre-commit checks..."
 
@@ -189,8 +189,8 @@ if command -v detect-secrets &> /dev/null; then
 fi
 
 # Run linting on staged files
-if command -v pnpm &> /dev/null && [ -f "6-ui/a2r-platform/package.json" ]; then
-    cd 6-ui/a2r-platform
+if command -v pnpm &> /dev/null && [ -f "6-ui/allternit-platform/package.json" ]; then
+    cd 6-ui/allternit-platform
     pnpm lint-staged || true
 fi
 
@@ -208,26 +208,26 @@ fi
 log_info "Creating shell aliases..."
 
 if [ -f "$HOME/.bashrc" ]; then
-    # Add A2R specific aliases if not already present
-    if ! grep -q "# A2R Platform Aliases" "$HOME/.bashrc"; then
+    # Add Allternit specific aliases if not already present
+    if ! grep -q "# Allternit Platform Aliases" "$HOME/.bashrc"; then
         cat >> "$HOME/.bashrc" << 'EOF'
 
-# A2R Platform Aliases
-alias a2r='cd /workspace'
-alias a2r-kernel='cd /workspace/1-kernel'
-alias a2r-ui='cd /workspace/6-ui/a2r-platform'
-alias a2r-apps='cd /workspace/7-apps'
-alias a2r-agents='cd /workspace/8-agents'
+# Allternit Platform Aliases
+alias allternit='cd /workspace'
+alias allternit-kernel='cd /workspace/1-kernel'
+alias allternit-ui='cd /workspace/6-ui/allternit-platform'
+alias allternit-apps='cd /workspace/7-apps'
+alias allternit-agents='cd /workspace/8-agents'
 
 # Development shortcuts
-alias a2r-dev='./scripts/start-services.sh'
-alias a2r-build='task build'
-alias a2r-test='task test'
-alias a2r-lint='task lint'
+alias allternit-dev='./scripts/start-services.sh'
+alias allternit-build='task build'
+alias allternit-test='task test'
+alias allternit-lint='task lint'
 
 # Service access
-alias psql-a2r='psql $DATABASE_URL'
-alias redis-a2r='redis-cli -u $REDIS_URL'
+alias psql-allternit='psql $DATABASE_URL'
+alias redis-allternit='redis-cli -u $REDIS_URL'
 alias minio-console='echo "MinIO Console: http://localhost:9001"'
 alias mailpit-ui='echo "Mailpit UI: http://localhost:8025"'
 EOF
@@ -250,9 +250,9 @@ if command -v pg_isready &> /dev/null; then
     
     # Run migrations if goose is available
     if command -v goose &> /dev/null; then
-        if [ -d "1-kernel/a2r-infrastructure/migrations" ]; then
+        if [ -d "1-kernel/allternit-infrastructure/migrations" ]; then
             log_info "Running database migrations..."
-            cd "$WORKSPACE_DIR/1-kernel/a2r-infrastructure/migrations"
+            cd "$WORKSPACE_DIR/1-kernel/allternit-infrastructure/migrations"
             goose up || log_warning "Migration failed or already applied"
             cd "$WORKSPACE_DIR"
         fi
@@ -260,9 +260,9 @@ if command -v pg_isready &> /dev/null; then
     
     # Run SQLx migrations if available
     if command -v sqlx &> /dev/null; then
-        if [ -f "1-kernel/a2r-kernel/sqlx-data.json" ] || [ -d "1-kernel/a2r-kernel/migrations" ]; then
+        if [ -f "1-kernel/allternit-kernel/sqlx-data.json" ] || [ -d "1-kernel/allternit-kernel/migrations" ]; then
             log_info "Running SQLx migrations..."
-            cd "$WORKSPACE_DIR/1-kernel/a2r-kernel"
+            cd "$WORKSPACE_DIR/1-kernel/allternit-kernel"
             sqlx migrate run || log_warning "SQLx migration failed or already applied"
             cd "$WORKSPACE_DIR"
         fi
@@ -283,7 +283,7 @@ log_success "Data directories created"
 # =============================================================================
 echo ""
 echo -e "${GREEN}╔════════════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║         A2R Platform Development Environment Ready!               ║${NC}"
+echo -e "${GREEN}║         Allternit Platform Development Environment Ready!               ║${NC}"
 echo -e "${GREEN}╚════════════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 log_info "Quick Start Commands:"

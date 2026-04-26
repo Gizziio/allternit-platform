@@ -17,13 +17,13 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::info;
 
-use a2r_policy_tier_gating::{
+use allternit_policy_tier_gating::{
     tiers::PolicyTier, PolicyTierRegistry, TargetType,
 };
-use a2r_purpose_binding::{
+use allternit_purpose_binding::{
     PurposeRegistry, enforcement::EnforcementDecision, PurposeCategory, SensitivityLevel,
 };
-use a2r_security_hardening::{SecureConfig, SecurityHardening};
+use allternit_security_hardening::{SecureConfig, SecurityHardening};
 
 /// Policy Service State
 #[derive(Clone)]
@@ -498,7 +498,7 @@ async fn assign_tier(
     State(state): State<PolicyServiceState>,
     Json(request): Json<TierAssignmentRequest>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    use a2r_policy_tier_gating::{RiskAssessment, RiskLevel};
+    use allternit_policy_tier_gating::{RiskAssessment, RiskLevel};
     
     let tier_gating = state.tier_gating.read().await;
     
@@ -562,7 +562,7 @@ async fn check_elevation(
     State(state): State<PolicyServiceState>,
     Json(request): Json<TierAssignmentRequest>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    use a2r_policy_tier_gating::tiers::TierRequirements;
+    use allternit_policy_tier_gating::tiers::TierRequirements;
     
     let tier_gating = state.tier_gating.read().await;
     let target_type = request.target_type;
@@ -595,7 +595,7 @@ async fn bind_purpose(
     State(state): State<PolicyServiceState>,
     Json(request): Json<PurposeBindingRequest>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    use a2r_purpose_binding::{Purpose, OperationType};
+    use allternit_purpose_binding::{Purpose, OperationType};
     
     let purpose_binding = state.purpose_binding.read().await;
     
@@ -621,9 +621,9 @@ async fn bind_purpose(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     
     // Create the binding
-    let context = a2r_purpose_binding::OperationContext {
+    let context = allternit_purpose_binding::OperationContext {
         operation_id: format!("op-{}", uuid::Uuid::new_v4().simple()),
-        operation_type: a2r_purpose_binding::OperationType::Process,
+        operation_type: allternit_purpose_binding::OperationType::Process,
         actor_id: request.data_processor.clone(),
         session_id: "default".to_string(),
         request_id: uuid::Uuid::new_v4().to_string(),
@@ -654,7 +654,7 @@ async fn record_consent(
     State(state): State<PolicyServiceState>,
     Json(request): Json<PurposeBindingRequest>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    use a2r_purpose_binding::{Purpose, OperationType};
+    use allternit_purpose_binding::{Purpose, OperationType};
     
     let purpose_binding = state.purpose_binding.read().await;
     
@@ -694,7 +694,7 @@ async fn check_consent(
     State(state): State<PolicyServiceState>,
     Json(request): Json<ConsentCheckRequest>,
 ) -> Result<Json<serde_json::Value>, StatusCode> {
-    use a2r_purpose_binding::{OperationContext, OperationType};
+    use allternit_purpose_binding::{OperationContext, OperationType};
     use std::collections::HashMap;
     
     let purpose_binding = state.purpose_binding.read().await;

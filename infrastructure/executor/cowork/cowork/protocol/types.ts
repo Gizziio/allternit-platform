@@ -1,5 +1,5 @@
 /**
- * @fileoverview A2R Guest Agent Protocol - Message Type Definitions
+ * @fileoverview Allternit Guest Agent Protocol - Message Type Definitions
  * 
  * Protocol for communication between host and VM via VSOCK/VZVirtioSocket.
  * All messages use JSON encoding with length-prefixed framing.

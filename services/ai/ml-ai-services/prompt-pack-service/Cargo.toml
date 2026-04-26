@@ -2,8 +2,8 @@
 name = "prompt-pack-service"
 version = "1.0.0"
 edition = "2021"
-description = "Deterministic, versioned prompt pack service for A2R"
-authors = ["A2R Platform <team@a2r.io>"]
+description = "Deterministic, versioned prompt pack service for Allternit"
+authors = ["Allternit Platform <team@allternit.io>"]
 license = "MIT"
 
 [dependencies]

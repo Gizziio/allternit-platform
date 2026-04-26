@@ -1,4 +1,4 @@
-# A2rchitech Memory Agent - Integration Guide
+# Allternitchitech Memory Agent - Integration Guide
 
 ## Overview
 
@@ -206,14 +206,14 @@ curl -X POST http://localhost:3201/api/ingest/bulk \
 cd /Users/macbook/Desktop/allternit-workspace/allternit/memory
 
 # Set workspace root (if different from default)
-export ALLTERNIT_WORKSPACE_ROOT=/path/to/a2r-workspace
+export ALLTERNIT_WORKSPACE_ROOT=/path/to/allternit-workspace
 
 # Run receipt ingestion
 pnpm run ingest:receipts
 ```
 
 This will:
-- Scan `a2r-workspace/receipts/` for all receipt JSON files
+- Scan `allternit-workspace/receipts/` for all receipt JSON files
 - Extract tool calls, inputs, outputs, and status
 - Store in memory with source `receipt:<receipt_id>`
 - Enable queries like "Show all tool executions for task T0001"
@@ -225,7 +225,7 @@ pnpm run ingest:wih
 ```
 
 This will:
-- Scan `a2r-workspace/wih/` for all WIH files
+- Scan `allternit-workspace/wih/` for all WIH files
 - Extract task patterns, tool allowlists, write scopes
 - Store with source `wih:<task_id>`
 - Enable queries like "Find similar tasks to this one"
@@ -237,7 +237,7 @@ pnpm run ingest:sessions
 ```
 
 This will:
-- Scan `a2r-workspace/run_state/` for all session states
+- Scan `allternit-workspace/run_state/` for all session states
 - Extract node states, resume points, artifacts
 - Store with source `session:<run_id>`
 - Enable queries like "Resume my session from yesterday"
@@ -715,7 +715,7 @@ pnpm run start:http
 pnpm run daemon logs
 
 # Or view log file directly
-tail -f /tmp/a2r-memory-agent.log
+tail -f /tmp/allternit-memory-agent.log
 ```
 
 ---
@@ -765,7 +765,7 @@ Rust Services (Kernel, Gateway, CLI)
 ### P2 Features (Coming Soon)
 
 - **Gateway Memory API** - External API routes
-- **CLI Commands** - `a2r memory query/inspect/stats`
+- **CLI Commands** - `allternit memory query/inspect/stats`
 - **Vector Search** - Embeddings for semantic search
 
 ### P3 Features (Future)

@@ -1,11 +1,11 @@
-//! # A2R SDK Functions
+//! # Allternit SDK Functions
 //!
-//! Function registry and management for the A2R SDK.
+//! Function registry and management for the Allternit SDK.
 //!
 //! ## Overview
 //!
 //! This crate provides the function registry system for managing and
-//! discovering functions within the A2R platform. It handles function
+//! discovering functions within the Allternit platform. It handles function
 //! registration, search, validation, and permission checking.
 //!
 //! The function registry serves as a central catalog of all available
@@ -71,7 +71,7 @@ use std::collections::HashMap;
 
 /// Complete definition of a function.
 ///
-/// `FunctionDefinition` describes a callable function within the A2R
+/// `FunctionDefinition` describes a callable function within the Allternit
 /// system, including its schema, platform support, risk classification,
 /// and execution metadata.
 ///

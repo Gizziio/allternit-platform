@@ -98,7 +98,7 @@ export class EnvironmentService {
     }
 
     const id = uuidv4();
-    const containerName = `a2r-env-${data.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+    const containerName = `allternit-env-${data.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
 
     // Create environment record
     const result = await query<Environment>(
@@ -239,7 +239,7 @@ export class EnvironmentService {
           sshConnection.client,
           composeContent,
           {
-            projectName: `a2r-${environment.name}`,
+            projectName: `allternit-${environment.name}`,
           }
         );
 
@@ -440,7 +440,7 @@ export class EnvironmentService {
     try {
       const logs = await getComposeLogs(
         sshConnection.client,
-        `/tmp/a2r-compose/a2r-${environment.name}`,
+        `/tmp/allternit-compose/allternit-${environment.name}`,
         {
           tail: options.tail || 100,
         }
@@ -505,7 +505,7 @@ export class EnvironmentService {
           try {
             await stopCompose(
               sshConnection.client,
-              `/tmp/a2r-compose/a2r-${environment.name}`,
+              `/tmp/allternit-compose/allternit-${environment.name}`,
               { removeVolumes: true }
             );
           } finally {

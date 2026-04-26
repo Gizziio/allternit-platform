@@ -1,6 +1,6 @@
-//! # A2rchitech WASM Runtime
+//! # Allternit WASM Runtime
 //!
-//! Sandboxed WebAssembly runtime for executing dynamic tools in the A2rchitech agentic OS.
+//! Sandboxed WebAssembly runtime for executing dynamic tools in the Allternit agentic OS.
 //!
 //! ## Design Principles
 //!

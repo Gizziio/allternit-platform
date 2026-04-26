@@ -212,25 +212,25 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: 1-kernel/agent-systems/a2r-dak-runner/package-lock.json
+          cache-dependency-path: 1-kernel/agent-systems/allternit-dak-runner/package-lock.json
       
       - name: Install dependencies
         run: npm ci
-        working-directory: 1-kernel/agent-systems/a2r-dak-runner
+        working-directory: 1-kernel/agent-systems/allternit-dak-runner
       
       - name: Run compliance tests
         run: npm test -- --testPathPattern='compliance'
-        working-directory: 1-kernel/agent-systems/a2r-dak-runner
+        working-directory: 1-kernel/agent-systems/allternit-dak-runner
       
       - name: Check ContextPack schema
         run: |
           npx ajv validate -s harness/schemas/context_pack.schema.json -d test-data/context-pack.json
-        working-directory: 1-kernel/agent-systems/a2r-dak-runner
+        working-directory: 1-kernel/agent-systems/allternit-dak-runner
       
       - name: Verify LAW-AUT imports
         run: |
           grep -r "LAW-AUT" src/ || (echo "ERROR: LAW-AUT not referenced in code" && exit 1)
-        working-directory: 1-kernel/agent-systems/a2r-dak-runner
+        working-directory: 1-kernel/agent-systems/allternit-dak-runner
 ```
 
 ---

@@ -434,8 +434,8 @@ where
     Ok(Json(response))
 }
 
-/// Get A2R Native state (GSD context) for a session
-pub async fn get_a2r_native_state<S>(
+/// Get Allternit Native state (GSD context) for a session
+pub async fn get_allternit_native_state<S>(
     State(state): State<S>,
     Path(session_id): Path<String>,
 ) -> Result<Json<serde_json::Value>, StatusCode>
@@ -449,25 +449,25 @@ where
         .ok_or(StatusCode::NOT_FOUND)?;
 
     let workspace_path = std::path::PathBuf::from(&session.workspace_dir);
-    let a2r_dir = workspace_path.join(".a2r");
+    let allternit_dir = workspace_path.join(".allternit");
 
-    if !a2r_dir.exists() {
+    if !allternit_dir.exists() {
         return Ok(Json(serde_json::json!({
             "status": "not_initialized",
-            "message": "A2R Native (.a2r) directory not found in workspace"
+            "message": "Allternit Native (.allternit) directory not found in workspace"
         })));
     }
 
     // Read STATE.md
-    let _state_content = std::fs::read_to_string(a2r_dir.join("STATE.md")).unwrap_or_default();
-    let _project_content = std::fs::read_to_string(a2r_dir.join("PROJECT.md")).unwrap_or_default();
-    let _roadmap_content = std::fs::read_to_string(a2r_dir.join("ROADMAP.md")).unwrap_or_default();
+    let _state_content = std::fs::read_to_string(allternit_dir.join("STATE.md")).unwrap_or_default();
+    let _project_content = std::fs::read_to_string(allternit_dir.join("PROJECT.md")).unwrap_or_default();
+    let _roadmap_content = std::fs::read_to_string(allternit_dir.join("ROADMAP.md")).unwrap_or_default();
 
     // Simple parser for demonstration - in real implementation use a proper Markdown/Frontmatter parser
     let mut native_state = serde_json::json!({
         "project": {
             "name": session.brain_id,
-            "description": "A2R Native Project",
+            "description": "Allternit Native Project",
             "core_value": "Context-driven engineering",
             "last_updated": chrono::Utc::now().to_rfc3339()
         },
@@ -482,7 +482,7 @@ where
     });
 
     // Try to find active plan
-    let plans_dir = a2r_dir.join("plans");
+    let plans_dir = allternit_dir.join("plans");
     if plans_dir.exists() {
         if let Ok(entries) = std::fs::read_dir(plans_dir) {
             for entry in entries.flatten() {

@@ -1,4 +1,4 @@
-//! Tool bridge for integrating MCP with A2R tool registry
+//! Tool bridge for integrating MCP with Allternit tool registry
 
 use crate::protocol::Tool;
 

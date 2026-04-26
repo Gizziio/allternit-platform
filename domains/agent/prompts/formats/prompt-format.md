@@ -4,13 +4,13 @@ Below are two save-ready spec files (Markdown) that lock:
 
 You can copy these verbatim into your repo under something like:
 	•	workspace/agent/packs/PROMPT_FORMAT_SPEC.md
-	•	workspace/agent/packs/A2R_PROMPT_PACK_INDEX.md
+	•	workspace/agent/packs/Allternit_PROMPT_PACK_INDEX.md
 
 ⸻
 
 FILE 1 — PROMPT_FORMAT_SPEC.md
 
-# A2R Prompt Format Spec (v1.0.0)
+# Allternit Prompt Format Spec (v1.0.0)
 
 This spec defines the canonical prompt file format for the Agent Runner system.
 Prompts are versioned assets used by the runner to compile tasks, build context bundles, and produce deterministic outputs.
@@ -57,22 +57,22 @@ hooks:
   post: {{post_hooks}}                     # list[str]
 
 storage_policy:
-  writable_root: ".a2r"
-  deny_writes_outside_a2r: true
-  run_dir: ".a2r/runs/{{run_id}}"
+  writable_root: ".allternit"
+  deny_writes_outside_allternit: true
+  run_dir: ".allternit/runs/{{run_id}}"
   dirs:
-    dag: ".a2r/runs/{{run_id}}/dag"
-    wih: ".a2r/runs/{{run_id}}/wih"
-    beads: ".a2r/runs/{{run_id}}/beads"
-    mail: ".a2r/runs/{{run_id}}/mail"
-    rail: ".a2r/runs/{{run_id}}/rail"
-    reports: ".a2r/runs/{{run_id}}/reports"
+    dag: ".allternit/runs/{{run_id}}/dag"
+    wih: ".allternit/runs/{{run_id}}/wih"
+    beads: ".allternit/runs/{{run_id}}/beads"
+    mail: ".allternit/runs/{{run_id}}/mail"
+    rail: ".allternit/runs/{{run_id}}/rail"
+    reports: ".allternit/runs/{{run_id}}/reports"
   registries:
-    artifacts: ".a2r/runs/{{run_id}}/ARTIFACTS.json"
-    dag: ".a2r/runs/{{run_id}}/dag/DAG.json"
-    wih_index: ".a2r/runs/{{run_id}}/wih/WIH.index.json"
-    mail_index: ".a2r/runs/{{run_id}}/mail/MAIL.index.json"
-    rail_pack: ".a2r/runs/{{run_id}}/rail/RAIL.pack.json"
+    artifacts: ".allternit/runs/{{run_id}}/ARTIFACTS.json"
+    dag: ".allternit/runs/{{run_id}}/dag/DAG.json"
+    wih_index: ".allternit/runs/{{run_id}}/wih/WIH.index.json"
+    mail_index: ".allternit/runs/{{run_id}}/mail/MAIL.index.json"
+    rail_pack: ".allternit/runs/{{run_id}}/rail/RAIL.pack.json"
 
 crud_notes:
   safe_to_edit: {{safe_to_edit}}           # list[str] paths or keys
@@ -82,8 +82,8 @@ crud_notes:
 1.1 Locked invariants
 
 These MUST NOT be removed or weakened in any prompt:
-	•	storage_policy.deny_writes_outside_a2r: true
-	•	storage_policy.writable_root: ".a2r"
+	•	storage_policy.deny_writes_outside_allternit: true
+	•	storage_policy.writable_root: ".allternit"
 	•	Variable syntax is only {{var_name}}
 
 ⸻
@@ -167,9 +167,9 @@ IMPORTANT, MUST, DO NOT, IF, ELSE, STOP, RETURN, RETRY.
 Every prompt MUST embed the following rules verbatim inside <output_rules> unless the prompt is explicitly “no-write” (in which case it must say so).
 
 ### Output Rules (Anti-Drift)
-- WRITE ROOT: Only write artifacts under `.a2r/`.
-- DENY: Any attempt to write outside `.a2r/` MUST STOP with reason `WRITE_OUTSIDE_A2R`.
-- REGISTRY REQUIRED: Before writing any artifact, register it in `.a2r/runs/{{run_id}}/ARTIFACTS.json`:
+- WRITE ROOT: Only write artifacts under `.allternit/`.
+- DENY: Any attempt to write outside `.allternit/` MUST STOP with reason `WRITE_OUTSIDE_Allternit`.
+- REGISTRY REQUIRED: Before writing any artifact, register it in `.allternit/runs/{{run_id}}/ARTIFACTS.json`:
   - fields: path, type, owner, purpose, planned_by_node
 - NO IMPLICIT PATHS: Every output path MUST be enumerated in Deliverables.
 - NO SIDE FILES: No additional outputs beyond Deliverables.
@@ -188,7 +188,7 @@ Prompts are designed to be compiled into tasks (DAG/WIH/Rail tasks). Therefore:
 	•	Every prompt SHOULD declare:
 	•	expected role (or allowed roles)
 	•	required inputs (explicit paths/IDs)
-	•	required outputs (explicit .a2r/... paths)
+	•	required outputs (explicit .allternit/... paths)
 	•	acceptance/evidence expectations (for gates)
 	•	loop policy (max iterations / escalate conditions) if used by orchestrator prompts
 

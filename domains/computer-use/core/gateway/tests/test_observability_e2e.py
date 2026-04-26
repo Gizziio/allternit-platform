@@ -18,10 +18,10 @@ from datetime import datetime
 
 # Configuration
 BASE_URL = "http://127.0.0.1:8080"
-RECORDINGS_PATH = Path("/tmp/a2r-recordings")  # Must match gateway default
+RECORDINGS_PATH = Path("/tmp/allternit-recordings")  # Must match gateway default
 
 # Enable observability (gateway must be started with this env var)
-os.environ["A2R_ENABLE_OBSERVABILITY"] = "true"
+os.environ["Allternit_ENABLE_OBSERVABILITY"] = "true"
 
 
 class ObservabilityE2ETest:

@@ -2,7 +2,7 @@
  * tmux Terminal Injector
  * 
  * Injects keystrokes into tmux sessions on macOS/Linux.
- * Reverse engineered from agentchattr pattern, implemented for a2rchitech.
+ * Reverse engineered from agentchattr pattern, implemented for allternit.
  */
 
 import { exec } from 'child_process';

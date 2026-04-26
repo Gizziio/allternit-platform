@@ -1,5 +1,5 @@
 /**
- * A2R Gateway - E2E Persistence Test
+ * Allternit Gateway - E2E Persistence Test
  * 
  * Verifies complete flow:
  * session.create → prompt_async → wait complete → GET session → verify final state
@@ -97,7 +97,7 @@ function parseSSEEvents(rawText: string): Array<{ data: unknown }> {
 // E2E Tests
 // =============================================================================
 
-describe('A2R Gateway - E2E Persistence Tests', () => {
+describe('Allternit Gateway - E2E Persistence Tests', () => {
   let gateway: ChildProcess;
 
   beforeAll(async () => {

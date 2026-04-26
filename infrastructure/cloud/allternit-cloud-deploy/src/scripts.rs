@@ -5,7 +5,7 @@
 /// Cloud-init user data for AWS
 pub fn get_aws_userdata() -> &'static str {
     r#"#!/bin/bash
-# Cloud-init script for A2R deployment
+# Cloud-init script for Allternit deployment
 
 # Update system
 yum update -y
@@ -17,31 +17,31 @@ yum install -y docker git curl
 systemctl enable docker
 systemctl start docker
 
-# Add a2r user
-useradd -r -s /bin/false a2r
+# Add allternit user
+useradd -r -s /bin/false allternit
 
 # Create directories
-mkdir -p /opt/a2r/bin
-mkdir -p /opt/a2r/config
-mkdir -p /var/log/a2r
+mkdir -p /opt/allternit/bin
+mkdir -p /opt/allternit/config
+mkdir -p /var/log/allternit
 
-# Install A2R (placeholder)
-echo "A2R Server" > /opt/a2r/bin/a2r-server
-chmod +x /opt/a2r/bin/a2r-server
+# Install Allternit (placeholder)
+echo "Allternit Server" > /opt/allternit/bin/allternit-server
+chmod +x /opt/allternit/bin/allternit-server
 
 # Set permissions
-chown -R a2r:a2r /opt/a2r
+chown -R allternit:allternit /opt/allternit
 
 # Create systemd service
-cat > /etc/systemd/system/a2r.service << 'EOF'
+cat > /etc/systemd/system/allternit.service << 'EOF'
 [Unit]
-Description=A2R Platform
+Description=Allternit Platform
 After=network.target
 
 [Service]
-ExecStart=/opt/a2r/bin/a2r-server
+ExecStart=/opt/allternit/bin/allternit-server
 Restart=always
-User=a2r
+User=allternit
 
 [Install]
 WantedBy=multi-user.target
@@ -49,15 +49,15 @@ EOF
 
 # Enable service
 systemctl daemon-reload
-systemctl enable a2r
-systemctl start a2r
+systemctl enable allternit
+systemctl start allternit
 "#
 }
 
 /// Cloud-init user data for DigitalOcean
 pub fn get_digitalocean_userdata() -> &'static str {
     r#"#!/bin/bash
-# Cloud-init script for A2R deployment on DigitalOcean
+# Cloud-init script for Allternit deployment on DigitalOcean
 
 # Update system
 apt-get update
@@ -70,31 +70,31 @@ apt-get install -y docker.io git curl
 systemctl enable docker
 systemctl start docker
 
-# Add a2r user
-useradd -r -s /bin/false a2r
+# Add allternit user
+useradd -r -s /bin/false allternit
 
 # Create directories
-mkdir -p /opt/a2r/bin
-mkdir -p /opt/a2r/config
-mkdir -p /var/log/a2r
+mkdir -p /opt/allternit/bin
+mkdir -p /opt/allternit/config
+mkdir -p /var/log/allternit
 
-# Install A2R (placeholder)
-echo "A2R Server" > /opt/a2r/bin/a2r-server
-chmod +x /opt/a2r/bin/a2r-server
+# Install Allternit (placeholder)
+echo "Allternit Server" > /opt/allternit/bin/allternit-server
+chmod +x /opt/allternit/bin/allternit-server
 
 # Set permissions
-chown -R a2r:a2r /opt/a2r
+chown -R allternit:allternit /opt/allternit
 
 # Create systemd service
-cat > /etc/systemd/system/a2r.service << 'EOF'
+cat > /etc/systemd/system/allternit.service << 'EOF'
 [Unit]
-Description=A2R Platform
+Description=Allternit Platform
 After=network.target
 
 [Service]
-ExecStart=/opt/a2r/bin/a2r-server
+ExecStart=/opt/allternit/bin/allternit-server
 Restart=always
-User=a2r
+User=allternit
 
 [Install]
 WantedBy=multi-user.target
@@ -102,15 +102,15 @@ EOF
 
 # Enable service
 systemctl daemon-reload
-systemctl enable a2r
-systemctl start a2r
+systemctl enable allternit
+systemctl start allternit
 "#
 }
 
 /// Firewall configuration script
 pub fn get_firewall_script() -> &'static str {
     r#"#!/bin/bash
-# Configure firewall for A2R
+# Configure firewall for Allternit
 
 # Allow SSH
 ufw allow 22/tcp
@@ -121,7 +121,7 @@ ufw allow 80/tcp
 # Allow HTTPS
 ufw allow 443/tcp
 
-# Allow A2R default port
+# Allow Allternit default port
 ufw allow 3000/tcp
 
 # Enable firewall
@@ -157,7 +157,7 @@ systemctl enable docker
 systemctl start docker
 
 # Add user to docker group
-usermod -aG docker a2r || true
+usermod -aG docker allternit || true
 
 echo "Docker installed"
 "#

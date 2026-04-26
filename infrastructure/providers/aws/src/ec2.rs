@@ -16,7 +16,7 @@ impl Ec2Client {
     }
     
     /// Run instances
-    pub async fn run_instances(&self, _config: &a2r_cloud_core::DeploymentConfig) -> Result<String, String> {
+    pub async fn run_instances(&self, _config: &allternit_cloud_core::DeploymentConfig) -> Result<String, String> {
         // In production, this would call AWS SDK
         // For now, return mock instance ID
         Ok(format!("i-{}", &uuid::Uuid::new_v4().to_string()[..17]))

@@ -1,16 +1,16 @@
 ---
 
-— A2R_PROMPT_PACK_INDEX.md
+— Allternit_PROMPT_PACK_INDEX.md
 
 ```md
-# A2R Prompt Pack Index (v1.0.0)
+# Allternit Prompt Pack Index (v1.0.0)
 
 This document locks the initial prompt packs and the prompts inside them.
 Each prompt is a deterministic template conforming to PROMPT_FORMAT_SPEC.md.
 
 ---
 
-## PACK A — A2R Core Orchestration Pack (v1.0.0)
+## PACK A — Allternit Core Orchestration Pack (v1.0.0)
 
 Purpose: Minimal set to run deterministic agentic engineering loops:
 Policy injection → ContextPack → DAG/WIH → Rail task pack → Orchestrate → Verify → Cleanup.
@@ -21,7 +21,7 @@ Policy injection → ContextPack → DAG/WIH → Rail task pack → Orchestrate 
 - Type: system
 - Purpose: Global invariants, tool gating, anti-drift rules, provenance expectations.
 - Contains:
-  - strict “no writes outside .a2r” enforcement reminder
+  - strict “no writes outside .allternit” enforcement reminder
   - minimal “MissingInputs” behavior
   - final Checklist requirement
 
@@ -30,11 +30,11 @@ Policy injection → ContextPack → DAG/WIH → Rail task pack → Orchestrate 
 - Purpose: Deterministic policy injection bundle builder.
 - Inputs:
   - repo AGENTS.md
-  - `.a2r/agents/*` role policies
+  - `.allternit/agents/*` role policies
   - selected spec excerpts (optional, by WIH)
-- Outputs (.a2r):
-  - `.a2r/runs/{{run_id}}/reports/PolicyBundle.md`
-  - `.a2r/runs/{{run_id}}/reports/InjectionMarker.json`
+- Outputs (.allternit):
+  - `.allternit/runs/{{run_id}}/reports/PolicyBundle.md`
+  - `.allternit/runs/{{run_id}}/reports/InjectionMarker.json`
 - Validation:
   - deterministic ordering
   - hash of AGENTS.md recorded
@@ -44,8 +44,8 @@ Policy injection → ContextPack → DAG/WIH → Rail task pack → Orchestrate 
 - Type: utility
 - Purpose: Build sealed ContextPack recipe from Rails truth + policy bundle + DAG slice + receipts.
 - Outputs:
-  - `.a2r/runs/{{run_id}}/reports/ContextPack.md`
-  - `.a2r/runs/{{run_id}}/reports/ContextPack.seal.json`
+  - `.allternit/runs/{{run_id}}/reports/ContextPack.md`
+  - `.allternit/runs/{{run_id}}/reports/ContextPack.seal.json`
 - Validation:
   - includes: policy bundle ref, DAG slice ref, receipt refs, leases ref (if present)
   - seal includes method_version + input refs
@@ -54,9 +54,9 @@ Policy injection → ContextPack → DAG/WIH → Rail task pack → Orchestrate 
 - Type: workflow
 - Purpose: Convert goal into DAG.json + WIH nodes (WIH per DAG node).
 - Outputs:
-  - `.a2r/runs/{{run_id}}/dag/DAG.json`
-  - `.a2r/runs/{{run_id}}/wih/N###.md`
-  - `.a2r/runs/{{run_id}}/wih/WIH.index.json`
+  - `.allternit/runs/{{run_id}}/dag/DAG.json`
+  - `.allternit/runs/{{run_id}}/wih/N###.md`
+  - `.allternit/runs/{{run_id}}/wih/WIH.index.json`
 - Must include in WIH:
   - role
   - inputs/outputs
@@ -68,8 +68,8 @@ Policy injection → ContextPack → DAG/WIH → Rail task pack → Orchestrate 
 - Type: utility
 - Purpose: Compile DAG/WIH into rail-ingestible task pack.
 - Outputs:
-  - `.a2r/runs/{{run_id}}/rail/RAIL.pack.json`
-  - `.a2r/runs/{{run_id}}/rail/RAIL.map.json`
+  - `.allternit/runs/{{run_id}}/rail/RAIL.pack.json`
+  - `.allternit/runs/{{run_id}}/rail/RAIL.map.json`
 - Task fields inside RAIL.pack.json:
   - task_id (node id)
   - role
@@ -88,8 +88,8 @@ Policy injection → ContextPack → DAG/WIH → Rail task pack → Orchestrate 
   - drives iterations until gates pass or escalation triggers
   - spawns subagents with fresh contexts per policy
 - Outputs:
-  - `.a2r/runs/{{run_id}}/reports/LoopLog.md`
-  - `.a2r/runs/{{run_id}}/mail/*.md` handoffs (optional)
+  - `.allternit/runs/{{run_id}}/reports/LoopLog.md`
+  - `.allternit/runs/{{run_id}}/mail/*.md` handoffs (optional)
 - Validation:
   - logs iteration transitions and reasons
 
@@ -97,7 +97,7 @@ Policy injection → ContextPack → DAG/WIH → Rail task pack → Orchestrate 
 - Type: workflow
 - Purpose: Generate plan for a node; no code changes.
 - Outputs:
-  - `.a2r/runs/{{run_id}}/reports/PlanReceipt.md`
+  - `.allternit/runs/{{run_id}}/reports/PlanReceipt.md`
 - Validation:
   - plan maps directly to WIH acceptance checks and outputs
 
@@ -105,10 +105,10 @@ Policy injection → ContextPack → DAG/WIH → Rail task pack → Orchestrate 
 - Type: workflow
 - Purpose: Implement node outputs under strict write policy.
 - Outputs:
-  - `.a2r/runs/{{run_id}}/reports/BuildReceipt.md`
-  - (optionally) patch artifacts under `.a2r/runs/{{run_id}}/...` if you’re doing “propose changes” mode
+  - `.allternit/runs/{{run_id}}/reports/BuildReceipt.md`
+  - (optionally) patch artifacts under `.allternit/runs/{{run_id}}/...` if you’re doing “propose changes” mode
 - Validation:
-  - no writes outside `.a2r`
+  - no writes outside `.allternit`
   - registry updated
   - provenance fields present
 
@@ -116,7 +116,7 @@ Policy injection → ContextPack → DAG/WIH → Rail task pack → Orchestrate 
 - Type: workflow
 - Purpose: Review changes/evidence; no writes to repo truth.
 - Outputs:
-  - `.a2r/runs/{{run_id}}/reports/ReviewReceipt.md`
+  - `.allternit/runs/{{run_id}}/reports/ReviewReceipt.md`
 - Validation:
   - pass/fail + risks + required fixes
 
@@ -124,7 +124,7 @@ Policy injection → ContextPack → DAG/WIH → Rail task pack → Orchestrate 
 - Type: workflow
 - Purpose: Verification gate (tests, contract checks, acceptance checks).
 - Outputs:
-  - `.a2r/runs/{{run_id}}/reports/VerifyReceipt.md`
+  - `.allternit/runs/{{run_id}}/reports/VerifyReceipt.md`
 - Validation:
   - explicit pass/fail against acceptance_checks
   - missing evidence list if fail
@@ -133,7 +133,7 @@ Policy injection → ContextPack → DAG/WIH → Rail task pack → Orchestrate 
 - Type: utility
 - Purpose: Check whether receipts/evidence satisfy acceptance refs.
 - Outputs:
-  - `.a2r/runs/{{run_id}}/reports/EvidenceAudit.md`
+  - `.allternit/runs/{{run_id}}/reports/EvidenceAudit.md`
 - Validation:
   - enumerates which acceptance checks are satisfied and by what evidence IDs
 
@@ -141,13 +141,13 @@ Policy injection → ContextPack → DAG/WIH → Rail task pack → Orchestrate 
 - Type: utility
 - Purpose: Reconcile registry, detect unregistered artifacts, close mail threads, produce cleanup actions.
 - Outputs:
-  - `.a2r/runs/{{run_id}}/reports/CleanupReport.md`
+  - `.allternit/runs/{{run_id}}/reports/CleanupReport.md`
 - Validation:
   - lists mismatches, proposed deletes, unresolved mail
 
 ---
 
-## PACK B — A2R Memory & Reinjection Pack (v1.0.0)
+## PACK B — Allternit Memory & Reinjection Pack (v1.0.0)
 
 Purpose: Deterministic compaction + reinjection + CTR policy integration (runner-enforced).
 
@@ -157,8 +157,8 @@ Purpose: Deterministic compaction + reinjection + CTR policy integration (runner
 - Type: utility
 - Purpose: Produce derived compaction artifact from an event/receipt slice.
 - Outputs:
-  - `.a2r/runs/{{run_id}}/reports/CompactionSummary.md`
-  - `.a2r/runs/{{run_id}}/reports/CompactionSeal.json`
+  - `.allternit/runs/{{run_id}}/reports/CompactionSummary.md`
+  - `.allternit/runs/{{run_id}}/reports/CompactionSeal.json`
 - Validation:
   - includes: input event range, receipt IDs, method_version
 
@@ -166,7 +166,7 @@ Purpose: Deterministic compaction + reinjection + CTR policy integration (runner
 - Type: utility
 - Purpose: Emit reinjection rules for new contexts (what gets injected and when).
 - Outputs:
-  - `.a2r/runs/{{run_id}}/reports/ReinjectionPolicy.md`
+  - `.allternit/runs/{{run_id}}/reports/ReinjectionPolicy.md`
 - Validation:
   - explicit triggers: new spawn, new iteration, post-compaction, cwd change
 
@@ -174,7 +174,7 @@ Purpose: Deterministic compaction + reinjection + CTR policy integration (runner
 - Type: utility
 - Purpose: Produce tool-risk retrieval profiles (thresholds, dedup rules) for PreToolUse.
 - Outputs:
-  - `.a2r/runs/{{run_id}}/reports/CTRConfig.json`
+  - `.allternit/runs/{{run_id}}/reports/CTRConfig.json`
 - Validation:
   - per-tool thresholds + dedup rules + max injected items
 

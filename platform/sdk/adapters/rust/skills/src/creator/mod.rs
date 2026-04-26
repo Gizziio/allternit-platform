@@ -1,6 +1,6 @@
 //! Skill Creator - Primitive for creating effective skills
 //!
-//! This module provides the foundational capability for skill creation in the A2R system.
+//! This module provides the foundational capability for skill creation in the Allternit system.
 //! It implements a 6-step process for creating skills:
 //! 1. Understand - Gather concrete examples of skill usage
 //! 2. Plan - Identify reusable resources (scripts, references, assets)
@@ -53,7 +53,7 @@ pub struct SkillCreationConfig {
 impl Default for SkillCreationConfig {
     fn default() -> Self {
         Self {
-            default_author: "A2R Developer".to_string(),
+            default_author: "Allternit Developer".to_string(),
             default_license: "MIT".to_string(),
             skills_dir: PathBuf::from("./skills"),
             auto_validate: true,
@@ -240,15 +240,24 @@ impl SkillCreator {
 
     /// Move to planning phase (Step 2: Planning)
     pub fn start_planning(&mut self, session_id: &str) -> Result<PlannedResources, CreatorError> {
+        let examples = {
+            let session = self
+                .sessions
+                .get(session_id)
+                .ok_or_else(|| CreatorError::Validation(format!("Session {} not found", session_id)))?;
+            session.examples.clone()
+        };
+
+        // Analyze examples and suggest resources (immutable borrow of self)
+        let planned = self.analyze_examples(&examples);
+
+        // Update session (mutable borrow of self)
         let session = self
             .sessions
             .get_mut(session_id)
             .ok_or_else(|| CreatorError::Validation(format!("Session {} not found", session_id)))?;
 
         session.current_step = CreationStep::Planning;
-
-        // Analyze examples and suggest resources
-        let planned = self.analyze_examples(&session.examples);
         session.planned_resources = planned.clone();
 
         Ok(planned)
@@ -471,7 +480,7 @@ impl SkillCreator {
         };
 
         Ok(serde_json::json!({
-            "id": format!("a2r.skill.{}", session.skill_name.replace("-", ".")),
+            "id": format!("allternit.skill.{}", session.skill_name.replace("-", ".")),
             "name": session.skill_name,
             "version": "0.1.0",
             "description": description,

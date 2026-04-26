@@ -6,12 +6,12 @@
  */
 
 import type {
-  A2RKernel,
+  AllternitKernel,
   WihItem,
   RoutingDecision,
   ToolContext,
   FileContext,
-} from '@a2r/governor';
+} from '@allternit/governor';
 import {
   type Policy,
   type PolicyRule,

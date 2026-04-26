@@ -1,10 +1,10 @@
 /**
- * A2R Computer Vision
+ * Allternit Computer Vision
  * 
- * Vision-based UI automation for A2R Computer Operator
+ * Vision-based UI automation for Allternit Computer Operator
  */
 
-export { A2RComputerVision } from './computer-vision.js';
+export { AllternitComputerVision } from './computer-vision.js';
 export type { ScreenElement, Screenshot } from './computer-vision.js';
 
 export { ScreenAnalyzer } from './screen-analyzer.js';

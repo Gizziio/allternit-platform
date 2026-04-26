@@ -1,5 +1,5 @@
 /**
- * A2R VM Sessions
+ * Allternit VM Sessions
  * 
  * VM session management for agent isolation
  */

@@ -1,0 +1,77 @@
+{
+  "name": "@allternit/sdk-stub",
+  "version": "1.0.0",
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./harness": {
+      "import": "./dist/harness/index.js",
+      "types": "./dist/harness/index.d.ts"
+    },
+    "./acp": {
+      "import": "./dist/acp/index.js",
+      "types": "./dist/acp/index.d.ts"
+    },
+    "./providers": {
+      "import": "./dist/providers/registry.js",
+      "types": "./dist/providers/registry.d.ts"
+    },
+    "./providers/anthropic": {
+      "import": "./dist/providers/anthropic/index.js",
+      "types": "./dist/providers/anthropic/index.d.ts"
+    },
+    "./providers/openai": {
+      "import": "./dist/providers/openai/index.js",
+      "types": "./dist/providers/openai/index.d.ts"
+    },
+    "./providers/google": {
+      "import": "./dist/providers/google/index.js",
+      "types": "./dist/providers/google/index.d.ts"
+    },
+    "./providers/ollama": {
+      "import": "./dist/providers/ollama/index.js",
+      "types": "./dist/providers/ollama/index.d.ts"
+    },
+    "./providers/mistral": {
+      "import": "./dist/providers/mistral/index.js",
+      "types": "./dist/providers/mistral/index.d.ts"
+    },
+    "./providers/cohere": {
+      "import": "./dist/providers/cohere/index.js",
+      "types": "./dist/providers/cohere/index.d.ts"
+    },
+    "./providers/groq": {
+      "import": "./dist/providers/groq/index.js",
+      "types": "./dist/providers/groq/index.d.ts"
+    },
+    "./providers/together": {
+      "import": "./dist/providers/together/index.js",
+      "types": "./dist/providers/together/index.d.ts"
+    },
+    "./providers/azure": {
+      "import": "./dist/providers/azure/index.js",
+      "types": "./dist/providers/azure/index.d.ts"
+    },
+    "./providers/bedrock": {
+      "import": "./dist/providers/bedrock/index.js",
+      "types": "./dist/providers/bedrock/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "test:coverage": "bun test --coverage"
+  },
+  "dependencies": {
+    "zod": "^3.x"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.x"
+  }
+}

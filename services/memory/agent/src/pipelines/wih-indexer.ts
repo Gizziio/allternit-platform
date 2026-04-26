@@ -1,7 +1,7 @@
 /**
  * WIH (Work Item Handler) Indexer
  * 
- * Indexes all WIH files from a2r-workspace/wih/
+ * Indexes all WIH files from allternit-workspace/wih/
  * to enable task pattern learning and recommendations
  */
 
@@ -232,13 +232,13 @@ export class WIHIndexer {
  */
 async function main(): Promise<void> {
   console.log('╔══════════════════════════════════════════════════════════╗');
-  console.log('║     A2rchitech WIH Pattern Indexer                       ║');
+  console.log('║     Allternitchitech WIH Pattern Indexer                       ║');
   console.log('╚══════════════════════════════════════════════════════════╝');
   console.log('');
 
   // Determine WIH directory
-  const workspaceRoot = process.env.A2R_WORKSPACE_ROOT 
-    || path.join(process.cwd(), '..', 'a2r-workspace');
+  const workspaceRoot = process.env.Allternit_WORKSPACE_ROOT 
+    || path.join(process.cwd(), '..', 'allternit-workspace');
   
   const wihDir = path.join(workspaceRoot, 'wih');
 
@@ -247,7 +247,7 @@ async function main(): Promise<void> {
     await fs.access(wihDir);
   } catch {
     console.error(`Error: WIH directory not found: ${wihDir}`);
-    console.error('Please set A2R_WORKSPACE_ROOT environment variable or run from the correct directory');
+    console.error('Please set Allternit_WORKSPACE_ROOT environment variable or run from the correct directory');
     process.exit(1);
   }
 

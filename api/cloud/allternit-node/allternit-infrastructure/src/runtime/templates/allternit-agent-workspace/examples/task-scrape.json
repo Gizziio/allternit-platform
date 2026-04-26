@@ -20,6 +20,6 @@ print(f'Content length: {len(response.content)} bytes')
 ",
   "timeout": 60,
   "env": {
-    "USER_AGENT": "A2R-Agent/1.0"
+    "USER_AGENT": "Allternit-Agent/1.0"
   }
 }

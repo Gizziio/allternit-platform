@@ -18,13 +18,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
-use a2r_driver_interface::{DriverError, ExecutionId};
+use allternit_driver_interface::{DriverError, ExecutionId};
 use serde::{Deserialize, Serialize};
 use tokio::fs;
 use tokio::process::{Child, Command};
 use tokio::sync::{mpsc, Mutex};
 use tokio::time::interval;
-use tracing::{debug, error, info, info_span, instrument, warn, Instrument, Span};
+use tracing::{debug, error, info, info_span, warn};
 
 /// RAII guard for VM resources that automatically cleans up on drop.
 ///
@@ -34,8 +34,8 @@ use tracing::{debug, error, info, info_span, instrument, warn, Instrument, Span}
 /// # Example
 ///
 /// ```rust,ignore
-/// use a2r_firecracker_driver::ResourceHandle;
-/// use a2r_driver_interface::ExecutionId;
+/// use allternit_firecracker_driver::ResourceHandle;
+/// use allternit_driver_interface::ExecutionId;
 /// use std::path::PathBuf;
 ///
 /// let vm_id = ExecutionId::new();
@@ -724,8 +724,8 @@ impl CleanupCoordinator {
 /// # Example
 ///
 /// ```rust,ignore
-/// use a2r_firecracker_driver::{spawn_with_cleanup, ResourceHandle};
-/// use a2r_driver_interface::{ExecutionId, DriverError, ExecutionHandle};
+/// use allternit_firecracker_driver::{spawn_with_cleanup, ResourceHandle};
+/// use allternit_driver_interface::{ExecutionId, DriverError, ExecutionHandle};
 ///
 /// async fn spawn_vm() -> Result<ExecutionHandle, DriverError> {
 ///     let vm_id = ExecutionId::new();
@@ -946,7 +946,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cleanup_coordinator_new() {
-        let temp_dir = std::env::temp_dir().join(format!("a2r-test-{}", uuid::Uuid::new_v4()));
+        let temp_dir = std::env::temp_dir().join(format!("allternit-test-{}", uuid::Uuid::new_v4()));
         let coordinator = CleanupCoordinator::new(&temp_dir).await;
         assert!(coordinator.is_ok());
 

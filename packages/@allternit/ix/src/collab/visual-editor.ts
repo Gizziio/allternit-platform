@@ -1,5 +1,5 @@
 /**
- * Visual Editor for A2R-IX
+ * Visual Editor for Allternit-IX
  * 
  * Declarative API for building UI IR visually.
  */
@@ -293,7 +293,7 @@ export const patterns = {
 
     // Build form components
     const formContainer = components.layout.Stack({ spacing: 4 })
-      .className('a2r-form');
+      .className('allternit-form');
 
     fields.forEach((field) => {
       formContainer.child(
@@ -326,7 +326,7 @@ export const patterns = {
   /** Create a modal/dialog */
   modal: (title: string, content: UIComponentBuilder, onClose: string) => {
     return components.layout.Box({ padding: 4 })
-      .className('a2r-modal')
+      .className('allternit-modal')
       .child(
         components.layout.Stack({ direction: 'vertical', spacing: 2 })
           .child(
@@ -344,7 +344,7 @@ export const patterns = {
   /** Create a navigation menu */
   navMenu: (items: Array<{ label: string; action: string; icon?: string }>) => {
     const list = components.layout.Stack({ direction: 'vertical', spacing: 1 })
-      .className('a2r-nav-menu');
+      .className('allternit-nav-menu');
 
     items.forEach((item) => {
       const btn = components.input.Button(item.label, { variant: 'ghost' })

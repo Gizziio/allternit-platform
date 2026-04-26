@@ -26,7 +26,7 @@ impl ContextPackStore {
             .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")));
         let context_packs_dir = opts
             .context_packs_dir
-            .unwrap_or_else(|| PathBuf::from(".a2r/context-packs"));
+            .unwrap_or_else(|| PathBuf::from(".allternit/context-packs"));
 
         let context_packs_dir = if context_packs_dir.is_absolute() {
             context_packs_dir
@@ -158,7 +158,7 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let store = ContextPackStore::new(ContextPackStoreOptions {
             root_dir: Some(temp_dir.path().to_path_buf()),
-            context_packs_dir: Some(PathBuf::from(".a2r/context-packs")),
+            context_packs_dir: Some(PathBuf::from(".allternit/context-packs")),
         }).unwrap();
         (temp_dir, store)
     }

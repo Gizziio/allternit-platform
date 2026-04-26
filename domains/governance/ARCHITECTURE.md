@@ -2,7 +2,7 @@
 
 ## Overview
 
-The 2-governance layer serves as the policy and governance engine for the A2R platform. This layer manages authorization, policy enforcement, audit logging, receipts, and governance mechanisms that ensure secure and compliant operation of the system. The governance layer enforces security policies, maintains audit trails, and ensures compliance with legal and regulatory requirements.
+The 2-governance layer serves as the policy and governance engine for the Allternit platform. This layer manages authorization, policy enforcement, audit logging, receipts, and governance mechanisms that ensure secure and compliant operation of the system. The governance layer enforces security policies, maintains audit trails, and ensures compliance with legal and regulatory requirements.
 
 ## Component Architecture
 
@@ -44,8 +44,8 @@ The 2-governance layer serves as the policy and governance engine for the A2R pl
 
 ### Audit & Logging Systems
 
-#### `a2r-audit-log/`
-- **Location**: `2-governance/a2r-audit-log/`
+#### `allternit-audit-log/`
+- **Location**: `2-governance/allternit-audit-log/`
 - **Purpose**: Persistent, append-only audit logging system
 - **Components**:
   - Audit event recorder: Records all system events
@@ -63,8 +63,8 @@ The 2-governance layer serves as the policy and governance engine for the A2R pl
 
 ### Governance Systems
 
-#### `a2r-governor/`
-- **Location**: `2-governance/a2r-governor/`
+#### `allternit-governor/`
+- **Location**: `2-governance/allternit-governor/`
 - **Purpose**: Governance decision-making and workflow engine
 - **Components**:
   - Decision workflow engine: Manages governance workflows
@@ -82,8 +82,8 @@ The 2-governance layer serves as the policy and governance engine for the A2R pl
 
 ### Legal & Compliance
 
-#### `a2r-lawlayer/`
-- **Location**: `2-governance/a2r-lawlayer/`
+#### `allternit-lawlayer/`
+- **Location**: `2-governance/allternit-lawlayer/`
 - **Purpose**: Legal compliance and regulatory framework
 - **Components**:
   - Regulatory checker: Verifies compliance with regulations
@@ -225,7 +225,7 @@ The 2-governance layer serves as the policy and governance engine for the A2R pl
 ```
 ┌─────────────┐    ┌─────────────────────────┐    ┌─────────────────────┐
 │ System      │───▶│ Event Capture &       │───▶│ Audit Log System    │
-│ Operation   │    │ Formatting            │    │ (a2r-audit-log/)    │
+│ Operation   │    │ Formatting            │    │ (allternit-audit-log/)    │
 └─────────────┘    └─────────────────────────┘    └─────────────────────┘
        │                       │                             │
        │                       ▼                             ▼
@@ -252,7 +252,7 @@ The 2-governance layer serves as the policy and governance engine for the A2R pl
 ```
 ┌─────────────┐    ┌─────────────────────────┐    ┌─────────────────────┐
 │ Governance  │───▶│ Governor Workflow     │───▶│ Decision Engine     │
-│ Event       │    │ (a2r-governor/)       │    │ (workflow engine)   │
+│ Event       │    │ (allternit-governor/)       │    │ (workflow engine)   │
 └─────────────┘    └─────────────────────────┘    └─────────────────────┘
        │                       │                             │
        │                       ▼                             ▼

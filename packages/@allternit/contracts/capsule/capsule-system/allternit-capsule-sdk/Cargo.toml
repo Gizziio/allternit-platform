@@ -1,8 +1,8 @@
 [package]
-name = "a2r-capsule-sdk"
+name = "allternit-capsule-sdk"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Capsule SDK - Capsule definition, lifecycle, and protocol implementation"
+description = "Allternit Capsule SDK - Capsule definition, lifecycle, and protocol implementation"
 
 [dependencies]
 serde = { workspace = true }

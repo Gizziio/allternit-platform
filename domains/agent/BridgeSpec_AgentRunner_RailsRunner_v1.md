@@ -1,11 +1,11 @@
-# Bridge Spec: Agent Runner ↔ Rails Runner (A2R)
+# Bridge Spec: Agent Runner ↔ Rails Runner (Allternit)
 
 <SECTION id="meta">
 ---
 bridge_spec_version: 1
 status: draft_locked_for_iteration
 principle: "Rails owns truth; Agent Runner owns LLM execution."
-rails_repo_observed: "a2r-agent-system-rails.zip"
+rails_repo_observed: "allternit-agent-system-rails.zip"
 ---
 </SECTION>
 
@@ -90,7 +90,7 @@ Rule:
 - Runner may build a derived ContextPack artifact, but it must be referenced in Rails as evidence (ReceiptWritten) and never treated as truth.
 
 ContextPack MUST include:
-- AGENTS.md + .a2r/agents/* policy bundle hash
+- AGENTS.md + .allternit/agents/* policy bundle hash
 - DAG slice (node + hard deps + minimal receipts from deps)
 - WIH file (or WIH projection)
 - current lease info (scope + expiry)

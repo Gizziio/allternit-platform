@@ -1,11 +1,11 @@
 [package]
-name = "a2r-meta-swarm"
+name = "allternit-meta-swarm"
 version = "1.0.0"
 edition = "2021"
-authors = ["A2R Team"]
-description = "Meta-Swarm orchestration for A2R - SwarmAgentic + Claude Swarm + ClosedLoop integration"
+authors = ["Allternit Team"]
+description = "Meta-Swarm orchestration for Allternit - SwarmAgentic + Claude Swarm + ClosedLoop integration"
 license = "MIT"
-repository = "https://github.com/a2rchitech/a2r-meta-swarm"
+repository = "https://github.com/allternit/allternit-meta-swarm"
 
 [dependencies]
 # Core async runtime
@@ -68,10 +68,10 @@ validator = { version = "0.16", features = ["derive"] }
 # Command line parsing (for CLI tools)
 clap = { version = "4.4", features = ["derive"] }
 
-# A2R-specific dependencies (these would be local path dependencies in actual project)
-# a2r-substrate = { path = "../../0-substrate/a2r-substrate" }
-# a2r-intent-graph-kernel = { path = "../../0-substrate/a2r-intent-graph-kernel" }
-# a2r-governance = { path = "../../2-governance/a2r-governance" }
+# Allternit-specific dependencies (these would be local path dependencies in actual project)
+# allternit-substrate = { path = "../../../platform/types/allternit-substrate" }
+# allternit-intent-graph-kernel = { path = "../../../platform/types/allternit-intent-graph-kernel" }
+# allternit-governance = { path = "../../2-governance/allternit-governance" }
 
 [dev-dependencies]
 tokio-test = "0.4"

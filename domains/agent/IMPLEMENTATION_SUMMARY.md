@@ -5,9 +5,9 @@
 
 ## What Was Built
 
-### 1. Renamed Module: `agent_workspace` (was `a2r_engine`)
+### 1. Renamed Module: `agent_workspace` (was `allternit_engine`)
 
-**Why:** "A2R Engine" was misleading - it sounded like kernel infrastructure when it's actually the **client-side** agent workspace runtime.
+**Why:** "Allternit Engine" was misleading - it sounded like kernel infrastructure when it's actually the **client-side** agent workspace runtime.
 
 **New name:** `agent_workspace` - clearly indicates this is the workspace layer for agents, not the kernel.
 
@@ -18,14 +18,14 @@
 | Document | Location | Purpose |
 |----------|----------|---------|
 | **AGENT_WORKSPACE_ARCHITECTURE.md** | `5-agents/` | Complete architecture documentation |
-| **A2R_Layer_Architecture.md** | `5-agents/` | Layer mapping to kernel infrastructure |
+| **Allternit_Layer_Architecture.md** | `5-agents/` | Layer mapping to kernel infrastructure |
 | **README.md** | `7-apps/cli/src/agent_workspace/` | Module documentation |
 | **IMPLEMENTATION_SUMMARY.md** | `5-agents/` | This document |
 
-### 3. Templates Created (`5-agents/templates/a2r_workspace/`)
+### 3. Templates Created (`5-agents/templates/allternit_workspace/`)
 
 ```
-templates/a2r_workspace/
+templates/allternit_workspace/
 ├── layer1_cognitive/
 │   ├── BRAIN.md                    # Task graph human view
 │   ├── MEMORY.md                   # Memory index
@@ -66,7 +66,7 @@ templates/a2r_workspace/
 
 ### 5. Agent Creation Wizard Updates
 
-Added `AgentFormat::A2R` to the TUI wizard:
+Added `AgentFormat::Allternit` to the TUI wizard:
 - Creates full 5-layer workspace
 - Configurable layers (skills, business optional)
 - Integrates with boot sequence
@@ -91,11 +91,11 @@ Added `AgentFormat::A2R` to the TUI wizard:
 ┌─────────────────────────────────────────────────────────────────────┐
 │  MARKDOWN (Distillation)                                            │
 │  ├── AGENTS.md (5-agents/AGENTS.md)                                 │
-│  ├── IDENTITY.md, SOUL.md (.a2r/identity/)                          │
-│  ├── POLICY.md (.a2r/identity/POLICY.md)                            │
-│  ├── BRAIN.md, MEMORY.md (.a2r/brain/, .a2r/memory/)                │
-│  ├── skills/ (.a2r/skills/)                                         │
-│  └── business/ (.a2r/business/)                                     │
+│  ├── IDENTITY.md, SOUL.md (.allternit/identity/)                          │
+│  ├── POLICY.md (.allternit/identity/POLICY.md)                            │
+│  ├── BRAIN.md, MEMORY.md (.allternit/brain/, .allternit/memory/)                │
+│  ├── skills/ (.allternit/skills/)                                         │
+│  └── business/ (.allternit/business/)                                     │
 │                                                                     │
 │  Purpose: Human-readable, Agent-consumable, Synced with Kernel      │
 └─────────────────────────────────────────────────────────────────────┘
@@ -144,7 +144,7 @@ The Agent Workspace is the **runtime** that:
 mod agent_workspace;
 use agent_workspace::{BootSequence, PolicyEngine, ContextPackBuilder};
 
-// Creates .a2r/ directory with all 5 layers
+// Creates .allternit/ directory with all 5 layers
 let workspace = initialize_workspace(path).await?;
 ```
 
@@ -159,14 +159,14 @@ interface AgentWorkspaceAPI {
     syncWithKernel(workspaceId: string): Promise<SyncResult>;
 }
 
-// Shell UI uses same .a2r/ structure
+// Shell UI uses same .allternit/ structure
 // Visual editing of markdown files
 // Same enforcement
 ```
 
 ### Shared Principles
 Both CLI and Shell UI:
-1. Use the same **5-layer workspace structure** (`.a2r/`)
+1. Use the same **5-layer workspace structure** (`.allternit/`)
 2. Read the same **markdown files** (AGENTS.md, etc.)
 3. Sync with the same **kernel infrastructure**
 4. Follow the same **boot sequence**
@@ -178,16 +178,16 @@ Both CLI and Shell UI:
 ```
 5-agents/
 ├── AGENT_WORKSPACE_ARCHITECTURE.md      # Main architecture doc
-├── A2R_Layer_Architecture.md            # Layer mapping
+├── Allternit_Layer_Architecture.md            # Layer mapping
 ├── IMPLEMENTATION_SUMMARY.md            # This file
-└── templates/a2r_workspace/             # 17 template files
+└── templates/allternit_workspace/             # 17 template files
     ├── layer1_cognitive/                # 6 files
     ├── layer2_identity/                 # 5 files
     ├── layer3_governance/               # 3 files
     ├── layer4_skills/                   # 2 files
     └── layer5_business/                 # 1 file
 
-7-apps/cli/src/agent_workspace/          # Renamed from a2r_engine
+7-apps/cli/src/agent_workspace/          # Renamed from allternit_engine
 ├── README.md                            # Module documentation
 ├── mod.rs                               # (updated)
 ├── boot_sequence.rs                     # (updated)
@@ -202,7 +202,7 @@ Both CLI and Shell UI:
 ```
 7-apps/cli/src/
 ├── main.rs                              # Updated module name
-└── commands/tui/agent_create_wizard.rs  # Added A2R format support
+└── commands/tui/agent_create_wizard.rs  # Added Allternit format support
 ```
 
 ## Next Steps
@@ -227,7 +227,7 @@ Both CLI and Shell UI:
 
 Build status:
 ```bash
-$ cargo check -p a2rchitech-cli
+$ cargo check -p allternit-cli
     Finished dev [unoptimized + debug info]
 ```
 

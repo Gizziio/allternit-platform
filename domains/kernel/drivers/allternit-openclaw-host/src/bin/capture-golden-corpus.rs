@@ -15,8 +15,8 @@ use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{debug, error, info, warn, Level};
 
-use a2r_openclaw_host::rpc::OpenClawHttpClient;
-use a2r_parity::capture::{CaptureConfig, CaptureManager, Receipt, ReceiptMetadata};
+use allternit_openclaw_host::rpc::OpenClawHttpClient;
+use allternit_parity::capture::{CaptureConfig, CaptureManager, Receipt, ReceiptMetadata};
 
 /// Golden corpus capture for OpenClaw strangler migration
 #[derive(Parser)]

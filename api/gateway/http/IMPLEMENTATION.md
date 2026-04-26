@@ -1,12 +1,12 @@
-# A2R Gateway v1 — UI v0 Binding Integration
+# Allternit Gateway v1 — UI v0 Binding Integration
 
 ## Overview
 
-This implementation extends the A2R Gateway v1 with a **UI v0 compatibility layer** that provides pure translation between the legacy UI contract and the canonical A2R core. No duplication, no new server process, no architectural drift.
+This implementation extends the Allternit Gateway v1 with a **UI v0 compatibility layer** that provides pure translation between the legacy UI contract and the canonical Allternit core. No duplication, no new server process, no architectural drift.
 
 **Key Principles:**
-1. A2R Gateway v1 remains the only server process
-2. A2R Kernel remains the only execution engine
+1. Allternit Gateway v1 remains the only server process
+2. Allternit Kernel remains the only execution engine
 3. ONE event bus, ONE session store
 4. Binding layer is pure translation only
 5. All canonical events originate from kernel adapter
@@ -26,7 +26,7 @@ This implementation extends the A2R Gateway v1 with a **UI v0 compatibility laye
 │                                │                                             │
 │                                ▼                                             │
 │  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │                    A2R GATEWAY PROTOCOL v1                              ││
+│  │                    Allternit GATEWAY PROTOCOL v1                              ││
 │  │  ┌─────────────────────────────────────────────────────────────────┐   ││
 │  │  │                  UI v0 BINDING LAYER (Pure Translation)          │   ││
 │  │  │  - /global/health    - /global/event (SSE)                       │   ││
@@ -319,4 +319,4 @@ No changes required. Core v1 routes unchanged:
 
 **Document Version:** 1.0.1  
 **Last Updated:** 2024-02-23  
-**Maintainer:** A2R Platform Team
+**Maintainer:** Allternit Platform Team

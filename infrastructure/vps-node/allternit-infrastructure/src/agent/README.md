@@ -1,6 +1,6 @@
-# A2R Node Agent Installation System
+# Allternit Node Agent Installation System
 
-Complete automated installation system for deploying A2R agents to VPS and cloud instances.
+Complete automated installation system for deploying Allternit agents to VPS and cloud instances.
 
 ## Features
 
@@ -43,7 +43,7 @@ agent/
 ├── AgentInstaller.ts          # Main installation orchestrator
 ├── AgentConfig.ts             # Configuration management
 ├── health-check.ts            # Health check implementation
-├── DockerCompose.yml          # Docker Compose for A2R services
+├── DockerCompose.yml          # Docker Compose for Allternit services
 ├── index.ts                   # Module exports
 ├── install-scripts/
 │   ├── install.sh            # Linux installation script
@@ -55,13 +55,13 @@ agent/
 
 ### AgentInstaller
 
-Main class for installing, upgrading, and managing A2R agents.
+Main class for installing, upgrading, and managing Allternit agents.
 
 #### Methods
 
-- `install(target, options)`: Install A2R agent on a VPS
-- `uninstall(target)`: Remove A2R agent from a VPS
-- `upgrade(target, version)`: Upgrade A2R agent to a new version
+- `install(target, options)`: Install Allternit agent on a VPS
+- `uninstall(target)`: Remove Allternit agent from a VPS
+- `upgrade(target, version)`: Upgrade Allternit agent to a new version
 - `checkStatus(target)`: Check current agent status
 
 ### AgentConfigurator
@@ -107,7 +107,7 @@ Provides comprehensive health checking.
 
 The `DockerCompose.yml` defines the following services:
 
-- **a2r-agent**: Main A2R agent container
+- **allternit-agent**: Main Allternit agent container
 - **traefik**: Reverse proxy and load balancer
 - **redis**: Caching and session storage
 - **promtail**: Log shipping to Loki
@@ -120,13 +120,13 @@ Example generated configuration:
 
 ```json
 {
-  "serverId": "a2r-aws-abcd1234-xyz789",
+  "serverId": "allternit-aws-abcd1234-xyz789",
   "datacenter": "aws",
   "region": "us-east-1",
   "apiEndpoint": "https://192.168.1.100:8080",
   "authToken": "secure-random-token-64-chars",
   "apiKey": "secure-api-key-32-chars",
-  "dockerNetwork": "a2r-network",
+  "dockerNetwork": "allternit-network",
   "maxContainers": 50,
   "resourceLimits": {
     "cpuPercent": 80,
@@ -225,14 +225,14 @@ console.log('Components:', health.checks);
 ### Service Won't Start
 
 1. Check Docker is running: `docker version`
-2. Check logs: `journalctl -u a2r-agent -f`
-3. Verify configuration: `cat /etc/a2r/config.json`
+2. Check logs: `journalctl -u allternit-agent -f`
+3. Verify configuration: `cat /etc/allternit/config.json`
 4. Check ports: `netstat -tlnp | grep 8080`
 
 ### Health Check Failing
 
 1. Check container status: `docker ps`
-2. View container logs: `docker logs a2r-agent`
+2. View container logs: `docker logs allternit-agent`
 3. Check resource usage: `df -h && free -m`
 4. Verify network: `ping 8.8.8.8`
 

@@ -26,7 +26,7 @@
   "buildContext": null,
   "nix": {
     "flake": true,
-    "flakeUri": "github:a2rchitech/templates#unified",
+    "flakeUri": "github:allternit/templates#unified",
     "packages": [
       "nodejs_20",
       "pnpm",

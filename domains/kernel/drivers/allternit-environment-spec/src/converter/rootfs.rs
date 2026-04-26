@@ -420,14 +420,14 @@ impl RootfsBuilder {
 
         // Create init script
         let init_script = r#"#!/bin/sh
-# A2R Initramfs Init
+# Allternit Initramfs Init
 
 mount -t proc none /proc
 mount -t sysfs none /sys
 mount -t devtmpfs none /dev
 mount -t tmpfs none /tmp
 
-echo "A2R MicroVM starting..."
+echo "Allternit MicroVM starting..."
 
 # Mount root filesystem
 mkdir -p /newroot

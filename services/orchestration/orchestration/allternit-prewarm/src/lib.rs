@@ -1,4 +1,4 @@
-//! # A2R Prewarm Service (N16)
+//! # Allternit Prewarm Service (N16)
 //!
 //! Pool management and cold start optimization.
 //!
@@ -15,7 +15,7 @@
 //! - Configure pool sizes
 //! - View pool status
 
-use a2r_driver_interface::{EnvironmentSpec, ExecutionHandle, ResourceSpec};
+use allternit_driver_interface::{EnvironmentSpec, ExecutionHandle, ResourceSpec};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
@@ -38,7 +38,7 @@ impl PoolConfig {
             name: name.into(),
             pool_size,
             env_spec: EnvironmentSpec {
-                spec_type: a2r_driver_interface::EnvSpecType::Oci,
+                spec_type: allternit_driver_interface::EnvSpecType::Oci,
                 image: "ubuntu:22.04".to_string(),
                 version: None,
                 packages: vec![],

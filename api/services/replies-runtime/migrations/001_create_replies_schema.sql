@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS conversations (
 -- ---------------------------------------------------------------------------
 -- replies
 -- Canonical reply record. items[] is the ordered list of ReplyItems
--- (same shape as Reply.items in @a2r/replies-contract). Written incrementally
+-- (same shape as Reply.items in @allternit/replies-contract). Written incrementally
 -- via reduceReplyEvent; full snapshot persisted on reply.completed/failed.
 -- ---------------------------------------------------------------------------
 

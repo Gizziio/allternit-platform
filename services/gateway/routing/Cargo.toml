@@ -1,11 +1,11 @@
 [package]
-name = "a2rchitech-tools-gateway"
+name = "allternit-tools-gateway"
 version = "0.1.0"
 edition = "2021"
-description = "A2R IO Service - The ONLY permitted side-effect path with sandboxed execution and policy enforcement"
+description = "Allternit IO Service - The ONLY permitted side-effect path with sandboxed execution and policy enforcement"
 
 [[bin]]
-name = "a2r-io-service"
+name = "allternit-io-service"
 path = "src/main.rs"
 
 [dependencies]
@@ -30,9 +30,9 @@ tower-http = { workspace = true, features = ["cors", "trace"] }
 utoipa = "4.2"
 
 # Internal
-a2rchitech-history = { workspace = true }
-a2rchitech-messaging = { workspace = true }
-a2rchitech-policy = { workspace = true }
+allternit-history = { workspace = true }
+allternit-messaging = { workspace = true }
+allternit-policy = { workspace = true }
 mcp-client = { path = "../../crates/mcp-client" }
 async-trait = "0.1"
 futures = "0.3"

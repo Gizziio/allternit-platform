@@ -1,12 +1,12 @@
 [package]
-name = "a2r-openclaw-host"
+name = "allternit-openclaw-host"
 version = "0.1.0"
 edition = "2021"
 description = "OpenClaw subprocess host with parity capture integration"
-authors = ["A2rchitect Team"]
+authors = ["allternit Team"]
 
 [lib]
-name = "a2r_openclaw_host"
+name = "allternit_openclaw_host"
 path = "src/lib.rs"
 
 [[bin]]
@@ -38,7 +38,7 @@ name = "tui-native"
 path = "src/bin/tui-native.rs"
 
 [dependencies]
-a2r_parity = { package = "a2r-parity", path = "../a2r-parity" }
+allternit_parity = { package = "allternit-parity", path = "../allternit-parity" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true, features = ["full", "process", "io-std", "io-util"] }

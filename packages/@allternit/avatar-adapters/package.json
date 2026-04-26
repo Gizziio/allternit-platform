@@ -1,7 +1,7 @@
 {
   "name": "@allternit/avatar-adapters",
   "version": "1.0.0",
-  "description": "A2R Avatar Adapters - Pluggable avatar rendering system for A2R Visual State Protocol",
+  "description": "Allternit Avatar Adapters - Pluggable avatar rendering system for Allternit Visual State Protocol",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -24,7 +24,7 @@
     "@allternit/visual-state": "workspace:*"
   },
   "keywords": [
-    "a2r",
+    "allternit",
     "avatar",
     "adapters",
     "visual-state",

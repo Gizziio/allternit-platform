@@ -1,6 +1,6 @@
-# A2R Infrastructure API
+# Allternit Infrastructure API
 
-Complete backend API server for the A2R infrastructure system. Handles VPS connections, cloud deployments, environment provisioning, and SSH key management.
+Complete backend API server for the Allternit infrastructure system. Handles VPS connections, cloud deployments, environment provisioning, and SSH key management.
 
 ## Technology Stack
 
@@ -59,7 +59,7 @@ PORT=3000
 HOST=0.0.0.0
 
 # Database
-DATABASE_URL=postgresql://user:password@localhost:5432/a2r_infrastructure
+DATABASE_URL=postgresql://user:password@localhost:5432/allternit_infrastructure
 
 # Redis
 REDIS_URL=redis://localhost:6379
@@ -96,7 +96,7 @@ AWS_SECRET_ACCESS_KEY=your-aws-secret
 | DELETE | `/api/v1/vps/:id` | Delete VPS connection |
 | POST | `/api/v1/vps/:id/test` | Test SSH connection |
 | POST | `/api/v1/vps/:id/exec` | Execute command on VPS |
-| POST | `/api/v1/vps/:id/install` | Install A2R node |
+| POST | `/api/v1/vps/:id/install` | Install Allternit node |
 | GET | `/api/v1/vps/:id/history` | Get connection history |
 
 ### Cloud Deployments

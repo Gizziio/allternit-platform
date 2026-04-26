@@ -1,5 +1,5 @@
 [package]
-name = "a2rchitech-mlx-inference"
+name = "allternit-mlx-inference"
 version = "0.1.0"
 edition = "2021"
 
@@ -18,5 +18,5 @@ reqwest = { workspace = true }
 uuid = { workspace = true }
 
 # SDKs
-a2rchitech-sdk-transport = { workspace = true }
-a2rchitech-model-router = { workspace = true }
+allternit-sdk-transport = { workspace = true }
+allternit-model-router = { workspace = true }

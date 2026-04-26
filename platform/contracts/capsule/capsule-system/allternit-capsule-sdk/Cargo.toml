@@ -1,8 +1,8 @@
 [package]
-name = "a2r-capsule-sdk"
+name = "allternit-capsule-sdk"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Capsule SDK - Capsule definition, lifecycle, and protocol implementation"
+description = "Allternit Capsule SDK - Capsule definition, lifecycle, and protocol implementation"
 
 [dependencies]
 serde = { workspace = true }
@@ -13,8 +13,8 @@ thiserror = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
 chrono = { workspace = true }
-a2rchitech-system-law = { workspace = true }
-a2rchitech-harness-engineering = { workspace = true }
+allternit-system-law = { workspace = true }
+allternit-harness-engineering = { workspace = true }
 
 [dev-dependencies]
 tokio-test = "0.4"

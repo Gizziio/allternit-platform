@@ -1,7 +1,7 @@
 {
   "name": "@allternit/infrastructure",
   "version": "1.0.0",
-  "description": "A2R Infrastructure API Server - VPS, Cloud Deployments, Environment Provisioning, and SSH Key Management",
+  "description": "Allternit Infrastructure API Server - VPS, Cloud Deployments, Environment Provisioning, and SSH Key Management",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -35,7 +35,7 @@
     "sandbox",
     "provisioning"
   ],
-  "author": "A2R Team",
+  "author": "Allternit Team",
   "license": "MIT",
   "dependencies": {
     "@fastify/cors": "^9.0.1",

@@ -64,12 +64,12 @@ describe('Integration: Full Stack', () => {
     expect(response.ok).toBe(true);
     
     const html = await response.text();
-    expect(html).toContain('A2R Canvas');
+    expect(html).toContain('Allternit Canvas');
   });
 
   it('should handle A2UI path', async () => {
     // A2UI handler returns 503 if bundle not present (expected in test)
-    const response = await fetch(`http://127.0.0.1:${canvasHost.port}/__a2r__/a2ui`);
+    const response = await fetch(`http://127.0.0.1:${canvasHost.port}/__allternit__/a2ui`);
     // Should return 503 (A2UI assets not found) or 200 (if bundle exists)
     expect([200, 404, 503]).toContain(response.status);
   });

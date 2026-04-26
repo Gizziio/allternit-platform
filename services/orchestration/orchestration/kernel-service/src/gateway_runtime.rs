@@ -140,7 +140,7 @@ fn write_receipt(run_id: &str, receipt: &GatewayRoutingReceipt) -> anyhow::Resul
     if run_id.trim().is_empty() {
         anyhow::bail!("run_id required for gateway receipts");
     }
-    let receipts_dir = Path::new(".a2r/receipts").join(run_id);
+    let receipts_dir = Path::new(".allternit/receipts").join(run_id);
     fs::create_dir_all(&receipts_dir)?;
     let path = receipts_dir.join(format!("{}.json", receipt.receipt_id));
     let data = serde_json::to_vec_pretty(receipt)?;
@@ -230,10 +230,10 @@ mod tests {
         let trace_id = "trace-test";
         let receipt = route_request_and_record(&registry, "kernel", "/", "GET", &run_id, trace_id)
             .expect("routing should succeed");
-        let path = Path::new(".a2r/receipts")
+        let path = Path::new(".allternit/receipts")
             .join(&run_id)
             .join(format!("{}.json", receipt.receipt_id));
         assert!(path.exists());
-        let _ = fs::remove_dir_all(Path::new(".a2r/receipts").join(&run_id));
+        let _ = fs::remove_dir_all(Path::new(".allternit/receipts").join(&run_id));
     }
 }

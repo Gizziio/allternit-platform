@@ -1,4 +1,4 @@
-//! Run Manager - Run lifecycle management for A2R Node
+//! Run Manager - Run lifecycle management for Allternit Node
 //!
 //! Handles run execution on the node, bridging between the control plane
 //! and local container/VM execution.

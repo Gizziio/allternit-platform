@@ -1,6 +1,6 @@
-//! A2R Cloud RackNerd Provider - Budget US VPS provider.
+//! Allternit Cloud RackNerd Provider - Budget US VPS provider.
 
-use a2r_cloud_core::{
+use allternit_cloud_core::{
     CloudProvider, CloudError, DeploymentConfig, Instance, InstanceType, 
     Region, PricingInfo, HealthStatus, InstanceStatus,
 };
@@ -56,13 +56,13 @@ impl CloudProvider for RackNerdProvider {
     async fn get_pricing(&self) -> Result<PricingInfo, CloudError> {
         Ok(PricingInfo {
             currency: "USD".into(),
-            instances: pricing::RN_PLANS.iter().map(|p| a2r_cloud_core::InstancePricing {
+            instances: pricing::RN_PLANS.iter().map(|p| allternit_cloud_core::InstancePricing {
                 instance_type: p.id.into(),
                 price_monthly: p.price_monthly,
                 price_hourly: p.price_hourly,
             }).collect(),
-            storage: a2r_cloud_core::StoragePricing { price_per_gb_month: 0.10 },
-            network: a2r_cloud_core::NetworkPricing { price_per_gb: 0.00, free_gb_monthly: 0 },
+            storage: allternit_cloud_core::StoragePricing { price_per_gb_month: 0.10 },
+            network: allternit_cloud_core::NetworkPricing { price_per_gb: 0.00, free_gb_monthly: 0 },
         })
     }
     
@@ -89,7 +89,7 @@ impl CloudProvider for RackNerdProvider {
         Ok(HealthStatus {
             healthy: true,
             status: "running".into(),
-            checks: vec![a2r_cloud_core::HealthCheck {
+            checks: vec![allternit_cloud_core::HealthCheck {
                 name: "vps_status".into(),
                 passed: true,
                 message: "VPS running".into(),
@@ -100,7 +100,7 @@ impl CloudProvider for RackNerdProvider {
     async fn get_instance(&self, id: String) -> Result<Instance, CloudError> {
         Ok(Instance {
             id,
-            name: "a2r-vps".into(),
+            name: "allternit-vps".into(),
             public_ip: Some("192.252.208.1".into()),
             private_ip: Some("10.0.0.2".into()),
             region: "us".into(),

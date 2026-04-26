@@ -1,5 +1,5 @@
 """
-A2R Computer Use — Policy Engine
+Allternit Computer Use — Policy Engine
 G2 policy guarantee: No adapter can bypass domain restrictions,
 auth boundaries, destructive action approval gates, artifact/output
 rules, or session isolation rules.

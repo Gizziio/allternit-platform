@@ -1,4 +1,4 @@
-use a2rchitech_kernel_contracts;
+use allternit_kernel_contracts;
 use serde_json::Value;
 use std::collections::HashMap;
 
@@ -35,7 +35,7 @@ impl ContractVerifier {
     /// Verify that a ContextBundle complies with the kernel contract specification
     pub fn verify_context_bundle(
         &self,
-        bundle: &a2rchitech_kernel_contracts::ContextBundle,
+        bundle: &allternit_kernel_contracts::ContextBundle,
     ) -> ContractComplianceResult {
         let mut violations = Vec::new();
 
@@ -107,7 +107,7 @@ impl ContractVerifier {
     /// Verify that an EventEnvelope complies with the kernel contract specification
     pub fn verify_event_envelope(
         &self,
-        envelope: &a2rchitech_kernel_contracts::EventEnvelope,
+        envelope: &allternit_kernel_contracts::EventEnvelope,
     ) -> ContractComplianceResult {
         let mut violations = Vec::new();
 
@@ -188,7 +188,7 @@ impl ContractVerifier {
     /// Verify that a RunModel complies with the kernel contract specification
     pub fn verify_run_model(
         &self,
-        run_model: &a2rchitech_kernel_contracts::RunModel,
+        run_model: &allternit_kernel_contracts::RunModel,
     ) -> ContractComplianceResult {
         let mut violations = Vec::new();
 
@@ -260,7 +260,7 @@ impl ContractVerifier {
     /// Verify that a VerifyArtifact complies with the kernel contract specification
     pub fn verify_verify_artifact(
         &self,
-        artifact: &a2rchitech_kernel_contracts::VerifyArtifact,
+        artifact: &allternit_kernel_contracts::VerifyArtifact,
     ) -> ContractComplianceResult {
         let mut violations = Vec::new();
 
@@ -330,7 +330,7 @@ impl ContractVerifier {
     /// Verify that a ToolABI complies with the kernel contract specification
     pub fn verify_tool_abi(
         &self,
-        tool_abi: &a2rchitech_kernel_contracts::ToolABI,
+        tool_abi: &allternit_kernel_contracts::ToolABI,
     ) -> ContractComplianceResult {
         let mut violations = Vec::new();
 
@@ -400,8 +400,8 @@ impl ContractVerifier {
     /// Verify that a ToolRequest complies with the kernel contract specification
     pub fn verify_tool_request(
         &self,
-        tool_request: &a2rchitech_kernel_contracts::ToolRequest,
-        tool_abi: Option<&a2rchitech_kernel_contracts::ToolABI>,
+        tool_request: &allternit_kernel_contracts::ToolRequest,
+        tool_abi: Option<&allternit_kernel_contracts::ToolABI>,
     ) -> ContractComplianceResult {
         let mut violations = Vec::new();
 
@@ -475,14 +475,14 @@ impl ContractVerifier {
     /// Run all contract compliance checks on provided kernel contract objects
     pub fn verify_contracts(
         &self,
-        context_bundle: Option<&a2rchitech_kernel_contracts::ContextBundle>,
-        event_envelope: Option<&a2rchitech_kernel_contracts::EventEnvelope>,
-        run_model: Option<&a2rchitech_kernel_contracts::RunModel>,
-        verify_artifact: Option<&a2rchitech_kernel_contracts::VerifyArtifact>,
-        tool_abi: Option<&a2rchitech_kernel_contracts::ToolABI>,
+        context_bundle: Option<&allternit_kernel_contracts::ContextBundle>,
+        event_envelope: Option<&allternit_kernel_contracts::EventEnvelope>,
+        run_model: Option<&allternit_kernel_contracts::RunModel>,
+        verify_artifact: Option<&allternit_kernel_contracts::VerifyArtifact>,
+        tool_abi: Option<&allternit_kernel_contracts::ToolABI>,
         tool_request: Option<(
-            &a2rchitech_kernel_contracts::ToolRequest,
-            Option<&a2rchitech_kernel_contracts::ToolABI>,
+            &allternit_kernel_contracts::ToolRequest,
+            Option<&allternit_kernel_contracts::ToolABI>,
         )>,
     ) -> HashMap<String, ContractComplianceResult> {
         let mut results = HashMap::new();

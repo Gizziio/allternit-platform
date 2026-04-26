@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# A2R Agent Workspace - Task Execution Script
+# Allternit Agent Workspace - Task Execution Script
 # Executes agent tasks in a sandboxed environment with timeout and monitoring
 # ============================================================================
 
@@ -12,7 +12,7 @@ readonly WORKSPACE_DIR="/home/agent/workspace"
 readonly TASK_TIMEOUT="${TASK_TIMEOUT:-3600}"  # Default 1 hour
 readonly MAX_OUTPUT_SIZE="${MAX_OUTPUT_SIZE:-104857600}"  # 100MB
 readonly SANDBOX_ENABLED="${SANDBOX_ENABLED:-true}"
-readonly FIREJAIL_PROFILE="${FIREJAIL_PROFILE:-a2r-agent}"
+readonly FIREJAIL_PROFILE="${FIREJAIL_PROFILE:-allternit-agent}"
 
 # Task tracking
 TASK_ID=""

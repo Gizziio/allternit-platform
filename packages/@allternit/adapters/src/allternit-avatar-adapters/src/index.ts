@@ -1,7 +1,7 @@
 /**
- * A2R Avatar Adapters
+ * Allternit Avatar Adapters
  * 
- * Pluggable avatar rendering system for A2R Visual State Protocol.
+ * Pluggable avatar rendering system for Allternit Visual State Protocol.
  * 
  * @example
  * ```typescript

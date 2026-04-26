@@ -1,14 +1,14 @@
-//! # A2R SDK Apps
+//! # Allternit SDK Apps
 //!
-//! Application definitions and management for the A2R SDK.
+//! Application definitions and management for the Allternit SDK.
 //!
 //! ## Overview
 //!
 //! This crate provides types and utilities for defining, registering,
-//! and managing A2R-compatible applications. It handles app manifests,
+//! and managing Allternit-compatible applications. It handles app manifests,
 //! tool definitions, UI card templates, and platform support.
 //!
-//! Applications in A2R are self-contained packages that provide tools
+//! Applications in Allternit are self-contained packages that provide tools
 //! and UI components that agents can use to interact with external
 //! services and systems.
 //!
@@ -17,7 +17,7 @@
 //! - **AppDefinition**: Complete application manifest
 //! - **ToolDefinition**: Tools exposed by the application
 //! - **UICardTemplate**: Reusable UI component templates
-//! - **AppAdapter**: Adapter for integrating apps with the A2R system
+//! - **AppAdapter**: Adapter for integrating apps with the Allternit system
 //! - **OAuthConfig**: OAuth 2.0 authentication configuration
 //!
 //! ## Example
@@ -44,10 +44,10 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-/// Complete application definition for A2R.
+/// Complete application definition for Allternit.
 ///
 /// `AppDefinition` describes an application that can be registered
-/// and used within the A2R ecosystem. It includes metadata about the
+/// and used within the Allternit ecosystem. It includes metadata about the
 /// app, its authentication configuration, supported platforms,
 /// and the tools it provides.
 ///
@@ -123,7 +123,7 @@ pub struct AppDefinition {
     
     /// Tools exposed by this application
     /// 
-    /// These tools can be called by agents through the A2R system
+    /// These tools can be called by agents through the Allternit system
     pub tools: Vec<ToolDefinition>,
     
     /// UI card templates provided by the app
@@ -302,7 +302,7 @@ impl AppDefinition {
 /// Definition of a tool exposed by an application.
 ///
 /// `ToolDefinition` describes a single function or capability
-/// that an application makes available to agents through the A2R
+/// that an application makes available to agents through the Allternit
 /// system. It includes the tool's schema, risk classification,
 /// and execution metadata.
 ///
@@ -422,7 +422,7 @@ impl ToolDefinition {
 /// Template for rendering a UI card.
 ///
 /// `UICardTemplate` defines a reusable template for displaying
-/// rich content cards in the A2R UI. Templates support variable
+/// rich content cards in the Allternit UI. Templates support variable
 /// substitution and can include actions.
 ///
 /// # Examples
@@ -570,10 +570,10 @@ pub struct OAuthConfig {
     pub scopes: Vec<String>,
 }
 
-/// Adapter for integrating external apps with A2R.
+/// Adapter for integrating external apps with Allternit.
 ///
 /// `AppAdapter` wraps an `AppDefinition` with additional configuration
-/// needed to integrate it into the A2R system.
+/// needed to integrate it into the Allternit system.
 ///
 /// # Examples
 ///

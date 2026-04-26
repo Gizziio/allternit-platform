@@ -1,13 +1,13 @@
 use super::compiler::{PersonaYaml, TaskTemplateDefinitionYaml, TaskTemplatesYaml, WorkflowYaml};
 
 pub struct YamlValidator {
-    policy_engine: std::sync::Arc<a2rchitech_policy::PolicyEngine>,
+    policy_engine: std::sync::Arc<allternit_policy::PolicyEngine>,
     tenant_id: String,
 }
 
 impl YamlValidator {
     pub fn new(
-        policy_engine: std::sync::Arc<a2rchitech_policy::PolicyEngine>,
+        policy_engine: std::sync::Arc<allternit_policy::PolicyEngine>,
         tenant_id: String,
     ) -> Self {
         YamlValidator {
@@ -294,8 +294,8 @@ pub enum ValidationError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use a2rchitech_history::HistoryLedger;
-    use a2rchitech_messaging::MessagingSystem;
+    use allternit_history::HistoryLedger;
+    use allternit_messaging::MessagingSystem;
     use std::sync::Arc;
     use tempfile::NamedTempFile;
     use uuid::Uuid;
@@ -307,25 +307,25 @@ mod tests {
         let pool = sqlx::SqlitePool::connect(&db_url).await.unwrap();
         let temp_path = format!("/tmp/test_validator_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(std::sync::Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
         let messaging_system = Arc::new(
-            a2rchitech_messaging::MessagingSystem::new_with_storage(
+            allternit_messaging::MessagingSystem::new_with_storage(
                 history_ledger.clone(),
                 pool.clone(),
             )
             .await
             .unwrap(),
         );
-        let policy_engine = Arc::new(a2rchitech_policy::PolicyEngine::new(
+        let policy_engine = Arc::new(allternit_policy::PolicyEngine::new(
             history_ledger.clone(),
             messaging_system.clone(),
         ));
 
         // Register a default identity for testing
-        let identity = a2rchitech_policy::Identity {
+        let identity = allternit_policy::Identity {
             id: "workflow_validator".to_string(),
-            identity_type: a2rchitech_policy::IdentityType::AgentIdentity,
+            identity_type: allternit_policy::IdentityType::AgentIdentity,
             name: "workflow_validator".to_string(),
             tenant_id: "tenant-123".to_string(),
             created_at: 0,
@@ -381,17 +381,17 @@ workflow:
         let pool = sqlx::SqlitePool::connect(&db_url).await.unwrap();
         let temp_path = format!("/tmp/test_validator2_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(std::sync::Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
         let messaging_system = Arc::new(
-            a2rchitech_messaging::MessagingSystem::new_with_storage(
+            allternit_messaging::MessagingSystem::new_with_storage(
                 history_ledger.clone(),
                 pool.clone(),
             )
             .await
             .unwrap(),
         );
-        let policy_engine = Arc::new(a2rchitech_policy::PolicyEngine::new(
+        let policy_engine = Arc::new(allternit_policy::PolicyEngine::new(
             history_ledger.clone(),
             messaging_system.clone(),
         ));
@@ -441,25 +441,25 @@ workflow:
         let pool = sqlx::SqlitePool::connect(&db_url).await.unwrap();
         let temp_path = format!("/tmp/test_validator3_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(std::sync::Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
         let messaging_system = Arc::new(
-            a2rchitech_messaging::MessagingSystem::new_with_storage(
+            allternit_messaging::MessagingSystem::new_with_storage(
                 history_ledger.clone(),
                 pool.clone(),
             )
             .await
             .unwrap(),
         );
-        let policy_engine = Arc::new(a2rchitech_policy::PolicyEngine::new(
+        let policy_engine = Arc::new(allternit_policy::PolicyEngine::new(
             history_ledger.clone(),
             messaging_system.clone(),
         ));
 
         // Register a default identity for testing
-        let identity = a2rchitech_policy::Identity {
+        let identity = allternit_policy::Identity {
             id: "workflow_validator".to_string(),
-            identity_type: a2rchitech_policy::IdentityType::AgentIdentity,
+            identity_type: allternit_policy::IdentityType::AgentIdentity,
             name: "workflow_validator".to_string(),
             tenant_id: "tenant-123".to_string(),
             created_at: 0,
@@ -518,17 +518,17 @@ workflow:
         let pool = sqlx::SqlitePool::connect(&db_url).await.unwrap();
         let temp_path = format!("/tmp/test_task_templates_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(std::sync::Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
         let messaging_system = Arc::new(
-            a2rchitech_messaging::MessagingSystem::new_with_storage(
+            allternit_messaging::MessagingSystem::new_with_storage(
                 history_ledger.clone(),
                 pool.clone(),
             )
             .await
             .unwrap(),
         );
-        let policy_engine = Arc::new(a2rchitech_policy::PolicyEngine::new(
+        let policy_engine = Arc::new(allternit_policy::PolicyEngine::new(
             history_ledger.clone(),
             messaging_system.clone(),
         ));
@@ -566,17 +566,17 @@ task_templates:
         let pool = sqlx::SqlitePool::connect(&db_url).await.unwrap();
         let temp_path = format!("/tmp/test_task_templates_invalid_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(std::sync::Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
         let messaging_system = Arc::new(
-            a2rchitech_messaging::MessagingSystem::new_with_storage(
+            allternit_messaging::MessagingSystem::new_with_storage(
                 history_ledger.clone(),
                 pool.clone(),
             )
             .await
             .unwrap(),
         );
-        let policy_engine = Arc::new(a2rchitech_policy::PolicyEngine::new(
+        let policy_engine = Arc::new(allternit_policy::PolicyEngine::new(
             history_ledger.clone(),
             messaging_system.clone(),
         ));

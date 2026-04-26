@@ -1,22 +1,22 @@
 #!/bin/bash
 # =============================================================================
-# A2R Chrome Launcher - Real Google Chrome with CDP
+# Allternit Chrome Launcher - Real Google Chrome with CDP
 # =============================================================================
 # Launches real Google Chrome with remote debugging enabled.
-# The A2R platform can connect via CDP (Chrome DevTools Protocol) to control it.
+# The Allternit platform can connect via CDP (Chrome DevTools Protocol) to control it.
 # =============================================================================
 
 set -e
 
 CHROME_PORT=${CHROME_CDP_PORT:-9222}
-USER_DATA_DIR="${CHROME_USER_DATA:-$HOME/.a2r/chrome-profile}"
+USER_DATA_DIR="${CHROME_USER_DATA:-$HOME/.allternit/chrome-profile}"
 CHROME_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
 # Create user data directory
 mkdir -p "$USER_DATA_DIR"
 
 echo "╔════════════════════════════════════════════════════════════╗"
-echo "║           A2R Chrome Launcher                              ║"
+echo "║           Allternit Chrome Launcher                              ║"
 echo "╚════════════════════════════════════════════════════════════╝"
 echo ""
 echo "📍 Chrome: $CHROME_PATH"
@@ -77,7 +77,7 @@ fi
 
 echo ""
 echo "════════════════════════════════════════════════════════════"
-echo "Chrome is ready for A2R platform integration"
+echo "Chrome is ready for Allternit platform integration"
 echo "════════════════════════════════════════════════════════════"
 
 # Keep running

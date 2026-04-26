@@ -1,8 +1,8 @@
-# A2R Chrome Streaming Gateway - Linux Production Deployment
+# Allternit Chrome Streaming Gateway - Linux Production Deployment
 
 ## Overview
 
-Real Google Chrome browser streaming embedded in A2R Browser Capsule via WebRTC.
+Real Google Chrome browser streaming embedded in Allternit Browser Capsule via WebRTC.
 
 **Platform:** Linux (Ubuntu 22.04+ recommended)
 **Backend:** Firecracker microVMs (production) or Docker containers (development)
@@ -30,7 +30,7 @@ sudo chmod +x /usr/local/bin/firecracker
 sudo apt-get install -y coturn
 
 # Clone and setup
-cd ~/Desktop/a2rchitech-workspace/a2rchitech
+cd ~/Desktop/allternit-workspace/allternit
 cp .env.example .env
 # Edit .env: set TURN_SECRET to a random 32+ char string
 ```
@@ -68,7 +68,7 @@ curl http://localhost:3478
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  A2R Electron App (Desktop)                                 │
+│  Allternit Electron App (Desktop)                                 │
 │  ┌───────────────────────────────────────────────────────┐  │
 │  │  Browser Capsule                                      │  │
 │  │  ┌─────────────────────────────────────────────────┐  │  │
@@ -85,7 +85,7 @@ curl http://localhost:3478
 │  ┌───────────────────────────────────────────────────────┐  │
 │  │  Google Chrome 145 (real, full extension support)     │  │
 │  │  selkies-gstreamer (WebRTC encoder)                   │  │
-│  │  A2R Sidecar (FastAPI CDP control)                    │  │
+│  │  Allternit Sidecar (FastAPI CDP control)                    │  │
 │  └───────────────────────────────────────────────────────┘  │
 │  Network: chrome-egress (egress-only, blocked RFC1918)      │
 └─────────────────────────────────────────────────────────────┘
@@ -159,12 +159,12 @@ curl -X DELETE http://localhost:3000/api/v1/chrome-sessions/{session_id}
 
 ## Frontend Integration
 
-The A2R Browser Capsule already has Chrome streaming integrated:
+The Allternit Browser Capsule already has Chrome streaming integrated:
 
 **Files:**
-- `6-ui/a2r-platform/src/capsules/browser/BrowserCapsuleEnhanced.tsx`
-- `6-ui/a2r-platform/src/capsules/browser/ChromeStreamView.tsx`
-- `6-ui/a2r-platform/src/capsules/browser/useChromeSession.ts`
+- `6-ui/allternit-platform/src/capsules/browser/BrowserCapsuleEnhanced.tsx`
+- `6-ui/allternit-platform/src/capsules/browser/ChromeStreamView.tsx`
+- `6-ui/allternit-platform/src/capsules/browser/useChromeSession.ts`
 
 **Usage in Electron App:**
 
@@ -184,12 +184,12 @@ The A2R Browser Capsule already has Chrome streaming integrated:
 ```bash
 # Chrome Streaming Gateway
 TURN_SECRET=your-random-32-char-secret-here
-TURN_REALM=a2r.io
+TURN_REALM=allternit.io
 
 # Session defaults
-A2R_RESOLUTION=1920x1080
-A2R_EXTENSION_MODE=managed  # or "power"
-A2R_DISABLE_BACKGROUND_THROTTLING=false
+Allternit_RESOLUTION=1920x1080
+Allternit_EXTENSION_MODE=managed  # or "power"
+Allternit_DISABLE_BACKGROUND_THROTTLING=false
 SELKIES_ENCODER=x264enc  # or "nvh264enc" for GPU
 ```
 
@@ -263,7 +263,7 @@ spec:
       runtimeClassName: kata  # Or gvisor
       containers:
       - name: chrome
-        image: a2r/chrome-stream:latest
+        image: allternit/chrome-stream:latest
         resources:
           limits:
             cpu: "2"
@@ -290,13 +290,13 @@ spec:
 
 ```bash
 # Check logs
-docker logs a2r-chrome-stream
+docker logs allternit-chrome-stream
 
 # Verify seccomp profile
-docker inspect a2r-chrome-stream | grep -i seccomp
+docker inspect allternit-chrome-stream | grep -i seccomp
 
 # Test without sandbox (dev only)
-docker run --rm -it a2r/chrome-stream bash
+docker run --rm -it allternit/chrome-stream bash
 /usr/bin/google-chrome-stable --no-sandbox
 ```
 
@@ -379,7 +379,7 @@ Chrome sessions run on isolated network `chrome-egress`:
 - Egress-only (no inbound connections)
 - RFC1918 blocked by default
 - Cloud metadata endpoints blocked
-- Tenant allowlist configurable via `A2R_INTERNAL_ALLOWLIST`
+- Tenant allowlist configurable via `Allternit_INTERNAL_ALLOWLIST`
 
 ### Profile Persistence
 
@@ -392,7 +392,7 @@ Chrome profiles mounted at `/data/chrome-profile`:
 
 ## Next Steps
 
-1. **Test WebRTC streaming** in A2R Electron app
+1. **Test WebRTC streaming** in Allternit Electron app
 2. **Configure extension catalog** for managed mode
 3. **Set up GPU encoding** for reduced latency
 4. **Deploy to Kubernetes** with Kata Containers

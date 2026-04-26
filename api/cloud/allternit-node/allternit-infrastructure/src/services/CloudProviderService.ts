@@ -203,7 +203,7 @@ export class CloudProviderService {
         if (sshKey.rows.length > 0) {
           try {
             const uploadedKey = await provider.uploadSSHKey?.(
-              `a2r-${deployment.name}`,
+              `allternit-${deployment.name}`,
               sshKey.rows[0].public_key
             );
             if (uploadedKey) {
@@ -226,7 +226,7 @@ export class CloudProviderService {
         sshKeys: sshKeyIds,
         userData: deployment.config?.user_data,
         tags: {
-          managed_by: 'a2r',
+          managed_by: 'allternit',
           deployment_id: deployment.id,
           ...deployment.config?.labels,
         },

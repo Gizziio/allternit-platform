@@ -1,8 +1,8 @@
 [package]
-name = "a2rchitech-node-registry"
+name = "allternit-node-registry"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Node Registry - Node registration, capability tracking, health monitoring, and discovery"
+description = "Allternit Node Registry - Node registration, capability tracking, health monitoring, and discovery"
 
 [dependencies]
 serde = { workspace = true }

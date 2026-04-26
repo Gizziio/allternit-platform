@@ -1,1 +1,1 @@
-"""A2R Operator Python package root."""
+"""Allternit Operator Python package root."""

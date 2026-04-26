@@ -417,7 +417,7 @@ export class SessionFork {
     // Copy to destination
     for (const [key, value] of sourceEnv) {
       // Skip session-specific variables
-      if (key === "A2R_SESSION_ID") continue;
+      if (key === "Allternit_SESSION_ID") continue;
 
       await to.setEnv(key, value);
     }
@@ -430,7 +430,7 @@ export class SessionFork {
     }
 
     // Set fork-specific environment
-    await to.setEnv("A2R_FORKED_FROM", from.id);
+    await to.setEnv("Allternit_FORKED_FROM", from.id);
   }
 
   /**

@@ -1,5 +1,5 @@
 {
-  "name": "@a2rchitech/memory",
+  "name": "@allternit/memory-service",
   "version": "1.0.0",
   "description": "Always-on AI memory agent with local LLM (Ollama)",
   "type": "module",
@@ -31,9 +31,9 @@
     "agent",
     "ollama",
     "local-llm",
-    "a2rchitech"
+    "allternit"
   ],
-  "author": "A2rchitect Team",
+  "author": "allternit Team",
   "license": "MIT",
   "dependencies": {
     "better-sqlite3": "^11.6.0",

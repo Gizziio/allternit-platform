@@ -1,8 +1,8 @@
 [package]
-name = "a2r-receipts-schema"
+name = "allternit-receipts-schema"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Receipts Schema - Cryptographic receipts for tool and workflow execution"
+description = "Allternit Receipts Schema - Cryptographic receipts for tool and workflow execution"
 
 [dependencies]
 serde = { workspace = true }

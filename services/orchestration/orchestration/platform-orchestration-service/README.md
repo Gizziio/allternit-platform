@@ -1,10 +1,10 @@
-# A2rchitech Platform Orchestrator
+# Allternitchitech Platform Orchestrator
 
-The A2rchitech Platform Orchestrator is a unified binary that starts and manages all services in the A2rchitech platform.
+The Allternitchitech Platform Orchestrator is a unified binary that starts and manages all services in the Allternitchitech platform.
 
 ## Overview
 
-The orchestrator provides a single command to start all platform services in the correct order, making it easy to run the complete A2rchitech platform with one command.
+The orchestrator provides a single command to start all platform services in the correct order, making it easy to run the complete Allternitchitech platform with one command.
 
 ## Features
 
@@ -20,10 +20,10 @@ The orchestrator provides a single command to start all platform services in the
 
 ```bash
 # Using the platform orchestrator binary
-cargo run -p a2rchitech-platform
+cargo run -p allternit-platform
 
 # Or using the CLI command
-cargo run -p a2rchitech-cli -- up
+cargo run -p allternit-cli -- up
 ```
 
 ### Available Commands
@@ -86,7 +86,7 @@ If services fail to start:
 For development, individual services can still be run separately:
 ```bash
 cargo run -p kernel
-cargo run -p a2rchitech-memory
+cargo run -p allternit-memory
 # etc.
 ```
 

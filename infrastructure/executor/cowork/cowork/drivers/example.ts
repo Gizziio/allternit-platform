@@ -4,7 +4,7 @@
  * Demonstrates complete VM lifecycle management using the AppleVFDriver.
  * 
  * Usage:
- *   A2R_MOCK_VIRTUALIZATION=1 npx ts-node example.ts
+ *   Allternit_MOCK_VIRTUALIZATION=1 npx ts-node example.ts
  */
 
 import {
@@ -26,7 +26,7 @@ async function main(): Promise<void> {
   // Check platform
   if (process.platform !== 'darwin') {
     console.error('❌ This example requires macOS');
-    console.log('   Set A2R_MOCK_VIRTUALIZATION=1 to run in mock mode');
+    console.log('   Set Allternit_MOCK_VIRTUALIZATION=1 to run in mock mode');
     process.exit(1);
   }
 
@@ -96,9 +96,9 @@ async function main(): Promise<void> {
   const vmConfig: VMConfig = {
     id: 'example-vm-001',
     name: 'Example Ubuntu VM',
-    kernelPath: '~/.a2r/images/vmlinux-6.5.0-a2r-arm64',
-    initrdPath: '~/.a2r/images/initrd.img-6.5.0-a2r-arm64',
-    rootfsPath: '~/.a2r/images/ubuntu-22.04.ext4',
+    kernelPath: '~/.allternit/images/vmlinux-6.5.0-allternit-arm64',
+    initrdPath: '~/.allternit/images/initrd.img-6.5.0-allternit-arm64',
+    rootfsPath: '~/.allternit/images/ubuntu-22.04.ext4',
     cpuCount: 2,
     memorySize: 2 * 1024 * 1024 * 1024, // 2GB
     sharedDirectories: [
@@ -133,7 +133,7 @@ async function main(): Promise<void> {
     console.log('   🧪 Running in mock mode...\n');
     
     // Use mock mode for demo
-    process.env.A2R_MOCK_VIRTUALIZATION = '1';
+    process.env.Allternit_MOCK_VIRTUALIZATION = '1';
     vm = await driver.createVM(vmConfig);
   }
 
@@ -173,7 +173,7 @@ async function main(): Promise<void> {
 
     // Command with environment variables
     const envResult = await driver.executeCommand(vm, 'echo $CUSTOM_VAR', {
-      env: { CUSTOM_VAR: 'Hello from A2R!' },
+      env: { CUSTOM_VAR: 'Hello from Allternit!' },
     });
     console.log('   Command: echo $CUSTOM_VAR');
     console.log(`   Output: ${envResult.stdout.trim()}\n`);

@@ -2,7 +2,7 @@
 name = "allternit-canvas-protocol"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Canvas Protocol - Declarative task surfaces for agentic systems"
+description = "Allternit Canvas Protocol - Declarative task surfaces for agentic systems"
 
 [dependencies]
 serde = { workspace = true }

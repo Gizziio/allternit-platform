@@ -1,6 +1,6 @@
-//! # A2R Local Inference
+//! # Allternit Local Inference
 //!
-//! Local LLM inference engine for the A2R platform.
+//! Local LLM inference engine for the Allternit platform.
 //!
 //! ## Overview
 //!
@@ -29,7 +29,7 @@
 //! ## Example
 //!
 //! ```rust,no_run
-//! use a2rchitech_local_inference::engine_rust::LlamaEngine;
+//! use allternit_local_inference::engine_rust::LlamaEngine;
 //! use std::collections::HashMap;
 //!
 //! // Configure model paths
@@ -57,7 +57,7 @@ use serde::{Deserialize, Serialize};
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_local_inference::InferenceRequest;
+/// use allternit_local_inference::InferenceRequest;
 ///
 /// let request = InferenceRequest {
 ///     model_id: "qwen-2.5-7b".to_string(),
@@ -101,7 +101,7 @@ impl InferenceRequest {
 /// # Examples
 ///
 /// ```
-/// use a2rchitech_local_inference::InferenceResponse;
+/// use allternit_local_inference::InferenceResponse;
 ///
 /// let response = InferenceResponse {
 ///     text: "The capital of France is Paris.".to_string(),

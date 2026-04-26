@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2rchitech.local/spec/contracts/PolicyProfile.schema.json",
+  "$id": "https://allternit.local/spec/contracts/PolicyProfile.schema.json",
   "title": "Policy Profile — Permission Gating Contract",
   "description": "Defines allow/ask/deny rules for tool invocations in Code Mode sessions.",
   "type": "object",

@@ -1,6 +1,6 @@
-# A2R Vision Brain Runtime Integration
+# Allternit Vision Brain Runtime Integration
 
-This document describes the brain runtime integration for A2R Vision, enabling desktop automation as a tool within brain sessions with autonomous vision model switching.
+This document describes the brain runtime integration for Allternit Vision, enabling desktop automation as a tool within brain sessions with autonomous vision model switching.
 
 ## Architecture Overview
 
@@ -42,7 +42,7 @@ This document describes the brain runtime integration for A2R Vision, enabling d
                                                      │
                                                      ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                  A2R Vision Service (Port 3007)                    │
+│                  Allternit Vision Service (Port 3007)                    │
 │                                                                 │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
 │  │  Screenshot │  │   Action    │  │   Status    │             │
@@ -59,7 +59,7 @@ This document describes the brain runtime integration for A2R Vision, enabling d
 Core integration module providing:
 
 - **Tool Registration**: Registers `desktop_control` tool with brain runtime
-- **Event Streaming**: Streams A2R Vision actions as brain events
+- **Event Streaming**: Streams Allternit Vision actions as brain events
 - **Session Context**: Maintains desktop state across interactions
 - **Model Routing**: Autonomous vision model switching
 - **Receipt Generation**: Generates immutable receipts for all desktop operations (G0501)
@@ -80,17 +80,17 @@ GET  /v1/receipts/{receipt_id}    - Retrieve specific receipt by ID (G0501)
 GET  /health                      - Health check
 ```
 
-### 3. Frontend Integration (`apps/shell/src/services/a2r-vision-brain/`)
+### 3. Frontend Integration (`apps/shell/src/services/allternit-vision-brain/`)
 
 React hooks and API client:
 
 - `useUITarsBrain()` - Hook for desktop automation
 - `useVisionModelSwitch()` - Hook for model switching
-- `ToolCallView` - Component for rendering A2R Vision events
+- `ToolCallView` - Component for rendering Allternit Vision events
 
 ## Event Types
 
-A2R Vision streams these event types during desktop automation:
+Allternit Vision streams these event types during desktop automation:
 
 | Event Type | Description |
 |------------|-------------|
@@ -108,7 +108,7 @@ A2R Vision streams these event types during desktop automation:
 
 ## Receipt Generation (G0501)
 
-The A2R Vision Operator now generates comprehensive receipts for all desktop operations, compliant with the A2R Receipt schema (`spec/Contracts/Receipt.schema.json`). Each action produces an immutable receipt that includes:
+The Allternit Vision Operator now generates comprehensive receipts for all desktop operations, compliant with the Allternit Receipt schema (`spec/Contracts/Receipt.schema.json`). Each action produces an immutable receipt that includes:
 
 - Content integrity verification via input/output hashes
 - Artifact manifest for generated content
@@ -116,14 +116,14 @@ The A2R Vision Operator now generates comprehensive receipts for all desktop ope
 - Policy decision references
 - Traceability information
 
-Receipts are stored locally in `/.a2r/receipts/` and submitted to the governance kernel for centralized tracking.
+Receipts are stored locally in `/.allternit/receipts/` and submitted to the governance kernel for centralized tracking.
 
 ## Tool Schema
 
 ```typescript
 {
   name: "desktop_control",
-  description: "Control native desktop applications using A2R Vision automation",
+  description: "Control native desktop applications using Allternit Vision automation",
   parameters: {
     type: "object",
     properties: {
@@ -168,10 +168,10 @@ vision_keywords = [
 
 ### Configuration
 
-Users configure vision models via A2R:
+Users configure vision models via Allternit:
 
 ```yaml
-# ~/.config/a2r/models.yaml
+# ~/.config/allternit/models.yaml
 models:
   default:
     provider: openrouter
@@ -192,7 +192,7 @@ models:
 ### Basic Desktop Control
 
 ```typescript
-import { useUITarsBrain } from '../services/a2r-vision-brain';
+import { useUITarsBrain } from '../services/allternit-vision-brain';
 
 function DesktopAutomationComponent({ sessionId }) {
   const { execute, isExecuting, progress } = useUITarsBrain({
@@ -236,7 +236,7 @@ const handleStreamingTask = async () => {
 ### Vision Model Switching
 
 ```typescript
-import { useVisionModelSwitch } from '../services/a2r-vision-brain';
+import { useVisionModelSwitch } from '../services/allternit-vision-brain';
 
 function IntentHandler({ sessionId, userInput }) {
   const { shouldUseVision, recommendedModel, checkIntent } = useVisionModelSwitch(sessionId);
@@ -287,13 +287,13 @@ const directive = router.toSpawnDirective(result);
 
 ```bash
 # Install dependencies
-cd services/a2r-vision-operator
+cd services/allternit-vision-operator
 pip install -r requirements.txt
 
 # Set environment variables
-export A2R_VISION_INFERENCE_BASE="https://api.openrouter.ai/v1"
-export A2R_VISION_INFERENCE_KEY="your-api-key"
-export A2R_VISION_MODEL_NAME="qwen/qwen2-vl-72b-instruct"
+export Allternit_VISION_INFERENCE_BASE="https://api.openrouter.ai/v1"
+export Allternit_VISION_INFERENCE_KEY="your-api-key"
+export Allternit_VISION_MODEL_NAME="qwen/qwen2-vl-72b-instruct"
 
 # Run the service
 python src/main.py
@@ -323,10 +323,10 @@ curl -X POST http://localhost:3007/v1/brain/vision-model/check \
 
 | Environment Variable | Default | Description |
 |---------------------|---------|-------------|
-| `A2R_VISION_INFERENCE_BASE` | - | Vision model API base URL |
-| `A2R_VISION_INFERENCE_KEY` | - | API key for vision model |
-| `A2R_VISION_MODEL_NAME` | a2r-vision-7b-qwen | Model to use |
-| `A2R_VISION_PORT` | 3007 | Service port |
+| `Allternit_VISION_INFERENCE_BASE` | - | Vision model API base URL |
+| `Allternit_VISION_INFERENCE_KEY` | - | API key for vision model |
+| `Allternit_VISION_MODEL_NAME` | allternit-vision-7b-qwen | Model to use |
+| `Allternit_VISION_PORT` | 3007 | Service port |
 | `BRAIN_GATEWAY_URL` | http://localhost:3004 | Brain gateway endpoint |
 
 ## Future Enhancements

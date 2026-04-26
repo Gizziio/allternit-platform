@@ -8,7 +8,7 @@ description: "Tool instructions and schemas for DAK agents"
 version: "1.0.0"
 deterministic: true
 
-author: "a2r-platform"
+author: "allternit-platform"
 tags: ["dak", "tools", "instructions"]
 
 dependencies:

@@ -1,8 +1,8 @@
 import { OrchestrationContext, AgentTurn } from './types.js';
 import { TurnManager } from './turn-manager.js';
-import { ExecutionEngine } from '@a2r/engine';
-import { CDPBridge } from '../../a2r-browser/src/cdp-bridge.js';
-import { SkillGenerator } from '../../../2-governance/a2r-governor/src/skill-generator.js';
+import { ExecutionEngine } from '@allternit/engine';
+import { CDPBridge } from '../../allternit-browser/src/cdp-bridge.js';
+import { SkillGenerator } from '../../../2-governance/allternit-governor/src/skill-generator.js';
 
 export class AgentOrchestrator {
   private turnManager: TurnManager;

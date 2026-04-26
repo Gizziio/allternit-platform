@@ -19,7 +19,7 @@ export class SnapshotStore {
   constructor(config: SnapshotStoreConfig) {
     this.config = {
       ...config,
-      storage_dir: config.storage_dir || '.a2r/snapshots',
+      storage_dir: config.storage_dir || '.allternit/snapshots',
       max_snapshots: config.max_snapshots || 10000,
       compression: config.compression ?? true,
       ttl_seconds: config.ttl_seconds ?? 7 * 24 * 60 * 60

@@ -1,4 +1,4 @@
-use sqlx::{Row, SqlitePool};
+use sqlx::SqlitePool;
 use std::path::Path;
 
 #[derive(Debug)]

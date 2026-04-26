@@ -252,7 +252,7 @@ impl Default for UiIntegrationConfig {
             enable_rate_limiting: true,
             requests_per_minute: Some(1000),
             enable_authentication: true,
-            auth_token: Some("a2r-ui-integration-token".to_string()),
+            auth_token: Some("allternit-ui-integration-token".to_string()),
             enable_compression: true,
             compression_level: Some(6),
             max_request_size_bytes: 10 * 1024 * 1024, // 10MB

@@ -34,7 +34,7 @@ export LLM_BASE_URL=http://localhost:11434
 ### Usage
 
 ```typescript
-import { createLlmClient, generateInsightPrompt } from '@a2r/ars-contexta';
+import { createLlmClient, generateInsightPrompt } from '@allternit/ars-contexta';
 
 // Create client
 const client = createLlmClient({
@@ -105,7 +105,7 @@ npm run build
 ### Usage
 
 ```typescript
-import { createEntityExtractor } from '@a2r/ars-contexta';
+import { createEntityExtractor } from '@allternit/ars-contexta';
 
 // Create extractor
 const extractor = createEntityExtractor('stub'); // or 'rust-bert', 'candle'

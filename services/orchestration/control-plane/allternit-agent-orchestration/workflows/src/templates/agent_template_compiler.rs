@@ -1,6 +1,6 @@
 use crate::{WorkflowDefinition, WorkflowNode, WorkflowEdge, WorkflowPhase, NodeConstraints};
-use a2rchitech_kernel_contracts::{EventEnvelope, RunModel, VerifyArtifact, ContextBundle, ContextInputs, MemoryReference, ContextBudgets, Redaction};
-use a2rchitech_policy::SafetyTier;
+use allternit_kernel_contracts::{EventEnvelope, RunModel, VerifyArtifact, ContextBundle, ContextInputs, MemoryReference, ContextBudgets, Redaction};
+use allternit_policy::SafetyTier;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

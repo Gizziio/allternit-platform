@@ -289,7 +289,7 @@ async fn run_automated_deployment(
         region_id: request.region_id.clone(),
         storage_gb: request.storage_gb,
         control_plane_url: std::env::var("CONTROL_PLANE_URL")
-            .unwrap_or_else(|_| "wss://console.a2r.sh".to_string()),
+            .unwrap_or_else(|_| "wss://console.allternit.sh".to_string()),
         deployment_token: deployment_id.to_string(),
     };
 
@@ -301,7 +301,7 @@ async fn run_automated_deployment(
         Ok(result) => {
             info!("Deployment successful: {} ({})", result.server_name, result.instance_ip);
             
-            update_deployment_status(state, deployment_id, "installing", 60, "A2R runtime installed")
+            update_deployment_status(state, deployment_id, "installing", 60, "Allternit runtime installed")
                 .await?;
             
             update_deployment_status(state, deployment_id, "complete", 100, "Deployment complete")
@@ -351,12 +351,12 @@ async fn run_manual_deployment(
         }
     }
 
-    // Install A2R runtime
-    update_deployment_status(state, deployment_id, "installing", 50, "Installing A2R runtime")
+    // Install Allternit runtime
+    update_deployment_status(state, deployment_id, "installing", 50, "Installing Allternit runtime")
         .await?;
 
     let control_plane_url = std::env::var("CONTROL_PLANE_URL")
-        .unwrap_or_else(|_| "wss://console.a2r.sh".to_string());
+        .unwrap_or_else(|_| "wss://console.allternit.sh".to_string());
 
     match ssh_executor.install_allternit_runtime(
         ssh_host,
@@ -367,14 +367,14 @@ async fn run_manual_deployment(
         deployment_id,
     ).await {
         Ok(output) => {
-            info!("A2R runtime installed successfully");
+            info!("Allternit runtime installed successfully");
             info!("Installation output: {}", output.stdout);
             
             update_deployment_status(state, deployment_id, "complete", 100, "Deployment complete")
                 .await?;
         }
         Err(e) => {
-            error!("A2R installation failed: {}", e);
+            error!("Allternit installation failed: {}", e);
             update_deployment_status(state, deployment_id, "failed", 0, &format!("Installation failed: {}", e))
                 .await?;
             return Err(ApiError::DeploymentFailed(e.to_string()));

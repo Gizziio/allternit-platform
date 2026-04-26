@@ -1,5 +1,5 @@
 /**
- * A2R Gateway - stdio Transport
+ * Allternit Gateway - stdio Transport
  * 
  * JSON-RPC 2.0 over stdin/stdout for local subprocess-launched usage.
  * MCP-compatible transport.
@@ -9,7 +9,7 @@
  * - Responses: JSON-RPC 2.0 via stdout (newline-delimited)
  * - Notifications: Server-pushed events via stdout (no id field)
  * 
- * @module @a2rchitech/gateway-stdio
+ * @module @allternit/gateway-stdio
  */
 
 import { createInterface } from 'readline';

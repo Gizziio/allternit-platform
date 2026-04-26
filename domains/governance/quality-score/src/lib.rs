@@ -1,11 +1,11 @@
-//! A2R Quality Score System
+//! Allternit Quality Score System
 //!
 //! Implements LAW-QLT-001/002/003:
 //! - Domain grades (architecture, tests, observability, boundaries, drift)
 //! - Entropy score (rule violations, drift rate, coverage delta, doc mismatch)
 //! - Quality optimization tracking
 
-use a2rchitech_system_law::SystemLawEngine;
+use allternit_system_law::SystemLawEngine;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;

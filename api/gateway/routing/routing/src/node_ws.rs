@@ -2,7 +2,7 @@
 #[cfg(target_os = "linux")]
 //! Node WebSocket Handler
 //!
-//! Handles WebSocket connections from A2R Nodes.
+//! Handles WebSocket connections from Allternit Nodes.
 //! - Node registration and authentication
 //! - Heartbeat monitoring
 //! - Job dispatch

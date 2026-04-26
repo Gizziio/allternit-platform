@@ -1,7 +1,7 @@
 {
-  "name": "@a2rchitech/agui-gateway",
+  "name": "@allternit/agui-gateway-service",
   "version": "1.0.0",
-  "description": "AGUI Gateway for A2rchitech",
+  "description": "AGUI Gateway for Allternitchitech",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -25,8 +25,8 @@
     "agui",
     "gateway",
     "websocket",
-    "a2rchitech"
+    "allternit"
   ],
-  "author": "A2rchitech",
+  "author": "Allternitchitech",
   "license": "MIT"
 }

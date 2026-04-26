@@ -1,7 +1,7 @@
-//! A2R Observability Dashboard
+//! Allternit Observability Dashboard
 //!
 //! Provides trace visualization, telemetry, and real-time monitoring
-//! for the A2R platform.
+//! for the Allternit platform.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

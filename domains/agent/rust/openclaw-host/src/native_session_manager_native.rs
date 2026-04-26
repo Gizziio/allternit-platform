@@ -244,7 +244,7 @@ impl SessionManagerService {
                 let mut meta = HashMap::new();
                 meta.insert(
                     "created_by".to_string(),
-                    serde_json::Value::String("a2r-native".to_string()),
+                    serde_json::Value::String("allternit-native".to_string()),
                 );
                 meta
             }),

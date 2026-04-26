@@ -54,7 +54,7 @@ impl Default for LocalRuntimeConfig {
     fn default() -> Self {
         Self {
             driver: detect_driver(),
-            data_dir: expand_home("~/.a2r/local-runtime"),
+            data_dir: expand_home("~/.allternit/local-runtime"),
             default_resources: ResourceLimits {
                 memory_mb: Some(2048),
                 cpu_cores: Some(2.0),
@@ -225,7 +225,7 @@ impl VmBridge {
                     "-t", "ed25519",
                     "-f", key_path.to_str().unwrap(),
                     "-N", "",  // No passphrase
-                    "-C", &format!("a2r@{})", vm_id),
+                    "-C", &format!("allternit@{})", vm_id),
                 ])
                 .output()
                 .await
@@ -245,7 +245,7 @@ impl VmBridge {
     fn generate_cloud_init_user_data(&self, ssh_pub_key: &str) -> String {
         format!(r#"#cloud-config
 users:
-  - name: a2r
+  - name: allternit
     sudo: ALL=(ALL) NOPASSWD:ALL
     groups: users, admin
     shell: /bin/bash
@@ -263,9 +263,9 @@ packages:
 runcmd:
   - systemctl enable qemu-guest-agent
   - systemctl start qemu-guest-agent
-  - echo "VM initialized by A2R" > /var/lib/cloud/instance/a2r-ready
+  - echo "VM initialized by Allternit" > /var/lib/cloud/instance/allternit-ready
 
-final_message: "The A2R VM is up and running!"
+final_message: "The Allternit VM is up and running!"
 "#, ssh_pub_key)
     }
     
@@ -1322,7 +1322,7 @@ mod tests {
     
     #[test]
     fn test_expand_home() {
-        let path = expand_home("~/.a2r/test");
+        let path = expand_home("~/.allternit/test");
         assert!(!path.to_str().unwrap().starts_with("~"));
     }
 }

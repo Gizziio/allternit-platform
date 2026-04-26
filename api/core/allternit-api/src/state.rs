@@ -75,14 +75,14 @@ impl RailsState {
         // Initialize Ledger
         let ledger = Arc::new(Ledger::new(LedgerOptions {
             root_dir: Some(root_dir.clone()),
-            ledger_dir: Some(std::path::PathBuf::from(".a2r/ledger")),
+            ledger_dir: Some(std::path::PathBuf::from(".allternit/ledger")),
         }));
 
         // Initialize Leases
         let leases = Arc::new(
             Leases::new(LeasesOptions {
                 root_dir: Some(root_dir.clone()),
-                leases_dir: Some(std::path::PathBuf::from(".a2r/leases")),
+                leases_dir: Some(std::path::PathBuf::from(".allternit/leases")),
                 event_sink: Some(ledger.clone()),
                 actor_id: Some("api".to_string()),
                 auto_renewal_enabled: true,
@@ -96,21 +96,21 @@ impl RailsState {
         // Initialize Receipts
         let receipts = Arc::new(ReceiptStore::new(ReceiptStoreOptions {
             root_dir: Some(root_dir.clone()),
-            receipts_dir: Some(std::path::PathBuf::from(".a2r/receipts")),
-            blobs_dir: Some(std::path::PathBuf::from(".a2r/blobs")),
+            receipts_dir: Some(std::path::PathBuf::from(".allternit/receipts")),
+            blobs_dir: Some(std::path::PathBuf::from(".allternit/blobs")),
         })?);
 
         // Initialize Context Packs
         let context_packs = Arc::new(ContextPackStore::new(ContextPackStoreOptions {
             root_dir: Some(root_dir.clone()),
-            context_packs_dir: Some(std::path::PathBuf::from(".a2r/context-packs")),
+            context_packs_dir: Some(std::path::PathBuf::from(".allternit/context-packs")),
         })?);
 
         // Initialize Index
         let index = Arc::new(
             Index::new(IndexOptions {
                 root_dir: Some(root_dir.clone()),
-                index_dir: Some(std::path::PathBuf::from(".a2r/index")),
+                index_dir: Some(std::path::PathBuf::from(".allternit/index")),
             })
             .await?,
         );

@@ -1,11 +1,11 @@
-# A2R Node Agent
+# Allternit Node Agent
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/a2r/node/ci.yml)](https://github.com/a2r/node/actions)
-[![Latest Release](https://img.shields.io/github/v/release/a2r/node)](https://github.com/a2r/node/releases)
-[![Discord](https://img.shields.io/discord/a2r)](https://discord.gg/a2r)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/allternit/node/ci.yml)](https://github.com/allternit/node/actions)
+[![Latest Release](https://img.shields.io/github/v/release/allternit/node)](https://github.com/allternit/node/releases)
+[![Discord](https://img.shields.io/discord/allternit)](https://discord.gg/allternit)
 [![License](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue)](LICENSE)
 
-**A2R Node Agent** connects your infrastructure (VPS, local machines, edge devices) to the A2R Control Plane, enabling secure agent orchestration, terminal access, and job execution.
+**Allternit Node Agent** connects your infrastructure (VPS, local machines, edge devices) to the Allternit Control Plane, enabling secure agent orchestration, terminal access, and job execution.
 
 ## Features
 
@@ -22,7 +22,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│              A2R CONTROL PLANE (We Host)                    │
+│              Allternit CONTROL PLANE (We Host)                    │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
 │  │   Web UI    │  │   Scheduler │  │   Policy    │         │
 │  │  (Browser)  │  │             │  │   Engine    │         │
@@ -45,7 +45,7 @@
 │  │                  CLIENT VPS (You Host)                │   │
 │  │                                                       │   │
 │  │  ┌──────────────┐  ┌──────────────┐  ┌────────────┐  │   │
-│  │  │  A2R Node    │  │   Docker     │  │  Execution │  │   │
+│  │  │  Allternit Node    │  │   Docker     │  │  Execution │  │   │
 │  │  │  Agent       │──│   Runtime    │──│   Kernel   │  │   │
 │  │  │              │  │              │  │            │  │   │
 │  │  │ • Register   │  │ • Sandboxes  │  │ • Codex    │  │   │
@@ -56,7 +56,7 @@
 │  │                                                       │   │
 │  └───────────────────────────────────────────────────────┘   │
 │                                                               │
-│  User runs: curl -s https://a2r.io/install.sh | bash         │
+│  User runs: curl -s https://allternit.io/install.sh | bash         │
 │                                                               │
 └───────────────────────────────────────────────────────────────┘
 ```
@@ -66,19 +66,19 @@
 ### One-Line Install (Linux/macOS)
 
 ```bash
-curl -sL https://install.a2r.io | A2R_TOKEN=your_token bash
+curl -sL https://install.allternit.io | Allternit_TOKEN=your_token bash
 ```
 
 ### Windows (PowerShell)
 
 ```powershell
 # Run as Administrator
-iwr -useb https://install.a2r.io/windows | iex
+iwr -useb https://install.allternit.io/windows | iex
 ```
 
 ### Get Your Token
 
-1. Visit [app.a2r.io](https://app.a2r.io/settings/nodes)
+1. Visit [app.allternit.io](https://app.allternit.io/settings/nodes)
 2. Click "Create Node"
 3. Copy your authentication token
 
@@ -88,41 +88,41 @@ iwr -useb https://install.a2r.io/windows | iex
 
 ```bash
 # Clone repository
-git clone https://github.com/a2r/node.git
+git clone https://github.com/allternit/node.git
 cd node/deploy
 
 # Run installer
-curl -sL https://raw.githubusercontent.com/a2r/node/main/deploy/install.sh | sudo A2R_TOKEN=your_token bash
+curl -sL https://raw.githubusercontent.com/allternit/node/main/deploy/install.sh | sudo Allternit_TOKEN=your_token bash
 ```
 
 ### Docker
 
 ```bash
 docker run -d \
-  --name a2r-node \
+  --name allternit-node \
   --restart unless-stopped \
   -v /var/run/docker.sock:/var/run/docker.sock \
-  -e A2R_TOKEN=your_token \
-  ghcr.io/a2r/node:latest
+  -e Allternit_TOKEN=your_token \
+  ghcr.io/allternit/node:latest
 ```
 
 ### From Source
 
 ```bash
-cd 8-cloud/a2r-node
+cd 8-cloud/allternit-node
 cargo build --release
-sudo cp target/release/a2r-node /opt/a2r/bin/
+sudo cp target/release/allternit-node /opt/allternit/bin/
 ```
 
 ### Configuration
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `A2R_TOKEN` | Yes | - | Node authentication token |
-| `A2R_NODE_ID` | No | Auto-generated | Custom node ID |
-| `A2R_CONTROL_PLANE` | No | `wss://control.a2r.io` | Control plane URL |
-| `A2R_LABELS` | No | - | Comma-separated capabilities |
-| `A2R_MAX_CONCURRENT_JOBS` | No | `10` | Max parallel jobs |
+| `Allternit_TOKEN` | Yes | - | Node authentication token |
+| `Allternit_NODE_ID` | No | Auto-generated | Custom node ID |
+| `Allternit_CONTROL_PLANE` | No | `wss://control.allternit.io` | Control plane URL |
+| `Allternit_LABELS` | No | - | Comma-separated capabilities |
+| `Allternit_MAX_CONCURRENT_JOBS` | No | `10` | Max parallel jobs |
 
 See [deploy/README.md](deploy/README.md) for full configuration options.
 
@@ -132,23 +132,23 @@ See [deploy/README.md](deploy/README.md) for full configuration options.
 
 ```bash
 # Linux
-sudo systemctl status a2r-node
-sudo journalctl -u a2r-node -f
+sudo systemctl status allternit-node
+sudo journalctl -u allternit-node -f
 
 # macOS
-launchctl list | grep a2r
-tail -f /var/log/a2r/node.log
+launchctl list | grep allternit
+tail -f /var/log/allternit/node.log
 
 # Windows
-Get-Service a2r-node
-Get-EventLog -LogName Application -Source a2r-node -Newest 50
+Get-Service allternit-node
+Get-EventLog -LogName Application -Source allternit-node -Newest 50
 ```
 
 ### Terminal Access
 
-Once your node is online, access the terminal from the A2R web UI:
+Once your node is online, access the terminal from the Allternit web UI:
 
-1. Visit [app.a2r.io](https://app.a2r.io)
+1. Visit [app.allternit.io](https://app.allternit.io)
 2. Select your node
 3. Click "Terminal"
 
@@ -158,13 +158,13 @@ Access files through the web UI or use the API:
 
 ```bash
 # Upload file
-curl -X POST https://control.a2r.io/api/v1/nodes/{node_id}/files/upload \
+curl -X POST https://control.allternit.io/api/v1/nodes/{node_id}/files/upload \
   -H "Authorization: Bearer $TOKEN" \
   -F "file=@localfile.txt" \
   -F "path=/remote/path/file.txt"
 
 # Download file
-curl -X GET https://control.a2r.io/api/v1/nodes/{node_id}/files/download?path=/remote/file.txt \
+curl -X GET https://control.allternit.io/api/v1/nodes/{node_id}/files/download?path=/remote/file.txt \
   -H "Authorization: Bearer $TOKEN" \
   -o localfile.txt
 ```
@@ -174,7 +174,7 @@ curl -X GET https://control.a2r.io/api/v1/nodes/{node_id}/files/download?path=/r
 Submit jobs via the web UI or API:
 
 ```bash
-curl -X POST https://control.a2r.io/api/v1/jobs \
+curl -X POST https://control.allternit.io/api/v1/jobs \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -184,7 +184,7 @@ curl -X POST https://control.a2r.io/api/v1/jobs \
       "handler": "shell",
       "task": {
         "type": "shell",
-        "command": "echo Hello from A2R"
+        "command": "echo Hello from Allternit"
       }
     }
   }'
@@ -202,23 +202,23 @@ curl -X POST https://control.a2r.io/api/v1/jobs \
 
 ```bash
 # Clone repository
-git clone https://github.com/a2r/node.git
+git clone https://github.com/allternit/node.git
 cd node
 
 # Build release
 cargo build --release
 
 # Binary location
-./target/release/a2r-node
+./target/release/allternit-node
 ```
 
 ### Run Locally
 
 ```bash
 # Development mode
-A2R_NODE_ID=dev-node \
-A2R_TOKEN=test-token \
-A2R_CONTROL_PLANE=ws://localhost:3000 \
+Allternit_NODE_ID=dev-node \
+Allternit_TOKEN=test-token \
+Allternit_CONTROL_PLANE=ws://localhost:3000 \
 cargo run
 ```
 
@@ -265,12 +265,12 @@ SystemCallFilter=@system-service
 
 1. Check service status:
    ```bash
-   sudo systemctl status a2r-node
+   sudo systemctl status allternit-node
    ```
 
 2. Check logs:
    ```bash
-   sudo journalctl -u a2r-node -n 50
+   sudo journalctl -u allternit-node -n 50
    ```
 
 3. Verify Docker:
@@ -280,7 +280,7 @@ SystemCallFilter=@system-service
 
 4. Test connection:
    ```bash
-   curl -I https://control.a2r.io
+   curl -I https://control.allternit.io
    ```
 
 ### Common Issues
@@ -297,7 +297,7 @@ sudo usermod -aG docker $USER
 
 **High Memory Usage**
 - Check for stuck jobs: `docker ps`
-- Restart service: `sudo systemctl restart a2r-node`
+- Restart service: `sudo systemctl restart allternit-node`
 
 ## Architecture Details
 
@@ -369,7 +369,7 @@ Dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE).
 
 ## Support
 
-- **Documentation**: [docs.a2r.io](https://docs.a2r.io)
-- **Discord**: [discord.gg/a2r](https://discord.gg/a2r)
-- **GitHub Issues**: [github.com/a2r/node/issues](https://github.com/a2r/node/issues)
-- **Email**: support@a2r.io
+- **Documentation**: [docs.allternit.io](https://docs.allternit.io)
+- **Discord**: [discord.gg/allternit](https://discord.gg/allternit)
+- **GitHub Issues**: [github.com/allternit/node/issues](https://github.com/allternit/node/issues)
+- **Email**: support@allternit.io

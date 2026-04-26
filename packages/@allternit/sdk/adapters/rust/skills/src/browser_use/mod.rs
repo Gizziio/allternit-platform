@@ -393,7 +393,7 @@ pub fn create_browser_use_skill() -> Skill {
         name: "Browser Use".to_string(),
         version: "1.0.0".to_string(),
         description: "Native browser automation for navigation, interaction, and screen recording".to_string(),
-        author: "A2rchitech".to_string(),
+        author: "Allternit".to_string(),
         license: "MIT".to_string(),
         tags: vec![
             "browser".to_string(),
@@ -522,7 +522,7 @@ pub fn create_browser_record_session_skill() -> Skill {
         name: "Browser Record Session".to_string(),
         version: "1.0.0".to_string(),
         description: "Record browser session as GIF or video for review and analysis".to_string(),
-        author: "A2rchitech".to_string(),
+        author: "Allternit".to_string(),
         license: "MIT".to_string(),
         tags: vec![
             "browser".to_string(),
@@ -663,7 +663,7 @@ pub fn create_browser_stop_recording_skill() -> Skill {
         name: "Browser Stop Recording".to_string(),
         version: "1.0.0".to_string(),
         description: "Stop an active browser recording session and save the output".to_string(),
-        author: "A2rchitech".to_string(),
+        author: "Allternit".to_string(),
         license: "MIT".to_string(),
         tags: vec![
             "browser".to_string(),

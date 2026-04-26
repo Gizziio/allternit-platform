@@ -24,16 +24,16 @@ impl BrowserPolicyTier {
     pub fn default_allowed_hosts(&self) -> Vec<String> {
         match self {
             BrowserPolicyTier::Minimal => vec![
-                "docs.a2r.systems".to_string(),
+                "docs.allternit.systems".to_string(),
             ],
             BrowserPolicyTier::Standard => vec![
-                "*.a2r.systems".to_string(),
+                "*.allternit.systems".to_string(),
                 "*.github.com".to_string(),
                 "*.stackoverflow.com".to_string(),
                 "docs.rs".to_string(),
             ],
             BrowserPolicyTier::Extended => vec![
-                "*.a2r.systems".to_string(),
+                "*.allternit.systems".to_string(),
                 "*.github.com".to_string(),
                 "*.stackoverflow.com".to_string(),
                 "docs.rs".to_string(),

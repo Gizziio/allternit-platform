@@ -1,6 +1,6 @@
 //! Unit tests for types module
 
-use a2r_meta_swarm::types::*;
+use allternit_meta_swarm::types::*;
 
 #[test]
 fn test_entity_id_creation() {

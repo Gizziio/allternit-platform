@@ -11,10 +11,10 @@
  *   dak-operator --api-key secret   # Require API key
  *
  * Environment:
- *   A2R_OPERATOR_PORT      Port to listen on (default: 3010)
- *   A2R_OPERATOR_API_KEY   API key for authentication
- *   A2R_PROJECT_PATH       Project root (default: cwd)
- *   A2R_OUTPUT_DIR         Output directory (default: .a2r/runner)
+ *   Allternit_OPERATOR_PORT      Port to listen on (default: 3010)
+ *   Allternit_OPERATOR_API_KEY   API key for authentication
+ *   Allternit_PROJECT_PATH       Project root (default: cwd)
+ *   Allternit_OUTPUT_DIR         Output directory (default: .allternit/runner)
  */
 
 import { DirectOperatorAdapter, createDirectOperatorAdapter } from './adapters/direct-operator';
@@ -35,11 +35,11 @@ interface OperatorConfig {
 function parseArgs(): OperatorConfig {
   const args = process.argv.slice(2);
   const config: OperatorConfig = {
-    port: parseInt(process.env.A2R_OPERATOR_PORT || '3010', 10),
-    host: process.env.A2R_OPERATOR_HOST || '127.0.0.1',
-    apiKey: process.env.A2R_OPERATOR_API_KEY,
-    projectPath: process.env.A2R_PROJECT_PATH || process.cwd(),
-    outputDir: process.env.A2R_OUTPUT_DIR || '.a2r/runner',
+    port: parseInt(process.env.Allternit_OPERATOR_PORT || '3010', 10),
+    host: process.env.Allternit_OPERATOR_HOST || '127.0.0.1',
+    apiKey: process.env.Allternit_OPERATOR_API_KEY,
+    projectPath: process.env.Allternit_PROJECT_PATH || process.cwd(),
+    outputDir: process.env.Allternit_OUTPUT_DIR || '.allternit/runner',
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -84,11 +84,11 @@ Options:
   -h, --help             Show this help
 
 Environment:
-  A2R_OPERATOR_PORT      Port to listen on
-  A2R_OPERATOR_HOST      Host to bind to
-  A2R_OPERATOR_API_KEY   API key for authentication
-  A2R_PROJECT_PATH       Project root
-  A2R_OUTPUT_DIR         Output directory
+  Allternit_OPERATOR_PORT      Port to listen on
+  Allternit_OPERATOR_HOST      Host to bind to
+  Allternit_OPERATOR_API_KEY   API key for authentication
+  Allternit_PROJECT_PATH       Project root
+  Allternit_OUTPUT_DIR         Output directory
 
 Endpoints:
   POST /work/submit      Submit work item

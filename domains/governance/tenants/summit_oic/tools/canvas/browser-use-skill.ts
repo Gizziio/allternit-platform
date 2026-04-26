@@ -1,12 +1,12 @@
 /**
- * A2R Operator Browser Use Skill Implementation
+ * Allternit Operator Browser Use Skill Implementation
  * 
- * Connects to the A2R Operator service (port 3000) for browser automation.
+ * Connects to the Allternit Operator service (port 3000) for browser automation.
  * This implementation uses the Operator's browser-use endpoints.
  * 
  * Architecture:
  * - BrowserUseSkill creates BrowserAutomationSession instances
- * - Sessions communicate with A2R Operator via HTTP
+ * - Sessions communicate with Allternit Operator via HTTP
  * - Operator handles actual browser control via browser-use/CDP
  */
 
@@ -24,17 +24,17 @@ import {
   TimeoutError,
 } from './browser-types';
 
-const A2R_OPERATOR_URL = process.env.A2R_OPERATOR_URL || 'http://127.0.0.1:3000';
+const Allternit_OPERATOR_URL = process.env.Allternit_OPERATOR_URL || 'http://127.0.0.1:3000';
 
 /**
- * A2R Operator Browser Session
+ * Allternit Operator Browser Session
  * Implements browser automation via the Operator service
  */
-class A2ROperatorSession implements BrowserAutomationSession {
+class AllternitOperatorSession implements BrowserAutomationSession {
   private sessionId?: string;
   private baseUrl: string;
 
-  constructor(baseUrl: string = A2R_OPERATOR_URL) {
+  constructor(baseUrl: string = Allternit_OPERATOR_URL) {
     this.baseUrl = baseUrl;
   }
 
@@ -263,19 +263,19 @@ class A2ROperatorSession implements BrowserAutomationSession {
 }
 
 /**
- * A2R Operator Browser Use Skill
+ * Allternit Operator Browser Use Skill
  * Factory for creating browser automation sessions
  */
-export class A2ROperatorBrowserSkill implements BrowserUseSkill {
+export class AllternitOperatorBrowserSkill implements BrowserUseSkill {
   private baseUrl: string;
   private capabilities?: BrowserCapabilities;
 
-  constructor(baseUrl: string = A2R_OPERATOR_URL) {
+  constructor(baseUrl: string = Allternit_OPERATOR_URL) {
     this.baseUrl = baseUrl;
   }
 
   async createSession(options?: SessionOptions): Promise<BrowserAutomationSession> {
-    const session = new A2ROperatorSession(this.baseUrl);
+    const session = new AllternitOperatorSession(this.baseUrl);
     await session.initialize(options);
     return session;
   }
@@ -330,14 +330,14 @@ export class A2ROperatorBrowserSkill implements BrowserUseSkill {
 }
 
 /**
- * A2R Operator Browser Session Factory
+ * Allternit Operator Browser Session Factory
  * Creates sessions using the best available backend
  */
-export class A2ROperatorSessionFactory implements BrowserSessionFactory {
-  private skill: A2ROperatorBrowserSkill;
+export class AllternitOperatorSessionFactory implements BrowserSessionFactory {
+  private skill: AllternitOperatorBrowserSkill;
 
-  constructor(baseUrl: string = A2R_OPERATOR_URL) {
-    this.skill = new A2ROperatorBrowserSkill(baseUrl);
+  constructor(baseUrl: string = Allternit_OPERATOR_URL) {
+    this.skill = new AllternitOperatorBrowserSkill(baseUrl);
   }
 
   async createSession(options?: SessionOptions): Promise<BrowserAutomationSession> {
@@ -371,12 +371,12 @@ export class A2ROperatorSessionFactory implements BrowserSessionFactory {
  * Factory function to create browser skill
  */
 export function createBrowserUseSkill(baseUrl?: string): BrowserUseSkill {
-  return new A2ROperatorBrowserSkill(baseUrl);
+  return new AllternitOperatorBrowserSkill(baseUrl);
 }
 
 /**
  * Factory function to create session factory
  */
 export function createBrowserSessionFactory(baseUrl?: string): BrowserSessionFactory {
-  return new A2ROperatorSessionFactory(baseUrl);
+  return new AllternitOperatorSessionFactory(baseUrl);
 }

@@ -5,7 +5,7 @@ use chrono::Utc;
 
 use crate::core::ids::create_event_id;
 use crate::core::io::{append_json_line, list_jsonl_sorted, read_json_lines};
-use crate::core::types::{A2REvent, LedgerQuery};
+use crate::core::types::{AllternitEvent, LedgerQuery};
 use crate::core::EventSink;
 
 #[derive(Debug, Clone)]
@@ -25,7 +25,7 @@ impl Ledger {
             .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")));
         let ledger_dir = opts
             .ledger_dir
-            .unwrap_or_else(|| PathBuf::from(".a2r/ledger"));
+            .unwrap_or_else(|| PathBuf::from(".allternit/ledger"));
         let base = if ledger_dir.is_absolute() {
             ledger_dir
         } else {
@@ -40,7 +40,7 @@ impl Ledger {
         Self { events_dir }
     }
 
-    pub async fn append(&self, mut event: A2REvent) -> Result<String> {
+    pub async fn append(&self, mut event: AllternitEvent) -> Result<String> {
         if event.event_id.is_empty() {
             event.event_id = create_event_id();
         }
@@ -53,7 +53,7 @@ impl Ledger {
         Ok(event.event_id)
     }
 
-    pub async fn query(&self, q: LedgerQuery) -> Result<Vec<A2REvent>> {
+    pub async fn query(&self, q: LedgerQuery) -> Result<Vec<AllternitEvent>> {
         let mut events = self.read_all_events()?;
         if let Some(scope) = q.scope {
             events = events
@@ -107,7 +107,7 @@ impl Ledger {
         Ok(events)
     }
 
-    pub async fn tail(&self, n: usize) -> Result<Vec<A2REvent>> {
+    pub async fn tail(&self, n: usize) -> Result<Vec<AllternitEvent>> {
         let mut events = self.read_all_events()?;
         if n == 0 {
             return Ok(Vec::new());
@@ -122,10 +122,10 @@ impl Ledger {
         Ok((true, Vec::new()))
     }
 
-    fn read_all_events(&self) -> Result<Vec<A2REvent>> {
+    fn read_all_events(&self) -> Result<Vec<AllternitEvent>> {
         let mut all = Vec::new();
         for file in list_jsonl_sorted(&self.events_dir)? {
-            let mut batch: Vec<A2REvent> = read_json_lines(&file)?;
+            let mut batch: Vec<AllternitEvent> = read_json_lines(&file)?;
             all.append(&mut batch);
         }
         Ok(all)
@@ -137,7 +137,7 @@ impl Ledger {
     }
 }
 
-fn matches_scope(event: &A2REvent, scope: &crate::core::types::EventScope) -> bool {
+fn matches_scope(event: &AllternitEvent, scope: &crate::core::types::EventScope) -> bool {
     let evt_scope = event.scope.as_ref();
     match evt_scope {
         None => false,
@@ -174,7 +174,7 @@ fn matches_scope(event: &A2REvent, scope: &crate::core::types::EventScope) -> bo
 
 #[async_trait::async_trait]
 impl EventSink for Ledger {
-    async fn append(&self, event: A2REvent) -> anyhow::Result<String> {
+    async fn append(&self, event: AllternitEvent) -> anyhow::Result<String> {
         Ledger::append(self, event).await
     }
 }

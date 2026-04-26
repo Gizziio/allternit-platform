@@ -10,7 +10,7 @@
 //! ┌─────────────────────────────────────────────────────────────┐
 //! │                    CgroupManager                            │
 //! ├─────────────────────────────────────────────────────────────┤
-//! │  Path: /sys/fs/cgroup/a2r/vms/{vm_id}                       │
+//! │  Path: /sys/fs/cgroup/allternit/vms/{vm_id}                       │
 //! │                                                               │
 //! │  Controllers:                                                │
 //! │  ├─ cpu.max        (quota/period for CPU limiting)          │
@@ -26,7 +26,7 @@
 //! └─────────────────────────────────────────────────────────────┘
 //! ```
 
-use a2r_driver_interface::{DriverError, ExecutionId, ResourceSpec};
+use allternit_driver_interface::{DriverError, ExecutionId, ResourceSpec};
 use std::path::{Path, PathBuf};
 use tokio::fs;
 use tracing::{debug, info, warn};
@@ -64,7 +64,7 @@ impl CgroupManager {
     /// * `base_path` - Base path to cgroups filesystem (e.g., /sys/fs/cgroup)
     /// * `vm_id` - Execution ID for the VM
     pub fn new(base_path: PathBuf, vm_id: ExecutionId) -> Self {
-        let cgroup_path = base_path.join("a2r").join("vms").join(vm_id.to_string());
+        let cgroup_path = base_path.join("allternit").join("vms").join(vm_id.to_string());
         Self {
             base_path,
             vm_id,
@@ -75,6 +75,11 @@ impl CgroupManager {
     /// Get the full path to the cgroup directory
     pub fn cgroup_path(&self) -> &Path {
         &self.cgroup_path
+    }
+
+    /// Get the base cgroup filesystem path
+    pub fn base_path(&self) -> &Path {
+        &self.base_path
     }
 
     /// Create a new cgroup with resource limits
@@ -119,7 +124,7 @@ impl CgroupManager {
 
     /// Enable CPU, memory, IO, and PID controllers in parent cgroup
     async fn enable_controllers(&self) -> Result<(), DriverError> {
-        // Get the parent cgroup path (a2r/vms)
+        // Get the parent cgroup path (allternit/vms)
         let parent_path = self
             .cgroup_path
             .parent()
@@ -468,7 +473,7 @@ mod tests {
         let manager = CgroupManager::new(base_path.clone(), vm_id);
 
         assert_eq!(manager.base_path, base_path);
-        assert!(manager.cgroup_path.to_string_lossy().contains("a2r/vms"));
+        assert!(manager.cgroup_path.to_string_lossy().contains("allternit/vms"));
     }
 
     #[test]
@@ -478,7 +483,7 @@ mod tests {
         let manager = CgroupManager::new(base_path, vm_id);
 
         let path_str = manager.cgroup_path.to_string_lossy();
-        assert!(path_str.contains("a2r"));
+        assert!(path_str.contains("allternit"));
         assert!(path_str.contains("vms"));
     }
 }

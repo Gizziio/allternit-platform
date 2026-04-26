@@ -13,7 +13,7 @@ import {
   execCommand,
   testSSHConnection,
   addAuthorizedKey,
-  installA2RNode,
+  installAllternitNode,
 } from '../utils/ssh';
 import { logger } from '../utils/logger';
 import { NotFoundError, ValidationError, SSHConnectionError } from '../utils/errors';
@@ -319,9 +319,9 @@ export class VPSService {
   }
 
   /**
-   * Install A2R node on VPS
+   * Install Allternit node on VPS
    */
-  async installA2RNode(
+  async installAllternitNode(
     id: string,
     options: { version?: string; port?: number } = {}
   ): Promise<{ success: boolean; message: string; installPath?: string }> {
@@ -339,7 +339,7 @@ export class VPSService {
     });
 
     try {
-      const result = await installA2RNode(sshConnection.client, {
+      const result = await installAllternitNode(sshConnection.client, {
         version: options.version,
         port: options.port,
       });

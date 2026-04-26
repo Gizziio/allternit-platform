@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-A2R Computer Use Gateway - Conformance Test Runner
+Allternit Computer Use Gateway - Conformance Test Runner
 
 Standalone test runner (no pytest required).
 Tests gateway contract with clear pass/fail output.
@@ -362,7 +362,7 @@ def test_close_session() -> bool:
 
 def main():
     print("\n" + "="*60)
-    print("A2R Computer Use Gateway - Conformance Tests")
+    print("Allternit Computer Use Gateway - Conformance Tests")
     print("="*60 + "\n")
     
     # Check gateway

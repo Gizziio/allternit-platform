@@ -1,8 +1,8 @@
 pub mod mcp_bridge;
 
-use a2rchitech_history::HistoryLedger;
-use a2rchitech_messaging::{EventEnvelope, MessagingSystem};
-use a2rchitech_policy::{PolicyEffect, PolicyEngine, PolicyRequest, SafetyTier};
+use allternit_history::HistoryLedger;
+use allternit_messaging::{EventEnvelope, MessagingSystem};
+use allternit_policy::{PolicyEffect, PolicyEngine, PolicyRequest, SafetyTier};
 use async_trait::async_trait;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -135,7 +135,7 @@ pub struct WriteScope {
 impl Default for WriteScope {
     fn default() -> Self {
         Self {
-            root: "/.a2r/".to_string(),
+            root: "/.allternit/".to_string(),
             allowed_globs: Vec::new(),
         }
     }
@@ -143,14 +143,14 @@ impl Default for WriteScope {
 
 pub fn run_scoped_write_scope(run_id: &str, capsule_run: bool) -> WriteScope {
     let mut globs = vec![
-        format!("/.a2r/artifacts/{run_id}/**"),
-        format!("/.a2r/receipts/{run_id}/**"),
+        format!("/.allternit/artifacts/{run_id}/**"),
+        format!("/.allternit/receipts/{run_id}/**"),
     ];
     if capsule_run {
-        globs.push(format!("/.a2r/capsules/instances/{run_id}/**"));
+        globs.push(format!("/.allternit/capsules/instances/{run_id}/**"));
     }
     WriteScope {
-        root: "/.a2r/".to_string(),
+        root: "/.allternit/".to_string(),
         allowed_globs: globs,
     }
 }
@@ -185,9 +185,9 @@ pub enum ToolGatewayError {
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
     #[error("History error: {0}")]
-    History(#[from] a2rchitech_history::HistoryError),
+    History(#[from] allternit_history::HistoryError),
     #[error("Policy error: {0}")]
-    Policy(#[from] a2rchitech_policy::PolicyError),
+    Policy(#[from] allternit_policy::PolicyError),
     #[error("Tool not found: {0}")]
     ToolNotFound(String),
     #[error("Execution failed: {0}")]
@@ -324,9 +324,9 @@ impl ToolGateway {
                 "write_scope required for tool execution".to_string(),
             )
         })?;
-        if !write_scope.root.starts_with("/.a2r/") {
+        if !write_scope.root.starts_with("/.allternit/") {
             return Err(ToolGatewayError::PermissionDenied(
-                "write_scope root must be under /.a2r/".to_string(),
+                "write_scope root must be under /.allternit/".to_string(),
             ));
         }
         if write_scope.allowed_globs.is_empty() {
@@ -952,14 +952,14 @@ fn render_args(
 }
 
 fn repo_root() -> Result<std::path::PathBuf, ToolGatewayError> {
-    if let Ok(root) = std::env::var("A2R_REPO_ROOT") {
+    if let Ok(root) = std::env::var("Allternit_REPO_ROOT") {
         return Ok(std::path::PathBuf::from(root));
     }
     std::env::current_dir().map_err(ToolGatewayError::Io)
 }
 
 fn load_worker_registry(root: &std::path::Path) -> Result<WorkerRegistry, ToolGatewayError> {
-    let registry_path = if let Ok(path) = std::env::var("A2R_WORKER_REGISTRY_PATH") {
+    let registry_path = if let Ok(path) = std::env::var("Allternit_WORKER_REGISTRY_PATH") {
         std::path::PathBuf::from(path)
     } else {
         root.join("workers").join("worker_registry.json")
@@ -1007,9 +1007,9 @@ fn ensure_worker_fs_policy(
     let mut expanded_roots = Vec::new();
     for root in &worker.fs_policy.allowed_output_roots {
         let expanded = root.replace("{{run_id}}", run_id);
-        if !expanded.starts_with("/.a2r/") {
+        if !expanded.starts_with("/.allternit/") {
             return Err(ToolGatewayError::PermissionDenied(
-                "worker allowed_output_roots must be under /.a2r/".to_string(),
+                "worker allowed_output_roots must be under /.allternit/".to_string(),
             ));
         }
         if !is_path_within_scope(&expanded, write_scope) {
@@ -1022,7 +1022,7 @@ fn ensure_worker_fs_policy(
 
     for glob in &write_scope.allowed_globs {
         let normalized = normalize_scope_path(glob);
-        if normalized.starts_with("/.a2r/receipts/") {
+        if normalized.starts_with("/.allternit/receipts/") {
             continue;
         }
         let allowed = expanded_roots.iter().any(|root| {
@@ -1094,7 +1094,7 @@ fn resolve_worker_cwd(
         return Ok(root.to_path_buf());
     }
     if policy == "run_artifacts_dir" {
-        let dir = root.join(".a2r").join("artifacts").join(run_id);
+        let dir = root.join(".allternit").join("artifacts").join(run_id);
         std::fs::create_dir_all(&dir).map_err(ToolGatewayError::Io)?;
         return Ok(dir);
     }
@@ -1203,17 +1203,17 @@ fn is_path_within_scope(path: &str, write_scope: &WriteScope) -> bool {
 
 fn is_denied_path(path: &str) -> bool {
     let normalized = normalize_scope_path(path);
-    normalized.starts_with("/.a2r/wih/")
-        || normalized.starts_with("/.a2r/graphs/")
-        || normalized.starts_with("/.a2r/spec/")
+    normalized.starts_with("/.allternit/wih/")
+        || normalized.starts_with("/.allternit/graphs/")
+        || normalized.starts_with("/.allternit/spec/")
 }
 
 fn is_other_run_receipts_path(path: &str, run_id: &str) -> bool {
     let normalized = normalize_scope_path(path);
-    if !normalized.starts_with("/.a2r/receipts/") {
+    if !normalized.starts_with("/.allternit/receipts/") {
         return false;
     }
-    let allowed_exact = format!("/.a2r/receipts/{}", run_id);
+    let allowed_exact = format!("/.allternit/receipts/{}", run_id);
     let allowed_prefix = format!("{}/", allowed_exact);
     !(normalized == allowed_exact || normalized.starts_with(&allowed_prefix))
 }
@@ -1269,7 +1269,7 @@ fn write_subprocess_receipt(
         "artifact_paths": []
     });
 
-    let dir = format!("/.a2r/receipts/{}", run_id);
+    let dir = format!("/.allternit/receipts/{}", run_id);
     let root = repo_root()?;
     let local_dir = root.join(dir.trim_start_matches('/'));
     std::fs::create_dir_all(&local_dir).map_err(ToolGatewayError::Io)?;
@@ -1286,7 +1286,7 @@ fn write_subprocess_receipt(
 fn write_receipt(
     request: &ToolExecutionRequest,
     tool_def: &ToolDefinition,
-    decision: &a2rchitech_policy::PolicyDecision,
+    decision: &allternit_policy::PolicyDecision,
     result: &ToolExecutionResult,
     pre_event: &EventEnvelope,
     duration_ms: u64,
@@ -1337,7 +1337,7 @@ fn write_receipt(
         "environment_hash": tool_def_hash
     });
 
-    let dir = format!("/.a2r/receipts/{}", run_id);
+    let dir = format!("/.allternit/receipts/{}", run_id);
     let local_dir = dir.trim_start_matches('/').to_string();
     std::fs::create_dir_all(&local_dir).map_err(ToolGatewayError::Io)?;
     let path = format!("{}/{}.json", dir, receipt_id);
@@ -1353,8 +1353,8 @@ fn write_receipt(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use a2rchitech_messaging::MessagingSystem;
-    use a2rchitech_policy::{PolicyEffect, PolicyEngine, PolicyRule};
+    use allternit_messaging::MessagingSystem;
+    use allternit_policy::{PolicyEffect, PolicyEngine, PolicyRule};
     use sqlx::SqlitePool;
     use std::path::PathBuf;
     use tempfile::NamedTempFile;
@@ -1365,7 +1365,7 @@ mod tests {
         let pool = SqlitePool::connect(&db_url).await.unwrap();
         let temp_path = format!("/tmp/test_tools_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
         let messaging_system = Arc::new(
             MessagingSystem::new_with_storage(history_ledger.clone(), pool.clone())
@@ -1377,9 +1377,9 @@ mod tests {
             messaging_system.clone(),
         ));
 
-        let identity = a2rchitech_policy::Identity {
+        let identity = allternit_policy::Identity {
             id: "test_identity".to_string(),
-            identity_type: a2rchitech_policy::IdentityType::AgentIdentity,
+            identity_type: allternit_policy::IdentityType::AgentIdentity,
             name: "test_agent".to_string(),
             tenant_id: "tenant1".to_string(),
             created_at: 0,
@@ -1408,9 +1408,9 @@ mod tests {
 
     fn repo_root() -> PathBuf {
         let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../..");
-        std::env::set_var("A2R_REPO_ROOT", &root);
+        std::env::set_var("Allternit_REPO_ROOT", &root);
         std::env::set_var(
-            "A2R_WORKER_REGISTRY_PATH",
+            "Allternit_WORKER_REGISTRY_PATH",
             root.join("workers").join("worker_registry.json"),
         );
         root
@@ -1423,7 +1423,7 @@ mod tests {
         let pool = SqlitePool::connect(&db_url).await.unwrap();
         let temp_path = format!("/tmp/test_tools_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
         let messaging_system = Arc::new(
             MessagingSystem::new_with_storage(history_ledger.clone(), pool.clone())
@@ -1496,7 +1496,7 @@ mod tests {
         let pool = SqlitePool::connect(&db_url).await.unwrap();
         let temp_path = format!("/tmp/test_execution_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
         let messaging_system = Arc::new(
             MessagingSystem::new_with_storage(history_ledger.clone(), pool.clone())
@@ -1509,9 +1509,9 @@ mod tests {
         ));
 
         // Register a default identity for testing
-        let identity = a2rchitech_policy::Identity {
+        let identity = allternit_policy::Identity {
             id: Uuid::new_v4().to_string(),
-            identity_type: a2rchitech_policy::IdentityType::AgentIdentity,
+            identity_type: allternit_policy::IdentityType::AgentIdentity,
             name: "test_agent".to_string(),
             tenant_id: "tenant1".to_string(),
             created_at: 0,
@@ -1600,7 +1600,7 @@ mod tests {
         let pool = SqlitePool::connect(&db_url).await.unwrap();
         let temp_path = format!("/tmp/test_idempotency_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
         let messaging_system = Arc::new(
             MessagingSystem::new_with_storage(history_ledger.clone(), pool.clone())
@@ -1671,8 +1671,8 @@ mod tests {
     #[test]
     fn test_write_scope_enforced() {
         let scope = WriteScope {
-            root: "/.a2r/".to_string(),
-            allowed_globs: vec![format!("/.a2r/artifacts/{}/**", "run1")],
+            root: "/.allternit/".to_string(),
+            allowed_globs: vec![format!("/.allternit/artifacts/{}/**", "run1")],
         };
         let access_outside_root = FilesystemAccess::Allowlist(vec!["/tmp/test".to_string()]);
         let err = validate_filesystem_access(&access_outside_root, &scope, "run1").unwrap_err();
@@ -1681,7 +1681,7 @@ mod tests {
             _ => panic!("Expected PermissionDenied for root violation"),
         }
         let access_outside_glob =
-            FilesystemAccess::Allowlist(vec!["/.a2r/artifacts/run2/test.txt".to_string()]);
+            FilesystemAccess::Allowlist(vec!["/.allternit/artifacts/run2/test.txt".to_string()]);
         let err = validate_filesystem_access(&access_outside_glob, &scope, "run1").unwrap_err();
         match err {
             ToolGatewayError::PermissionDenied(_) => {}
@@ -1732,13 +1732,13 @@ mod tests {
             subprocess: None,
         };
 
-        let decision = a2rchitech_policy::PolicyDecision {
+        let decision = allternit_policy::PolicyDecision {
             decision_id: "d1".to_string(),
             request_id: "r1".to_string(),
             identity_id: "id".to_string(),
             resource: "tool:t1".to_string(),
             action: "execute".to_string(),
-            decision: a2rchitech_policy::PolicyEffect::Allow,
+            decision: allternit_policy::PolicyEffect::Allow,
             reason: "ok".to_string(),
             timestamp: 0,
             constraints: None,
@@ -1776,10 +1776,10 @@ mod tests {
         };
 
         let scope = WriteScope {
-            root: "/.a2r/".to_string(),
+            root: "/.allternit/".to_string(),
             allowed_globs: vec![
-                "/.a2r/receipts/run1/**".to_string(),
-                "/.a2r/artifacts/run1/**".to_string(),
+                "/.allternit/receipts/run1/**".to_string(),
+                "/.allternit/artifacts/run1/**".to_string(),
             ],
         };
         write_receipt(
@@ -1787,7 +1787,7 @@ mod tests {
         )
         .unwrap();
 
-        let dir = format!(".a2r/receipts/{}", request.run_id.unwrap());
+        let dir = format!(".allternit/receipts/{}", request.run_id.unwrap());
         let entries: Vec<_> = std::fs::read_dir(&dir)
             .unwrap()
             .filter_map(|e| e.ok())
@@ -2067,7 +2067,7 @@ mod tests {
         let result = tool_gateway.execute_tool(request).await.unwrap();
         assert!(result.exit_code.unwrap_or(1) == 0);
 
-        let receipt_dir = root.join(".a2r").join("receipts").join(&run_id);
+        let receipt_dir = root.join(".allternit").join("receipts").join(&run_id);
         let mut found = None;
         if let Ok(entries) = std::fs::read_dir(&receipt_dir) {
             for entry in entries.flatten() {
@@ -2098,29 +2098,29 @@ mod tests {
     #[test]
     fn test_write_scope_restrictions() {
         let scope = WriteScope {
-            root: "/.a2r/".to_string(),
+            root: "/.allternit/".to_string(),
             allowed_globs: vec![
-                "/.a2r/artifacts/run1/**".to_string(),
-                "/.a2r/receipts/run1/**".to_string(),
+                "/.allternit/artifacts/run1/**".to_string(),
+                "/.allternit/receipts/run1/**".to_string(),
             ],
         };
-        let wih_access = FilesystemAccess::Allowlist(vec!["/.a2r/wih/secret.json".to_string()]);
+        let wih_access = FilesystemAccess::Allowlist(vec!["/.allternit/wih/secret.json".to_string()]);
         let err = validate_filesystem_access(&wih_access, &scope, "run1").unwrap_err();
         match err {
             ToolGatewayError::PermissionDenied(_) => {}
-            _ => panic!("Expected PermissionDenied for /.a2r/wih access"),
+            _ => panic!("Expected PermissionDenied for /.allternit/wih access"),
         }
 
         let graphs_access =
-            FilesystemAccess::Allowlist(vec!["/.a2r/graphs/graph.json".to_string()]);
+            FilesystemAccess::Allowlist(vec!["/.allternit/graphs/graph.json".to_string()]);
         let err = validate_filesystem_access(&graphs_access, &scope, "run1").unwrap_err();
         match err {
             ToolGatewayError::PermissionDenied(_) => {}
-            _ => panic!("Expected PermissionDenied for /.a2r/graphs access"),
+            _ => panic!("Expected PermissionDenied for /.allternit/graphs access"),
         }
 
         let other_receipts =
-            FilesystemAccess::Allowlist(vec!["/.a2r/receipts/run2/receipt.json".to_string()]);
+            FilesystemAccess::Allowlist(vec!["/.allternit/receipts/run2/receipt.json".to_string()]);
         let err = validate_filesystem_access(&other_receipts, &scope, "run1").unwrap_err();
         match err {
             ToolGatewayError::PermissionDenied(_) => {}

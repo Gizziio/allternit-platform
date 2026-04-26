@@ -1,10 +1,10 @@
 # OWNER: T1-A3
 
 [package]
-name = "a2r-environment"
+name = "allternit-environment"
 version = "0.1.0"
 edition = "2021"
-description = "Environment standardization for A2rchitech - language detection, package managers, container runtimes"
+description = "Environment standardization for Allternit - language detection, package managers, container runtimes"
 
 [workspace]
 

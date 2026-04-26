@@ -1,7 +1,7 @@
 {
   "name": "@allternit/form-surfaces",
   "version": "1.0.0",
-  "description": "Form surfaces logic for A2Rchitech",
+  "description": "Form surfaces logic for Allternit",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",

@@ -1,6 +1,6 @@
 //! Skill Registry CLI - OC-006
 //!
-//! CLI tool for managing the skill metadata bridge between OpenClaw and A2R.
+//! CLI tool for managing the skill metadata bridge between OpenClaw and Allternit.
 //!
 //! ## Usage
 //!
@@ -15,14 +15,14 @@
 //! skill-registry check --vendor-dir 3-adapters/vendor/openclaw/skills
 //! ```
 
-use a2r_openclaw_host::skills::SkillRegistry;
+use allternit_openclaw_host::skills::SkillRegistry;
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(name = "skill-registry")]
-#[command(about = "OpenClaw/A2R Skill Metadata Bridge")]
+#[command(about = "OpenClaw/Allternit Skill Metadata Bridge")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -153,7 +153,7 @@ async fn main() -> Result<()> {
                 .filter(|s| {
                     matches!(
                         s.availability,
-                        a2r_openclaw_host::skills::registry::SkillAvailability::Available
+                        allternit_openclaw_host::skills::registry::SkillAvailability::Available
                     )
                 })
                 .collect();
@@ -162,7 +162,7 @@ async fn main() -> Result<()> {
                 .filter(|s| {
                     matches!(
                         s.availability,
-                        a2r_openclaw_host::skills::registry::SkillAvailability::Partial
+                        allternit_openclaw_host::skills::registry::SkillAvailability::Partial
                     )
                 })
                 .collect();
@@ -171,7 +171,7 @@ async fn main() -> Result<()> {
                 .filter(|s| {
                     matches!(
                         s.availability,
-                        a2r_openclaw_host::skills::registry::SkillAvailability::Unavailable
+                        allternit_openclaw_host::skills::registry::SkillAvailability::Unavailable
                     )
                 })
                 .collect();

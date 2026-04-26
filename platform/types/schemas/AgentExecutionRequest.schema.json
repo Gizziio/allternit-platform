@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2rchitech.local/spec/contracts/AgentExecutionRequest.schema.json",
+  "$id": "https://allternit.local/spec/contracts/AgentExecutionRequest.schema.json",
   "title": "Agent Execution Request",
   "type": "object",
   "additionalProperties": false,
@@ -27,7 +27,7 @@
       "additionalProperties": false,
       "required": ["root", "allowed_globs"],
       "properties": {
-        "root": { "type": "string", "const": "/.a2r/" },
+        "root": { "type": "string", "const": "/.allternit/" },
         "allowed_globs": {
           "type": "array",
           "items": { "type": "string" },

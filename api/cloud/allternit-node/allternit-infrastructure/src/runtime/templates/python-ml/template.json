@@ -3,7 +3,7 @@
   "name": "Python ML & Data Science",
   "description": "Complete ML environment with Python 3.12, JupyterLab, PyTorch, TensorFlow, scikit-learn, pandas, and GPU support (CUDA).",
   "version": "1.0.0",
-  "author": "A2R",
+  "author": "Allternit",
   "type": "devcontainer",
   "category": "ml",
   "language": "python",
@@ -34,7 +34,7 @@
       "name": "JUPYTER_TOKEN",
       "description": "Jupyter access token",
       "type": "secret",
-      "default": "a2r-ml-dev"
+      "default": "allternit-ml-dev"
     },
     {
       "name": "INCLUDE_TENSORFLOW",

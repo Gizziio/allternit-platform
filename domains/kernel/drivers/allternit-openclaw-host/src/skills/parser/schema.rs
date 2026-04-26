@@ -38,7 +38,7 @@ pub struct SkillRequirements {
     pub all_bins: Option<Vec<String>>,
 }
 
-/// Native skill manifest for A2R skills
+/// Native skill manifest for Allternit skills
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NativeSkillManifest {
     pub id: String,

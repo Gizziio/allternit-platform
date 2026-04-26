@@ -1,8 +1,8 @@
 [package]
-name = "a2r-observability-dashboard"
+name = "allternit-observability-dashboard"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Observability Dashboard - Trace visualization and telemetry"
+description = "Allternit Observability Dashboard - Trace visualization and telemetry"
 
 [dependencies]
 serde = { workspace = true }
@@ -15,9 +15,9 @@ tracing = { workspace = true }
 axum = { workspace = true }
 tower-http = { workspace = true }
 
-a2r-dag-wih-integration = { path = "../dag-wih-integration" }
-a2r-evaluation-harness = { path = "../evaluation-harness" }
-a2rchitech-messaging = { workspace = true }
+allternit-dag-wih-integration = { path = "../dag-wih-integration" }
+allternit-evaluation-harness = { path = "../evaluation-harness" }
+allternit-messaging = { workspace = true }
 
 [dev-dependencies]
 tokio-test = "0.4"

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2rchitech.local/spec/contracts/WorkerRegistry.schema.json",
-  "title": "A2rchitech Worker Registry",
+  "$id": "https://allternit.local/spec/contracts/WorkerRegistry.schema.json",
+  "title": "Allternit Worker Registry",
   "type": "object",
   "additionalProperties": false,
   "required": ["version", "workers"],
@@ -9,7 +9,7 @@
     "version": { "type": "string" },
     "workers": {
       "type": "array",
-      "items": { "$ref": "https://a2rchitech.local/spec/contracts/WorkerDefinition.schema.json" }
+      "items": { "$ref": "https://allternit.local/spec/contracts/WorkerDefinition.schema.json" }
     }
   }
 }

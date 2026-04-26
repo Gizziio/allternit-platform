@@ -29,7 +29,7 @@ import {
   createLeaseManager,
   createDagExecutor,
   createContextPackBuilder 
-} from '@a2r/dak-runner';
+} from '@allternit/dak-runner';
 
 // 1. Create Rails HTTP adapter
 const railsAdapter = createRailsHttpAdapter({
@@ -72,7 +72,7 @@ await executor.execute();
 Full REST API client for Rails control plane.
 
 ```typescript
-import { createRailsHttpAdapter } from '@a2r/dak-runner';
+import { createRailsHttpAdapter } from '@allternit/dak-runner';
 
 const adapter = createRailsHttpAdapter({
   baseURL: 'http://rails-api:3001',
@@ -184,10 +184,10 @@ await adapter.sealContextPack({
 Combines CLI and HTTP adapters with automatic fallback.
 
 ```typescript
-import { createRailsUnifiedAdapter } from '@a2r/dak-runner';
+import { createRailsUnifiedAdapter } from '@allternit/dak-runner';
 
 const adapter = createRailsUnifiedAdapter({
-  cliPath: 'a2r',
+  cliPath: 'allternit',
   projectPath: '.',
   http: { baseURL: 'http://localhost:3001' },
   preferHttp: true,
@@ -207,7 +207,7 @@ const result = await adapter.gateCheck(request);
 Automatic lease renewal and lifecycle management.
 
 ```typescript
-import { createLeaseManager } from '@a2r/dak-runner';
+import { createLeaseManager } from '@allternit/dak-runner';
 
 const leaseManager = createLeaseManager({
   railsAdapter,
@@ -269,7 +269,7 @@ await leaseManager.shutdown();
 Executes DAGs with topological ordering and lease management.
 
 ```typescript
-import { createDagExecutor } from '@a2r/dak-runner';
+import { createDagExecutor } from '@allternit/dak-runner';
 
 const executor = createDagExecutor({
   dag,
@@ -338,7 +338,7 @@ console.log(result);
 Builds and seals deterministic context packs.
 
 ```typescript
-import { createContextPackBuilder } from '@a2r/dak-runner';
+import { createContextPackBuilder } from '@allternit/dak-runner';
 
 const builder = createContextPackBuilder({
   basePath: '.',
@@ -406,7 +406,7 @@ const receipts = await builder.collectDependencyReceipts(
 Manages hook lifecycle with lease validation.
 
 ```typescript
-import { createHookRuntime } from '@a2r/dak-runner';
+import { createHookRuntime } from '@allternit/dak-runner';
 
 const runtime = createHookRuntime(
   {
@@ -463,12 +463,12 @@ runtime.on('PostToolUseFailure', (event) => {
 Generates and injects policy markers.
 
 ```typescript
-import { PolicyInjector } from '@a2r/dak-runner';
+import { PolicyInjector } from '@allternit/dak-runner';
 
 const injector = new PolicyInjector({
   bundle_id: 'pb_001',
   injection_points: ['session_start', 'dag_load', 'node_entry'],
-  marker_output_dir: '.a2r/markers',
+  marker_output_dir: '.allternit/markers',
 });
 
 await injector.loadBundle(policyBundle);
@@ -488,10 +488,10 @@ await injector.injectForNode('dag_001', 'node_001', 'sess_001', 'agent_001');
 Content-addressed storage for deterministic replay.
 
 ```typescript
-import { SnapshotStore, ReplayEngine, withSnapshots } from '@a2r/dak-runner';
+import { SnapshotStore, ReplayEngine, withSnapshots } from '@allternit/dak-runner';
 
 const store = new SnapshotStore({
-  storage_dir: '.a2r/snapshots',
+  storage_dir: '.allternit/snapshots',
   max_snapshots: 10000,
   ttl_seconds: 7 * 24 * 60 * 60,
 });
@@ -521,7 +521,7 @@ const searchWithCache = withSnapshots('search', liveSearch, store);
 ### Circuit Breaker
 
 ```typescript
-import { createCircuitBreaker } from '@a2r/dak-runner';
+import { createCircuitBreaker } from '@allternit/dak-runner';
 
 const breaker = createCircuitBreaker('rails_api', 'strict');
 
@@ -533,7 +533,7 @@ const result = await breaker.execute(async () => {
 ### Retry Logic
 
 ```typescript
-import { withRetry, RetryPresets } from '@a2r/dak-runner';
+import { withRetry, RetryPresets } from '@allternit/dak-runner';
 
 const result = await withRetry(
   async () => await fetchData(),
@@ -550,7 +550,7 @@ const result = await withRetry(
 ### Metrics
 
 ```typescript
-import { globalMetrics, MetricsCollector } from '@a2r/dak-runner';
+import { globalMetrics, MetricsCollector } from '@allternit/dak-runner';
 
 // Count events
 globalMetrics.increment('dag_executions', 1, { status: 'success' });
@@ -627,7 +627,7 @@ import type {
   CircuitBreakerConfig,
   RetryConfig,
   MetricValue,
-} from '@a2r/dak-runner';
+} from '@allternit/dak-runner';
 ```
 
 ---

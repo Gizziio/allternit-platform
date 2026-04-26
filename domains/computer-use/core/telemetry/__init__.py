@@ -1,5 +1,5 @@
 """
-A2R Computer Use — Telemetry Normalization
+Allternit Computer Use — Telemetry Normalization
 Wraps the existing telemetry.py from the operator.
 Provides normalized event emission across all adapter families.
 """

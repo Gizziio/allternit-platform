@@ -125,7 +125,7 @@ The Deterministic Agent Kernel (DAK) Runner provides deterministic, auditable ex
 #### PolicyInjector
 - Signed marker generation
 - Multi-point injection (session, DAG, node, tool)
-- Marker output to `.a2r/markers/`
+- Marker output to `.allternit/markers/`
 - Policy bundle validation
 
 ### 7. Tool Snapshots (✅ Complete)
@@ -295,7 +295,7 @@ DAK_LEASE_RENEWAL_INTERVAL=60000
 DAK_LEASE_EXTENSION_SECONDS=300
 
 # Shell UI
-VITE_A2R_GATEWAY_URL=http://localhost:8013
+VITE_Allternit_GATEWAY_URL=http://localhost:8013
 ```
 
 ### Service Dependencies

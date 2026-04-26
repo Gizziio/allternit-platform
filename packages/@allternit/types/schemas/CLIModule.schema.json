@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://allternit.local/spec/contracts/CLIModule.schema.json",
   "title": "CLI Module Contract",
-  "description": "Schema for CLI module definitions in the A2R system",
+  "description": "Schema for CLI module definitions in the Allternit system",
   "type": "object",
   "properties": {
     "version": {

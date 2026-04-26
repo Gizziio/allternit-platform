@@ -1,9 +1,9 @@
 [package]
-name = "a2r-driver-interface"
+name = "allternit-driver-interface"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "A2R Execution Driver Interface - Core abstraction for execution substrates"
+description = "Allternit Execution Driver Interface - Core abstraction for execution substrates"
 
 [dependencies]
 async-trait = { workspace = true }

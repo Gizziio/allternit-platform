@@ -19,7 +19,7 @@ use std::cmp::Ordering;
 pub enum RunMode {
     /// Local VM execution (Apple VF/Firecracker)
     Local,
-    /// Remote VPS execution (a2r-node)
+    /// Remote VPS execution (allternit-node)
     Remote,
     /// Cloud-managed execution (Kubernetes, etc.)
     Cloud,

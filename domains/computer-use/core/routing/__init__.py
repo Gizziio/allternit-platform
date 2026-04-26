@@ -1,5 +1,5 @@
 """
-A2R Computer Use — Deterministic Router
+Allternit Computer Use — Deterministic Router
 Routes tasks by: mode → family → adapter (G5 routing guarantee).
 No direct UI-to-adapter paths. All routing decisions are logged.
 
@@ -181,14 +181,14 @@ ADAPTER_MATRIX: Dict[Tuple[str, str, bool], dict] = {
 
     # ── retrieval × crawl (primary use case for retrieval family) ──
     ("crawl", "retrieval", True): {
-        "primary": "retrieval.playwright-crawler",
-        "fallbacks": [],
-        "reason": "Retrieval crawl → Playwright-based systematic crawler",
+        "primary": "browser.retrieval",
+        "fallbacks": ["retrieval.playwright-crawler"],
+        "reason": "Retrieval crawl → browser.retrieval adapter (multi-action crawl)",
     },
     ("crawl", "retrieval", False): {
-        "primary": "retrieval.playwright-crawler",
-        "fallbacks": [],
-        "reason": "Retrieval crawl → Playwright-based systematic crawler",
+        "primary": "browser.retrieval",
+        "fallbacks": ["retrieval.playwright-crawler"],
+        "reason": "Retrieval crawl → browser.retrieval adapter (multi-action crawl)",
     },
 
     # ── retrieval × execute (single-page extraction) ──

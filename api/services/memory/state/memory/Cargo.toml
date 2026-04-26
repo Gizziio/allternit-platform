@@ -2,7 +2,7 @@
 name = "allternit-memory"
 version = "0.1.0"
 edition = "2021"
-description = "A2rchitech tiered memory system with consolidation and decay"
+description = "Allternitchitech tiered memory system with consolidation and decay"
 
 [dependencies]
 axum = { workspace = true }

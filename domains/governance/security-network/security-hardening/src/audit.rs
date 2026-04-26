@@ -160,7 +160,7 @@ impl Default for AuditConfig {
             max_in_memory_events: 10000,
             log_to_stdout: true,
             log_to_file: false,
-            log_file_path: "/var/log/a2r/security_audit.log".to_string(),
+            log_file_path: "/var/log/allternit/security_audit.log".to_string(),
             min_severity: Severity::Info,
         }
     }

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://allternit.local/spec/contracts/ToolDefinition.schema.json",
-  "title": "A2rchitech Tool Definition",
+  "title": "Allternit Tool Definition",
   "type": "object",
   "additionalProperties": false,
   "required": [

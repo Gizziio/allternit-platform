@@ -1,10 +1,10 @@
 /**
- * A2R Kernel Adapter
+ * Allternit Kernel Adapter
  * 
  * The ONLY component authorized to emit canonical execution events.
  * All prompt execution, tool calls, and session state changes flow through here.
  * 
- * This adapter bridges the gateway core to the actual A2R kernel runtime.
+ * This adapter bridges the gateway core to the actual Allternit kernel runtime.
  * For now, it simulates kernel behavior with deterministic event emission.
  * 
  * @module @allternit/gateway-kernel-adapter
@@ -141,17 +141,9 @@ export class KernelAdapter extends EventEmitter {
         created_at: now,
       });
 
-      // Stub: call actual kernel and stream real deltas pending kernel integration
-      // @placeholder APPROVED - Kernel streaming pending
-      // @ticket GAP-53
-      // @fallback Simulated deterministic streaming
-      await this._simulateStreaming({
-        message_id,
-        part_id,
-        directory: directory || '*',
-        text,
-        run_id, // Pass run_id for source tracking
-      });
+      throw new Error(
+        'Kernel adapter is not wired to a real backend. Refusing to emit simulated responses.',
+      );
 
       // Emit PART_UPDATED (final state)
       this._publish('part.updated', {
@@ -197,16 +189,8 @@ export class KernelAdapter extends EventEmitter {
   }
 
   /**
-   * Simulate streaming response (placeholder for real kernel integration)
-   *
-   * In production, this would:
-   * 1. Call kernel.execute() with callback
-   * 2. Kernel streams chunks via callback
-   * 3. For each chunk, emit PART_DELTA with source=kernel
-   *
-   * KERNEL-ONLY DELTA ENFORCEMENT:
-   * All PART_DELTA events MUST originate from this method (kernel authority).
-   * The source field is used for internal verification only.
+   * Deprecated placeholder retained only for compatibility with older imports.
+   * Real prompt execution must be backed by an actual kernel stream.
    */
   private async _simulateStreaming(params: {
     message_id: string;
@@ -215,26 +199,10 @@ export class KernelAdapter extends EventEmitter {
     text: string;
     run_id: string;
   }): Promise<void> {
-    const { message_id, part_id, directory, text, run_id } = params;
-
-    // Split into chunks for simulation
-    const chunks = text.split(' ');
-
-    for (let i = 0; i < chunks.length; i++) {
-      // Simulate network delay (50ms per chunk)
-      await new Promise(resolve => setTimeout(resolve, 50));
-
-      // Emit PART_DELTA with source=kernel (KERNEL-ONLY DELTA ENFORCEMENT)
-      // This is the ONLY place PART_DELTA should be emitted
-      this._publish('part.delta', {
-        directory,
-        part_id,
-        message_id,
-        delta: (i > 0 ? ' ' : '') + chunks[i],
-        index: i,
-        timestamp: new Date().toISOString(),
-      } as any);
-    }
+    void params;
+    throw new Error(
+      'Kernel adapter mock streaming has been disabled. Connect a real kernel backend instead.',
+    );
   }
 
   // =============================================================================

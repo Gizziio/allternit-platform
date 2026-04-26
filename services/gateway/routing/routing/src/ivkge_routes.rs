@@ -6,7 +6,7 @@
 //! - User corrections
 //! - Ambiguity resolution
 
-use a2r_ivkge_advanced::VisualExtractionResult;
+use allternit_ivkge_advanced::VisualExtractionResult;
 use axum::{
     extract::{Path, State},
     http::StatusCode,

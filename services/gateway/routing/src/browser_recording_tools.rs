@@ -5,8 +5,8 @@
 //! with the tool gateway - similar to gui_tools.rs
 
 use crate::kernel::tools_gateway::{ToolGateway, ToolDefinition, ToolType};
-use a2rchitech_policy::SafetyTier;
-use a2rchitech_tools_gateway::{NetworkAccess, FilesystemAccess, ResourceLimits};
+use allternit_policy::SafetyTier;
+use allternit_tools_gateway::{NetworkAccess, FilesystemAccess, ResourceLimits};
 
 /// Register all browser recording tools with the tool gateway
 pub async fn register_browser_recording_tools(gateway: &ToolGateway) -> anyhow::Result<()> {

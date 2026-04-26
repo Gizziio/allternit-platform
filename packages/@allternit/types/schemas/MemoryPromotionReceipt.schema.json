@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://allternit.local/spec/contracts/MemoryPromotionReceipt.schema.json",
   "title": "Memory Promotion Receipt",
-  "description": "Schema for memory promotion receipts in the A2R system",
+  "description": "Schema for memory promotion receipts in the Allternit system",
   "type": "object",
   "properties": {
     "receipt_version": {

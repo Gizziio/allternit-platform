@@ -1,6 +1,6 @@
 //! Multimodal Streaming Execution Module
 //!
-//! WebRTC-based audio and video streaming for a2rchitech agents.
+//! WebRTC-based audio and video streaming for allternit agents.
 //!
 //! ## Architecture
 //!

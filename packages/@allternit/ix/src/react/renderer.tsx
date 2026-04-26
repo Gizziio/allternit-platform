@@ -1,7 +1,7 @@
 /**
- * React Renderer for A2R-IX
+ * React Renderer for Allternit-IX
  * 
- * Renders A2R-IX UI IR to React components.
+ * Renders Allternit-IX UI IR to React components.
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -313,7 +313,7 @@ export function createReactRenderer(config: ReactRendererConfig): ReactRenderer 
 
     return (
       <StoreContext.Provider value={store}>
-        <div className="a2r-ix-root" data-version={root.version}>
+        <div className="allternit-ix-root" data-version={root.version}>
           {root.components.map((component) => (
             <UIComponentRenderer key={component.id} component={component} />
           ))}

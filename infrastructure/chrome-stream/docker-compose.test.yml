@@ -1,4 +1,4 @@
-# A2R Chrome Stream - Local Test Configuration
+# Allternit Chrome Stream - Local Test Configuration
 # Use this for local development and testing
 
 version: '3.8'
@@ -8,17 +8,17 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: a2r-chrome-stream-test
+    container_name: allternit-chrome-stream-test
     ports:
       - "8080:8080"  # WebRTC signaling
       - "8081:8081"  # Sidecar control API
     environment:
-      - A2R_SESSION_ID=test-session-001
-      - A2R_TENANT_ID=test-tenant
-      - A2R_RESOLUTION=1920x1080
-      - A2R_EXTENSION_MODE=power
-      - A2R_DISABLE_BACKGROUND_THROTTLING=false
-      - A2R_SKIP_NETWORK_ISOLATION=true  # Skip iptables for local testing
+      - Allternit_SESSION_ID=test-session-001
+      - Allternit_TENANT_ID=test-tenant
+      - Allternit_RESOLUTION=1920x1080
+      - Allternit_EXTENSION_MODE=power
+      - Allternit_DISABLE_BACKGROUND_THROTTLING=false
+      - Allternit_SKIP_NETWORK_ISOLATION=true  # Skip iptables for local testing
       - SELKIES_ENCODER=x264enc
     volumes:
       - chrome-profile:/data/chrome-profile
@@ -40,10 +40,10 @@ services:
   # Optional: coturn for WebRTC TURN testing
   coturn:
     image: coturn/coturn:latest
-    container_name: a2r-coturn-test
+    container_name: allternit-coturn-test
     network_mode: host
     environment:
-      - TURN_REALM=a2r.io
+      - TURN_REALM=allternit.io
       - TURN_SECRET=test-secret-change-in-production
       - TLS_CERT=/etc/turnserver/cert.pem
       - TLS_PKEY=/etc/turnserver/pkey.pem

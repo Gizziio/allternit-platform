@@ -3,7 +3,7 @@
 //! Factory for creating VerificationProvider instances based on configuration.
 
 use crate::verification::providers::{FileBasedProvider, GrpcProvider};
-use crate::verification::types::{GrpcConfig, ProviderError, ProviderType};
+use crate::verification::types::{GrpcConfig, ProviderError};
 use crate::verification::VerificationProvider;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -26,13 +26,13 @@ impl ProviderFactory {
     /// # Examples
     ///
     /// ```rust,no_run
-    /// use a2r_agent_system_rails::verification::{
+    /// use allternit_agent_system_rails::verification::{
     ///     ProviderFactory, ProviderConfig, ProviderType
     /// };
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// // Create a file-based provider
-    /// let config = ProviderConfig::file_based(".a2r/evidence", 30);
+    /// let config = ProviderConfig::file_based(".allternit/evidence", 30);
     /// let provider = ProviderFactory::create(ProviderType::FileBased, &config)?;
     /// # Ok(())
     /// # }
@@ -98,31 +98,31 @@ impl ProviderFactory {
     /// Create a provider from environment configuration
     ///
     /// Checks environment variables:
-    /// - `A2R_VERIFICATION_PROVIDER`: "file" or "grpc"
-    /// - `A2R_VERIFICATION_EVIDENCES_DIR`: Directory for file-based provider
-    /// - `A2R_VERIFICATION_GRPC_ENDPOINT`: Endpoint for gRPC provider
-    /// - `A2R_VERIFICATION_TIMEOUT`: Timeout in seconds (default: 30)
+    /// - `Allternit_VERIFICATION_PROVIDER`: "file" or "grpc"
+    /// - `Allternit_VERIFICATION_EVIDENCES_DIR`: Directory for file-based provider
+    /// - `Allternit_VERIFICATION_GRPC_ENDPOINT`: Endpoint for gRPC provider
+    /// - `Allternit_VERIFICATION_TIMEOUT`: Timeout in seconds (default: 30)
     pub fn from_env() -> Result<SharedProvider, ProviderError> {
         use std::env;
 
-        let provider_type = env::var("A2R_VERIFICATION_PROVIDER")
+        let provider_type = env::var("Allternit_VERIFICATION_PROVIDER")
             .unwrap_or_else(|_| "file".to_string())
             .to_lowercase();
 
-        let timeout_secs = env::var("A2R_VERIFICATION_TIMEOUT")
+        let timeout_secs = env::var("Allternit_VERIFICATION_TIMEOUT")
             .ok()
             .and_then(|s| s.parse().ok())
             .unwrap_or(30);
 
         match provider_type.as_str() {
             "grpc" => {
-                let endpoint = env::var("A2R_VERIFICATION_GRPC_ENDPOINT")
+                let endpoint = env::var("Allternit_VERIFICATION_GRPC_ENDPOINT")
                     .unwrap_or_else(|_| "http://localhost:50051".to_string());
                 Self::create_grpc(endpoint, timeout_secs)
             }
             "file" | "file_based" | "file-based" => {
-                let evidences_dir = env::var("A2R_VERIFICATION_EVIDENCES_DIR")
-                    .unwrap_or_else(|_| ".a2r/evidence".to_string());
+                let evidences_dir = env::var("Allternit_VERIFICATION_EVIDENCES_DIR")
+                    .unwrap_or_else(|_| ".allternit/evidence".to_string());
                 let workspace_root = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
                 Self::create_file_based(evidences_dir, workspace_root, timeout_secs)
             }
@@ -159,24 +159,24 @@ impl AsyncProviderFactory {
     pub async fn from_env() -> Result<SharedProvider, ProviderError> {
         use std::env;
 
-        let provider_type = env::var("A2R_VERIFICATION_PROVIDER")
+        let provider_type = env::var("Allternit_VERIFICATION_PROVIDER")
             .unwrap_or_else(|_| "file".to_string())
             .to_lowercase();
 
-        let timeout_secs = env::var("A2R_VERIFICATION_TIMEOUT")
+        let timeout_secs = env::var("Allternit_VERIFICATION_TIMEOUT")
             .ok()
             .and_then(|s| s.parse().ok())
             .unwrap_or(30);
 
         match provider_type.as_str() {
             "grpc" => {
-                let endpoint = env::var("A2R_VERIFICATION_GRPC_ENDPOINT")
+                let endpoint = env::var("Allternit_VERIFICATION_GRPC_ENDPOINT")
                     .unwrap_or_else(|_| "http://localhost:50051".to_string());
                 Self::create_grpc_connected(endpoint, timeout_secs).await
             }
             "file" | "file_based" | "file-based" => {
-                let evidences_dir = env::var("A2R_VERIFICATION_EVIDENCES_DIR")
-                    .unwrap_or_else(|_| ".a2r/evidence".to_string());
+                let evidences_dir = env::var("Allternit_VERIFICATION_EVIDENCES_DIR")
+                    .unwrap_or_else(|_| ".allternit/evidence".to_string());
                 let workspace_root = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
                 ProviderFactory::create_file_based(evidences_dir, workspace_root, timeout_secs)
             }
@@ -221,7 +221,7 @@ mod tests {
     fn test_create_file_based() {
         let temp_dir = TempDir::new().unwrap();
         let provider = ProviderFactory::create_file_based(
-            ".a2r/evidence",
+            ".allternit/evidence",
             temp_dir.path(),
             30,
         );
@@ -241,7 +241,7 @@ mod tests {
     #[test]
     fn test_create_file_based_with_config() {
         let config = crate::verification::types::FileBasedConfig {
-            evidences_dir: std::path::PathBuf::from(".a2r/evidence"),
+            evidences_dir: std::path::PathBuf::from(".allternit/evidence"),
             timeout_secs: 30,
             poll_interval_ms: 100,
         };
@@ -254,7 +254,7 @@ mod tests {
     fn test_shared_provider_factory() {
         let temp_dir = TempDir::new().unwrap();
         let provider = SharedProviderFactory::create_file_based(
-            ".a2r/evidence",
+            ".allternit/evidence",
             temp_dir.path(),
             30,
         );

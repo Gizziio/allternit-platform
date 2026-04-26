@@ -1,18 +1,18 @@
 [package]
-name = "a2r-cowork-scheduler"
+name = "allternit-cowork-scheduler"
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
-description = "A2R Scheduler - Cron-based job scheduling using tokio-cron-scheduler"
+description = "Allternit Scheduler - Cron-based job scheduling using tokio-cron-scheduler"
 
 [[bin]]
-name = "a2r-cowork-scheduler"
+name = "allternit-cowork-scheduler"
 path = "src/main.rs"
 
 [lib]
-name = "a2r_cowork_scheduler"
+name = "allternit_cowork_scheduler"
 path = "src/lib.rs"
 
 [dependencies]

@@ -1,6 +1,6 @@
 //! Test Control Plane Server
 //!
-//! Minimal WebSocket server for testing the A2R Node.
+//! Minimal WebSocket server for testing the Allternit Node.
 //! Run this alongside the node to verify connectivity.
 //!
 //! Usage:
@@ -23,7 +23,7 @@ use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
 use tracing::{info, warn, debug};
 
-use a2r_protocol::{
+use allternit_protocol::{
     Message, MessagePayload, NodeConfig, NodeCapabilities,
     NodeStatus, ResourceUsage, JobSpec, JobResult,
 };
@@ -31,7 +31,7 @@ use a2r_protocol::{
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
-        .with_env_filter("info,a2r_node=debug")
+        .with_env_filter("info,allternit_node=debug")
         .init();
 
     let port = std::env::var("PORT")
@@ -117,16 +117,16 @@ pub async fn run_test_server(port: u16) -> anyhow::Result<()> {
                     job: JobSpec {
                         id: format!("test-job-{}", uuid::Uuid::new_v4()),
                         name: "Test Job".to_string(),
-                        wih: a2r_protocol::WIHDefinition {
+                        wih: allternit_protocol::WIHDefinition {
                             handler: "shell".to_string(),
                             version: "1.0".to_string(),
-                            task: a2r_protocol::TaskDefinition::Shell {
+                            task: allternit_protocol::TaskDefinition::Shell {
                                 command: "echo 'Hello from test server'".to_string(),
                                 working_dir: None,
                             },
                             tools: vec![],
                         },
-                        resources: a2r_protocol::ResourceRequirements::default(),
+                        resources: allternit_protocol::ResourceRequirements::default(),
                         env: Default::default(),
                         priority: 0,
                         timeout_secs: 60,

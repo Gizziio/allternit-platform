@@ -1,11 +1,11 @@
-//! # A2R SDK Policy
+//! # Allternit SDK Policy
 //!
-//! Policy engine interface and types for the A2R SDK.
+//! Policy engine interface and types for the Allternit SDK.
 //!
 //! ## Overview
 //!
 //! This crate provides the policy engine abstraction and types for
-//! security policy evaluation within the A2R platform. It defines
+//! security policy evaluation within the Allternit platform. It defines
 //! the interface for checking permissions, evaluating policies,
 //! and enforcing security constraints.
 //!
@@ -196,7 +196,7 @@ impl Default for PolicyEngine {
 ///     action: "execute".to_string(),
 ///     context: serde_json::json!({
 ///         "ip_address": "192.168.1.1",
-///         "user_agent": "A2R Client/1.0"
+///         "user_agent": "Allternit Client/1.0"
 ///     }),
 ///     requested_tier: SafetyTier::T3,
 /// };

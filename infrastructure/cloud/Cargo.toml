@@ -1,8 +1,8 @@
 [package]
-name = "a2r-cloud-core"
+name = "allternit-cloud-core"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Cloud Core - Provider traits, types, and registry"
+description = "Allternit Cloud Core - Provider traits, types, and registry"
 
 [dependencies]
 serde = { workspace = true }

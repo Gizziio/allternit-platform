@@ -45,7 +45,7 @@ mod context_manager_tests {
         let context_manager = ContextManager::new(128000);
 
         let test_content = "Contact John Doe at john.doe@example.com or call 555-123-4567";
-        let redactions = vec![a2rchitech_kernel_contracts::Redaction {
+        let redactions = vec![allternit_kernel_contracts::Redaction {
             redaction_type: "PII".to_string(),
             target: "email".to_string(),
             reason: "Privacy protection".to_string(),
@@ -73,15 +73,15 @@ mod contract_verifier_tests {
         let contract_verifier = ContractVerifier::new();
 
         // Create a valid context bundle
-        let bundle = a2rchitech_kernel_contracts::ContextBundle {
+        let bundle = allternit_kernel_contracts::ContextBundle {
             bundle_hash: format!("test_{}", uuid::Uuid::new_v4()),
-            inputs: a2rchitech_kernel_contracts::ContextInputs {
+            inputs: allternit_kernel_contracts::ContextInputs {
                 user_inputs: serde_json::json!({ "intent": "test intent" }),
                 system_inputs: serde_json::json!({ "session_id": "session-123" }),
                 previous_outputs: vec![],
             },
             memory_refs: vec![],
-            budgets: a2rchitech_kernel_contracts::ContextBudgets {
+            budgets: allternit_kernel_contracts::ContextBudgets {
                 max_tokens: Some(1000),
                 max_execution_time_ms: Some(5000),
                 max_tool_calls: Some(10),
@@ -102,15 +102,15 @@ mod contract_verifier_tests {
         let contract_verifier = ContractVerifier::new();
 
         // Create an invalid context bundle (empty hash)
-        let bundle = a2rchitech_kernel_contracts::ContextBundle {
+        let bundle = allternit_kernel_contracts::ContextBundle {
             bundle_hash: "".to_string(), // Invalid - empty hash
-            inputs: a2rchitech_kernel_contracts::ContextInputs {
+            inputs: allternit_kernel_contracts::ContextInputs {
                 user_inputs: serde_json::json!({ "intent": "test intent" }),
                 system_inputs: serde_json::json!({ "session_id": "session-123" }),
                 previous_outputs: vec![],
             },
             memory_refs: vec![],
-            budgets: a2rchitech_kernel_contracts::ContextBudgets {
+            budgets: allternit_kernel_contracts::ContextBudgets {
                 max_tokens: Some(1000),
                 max_execution_time_ms: Some(5000),
                 max_tool_calls: Some(10),
@@ -132,7 +132,7 @@ mod contract_verifier_tests {
         let contract_verifier = ContractVerifier::new();
 
         // Create a valid event envelope
-        let envelope = a2rchitech_kernel_contracts::EventEnvelope {
+        let envelope = allternit_kernel_contracts::EventEnvelope {
             event_id: uuid::Uuid::new_v4().to_string(),
             event_type: "test_event".to_string(),
             session_id: "session-123".to_string(),
@@ -155,7 +155,7 @@ mod contract_verifier_tests {
         let contract_verifier = ContractVerifier::new();
 
         // Create a valid run model
-        let run_model = a2rchitech_kernel_contracts::RunModel {
+        let run_model = allternit_kernel_contracts::RunModel {
             run_id: uuid::Uuid::new_v4().to_string(),
             tenant_id: "tenant-123".to_string(),
             session_id: "session-123".to_string(),
@@ -163,7 +163,7 @@ mod contract_verifier_tests {
             created_at: chrono::Utc::now().timestamp() as u64,
             updated_at: chrono::Utc::now().timestamp() as u64,
             completed_at: None,
-            status: a2rchitech_kernel_contracts::RunState::Created,
+            status: allternit_kernel_contracts::RunState::Created,
             error_message: None,
             metadata: std::collections::HashMap::new(),
         };
@@ -178,11 +178,11 @@ mod contract_verifier_tests {
         let contract_verifier = ContractVerifier::new();
 
         // Create a valid verify artifact
-        let verify_artifact = a2rchitech_kernel_contracts::VerifyArtifact::new(
+        let verify_artifact = allternit_kernel_contracts::VerifyArtifact::new(
             uuid::Uuid::new_v4().to_string(),
             "test_step".to_string(),
             format!("hash_{}", uuid::Uuid::new_v4()),
-            a2rchitech_kernel_contracts::VerificationResults {
+            allternit_kernel_contracts::VerificationResults {
                 passed: true,
                 details: serde_json::json!({ "test": "result" }),
                 confidence: 0.95,

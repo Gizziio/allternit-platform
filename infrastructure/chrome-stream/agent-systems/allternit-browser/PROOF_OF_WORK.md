@@ -1,4 +1,4 @@
-# Proof of Work: A2R Browser Module
+# Proof of Work: Allternit Browser Module
 
 ## Overview
 
@@ -7,7 +7,7 @@ This document provides evidence that the browser module implementation is comple
 ## File Structure
 
 ```
-1-kernel/a2r-browser/
+1-kernel/allternit-browser/
 ├── src/
 │   ├── __tests__/
 │   │   └── integration.test.ts       # E2E tests
@@ -118,7 +118,7 @@ Total: 35+ files, ~4000 lines of code
 ## Running the Demo
 
 ```bash
-cd 1-kernel/a2r-browser
+cd 1-kernel/allternit-browser
 
 # Install dependencies
 npm install
@@ -128,7 +128,7 @@ npm run demo
 
 # Expected output:
 # ╔════════════════════════════════════════════════════════════╗
-# ║           A2R Browser & Canvas Demo                        ║
+# ║           Allternit Browser & Canvas Demo                        ║
 # ╚════════════════════════════════════════════════════════════╝
 #
 # 📦 Step 1: Starting Browser Control Server...
@@ -136,7 +136,7 @@ npm run demo
 #
 # 🎨 Step 2: Starting Canvas Host Server...
 #    ✓ Canvas host running on http://127.0.0.1:xxxxx
-#    ✓ Canvas root: /Users/.../.a2r/canvas
+#    ✓ Canvas root: /Users/.../.allternit/canvas
 #
 # ... etc
 ```
@@ -185,7 +185,7 @@ The module integrates with:
 
 1. **Gateway**: Exports `createCanvasCommands()` and `createBrowserCommands()`
 2. **Kernel**: Exports `createCanvasTool()` and `createBrowserTool()`
-3. **UI**: Canvas host serves A2UI bundle at `/__a2r__/a2ui`
+3. **UI**: Canvas host serves A2UI bundle at `/__allternit__/a2ui`
 
 ## Conclusion
 

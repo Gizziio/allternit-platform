@@ -1,6 +1,6 @@
 //! Integration tests for Image Converter (Rootfs/Initramfs)
 
-use a2r_environment_spec::{
+use allternit_environment_spec::{
     converter::{ImageConverter, RootfsBuilder},
     EnvironmentSource, EnvironmentSpec, ResourceRequirements,
 };
@@ -20,13 +20,13 @@ fn create_test_spec(image: &str) -> EnvironmentSpec {
         mounts: vec![],
         post_create_commands: vec![],
         resources: ResourceRequirements::default(),
-        a2r_config: Default::default(),
+        allternit_config: Default::default(),
     }
 }
 
 fn temp_output_dir() -> PathBuf {
     std::env::temp_dir()
-        .join("a2r_converter_test")
+        .join("allternit_converter_test")
         .join(format!("test_{}", std::process::id()))
 }
 
@@ -123,7 +123,7 @@ async fn test_spec_with_post_create_commands() {
             "apt-get install -y curl".to_string(),
         ],
         resources: ResourceRequirements::default(),
-        a2r_config: Default::default(),
+        allternit_config: Default::default(),
     };
 
     // Verify spec is correctly created with post-create commands
@@ -186,7 +186,7 @@ async fn test_converter_error_handling() {
 
 #[tokio::test]
 async fn test_spec_serialization_with_mounts() {
-    use a2r_environment_spec::{MountSpec, MountType};
+    use allternit_environment_spec::{MountSpec, MountType};
 
     let spec = EnvironmentSpec {
         source: EnvironmentSource::Oci,
@@ -213,7 +213,7 @@ async fn test_spec_serialization_with_mounts() {
         ],
         post_create_commands: vec![],
         resources: ResourceRequirements::default(),
-        a2r_config: Default::default(),
+        allternit_config: Default::default(),
     };
 
     // Serialize and verify mounts are preserved
@@ -249,7 +249,7 @@ async fn test_workspace_folder_variations() {
             mounts: vec![],
             post_create_commands: vec![],
             resources: ResourceRequirements::default(),
-            a2r_config: Default::default(),
+            allternit_config: Default::default(),
         };
 
         assert_eq!(spec.workspace_folder, folder);

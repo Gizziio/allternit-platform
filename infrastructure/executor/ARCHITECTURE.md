@@ -12,7 +12,7 @@
 
 ## 1. Overview
 
-The Selfhosted Executor is a containerized job execution system designed to run agent workloads in isolated Docker environments. It provides resource management, job queuing, and container orchestration for the A2rchitech platform.
+The Selfhosted Executor is a containerized job execution system designed to run agent workloads in isolated Docker environments. It provides resource management, job queuing, and container orchestration for the Allternitchitech platform.
 
 ### 1.1 Purpose
 

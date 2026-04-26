@@ -1,7 +1,7 @@
 /**
- * A2R Node Agent Installation System
+ * Allternit Node Agent Installation System
  * 
- * Complete installation and management system for A2R agents on VPS/cloud instances.
+ * Complete installation and management system for Allternit agents on VPS/cloud instances.
  * 
  * @example
  * ```typescript

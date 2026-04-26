@@ -1,26 +1,26 @@
 //! Skill Mapping
 //!
-//! Maps OpenClaw skill IDs to A2R native skill IDs.
+//! Maps OpenClaw skill IDs to Allternit native skill IDs.
 
 use std::collections::HashMap;
 
-/// Mapping between OpenClaw and A2R skills
+/// Mapping between OpenClaw and Allternit skills
 #[derive(Debug, Clone)]
 pub struct SkillMapping {
     /// OpenClaw skill ID
     pub openclaw_id: String,
-    /// A2R native skill ID
+    /// Allternit native skill ID
     pub native_id: String,
     /// Whether mapping is bidirectional
     pub bidirectional: bool,
 }
 
-/// Maps skills between OpenClaw and A2R
+/// Maps skills between OpenClaw and Allternit
 #[derive(Debug)]
 pub struct SkillMapper {
-    /// OpenClaw -> A2R mappings
+    /// OpenClaw -> Allternit mappings
     openclaw_to_native: HashMap<String, String>,
-    /// A2R -> OpenClaw mappings
+    /// Allternit -> OpenClaw mappings
     native_to_openclaw: HashMap<String, String>,
     /// Built-in mappings
     built_in: HashMap<String, String>,
@@ -70,7 +70,7 @@ impl SkillMapper {
             .insert(openclaw.to_string(), native.to_string());
     }
 
-    /// Map OpenClaw skill ID to A2R native ID
+    /// Map OpenClaw skill ID to Allternit native ID
     pub fn to_native(&self, openclaw_id: &str) -> Option<&str> {
         // Check user mappings first
         if let Some(native) = self.openclaw_to_native.get(openclaw_id) {
@@ -81,7 +81,7 @@ impl SkillMapper {
         self.built_in.get(openclaw_id).map(|s| s.as_str())
     }
 
-    /// Map A2R native ID to OpenClaw skill ID
+    /// Map Allternit native ID to OpenClaw skill ID
     pub fn to_openclaw(&self, native_id: &str) -> Option<&str> {
         // Check user mappings first
         if let Some(oc) = self.native_to_openclaw.get(native_id) {

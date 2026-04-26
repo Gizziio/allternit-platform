@@ -1,6 +1,6 @@
-//! A2R Evaluation Harness
+//! Allternit Evaluation Harness
 //!
-//! Provides testing, benchmarking, and validation capabilities for the A2R platform.
+//! Provides testing, benchmarking, and validation capabilities for the Allternit platform.
 //! Integrates with ontology runtime for constraint validation and DAG/WIH for task evaluation.
 
 use chrono::{DateTime, Utc};
@@ -20,8 +20,8 @@ pub mod report;
 pub mod runner;
 pub mod scoring;
 
-use a2r_dag_wih_integration::{TaskState, WorkItemHeader};
-use a2r_ontology_runtime::{DomainRegistry, OntologyError, ReasoningEngine, ValidationResult};
+use allternit_dag_wih_integration::{TaskState, WorkItemHeader};
+use allternit_ontology_runtime::{DomainRegistry, OntologyError, ReasoningEngine, ValidationResult};
 use benchmark::{BenchmarkConfig, BenchmarkResult, BenchmarkRunner};
 use conformance::{ConformanceChecker, ConformanceRule, ConformanceViolation};
 use report::{EvaluationReporter, ReportFormat};
@@ -342,7 +342,7 @@ impl Default for HarnessConfig {
             fail_fast: false,
             verbose: false,
             report_format: ReportFormat::Json,
-            output_dir: std::path::PathBuf::from(".a2r/evaluations"),
+            output_dir: std::path::PathBuf::from(".allternit/evaluations"),
         }
     }
 }

@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use anyhow::Result;
-use a2rchitech_skills::SkillRegistry;
+use allternit_skills::SkillRegistry;
 use std::sync::Arc;
 
 #[async_trait]

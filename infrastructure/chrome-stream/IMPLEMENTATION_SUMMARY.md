@@ -2,7 +2,7 @@
 
 ## Summary
 
-Chrome Streaming is now **fully integrated** into the A2R Platform with a **standardized, automated setup process** that works for ANY deployment.
+Chrome Streaming is now **fully integrated** into the Allternit Platform with a **standardized, automated setup process** that works for ANY deployment.
 
 ---
 
@@ -16,7 +16,7 @@ Chrome Streaming is now **fully integrated** into the A2R Platform with a **stan
 | `8-cloud/chrome-stream/README_SETUP.md` | User-facing setup guide |
 | `8-cloud/chrome-stream/DEPLOYMENT_LINUX.md` | Technical deployment docs |
 | `8-cloud/chrome-stream/test-chrome.html` | Test interface |
-| `8-cloud/chrome-stream/a2r-browser-test.html` | Browser integration test |
+| `8-cloud/chrome-stream/allternit-browser-test.html` | Browser integration test |
 | `8-cloud/chrome-stream/simple-proxy.cjs` | API proxy for testing |
 
 ### Modified Files
@@ -37,8 +37,8 @@ Chrome Streaming is now **fully integrated** into the A2R Platform with a **stan
 ```bash
 # 1. Clone platform
 cd ~
-git clone <repo-url>/a2rchitech-workspace.git
-cd a2rchitech-workspace
+git clone <repo-url>/allternit-workspace.git
+cd allternit-workspace
 
 # 2. Setup environment
 cp .env.example .env
@@ -84,7 +84,7 @@ install-chrome-streaming.sh
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│  A2R Electron App                                        │
+│  Allternit Electron App                                        │
 │  ┌────────────────────────────────────────────────────┐  │
 │  │  Browser Capsule                                   │  │
 │  │  ┌──────────────────────────────────────────────┐  │  │
@@ -98,7 +98,7 @@ install-chrome-streaming.sh
 │  ┌────────────────────────────────────────────────────┐  │
 │  │  Google Chrome 145 (real, full extension support)  │  │
 │  │  selkies-gstreamer (WebRTC streaming)              │  │
-│  │  A2R Sidecar (FastAPI CDP control)                 │  │
+│  │  Allternit Sidecar (FastAPI CDP control)                 │  │
 │  └────────────────────────────────────────────────────┘  │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -112,7 +112,7 @@ install-chrome-streaming.sh
 ```bash
 # Check Chrome container
 docker ps | grep chrome
-# Expected: a2r-chrome-stream   Up (healthy)
+# Expected: allternit-chrome-stream   Up (healthy)
 
 # Check sidecar API
 curl http://localhost:8081/health
@@ -199,7 +199,7 @@ For deploying to customer VPS:
 |-------|---------|-----|
 | Docker not running | `sudo systemctl start docker` | Start Docker daemon |
 | coturn failed | `sudo journalctl -u coturn -n 50` | Check logs, fix config |
-| Chrome won't start | `docker logs a2r-chrome-stream` | Check container logs |
+| Chrome won't start | `docker logs allternit-chrome-stream` | Check container logs |
 | WebRTC fails | `sudo ufw allow 3478/udp` | Open firewall ports |
 | Installation fails | Check `/tmp/chrome-install.log` | Review installer output |
 
@@ -221,7 +221,7 @@ For deploying to customer VPS:
 ✅ **Standard**: Same process for EVERY deployment
 ✅ **Tested**: Works on Ubuntu 22.04+ (x86_64 and ARM64)
 ✅ **Production**: Security-hardened, monitored, scalable
-✅ **Integrated**: Part of A2R Browser Capsule (not separate)
+✅ **Integrated**: Part of Allternit Browser Capsule (not separate)
 
 ---
 

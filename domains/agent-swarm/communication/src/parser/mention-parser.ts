@@ -2,7 +2,7 @@
  * Mention Parser
  * 
  * Parses @mentions from text messages.
- * Reverse engineered from agentchattr pattern, implemented for a2rchitech.
+ * Reverse engineered from agentchattr pattern, implemented for allternit.
  */
 
 import type {

@@ -2,7 +2,7 @@
 name = "allternit-browser-view-service"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Browser View Service - Resource browsing and viewing for ShellUI"
+description = "Allternit Browser View Service - Resource browsing and viewing for ShellUI"
 
 [dependencies]
 serde = { workspace = true }

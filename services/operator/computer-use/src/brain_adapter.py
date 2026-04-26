@@ -1,9 +1,9 @@
 """
-Brain Runtime Adapter for A2R Vision Operator
+Brain Runtime Adapter for Allternit Vision Operator
 
-Integrates A2R Vision with the brain session system as a tool.
+Integrates Allternit Vision with the brain session system as a tool.
 Provides event streaming, tool registration, and model switching hooks.
-Now includes A2R Receipt generation and Safety Interception.
+Now includes Allternit Receipt generation and Safety Interception.
 """
 
 from typing import Dict, Any, List, Optional, AsyncGenerator, Callable
@@ -59,7 +59,7 @@ class SessionContext(BaseModel):
 # Tool Schema for desktop_control
 DESKTOP_CONTROL_TOOL = ToolDefinition(
     name="desktop_control",
-    description="Control native desktop applications using A2R Vision automation.",
+    description="Control native desktop applications using Allternit Vision automation.",
     parameters={
         "type": "object",
         "properties": {
@@ -143,7 +143,7 @@ async def evaluate_safety_policy(session_id: str, action: Dict[str, Any]) -> boo
         print(f"Safety check failed to connect: {e}")
     return True # Default to True for dev if bridge is offline
 
-async def generate_a2r_receipt(session_id: str, action: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
+async def generate_allternit_receipt(session_id: str, action: Dict[str, Any], result: Dict[str, Any]) -> Dict[str, Any]:
     """G0501: Generate Immutable Receipt - Full Compliance with Receipt.schema.json"""
     import hashlib
     import json
@@ -173,7 +173,7 @@ async def generate_a2r_receipt(session_id: str, action: Dict[str, Any], result: 
         "receipt_id": receipt_id,
         "created_at": datetime.utcnow().isoformat(),
         "run_id": session_id,  # Using session_id as run_id for now
-        "workflow_id": "a2r-vision-workflow",  # Placeholder
+        "workflow_id": "allternit-vision-workflow",  # Placeholder
         "node_id": f"vision-node-{receipt_id[-8:]}",  # Unique node ID
         "wih_id": f"wih-{session_id}",  # Work-in-hand ID
         "tool_id": "desktop_control",
@@ -184,8 +184,8 @@ async def generate_a2r_receipt(session_id: str, action: Dict[str, Any], result: 
         "output_hashes": [output_hash],
         "artifact_manifest": artifact_manifest,
         "write_scope_proof": {
-            "declared": ["/.a2r/**"],
-            "actual": ["/.a2r/receipts/**"]  # Where receipts are stored
+            "declared": ["/.allternit/**"],
+            "actual": ["/.allternit/receipts/**"]  # Where receipts are stored
         },
         "execution": {
             "exit_code": 0 if result.get("success", True) else 1,
@@ -199,13 +199,13 @@ async def generate_a2r_receipt(session_id: str, action: Dict[str, Any], result: 
         "environment_hash": hashlib.sha256(f"session:{session_id}".encode()).hexdigest()
     }
 
-    # Save receipt locally to .a2r/receipts directory
+    # Save receipt locally to .allternit/receipts directory
     try:
         # Create receipts directory if it doesn't exist
-        os.makedirs(".a2r/receipts", exist_ok=True)
+        os.makedirs(".allternit/receipts", exist_ok=True)
 
         # Write receipt to local file
-        with open(f".a2r/receipts/{receipt_id}.json", "w") as f:
+        with open(f".allternit/receipts/{receipt_id}.json", "w") as f:
             json.dump(receipt, f, indent=2)
     except Exception as e:
         print(f"Failed to save receipt locally: {e}")
@@ -233,14 +233,14 @@ async def stream_desktop_automation(session_id: str, instruction: str, app: Opti
         # G0502: Safety Interception
         allowed = await evaluate_safety_policy(session_id, action)
         if not allowed:
-            yield await emit_brain_event(session_id, "tool_call.error", {"error": "Policy Denied: Action blocked by A2R Governor"})
+            yield await emit_brain_event(session_id, "tool_call.error", {"error": "Policy Denied: Action blocked by Allternit Governor"})
             return
 
         yield await emit_brain_event(session_id, "tool_call.action", {"action": action})
         await asyncio.sleep(0.1)
         
         # G0501: Receipt Generation
-        receipt_obj = await generate_a2r_receipt(session_id, action, {"status": "success"})
+        receipt_obj = await generate_allternit_receipt(session_id, action, {"status": "success"})
         yield await emit_brain_event(session_id, "tool_call.receipt", {"receipt_id": receipt_obj["receipt_id"], "receipt": receipt_obj})
 
     yield await emit_brain_event(session_id, "tool_call.completed", {"summary": f"Completed: {instruction}"})
@@ -274,7 +274,44 @@ def detect_vision_model_needed(intent: str) -> bool:
 class ModelRouter:
     @staticmethod
     async def get_vision_model_config(user_id: Optional[str] = None) -> Dict[str, Any]:
-        return {"model_id": "a2r-vision-7b", "auto_switch": True}
+        """
+        Returns the active vision provider config by querying VisionProviderFactory.
+        Routing priority (first available wins):
+          1. UI-TARS skill (ACU_SKILLS_URL)  — purpose-built for GUI grounding
+          2. Anthropic Claude (ANTHROPIC_API_KEY)
+          3. OpenAI GPT-4o (OPENAI_API_KEY)
+          4. Google Gemini (GOOGLE_API_KEY)
+          5. Qwen-VL (QWEN_BASE_URL)
+        Every model works — UI-TARS just performs best for GUI tasks.
+        """
+        import sys
+        from pathlib import Path
+        # Resolve to domains/computer-use/core/core
+        core_path = Path(__file__).parent.parent.parent.parent.parent / "domains" / "computer-use" / "core" / "core"
+        if str(core_path) not in sys.path:
+            sys.path.insert(0, str(core_path.parent))
+        try:
+            from core.vision_providers import VisionProviderFactory, PROVIDER_AUTO_DETECT_ORDER
+            for env_var, provider_type in PROVIDER_AUTO_DETECT_ORDER:
+                if os.getenv(env_var):
+                    return {"model_id": provider_type.value, "auto_switch": True, "env_var": env_var}
+            return {"model_id": "mock", "auto_switch": True, "env_var": None}
+        except ImportError:
+            return {"model_id": "mock", "auto_switch": True, "env_var": None}
+
+    @staticmethod
+    def create_provider():
+        """Create and return the best available VisionProvider."""
+        import sys
+        from pathlib import Path
+        core_path = Path(__file__).parent.parent.parent.parent.parent / "domains" / "computer-use" / "core"
+        if str(core_path) not in sys.path:
+            sys.path.insert(0, str(core_path))
+        try:
+            from core.vision_providers import VisionProviderFactory
+            return VisionProviderFactory.create_from_env()
+        except ImportError:
+            return None
 # Gateway configuration (route all kernel calls through the gateway)
 BRAIN_GATEWAY_URL = os.getenv("BRAIN_GATEWAY_URL", "http://localhost:3000")
 

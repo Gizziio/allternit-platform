@@ -2,7 +2,7 @@
 name = "gateway-stdio"
 version = "0.1.0"
 edition = "2021"
-description = "Stdio NDJSON-RPC gateway for A2rchitech"
+description = "Stdio NDJSON-RPC gateway for Allternitchitech"
 
 [dependencies]
 tokio = { version = "1.0", features = ["full"] }

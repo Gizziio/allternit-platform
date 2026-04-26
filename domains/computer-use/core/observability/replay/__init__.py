@@ -1,5 +1,5 @@
 """
-A2R Computer Use Observability - Replay
+Allternit Computer Use Observability - Replay
 
 Build replay artifacts from recorded frames:
 - GIF for quick visual review

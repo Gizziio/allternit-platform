@@ -1,5 +1,5 @@
 /**
- * @fileoverview A2R File Sync System - Main Exports
+ * @fileoverview Allternit File Sync System - Main Exports
  *
  * Bidirectional file synchronization system for host↔VM communication.
  *

@@ -130,25 +130,31 @@ def get_connectors_by_category(category: str) -> List[AppInfo]:
 @router.post("/connect/{app_id}")
 async def connect_to_app(app_id: str) -> Dict[str, Any]:
     """
-    Connect to a specific app for contextual assistance
-    
-    This establishes a "connection" that informs the AI about
-    the app context for better assistance.
+    Connect to a specific app for contextual assistance.
+
+    Verifies the app is registered, checks whether it is currently running
+    (when app discovery is initialized), and returns connection metadata.
     """
     app = registry.get_by_id(app_id)
     if not app:
         raise HTTPException(status_code=404, detail=f"App not found: {app_id}")
-    
-    # TODO: Implement actual connection logic
-    # - Verify app is running
-    # - Get window handle for automation
-    # - Set up context for AI
-    
+
+    is_running = False
+    if discovery:
+        try:
+            context = await discovery.detect()
+            running_names = {a.name.lower() for a in context.running if a}
+            is_running = app.name.lower() in running_names
+        except Exception:
+            pass
+
     return {
         "success": True,
         "app_id": app_id,
         "app_name": app.name,
-        "message": f"Connected to {app.name}",
+        "is_running": is_running,
+        "capabilities": [c.value for c in app.capabilities],
+        "message": f"Connected to {app.name}" + ("" if is_running else " (app not currently running)"),
     }
 
 
@@ -159,11 +165,12 @@ def get_app_capabilities(app_id: str) -> Dict[str, Any]:
     if not app:
         raise HTTPException(status_code=404, detail=f"App not found: {app_id}")
     
+    caps = [c.value for c in app.capabilities]
     return {
         "app_id": app_id,
         "app_name": app.name,
-        "capabilities": [c.value for c in app.capabilities],
-        "can_screenshot": registry.can_automate(app_id, registry.capabilities[0]),
+        "capabilities": caps,
+        "can_screenshot": "screenshot" in caps,
     }
 
 

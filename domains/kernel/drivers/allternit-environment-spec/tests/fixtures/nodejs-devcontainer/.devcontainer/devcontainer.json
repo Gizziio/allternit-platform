@@ -23,7 +23,7 @@
         "editor.defaultFormatter": "esbenp.prettier-vscode"
       }
     },
-    "a2r": {
+    "allternit": {
       "driver": "process",
       "enablePrewarm": true
     }

@@ -1,7 +1,7 @@
-use a2rchitech_history::HistoryLedger;
-use a2rchitech_messaging::{EventEnvelope, MessagingSystem};
-use a2rchitech_policy::{PolicyEngine, SafetyTier};
-use a2rchitech_tools_gateway::{ToolDefinition, ToolGateway};
+use allternit_history::HistoryLedger;
+use allternit_messaging::{EventEnvelope, MessagingSystem};
+use allternit_policy::{PolicyEngine, SafetyTier};
+use allternit_tools_gateway::{ToolDefinition, ToolGateway};
 use data_encoding::{BASE64, BASE64URL, HEXLOWER};
 use ring::{digest, signature};
 use serde::{Deserialize, Serialize};
@@ -172,7 +172,7 @@ pub enum SkillsError {
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
     #[error("History error: {0}")]
-    History(#[from] a2rchitech_history::HistoryError),
+    History(#[from] allternit_history::HistoryError),
     #[error("SQLX error: {0}")]
     Sqlx(#[from] sqlx::Error),
     #[error("Validation error: {0}")]
@@ -871,7 +871,7 @@ impl SkillRegistry {
                 id: skill.manifest.id.clone(),
                 name: skill.manifest.name.clone(),
                 description: skill.manifest.description.clone(),
-                tool_type: a2rchitech_tools_gateway::ToolType::Local, // Placeholder
+                tool_type: allternit_tools_gateway::ToolType::Local, // Placeholder
                 command: "".to_string(), // Would be the skill execution command
                 endpoint: "".to_string(),
                 input_schema: serde_json::from_str(&skill.manifest.inputs.schema)
@@ -883,7 +883,7 @@ impl SkillRegistry {
                 retryable: true,
                 failure_classification: "transient".to_string(),
                 safety_tier: skill.manifest.risk_tier.clone(),
-                resource_limits: a2rchitech_tools_gateway::ResourceLimits {
+                resource_limits: allternit_tools_gateway::ResourceLimits {
                     cpu: skill
                         .manifest
                         .runtime
@@ -897,21 +897,21 @@ impl SkillRegistry {
                         .as_ref()
                         .and_then(|r| r.memory.clone()),
                     network: match &skill.manifest.environment.network {
-                        NetworkAccess::None => a2rchitech_tools_gateway::NetworkAccess::None,
+                        NetworkAccess::None => allternit_tools_gateway::NetworkAccess::None,
                         NetworkAccess::DomainAllowlist(list) => {
-                            a2rchitech_tools_gateway::NetworkAccess::DomainAllowlist(list.clone())
+                            allternit_tools_gateway::NetworkAccess::DomainAllowlist(list.clone())
                         }
                         NetworkAccess::Unrestricted => {
-                            a2rchitech_tools_gateway::NetworkAccess::Unrestricted
+                            allternit_tools_gateway::NetworkAccess::Unrestricted
                         }
                     },
                     filesystem: match &skill.manifest.environment.filesystem {
-                        FilesystemAccess::None => a2rchitech_tools_gateway::FilesystemAccess::None,
+                        FilesystemAccess::None => allternit_tools_gateway::FilesystemAccess::None,
                         FilesystemAccess::Allowlist(list) => {
-                            a2rchitech_tools_gateway::FilesystemAccess::Allowlist(list.clone())
+                            allternit_tools_gateway::FilesystemAccess::Allowlist(list.clone())
                         }
                         FilesystemAccess::ReadWrite(list) => {
-                            a2rchitech_tools_gateway::FilesystemAccess::ReadWrite(list.clone())
+                            allternit_tools_gateway::FilesystemAccess::ReadWrite(list.clone())
                         }
                     },
                     time_limit: skill.manifest.runtime.timeouts.total.unwrap_or(300), // 5 minutes default
@@ -928,9 +928,9 @@ impl SkillRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use a2rchitech_messaging::MessagingSystem;
-    use a2rchitech_policy::PolicyEngine;
-    use a2rchitech_tools_gateway::ToolGateway;
+    use allternit_messaging::MessagingSystem;
+    use allternit_policy::PolicyEngine;
+    use allternit_tools_gateway::ToolGateway;
     use data_encoding::BASE64;
     use ring::rand::SystemRandom;
     use ring::signature::Ed25519KeyPair;
@@ -946,7 +946,7 @@ mod tests {
 
         let temp_path = format!("/tmp/test_skills_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
 
         // Create a temporary SQLite database for messaging
@@ -1076,7 +1076,7 @@ mod tests {
             id: "echo_tool".to_string(),
             name: "Echo Tool".to_string(),
             description: "Simple echo tool".to_string(),
-            tool_type: a2rchitech_tools_gateway::ToolType::Local,
+            tool_type: allternit_tools_gateway::ToolType::Local,
             command: "echo".to_string(),
             endpoint: "".to_string(),
             input_schema: serde_json::json!({
@@ -1096,11 +1096,11 @@ mod tests {
             retryable: true,
             failure_classification: "transient".to_string(),
             safety_tier: SafetyTier::T0,
-            resource_limits: a2rchitech_tools_gateway::ResourceLimits {
+            resource_limits: allternit_tools_gateway::ResourceLimits {
                 cpu: Some("100m".to_string()),
                 memory: Some("64Mi".to_string()),
-                network: a2rchitech_tools_gateway::NetworkAccess::None,
-                filesystem: a2rchitech_tools_gateway::FilesystemAccess::None,
+                network: allternit_tools_gateway::NetworkAccess::None,
+                filesystem: allternit_tools_gateway::FilesystemAccess::None,
                 time_limit: 10,
             },
             subprocess: None,

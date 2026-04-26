@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "description": "Simple counter plugin for demonstration",
   "main": "counter",
-  "author": "A2R Team",
+  "author": "Allternit Team",
   "license": "MIT",
   "engines": {
-    "a2r": ">=1.0.0"
+    "allternit": ">=1.0.0"
   },
   "capabilities": {
     "commands": [

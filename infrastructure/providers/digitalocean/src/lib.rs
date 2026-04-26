@@ -1,8 +1,8 @@
-//! A2R Cloud DigitalOcean Provider
+//! Allternit Cloud DigitalOcean Provider
 //!
-//! DigitalOcean Droplet provider implementation for A2R cloud deployment.
+//! DigitalOcean Droplet provider implementation for Allternit cloud deployment.
 
-use a2r_cloud_core::{
+use allternit_cloud_core::{
     CloudProvider, CloudError, DeploymentConfig, Instance, InstanceType, 
     Region, PricingInfo, HealthStatus, InstanceStatus,
 };
@@ -90,16 +90,16 @@ impl CloudProvider for DigitalOceanProvider {
         Ok(PricingInfo {
             currency: "USD".to_string(),
             instances: pricing::DO_DROPLETS.iter().map(|d| {
-                a2r_cloud_core::InstancePricing {
+                allternit_cloud_core::InstancePricing {
                     instance_type: d.slug.to_string(),
                     price_monthly: d.price_monthly,
                     price_hourly: d.price_hourly,
                 }
             }).collect(),
-            storage: a2r_cloud_core::StoragePricing {
+            storage: allternit_cloud_core::StoragePricing {
                 price_per_gb_month: 0.10,
             },
-            network: a2r_cloud_core::NetworkPricing {
+            network: allternit_cloud_core::NetworkPricing {
                 price_per_gb: 0.01,
                 free_gb_monthly: 1000, // DO includes 1TB transfer
             },
@@ -136,12 +136,12 @@ impl CloudProvider for DigitalOceanProvider {
             healthy: true,
             status: "active".to_string(),
             checks: vec![
-                a2r_cloud_core::HealthCheck {
+                allternit_cloud_core::HealthCheck {
                     name: "droplet_status".to_string(),
                     passed: true,
                     message: "Droplet is active".to_string(),
                 },
-                a2r_cloud_core::HealthCheck {
+                allternit_cloud_core::HealthCheck {
                     name: "network_status".to_string(),
                     passed: true,
                     message: "Network is available".to_string(),
@@ -156,7 +156,7 @@ impl CloudProvider for DigitalOceanProvider {
         
         Ok(Instance {
             id,
-            name: "a2r-droplet".to_string(),
+            name: "allternit-droplet".to_string(),
             public_ip: Some("104.131.186.241".to_string()),
             private_ip: Some("10.132.0.2".to_string()),
             region: "nyc3".to_string(),

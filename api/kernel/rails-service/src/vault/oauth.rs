@@ -13,7 +13,7 @@ impl OAuthVault {
     }
 
     fn tokens_dir(&self) -> PathBuf {
-        self.root_dir.join(".a2r/vault/oauth/tokens")
+        self.root_dir.join(".allternit/vault/oauth/tokens")
     }
 
     pub fn store_token(&self, token: &OAuthTokenRecord) -> Result<()> {

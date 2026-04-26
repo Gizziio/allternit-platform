@@ -1,9 +1,9 @@
 //! Unit tests for router module
 
-use a2r_meta_swarm::config::RoutingConfig;
-use a2r_meta_swarm::knowledge::InMemoryKnowledgeStore;
-use a2r_meta_swarm::router::{ModeRouter, TaskAnalyzer};
-use a2r_meta_swarm::types::{Domain, SwarmMode, Task};
+use allternit_meta_swarm::config::RoutingConfig;
+use allternit_meta_swarm::knowledge::InMemoryKnowledgeStore;
+use allternit_meta_swarm::router::{ModeRouter, TaskAnalyzer};
+use allternit_meta_swarm::types::{Domain, SwarmMode, Task};
 use std::sync::Arc;
 
 #[tokio::test]

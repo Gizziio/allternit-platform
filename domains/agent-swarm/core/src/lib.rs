@@ -1,4 +1,4 @@
-//! A2R Meta-Swarm
+//! Allternit Meta-Swarm
 //! 
 //! Multi-agent orchestration system integrating:
 //! - SwarmAgentic: PSO-based automatic architecture discovery
@@ -22,7 +22,7 @@ pub mod modes {
     pub mod hybrid;
 }
 
-// A2R integrations
+// Allternit integrations
 pub mod integrations {
     pub mod intent_graph;
     pub mod wih;
@@ -46,11 +46,11 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Initialize the meta-swarm system
 pub async fn initialize(config: MetaSwarmConfig) -> SwarmResult<MetaSwarmController> {
-    tracing::info!("Initializing A2R Meta-Swarm v{}", VERSION);
+    tracing::info!("Initializing Allternit Meta-Swarm v{}", VERSION);
     
     let controller = MetaSwarmController::new(config).await?;
     
-    tracing::info!("A2R Meta-Swarm initialized successfully");
+    tracing::info!("Allternit Meta-Swarm initialized successfully");
     Ok(controller)
 }
 

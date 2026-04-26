@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# A2R Node E2E Test - Automated Deployment Script
+# Allternit Node E2E Test - Automated Deployment Script
 #
 # Usage: ./deploy-e2e-test.sh <vps-user> <vps-host> [control-plane-url]
 #
@@ -67,23 +67,23 @@ check_prerequisites() {
 }
 
 build_node_agent() {
-    echo -e "${YELLOW}Building A2R Node Agent...${NC}"
+    echo -e "${YELLOW}Building Allternit Node Agent...${NC}"
     
     cd "$(dirname "$0")"
     
     if [ ! -f "Cargo.toml" ]; then
-        echo -e "${RED}Error: Not in a2r-node directory${NC}"
+        echo -e "${RED}Error: Not in allternit-node directory${NC}"
         exit 1
     fi
     
     cargo build --release
     
-    if [ ! -f "target/release/a2r-node" ]; then
+    if [ ! -f "target/release/allternit-node" ]; then
         echo -e "${RED}Error: Build failed${NC}"
         exit 1
     fi
     
-    BINARY_SIZE=$(du -h target/release/a2r-node | cut -f1)
+    BINARY_SIZE=$(du -h target/release/allternit-node | cut -f1)
     echo -e "${GREEN}✓ Built node agent (${BINARY_SIZE})${NC}"
     echo ""
 }
@@ -105,13 +105,13 @@ deploy_to_vps() {
     
     # Create directories
     echo -e "${BLUE}→ Creating directories...${NC}"
-    ssh "${VPS_USER}@${VPS_HOST}" "mkdir -p /opt/a2r/bin /etc/a2r /var/log/a2r"
+    ssh "${VPS_USER}@${VPS_HOST}" "mkdir -p /opt/allternit/bin /etc/allternit /var/log/allternit"
     echo -e "${GREEN}✓ Directories created${NC}"
     
     # Transfer binary
     echo -e "${BLUE}→ Transferring binary...${NC}"
-    scp target/release/a2r-node "${VPS_USER}@${VPS_HOST}:/opt/a2r/bin/"
-    ssh "${VPS_USER}@${VPS_HOST}" "chmod +x /opt/a2r/bin/a2r-node"
+    scp target/release/allternit-node "${VPS_USER}@${VPS_HOST}:/opt/allternit/bin/"
+    ssh "${VPS_USER}@${VPS_HOST}" "chmod +x /opt/allternit/bin/allternit-node"
     echo -e "${GREEN}✓ Binary transferred${NC}"
     
     # Install Docker
@@ -129,16 +129,16 @@ EOF
     # Create config
     echo -e "${BLUE}→ Creating configuration...${NC}"
     ssh "${VPS_USER}@${VPS_HOST}" << EOF
-        cat > /etc/a2r/node.env << 'CONF'
-# A2R Node Configuration
+        cat > /etc/allternit/node.env << 'CONF'
+# Allternit Node Configuration
 # Generated: $(date)
 
 ALLTERNIT_NODE_ID=${NODE_ID}
 ALLTERNIT_TOKEN=${NODE_TOKEN}
 ALLTERNIT_CONTROL_PLANE=${CONTROL_PLANE_URL}
 CONF
-        chmod 600 /etc/a2r/node.env
-        chown root:root /etc/a2r/node.env
+        chmod 600 /etc/allternit/node.env
+        chown root:root /etc/allternit/node.env
 EOF
     echo -e "${GREEN}✓ Configuration created${NC}"
     echo -e "${BLUE}  Node ID: ${NODE_ID}${NC}"
@@ -147,28 +147,28 @@ EOF
     # Install systemd service
     echo -e "${BLUE}→ Installing systemd service...${NC}"
     ssh "${VPS_USER}@${VPS_HOST}" << 'EOF'
-        cat > /etc/systemd/system/a2r-node.service << 'SERVICE'
+        cat > /etc/systemd/system/allternit-node.service << 'SERVICE'
 [Unit]
-Description=A2R Node Agent
+Description=Allternit Node Agent
 Documentation=https://docs.allternit.com
 After=network.target docker.service
 Requires=docker.service
 
 [Service]
 Type=simple
-EnvironmentFile=/etc/a2r/node.env
-ExecStart=/opt/a2r/bin/a2r-node
+EnvironmentFile=/etc/allternit/node.env
+ExecStart=/opt/allternit/bin/allternit-node
 Restart=always
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=a2r-node
+SyslogIdentifier=allternit-node
 
 [Install]
 WantedBy=multi-user.target
 SERVICE
         systemctl daemon-reload
-        systemctl enable a2r-node
+        systemctl enable allternit-node
 EOF
     echo -e "${GREEN}✓ Systemd service installed${NC}"
     
@@ -184,8 +184,8 @@ EOF
     echo ""
     echo "Next Steps:"
     echo "  1. Start your control plane API server"
-    echo "  2. Start the node agent: ssh ${VPS_USER}@${VPS_HOST} 'sudo systemctl start a2r-node'"
-    echo "  3. Watch logs: ssh ${VPS_USER}@${VPS_HOST} 'sudo journalctl -u a2r-node -f'"
+    echo "  2. Start the node agent: ssh ${VPS_USER}@${VPS_HOST} 'sudo systemctl start allternit-node'"
+    echo "  3. Watch logs: ssh ${VPS_USER}@${VPS_HOST} 'sudo journalctl -u allternit-node -f'"
     echo "  4. Verify registration: curl http://localhost:3000/api/v1/nodes"
     echo ""
 }
@@ -195,7 +195,7 @@ run_quick_test() {
     
     # Start node agent
     echo -e "${BLUE}→ Starting node agent...${NC}"
-    ssh "${VPS_USER}@${VPS_HOST}" "sudo systemctl start a2r-node"
+    ssh "${VPS_USER}@${VPS_HOST}" "sudo systemctl start allternit-node"
     
     # Wait for connection
     echo -e "${BLUE}→ Waiting for node to connect (10 seconds)...${NC}"
@@ -220,7 +220,7 @@ run_quick_test() {
         echo ""
         echo "Useful Commands:"
         echo "  # Watch node logs"
-        echo "  ssh ${VPS_USER}@${VPS_HOST} 'sudo journalctl -u a2r-node -f'"
+        echo "  ssh ${VPS_USER}@${VPS_HOST} 'sudo journalctl -u allternit-node -f'"
         echo ""
         echo "  # Submit a test job"
         echo "  curl -X POST http://localhost:3000/api/v1/jobs \\"
@@ -231,7 +231,7 @@ run_quick_test() {
         echo "  curl http://localhost:3000/api/v1/jobs | jq '.'"
         echo ""
         echo "  # Stop node"
-        echo "  ssh ${VPS_USER}@${VPS_HOST} 'sudo systemctl stop a2r-node'"
+        echo "  ssh ${VPS_USER}@${VPS_HOST} 'sudo systemctl stop allternit-node'"
         echo ""
         
         return 0
@@ -240,7 +240,7 @@ run_quick_test() {
         echo ""
         echo "Troubleshooting:"
         echo "  1. Make sure control plane is running on ${CONTROL_PLANE_URL}"
-        echo "  2. Check node logs: ssh ${VPS_USER}@${VPS_HOST} 'sudo journalctl -u a2r-node -f'"
+        echo "  2. Check node logs: ssh ${VPS_USER}@${VPS_HOST} 'sudo journalctl -u allternit-node -f'"
         echo "  3. Check firewall settings on both machines"
         echo ""
         return 1
@@ -251,10 +251,10 @@ cleanup() {
     echo -e "${YELLOW}Cleaning up...${NC}"
     
     ssh "${VPS_USER}@${VPS_HOST}" << 'EOF'
-        sudo systemctl stop a2r-node
-        sudo systemctl disable a2r-node
-        sudo rm -f /etc/systemd/system/a2r-node.service
-        sudo rm -rf /opt/a2r /etc/a2r /var/log/a2r
+        sudo systemctl stop allternit-node
+        sudo systemctl disable allternit-node
+        sudo rm -f /etc/systemd/system/allternit-node.service
+        sudo rm -rf /opt/allternit /etc/allternit /var/log/allternit
         systemctl daemon-reload
 EOF
     

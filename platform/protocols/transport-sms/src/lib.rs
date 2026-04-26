@@ -1,10 +1,10 @@
 //! # Allternit Transport SMS
 //!
-//! SMS transport provider for the A2R messaging system.
+//! SMS transport provider for the Allternit messaging system.
 //!
 //! ## Overview
 //!
-//! This crate provides SMS transport capabilities for the A2R platform,
+//! This crate provides SMS transport capabilities for the Allternit platform,
 //! supporting multiple SMS providers including Telnyx and Twilio. It
 //! handles message sending, delivery status tracking, and provider
 //! abstraction.
@@ -59,7 +59,7 @@ use tracing::{error, info};
 /// let message = SmsMessage {
 ///     to: "+1234567890".to_string(),
 ///     from: "+0987654321".to_string(),
-///     body: "Hello from A2R!".to_string(),
+///     body: "Hello from Allternit!".to_string(),
 ///     media_urls: vec![],
 /// };
 /// ```

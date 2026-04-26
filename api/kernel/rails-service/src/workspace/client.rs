@@ -1,6 +1,6 @@
 //! Workspace service client for Rails
 //!
-//! Provides integration between A2R Rails and the workspace service.
+//! Provides integration between Allternit Rails and the workspace service.
 
 use crate::wih::types::{TerminalContext, WihState};
 use reqwest::Client;
@@ -162,7 +162,7 @@ impl WorkspaceClient {
         info!("Spawning terminal for WIH: {}", wih.wih_id);
 
         // Create session if it doesn't exist
-        let session_name = format!("a2r-{}", wih.dag_id);
+        let session_name = format!("allternit-{}", wih.dag_id);
         let session = match self.get_session(&session_name).await {
             Ok(s) => s,
             Err(_) => {

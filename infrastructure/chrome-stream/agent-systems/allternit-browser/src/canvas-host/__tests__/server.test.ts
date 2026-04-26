@@ -33,7 +33,7 @@ describe('Canvas Host', () => {
     expect(response.status).toBe(200);
     
     const html = await response.text();
-    expect(html).toContain('A2R Canvas');
+    expect(html).toContain('Allternit Canvas');
   });
 
   it('should return 404 for missing files', async () => {
@@ -54,8 +54,8 @@ describe('A2UI Handler', () => {
     const html = '<html><body>Test</body></html>';
     const result = injectCanvasLiveReload(html);
     
-    expect(result).toContain('A2R');
-    expect(result).toContain('a2rSendUserAction');
+    expect(result).toContain('Allternit');
+    expect(result).toContain('allternitSendUserAction');
     expect(result).toContain('WebSocket');
   });
 
@@ -63,7 +63,7 @@ describe('A2UI Handler', () => {
     const html = '<html>Test</html>';
     const result = injectCanvasLiveReload(html);
     
-    expect(result).toContain('A2R');
+    expect(result).toContain('Allternit');
     expect(result.length).toBeGreaterThan(html.length);
   });
 });
@@ -76,7 +76,7 @@ describe('Canvas Host Handler', () => {
 
     expect(handler).toBeDefined();
     expect(handler.rootDir).toBeDefined();
-    expect(handler.basePath).toBe('/__a2r__/canvas');
+    expect(handler.basePath).toBe('/__allternit__/canvas');
     expect(typeof handler.handleHttpRequest).toBe('function');
     expect(typeof handler.handleUpgrade).toBe('function');
     expect(typeof handler.close).toBe('function');

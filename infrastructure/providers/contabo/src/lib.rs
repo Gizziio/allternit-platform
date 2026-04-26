@@ -1,8 +1,8 @@
-//! A2R Cloud Contabo Provider
+//! Allternit Cloud Contabo Provider
 //!
 //! Contabo VPS provider - budget-friendly German VPS provider.
 
-use a2r_cloud_core::{
+use allternit_cloud_core::{
     CloudProvider, CloudError, DeploymentConfig, Instance, InstanceType, 
     Region, PricingInfo, HealthStatus, InstanceStatus,
 };
@@ -65,13 +65,13 @@ impl CloudProvider for ContaboProvider {
         Ok(PricingInfo {
             currency: "EUR".to_string(),
             instances: pricing::CONTABO_VPS.iter().map(|v| {
-                a2r_cloud_core::InstancePricing {
+                allternit_cloud_core::InstancePricing {
                     instance_type: v.id.to_string(),
                     price_monthly: v.price_monthly, price_hourly: v.price_hourly,
                 }
             }).collect(),
-            storage: a2r_cloud_core::StoragePricing { price_per_gb_month: 0.05 },
-            network: a2r_cloud_core::NetworkPricing { price_per_gb: 0.00, free_gb_monthly: 0 },
+            storage: allternit_cloud_core::StoragePricing { price_per_gb_month: 0.05 },
+            network: allternit_cloud_core::NetworkPricing { price_per_gb: 0.00, free_gb_monthly: 0 },
         })
     }
     
@@ -93,7 +93,7 @@ impl CloudProvider for ContaboProvider {
     async fn health_check(&self, id: String) -> Result<HealthStatus, CloudError> {
         let _ = id;
         Ok(HealthStatus { healthy: true, status: "running".to_string(),
-            checks: vec![a2r_cloud_core::HealthCheck {
+            checks: vec![allternit_cloud_core::HealthCheck {
                 name: "vps_status".to_string(), passed: true,
                 message: "VPS is running".to_string(),
             }]
@@ -101,7 +101,7 @@ impl CloudProvider for ContaboProvider {
     }
     
     async fn get_instance(&self, id: String) -> Result<Instance, CloudError> {
-        Ok(Instance { id, name: "a2r-vps".to_string(),
+        Ok(Instance { id, name: "allternit-vps".to_string(),
             public_ip: Some("123.45.67.89".to_string()),
             private_ip: Some("10.0.0.2".to_string()),
             region: "de".to_string(), instance_type: "VPS 10".to_string(),

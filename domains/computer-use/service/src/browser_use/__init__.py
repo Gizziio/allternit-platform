@@ -1,8 +1,8 @@
 """
-A2R Browser-Use Module
-Provides browser automation capabilities for A2R Operator
+Allternit Browser-Use Module
+Provides browser automation capabilities for Allternit Operator
 """
 
-from .manager import A2RBrowserManager, BrowserTask, a2r_browser_manager
+from .manager import AllternitBrowserManager, BrowserTask, allternit_browser_manager
 
-__all__ = ["A2RBrowserManager", "BrowserTask", "a2r_browser_manager"]
+__all__ = ["AllternitBrowserManager", "BrowserTask", "allternit_browser_manager"]

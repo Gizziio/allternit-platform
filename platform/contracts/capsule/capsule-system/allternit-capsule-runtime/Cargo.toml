@@ -16,7 +16,7 @@ axum = "0.7"
 tower-http = { version = "0.5", features = ["cors"] }
 tracing = "0.1"
 async-trait = "0.1"
-a2rchitech-kernel-contracts = { workspace = true }
+allternit-kernel-contracts = { workspace = true }
 marketplace = { path = "../../../3-adapters/rust/marketplace" }
 sqlx = { workspace = true, features = ["runtime-tokio-rustls", "sqlite"] }
 

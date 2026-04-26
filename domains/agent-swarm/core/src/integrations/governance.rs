@@ -1,6 +1,6 @@
 //! Governance Integration
 //!
-//! Integrates with A2R's Governance layer for policy enforcement.
+//! Integrates with Allternit's Governance layer for policy enforcement.
 
 use crate::error::SwarmResult;
 use crate::types::{ApprovalRequest, EntityId, PolicyCheck};

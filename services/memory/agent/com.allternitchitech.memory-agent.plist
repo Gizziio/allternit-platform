@@ -4,23 +4,23 @@
 <dict>
     <!-- Unique identifier for this service -->
     <key>Label</key>
-    <string>com.a2rchitech.memory-agent</string>
+    <string>com.allternit.memory-agent</string>
 
     <!-- Human-readable description -->
     <key>LabelDescription</key>
-    <string>A2rchitech Always-On Memory Agent</string>
+    <string>Allternitchitech Always-On Memory Agent</string>
 
     <!-- Program to execute -->
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
         <string>-c</string>
-        <string>cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/memory &amp;&amp; /opt/homebrew/bin/pnpm run daemon start</string>
+        <string>cd /Users/macbook/Desktop/allternit-workspace/allternit/memory &amp;&amp; /opt/homebrew/bin/pnpm run daemon start</string>
     </array>
 
     <!-- Working directory -->
     <key>WorkingDirectory</key>
-    <string>/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/memory</string>
+    <string>/Users/macbook/Desktop/allternit-workspace/allternit/memory</string>
 
     <!-- Run at login -->
     <key>RunAtLoad</key>
@@ -51,11 +51,11 @@
 
     <!-- Standard output log -->
     <key>StandardOutPath</key>
-    <string>/Users/macbook/Library/Logs/a2rchitech/memory-agent.out.log</string>
+    <string>/Users/macbook/Library/Logs/allternit/memory-agent.out.log</string>
 
     <!-- Standard error log -->
     <key>StandardErrorPath</key>
-    <string>/Users/macbook/Library/Logs/a2rchitech/memory-agent.err.log</string>
+    <string>/Users/macbook/Library/Logs/allternit/memory-agent.err.log</string>
 
     <!-- Nice value (lower priority) -->
     <key>Nice</key>

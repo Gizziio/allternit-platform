@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2rchitech.local/spec/contracts/Workspace.schema.json",
+  "$id": "https://allternit.local/spec/contracts/Workspace.schema.json",
   "title": "Workspace — Code Mode Workspace Binding",
   "description": "A directory/repo the user selects for Code Mode. Context is scoped per session within a workspace.",
   "type": "object",

@@ -41,51 +41,51 @@ pub mod skill_installer_service;
 pub mod skills;
 // Legacy modules - excluded from tests due to API incompatibilities
 #[cfg(not(test))]
-#[path = "../../../rust/openclaw-host/src/final_integration_verification.rs"]
+#[path = "../../../../agent/rust/openclaw-host/src/final_integration_verification.rs"]
 pub mod final_integration_verification;
 #[cfg(not(test))]
-#[path = "../../../rust/openclaw-host/src/native_api_gateway_router.rs"]
+#[path = "../../../../agent/rust/openclaw-host/src/native_api_gateway_router.rs"]
 pub mod native_api_gateway_router;
 #[cfg(not(test))]
-#[path = "../../../rust/openclaw-host/src/native_canvas_a2ui_native.rs"]
+#[path = "../../../../agent/rust/openclaw-host/src/native_canvas_a2ui_native.rs"]
 pub mod native_canvas_a2ui_native;
 #[cfg(not(test))]
-#[path = "../../../rust/openclaw-host/src/native_channel_abstraction_native.rs"]
+#[path = "../../../../agent/rust/openclaw-host/src/native_channel_abstraction_native.rs"]
 pub mod native_channel_abstraction_native;
 #[cfg(not(test))]
-#[path = "../../../rust/openclaw-host/src/native_final_cleanup.rs"]
+#[path = "../../../../agent/rust/openclaw-host/src/native_final_cleanup.rs"]
 pub mod native_final_cleanup;
 #[cfg(not(test))]
-#[path = "../../../rust/openclaw-host/src/native_imessage_bridge.rs"]
+#[path = "../../../../agent/rust/openclaw-host/src/native_imessage_bridge.rs"]
 pub mod native_imessage_bridge;
 #[cfg(not(test))]
-#[path = "../../../rust/openclaw-host/src/native_provider_router.rs"]
+#[path = "../../../../agent/rust/openclaw-host/src/native_provider_router.rs"]
 pub mod native_provider_router;
 #[cfg(not(test))]
-#[path = "../../../rust/openclaw-host/src/native_remaining_channels.rs"]
+#[path = "../../../../agent/rust/openclaw-host/src/native_remaining_channels.rs"]
 pub mod native_remaining_channels;
 #[cfg(not(test))]
-#[path = "../../../rust/openclaw-host/src/native_session_manager_native.rs"]
+#[path = "../../../../agent/rust/openclaw-host/src/native_session_manager_native.rs"]
 pub mod native_session_manager_native;
 #[cfg(not(test))]
-#[path = "../../../rust/openclaw-host/src/native_shell_ui_bridge.rs"]
+#[path = "../../../../agent/rust/openclaw-host/src/native_shell_ui_bridge.rs"]
 pub mod native_shell_ui_bridge;
 #[cfg(not(test))]
-#[path = "../../../rust/openclaw-host/src/native_skill_execution_native.rs"]
+#[path = "../../../../agent/rust/openclaw-host/src/native_skill_execution_native.rs"]
 pub mod native_skill_execution_native;
 #[cfg(not(test))]
-#[path = "../../../rust/openclaw-host/src/native_subprocess_removal.rs"]
+#[path = "../../../../agent/rust/openclaw-host/src/native_subprocess_removal.rs"]
 pub mod native_subprocess_removal;
 #[cfg(not(test))]
-#[path = "../../../rust/openclaw-host/src/native_tui.rs"]
+#[path = "../../../../agent/rust/openclaw-host/src/native_tui.rs"]
 pub mod native_tui;
 #[cfg(not(test))]
-#[path = "../../../rust/openclaw-host/src/native_ui_integration.rs"]
+#[path = "../../../../agent/rust/openclaw-host/src/native_ui_integration.rs"]
 pub mod native_ui_integration;
 #[path = "native_ui_integration_service.rs"]
 pub mod native_ui_integration_service;
 #[cfg(not(test))]
-#[path = "../../../rust/openclaw-host/src/native_vector_memory_native.rs"]
+#[path = "../../../../agent/rust/openclaw-host/src/native_vector_memory_native.rs"]
 pub mod native_vector_memory_native;
 
 pub use config::HostConfig;
@@ -94,7 +94,7 @@ pub use health::HealthStatus;
 pub use launcher::OpenClawHost;
 
 // Re-export key parity types for convenience
-pub use a2r_parity::{
+pub use allternit_parity::{
     capture::{CaptureManager, Receipt, ReceiptMetadata},
     strangler::{ComponentInput, ComponentOutput, MigrationPhase, StranglerComponent},
 };

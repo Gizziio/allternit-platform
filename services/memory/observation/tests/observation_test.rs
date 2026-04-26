@@ -10,7 +10,7 @@ mod tests {
         // Start the observation service as a child process
         let mut service_cmd = Command::new("cargo");
         service_cmd
-            .args(["run", "--bin", "a2rchitech-observation"])
+            .args(["run", "--bin", "allternit-observation"])
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
 

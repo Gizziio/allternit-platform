@@ -1,5 +1,5 @@
 import { AgentTurn, OrchestrationContext, ToolCall, ToolResult } from './types.js';
-import { ExecutionEngine, ToolExecutor } from '@a2r/engine';
+import { ExecutionEngine, ToolExecutor } from '@allternit/engine';
 
 export class TurnManager {
   private toolExecutor: ToolExecutor;
@@ -9,7 +9,7 @@ export class TurnManager {
   }
 
   async buildSystemPrompt(context: OrchestrationContext): Promise<string> {
-    return 'You are an A2R agent with role: ' + context.role + '. ' +
+    return 'You are an Allternit agent with role: ' + context.role + '. ' +
            'You have access to the following tools: shell, ls, desktop_control. ' +
            'Use desktop_control for any native application interaction.';
   }

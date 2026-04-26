@@ -1,6 +1,6 @@
-# @a2r/webhook-ingestion
+# @allternit/webhook-ingestion
 
-Webhook ingestion service for a2rchitech - receives, validates, normalizes, and processes webhooks from multiple sources (GitHub, Discord, Ant Farm, Moltbook) and emits events to Rails ledger.
+Webhook ingestion service for allternit - receives, validates, normalizes, and processes webhooks from multiple sources (GitHub, Discord, Ant Farm, Moltbook) and emits events to Rails ledger.
 
 ## Features
 
@@ -10,7 +10,7 @@ Webhook ingestion service for a2rchitech - receives, validates, normalizes, and 
 - **Idempotency**: Deduplication with configurable TTL
 - **Rate Limiting**: Sliding window rate limiting per source
 - **Allowlist/Blocklist**: Configurable source and event type filtering
-- **Rails Integration**: Emits events to a2rchitech Rails ledger
+- **Rails Integration**: Emits events to allternit Rails ledger
 - **Receipt Recording**: Immutable audit trail for all processed events
 
 ## Installation
@@ -34,8 +34,8 @@ WEBHOOK_GITHUB_SECRET=your_github_secret
 WEBHOOK_DISCORD_SECRET=your_discord_secret
 
 # Rails
-A2R_RAILS_URL=http://127.0.0.1:3011
-A2R_RAILS_API_KEY=your_api_key
+Allternit_RAILS_URL=http://127.0.0.1:3011
+Allternit_RAILS_API_KEY=your_api_key
 ```
 
 ## Usage

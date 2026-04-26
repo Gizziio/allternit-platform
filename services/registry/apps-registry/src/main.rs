@@ -431,7 +431,7 @@ async fn handle_authenticate_user(
                     format!("{}?client_id={}&redirect_uri={}&scope={}&response_type=code",
                         config.authorization_url,
                         config.client_id,
-                        "https://a2rchitech.com/oauth/callback", // This would come from request
+                        "https://allternit.com/oauth/callback", // This would come from request
                         config.scopes.join(" ")
                     )
                 }),

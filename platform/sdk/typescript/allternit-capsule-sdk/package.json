@@ -1,7 +1,7 @@
 {
-  "name": "@a2rchitech/capsule-sdk",
+  "name": "@allternit/capsule-sdk-platform",
   "version": "0.1.0",
-  "description": "Headless Capsule SDK - lifecycle, contracts, and guardrails for A2rchitech capsules",
+  "description": "Headless Capsule SDK - lifecycle, contracts, and guardrails for Allternit capsules",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -30,13 +30,13 @@
     "typecheck": "tsc --noEmit"
   },
   "keywords": [
-    "a2rchitech",
+    "allternit",
     "capsule",
     "lifecycle",
     "contracts",
     "sdk"
   ],
-  "author": "A2rchitech",
+  "author": "Allternit",
   "license": "MIT",
   "devDependencies": {
     "typescript": "^5.4.5"

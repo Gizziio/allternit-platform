@@ -22,6 +22,10 @@ pub struct EventScope {
     pub node_id: Option<String>,
     pub wih_id: Option<String>,
     pub run_id: Option<String>,
+    /// Team workspace this event belongs to (cowork-team integration)
+    pub team_workspace_id: Option<String>,
+    /// Human-readable team name for display purposes
+    pub team_name: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -33,7 +37,7 @@ pub struct EventProvenance {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct A2REvent {
+pub struct AllternitEvent {
     pub event_id: String,
     pub ts: String,
     pub actor: Actor,

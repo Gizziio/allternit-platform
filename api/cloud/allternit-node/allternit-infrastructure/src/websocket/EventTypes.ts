@@ -1,7 +1,7 @@
 /**
  * EventTypes.ts
  * 
- * All WebSocket event type definitions for the A2R Infrastructure real-time event system.
+ * All WebSocket event type definitions for the Allternit Infrastructure real-time event system.
  * Defines interfaces for deployment, environment, VPS, and system events.
  */
 

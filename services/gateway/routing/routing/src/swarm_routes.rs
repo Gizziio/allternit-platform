@@ -5,7 +5,7 @@
 //! - Circuit breaker control
 //! - Quarantine management
 
-use a2r_swarm_advanced::{CircuitBreakerStatus, MessageStats, QuarantinedAgentStatus};
+use allternit_swarm_advanced::{CircuitBreakerStatus, MessageStats, QuarantinedAgentStatus};
 use axum::{
     extract::{Path, State},
     http::StatusCode,

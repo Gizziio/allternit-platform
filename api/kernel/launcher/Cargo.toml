@@ -2,8 +2,8 @@
 name = "allternit-platform-launcher"
 version = "0.1.0"
 edition = "2021"
-authors = ["A2rchitect Team"]
-description = "Single-binary launcher for A2R Platform"
+authors = ["allternit Team"]
+description = "Single-binary launcher for Allternit Platform"
 license = "MIT"
 
 [dependencies]

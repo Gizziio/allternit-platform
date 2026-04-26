@@ -1,12 +1,12 @@
 # OWNER: T1-A4
 
 [package]
-name = "a2r-executor"
+name = "allternit-executor"
 version = "0.1.0"
 edition = "2021"
-authors = ["A2R Team <team@a2r.io>"]
+authors = ["Allternit Team <team@allternit.io>"]
 license = "MIT OR Apache-2.0"
-description = "A2R Executor - Docker container orchestration for job execution"
+description = "Allternit Executor - Docker container orchestration for job execution"
 
 [dependencies]
 # Async runtime

@@ -25,7 +25,7 @@
         "python.linting.pylintEnabled": true
       }
     },
-    "a2r": {
+    "allternit": {
       "driver": "process",
       "enablePrewarm": true
     }

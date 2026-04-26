@@ -1,7 +1,7 @@
 //! MCP (Model Context Protocol) routes with policy enforcement
 //!
 //! This module provides API endpoints for managing MCP servers and executing
-//! tools with A2R policy engine integration.
+//! tools with Allternit policy engine integration.
 //!
 //! # Endpoints
 //!

@@ -1,5 +1,5 @@
 {
-  "$schema": "https://a2r.dev/schemas/v1.0.0/event-envelope.json",
+  "$schema": "https://allternit.dev/schemas/v1.0.0/event-envelope.json",
   "$id": "event-envelope",
   "type": "object",
   "required": [

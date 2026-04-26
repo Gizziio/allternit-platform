@@ -2,7 +2,7 @@
 name = "allternit-memory-kernel"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Memory Kernel - Three-layer memory system (events, entities, summaries)"
+description = "Allternit Memory Kernel - Three-layer memory system (events, entities, summaries)"
 
 [dependencies]
 serde = { workspace = true }

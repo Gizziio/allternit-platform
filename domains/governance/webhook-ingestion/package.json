@@ -1,12 +1,12 @@
 {
-  "name": "@a2r/webhook-ingestion",
+  "name": "@allternit/webhook-ingestion",
   "version": "1.0.0",
-  "description": "Webhook ingestion service for a2rchitech - normalizes external events and emits to Rails ledger",
+  "description": "Webhook ingestion service for allternit - normalizes external events and emits to Rails ledger",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "a2r-webhook": "./dist/cli/index.js"
+    "allternit-webhook": "./dist/cli/index.js"
   },
   "scripts": {
     "build": "tsc",
@@ -20,12 +20,12 @@
     "typecheck": "tsc --noEmit"
   },
   "keywords": [
-    "a2rchitech",
+    "allternit",
     "webhook",
     "agent",
     "rails"
   ],
-  "author": "a2rchitech",
+  "author": "allternit",
   "license": "MIT",
   "dependencies": {
     "fastify": "^4.25.2",
@@ -51,7 +51,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/a2rchitech/a2rchitech.git",
+    "url": "https://github.com/allternit/allternit.git",
     "directory": "2-governance/webhook-ingestion"
   }
 }

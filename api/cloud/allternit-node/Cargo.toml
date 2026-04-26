@@ -2,9 +2,9 @@
 name = "allternit-node"
 version = "0.1.0"
 edition = "2021"
-authors = ["A2R Team <team@allternit.com>"]
+authors = ["Allternit Team <team@allternit.com>"]
 license = "MIT OR Apache-2.0"
-description = "A2R Node Agent - runs on user VPS to connect to control plane"
+description = "Allternit Node Agent - runs on user VPS to connect to control plane"
 
 [[bin]]
 name = "allternit-node"

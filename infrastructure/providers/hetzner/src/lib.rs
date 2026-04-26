@@ -1,4 +1,4 @@
-//! A2R Cloud Hetzner Provider
+//! Allternit Cloud Hetzner Provider
 //!
 //! Real Hetzner Cloud API integration for automated deployments.
 

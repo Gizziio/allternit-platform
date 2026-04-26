@@ -1,7 +1,7 @@
 /**
- * A2R Runtime Bridge - Adapters
+ * Allternit Runtime Bridge - Adapters
  * 
- * Adapter modules for integrating A2R Kernel with the runtime.
+ * Adapter modules for integrating Allternit Kernel with the runtime.
  */
 
 // Session Adapter
@@ -10,9 +10,9 @@ export {
   cleanupSession,
   getSessionContext,
   getActiveSessions,
-  createA2RGatewayOptions,
+  createAllternitGatewayOptions,
   wrapGatewayClient,
-  type A2RGatewayOptions,
+  type AllternitGatewayOptions,
   type SessionAdapterOptions,
   _clearActiveSessions,
 } from './session-adapter.js';

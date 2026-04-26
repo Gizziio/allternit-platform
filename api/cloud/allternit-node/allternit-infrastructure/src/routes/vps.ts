@@ -195,7 +195,7 @@ export default async function vpsRoutes(
     }
   });
 
-  // Install A2R node on VPS
+  // Install Allternit node on VPS
   fastify.post('/:id/install', {
     schema: {
       body: installNodeSchema,
@@ -203,13 +203,13 @@ export default async function vpsRoutes(
   }, async (request: FastifyRequest<{ Params: { id: string }; Body: { version?: string; port?: number } }>, reply: FastifyReply) => {
     try {
       const { id } = request.params;
-      const result = await VPSService.installA2RNode(id, request.body);
+      const result = await VPSService.installAllternitNode(id, request.body);
       return reply.send({
         success: result.success,
         data: result,
       });
     } catch (error) {
-      logger.error('Failed to install A2R node', { error });
+      logger.error('Failed to install Allternit node', { error });
       throw error;
     }
   });

@@ -15,7 +15,7 @@ plugin system.
   valid `plugin.json`.
 - `browser.playwright` adapter is available (Chromium installed).
 - A test GitHub pull request URL is available:
-  `https://github.com/a2rchitech/computer-use/pull/1` (or a localhost HTML stub
+  `https://github.com/allternit/computer-use/pull/1` (or a localhost HTML stub
   mimicking a GitHub PR page structure).
 - The agent is authenticated to GitHub (session cookie or stub bypass active).
 - Policy engine is running with the `github` plugin profile loaded.
@@ -71,7 +71,7 @@ Router.route(
     mode="execute",
     plugin_id="github",
     cookbook_id="review-pr",
-    target_url="https://github.com/a2rchitech/computer-use/pull/1"
+    target_url="https://github.com/allternit/computer-use/pull/1"
 )
   → PolicyEngine.evaluate(target=target_url, action_type="goto")
       → decision: allow (github.com in allowed_domains)

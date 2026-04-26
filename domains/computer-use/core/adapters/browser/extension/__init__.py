@@ -1,5 +1,5 @@
 """
-A2R Computer Use — Browser Extension Adapter (Assist Mode)
+Allternit Computer Use — Browser Extension Adapter (Assist Mode)
 Connects to a user's active browser session via the thin-client extension.
 
 In assist mode, the agent observes the page, suggests actions, and waits
@@ -24,7 +24,7 @@ import json
 class ExtensionAdapter(BaseAdapter):
     """
     Browser extension adapter for user-present assist workflows.
-    Communicates with A2R thin-client extension via WebSocket.
+    Communicates with Allternit thin-client extension via WebSocket.
     """
 
     def __init__(self, ws_url: str = "ws://localhost:3011/extension"):
@@ -54,7 +54,7 @@ class ExtensionAdapter(BaseAdapter):
             self._connected = False
             raise RuntimeError(
                 f"Could not connect to extension at {self._ws_url}. "
-                f"Ensure the A2R extension is installed and running. Error: {e}"
+                f"Ensure the Allternit extension is installed and running. Error: {e}"
             )
 
     async def execute(self, action: ActionRequest, session_id: str, run_id: str) -> ResultEnvelope:
@@ -65,7 +65,7 @@ class ExtensionAdapter(BaseAdapter):
                 envelope.status = "failed"
                 envelope.error = {
                     "code": "NOT_CONNECTED",
-                    "message": "Extension not connected. Ensure A2R extension is running.",
+                    "message": "Extension not connected. Ensure Allternit extension is running.",
                     "adapter_id": self.adapter_id,
                 }
                 envelope.completed_at = datetime.utcnow().isoformat()

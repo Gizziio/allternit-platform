@@ -1,11 +1,11 @@
 [package]
-name = "a2r-edge-runner"
+name = "allternit-edge-runner"
 version = "0.1.0"
 edition = "2021"
-description = "A2R BYOC Edge Runner - Secure tunnel to control plane, worker management, tool execution"
+description = "Allternit BYOC Edge Runner - Secure tunnel to control plane, worker management, tool execution"
 
 [[bin]]
-name = "a2r-edge-runner"
+name = "allternit-edge-runner"
 path = "src/main.rs"
 
 [dependencies]

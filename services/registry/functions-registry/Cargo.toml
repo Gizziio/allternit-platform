@@ -1,5 +1,5 @@
 [package]
-name = "a2rchitech-registry-functions"
+name = "allternit-registry-functions"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,7 +8,7 @@ name = "registry-functions"
 path = "src/main.rs"
 
 [lib]
-name = "a2rchitech_registry_functions"
+name = "allternit_registry_functions"
 path = "src/lib.rs"
 
 [dependencies]
@@ -23,9 +23,9 @@ tracing-subscriber = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 async-trait = { workspace = true }
-a2rchitech-sdk-core = { workspace = true }
-a2rchitech-sdk-apps = { workspace = true }
-a2rchitech-sdk-functions = { workspace = true }
-a2rchitech-sdk-policy = { workspace = true }
+allternit-sdk-core = { workspace = true }
+allternit-sdk-apps = { workspace = true }
+allternit-sdk-functions = { workspace = true }
+allternit-sdk-policy = { workspace = true }
 sqlx = { workspace = true }
 reqwest = { workspace = true }

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * A2R Browser & Canvas Demo
+ * Allternit Browser & Canvas Demo
  * 
  * This script demonstrates the full functionality of the browser module.
  * Run with: npx tsx demo.ts
@@ -30,7 +30,7 @@ const DEMO_CONFIG: BrowserConfig = {
 
 async function runDemo() {
   console.log('╔════════════════════════════════════════════════════════════╗');
-  console.log('║           A2R Browser & Canvas Demo                        ║');
+  console.log('║           Allternit Browser & Canvas Demo                        ║');
   console.log('╚════════════════════════════════════════════════════════════╝\n');
 
   let browserServer: any;
@@ -84,7 +84,7 @@ async function runDemo() {
     const canvasRes = await fetch(`http://127.0.0.1:${canvasHost.port}/`);
     const canvasHtml = await canvasRes.text();
     console.log(`   ✓ GET / - Returns ${canvasHtml.length} bytes HTML`);
-    console.log(`   ✓ Contains "A2R Canvas": ${canvasHtml.includes('A2R Canvas')}`);
+    console.log(`   ✓ Contains "Allternit Canvas": ${canvasHtml.includes('Allternit Canvas')}`);
     console.log();
 
     // ═════════════════════════════════════════════════════════════

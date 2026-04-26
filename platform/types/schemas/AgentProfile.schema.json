@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2rchitech.local/spec/contracts/AgentProfile.schema.json",
+  "$id": "https://allternit.local/spec/contracts/AgentProfile.schema.json",
   "title": "Agent Profile Registry",
   "type": "object",
   "additionalProperties": false,

@@ -3,7 +3,7 @@
 //! These tests exercise the full workflow from task submission
 //! through execution and knowledge compounding.
 
-use a2r_meta_swarm::{
+use allternit_meta_swarm::{
     initialize, MetaSwarmConfig, Task, SwarmMode,
     types::{Complexity, Domain, TaskClassification, TaskConstraints},
 };
@@ -17,9 +17,9 @@ async fn e2e_swarm_agentic_workflow() {
     let task = Task::new("Design a new microservices communication protocol")
         .with_classification(TaskClassification {
             complexity: Complexity::Extreme,
-            novelty: a2r_meta_swarm::types::Novelty::Breakthrough,
+            novelty: allternit_meta_swarm::types::Novelty::Breakthrough,
             domain: Domain::Architecture,
-            estimated_duration: a2r_meta_swarm::types::DurationEstimate::Days(3),
+            estimated_duration: allternit_meta_swarm::types::DurationEstimate::Days(3),
         });
     
     let handle = controller.submit_task(task).await.unwrap();
@@ -43,9 +43,9 @@ async fn e2e_claude_swarm_workflow() {
     let task = Task::new("Refactor the auth module to extract common logic")
         .with_classification(TaskClassification {
             complexity: Complexity::Medium,
-            novelty: a2r_meta_swarm::types::Novelty::Similar,
+            novelty: allternit_meta_swarm::types::Novelty::Similar,
             domain: Domain::Code,
-            estimated_duration: a2r_meta_swarm::types::DurationEstimate::Hours(2),
+            estimated_duration: allternit_meta_swarm::types::DurationEstimate::Hours(2),
         });
     
     let handle = controller.submit_task(task).await.unwrap();
@@ -83,7 +83,7 @@ async fn e2e_closed_loop_workflow() {
 /// Test that the knowledge base is updated after task completion
 #[tokio::test]
 async fn e2e_knowledge_compounding() {
-    use a2r_meta_swarm::knowledge::{KnowledgeStore, InMemoryKnowledgeStore};
+    use allternit_meta_swarm::knowledge::{KnowledgeStore, InMemoryKnowledgeStore};
     use std::sync::Arc;
     
     let knowledge = Arc::new(InMemoryKnowledgeStore::new());
@@ -129,10 +129,10 @@ async fn e2e_concurrent_tasks() {
 /// Test the full 5-step ClosedLoop methodology
 #[tokio::test]
 async fn e2e_closed_loop_five_steps() {
-    use a2r_meta_swarm::modes::closedloop::{
+    use allternit_meta_swarm::modes::closedloop::{
         BrainstormPhase, PlanPhase, WorkPhase, ReviewPhase, CompoundPhase,
     };
-    use a2r_meta_swarm::knowledge::InMemoryKnowledgeStore;
+    use allternit_meta_swarm::knowledge::InMemoryKnowledgeStore;
     use std::sync::Arc;
     
     let task = Task::new("Implement new feature with full review process");
@@ -164,11 +164,11 @@ async fn e2e_closed_loop_five_steps() {
 /// Test file conflict detection
 #[tokio::test]
 async fn e2e_file_conflict_detection() {
-    use a2r_meta_swarm::modes::claudeswarm::FileLockManager;
+    use allternit_meta_swarm::modes::claudeswarm::FileLockManager;
     
     let manager = FileLockManager::new();
-    let agent1 = a2r_meta_swarm::types::EntityId::new();
-    let agent2 = a2r_meta_swarm::types::EntityId::new();
+    let agent1 = allternit_meta_swarm::types::EntityId::new();
+    let agent2 = allternit_meta_swarm::types::EntityId::new();
     
     // Simulate concurrent file access
     let lock1 = manager.try_lock(agent1, "/src/main.rs").await.unwrap();
@@ -189,11 +189,11 @@ async fn e2e_file_conflict_detection() {
 /// Test PSO-based architecture discovery
 #[tokio::test]
 async fn e2e_pso_architecture_discovery() {
-    use a2r_meta_swarm::modes::swarmagentic::{AutoArchitectMode, PSOEngine};
-    use a2r_meta_swarm::knowledge::InMemoryKnowledgeStore;
+    use allternit_meta_swarm::modes::swarmagentic::{AutoArchitectMode, PSOEngine};
+    use allternit_meta_swarm::knowledge::InMemoryKnowledgeStore;
     use std::sync::Arc;
     
-    let config = a2r_meta_swarm::types::ModeConfig::new(SwarmMode::SwarmAgentic);
+    let config = allternit_meta_swarm::types::ModeConfig::new(SwarmMode::SwarmAgentic);
     let knowledge = Arc::new(InMemoryKnowledgeStore::new());
     
     let mode = AutoArchitectMode::new(config, knowledge).unwrap();
@@ -223,9 +223,9 @@ async fn e2e_full_meta_swarm_workflow() {
         let task = Task::new(desc)
             .with_classification(TaskClassification {
                 complexity,
-                novelty: a2r_meta_swarm::types::Novelty::Unknown,
+                novelty: allternit_meta_swarm::types::Novelty::Unknown,
                 domain,
-                estimated_duration: a2r_meta_swarm::types::DurationEstimate::Hours(1),
+                estimated_duration: allternit_meta_swarm::types::DurationEstimate::Hours(1),
             });
         
         let handle = controller.submit_task(task).await;

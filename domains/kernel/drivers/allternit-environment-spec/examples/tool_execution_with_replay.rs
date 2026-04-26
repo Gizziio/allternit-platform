@@ -6,12 +6,12 @@
 //! 3. Save the execution trace for replay
 //! 4. Replay the execution later
 
-use a2r_driver_interface::{
+use allternit_driver_interface::{
     CommandSpec, DeterminismEnvelope, EnvSpecType, ExecutionDriver, ExecutionId, PolicySpec,
     ResourceSpec, SpawnSpec,
 };
-use a2r_process_driver::ProcessDriver;
-use a2r_replay::{CaptureLevel, ReplayEngine};
+use allternit_process_driver::ProcessDriver;
+use allternit_replay::{CaptureLevel, ReplayEngine};
 use std::collections::HashMap;
 
 #[tokio::main]
@@ -54,11 +54,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Step 3: Spawn execution environment
     println!("📦 Step 3: Spawning execution environment...");
     let spawn_spec = SpawnSpec {
-        tenant: a2r_driver_interface::TenantId("example-tenant".to_string()),
+        tenant: allternit_driver_interface::TenantId("example-tenant".to_string()),
         project: None,
         workspace: None,
         run_id: Some(ExecutionId::new()),
-        env: a2r_driver_interface::EnvironmentSpec {
+        env: allternit_driver_interface::EnvironmentSpec {
             spec_type: EnvSpecType::Oci,
             image: "alpine:latest".to_string(),
             version: None,

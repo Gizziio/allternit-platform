@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://allternit.local/spec/contracts/Receipt.schema.json",
-  "title": "A2R Receipt Schema",
+  "title": "Allternit Receipt Schema",
   "description": "Receipt proofs for tool and workflow execution",
   "type": "object",
   "required": [

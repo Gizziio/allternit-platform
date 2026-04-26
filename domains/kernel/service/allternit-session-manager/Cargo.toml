@@ -1,19 +1,19 @@
 [package]
-name = "a2r-session-manager"
+name = "allternit-session-manager"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Session Manager - High-level session lifecycle management"
+description = "Allternit Session Manager - High-level session lifecycle management"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
 # Internal dependencies
-a2r-driver-interface = { path = "../../drivers/a2r-driver-interface" }
-a2r-process-driver = { path = "../a2r-process-driver" }
-a2r-firecracker-driver = { path = "../a2r-firecracker-driver" }
+allternit-driver-interface = { path = "../../drivers/allternit-driver-interface" }
+allternit-process-driver = { path = "../allternit-process-driver" }
+allternit-firecracker-driver = { path = "../allternit-firecracker-driver" }
 
 # Apple Virtualization.framework driver (macOS only)
 [target.'cfg(target_os = "macos")'.dependencies]
-a2r-apple-vf-driver = { path = "../a2r-apple-vf-driver" }
+allternit-apple-vf-driver = { path = "../allternit-apple-vf-driver" }
 
 # Core async
 tokio = { version = "1", features = ["full"] }

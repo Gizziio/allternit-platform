@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use a2rchitech_providers::adapters::openai::LLMProvider as BaseLLMProvider;
+use allternit_providers::adapters::openai::LLMProvider as BaseLLMProvider;
 use anyhow::Result;
 
 #[async_trait]

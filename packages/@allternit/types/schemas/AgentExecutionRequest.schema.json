@@ -27,7 +27,7 @@
       "additionalProperties": false,
       "required": ["root", "allowed_globs"],
       "properties": {
-        "root": { "type": "string", "const": "/.a2r/" },
+        "root": { "type": "string", "const": "/.allternit/" },
         "allowed_globs": {
           "type": "array",
           "items": { "type": "string" },

@@ -8,7 +8,7 @@ import {
   DEFAULT_ALLOWED_TOOLS,
   HIGH_RISK_TOOLS,
 } from '../src/routing';
-import { A2RKernelImpl, WihItem, WihStorage } from '../src/index';
+import { AllternitKernelImpl, WihItem, WihStorage } from '../src/index';
 import { ToolContext, FileContext } from '../src/types';
 
 // Mock storage implementation
@@ -49,7 +49,7 @@ class MockStorage implements WihStorage {
 }
 
 describe('Routing Functions', () => {
-  const mockKernel = new A2RKernelImpl(new MockStorage());
+  const mockKernel = new AllternitKernelImpl(new MockStorage());
 
   describe('preToolUseRouter', () => {
     const baseContext: ToolContext = {
@@ -275,13 +275,13 @@ describe('Routing Functions', () => {
   });
 });
 
-describe('A2RKernelImpl', () => {
+describe('AllternitKernelImpl', () => {
   let storage: MockStorage;
-  let kernel: A2RKernelImpl;
+  let kernel: AllternitKernelImpl;
 
   beforeEach(() => {
     storage = new MockStorage();
-    kernel = new A2RKernelImpl(storage);
+    kernel = new AllternitKernelImpl(storage);
   });
 
   describe('WIH Operations', () => {
@@ -290,7 +290,7 @@ describe('A2RKernelImpl', () => {
         title: 'Test WIH',
       });
 
-      expect(wih.id).toMatch(/^A2R-\d{4}$/);
+      expect(wih.id).toMatch(/^Allternit-\d{4}$/);
       expect(wih.status).toBe('draft');
       expect(wih.priority).toBe(50);
       expect(wih.version).toBe('1.0.0');

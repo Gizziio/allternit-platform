@@ -1,10 +1,10 @@
-//! A2R Parity Testing Framework
+//! Allternit Parity Testing Framework
 //!
 //! Provides infrastructure for the Strangler Fig migration pattern
-//! when absorbing OpenClaw components into A2rchitect.
+//! when absorbing OpenClaw components into allternit.
 //!
 //! Core concepts:
-//! - StranglerComponent: A component being migrated from OpenClaw to native A2R
+//! - StranglerComponent: A component being migrated from OpenClaw to native Allternit
 //! - ParityHarness: Orchestrates testing and comparison
 //! - Receipts: Immutable records of all OpenClaw I/O
 //!

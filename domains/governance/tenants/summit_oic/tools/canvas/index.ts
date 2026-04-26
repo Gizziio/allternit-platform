@@ -2,10 +2,10 @@
  * Summit Canvas Browser Automation Module
  * 
  * Browser-based Canvas LMS automation for when API access is unavailable.
- * Uses A2R Operator browser-use skills for visual grounding and control.
+ * Uses Allternit Operator browser-use skills for visual grounding and control.
  * 
  * This module is part of the Summit OIC tenant overlay, separate from
- * the core a2rchitech platform.
+ * the core allternit platform.
  * 
  * @module summit.canvas
  */
@@ -13,10 +13,10 @@
 // Types and interfaces
 export * from './browser-types';
 
-// Browser automation skill (connection to A2R Operator)
+// Browser automation skill (connection to Allternit Operator)
 export {
-  A2ROperatorBrowserSkill,
-  A2ROperatorSessionFactory,
+  AllternitOperatorBrowserSkill,
+  AllternitOperatorSessionFactory,
   createBrowserUseSkill,
   createBrowserSessionFactory,
 } from './browser-use-skill';

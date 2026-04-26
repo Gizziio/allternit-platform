@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::core::types::A2REvent;
+use crate::core::types::AllternitEvent;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PromptDelta {
@@ -25,7 +25,7 @@ pub struct PromptTimeline {
     pub work_links: Vec<Value>,
 }
 
-pub fn project_prompt(events: &[A2REvent], prompt_id: &str) -> Option<PromptTimeline> {
+pub fn project_prompt(events: &[AllternitEvent], prompt_id: &str) -> Option<PromptTimeline> {
     let mut prompt: Option<PromptTimeline> = None;
     let mut deltas: Vec<PromptDelta> = Vec::new();
     let mut links: Vec<Value> = Vec::new();

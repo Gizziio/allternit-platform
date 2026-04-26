@@ -1,7 +1,7 @@
 {
   "name": "@allternit/ix",
   "version": "0.1.0",
-  "description": "A2R Interface eXecution - Declarative UI generation with json-render compatibility",
+  "description": "Allternit Interface eXecution - Declarative UI generation with json-render compatibility",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -58,7 +58,7 @@
     "README.md"
   ],
   "keywords": [
-    "a2r",
+    "allternit",
     "ui",
     "json-render",
     "declarative",
@@ -67,6 +67,6 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/a2r/ix"
+    "url": "https://github.com/allternit/ix"
   }
 }

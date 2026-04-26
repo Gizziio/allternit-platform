@@ -6,7 +6,7 @@ const execAsync = promisify(exec);
 
 export class DockerVMProvider {
   async boot(image: string, config: VMSessionConfig): Promise<string> {
-    const sessionId = `a2r-session-${Date.now()}`;
+    const sessionId = `allternit-session-${Date.now()}`;
     
     const { stdout } = await execAsync(
       `docker run -d ` +

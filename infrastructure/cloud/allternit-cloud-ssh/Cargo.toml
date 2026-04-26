@@ -1,8 +1,8 @@
 [package]
-name = "a2r-cloud-ssh"
+name = "allternit-cloud-ssh"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Cloud SSH Executor - Real SSH connection management"
+description = "Allternit Cloud SSH Executor - Real SSH connection management"
 
 [dependencies]
 tokio = { workspace = true, features = ["full"] }

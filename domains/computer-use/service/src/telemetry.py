@@ -11,9 +11,9 @@ from .plugin_engine import run_probe
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 VENDOR_PLUGINS_DIR = (
-    REPO_ROOT / "5-ui" / "a2r-platform" / "src" / "a2r-usage" / "plugins"
+    REPO_ROOT / "5-ui" / "allternit-platform" / "src" / "allternit-usage" / "plugins"
 )
-RECEIPTS_DIR = Path(__file__).resolve().parents[1].resolve().parents[0] / ".a2r" / "receipts"
+RECEIPTS_DIR = Path(__file__).resolve().parents[1].resolve().parents[0] / ".allternit" / "receipts"
 PROVIDER_STATUS_CACHE: Dict[str, Dict[str, float]] = {}
 
 
@@ -198,7 +198,7 @@ def build_snapshot(session_id: str, provider: Optional[TelemetryProviderInfo]) -
                 for r in session_receipts
             ]
             model_usage = None
-            metadata["source"] = "a2r-receipts"
+            metadata["source"] = "allternit-receipts"
             metadata["total_actions"] = len(session_receipts)
             metadata["succeeded"] = succeeded
             metadata["total_duration_ms"] = total_ms
@@ -214,7 +214,7 @@ def build_snapshot(session_id: str, provider: Optional[TelemetryProviderInfo]) -
             status = "idle"
             tool_usage = None
             model_usage = None
-            metadata["source"] = "a2r-receipts"
+            metadata["source"] = "allternit-receipts"
             _set_provider_status(provider_id, False)
 
     snapshot = TelemetrySnapshot(
@@ -238,12 +238,12 @@ def build_snapshot(session_id: str, provider: Optional[TelemetryProviderInfo]) -
 
 
 def _load_session_receipts(session_id: str) -> List[Dict[str, Any]]:
-    """Load all receipts associated with a session from .a2r/receipts/."""
+    """Load all receipts associated with a session from .allternit/receipts/."""
     receipts: List[Dict[str, Any]] = []
     dirs_to_check = [
         RECEIPTS_DIR,
-        Path.home() / ".a2r" / "receipts",
-        Path.cwd() / ".a2r" / "receipts",
+        Path.home() / ".allternit" / "receipts",
+        Path.cwd() / ".allternit" / "receipts",
     ]
     seen: set = set()
     for receipts_dir in dirs_to_check:

@@ -1,5 +1,5 @@
 use crate::tool_executor::{ToolCall, ToolExecutor};
-use a2rchitech_tools_gateway::{SdkToolExecutor, ToolExecutionRequest, ToolGatewayError};
+use allternit_tools_gateway::{SdkToolExecutor, ToolExecutionRequest, ToolGatewayError};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 

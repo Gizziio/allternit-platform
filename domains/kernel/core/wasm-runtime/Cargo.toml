@@ -1,10 +1,10 @@
 [package]
-name = "a2r-wasm-runtime"
+name = "allternit-wasm-runtime"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "WASM runtime for A2rchitech agentic OS - sandboxed tool execution"
+description = "WASM runtime for Allternit agentic OS - sandboxed tool execution"
 
 [dependencies]
 # WASM Runtime
@@ -38,7 +38,7 @@ reqwest = { version = "0.11", features = ["blocking"] }
 allternit-history = { workspace = true }
 
 # Internal crates
-a2r-capsule = { workspace = true }
+allternit-capsule = { workspace = true }
 allternit-policy = { workspace = true }
 
 [dev-dependencies]

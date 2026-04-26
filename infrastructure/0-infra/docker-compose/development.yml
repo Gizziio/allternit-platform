@@ -10,7 +10,7 @@ services:
       - "3000:3000"
     environment:
       - RUST_LOG=info
-      - DATABASE_URL=postgresql://user:password@db:5432/a2rchitech
+      - DATABASE_URL=postgresql://user:password@db:5432/allternit
       - REDIS_URL=redis://redis:6379
     depends_on:
       - db
@@ -28,7 +28,7 @@ services:
       - "3006:3006"
     environment:
       - RUST_LOG=info
-      - DATABASE_URL=postgresql://user:password@db:5432/a2rchitech
+      - DATABASE_URL=postgresql://user:password@db:5432/allternit
       - REDIS_URL=redis://redis:6379
     depends_on:
       - db
@@ -45,7 +45,7 @@ services:
       - "3007:3007"
     environment:
       - RUST_LOG=info
-      - DATABASE_URL=postgresql://user:password@db:5432/a2rchitech
+      - DATABASE_URL=postgresql://user:password@db:5432/allternit
       - REDIS_URL=redis://redis:6379
     depends_on:
       - db
@@ -61,7 +61,7 @@ services:
       - "3008:3008"
     environment:
       - RUST_LOG=info
-      - DATABASE_URL=postgresql://user:password@db:5432/a2rchitech
+      - DATABASE_URL=postgresql://user:password@db:5432/allternit
       - REDIS_URL=redis://redis:6379
     depends_on:
       - db
@@ -78,7 +78,7 @@ services:
       - "3001:3001"
     environment:
       - RUST_LOG=info
-      - DATABASE_URL=postgresql://user:password@db:5432/a2rchitech
+      - DATABASE_URL=postgresql://user:password@db:5432/allternit
     depends_on:
       - db
 
@@ -90,7 +90,7 @@ services:
       - "3002:3002"
     environment:
       - RUST_LOG=info
-      - DATABASE_URL=postgresql://user:password@db:5432/a2rchitech
+      - DATABASE_URL=postgresql://user:password@db:5432/allternit
     depends_on:
       - db
 
@@ -103,7 +103,7 @@ services:
       - "3003:3003"
     environment:
       - RUST_LOG=info
-      - DATABASE_URL=postgresql://user:password@db:5432/a2rchitech
+      - DATABASE_URL=postgresql://user:password@db:5432/allternit
     depends_on:
       - db
 
@@ -116,7 +116,7 @@ services:
       - "3005:3005"
     environment:
       - RUST_LOG=info
-      - DATABASE_URL=postgresql://user:password@db:5432/a2rchitech
+      - DATABASE_URL=postgresql://user:password@db:5432/allternit
     depends_on:
       - db
 
@@ -128,7 +128,7 @@ services:
       - "3009:3009"
     environment:
       - RUST_LOG=info
-      - DATABASE_URL=postgresql://user:password@db:5432/a2rchitech
+      - DATABASE_URL=postgresql://user:password@db:5432/allternit
     depends_on:
       - db
 
@@ -139,7 +139,7 @@ services:
       dockerfile: services/executor/Dockerfile
     environment:
       - RUST_LOG=info
-      - DATABASE_URL=postgresql://user:password@db:5432/a2rchitech
+      - DATABASE_URL=postgresql://user:password@db:5432/allternit
     depends_on:
       - db
       - redis
@@ -154,7 +154,7 @@ services:
       - "3004:3004"
     environment:
       - RUST_LOG=info
-      - DATABASE_URL=postgresql://user:password@db:5432/a2rchitech
+      - DATABASE_URL=postgresql://user:password@db:5432/allternit
     depends_on:
       - db
 
@@ -164,7 +164,7 @@ services:
       dockerfile: services/memory/Dockerfile
     environment:
       - RUST_LOG=info
-      - DATABASE_URL=postgresql://user:password@db:5432/a2rchitech
+      - DATABASE_URL=postgresql://user:password@db:5432/allternit
     depends_on:
       - db
       - redis
@@ -175,7 +175,7 @@ services:
       dockerfile: services/local-inference/Dockerfile
     environment:
       - RUST_LOG=info
-      - DATABASE_URL=postgresql://user:password@db:5432/a2rchitech
+      - DATABASE_URL=postgresql://user:password@db:5432/allternit
     depends_on:
       - db
 
@@ -183,7 +183,7 @@ services:
   db:
     image: postgres:15
     environment:
-      POSTGRES_DB: a2rchitech
+      POSTGRES_DB: allternit
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
     ports:

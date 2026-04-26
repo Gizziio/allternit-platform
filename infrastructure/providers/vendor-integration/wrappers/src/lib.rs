@@ -1,7 +1,7 @@
-//! A2R Vendor Wrappers
+//! Allternit Vendor Wrappers
 //!
 //! Defines wrapper contracts for vendor library integration.
-//! These wrappers provide a unified A2R-compatible interface for:
+//! These wrappers provide a unified Allternit-compatible interface for:
 //! - UI components (flexlayout, resizable panels, virtual lists, etc.)
 //! - Command palettes (kbar, cmdk)
 //! - Hotkeys (react-hotkeys-hook)
@@ -27,7 +27,7 @@ pub struct VendorWrapper {
     pub vendor_package: String,
     /// Vendor version (pinned)
     pub vendor_version: String,
-    /// A2R wrapper name
+    /// Allternit wrapper name
     pub wrapper_name: String,
     /// Wrapper description
     pub description: String,
@@ -35,7 +35,7 @@ pub struct VendorWrapper {
     pub upstream_repo: Option<String>,
     /// License
     pub license: String,
-    /// A2R exports
+    /// Allternit exports
     pub exports: Vec<String>,
     /// Usage example
     pub usage_example: String,
@@ -52,7 +52,7 @@ pub struct VendorWrapper {
 pub struct FlexLayoutWrapper {
     /// Vendor: flexlayout-react
     pub vendor_version: String,
-    /// A2R wrapper: FlexLayoutHost
+    /// Allternit wrapper: FlexLayoutHost
     pub wrapper_component: String,
     /// Purpose: Docking, tabsets, draggable tabs, layout model
     pub purpose: String,
@@ -73,7 +73,7 @@ impl Default for FlexLayoutWrapper {
 pub struct ResizablePanelsWrapper {
     /// Vendor: react-resizable-panels
     pub vendor_version: String,
-    /// A2R wrapper: A2RPanelGroup
+    /// Allternit wrapper: AllternitPanelGroup
     pub wrapper_component: String,
     /// Purpose: Split panes for console/inspector/workspace
     pub purpose: String,
@@ -83,7 +83,7 @@ impl Default for ResizablePanelsWrapper {
     fn default() -> Self {
         Self {
             vendor_version: "2.1.0".to_string(),
-            wrapper_component: "A2RPanelGroup".to_string(),
+            wrapper_component: "AllternitPanelGroup".to_string(),
             purpose: "Split panes for console/inspector/workspace".to_string(),
         }
     }
@@ -96,7 +96,7 @@ pub struct VirtualListWrapper {
     pub vendor_package: String,
     /// Vendor version
     pub vendor_version: String,
-    /// A2R wrapper: VirtualList
+    /// Allternit wrapper: VirtualList
     pub wrapper_component: String,
     /// Purpose: Ticket lists, logs, sessions at scale
     pub purpose: String,
@@ -124,7 +124,7 @@ pub struct CommandPaletteWrapper {
     pub vendor_package: String,
     /// Vendor version
     pub vendor_version: String,
-    /// A2R wrapper: CommandPalette
+    /// Allternit wrapper: CommandPalette
     pub wrapper_component: String,
     /// Purpose: Option+A command runner
     pub purpose: String,
@@ -146,7 +146,7 @@ impl Default for CommandPaletteWrapper {
 pub struct HotkeysWrapper {
     /// Vendor: react-hotkeys-hook
     pub vendor_version: String,
-    /// A2R wrapper: useA2RHotkeys
+    /// Allternit wrapper: useAllternitHotkeys
     pub wrapper_hook: String,
     /// Purpose: Keyboard shortcuts
     pub purpose: String,
@@ -156,7 +156,7 @@ impl Default for HotkeysWrapper {
     fn default() -> Self {
         Self {
             vendor_version: "4.5.0".to_string(),
-            wrapper_hook: "useA2RHotkeys".to_string(),
+            wrapper_hook: "useAllternitHotkeys".to_string(),
             purpose: "Keyboard shortcuts".to_string(),
         }
     }
@@ -171,7 +171,7 @@ impl Default for HotkeysWrapper {
 pub struct RadixUIWrapper {
     /// Vendor: @radix-ui/react-*
     pub vendor_version: String,
-    /// A2R wrapper: Radix wrappers (export only what we use)
+    /// Allternit wrapper: Radix wrappers (export only what we use)
     pub wrapper_module: String,
     /// Purpose: UI primitives (dialog, dropdown, etc.)
     pub purpose: String,
@@ -204,7 +204,7 @@ impl Default for RadixUIWrapper {
 pub struct MonacoEditorWrapper {
     /// Vendor: @monaco-editor/react
     pub vendor_version: String,
-    /// A2R wrapper: CodeEditor
+    /// Allternit wrapper: CodeEditor
     pub wrapper_component: String,
     /// Purpose: Code editing
     pub purpose: String,
@@ -225,7 +225,7 @@ impl Default for MonacoEditorWrapper {
 pub struct TerminalWrapper {
     /// Vendor: xterm + xterm-addon-fit
     pub vendor_version: String,
-    /// A2R wrapper: TerminalView
+    /// Allternit wrapper: TerminalView
     pub wrapper_component: String,
     /// Purpose: Terminal emulation
     pub purpose: String,
@@ -250,7 +250,7 @@ impl Default for TerminalWrapper {
 pub struct TldrawWrapper {
     /// Vendor: tldraw
     pub vendor_version: String,
-    /// A2R wrapper: CanvasSurface
+    /// Allternit wrapper: CanvasSurface
     pub wrapper_component: String,
     /// Purpose: Infinite canvas
     pub purpose: String,
@@ -271,7 +271,7 @@ impl Default for TldrawWrapper {
 pub struct ReactFlowWrapper {
     /// Vendor: reactflow
     pub vendor_version: String,
-    /// A2R wrapper: GraphSurface
+    /// Allternit wrapper: GraphSurface
     pub wrapper_component: String,
     /// Purpose: Graph editor
     pub purpose: String,
@@ -355,12 +355,12 @@ pub fn create_default_registry() -> VendorRegistry {
         wrapper_id: "ui.panels".to_string(),
         vendor_package: "react-resizable-panels".to_string(),
         vendor_version: ResizablePanelsWrapper::default().vendor_version,
-        wrapper_name: "A2RPanelGroup".to_string(),
+        wrapper_name: "AllternitPanelGroup".to_string(),
         description: "Split panes for console/inspector/workspace".to_string(),
         upstream_repo: Some("https://github.com/bvaughn/react-resizable-panels".to_string()),
         license: "MIT".to_string(),
-        exports: vec!["A2RPanelGroup".to_string()],
-        usage_example: "<A2RPanelGroup><Panel size={50} /><Panel size={50} /></A2RPanelGroup>".to_string(),
+        exports: vec!["AllternitPanelGroup".to_string()],
+        usage_example: "<AllternitPanelGroup><Panel size={50} /><Panel size={50} /></AllternitPanelGroup>".to_string(),
         notes: None,
     });
 
@@ -395,12 +395,12 @@ pub fn create_default_registry() -> VendorRegistry {
         wrapper_id: "cmd.hotkeys".to_string(),
         vendor_package: "react-hotkeys-hook".to_string(),
         vendor_version: HotkeysWrapper::default().vendor_version,
-        wrapper_name: "useA2RHotkeys".to_string(),
+        wrapper_name: "useAllternitHotkeys".to_string(),
         description: "Keyboard shortcuts".to_string(),
         upstream_repo: Some("https://github.com/JohannesKlauss/react-hotkeys-hook".to_string()),
         license: "MIT".to_string(),
-        exports: vec!["useA2RHotkeys".to_string()],
-        usage_example: "const { enabled } = useA2RHotkeys('mod+k', handleShortcut);".to_string(),
+        exports: vec!["useAllternitHotkeys".to_string()],
+        usage_example: "const { enabled } = useAllternitHotkeys('mod+k', handleShortcut);".to_string(),
         notes: None,
     });
 

@@ -1,0 +1,18 @@
+{
+  "name": "allternit-computer-use",
+  "version": "0.1.0",
+  "description": "Allternit Computer Use plugin — HTTP and MCP gateway adapters",
+  "main": "adapters/http.js",
+  "scripts": {
+    "test": "jest --testEnvironment node",
+    "test:coverage": "jest --coverage --testEnvironment node"
+  },
+  "jest": {
+    "testMatch": ["**/adapters/__tests__/**/*.test.js"],
+    "testEnvironment": "node"
+  },
+  "devDependencies": {
+    "jest": "^29.0.0",
+    "@jest/globals": "^29.0.0"
+  }
+}

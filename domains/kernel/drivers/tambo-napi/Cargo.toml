@@ -1,5 +1,5 @@
 [package]
-name = "a2r-tambo-napi"
+name = "allternit-tambo-napi"
 version = "0.1.0"
 edition = "2021"
 description = "Node-API bindings for Tambo engine"
@@ -10,7 +10,7 @@ crate-type = ["cdylib"]
 [dependencies]
 napi = { version = "2", features = ["async", "serde-json"] }
 napi-derive = "2"
-a2r-tambo-integration = { path = "../tambo-integration" }
+allternit-tambo-integration = { path = "../tambo-integration" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["full"] }

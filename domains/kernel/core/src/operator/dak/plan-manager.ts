@@ -45,7 +45,7 @@ export interface Finding {
 export class PlanManager {
   private baseDir: string;
 
-  constructor(baseDir: string = '.a2r/runner/plans') {
+  constructor(baseDir: string = '.allternit/runner/plans') {
     this.baseDir = baseDir;
   }
 

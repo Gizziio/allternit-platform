@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Allternit Universal Plugin SDK</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #1a1a1a;
+            background: #faf8f5;
+        }
+        .hero {
+            background: linear-gradient(135deg, #D4B08C 0%, #c9a27d 100%);
+            color: #1a1a1a;
+            padding: 4rem 2rem;
+            text-align: center;
+        }
+        .hero h1 { 
+            font-size: 3rem; 
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+        .hero p { 
+            font-size: 1.25rem; 
+            opacity: 0.9; 
+            max-width: 600px; 
+            margin: 0 auto;
+        }
+        .install {
+            background: rgba(26, 26, 26, 0.9);
+            color: #D4B08C;
+            display: inline-block;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            margin-top: 2rem;
+            font-family: monospace;
+            font-size: 1.1rem;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+        }
+        .feature {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(212, 176, 140, 0.15);
+            border: 1px solid #e8e0d5;
+        }
+        .feature h3 { 
+            color: #D97757; 
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        .platforms {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+        .platform {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+            border: 2px solid #e8e0d5;
+        }
+        .platform.ready { 
+            border-color: #D4B08C; 
+        }
+        .status {
+            display: inline-block;
+            background: #D4B08C;
+            color: #1a1a1a;
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+            font-weight: 500;
+        }
+        .cta {
+            background: linear-gradient(135deg, #D97757 0%, #c96a4a 100%);
+            color: white;
+            padding: 4rem 2rem;
+            text-align: center;
+            margin-top: 3rem;
+        }
+        .cta h2 { 
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+        code {
+            background: #f0ebe3;
+            color: #1a1a1a;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        pre {
+            background: #1a1a1a;
+            color: #D4B08C;
+            padding: 1.5rem;
+            border-radius: 12px;
+            overflow-x: auto;
+            margin: 1rem 0;
+        }
+        a { 
+            color: #D97757;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .btn {
+            display: inline-block;
+            background: white;
+            color: #D97757;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            margin: 0.5rem;
+        }
+        .btn:hover {
+            background: #faf8f5;
+            text-decoration: none;
+        }
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 1rem;
+            background: white;
+            padding: 12px;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <img src="matrix-logo.svg" alt="Allternit" class="logo" onerror="this.style.display='none'">
+        <h1>Universal Plugin SDK</h1>
+        <p>Write once. Run on any LLM platform.<br>Build plugins that work on Claude, VS Code, Codex, Cursor, and more.</p>
+        <div class="install">npm install -g @allternit/plugin-sdk</div>
+    </div>
+
+    <div class="container">
+        <h2 style="text-align: center; margin: 2rem 0;">Supported Platforms</h2>
+        <div class="platforms">
+            <div class="platform ready">
+                <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">Claude Desktop</div>
+                <span class="status">Ready</span>
+            </div>
+            <div class="platform ready">
+                <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">VS Code</div>
+                <span class="status">Ready</span>
+            </div>
+            <div class="platform ready">
+                <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">OpenAI Codex</div>
+                <span class="status">Ready</span>
+            </div>
+            <div class="platform ready">
+                <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">Cursor</div>
+                <span class="status">Ready</span>
+            </div>
+            <div class="platform ready">
+                <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">LangChain</div>
+                <span class="status">Ready</span>
+            </div>
+            <div class="platform ready">
+                <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">HTTP API</div>
+                <span class="status">Ready</span>
+            </div>
+        </div>
+
+        <h2 style="text-align: center; margin: 3rem 0 2rem;">Key Features</h2>
+        <div class="features">
+            <div class="feature">
+                <h3>Universal Format</h3>
+                <p>One plugin works across all platforms. No rewrites needed.</p>
+            </div>
+            <div class="feature">
+                <h3>Graceful Degradation</h3>
+                <p>Plugins adapt to available capabilities. Missing tools? LLM fills in.</p>
+            </div>
+            <div class="feature">
+                <h3>Quick Development</h3>
+                <p>Create, test, and publish plugins in minutes.</p>
+            </div>
+            <div class="feature">
+                <h3>Template Support</h3>
+                <p>Convert existing templates or create from scratch.</p>
+            </div>
+        </div>
+
+        <h2 style="margin-top: 3rem;">Quick Start</h2>
+        <pre><code># Install the SDK
+npm install -g @allternit/plugin-sdk
+
+# Create a plugin
+allternit-plugin create my-plugin
+cd my-plugin
+npm install
+npm run build
+
+# Run it
+allternit-plugin run --input "Hello world"</code></pre>
+
+        <h2 style="margin-top: 2rem;">Example Plugin</h2>
+        <pre><code>import { PluginHost } from '@allternit/plugin-sdk';
+
+export async function run(host: PluginHost, params: any) {
+  // Works on Claude, VS Code, Codex, Cursor...
+  const result = await host.llm.complete(`Analyze: ${params.topic}`);
+  host.ui.renderMarkdown(result);
+  return result;
+}</code></pre>
+
+        <h2 style="margin-top: 2rem;">12 Built-in Plugins</h2>
+        <ul style="columns: 2; margin: 1rem 0;">
+            <li><code>@allternit/marketresearchcard-plugin</code></li>
+            <li><code>@allternit/codereviewcard-plugin</code></li>
+            <li><code>@allternit/imagegencard-plugin</code></li>
+            <li><code>@allternit/datatablecard-plugin</code></li>
+            <li><code>@allternit/documentanalyzercard-plugin</code></li>
+            <li><code>@allternit/emailcomposercard-plugin</code></li>
+            <li><code>@allternit/chatbotcard-plugin</code></li>
+            <li><code>@allternit/apispeccard-plugin</code></li>
+            <li><code>@allternit/prdescriptioncard-plugin</code></li>
+            <li><code>@allternit/socialmediacard-plugin</code></li>
+            <li><code>@allternit/testgeneratorcard-plugin</code></li>
+            <li><code>@allternit/translationcard-plugin</code></li>
+        </ul>
+
+        <h2 style="margin-top: 2rem;">Documentation</h2>
+        <ul>
+            <li><a href="CLI_GUIDE.md">CLI Guide</a> - Complete command reference</li>
+            <li><a href="TEMPLATE_WORKFLOWS.md">Template Workflows</a> - Working with templates</li>
+            <li><a href="ARCHITECTURE_SUMMARY.md">Architecture</a> - System design overview</li>
+            <li><a href="QUICKSTART.md">Quick Start</a> - 5-minute setup guide</li>
+        </ul>
+    </div>
+
+    <div class="cta">
+        <h2>Ready to build universal plugins?</h2>
+        <p>Join the ecosystem. Publish once. Reach every LLM platform.</p>
+        <a href="https://www.npmjs.com/package/@allternit/plugin-sdk" class="btn">View on NPM</a>
+        <a href="https://github.com/allternit/plugin-sdk" class="btn">GitHub</a>
+    </div>
+
+    <div style="text-align: center; padding: 2rem; color: #666;">
+        <p>&copy; 2025 Allternit. All rights reserved.</p>
+    </div>
+</body>
+</html>

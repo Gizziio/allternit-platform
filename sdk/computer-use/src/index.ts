@@ -1,17 +1,17 @@
 /**
- * A2R Computer Use Engine - TypeScript SDK
+ * Allternit Computer Use Engine - TypeScript SDK
  * 
  * @package @allternit/computer-use
  * @version 0.1.0
  * 
- * Thin TypeScript/JavaScript SDK over the canonical A2R Computer Use Engine HTTP API.
+ * Thin TypeScript/JavaScript SDK over the canonical Allternit Computer Use Engine HTTP API.
  * 
  * ## Quick Start
  * 
  * ```typescript
- * import { A2RComputerUseClient, EngineMode } from '@allternit/computer-use';
+ * import { AllternitComputerUseClient, EngineMode } from '@allternit/computer-use';
  * 
- * const client = new A2RComputerUseClient({
+ * const client = new AllternitComputerUseClient({
  *   endpoint: 'http://localhost:8080',
  *   timeout: 60000,
  * });
@@ -34,9 +34,9 @@
 // Replies Client (chat / streaming API — Anthropic/OpenAI-aligned)
 // =============================================================================
 
-export { A2RClient, A2RAPIError, ReplyStream } from './replies-client';
+export { AllternitClient, AllternitAPIError, ReplyStream } from './replies-client';
 export type {
-  A2RClientConfig,
+  AllternitClientConfig,
   CreateReplyRequest,
   CreateConversationRequest,
   Conversation,
@@ -47,7 +47,7 @@ export type {
 // Computer Use Client (engine / actions API)
 // =============================================================================
 
-export { A2RComputerUseClient } from './client';
+export { AllternitComputerUseClient } from './client';
 
 // =============================================================================
 // Types
@@ -111,6 +111,34 @@ export type {
   ApprovalRequestInfo,
   ApprovalPredicate,
   SubscribeOptions,
+
+  // Service-layer types
+  EngineActionKind,
+  BrowserTaskMode,
+  BrowserTaskStatus,
+  BrowserTaskRequest,
+  BrowserTaskResponse,
+  BrowserTaskDetailResponse,
+  BrowserTaskExecuteRequest,
+  BrowserTaskExecuteResponse,
+  BrowserSearchRequest,
+  BrowserRetrieveRequest,
+  BrowserHealthResponse,
+  VisionViewport,
+  VisionProposeRequest,
+  VisionProposeResponse,
+  VisionScreenshotResponse,
+  ActionProposal,
+  DesktopExecuteRequest,
+  DesktopExecuteResponse,
+  ParallelVariantConfig,
+  ParallelVerificationProfile,
+  ParallelRunRequest,
+  ParallelRunStatus,
+  ParallelRunResults,
+  ParallelVariantResult,
+  TelemetryProviderInfo,
+  TelemetrySnapshot,
 } from './types';
 
 // =============================================================================
@@ -140,7 +168,7 @@ export {
   buildRequestHeaders,
 
   // Error Handling
-  A2RComputerUseError,
+  AllternitComputerUseError,
   handleApiError,
 
   // Async Helpers
@@ -163,3 +191,10 @@ export {
   safeJSONParse,
   safeJSONStringify,
 } from './utils';
+
+// =============================================================================
+// MCP Tool Specifications
+// =============================================================================
+
+export type { McpToolSpec, McpToolName } from './mcp-tool-spec';
+export { MCP_TOOL_SPECS } from './mcp-tool-spec';

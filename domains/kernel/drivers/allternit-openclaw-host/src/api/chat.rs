@@ -15,7 +15,6 @@ use serde::{Deserialize, Serialize};
 use std::convert::Infallible;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tokio::time::Duration;
 use uuid::Uuid;
 
 use super::{AgentApiState, ApiError};
@@ -167,181 +166,17 @@ pub async fn chat_stream(
     Path(session_id): Path<String>,
     Json(req): Json<ChatRequest>,
 ) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, (StatusCode, Json<ApiError>)> {
-    use async_stream::stream;
+    let _ = state;
+    let _ = session_id;
+    let _ = req;
 
-    // Store the user message first
-    let user_msg = crate::native_session_manager::SessionMessage {
-        id: Uuid::new_v4().to_string(),
-        role: "user".to_string(),
-        content: req.message.clone(),
-        timestamp: Utc::now(),
-        metadata: None,
-    };
-
-    {
-        let mut sessions = state.session_manager.write().await;
-        if let Some(session) = sessions.get_session_mut_api(&session_id).await {
-            session.messages.push(user_msg);
-        } else {
-            return Err((
-                StatusCode::NOT_FOUND,
-                Json(ApiError::new("Session not found", "SESSION_NOT_FOUND")),
-            ));
-        }
-    }
-
-    // Generate response based on user input
-    let response = generate_mock_response(&req.message);
-    let message_id = Uuid::new_v4().to_string();
-    let session_id_clone = session_id.clone();
-    let state_clone = state.clone();
-
-    let s = stream! {
-        let timestamp = Utc::now().to_rfc3339();
-
-        // Send message_start event
-        yield Ok(StreamEvent::MessageStart {
-            message_id: message_id.clone(),
-            session_id: session_id_clone.clone(),
-            timestamp: timestamp.clone(),
-        }.to_sse_event());
-
-        // Stream the response word by word
-        let words: Vec<&str> = response.text.split_whitespace().collect();
-        for (i, word) in words.iter().enumerate() {
-            tokio::time::sleep(Duration::from_millis(50)).await;
-
-            let content = if i == words.len() - 1 {
-                word.to_string()
-            } else {
-                format!("{} ", word)
-            };
-
-            yield Ok(StreamEvent::MessageDelta {
-                message_id: message_id.clone(),
-                session_id: session_id_clone.clone(),
-                delta: Delta {
-                    content: Some(content),
-                    reasoning: None,
-                },
-                timestamp: Utc::now().to_rfc3339(),
-            }.to_sse_event());
-        }
-
-        // Send any tool calls (clone to avoid move)
-        let tool_calls = response.tool_calls.clone();
-        for tool_call in tool_calls {
-            yield Ok(StreamEvent::ToolCall {
-                session_id: session_id_clone.clone(),
-                tool_call: tool_call.clone(),
-                timestamp: Utc::now().to_rfc3339(),
-            }.to_sse_event());
-
-            tokio::time::sleep(Duration::from_millis(200)).await;
-
-            // Send tool result
-            yield Ok(StreamEvent::ToolResult {
-                session_id: session_id_clone.clone(),
-                tool_result: ToolResult {
-                    tool_call_id: tool_call.id.clone(),
-                    result: serde_json::json!({"status": "success", "data": "Tool executed successfully"}),
-                    error: None,
-                },
-                timestamp: Utc::now().to_rfc3339(),
-            }.to_sse_event());
-        }
-
-        // Send message_complete
-        yield Ok(StreamEvent::MessageComplete {
-            message_id: message_id.clone(),
-            session_id: session_id_clone.clone(),
-            timestamp: Utc::now().to_rfc3339(),
-        }.to_sse_event());
-
-        // Store the assistant message
-        let assistant_msg = crate::native_session_manager::SessionMessage {
-            id: message_id.clone(),
-            role: "assistant".to_string(),
-            content: response.text,
-            timestamp: Utc::now(),
-            metadata: Some({
-                let mut meta = std::collections::HashMap::new();
-                meta.insert("tool_calls".to_string(), serde_json::to_value(&response.tool_calls).unwrap_or_default());
-                meta
-            }),
-        };
-
-        {
-            let mut sessions = state_clone.session_manager.write().await;
-            if let Some(session) = sessions.get_session_mut_api(&session_id_clone).await {
-                session.messages.push(assistant_msg);
-            }
-        }
-
-        // Send done event
-        yield Ok(StreamEvent::Done {
-            session_id: session_id_clone,
-            timestamp: Utc::now().to_rfc3339(),
-        }.to_sse_event());
-    };
-
-    Ok(Sse::new(s))
-}
-
-/// Mock response structure
-struct MockResponse {
-    text: String,
-    tool_calls: Vec<ToolCall>,
-}
-
-/// Generate a mock response based on user input
-fn generate_mock_response(input: &str) -> MockResponse {
-    let lower = input.to_lowercase();
-
-    // Check for tool-related keywords
-    if lower.contains("weather") {
-        MockResponse {
-            text: "I'll check the weather for you.".to_string(),
-            tool_calls: vec![ToolCall {
-                id: Uuid::new_v4().to_string(),
-                name: "get_weather".to_string(),
-                arguments: serde_json::json!({"location": "current"}),
-            }],
-        }
-    } else if lower.contains("time") || lower.contains("date") {
-        MockResponse {
-            text: format!("The current time is {}.", Utc::now().format("%H:%M:%S")),
-            tool_calls: vec![],
-        }
-    } else if lower.contains("code") || lower.contains("function") {
-        MockResponse {
-            text: "Here's a simple function for you:\n\n```rust\nfn hello() -> String {\n    \"Hello, World!\".to_string()\n}\n```".to_string(),
-            tool_calls: vec![],
-        }
-    } else if lower.contains("canvas") || lower.contains("draw") {
-        MockResponse {
-            text: "I'll create a canvas for you with some visualization.".to_string(),
-            tool_calls: vec![ToolCall {
-                id: Uuid::new_v4().to_string(),
-                name: "create_canvas".to_string(),
-                arguments: serde_json::json!({"type": "visualization", "title": "Demo Canvas"}),
-            }],
-        }
-    } else {
-        MockResponse {
-            text: format!(
-                "Hello! I'm the N20 Native OpenClaw Agent. You said: \"{}\"\n\n\
-                I can help you with:\n\
-                - Answering questions\n\
-                - Running tools\n\
-                - Creating canvas visualizations\n\
-                - Writing code\n\n\
-                Try asking about the weather, time, or ask me to write some code!",
-                input
-            ),
-            tool_calls: vec![],
-        }
-    }
+    Err::<Sse<futures::stream::Empty<Result<Event, Infallible>>>, _>((
+        StatusCode::NOT_IMPLEMENTED,
+        Json(ApiError::new(
+            "Native agent chat backend is not wired to a real model runtime",
+            "CHAT_BACKEND_NOT_IMPLEMENTED",
+        )),
+    ))
 }
 
 /// Abort ongoing generation

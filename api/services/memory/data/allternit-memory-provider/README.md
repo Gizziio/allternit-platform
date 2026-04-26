@@ -1,4 +1,4 @@
-# A2rchitech Memory Provider
+# Allternitchitech Memory Provider
 
 A unified memory abstraction layer that provides a seamless interface to multiple memory implementations following Unix-like modularity principles.
 

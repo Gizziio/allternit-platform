@@ -1,5 +1,5 @@
 {
-  "name": "@a2r/ars-contexta",
+  "name": "@allternit/ars-contexta-service",
   "version": "1.0.0",
   "description": "Ars Contexta Knowledge System - Three-Space Architecture with 6Rs pipeline",
   "type": "module",
@@ -14,6 +14,12 @@
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
-  "keywords": ["a2r", "knowledge", "second-brain", "notes", "graph"],
+  "keywords": [
+    "allternit",
+    "knowledge",
+    "second-brain",
+    "notes",
+    "graph"
+  ],
   "license": "MIT"
 }

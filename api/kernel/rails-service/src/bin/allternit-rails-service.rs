@@ -1,6 +1,6 @@
-//! A2R Agent System Rails - HTTP Service Binary
+//! Allternit Agent System Rails - HTTP Service Binary
 //!
-//! Run: cargo run --bin a2r-rails-service
+//! Run: cargo run --bin allternit-rails-service
 
 use std::path::PathBuf;
 
@@ -18,7 +18,7 @@ async fn main() -> anyhow::Result<()> {
         .map(PathBuf::from)
         .unwrap_or_else(|_| std::env::current_dir().unwrap());
 
-    tracing::info!("Starting A2R Agent System Rails HTTP service");
+    tracing::info!("Starting Allternit Agent System Rails HTTP service");
     tracing::info!("Bind address: {}", bind_addr);
     tracing::info!("Root directory: {}", root_dir.display());
 

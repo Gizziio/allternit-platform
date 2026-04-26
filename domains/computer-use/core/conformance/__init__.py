@@ -1,5 +1,5 @@
 """
-A2R Computer Use — Conformance Harness
+Allternit Computer Use — Conformance Harness
 G4 conformance guarantee: An adapter is only production-grade
 if it passes the conformance suite for its declared capability class.
 

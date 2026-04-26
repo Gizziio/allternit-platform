@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2rchitech.local/spec/contracts/CodeSession.schema.json",
+  "$id": "https://allternit.local/spec/contracts/CodeSession.schema.json",
   "title": "Code Session — Session Registry Contract",
   "description": "An isolated coding session in Code Mode. Each session has its own worktree/sandbox, mode, policy profile, and state.",
   "type": "object",

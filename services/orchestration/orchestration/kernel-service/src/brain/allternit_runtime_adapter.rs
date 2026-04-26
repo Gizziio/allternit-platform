@@ -1,7 +1,7 @@
-//! A2R Runtime Adapter
+//! Allternit Runtime Adapter
 //!
-//! This module integrates a2r-runtime into kernel-service.
-//! It adapts kernel-service's BrainRuntime trait to use a2r-runtime's production brain.
+//! This module integrates allternit-runtime into kernel-service.
+//! It adapts kernel-service's BrainRuntime trait to use allternit-runtime's production brain.
 
 use crate::brain::traits::BrainRuntime as KernelBrainRuntime;
 use crate::brain::types::{BrainConfig, BrainEvent, BrainType, EventMode, SessionStatus};
@@ -11,16 +11,16 @@ use std::sync::Arc;
 use tokio::sync::{broadcast, mpsc, RwLock};
 use tracing::{debug, error, info, warn};
 
-// Import a2r-runtime traits and types (re-exported from supervision module)
-use a2r_runtime::supervision::{BrainRuntime as A2rBrainRuntime, BrainRuntimeImpl, BrainRuntimeConfig, SessionSupervisor};
+// Import allternit-runtime traits and types (re-exported from supervision module)
+use allternit_runtime::supervision::{BrainRuntime as AllternitBrainRuntime, BrainRuntimeImpl, BrainRuntimeConfig, SessionSupervisor};
 
-/// Adapter that wraps a2r-runtime to implement kernel-service's BrainRuntime trait
-pub struct A2rRuntimeAdapter {
-    /// The underlying a2r-runtime implementation
+/// Adapter that wraps allternit-runtime to implement kernel-service's BrainRuntime trait
+pub struct AllternitRuntimeAdapter {
+    /// The underlying allternit-runtime implementation
     runtime: Arc<BrainRuntimeImpl>,
     
     /// Session handle for this adapter instance
-    session_handle: Arc<RwLock<Option<a2r_runtime::session::SessionHandle>>>,
+    session_handle: Arc<RwLock<Option<allternit_runtime::session::SessionHandle>>>,
     
     /// Event sender for BrainEvent (kernel-service format)
     event_tx: broadcast::Sender<BrainEvent>,
@@ -35,14 +35,14 @@ pub struct A2rRuntimeAdapter {
     pid: Option<u32>,
 }
 
-impl A2rRuntimeAdapter {
+impl AllternitRuntimeAdapter {
     /// Create a new runtime adapter
     pub fn new(
         config: BrainConfig,
         session_id: String,
         event_tx: broadcast::Sender<BrainEvent>,
     ) -> Self {
-        // Create the actual a2r-runtime with default config
+        // Create the actual allternit-runtime with default config
         let runtime_config = BrainRuntimeConfig::default();
         let runtime = Arc::new(BrainRuntimeImpl::new(runtime_config));
         
@@ -56,9 +56,9 @@ impl A2rRuntimeAdapter {
         }
     }
     
-    /// Convert kernel-service BrainConfig to a2r-runtime SessionConfig
-    fn to_session_config(&self) -> a2r_runtime::session::SessionConfig {
-        a2r_runtime::session::SessionConfig {
+    /// Convert kernel-service BrainConfig to allternit-runtime SessionConfig
+    fn to_session_config(&self) -> allternit_runtime::session::SessionConfig {
+        allternit_runtime::session::SessionConfig {
             session_id: self.session_id.clone(),
             tenant_id: self.config.tenant_id.clone().unwrap_or_else(|| "default".to_string()),
             provider_id: self.config.id.clone(),
@@ -70,16 +70,16 @@ impl A2rRuntimeAdapter {
         }
     }
     
-    /// Convert kernel-service input to a2r-runtime Prompt
-    fn to_prompt(&self, input: &str) -> a2r_runtime::Prompt {
-        a2r_runtime::Prompt::new(input)
+    /// Convert kernel-service input to allternit-runtime Prompt
+    fn to_prompt(&self, input: &str) -> allternit_runtime::Prompt {
+        allternit_runtime::Prompt::new(input)
             .with_stream(true)
     }
     
     /// Spawn event translator task
     fn spawn_event_translator(
         &self,
-        mut rx: mpsc::Receiver<a2r_runtime::events::NormalizedEvent>,
+        mut rx: mpsc::Receiver<allternit_runtime::events::NormalizedEvent>,
     ) {
         let event_tx = self.event_tx.clone();
         let session_id = self.session_id.clone();
@@ -97,9 +97,9 @@ impl A2rRuntimeAdapter {
         });
     }
     
-    /// Translate a2r-runtime NormalizedEvent to kernel-service BrainEvent
-    fn translate_event(session_id: &str, event: a2r_runtime::events::NormalizedEvent) -> Option<BrainEvent> {
-        use a2r_runtime::events::NormalizedEvent;
+    /// Translate allternit-runtime NormalizedEvent to kernel-service BrainEvent
+    fn translate_event(session_id: &str, event: allternit_runtime::events::NormalizedEvent) -> Option<BrainEvent> {
+        use allternit_runtime::events::NormalizedEvent;
         
         match event {
             NormalizedEvent::ContentDelta { delta, .. } => {
@@ -143,17 +143,17 @@ impl A2rRuntimeAdapter {
 }
 
 #[async_trait]
-impl KernelBrainRuntime for A2rRuntimeAdapter {
+impl KernelBrainRuntime for AllternitRuntimeAdapter {
     async fn start(&mut self) -> Result<()> {
-        info!("Starting A2R runtime for session {}", self.session_id);
+        info!("Starting Allternit runtime for session {}", self.session_id);
         
         // Create session config
         let session_config = self.to_session_config();
         let tenant_id = self.config.tenant_id.clone().unwrap_or_else(|| "default".to_string());
         
-        // Create the session using a2r-runtime
+        // Create the session using allternit-runtime
         let handle = self.runtime.session_create(&tenant_id, session_config).await.map_err(|e| {
-            anyhow!("Failed to create a2r-runtime session: {:?}", e)
+            anyhow!("Failed to create allternit-runtime session: {:?}", e)
         })?;
         
         // Store the handle
@@ -190,7 +190,7 @@ impl KernelBrainRuntime for A2rRuntimeAdapter {
             event_id: None,
         });
         
-        info!("A2R runtime started for session {}", self.session_id);
+        info!("Allternit runtime started for session {}", self.session_id);
         Ok(())
     }
     
@@ -224,7 +224,7 @@ impl KernelBrainRuntime for A2rRuntimeAdapter {
     }
     
     async fn stop(&mut self) -> Result<()> {
-        info!("Stopping A2R runtime for session {}", self.session_id);
+        info!("Stopping Allternit runtime for session {}", self.session_id);
         let tenant_id = self.config.tenant_id.clone().unwrap_or_else(|| "default".to_string());
         
         if let Some(ref handle) = *self.session_handle.read().await {
@@ -283,14 +283,14 @@ impl KernelBrainRuntime for A2rRuntimeAdapter {
         match handle {
             Some(session_handle) => {
                 // Create tool result
-                let tool_result = a2r_runtime::ToolResult {
+                let tool_result = allternit_runtime::ToolResult {
                     call_id: tool_call_id.to_string(),
                     content: result.to_string(),
                     is_error: false,
                 };
                 
                 // Send to runtime
-                // Note: The a2r-runtime BrainRuntime trait in lib.rs has send_tool_result
+                // Note: The allternit-runtime BrainRuntime trait in lib.rs has send_tool_result
                 // But the supervision::manager BrainRuntime doesn't expose it directly
                 // We emit an event instead
                 let _ = self.event_tx.send(BrainEvent::ToolResult {
@@ -309,23 +309,23 @@ impl KernelBrainRuntime for A2rRuntimeAdapter {
     }
 }
 
-/// Factory for creating A2R runtime adapters
-pub struct A2rRuntimeDriver;
+/// Factory for creating Allternit runtime adapters
+pub struct AllternitRuntimeDriver;
 
-impl A2rRuntimeDriver {
+impl AllternitRuntimeDriver {
     pub fn new() -> Self {
         Self
     }
 }
 
-impl Default for A2rRuntimeDriver {
+impl Default for AllternitRuntimeDriver {
     fn default() -> Self {
         Self::new()
     }
 }
 
 #[async_trait]
-impl crate::brain::traits::BrainDriver for A2rRuntimeDriver {
+impl crate::brain::traits::BrainDriver for AllternitRuntimeDriver {
     async fn create_runtime(
         &self,
         config: &BrainConfig,
@@ -333,7 +333,7 @@ impl crate::brain::traits::BrainDriver for A2rRuntimeDriver {
     ) -> Result<Box<dyn KernelBrainRuntime>> {
         let (event_tx, _event_rx) = broadcast::channel(1000);
         
-        let adapter = A2rRuntimeAdapter::new(
+        let adapter = AllternitRuntimeAdapter::new(
             config.clone(),
             session_id.to_string(),
             event_tx,

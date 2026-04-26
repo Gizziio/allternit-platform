@@ -1,12 +1,12 @@
 {
-  "name": "@a2r/native-bridge",
+  "name": "@allternit/native-bridge",
   "version": "0.1.0",
   "main": "index.js",
   "types": "index.d.ts",
   "napi": {
-    "name": "a2r-native-bridge",
+    "name": "allternit-native-bridge",
     "package": {
-      "name": "@a2r/native-bridge"
+      "name": "@allternit/native-bridge"
     }
   },
   "scripts": {

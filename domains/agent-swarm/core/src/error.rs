@@ -35,7 +35,7 @@ pub enum SwarmError {
     #[error("PSO error: {0}")]
     Pso(String),
 
-    /// Integration errors with A2R systems
+    /// Integration errors with Allternit systems
     #[error("Integration error: {source}")]
     Integration {
         #[source]

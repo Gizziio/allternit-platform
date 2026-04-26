@@ -43,7 +43,7 @@ impl MLXInferenceService {
     fn new(socket_path: String, model_path: String) -> Result<Self, Box<dyn std::error::Error>> {
         // Start the Python inference service as a child process
         let child = Command::new("python3")
-           .arg("/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/services/local-inference/inference.py")
+           .arg("/Users/macbook/Desktop/allternit-workspace/allternit/services/local-inference/inference.py")
            .arg("--model-path").arg(&model_path)
            .arg("--socket-path").arg(&socket_path)
            .spawn()?;
@@ -111,7 +111,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Configuration
     let socket_path = "/tmp/mlx_inference.sock".to_string();
-    let model_path = "/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/models/mlx-llama".to_string();
+    let model_path = "/Users/macbook/Desktop/allternit-workspace/allternit/models/mlx-llama".to_string();
 
     // Create application state
     let app_state = AppState {

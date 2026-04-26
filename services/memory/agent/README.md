@@ -1,4 +1,4 @@
-# A2rchitech Always-On Memory Agent
+# Allternitchitech Always-On Memory Agent
 
 > **Persistent AI memory powered by local LLM (Ollama)** - Runs 24/7 as a lightweight background process, continuously processing, consolidating, and connecting information.
 
@@ -76,7 +76,7 @@
 ### Installation
 
 ```bash
-cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/4-services/memory/agent
+cd /Users/macbook/Desktop/allternit-workspace/allternit/4-services/memory/agent
 
 # Install dependencies
 pnpm install
@@ -259,7 +259,7 @@ memory/
 ├── package.json
 ├── README.md
 ├── install-launchd.sh
-├── com.a2rchitech.memory-agent.plist
+├── com.allternit.memory-agent.plist
 ├── src/
 │   ├── orchestrator.ts       # Root agent
 │   ├── ingest-agent.ts       # File ingestion
@@ -279,9 +279,9 @@ memory/
 
 ## Logs
 
-- **Daemon logs**: `/tmp/a2r-memory-agent.log`
-- **Launchd stdout**: `~/Library/Logs/a2rchitech/memory-agent.out.log`
-- **Launchd stderr**: `~/Library/Logs/a2rchitech/memory-agent.err.log`
+- **Daemon logs**: `/tmp/allternit-memory-agent.log`
+- **Launchd stdout**: `~/Library/Logs/allternit/memory-agent.out.log`
+- **Launchd stderr**: `~/Library/Logs/allternit/memory-agent.err.log`
 
 ## Troubleshooting
 
@@ -311,10 +311,10 @@ ollama pull mxbai-embed-large
 pnpm daemon status
 
 # Kill stale process
-kill $(cat /tmp/a2r-memory-agent.pid) 2>/dev/null || true
+kill $(cat /tmp/allternit-memory-agent.pid) 2>/dev/null || true
 
 # Remove PID file
-rm /tmp/a2r-memory-agent.pid
+rm /tmp/allternit-memory-agent.pid
 
 # Try starting again
 pnpm daemon start
@@ -330,17 +330,17 @@ rm memory.db
 pnpm daemon restart
 ```
 
-## Integration with a2rchitech
+## Integration with allternit
 
-The memory agent is designed to integrate seamlessly with the a2rchitech platform:
+The memory agent is designed to integrate seamlessly with the allternit platform:
 
 1. **Agent Context**: Agents can query memory for historical context
 2. **Session Continuity**: Memories persist across sessions
 3. **Knowledge Base**: Build a searchable knowledge base from all ingested content
 
 ```typescript
-// Example: Use in an a2r agent
-import { MemoryOrchestrator } from '@a2rchitech/memory';
+// Example: Use in an allternit agent
+import { MemoryOrchestrator } from '@allternit/memory';
 
 const memory = new MemoryOrchestrator();
 await memory.initialize();

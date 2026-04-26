@@ -1,7 +1,7 @@
 #![allow(dead_code, unused_variables, unused_imports)]
 //! Terminal Session Management Module
 //!
-//! This module provides terminal session management functionality for the A2rchitech API,
+//! This module provides terminal session management functionality for the Allternitchitech API,
 //! including session creation, listing, retrieval, and deletion. It integrates with the
 //! policy engine for authorization checks and with the messaging system for secure
 //! terminal operations.

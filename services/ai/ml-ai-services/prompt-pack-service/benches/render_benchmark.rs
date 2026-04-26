@@ -67,7 +67,7 @@ fn build_pack(pack_id: &str, version: &str, prompt_id: &str, template_path: &str
         description: "Benchmark pack for render performance".to_string(),
         version: version.to_string(),
         deterministic: true,
-        author: "a2rchitech".to_string(),
+        author: "allternit".to_string(),
         tags: vec!["benchmark".to_string(), "render".to_string()],
         dependencies: Vec::<PackDependency>::new(),
         variables,

@@ -1,0 +1,24 @@
+[package]
+name = "allternit-acp-driver"
+version = "0.1.0"
+edition = "2021"
+description = "ACP (Agent Client Protocol) driver for allternit kernel"
+
+[dependencies]
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+anyhow = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+futures = { workspace = true }
+tokio-stream = { workspace = true }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+agent-client-protocol-schema = { workspace = true }
+allternit-runtime = { workspace = true }
+allternit-providers = { workspace = true }
+
+[dev-dependencies]
+tokio-test = "0.4"

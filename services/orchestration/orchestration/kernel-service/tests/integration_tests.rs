@@ -73,15 +73,15 @@ mod integration_tests {
         let contract_verifier = ContractVerifier::new();
 
         // Create a minimal valid context bundle for testing
-        let bundle = a2rchitech_kernel_contracts::ContextBundle {
+        let bundle = allternit_kernel_contracts::ContextBundle {
             bundle_hash: format!("test_{}", uuid::Uuid::new_v4()),
-            inputs: a2rchitech_kernel_contracts::ContextInputs {
+            inputs: allternit_kernel_contracts::ContextInputs {
                 user_inputs: serde_json::json!({ "intent": "test intent" }),
                 system_inputs: serde_json::json!({ "session_id": "session-123" }),
                 previous_outputs: vec![],
             },
             memory_refs: vec![],
-            budgets: a2rchitech_kernel_contracts::ContextBudgets {
+            budgets: allternit_kernel_contracts::ContextBudgets {
                 max_tokens: Some(1000),
                 max_execution_time_ms: Some(5000),
                 max_tool_calls: Some(10),

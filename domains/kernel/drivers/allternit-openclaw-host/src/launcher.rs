@@ -18,7 +18,7 @@ use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
 use crate::{config::HostConfig, errors::HostError, health::HealthStatus};
-use a2r_parity::capture::{write_receipt_to_disk, Receipt, ReceiptMetadata};
+use allternit_parity::capture::{write_receipt_to_disk, Receipt, ReceiptMetadata};
 
 /// Manages OpenClaw subprocess lifecycle and communication
 ///
@@ -240,7 +240,7 @@ impl OpenClawHost {
             metadata: ReceiptMetadata {
                 version: env!("CARGO_PKG_VERSION").to_string(),
                 host_version: self.config.openclaw_version.clone(),
-                environment: std::env::var("A2R_ENV").unwrap_or_else(|_| "development".to_string()),
+                environment: std::env::var("Allternit_ENV").unwrap_or_else(|_| "development".to_string()),
                 host_hash: None,
             },
         };

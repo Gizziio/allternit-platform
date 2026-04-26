@@ -34,7 +34,7 @@ describe('Policy Injection Integration', () => {
       bundle_id: 'pb_test_001',
       auto_inject: false,
       injection_points: ['session_start', 'dag_load', 'node_entry'],
-      marker_output_dir: '.a2r/test-markers'
+      marker_output_dir: '.allternit/test-markers'
     });
   });
 

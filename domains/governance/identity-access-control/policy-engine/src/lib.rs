@@ -1,6 +1,6 @@
-use a2rchitech_history::HistoryLedger;
-use a2rchitech_messaging::{EventEnvelope, MessagingSystem};
-use a2rchitech_security_governance::{
+use allternit_history::HistoryLedger;
+use allternit_messaging::{EventEnvelope, MessagingSystem};
+use allternit_security_governance::{
     AccessTier, AuditDecision, AuditEvent, AuthContext, GovernanceDecision, GovernanceEngine,
     GovernanceIdentity, IdentityKind,
 };
@@ -90,7 +90,7 @@ pub enum PolicyError {
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
     #[error("History error: {0}")]
-    History(#[from] a2rchitech_history::HistoryError),
+    History(#[from] allternit_history::HistoryError),
     #[error("Identity not found: {0}")]
     IdentityNotFound(String),
     #[error("Permission denied: {0}")]
@@ -100,7 +100,7 @@ pub enum PolicyError {
     #[error("Policy evaluation failed: {0}")]
     EvaluationFailed(String),
     #[error("Governance error: {0}")]
-    Governance(#[from] a2rchitech_security_governance::GovernanceError),
+    Governance(#[from] allternit_security_governance::GovernanceError),
     #[error("Mutex poisoned: {0}")]
     MutexPoisoned(String),
     #[error("Time error: {0}")]
@@ -630,7 +630,7 @@ fn policy_scopes_for_request(request: &PolicyRequest) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use a2rchitech_messaging::MessagingSystem;
+    use allternit_messaging::MessagingSystem;
     use sqlx::SqlitePool;
     use tempfile::NamedTempFile;
 
@@ -641,7 +641,7 @@ mod tests {
         let pool = SqlitePool::connect(&db_url).await.unwrap();
         let temp_path = format!("/tmp/test_policy_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
         let messaging_system = Arc::new(
             MessagingSystem::new_with_storage(history_ledger.clone(), pool.clone())
@@ -703,7 +703,7 @@ mod tests {
         let pool = SqlitePool::connect(&db_url).await.unwrap();
         let temp_path = format!("/tmp/test_revoke_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
         let messaging_system = Arc::new(
             MessagingSystem::new_with_storage(history_ledger.clone(), pool.clone())

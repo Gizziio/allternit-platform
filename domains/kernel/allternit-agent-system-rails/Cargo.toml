@@ -1,21 +1,21 @@
 [package]
-name = "a2r-agent-system-rails"
+name = "allternit-agent-system-rails"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
 publish = false
 
 [lib]
-name = "a2r_agent_system_rails"
+name = "allternit_agent_system_rails"
 path = "src/lib.rs"
 
 [[bin]]
-name = "a2r-rails"
-path = "src/bin/a2r-rails.rs"
+name = "allternit-rails"
+path = "src/bin/allternit-rails.rs"
 
 [[bin]]
-name = "a2r-rails-service"
-path = "src/bin/a2r-rails-service.rs"
+name = "allternit-rails-service"
+path = "src/bin/allternit-rails-service.rs"
 
 [dependencies]
 serde = { workspace = true }
@@ -41,7 +41,7 @@ tonic = { workspace = true }
 prost = { workspace = true }
 prost-types = { workspace = true }
 serde_bytes = { workspace = true }
-worktree-manager = { path = "../../2-governance/worktree-manager" }
+worktree-manager = { path = "../../governance/worktree-manager" }
 
 [build-dependencies]
 tonic-build = { workspace = true }

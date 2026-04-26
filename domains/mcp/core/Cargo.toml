@@ -3,8 +3,8 @@ name = "mcp"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
-repository = "https://github.com/a2rchitect/a2rchitech"
-description = "MCP (Model Context Protocol) client with stdio/SSE transport, OAuth, health monitoring, and A2R integration"
+repository = "https://github.com/allternitchitect/allternit"
+description = "MCP (Model Context Protocol) client with stdio/SSE transport, OAuth, health monitoring, and Allternit integration"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
@@ -26,9 +26,9 @@ uuid = { version = "1.6", features = ["v4"] }
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite"] }
 bytes = "1.5"
 
-# A2R SDK dependencies
-a2rchitech-sdk-core = { path = "../../0-substrate/sdk/sdk-core" }
-a2rchitech-sdk-policy = { path = "../../0-substrate/sdk/sdk-policy" }
+# Allternit SDK dependencies
+allternit-sdk-core = { path = "../../../platform/sdk/typescript/sdk-core" }
+allternit-sdk-policy = { path = "../../../platform/sdk/typescript/sdk-policy" }
 
 [dev-dependencies]
 tokio-test = "0.4"

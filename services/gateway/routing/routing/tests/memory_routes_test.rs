@@ -6,7 +6,7 @@
 //! - GET /api/v1/local/memory/knowledge
 //! - GET /api/v1/local/memory/{session_id}
 
-use a2rchitech_memory::{
+use allternit_memory::{
     ConsolidationState, ConsolidationTrigger, DeletionPolicy, MemoryDecayFunction, MemoryEntry,
     MemoryProvenance, MemoryRetentionPolicy, MemoryType,
 };
@@ -245,7 +245,7 @@ fn test_law_grd_009_memory_no_placeholders() {
 /// Test MemoryQuery structure for session-based queries
 #[test]
 fn test_memory_query_session_filter() {
-    use a2rchitech_memory::MemoryQuery;
+    use allternit_memory::MemoryQuery;
 
     let session_id = "test-session-456".to_string();
     let query = MemoryQuery {
@@ -570,7 +570,7 @@ fn test_get_memory_by_id_endpoint_exists() {
 /// Test MemoryEntry serialization for get_memory_by_id response
 #[test]
 fn test_memory_entry_for_get_by_id() {
-    use a2rchitech_memory::{
+    use allternit_memory::{
         ConsolidationState, ConsolidationTrigger, DeletionPolicy, MemoryDecayFunction, MemoryEntry,
         MemoryProvenance, MemoryRetentionPolicy, MemoryType,
     };

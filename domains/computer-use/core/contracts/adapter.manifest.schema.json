@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2rchitech.local/schemas/computer-use/adapter.manifest.schema.json",
-  "title": "A2R Computer Use Adapter Manifest",
+  "$id": "https://allternit.local/schemas/computer-use/adapter.manifest.schema.json",
+  "title": "Allternit Computer Use Adapter Manifest",
   "type": "object",
   "additionalProperties": false,
   "required": [

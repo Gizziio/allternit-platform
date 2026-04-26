@@ -1,7 +1,7 @@
-use crate::core::types::A2REvent;
+use crate::core::types::AllternitEvent;
 use crate::wih::types::{LoopPolicy, WihState};
 
-pub fn project_wih(events: &[A2REvent], wih_id: &str) -> Option<WihState> {
+pub fn project_wih(events: &[AllternitEvent], wih_id: &str) -> Option<WihState> {
     let mut wih: Option<WihState> = None;
 
     for evt in events {

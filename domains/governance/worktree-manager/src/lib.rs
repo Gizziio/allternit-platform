@@ -20,7 +20,7 @@ impl WorktreeManager {
     /// Create a new worktree manager
     pub fn new(base_repo: impl AsRef<Path>) -> anyhow::Result<Self> {
         let base_repo = base_repo.as_ref().canonicalize()?;
-        let worktree_root = base_repo.join(".a2r").join("worktrees");
+        let worktree_root = base_repo.join(".allternit").join("worktrees");
 
         Ok(Self {
             base_repo,
@@ -46,7 +46,7 @@ impl WorktreeManager {
     pub fn generate_branch_name(&self, dag_id: &str, node_id: &str) -> String {
         let sanitized_dag = dag_id.replace(|c: char| !c.is_alphanumeric(), "-");
         let sanitized_node = node_id.replace(|c: char| !c.is_alphanumeric(), "-");
-        format!("a2r/{}/{}", sanitized_dag, sanitized_node)
+        format!("allternit/{}/{}", sanitized_dag, sanitized_node)
     }
 
     /// Ensure a worktree exists (create if necessary)
@@ -317,13 +317,13 @@ mod tests {
     fn test_generate_branch_name() {
         let manager = WorktreeManager::new("/tmp").unwrap();
         let name = manager.generate_branch_name("D2026-02-13", "N1");
-        assert_eq!(name, "a2r/D2026-02-13/N1");
+        assert_eq!(name, "allternit/D2026-02-13/N1");
     }
 
     #[test]
     fn test_generate_branch_name_special_chars() {
         let manager = WorktreeManager::new("/tmp").unwrap();
         let name = manager.generate_branch_name("D2026.02.13", "N1.2");
-        assert_eq!(name, "a2r/D2026-02-13/N1-2");
+        assert_eq!(name, "allternit/D2026-02-13/N1-2");
     }
 }

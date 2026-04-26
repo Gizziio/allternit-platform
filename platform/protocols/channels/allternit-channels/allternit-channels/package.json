@@ -1,7 +1,7 @@
 {
-  "name": "@a2r/channels",
+  "name": "@allternit/channels",
   "version": "1.0.0",
-  "description": "A2Rchitech Communication Channel Adapters",
+  "description": "Allternit Communication Channel Adapters",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

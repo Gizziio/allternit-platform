@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2rchitech.local/spec/contracts/Graph.schema.json",
-  "title": "A2rchitech Task Graph",
+  "$id": "https://allternit.local/spec/contracts/Graph.schema.json",
+  "title": "Allternit Task Graph",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -71,7 +71,7 @@
           },
           "wih_path": {
             "type": "string",
-            "pattern": "^/\\.a2r/wih/.+\\.json$"
+            "pattern": "^/\\.allternit/wih/.+\\.json$"
           }
         }
       }

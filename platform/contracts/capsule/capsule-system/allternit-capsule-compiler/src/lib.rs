@@ -14,7 +14,7 @@ use a2ui_types::{
     BaseProps, ComponentNode,
 };
 use evidence_store::{EvidenceStore, EvidenceStoreError};
-use a2rchitech_kernel_contracts;
+use allternit_kernel_contracts;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -461,7 +461,7 @@ impl CapsuleCompiler {
         &self,
         goal_text: &str,
         evidence_objects: &[capsule_spec::EvidenceObject],
-        context_bundle: Option<&a2rchitech_kernel_contracts::ContextBundle>,
+        context_bundle: Option<&allternit_kernel_contracts::ContextBundle>,
     ) -> Result<CapsuleSpec, CompilerError> {
         // First compile normally
         let mut spec = self.compile_full(goal_text, evidence_objects).await?;
@@ -475,7 +475,7 @@ impl CapsuleCompiler {
         Ok(spec)
     }
 
-    fn apply_context_to_spec(&self, spec: &mut CapsuleSpec, context: &a2rchitech_kernel_contracts::ContextBundle) {
+    fn apply_context_to_spec(&self, spec: &mut CapsuleSpec, context: &allternit_kernel_contracts::ContextBundle) {
         // Apply context-specific configurations to the capsule
         // This could include setting specific UI configurations, data models, or update rules
         // based on the context bundle
@@ -503,8 +503,8 @@ impl CapsuleCompiler {
         &self,
         capsule_spec: &CapsuleSpec,
         run_id: &str,
-    ) -> a2rchitech_kernel_contracts::VerifyArtifact {
-        use a2rchitech_kernel_contracts::{VerifyArtifact, VerificationResults, VerificationIssue, VerificationSeverity};
+    ) -> allternit_kernel_contracts::VerifyArtifact {
+        use allternit_kernel_contracts::{VerifyArtifact, VerificationResults, VerificationIssue, VerificationSeverity};
 
         // Perform actual verification checks on the capsule spec
         let mut issues = Vec::new();
@@ -598,7 +598,7 @@ impl CapsuleCompiler {
             issues,
         };
 
-        a2rchitech_kernel_contracts::VerifyArtifact::new(
+        allternit_kernel_contracts::VerifyArtifact::new(
             run_id.to_string(),
             "compile_step".to_string(),
             capsule_spec.id.clone(), // Using capsule ID as hash for simplicity

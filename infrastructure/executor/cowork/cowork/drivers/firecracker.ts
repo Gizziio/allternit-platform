@@ -1,9 +1,9 @@
 /**
- * A2R Firecracker Driver for Linux
+ * Allternit Firecracker Driver for Linux
  *
  * Production-ready TypeScript driver for managing Linux microVMs using AWS Firecracker.
  * Provides VM lifecycle management, Firecracker API integration, and VSOCK communication
- * with the a2r-vm-executor guest agent.
+ * with the allternit-vm-executor guest agent.
  *
  * @module firecracker
  * @version 1.0.0
@@ -17,8 +17,8 @@
  * const vm = await driver.createVM({
  *   id: "vm-001",
  *   name: "Ubuntu 22.04",
- *   kernelPath: "~/.a2r/images/vmlinux-6.5.0-x86_64",
- *   rootfsPath: "~/.a2r/images/ubuntu-22.04.ext4",
+ *   kernelPath: "~/.allternit/images/vmlinux-6.5.0-x86_64",
+ *   rootfsPath: "~/.allternit/images/ubuntu-22.04.ext4",
  *   cpuCount: 2,
  *   memorySize: 1024 * 1024 * 1024,
  * });
@@ -164,7 +164,7 @@ export interface VsockConfig {
   guestCid?: number;
   /** Unix domain socket path on host */
   udsPath?: string;
-  /** Port for a2r-vm-executor */
+  /** Port for allternit-vm-executor */
   port?: number;
 }
 
@@ -1226,7 +1226,7 @@ class BinaryManager {
  *
  * This driver provides complete lifecycle management for Firecracker microVMs
  * including binary management, VM creation, startup/shutdown, and VSOCK
- * communication with the a2r-vm-executor guest agent.
+ * communication with the allternit-vm-executor guest agent.
  *
  * @example
  * ```typescript
@@ -1238,8 +1238,8 @@ class BinaryManager {
  * const vm = await driver.createVM({
  *   id: "vm-001",
  *   name: "Test VM",
- *   kernelPath: "~/.a2r/images/vmlinux",
- *   rootfsPath: "~/.a2r/images/rootfs.ext4",
+ *   kernelPath: "~/.allternit/images/vmlinux",
+ *   rootfsPath: "~/.allternit/images/rootfs.ext4",
  *   cpuCount: 2,
  *   memorySize: 1024 * 1024 * 1024,
  * });
@@ -1267,7 +1267,7 @@ export class FirecrackerDriver extends EventEmitter {
     super();
 
     const homeDir = os.homedir();
-    const defaultDataDir = path.join(homeDir, ".a2r", "firecracker");
+    const defaultDataDir = path.join(homeDir, ".allternit", "firecracker");
 
     this.options = {
       firecrackerBinary: options.firecrackerBinary || "",

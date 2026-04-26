@@ -1,7 +1,7 @@
 {
-  "name": "@a2r/runtime",
+  "name": "@allternit/runtime",
   "version": "1.0.0",
-  "description": "A2R Runtime Bridge for AI Agent Integration",
+  "description": "Allternit Runtime Bridge for AI Agent Integration",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -36,16 +36,16 @@
     "serve": "node dist/server.js"
   },
   "keywords": [
-    "a2r",
+    "allternit",
     "runtime",
     "bridge",
     "adapter"
   ],
-  "author": "A2rchitect Team",
+  "author": "allternit Team",
   "license": "MIT",
   "dependencies": {
-    "@a2r/governor": "workspace:*",
-    "@a2r/engine": "workspace:*"
+    "@allternit/governor": "workspace:*",
+    "@allternit/engine": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

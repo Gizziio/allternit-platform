@@ -6,11 +6,11 @@
 //! 3. Pass state between nodes
 //! 4. Handle errors and retries
 
-use a2r_driver_interface::{
+use allternit_driver_interface::{
     CommandSpec, EnvSpecType, ExecutionDriver, ExecutionId, PolicySpec, ResourceSpec, SpawnSpec,
     TenantId,
 };
-use a2r_process_driver::ProcessDriver;
+use allternit_process_driver::ProcessDriver;
 use std::collections::{HashMap, HashSet};
 use std::time::Instant;
 
@@ -135,7 +135,7 @@ impl WorkflowEngine {
             project: None,
             workspace: None,
             run_id: Some(ExecutionId::new()),
-            env: a2r_driver_interface::EnvironmentSpec {
+            env: allternit_driver_interface::EnvironmentSpec {
                 spec_type: EnvSpecType::Oci,
                 image: "alpine:latest".to_string(),
                 version: None,

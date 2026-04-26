@@ -4,7 +4,7 @@
 **Status:** Production Ready  
 **License:** MIT
 
-The Deterministic Agent Kernel (DAK) Runner is an execution runtime for A2R (Agent-to-Agent Runtime) that ensures reproducible, auditable, and policy-compliant agent workflows.
+The Deterministic Agent Kernel (DAK) Runner is an execution runtime for Allternit (Agent-to-Agent Runtime) that ensures reproducible, auditable, and policy-compliant agent workflows.
 
 ---
 
@@ -26,7 +26,7 @@ The Deterministic Agent Kernel (DAK) Runner is an execution runtime for A2R (Age
 
 ## Overview
 
-DAK Runner sits in the **execution plane** of the A2R architecture. It:
+DAK Runner sits in the **execution plane** of the Allternit architecture. It:
 
 - Executes DAG (Directed Acyclic Graph) workflows
 - Enforces Work Item Header (WIH) constraints
@@ -38,7 +38,7 @@ DAK Runner sits in the **execution plane** of the A2R architecture. It:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                        A2R SYSTEM                          │
+│                        Allternit SYSTEM                          │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │  ┌──────────────┐      ┌──────────────┐      ┌──────────┐  │
@@ -95,7 +95,7 @@ DAK Runner sits in the **execution plane** of the A2R architecture. It:
 ### Installation
 
 ```bash
-npm install @a2r/dak-runner
+npm install @allternit/dak-runner
 ```
 
 ### Basic Usage
@@ -106,7 +106,7 @@ import {
   DagExecutor,
   PolicyInjector,
   SnapshotStore 
-} from '@a2r/dak-runner';
+} from '@allternit/dak-runner';
 
 // Initialize
 const parser = new DagParser();
@@ -149,7 +149,7 @@ console.log('Status:', result.status);
                          │
                          ▼
 ┌────────────────────────────────────────────────────────┐
-│                  A2R Platform UI                        │
+│                  Allternit Platform UI                        │
 │           (Intent Capture, Canvas, Shell)               │
 └────────────────────────────────────────────────────────┘
                          │
@@ -343,7 +343,7 @@ if (role === 'builder') {
 ### DAG Execution
 
 ```typescript
-import { DagParser, DagExecutor } from '@a2r/dak-runner';
+import { DagParser, DagExecutor } from '@allternit/dak-runner';
 
 const dag = await new DagParser().parse(yamlString);
 const result = await new DagExecutor().execute(dag, context);
@@ -352,7 +352,7 @@ const result = await new DagExecutor().execute(dag, context);
 ### Policy Injection
 
 ```typescript
-import { PolicyInjector } from '@a2r/dak-runner';
+import { PolicyInjector } from '@allternit/dak-runner';
 
 const injector = new PolicyInjector(config);
 await injector.loadBundle(policyBundle);
@@ -362,7 +362,7 @@ const marker = await injector.injectForDAG(dagId, sessionId, agentId);
 ### Tool Snapshots
 
 ```typescript
-import { SnapshotStore, ReplayEngine, withSnapshots } from '@a2r/dak-runner';
+import { SnapshotStore, ReplayEngine, withSnapshots } from '@allternit/dak-runner';
 
 const store = new SnapshotStore(config);
 const engine = new ReplayEngine(store, replayConfig);
@@ -374,7 +374,7 @@ const wrappedTool = withSnapshots('tool_name', liveFunction, store);
 ### Monitoring
 
 ```typescript
-import { CircuitBreaker, withRetry, MetricsCollector } from '@a2r/dak-runner';
+import { CircuitBreaker, withRetry, MetricsCollector } from '@allternit/dak-runner';
 
 const breaker = new CircuitBreaker('api', config);
 const result = await withRetry(() => fetchData(), retryConfig);
@@ -392,8 +392,8 @@ See [API-REFERENCE.md](./docs/API-REFERENCE.md) for complete documentation.
 ```bash
 # DAK Runner
 DAK_LOG_LEVEL=info
-DAK_MARKER_DIR=.a2r/markers
-DAK_SNAPSHOT_DIR=.a2r/snapshots
+DAK_MARKER_DIR=.allternit/markers
+DAK_SNAPSHOT_DIR=.allternit/snapshots
 DAK_MAX_SNAPSHOTS=10000
 DAK_SNAPSHOT_TTL=604800
 
@@ -413,7 +413,7 @@ DAK_RETRY_BACKOFF=exponential
 ### Programmatic Configuration
 
 ```typescript
-import { DagExecutor } from '@a2r/dak-runner';
+import { DagExecutor } from '@allternit/dak-runner';
 
 const executor = new DagExecutor({
   maxNodes: 100,
@@ -489,7 +489,7 @@ npm test -- --watch # Watch mode
 | Rails API | `3-adapters/rails/` | Control plane (gates, leases, receipts) |
 | Prompt Pack Service | `4-services/prompt-pack-service/` | Template rendering service |
 | Intent Graph Kernel | `1-kernel/intent-graph-kernel/` | Graph construction and planning |
-| A2R Platform | `5-ui/a2r-platform/` | User interface |
+| Allternit Platform | `5-ui/allternit-platform/` | User interface |
 
 ---
 
@@ -508,4 +508,4 @@ MIT License - See LICENSE file for details.
 
 ---
 
-**Built with ❤️ by the A2R Team**
+**Built with ❤️ by the Allternit Team**

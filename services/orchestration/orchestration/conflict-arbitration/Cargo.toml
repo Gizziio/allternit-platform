@@ -1,8 +1,8 @@
 [package]
-name = "a2rchitech-conflict-arbitration"
+name = "allternit-conflict-arbitration"
 version = "0.1.0"
 edition = "2021"
-description = "Conflict arbitration engine for A2R - diff overlap detection, priority-based arbitration, PR splitting"
+description = "Conflict arbitration engine for Allternit - diff overlap detection, priority-based arbitration, PR splitting"
 
 [dependencies]
 serde = { workspace = true }

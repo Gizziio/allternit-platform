@@ -2,7 +2,7 @@
 //!
 //! Final cleanup operations for the OpenClaw absorption project.
 //! This module handles the final steps of removing deprecated bridge code
-//! and transitioning fully to native A2R implementations.
+//! and transitioning fully to native Allternit implementations.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

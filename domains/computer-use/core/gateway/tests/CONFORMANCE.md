@@ -1,4 +1,4 @@
-# A2R Computer Use Gateway - Conformance Test Suite
+# Allternit Computer Use Gateway - Conformance Test Suite
 
 ## Overview
 
@@ -63,7 +63,7 @@ python3 -m pytest tests/test_conformance.py -v
 
 ```
 ============================================================
-A2R Computer Use Gateway - Conformance Tests
+Allternit Computer Use Gateway - Conformance Tests
 ============================================================
 
 Checking gateway...

@@ -1,7 +1,7 @@
 /**
  * Svelte Renderer
  * 
- * Generates Svelte component code from A2R-IX UI IR.
+ * Generates Svelte component code from Allternit-IX UI IR.
  * 
  * @example
  * ```typescript

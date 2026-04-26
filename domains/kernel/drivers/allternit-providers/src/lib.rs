@@ -1,11 +1,11 @@
 pub mod adapters;
 pub mod runtime;
-use a2rchitech_context_router::{ContextBundle, ContextRouter};
-use a2rchitech_history::{HistoryError, HistoryLedger};
-use a2rchitech_memory::MemoryFabric;
-use a2rchitech_messaging::{EventEnvelope, MessagingSystem};
-use a2rchitech_policy::{PolicyEffect, PolicyEngine, PolicyRequest};
-use a2rchitech_runtime_core::SessionManager;
+use allternit_context_router::{ContextBundle, ContextRouter};
+use allternit_history::{HistoryError, HistoryLedger};
+use allternit_memory::MemoryFabric;
+use allternit_messaging::{EventEnvelope, MessagingSystem};
+use allternit_policy::{PolicyEffect, PolicyEngine, PolicyRequest};
+use allternit_runtime_core::SessionManager;
 use serde::{Deserialize, Serialize};
 use sqlx::{Row, SqlitePool};
 use std::collections::HashMap;
@@ -222,7 +222,7 @@ pub enum ProviderError {
     #[error("SQLX error: {0}")]
     Sqlx(#[from] sqlx::Error),
     #[error("Policy error: {0}")]
-    Policy(#[from] a2rchitech_policy::PolicyError),
+    Policy(#[from] allternit_policy::PolicyError),
     #[error("Provider not found: {0}")]
     ProviderNotFound(String),
     #[error("Provider disabled: {0}")]
@@ -844,7 +844,7 @@ impl ProviderRouter {
                 "required_capabilities": &request.required_capabilities,
                 "budget_constraints": &request.budget_constraints,
             }),
-            requested_tier: a2rchitech_policy::SafetyTier::T0, // Default to lowest tier for provider access
+            requested_tier: allternit_policy::SafetyTier::T0, // Default to lowest tier for provider access
         };
 
         let policy_decision = self.policy_engine.evaluate(policy_request).await?;
@@ -1112,12 +1112,12 @@ mod tests {
         // Create temporary history ledger
         let temp_path = format!("/tmp/test_providers_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
 
         // Create messaging system
         let messaging_system = Arc::new(
-            a2rchitech_messaging::MessagingSystem::new_with_storage(
+            allternit_messaging::MessagingSystem::new_with_storage(
                 history_ledger.clone(),
                 pool.clone(),
             )
@@ -1126,17 +1126,17 @@ mod tests {
         );
 
         // Create policy engine
-        let policy_engine = Arc::new(a2rchitech_policy::PolicyEngine::new(
+        let policy_engine = Arc::new(allternit_policy::PolicyEngine::new(
             history_ledger.clone(),
             messaging_system.clone(),
         ));
 
         // Create context router
-        let context_router = Arc::new(a2rchitech_context_router::ContextRouter::new(
+        let context_router = Arc::new(allternit_context_router::ContextRouter::new(
             history_ledger.clone(),
             messaging_system.clone(),
             policy_engine.clone(),
-            Arc::new(a2rchitech_runtime_core::SessionManager::new(
+            Arc::new(allternit_runtime_core::SessionManager::new(
                 history_ledger.clone(),
                 messaging_system.clone(),
             )),
@@ -1144,7 +1144,7 @@ mod tests {
 
         // Create memory fabric
         let memory_fabric = Arc::new(
-            a2rchitech_memory::MemoryFabric::new_with_storage(
+            allternit_memory::MemoryFabric::new_with_storage(
                 history_ledger.clone(),
                 messaging_system.clone(),
                 policy_engine.clone(),
@@ -1156,7 +1156,7 @@ mod tests {
         );
 
         // Create session manager
-        let session_manager = Arc::new(a2rchitech_runtime_core::SessionManager::new(
+        let session_manager = Arc::new(allternit_runtime_core::SessionManager::new(
             history_ledger.clone(),
             messaging_system.clone(),
         ));

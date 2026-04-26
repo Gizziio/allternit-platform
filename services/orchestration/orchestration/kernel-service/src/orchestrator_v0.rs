@@ -1,6 +1,6 @@
-use a2rchitech_providers::adapters::openai::{LLMProvider, MockProvider, OpenAIProvider};
-use a2rchitech_tools::fs::FsTool;
-use a2rchitech_tools::search::SearchTool;
+use allternit_providers::adapters::openai::{LLMProvider, MockProvider, OpenAIProvider};
+use allternit_tools::fs::FsTool;
+use allternit_tools::search::SearchTool;
 use serde_json::Value;
 use std::env;
 use std::sync::Arc;

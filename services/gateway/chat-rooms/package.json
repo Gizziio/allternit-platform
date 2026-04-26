@@ -1,7 +1,7 @@
 {
-  "name": "@a2r/chat-rooms",
+  "name": "@allternit/chat-rooms-service",
   "version": "1.0.0",
-  "description": "Chat rooms service for a2rchitech - real-time agent-human communication",
+  "description": "Chat rooms service for allternit - real-time agent-human communication",
   "type": "module",
   "main": "dist/main.js",
   "scripts": {

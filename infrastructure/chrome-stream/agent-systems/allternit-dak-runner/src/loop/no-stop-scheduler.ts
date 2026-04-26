@@ -246,10 +246,10 @@ export class RalphNoStopScheduler extends EventEmitter {
           execution_mode: node.executionMode,
         } as any,
         planFiles: {
-          planPath: `.a2r/work/dags/${node.dagId}/plan.md`,
-          todoPath: `.a2r/work/dags/${node.dagId}/todo.md`,
-          progressPath: `.a2r/work/dags/${node.dagId}/progress.md`,
-          findingsPath: `.a2r/work/dags/${node.dagId}/findings.md`,
+          planPath: `.allternit/work/dags/${node.dagId}/plan.md`,
+          todoPath: `.allternit/work/dags/${node.dagId}/todo.md`,
+          progressPath: `.allternit/work/dags/${node.dagId}/progress.md`,
+          findingsPath: `.allternit/work/dags/${node.dagId}/findings.md`,
         },
       };
 

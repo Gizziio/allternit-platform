@@ -97,6 +97,6 @@ class ImageGenRouter:
         """
         # In a real implementation, this would return a shared memory segment
         # For now, we'll use a temporary directory
-        shm_path = "/tmp/a2rchitech_shm"
+        shm_path = "/tmp/allternit_shm"
         os.makedirs(shm_path, exist_ok=True)
         return shm_path

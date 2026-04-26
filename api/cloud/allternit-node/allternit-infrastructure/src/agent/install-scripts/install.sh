@@ -1,12 +1,12 @@
 #!/bin/bash
 #
-# A2R Node Agent Installation Script
+# Allternit Node Agent Installation Script
 # Supports: Ubuntu, Debian, CentOS, RHEL, Fedora, Alpine Linux
 #
 # This script:
 # - Detects OS and architecture
 # - Installs Docker if not present
-# - Pulls A2R agent Docker image
+# - Pulls Allternit agent Docker image
 # - Sets up systemd service
 # - Configures networking and firewall
 # - Sets up log rotation
@@ -29,11 +29,11 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
 # Configuration
 ALLTERNIT_VERSION="${ALLTERNIT_VERSION:-latest}"
-ALLTERNIT_DIR="/opt/a2r"
-ALLTERNIT_CONFIG_DIR="/etc/a2r"
-ALLTERNIT_LOG_DIR="/var/log/a2r"
-ALLTERNIT_USER="a2r"
-ALLTERNIT_GROUP="a2r"
+ALLTERNIT_DIR="/opt/allternit"
+ALLTERNIT_CONFIG_DIR="/etc/allternit"
+ALLTERNIT_LOG_DIR="/var/log/allternit"
+ALLTERNIT_USER="allternit"
+ALLTERNIT_GROUP="allternit"
 
 # Detect OS
 detect_os() {
@@ -199,9 +199,9 @@ install_docker_generic() {
     rm -f /tmp/get-docker.sh
 }
 
-# Create A2R user and directories
+# Create Allternit user and directories
 setup_directories() {
-    log_info "Setting up A2R directories..."
+    log_info "Setting up Allternit directories..."
     
     # Create user
     if ! id "$ALLTERNIT_USER" &>/dev/null; then
@@ -234,7 +234,7 @@ configure_firewall() {
     # ufw (Ubuntu/Debian)
     if command -v ufw &> /dev/null && ufw status | grep -q "Status: active"; then
         for port in "${ports[@]}"; do
-            ufw allow "$port/tcp" comment "A2R Agent" 2>/dev/null || true
+            ufw allow "$port/tcp" comment "Allternit Agent" 2>/dev/null || true
         done
         log_info "Configured ufw firewall"
     fi
@@ -267,18 +267,18 @@ configure_firewall() {
 setup_log_rotation() {
     log_info "Setting up log rotation..."
     
-    cat > /etc/logrotate.d/a2r-agent << 'EOF'
-/var/log/a2r/*.log {
+    cat > /etc/logrotate.d/allternit-agent << 'EOF'
+/var/log/allternit/*.log {
     daily
     rotate 14
     compress
     delaycompress
     missingok
     notifempty
-    create 0640 a2r a2r
+    create 0640 allternit allternit
     sharedscripts
     postrotate
-        /usr/bin/docker kill --signal="USR1" a2r-agent 2>/dev/null || true
+        /usr/bin/docker kill --signal="USR1" allternit-agent 2>/dev/null || true
     endscript
 }
 EOF
@@ -290,9 +290,9 @@ EOF
 create_systemd_service() {
     log_info "Creating systemd service..."
     
-    cat > /etc/systemd/system/a2r-agent.service << EOF
+    cat > /etc/systemd/system/allternit-agent.service << EOF
 [Unit]
-Description=A2R Node Agent
+Description=Allternit Node Agent
 Documentation=https://docs.allternit.com
 Requires=docker.service
 After=docker.service network.target
@@ -326,7 +326,7 @@ EOF
     
     # Reload systemd
     systemctl daemon-reload
-    systemctl enable a2r-agent
+    systemctl enable allternit-agent
     
     log_success "Systemd service created"
 }
@@ -335,14 +335,14 @@ EOF
 setup_docker_network() {
     log_info "Setting up Docker network..."
     
-    # Create a2r network if it doesn't exist
-    if ! docker network inspect a2r-network &>/dev/null; then
+    # Create allternit network if it doesn't exist
+    if ! docker network inspect allternit-network &>/dev/null; then
         docker network create \
             --driver bridge \
             --subnet=172.20.0.0/16 \
             --gateway=172.20.0.1 \
-            --opt com.docker.network.bridge.name=a2r-br0 \
-            a2r-network || true
+            --opt com.docker.network.bridge.name=allternit-br0 \
+            allternit-network || true
     fi
     
     log_success "Docker network configured"
@@ -377,7 +377,7 @@ verify_installation() {
     fi
     
     # Check systemd service
-    if [[ ! -f /etc/systemd/system/a2r-agent.service ]]; then
+    if [[ ! -f /etc/systemd/system/allternit-agent.service ]]; then
         log_error "Systemd service file not found"
         exit 1
     fi
@@ -388,7 +388,7 @@ verify_installation() {
 # Main installation function
 main() {
     log_info "======================================"
-    log_info "A2R Node Agent Installer"
+    log_info "Allternit Node Agent Installer"
     log_info "Version: $ALLTERNIT_VERSION"
     log_info "======================================"
     
@@ -404,13 +404,13 @@ main() {
     verify_installation
     
     log_success "======================================"
-    log_success "A2R Agent installation completed!"
+    log_success "Allternit Agent installation completed!"
     log_success "======================================"
     log_info ""
     log_info "Next steps:"
-    log_info "  1. Start the agent: sudo systemctl start a2r-agent"
-    log_info "  2. Check status: sudo systemctl status a2r-agent"
-    log_info "  3. View logs: sudo journalctl -u a2r-agent -f"
+    log_info "  1. Start the agent: sudo systemctl start allternit-agent"
+    log_info "  2. Check status: sudo systemctl status allternit-agent"
+    log_info "  3. View logs: sudo journalctl -u allternit-agent -f"
     log_info "  4. Docker logs: docker compose -f $ALLTERNIT_DIR/docker-compose.yml logs -f"
     log_info ""
     log_info "Configuration file: $ALLTERNIT_CONFIG_DIR/config.json"

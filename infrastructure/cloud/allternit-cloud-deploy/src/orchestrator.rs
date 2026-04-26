@@ -2,7 +2,7 @@
 //!
 //! Coordinates the full deployment lifecycle.
 
-use a2r_cloud_core::{
+use allternit_cloud_core::{
     CloudProvider, CloudError, DeploymentConfig, Instance, 
     ProviderCredentials, PreflightChecker, PreflightResult,
     DeploymentStatus, DeploymentPhase,
@@ -33,9 +33,9 @@ impl DeploymentOrchestrator {
         Self { provider, credentials }
     }
     
-    /// Deploy A2R to cloud
+    /// Deploy Allternit to cloud
     pub async fn deploy(&self, config: DeploymentConfig) -> Result<DeploymentResult, CloudError> {
-        tracing::info!("Starting A2R deployment to {}", config.provider);
+        tracing::info!("Starting Allternit deployment to {}", config.provider);
         
         // Create deployment status tracker
         let mut status = DeploymentStatus {
@@ -79,11 +79,11 @@ impl DeploymentOrchestrator {
         
         self.wait_for_ready(&instance).await?;
         
-        // Step 4: Install A2R
+        // Step 4: Install Allternit
         status.progress = 60;
-        status.message = "Installing A2R platform".to_string();
+        status.message = "Installing Allternit platform".to_string();
         
-        self.install_a2r(&instance).await?;
+        self.install_allternit(&instance).await?;
         
         // Step 5: Configure networking
         status.phase = DeploymentPhase::Configuring;
@@ -123,10 +123,10 @@ impl DeploymentOrchestrator {
         Ok(())
     }
     
-    /// Install A2R on instance
-    async fn install_a2r(&self, instance: &Instance) -> Result<(), CloudError> {
+    /// Install Allternit on instance
+    async fn install_allternit(&self, instance: &Instance) -> Result<(), CloudError> {
         // In production, this would SSH to the instance and run installation
-        tracing::info!("Installing A2R on instance {}", instance.id);
+        tracing::info!("Installing Allternit on instance {}", instance.id);
         
         // Simulate installation
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;

@@ -1,0 +1,28 @@
+{
+  "input": {
+    "course_id": 101,
+    "module_name": "Unit 1: Scientific Method",
+    "lesson_count": 2,
+    "publish": false
+  },
+  "expected_plan": {
+    "skill": "summit.canvas.module_builder",
+    "steps": [
+      {
+        "id": "step-1",
+        "tool": "canvas.create_module",
+        "args": { "course_id": 101, "name": "Unit 1: Scientific Method", "published": false }
+      },
+      {
+        "id": "step-2",
+        "tool": "canvas.create_page",
+        "args": { "course_id": 101, "title": "Lesson 1: Observation", "body": "...", "published": false }
+      },
+      {
+        "id": "step-3",
+        "tool": "canvas.add_module_item",
+        "args": { "course_id": 101, "module_id": "$RESULT_1", "title": "Lesson 1: Observation", "type": "Page", "content_id": "$RESULT_2" }
+      }
+    ]
+  }
+}

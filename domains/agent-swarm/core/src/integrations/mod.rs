@@ -1,6 +1,6 @@
-//! A2R Integration modules
+//! Allternit Integration modules
 //!
-//! These modules provide integration with A2R's core services:
+//! These modules provide integration with Allternit's core services:
 //! - Intent Graph: Store and query swarm execution data
 //! - WIH: Work Item Handling for task tracking
 //! - Rails: Execution sandbox

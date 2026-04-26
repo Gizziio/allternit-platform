@@ -1,4 +1,4 @@
-use a2rchitech_kernel_contracts::{
+use allternit_kernel_contracts::{
     BudgetReport, ContextBudgets, ContextBundle, ContextInputs, ContextMap, MemoryReference,
     Redaction, VerificationIssue, VerificationResults, VerificationSeverity, VerifyArtifact,
 };
@@ -124,7 +124,7 @@ impl ContextManager {
         let start_time = std::time::Instant::now();
 
         // Use context tree routing logic to determine how to assemble context
-        let routing_decision = a2rchitech_memory::v2::context_tree::decide(user_intent);
+        let routing_decision = allternit_memory::v2::context_tree::decide(user_intent);
 
         // Compute the result (original implementation with routing logic)
         let mut included_ids = Vec::new();
@@ -145,14 +145,14 @@ impl ContextManager {
 
         // 3. Progressive Disclosure: Fetch Memory based on routing decision
         let candidates = match routing_decision.route {
-            a2rchitech_memory::v2::context_tree::ContextRoute::SummariesOnly => {
+            allternit_memory::v2::context_tree::ContextRoute::SummariesOnly => {
                 // Only fetch summary memories
                 vec![
                     ("summary_1", "summary", 0.95, 500),
                     ("summary_2", "summary", 0.85, 400),
                 ]
             }
-            a2rchitech_memory::v2::context_tree::ContextRoute::SummariesThenItems => {
+            allternit_memory::v2::context_tree::ContextRoute::SummariesThenItems => {
                 // Fetch summaries first, then detailed items
                 vec![
                     ("summary_1", "summary", 0.95, 500),
@@ -160,7 +160,7 @@ impl ContextManager {
                     ("item_2", "detail", 0.75, 800),
                 ]
             }
-            a2rchitech_memory::v2::context_tree::ContextRoute::ItemsThenHistory => {
+            allternit_memory::v2::context_tree::ContextRoute::ItemsThenHistory => {
                 // Fetch detailed items first, then historical context
                 vec![
                     ("item_1", "detail", 0.90, 1200),
@@ -168,7 +168,7 @@ impl ContextManager {
                     ("history_1", "history", 0.70, 800),
                 ]
             }
-            a2rchitech_memory::v2::context_tree::ContextRoute::GraphAndItems => {
+            allternit_memory::v2::context_tree::ContextRoute::GraphAndItems => {
                 // Fetch both graph relationships and detailed items
                 vec![
                     ("rel_1", "relationship", 0.92, 600),
@@ -176,14 +176,14 @@ impl ContextManager {
                     ("rel_2", "relationship", 0.85, 400),
                 ]
             }
-            a2rchitech_memory::v2::context_tree::ContextRoute::HistoryOnly => {
+            allternit_memory::v2::context_tree::ContextRoute::HistoryOnly => {
                 // Fetch only historical context
                 vec![
                     ("history_1", "history", 0.90, 800),
                     ("history_2", "history", 0.80, 1000),
                 ]
             }
-            a2rchitech_memory::v2::context_tree::ContextRoute::None => {
+            allternit_memory::v2::context_tree::ContextRoute::None => {
                 // No context needed
                 vec![]
             }

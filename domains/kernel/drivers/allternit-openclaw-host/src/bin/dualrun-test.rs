@@ -1,6 +1,6 @@
 //! DualRun Test Runner
 //!
-//! Runs Phase 2 DualRun tests comparing OpenClaw (reference) vs Native A2R implementations.
+//! Runs Phase 2 DualRun tests comparing OpenClaw (reference) vs Native Allternit implementations.
 //! This is the key parity testing phase where both implementations run side-by-side.
 //!
 //! Usage:
@@ -18,13 +18,13 @@ use std::time::Duration;
 use tokio::time::sleep;
 use tracing::{info, warn, Level};
 
-use a2r_openclaw_host::{components::OpenClawComponentFactory, rpc::OpenClawHttpClient};
-use a2r_parity::{strangler::ComponentInput, HarnessConfig, ParityHarness};
+use allternit_openclaw_host::{components::OpenClawComponentFactory, rpc::OpenClawHttpClient};
+use allternit_parity::{strangler::ComponentInput, HarnessConfig, ParityHarness};
 
 /// DualRun test runner for Phase 2 parity testing
 #[derive(Parser)]
 #[command(name = "dualrun-test")]
-#[command(about = "Phase 2 DualRun parity testing - OpenClaw vs Native A2R")]
+#[command(about = "Phase 2 DualRun parity testing - OpenClaw vs Native Allternit")]
 struct Cli {
     /// OpenClaw HTTP API base URL
     #[arg(short, long, default_value = "http://localhost:18789")]
@@ -77,7 +77,7 @@ async fn main() -> Result<()> {
 
     info!("╔════════════════════════════════════════════════════════════╗");
     info!("║              PHASE 2 DUALRUN PARITY TESTING                ║");
-    info!("║         OpenClaw (Reference) vs Native A2R                 ║");
+    info!("║         OpenClaw (Reference) vs Native Allternit                 ║");
     info!("╚════════════════════════════════════════════════════════════╝");
     info!("");
     info!("OpenClaw URL: {}", cli.openclaw_url);

@@ -2,14 +2,14 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://allternit.dev/schemas/wih.json",
   "title": "Work-In-Hand (WIH) Schema",
-  "description": "Schema for A2R Kernel work items governing task execution and dependency tracking",
+  "description": "Schema for Allternit Kernel work items governing task execution and dependency tracking",
   "type": "object",
   "required": ["id", "title", "status", "createdAt", "version"],
   "properties": {
     "id": {
       "type": "string",
       "pattern": "^[A-Z0-9]+-[A-Z0-9]+$",
-      "description": "Unique work item identifier (e.g., 'P2-T0200', 'A2R-001')"
+      "description": "Unique work item identifier (e.g., 'P2-T0200', 'Allternit-001')"
     },
     "title": {
       "type": "string",
@@ -116,7 +116,7 @@
     },
     "routing": {
       "type": "object",
-      "description": "A2R Kernel routing configuration",
+      "description": "Allternit Kernel routing configuration",
       "properties": {
         "preToolUse": {
           "type": "array",

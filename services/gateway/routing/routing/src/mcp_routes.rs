@@ -1,7 +1,7 @@
 //! MCP (Model Context Protocol) routes with policy enforcement
 //!
 //! This module provides API endpoints for managing MCP servers and executing
-//! tools with A2R policy engine integration.
+//! tools with Allternit policy engine integration.
 //!
 //! # Endpoints
 //!
@@ -317,7 +317,7 @@ async fn register_mcp_server(
     // Create policy-enforcing client
     let client = PolicyEnforcingMcpClient::new(
         transport,
-        Arc::new(a2rchitech_sdk_policy::PolicyEngine::new()),
+        Arc::new(allternit_sdk_policy::PolicyEngine::new()),
         server_id.clone(),
         request.name.clone(),
         state.app_state.policy_identity_id.clone(),

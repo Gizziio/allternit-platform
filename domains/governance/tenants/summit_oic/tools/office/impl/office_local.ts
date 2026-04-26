@@ -1,6 +1,6 @@
 /**
  * Office Document Diff Engine
- * Part of the Summit OIC Tenant Layer above A2Rchitech Platform.
+ * Part of the Summit OIC Tenant Layer above Allternit Platform.
  */
 import crypto from 'crypto';
 import { readFile } from 'fs/promises';

@@ -1,4 +1,4 @@
-//! # A2rchitech Tool Registry
+//! # Allternitchitech Tool Registry
 //!
 //! Dynamic tool discovery, registration, and resolution.
 //!
@@ -28,7 +28,7 @@
 //! └─────────────────────────────────────────────────────────┘
 //! ```
 
-use a2r_capsule::{CapsuleManifest, CapsuleStore, ContentHash, SafetyTier, VerifyingKey};
+use allternit_capsule::{CapsuleManifest, CapsuleStore, ContentHash, SafetyTier, VerifyingKey};
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use semver::{Version, VersionReq};
@@ -61,7 +61,7 @@ pub enum RegistryError {
     InvalidQuery(String),
 
     #[error("Capsule error: {0}")]
-    CapsuleError(#[from] a2r_capsule::CapsuleError),
+    CapsuleError(#[from] allternit_capsule::CapsuleError),
 
     #[error("Internal error: {0}")]
     Internal(String),

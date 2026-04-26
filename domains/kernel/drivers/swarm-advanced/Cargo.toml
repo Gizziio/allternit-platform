@@ -1,5 +1,5 @@
 [package]
-name = "a2r-swarm-advanced"
+name = "allternit-swarm-advanced"
 version = "0.1.0"
 edition = "2021"
 description = "Advanced Swarm Scheduler features: message bus, retry logic, circuit breaker, quarantine"

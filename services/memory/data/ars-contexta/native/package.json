@@ -1,5 +1,5 @@
 {
-  "name": "@a2r/ars-contexta-nlp",
+  "name": "@allternit/ars-contexta-nlp-service",
   "version": "1.0.0",
   "description": "Native NLP module for Ars Contexta",
   "main": "index.js",
@@ -25,6 +25,11 @@
   "devDependencies": {
     "@napi-rs/cli": "^2.18"
   },
-  "keywords": ["nlp", "bert", "embeddings", "rust"],
+  "keywords": [
+    "nlp",
+    "bert",
+    "embeddings",
+    "rust"
+  ],
   "license": "MIT"
 }

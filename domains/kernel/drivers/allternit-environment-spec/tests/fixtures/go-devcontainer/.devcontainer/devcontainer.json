@@ -30,7 +30,7 @@
         }
       }
     },
-    "a2r": {
+    "allternit": {
       "driver": "process",
       "enablePrewarm": true
     }

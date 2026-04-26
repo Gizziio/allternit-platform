@@ -1,9 +1,9 @@
-# A2R Prompt Format Spec (PFS) v1
+# Allternit Prompt Format Spec (PFS) v1
 
 <SECTION id="meta">
 ---
 pfs_version: 1
-name: "A2R Prompt Format Spec"
+name: "Allternit Prompt Format Spec"
 status: locked
 purpose: "Defines the canonical, reusable prompt file format used by Agent Runner prompt packs."
 variable_syntax:
@@ -29,7 +29,7 @@ sections:
 This YAML block is the machine-parsed contract for the prompt.
 
 ### Required keys
-- `prompt_id`: stable identifier (e.g., `a2r.pack.core.context_prime@v1`)
+- `prompt_id`: stable identifier (e.g., `allternit.pack.core.context_prime@v1`)
 - `version`: semver-ish (`v1`, `v1.1`, `v2`)
 - `description`: one sentence
 - `argument_hint`: CLI-style usage hint (string)
@@ -41,7 +41,7 @@ This YAML block is the machine-parsed contract for the prompt.
 - `hooks_required`: list of hook stages that MUST be active for this prompt
 - `outputs`: list of required artifacts (filenames or logical artifact IDs)
 - `writes_policy`:
-  - `workspace_root`: e.g. `.a2r/` (or other repo-defined root)
+  - `workspace_root`: e.g. `.allternit/` (or other repo-defined root)
   - `allow_write_paths`: allowlist globs
   - `deny_write_paths`: denylist globs
 
@@ -63,7 +63,7 @@ Include a short, stable, human-readable tree (not exhaustive). This is not “tr
 Example:
 ```text
 codebase_structure:
-  .a2r/
+  .allternit/
     wih/            # WIH files (execution envelopes)
     dags/           # DAG specs
     ledger/         # append-only events
@@ -115,7 +115,7 @@ variables:
     description: "Raw user request text"
   workspace_root:
     required: false
-    default: ".a2r"
+    default: ".allternit"
 ```
 </SECTION>
 

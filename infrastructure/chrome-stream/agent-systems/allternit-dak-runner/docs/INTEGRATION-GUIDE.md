@@ -59,7 +59,7 @@ import {
   createLeaseManager,
   createDagExecutor,
   createContextPackBuilder 
-} from '@a2r/dak-runner';
+} from '@allternit/dak-runner';
 
 // 1. Initialize Rails adapter
 const railsAdapter = createRailsHttpAdapter({
@@ -103,11 +103,11 @@ leaseManager.on('lease:failed', (lease, error) => {
 ### HTTP Adapter with Fallback
 
 ```typescript
-import { createRailsUnifiedAdapter } from '@a2r/dak-runner';
+import { createRailsUnifiedAdapter } from '@allternit/dak-runner';
 
 // Try HTTP, fallback to CLI if HTTP fails
 const adapter = createRailsUnifiedAdapter({
-  cliPath: 'a2r',
+  cliPath: 'allternit',
   projectPath: '.',
   http: { baseURL: 'http://localhost:3001' },
   preferHttp: true,
@@ -204,7 +204,7 @@ const result = await runtime.executeTool(toolCall, leaseManager);
 ### With Lease Management
 
 ```typescript
-import { createDagExecutor } from '@a2r/dak-runner';
+import { createDagExecutor } from '@allternit/dak-runner';
 
 const executor = createDagExecutor({
   dag: parsedDag,
@@ -257,7 +257,7 @@ console.log(`Blocked: ${result.blocked_nodes.length}`);
 ### Building and Sealing
 
 ```typescript
-import { createContextPackBuilder } from '@a2r/dak-runner';
+import { createContextPackBuilder } from '@allternit/dak-runner';
 
 const builder = createContextPackBuilder({
   basePath: '.',
@@ -313,7 +313,7 @@ console.log(`Context pack sealed: ${pack.contextPackId}`);
 
 ### Monitoring Components
 
-The Shell UI (`5-ui/a2r-platform/`) provides monitoring for DAK Runner:
+The Shell UI (`5-ui/allternit-platform/`) provides monitoring for DAK Runner:
 
 #### 1. Lease Monitor (`RailsView.tsx`)
 
@@ -445,7 +445,7 @@ function ContextPackBrowser({ dagId }: { dagId: string }) {
 ### Metrics Collection
 
 ```typescript
-import { globalMetrics } from '@a2r/dak-runner';
+import { globalMetrics } from '@allternit/dak-runner';
 
 // Count events
 globalMetrics.increment('dag_executions', 1, { 
@@ -511,7 +511,7 @@ leaseManager.on('lease:failed', (lease, error) => {
 #### Network Failures with Retry
 
 ```typescript
-import { withRetry, RetryPresets } from '@a2r/dak-runner';
+import { withRetry, RetryPresets } from '@allternit/dak-runner';
 
 const result = await withRetry(
   async () => await railsAdapter.gateCheck(request),

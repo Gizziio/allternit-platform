@@ -8,9 +8,9 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PLIST_FILE="$SCRIPT_DIR/com.a2rchitech.memory-agent.plist"
+PLIST_FILE="$SCRIPT_DIR/com.allternit.memory-agent.plist"
 LAUNCHD_DIR="$HOME/Library/LaunchAgents"
-LAUNCHD_LABEL="com.a2rchitech.memory-agent"
+LAUNCHD_LABEL="com.allternit.memory-agent"
 
 # Colors for output
 RED='\033[0;31m'
@@ -37,7 +37,7 @@ install_service() {
     mkdir -p "$LAUNCHD_DIR"
     
     # Ensure log directory exists
-    mkdir -p "$HOME/Library/Logs/a2rchitech"
+    mkdir -p "$HOME/Library/Logs/allternit"
     
     # Update plist with current user's paths
     local temp_plist=$(mktemp)
@@ -59,7 +59,7 @@ install_service() {
     echo "  Stop:   launchctl stop $LAUNCHD_LABEL"
     echo "  Status: launchctl list | grep $LAUNCHD_LABEL"
     echo ""
-    print_status "Logs: $HOME/Library/Logs/a2rchitech/memory-agent.*.log"
+    print_status "Logs: $HOME/Library/Logs/allternit/memory-agent.*.log"
 }
 
 uninstall_service() {
@@ -73,7 +73,7 @@ uninstall_service() {
     
     print_status "Memory Agent service removed"
     echo ""
-    print_warning "Note: Memory data in ~/.a2rchitech/memory/ is preserved"
+    print_warning "Note: Memory data in ~/.allternit/memory/ is preserved"
 }
 
 check_status() {

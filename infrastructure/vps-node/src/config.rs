@@ -1,4 +1,4 @@
-//! Configuration management for A2R Node
+//! Configuration management for Allternit Node
 
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -104,16 +104,16 @@ impl NodeConfig {
     
     /// Load from environment variables
     pub fn from_env() -> Result<Self> {
-        let node_id = std::env::var("A2R_NODE_ID")
-            .map_err(|_| anyhow::anyhow!("A2R_NODE_ID not set"))?;
+        let node_id = std::env::var("Allternit_NODE_ID")
+            .map_err(|_| anyhow::anyhow!("Allternit_NODE_ID not set"))?;
         
-        let auth_token = std::env::var("A2R_TOKEN")
-            .map_err(|_| anyhow::anyhow!("A2R_TOKEN not set"))?;
+        let auth_token = std::env::var("Allternit_TOKEN")
+            .map_err(|_| anyhow::anyhow!("Allternit_TOKEN not set"))?;
         
-        let control_plane_url = std::env::var("A2R_CONTROL_PLANE")
+        let control_plane_url = std::env::var("Allternit_CONTROL_PLANE")
             .unwrap_or_else(|_| default_control_plane());
         
-        let labels = std::env::var("A2R_LABELS")
+        let labels = std::env::var("Allternit_LABELS")
             .unwrap_or_default()
             .split(',')
             .map(|s| s.trim().to_string())
@@ -211,7 +211,7 @@ fn default_node_id() -> String {
 }
 
 fn default_control_plane() -> String {
-    "wss://control.a2r.io".to_string()
+    "wss://control.allternit.io".to_string()
 }
 
 fn default_heartbeat_interval() -> u64 {
@@ -276,7 +276,7 @@ mod tests {
         let config = NodeConfig {
             node_id: "test-node".to_string(),
             auth_token: "secret-token".to_string(),
-            control_plane_url: "wss://control.a2r.io".to_string(),
+            control_plane_url: "wss://control.allternit.io".to_string(),
             ..Default::default()
         };
         assert!(config.validate().is_ok());

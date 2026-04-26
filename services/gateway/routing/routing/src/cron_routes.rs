@@ -1,7 +1,7 @@
 //! Cron Job Routes - Native OpenClaw Cron System HTTP API
 //!
 //! Provides REST API endpoints for managing cron jobs using the native
-//! Rust implementation in a2r_openclaw_host::native_cron_system.
+//! Rust implementation in allternit_openclaw_host::native_cron_system.
 
 use axum::{
     extract::{Path, State},
@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use utoipa::ToSchema;
 
-use a2r_openclaw_host::native_cron_system::{
+use allternit_openclaw_host::native_cron_system::{
     CronJobDefinition, CronJobExecutionRequest, CronJobId, CronJobManagementRequest,
     CronJobOperation,
 };

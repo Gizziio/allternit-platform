@@ -1,7 +1,7 @@
 {
   "name": "@allternit/governor",
   "version": "1.0.0",
-  "description": "A2R Governor - Work-In-Hand management and routing for runtime integration",
+  "description": "Allternit Governor - Work-In-Hand management and routing for runtime integration",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -32,12 +32,12 @@
     "typecheck": "tsc --noEmit"
   },
   "keywords": [
-    "a2r",
+    "allternit",
     "governor",
     "wih",
     "routing"
   ],
-  "author": "A2rchitect Team",
+  "author": "allternit Team",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^20.0.0",

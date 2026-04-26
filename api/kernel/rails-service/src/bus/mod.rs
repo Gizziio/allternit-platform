@@ -10,7 +10,7 @@ use sqlx::{Pool, Row, Sqlite};
 
 use crate::core::ids::create_event_id;
 use crate::core::io::ensure_dir;
-use crate::core::types::{A2REvent, Actor, ActorType};
+use crate::core::types::{AllternitEvent, Actor, ActorType};
 use crate::ledger::Ledger;
 
 pub struct BusOptions {
@@ -50,7 +50,7 @@ pub struct NewBusMessage {
 
 impl Bus {
     pub async fn new(opts: BusOptions) -> Result<Self> {
-        let bus_dir = opts.root_dir.join(".a2r").join("bus");
+        let bus_dir = opts.root_dir.join(".allternit").join("bus");
         ensure_dir(&bus_dir)?;
         let db_path = bus_dir.join("queue.db");
         let database_url = format!("sqlite://{}", db_path.display());
@@ -97,8 +97,8 @@ impl Bus {
         })
     }
 
-    pub fn ensure_event(&self, event_type: &str, payload: Value) -> A2REvent {
-        A2REvent {
+    pub fn ensure_event(&self, event_type: &str, payload: Value) -> AllternitEvent {
+        AllternitEvent {
             event_id: create_event_id(),
             ts: Utc::now().to_rfc3339(),
             actor: self.actor.clone(),

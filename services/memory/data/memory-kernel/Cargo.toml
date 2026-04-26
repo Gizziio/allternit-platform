@@ -1,8 +1,8 @@
 [package]
-name = "a2r-memory-kernel"
+name = "allternit-memory-kernel"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Memory Kernel - Three-layer memory system (events, entities, summaries)"
+description = "Allternit Memory Kernel - Three-layer memory system (events, entities, summaries)"
 
 [dependencies]
 serde = { workspace = true }
@@ -14,7 +14,7 @@ anyhow = { workspace = true }
 tracing = { workspace = true }
 chrono = { workspace = true }
 sha2 = "0.10"
-a2r-evolution-layer = { workspace = true }
+allternit-evolution-layer = { workspace = true }
 
 [dev-dependencies]
 tokio-test = "0.4"

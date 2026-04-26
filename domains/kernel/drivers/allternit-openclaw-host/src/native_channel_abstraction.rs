@@ -335,8 +335,8 @@ impl ChannelAbstractionService {
         let message = ChannelMessage {
             id: uuid::Uuid::new_v4().to_string(),
             channel_id: request.channel_id,
-            sender_id: "a2r-system".to_string(), // In a real implementation, this would come from context
-            sender_label: Some("A2R System".to_string()),
+            sender_id: "allternit-system".to_string(), // In a real implementation, this would come from context
+            sender_label: Some("Allternit System".to_string()),
             content: request.content,
             timestamp: Utc::now(),
             message_type: MessageType::Text, // Could be determined from content

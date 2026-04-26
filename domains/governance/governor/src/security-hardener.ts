@@ -2,7 +2,7 @@
  * Advanced Security Hardening Implementation
  * 
  * Implements advanced security measures, threat detection, authentication mechanisms,
- * and security monitoring for the A2R platform.
+ * and security monitoring for the Allternit platform.
  */
 
 export interface SecurityThreat {

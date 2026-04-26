@@ -1,0 +1,35 @@
+{
+  "type": "object",
+  "required": ["run_id", "skill", "teacher_id", "timestamp", "plan_hash"],
+  "properties": {
+    "run_id": {"type": "string", "format": "uuid"},
+    "skill": {"type": "string"},
+    "teacher_id": {"type": "string"},
+    "timestamp": {"type": "string", "format": "date-time"},
+    "plan_hash": {"type": "string"},
+    "tool_calls": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "tool": {"type": "string"},
+          "args": {"type": "object"},
+          "result_hash": {"type": "string"},
+          "status": {"type": "string"}
+        }
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "type": {"type": "string"},
+          "path": {"type": "string"},
+          "original_hash": {"type": "string", "nullable": true},
+          "new_hash": {"type": "string"}
+        }
+      }
+    }
+  }
+}

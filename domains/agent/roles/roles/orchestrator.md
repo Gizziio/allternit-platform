@@ -38,7 +38,7 @@
 | Constraint | Value |
 |------------|-------|
 | Allowed Tools | Read, Glob, Grep, Search |
-| Write Scope | `.a2r/runner/plans/*.md` only |
+| Write Scope | `.allternit/runner/plans/*.md` only |
 | Network | None |
 | Can Modify Code | NO |
 

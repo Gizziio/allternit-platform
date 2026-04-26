@@ -1,7 +1,7 @@
 # =============================================================================
-# A2R Platform Development Task Runner
+# Allternit Platform Development Task Runner
 # =============================================================================
-# This Taskfile defines common development tasks for the A2R platform.
+# This Taskfile defines common development tasks for the Allternit platform.
 # Install Task from https://taskfile.dev/
 # =============================================================================
 
@@ -76,7 +76,7 @@ tasks:
 
   deps:rust:
     desc: Install Rust dependencies
-    dir: 1-kernel/a2r-infrastructure
+    dir: 1-kernel/allternit-infrastructure
     cmds:
       - cargo fetch
 
@@ -96,7 +96,7 @@ tasks:
 
   dev:api:
     desc: Start API gateway with hot reload
-    dir: 1-kernel/a2r-cloud
+    dir: 1-kernel/allternit-cloud
     cmds:
       - air
 
@@ -108,7 +108,7 @@ tasks:
 
   dev:infra:
     desc: Start infrastructure services with hot reload
-    dir: 1-kernel/a2r-infrastructure
+    dir: 1-kernel/allternit-infrastructure
     cmds:
       - cargo watch -x run
 
@@ -134,18 +134,18 @@ tasks:
     desc: Build Go services
     dir: 1-kernel
     cmds:
-      - go build -o {{.BUILD_DIR}}/a2r-cloud ./a2r-cloud
+      - go build -o {{.BUILD_DIR}}/allternit-cloud ./allternit-cloud
       - go build -o {{.BUILD_DIR}}/allternit-kernel ./allternit-kernel
     generates:
-      - '{{.BUILD_DIR}}/a2r-*'
+      - '{{.BUILD_DIR}}/allternit-*'
 
   build:rust:
     desc: Build Rust services
-    dir: 1-kernel/a2r-infrastructure
+    dir: 1-kernel/allternit-infrastructure
     cmds:
       - cargo build --release
     generates:
-      - 1-kernel/a2r-infrastructure/target/release/a2r-infrastructure
+      - 1-kernel/allternit-infrastructure/target/release/allternit-infrastructure
 
   # ===========================================================================
   # Test Tasks
@@ -165,7 +165,7 @@ tasks:
 
   test:rust:
     desc: Run Rust tests
-    dir: 1-kernel/a2r-infrastructure
+    dir: 1-kernel/allternit-infrastructure
     cmds:
       - cargo test --all-features
 
@@ -199,7 +199,7 @@ tasks:
 
   lint:rust:
     desc: Run Rust linter
-    dir: 1-kernel/a2r-infrastructure
+    dir: 1-kernel/allternit-infrastructure
     cmds:
       - cargo clippy --all-features -- -D warnings
 
@@ -224,7 +224,7 @@ tasks:
 
   lint:rust:fix:
     desc: Fix Rust linting issues
-    dir: 1-kernel/a2r-infrastructure
+    dir: 1-kernel/allternit-infrastructure
     cmds:
       - cargo clippy --all-features --fix --allow-dirty
       - cargo fmt
@@ -248,7 +248,7 @@ tasks:
 
   db:migrate:goose:
     desc: Run Goose migrations
-    dir: 1-kernel/a2r-infrastructure/migrations
+    dir: 1-kernel/allternit-infrastructure/migrations
     cmds:
       - goose up
     ignore_error: true
@@ -275,7 +275,7 @@ tasks:
 
   db:rollback:goose:
     desc: Rollback Goose migrations
-    dir: 1-kernel/a2r-infrastructure/migrations
+    dir: 1-kernel/allternit-infrastructure/migrations
     cmds:
       - goose down
     ignore_error: true
@@ -360,7 +360,7 @@ tasks:
 
   generate:swagger:
     desc: Generate Swagger documentation
-    dir: 1-kernel/a2r-cloud
+    dir: 1-kernel/allternit-cloud
     cmds:
       - swag init
     ignore_error: true
@@ -375,14 +375,14 @@ tasks:
       - rm -rf {{.DIST_DIR}}
       - rm -rf 6-ui/allternit-platform/.next
       - rm -rf 6-ui/allternit-platform/dist
-      - rm -rf 1-kernel/a2r-infrastructure/target
+      - rm -rf 1-kernel/allternit-infrastructure/target
 
   clean:all:
     desc: Deep clean (including dependencies)
     cmds:
       - task: clean
       - rm -rf 6-ui/allternit-platform/node_modules
-      - rm -rf 1-kernel/a2r-infrastructure/target
+      - rm -rf 1-kernel/allternit-infrastructure/target
 
   # ===========================================================================
   # Utility Tasks
@@ -404,7 +404,7 @@ tasks:
 
   format:rust:
     desc: Format Rust code
-    dir: 1-kernel/a2r-infrastructure
+    dir: 1-kernel/allternit-infrastructure
     cmds:
       - cargo fmt
 
@@ -437,7 +437,7 @@ tasks:
 
   update:rust:
     desc: Update Rust dependencies
-    dir: 1-kernel/a2r-infrastructure
+    dir: 1-kernel/allternit-infrastructure
     cmds:
       - cargo update
 

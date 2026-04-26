@@ -171,7 +171,6 @@ pub struct Server {
     pub name: String,
     pub status: String,
     pub public_net: PublicNet,
-    private_net: Option<Vec<PrivateNet>>,
     pub server_type: ServerTypeInfo,
     pub location: LocationInfo,
     pub created: String,

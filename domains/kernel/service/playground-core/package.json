@@ -1,7 +1,7 @@
 {
-  "name": "@a2r/playground-core",
+  "name": "@allternit/playground-core",
   "version": "1.0.0",
-  "description": "A2R Playground Core Engine - Storage, relay, and tool integration",
+  "description": "Allternit Playground Core Engine - Storage, relay, and tool integration",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -24,7 +24,7 @@
     "typescript": "^5.3.3"
   },
   "keywords": [
-    "a2r",
+    "allternit",
     "playground",
     "interactive",
     "agent"

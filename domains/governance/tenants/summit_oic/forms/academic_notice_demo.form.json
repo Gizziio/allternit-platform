@@ -1,0 +1,38 @@
+{
+  "title": "Academic Notice Demo",
+  "description": "Run the live Canvas Academic Notice PoC end-to-end. Creates a demo module, generates PDFs from institutional templates, uploads files, and optionally opens a browser for recording.",
+  "type": "object",
+  "required": [],
+  "properties": {
+    "course_id": {
+      "type": "integer",
+      "title": "Canvas Course ID",
+      "description": "Target Canvas course ID. Uses CANVAS_COURSE_ID from credentials if not specified.",
+      "default": 14389375
+    },
+    "publish_module": {
+      "type": "boolean",
+      "title": "Publish Demo Module",
+      "description": "Make the demo module visible to students (default: unpublished)",
+      "default": false
+    },
+    "headed": {
+      "type": "boolean",
+      "title": "Open Headed Browser",
+      "description": "Open a visible browser window after creation for demo/recording",
+      "default": true
+    },
+    "keep_open": {
+      "type": "boolean",
+      "title": "Keep Browser Open",
+      "description": "Keep browser open until manually closed (Ctrl+C)",
+      "default": true
+    },
+    "verify_only": {
+      "type": "boolean",
+      "title": "Verify Outputs Only",
+      "description": "Skip creation and just verify existing output files",
+      "default": false
+    }
+  }
+}

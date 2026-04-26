@@ -55,17 +55,22 @@ pub trait RailsClient: Send + Sync {
 /// Configuration for the RunManager
 #[derive(Debug, Clone)]
 pub struct RunManagerConfig {
+    /// Directory where runtime data is stored
     pub data_dir: std::path::PathBuf,
+    /// Base URL for the Rails backend service
     pub rails_base_url: String,
+    /// Seconds before an inactive attachment is considered stale
     pub attachment_timeout_secs: u64,
+    /// Duration of a worker lease in seconds
     pub lease_duration_secs: u64,
+    /// Maximum age of a checkpoint before it is eligible for deletion
     pub max_checkpoint_age_hours: u64,
 }
 
 impl Default for RunManagerConfig {
     fn default() -> Self {
         Self {
-            data_dir: std::path::PathBuf::from("/var/lib/a2r/cowork"),
+            data_dir: std::path::PathBuf::from("/var/lib/allternit/cowork"),
             rails_base_url: "http://127.0.0.1:3021".to_string(),
             attachment_timeout_secs: 300, // 5 minutes
             lease_duration_secs: 60,      // 1 minute

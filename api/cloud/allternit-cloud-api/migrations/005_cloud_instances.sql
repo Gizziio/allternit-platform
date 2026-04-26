@@ -1,4 +1,4 @@
--- Cloud Instances table for A2R Cloud API
+-- Cloud Instances table for Allternit Cloud API
 -- Stores cloud provider instances (Hetzner, AWS, etc.) with their metadata
 
 CREATE TABLE IF NOT EXISTS cloud_instances (

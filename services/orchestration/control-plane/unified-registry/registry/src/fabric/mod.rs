@@ -1,13 +1,13 @@
 //! Data Fabric implementation for the Unified Registry.
 
 use crate::{agents, tools};
-use a2rchitech_history::HistoryLedger;
-use a2rchitech_messaging::{
+use allternit_history::HistoryLedger;
+use allternit_messaging::{
     ConflictPolicy, LeaseEnvelope, LeaseScope, MailMessageEnvelope, MessagingSystem,
 };
-use a2rchitech_policy::PolicyEngine;
-use a2rchitech_skills::SkillRegistry;
-use a2rchitech_tools_gateway::ToolDefinition;
+use allternit_policy::PolicyEngine;
+use allternit_skills::SkillRegistry;
+use allternit_tools_gateway::ToolDefinition;
 use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
 use sqlx::{AnyPool, Row};
@@ -21,13 +21,13 @@ pub enum FabricError {
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
     #[error("History error: {0}")]
-    History(#[from] a2rchitech_history::HistoryError),
+    History(#[from] allternit_history::HistoryError),
     #[error("Messaging error: {0}")]
-    Messaging(#[from] a2rchitech_messaging::MessagingError),
+    Messaging(#[from] allternit_messaging::MessagingError),
     #[error("Policy error: {0}")]
-    Policy(#[from] a2rchitech_policy::PolicyError),
+    Policy(#[from] allternit_policy::PolicyError),
     #[error("Skills error: {0}")]
-    Skills(#[from] a2rchitech_skills::SkillsError),
+    Skills(#[from] allternit_skills::SkillsError),
     #[error("Registry error: {0}")]
     Registry(String),
     #[error("Not found: {0}")]
@@ -798,7 +798,7 @@ impl DataFabric {
     /// Register a skill with the fabric
     pub async fn register_skill(
         &self,
-        skill: a2rchitech_skills::Skill,
+        skill: allternit_skills::Skill,
     ) -> Result<String, FabricError> {
         self.skill_registry
             .register_skill(skill)
@@ -829,7 +829,7 @@ impl DataFabric {
     pub async fn get_skill(
         &self,
         id: String,
-    ) -> Result<Option<a2rchitech_skills::Skill>, FabricError> {
+    ) -> Result<Option<allternit_skills::Skill>, FabricError> {
         self.skill_registry
             .get_skill(id, None)
             .await
@@ -849,7 +849,7 @@ impl DataFabric {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TenantCapabilities {
     pub agents: Vec<agents::AgentDefinition>,
-    pub skills: Vec<a2rchitech_skills::Skill>,
+    pub skills: Vec<allternit_skills::Skill>,
     pub tools: Vec<ToolDefinition>,
 }
 
@@ -867,7 +867,7 @@ pub struct CapabilitySummary {
 #[derive(Debug, Clone)]
 pub struct SearchResults {
     pub agents: Vec<agents::AgentDefinition>,
-    pub skills: Vec<a2rchitech_skills::Skill>,
+    pub skills: Vec<allternit_skills::Skill>,
     pub tools: Vec<ToolDefinition>,
 }
 
@@ -897,8 +897,8 @@ pub struct BridgedCoordinationResult {
 #[derive(Debug, Clone)]
 enum CapabilityMatch {
     Agent((agents::AgentDefinition, f32)),
-    Skill((a2rchitech_skills::Skill, f32)),
-    Tool((a2rchitech_tools_gateway::ToolDefinition, f32)),
+    Skill((allternit_skills::Skill, f32)),
+    Tool((allternit_tools_gateway::ToolDefinition, f32)),
 }
 
 impl CapabilityMatch {

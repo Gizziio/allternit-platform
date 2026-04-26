@@ -1,8 +1,8 @@
 [package]
-name = "a2r-policy-tier-gating"
+name = "allternit-policy-tier-gating"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Policy Tier Gating - Tiered policy enforcement for safety levels"
+description = "Allternit Policy Tier Gating - Tiered policy enforcement for safety levels"
 
 [dependencies]
 serde = { workspace = true }
@@ -13,8 +13,8 @@ thiserror = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
 chrono = { workspace = true }
-a2r-ontology-runtime = { path = "../../../1-kernel/infrastructure/ontology-runtime" }
-a2r-purpose-binding = { path = "../purpose-binding" }
+allternit-ontology-runtime = { workspace = true }
+allternit-purpose-binding = { workspace = true }
 
 [dev-dependencies]
 tokio-test = "0.4"

@@ -1,5 +1,5 @@
-use a2r_governor::PolicyEngine;
-use a2r_substrate::PolicyContext;
+use allternit_governor::PolicyEngine;
+use allternit_substrate::PolicyContext;
 use napi_derive::napi;
 use serde_json::{json, Value};
 
@@ -38,7 +38,7 @@ impl NativeBridge {
         match self.engine.evaluate(&context).await {
             Ok(decision) => Ok(json!({
                 "decision": decision,
-                "reason": "Evaluated by a2r-governor native engine"
+                "reason": "Evaluated by allternit-governor native engine"
             })
             .to_string()),
             Err(e) => Err(napi::Error::from_reason(format!(

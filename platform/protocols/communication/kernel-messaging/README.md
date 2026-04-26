@@ -1,6 +1,6 @@
-# A2rchitech Messaging Package
+# Allternit Messaging Package
 
-The messaging package provides the transport substrate for the A2rchitech kernel, including task queues, event buses, agent mail, and coordination leases.
+The messaging package provides the transport substrate for the Allternit kernel, including task queues, event buses, agent mail, and coordination leases.
 
 ## Features
 

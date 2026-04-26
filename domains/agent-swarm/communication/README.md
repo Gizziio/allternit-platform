@@ -1,6 +1,6 @@
-# @a2r/communication
+# @allternit/communication
 
-Agent communication primitives for a2rchitech.
+Agent communication primitives for allternit.
 
 ## Features
 
@@ -21,7 +21,7 @@ pnpm install
 ### @mention Parser
 
 ```typescript
-import { MentionParser, parseMentions } from '@a2r/communication';
+import { MentionParser, parseMentions } from '@allternit/communication';
 
 const parser = new MentionParser({
   knownRoles: ['builder', 'validator', 'reviewer'],
@@ -35,7 +35,7 @@ console.log(result.mentions);
 ### MCP Proxy
 
 ```typescript
-import { createMCPProxy } from '@a2r/communication';
+import { createMCPProxy } from '@allternit/communication';
 
 const proxy = createMCPProxy({
   agentName: 'builder-1',
@@ -56,7 +56,7 @@ const result = await proxy.forward({
 ### Terminal Injection
 
 ```typescript
-import { createTmuxInjector } from '@a2r/communication';
+import { createTmuxInjector } from '@allternit/communication';
 
 const injector = createTmuxInjector();
 
@@ -70,7 +70,7 @@ const output = await injector.captureOutput('agent-session-1', 100);
 ### Loop Guard
 
 ```typescript
-import { createLoopGuard } from '@a2r/communication';
+import { createLoopGuard } from '@allternit/communication';
 
 const guard = createLoopGuard({
   maxAgentHops: 4,

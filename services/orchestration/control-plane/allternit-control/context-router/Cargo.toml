@@ -1,8 +1,8 @@
 [package]
-name = "a2rchitech-context-router"
+name = "allternit-context-router"
 version = "0.1.0"
 edition = "2021"
-description = "A2rchitech context routing and precision hydration engine"
+description = "Allternitchitech context routing and precision hydration engine"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
@@ -12,11 +12,11 @@ uuid = { version = "1.0", features = ["v4", "serde"] }
 thiserror = "1.0"
 anyhow = "1.0"
 tracing = "0.1"
-a2rchitech-history = { workspace = true }
-a2rchitech-messaging = { workspace = true }
-a2rchitech-policy = { workspace = true }
-a2rchitech-runtime-core = { workspace = true }
-a2rchitech-kernel-contracts = { workspace = true }
+allternit-history = { workspace = true }
+allternit-messaging = { workspace = true }
+allternit-policy = { workspace = true }
+allternit-runtime-core = { workspace = true }
+allternit-kernel-contracts = { workspace = true }
 async-trait = "0.1"
 futures = "0.3"
 sha2 = "0.10"

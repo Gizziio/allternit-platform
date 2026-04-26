@@ -37,7 +37,7 @@ Run Ollama with larger/faster models on a VPS and connect your local memory agen
 ssh root@<VPS_IP>
 
 # Download setup script
-curl -o setup.sh https://raw.githubusercontent.com/a2rchitech/a2rchitech/main/4-services/memory/agent/scripts/setup-ollama-vps.sh
+curl -o setup.sh https://raw.githubusercontent.com/allternit/allternit/main/4-services/memory/agent/scripts/setup-ollama-vps.sh
 
 # Make executable and run
 chmod +x setup-ollama.sh

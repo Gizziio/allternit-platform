@@ -18,7 +18,7 @@ export const tool = {
   safety_level: "caution" as const,
   version: "1.0.0",
   tags: ["browser", "automation", "playwright", "web", "screenshot"],
-  author: "A2Rchitech",
+  author: "Allternit",
   license: "Apache-2.0",
 };
 

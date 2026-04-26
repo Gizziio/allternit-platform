@@ -11,7 +11,7 @@
 //! - **CIDR parsing**: Supports standard CIDR notation (e.g., "172.16.0.0/24")
 //! - **Orphan reclamation**: Detects and reclaims IPs from dead VMs
 
-use a2r_driver_interface::{DriverError, ExecutionId};
+use allternit_driver_interface::{DriverError, ExecutionId};
 use ipnet::Ipv4Net;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -19,7 +19,7 @@ use std::net::Ipv4Addr;
 use std::path::{Path, PathBuf};
 use tokio::fs;
 use tokio::process::Command;
-use tracing::{debug, info, instrument, warn};
+use tracing::{debug, info, warn};
 
 /// Persisted IPAM state structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -339,7 +339,7 @@ impl IpamState {
     /// * `Ok(usize)` - Number of orphaned IPs reclaimed
     /// * `Err(DriverError)` - If persistence fails
     #[tracing::instrument(skip(self))]
-    pub async fn reclaim_orphaned(&mut self) -> Result<usize, DriverError> {
+    pub async fn _reclaim_orphaned(&mut self) -> Result<usize, DriverError> {
         let mut to_reclaim = Vec::new();
 
         // Check each allocated IP
@@ -388,12 +388,12 @@ impl IpamState {
     }
 
     /// Get the subnet
-    pub fn subnet(&self) -> Ipv4Net {
+    pub fn _subnet(&self) -> Ipv4Net {
         self.subnet
     }
 
     /// Get count of allocated IPs
-    pub fn allocation_count(&self) -> usize {
+    pub fn _allocation_count(&self) -> usize {
         self.allocated.len()
     }
 

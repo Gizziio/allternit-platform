@@ -1,4 +1,4 @@
-//! A2R Context Pack Builder
+//! Allternit Context Pack Builder
 //!
 //! Builds deterministic context bundles for WIH execution.
 //! Integrates with ontology runtime to provide domain-aware context.
@@ -10,9 +10,9 @@ use std::collections::HashMap;
 use std::path::Path;
 use tracing::{info, debug, warn};
 
-use a2r_ontology_runtime::{DomainRegistry, OntologyInjectionEngine};
+use allternit_ontology_runtime::{DomainRegistry, OntologyInjectionEngine};
 use std::sync::Arc;
-use a2rchitech_system_law::SystemLawEngine;
+use allternit_system_law::SystemLawEngine;
 
 /// Context Pack identifier
 pub type ContextPackId = String;

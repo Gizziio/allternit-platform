@@ -1,0 +1,496 @@
+openapi: 3.0.3
+info:
+  title: Summit Copilot Skills API
+  version: "0.1.0"
+  description: >
+    REST actions for a Microsoft 365 Copilot declarative agent. Generates academic artifacts
+    (PPTX photo-card decks, DOCX/PDF study guides, XLSX rubrics/trackers) and returns a SharePoint link.
+
+servers:
+  - url: https://YOUR-SKILL-SERVER.DOMAIN
+    description: Skill Server base URL
+
+security:
+  - ApiKeyAuth: []
+
+tags:
+  - name: Health
+  - name: Actions
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      operationId: healthCheck
+      security: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /actions/generatePhotoCardDeck:
+    post:
+      tags: [Actions]
+      summary: Generate a short photo-card style PPTX deck and upload to SharePoint
+      operationId: generatePhotoCardDeck
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GeneratePhotoCardDeckRequest"
+      responses:
+        "200":
+          description: Generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArtifactResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized (missing/invalid API key)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal error generating or uploading artifact
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /actions/generateStudyGuide:
+    post:
+      tags: [Actions]
+      summary: Generate a DOCX or PDF study guide and upload to SharePoint
+      operationId: generateStudyGuide
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateStudyGuideRequest"
+      responses:
+        "200":
+          description: Generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArtifactResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized (missing/invalid API key)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal error generating or uploading artifact
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /actions/generateRubricSpreadsheet:
+    post:
+      tags: [Actions]
+      summary: Generate an XLSX rubric/tracker/study plan/grade calc and upload to SharePoint
+      operationId: generateRubricSpreadsheet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateRubricSpreadsheetRequest"
+      responses:
+        "200":
+          description: Generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ArtifactResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized (missing/invalid API key)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal error generating or uploading artifact
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  schemas:
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        ok:
+          type: boolean
+          example: true
+        service:
+          type: string
+          example: summit-copilot-skills
+        version:
+          type: string
+          example: "0.1.0"
+        time_utc:
+          type: string
+          example: "2026-01-04T07:12:34Z"
+      required: [ok, service, version, time_utc]
+
+    ArtifactResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        request_id:
+          type: string
+          description: Server-generated id for auditing/support.
+          example: "req_01HRW8D9QK5H4C9N8S"
+        artifact_type:
+          type: string
+          enum: [pptx, docx, pdf, xlsx]
+          example: pptx
+        file_name:
+          type: string
+          example: "Summit_Copilot_Deck_Module_3.pptx"
+        sharepoint_file_url:
+          type: string
+          description: A link to the uploaded file in SharePoint (preferred).
+          example: "https://tenant.sharepoint.com/sites/CourseHub/Shared%20Documents/Artifacts/Summit_Copilot_Deck_Module_3.pptx"
+        expires_at_utc:
+          type: string
+          nullable: true
+          description: If you return a pre-signed URL instead of SharePoint, set expiry; otherwise null.
+          example: null
+        warnings:
+          type: array
+          items:
+            type: string
+          description: Non-fatal issues (e.g., used placeholder images).
+          example: ["Placeholder images used for photo cards."]
+      required: [request_id, artifact_type, file_name, sharepoint_file_url, expires_at_utc, warnings]
+
+    ErrorResponse:
+      type: object
+      additionalProperties: false
+      properties:
+        request_id:
+          type: string
+          example: "req_01HRW8D9QK5H4C9N8S"
+        error_code:
+          type: string
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          example: "slide_count must be between 4 and 10"
+        details:
+          type: object
+          additionalProperties: true
+          nullable: true
+      required: [request_id, error_code, message]
+
+    Audience:
+      type: string
+      enum: [student, instructor, exec]
+      default: student
+
+    Citation:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          example: "Module 3: VLAN Trunking"
+        url:
+          type: string
+          example: "https://canvas.instructure.com/courses/123/pages/vlan-trunking"
+        source_id:
+          type: string
+          description: Optional stable id for your internal source tracking (Canvas page id, SharePoint file id, etc.)
+          example: "canvas:page:98765"
+        excerpt:
+          type: string
+          nullable: true
+          description: Optional short supporting quote/snippet (<= 240 chars recommended).
+          example: "A trunk port carries traffic for multiple VLANs using tagging."
+      required: [title, url]
+
+    SharePointTarget:
+      type: object
+      additionalProperties: false
+      description: Where to upload the artifact in SharePoint. If omitted, server uses defaults.
+      properties:
+        site_url:
+          type: string
+          example: "https://tenant.sharepoint.com/sites/CourseHub"
+        drive_id:
+          type: string
+          nullable: true
+          description: Optional SharePoint drive id if you prefer addressing via Graph drive.
+          example: null
+        folder_path:
+          type: string
+          description: Folder path within the library/drive.
+          example: "Shared Documents/Artifacts"
+      required: [site_url, folder_path]
+
+    GeneratePhotoCardDeckRequest:
+      type: object
+      additionalProperties: false
+      required: [title]
+      properties:
+        request_meta:
+          $ref: "#/components/schemas/RequestMeta"
+        title:
+          type: string
+          description: Deck title.
+          example: "Module 3 — VLAN Trunking (Student Overview)"
+        audience:
+          $ref: "#/components/schemas/Audience"
+        slide_count:
+          type: integer
+          minimum: 4
+          maximum: 10
+          default: 6
+          description: Keep decks short for attention.
+        deck_style:
+          type: string
+          enum: [photo_card]
+          default: photo_card
+        key_points:
+          type: array
+          description: One idea per slide. If empty, server may derive from outline (if provided).
+          items:
+            type: string
+            maxLength: 220
+          example:
+            - "What a VLAN is and why it exists"
+            - "Trunk ports vs access ports"
+            - "802.1Q tagging basics"
+            - "Common trunk misconfigurations"
+            - "Verification commands checklist"
+            - "Quick recap + next steps"
+        outline:
+          type: object
+          description: Optional structured outline if you want stronger control.
+          additionalProperties: false
+          properties:
+            sections:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                properties:
+                  slide_title:
+                    type: string
+                  subtitle:
+                    type: string
+                  speaker_notes:
+                    type: string
+                    nullable: true
+                required: [slide_title]
+        images:
+          type: array
+          description: Optional image URLs to use as photo-cards (one per slide). If missing, use placeholders.
+          items:
+            type: string
+          example: []
+        citations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Citation"
+          description: Sources to include on final "Sources" slide (and optionally in notes).
+          example:
+            - title: "Module 3: VLAN Trunking"
+              url: "https://canvas.instructure.com/courses/123/pages/vlan-trunking"
+              source_id: "canvas:page:98765"
+              excerpt: "A trunk port carries traffic for multiple VLANs using tagging."
+        sharepoint_target:
+          $ref: "#/components/schemas/SharePointTarget"
+        output:
+          $ref: "#/components/schemas/OutputOptions"
+
+    GenerateStudyGuideRequest:
+      type: object
+      additionalProperties: false
+      required: [topic]
+      properties:
+        request_meta:
+          $ref: "#/components/schemas/RequestMeta"
+        topic:
+          type: string
+          example: "VLAN Trunking — Study Guide"
+        audience:
+          $ref: "#/components/schemas/Audience"
+        format:
+          type: string
+          enum: [docx, pdf]
+          default: docx
+        length:
+          type: string
+          enum: [short, medium]
+          default: short
+          description: short ~ 1–2 pages; medium ~ 2–4 pages.
+        learning_objectives:
+          type: array
+          items:
+            type: string
+          example:
+            - "Explain the purpose of VLANs"
+            - "Differentiate trunk vs access ports"
+            - "Validate trunk configuration using show commands"
+        key_terms:
+          type: array
+          items:
+            type: string
+          example: ["VLAN", "802.1Q", "trunk port", "access port", "native VLAN"]
+        include_self_check:
+          type: boolean
+          default: true
+          description: Adds ~10 questions at the end.
+        examples:
+          type: array
+          items:
+            type: string
+          description: Optional examples or scenarios to include.
+          example:
+            - "Scenario: host in VLAN 10 cannot reach gateway after trunk change"
+        citations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Citation"
+        sharepoint_target:
+          $ref: "#/components/schemas/SharePointTarget"
+        output:
+          $ref: "#/components/schemas/OutputOptions"
+
+    GenerateRubricSpreadsheetRequest:
+      type: object
+      additionalProperties: false
+      required: [template_type]
+      properties:
+        request_meta:
+          $ref: "#/components/schemas/RequestMeta"
+        template_type:
+          type: string
+          enum: [rubric, tracker, study_plan, grade_calc]
+          example: rubric
+        title:
+          type: string
+          nullable: true
+          example: "Lab 4 — Grading Rubric"
+        columns:
+          type: array
+          description: Column headers for the main sheet. If omitted, server uses defaults per template_type.
+          items:
+            type: string
+          example: ["Criteria", "Description", "Points Possible", "Points Earned", "Notes"]
+        rows:
+          type: array
+          description: Optional initial rows. If omitted, server creates blank rows.
+          items:
+            type: array
+            items:
+              type: string
+          example:
+            - ["Correct trunk config", "Trunk allows VLANs 10,20", "20", "", ""]
+            - ["Verification output", "show interfaces trunk provided", "10", "", ""]
+        validation:
+          type: object
+          description: Optional validation lists (dropdowns) and rules.
+          additionalProperties: true
+          example:
+            status_dropdown: ["Not started", "In progress", "Complete"]
+        formulas:
+          type: object
+          description: Optional formulas to apply (grade_calc, totals).
+          additionalProperties: true
+          example:
+            total_points_possible: "=SUM(C2:C50)"
+            total_points_earned: "=SUM(D2:D50)"
+        citations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Citation"
+          description: If present, add a References sheet with links.
+        sharepoint_target:
+          $ref: "#/components/schemas/SharePointTarget"
+        output:
+          $ref: "#/components/schemas/OutputOptions"
+
+    RequestMeta:
+      type: object
+      additionalProperties: false
+      description: Optional metadata for auditing and traceability.
+      properties:
+        user_id:
+          type: string
+          nullable: true
+          description: Upstream user identifier (Entra object id, email hash, etc.)
+          example: "aad:2d8b0f1e-1234-5678-90ab-1c2d3e4f5a6b"
+        course_id:
+          type: string
+          nullable: true
+          example: "canvas_course_123"
+        module_id:
+          type: string
+          nullable: true
+          example: "canvas_module_45"
+        assignment_id:
+          type: string
+          nullable: true
+          example: "canvas_assignment_999"
+        locale:
+          type: string
+          nullable: true
+          example: "en-US"
+      required: []
+
+    OutputOptions:
+      type: object
+      additionalProperties: false
+      description: Output naming and basic generation flags.
+      properties:
+        file_name_hint:
+          type: string
+          nullable: true
+          description: If provided, server uses as a base name (sanitized).
+          example: "Module3_VLAN_Trunking_Deck"
+        include_citations_slide_or_section:
+          type: boolean
+          default: true
+        include_timestamp_in_filename:
+          type: boolean
+          default: true
+      required: []

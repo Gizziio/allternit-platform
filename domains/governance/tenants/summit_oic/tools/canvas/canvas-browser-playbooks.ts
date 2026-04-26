@@ -2,10 +2,10 @@
  * Canvas Browser Playbooks for Summit Tenant
  * 
  * Browser-based automation for Canvas LMS when API access is unavailable.
- * Uses A2R Operator browser-use skills for visual grounding and control.
+ * Uses Allternit Operator browser-use skills for visual grounding and control.
  * 
  * These playbooks are tenant-specific (Summit OIC) and separate from the
- * core a2rchitech platform.
+ * core allternit platform.
  * 
  * @module summit.canvas.browser_playbooks
  */

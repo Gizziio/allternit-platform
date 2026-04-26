@@ -1,7 +1,7 @@
 {
-  "name": "@a2r/ui-tars",
+  "name": "@allternit/ui-tars-operator",
   "version": "1.0.0",
-  "description": "A2R Computer Vision - UI automation with vision",
+  "description": "Allternit Computer Vision - UI automation with vision",
   "type": "module",
   "main": "./src/index.js",
   "scripts": {
@@ -9,7 +9,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@a2r/sdk": "workspace:*",
+    "@allternit/sdk": "workspace:*",
     "sharp": "^0.33.0"
   },
   "devDependencies": {

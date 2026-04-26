@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2rchitech.local/spec/contracts/ExecutionPlan.schema.json",
+  "$id": "https://allternit.local/spec/contracts/ExecutionPlan.schema.json",
   "title": "Execution Plan",
   "type": "object",
   "additionalProperties": false,

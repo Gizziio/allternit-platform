@@ -1,5 +1,5 @@
 use super::RegistryError;
-use a2rchitech_tools_gateway::ToolDefinition;
+use allternit_tools_gateway::ToolDefinition;
 use sqlx::{AnyPool, Row};
 
 pub struct ToolRegistry {

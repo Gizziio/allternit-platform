@@ -2,14 +2,14 @@
 name = "allternit-cloud-api"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Cloud API - Backend API for cloud deployment"
+description = "Allternit Cloud API - Backend API for cloud deployment"
 
 [[bin]]
 name = "allternit-cloud-api"
 path = "src/main.rs"
 
 [dependencies]
-# A2R internal
+# Allternit internal
 allternit-cloud-core = { path = ".." }
 allternit-cloud-ssh = { path = "../allternit-cloud-ssh" }
 allternit-cloud-hetzner = { path = "../../allternit-cloud-providers/hetzner" }

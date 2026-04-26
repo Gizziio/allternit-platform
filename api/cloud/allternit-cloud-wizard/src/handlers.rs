@@ -263,7 +263,7 @@ async fn execute_step(wizard: &mut WizardState) -> Result<(), String> {
                             let driver = HetznerDriver::new(token.clone());
                             
                             let request = CreateServerRequest {
-                                name: wizard.context.instance_name.clone().unwrap_or_else(|| "a2r-instance".to_string()),
+                                name: wizard.context.instance_name.clone().unwrap_or_else(|| "allternit-instance".to_string()),
                                 region: wizard.context.region.clone().unwrap_or_else(|| "fsn1".to_string()),
                                 instance_type: wizard.context.instance_type.clone().unwrap_or_else(|| "cx21".to_string()),
                                 image: "ubuntu-22.04".to_string(),
@@ -292,7 +292,7 @@ async fn execute_step(wizard: &mut WizardState) -> Result<(), String> {
                             let driver = DigitalOceanDriver::new(token.clone());
                             
                             let request = CreateServerRequest {
-                                name: wizard.context.instance_name.clone().unwrap_or_else(|| "a2r-instance".to_string()),
+                                name: wizard.context.instance_name.clone().unwrap_or_else(|| "allternit-instance".to_string()),
                                 region: wizard.context.region.clone().unwrap_or_else(|| "nyc3".to_string()),
                                 instance_type: wizard.context.instance_type.clone().unwrap_or_else(|| "s-1vcpu-2gb".to_string()),
                                 image: "ubuntu-22-04-x64".to_string(),

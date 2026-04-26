@@ -45,12 +45,12 @@ impl Default for WasmRuntimeConfig {
             max_cached_components: 100,
             debug_info: false,
             cranelift_optimizations: true,
-            history_path: PathBuf::from(".a2r/wasm-runtime-history.jsonl"),
+            history_path: PathBuf::from(".allternit/wasm-runtime-history.jsonl"),
         }
     }
 }
 
-/// The main WASM runtime for A2rchitech.
+/// The main WASM runtime for Allternit.
 ///
 /// This runtime manages:
 /// - Wasmtime engine and configuration

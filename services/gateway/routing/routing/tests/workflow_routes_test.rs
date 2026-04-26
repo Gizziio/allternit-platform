@@ -5,12 +5,12 @@
 //! - GET /api/v1/local/workflows/{id}
 //! - POST /api/v1/local/workflows/{id}/execute
 
-use a2rchitech_api::AppState;
-use a2rchitech_capsule::{CapsuleStore, CapsuleStoreConfig};
-use a2rchitech_control_plane_service::{ControlPlaneService, ControlPlaneServiceConfig};
-use a2rchitech_policy::PolicyEngine;
-use a2rchitech_registry::fabric::DataFabric;
-use a2rchitech_tools_gateway::ToolGateway;
+use allternit_api::AppState;
+use allternit_capsule::{CapsuleStore, CapsuleStoreConfig};
+use allternit_control_plane_service::{ControlPlaneService, ControlPlaneServiceConfig};
+use allternit_policy::PolicyEngine;
+use allternit_registry::fabric::DataFabric;
+use allternit_tools_gateway::ToolGateway;
 use axum::{
     body::Body,
     http::{Request, StatusCode},
@@ -79,8 +79,8 @@ async fn test_execute_workflow_endpoint_exists() {
 /// Test that WorkflowDefinition is serializable
 #[test]
 fn test_workflow_definition_serializable() {
-    use a2rchitech_policy::SafetyTier;
-    use a2rchitech_workflows::{
+    use allternit_policy::SafetyTier;
+    use allternit_workflows::{
         NodeConstraints, WorkflowDefinition, WorkflowEdge, WorkflowNode, WorkflowPhase,
     };
 
@@ -169,7 +169,7 @@ fn test_replay_workflow_request_deserialization() {
         "checkpoint_id": "node-456"
     }"#;
 
-    let request: a2rchitech_api::ReplayWorkflowRequest = serde_json::from_str(json_with_checkpoint)
+    let request: allternit_api::ReplayWorkflowRequest = serde_json::from_str(json_with_checkpoint)
         .expect("Failed to deserialize request with checkpoint");
 
     assert_eq!(request.session_id, "session-123");
@@ -180,7 +180,7 @@ fn test_replay_workflow_request_deserialization() {
         "session_id": "session-789"
     }"#;
 
-    let request: a2rchitech_api::ReplayWorkflowRequest =
+    let request: allternit_api::ReplayWorkflowRequest =
         serde_json::from_str(json_without_checkpoint)
             .expect("Failed to deserialize request without checkpoint");
 
@@ -191,7 +191,7 @@ fn test_replay_workflow_request_deserialization() {
 /// Test ReplayWorkflowResponse serialization
 #[test]
 fn test_replay_workflow_response_serialization() {
-    use a2rchitech_api::ReplayWorkflowResponse;
+    use allternit_api::ReplayWorkflowResponse;
     use uuid::Uuid;
 
     let response = ReplayWorkflowResponse {
@@ -247,7 +247,7 @@ fn test_replay_receipt_generation() {
 /// Test WorkflowEngine ReplayResult serialization
 #[test]
 fn test_replay_result_serialization() {
-    use a2rchitech_workflows::ReplayResult;
+    use allternit_workflows::ReplayResult;
 
     let result = ReplayResult {
         replay_id: "replay-123".to_string(),
@@ -274,13 +274,13 @@ fn test_replay_result_serialization() {
 /// Test deleting a non-existent workflow (expect 404)
 #[tokio::test]
 async fn test_delete_nonexistent_workflow_returns_404() {
-    use a2rchitech_history::HistoryLedger;
-    use a2rchitech_messaging::MessagingSystem;
-    use a2rchitech_messaging::TaskQueue;
-    use a2rchitech_policy::PolicyEngine;
-    use a2rchitech_skills::SkillRegistry;
-    use a2rchitech_tools_gateway::ToolGateway;
-    use a2rchitech_workflows::{WorkflowEngine, WorkflowStatus};
+    use allternit_history::HistoryLedger;
+    use allternit_messaging::MessagingSystem;
+    use allternit_messaging::TaskQueue;
+    use allternit_policy::PolicyEngine;
+    use allternit_skills::SkillRegistry;
+    use allternit_tools_gateway::ToolGateway;
+    use allternit_workflows::{WorkflowEngine, WorkflowStatus};
     use sqlx::SqlitePool;
     use std::sync::Arc;
     use tempfile::NamedTempFile;
@@ -346,7 +346,7 @@ async fn test_delete_nonexistent_workflow_returns_404() {
     assert!(
         matches!(
             result,
-            Err(a2rchitech_workflows::WorkflowError::WorkflowNotFound(_))
+            Err(allternit_workflows::WorkflowError::WorkflowNotFound(_))
         ),
         "Expected WorkflowNotFound error, got: {:?}",
         result
@@ -359,13 +359,13 @@ async fn test_delete_nonexistent_workflow_returns_404() {
 /// Test deleting a workflow with in-progress execution (expect 409)
 #[tokio::test]
 async fn test_delete_workflow_with_in_progress_execution_returns_409() {
-    use a2rchitech_history::HistoryLedger;
-    use a2rchitech_messaging::MessagingSystem;
-    use a2rchitech_messaging::TaskQueue;
-    use a2rchitech_policy::PolicyEngine;
-    use a2rchitech_skills::SkillRegistry;
-    use a2rchitech_tools_gateway::ToolGateway;
-    use a2rchitech_workflows::{
+    use allternit_history::HistoryLedger;
+    use allternit_messaging::MessagingSystem;
+    use allternit_messaging::TaskQueue;
+    use allternit_policy::PolicyEngine;
+    use allternit_skills::SkillRegistry;
+    use allternit_tools_gateway::ToolGateway;
+    use allternit_workflows::{
         NodeConstraints, WorkflowDefinition, WorkflowEngine, WorkflowPhase, WorkflowStatus,
     };
     use sqlx::SqlitePool;
@@ -434,7 +434,7 @@ async fn test_delete_workflow_with_in_progress_execution_returns_409() {
         version: "1.0.0".to_string(),
         description: "Test workflow for delete with in-progress execution".to_string(),
         required_roles: vec!["user".to_string()],
-        allowed_skill_tiers: vec![a2rchitech_policy::SafetyTier::T0],
+        allowed_skill_tiers: vec![allternit_policy::SafetyTier::T0],
         phases_used: vec![WorkflowPhase::Observe],
         success_criteria: "Success".to_string(),
         failure_modes: vec![],
@@ -450,7 +450,7 @@ async fn test_delete_workflow_with_in_progress_execution_returns_409() {
 
     // Create a running execution for this workflow
     let execution_id = "exec-running-123";
-    let execution = a2rchitech_workflows::WorkflowExecution {
+    let execution = allternit_workflows::WorkflowExecution {
         execution_id: execution_id.to_string(),
         workflow_id: workflow_id.to_string(),
         session_id: "test-session".to_string(),
@@ -478,7 +478,7 @@ async fn test_delete_workflow_with_in_progress_execution_returns_409() {
     assert!(
         matches!(
             result,
-            Err(a2rchitech_workflows::WorkflowError::WorkflowInProgress(_))
+            Err(allternit_workflows::WorkflowError::WorkflowInProgress(_))
         ),
         "Expected WorkflowInProgress error, got: {:?}",
         result
@@ -498,13 +498,13 @@ async fn test_delete_workflow_with_in_progress_execution_returns_409() {
 /// Test deleting a workflow with no executions (expect 204 / success)
 #[tokio::test]
 async fn test_delete_workflow_with_no_executions_returns_204() {
-    use a2rchitech_history::HistoryLedger;
-    use a2rchitech_messaging::MessagingSystem;
-    use a2rchitech_messaging::TaskQueue;
-    use a2rchitech_policy::PolicyEngine;
-    use a2rchitech_skills::SkillRegistry;
-    use a2rchitech_tools_gateway::ToolGateway;
-    use a2rchitech_workflows::{WorkflowDefinition, WorkflowEngine, WorkflowPhase};
+    use allternit_history::HistoryLedger;
+    use allternit_messaging::MessagingSystem;
+    use allternit_messaging::TaskQueue;
+    use allternit_policy::PolicyEngine;
+    use allternit_skills::SkillRegistry;
+    use allternit_tools_gateway::ToolGateway;
+    use allternit_workflows::{WorkflowDefinition, WorkflowEngine, WorkflowPhase};
     use sqlx::SqlitePool;
     use std::sync::Arc;
     use tempfile::NamedTempFile;
@@ -571,7 +571,7 @@ async fn test_delete_workflow_with_no_executions_returns_204() {
         version: "1.0.0".to_string(),
         description: "Test workflow for delete with no executions".to_string(),
         required_roles: vec!["user".to_string()],
-        allowed_skill_tiers: vec![a2rchitech_policy::SafetyTier::T0],
+        allowed_skill_tiers: vec![allternit_policy::SafetyTier::T0],
         phases_used: vec![WorkflowPhase::Observe],
         success_criteria: "Success".to_string(),
         failure_modes: vec![],
@@ -620,13 +620,13 @@ async fn test_delete_workflow_with_no_executions_returns_204() {
 /// Test that deleted workflow cannot be retrieved
 #[tokio::test]
 async fn test_deleted_workflow_cannot_be_retrieved() {
-    use a2rchitech_history::HistoryLedger;
-    use a2rchitech_messaging::MessagingSystem;
-    use a2rchitech_messaging::TaskQueue;
-    use a2rchitech_policy::PolicyEngine;
-    use a2rchitech_skills::SkillRegistry;
-    use a2rchitech_tools_gateway::ToolGateway;
-    use a2rchitech_workflows::{WorkflowDefinition, WorkflowEngine, WorkflowPhase};
+    use allternit_history::HistoryLedger;
+    use allternit_messaging::MessagingSystem;
+    use allternit_messaging::TaskQueue;
+    use allternit_policy::PolicyEngine;
+    use allternit_skills::SkillRegistry;
+    use allternit_tools_gateway::ToolGateway;
+    use allternit_workflows::{WorkflowDefinition, WorkflowEngine, WorkflowPhase};
     use sqlx::SqlitePool;
     use std::sync::Arc;
     use tempfile::NamedTempFile;
@@ -693,7 +693,7 @@ async fn test_deleted_workflow_cannot_be_retrieved() {
         version: "1.0.0".to_string(),
         description: "Test workflow for retrieval after deletion".to_string(),
         required_roles: vec!["user".to_string()],
-        allowed_skill_tiers: vec![a2rchitech_policy::SafetyTier::T0],
+        allowed_skill_tiers: vec![allternit_policy::SafetyTier::T0],
         phases_used: vec![WorkflowPhase::Observe],
         success_criteria: "Success".to_string(),
         failure_modes: vec![],
@@ -745,13 +745,13 @@ async fn test_deleted_workflow_cannot_be_retrieved() {
 /// Test that workflow is removed from SQLite storage
 #[tokio::test]
 async fn test_workflow_removed_from_sqlite_storage() {
-    use a2rchitech_history::HistoryLedger;
-    use a2rchitech_messaging::MessagingSystem;
-    use a2rchitech_messaging::TaskQueue;
-    use a2rchitech_policy::PolicyEngine;
-    use a2rchitech_skills::SkillRegistry;
-    use a2rchitech_tools_gateway::ToolGateway;
-    use a2rchitech_workflows::{WorkflowDefinition, WorkflowEngine, WorkflowPhase};
+    use allternit_history::HistoryLedger;
+    use allternit_messaging::MessagingSystem;
+    use allternit_messaging::TaskQueue;
+    use allternit_policy::PolicyEngine;
+    use allternit_skills::SkillRegistry;
+    use allternit_tools_gateway::ToolGateway;
+    use allternit_workflows::{WorkflowDefinition, WorkflowEngine, WorkflowPhase};
     use sqlx::SqlitePool;
     use std::sync::Arc;
     use tempfile::NamedTempFile;
@@ -818,7 +818,7 @@ async fn test_workflow_removed_from_sqlite_storage() {
         version: "1.0.0".to_string(),
         description: "Test workflow for SQLite removal verification".to_string(),
         required_roles: vec!["user".to_string()],
-        allowed_skill_tiers: vec![a2rchitech_policy::SafetyTier::T0],
+        allowed_skill_tiers: vec![allternit_policy::SafetyTier::T0],
         phases_used: vec![WorkflowPhase::Observe],
         success_criteria: "Success".to_string(),
         failure_modes: vec![],

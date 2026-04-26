@@ -1,7 +1,7 @@
 /**
- * @a2r/communication
+ * @allternit/communication
  * 
- * Agent communication primitives for a2rchitech.
+ * Agent communication primitives for allternit.
  * Provides @mention routing, MCP proxy, terminal injection, and loop guard.
  */
 

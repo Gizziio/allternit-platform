@@ -1,5 +1,5 @@
 {
-  "name": "@a2r/agent-characterization",
+  "name": "@allternit/agent-characterization",
   "version": "1.0.0",
   "description": "Agent Characterization Framework - Operational metrics and behavioral profiles",
   "type": "module",
@@ -14,6 +14,6 @@
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
-  "keywords": ["a2r", "agent", "characterization", "metrics"],
+  "keywords": ["allternit", "agent", "characterization", "metrics"],
   "license": "MIT"
 }

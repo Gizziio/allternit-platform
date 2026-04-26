@@ -1,5 +1,5 @@
 /**
- * A2R Workflow Engine
+ * Allternit Workflow Engine
  * 
  * Visual workflow orchestration with DAG support.
  * 

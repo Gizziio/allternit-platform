@@ -1,1 +1,1 @@
-# A2R Computer Use Gateway - Conformance Tests
+# Allternit Computer Use Gateway - Conformance Tests

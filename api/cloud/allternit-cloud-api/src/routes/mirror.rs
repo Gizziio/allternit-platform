@@ -1,4 +1,4 @@
-//! Mirror API Routes - Remote Control for A2R Sessions
+//! Mirror API Routes - Remote Control for Allternit Sessions
 //!
 //! Endpoints for session mirroring and mobile device pairing.
 //! Integrates with Cowork Controller for real-time terminal streaming.

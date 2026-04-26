@@ -1,6 +1,6 @@
 version: '3.8'
 
-# A2R Node Agent Docker Compose
+# Allternit Node Agent Docker Compose
 #
 # Usage:
 #   ALLTERNIT_TOKEN=xxx docker-compose up -d
@@ -11,22 +11,22 @@ version: '3.8'
 #   docker-compose up -d
 
 services:
-  a2r-node:
-    image: ghcr.io/a2r/node:latest
+  allternit-node:
+    image: ghcr.io/allternit/node:latest
     # Or build from source:
     # build:
     #   context: .
     #   dockerfile: Dockerfile
     
-    container_name: a2r-node
+    container_name: allternit-node
     
     restart: unless-stopped
     
     # Docker socket access for containerized job execution
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - a2r-config:/etc/a2r
-      - a2r-logs:/var/log/a2r
+      - allternit-config:/etc/allternit
+      - allternit-logs:/var/log/allternit
     
     # Environment variables
     environment:
@@ -56,7 +56,7 @@ services:
     
     # Health check
     healthcheck:
-      test: ["CMD", "/opt/a2r/bin/a2r-node", "--health"]
+      test: ["CMD", "/opt/allternit/bin/allternit-node", "--health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -76,7 +76,7 @@ services:
 
 # Named volumes
 volumes:
-  a2r-config:
+  allternit-config:
     driver: local
-  a2r-logs:
+  allternit-logs:
     driver: local

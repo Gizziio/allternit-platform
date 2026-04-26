@@ -28,8 +28,8 @@ interface DaemonConfig {
  * Default daemon configuration
  */
 const DEFAULT_DAEMON_CONFIG: DaemonConfig = {
-  pidFile: '/tmp/a2r-memory-agent.pid',
-  logFile: '/tmp/a2r-memory-agent.log',
+  pidFile: '/tmp/allternit-memory-agent.pid',
+  logFile: '/tmp/allternit-memory-agent.log',
   dataDir: path.join(process.env.HOME || '~', '.allternit', 'memory'),
   memoryAgentDir: path.dirname(path.dirname(new URL(import.meta.url).pathname)),
 };

@@ -25,7 +25,7 @@ use crate::AppState;
 
 // Platform-specific imports
 #[cfg(target_os = "linux")]
-use a2r_driver_interface::{
+use allternit_driver_interface::{
     ExecutionDriver, SpawnSpec, CommandSpec, ResourceSpec, PolicySpec,
     NetworkPolicy, DriverError, TenantId, EnvironmentSpec,
     FilePolicy, EnvSpecType, MountSpec,
@@ -221,7 +221,7 @@ async fn create_session(
 ) -> impl IntoResponse {
     let session_id = Uuid::new_v4().to_string();
     let session_token = Uuid::new_v4().to_string();
-    let container_id = format!("a2r-chrome-{}", session_id[..8].to_string());
+    let container_id = format!("allternit-chrome-{}", session_id[..8].to_string());
 
     let tenant_id = "default".to_string();
     let resolution = req.resolution.unwrap_or_else(|| "1920x1080".to_string());
@@ -326,7 +326,7 @@ async fn create_firecracker_session(
     container_id: &str,
     tenant_id: &str,
 ) -> Option<Result<(), String>> {
-    use a2r_driver_interface::{
+    use allternit_driver_interface::{
         ExecutionDriver, SpawnSpec, ResourceSpec, PolicySpec,
         NetworkPolicy, TenantId, EnvironmentSpec, FilePolicy, EnvSpecType,
     };
@@ -335,7 +335,7 @@ async fn create_firecracker_session(
     if let Some(firecracker) = state.firecracker_driver.as_ref() {
         info!("Spawning Chrome Firecracker VM: {} (tenant: {})", container_id, tenant_id);
 
-        let execution_id = a2r_driver_interface::ExecutionId(
+        let execution_id = allternit_driver_interface::ExecutionId(
             uuid::Uuid::from_str(session_id).unwrap_or_else(|_| Uuid::new_v4())
         );
 
@@ -346,7 +346,7 @@ async fn create_firecracker_session(
             workspace: None,
             env: EnvironmentSpec {
                 spec_type: EnvSpecType::Oci,
-                image: "a2r/chrome-rootfs:latest".to_string(),
+                image: "allternit/chrome-rootfs:latest".to_string(),
                 version: None,
                 packages: vec![],
                 env_vars: std::collections::HashMap::new(),
@@ -427,13 +427,13 @@ async fn create_docker_session(
 
     // Create container config
     let env_vars: Vec<String> = vec![
-        format!("A2R_SESSION_ID={}", session_id),
-        format!("A2R_TENANT_ID={}", tenant_id),
-        "A2R_RESOLUTION=1920x1080".to_string(),
-        "A2R_EXTENSION_MODE=power".to_string(),
+        format!("Allternit_SESSION_ID={}", session_id),
+        format!("Allternit_TENANT_ID={}", tenant_id),
+        "Allternit_RESOLUTION=1920x1080".to_string(),
+        "Allternit_EXTENSION_MODE=power".to_string(),
     ];
     let config = Config {
-        image: Some("a2r/chrome-stream:latest"),
+        image: Some("allternit/chrome-stream:latest"),
         env: Some(env_vars.iter().map(|s| s.as_str()).collect()),
         host_config: Some(HostConfig {
             shm_size: Some(2 * 1024 * 1024 * 1024), // 2GB
@@ -631,7 +631,7 @@ async fn destroy_session(
     {
         if let Some(firecracker) = state.firecracker_driver.as_ref() {
             use std::str::FromStr;
-            let exec_id = a2r_driver_interface::ExecutionId(
+            let exec_id = allternit_driver_interface::ExecutionId(
                 uuid::Uuid::from_str(&session.session_id).unwrap_or_else(|_| Uuid::new_v4())
             );
             if let Err(e) = firecracker.terminate(exec_id).await {
@@ -1157,7 +1157,7 @@ async fn terminate_session_container(state: &AppState, session: &ChromeSessionRe
     {
         if let Some(firecracker) = state.firecracker_driver.as_ref() {
             use std::str::FromStr;
-            let exec_id = a2r_driver_interface::ExecutionId(
+            let exec_id = allternit_driver_interface::ExecutionId(
                 uuid::Uuid::from_str(&session.session_id).unwrap_or_else(|_| Uuid::new_v4())
             );
             let _ = firecracker.terminate(exec_id).await;

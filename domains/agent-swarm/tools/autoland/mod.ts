@@ -1,14 +1,14 @@
 // tools/autoland/mod.ts
-//! A2R Autoland Tool Implementation
+//! Allternit Autoland Tool Implementation
 //!
 //! Note: This tool acts as a proxy for the Rails Autoland functionality.
-//! The actual implementation is handled by the A2R Rails service (Gate::autoland_wih).
+//! The actual implementation is handled by the Allternit Rails service (Gate::autoland_wih).
 
 import { z } from "zod";
 
 export const tool = {
   id: "autoland",
-  title: "A2R Autoland",
+  title: "Allternit Autoland",
   description: "Land a completed and validated implementation run into the project root.",
   kind: "write",
   safety_level: "critical",

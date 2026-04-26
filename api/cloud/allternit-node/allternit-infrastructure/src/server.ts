@@ -82,11 +82,11 @@ export async function createServer() {
   await fastify.register(swagger, {
     swagger: {
       info: {
-        title: 'A2R Infrastructure API',
+        title: 'Allternit Infrastructure API',
         description: 'API for managing VPS connections, cloud deployments, environments, and SSH keys',
         version: '1.0.0',
         contact: {
-          name: 'A2R Team',
+          name: 'Allternit Team',
         },
       },
       externalDocs: {

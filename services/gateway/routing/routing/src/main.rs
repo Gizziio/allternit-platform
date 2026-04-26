@@ -1,27 +1,27 @@
 #![allow(dead_code, unused_variables, unused_imports, non_snake_case)]
-use a2rchitech_capsule::{CapsuleBundle, CapsuleError, CapsuleStore, CapsuleStoreConfig};
-use a2rchitech_control_plane_service::{ControlPlaneService, ControlPlaneServiceConfig};
-use a2rchitech_policy::{
+use allternit_capsule::{CapsuleBundle, CapsuleError, CapsuleStore, CapsuleStoreConfig};
+use allternit_control_plane_service::{ControlPlaneService, ControlPlaneServiceConfig};
+use allternit_policy::{
     Identity, IdentityType, PolicyEffect, PolicyEngine, PolicyRequest, PolicyRule, SafetyTier,
 };
-use a2rchitech_registry::agents::AgentDefinition;
-use a2rchitech_skills::Skill;
-use a2rchitech_tools_gateway::{ToolDefinition, ToolExecutionRequest};
+use allternit_registry::agents::AgentDefinition;
+use allternit_skills::Skill;
+use allternit_tools_gateway::{ToolDefinition, ToolExecutionRequest};
 // Note: Workflow compilation/validation temporarily disabled - needs crate update
-// use a2rchitech_workflows::compiler::{CompiledWorkflowContracts, KernelCompilationContext, YamlCompiler};
-// use a2rchitech_workflows::validator::YamlValidator;
+// use allternit_workflows::compiler::{CompiledWorkflowContracts, KernelCompilationContext, YamlCompiler};
+// use allternit_workflows::validator::YamlValidator;
 use crate::routes::{
     AgentMailListResponse, AgentMailResponse, AgentMailResponseResponse, ExecuteWorkflowRequest,
     ExecuteWorkflowResponse, ExecutionMetrics, MemoryResponse, PoliciesListResponse,
     ProcessingStep, RLMConfigRequest, SkillsListResponse, WorkflowListResponse,
 };
-use a2rchitech_registry::fabric::DataFabric;
-use a2rchitech_workflows::compiler::{
+use allternit_registry::fabric::DataFabric;
+use allternit_workflows::compiler::{
     CompiledNode, CompiledWorkflow, ExecutionPlan, WorkflowCompiler,
 };
-use a2rchitech_workflows::loader::WorkflowLoader;
-use a2rchitech_workflows::validator::WorkflowValidator;
-use a2rchitech_workflows::WorkflowDefinition;
+use allternit_workflows::loader::WorkflowLoader;
+use allternit_workflows::validator::WorkflowValidator;
+use allternit_workflows::WorkflowDefinition;
 pub mod agent_session_routes;
 pub mod agents;
 pub mod approval_routes;
@@ -47,10 +47,10 @@ pub mod cli_tools_routes;
 
 // P4 DAG Integration crate imports
 use crate::environment_routes::EnvironmentSpecLoaderWithCache;
-use a2r_ivkge_advanced::IvkgeAdvancedEngine;
-use a2r_multimodal_streaming::MultimodalEngine;
-use a2r_swarm_advanced::{SwarmAdvancedConfig, SwarmAdvancedEngine};
-use a2r_tambo_integration::TamboEngine;
+use allternit_ivkge_advanced::IvkgeAdvancedEngine;
+use allternit_multimodal_streaming::MultimodalEngine;
+use allternit_swarm_advanced::{SwarmAdvancedConfig, SwarmAdvancedEngine};
+use allternit_tambo_integration::TamboEngine;
 use axum::body::Body;
 use axum::{
     body::Bytes,
@@ -165,7 +165,7 @@ async fn init_sqlite_pool(db_path: &std::path::Path) -> Result<sqlx::SqlitePool,
     Ok(pool)
 }
 
-use a2r_openclaw_host::native_cron_system::CronSystemService;
+use allternit_openclaw_host::native_cron_system::CronSystemService;
 use prometheus::{Counter, Encoder, Histogram, IntGauge, TextEncoder};
 
 #[derive(Clone)]
@@ -325,31 +325,31 @@ pub struct AppState {
     kernel_url: String,
     chat_sessions: Arc<RwLock<HashMap<String, ChatSessionBinding>>>,
     session_service_state: Option<Arc<SessionServiceState>>,
-    /// Tool gateway for native A2R tool execution
-    tool_gateway: Arc<a2rchitech_tools_gateway::ToolGateway>,
+    /// Tool gateway for native Allternit tool execution
+    tool_gateway: Arc<allternit_tools_gateway::ToolGateway>,
     /// Browser recording service for agent-controlled screen capture
     browser_recording_service: Option<Arc<RwLock<crate::browser_recording::RecordingService>>>,
     /// Browser tool executor for native browser automation
     browser_tool_executor: Option<Arc<crate::tools::browser::BrowserToolExecutor>>,
     /// Cron system service for job scheduling
-    cron_service: Option<Arc<RwLock<a2r_openclaw_host::native_cron_system::CronSystemService>>>,
+    cron_service: Option<Arc<RwLock<allternit_openclaw_host::native_cron_system::CronSystemService>>>,
     /// Log service for log aggregation and querying
-    log_service: Option<Arc<RwLock<a2r_openclaw_host::native_log_service::LogService>>>,
+    log_service: Option<Arc<RwLock<allternit_openclaw_host::native_log_service::LogService>>>,
     /// Config service for system configuration management
     config_service:
-        Option<Arc<RwLock<a2r_openclaw_host::native_config_system::ConfigSystemService>>>,
+        Option<Arc<RwLock<allternit_openclaw_host::native_config_system::ConfigSystemService>>>,
     /// SQLite database pool
     database: sqlx::SqlitePool,
     // P4 DAG Integration engines
-    swarm_engine: Arc<a2r_swarm_advanced::SwarmAdvancedEngine>,
-    ivkge_engine: Arc<a2r_ivkge_advanced::IvkgeAdvancedEngine>,
-    multimodal_engine: Arc<a2r_multimodal_streaming::MultimodalEngine>,
-    tambo_engine: Arc<a2r_tambo_integration::TamboEngine>,
+    swarm_engine: Arc<allternit_swarm_advanced::SwarmAdvancedEngine>,
+    ivkge_engine: Arc<allternit_ivkge_advanced::IvkgeAdvancedEngine>,
+    multimodal_engine: Arc<allternit_multimodal_streaming::MultimodalEngine>,
+    tambo_engine: Arc<allternit_tambo_integration::TamboEngine>,
     /// Channel abstraction service for multi-channel messaging
     channel_abstraction: Option<
         Arc<
             tokio::sync::Mutex<
-                a2r_openclaw_host::native_channel_abstraction_native::ChannelAbstractionService,
+                allternit_openclaw_host::native_channel_abstraction_native::ChannelAbstractionService,
             >,
         >,
     >,
@@ -358,46 +358,46 @@ pub struct AppState {
     /// Shared execution mode for runtime tool dispatch
     runtime_execution_mode: runtime_routes::RuntimeExecutionModeState,
     /// Budget metering engine (N11)
-    budget_engine: Arc<a2rchitech_budget_metering::BudgetMeteringEngine>,
+    budget_engine: Arc<allternit_budget_metering::BudgetMeteringEngine>,
     /// Replay engine (N12)
-    replay_engine: Arc<RwLock<a2r_replay::ReplayEngine>>,
+    replay_engine: Arc<RwLock<allternit_replay::ReplayEngine>>,
     /// Prewarm pool manager (N16)
-    pool_manager: Arc<a2r_prewarm::PoolManager>,
+    pool_manager: Arc<allternit_prewarm::PoolManager>,
     /// Driver registry (N3)
-    driver_registry: Arc<RwLock<a2r_driver_interface::DriverRegistry>>,
+    driver_registry: Arc<RwLock<allternit_driver_interface::DriverRegistry>>,
     /// MCP Apps interactive capsule registry (P3.9) - Legacy, being migrated
     mcp_capsule_registry:
         Option<Arc<RwLock<std::collections::HashMap<String, mcp_apps_routes::CapsuleEntry>>>>,
     /// New capsule registry service (P3.9)
     capsule_registry: Option<crate::services::SharedCapsuleRegistry>,
-    /// A2R-IX capsule registry (P3.13)
+    /// Allternit-IX capsule registry (P3.13)
     ix_capsule_registry: Arc<ix_routes::IXCapsuleRegistry>,
     /// Environment spec loader with caching (N5)
     environment_loader: Arc<EnvironmentSpecLoaderWithCache>,
     /// Rails client for receipt emission (N2)
     rails_client: Option<Arc<rails_client::RailsClient>>,
     /// Rails Gate for policy enforcement (N0)
-    rails_gate: Option<Arc<a2r_agent_system_rails::Gate>>,
+    rails_gate: Option<Arc<allternit_agent_system_rails::Gate>>,
     /// Rails Ledger for event storage (N0)
-    rails_ledger: Option<Arc<a2r_agent_system_rails::Ledger>>,
+    rails_ledger: Option<Arc<allternit_agent_system_rails::Ledger>>,
     /// Rails Receipts Store (N0)
-    rails_receipts: Option<Arc<a2r_agent_system_rails::ReceiptStore>>,
+    rails_receipts: Option<Arc<allternit_agent_system_rails::ReceiptStore>>,
     /// Native Session Manager for agent sessions (OpenClaw-compatible)
     session_manager: Option<
-        Arc<RwLock<a2r_openclaw_host::native_session_manager::SessionManagerService>>,
+        Arc<RwLock<allternit_openclaw_host::native_session_manager::SessionManagerService>>,
     >,
     /// Chrome streaming sessions
     chrome_sessions: Arc<RwLock<HashMap<String, crate::chrome_session_routes::ChromeSessionRecord>>>,
     /// Firecracker driver for Chrome VMs (Linux only)
     #[cfg(target_os = "linux")]
-    firecracker_driver: Option<Arc<a2r_firecracker_driver::FirecrackerDriver>>,
+    firecracker_driver: Option<Arc<allternit_firecracker_driver::FirecrackerDriver>>,
     /// Docker client for Chrome containers (macOS only)
     #[cfg(target_os = "macos")]
     docker_client: Option<Arc<bollard::Docker>>,
     /// TURN secret for WebRTC credentials
     turn_secret: String,
     /// Session Sync Service for real-time updates
-    session_sync: Option<Arc<a2r_openclaw_host::session_sync::SessionSyncService>>,
+    session_sync: Option<Arc<allternit_openclaw_host::session_sync::SessionSyncService>>,
     /// Node registry for WebSocket connections
     #[cfg(target_os = "linux")]
     node_registry: Arc<crate::node_ws::NodeRegistry>,
@@ -419,7 +419,7 @@ pub struct AppState {
     /// Connected MCP servers metadata
     mcp_servers: Arc<RwLock<HashMap<String, McpServerEntry>>>,
     /// Workflow storage - stores workflow definitions by workflow_id
-    pub workflow_store: Arc<RwLock<HashMap<String, a2rchitech_workflows::WorkflowDefinition>>>,
+    pub workflow_store: Arc<RwLock<HashMap<String, allternit_workflows::WorkflowDefinition>>>,
     /// Execution storage - stores execution status by execution_id
     pub execution_store: Arc<RwLock<HashMap<String, crate::workflow_routes::ExecutionRecord>>>,
 }
@@ -438,7 +438,7 @@ pub struct JobEvent {
 /// MCP tool entry for tracking tools from MCP servers
 #[derive(Debug, Clone)]
 pub struct McpToolEntry {
-    pub tool: a2rchitech_tools_gateway::ToolDefinition,
+    pub tool: allternit_tools_gateway::ToolDefinition,
     pub server_id: String,
     pub mcp_tool_name: String,
 }
@@ -476,23 +476,23 @@ impl ApiConfig {
         let host = std::env::var("HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
         let port = std::env::var("PORT").unwrap_or_else(|_| "3000".to_string());
         let bind_addr =
-            std::env::var("A2RCHITECH_API_BIND").unwrap_or_else(|_| format!("{}:{}", host, port));
-        let ledger_path = std::env::var("A2RCHITECH_LEDGER_PATH")
+            std::env::var("Allternit_API_BIND").unwrap_or_else(|_| format!("{}:{}", host, port));
+        let ledger_path = std::env::var("Allternit_LEDGER_PATH")
             .map(PathBuf::from)
-            .unwrap_or_else(|_| PathBuf::from("./a2rchitech.jsonl"));
-        let db_path = std::env::var("A2RCHITECH_DB_PATH")
+            .unwrap_or_else(|_| PathBuf::from("./allternit.jsonl"));
+        let db_path = std::env::var("Allternit_DB_PATH")
             .map(PathBuf::from)
-            .unwrap_or_else(|_| PathBuf::from("./a2rchitech.db"));
+            .unwrap_or_else(|_| PathBuf::from("./allternit.db"));
         let policy_identity_id =
-            std::env::var("A2RCHITECH_API_IDENTITY").unwrap_or_else(|_| "api-service".to_string());
+            std::env::var("Allternit_API_IDENTITY").unwrap_or_else(|_| "api-service".to_string());
         let policy_tenant_id =
-            std::env::var("A2RCHITECH_API_TENANT").unwrap_or_else(|_| "default".to_string());
-        let policy_bootstrap = std::env::var("A2RCHITECH_API_BOOTSTRAP_POLICY")
+            std::env::var("Allternit_API_TENANT").unwrap_or_else(|_| "default".to_string());
+        let policy_bootstrap = std::env::var("Allternit_API_BOOTSTRAP_POLICY")
             .map(|value| value != "false" && value != "0")
             .unwrap_or(true);
         // Default policy enforcement to false in local/dev so chat/session endpoints
         // are not blocked by policy bootstrap state. Production should set this to true.
-        let policy_enforce = std::env::var("A2RCHITECH_API_POLICY_ENFORCE")
+        let policy_enforce = std::env::var("Allternit_API_POLICY_ENFORCE")
             .map(|value| value != "false" && value != "0")
             .unwrap_or(false);
 
@@ -591,9 +591,9 @@ struct CompileWorkflowRequest {
 
 #[derive(Debug, Serialize, ToSchema)]
 struct CompileWorkflowResponse {
-    workflow_definition: a2rchitech_workflows::WorkflowDefinition,
-    run_model: a2rchitech_kernel_contracts::RunModel,
-    compilation_event: a2rchitech_kernel_contracts::EventEnvelope,
+    workflow_definition: allternit_workflows::WorkflowDefinition,
+    run_model: allternit_kernel_contracts::RunModel,
+    compilation_event: allternit_kernel_contracts::EventEnvelope,
 }
 
 #[derive(Debug, Serialize, ToSchema)]
@@ -618,7 +618,7 @@ fn init_tracing() {
     let tracer_provider = SdkTracerProvider::builder()
         .with_config(
             opentelemetry_sdk::trace::Config::default().with_resource(Resource::new(vec![
-                KeyValue::new("service.name", "a2rchitech-api"),
+                KeyValue::new("service.name", "allternit-api"),
             ])),
         )
         .build();
@@ -641,7 +641,7 @@ fn init_tracing() {
         .init();
 }
 
-/// A2rchitech API
+/// Allternitchitech API
 #[derive(OpenApi)]
 #[openapi(
     paths(
@@ -776,7 +776,7 @@ fn init_tracing() {
                 viz_routes::ExportResponse, viz_routes::VizErrorResponse, viz_routes::VizHealthResponse)
     ),
     tags(
-        (name = "a2rchitech-api", description = "A2rchitech API for agentic OS")
+        (name = "allternit-api", description = "Allternitchitech API for agentic OS")
     )
 )]
 struct ApiDoc;
@@ -803,7 +803,7 @@ async fn get_channel_status(
     State(state): State<Arc<AppState>>,
     Path(channel_id): Path<String>,
 ) -> impl IntoResponse {
-    use a2r_openclaw_host::native_channel_abstraction_native::{
+    use allternit_openclaw_host::native_channel_abstraction_native::{
         ChannelAbstractionRequest, ChannelId, ChannelOperation,
     };
 
@@ -930,7 +930,7 @@ async fn login_channel(
     Path(channel_id): Path<String>,
     Json(_request): Json<LoginChannelRequest>,
 ) -> impl IntoResponse {
-    use a2r_openclaw_host::native_channel_abstraction_native::{
+    use allternit_openclaw_host::native_channel_abstraction_native::{
         ChannelAbstractionRequest, ChannelId, ChannelOperation,
     };
 
@@ -1059,14 +1059,14 @@ async fn main() -> anyhow::Result<()> {
     ));
 
     let kernel_client = reqwest::Client::builder().no_proxy().build()?;
-    let kernel_url = std::env::var("A2RCHITECH_KERNEL_URL")
+    let kernel_url = std::env::var("Allternit_KERNEL_URL")
         .unwrap_or_else(|_| "http://127.0.0.1:3004".to_string());
 
     // Initialize OpenClaw session service state
     let session_service_state = Arc::new(SessionServiceState::new());
 
     // Initialize tool gateway for MCP integration
-    let tool_gateway = Arc::new(a2rchitech_tools_gateway::ToolGateway::new(
+    let tool_gateway = Arc::new(allternit_tools_gateway::ToolGateway::new(
         control_plane.policy_engine.clone(),
         control_plane.history_ledger.clone(),
         control_plane.messaging_system.clone(),
@@ -1075,8 +1075,8 @@ async fn main() -> anyhow::Result<()> {
     // Register browser recording tools (GIF/video capture for browser sessions)
     // These are native tools like gui.screenshot, not skills
     {
-        use a2rchitech_tools_gateway::{ToolDefinition, ToolType, ResourceLimits, NetworkAccess, FilesystemAccess};
-        use a2rchitech_policy::SafetyTier;
+        use allternit_tools_gateway::{ToolDefinition, ToolType, ResourceLimits, NetworkAccess, FilesystemAccess};
+        use allternit_policy::SafetyTier;
         
         let browser_recording_tools = vec![
             ToolDefinition {
@@ -1229,7 +1229,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Initialize log service
     let log_service = {
-        let service = a2r_openclaw_host::native_log_service::LogService::new();
+        let service = allternit_openclaw_host::native_log_service::LogService::new();
         if let Err(e) = service.ensure_logs_dir().await {
             tracing::warn!("Failed to ensure logs directory: {}", e);
         }
@@ -1257,7 +1257,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Initialize config service
     let config_service = {
-        let mut service = a2r_openclaw_host::native_config_system::ConfigSystemService::new();
+        let mut service = allternit_openclaw_host::native_config_system::ConfigSystemService::new();
         if let Err(e) = service.initialize().await {
             tracing::warn!("Failed to initialize config service: {}", e);
             None
@@ -1270,7 +1270,7 @@ async fn main() -> anyhow::Result<()> {
     // Initialize channel abstraction service
     let channel_abstraction = {
         let mut service =
-            a2r_openclaw_host::native_channel_abstraction_native::ChannelAbstractionService::new();
+            allternit_openclaw_host::native_channel_abstraction_native::ChannelAbstractionService::new();
         if let Err(e) = service.initialize().await {
             tracing::warn!("Failed to initialize channel abstraction service: {}", e);
             None
@@ -1313,25 +1313,25 @@ async fn main() -> anyhow::Result<()> {
         runtime_settings: runtime_routes::init_runtime_settings(),
         runtime_execution_mode: runtime_routes::init_runtime_execution_mode(),
         // Budget metering engine (N11)
-        budget_engine: Arc::new(a2rchitech_budget_metering::BudgetMeteringEngine::new()),
+        budget_engine: Arc::new(allternit_budget_metering::BudgetMeteringEngine::new()),
         // Replay engine (N12)
-        replay_engine: Arc::new(RwLock::new(a2r_replay::ReplayEngine::new())),
+        replay_engine: Arc::new(RwLock::new(allternit_replay::ReplayEngine::new())),
         // Prewarm pool manager (N16)
-        pool_manager: Arc::new(a2r_prewarm::PoolManager::new()),
+        pool_manager: Arc::new(allternit_prewarm::PoolManager::new()),
         // Driver registry (N3)
         driver_registry: Arc::new(RwLock::new({
-            let mut registry = a2r_driver_interface::DriverRegistry::new();
+            let mut registry = allternit_driver_interface::DriverRegistry::new();
             // Register the process driver
-            registry.register_driver(Arc::new(a2r_process_driver::ProcessDriver::new()));
+            registry.register_driver(Arc::new(allternit_process_driver::ProcessDriver::new()));
             // Register the firecracker driver (N4 prototype) - disabled due to runtime conflict
-            // registry.register_driver(Arc::new(a2r_firecracker_driver::FirecrackerDriver::new()));
+            // registry.register_driver(Arc::new(allternit_firecracker_driver::FirecrackerDriver::new()));
             registry
         })),
         // MCP Apps interactive capsule registry (P3.9)
         mcp_capsule_registry: Some(Arc::new(RwLock::new(std::collections::HashMap::new()))),
         // New capsule registry service (P3.9)
         capsule_registry: Some(std::sync::Arc::new(crate::services::CapsuleRegistry::new())),
-        // A2R-IX capsule registry (P3.13)
+        // Allternit-IX capsule registry (P3.13)
         ix_capsule_registry: Arc::new(ix_routes::IXCapsuleRegistry::new()),
         // Environment spec loader with caching (N5)
         environment_loader: Arc::new(
@@ -1392,11 +1392,11 @@ async fn main() -> anyhow::Result<()> {
     #[cfg(target_os = "linux")]
     {
         // Initialize Firecracker driver for Chrome VMs (outside async context)
-        let mut fc_config = a2r_firecracker_driver::FirecrackerConfig::default();
-        fc_config.vm_root_dir = std::path::PathBuf::from("/var/lib/a2r/firecracker-vms");
+        let mut fc_config = allternit_firecracker_driver::FirecrackerConfig::default();
+        fc_config.vm_root_dir = std::path::PathBuf::from("/var/lib/allternit/firecracker-vms");
         
         let firecracker_driver = tokio::task::block_in_place(|| {
-            match a2r_firecracker_driver::FirecrackerDriver::with_config(fc_config) {
+            match allternit_firecracker_driver::FirecrackerDriver::with_config(fc_config) {
                 driver => {
                     tracing::info!("Firecracker driver initialized successfully");
                     Some(Arc::new(driver))
@@ -1424,18 +1424,18 @@ async fn main() -> anyhow::Result<()> {
     // Initialize Rails Gate, Ledger, and Receipts Store (N0)
     let rails_dir = std::env::current_dir()
         .unwrap_or_else(|_| std::path::PathBuf::from("."))
-        .join(".a2r/rails");
+        .join(".allternit/rails");
     std::fs::create_dir_all(&rails_dir).ok();
 
-    let ledger = Arc::new(a2r_agent_system_rails::Ledger::new(
-        a2r_agent_system_rails::ledger::ledger::LedgerOptions {
+    let ledger = Arc::new(allternit_agent_system_rails::Ledger::new(
+        allternit_agent_system_rails::ledger::ledger::LedgerOptions {
             root_dir: Some(rails_dir.clone()),
             ledger_dir: Some(rails_dir.join("ledger")),
         },
     ));
 
     let receipts = Arc::new(
-        a2r_agent_system_rails::ReceiptStore::new(a2r_agent_system_rails::ReceiptStoreOptions {
+        allternit_agent_system_rails::ReceiptStore::new(allternit_agent_system_rails::ReceiptStoreOptions {
             root_dir: Some(rails_dir.clone()),
             receipts_dir: Some(rails_dir.join("receipts")),
             blobs_dir: Some(rails_dir.join("blobs")),
@@ -1444,8 +1444,8 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let leases = Arc::new(
-        a2r_agent_system_rails::Leases::new(
-            a2r_agent_system_rails::leases::leases::LeasesOptions {
+        allternit_agent_system_rails::Leases::new(
+            allternit_agent_system_rails::leases::leases::LeasesOptions {
             root_dir: Some(rails_dir.clone()),
                 leases_dir: Some(rails_dir.join("leases")),
                 ..Default::default()
@@ -1456,7 +1456,7 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let index = Arc::new(
-        a2r_agent_system_rails::Index::new(a2r_agent_system_rails::IndexOptions {
+        allternit_agent_system_rails::Index::new(allternit_agent_system_rails::IndexOptions {
             root_dir: Some(rails_dir.clone()),
             index_dir: Some(rails_dir.join("index")),
         })
@@ -1464,8 +1464,8 @@ async fn main() -> anyhow::Result<()> {
         .expect("Failed to create index"),
     );
 
-    let gate = Arc::new(a2r_agent_system_rails::Gate::new(
-        a2r_agent_system_rails::GateOptions {
+    let gate = Arc::new(allternit_agent_system_rails::Gate::new(
+        allternit_agent_system_rails::GateOptions {
             ledger: ledger.clone(),
             leases: leases.clone(),
             receipts: receipts.clone(),
@@ -1485,9 +1485,9 @@ async fn main() -> anyhow::Result<()> {
 
     // Initialize Native Session Manager and Session Sync (OpenClaw-compatible agent sessions)
     let session_manager = Arc::new(tokio::sync::RwLock::new(
-        a2r_openclaw_host::native_session_manager::SessionManagerService::new(),
+        allternit_openclaw_host::native_session_manager::SessionManagerService::new(),
     ));
-    let session_sync = Arc::new(a2r_openclaw_host::session_sync::SessionSyncService::new());
+    let session_sync = Arc::new(allternit_openclaw_host::session_sync::SessionSyncService::new());
 
     state.session_manager = Some(session_manager.clone());
     state.session_sync = Some(session_sync.clone());
@@ -1617,9 +1617,9 @@ async fn main() -> anyhow::Result<()> {
         .merge(create_voice_routes())
         // WebVM bridge endpoints
         .merge(create_webvm_routes())
-        // A2R Operator endpoints
+        // Allternit Operator endpoints
         .merge(create_operator_routes())
-        // A2R Agent System Rails endpoints
+        // Allternit Agent System Rails endpoints
         .merge(create_rails_routes())
         // Agent management endpoints
         .merge(agents::create_agent_routes())
@@ -1633,7 +1633,7 @@ async fn main() -> anyhow::Result<()> {
         ))
         // TUI compatibility routes (OpenCode SDK interface)
         .merge(tui_routes::create_tui_routes())
-        // A2R Shell UI routes (OpenCode SDK compatible)
+        // Allternit Shell UI routes (OpenCode SDK compatible)
         .merge(shell_ui::create_shell_ui_routes())
         // MCP tools integration endpoints
         .merge(tools_routes::create_tools_routes())
@@ -1655,7 +1655,7 @@ async fn main() -> anyhow::Result<()> {
         .merge(tambo_routes::tambo_router_from_engine())
         // MCP Apps / Interactive Capsules endpoints (P3.9)
         .merge(mcp_apps_routes::router())
-        // A2R-IX (Interface eXecution) endpoints (P3.13)
+        // Allternit-IX (Interface eXecution) endpoints (P3.13)
         .merge(ix_routes::ix_routes())
         // Workflow Engine Extended endpoints
         .merge(workflow_routes_ext::create_workflow_ext_routes())
@@ -1974,7 +1974,7 @@ async fn compile_workflow(
                 .unwrap_or_default()
                 .as_secs();
 
-            let compilation_event = a2rchitech_kernel_contracts::EventEnvelope {
+            let compilation_event = allternit_kernel_contracts::EventEnvelope {
                 event_id: uuid::Uuid::new_v4().to_string(),
                 event_type: "WorkflowCompiled".to_string(),
                 session_id: "api".to_string(),
@@ -1993,9 +1993,9 @@ async fn compile_workflow(
             };
 
             // Create a RunModel from the compiled workflow
-            let run_model = a2rchitech_kernel_contracts::RunModel {
+            let run_model = allternit_kernel_contracts::RunModel {
                 run_id: uuid::Uuid::new_v4().to_string(),
-                state: a2rchitech_kernel_contracts::RunState::Created,
+                state: allternit_kernel_contracts::RunState::Created,
                 tenant_id: _tenant_id.clone(),
                 session_id: "api".to_string(),
                 created_by: "api".to_string(),
@@ -2428,8 +2428,8 @@ async fn ws_terminal_session(
     })
 }
 
-// Integrate a2r_terminal crate for proper terminal management
-use a2r_terminal::{AuthMethod, InMemoryTerminalManager, TerminalManager, TerminalSessionConfig};
+// Integrate allternit_terminal crate for proper terminal management
+use allternit_terminal::{AuthMethod, InMemoryTerminalManager, TerminalManager, TerminalSessionConfig};
 
 // Global map to store active terminal sessions
 lazy_static! {
@@ -2623,7 +2623,7 @@ async fn bootstrap_policy(
     let identity = Identity {
         id: config.policy_identity_id.clone(),
         identity_type: IdentityType::ServiceAccount,
-        name: "A2rchitech API".to_string(),
+        name: "Allternitchitech API".to_string(),
         tenant_id: config.policy_tenant_id.clone(),
         created_at: 0,
         active: true,
@@ -3190,15 +3190,15 @@ async fn execute_tool(
     // Policy Tier Gate Check
     // Determine tool tier based on tool ID (simplified - in production would query tool registry)
     let tool_tier = match id.as_str() {
-        "shell" | "execute_command" => a2r_policy_tier_gating::PolicyTier::Elevated,
-        "read_file" | "list_directory" => a2r_policy_tier_gating::PolicyTier::Minimal,
-        "write_file" | "delete_file" => a2r_policy_tier_gating::PolicyTier::Standard,
-        "network_request" | "http_call" => a2r_policy_tier_gating::PolicyTier::Standard,
-        _ => a2r_policy_tier_gating::PolicyTier::Standard,
+        "shell" | "execute_command" => allternit_policy_tier_gating::PolicyTier::Elevated,
+        "read_file" | "list_directory" => allternit_policy_tier_gating::PolicyTier::Minimal,
+        "write_file" | "delete_file" => allternit_policy_tier_gating::PolicyTier::Standard,
+        "network_request" | "http_call" => allternit_policy_tier_gating::PolicyTier::Standard,
+        _ => allternit_policy_tier_gating::PolicyTier::Standard,
     };
 
     // Check if tool requires approval (Elevated or higher)
-    if tool_tier >= a2r_policy_tier_gating::PolicyTier::Elevated {
+    if tool_tier >= allternit_policy_tier_gating::PolicyTier::Elevated {
         tracing::info!(
             "Tool {} requires tier {:?} - policy gate check",
             id,
@@ -3401,7 +3401,7 @@ async fn create_capsule(State(state): State<Arc<AppState>>, body: Bytes) -> impl
         ("id" = String, Path, description = "Capsule ID (with optional version as id@version)")
     ),
     responses(
-        (status = 200, description = "Capsule manifest retrieved successfully", body = a2rchitech_capsule::CapsuleManifest),
+        (status = 200, description = "Capsule manifest retrieved successfully", body = allternit_capsule::CapsuleManifest),
         (status = 404, description = "Capsule not found", body = serde_json::Value),
         (status = 500, description = "Failed to retrieve capsule", body = serde_json::Value)
     )
@@ -3795,14 +3795,14 @@ fn resolve_chat_model_route(model_id: &str) -> Option<ChatModelRoute> {
                 // Or if it's an opencode/model format (legacy naming)
                 if provider.models.contains_key(sub_model_id)
                     || provider_id == "opencode"
-                    || provider_id == "a2r"
+                    || provider_id == "allternit"
                 {
                     return Some(ChatModelRoute {
                         config: build_cli_config(
                             provider_id,
                             &format!("{} CLI", provider.name),
                             sub_model_id,
-                            "a2r",
+                            "allternit",
                             vec!["run", "--format", "json", "-m", &normalized],
                             None,
                             "jsonl",
@@ -4011,11 +4011,11 @@ async fn chat_handler(
     let kernel_url = state.kernel_url.clone();
     let kernel_client = state.kernel_client.clone();
     let chat_sessions = state.chat_sessions.clone();
-    let kernel_auth_token = std::env::var("A2R_KERNEL_AUTH_TOKEN")
-        .or_else(|_| std::env::var("A2R_KERNEL_TOKEN"))
-        .or_else(|_| std::env::var("A2R_GATEWAY_TOKEN"))
+    let kernel_auth_token = std::env::var("Allternit_KERNEL_AUTH_TOKEN")
+        .or_else(|_| std::env::var("Allternit_KERNEL_TOKEN"))
+        .or_else(|_| std::env::var("Allternit_GATEWAY_TOKEN"))
         .or_else(|_| std::env::var("OPENCLAW_GATEWAY_TOKEN"))
-        .unwrap_or_else(|_| "api-a2r-local-dev".to_string());
+        .unwrap_or_else(|_| "api-allternit-local-dev".to_string());
     let message = request.message;
     let chat_id = request.chat_id;
 

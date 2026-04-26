@@ -1,7 +1,14 @@
 """
-A2R Computer Use — CDP Adapter
+Allternit Computer Use — CDP Adapter
 Chrome DevTools Protocol for inspect/debug workflows.
 Uses HTTP for target discovery and WebSocket for page interaction.
+
+Auto-launch
+-----------
+If Chrome is not already listening on the configured port, the adapter will
+attempt to launch it automatically (headless) and wait up to 4 seconds for
+the debugging port to open.  The spawned process is stored on the instance
+and terminated when ``close()`` is called or the adapter is garbage-collected.
 """
 
 from core import BaseAdapter, ActionRequest, ResultEnvelope
@@ -9,6 +16,57 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 import json
 import base64
+import os
+import socket
+import subprocess
+import time
+
+
+# ---------------------------------------------------------------------------
+# Chrome auto-launcher
+# ---------------------------------------------------------------------------
+
+def _launch_chrome(port: int = 9222) -> Optional[subprocess.Popen]:
+    """
+    Locate a Chrome/Chromium binary and launch it with remote debugging enabled.
+
+    Waits up to 4 seconds for the debugging port to become reachable.  Returns
+    the ``subprocess.Popen`` handle on success, or ``None`` if no binary was
+    found or the port never opened.
+    """
+    candidates = [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "/Applications/Chromium.app/Contents/MacOS/Chromium",
+        "/Applications/Google Chrome Canary.app/Contents/MacOS/Google Chrome Canary",
+        "/usr/bin/google-chrome",
+        "/usr/bin/chromium-browser",
+        "/usr/bin/chromium",
+    ]
+    chrome_bin = next((c for c in candidates if os.path.exists(c)), None)
+    if not chrome_bin:
+        return None
+    proc = subprocess.Popen(
+        [
+            chrome_bin,
+            f"--remote-debugging-port={port}",
+            "--no-first-run",
+            "--no-default-browser-check",
+            "--disable-extensions",
+            "--headless=new",
+        ],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    # Wait up to 4s for port to open
+    deadline = time.time() + 4
+    while time.time() < deadline:
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=0.3):
+                return proc
+        except (ConnectionRefusedError, OSError):
+            time.sleep(0.2)
+    proc.terminate()
+    return None
 
 
 class CDPAdapter(BaseAdapter):
@@ -17,6 +75,19 @@ class CDPAdapter(BaseAdapter):
     def __init__(self, port: int = 9222):
         self._port = port
         self._ws_url: Optional[str] = None
+        self._chrome_proc: Optional[subprocess.Popen] = None
+
+    def __del__(self) -> None:
+        self._terminate_chrome()
+
+    def _terminate_chrome(self) -> None:
+        """Terminate the auto-launched Chrome process if we own it."""
+        if self._chrome_proc is not None:
+            try:
+                self._chrome_proc.terminate()
+            except Exception:
+                pass
+            self._chrome_proc = None
 
     @property
     def adapter_id(self) -> str:
@@ -28,6 +99,33 @@ class CDPAdapter(BaseAdapter):
 
     async def initialize(self) -> None:
         pass  # CDP connects on-demand per action
+
+    async def _ensure_chrome(self) -> None:
+        """
+        Verify that Chrome is reachable on the configured port.
+
+        If the port is not open, attempt to auto-launch Chrome.  Raises
+        ``RuntimeError`` if Chrome cannot be found or started.
+        """
+        import aiohttp
+        base = f"http://127.0.0.1:{self._port}"
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(f"{base}/json", timeout=aiohttp.ClientTimeout(total=2)) as resp:
+                    await resp.json()
+            return  # Already reachable
+        except Exception:
+            pass
+
+        # Port not open — try to launch Chrome
+        proc = _launch_chrome(self._port)
+        if proc is None:
+            raise RuntimeError(
+                f"Chrome not running on port {self._port} and no Chrome/Chromium binary found. "
+                "Start Chrome manually with: "
+                f"'Google Chrome' --remote-debugging-port={self._port}"
+            )
+        self._chrome_proc = proc
 
     async def _get_ws_url(self, session) -> str:
         """Get WebSocket debugger URL for the first available page target."""
@@ -66,6 +164,10 @@ class CDPAdapter(BaseAdapter):
 
         try:
             import aiohttp
+
+            # Ensure Chrome is running (auto-launches if needed)
+            await self._ensure_chrome()
+
             base = f"http://127.0.0.1:{self._port}"
 
             async with aiohttp.ClientSession() as session:
@@ -144,3 +246,4 @@ class CDPAdapter(BaseAdapter):
 
     async def close(self) -> None:
         self._ws_url = None
+        self._terminate_chrome()

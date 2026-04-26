@@ -9,7 +9,7 @@ use crate::types::{
     Artifact, CanvasInstance, CapsuleInstance, DispatchResponse, JournalEvent, ToolDefinition,
 };
 use crate::brain::types::SessionStatus;
-use a2rchitech_tools_gateway::{run_scoped_write_scope, ToolExecutionRequest, ToolGateway};
+use allternit_tools_gateway::{run_scoped_write_scope, ToolExecutionRequest, ToolGateway};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -276,17 +276,17 @@ impl IntentDispatcher {
                 });
 
                 // Use a fallback context bundle
-                let fallback_inputs = a2rchitech_kernel_contracts::ContextInputs {
+                let fallback_inputs = allternit_kernel_contracts::ContextInputs {
                     user_inputs: serde_json::json!({ "intent": &intent_text }),
                     system_inputs: serde_json::json!({ "session_id": &capsule_id, "framework_id": &framework_id }),
                     previous_outputs: vec![],
                 };
 
-                let fallback_bundle = a2rchitech_kernel_contracts::ContextBundle {
+                let fallback_bundle = allternit_kernel_contracts::ContextBundle {
                     bundle_hash: format!("fallback_{}", uuid::Uuid::new_v4()),
                     inputs: fallback_inputs,
                     memory_refs: vec![],
-                    budgets: a2rchitech_kernel_contracts::ContextBudgets {
+                    budgets: allternit_kernel_contracts::ContextBudgets {
                         max_tokens: Some(1000),
                         max_execution_time_ms: Some(5000),
                         max_tool_calls: Some(5),
@@ -297,21 +297,21 @@ impl IntentDispatcher {
                     metadata: std::collections::HashMap::new(),
                 };
 
-                let fallback_verify_artifact = a2rchitech_kernel_contracts::VerifyArtifact::new(
+                let fallback_verify_artifact = allternit_kernel_contracts::VerifyArtifact::new(
                     capsule_id.clone(),
                     "context_assembly".to_string(),
                     format!("fallback_{}", uuid::Uuid::new_v4()),
-                    a2rchitech_kernel_contracts::VerificationResults {
+                    allternit_kernel_contracts::VerificationResults {
                         passed: false,
                         details: serde_json::json!({
                             "warning": "Using fallback context due to assembly failure",
                             "original_intent": &intent_text,
                         }),
                         confidence: 0.3,
-                        issues: vec![a2rchitech_kernel_contracts::VerificationIssue {
+                        issues: vec![allternit_kernel_contracts::VerificationIssue {
                             issue_type: "context_assembly_failure".to_string(),
                             description: "Context assembly failed, using fallback".to_string(),
-                            severity: a2rchitech_kernel_contracts::VerificationSeverity::Warning,
+                            severity: allternit_kernel_contracts::VerificationSeverity::Warning,
                             location: None,
                         }],
                     },
@@ -320,12 +320,12 @@ impl IntentDispatcher {
 
                 (
                     fallback_bundle,
-                    a2rchitech_kernel_contracts::ContextMap {
+                    allternit_kernel_contracts::ContextMap {
                         included_ids: vec![],
                         excluded_ids: vec![],
                         reasons: std::collections::HashMap::new(),
                     },
-                    a2rchitech_kernel_contracts::BudgetReport {
+                    allternit_kernel_contracts::BudgetReport {
                         token_usage: std::collections::HashMap::new(),
                         total_tokens: 0,
                         budget_limit: 1000,
@@ -550,7 +550,7 @@ impl IntentDispatcher {
             .filter(|issue| {
                 matches!(
                     issue.severity,
-                    a2rchitech_kernel_contracts::VerificationSeverity::Critical
+                    allternit_kernel_contracts::VerificationSeverity::Critical
                 )
             })
             .collect();
@@ -893,7 +893,7 @@ impl IntentDispatcher {
             tools.len()
         );
 
-        let system_prompt = "You are the A2rchitech Kernel. Given a user intent, decide which tools to call. \
+        let system_prompt = "You are the Allternitchitech Kernel. Given a user intent, decide which tools to call. \
                              If a tool is relevant, return a tool call. If no tools are needed, answer directly. \
                              Always maintain system safety.";
 

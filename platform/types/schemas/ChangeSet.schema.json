@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2rchitech.local/spec/contracts/ChangeSet.schema.json",
+  "$id": "https://allternit.local/spec/contracts/ChangeSet.schema.json",
   "title": "ChangeSet — Patch Bundle Contract",
   "description": "A proposed set of file changes (diffs) with verification and apply metadata. Core primitive of Code Mode diff-first editing.",
   "type": "object",

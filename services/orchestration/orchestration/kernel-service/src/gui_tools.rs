@@ -20,10 +20,10 @@ use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
 use uuid::Uuid;
 
-// Configuration for A2R Vision operator (via gateway)
+// Configuration for Allternit Vision operator (via gateway)
 const VISION_OPERATOR_DEFAULT_URL: &str = "http://localhost:3000/api/v1/vision";
 lazy_static::lazy_static! {
-    static ref VISION_OPERATOR_URL: String = std::env::var("A2R_VISION_OPERATOR_URL")
+    static ref VISION_OPERATOR_URL: String = std::env::var("Allternit_VISION_OPERATOR_URL")
         .unwrap_or_else(|_| VISION_OPERATOR_DEFAULT_URL.to_string());
 }
 const DEFAULT_VIEWPORT_WIDTH: u32 = 1920;

@@ -1,6 +1,6 @@
-//! A2R Canvas Protocol
+//! Allternit Canvas Protocol
 //!
-//! Implements the Canvas Protocol for A2rchitech:
+//! Implements the Canvas Protocol for Allternit:
 //! - CanvasSpec - declarative task surface definition
 //! - Canvas Runtime - canvas instantiation and management
 //! - Canvas State Manager - deterministic state sync

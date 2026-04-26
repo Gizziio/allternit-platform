@@ -1,4 +1,4 @@
-//! A2R Cowork Runtime
+//! Allternit Cowork Runtime
 //!
 //! Manages persistent, detachable compute runs with Rails backend integration.
 //! Provides checkpoint/restore, client attachment, and event streaming capabilities.

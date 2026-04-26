@@ -1,7 +1,7 @@
-//! A2R Scheduler - Cron-based job scheduling for cowork runtime
+//! Allternit Scheduler - Cron-based job scheduling for cowork runtime
 //!
 //! Uses tokio-cron-scheduler (same as the existing native_cron_system)
-//! but as a standalone implementation that doesn't depend on a2r-openclaw-host.
+//! but as a standalone implementation that doesn't depend on allternit-openclaw-host.
 
 #![warn(missing_docs)]
 

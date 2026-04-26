@@ -3,13 +3,13 @@
 //! This binary provides the command-line interface to the native TUI service
 //! that was implemented as part of the OpenClaw absorption project.
 
-use a2r_openclaw_host::{TuiConfig, TuiService, TuiTheme};
+use allternit_openclaw_host::{TuiConfig, TuiService, TuiTheme};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("Starting A2R Native TUI Service...");
+    println!("Starting Allternit Native TUI Service...");
 
-    // Create TUI service with configuration (overridable via A2R_TUI_CONFIG)
+    // Create TUI service with configuration (overridable via Allternit_TUI_CONFIG)
     let config = TuiConfig {
         theme: TuiTheme::default(),
         ..Default::default()

@@ -20,7 +20,7 @@ When a node has `execution_mode: fresh`, the gate must provide a clean context w
 
 ## Practical implementation
 - Build a ContextPack artifact (JSON) that enumerates allowed references.
-- Stored at `.a2r/work/dags/<dag_id>/wih/context/<wih_id>.context.json`.
+- Stored at `.allternit/work/dags/<dag_id>/wih/context/<wih_id>.context.json`.
 - Capsules mount only the ContextPack + referenced files.
 
 ContextPack (v1) includes:

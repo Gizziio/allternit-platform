@@ -241,7 +241,7 @@ async fn handle_execute(
     }
 
     // Determine if this is a system function or app tool
-    let result = if request.function_call.function_id.starts_with("com.a2rchitech.os.") {
+    let result = if request.function_call.function_id.starts_with("com.allternit.os.") {
         // This is a system function - execute locally or via system APIs
         execute_system_function(&request.function_call, &request.context).await
     } else if request.function_call.function_id.contains('.') {
@@ -309,7 +309,7 @@ async fn execute_system_function(function_call: &FunctionCall, context: &serde_j
     // In a real implementation, this would call actual system functions
     // For now, we'll simulate based on the function ID
     match function_call.function_id.as_str() {
-        "com.a2rchitech.os.set_alarm" => {
+        "com.allternit.os.set_alarm" => {
             // Simulate setting an alarm
             serde_json::json!({
                 "status": "success",
@@ -319,7 +319,7 @@ async fn execute_system_function(function_call: &FunctionCall, context: &serde_j
                 "label": function_call.parameters.get("label").unwrap_or(&serde_json::Value::String("".to_string()))
             })
         },
-        "com.a2rchitech.os.create_note" => {
+        "com.allternit.os.create_note" => {
             // Simulate creating a note
             serde_json::json!({
                 "status": "success", 
@@ -328,7 +328,7 @@ async fn execute_system_function(function_call: &FunctionCall, context: &serde_j
                 "content": function_call.parameters.get("content").unwrap_or(&serde_json::Value::String("".to_string()))
             })
         },
-        "com.a2rchitech.os.schedule_event" => {
+        "com.allternit.os.schedule_event" => {
             // Simulate scheduling an event
             serde_json::json!({
                 "status": "success",
@@ -389,7 +389,7 @@ fn create_confirmation_card(function_call: &FunctionCall) -> UICard {
 
 fn create_system_function_card(function_id: &str, result: &serde_json::Value) -> Option<UICard> {
     match function_id {
-        "com.a2rchitech.os.set_alarm" => Some(UICard {
+        "com.allternit.os.set_alarm" => Some(UICard {
             card_type: "basic".to_string(),
             title: "Alarm Set".to_string(),
             subtitle: result.get("message").and_then(|m| m.as_str()).map(|s| s.to_string()),
@@ -399,7 +399,7 @@ fn create_system_function_card(function_id: &str, result: &serde_json::Value) ->
             }),
             actions: None,
         }),
-        "com.a2rchitech.os.create_note" => Some(UICard {
+        "com.allternit.os.create_note" => Some(UICard {
             card_type: "basic".to_string(),
             title: "Note Created".to_string(),
             subtitle: result.get("message").and_then(|m| m.as_str()).map(|s| s.to_string()),
@@ -420,7 +420,7 @@ fn create_system_function_card(function_id: &str, result: &serde_json::Value) ->
                 }
             ]),
         }),
-        "com.a2rchitech.os.schedule_event" => Some(UICard {
+        "com.allternit.os.schedule_event" => Some(UICard {
             card_type: "basic".to_string(),
             title: "Event Scheduled".to_string(),
             subtitle: result.get("message").and_then(|m| m.as_str()).map(|s| s.to_string()),

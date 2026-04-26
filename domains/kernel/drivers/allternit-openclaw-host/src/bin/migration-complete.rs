@@ -15,7 +15,7 @@ use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use tracing::{error, info, Level};
 
-use a2r_openclaw_host::{completion::CompletionManager, feature_flags::global_registry};
+use allternit_openclaw_host::{completion::CompletionManager, feature_flags::global_registry};
 
 /// Phase 4: Complete the OpenClaw strangler migration
 #[derive(Parser)]
@@ -311,7 +311,7 @@ async fn check_finish(manager: &CompletionManager) -> Result<()> {
         info!("The OpenClaw strangler migration has been successfully completed.");
         info!("");
         info!("Summary:");
-        info!("  - All components migrated to native A2R");
+        info!("  - All components migrated to native Allternit");
         info!("  - Parity testing verified");
         info!("  - OpenClaw subprocess can be removed");
         info!("");

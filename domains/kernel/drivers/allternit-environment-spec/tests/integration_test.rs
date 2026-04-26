@@ -2,7 +2,7 @@
 //!
 //! Tests the full flow from source → resolved spec → converted image
 
-use a2r_environment_spec::{
+use allternit_environment_spec::{
     EnvironmentSource, EnvironmentSpec, EnvironmentSpecLoader, FeatureSpec, MountSpec, MountType,
     ResourceRequirements,
 };
@@ -20,7 +20,7 @@ fn fixture_path(name: &str) -> PathBuf {
 /// Helper to create temp cache dir
 fn temp_cache_dir() -> PathBuf {
     std::env::temp_dir()
-        .join("a2r_integration_test")
+        .join("allternit_integration_test")
         .join(format!("test_{}", std::process::id()))
 }
 
@@ -224,7 +224,7 @@ async fn test_convert_to_rootfs_error_handling() {
         mounts: vec![],
         post_create_commands: vec![],
         resources: ResourceRequirements::default(),
-        a2r_config: Default::default(),
+        allternit_config: Default::default(),
     };
 
     // Attempt conversion (will fail without skopeo/crane in test environment)
@@ -279,7 +279,7 @@ async fn test_environment_spec_serialization() {
             memory_gb: Some(8.0),
             disk_gb: Some(20.0),
         },
-        a2r_config: Default::default(),
+        allternit_config: Default::default(),
     };
 
     // Serialize to JSON

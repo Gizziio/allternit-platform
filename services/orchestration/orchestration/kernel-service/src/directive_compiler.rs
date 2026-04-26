@@ -56,9 +56,9 @@ impl DirectiveCompiler {
         &self,
         intent_text: &str,
         evidence_objects: &[capsule_spec::EvidenceObject],
-        context_bundle: &a2rchitech_kernel_contracts::ContextBundle,
-    ) -> a2rchitech_kernel_contracts::VerifyArtifact {
-        use a2rchitech_kernel_contracts::{
+        context_bundle: &allternit_kernel_contracts::ContextBundle,
+    ) -> allternit_kernel_contracts::VerifyArtifact {
+        use allternit_kernel_contracts::{
             VerificationIssue, VerificationResults, VerificationSeverity, VerifyArtifact,
         };
 

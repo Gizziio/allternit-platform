@@ -39,7 +39,7 @@ impl Default for WorktreeConfig {
     fn default() -> Self {
         Self {
             auto_create: true,
-            branch_prefix: "a2r/".to_string(),
+            branch_prefix: "allternit/".to_string(),
             cleanup_on_done: CleanupPolicy::CleanOnly,
             base_branch: "main".to_string(),
         }
@@ -51,7 +51,7 @@ fn default_auto_create() -> bool {
 }
 
 fn default_branch_prefix() -> String {
-    "a2r/".to_string()
+    "allternit/".to_string()
 }
 
 fn default_base_branch() -> String {

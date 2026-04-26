@@ -1,6 +1,6 @@
 # @allternit/computer-use
 
-TypeScript SDK for the A2R Computer Use Engine - a thin HTTP client over the canonical engine API.
+TypeScript SDK for the Allternit Computer Use Engine - a thin HTTP client over the canonical engine API.
 
 ## Installation
 
@@ -17,9 +17,9 @@ npm install eventsource
 ## Quick Start
 
 ```typescript
-import { A2RComputerUseClient } from '@allternit/computer-use';
+import { AllternitComputerUseClient } from '@allternit/computer-use';
 
-const client = new A2RComputerUseClient({
+const client = new AllternitComputerUseClient({
   endpoint: 'http://localhost:8080',
   timeout: 60000,
 });
@@ -39,7 +39,7 @@ console.log('Summary:', result.summary);
 ### Client Configuration
 
 ```typescript
-const client = new A2RComputerUseClient({
+const client = new AllternitComputerUseClient({
   endpoint: 'http://localhost:8080',  // Required: Engine HTTP API endpoint
   timeout: 60000,                      // Optional: Request timeout (ms)
   apiKey: 'your-api-key',              // Optional: API key for authentication
@@ -270,14 +270,14 @@ const runs = await client.listRuns(sessionId, 'completed');
 
 ## API Reference
 
-### `A2RComputerUseClient`
+### `AllternitComputerUseClient`
 
-Main client class for interacting with the A2R Computer Use Engine.
+Main client class for interacting with the Allternit Computer Use Engine.
 
 #### Constructor
 
 ```typescript
-new A2RComputerUseClient(config: ClientConfig)
+new AllternitComputerUseClient(config: ClientConfig)
 ```
 
 #### Methods
@@ -347,12 +347,12 @@ import {
 ## Error Handling
 
 ```typescript
-import { A2RComputerUseError } from '@allternit/computer-use';
+import { AllternitComputerUseError } from '@allternit/computer-use';
 
 try {
   const result = await client.executeIntent('Task');
 } catch (error) {
-  if (error instanceof A2RComputerUseError) {
+  if (error instanceof AllternitComputerUseError) {
     console.error('API Error:', error.status, error.code, error.message);
   } else {
     console.error('Unknown error:', error);

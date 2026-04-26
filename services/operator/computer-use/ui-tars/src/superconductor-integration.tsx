@@ -1167,7 +1167,7 @@ export const useSuperconductorLogic = ({
   const [createdIssue, setCreatedIssue] = useState<BeadsIssue | null>(null);
   const [isCreatingIssue, setIsCreatingIssue] = useState(false);
   
-  const superconductorUrl = (window as any).__A2R_SUPERCONDUCTOR_URL__ || 'http://localhost:3310';
+  const superconductorUrl = (window as any).__Allternit_SUPERCONDUCTOR_URL__ || 'http://localhost:3310';
   const registry = useBeadsRegistry(superconductorUrl);
 
   const executor = useMemo(() => new SuperconductorExecutor({

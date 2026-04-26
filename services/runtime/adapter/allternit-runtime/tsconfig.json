@@ -22,10 +22,10 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@a2r/runtime": [
+      "@allternit/runtime": [
         "./src/index.ts"
       ],
-      "@a2r/runtime/*": [
+      "@allternit/runtime/*": [
         "./src/*/index.ts"
       ]
     }

@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2rchitech.local/spec/contracts/UIReceipt.schema.json",
+  "$id": "https://allternit.local/spec/contracts/UIReceipt.schema.json",
   "title": "UI Receipt",
-  "description": "Schema for UI action receipts in the A2R system",
+  "description": "Schema for UI action receipts in the Allternit system",
   "type": "object",
   "properties": {
     "receipt_version": {

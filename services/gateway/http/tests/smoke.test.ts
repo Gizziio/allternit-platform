@@ -1,5 +1,5 @@
 /**
- * A2R Gateway - Smoke Tests
+ * Allternit Gateway - Smoke Tests
  * 
  * End-to-end tests for both transports:
  * - stdio: spawn gateway, send prompt, receive streamed response
@@ -22,7 +22,7 @@ const HTTP_PORT = 3298;
 // stdio Smoke Tests
 // =============================================================================
 
-describe('A2R Gateway Smoke Tests - stdio', () => {
+describe('Allternit Gateway Smoke Tests - stdio', () => {
   it('completes full flow: spawn → health → discovery → session', async () => {
     // Spawn gateway
     const gateway = spawn('tsx', [GATEWAY_PATH, '--transport', 'stdio'], {
@@ -113,7 +113,7 @@ describe('A2R Gateway Smoke Tests - stdio', () => {
 // HTTP Smoke Tests
 // =============================================================================
 
-describe('A2R Gateway Smoke Tests - HTTP', () => {
+describe('Allternit Gateway Smoke Tests - HTTP', () => {
   let gateway: ReturnType<typeof spawn>;
 
   beforeAll(async () => {

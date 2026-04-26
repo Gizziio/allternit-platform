@@ -1,10 +1,10 @@
-# Building A2R VM Images
+# Building Allternit VM Images
 
 Complete guide for building VM images from scratch.
 
 ## Overview
 
-This document explains how to build the Linux VM images used by A2R. Due to platform limitations, images **must be built on Linux** (macOS cannot create ext4 filesystems).
+This document explains how to build the Linux VM images used by Allternit. Due to platform limitations, images **must be built on Linux** (macOS cannot create ext4 filesystems).
 
 ## Prerequisites
 
@@ -39,7 +39,7 @@ The uncompressed kernel image for Firecracker/microVMs.
 
 ```bash
 wget https://cloud-images.ubuntu.com/releases/22.04/release/unpacked/ubuntu-22.04-server-cloudimg-amd64-vmlinuz-generic \
-    -O vmlinux-6.5.0-a2r
+    -O vmlinux-6.5.0-allternit
 ```
 
 ### 2. Initial Ramdisk (initrd)
@@ -50,32 +50,32 @@ Boot-time filesystem and drivers.
 
 ```bash
 wget https://cloud-images.ubuntu.com/releases/22.04/release/unpacked/ubuntu-22.04-server-cloudimg-amd64-initrd-generic \
-    -O initrd.img-6.5.0-a2r
+    -O initrd.img-6.5.0-allternit
 ```
 
 ### 3. Root Filesystem (rootfs)
 
 The main ext4 filesystem containing:
 - Ubuntu 22.04 base system
-- a2r-vm-executor (guest agent)
+- allternit-vm-executor (guest agent)
 - Node.js, Python, Rust toolchains
 - Git, curl, and other utilities
 - Bubblewrap for sandboxing
 
 ## Building the Root Filesystem
 
-### Method 1: Using a2r-vm-image-builder (Recommended)
+### Method 1: Using allternit-vm-image-builder (Recommended)
 
 ```bash
 # Clone repository
-git clone https://github.com/Gizziio/a2rchitech.git
-cd a2rchitech
+git clone https://github.com/Gizziio/allternit.git
+cd allternit
 
 # Build the image builder
-cargo build --release -p a2r-vm-image-builder
+cargo build --release -p allternit-vm-image-builder
 
 # Build images
-./target/release/a2r-vm-image-builder build \
+./target/release/allternit-vm-image-builder build \
     --ubuntu-version 22.04 \
     --packages "nodejs,npm,python3,python3-pip"
 ```
@@ -86,16 +86,16 @@ cargo build --release -p a2r-vm-image-builder
 
 ```bash
 # Create 2GB empty image
-dd if=/dev/zero of=ubuntu-22.04-a2r-v1.1.0.ext4 bs=1M count=2048
+dd if=/dev/zero of=ubuntu-22.04-allternit-v1.1.0.ext4 bs=1M count=2048
 
 # Create ext4 filesystem
-mkfs.ext4 ubuntu-22.04-a2r-v1.1.0.ext4
+mkfs.ext4 ubuntu-22.04-allternit-v1.1.0.ext4
 
 # Create mount point
 sudo mkdir -p /mnt/rootfs
 
 # Mount
-sudo mount -o loop ubuntu-22.04-a2r-v1.1.0.ext4 /mnt/rootfs
+sudo mount -o loop ubuntu-22.04-allternit-v1.1.0.ext4 /mnt/rootfs
 ```
 
 #### Step 2: Install Base System
@@ -159,23 +159,23 @@ rm -rf /var/lib/apt/lists/*
 exit
 ```
 
-#### Step 4: Install a2r-vm-executor
+#### Step 4: Install allternit-vm-executor
 
 ```bash
 # Build executor (on build machine)
-cd /path/to/a2rchitech
-cargo build --release -p a2r-vm-executor --target x86_64-unknown-linux-musl
+cd /path/to/allternit
+cargo build --release -p allternit-vm-executor --target x86_64-unknown-linux-musl
 
 # Copy to image
-sudo cp target/x86_64-unknown-linux-musl/release/a2r-vm-executor \
+sudo cp target/x86_64-unknown-linux-musl/release/allternit-vm-executor \
     /mnt/rootfs/usr/bin/
-sudo chmod +x /mnt/rootfs/usr/bin/a2r-vm-executor
+sudo chmod +x /mnt/rootfs/usr/bin/allternit-vm-executor
 
 # Create config directory
-sudo mkdir -p /mnt/rootfs/etc/a2r
+sudo mkdir -p /mnt/rootfs/etc/allternit
 
 # Create config file
-sudo tee /mnt/rootfs/etc/a2r/vm-executor.toml << 'EOF'
+sudo tee /mnt/rootfs/etc/allternit/vm-executor.toml << 'EOF'
 vsock_port = 8080
 log_level = "info"
 max_sessions = 50
@@ -188,14 +188,14 @@ max_memory_mb = 2048
 EOF
 
 # Create systemd service
-sudo tee /mnt/rootfs/etc/systemd/system/a2r-vm-executor.service << 'EOF'
+sudo tee /mnt/rootfs/etc/systemd/system/allternit-vm-executor.service << 'EOF'
 [Unit]
-Description=A2R VM Executor
+Description=Allternit VM Executor
 After=network.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/a2r-vm-executor
+ExecStart=/usr/bin/allternit-vm-executor
 Restart=always
 RestartSec=5
 
@@ -204,8 +204,8 @@ WantedBy=multi-user.target
 EOF
 
 # Enable service
-sudo ln -sf /etc/systemd/system/a2r-vm-executor.service \
-    /mnt/rootfs/etc/systemd/system/multi-user.target.wants/a2r-vm-executor.service
+sudo ln -sf /etc/systemd/system/allternit-vm-executor.service \
+    /mnt/rootfs/etc/systemd/system/multi-user.target.wants/allternit-vm-executor.service
 ```
 
 #### Step 5: Finalize
@@ -218,13 +218,13 @@ sudo umount /mnt/rootfs/sys
 sudo umount /mnt/rootfs
 
 # Compress image
-zstd -19 -T0 ubuntu-22.04-a2r-v1.1.0.ext4 \
-    -o ubuntu-22.04-a2r-v1.1.0.ext4.zst
+zstd -19 -T0 ubuntu-22.04-allternit-v1.1.0.ext4 \
+    -o ubuntu-22.04-allternit-v1.1.0.ext4.zst
 
 # Generate checksums
-sha256sum ubuntu-22.04-a2r-v1.1.0.ext4 > checksums.txt
-sha256sum vmlinux-6.5.0-a2r >> checksums.txt
-sha256sum initrd.img-6.5.0-a2r >> checksums.txt
+sha256sum ubuntu-22.04-allternit-v1.1.0.ext4 > checksums.txt
+sha256sum vmlinux-6.5.0-allternit >> checksums.txt
+sha256sum initrd.img-6.5.0-allternit >> checksums.txt
 ```
 
 ## CI/CD Build
@@ -255,8 +255,8 @@ jobs:
       
       - name: Build images
         run: |
-          cargo build --release -p a2r-vm-executor --target x86_64-unknown-linux-musl
-          cargo run --release -p a2r-vm-image-builder -- build
+          cargo build --release -p allternit-vm-executor --target x86_64-unknown-linux-musl
+          cargo run --release -p allternit-vm-image-builder -- build
       
       - name: Upload to release
         uses: softprops/action-gh-release@v1
@@ -284,12 +284,12 @@ CMD ["/build/build-images.sh"]
 
 ```bash
 # Build
-docker build -t a2r-vm-builder .
+docker build -t allternit-vm-builder .
 
 # Run
 docker run --rm --privileged \
     -v $(pwd)/output:/output \
-    a2r-vm-builder
+    allternit-vm-builder
 ```
 
 ## Image Specifications
@@ -300,14 +300,14 @@ docker run --rm --privileged \
 /
 ├── bin/                    # Essential binaries
 ├── etc/
-│   └── a2r/
-│       └── vm-executor.toml    # A2R configuration
+│   └── allternit/
+│       └── vm-executor.toml    # Allternit configuration
 ├── home/
-│   └── a2r/               # User home
+│   └── allternit/               # User home
 ├── opt/                   # Optional packages
 ├── usr/
 │   ├── bin/
-│   │   └── a2r-vm-executor   # Guest agent
+│   │   └── allternit-vm-executor   # Guest agent
 │   └── local/             # Local installations
 ├── var/
 │   └── log/               # Log files
@@ -380,23 +380,23 @@ sudo rm -rf /var/cache/apt/archives/*
 **Check kernel/initrd compatibility:**
 ```bash
 # Verify kernel version
-file vmlinux-6.5.0-a2r
+file vmlinux-6.5.0-allternit
 
 # Check initrd format
-file initrd.img-6.5.0-a2r
-lsinitramfs initrd.img-6.5.0-a2r | head
+file initrd.img-6.5.0-allternit
+lsinitramfs initrd.img-6.5.0-allternit | head
 ```
 
 **Mount and inspect:**
 ```bash
 # Mount rootfs
-sudo mount -o loop ubuntu-22.04-a2r-v1.1.0.ext4 /mnt/inspect
+sudo mount -o loop ubuntu-22.04-allternit-v1.1.0.ext4 /mnt/inspect
 
 # Check systemd
 ls /mnt/inspect/lib/systemd/systemd
 
 # Verify executor
-file /mnt/inspect/usr/bin/a2r-vm-executor
+file /mnt/inspect/usr/bin/allternit-vm-executor
 
 # Unmount
 sudo umount /mnt/inspect
@@ -407,7 +407,7 @@ sudo umount /mnt/inspect
 **Check executor is running:**
 ```bash
 # In VM (via serial console)
-systemctl status a2r-vm-executor
+systemctl status allternit-vm-executor
 ss -ln | grep 8080
 ```
 
@@ -442,10 +442,10 @@ rm /mnt/rootfs/zero
 
 ```bash
 # Use multiple threads
-zstd -T0 -19 ubuntu-22.04-a2r-v1.1.0.ext4
+zstd -T0 -19 ubuntu-22.04-allternit-v1.1.0.ext4
 
 # Trade compression for speed
-zstd -T0 -3 ubuntu-22.04-a2r-v1.1.0.ext4
+zstd -T0 -3 ubuntu-22.04-allternit-v1.1.0.ext4
 ```
 
 ## Verification
@@ -487,9 +487,9 @@ EOF
 ```bash
 # Create release
 gh release create v1.1.0 \
-    vmlinux-6.5.0-a2r \
-    initrd.img-6.5.0-a2r \
-    ubuntu-22.04-a2r-v1.1.0.ext4.zst \
+    vmlinux-6.5.0-allternit \
+    initrd.img-6.5.0-allternit \
+    ubuntu-22.04-allternit-v1.1.0.ext4.zst \
     version-1.1.0-amd64.json \
     --title "VM Images v1.1.0" \
     --notes "Updated Ubuntu 22.04 base with Node.js 20.x"
@@ -499,16 +499,16 @@ gh release create v1.1.0 \
 
 ```bash
 # Upload to S3
-aws s3 cp vm-images/ s3://a2r-vm-images/v1.1.0/ --recursive
+aws s3 cp vm-images/ s3://allternit-vm-images/v1.1.0/ --recursive
 
 # Generate signed URLs
-aws s3 presign s3://a2r-vm-images/v1.1.0/ubuntu-22.04-a2r-v1.1.0.ext4.zst
+aws s3 presign s3://allternit-vm-images/v1.1.0/ubuntu-22.04-allternit-v1.1.0.ext4.zst
 ```
 
 ---
 
 ## See Also
 
-- [A2R VM README](./A2R-VM-README.md) - Overview
-- [A2R VM API](./A2R-VM-API.md) - API Reference
+- [Allternit VM README](./Allternit-VM-README.md) - Overview
+- [Allternit VM API](./Allternit-VM-API.md) - API Reference
 - [CONTRIBUTING.md](../../CONTRIBUTING.md) - Contribution guidelines

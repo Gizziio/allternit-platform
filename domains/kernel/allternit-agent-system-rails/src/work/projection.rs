@@ -2,10 +2,10 @@ use std::collections::HashMap;
 
 use serde_json::Value;
 
-use crate::core::types::A2REvent;
+use crate::core::types::AllternitEvent;
 use crate::work::types::{DagEdge, DagNode, DagRelation, DagState};
 
-pub fn project_dag(events: &[A2REvent], dag_id: &str) -> DagState {
+pub fn project_dag(events: &[AllternitEvent], dag_id: &str) -> DagState {
     let mut dag = DagState {
         dag_id: dag_id.to_string(),
         nodes: HashMap::new(),
@@ -93,7 +93,7 @@ pub fn project_dag(events: &[A2REvent], dag_id: &str) -> DagState {
     dag
 }
 
-fn parse_node_created(evt: &A2REvent, dag_id: &str) -> Option<DagNode> {
+fn parse_node_created(evt: &AllternitEvent, dag_id: &str) -> Option<DagNode> {
     let payload = &evt.payload;
     let payload_dag = get_str(payload, "dag_id")?;
     if payload_dag != dag_id {

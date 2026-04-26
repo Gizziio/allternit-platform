@@ -1,4 +1,4 @@
-//! # A2R IO Daemon
+//! # Allternit IO Daemon
 //!
 //! IO bridge daemon for stdio communication.
 //!
@@ -25,7 +25,7 @@
 //! ## Example
 //!
 //! ```rust,no_run
-//! use a2rchitech_io_daemon::{DaemonStatus, DaemonHealth};
+//! use allternit_io_daemon::{DaemonStatus, DaemonHealth};
 //!
 //! // Check daemon health
 //! // GET /health returns DaemonHealth

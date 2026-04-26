@@ -25,7 +25,7 @@ impl Default for VisualConfig {
             provider_type: ProviderType::Grpc,
             min_confidence: 0.8,
             timeout_seconds: 30,
-            evidence_dir: PathBuf::from(".a2r/visual_evidence"),
+            evidence_dir: PathBuf::from(".allternit/visual_evidence"),
         }
     }
 }
@@ -77,7 +77,7 @@ pub struct FileBasedConfig {
 impl Default for FileBasedConfig {
     fn default() -> Self {
         Self {
-            evidences_dir: PathBuf::from(".a2r/evidence"),
+            evidences_dir: PathBuf::from(".allternit/evidence"),
             poll_interval_ms: 500,
             timeout_secs: 30,
         }

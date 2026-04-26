@@ -30,7 +30,7 @@ export function Header({ onToggleDrawer }: HeaderProps) {
           >
             <Hexagon weight="fill" size={22} className="text-white" />
           </div>
-          <span className="text-lg font-semibold text-white tracking-tight">A2R</span>
+          <span className="text-lg font-semibold text-white tracking-tight">Allternit</span>
         </div>
 
         <div className="absolute left-1/2 -translate-x-1/2">

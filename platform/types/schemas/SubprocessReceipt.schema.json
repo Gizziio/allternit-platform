@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2rchitech.local/spec/contracts/SubprocessReceipt.schema.json",
-  "title": "A2rchitech Subprocess Receipt",
+  "$id": "https://allternit.local/spec/contracts/SubprocessReceipt.schema.json",
+  "title": "Allternit Subprocess Receipt",
   "type": "object",
   "additionalProperties": false,
   "required": [

@@ -1,4 +1,4 @@
-//! A2rchitech Federation Package
+//! Allternit Federation Package
 //! 
 //! This package provides node identity and trust graph functionality for federation capabilities.
 //! It implements the foundation for secure multi-node coordination with device keypairs and

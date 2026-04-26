@@ -2,7 +2,7 @@
 name = "allternit-tools-gateway"
 version = "0.1.0"
 edition = "2021"
-description = "A2R IO Service - The ONLY permitted side-effect path with sandboxed execution and policy enforcement"
+description = "Allternit IO Service - The ONLY permitted side-effect path with sandboxed execution and policy enforcement"
 
 [[bin]]
 name = "allternit-io-service"
@@ -33,7 +33,7 @@ utoipa = "4.2"
 allternit-history = { workspace = true }
 allternit-messaging = { workspace = true }
 allternit-policy = { workspace = true }
-allternit-mcp-client = { path = "../../../domains/mcp/mcp-client" }
+mcp-client = { workspace = true }
 async-trait = "0.1"
 futures = "0.3"
 tempfile = "3.0"

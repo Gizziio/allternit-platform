@@ -1,8 +1,8 @@
 #!/bin/bash
 # =============================================================================
-# A2R Platform Services Startup Script
+# Allternit Platform Services Startup Script
 # =============================================================================
-# This script starts all required services for A2R platform development.
+# This script starts all required services for Allternit platform development.
 # Run this after setup-dev.sh or when restarting the environment.
 # =============================================================================
 
@@ -28,7 +28,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_DIR="$(dirname "$SCRIPT_DIR")"
 
 # PID file for tracking background processes
-PID_FILE="/tmp/a2r-services.pid"
+PID_FILE="/tmp/allternit-services.pid"
 
 # =============================================================================
 # Cleanup function
@@ -84,7 +84,7 @@ wait_for_redis() {
     log_info "Waiting for Redis..."
     local retries=30
     while [ $retries -gt 0 ]; do
-        if redis-cli -h redis -a "${REDIS_PASSWORD:-a2r-redis-password}" ping > /dev/null 2>&1; then
+        if redis-cli -h redis -a "${REDIS_PASSWORD:-allternit-redis-password}" ping > /dev/null 2>&1; then
             log_success "Redis is ready"
             return 0
         fi
@@ -157,9 +157,9 @@ log_success "All infrastructure services are ready!"
 # =============================================================================
 log_step "Running database migrations..."
 
-if command -v goose &> /dev/null && [ -d "$WORKSPACE_DIR/1-kernel/a2r-infrastructure/migrations" ]; then
+if command -v goose &> /dev/null && [ -d "$WORKSPACE_DIR/1-kernel/allternit-infrastructure/migrations" ]; then
     log_info "Running Goose migrations..."
-    cd "$WORKSPACE_DIR/1-kernel/a2r-infrastructure/migrations"
+    cd "$WORKSPACE_DIR/1-kernel/allternit-infrastructure/migrations"
     goose up || log_warning "Goose migrations may have already been applied"
     cd "$WORKSPACE_DIR"
 fi
@@ -199,18 +199,18 @@ fi
 log_info "Ensuring MinIO buckets exist..."
 if command -v mc &> /dev/null; then
     mc alias set local http://minio:9000 minioadmin "${MINIO_ROOT_PASSWORD:-minio-admin-password}" > /dev/null 2>&1 || true
-    mc mb local/a2r-assets 2>/dev/null || true
-    mc mb local/a2r-uploads 2>/dev/null || true
-    mc mb local/a2r-exports 2>/dev/null || true
-    mc policy set public local/a2r-assets 2>/dev/null || true
-    mc policy set download local/a2r-uploads 2>/dev/null || true
+    mc mb local/allternit-assets 2>/dev/null || true
+    mc mb local/allternit-uploads 2>/dev/null || true
+    mc mb local/allternit-exports 2>/dev/null || true
+    mc policy set public local/allternit-assets 2>/dev/null || true
+    mc policy set download local/allternit-uploads 2>/dev/null || true
     log_success "MinIO buckets configured"
 fi
 
 # =============================================================================
-# Start A2R services
+# Start Allternit services
 # =============================================================================
-log_step "Starting A2R services..."
+log_step "Starting Allternit services..."
 
 # Clear PID file
 > "$PID_FILE"
@@ -218,7 +218,7 @@ log_step "Starting A2R services..."
 # Start Kernel services (Go)
 start_kernel_services() {
     if [ -d "$WORKSPACE_DIR/1-kernel/allternit-kernel" ]; then
-        log_info "Starting A2R Kernel services..."
+        log_info "Starting Allternit Kernel services..."
         cd "$WORKSPACE_DIR/1-kernel/allternit-kernel"
         
         # Check if air is available for hot reload
@@ -238,9 +238,9 @@ start_kernel_services() {
 
 # Start API Gateway (Go)
 start_api_gateway() {
-    if [ -d "$WORKSPACE_DIR/1-kernel/a2r-cloud" ]; then
-        log_info "Starting A2R API Gateway..."
-        cd "$WORKSPACE_DIR/1-kernel/a2r-cloud"
+    if [ -d "$WORKSPACE_DIR/1-kernel/allternit-cloud" ]; then
+        log_info "Starting Allternit API Gateway..."
+        cd "$WORKSPACE_DIR/1-kernel/allternit-cloud"
         
         if command -v air &> /dev/null && [ -f ".air.toml" ]; then
             air &
@@ -256,9 +256,9 @@ start_api_gateway() {
 
 # Start Infrastructure services (Rust)
 start_infrastructure_services() {
-    if [ -d "$WORKSPACE_DIR/1-kernel/a2r-infrastructure" ]; then
-        log_info "Starting A2R Infrastructure services..."
-        cd "$WORKSPACE_DIR/1-kernel/a2r-infrastructure"
+    if [ -d "$WORKSPACE_DIR/1-kernel/allternit-infrastructure" ]; then
+        log_info "Starting Allternit Infrastructure services..."
+        cd "$WORKSPACE_DIR/1-kernel/allternit-infrastructure"
         
         if command -v cargo-watch &> /dev/null; then
             cargo watch -x run &
@@ -275,7 +275,7 @@ start_infrastructure_services() {
 # Start UI development server
 start_ui() {
     if [ -d "$WORKSPACE_DIR/6-ui/allternit-platform" ]; then
-        log_info "Starting A2R Platform UI (Next.js)..."
+        log_info "Starting Allternit Platform UI (Next.js)..."
         cd "$WORKSPACE_DIR/6-ui/allternit-platform"
         
         # Check for package.json
@@ -304,7 +304,7 @@ log_step "Service Status"
 
 echo ""
 echo -e "${GREEN}╔════════════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║              A2R Platform Services Started!                       ║${NC}"
+echo -e "${GREEN}║              Allternit Platform Services Started!                       ║${NC}"
 echo -e "${GREEN}╚════════════════════════════════════════════════════════════════════╝${NC}"
 echo ""
 

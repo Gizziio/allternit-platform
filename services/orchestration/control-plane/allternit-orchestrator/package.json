@@ -1,7 +1,7 @@
 {
-  "name": "@a2r/orchestrator",
+  "name": "@allternit/orchestrator",
   "version": "1.0.0",
-  "description": "A2Rchitech Agent Orchestration Layer",
+  "description": "Allternit Agent Orchestration Layer",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -16,7 +16,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@a2r/engine": "workspace:*",
-    "@a2r/governor": "workspace:*"
+    "@allternit/engine": "workspace:*",
+    "@allternit/governor": "workspace:*"
   }
 }

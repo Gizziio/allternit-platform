@@ -1,6 +1,6 @@
 # @allternit/workflow-engine
 
-A2R Workflow Engine - Visual workflow orchestration with DAG support.
+Allternit Workflow Engine - Visual workflow orchestration with DAG support.
 
 ## Overview
 

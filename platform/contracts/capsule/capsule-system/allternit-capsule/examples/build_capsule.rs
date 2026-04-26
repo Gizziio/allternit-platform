@@ -1,6 +1,6 @@
-use a2r_capsule::bundle::{CapsuleBundler, ManifestBuilder};
-use a2r_capsule::manifest::{Capabilities, IdempotencyBehavior, SafetyTier, ToolABISpec};
-use a2r_capsule::signing::SigningKey;
+use allternit_capsule::bundle::{CapsuleBundler, ManifestBuilder};
+use allternit_capsule::manifest::{Capabilities, IdempotencyBehavior, SafetyTier, ToolABISpec};
+use allternit_capsule::signing::SigningKey;
 use semver::Version;
 use std::collections::HashMap;
 use std::path::PathBuf;

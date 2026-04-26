@@ -1,5 +1,5 @@
 /**
- * @fileoverview A2R File Sync System - File System Watcher
+ * @fileoverview Allternit File Sync System - File System Watcher
  *
  * High-performance file system watcher with debouncing, batching, and
  * cross-platform support. Uses chokidar when available, falls back to

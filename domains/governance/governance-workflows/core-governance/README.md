@@ -1,6 +1,6 @@
 # Core Governance Engine
 
-The core governance engine provides the central decision-making capabilities for the A2R platform. This component is part of the Governance Workflows system within the 2-governance layer.
+The core governance engine provides the central decision-making capabilities for the Allternit platform. This component is part of the Governance Workflows system within the 2-governance layer.
 
 **Status:** Implemented baseline
 

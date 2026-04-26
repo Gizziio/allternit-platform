@@ -25,7 +25,7 @@
 //! └─────────────────┘
 //! ```
 
-use a2r_driver_interface::{DriverError, ExecutionId};
+use allternit_driver_interface::{DriverError, ExecutionId};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -312,7 +312,7 @@ impl GuestAgentMonitor {
     ///
     /// ```rust
     /// use std::path::PathBuf;
-    /// use a2r_driver_interface::ExecutionId;
+    /// use allternit_driver_interface::ExecutionId;
     ///
     /// let vm_id = ExecutionId::new();
     /// let vsock_path = PathBuf::from("/tmp/vsock-test.sock");
@@ -558,7 +558,7 @@ impl GuestAgentMonitor {
         let interval = self.health_check_interval;
         let max_failures = self.max_failures;
         let state = self.state.clone();
-        let vsock_path = self.vsock_path.clone();
+        let _vsock_path = self.vsock_path.clone();
 
         info!(
             vm_id = %vm_id,

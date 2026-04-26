@@ -1,7 +1,7 @@
-//! A2rchitech Terminal/SSH Session Management
+//! Allternit Terminal/SSH Session Management
 //!
 //! This crate provides secure terminal and SSH session management capabilities
-//! for the A2rchitech platform, following Unix philosophy with clear separation
+//! for the Allternit platform, following Unix philosophy with clear separation
 //! of concerns for better observability and maintainability.
 
 use async_trait::async_trait;

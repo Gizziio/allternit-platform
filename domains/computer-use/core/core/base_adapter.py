@@ -1,10 +1,10 @@
 """
-A2R Computer Use — Base Adapter Interface
+Allternit Computer Use — Base Adapter Interface
 All adapters must implement this interface to participate in routing.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
 from datetime import datetime
 import uuid
@@ -113,6 +113,22 @@ class Receipt:
         return self.integrity_hash
 
 
+@dataclass
+class AdapterCapabilities:
+    """Runtime capability advertisement — adapters declare what they can do."""
+    dom_tree: bool = False          # Can produce DOM/accessibility tree
+    vision_required: bool = False   # Requires a VLM to interpret screen
+    code_execution: bool = False    # Can run arbitrary code
+    file_access: bool = False       # Can read/write files
+    network_isolation: bool = False # Running inside a sandbox
+    multi_tab: bool = False         # Supports multiple browser tabs
+    auth_flows: bool = False        # Handles 2FA/TOTP/auth flows
+    mobile: bool = False            # Controls mobile device (ADB)
+    platform: str = "any"           # "macos" | "linux" | "windows" | "any"
+    adapter_id: str = ""
+    family: str = ""                # browser | desktop | retrieval | hybrid
+
+
 class BaseAdapter(ABC):
     """Base class for all computer-use adapters."""
 
@@ -156,6 +172,17 @@ class BaseAdapter(ABC):
             status="running",
             started_at=datetime.utcnow().isoformat(),
         )
+
+    async def capabilities(self) -> AdapterCapabilities:
+        """Advertise runtime capabilities to the router. Override to customise."""
+        return AdapterCapabilities(
+            adapter_id=self.adapter_id,
+            family=self.family,
+        )
+
+    async def health_check(self) -> bool:
+        """Return True if adapter is functional. Default: True."""
+        return True
 
     def _emit_receipt(self, envelope: ResultEnvelope, action: ActionRequest, result_data: Dict = None) -> Receipt:
         """Emit a receipt for an action"""

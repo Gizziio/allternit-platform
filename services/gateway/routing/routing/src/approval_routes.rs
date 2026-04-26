@@ -2,7 +2,7 @@
 //!
 //! API endpoints for managing policy tier approvals.
 
-use a2r_policy_tier_gating::{
+use allternit_policy_tier_gating::{
     Approval, ApprovalRequirement, GateCheckRequest, GateCheckResult, PolicyTier,
     PolicyTierRegistry, TargetType, TierAssignment,
 };
@@ -231,7 +231,7 @@ async fn create_assignment(
         .ok_or_else(|| (StatusCode::BAD_REQUEST, "Invalid target type".to_string()))?;
 
     let risk_level = request.risk_level.as_deref().unwrap_or("moderate");
-    let risk_assessment = a2r_policy_tier_gating::RiskAssessment {
+    let risk_assessment = allternit_policy_tier_gating::RiskAssessment {
         level: parse_risk_level(risk_level),
         factors: vec![format!("Auto-assigned: {}", request.justification)],
         mitigations: vec![],
@@ -334,7 +334,7 @@ async fn gate_check(
         target_type,
         target_id: query.target_id.clone(),
         operation: "execute".to_string(),
-        context: a2r_policy_tier_gating::OperationContext {
+        context: allternit_policy_tier_gating::OperationContext {
             actor_id: query
                 .actor_id
                 .clone()
@@ -449,14 +449,14 @@ fn parse_target_type(type_str: &str) -> Option<TargetType> {
     }
 }
 
-fn parse_risk_level(level_str: &str) -> a2r_policy_tier_gating::RiskLevel {
+fn parse_risk_level(level_str: &str) -> allternit_policy_tier_gating::RiskLevel {
     match level_str.to_lowercase().as_str() {
-        "minimal" => a2r_policy_tier_gating::RiskLevel::Minimal,
-        "low" => a2r_policy_tier_gating::RiskLevel::Low,
-        "moderate" => a2r_policy_tier_gating::RiskLevel::Moderate,
-        "high" => a2r_policy_tier_gating::RiskLevel::High,
-        "critical" => a2r_policy_tier_gating::RiskLevel::Critical,
-        _ => a2r_policy_tier_gating::RiskLevel::Moderate,
+        "minimal" => allternit_policy_tier_gating::RiskLevel::Minimal,
+        "low" => allternit_policy_tier_gating::RiskLevel::Low,
+        "moderate" => allternit_policy_tier_gating::RiskLevel::Moderate,
+        "high" => allternit_policy_tier_gating::RiskLevel::High,
+        "critical" => allternit_policy_tier_gating::RiskLevel::Critical,
+        _ => allternit_policy_tier_gating::RiskLevel::Moderate,
     }
 }
 

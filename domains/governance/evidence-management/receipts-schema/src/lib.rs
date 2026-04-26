@@ -1,4 +1,4 @@
-//! A2R Receipts Schema
+//! Allternit Receipts Schema
 //!
 //! Provides cryptographic receipts for tool and workflow execution.
 //! Receipts serve as tamper-evident proofs of execution that can be verified

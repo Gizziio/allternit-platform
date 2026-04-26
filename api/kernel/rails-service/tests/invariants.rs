@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use allternit_agent_system_rails::core::types::{A2REvent, Actor, ActorType, ReceiptRecord};
+use allternit_agent_system_rails::core::types::{AllternitEvent, Actor, ActorType, ReceiptRecord};
 use allternit_agent_system_rails::gate::gate::DagMutation as Mutation;
 use allternit_agent_system_rails::leases::leases::LeasesOptions;
 use allternit_agent_system_rails::ledger::ledger::LedgerOptions;
@@ -15,7 +15,7 @@ fn test_root() -> TempDir {
     let base = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/tmp");
     std::fs::create_dir_all(&base).unwrap();
     tempfile::Builder::new()
-        .prefix("a2r-rails-")
+        .prefix("allternit-rails-")
         .tempdir_in(base)
         .unwrap()
 }
@@ -27,13 +27,13 @@ async fn fresh_wih_writes_context_pack() {
 
     let ledger = Arc::new(Ledger::new(LedgerOptions {
         root_dir: Some(root.clone()),
-        ledger_dir: Some(PathBuf::from(".a2r/ledger")),
+        ledger_dir: Some(PathBuf::from(".allternit/ledger")),
     }));
 
     let leases = Arc::new(
         Leases::new(LeasesOptions {
             root_dir: Some(root.clone()),
-            leases_dir: Some(PathBuf::from(".a2r/leases")),
+            leases_dir: Some(PathBuf::from(".allternit/leases")),
             event_sink: Some(ledger.clone()),
             actor_id: Some("gate".to_string()),
         })
@@ -44,8 +44,8 @@ async fn fresh_wih_writes_context_pack() {
     let receipts = Arc::new(
         ReceiptStore::new(ReceiptStoreOptions {
             root_dir: Some(root.clone()),
-            receipts_dir: Some(PathBuf::from(".a2r/receipts")),
-            blobs_dir: Some(PathBuf::from(".a2r/blobs")),
+            receipts_dir: Some(PathBuf::from(".allternit/receipts")),
+            blobs_dir: Some(PathBuf::from(".allternit/blobs")),
         })
         .unwrap(),
     );
@@ -78,7 +78,7 @@ async fn fresh_wih_writes_context_pack() {
         .unwrap();
 
     let context_path = root
-        .join(".a2r/work/dags")
+        .join(".allternit/work/dags")
         .join(&dag_id)
         .join("wih/context")
         .join(format!("{wih_id}.context.json"));
@@ -92,13 +92,13 @@ async fn plan_new_emits_required_events() {
 
     let ledger = Arc::new(Ledger::new(LedgerOptions {
         root_dir: Some(root.clone()),
-        ledger_dir: Some(PathBuf::from(".a2r/ledger")),
+        ledger_dir: Some(PathBuf::from(".allternit/ledger")),
     }));
 
     let leases = Arc::new(
         Leases::new(LeasesOptions {
             root_dir: Some(root.clone()),
-            leases_dir: Some(PathBuf::from(".a2r/leases")),
+            leases_dir: Some(PathBuf::from(".allternit/leases")),
             event_sink: Some(ledger.clone()),
             actor_id: Some("gate".to_string()),
         })
@@ -109,8 +109,8 @@ async fn plan_new_emits_required_events() {
     let receipts = Arc::new(
         ReceiptStore::new(ReceiptStoreOptions {
             root_dir: Some(root.clone()),
-            receipts_dir: Some(PathBuf::from(".a2r/receipts")),
-            blobs_dir: Some(PathBuf::from(".a2r/blobs")),
+            receipts_dir: Some(PathBuf::from(".allternit/receipts")),
+            blobs_dir: Some(PathBuf::from(".allternit/blobs")),
         })
         .unwrap(),
     );
@@ -118,7 +118,7 @@ async fn plan_new_emits_required_events() {
     let index = Arc::new(
         Index::new(IndexOptions {
             root_dir: Some(root.clone()),
-            index_dir: Some(PathBuf::from(".a2r/index")),
+            index_dir: Some(PathBuf::from(".allternit/index")),
         })
         .await
         .unwrap(),
@@ -157,13 +157,13 @@ async fn pre_tool_denies_without_open_signature() {
 
     let ledger = Arc::new(Ledger::new(LedgerOptions {
         root_dir: Some(root.clone()),
-        ledger_dir: Some(PathBuf::from(".a2r/ledger")),
+        ledger_dir: Some(PathBuf::from(".allternit/ledger")),
     }));
 
     let leases = Arc::new(
         Leases::new(LeasesOptions {
             root_dir: Some(root.clone()),
-            leases_dir: Some(PathBuf::from(".a2r/leases")),
+            leases_dir: Some(PathBuf::from(".allternit/leases")),
             event_sink: Some(ledger.clone()),
             actor_id: Some("gate".to_string()),
         })
@@ -174,8 +174,8 @@ async fn pre_tool_denies_without_open_signature() {
     let receipts = Arc::new(
         ReceiptStore::new(ReceiptStoreOptions {
             root_dir: Some(root.clone()),
-            receipts_dir: Some(PathBuf::from(".a2r/receipts")),
-            blobs_dir: Some(PathBuf::from(".a2r/blobs")),
+            receipts_dir: Some(PathBuf::from(".allternit/receipts")),
+            blobs_dir: Some(PathBuf::from(".allternit/blobs")),
         })
         .unwrap(),
     );
@@ -206,13 +206,13 @@ async fn blocked_by_cycle_is_rejected() {
 
     let ledger = Arc::new(Ledger::new(LedgerOptions {
         root_dir: Some(root.clone()),
-        ledger_dir: Some(PathBuf::from(".a2r/ledger")),
+        ledger_dir: Some(PathBuf::from(".allternit/ledger")),
     }));
 
     let leases = Arc::new(
         Leases::new(LeasesOptions {
             root_dir: Some(root.clone()),
-            leases_dir: Some(PathBuf::from(".a2r/leases")),
+            leases_dir: Some(PathBuf::from(".allternit/leases")),
             event_sink: Some(ledger.clone()),
             actor_id: Some("gate".to_string()),
         })
@@ -223,8 +223,8 @@ async fn blocked_by_cycle_is_rejected() {
     let receipts = Arc::new(
         ReceiptStore::new(ReceiptStoreOptions {
             root_dir: Some(root.clone()),
-            receipts_dir: Some(PathBuf::from(".a2r/receipts")),
-            blobs_dir: Some(PathBuf::from(".a2r/blobs")),
+            receipts_dir: Some(PathBuf::from(".allternit/receipts")),
+            blobs_dir: Some(PathBuf::from(".allternit/blobs")),
         })
         .unwrap(),
     );
@@ -310,10 +310,10 @@ async fn authoritative_stores_are_created() {
 
     let ledger = Ledger::new(LedgerOptions {
         root_dir: Some(root.clone()),
-        ledger_dir: Some(PathBuf::from(".a2r/ledger")),
+        ledger_dir: Some(PathBuf::from(".allternit/ledger")),
     });
 
-    let event = A2REvent {
+    let event = AllternitEvent {
         event_id: String::new(),
         ts: String::new(),
         actor: Actor {
@@ -329,25 +329,25 @@ async fn authoritative_stores_are_created() {
 
     let date = chrono::Utc::now().format("%Y-%m-%d").to_string();
     let ledger_file = root
-        .join(".a2r/ledger/events")
+        .join(".allternit/ledger/events")
         .join(format!("{date}.jsonl"));
     assert!(ledger_file.exists());
 
     let _leases = Leases::new(LeasesOptions {
         root_dir: Some(root.clone()),
-        leases_dir: Some(PathBuf::from(".a2r/leases")),
+        leases_dir: Some(PathBuf::from(".allternit/leases")),
         event_sink: None,
         actor_id: Some("gate".to_string()),
     })
     .await
     .unwrap();
-    let lease_db = root.join(".a2r/leases/leases.db");
+    let lease_db = root.join(".allternit/leases/leases.db");
     assert!(lease_db.exists());
 
     let receipts = ReceiptStore::new(ReceiptStoreOptions {
         root_dir: Some(root.clone()),
-        receipts_dir: Some(PathBuf::from(".a2r/receipts")),
-        blobs_dir: Some(PathBuf::from(".a2r/blobs")),
+        receipts_dir: Some(PathBuf::from(".allternit/receipts")),
+        blobs_dir: Some(PathBuf::from(".allternit/blobs")),
     })
     .unwrap();
 

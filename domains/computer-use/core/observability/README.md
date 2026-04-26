@@ -1,4 +1,4 @@
-# A2R Computer Use Observability
+# Allternit Computer Use Observability
 
 Adapter-agnostic session recording, replay, and analysis for browser/desktop automation.
 
@@ -168,8 +168,8 @@ The gateway automatically records actions when observability is enabled:
 
 ```bash
 # Enable observability
-export A2R_ENABLE_OBSERVABILITY=true
-export A2R_RECORDINGS_PATH=/var/lib/a2r/recordings
+export Allternit_ENABLE_OBSERVABILITY=true
+export Allternit_RECORDINGS_PATH=/var/lib/allternit/recordings
 
 # Start gateway
 python -m uvicorn main:app --host 127.0.0.1 --port 8080
@@ -225,14 +225,14 @@ print(f"Analysis: {result['analysis']['summary']}")
 
 | Environment Variable | Default | Description |
 |---------------------|---------|-------------|
-| `A2R_ENABLE_OBSERVABILITY` | `true` | Enable/disable recording |
-| `A2R_RECORDINGS_PATH` | `/tmp/a2r-recordings` | Storage directory |
-| `A2R_COMPUTER_USE_URL` | `http://localhost:8080` | Gateway URL |
+| `Allternit_ENABLE_OBSERVABILITY` | `true` | Enable/disable recording |
+| `Allternit_RECORDINGS_PATH` | `/tmp/allternit-recordings` | Storage directory |
+| `Allternit_COMPUTER_USE_URL` | `http://localhost:8080` | Gateway URL |
 
 ## Storage Structure
 
 ```
-A2R_RECORDINGS_PATH/
+Allternit_RECORDINGS_PATH/
 ├── 2026-03-14/
 │   ├── run_abc123/
 │   │   ├── timeline.json

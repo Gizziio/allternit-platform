@@ -1,5 +1,5 @@
 /**
- * A2R Infrastructure - Runtime Environment Provisioning Engine
+ * Allternit Infrastructure - Runtime Environment Provisioning Engine
  * 
  * Railway-style one-click environment setup for devcontainers, Nix flakes, and sandbox VMs.
  */

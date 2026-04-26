@@ -1,8 +1,8 @@
 [package]
-name = "a2r-purpose-binding-core"
+name = "allternit-purpose-binding-core"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Purpose Binding - Explicit purpose enforcement for all tool calls"
+description = "Allternit Purpose Binding - Explicit purpose enforcement for all tool calls"
 
 [dependencies]
 serde = { workspace = true }
@@ -14,8 +14,8 @@ anyhow = { workspace = true }
 tracing = { workspace = true }
 chrono = { workspace = true }
 sha2 = "0.10"
-a2rchitech-system-law = { workspace = true }
-a2rchitech-harness-engineering = { workspace = true }
+allternit-system-law = { workspace = true }
+allternit-harness-engineering = { workspace = true }
 
 [dev-dependencies]
 tokio-test = "0.4"

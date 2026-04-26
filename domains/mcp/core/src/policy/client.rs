@@ -1,7 +1,7 @@
 //! MCP client wrapper that applies policy enforcement
 //!
 //! This module provides a policy-enforcing wrapper around the MCP client,
-//! ensuring that all tool calls are evaluated by the A2R policy engine
+//! ensuring that all tool calls are evaluated by the Allternit policy engine
 //! before execution.
 //!
 //! # Example
@@ -9,7 +9,7 @@
 //! ```rust,no_run
 //! use mcp::policy::client::PolicyEnforcingMcpClient;
 //! use mcp::transport::StdioTransport;
-//! use a2rchitech_sdk_policy::PolicyEngine;
+//! use allternit_sdk_policy::PolicyEngine;
 //! use std::sync::Arc;
 //!
 //! #[tokio::main]
@@ -32,7 +32,7 @@
 
 use std::sync::Arc;
 
-use a2rchitech_sdk_policy::{Constraint, PolicyEngine, PolicyRequest, SafetyTier};
+use allternit_sdk_policy::{Constraint, PolicyEngine, PolicyRequest, SafetyTier};
 use serde_json::Value;
 use tracing::{debug, info, instrument, warn};
 
@@ -73,7 +73,7 @@ pub type PolicyResult<T> = Result<T, PolicyError>;
 /// MCP client wrapper that applies policy enforcement
 ///
 /// This client wraps an MCP transport and evaluates all tool calls
-/// against the A2R policy engine before execution. It supports:
+/// against the Allternit policy engine before execution. It supports:
 ///
 /// - Automatic tool categorization and safety tier assignment
 /// - Policy-based allow/deny decisions
@@ -109,7 +109,7 @@ impl PolicyEnforcingMcpClient {
     /// # Arguments
     ///
     /// * `transport` - The underlying MCP transport
-    /// * `policy_engine` - The A2R policy engine
+    /// * `policy_engine` - The Allternit policy engine
     /// * `server_id` - Unique identifier for this MCP server
     /// * `server_name` - Human-readable name of the server
     /// * `identity_id` - Identity to use for policy evaluation
@@ -119,7 +119,7 @@ impl PolicyEnforcingMcpClient {
     /// ```rust,no_run
     /// use mcp::policy::client::PolicyEnforcingMcpClient;
     /// use mcp::transport::StdioTransport;
-    /// use a2rchitech_sdk_policy::PolicyEngine;
+    /// use allternit_sdk_policy::PolicyEngine;
     /// use std::sync::Arc;
     ///
     /// let transport = StdioTransport::new("mcp-server", &[]).unwrap();
@@ -194,7 +194,7 @@ impl PolicyEnforcingMcpClient {
 
     /// Call a tool with policy enforcement
     ///
-    /// This method evaluates the tool call against the A2R policy engine
+    /// This method evaluates the tool call against the Allternit policy engine
     /// before execution. Depending on the policy decision:
     ///
     /// - `Allow` → Execute the tool
@@ -440,7 +440,7 @@ impl PolicyEnforcingMcpClient {
 /// ```rust,no_run
 /// use mcp::policy::client::PolicyEnforcingClientBuilder;
 /// use mcp::transport::StdioTransport;
-/// use a2rchitech_sdk_policy::PolicyEngine;
+/// use allternit_sdk_policy::PolicyEngine;
 /// use std::sync::Arc;
 ///
 /// let policy_engine = Arc::new(PolicyEngine::new());

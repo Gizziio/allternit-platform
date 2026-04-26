@@ -1,5 +1,5 @@
 /**
- * A2R Gateway
+ * Allternit Gateway
  * 
  * Routes all UI requests to appropriate backend services.
  * Architecture: UI → Gateway (8013) → API (3000) → Kernel (3004)

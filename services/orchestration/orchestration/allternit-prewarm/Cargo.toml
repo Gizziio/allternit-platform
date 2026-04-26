@@ -1,12 +1,12 @@
 [package]
-name = "a2r-prewarm"
+name = "allternit-prewarm"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "A2R Prewarm Service - Pool management and cold start optimization (N16)"
+description = "Allternit Prewarm Service - Pool management and cold start optimization (N16)"
 
 [dependencies]
-a2r-driver-interface = { path = "../../../1-kernel/infrastructure/a2r-driver-interface" }
+allternit-driver-interface = { path = "../../../1-kernel/infrastructure/allternit-driver-interface" }
 serde = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }

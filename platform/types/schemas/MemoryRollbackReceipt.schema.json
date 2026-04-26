@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2rchitech.local/spec/contracts/MemoryRollbackReceipt.schema.json",
+  "$id": "https://allternit.local/spec/contracts/MemoryRollbackReceipt.schema.json",
   "title": "Memory Rollback Receipt",
-  "description": "Schema for memory rollback receipts in the A2R system",
+  "description": "Schema for memory rollback receipts in the Allternit system",
   "type": "object",
   "properties": {
     "receipt_version": {

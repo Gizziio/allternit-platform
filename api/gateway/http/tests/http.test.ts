@@ -1,5 +1,5 @@
 /**
- * A2R Gateway - HTTP Transport Contract Tests
+ * Allternit Gateway - HTTP Transport Contract Tests
  * 
  * Tests for Streamable HTTP endpoints.
  * Verifies REST API conformance and streaming responses.
@@ -119,7 +119,7 @@ function parseSSEEvents(rawText: string): Array<{ type: string; data: unknown }>
 // Tests
 // =============================================================================
 
-describe('A2R Gateway HTTP Transport', () => {
+describe('Allternit Gateway HTTP Transport', () => {
   let gateway: ChildProcess;
 
   beforeAll(async () => {
@@ -155,7 +155,7 @@ describe('A2R Gateway HTTP Transport', () => {
       const data = JSON.parse(response.body);
       
       expect(data.status).toBe('healthy');
-      expect(data.service).toBe('a2r-gateway');
+      expect(data.service).toBe('allternit-gateway');
       expect(data.version).toBe('1.0.0');
     });
 

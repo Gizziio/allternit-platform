@@ -2,7 +2,7 @@
 //!
 //! Provides TypeScript/JavaScript access to the Rust Tambo engine.
 
-use a2r_tambo_integration::{GenerationConfig, TamboEngine, UISpec, UIType};
+use allternit_tambo_integration::{GenerationConfig, TamboEngine, UISpec, UIType};
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use serde::{Deserialize, Serialize};
@@ -139,7 +139,7 @@ fn ts_spec_to_rust(ts: TsUISpec) -> UISpec {
         components: ts
             .components
             .into_iter()
-            .map(|c| a2r_tambo_integration::ComponentSpec {
+            .map(|c| allternit_tambo_integration::ComponentSpec {
                 component_id: c.component_id,
                 component_type: c.component_type,
                 properties: c
@@ -151,7 +151,7 @@ fn ts_spec_to_rust(ts: TsUISpec) -> UISpec {
                 bindings: c
                     .bindings
                     .into_iter()
-                    .map(|b| a2r_tambo_integration::DataBinding {
+                    .map(|b| allternit_tambo_integration::DataBinding {
                         property: b.property,
                         source: b.source,
                         transform: b.transform,
@@ -159,9 +159,9 @@ fn ts_spec_to_rust(ts: TsUISpec) -> UISpec {
                     .collect(),
             })
             .collect(),
-        layout: a2r_tambo_integration::LayoutSpec {
+        layout: allternit_tambo_integration::LayoutSpec {
             layout_type: ts.layout.layout_type,
-            constraints: a2r_tambo_integration::LayoutConstraints {
+            constraints: allternit_tambo_integration::LayoutConstraints {
                 min_width: ts.layout.constraints.min_width,
                 max_width: ts.layout.constraints.max_width,
                 min_height: ts.layout.constraints.min_height,
@@ -171,24 +171,24 @@ fn ts_spec_to_rust(ts: TsUISpec) -> UISpec {
                 .layout
                 .regions
                 .into_iter()
-                .map(|r| a2r_tambo_integration::LayoutRegionSpec {
+                .map(|r| allternit_tambo_integration::LayoutRegionSpec {
                     region_id: r.region_id,
                     region_type: r.region_type,
-                    position: a2r_tambo_integration::RegionPosition {
+                    position: allternit_tambo_integration::RegionPosition {
                         x: r.position.x as f32,
                         y: r.position.y as f32,
                     },
-                    size: a2r_tambo_integration::RegionSize {
+                    size: allternit_tambo_integration::RegionSize {
                         width: r.size.width as f32,
                         height: r.size.height as f32,
                     },
                 })
                 .collect(),
         },
-        style: a2r_tambo_integration::StyleSpec {
+        style: allternit_tambo_integration::StyleSpec {
             theme: ts.style.theme,
             colors: ts.style.colors,
-            typography: a2r_tambo_integration::TypographySpec {
+            typography: allternit_tambo_integration::TypographySpec {
                 font_family: ts.style.typography.font_family,
                 font_sizes: ts.style.typography.font_sizes,
                 line_heights: ts
@@ -199,7 +199,7 @@ fn ts_spec_to_rust(ts: TsUISpec) -> UISpec {
                     .map(|(k, v)| (k, v as f32))
                     .collect(),
             },
-            spacing: a2r_tambo_integration::SpacingSpec {
+            spacing: allternit_tambo_integration::SpacingSpec {
                 scale: ts.style.spacing.scale,
                 unit: ts.style.spacing.unit,
             },
@@ -207,7 +207,7 @@ fn ts_spec_to_rust(ts: TsUISpec) -> UISpec {
         interactions: ts
             .interactions
             .into_iter()
-            .map(|i| a2r_tambo_integration::InteractionSpec {
+            .map(|i| allternit_tambo_integration::InteractionSpec {
                 interaction_id: i.interaction_id,
                 trigger: i.trigger,
                 action: i.action,
@@ -223,7 +223,7 @@ fn ts_spec_to_rust(ts: TsUISpec) -> UISpec {
     }
 }
 
-fn rust_ui_to_ts(rust: a2r_tambo_integration::GeneratedUI) -> TsGeneratedUI {
+fn rust_ui_to_ts(rust: allternit_tambo_integration::GeneratedUI) -> TsGeneratedUI {
     TsGeneratedUI {
         generation_id: rust.generation_id,
         spec_id: rust.spec_id,
@@ -428,7 +428,7 @@ impl TamboEngineNapi {
     /// Validate generated UI for accessibility
     #[napi]
     pub fn validate_ui_a11y(&self, ui: TsGeneratedUI) -> TsA11yResult {
-        let rust_ui = a2r_tambo_integration::GeneratedUI {
+        let rust_ui = allternit_tambo_integration::GeneratedUI {
             generation_id: ui.generation_id,
             spec_id: ui.spec_id,
             ui_code: ui.ui_code,
@@ -537,7 +537,7 @@ pub struct TsA11yWarning {
 // Conversion Functions for New Types
 // =============================================================================
 
-fn rust_diff_to_ts(diff: a2r_tambo_integration::SpecDiff) -> TsSpecDiff {
+fn rust_diff_to_ts(diff: allternit_tambo_integration::SpecDiff) -> TsSpecDiff {
     TsSpecDiff {
         has_changes: diff.has_changes,
         component_changes: diff
@@ -580,12 +580,12 @@ fn rust_diff_to_ts(diff: a2r_tambo_integration::SpecDiff) -> TsSpecDiff {
     }
 }
 
-fn ts_diff_to_rust(diff: TsSpecDiff) -> a2r_tambo_integration::SpecDiff {
-    use a2r_tambo_integration::{
+fn ts_diff_to_rust(diff: TsSpecDiff) -> allternit_tambo_integration::SpecDiff {
+    use allternit_tambo_integration::{
         BreakingChange, ChangeType, ComponentChange, LayoutChange, Severity, StyleChange,
     };
 
-    a2r_tambo_integration::SpecDiff {
+    allternit_tambo_integration::SpecDiff {
         has_changes: diff.has_changes,
         component_changes: diff
             .component_changes
@@ -636,7 +636,7 @@ fn ts_diff_to_rust(diff: TsSpecDiff) -> a2r_tambo_integration::SpecDiff {
     }
 }
 
-fn rust_a11y_to_ts(result: a2r_tambo_integration::A11yCheckResult) -> TsA11yResult {
+fn rust_a11y_to_ts(result: allternit_tambo_integration::A11yCheckResult) -> TsA11yResult {
     TsA11yResult {
         passed: result.passed,
         score: result.score as f64,
@@ -665,10 +665,10 @@ fn rust_a11y_to_ts(result: a2r_tambo_integration::A11yCheckResult) -> TsA11yResu
     }
 }
 
-fn ts_a11y_to_rust(result: TsA11yResult) -> a2r_tambo_integration::A11yCheckResult {
-    use a2r_tambo_integration::{A11ySeverity, A11yViolation, A11yWarning};
+fn ts_a11y_to_rust(result: TsA11yResult) -> allternit_tambo_integration::A11yCheckResult {
+    use allternit_tambo_integration::{A11ySeverity, A11yViolation, A11yWarning};
 
-    a2r_tambo_integration::A11yCheckResult {
+    allternit_tambo_integration::A11yCheckResult {
         passed: result.passed,
         score: result.score as f32,
         violations: result

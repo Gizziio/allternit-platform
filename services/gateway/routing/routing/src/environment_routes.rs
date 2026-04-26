@@ -19,7 +19,7 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use crate::AppState;
-use a2r_environment_spec::{EnvironmentSource, EnvironmentSpec, EnvironmentSpecLoader};
+use allternit_environment_spec::{EnvironmentSource, EnvironmentSpec, EnvironmentSpecLoader};
 
 // ============================================================================
 // Cache Tracking
@@ -39,7 +39,7 @@ pub struct EnvironmentSpecLoaderWithCache {
 
 impl EnvironmentSpecLoaderWithCache {
     /// Create a new loader with cache tracking
-    pub fn new() -> Result<Self, a2r_environment_spec::EnvironmentSpecError> {
+    pub fn new() -> Result<Self, allternit_environment_spec::EnvironmentSpecError> {
         Ok(Self {
             loader: EnvironmentSpecLoader::new()?,
             cache: RwLock::new(HashSet::new()),
@@ -54,7 +54,7 @@ impl EnvironmentSpecLoaderWithCache {
         &self,
         source: &str,
         force: bool,
-    ) -> Result<(EnvironmentSpec, bool), a2r_environment_spec::EnvironmentSpecError> {
+    ) -> Result<(EnvironmentSpec, bool), allternit_environment_spec::EnvironmentSpecError> {
         let cache = self.cache.read().await;
         let is_cached = cache.contains(source);
         drop(cache);
@@ -326,7 +326,7 @@ async fn convert_environment(
             // OCI tarball is the cached image itself
             let cache_dir = dirs::cache_dir()
                 .unwrap_or_else(|| std::env::temp_dir())
-                .join("a2r")
+                .join("allternit")
                 .join("oci-images")
                 .join(sanitize_filename(&spec.image));
 
@@ -449,7 +449,7 @@ async fn get_cache_stats(State(state): State<Arc<AppState>>) -> Json<CacheStatsR
     // Get cache directory
     let cache_dir = dirs::cache_dir()
         .unwrap_or_else(|| std::env::temp_dir())
-        .join("a2r")
+        .join("allternit")
         .join("environments");
 
     // Calculate stats
@@ -493,7 +493,7 @@ async fn clear_cache(
     // Also clear cache directory
     let cache_dir = dirs::cache_dir()
         .unwrap_or_else(|| std::env::temp_dir())
-        .join("a2r")
+        .join("allternit")
         .join("environments");
 
     if cache_dir.exists() {

@@ -1,4 +1,4 @@
-use a2rchitech_tools_gateway::ToolDefinition;
+use allternit_tools_gateway::ToolDefinition;
 use serde::{Deserialize, Serialize};
 use sqlx::{SqlitePool, AnyPool, Row};
 use super::RegistryError;

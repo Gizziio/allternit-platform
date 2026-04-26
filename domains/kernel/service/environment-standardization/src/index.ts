@@ -9,7 +9,7 @@
 // ============================================================================
 
 export interface NormalizedEnvironmentSpec {
-  apiVersion: 'a2r.dev/v1';
+  apiVersion: 'allternit.dev/v1';
   kind: 'Environment';
   metadata: EnvironmentMetadata;
   spec: EnvironmentSpec;
@@ -283,7 +283,7 @@ export class EnvironmentStandardizationEngine {
   async normalize(source: EnvironmentSource): Promise<NormalizedEnvironmentSpec> {
     if (source.type === 'devcontainer') {
       return this.fromDevContainer(source.content);
-    } else if (source.type === 'a2r-native') {
+    } else if (source.type === 'allternit-native') {
       return JSON.parse(source.content) as NormalizedEnvironmentSpec;
     }
     throw new Error(`Unknown source type: ${source.type}`);
@@ -294,7 +294,7 @@ export class EnvironmentStandardizationEngine {
     
     // Convert devcontainer.json to NES
     return {
-      apiVersion: 'a2r.dev/v1',
+      apiVersion: 'allternit.dev/v1',
       kind: 'Environment',
       metadata: {
         name: devContainer.name || 'dev-container',
@@ -399,7 +399,7 @@ export class EnvironmentStandardizationEngine {
 }
 
 export interface EnvironmentSource {
-  type: 'devcontainer' | 'a2r-native' | 'nix';
+  type: 'devcontainer' | 'allternit-native' | 'nix';
   content: string;
   path?: string;
 }

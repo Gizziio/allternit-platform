@@ -1,5 +1,5 @@
 /**
- * A2R Gateway - HTTP Transport with UI v0 Binding
+ * Allternit Gateway - HTTP Transport with UI v0 Binding
  * 
  * Streamable HTTP endpoints for web/enterprise deployments.
  * Includes UI v0 compatibility layer as pure translation.
@@ -10,7 +10,7 @@
  * - ALL execution flows through kernel adapter
  * - Binding layer is PURE TRANSLATION only
  * 
- * @module @a2rchitech/gateway-http
+ * @module @allternit/gateway-http
  */
 
 import Fastify from 'fastify';
@@ -754,9 +754,9 @@ export class HttpTransport {
 // =============================================================================
 
 const DEFAULT_HTTP_OPTIONS: HttpTransportOptions = {
-  port: parseInt(process.env.A2R_HTTP_PORT || '3210', 10),
-  host: process.env.A2R_HTTP_HOST || '0.0.0.0',
-  corsOrigins: (process.env.A2R_CORS_ORIGINS || 'http://localhost:*,http://127.0.0.1:*').split(','),
+  port: parseInt(process.env.Allternit_HTTP_PORT || '3210', 10),
+  host: process.env.Allternit_HTTP_HOST || '0.0.0.0',
+  corsOrigins: (process.env.Allternit_CORS_ORIGINS || 'http://localhost:*,http://127.0.0.1:*').split(','),
 };
 
 // =============================================================================

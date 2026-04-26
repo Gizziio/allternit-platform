@@ -21,7 +21,7 @@
 |---------|--------|----------------|
 | Jailer Integration | ✅ | `src/lib.rs` - Chroot, namespaces, priv drop |
 | Network Policy | ✅ | `src/netpolicy.rs` - TC/iptables enforcement |
-| Secure Socket Paths | ✅ | `/run/a2r/firecracker/` - Private directories |
+| Secure Socket Paths | ✅ | `/run/allternit/firecracker/` - Private directories |
 
 ### Phase 2: Determinism (COMPLETE)
 

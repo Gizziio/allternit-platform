@@ -32,8 +32,8 @@ pub struct MetaSwarmConfig {
     /// Execution configuration
     pub execution: ExecutionConfig,
 
-    /// A2R integration configuration
-    pub a2r: A2RIntegrationConfig,
+    /// Allternit integration configuration
+    pub allternit: AllternitIntegrationConfig,
 }
 
 impl MetaSwarmConfig {
@@ -86,7 +86,7 @@ impl MetaSwarmConfig {
         modes.insert(SwarmMode::Hybrid, ModeConfig::new(SwarmMode::Hybrid));
 
         Self {
-            name: "A2R Meta-Swarm".to_string(),
+            name: "Allternit Meta-Swarm".to_string(),
             version: "1.0.0".to_string(),
             default_mode: SwarmMode::ClaudeSwarm,
             modes,
@@ -94,7 +94,7 @@ impl MetaSwarmConfig {
             knowledge: KnowledgeConfig::default(),
             budget: BudgetConfig::default(),
             execution: ExecutionConfig::default(),
-            a2r: A2RIntegrationConfig::default(),
+            allternit: AllternitIntegrationConfig::default(),
         }
     }
 }
@@ -168,7 +168,7 @@ impl Default for KnowledgeConfig {
         Self {
             storage_backend: StorageBackend::IntentGraph,
             intent_graph_url: "http://localhost:3000/api/intent-graph".to_string(),
-            local_storage_path: PathBuf::from("./a2r-workspace/knowledge"),
+            local_storage_path: PathBuf::from("./allternit-workspace/knowledge"),
             cache_size: 1000,
             enable_cross_mode_learning: true,
             pattern_expiration_days: 365,
@@ -263,9 +263,9 @@ pub enum ExecutionBackend {
     Mock,
 }
 
-/// A2R integration configuration
+/// Allternit integration configuration
 #[derive(Debug, Clone, Serialize, Deserialize, Validate)]
-pub struct A2RIntegrationConfig {
+pub struct AllternitIntegrationConfig {
     /// Intent Graph endpoint
     pub intent_graph_endpoint: String,
 
@@ -278,7 +278,7 @@ pub struct A2RIntegrationConfig {
     /// Governance endpoint
     pub governance_endpoint: String,
 
-    /// API key for A2R services
+    /// API key for Allternit services
     pub api_key: Option<String>,
 
     /// Namespace for storing data
@@ -291,7 +291,7 @@ pub struct A2RIntegrationConfig {
     pub enable_governance: bool,
 }
 
-impl Default for A2RIntegrationConfig {
+impl Default for AllternitIntegrationConfig {
     fn default() -> Self {
         Self {
             intent_graph_endpoint: "http://localhost:3000/api".to_string(),

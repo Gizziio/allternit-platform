@@ -1,7 +1,7 @@
 /**
- * Svelte Renderer for A2R-IX
+ * Svelte Renderer for Allternit-IX
  * 
- * Renders A2R-IX UI IR to Svelte components.
+ * Renders Allternit-IX UI IR to Svelte components.
  */
 
 import type { UIRoot, UIComponent } from '../types';
@@ -60,7 +60,7 @@ ${style}`;
    */
   function generateScript(root: UIRoot): string {
     const lines: string[] = [
-      '// Auto-generated A2R-IX Svelte component',
+      '// Auto-generated Allternit-IX Svelte component',
       '',
       '// State bindings',
     ];
@@ -366,7 +366,7 @@ ${style}`;
 }
 
 /**
- * Compile A2R-IX UI to Svelte component
+ * Compile Allternit-IX UI to Svelte component
  */
 export function compileToSvelte(root: UIRoot, config: SvelteRendererConfig = {}): string {
   const renderer = createSvelteRenderer(config);

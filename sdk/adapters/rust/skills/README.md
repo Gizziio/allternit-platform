@@ -1,6 +1,6 @@
-# A2rchitech Skills Package
+# Allternit Skills Package
 
-The skills package provides the skill packaging, manifest parsing, and routing system for A2rchitech, enabling installable, versioned, and signed capabilities.
+The skills package provides the skill packaging, manifest parsing, and routing system for Allternit, enabling installable, versioned, and signed capabilities.
 
 ## Features
 

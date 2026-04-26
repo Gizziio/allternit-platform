@@ -1,11 +1,11 @@
 {
-  "name": "@a2rchitech/tambo-napi",
+  "name": "@allternit/tambo-napi",
   "version": "0.1.0",
   "description": "Node-API bindings for Tambo engine",
   "main": "index.js",
   "types": "index.d.ts",
   "napi": {
-    "name": "a2r-tambo-napi",
+    "name": "allternit-tambo-napi",
     "triples": {
       "defaults": true,
       "additional": [

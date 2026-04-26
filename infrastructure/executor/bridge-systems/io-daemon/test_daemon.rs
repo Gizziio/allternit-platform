@@ -7,7 +7,7 @@ fn main() {
     
     // Start the daemon in the background
     let mut daemon_process = Command::new("cargo")
-        .args(["run", "--bin", "a2rchitech-io-daemon"])
+        .args(["run", "--bin", "allternit-io-daemon"])
         .spawn()
         .expect("Failed to start daemon");
     

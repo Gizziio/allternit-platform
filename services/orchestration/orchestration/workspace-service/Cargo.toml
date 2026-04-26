@@ -25,7 +25,7 @@ uuid = { workspace = true, features = ["v4", "serde"] }
 futures.workspace = true
 tokio-stream.workspace = true
 
-a2r-substrate = { path = "../../../0-substrate/a2r-substrate" }
+allternit-substrate = { path = "../../../../platform/types/allternit-substrate" }
 
 [dev-dependencies]
 tempfile.workspace = true

@@ -1,0 +1,220 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e3]:
+      - link "Allternit" [ref=e4] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e6]:
+          - generic:
+            - img
+        - generic [ref=e39]: Allternit
+      - link "New here? Create an account" [ref=e40] [cursor=pointer]:
+        - /url: /sign-up
+    - generic [ref=e41]:
+      - generic [ref=e43]:
+        - generic [ref=e44]:
+          - generic [ref=e46]: A:// chat
+          - paragraph [ref=e48]: Talk to any AI model. One clean interface, every conversation.
+        - generic [ref=e51]:
+          - generic [ref=e52]:
+            - generic [ref=e54]: Can you analyze this research and write a structured summary?
+            - generic [ref=e55]:
+              - generic [ref=e56]: G
+              - generic [ref=e57]:
+                - generic [ref=e58]: "Here's the structured summary:"
+                - generic [ref=e59]: "→ Key finding: methodology validated"
+                - generic [ref=e60]: "→ Results: 94% accuracy across trials"
+                - generic [ref=e61]: "→ Next: expand to larger dataset"
+          - generic [ref=e68]:
+            - generic [ref=e69]: Ask Gizzi anything…
+            - generic [ref=e71]: →
+        - generic [ref=e72]:
+          - button [ref=e73] [cursor=pointer]
+          - button [ref=e74] [cursor=pointer]
+          - button [ref=e75] [cursor=pointer]
+          - button [ref=e76] [cursor=pointer]
+        - generic [ref=e77]:
+          - generic [ref=e80]: Allternit Platform
+          - generic [ref=e81]:
+            - generic [ref=e82]:
+              - generic [ref=e83]: One operating layer for every model your team uses.
+              - paragraph [ref=e84]: Run conversations, artifacts, and agent workflows in a single branded environment instead of scattering work across disconnected tabs and vendor silos.
+            - generic [ref=e85]:
+              - generic [ref=e86]:
+                - generic [ref=e87]: Why teams choose it
+                - generic [ref=e88]:
+                  - generic [ref=e89]:
+                    - generic [ref=e90]: Multi-model
+                    - generic [ref=e91]: Claude, OpenAI, Gemini, and open runtimes in one workspace
+                  - generic [ref=e92]:
+                    - generic [ref=e93]: Persistent
+                    - generic [ref=e94]: Shared context that carries across sessions, tools, and deliverables
+                  - generic [ref=e95]:
+                    - generic [ref=e96]: Gizzi-led
+                    - generic [ref=e97]: A branded AI guide that keeps work coherent from prompt to outcome
+              - generic [ref=e98]:
+                - generic [ref=e99]:
+                  - generic [ref=e100]: Branded experience
+                  - paragraph [ref=e101]: Designed for teams that want model flexibility, operational control, and a product surface that feels owned instead of rented.
+                - generic [ref=e102]:
+                  - generic [ref=e103]: Gizzi keeps the product feeling guided, not generic.
+                  - generic [ref=e104]: A clearer voice, a stronger brand surface, and a workflow that reads like a finished product.
+      - generic [ref=e105]:
+        - heading "Welcome back to Allternit." [level=1] [ref=e106]:
+          - text: Welcome
+          - text: back to
+          - text: Allternit.
+        - paragraph [ref=e107]: Your platform is waiting. Pick up right where you left off.
+        - paragraph [ref=e109]:
+          - text: By continuing you agree to the
+          - link "Terms" [ref=e110] [cursor=pointer]:
+            - /url: /terms
+          - text: and
+          - link "Privacy Policy" [ref=e111] [cursor=pointer]:
+            - /url: /privacy
+          - text: .
+        - generic [ref=e112]:
+          - generic [ref=e115]: Also available on
+          - generic [ref=e117]:
+            - link "Chrome Extension Allternit in your browser" [ref=e118] [cursor=pointer]:
+              - /url: https://github.com/allternit/chrome-extension/releases
+              - img [ref=e119]
+              - generic [ref=e125]:
+                - generic [ref=e126]: Chrome Extension
+                - generic [ref=e127]: Allternit in your browser
+            - link "Desktop App Mac, Windows & Linux" [ref=e128] [cursor=pointer]:
+              - /url: https://allternit.com/#/download
+              - img [ref=e129]
+              - generic [ref=e132]:
+                - generic [ref=e133]: Desktop App
+                - generic [ref=e134]: Mac, Windows & Linux
+    - contentinfo [ref=e135]:
+      - generic [ref=e137]:
+        - generic [ref=e138]:
+          - generic [ref=e139]:
+            - heading "Research" [level=3] [ref=e140]
+            - list [ref=e141]:
+              - listitem [ref=e142]:
+                - link "Interpretability" [ref=e143] [cursor=pointer]:
+                  - /url: https://allternit.com/research#interpretability
+              - listitem [ref=e144]:
+                - link "Alignment" [ref=e145] [cursor=pointer]:
+                  - /url: https://allternit.com/research#alignment
+              - listitem [ref=e146]:
+                - link "Societal Impacts" [ref=e147] [cursor=pointer]:
+                  - /url: https://allternit.com/research#societal
+              - listitem [ref=e148]:
+                - link "Economic Futures" [ref=e149] [cursor=pointer]:
+                  - /url: https://allternit.com/economic-futures
+              - listitem [ref=e150]:
+                - link "Publications" [ref=e151] [cursor=pointer]:
+                  - /url: https://allternit.com/research#publications
+              - listitem [ref=e152]:
+                - link "Gizzi's Constitution" [ref=e153] [cursor=pointer]:
+                  - /url: https://allternit.com/constitution
+          - generic [ref=e154]:
+            - heading "Products" [level=3] [ref=e155]
+            - list [ref=e156]:
+              - listitem [ref=e157]:
+                - link "Platform" [ref=e158] [cursor=pointer]:
+                  - /url: https://allternit.com/platform
+              - listitem [ref=e159]:
+                - link "Gizzi Code" [ref=e160] [cursor=pointer]:
+                  - /url: https://allternit.com/gizzi-code
+              - listitem [ref=e161]:
+                - link "Gizzi Code Enterprise" [ref=e162] [cursor=pointer]:
+                  - /url: https://allternit.com/gizzi-code-enterprise
+              - listitem [ref=e163]:
+                - link "Chat" [ref=e164] [cursor=pointer]:
+                  - /url: https://allternit.com/chat
+              - listitem [ref=e165]:
+                - link "Cowork" [ref=e166] [cursor=pointer]:
+                  - /url: https://allternit.com/cowork
+              - listitem [ref=e167]:
+                - link "A:// Web" [ref=e168] [cursor=pointer]:
+                  - /url: https://allternit.com/web
+          - generic [ref=e169]:
+            - heading "Developers" [level=3] [ref=e170]
+            - list [ref=e171]:
+              - listitem [ref=e172]:
+                - link "Documentation" [ref=e173] [cursor=pointer]:
+                  - /url: https://docs.allternit.com
+              - listitem [ref=e174]:
+                - link "API Reference" [ref=e175] [cursor=pointer]:
+                  - /url: https://docs.allternit.com/api
+              - listitem [ref=e176]:
+                - link "TypeScript SDK" [ref=e177] [cursor=pointer]:
+                  - /url: https://docs.allternit.com/sdk
+              - listitem [ref=e178]:
+                - link "Pricing" [ref=e179] [cursor=pointer]:
+                  - /url: https://allternit.com/pricing
+              - listitem [ref=e180]:
+                - link "Service Catalog" [ref=e181] [cursor=pointer]:
+                  - /url: https://docs.allternit.com/services
+              - listitem [ref=e182]:
+                - link "Console login" [ref=e183] [cursor=pointer]:
+                  - /url: /sign-in
+          - generic [ref=e184]:
+            - heading "Company" [level=3] [ref=e185]
+            - list [ref=e186]:
+              - listitem [ref=e187]:
+                - link "About Allternit" [ref=e188] [cursor=pointer]:
+                  - /url: https://allternit.com/company
+              - listitem [ref=e189]:
+                - link "Careers" [ref=e190] [cursor=pointer]:
+                  - /url: https://allternit.com/careers
+              - listitem [ref=e191]:
+                - link "News" [ref=e192] [cursor=pointer]:
+                  - /url: https://allternit.com/news
+              - listitem [ref=e193]:
+                - link "Blog" [ref=e194] [cursor=pointer]:
+                  - /url: https://allternit.com/blog
+              - listitem [ref=e195]:
+                - link "Customer stories" [ref=e196] [cursor=pointer]:
+                  - /url: https://allternit.com/stories
+              - listitem [ref=e197]:
+                - link "Events" [ref=e198] [cursor=pointer]:
+                  - /url: https://allternit.com/events
+          - generic [ref=e199]:
+            - heading "Operations" [level=3] [ref=e200]
+            - list [ref=e201]:
+              - listitem [ref=e202]:
+                - link "System status" [ref=e203] [cursor=pointer]:
+                  - /url: https://allternit.com/status
+              - listitem [ref=e204]:
+                - link "Solutions" [ref=e205] [cursor=pointer]:
+                  - /url: https://allternit.com/solutions
+              - listitem [ref=e206]:
+                - link "Support" [ref=e207] [cursor=pointer]:
+                  - /url: https://allternit.com/support
+              - listitem [ref=e208]:
+                - link "Privacy policy" [ref=e209] [cursor=pointer]:
+                  - /url: /privacy
+              - listitem [ref=e210]:
+                - link "Terms of service" [ref=e211] [cursor=pointer]:
+                  - /url: /terms
+              - listitem [ref=e212]:
+                - link "Usage policy" [ref=e213] [cursor=pointer]:
+                  - /url: https://allternit.com/usage
+        - generic [ref=e214]:
+          - generic [ref=e215]:
+            - paragraph [ref=e216]: © 2026 Allternit PBC
+            - generic [ref=e217]:
+              - link "LinkedIn" [ref=e218] [cursor=pointer]:
+                - /url: https://linkedin.com/company/allternit
+                - img [ref=e219]
+              - link "X" [ref=e223] [cursor=pointer]:
+                - /url: https://twitter.com/allternit
+                - img [ref=e224]
+              - link "YouTube" [ref=e226] [cursor=pointer]:
+                - /url: https://youtube.com/@allternit
+                - img [ref=e227]
+          - generic [ref=e230]:
+            - link "Privacy policy" [ref=e231] [cursor=pointer]:
+              - /url: /privacy
+            - link "Terms of service" [ref=e232] [cursor=pointer]:
+              - /url: /terms
+            - link "Responsible disclosure" [ref=e233] [cursor=pointer]:
+              - /url: https://allternit.com/disclosure
+            - link "Usage policy" [ref=e234] [cursor=pointer]:
+              - /url: https://allternit.com/usage
+  - alert [ref=e235]

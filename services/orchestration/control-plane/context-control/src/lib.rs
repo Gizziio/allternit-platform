@@ -1,4 +1,4 @@
-//! A2R Context Control Plane
+//! Allternit Context Control Plane
 //!
 //! Git Context Controller (GCC) implementation:
 //! - Context as first-class object (not chat history)
@@ -6,7 +6,7 @@
 //! - Multi-resolution retrieval: summary → state → traces
 //! - Shareable context bundles
 
-use a2r_memory_kernel::{MemoryKernel, MemoryEvent};
+use allternit_memory_kernel::{MemoryKernel, MemoryEvent};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};

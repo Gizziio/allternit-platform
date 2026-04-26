@@ -45,7 +45,7 @@ async function runE2ETest() {
       if (event.type === 'receipt') {
         receiptGenerated = true;
         // Verify receipt existence on disk
-        const receiptPath = `.a2r/receipts/${event.receipt.receipt_id}.json`;
+        const receiptPath = `.allternit/receipts/${event.receipt.receipt_id}.json`;
         try {
           await fs.access(receiptPath);
           console.log(`   ✅ Verified Receipt on disk: ${event.receipt.receipt_id}`);

@@ -1,7 +1,7 @@
 /**
  * Playground Core Types
  *
- * Type definitions for A2R Playground System.
+ * Type definitions for Allternit Playground System.
  */
 
 // ============================================================================

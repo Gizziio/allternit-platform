@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { A2RReceipt } from './policy-engine.js';
+import { AllternitReceipt } from './policy-engine.js';
 
 export class ReceiptSystem {
   private storageDir: string;
@@ -9,18 +9,18 @@ export class ReceiptSystem {
     this.storageDir = path.resolve(storageDir);
   }
 
-  async saveReceipt(receipt: A2RReceipt): Promise<void> {
+  async saveReceipt(receipt: AllternitReceipt): Promise<void> {
     await fs.mkdir(this.storageDir, { recursive: true });
     const filePath = path.join(this.storageDir, receipt.id + '.json');
     await fs.writeFile(filePath, JSON.stringify(receipt, null, 2), 'utf8');
   }
 
-  async getAuditTrail(): Promise<A2RReceipt[]> {
+  async getAuditTrail(): Promise<AllternitReceipt[]> {
     if (!(await this.exists(this.storageDir))) {
       return [];
     }
     const files = await fs.readdir(this.storageDir);
-    const receipts: A2RReceipt[] = [];
+    const receipts: AllternitReceipt[] = [];
     for (const file of files) {
       if (file.endsWith('.json')) {
         const content = await fs.readFile(path.join(this.storageDir, file), 'utf8');

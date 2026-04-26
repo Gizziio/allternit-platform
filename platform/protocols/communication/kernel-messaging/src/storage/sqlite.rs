@@ -199,7 +199,7 @@ impl super::TaskQueueStorage for SqliteTaskQueueStorage {
     async fn fail_task(
         &self,
         task_id: String,
-        task: TaskEnvelope,
+        _task: TaskEnvelope,
         error: String,
     ) -> Result<(), MessagingError> {
         sqlx::query("UPDATE tasks SET status = 'failed', error_message = ? WHERE task_id = ?")

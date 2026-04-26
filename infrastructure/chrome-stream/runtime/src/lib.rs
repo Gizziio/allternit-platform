@@ -1,4 +1,4 @@
-//! A2R Browser Runtime
+//! Allternit Browser Runtime
 //!
 //! Secure browser automation with:
 //! - Receipt emission for all actions (P5.1.2)

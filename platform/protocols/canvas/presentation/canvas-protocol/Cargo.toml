@@ -1,8 +1,8 @@
 [package]
-name = "a2r-canvas-protocol"
+name = "allternit-canvas-protocol"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Canvas Protocol - Declarative task surfaces for agentic systems"
+description = "Allternit Canvas Protocol - Declarative task surfaces for agentic systems"
 
 [dependencies]
 serde = { workspace = true }
@@ -13,8 +13,8 @@ thiserror = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
 chrono = { workspace = true }
-a2r-capsule-sdk = { workspace = true }
-a2rchitech-system-law = { workspace = true }
+allternit-capsule-sdk = { workspace = true }
+allternit-system-law = { workspace = true }
 
 [dev-dependencies]
 tokio-test = "0.4"

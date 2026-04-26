@@ -7,7 +7,7 @@ use crate::{
     NodeResult, NodeStatus, WorkflowDefinition, WorkflowExecution, WorkflowNode, WorkflowPhase,
     WorkflowStatus,
 };
-use a2r_driver_interface::{CommandSpec, ExecutionDriver, SpawnSpec, TenantId};
+use allternit_driver_interface::{CommandSpec, ExecutionDriver, SpawnSpec, TenantId};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -199,9 +199,9 @@ impl WorkflowExecutor {
             tenant: TenantId(tenant_id.to_string()),
             project: None,
             workspace: None,
-            run_id: Some(a2r_driver_interface::ExecutionId::new()),
-            env: a2r_driver_interface::EnvironmentSpec {
-                spec_type: a2r_driver_interface::EnvSpecType::Oci,
+            run_id: Some(allternit_driver_interface::ExecutionId::new()),
+            env: allternit_driver_interface::EnvironmentSpec {
+                spec_type: allternit_driver_interface::EnvSpecType::Oci,
                 image: "alpine:latest".to_string(),
                 version: None,
                 packages: vec![],
@@ -209,8 +209,8 @@ impl WorkflowExecutor {
                 working_dir: Some("/workspace".to_string()),
                 mounts: vec![],
             },
-            policy: a2r_driver_interface::PolicySpec::default_permissive(),
-            resources: a2r_driver_interface::ResourceSpec::default(),
+            policy: allternit_driver_interface::PolicySpec::default_permissive(),
+            resources: allternit_driver_interface::ResourceSpec::default(),
             envelope: None,
             prewarm_pool: None,
         };

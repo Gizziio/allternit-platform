@@ -7,7 +7,7 @@ use serde_json::json;
 use sha2::{Digest, Sha256};
 
 use crate::core::ids::create_event_id;
-use crate::core::types::{A2REvent, Actor, ActorType, EventScope, LedgerQuery};
+use crate::core::types::{AllternitEvent, Actor, ActorType, EventScope, LedgerQuery};
 use crate::ledger::Ledger;
 
 const POLICY_EVENT_TYPE: &str = "AgentsPolicyInjected";
@@ -47,7 +47,7 @@ pub async fn inject_policy(
     let bundle_id = uuid::Uuid::new_v4().to_string();
     let event_scope = scope.unwrap_or_default();
 
-    let event = A2REvent {
+    let event = AllternitEvent {
         event_id: create_event_id(),
         ts: Utc::now().to_rfc3339(),
         actor: Actor {
@@ -112,8 +112,8 @@ fn gather_policy_files(root_dir: &Path) -> Result<Vec<PathBuf>> {
     let agents_md = root_dir.join("AGENTS.md");
     add(agents_md);
 
-    collect_markdown_files(&root_dir.join(".a2r/agents"), &mut entries)?;
-    collect_markdown_files(&root_dir.join(".a2r/spec"), &mut entries)?;
+    collect_markdown_files(&root_dir.join(".allternit/agents"), &mut entries)?;
+    collect_markdown_files(&root_dir.join(".allternit/spec"), &mut entries)?;
 
     entries.sort_by(|a, b| a.display().to_string().cmp(&b.display().to_string()));
     Ok(entries)

@@ -2,7 +2,7 @@
 #[cfg(target_os = "linux")]
 //! Node WebSocket Handler
 //!
-//! Handles WebSocket connections from A2R Nodes.
+//! Handles WebSocket connections from Allternit Nodes.
 //! - Node registration and authentication
 //! - Heartbeat monitoring
 //! - Job dispatch
@@ -27,7 +27,7 @@ use tokio::sync::{mpsc, RwLock};
 use tracing::{debug, error, info, trace, warn};
 use uuid::Uuid;
 
-use a2r_protocol::{
+use allternit_protocol::{
     FileEntry, JobResult, JobSpec, Message, MessagePayload, NodeCapabilities, NodeConfig,
     NodeStatus, ResourceUsage,
 };
@@ -307,7 +307,7 @@ fn create_node_token() -> String {
         })
         .collect();
 
-    format!("a2r_{}", token)
+    format!("allternit_{}", token)
 }
 
 /// Hash a token for storage (simple hash for now - should use bcrypt in production)
@@ -865,7 +865,7 @@ async fn handle_node_message(
                 d.children.as_ref().map(|children| {
                     children
                         .iter()
-                        .map(|child| a2r_protocol::FileEntry {
+                        .map(|child| allternit_protocol::FileEntry {
                             name: child.name.clone(),
                             path: child.path.clone(),
                             is_dir: child.is_dir,
@@ -1014,7 +1014,7 @@ pub async fn generate_node_token(
             "token": token,
             "token_type": "jwt",
             "install_command": format!(
-                "curl -fsSL https://install.a2r.io | A2R_TOKEN={} bash",
+                "curl -fsSL https://install.allternit.io | Allternit_TOKEN={} bash",
                 token
             ),
         })),

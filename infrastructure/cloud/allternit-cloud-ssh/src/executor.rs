@@ -1,6 +1,6 @@
 //! SSH executor for deployment operations
 //!
-//! Real SSH implementation for A2R installation.
+//! Real SSH implementation for Allternit installation.
 
 use crate::{Result, SshConnection, CommandOutput, SshKeyManager};
 
@@ -18,7 +18,7 @@ impl SshExecutor {
     }
 
     /// Execute installation script on remote VPS
-    pub async fn install_a2r_runtime(
+    pub async fn install_allternit_runtime(
         &self,
         host: &str,
         port: u16,
@@ -27,7 +27,7 @@ impl SshExecutor {
         control_plane_url: &str,
         deployment_token: &str,
     ) -> Result<CommandOutput> {
-        tracing::info!("Installing A2R runtime on {}:{}", host, port);
+        tracing::info!("Installing Allternit runtime on {}:{}", host, port);
 
         // Connect to VPS
         let conn = SshConnection::connect(host, port, username, private_key).await?;
@@ -35,11 +35,11 @@ impl SshExecutor {
         // Download and execute installation script
         let install_command = format!(
             r#"
-export A2R_VERSION="latest"
+export Allternit_VERSION="latest"
 export CONTROL_PLANE_URL="{}"
 export DEPLOYMENT_TOKEN="{}"
 
-curl -L "https://releases.a2r.sh/${{A2R_VERSION}}/install-a2r-runtime.sh" | bash
+curl -L "https://releases.allternit.sh/${{Allternit_VERSION}}/install-allternit-runtime.sh" | bash
             "#,
             control_plane_url,
             deployment_token
@@ -48,15 +48,15 @@ curl -L "https://releases.a2r.sh/${{A2R_VERSION}}/install-a2r-runtime.sh" | bash
         let output = conn.execute(&install_command).await?;
 
         // Verify installation
-        let verify_output = conn.execute("systemctl is-active a2r-agent").await?;
+        let verify_output = conn.execute("systemctl is-active allternit-agent").await?;
         
         if verify_output.exit_code != 0 {
             return Err(crate::SshError::CommandFailed(
-                format!("A2R agent failed to start: {}", verify_output.stderr)
+                format!("Allternit agent failed to start: {}", verify_output.stderr)
             ));
         }
 
-        tracing::info!("A2R runtime installed successfully on {}:{}", host, port);
+        tracing::info!("Allternit runtime installed successfully on {}:{}", host, port);
 
         Ok(output)
     }

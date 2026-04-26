@@ -1,7 +1,7 @@
 {
-  "name": "@a2r/visual-state",
+  "name": "@allternit/platform-visual-state",
   "version": "1.0.0",
-  "description": "Visual state types and utilities for A2R avatar system",
+  "description": "Visual state types and utilities for Allternit avatar system",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",

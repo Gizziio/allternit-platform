@@ -1,10 +1,10 @@
 # @allternit/viz
 
-A2R Data Visualization - Charts, graphs, and dashboards.
+Allternit Data Visualization - Charts, graphs, and dashboards.
 
 ## Overview
 
-The Visualization package provides chart rendering, dashboard components, and data transformation utilities for the A2R platform. It supports multiple output formats including SVG, Canvas, and React components.
+The Visualization package provides chart rendering, dashboard components, and data transformation utilities for the Allternit platform. It supports multiple output formats including SVG, Canvas, and React components.
 
 ## Features
 

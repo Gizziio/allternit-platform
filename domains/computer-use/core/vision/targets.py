@@ -1,5 +1,5 @@
 """
-A2R Computer Use — Target Detection Heuristics
+Allternit Computer Use — Target Detection Heuristics
 
 Detects actionable targets from page/desktop state using regex and keyword
 matching rather than visual inference. Used as heuristic fallback inside

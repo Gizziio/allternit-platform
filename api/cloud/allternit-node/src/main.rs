@@ -1,7 +1,7 @@
-//! A2R Node Agent
+//! Allternit Node Agent
 //!
 //! Runs on user's VPS or local machine.
-//! Connects to A2R Control Plane via WebSocket reverse tunnel.
+//! Connects to Allternit Control Plane via WebSocket reverse tunnel.
 //! Executes jobs, manages containers, provides terminal access.
 
 use anyhow::Result;
@@ -26,12 +26,12 @@ use pty::PtyManager;
 use run_manager::RunManager;
 use websocket::{WebSocketClient, WebSocketConfig};
 
-/// A2R Node Agent
+/// Allternit Node Agent
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
     /// Path to config file
-    #[arg(short, long, default_value = "/etc/a2r/node.toml")]
+    #[arg(short, long, default_value = "/etc/allternit/node.toml")]
     config: String,
     
     /// Node ID (overrides config)
@@ -96,7 +96,7 @@ async fn main() -> Result<()> {
 
     let args = Args::parse();
 
-    info!("A2R Node Agent v{}", env!("CARGO_PKG_VERSION"));
+    info!("Allternit Node Agent v{}", env!("CARGO_PKG_VERSION"));
     
     // Load configuration
     let mut config = NodeConfig::load(&args.config).await?;
@@ -147,7 +147,7 @@ async fn main() -> Result<()> {
     let pty_manager = Arc::new(PtyManager::new());
 
     // Start node
-    let node = A2RNode::new(config, state.clone(), docker, executor, pty_manager);
+    let node = AllternitNode::new(config, state.clone(), docker, executor, pty_manager);
     
     if args.once {
         // Run once (for testing)
@@ -161,7 +161,7 @@ async fn main() -> Result<()> {
 }
 
 /// Main node struct
-pub struct A2RNode {
+pub struct AllternitNode {
     config: NodeConfig,
     state: Arc<NodeState>,
     docker: Arc<RwLock<DockerRuntime>>,
@@ -169,7 +169,7 @@ pub struct A2RNode {
     pty_manager: Arc<PtyManager>,
 }
 
-impl A2RNode {
+impl AllternitNode {
     pub fn new(
         config: NodeConfig,
         state: Arc<NodeState>,
@@ -188,7 +188,7 @@ impl A2RNode {
 
     /// Run the node forever (with reconnection)
     pub async fn run(self) -> Result<()> {
-        info!("Starting A2R Node...");
+        info!("Starting Allternit Node...");
 
         // Channel for shutdown signals
         let (shutdown_tx, mut shutdown_rx) = mpsc::channel::<()>(1);
@@ -241,7 +241,7 @@ impl A2RNode {
             }
         }
 
-        info!("A2R Node stopped");
+        info!("Allternit Node stopped");
         Ok(())
     }
 
@@ -290,6 +290,6 @@ mod tests {
         let executor = Arc::new(JobExecutor::new(docker.clone(), 5));
         let pty = Arc::new(PtyManager::new());
         
-        let _node = A2RNode::new(config, state, docker, executor, pty);
+        let _node = AllternitNode::new(config, state, docker, executor, pty);
     }
 }

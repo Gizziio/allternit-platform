@@ -12,7 +12,7 @@ A **Code Review Assistant** that:
 
 ## Prerequisites
 
-- [A2R CLI](../../7-apps/cli/) installed
+- [Allternit CLI](../../7-apps/cli/) installed
 - Basic understanding of Markdown
 - A code repository to work with
 
@@ -28,7 +28,7 @@ cd ~/my-code-reviewer
 Initialize the workspace structure:
 
 ```bash
-a2rchitech workspace init --name "Code Reviewer" --nature "AI code review assistant"
+allternit workspace init --name "Code Reviewer" --nature "AI code review assistant"
 ```
 
 This creates the basic structure:
@@ -184,13 +184,13 @@ Install required skills:
 
 ```bash
 # Code analysis skill
-a2rchitech skills install code-analysis
+allternit skills install code-analysis
 
 # Git operations skill
-a2rchitech skills install git-operations
+allternit skills install git-operations
 
 # Security scanning skill
-a2rchitech skills install security-scan
+allternit skills install security-scan
 ```
 
 Create a custom skill for your review process:
@@ -255,7 +255,7 @@ EOF
 Start your agent:
 
 ```bash
-a2rchitech workspace boot
+allternit workspace boot
 ```
 
 You should see output like:
@@ -294,7 +294,7 @@ cat > test-review.sh << 'EOF'
 #!/bin/bash
 # Test the PR reviewer skill
 
-a2rchitech skill run pr-reviewer \
+allternit skill run pr-reviewer \
   --input '{
     "repository": "my-org/my-repo",
     "pr_number": 42,
@@ -361,10 +361,10 @@ If you have the Agent Shell installed:
 
 ```bash
 # Open in Shell UI
-a2rchitech shell
+allternit shell
 
 # Or open specific workspace
-a2rchitech shell --workspace ~/my-code-reviewer
+allternit shell --workspace ~/my-code-reviewer
 ```
 
 This opens the visual workspace browser where you can:
@@ -387,13 +387,13 @@ Example checkpoint:
 
 ```bash
 # Create a checkpoint
-a2rchitect checkpoint create "after-10-reviews"
+allternitchitect checkpoint create "after-10-reviews"
 
 # View checkpoint history
-a2rchitect checkpoint list
+allternitchitect checkpoint list
 
 # Restore if needed
-a2rchitect checkpoint restore "after-10-reviews"
+allternitchitect checkpoint restore "after-10-reviews"
 ```
 
 ## Next Steps
@@ -424,14 +424,14 @@ a2rchitect checkpoint restore "after-10-reviews"
        steps:
          - uses: actions/checkout@v3
          - name: Run Code Reviewer
-           run: a2rchitect skill run pr-reviewer --input '{"pr_number": ${{ github.event.number }}}'
+           run: allternitchitect skill run pr-reviewer --input '{"pr_number": ${{ github.event.number }}}'
    ```
 
 3. **Team Shared Configuration**
    ```bash
    # Sync team policy updates
-   git remote add team-policy https://github.com/team/a2r-policy
-   a2rchitect workspace sync --remote team-policy
+   git remote add team-policy https://github.com/team/allternit-policy
+   allternitchitect workspace sync --remote team-policy
    ```
 
 ## Troubleshooting
@@ -439,7 +439,7 @@ a2rchitect checkpoint restore "after-10-reviews"
 ### Workspace won't boot
 - Check that all required files exist: `ls *.md`
 - Validate JSON in contract.json files
-- Check logs: `a2rchitect logs --tail 50`
+- Check logs: `allternitchitect logs --tail 50`
 
 ### Skills not loading
 - Verify skill directory structure
@@ -456,7 +456,7 @@ a2rchitect checkpoint restore "after-10-reviews"
 - [Example Workspaces](./examples/)
 - [Agent Workspace Architecture](./AGENT_WORKSPACE_ARCHITECTURE.md)
 - [CLI Reference](../7-apps/cli/README.md)
-- [Shell UI Guide](../6-ui/a2r-platform/docs/)
+- [Shell UI Guide](../6-ui/allternit-platform/docs/)
 
 ---
 

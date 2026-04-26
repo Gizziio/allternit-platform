@@ -1,5 +1,5 @@
 """
-A2R Computer Use — Built-in Conformance Suite Definitions
+Allternit Computer Use — Built-in Conformance Suite Definitions
 Only suites with real, runnable test functions.
 
 Suites:
@@ -491,7 +491,7 @@ async def _dx03_type_text(adapter):
     """Type text via keyboard."""
     from core import ActionRequest
     # Type into nowhere — just verify the action works without crash
-    req = ActionRequest(action_type="type_text", target="keyboard", parameters={"text": "a2r test", "interval": 0.0})
+    req = ActionRequest(action_type="type_text", target="keyboard", parameters={"text": "allternit test", "interval": 0.0})
     result = await adapter.execute(req, session_id="conformance-dx03", run_id="run-dx03")
     assert result.status == "completed"
     assert result.extracted_content is not None
@@ -509,7 +509,7 @@ async def _dx04_capture_region(adapter):
 async def _dx05_clipboard(adapter):
     """Write and read clipboard."""
     from core import ActionRequest
-    write_req = ActionRequest(action_type="clipboard_write", target="clipboard", parameters={"text": "a2r-clip-test"})
+    write_req = ActionRequest(action_type="clipboard_write", target="clipboard", parameters={"text": "allternit-clip-test"})
     r1 = await adapter.execute(write_req, session_id="conformance-dx05", run_id="run-dx05-write")
     assert r1.status == "completed"
 

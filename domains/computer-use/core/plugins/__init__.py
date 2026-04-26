@@ -1,5 +1,5 @@
 """
-A2R Computer Use — Plugin System
+Allternit Computer Use — Plugin System
 Loads and registers domain-specific workflow plugins.
 
 Each plugin lives in a subdirectory under plugins/ and must contain a

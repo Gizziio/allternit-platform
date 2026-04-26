@@ -7,7 +7,7 @@
 
 ## Executive Summary
 
-The **A2rchitech Memory Agent** has been successfully implemented as a core platform service. It provides:
+The **Allternitchitech Memory Agent** has been successfully implemented as a core platform service. It provides:
 
 - ✅ **24/7 Always-On Operation** - Runs as background daemon with auto-start
 - ✅ **Local LLM Processing** - Uses Ollama (llama3.2:3b, phi3:mini) - no API costs
@@ -56,15 +56,15 @@ GET  /api/events          - Event stream (SSE)
 | Session State Tracking | ✅ Complete | `memory/src/pipelines/session-tracker.ts` |
 
 **What Gets Indexed:**
-- **Receipts**: All agent execution receipts from `a2r-workspace/receipts/`
+- **Receipts**: All agent execution receipts from `allternit-workspace/receipts/`
   - Tool calls, inputs, outputs, status
   - Queryable: "Show all tool executions for task T0001"
   
-- **WIH Files**: All Work Item Handler definitions from `a2r-workspace/wih/`
+- **WIH Files**: All Work Item Handler definitions from `allternit-workspace/wih/`
   - Task patterns, tool allowlists, write scopes
   - Queryable: "Find similar tasks to this one"
   
-- **Session States**: All run states from `a2r-workspace/run_state/`
+- **Session States**: All run states from `allternit-workspace/run_state/`
   - Node states, resume points, artifacts
   - Queryable: "Resume my session from yesterday"
 
@@ -96,7 +96,7 @@ memory/
 ├── INTEGRATION_GUIDE.md            # Developer integration guide
 ├── IMPLEMENTATION_SUMMARY.md       # This file
 ├── install-launchd.sh              # macOS service installer
-├── com.a2rchitech.memory-agent.plist  # Launchd service definition
+├── com.allternit.memory-agent.plist  # Launchd service definition
 ├── .env.example                    # Configuration template
 ├── src/
 │   ├── orchestrator.ts             # Root agent coordinator
@@ -140,7 +140,7 @@ ollama pull phi3:mini
 ### 2. Start Memory Agent
 
 ```bash
-cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/memory
+cd /Users/macbook/Desktop/allternit-workspace/allternit/memory
 
 # Install dependencies
 pnpm install
@@ -255,7 +255,7 @@ async def memory_query(request: MemoryQueryRequest):
 |------|----------|------|
 | SQLite Database | `memory/memory.db` | ~1MB per 1000 memories |
 | WAL Files | `memory/memory.db-*` | Temporary |
-| Logs | `/tmp/a2r-memory-agent.log` | Rotated |
+| Logs | `/tmp/allternit-memory-agent.log` | Rotated |
 
 ---
 
@@ -290,8 +290,8 @@ async def memory_query(request: MemoryQueryRequest):
    - Store execution results
 
 3. **Add CLI Commands**
-   - Implement `a2r memory query`
-   - Implement `a2r memory stats`
+   - Implement `allternit memory query`
+   - Implement `allternit memory stats`
    - Test developer experience
 
 ### Short Term (Next Week)
@@ -348,7 +348,7 @@ MEMORY_CONSOLIDATION_INTERVAL_MINUTES=30
 ### Service Configuration (Rust)
 
 ```rust
-use a2rchitech_memory_provider::MemoryAgentAdapter;
+use allternit_memory_provider::MemoryAgentAdapter;
 
 let adapter = MemoryAgentAdapter::with_url("http://localhost:3201")?;
 
@@ -374,7 +374,7 @@ let adapter = MemoryAgentAdapter::new(config)?;
 - [ ] Session tracking works (`pnpm run ingest:sessions`)
 - [ ] Queries return results (`POST /api/query`)
 - [ ] Daemon starts (`pnpm run daemon start`)
-- [ ] Logs are written (`/tmp/a2r-memory-agent.log`)
+- [ ] Logs are written (`/tmp/allternit-memory-agent.log`)
 
 ---
 
@@ -423,7 +423,7 @@ let adapter = MemoryAgentAdapter::new(config)?;
 ## Contact & Support
 
 - **Documentation**: See `INTEGRATION_GUIDE.md`
-- **Issues**: Check logs at `/tmp/a2r-memory-agent.log`
+- **Issues**: Check logs at `/tmp/allternit-memory-agent.log`
 - **Health**: `curl http://localhost:3201/health`
 - **Stats**: `curl http://localhost:3201/stats`
 

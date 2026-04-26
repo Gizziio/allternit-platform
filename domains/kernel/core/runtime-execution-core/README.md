@@ -1,6 +1,6 @@
-# A2rchitech Runtime Core Package
+# Allternit Runtime Core Package
 
-The runtime-core package provides the sovereign execution substrate of A2rchitech, including session management, scheduling, eventing, artifacts, checkpoints, and replay capabilities.
+The runtime-core package provides the sovereign execution substrate of Allternit, including session management, scheduling, eventing, artifacts, checkpoints, and replay capabilities.
 
 ## Features
 

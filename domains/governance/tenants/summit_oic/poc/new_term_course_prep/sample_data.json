@@ -1,0 +1,51 @@
+{
+  "source_course": {
+    "course_name": "IT Fundamentals Phase 1 - Spring 2027",
+    "course_id": 50101,
+    "term_start": "2027-01-11",
+    "term_end": "2027-03-19",
+    "published": true,
+    "assignments": [
+      {
+        "name": "Week 1 Orientation Quiz",
+        "relative_day": 4,
+        "points": 10
+      },
+      {
+        "name": "Hardware Components Lab",
+        "relative_day": 11,
+        "points": 20
+      },
+      {
+        "name": "Operating Systems Project",
+        "relative_day": 25,
+        "points": 40
+      },
+      {
+        "name": "Final Skills Check",
+        "relative_day": 60,
+        "points": 30
+      }
+    ]
+  },
+  "destination_course": {
+    "course_name": "IT Fundamentals Phase 1 - Spring 2027 Cohort B",
+    "course_id": 50188,
+    "term_start": "2027-03-29",
+    "term_end": "2027-06-04",
+    "published": false
+  },
+  "calendar": {
+    "holiday_dates": [
+      "2027-05-31"
+    ],
+    "break_dates": []
+  },
+  "copy_options": {
+    "copy_pages": true,
+    "copy_assignments": true,
+    "copy_modules": true,
+    "copy_announcements": false,
+    "copy_files": true
+  }
+}

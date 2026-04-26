@@ -31,7 +31,7 @@ bun --conditions=browser packages/sdk/js/script/build.ts
 
 1. **Generates OpenAPI spec** from the Hono server (`Server.openapi()`)
 2. **Generates base SDK** using `@hey-api/openapi-ts` with `@hey-api/client-fetch`
-3. **Creates class-based wrapper** (`a2r-client.ts`) that provides the `A2RClient` class
+3. **Creates class-based wrapper** (`allternit-client.ts`) that provides the `AllternitClient` class
 4. **Compiles to JavaScript** using Bun's bundler
 5. **Generates type declarations** for TypeScript support
 
@@ -39,10 +39,10 @@ bun --conditions=browser packages/sdk/js/script/build.ts
 
 ```
 packages/sdk/dist/v2/
-├── client.js              # Main entry - exports A2RClient
+├── client.js              # Main entry - exports AllternitClient
 ├── client.d.ts            # Type declarations
-├── a2r-client.js          # Class-based wrapper (compiled)
-├── a2r-client.ts          # Class-based wrapper (source)
+├── allternit-client.js          # Class-based wrapper (compiled)
+├── allternit-client.ts          # Class-based wrapper (source)
 ├── sdk.gen.js             # Functional API operations
 ├── types.gen.js           # TypeScript types
 ├── client/                # Core HTTP client

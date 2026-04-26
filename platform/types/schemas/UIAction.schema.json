@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2rchitech.local/spec/contracts/UIAction.schema.json",
+  "$id": "https://allternit.local/spec/contracts/UIAction.schema.json",
   "title": "UI Action Contract",
-  "description": "Schema for UI actions in the A2R system",
+  "description": "Schema for UI actions in the Allternit system",
   "type": "object",
   "properties": {
     "action_version": {

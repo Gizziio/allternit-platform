@@ -1,5 +1,5 @@
 {
-  "name": "@a2r-plugins/example-counter",
+  "name": "@allternit-plugins/example-counter",
   "version": "1.0.0",
   "description": "Example ChatView plugin that counts messages",
   "type": "module",
@@ -15,7 +15,7 @@
     "esbuild": "^0.20.0"
   },
   "keywords": [
-    "a2r-plugin",
+    "allternit-plugin",
     "chatview",
     "counter"
   ],

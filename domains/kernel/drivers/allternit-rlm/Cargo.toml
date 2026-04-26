@@ -1,23 +1,23 @@
 [package]
-name = "a2rchitech-rlm"
+name = "allternit-rlm"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-a2rchitech-history = { workspace = true }
-a2rchitech-messaging = { workspace = true }
+allternit-history = { workspace = true }
+allternit-messaging = { workspace = true }
 tokio = { workspace = true }
 async-trait = { workspace = true }
 sha2 = "0.10"
 hex = "0.4"
-a2rchitech-memory = { workspace = true }
-a2rchitech-policy = { workspace = true }
-a2rchitech-registry = { path = "../../control-plane/unified-registry/registry" }
-a2rchitech-skills = { workspace = true }
-a2rchitech-tools-gateway = { workspace = true }
-a2rchitech-providers = { workspace = true }
-a2rchitech-runtime-core = { workspace = true }
-a2rchitech-context-router = { workspace = true }
+allternit-memory = { workspace = true }
+allternit-policy = { workspace = true }
+allternit-registry = { path = "../../control-plane/unified-registry/registry" }
+allternit-skills = { workspace = true }
+allternit-tools-gateway = { workspace = true }
+allternit-providers = { workspace = true }
+allternit-runtime-core = { workspace = true }
+allternit-context-router = { workspace = true }
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
 thiserror = "1.0"
 serde = { version = "1.0", features = ["derive"] }

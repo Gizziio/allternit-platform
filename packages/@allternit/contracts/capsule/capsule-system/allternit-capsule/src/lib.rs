@@ -1,10 +1,10 @@
-//! # A2rchitech Capsule
+//! # Allternit Capsule
 //!
 //! Content-addressed, cryptographically signed deployment bundles for tools.
 //!
 //! ## What is a Capsule?
 //!
-//! A capsule is the unit of deployment in A2rchitech. It packages:
+//! A capsule is the unit of deployment in Allternit. It packages:
 //! - A WASM component (the compiled tool)
 //! - Metadata (name, version, description)
 //! - ToolABI specification (inputs, outputs, capabilities)
@@ -14,7 +14,7 @@
 //! ## Capsule Format
 //!
 //! ```text
-//! capsule.a2r (tar.gz archive)
+//! capsule.allternit (tar.gz archive)
 //! ├── manifest.json       # CapsuleManifest
 //! ├── component.wasm      # Compiled WASM component
 //! ├── tool-abi.json       # ToolABI specification

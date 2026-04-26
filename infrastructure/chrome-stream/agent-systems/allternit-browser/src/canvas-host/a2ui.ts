@@ -7,9 +7,9 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const A2UI_PATH = '/__a2r__/a2ui';
-export const CANVAS_HOST_PATH = '/__a2r__/canvas';
-export const CANVAS_WS_PATH = '/__a2r__/ws';
+export const A2UI_PATH = '/__allternit__/a2ui';
+export const CANVAS_HOST_PATH = '/__allternit__/canvas';
+export const CANVAS_WS_PATH = '/__allternit__/ws';
 
 let cachedA2uiRootReal: string | null | undefined;
 let resolvingA2uiRoot: Promise<string | null> | null = null;
@@ -26,7 +26,7 @@ async function resolveA2uiRoot(): Promise<string | null> {
     path.resolve(process.cwd(), 'src/canvas-host/a2ui'),
     path.resolve(process.cwd(), 'dist/canvas-host/a2ui'),
     // From bundle directory
-    path.resolve(process.cwd(), '5-ui/a2r-platform/dist-a2ui'),
+    path.resolve(process.cwd(), '5-ui/allternit-platform/dist-a2ui'),
   ];
   
   if (process.execPath) {
@@ -107,7 +107,7 @@ export function injectCanvasLiveReload(html: string): string {
 <script>
 (() => {
   // Cross-platform action bridge helper
-  const handlerNames = ["a2rCanvasA2UIAction"];
+  const handlerNames = ["allternitCanvasA2UIAction"];
   function postToNode(payload) {
     try {
       const raw = typeof payload === "string" ? payload : JSON.stringify(payload);
@@ -125,7 +125,7 @@ export function injectCanvasLiveReload(html: string): string {
       }
       // Web fallback - post to parent
       if (window.parent !== window) {
-        window.parent.postMessage({ type: 'A2R_ACTION', payload }, '*');
+        window.parent.postMessage({ type: 'Allternit_ACTION', payload }, '*');
         return true;
       }
     } catch {}
@@ -137,11 +137,11 @@ export function injectCanvasLiveReload(html: string): string {
     const action = { ...userAction, id };
     return postToNode({ userAction: action });
   }
-  globalThis.A2R = globalThis.A2R ?? {};
-  globalThis.A2R.postMessage = postToNode;
-  globalThis.A2R.sendUserAction = sendUserAction;
-  globalThis.a2rPostMessage = postToNode;
-  globalThis.a2rSendUserAction = sendUserAction;
+  globalThis.Allternit = globalThis.Allternit ?? {};
+  globalThis.Allternit.postMessage = postToNode;
+  globalThis.Allternit.sendUserAction = sendUserAction;
+  globalThis.allternitPostMessage = postToNode;
+  globalThis.allternitSendUserAction = sendUserAction;
 
   // WebSocket live reload
   try {

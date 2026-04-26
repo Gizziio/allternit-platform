@@ -21,4 +21,4 @@ tracing-subscriber = { workspace = true }
 uuid = { workspace = true }
 tower = { version = "0.5", features = ["util"] }
 
-a2rchitech-policy = { workspace = true }
+allternit-policy = { workspace = true }

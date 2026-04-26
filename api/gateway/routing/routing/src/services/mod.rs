@@ -1,6 +1,6 @@
 //! API Services Module
 //!
-//! Core services for the A2R API layer.
+//! Core services for the Allternit API layer.
 
 pub mod capsule_permissions;
 pub mod capsule_registry;

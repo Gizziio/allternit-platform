@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://a2rchitech.local/spec/contracts/MCPAppDescriptor.schema.json",
+  "$id": "https://allternit.local/spec/contracts/MCPAppDescriptor.schema.json",
   "title": "MCP App Descriptor",
   "type": "object",
   "additionalProperties": false,
@@ -29,7 +29,7 @@
           "type": "string",
           "enum": [
             "text/html",
-            "application/vnd.a2r.mcpapp+json"
+            "application/vnd.allternit.mcpapp+json"
           ]
         }
       }

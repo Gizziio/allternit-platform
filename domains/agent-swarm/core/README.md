@@ -8,25 +8,25 @@ A multi-agent orchestration platform with 4 swarm modes for parallel task execut
 
 ```bash
 # Submit a task with auto-detected mode
-a2r swarm "Implement a REST API for user management"
+allternit swarm "Implement a REST API for user management"
 
 # Force specific mode
-a2r swarm "Refactor codebase" --mode=closed_loop
+allternit swarm "Refactor codebase" --mode=closed_loop
 
 # Watch progress in real-time
-a2r swarm "Build feature X" --watch
+allternit swarm "Build feature X" --watch
 
 # Set budget limit
-a2r swarm "Large refactoring" --budget=10.00 --agents=10
+allternit swarm "Large refactoring" --budget=10.00 --agents=10
 
 # Check active sessions
-a2r swarm status
+allternit swarm status
 
 # Open dashboard
-a2r swarm dashboard
+allternit swarm dashboard
 
 # Query knowledge base
-a2r swarm knowledge "authentication patterns"
+allternit swarm knowledge "authentication patterns"
 ```
 
 ### Natural Language Triggers
@@ -45,7 +45,7 @@ Just say the magic words and the swarm activates:
 ### JavaScript/TypeScript API
 
 ```typescript
-import { useMetaSwarm, detectSwarmTrigger } from '@a2r/platform/swarm';
+import { useMetaSwarm, detectSwarmTrigger } from '@allternit/platform/swarm';
 
 // In your component
 function MyComponent() {
@@ -84,7 +84,7 @@ function MyComponent() {
 - Exports best architecture to DAK packs
 
 ```bash
-a2r swarm "Design optimal agent architecture for web scraping" --mode=swarm_agentic
+allternit swarm "Design optimal agent architecture for web scraping" --mode=swarm_agentic
 ```
 
 ### 2. Claude Swarm
@@ -98,7 +98,7 @@ a2r swarm "Design optimal agent architecture for web scraping" --mode=swarm_agen
 - Result Merger combines outputs
 
 ```bash
-a2r swarm "Generate 50 test cases" --mode=claude_swarm
+allternit swarm "Generate 50 test cases" --mode=claude_swarm
 ```
 
 ### 3. ClosedLoop (Production)
@@ -113,7 +113,7 @@ a2r swarm "Generate 50 test cases" --mode=claude_swarm
 - **Compound:** Extract patterns to knowledge base
 
 ```bash
-a2r swarm "Refactor production API" --mode=closed_loop --agents=29
+allternit swarm "Refactor production API" --mode=closed_loop --agents=29
 ```
 
 ### 4. Hybrid
@@ -126,7 +126,7 @@ a2r swarm "Refactor production API" --mode=closed_loop --agents=29
 - Adaptive based on intermediate results
 
 ```bash
-a2r swarm "Build complete system" --mode=hybrid
+allternit swarm "Build complete system" --mode=hybrid
 ```
 
 ## Dashboard
@@ -141,7 +141,7 @@ The MetaSwarmDashboard provides real-time monitoring:
 
 Access via:
 ```bash
-a2r shell --view=swarm
+allternit shell --view=swarm
 # or
 open http://localhost:5173/#/swarm
 ```
@@ -151,7 +151,7 @@ open http://localhost:5173/#/swarm
 ### In AskUserQuestion
 
 ```tsx
-import { SwarmAwareAskUserQuestion } from '@a2r/platform/swarm';
+import { SwarmAwareAskUserQuestion } from '@allternit/platform/swarm';
 
 <SwarmAwareAskUserQuestion
   id="implementation"
@@ -186,7 +186,7 @@ const handleChatMessage = async (text: string) => {
 ### In ADE/Code Mode
 
 ```typescript
-import { useMetaSwarm } from '@a2r/platform/swarm';
+import { useMetaSwarm } from '@allternit/platform/swarm';
 
 function CodeModeAgent() {
   const { submitTask, dashboardState } = useMetaSwarm();
@@ -233,8 +233,8 @@ struct Pattern {
 
 Query patterns:
 ```bash
-a2r swarm knowledge "authentication errors"
-a2r swarm knowledge "optimization patterns" --domain=database
+allternit swarm knowledge "authentication errors"
+allternit swarm knowledge "optimization patterns" --domain=database
 ```
 
 ## Architecture
@@ -276,13 +276,13 @@ WS     /api/v1/swarm/events             # Real-time events
 
 ```bash
 # Run all tests
-cargo test -p a2r-meta-swarm
+cargo test -p allternit-meta-swarm
 
 # Run integration tests
-cargo test -p a2r-meta-swarm --test integration_test
+cargo test -p allternit-meta-swarm --test integration_test
 
 # Run with coverage
-cargo tarpaulin -p a2r-meta-swarm
+cargo tarpaulin -p allternit-meta-swarm
 ```
 
 ## License

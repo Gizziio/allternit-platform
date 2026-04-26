@@ -1,7 +1,7 @@
 {
   "name": "@allternit/replies-runtime",
   "version": "1.0.0",
-  "description": "A2R Replies Runtime — /v1/replies lifecycle, SSE streams, in-memory store",
+  "description": "Allternit Replies Runtime — /v1/replies lifecycle, SSE streams, in-memory store",
   "type": "module",
   "main": "./src/index.ts",
   "scripts": {

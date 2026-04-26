@@ -19,7 +19,7 @@ class CookbookRepository:
     - Get examples for planner training
     """
     
-    def __init__(self, storage_path: str = "/tmp/a2r-cookbook"):
+    def __init__(self, storage_path: str = "/tmp/allternit-cookbook"):
         self.storage_path = Path(storage_path)
         self.storage_path.mkdir(parents=True, exist_ok=True)
         self.index_path = self.storage_path / "index.json"

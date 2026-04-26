@@ -12,7 +12,7 @@ sqlx = { workspace = true, features = ["runtime-tokio-rustls", "sqlite", "chrono
 thiserror = { workspace = true }
 async-trait = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
-a2ui-types = { path = "../../../0-substrate/types/a2ui_types" }
+a2ui-types = { path = "../../../../types/typescript/a2ui_types" }
 anyhow = { workspace = true }
 reqwest = { workspace = true, features = ["json"] }
 ratatui = "0.26"

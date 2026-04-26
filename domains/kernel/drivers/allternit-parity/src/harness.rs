@@ -479,7 +479,7 @@ impl ParityHarness {
             metadata: crate::capture::ReceiptMetadata {
                 version: env!("CARGO_PKG_VERSION").to_string(),
                 host_version: "2026.1.29".to_string(),
-                environment: "a2r-parity".to_string(),
+                environment: "allternit-parity".to_string(),
                 host_hash: None,
             },
         }

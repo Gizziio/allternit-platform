@@ -16,7 +16,7 @@ const manager = new VMImageManager();
 
 // Or with custom options
 const customManager = new VMImageManager({
-  cacheDir: "~/.a2r/images",
+  cacheDir: "~/.allternit/images",
   maxCacheSize: 20 * 1024 * 1024 * 1024, // 20GB
   debug: true,
   githubToken: process.env.GITHUB_TOKEN, // For higher rate limits
@@ -59,7 +59,7 @@ async function buildExample() {
       architecture: "arm64",
       packages: ["nodejs", "npm", "python3", "git"],
       includeToolchains: true,
-      outputDir: "~/.a2r/images",
+      outputDir: "~/.allternit/images",
       version: "1.2.0-custom",
     });
 

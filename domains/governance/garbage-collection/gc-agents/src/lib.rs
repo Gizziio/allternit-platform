@@ -1,4 +1,4 @@
-//! A2R Garbage Collection Agents
+//! Allternit Garbage Collection Agents
 //!
 //! Implements LAW-ENF-005: Entropy Compression Engine
 //!

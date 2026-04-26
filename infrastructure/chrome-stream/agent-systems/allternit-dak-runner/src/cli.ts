@@ -31,11 +31,11 @@ function parseArgs(): { command: Command; subcommand?: string; options: CLIOptio
   const subcommand = args[1];
 
   const options: CLIOptions = {
-    railsCliPath: process.env.A2R_RAILS_CLI || 'a2r',
-    projectPath: process.env.A2R_PROJECT_PATH || process.cwd(),
-    outputDir: process.env.A2R_OUTPUT_DIR || '.a2r/runner',
-    railsHttpUrl: process.env.A2R_RAILS_HTTP_URL,
-    railsApiKey: process.env.A2R_RAILS_API_KEY,
+    railsCliPath: process.env.Allternit_RAILS_CLI || 'allternit',
+    projectPath: process.env.Allternit_PROJECT_PATH || process.cwd(),
+    outputDir: process.env.Allternit_OUTPUT_DIR || '.allternit/runner',
+    railsHttpUrl: process.env.Allternit_RAILS_HTTP_URL,
+    railsApiKey: process.env.Allternit_RAILS_API_KEY,
   };
 
   return { command, subcommand, options };
@@ -55,11 +55,11 @@ Commands:
   worker stats Show worker statistics
 
 Environment:
-  A2R_RAILS_CLI        Path to Rails CLI binary (default: a2r)
-  A2R_PROJECT_PATH     Project root path (default: cwd)
-  A2R_OUTPUT_DIR       Runner output directory (default: .a2r/runner)
-  A2R_RAILS_HTTP_URL   Rails HTTP API URL (optional, enables HTTP mode)
-  A2R_RAILS_API_KEY    Rails API key (optional)
+  Allternit_RAILS_CLI        Path to Rails CLI binary (default: allternit)
+  Allternit_PROJECT_PATH     Project root path (default: cwd)
+  Allternit_OUTPUT_DIR       Runner output directory (default: .allternit/runner)
+  Allternit_RAILS_HTTP_URL   Rails HTTP API URL (optional, enables HTTP mode)
+  Allternit_RAILS_API_KEY    Rails API key (optional)
 `);
 }
 

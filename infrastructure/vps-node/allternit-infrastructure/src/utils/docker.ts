@@ -633,7 +633,7 @@ export async function deployCompose(
     envFile?: string;
   } = {}
 ): Promise<{ success: boolean; output: string; services?: string[] }> {
-  const workDir = options.workDir || '/tmp/a2r-compose';
+  const workDir = options.workDir || '/tmp/allternit-compose';
   
   // Create working directory
   const mkdirResult = await execCommand(client, `mkdir -p ${workDir}`);

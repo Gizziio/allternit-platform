@@ -1,7 +1,7 @@
 {
   "name": "@allternit/workflow-engine",
   "version": "0.1.0",
-  "description": "A2R Workflow Engine - Visual workflow orchestration with DAG support",
+  "description": "Allternit Workflow Engine - Visual workflow orchestration with DAG support",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -47,7 +47,7 @@
     "vitest": "^1.0.0"
   },
   "keywords": [
-    "a2r",
+    "allternit",
     "workflow",
     "dag",
     "orchestration",

@@ -1,9 +1,17 @@
 {
-  "extends": "../../../tsconfig.json",
-  "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": "./src"
-  },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+    "compilerOptions": {
+        "target": "ES2022",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+        "noEmit": false,
+        "allowImportingTsExtensions": false,
+        "baseUrl": ".",
+        "outDir": "dist"
+    },
+    "include": ["**/*.ts", "**/*.tsx"],
+    "exclude": ["dist", "node_modules"]
 }

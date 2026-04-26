@@ -39,7 +39,7 @@ class DiscoveredApp:
     window_title: Optional[str] = None  # Current window title
     pid: Optional[int] = None        # Process ID
     is_frontmost: bool = False       # Is currently active
-    is_connected: bool = False       # Is connected to A2R
+    is_connected: bool = False       # Is connected to Allternit
     detected_at: datetime = field(default_factory=datetime.utcnow)
     detection_methods: Set[DetectionMethod] = field(default_factory=set)
     metadata: Dict[str, Any] = field(default_factory=dict)
@@ -285,7 +285,7 @@ class AppDiscovery:
                             front_pid = parts[3]
                             
                             # Skip our own app
-                            if front_name not in ("Electron", "A2R Thin Client"):
+                            if front_name not in ("Electron", "Allternit Thin Client"):
                                 frontmost = DiscoveredApp(
                                     id=self._name_to_id(front_name),
                                     name=front_name,
@@ -306,7 +306,7 @@ class AppDiscovery:
                                 app_bundle = app_parts[1] if app_parts[1] else None
                                 
                                 # Skip system processes and our app
-                                if app_name and app_name not in ("Electron", "A2R Thin Client", ""):
+                                if app_name and app_name not in ("Electron", "Allternit Thin Client", ""):
                                     app = DiscoveredApp(
                                         id=self._name_to_id(app_name),
                                         name=app_name,

@@ -2,7 +2,7 @@
  * GizziClaw - Agent Workspace System
  * 
  * A TypeScript implementation of the OpenCLAW agent workspace system,
- * integrated with Gizzi-Code and the A2R platform.
+ * integrated with Gizzi-Code and the Allternit platform.
  */
 
 export { Workspace, WorkspaceSchema } from './workspace/workspace.js';

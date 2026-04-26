@@ -8,7 +8,7 @@
 //!
 //! ```rust,no_run
 //! use mcp::tools_registry::McpToolsRegistry;
-//! use a2rchitech_sdk_core::ToolGatewayDefinition;
+//! use allternit_sdk_core::ToolGatewayDefinition;
 //!
 //! # async fn example() {
 //! let registry = McpToolsRegistry::new();
@@ -20,7 +20,7 @@
 //!         // ... other fields
 //!         # name: "read_file".to_string(),
 //!         # description: "Read a file".to_string(),
-//!         # tool_type: a2rchitech_sdk_core::ToolType::Local,
+//!         # tool_type: allternit_sdk_core::ToolType::Local,
 //!         # command: "read_file".to_string(),
 //!         # endpoint: "".to_string(),
 //!         # input_schema: serde_json::json!({}),
@@ -29,12 +29,12 @@
 //!         # idempotency_behavior: "idempotent".to_string(),
 //!         # retryable: true,
 //!         # failure_classification: "none".to_string(),
-//!         # safety_tier: a2rchitech_sdk_core::SafetyTier::T1,
-//!         # resource_limits: a2rchitech_sdk_core::ToolResourceLimits {
+//!         # safety_tier: allternit_sdk_core::SafetyTier::T1,
+//!         # resource_limits: allternit_sdk_core::ToolResourceLimits {
 //!         #     cpu: None,
 //!         #     memory: None,
-//!         #     network: a2rchitech_sdk_core::NetworkAccess::None,
-//!         #     filesystem: a2rchitech_sdk_core::FilesystemAccess::None,
+//!         #     network: allternit_sdk_core::NetworkAccess::None,
+//!         #     filesystem: allternit_sdk_core::FilesystemAccess::None,
 //!         #     time_limit: 30000,
 //!         # },
 //!     }
@@ -53,7 +53,7 @@
 //! # }
 //! ```
 
-use a2rchitech_sdk_core::ToolGatewayDefinition;
+use allternit_sdk_core::ToolGatewayDefinition;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
@@ -108,7 +108,7 @@ impl McpToolsRegistry {
     ///
     /// ```rust,no_run
     /// # use mcp::tools_registry::McpToolsRegistry;
-    /// # use a2rchitech_sdk_core::ToolGatewayDefinition;
+    /// # use allternit_sdk_core::ToolGatewayDefinition;
     /// # async fn example() {
     /// # let registry = McpToolsRegistry::new();
     /// # let tools = vec![];
@@ -436,7 +436,7 @@ pub struct TrackedRegistryStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use a2rchitech_sdk_core::{
+    use allternit_sdk_core::{
         FilesystemAccess, NetworkAccess, SafetyTier, ToolResourceLimits, ToolType,
     };
 

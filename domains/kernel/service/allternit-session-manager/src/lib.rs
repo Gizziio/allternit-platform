@@ -1,4 +1,4 @@
-//! # A2R Session Manager
+//! # Allternit Session Manager
 //!
 //! High-level session management that orchestrates execution drivers.
 //! Provides a unified interface for creating, managing, and destroying

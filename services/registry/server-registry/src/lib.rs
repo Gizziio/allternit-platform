@@ -1,8 +1,8 @@
-//! A2rchitech Registry Server Library
+//! Allternitchitech Registry Server Library
 //!
 //! Core functionality for the registry server including data models, business logic,
 //! and service implementations for publishing, searching, indexing, and managing
-//! skills, tools, and agents in the A2rchitech ecosystem.
+//! skills, tools, and agents in the Allternitchitech ecosystem.
 
 use anyhow::Result;
 use chrono::{DateTime, NaiveDateTime, Utc};

@@ -71,7 +71,7 @@ impl DagValidator {
             }
             
             // Validate wih_path format
-            if !node.wih_path.starts_with("/.a2r/wih/") || !node.wih_path.ends_with(".json") {
+            if !node.wih_path.starts_with("/.allternit/wih/") || !node.wih_path.ends_with(".json") {
                 errors.push(format!(
                     "Node {} has invalid wih_path: {}",
                     node.task_id, node.wih_path
@@ -261,21 +261,21 @@ mod tests {
                     task_id: "A".to_string(),
                     title: "A".to_string(),
                     blocked_by: vec![],
-                    wih_path: "/.a2r/wih/A.wih.json".to_string(),
+                    wih_path: "/.allternit/wih/A.wih.json".to_string(),
                     wih: None,
                 },
                 GraphNode {
                     task_id: "B".to_string(),
                     title: "B".to_string(),
                     blocked_by: vec!["A".to_string()],
-                    wih_path: "/.a2r/wih/B.wih.json".to_string(),
+                    wih_path: "/.allternit/wih/B.wih.json".to_string(),
                     wih: None,
                 },
                 GraphNode {
                     task_id: "C".to_string(),
                     title: "C".to_string(),
                     blocked_by: vec!["B".to_string()],
-                    wih_path: "/.a2r/wih/C.wih.json".to_string(),
+                    wih_path: "/.allternit/wih/C.wih.json".to_string(),
                     wih: None,
                 },
             ],

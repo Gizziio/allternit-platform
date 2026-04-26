@@ -1,4 +1,4 @@
-//! A2R Memory Kernel
+//! Allternit Memory Kernel
 //!
 //! Three-layer memory system:
 //! 1. Events Layer - Append-only event log (traces.ndjson)

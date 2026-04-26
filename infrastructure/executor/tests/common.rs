@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 use uuid::Uuid;
 
-use a2r_executor::{
+use allternit_executor::{
     ContainerConfig, Job, JobFilter, JobStatus, Priority, ResourceLimits, ResourceRequest,
     VolumeMount,
 };

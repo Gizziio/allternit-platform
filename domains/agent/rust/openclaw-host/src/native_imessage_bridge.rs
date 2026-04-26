@@ -1,8 +1,8 @@
 //! iMessage Bridge - OC-029
 //!
-//! Bridge between OpenClaw's iMessage functionality and A2R's native messaging system.
+//! Bridge between OpenClaw's iMessage functionality and Allternit's native messaging system.
 //! This module implements the adapter pattern to translate between OpenClaw iMessage operations
-//! and A2R messaging operations while maintaining A2R interface.
+//! and Allternit messaging operations while maintaining Allternit interface.
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};

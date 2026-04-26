@@ -1,6 +1,6 @@
-//! A2R SYSTEM_LAW Enforcement Engine
+//! Allternit SYSTEM_LAW Enforcement Engine
 //!
-//! Implements constitutional authority for the A2rchitech Agentic Operating System.
+//! Implements constitutional authority for the Allternit Agentic Operating System.
 //! This crate enforces all SYSTEM_LAW sections defined in SYSTEM_LAW.md (Tier-0 authority).
 //!
 //! # Law Categories

@@ -48,12 +48,12 @@ def init_observability() -> None:
     global recorder, replay_builder
     
     # Check if observability is enabled
-    if os.environ.get("A2R_ENABLE_OBSERVABILITY", "true").lower() != "true":
-        print("Observability disabled (set A2R_ENABLE_OBSERVABILITY=true to enable)")
+    if os.environ.get("Allternit_ENABLE_OBSERVABILITY", "true").lower() != "true":
+        print("Observability disabled (set Allternit_ENABLE_OBSERVABILITY=true to enable)")
         return
     
     # Configure from environment
-    storage_path = os.environ.get("A2R_RECORDINGS_PATH", "/tmp/a2r-recordings")
+    storage_path = os.environ.get("Allternit_RECORDINGS_PATH", "/tmp/allternit-recordings")
     
     config = RecorderConfig(
         storage_path=storage_path,

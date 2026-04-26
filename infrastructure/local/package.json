@@ -1,5 +1,5 @@
 {
-  "name": "@a2r/multi-region",
+  "name": "@allternit/multi-region",
   "version": "1.0.0",
   "description": "Multi-Region Deployment - Geographic distribution, failover, load balancing",
   "type": "module",
@@ -14,6 +14,6 @@
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
-  "keywords": ["a2r", "multi-region", "deployment", "failover"],
+  "keywords": ["allternit", "multi-region", "deployment", "failover"],
   "license": "MIT"
 }

@@ -53,7 +53,7 @@ const client = await createLlmClientWithFallback("openai/gpt-4o-mini")
 ```
 
 **Key Features**:
-- Dynamic import of `@a2rchitect/tui/provider` and `ai` SDK
+- Dynamic import of `@allternitchitect/tui/provider` and `ai` SDK
 - Automatic fallback to StubProvider when not in terminal context
 - Message format conversion between ars-contexta and ai-sdk
 - Streaming support with AsyncGenerator
@@ -105,7 +105,7 @@ npm run build    # Compiles Rust → Node.js native module
 ### Step 4: TUI Integration ✅
 
 **Files**:
-- `src/ui/a2r/ars-contexta-runtime.ts` - Runtime state manager
+- `src/ui/allternit/ars-contexta-runtime.ts` - Runtime state manager
 - `src/tui/components/ars-contexta-panel.tsx` - Panel component
 - `src/server/routes/ars-contexta-tui-bridge.ts` - Server-TUI bridge
 
@@ -152,7 +152,7 @@ export ENABLE_NLP_NATIVE=true
 ```json
 {
   "dependencies": {
-    "@a2r/ars-contexta": "workspace:*"
+    "@allternit/ars-contexta": "workspace:*"
   }
 }
 ```

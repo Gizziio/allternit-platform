@@ -57,8 +57,8 @@ sudo chmod +x /usr/local/bin/firecracker /usr/local/bin/jailer
 
 ```bash
 # Download pre-built kernel (or build your own)
-sudo mkdir -p /var/lib/a2r
-sudo curl -o /var/lib/a2r/vmlinux \
+sudo mkdir -p /var/lib/allternit
+sudo curl -o /var/lib/allternit/vmlinux \
   https://s3.amazonaws.com/spec.ccfc.min/img/quickstart_guide/x86_64/kernels/vmlinux-5.10.186
 
 # Or build custom kernel with necessary drivers
@@ -68,15 +68,15 @@ sudo curl -o /var/lib/a2r/vmlinux \
 
 ```bash
 # Create required directories
-sudo mkdir -p /var/lib/a2r/vms
-sudo mkdir -p /var/lib/a2r/firecracker-vms
+sudo mkdir -p /var/lib/allternit/vms
+sudo mkdir -p /var/lib/allternit/firecracker-vms
 sudo mkdir -p /srv/jailer
-sudo mkdir -p /run/a2r/firecracker
+sudo mkdir -p /run/allternit/firecracker
 
 # Set permissions
-sudo chown -R a2r:a2r /var/lib/a2r
-sudo chown -R a2r:a2r /srv/jailer
-sudo chmod 755 /var/lib/a2r
+sudo chown -R allternit:allternit /var/lib/allternit
+sudo chown -R allternit:allternit /srv/jailer
+sudo chmod 755 /var/lib/allternit
 sudo chmod 750 /srv/jailer
 ```
 
@@ -105,9 +105,9 @@ mount | grep cgroup2
 
 # Should show: cgroup2 on /sys/fs/cgroup type cgroup2
 
-# Create a2r cgroup subtree
-sudo mkdir -p /sys/fs/cgroup/a2r
-sudo chown a2r:a2r /sys/fs/cgroup/a2r
+# Create allternit cgroup subtree
+sudo mkdir -p /sys/fs/cgroup/allternit
+sudo chown allternit:allternit /sys/fs/cgroup/allternit
 
 # Enable controllers
 sudo sh -c 'echo "+cpu +memory +io +pids" > /sys/fs/cgroup/cgroup.subtree_control'
@@ -117,7 +117,7 @@ sudo sh -c 'echo "+cpu +memory +io +pids" > /sys/fs/cgroup/cgroup.subtree_contro
 
 ```bash
 # Create dedicated user
-sudo useradd -r -s /bin/false -M a2r
+sudo useradd -r -s /bin/false -M allternit
 
 # Add capabilities (alternative to running as root)
 sudo setcap cap_net_admin,cap_sys_admin,cap_chown=eip /usr/local/bin/firecracker
@@ -132,8 +132,8 @@ let config = FirecrackerConfig {
     firecracker_bin: PathBuf::from("/usr/local/bin/firecracker"),
     jailer_bin: PathBuf::from("/usr/local/bin/jailer"),
     chroot_base_dir: PathBuf::from("/srv/jailer"),
-    vm_root_dir: PathBuf::from("/var/lib/a2r/vms"),
-    kernel_image: PathBuf::from("/var/lib/a2r/vmlinux"),
+    vm_root_dir: PathBuf::from("/var/lib/allternit/vms"),
+    kernel_image: PathBuf::from("/var/lib/allternit/vmlinux"),
     bridge_iface: "fcbridge0".to_string(),
     vm_subnet: "172.16.0.0/24".to_string(),
     cgroup_base: PathBuf::from("/sys/fs/cgroup"),
@@ -150,8 +150,8 @@ let config = FirecrackerConfig {
     firecracker_bin: PathBuf::from("/usr/local/bin/firecracker"),
     jailer_bin: PathBuf::from("/usr/local/bin/jailer"),
     chroot_base_dir: PathBuf::from("/srv/jailer"),
-    vm_root_dir: PathBuf::from("/var/lib/a2r/vms"),
-    kernel_image: PathBuf::from("/var/lib/a2r/vmlinux"),
+    vm_root_dir: PathBuf::from("/var/lib/allternit/vms"),
+    kernel_image: PathBuf::from("/var/lib/allternit/vmlinux"),
     bridge_iface: "fcbridge0".to_string(),
     vm_subnet: "10.0.0.0/16".to_string(),  // Larger subnet
     cgroup_base: PathBuf::from("/sys/fs/cgroup"),
@@ -177,10 +177,10 @@ curl http://localhost:8080/health
 
 Prometheus metrics available at `/metrics`:
 
-- `a2r_vm_active` - Number of active VMs
-- `a2r_vm_spawn_duration_ms` - VM spawn latency
-- `a2r_resources_memory_used_mib` - Memory usage
-- `a2r_resources_ip_available` - Available IPs
+- `allternit_vm_active` - Number of active VMs
+- `allternit_vm_spawn_duration_ms` - VM spawn latency
+- `allternit_resources_memory_used_mib` - Memory usage
+- `allternit_resources_ip_available` - Available IPs
 
 ### Logs
 
@@ -188,10 +188,10 @@ Structured logs in JSON format:
 
 ```bash
 # View logs
-journalctl -u a2r-firecracker-driver -f
+journalctl -u allternit-firecracker-driver -f
 
 # Filter for spawn failures
-journalctl -u a2r-firecracker-driver | jq 'select(.event == "vm.spawn.failed")'
+journalctl -u allternit-firecracker-driver | jq 'select(.event == "vm.spawn.failed")'
 ```
 
 ## Backup and Recovery
@@ -200,17 +200,17 @@ journalctl -u a2r-firecracker-driver | jq 'select(.event == "vm.spawn.failed")'
 
 ```bash
 # Backup IPAM state
-cp /var/lib/a2r/vms/ipam-state.json /backup/ipam-state-$(date +%Y%m%d).json
+cp /var/lib/allternit/vms/ipam-state.json /backup/ipam-state-$(date +%Y%m%d).json
 
 # Restore IPAM state
-cp /backup/ipam-state-YYYYMMDD.json /var/lib/a2r/vms/ipam-state.json
+cp /backup/ipam-state-YYYYMMDD.json /var/lib/allternit/vms/ipam-state.json
 ```
 
 ### VM Cache
 
 ```bash
 # Backup OCI image cache
-tar -czf /backup/a2r-cache-$(date +%Y%m%d).tar.gz /var/lib/a2r/vms/cache/
+tar -czf /backup/allternit-cache-$(date +%Y%m%d).tar.gz /var/lib/allternit/vms/cache/
 ```
 
 ## Scaling

@@ -1,5 +1,5 @@
 {
-  "name": "@a2r/mcp-connectors",
+  "name": "@allternit/mcp-connectors",
   "version": "1.0.0",
   "description": "MCP Connectors - External service integrations",
   "type": "module",
@@ -16,8 +16,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@a2r/sdk": "workspace:*",
-    "@a2r/types": "workspace:*",
+    "@allternit/sdk": "workspace:*",
+    "@allternit/types": "workspace:*",
     "@octokit/rest": "^20.0.0",
     "@slack/web-api": "^7.0.0",
     "pg": "^8.11.0",

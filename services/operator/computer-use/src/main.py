@@ -1,9 +1,9 @@
 """
-A2R Operator Service
-Unified service for A2R automation capabilities:
+Allternit Operator Service
+Unified service for Allternit automation capabilities:
 - Browser-Use: Agent-based browser automation (Chromium + CDP)
 - Computer-Use: Vision-based computer control
-- Desktop-Use: Desktop automation (A2R Vision)
+- Desktop-Use: Desktop automation (Allternit Vision)
 - Parallel Execution: Multi-variant task execution
 """
 
@@ -29,9 +29,9 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Import A2R Browser-Use
+# Import Allternit Browser-Use
 try:
-    from .browser_use.manager import a2r_browser_manager, A2RBrowserManager, BrowserTask
+    from .browser_use.manager import allternit_browser_manager, AllternitBrowserManager, BrowserTask
     BROWSER_USE_AVAILABLE = True
 except ImportError as e:
     print(f"Browser-use not available: {e}")
@@ -48,23 +48,23 @@ from .brain_adapter import (
 )
 
 # Import internalized parsing logic
-from .a2r_vision.action_parser import parse_action_to_structure_output
+from .allternit_vision.action_parser import parse_action_to_structure_output
 from .telemetry import list_providers, build_snapshot, TelemetryProviderInfo, TelemetrySnapshot
 
-app = FastAPI(title="A2R Operator - Browser, Computer & Desktop Automation")
+app = FastAPI(title="Allternit Operator - Browser, Computer & Desktop Automation")
 
 # Configuration
-API_BASE = os.getenv("A2R_VISION_INFERENCE_BASE", os.getenv("OPENAI_API_BASE"))
-API_KEY = os.getenv("A2R_VISION_INFERENCE_KEY", os.getenv("OPENAI_API_KEY", "no-key"))
-MODEL_NAME = os.getenv("A2R_VISION_MODEL_NAME", "a2r-vision-7b")
+API_BASE = os.getenv("Allternit_VISION_INFERENCE_BASE", os.getenv("OPENAI_API_BASE"))
+API_KEY = os.getenv("Allternit_VISION_INFERENCE_KEY", os.getenv("OPENAI_API_KEY", "no-key"))
+MODEL_NAME = os.getenv("Allternit_VISION_MODEL_NAME", "allternit-vision-7b")
 
 # Service configuration
-SERVICE_PORT = int(os.getenv("A2R_OPERATOR_PORT", "3010"))
-SERVICE_HOST = os.getenv("A2R_OPERATOR_HOST", "127.0.0.1")
+SERVICE_PORT = int(os.getenv("Allternit_OPERATOR_PORT", "3010"))
+SERVICE_HOST = os.getenv("Allternit_OPERATOR_HOST", "127.0.0.1")
 BRAIN_GATEWAY_URL = os.getenv("BRAIN_GATEWAY_URL", "http://localhost:3000")
 
-# API Key for A2R Operator
-EXPECTED_API_KEY = os.getenv("A2R_OPERATOR_API_KEY", "a2r-operator-key")
+# API Key for Allternit Operator
+EXPECTED_API_KEY = os.getenv("Allternit_OPERATOR_API_KEY", "allternit-operator-key")
 
 # CORS middleware
 app.add_middleware(
@@ -86,7 +86,7 @@ async def verify_api_key(authorization: str = Header(None)):
     return token
 
 # ============================================================================
-# A2R VISION / DESKTOP SECTION (Existing)
+# Allternit VISION / DESKTOP SECTION (Existing)
 # ============================================================================
 
 class Viewport(BaseModel):
@@ -117,7 +117,7 @@ class ProposeResponse(BaseModel):
 async def fn_inference_real(task: str, screenshot_b64: str) -> str:
     """Perform real inference using a VLM API"""
     if not API_BASE:
-        raise ValueError("Inference API Base not configured (A2R_VISION_INFERENCE_BASE)")
+        raise ValueError("Inference API Base not configured (Allternit_VISION_INFERENCE_BASE)")
     
     client = OpenAI(base_url=API_BASE, api_key=API_KEY)
     prompt = f"Task: {task}"
@@ -179,7 +179,7 @@ async def execute_computer_task(session_id: str, request: DesktopControlRequest)
     return await execute_desktop_control(request)
 
 # ============================================================================
-# A2R BROWSER-USE SECTION (New - replaces Superconductor browser)
+# Allternit BROWSER-USE SECTION (New - replaces Superconductor browser)
 # ============================================================================
 
 class BrowserTaskRequest(BaseModel):
@@ -199,7 +199,7 @@ async def browser_health():
     """Check browser-use availability"""
     return {
         "available": BROWSER_USE_AVAILABLE,
-        "service": "a2r-operator",
+        "service": "allternit-operator",
         "modes": ["browser-use", "playwright", "computer-use"] if BROWSER_USE_AVAILABLE else [],
         "chromium": True,
         "cdp_protocol": True
@@ -212,7 +212,7 @@ async def create_browser_task(request: BrowserTaskRequest):
         raise HTTPException(status_code=503, detail="browser-use not available. Run: pip install browser-use playwright")
     
     try:
-        task = await a2r_browser_manager.create_task(
+        task = await allternit_browser_manager.create_task(
             goal=request.goal,
             url=request.url,
             mode=request.mode
@@ -233,7 +233,7 @@ async def execute_browser_task(task_id: str):
         raise HTTPException(status_code=503, detail="browser-use not available")
     
     try:
-        task = await a2r_browser_manager.execute_task(task_id)
+        task = await allternit_browser_manager.execute_task(task_id)
         return {
             "task_id": task.id,
             "status": task.status,
@@ -250,7 +250,7 @@ async def get_browser_task(task_id: str):
     if not BROWSER_USE_AVAILABLE:
         raise HTTPException(status_code=503, detail="browser-use not available")
     
-    task = a2r_browser_manager.get_task(task_id)
+    task = allternit_browser_manager.get_task(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     
@@ -273,7 +273,7 @@ async def browser_search(request: BrowserSearchRequest):
         raise HTTPException(status_code=503, detail="browser-use not available")
     
     try:
-        result = await a2r_browser_manager.search_and_retrieve(
+        result = await allternit_browser_manager.search_and_retrieve(
             query=request.query,
             search_engine=request.search_engine
         )
@@ -288,18 +288,18 @@ async def browser_retrieve(request: BrowserRetrieveRequest):
         raise HTTPException(status_code=503, detail="browser-use not available")
     
     try:
-        result = await a2r_browser_manager.retrieve_url(request.url)
+        result = await allternit_browser_manager.retrieve_url(request.url)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 # ============================================================================
-# A2R PARALLEL EXECUTION SECTION (Rebranded from Superconductor)
+# Allternit PARALLEL EXECUTION SECTION (Rebranded from Superconductor)
 # ============================================================================
 
 # In-memory storage for runs (replaces Superconductor RUNS)
-A2R_RUNS = {}
-A2R_EVENT_QUEUES = {}
+Allternit_RUNS = {}
+Allternit_EVENT_QUEUES = {}
 
 class VariantConfig(BaseModel):
     variantId: str
@@ -314,7 +314,7 @@ class VerificationProfile(BaseModel):
     typechecking: bool = False
     customChecks: List[Any] = []
 
-class A2RRunRequest(BaseModel):
+class AllternitRunRequest(BaseModel):
     jobId: str
     goal: str
     beadsIssueId: Optional[str] = None
@@ -323,7 +323,7 @@ class A2RRunRequest(BaseModel):
     snapshotId: Optional[str] = None
     createdAt: Optional[str] = None
 
-class A2RRunStatus(BaseModel):
+class AllternitRunStatus(BaseModel):
     status: str
     progress: int
     activeVariants: int
@@ -331,7 +331,7 @@ class A2RRunStatus(BaseModel):
     totalVariants: int
     updatedAt: str
 
-class A2RVariantResult(BaseModel):
+class AllternitVariantResult(BaseModel):
     variantId: str
     status: str
     output: Optional[str] = None
@@ -340,13 +340,13 @@ class A2RVariantResult(BaseModel):
     verificationResults: List[Dict[str, Any]] = []
     error: Optional[str] = None
 
-class A2RRunResults(BaseModel):
+class AllternitRunResults(BaseModel):
     status: str
-    variants: List[A2RVariantResult]
+    variants: List[AllternitVariantResult]
     createdAt: str
     completedAt: Optional[str] = None
 
-async def a2r_emit_event(run_id: str, event_type: str, payload: Dict[str, Any]):
+async def allternit_emit_event(run_id: str, event_type: str, payload: Dict[str, Any]):
     """Emit event for parallel runs"""
     data_dict = {
         "type": event_type,
@@ -356,8 +356,8 @@ async def a2r_emit_event(run_id: str, event_type: str, payload: Dict[str, Any]):
     }
     data = json.dumps(data_dict)
 
-    # Persist the event to .a2r/autoland/{run_id}.jsonl for Proof of Work
-    autoland_dir = os.path.join(os.getcwd(), ".a2r", "autoland")
+    # Persist the event to .allternit/autoland/{run_id}.jsonl for Proof of Work
+    autoland_dir = os.path.join(os.getcwd(), ".allternit", "autoland")
     os.makedirs(autoland_dir, exist_ok=True)
     pow_path = os.path.join(autoland_dir, f"{run_id}.jsonl")
     try:
@@ -366,20 +366,20 @@ async def a2r_emit_event(run_id: str, event_type: str, payload: Dict[str, Any]):
     except Exception as e:
         logger.error(f"Failed to persist proof of work event: {e}")
 
-    if run_id in A2R_EVENT_QUEUES:
+    if run_id in Allternit_EVENT_QUEUES:
         message = f"data: {data}\n\n"
-        for queue in A2R_EVENT_QUEUES[run_id]:
+        for queue in Allternit_EVENT_QUEUES[run_id]:
             await queue.put(message)
 
-async def a2r_execute_variant(run_id: str, variant: VariantConfig, goal: str):
+async def allternit_execute_variant(run_id: str, variant: VariantConfig, goal: str):
     """Execute a variant in parallel"""
-    if run_id not in A2R_RUNS:
+    if run_id not in Allternit_RUNS:
         return
     
-    A2R_RUNS[run_id]["variants_state"][variant.variantId]["status"] = "running"
+    Allternit_RUNS[run_id]["variants_state"][variant.variantId]["status"] = "running"
     
     async def update_status(msg: str):
-        await a2r_emit_event(run_id, "status.variant", {
+        await allternit_emit_event(run_id, "status.variant", {
             "variantId": variant.variantId,
             "status": "running",
             "message": msg
@@ -412,7 +412,7 @@ export const GeneratedComponent = () => {{
         await update_status("✅ Verifying output...")
         await asyncio.sleep(0.5)
 
-        A2R_RUNS[run_id]["variants_state"][variant.variantId].update({
+        Allternit_RUNS[run_id]["variants_state"][variant.variantId].update({
             "status": "completed",
             "output": output,
             "previewUrl": f"http://{SERVICE_HOST}:{SERVICE_PORT}/v1/preview/{run_id}/{variant.variantId}",
@@ -420,42 +420,42 @@ export const GeneratedComponent = () => {{
             "verificationResults": [{"type": "lint", "status": "passed"}]
         })
         
-        await a2r_emit_event(run_id, "variant.completed", {"variantId": variant.variantId})
+        await allternit_emit_event(run_id, "variant.completed", {"variantId": variant.variantId})
 
     except Exception as e:
-        A2R_RUNS[run_id]["variants_state"][variant.variantId].update({
+        Allternit_RUNS[run_id]["variants_state"][variant.variantId].update({
             "status": "failed",
             "error": str(e)
         })
-        await a2r_emit_event(run_id, "variant.failed", {"variantId": variant.variantId, "error": str(e)})
+        await allternit_emit_event(run_id, "variant.failed", {"variantId": variant.variantId, "error": str(e)})
 
-    a2r_update_run_progress(run_id)
+    allternit_update_run_progress(run_id)
 
-def a2r_update_run_progress(run_id: str):
+def allternit_update_run_progress(run_id: str):
     """Update run progress"""
-    if run_id not in A2R_RUNS:
+    if run_id not in Allternit_RUNS:
         return
-    v_states = A2R_RUNS[run_id]["variants_state"].values()
+    v_states = Allternit_RUNS[run_id]["variants_state"].values()
     total = len(v_states)
     done = [v for v in v_states if v["status"] in ["completed", "failed"]]
-    A2R_RUNS[run_id]["progress"] = int((len(done)/total)*100) if total > 0 else 0
-    A2R_RUNS[run_id]["activeVariants"] = len([v for v in v_states if v["status"] == "running"])
-    A2R_RUNS[run_id]["completedVariants"] = len(done)
+    Allternit_RUNS[run_id]["progress"] = int((len(done)/total)*100) if total > 0 else 0
+    Allternit_RUNS[run_id]["activeVariants"] = len([v for v in v_states if v["status"] == "running"])
+    Allternit_RUNS[run_id]["completedVariants"] = len(done)
     if len(done) == total:
-        A2R_RUNS[run_id]["status"] = "completed"
-        A2R_RUNS[run_id]["completedAt"] = datetime.now().isoformat()
+        Allternit_RUNS[run_id]["status"] = "completed"
+        Allternit_RUNS[run_id]["completedAt"] = datetime.now().isoformat()
 
-async def a2r_process_run(run_id: str, request: A2RRunRequest):
+async def allternit_process_run(run_id: str, request: AllternitRunRequest):
     """Process a parallel run"""
-    A2R_RUNS[run_id]["status"] = "running"
-    await a2r_emit_event(run_id, "run.started", {"goal": request.goal})
-    await asyncio.gather(*[a2r_execute_variant(run_id, v, request.goal) for v in request.variants])
+    Allternit_RUNS[run_id]["status"] = "running"
+    await allternit_emit_event(run_id, "run.started", {"goal": request.goal})
+    await asyncio.gather(*[allternit_execute_variant(run_id, v, request.goal) for v in request.variants])
 
 @app.post("/v1/parallel/runs", dependencies=[Depends(verify_api_key)])
-async def a2r_create_run(request: A2RRunRequest, background_tasks: BackgroundTasks):
+async def allternit_create_run(request: AllternitRunRequest, background_tasks: BackgroundTasks):
     """Create a parallel execution run (replaces Superconductor)"""
     run_id = request.jobId
-    A2R_RUNS[run_id] = {
+    Allternit_RUNS[run_id] = {
         "status": "pending",
         "progress": 0,
         "activeVariants": 0,
@@ -465,48 +465,48 @@ async def a2r_create_run(request: A2RRunRequest, background_tasks: BackgroundTas
         "createdAt": request.createdAt or datetime.now().isoformat(),
         "variants_state": {v.variantId: {"variantId": v.variantId, "status": "pending"} for v in request.variants}
     }
-    background_tasks.add_task(a2r_process_run, run_id, request)
+    background_tasks.add_task(allternit_process_run, run_id, request)
     return {"jobId": run_id, "status": "accepted"}
 
-@app.get("/v1/parallel/runs/{run_id}/status", response_model=A2RRunStatus)
-async def a2r_get_run_status(run_id: str):
+@app.get("/v1/parallel/runs/{run_id}/status", response_model=AllternitRunStatus)
+async def allternit_get_run_status(run_id: str):
     """Get parallel run status"""
-    if run_id not in A2R_RUNS:
+    if run_id not in Allternit_RUNS:
         raise HTTPException(status_code=404)
-    return A2RRunStatus(**A2R_RUNS[run_id])
+    return AllternitRunStatus(**Allternit_RUNS[run_id])
 
-@app.get("/v1/parallel/runs/{run_id}/results", response_model=A2RRunResults)
-async def a2r_get_run_results(run_id: str):
+@app.get("/v1/parallel/runs/{run_id}/results", response_model=AllternitRunResults)
+async def allternit_get_run_results(run_id: str):
     """Get parallel run results"""
-    if run_id not in A2R_RUNS:
+    if run_id not in Allternit_RUNS:
         raise HTTPException(status_code=404)
-    res = A2R_RUNS[run_id]
-    return A2RRunResults(
+    res = Allternit_RUNS[run_id]
+    return AllternitRunResults(
         status=res["status"],
-        variants=[A2RVariantResult(**v) for v in res["variants_state"].values()],
+        variants=[AllternitVariantResult(**v) for v in res["variants_state"].values()],
         createdAt=res["createdAt"],
         completedAt=res.get("completedAt")
     )
 
 @app.get("/v1/parallel/runs/{run_id}/events")
-async def a2r_stream_events(run_id: str, request: Request):
+async def allternit_stream_events(run_id: str, request: Request):
     """Stream events for parallel run"""
-    if run_id not in A2R_RUNS:
+    if run_id not in Allternit_RUNS:
         raise HTTPException(status_code=404)
     queue = asyncio.Queue()
-    A2R_EVENT_QUEUES.setdefault(run_id, []).append(queue)
+    Allternit_EVENT_QUEUES.setdefault(run_id, []).append(queue)
     async def gen():
         try:
             while not await request.is_disconnected():
                 yield await queue.get()
         finally:
-            A2R_EVENT_QUEUES[run_id].remove(queue)
+            Allternit_EVENT_QUEUES[run_id].remove(queue)
     return StreamingResponse(gen(), media_type="text/event-stream")
 
 @app.get("/v1/operator/autoland/{run_id}/proof_of_work")
-async def a2r_get_proof_of_work(run_id: str):
+async def allternit_get_proof_of_work(run_id: str):
     """Retrieve the stored proof of work events for an autoland run"""
-    autoland_dir = os.path.join(os.getcwd(), ".a2r", "autoland")
+    autoland_dir = os.path.join(os.getcwd(), ".allternit", "autoland")
     pow_path = os.path.join(autoland_dir, f"{run_id}.jsonl")
     
     if not os.path.exists(pow_path):
@@ -525,10 +525,10 @@ async def a2r_get_proof_of_work(run_id: str):
     return {"run_id": run_id, "events": events}
 
 @app.get("/v1/preview/{run_id}/{variant_id}")
-async def a2r_get_preview(run_id: str, variant_id: str):
+async def allternit_get_preview(run_id: str, variant_id: str):
     """Get preview for variant"""
-    if run_id in A2R_RUNS and variant_id in A2R_RUNS[run_id]["variants_state"]:
-        output = A2R_RUNS[run_id]["variants_state"][variant_id].get("output", "")
+    if run_id in Allternit_RUNS and variant_id in Allternit_RUNS[run_id]["variants_state"]:
+        output = Allternit_RUNS[run_id]["variants_state"][variant_id].get("output", "")
         html = f"<html><body style='font-family:sans-serif;padding:20px;'><h3>Preview: {variant_id}</h3><pre>{output}</pre></body></html>"
         return StreamingResponse(iter([html]), media_type="text/html")
     raise HTTPException(status_code=404)
@@ -541,7 +541,7 @@ async def a2r_get_preview(run_id: str, variant_id: str):
 async def get_receipt(receipt_id: str):
     """Retrieve a specific receipt by ID"""
     try:
-        receipt_path = f".a2r/receipts/{receipt_id}.json"
+        receipt_path = f".allternit/receipts/{receipt_id}.json"
         if os.path.exists(receipt_path):
             with open(receipt_path, "r") as f:
                 receipt_data = json.load(f)
@@ -556,7 +556,7 @@ async def health():
     """Health check endpoint"""
     return {
         "status": "healthy",
-        "service": "a2r-operator",
+        "service": "allternit-operator",
         "capabilities": {
             "browser-use": BROWSER_USE_AVAILABLE,
             "computer-use": True,
@@ -585,7 +585,7 @@ async def get_snapshot(session_id: str, provider_id: Optional[str] = None, api_k
 async def shutdown_event():
     """Clean up resources"""
     if BROWSER_USE_AVAILABLE:
-        await a2r_browser_manager.close()
+        await allternit_browser_manager.close()
 
 if __name__ == "__main__":
     uvicorn.run(app, host=SERVICE_HOST, port=SERVICE_PORT)

@@ -6,12 +6,12 @@
 //! 3. Record resource consumption during execution
 //! 4. Enforce budget limits
 
-use a2r_driver_interface::{
+use allternit_driver_interface::{
     CommandSpec, EnvSpecType, ExecutionDriver, PolicySpec, ResourceSpec, SpawnSpec,
 };
-use a2r_environment_spec::{EnvironmentSource, EnvironmentSpecLoader};
-use a2r_process_driver::ProcessDriver;
-use a2rchitech_budget_metering::{BudgetMeteringEngine, BudgetQuota, ResourceMeasurement};
+use allternit_environment_spec::{EnvironmentSource, EnvironmentSpecLoader};
+use allternit_process_driver::ProcessDriver;
+use allternit_budget_metering::{BudgetMeteringEngine, BudgetQuota, ResourceMeasurement};
 use chrono::Utc;
 use uuid::Uuid;
 
@@ -63,16 +63,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let budget_check = budget_engine.check_budget(tenant_id, Some(&run_id)).await?;
 
     match &budget_check.admission {
-        a2rchitech_budget_metering::AdmissionDecision::Allow => {
+        allternit_budget_metering::AdmissionDecision::Allow => {
             println!("   ✓ Budget check passed - execution allowed");
             println!("     - CPU used: {}%", budget_check.cpu_percent);
             println!("     - Memory used: {}%", budget_check.memory_percent);
         }
-        a2rchitech_budget_metering::AdmissionDecision::Deny { reason } => {
+        allternit_budget_metering::AdmissionDecision::Deny { reason } => {
             println!("   ✗ Budget check failed: {}", reason);
             return Err(format!("Budget exceeded: {}", reason).into());
         }
-        a2rchitech_budget_metering::AdmissionDecision::AllowWithWarning { warning } => {
+        allternit_budget_metering::AdmissionDecision::AllowWithWarning { warning } => {
             println!("   ⚠ Budget check passed with warning: {}", warning);
         }
     }
@@ -80,7 +80,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Step 4: Load environment and spawn
     println!("📦 Step 4: Loading environment and spawning...");
-    let env_spec = a2r_environment_spec::EnvironmentSpec {
+    let env_spec = allternit_environment_spec::EnvironmentSpec {
         source: EnvironmentSource::Oci,
         source_uri: "docker.io/library/alpine:latest".to_string(),
         image: "docker.io/library/alpine:latest".to_string(),
@@ -91,16 +91,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         features: vec![],
         mounts: vec![],
         post_create_commands: vec![],
-        resources: a2r_environment_spec::ResourceRequirements::default(),
-        a2r_config: Default::default(),
+        resources: allternit_environment_spec::ResourceRequirements::default(),
+        allternit_config: Default::default(),
     };
 
     let spawn_spec = SpawnSpec {
-        tenant: a2r_driver_interface::TenantId(tenant_id.to_string()),
+        tenant: allternit_driver_interface::TenantId(tenant_id.to_string()),
         project: None,
         workspace: None,
-        run_id: Some(a2r_driver_interface::ExecutionId::new()),
-        env: a2r_driver_interface::EnvironmentSpec {
+        run_id: Some(allternit_driver_interface::ExecutionId::new()),
+        env: allternit_driver_interface::EnvironmentSpec {
             spec_type: EnvSpecType::Oci,
             image: env_spec.image.clone(),
             version: env_spec.image_digest.clone(),

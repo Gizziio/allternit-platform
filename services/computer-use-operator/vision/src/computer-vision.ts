@@ -1,7 +1,7 @@
 /**
- * A2R Computer Vision
+ * Allternit Computer Vision
  *
- * Vision-based UI automation for A2R Computer Operator.
+ * Vision-based UI automation for Allternit Computer Operator.
  */
 
 import { execFile } from 'node:child_process';
@@ -366,7 +366,7 @@ async function runCommand(command: string, args: string[]): Promise<boolean> {
   }
 }
 
-export class A2RComputerVision {
+export class AllternitComputerVision {
   private initialized = false;
 
   async initialize(): Promise<void> {
@@ -386,7 +386,7 @@ export class A2RComputerVision {
       return readScreenshot(providedPath);
     }
 
-    const tempDir = await mkdtemp(join(tmpdir(), 'a2r-vision-'));
+    const tempDir = await mkdtemp(join(tmpdir(), 'allternit-vision-'));
     const screenshotPath = join(tempDir, 'capture.png');
     const captureCommands: Array<[string, string[]]> = [
       ['screencapture', ['-x', '-t', 'png', screenshotPath]],
@@ -473,4 +473,4 @@ export class A2RComputerVision {
   }
 }
 
-export default A2RComputerVision;
+export default AllternitComputerVision;

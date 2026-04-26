@@ -4,7 +4,7 @@
 //! Provides sandboxed terminal access with resource limits and security constraints.
 
 use anyhow::{Context, Result};
-use a2r_protocol::{SandboxConfig, VolumeMount};
+use allternit_protocol::{SandboxConfig, VolumeMount};
 use std::collections::HashMap;
 use std::process::Stdio;
 use std::sync::Arc;
@@ -113,7 +113,7 @@ impl ContainerPtyManager {
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
         // Generate a unique container name
-        let container_id = format!("a2r-terminal-{}", session_id);
+        let container_id = format!("allternit-terminal-{}", session_id);
 
         // Store session handle
         let handle = ContainerSessionHandle {
@@ -164,7 +164,7 @@ impl ContainerPtyManager {
             let _ = handle.shutdown_tx.send(()).await;
             
             // Stop and remove the container
-            let container_name = format!("a2r-terminal-{}", session_id);
+            let container_name = format!("allternit-terminal-{}", session_id);
             let _ = Command::new("docker")
                 .args(["stop", "-t", "5", &container_name])
                 .output()
@@ -228,7 +228,7 @@ fn build_docker_args(
     cols: u16,
     rows: u16,
 ) -> Vec<String> {
-    let container_name = format!("a2r-terminal-{}", session_id);
+    let container_name = format!("allternit-terminal-{}", session_id);
     let mut args = vec![
         "run".to_string(),
         "--rm".to_string(),
@@ -339,7 +339,7 @@ async fn run_container_pty_task(
     let mut full_args = vec!["run".to_string()];
     
     // We need to rebuild args to include environment variables
-    let container_name = format!("a2r-terminal-{}", session_id);
+    let container_name = format!("allternit-terminal-{}", session_id);
     let mut all_args = vec![
         "run".to_string(),
         "--rm".to_string(),

@@ -1,8 +1,8 @@
 //! Gateway Bridge - OC-009
 //!
-//! Bridge between OpenClaw's gateway and A2R's native gateway.
+//! Bridge between OpenClaw's gateway and Allternit's native gateway.
 //! Implements the adapter pattern to translate between OpenClaw gateway operations
-//! and A2R gateway operations while maintaining A2R interface.
+//! and Allternit gateway operations while maintaining Allternit interface.
 
 use crate::{HostError, OpenClawHost};
 use serde::{Deserialize, Serialize};

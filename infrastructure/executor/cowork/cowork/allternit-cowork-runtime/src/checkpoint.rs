@@ -23,22 +23,34 @@ pub struct CheckpointManager {
 /// Rails ContextPack reference
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContextPackRef {
+    /// Unique identifier for the ContextPack
     pub pack_id: String,
+    /// When the ContextPack was created
     pub created_at: DateTime<Utc>,
+    /// Optional URI for external payload storage
     pub payload_uri: Option<String>,
 }
 
 /// Local checkpoint state stored alongside ContextPack reference
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CheckpointState {
+    /// Unique identifier for this checkpoint
     pub checkpoint_id: String,
+    /// ID of the run this checkpoint belongs to
     pub run_id: RunId,
+    /// Optional ID of the job being executed
     pub job_id: Option<JobId>,
+    /// Execution step index
     pub step_index: i32,
+    /// Reference to the Rails ContextPack
     pub pack_ref: ContextPackRef,
+    /// Serialized agent cursor/memory state
     pub cursor_state: serde_json::Value,
+    /// Policy approvals currently pending
     pub pending_approvals: Vec<String>,
+    /// References to artifacts produced up to this point
     pub artifact_refs: Vec<String>,
+    /// Creation timestamp
     pub created_at: DateTime<Utc>,
 }
 

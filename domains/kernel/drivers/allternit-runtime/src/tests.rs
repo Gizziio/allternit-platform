@@ -1,4 +1,4 @@
-//! Integration Tests for a2r-runtime
+//! Integration Tests for allternit-runtime
 //!
 //! These tests verify the runtime brain functionality.
 

@@ -1,5 +1,5 @@
 /**
- * A2R Computer Use Engine - TypeScript SDK Event Streaming
+ * Allternit Computer Use Engine - TypeScript SDK Event Streaming
  * 
  * Server-Sent Events (SSE) handling for real-time event streaming.
  */
@@ -57,7 +57,7 @@ interface Subscription {
  * Event stream manager for SSE handling.
  * 
  * Manages EventSource connections for real-time event streaming
- * from the A2R Computer Use Engine.
+ * from the Allternit Computer Use Engine.
  */
 export class EventStream {
   private endpoint: string;

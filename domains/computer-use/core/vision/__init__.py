@@ -1,6 +1,6 @@
 """
-A2R Computer Use — Vision Module
-Wraps the existing a2r_vision action parser and VLM integration.
+Allternit Computer Use — Vision Module
+Wraps the existing allternit_vision action parser and VLM integration.
 
 This module provides:
 - Vision-based action parsing (from UI-TARS / ByteDance parser)
@@ -30,7 +30,7 @@ from .targets import TargetDetector
 class VisionParser:
     """
     Parses VLM output into structured actions.
-    Wraps the existing a2r_vision.action_parser module.
+    Wraps the existing allternit_vision.action_parser module.
     """
 
     @staticmethod
@@ -71,14 +71,14 @@ class VisionInference:
 
     def __init__(self, api_base: Optional[str] = None, api_key: Optional[str] = None, model: Optional[str] = None):
         import os
-        self.api_base = api_base or os.getenv("A2R_VISION_INFERENCE_BASE")
-        self.api_key = api_key or os.getenv("A2R_VISION_INFERENCE_KEY", os.getenv("OPENAI_API_KEY", "no-key"))
-        self.model = model or os.getenv("A2R_VISION_MODEL_NAME", "a2r-vision-7b")
+        self.api_base = api_base or os.getenv("Allternit_VISION_INFERENCE_BASE")
+        self.api_key = api_key or os.getenv("Allternit_VISION_INFERENCE_KEY", os.getenv("OPENAI_API_KEY", "no-key"))
+        self.model = model or os.getenv("Allternit_VISION_MODEL_NAME", "allternit-vision-7b")
 
     def analyze_screenshot(self, task: str, screenshot_b64: str) -> str:
         """Analyze a screenshot with a VLM and return action proposals."""
         if not self.api_base:
-            raise ValueError("VLM API base not configured (A2R_VISION_INFERENCE_BASE)")
+            raise ValueError("VLM API base not configured (Allternit_VISION_INFERENCE_BASE)")
 
         from openai import OpenAI
         client = OpenAI(base_url=self.api_base, api_key=self.api_key)

@@ -1,5 +1,5 @@
 /**
- * @fileoverview A2R File Sync System - Conflict Resolution
+ * @fileoverview Allternit File Sync System - Conflict Resolution
  *
  * Conflict detection and resolution strategies for bidirectional file sync.
  * Provides multiple resolution algorithms including timestamp-based,

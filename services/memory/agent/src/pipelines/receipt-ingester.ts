@@ -1,7 +1,7 @@
 /**
  * Receipt Ingestion Pipeline
  * 
- * Ingests all agent execution receipts from a2r-workspace/receipts/
+ * Ingests all agent execution receipts from allternit-workspace/receipts/
  * into the memory agent for queryable history
  */
 
@@ -215,13 +215,13 @@ export class ReceiptIngester {
  */
 async function main(): Promise<void> {
   console.log('╔══════════════════════════════════════════════════════════╗');
-  console.log('║     A2rchitech Receipt Ingestion Pipeline                ║');
+  console.log('║     Allternitchitech Receipt Ingestion Pipeline                ║');
   console.log('╚══════════════════════════════════════════════════════════╝');
   console.log('');
 
   // Determine receipts directory
-  const workspaceRoot = process.env.A2R_WORKSPACE_ROOT 
-    || path.join(process.cwd(), '..', 'a2r-workspace');
+  const workspaceRoot = process.env.Allternit_WORKSPACE_ROOT 
+    || path.join(process.cwd(), '..', 'allternit-workspace');
   
   const receiptsDir = path.join(workspaceRoot, 'receipts');
 
@@ -230,7 +230,7 @@ async function main(): Promise<void> {
     await fs.access(receiptsDir);
   } catch {
     console.error(`Error: Receipts directory not found: ${receiptsDir}`);
-    console.error('Please set A2R_WORKSPACE_ROOT environment variable or run from the correct directory');
+    console.error('Please set Allternit_WORKSPACE_ROOT environment variable or run from the correct directory');
     process.exit(1);
   }
 

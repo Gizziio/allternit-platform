@@ -1,5 +1,5 @@
 {
-  "name": "@a2rchitech/vm-transport",
+  "name": "@allternit/vm-transport",
   "version": "1.0.0",
   "description": "Unified VSOCK/VZVirtioSocket transport layer for host↔VM communication",
   "main": "dist/index.js",
@@ -20,7 +20,7 @@
     "firecracker",
     "apple-virtualization"
   ],
-  "author": "A2rchitech",
+  "author": "Allternitchitech",
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0"

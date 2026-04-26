@@ -2,7 +2,7 @@
 name = "allternit-history"
 version = "0.1.0"
 edition = "2021"
-description = "A2rchitech append-only JSONL ledger with chained hashes"
+description = "Allternitchitech append-only JSONL ledger with chained hashes"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }

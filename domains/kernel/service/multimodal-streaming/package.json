@@ -1,5 +1,5 @@
 {
-  "name": "@a2r/multimodal-streaming",
+  "name": "@allternit/multimodal-streaming",
   "version": "1.0.0",
   "description": "Multimodal Streaming - Full-duplex A/V, interruptible output",
   "type": "module",
@@ -14,6 +14,6 @@
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
-  "keywords": ["a2r", "multimodal", "streaming", "audio", "vision"],
+  "keywords": ["allternit", "multimodal", "streaming", "audio", "vision"],
   "license": "MIT"
 }

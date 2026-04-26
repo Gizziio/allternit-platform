@@ -1,10 +1,10 @@
 /**
  * Plugin Adapter
  * 
- * Adapts runtime plugin loading to inject A2R Kernel governance.
+ * Adapts runtime plugin loading to inject Allternit Kernel governance.
  */
 
-import type { A2RKernel } from '@a2r/governor';
+import type { AllternitKernel } from '@allternit/governor';
 import type {
   RuntimeToolPolicy,
 
@@ -40,7 +40,7 @@ export interface Plugin {
  * Plugin adapter options
  */
 export interface PluginAdapterOptions {
-  kernel: A2RKernel;
+  kernel: AllternitKernel;
   allowedPlugins?: string[];
   deniedPlugins?: string[];
   requireWih?: boolean;

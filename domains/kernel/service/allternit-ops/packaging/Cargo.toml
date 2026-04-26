@@ -1,8 +1,8 @@
 [package]
-name = "a2rchitech-packaging"
+name = "allternit-packaging"
 version = "0.1.0"
 edition = "2021"
-description = "A2rchitech on-prem packaging and deployment system"
+description = "Allternit on-prem packaging and deployment system"
 
 [dependencies]
 serde = { workspace = true }
@@ -12,13 +12,13 @@ uuid = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
-a2rchitech-history = { workspace = true }
-a2rchitech-messaging = { workspace = true }
-a2rchitech-policy = { workspace = true }
-a2rchitech-context-router = { workspace = true }
-a2rchitech-memory = { workspace = true }
-a2rchitech-providers = { workspace = true }
-a2rchitech-runtime-core = { workspace = true }
+allternit-history = { workspace = true }
+allternit-messaging = { workspace = true }
+allternit-policy = { workspace = true }
+allternit-context-router = { workspace = true }
+allternit-memory = { workspace = true }
+allternit-providers = { workspace = true }
+allternit-runtime-core = { workspace = true }
 async-trait = { workspace = true }
 sqlx = { workspace = true }
 tempfile = { workspace = true }

@@ -141,7 +141,7 @@ app.get('/o/:id', async (req, res) => {
       <html>
       <head>
         <meta property="og:title" content="${data.title}" />
-        <meta property="og:description" content="${data.subtitle || 'a2rchitech session'}" />
+        <meta property="og:description" content="${data.subtitle || 'allternit session'}" />
         <meta property="og:image" content="${imageUrl}" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />

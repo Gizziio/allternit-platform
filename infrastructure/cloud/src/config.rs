@@ -40,9 +40,9 @@ impl DeploymentConfig {
             region: region.to_string(),
             instance_type: instance_type.to_string(),
             storage_gb: 100,
-            instance_name: format!("a2r-instance-{}", &uuid::Uuid::new_v4().to_string()[..8]),
+            instance_name: format!("allternit-instance-{}", &uuid::Uuid::new_v4().to_string()[..8]),
             ssh_public_key: String::new(),
-            tags: vec!["a2r".to_string()],
+            tags: vec!["allternit".to_string()],
             user_data: None,
         }
     }

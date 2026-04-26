@@ -1,17 +1,17 @@
 [package]
-name = "a2r-scheduler"
+name = "allternit-scheduler"
 version = "0.1.0"
 edition = "2021"
-description = "A2R Scheduler Daemon - Server-side cron scheduling service"
+description = "Allternit Scheduler Daemon - Server-side cron scheduling service"
 
 [[bin]]
-name = "a2r-scheduler"
+name = "allternit-scheduler"
 path = "src/main.rs"
 
 [dependencies]
-# A2R internal
-a2r-cron-parser = { path = "../../packages/cron-parser" }
-a2r-cloud-api = { path = "../a2r-cloud-api" }
+# Allternit internal
+allternit-cron-parser = { path = "../../packages/cron-parser" }
+allternit-cloud-api = { path = "../../cmd/allternit-cloud-api" }
 
 # Async runtime
 tokio = { workspace = true, features = ["full"] }

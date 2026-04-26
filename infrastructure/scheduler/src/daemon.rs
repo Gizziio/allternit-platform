@@ -159,11 +159,11 @@ impl SchedulerDaemon {
     /// Calculate next run time for a schedule
     async fn calculate_next_run(&self, schedule: &Schedule) -> Result<Option<chrono::DateTime<Utc>>> {
         // Parse the cron expression
-        let parsed = a2r_cron_parser::parse(&schedule.cron_expr)
+        let parsed = allternit_cron_parser::parse(&schedule.cron_expr)
             .map_err(|e| anyhow::anyhow!("Failed to parse cron expression: {}", e))?;
         
         // Get next occurrence after now
-        let next = a2r_cron_parser::next_occurrence(&parsed.expression, Some(Utc::now()))
+        let next = allternit_cron_parser::next_occurrence(&parsed.expression, Some(Utc::now()))
             .ok_or_else(|| anyhow::anyhow!("Failed to calculate next occurrence"))?;
         
         Ok(Some(next))

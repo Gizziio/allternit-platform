@@ -1,15 +1,15 @@
-use a2rchitech_context_router::{ContextBundle, ContextRouter};
-use a2rchitech_embodiment::EmbodimentControlPlane;
-use a2rchitech_evals::EvaluationEngine;
-use a2rchitech_history::{HistoryError, HistoryLedger};
-use a2rchitech_memory::MemoryFabric;
-use a2rchitech_messaging::{EventEnvelope, MessagingSystem};
-use a2rchitech_packaging::PackageManager;
-use a2rchitech_policy::{PolicyEffect, PolicyEngine, PolicyRequest};
-use a2rchitech_providers::ProviderRouter;
-use a2rchitech_runtime_core::SessionManager;
-use a2rchitech_skills::SkillRegistry;
-use a2rchitech_workflows::WorkflowEngine;
+use allternit_context_router::{ContextBundle, ContextRouter};
+use allternit_embodiment::EmbodimentControlPlane;
+use allternit_evals::EvaluationEngine;
+use allternit_history::{HistoryError, HistoryLedger};
+use allternit_memory::MemoryFabric;
+use allternit_messaging::{EventEnvelope, MessagingSystem};
+use allternit_packaging::PackageManager;
+use allternit_policy::{PolicyEffect, PolicyEngine, PolicyRequest};
+use allternit_providers::ProviderRouter;
+use allternit_runtime_core::SessionManager;
+use allternit_skills::SkillRegistry;
+use allternit_workflows::WorkflowEngine;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use sqlx::{Row, SqlitePool};
@@ -455,7 +455,7 @@ pub enum ArtifactRegistryError {
     #[error("SQLX error: {0}")]
     Sqlx(#[from] sqlx::Error),
     #[error("Policy error: {0}")]
-    Policy(#[from] a2rchitech_policy::PolicyError),
+    Policy(#[from] allternit_policy::PolicyError),
     #[error("Artifact not found: {0}")]
     ArtifactNotFound(String),
     #[error("Publisher not found: {0}")]
@@ -1282,7 +1282,7 @@ impl ArtifactRegistry {
                 "artifact": &request.artifact,
                 "publisher": &request.artifact.publisher,
             }),
-            requested_tier: a2rchitech_policy::SafetyTier::T0, // Default to lowest tier for publishing
+            requested_tier: allternit_policy::SafetyTier::T0, // Default to lowest tier for publishing
         };
 
         let policy_decision = self.policy_engine.evaluate(policy_request).await?;
@@ -1519,7 +1519,7 @@ impl ArtifactRegistry {
                 "query": &query,
                 "filters": &query.filters,
             }),
-            requested_tier: a2rchitech_policy::SafetyTier::T0, // Default to lowest tier for querying
+            requested_tier: allternit_policy::SafetyTier::T0, // Default to lowest tier for querying
         };
 
         let policy_decision = self.policy_engine.evaluate(policy_request).await?;
@@ -1601,7 +1601,7 @@ impl ArtifactRegistry {
                 "version": &request.version,
                 "tenant_id": &request.tenant_id,
             }),
-            requested_tier: a2rchitech_policy::SafetyTier::T0, // Default to lowest tier for downloading
+            requested_tier: allternit_policy::SafetyTier::T0, // Default to lowest tier for downloading
         };
 
         let policy_decision = self.policy_engine.evaluate(policy_request).await?;
@@ -1712,7 +1712,7 @@ impl ArtifactRegistry {
                 "version": &request.version,
                 "target_environment": &request.target_environment,
             }),
-            requested_tier: a2rchitech_policy::SafetyTier::T0, // Default to lowest tier for dependency resolution
+            requested_tier: allternit_policy::SafetyTier::T0, // Default to lowest tier for dependency resolution
         };
 
         let policy_decision = self.policy_engine.evaluate(policy_request).await?;
@@ -1830,12 +1830,12 @@ mod tests {
         // Create temporary history ledger
         let temp_path = format!("/tmp/test_artifact_registry_{}.jsonl", Uuid::new_v4());
         let history_ledger = Arc::new(Mutex::new(
-            a2rchitech_history::HistoryLedger::new(&temp_path).unwrap(),
+            allternit_history::HistoryLedger::new(&temp_path).unwrap(),
         ));
 
         // Create messaging system
         let messaging_system = Arc::new(
-            a2rchitech_messaging::MessagingSystem::new_with_storage(
+            allternit_messaging::MessagingSystem::new_with_storage(
                 history_ledger.clone(),
                 pool.clone(),
             )
@@ -1844,13 +1844,13 @@ mod tests {
         );
 
         // Create policy engine
-        let policy_engine = Arc::new(a2rchitech_policy::PolicyEngine::new(
+        let policy_engine = Arc::new(allternit_policy::PolicyEngine::new(
             history_ledger.clone(),
             messaging_system.clone(),
         ));
-        let publisher_identity = a2rchitech_policy::Identity {
+        let publisher_identity = allternit_policy::Identity {
             id: "test-publisher-001".to_string(),
-            identity_type: a2rchitech_policy::IdentityType::SkillPublisherIdentity,
+            identity_type: allternit_policy::IdentityType::SkillPublisherIdentity,
             name: "Test Publisher".to_string(),
             tenant_id: "test-tenant".to_string(),
             created_at: 0,
@@ -1862,9 +1862,9 @@ mod tests {
             .register_identity(publisher_identity)
             .await
             .unwrap();
-        let system_identity = a2rchitech_policy::Identity {
+        let system_identity = allternit_policy::Identity {
             id: "system".to_string(),
-            identity_type: a2rchitech_policy::IdentityType::ServiceAccount,
+            identity_type: allternit_policy::IdentityType::ServiceAccount,
             name: "System".to_string(),
             tenant_id: "system".to_string(),
             created_at: 0,
@@ -1878,12 +1878,12 @@ mod tests {
             .unwrap();
         policy_engine.create_default_permissions().await.unwrap();
         policy_engine.create_default_rules().await.unwrap();
-        let publish_rule = a2rchitech_policy::PolicyRule {
+        let publish_rule = allternit_policy::PolicyRule {
             id: "rule_allow_publish".to_string(),
             name: "Allow Publish Operations".to_string(),
             description: "Allow artifact publishing in tests".to_string(),
             condition: "identity.active".to_string(),
-            effect: a2rchitech_policy::PolicyEffect::Allow,
+            effect: allternit_policy::PolicyEffect::Allow,
             resource: "*".to_string(),
             actions: vec!["publish".to_string()],
             priority: 150,
@@ -1892,11 +1892,11 @@ mod tests {
         policy_engine.add_rule(publish_rule).await.unwrap();
 
         // Create context router
-        let context_router = Arc::new(a2rchitech_context_router::ContextRouter::new(
+        let context_router = Arc::new(allternit_context_router::ContextRouter::new(
             history_ledger.clone(),
             messaging_system.clone(),
             policy_engine.clone(),
-            Arc::new(a2rchitech_runtime_core::SessionManager::new(
+            Arc::new(allternit_runtime_core::SessionManager::new(
                 history_ledger.clone(),
                 messaging_system.clone(),
             )),
@@ -1904,7 +1904,7 @@ mod tests {
 
         // Create memory fabric
         let memory_fabric = Arc::new(
-            a2rchitech_memory::MemoryFabric::new_with_storage(
+            allternit_memory::MemoryFabric::new_with_storage(
                 history_ledger.clone(),
                 messaging_system.clone(),
                 policy_engine.clone(),
@@ -1917,13 +1917,13 @@ mod tests {
 
         // Create provider router
         let provider_router = Arc::new(
-            a2rchitech_providers::ProviderRouter::new_with_storage(
+            allternit_providers::ProviderRouter::new_with_storage(
                 history_ledger.clone(),
                 messaging_system.clone(),
                 policy_engine.clone(),
                 context_router.clone(),
                 memory_fabric.clone(),
-                Arc::new(a2rchitech_runtime_core::SessionManager::new(
+                Arc::new(allternit_runtime_core::SessionManager::new(
                     history_ledger.clone(),
                     messaging_system.clone(),
                 )),
@@ -1934,7 +1934,7 @@ mod tests {
         );
 
         // Create tool gateway
-        let tool_gateway = Arc::new(a2rchitech_tools_gateway::ToolGateway::new(
+        let tool_gateway = Arc::new(allternit_tools_gateway::ToolGateway::new(
             policy_engine.clone(),
             history_ledger.clone(),
             messaging_system.clone(),
@@ -1942,7 +1942,7 @@ mod tests {
 
         // Create skill registry
         let skill_registry = Arc::new(
-            a2rchitech_skills::SkillRegistry::new_with_storage(
+            allternit_skills::SkillRegistry::new_with_storage(
                 history_ledger.clone(),
                 messaging_system.clone(),
                 policy_engine.clone(),
@@ -1955,13 +1955,13 @@ mod tests {
 
         // Create task queue
         let task_queue = Arc::new(
-            a2rchitech_messaging::TaskQueue::new(history_ledger.clone(), pool.clone())
+            allternit_messaging::TaskQueue::new(history_ledger.clone(), pool.clone())
                 .await
                 .unwrap(),
         );
 
         // Create workflow engine
-        let workflow_engine = Arc::new(a2rchitech_workflows::WorkflowEngine::new(
+        let workflow_engine = Arc::new(allternit_workflows::WorkflowEngine::new(
             history_ledger.clone(),
             messaging_system.clone(),
             policy_engine.clone(),
@@ -1972,7 +1972,7 @@ mod tests {
 
         // Create embodiment control plane
         let embodiment_control_plane = Arc::new(
-            a2rchitech_embodiment::EmbodimentControlPlane::new_with_storage(
+            allternit_embodiment::EmbodimentControlPlane::new_with_storage(
                 history_ledger.clone(),
                 messaging_system.clone(),
                 policy_engine.clone(),
@@ -1981,7 +1981,7 @@ mod tests {
                 provider_router.clone(),
                 skill_registry.clone(),
                 workflow_engine.clone(),
-                Arc::new(a2rchitech_runtime_core::SessionManager::new(
+                Arc::new(allternit_runtime_core::SessionManager::new(
                     history_ledger.clone(),
                     messaging_system.clone(),
                 )),
@@ -1993,14 +1993,14 @@ mod tests {
 
         // Create package manager
         let package_manager = Arc::new(
-            a2rchitech_packaging::PackageManager::new_with_storage(
+            allternit_packaging::PackageManager::new_with_storage(
                 history_ledger.clone(),
                 messaging_system.clone(),
                 policy_engine.clone(),
                 context_router.clone(),
                 memory_fabric.clone(),
                 provider_router.clone(),
-                Arc::new(a2rchitech_runtime_core::SessionManager::new(
+                Arc::new(allternit_runtime_core::SessionManager::new(
                     history_ledger.clone(),
                     messaging_system.clone(),
                 )),
@@ -2012,7 +2012,7 @@ mod tests {
 
         // Create evaluation engine
         let evaluation_engine = Arc::new(
-            a2rchitech_evals::EvaluationEngine::new_with_storage(
+            allternit_evals::EvaluationEngine::new_with_storage(
                 history_ledger.clone(),
                 messaging_system.clone(),
                 policy_engine.clone(),
@@ -2021,7 +2021,7 @@ mod tests {
                 provider_router.clone(),
                 skill_registry.clone(),
                 workflow_engine.clone(),
-                Arc::new(a2rchitech_runtime_core::SessionManager::new(
+                Arc::new(allternit_runtime_core::SessionManager::new(
                     history_ledger.clone(),
                     messaging_system.clone(),
                 )),
@@ -2032,7 +2032,7 @@ mod tests {
         );
 
         // Create session manager
-        let session_manager = Arc::new(a2rchitech_runtime_core::SessionManager::new(
+        let session_manager = Arc::new(allternit_runtime_core::SessionManager::new(
             history_ledger.clone(),
             messaging_system.clone(),
         ));
@@ -2041,7 +2041,7 @@ mod tests {
         let config = ArtifactRegistryConfig {
             registry_id: "test-registry-001".to_string(),
             name: "Test Artifact Registry".to_string(),
-            description: "A test artifact registry for A2rchitech".to_string(),
+            description: "A test artifact registry for Allternitchitech".to_string(),
             version: "1.0.0".to_string(),
             storage_config: StorageConfig {
                 storage_type: StorageType::LocalFileSystem,
@@ -2141,10 +2141,10 @@ mod tests {
             name: "Test Skill".to_string(),
             version: "1.0.0".to_string(),
             artifact_type: ArtifactType::Skill,
-            description: "A test skill for A2rchitech".to_string(),
+            description: "A test skill for Allternitchitech".to_string(),
             author: "Test Author".to_string(),
             license: "MIT".to_string(),
-            tags: vec!["test".to_string(), "a2rchitech".to_string()],
+            tags: vec!["test".to_string(), "allternit".to_string()],
             dependencies: vec![],
             content_hash: "test-content-hash".to_string(),
             signature: Some("test-signature".to_string()),

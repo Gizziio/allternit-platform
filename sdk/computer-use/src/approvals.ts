@@ -1,5 +1,5 @@
 /**
- * A2R Computer Use Engine - TypeScript SDK Approval Helpers
+ * Allternit Computer Use Engine - TypeScript SDK Approval Helpers
  * 
  * Utilities for handling approval requests in assist mode.
  */
@@ -12,7 +12,7 @@ import {
   EngineEvent,
   EngineEventType,
 } from './types';
-import { A2RComputerUseClient } from './client';
+import { AllternitComputerUseClient } from './client';
 
 /**
  * Pre-built approval predicates for common use cases.
@@ -149,7 +149,7 @@ export const ApprovalPredicates = {
  * Handler for managing approval requests.
  */
 export class ApprovalHandler {
-  private client: A2RComputerUseClient;
+  private client: AllternitComputerUseClient;
   private pendingApprovals: Map<string, (decision: boolean) => void> = new Map();
   private autoApprovePredicates: Map<string, ApprovalPredicate> = new Map();
   private globalPredicate?: ApprovalPredicate;
@@ -164,9 +164,9 @@ export class ApprovalHandler {
   /**
    * Create a new approval handler.
    * 
-   * @param client - The A2R Computer Use client
+   * @param client - The Allternit Computer Use client
    */
-  constructor(client: A2RComputerUseClient) {
+  constructor(client: AllternitComputerUseClient) {
     this.client = client;
   }
 
@@ -311,7 +311,7 @@ export class ApprovalHandler {
    * @returns ApprovalHandler configured for interactive approval
    */
   static createInteractive(
-    client: A2RComputerUseClient,
+    client: AllternitComputerUseClient,
     prompt: (request: ApprovalRequestInfo) => Promise<boolean> | boolean
   ): ApprovalHandler {
     const handler = new ApprovalHandler(client);
@@ -326,7 +326,7 @@ export class ApprovalHandler {
    * @returns ApprovalHandler configured for auto-approval
    */
   static createAutoApprove(
-    client: A2RComputerUseClient,
+    client: AllternitComputerUseClient,
     predicate: ApprovalPredicate = ApprovalPredicates.always
   ): ApprovalHandler {
     const handler = new ApprovalHandler(client);
@@ -380,13 +380,13 @@ export class ApprovalHandler {
  * 
  * This is a convenience function for creating interactive approval flows.
  * 
- * @param client - The A2R Computer Use client
+ * @param client - The Allternit Computer Use client
  * @param runId - The run ID
  * @param prompt - Function to prompt the user
  * @returns Promise resolving when approval is handled
  */
 export async function createApprovalPrompt(
-  client: A2RComputerUseClient,
+  client: AllternitComputerUseClient,
   runId: string,
   prompt: (request: ApprovalRequestInfo) => Promise<boolean> | boolean
 ): Promise<ApprovalResponse> {
@@ -409,13 +409,13 @@ export async function createApprovalPrompt(
 /**
  * Set up conditional auto-approval for a run.
  * 
- * @param client - The A2R Computer Use client
+ * @param client - The Allternit Computer Use client
  * @param runId - The run ID
  * @param predicate - Predicate to determine approval
  * @returns Unwatch function
  */
 export function autoApprove(
-  client: A2RComputerUseClient,
+  client: AllternitComputerUseClient,
   runId: string,
   predicate: ApprovalPredicate
 ): () => void {

@@ -504,7 +504,7 @@ impl IntegrationVerificationService {
                 "legacy-bridge".to_string(),
             ],
             native_implementations: self.native_implementations.keys().cloned().collect(),
-            notes: "All OpenClaw subprocess dependencies successfully removed. System now fully operates with native A2R implementations.".to_string(),
+            notes: "All OpenClaw subprocess dependencies successfully removed. System now fully operates with native Allternit implementations.".to_string(),
         };
 
         // In a real implementation, this would save the report to disk

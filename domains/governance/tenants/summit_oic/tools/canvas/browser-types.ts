@@ -168,7 +168,7 @@ export interface BrowserElement {
 
 /**
  * Browser automation skill interface
- * Used to create sessions via the A2R Operator
+ * Used to create sessions via the Allternit Operator
  */
 export interface BrowserUseSkill {
   /**

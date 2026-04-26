@@ -1,4 +1,4 @@
-//! # A2R Firecracker Driver (N4 Implementation)
+//! # Allternit Firecracker Driver (N4 Implementation)
 //!
 //! Production-ready MicroVM-based execution driver using AWS Firecracker.
 //! Provides hardware-level isolation for multi-tenant workloads with Jailer security.
@@ -20,7 +20,7 @@
 //! └─────────────────────────────────────────────────────────────┘
 //! ```
 
-use a2r_driver_interface::*;
+use allternit_driver_interface::*;
 use async_trait::async_trait;
 
 use reqwest::Client;
@@ -56,7 +56,7 @@ pub use cgroups::{CgroupManager, CgroupStats};
 pub use cleanup::{
     spawn_with_cleanup, spawn_with_cleanup_async, CleanupCoordinator, ResourceGuard, ResourceHandle,
 };
-pub use guest_health::{AgentHealth, AgentVersion, GuestAgentMonitor};
+pub use guest_health::{AgentHealth, AgentVersion, GuestAgentMonitor, DEFAULT_STARTUP_TIMEOUT};
 use ipam::IpamState;
 use metrics::{DriverMetrics, Timer};
 pub use metrics_server::{setup_metrics_server, MetricsServer};
@@ -146,8 +146,8 @@ impl Default for FirecrackerConfig {
             uid: 1000,
             gid: 1000,
             max_open_fds: 1024,
-            vm_root_dir: PathBuf::from("/var/lib/a2r/firecracker-vms"),
-            kernel_image: PathBuf::from("/var/lib/a2r/vmlinux"),
+            vm_root_dir: PathBuf::from("/var/lib/allternit/firecracker-vms"),
+            kernel_image: PathBuf::from("/var/lib/allternit/vmlinux"),
             bridge_iface: "fcbridge0".to_string(),
             vm_subnet: "172.16.0.0/24".to_string(),
             vsock_port_start: 10000,
@@ -193,13 +193,25 @@ pub struct MicroVM {
     /// Chroot directory path
     chroot_dir: Option<PathBuf>,
     /// Determinism envelope for reproducible execution
-    envelope: Option<a2r_driver_interface::DeterminismEnvelope>,
+    envelope: Option<allternit_driver_interface::DeterminismEnvelope>,
     /// Cgroup manager for resource enforcement
     cgroup_manager: Option<CgroupManager>,
     /// Health monitor for guest agent
     health_monitor: Option<GuestAgentMonitor>,
     /// Background monitor task handle
     monitor_task: Option<tokio::task::JoinHandle<()>>,
+}
+
+impl MicroVM {
+    /// Get debug information for this VM
+    pub fn debug_info(&self) -> HashMap<String, String> {
+        let mut info = HashMap::new();
+        info.insert("vsock_port".to_string(), self.vsock_port.to_string());
+        info.insert("vm_ip".to_string(), self.vm_ip.to_string());
+        info.insert("tap_device".to_string(), self.tap_device.clone());
+        info.insert("image".to_string(), self.vm_config.env_spec.image.clone());
+        info
+    }
 }
 
 /// VM status
@@ -415,7 +427,7 @@ impl FirecrackerDriver {
         )
     )]
     async fn setup_netns(&self, vm_id: &ExecutionId) -> Result<String, DriverError> {
-        let ns_name = format!("a2r-{}", vm_id);
+        let ns_name = format!("allternit-{}", vm_id);
 
         info!(
             event = "netns.create.start",
@@ -958,7 +970,7 @@ impl FirecrackerDriver {
         .stderr(Stdio::from(log_file_std));
 
         // Spawn the jailer process
-        let mut child = cmd.spawn().map_err(|e| DriverError::SpawnFailed {
+        let child = cmd.spawn().map_err(|e| DriverError::SpawnFailed {
             reason: format!("Failed to start jailer: {}", e),
         })?;
 
@@ -1310,7 +1322,7 @@ impl FirecrackerDriver {
 
     /// Pause VM
     #[tracing::instrument(skip(self, vm), fields(vm_id = %vm.id))]
-    async fn pause_vm(&self, vm: &MicroVM) -> Result<(), DriverError> {
+    async fn pause_vm_internal(&self, vm: &MicroVM) -> Result<(), DriverError> {
         info!(event = "vm.pause.start", vm_id = %vm.id, "Pausing VM");
         self.api_put(vm, "actions", &json!({"action_type": "PauseVm"}))
             .await?;
@@ -1320,7 +1332,7 @@ impl FirecrackerDriver {
 
     /// Resume VM
     #[tracing::instrument(skip(self, vm), fields(vm_id = %vm.id))]
-    async fn resume_vm(&self, vm: &MicroVM) -> Result<(), DriverError> {
+    async fn resume_vm_internal(&self, vm: &MicroVM) -> Result<(), DriverError> {
         info!(event = "vm.resume.start", vm_id = %vm.id, "Resuming VM");
         self.api_put(vm, "actions", &json!({"action_type": "ResumeVm"}))
             .await?;
@@ -1657,8 +1669,8 @@ impl ExecutionDriver for FirecrackerDriver {
         let vsock_path = PathBuf::from(format!("/tmp/vsock-{}.sock", vm.id));
         let monitor = GuestAgentMonitor::new(vm.id, vsock_path);
 
-        // Wait for guest agent to be ready (30 second timeout)
-        let startup_timeout = std::time::Duration::from_secs(30);
+        // Wait for guest agent to be ready
+        let startup_timeout = DEFAULT_STARTUP_TIMEOUT;
         if let Err(e) = monitor.wait_for_ready(startup_timeout).await {
             error!(run_id = %run_id, error = %e, "Guest agent failed to become ready");
 
@@ -1792,6 +1804,24 @@ impl ExecutionDriver for FirecrackerDriver {
         DriverMetrics::spawn_duration_ms(spawn_timer.elapsed_ms());
 
         result
+    }
+
+    async fn pause_vm(&self, handle: &ExecutionHandle) -> std::result::Result<(), DriverError> {
+        let vms = self.vms.read().await;
+        let vm_arc = vms.get(&handle.id).ok_or(DriverError::NotFound {
+            id: handle.id.to_string(),
+        })?;
+        let vm = vm_arc.lock().await;
+        self.pause_vm_internal(&vm).await
+    }
+
+    async fn resume_vm(&self, handle: &ExecutionHandle) -> std::result::Result<(), DriverError> {
+        let vms = self.vms.read().await;
+        let vm_arc = vms.get(&handle.id).ok_or(DriverError::NotFound {
+            id: handle.id.to_string(),
+        })?;
+        let vm = vm_arc.lock().await;
+        self.resume_vm_internal(&vm).await
     }
 
     async fn exec(

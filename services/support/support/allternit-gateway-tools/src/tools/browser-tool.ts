@@ -31,7 +31,7 @@ export function createBrowserTool(ctx: BrowserToolContext) {
     description: [
       'Control the browser via browser control server (status/start/stop/profiles/tabs/open/snapshot/screenshot/actions).',
       'Profiles: use profile="chrome" for Chrome extension relay takeover.',
-      'Use profile="a2r" for the isolated A2R-managed browser.',
+      'Use profile="allternit" for the isolated Allternit-managed browser.',
       'When using refs from snapshot (e.g. e12), keep the same tab: prefer passing targetId from the snapshot response.',
       'For stable refs across calls, use snapshot with refs="aria".',
       'Use snapshot+act for UI automation.',

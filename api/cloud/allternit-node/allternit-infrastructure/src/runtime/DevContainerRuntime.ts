@@ -168,7 +168,7 @@ export class DevContainerRuntime {
       labels: {
         'devcontainer.id': template.id,
         'devcontainer.name': template.name,
-        'managed-by': 'a2r-environment-engine',
+        'managed-by': 'allternit-environment-engine',
       },
     };
 
@@ -452,7 +452,7 @@ export class DevContainerRuntime {
    * List all dev containers
    */
   async listContainers(conn?: Connection): Promise<Container[]> {
-    const cmd = `docker ps -a --filter "label=managed-by=a2r-environment-engine" --format "{{json .}}"`;
+    const cmd = `docker ps -a --filter "label=managed-by=allternit-environment-engine" --format "{{json .}}"`;
     
     let output: string;
     if (conn) {

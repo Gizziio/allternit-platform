@@ -75,13 +75,13 @@ pub struct SessionManagerConfig {
 impl Default for SessionManagerConfig {
     fn default() -> Self {
         // Use environment variable if set, otherwise use default path
-        let sessions_dir = std::env::var("A2R_SESSIONS_DIR")
+        let sessions_dir = std::env::var("Allternit_SESSIONS_DIR")
             .map(PathBuf::from)
             .unwrap_or_else(|_| {
                 // Use temp directory for development if ./sessions doesn't exist
                 let default = PathBuf::from("./sessions");
                 if !default.exists() {
-                    std::env::temp_dir().join("a2r-sessions")
+                    std::env::temp_dir().join("allternit-sessions")
                 } else {
                     default
                 }

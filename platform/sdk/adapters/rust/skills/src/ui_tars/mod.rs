@@ -51,11 +51,11 @@ pub fn create_ui_tars_propose_skill() -> Skill {
         name: "UI-TARS Propose".to_string(),
         version: "1.0.0".to_string(),
         description: "Vision-Language Model that proposes GUI actions based on screenshots".to_string(),
-        author: "A2rchitech".to_string(),
+        author: "Allternit".to_string(),
         license: "MIT".to_string(),
         tags: vec!["gui".to_string(), "automation".to_string(), "vision".to_string(), "proposal".to_string()],
-        homepage: Some("https://a2rchitech.com".to_string()),
-        repository: Some("https://github.com/a2rchitech/a2rchitech".to_string()),
+        homepage: Some("https://allternit.com".to_string()),
+        repository: Some("https://github.com/allternit/allternit".to_string()),
 
         inputs: SkillIO {
             schema: r#"{
@@ -130,8 +130,8 @@ pub fn create_ui_tars_propose_skill() -> Skill {
         environment: SkillEnvironment {
             allowed_envs: vec![Environment::Dev, Environment::Stage, Environment::Prod],
             network: NetworkAccess::DomainAllowlist(vec![
-                "api.a2rchitech.com".to_string(),
-                "models.a2rchitech.com".to_string(),
+                "api.allternit.com".to_string(),
+                "models.allternit.com".to_string(),
             ]),
             filesystem: FilesystemAccess::Allowlist(vec![
                 "/tmp".to_string(),
@@ -145,8 +145,8 @@ pub fn create_ui_tars_propose_skill() -> Skill {
         required_permissions: vec!["model.inference".to_string()],
         requires_policy_gate: false,
         publisher: PublisherInfo {
-            publisher_id: "a2rchitech.core".to_string(),
-            public_key_id: "pk_a2rchitech_core_1".to_string(),
+            publisher_id: "allternit.core".to_string(),
+            public_key_id: "pk_allternit_core_1".to_string(),
         },
         signature: SignatureInfo {
             manifest_sig: "placeholder_signature".to_string(),
@@ -192,9 +192,9 @@ pub fn create_ui_tars_propose_skill() -> Skill {
             id: "ui_tars_inference".to_string(),
             name: "UI-TARS Inference".to_string(),
             description: "Runs UI-TARS model inference on screenshot to generate action proposals".to_string(),
-            tool_type: a2rchitech_tools_gateway::ToolType::Http,
+            tool_type: allternit_tools_gateway::ToolType::Http,
             command: "".to_string(),
-            endpoint: "https://api.a2rchitech.com/v1/ui-tars".to_string(),
+            endpoint: "https://api.allternit.com/v1/ui-tars".to_string(),
             input_schema: serde_json::json!({
                 "type": "object",
                 "properties": {
@@ -230,13 +230,13 @@ pub fn create_ui_tars_propose_skill() -> Skill {
             retryable: true,
             failure_classification: "transient".to_string(),
             safety_tier: SafetyTier::T0,
-            resource_limits: a2rchitech_tools_gateway::ResourceLimits {
+            resource_limits: allternit_tools_gateway::ResourceLimits {
                 cpu: Some("500m".to_string()),
                 memory: Some("1Gi".to_string()),
-                network: a2rchitech_tools_gateway::NetworkAccess::DomainAllowlist(vec![
-                    "api.a2rchitech.com".to_string()
+                network: allternit_tools_gateway::NetworkAccess::DomainAllowlist(vec![
+                    "api.allternit.com".to_string()
                 ]),
-                filesystem: a2rchitech_tools_gateway::FilesystemAccess::None,
+                filesystem: allternit_tools_gateway::FilesystemAccess::None,
                 time_limit: 60, // 60 seconds
             },
             subprocess: None,

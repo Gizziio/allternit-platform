@@ -1,7 +1,7 @@
 /**
  * Rails Event Emitter
  * 
- * Emits events to the a2rchitech Rails ledger.
+ * Emits events to the allternit Rails ledger.
  * This is the bridge between webhook ingestion and Rails control plane.
  */
 
@@ -332,7 +332,7 @@ export class RailsEventEmitter {
 export function createRailsEventEmitter(config?: Partial<RailsClientConfig>): RailsEventEmitter {
   return new RailsEventEmitter({
     baseUrl: config?.baseUrl || 'http://127.0.0.1:3011',
-    apiKey: config?.apiKey || process.env.A2R_RAILS_API_KEY,
+    apiKey: config?.apiKey || process.env.Allternit_RAILS_API_KEY,
     timeout: config?.timeout || 30000,
     maxRetries: config?.maxRetries || 3,
     retryDelay: config?.retryDelay || 1000,

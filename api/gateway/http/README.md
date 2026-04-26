@@ -1,13 +1,13 @@
-# A2R Gateway v1
+# Allternit Gateway v1
 
-**Transport-agnostic API Gateway for A2R Platform**
+**Transport-agnostic API Gateway for Allternit Platform**
 
 [![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/allternit/gateway)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 ## Overview
 
-A2R Gateway is a **pluggable, transport-multiplexed gateway** that exposes a stable contract while supporting multiple transports:
+Allternit Gateway is a **pluggable, transport-multiplexed gateway** that exposes a stable contract while supporting multiple transports:
 
 - **stdio** - JSON-RPC 2.0 over stdin/stdout (MCP-compatible)
 - **HTTP** - REST + SSE streaming (MCP-compatible streamable HTTP)
@@ -86,7 +86,7 @@ curl http://localhost:3210/v1/events
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      A2R Gateway Core                           │
+│                      Allternit Gateway Core                           │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
 │  │   Routing   │  │  Event Bus  │  │   Session   │             │
 │  │   Engine    │  │   (SSE)     │  │    Store    │             │
@@ -176,4 +176,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 ---
 
 **Version:** 1.0.0  
-**Maintainer:** A2R Platform Team
+**Maintainer:** Allternit Platform Team

@@ -1,5 +1,5 @@
 // packages/sdk/js/src/computer-use.ts
-class A2RComputerUseClient {
+class AllternitComputerUseClient {
   baseUrl;
   fetch;
   headers;
@@ -9,7 +9,7 @@ class A2RComputerUseClient {
     this.headers = config.headers || {};
   }
   async execute(request) {
-    const response = await this.fetch(`${this.baseUrl}/v1/engine/execute`, {
+    const response = await this.fetch(`${this.baseUrl}/v1/computer-use/execute`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -23,7 +23,7 @@ class A2RComputerUseClient {
     return response.json();
   }
   async watch(options) {
-    const response = await this.fetch(`${this.baseUrl}/v1/engine/watch/${options.runId}`, {
+    const response = await this.fetch(`${this.baseUrl}/v1/computer-use/runs/${options.runId}/events`, {
       method: "GET",
       headers: this.headers,
       signal: options.signal
@@ -34,7 +34,7 @@ class A2RComputerUseClient {
     return response;
   }
   async getReceipts(runId) {
-    const response = await this.fetch(`${this.baseUrl}/v1/engine/receipts/${runId}`, {
+    const response = await this.fetch(`${this.baseUrl}/v1/computer-use/runs/${runId}`, {
       method: "GET",
       headers: this.headers
     });
@@ -44,7 +44,7 @@ class A2RComputerUseClient {
     return response.json();
   }
   async getSnapshot(runId) {
-    const response = await this.fetch(`${this.baseUrl}/v1/engine/snapshot/${runId}`, {
+    const response = await this.fetch(`${this.baseUrl}/v1/computer-use/runs/${runId}`, {
       method: "GET",
       headers: this.headers
     });
@@ -54,7 +54,7 @@ class A2RComputerUseClient {
     return response.json();
   }
   async approveRun(runId, options = {}) {
-    const response = await this.fetch(`${this.baseUrl}/v1/engine/runs/${runId}/approval`, {
+    const response = await this.fetch(`${this.baseUrl}/v1/computer-use/runs/${runId}/approve`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -71,7 +71,7 @@ class A2RComputerUseClient {
     return response.json();
   }
   async denyRun(runId, options = {}) {
-    const response = await this.fetch(`${this.baseUrl}/v1/engine/runs/${runId}/approval`, {
+    const response = await this.fetch(`${this.baseUrl}/v1/computer-use/runs/${runId}/approve`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -88,7 +88,7 @@ class A2RComputerUseClient {
     return response.json();
   }
   async cancelRun(runId, options = {}) {
-    const response = await this.fetch(`${this.baseUrl}/v1/engine/runs/${runId}/cancel`, {
+    const response = await this.fetch(`${this.baseUrl}/v1/computer-use/runs/${runId}/cancel`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -102,7 +102,7 @@ class A2RComputerUseClient {
     return response.json();
   }
   async pauseRun(runId, options = {}) {
-    const response = await this.fetch(`${this.baseUrl}/v1/engine/runs/${runId}/pause`, {
+    const response = await this.fetch(`${this.baseUrl}/v1/computer-use/runs/${runId}/pause`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -116,7 +116,7 @@ class A2RComputerUseClient {
     return response.json();
   }
   async resumeRun(runId, options = {}) {
-    const response = await this.fetch(`${this.baseUrl}/v1/engine/runs/${runId}/resume`, {
+    const response = await this.fetch(`${this.baseUrl}/v1/computer-use/runs/${runId}/resume`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -133,7 +133,7 @@ class A2RComputerUseClient {
     const { intervalMs = 1000, signal } = options;
     let nextIndex = 0;
     while (!signal?.aborted) {
-      const response = await this.fetch(`${this.baseUrl}/v1/engine/runs/${runId}/events?next_index=${nextIndex}`, {
+      const response = await this.fetch(`${this.baseUrl}/v1/computer-use/runs/${runId}/events?after_index=${nextIndex}`, {
         method: "GET",
         headers: this.headers,
         signal
@@ -166,16 +166,20 @@ class A2RComputerUseClient {
   }
 }
 function createComputerUseClient(config) {
-  return new A2RComputerUseClient(config);
+  return new AllternitComputerUseClient(config);
 }
 function resolveComputerUseBaseUrl(url) {
   if (!url) {
-    return (process.env.ALLTERNIT_BASE_URL || process.env.GIZZI_SERVER_URL || "http://localhost:4096").replace(/\/+$/g, "");
+    return (
+      process.env.ALLTERNIT_BASE_URL ||
+      process.env.ACU_GATEWAY_URL ||
+      "http://127.0.0.1:8760"
+    ).replace(/\/+$/g, "");
   }
   return String(url).replace(/\/+$/g, "");
 }
 export {
   resolveComputerUseBaseUrl,
   createComputerUseClient,
-  A2RComputerUseClient
+  AllternitComputerUseClient
 };

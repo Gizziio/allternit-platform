@@ -13,7 +13,7 @@ describe('Tool Snapshots Integration', () => {
   
   beforeEach(async () => {
     store = new SnapshotStore({
-      storage_dir: '.a2r/test-snapshots',
+      storage_dir: '.allternit/test-snapshots',
       max_snapshots: 100,
       compression: false,
       ttl_seconds: 3600
@@ -271,7 +271,7 @@ describe('Tool Snapshots Integration', () => {
   describe('Retention Policy', () => {
     it('should enforce max snapshots limit', async () => {
       const smallStore = new SnapshotStore({
-        storage_dir: '.a2r/test-snapshots-small',
+        storage_dir: '.allternit/test-snapshots-small',
         max_snapshots: 5,
         compression: false,
         ttl_seconds: 0

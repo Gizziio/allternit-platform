@@ -9,7 +9,7 @@ mod tests {
         // Start the daemon as a child process
         let mut daemon_cmd = Command::new("cargo");
         daemon_cmd
-            .args(["run", "--bin", "a2rchitech-io-daemon"])
+            .args(["run", "--bin", "allternit-io-daemon"])
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
 

@@ -1,6 +1,6 @@
-//! A2R Protocol
+//! Allternit Protocol
 //!
-//! Shared types for communication between A2R Node and Control Plane.
+//! Shared types for communication between Allternit Node and Control Plane.
 //! This crate defines the WebSocket message protocol, job formats, and common types.
 
 use chrono::{DateTime, Utc};

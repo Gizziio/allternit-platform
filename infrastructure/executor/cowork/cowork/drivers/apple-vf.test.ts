@@ -14,7 +14,7 @@ import {
 } from './apple-vf';
 
 // Mock environment for testing
-process.env.A2R_MOCK_VIRTUALIZATION = '1';
+process.env.Allternit_MOCK_VIRTUALIZATION = '1';
 
 describe('AppleVFDriver', () => {
   let driver: AppleVFDriver;

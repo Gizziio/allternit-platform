@@ -1,5 +1,5 @@
 [package]
-name = "a2r-multimodal-streaming"
+name = "allternit-multimodal-streaming"
 version = "0.1.0"
 edition = "2021"
 description = "Multimodal streaming: vision and audio processing for agents"

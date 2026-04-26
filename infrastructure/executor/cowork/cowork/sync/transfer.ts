@@ -1,5 +1,5 @@
 /**
- * @fileoverview A2R File Sync System - File Transfer Logic
+ * @fileoverview Allternit File Sync System - File Transfer Logic
  *
  * High-performance file transfer queue with concurrency control, compression,
  * delta sync for large files, and checksum verification.

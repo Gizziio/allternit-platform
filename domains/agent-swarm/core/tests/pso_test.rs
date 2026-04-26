@@ -1,7 +1,7 @@
 //! Unit tests for PSO engine
 
-use a2r_meta_swarm::modes::swarmagentic::PSOEngine;
-use a2r_meta_swarm::types::{AgentTeam, EntityId, Particle};
+use allternit_meta_swarm::modes::swarmagentic::PSOEngine;
+use allternit_meta_swarm::types::{AgentTeam, EntityId, Particle};
 
 #[tokio::test]
 async fn test_pso_convergence() {

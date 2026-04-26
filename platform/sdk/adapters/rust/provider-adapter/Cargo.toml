@@ -8,4 +8,4 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 anyhow = { workspace = true }
 async-trait = { workspace = true }
-a2rchitech-providers = { workspace = true }
+allternit-providers = { workspace = true }

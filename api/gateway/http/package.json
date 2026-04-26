@@ -1,12 +1,12 @@
 {
   "name": "@allternit/http-gateway",
   "version": "1.0.1",
-  "description": "A2R Gateway - Transport-agnostic API Gateway with UI v0 Binding (Deterministic)",
+  "description": "Allternit Gateway - Transport-agnostic API Gateway with UI v0 Binding (Deterministic)",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "a2r-gateway": "./dist/index.js"
+    "allternit-gateway": "./dist/index.js"
   },
   "scripts": {
     "dev": "tsx watch index.ts",
@@ -41,7 +41,7 @@
     "ui-v0",
     "deterministic"
   ],
-  "author": "A2R Platform Team",
+  "author": "Allternit Platform Team",
   "license": "MIT",
   "dependencies": {
     "@fastify/cors": "^9.0.0",

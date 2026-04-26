@@ -1,7 +1,7 @@
 /**
  * WebSocket Event System - Index
  * 
- * A complete real-time event system for A2R Infrastructure.
+ * A complete real-time event system for Allternit Infrastructure.
  * Provides WebSocket connectivity with horizontal scaling support via Redis.
  */
 

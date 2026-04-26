@@ -241,7 +241,7 @@ pub struct CorsPolicy {
 impl Default for CorsPolicy {
     fn default() -> Self {
         Self {
-            allowed_origins: vec!["https://*.a2r.local".to_string()],
+            allowed_origins: vec!["https://*.allternit.local".to_string()],
             allowed_methods: vec![
                 "GET".to_string(),
                 "POST".to_string(),
@@ -265,7 +265,7 @@ impl CorsPolicy {
     /// Strict CORS policy
     pub fn strict() -> Self {
         Self {
-            allowed_origins: vec!["https://a2r.local".to_string()],
+            allowed_origins: vec!["https://allternit.local".to_string()],
             allowed_methods: vec!["GET".to_string(), "POST".to_string()],
             allowed_headers: vec!["Content-Type".to_string(), "Authorization".to_string()],
             allow_credentials: true,
@@ -340,7 +340,7 @@ impl SecureConfig {
         let mut config = Self::default();
 
         // Load security policy from env
-        if let Ok(policy) = std::env::var("A2R_SECURITY_POLICY") {
+        if let Ok(policy) = std::env::var("Allternit_SECURITY_POLICY") {
             config.security_policy = match policy.as_str() {
                 "production" => SecurityPolicy::production(),
                 "development" => SecurityPolicy::development(),
@@ -349,14 +349,14 @@ impl SecureConfig {
         }
 
         // Load rate limit config
-        if let Ok(rps) = std::env::var("A2R_RATE_LIMIT_RPS") {
+        if let Ok(rps) = std::env::var("Allternit_RATE_LIMIT_RPS") {
             if let Ok(rps) = rps.parse() {
                 config.rate_limit.requests_per_second = rps;
             }
         }
 
         // Load strict mode
-        if let Ok(strict) = std::env::var("A2R_STRICT_MODE") {
+        if let Ok(strict) = std::env::var("Allternit_STRICT_MODE") {
             config.security_policy.strict_mode = strict == "true" || strict == "1";
         }
 
@@ -571,9 +571,9 @@ mod tests {
     #[test]
     fn test_config_from_env() {
         // Set env vars
-        std::env::set_var("A2R_SECURITY_POLICY", "production");
-        std::env::set_var("A2R_RATE_LIMIT_RPS", "5");
-        std::env::set_var("A2R_STRICT_MODE", "true");
+        std::env::set_var("Allternit_SECURITY_POLICY", "production");
+        std::env::set_var("Allternit_RATE_LIMIT_RPS", "5");
+        std::env::set_var("Allternit_STRICT_MODE", "true");
 
         let config = SecureConfig::from_env();
         assert_eq!(config.security_policy.name, "production");
@@ -581,8 +581,8 @@ mod tests {
         assert!(config.security_policy.strict_mode);
 
         // Cleanup
-        std::env::remove_var("A2R_SECURITY_POLICY");
-        std::env::remove_var("A2R_RATE_LIMIT_RPS");
-        std::env::remove_var("A2R_STRICT_MODE");
+        std::env::remove_var("Allternit_SECURITY_POLICY");
+        std::env::remove_var("Allternit_RATE_LIMIT_RPS");
+        std::env::remove_var("Allternit_STRICT_MODE");
     }
 }

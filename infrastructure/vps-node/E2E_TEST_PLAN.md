@@ -1,8 +1,8 @@
-# A2R Node End-to-End Production Test Plan
+# Allternit Node End-to-End Production Test Plan
 
 **Date:** 2026-02-24  
 **Environment:** Production VPS  
-**Goal:** Validate complete A2R Node system in production-like environment
+**Goal:** Validate complete Allternit Node system in production-like environment
 
 ---
 
@@ -31,21 +31,21 @@
 
 ```bash
 # Navigate to node agent directory
-cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/8-cloud/a2r-node
+cd /Users/macbook/Desktop/allternit-workspace/allternit/8-cloud/allternit-node
 
 # Build release binary
 cargo build --release
 
 # Verify binary was created
-ls -lh target/release/a2r-node
+ls -lh target/release/allternit-node
 
 # Check binary size (should be ~15-25 MB)
-file target/release/a2r-node
+file target/release/allternit-node
 ```
 
 **Expected Output:**
 ```
--rwxr-xr-x  1 user  staff    18M Feb 24 10:00 target/release/a2r-node
+-rwxr-xr-x  1 user  staff    18M Feb 24 10:00 target/release/allternit-node
 ```
 
 ---
@@ -58,13 +58,13 @@ VPS_USER="root"
 VPS_HOST="your.vps.ip.address"
 
 # Create directory on VPS
-ssh ${VPS_USER}@${VPS_HOST} "mkdir -p /opt/a2r/bin"
+ssh ${VPS_USER}@${VPS_HOST} "mkdir -p /opt/allternit/bin"
 
 # Transfer binary
-scp target/release/a2r-node ${VPS_USER}@${VPS_HOST}:/opt/a2r/bin/
+scp target/release/allternit-node ${VPS_USER}@${VPS_HOST}:/opt/allternit/bin/
 
 # Make executable
-ssh ${VPS_USER}@${VPS_HOST} "chmod +x /opt/a2r/bin/a2r-node"
+ssh ${VPS_USER}@${VPS_HOST} "chmod +x /opt/allternit/bin/allternit-node"
 ```
 
 ---
@@ -102,29 +102,29 @@ CONTAINER ID   IMAGE   COMMAND   CREATED   STATUS    PORTS   NAMES
 
 ```bash
 # Still on VPS, create config directory
-sudo mkdir -p /etc/a2r
-sudo mkdir -p /var/log/a2r
+sudo mkdir -p /etc/allternit
+sudo mkdir -p /var/log/allternit
 
 # Generate a test token (or use your control plane token)
 NODE_TOKEN="test-token-$(openssl rand -hex 16)"
 NODE_ID="node-prod-test-$(hostname | cut -c1-8)"
 
 # Create config file
-sudo cat > /etc/a2r/node.env << EOF
-# A2R Node Configuration
+sudo cat > /etc/allternit/node.env << EOF
+# Allternit Node Configuration
 # Generated: $(date)
 
-A2R_NODE_ID=${NODE_ID}
-A2R_TOKEN=${NODE_TOKEN}
-A2R_CONTROL_PLANE=ws://localhost:3000
+Allternit_NODE_ID=${NODE_ID}
+Allternit_TOKEN=${NODE_TOKEN}
+Allternit_CONTROL_PLANE=ws://localhost:3000
 EOF
 
 # Secure config file
-sudo chmod 600 /etc/a2r/node.env
-sudo chown root:root /etc/a2r/node.env
+sudo chmod 600 /etc/allternit/node.env
+sudo chown root:root /etc/allternit/node.env
 
 # Show config
-cat /etc/a2r/node.env
+cat /etc/allternit/node.env
 ```
 
 ---
@@ -133,22 +133,22 @@ cat /etc/a2r/node.env
 
 ```bash
 # Create systemd service file
-sudo cat > /etc/systemd/system/a2r-node.service << 'EOF'
+sudo cat > /etc/systemd/system/allternit-node.service << 'EOF'
 [Unit]
-Description=A2R Node Agent
-Documentation=https://docs.a2r.io
+Description=Allternit Node Agent
+Documentation=https://docs.allternit.io
 After=network.target docker.service
 Requires=docker.service
 
 [Service]
 Type=simple
-EnvironmentFile=/etc/a2r/node.env
-ExecStart=/opt/a2r/bin/a2r-node
+EnvironmentFile=/etc/allternit/node.env
+ExecStart=/opt/allternit/bin/allternit-node
 Restart=always
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=a2r-node
+SyslogIdentifier=allternit-node
 
 [Install]
 WantedBy=multi-user.target
@@ -158,10 +158,10 @@ EOF
 sudo systemctl daemon-reload
 
 # Enable service
-sudo systemctl enable a2r-node
+sudo systemctl enable allternit-node
 
 # Show service status
-systemctl status a2r-node --no-pager
+systemctl status allternit-node --no-pager
 ```
 
 ---
@@ -172,7 +172,7 @@ systemctl status a2r-node --no-pager
 
 ```bash
 # On your local machine
-cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/7-apps/api
+cd /Users/macbook/Desktop/allternit-workspace/allternit/7-apps/api
 
 # Start API server
 cargo run
@@ -182,13 +182,13 @@ cargo run
 
 ```bash
 # On VPS, in a separate terminal or screen session
-cd /path/to/a2rchitech/7-apps/api
+cd /path/to/allternit/7-apps/api
 cargo run --release
 ```
 
 **Expected Output:**
 ```
-2026-02-24T10:00:00Z  INFO  Starting A2R API server
+2026-02-24T10:00:00Z  INFO  Starting Allternit API server
 2026-02-24T10:00:00Z  INFO  Listening on http://127.0.0.1:3000
 2026-02-24T10:00:00Z  INFO  SQLite database initialized
 2026-02-24T10:00:00Z  INFO  Job dispatcher started
@@ -200,20 +200,20 @@ cargo run --release
 
 ```bash
 # On VPS
-sudo systemctl start a2r-node
+sudo systemctl start allternit-node
 
 # Watch logs in real-time
-sudo journalctl -u a2r-node -f
+sudo journalctl -u allternit-node -f
 ```
 
 **Expected Output:**
 ```
-Feb 24 10:05:00 vps a2r-node[12345]: 🔌 Connecting to ws://localhost:3000/ws/nodes/node-prod-test-xxx
-Feb 24 10:05:01 vps a2r-node[12345]: ✅ WebSocket connected
-Feb 24 10:05:01 vps a2r-node[12345]: 📋 Registration sent
-Feb 24 10:05:01 vps a2r-node[12345]: ✅ Registered with control plane
-Feb 24 10:05:01 vps a2r-node[12345]: 🐳 Docker available: version=24.0.7
-Feb 24 10:05:31 vps a2r-node[12345]: 💓 Heartbeat sent
+Feb 24 10:05:00 vps allternit-node[12345]: 🔌 Connecting to ws://localhost:3000/ws/nodes/node-prod-test-xxx
+Feb 24 10:05:01 vps allternit-node[12345]: ✅ WebSocket connected
+Feb 24 10:05:01 vps allternit-node[12345]: 📋 Registration sent
+Feb 24 10:05:01 vps allternit-node[12345]: ✅ Registered with control plane
+Feb 24 10:05:01 vps allternit-node[12345]: 🐳 Docker available: version=24.0.7
+Feb 24 10:05:31 vps allternit-node[12345]: 💓 Heartbeat sent
 ```
 
 ---
@@ -227,7 +227,7 @@ Feb 24 10:05:31 vps a2r-node[12345]: 💓 Heartbeat sent
 curl -s http://localhost:3000/api/v1/nodes | jq '.'
 
 # Or check database directly
-sqlite3 a2rchitech.db "SELECT id, hostname, status FROM nodes;"
+sqlite3 allternit.db "SELECT id, hostname, status FROM nodes;"
 ```
 
 **Expected Result:**
@@ -277,7 +277,7 @@ curl -X POST http://localhost:3000/api/v1/jobs \
       "version": "1.0",
       "task": {
         "type": "shell",
-        "command": "echo \"Hello from A2R! $(date)\""
+        "command": "echo \"Hello from Allternit! $(date)\""
       },
       "tools": []
     },
@@ -306,7 +306,7 @@ curl -X POST http://localhost:3000/api/v1/jobs \
 watch -n 2 'curl -s http://localhost:3000/api/v1/jobs | jq "."'
 
 # Watch node logs for job execution
-ssh ${VPS_USER}@${VPS_HOST} "sudo journalctl -u a2r-node -f | grep -i job"
+ssh ${VPS_USER}@${VPS_HOST} "sudo journalctl -u allternit-node -f | grep -i job"
 ```
 
 **Expected Flow:**
@@ -396,13 +396,13 @@ curl -s http://localhost:3000/api/v1/jobs/${JOB_ID} | jq '.job.status'
 
 ```bash
 # Stop node agent
-ssh ${VPS_USER}@${VPS_HOST} "sudo systemctl stop a2r-node"
+ssh ${VPS_USER}@${VPS_HOST} "sudo systemctl stop allternit-node"
 
 # Check node status (should show offline after ~60 seconds)
 curl -s http://localhost:3000/api/v1/nodes | jq '.[]'
 
 # Start node agent again
-ssh ${VPS_USER}@${VPS_HOST} "sudo systemctl start a2r-node"
+ssh ${VPS_USER}@${VPS_HOST} "sudo systemctl start allternit-node"
 
 # Wait for reconnection
 sleep 5
@@ -475,7 +475,7 @@ curl -X DELETE http://localhost:3000/api/v1/nodes/${NODE_ID}
 curl -s http://localhost:3000/api/v1/nodes | jq '.'
 
 # Check VPS logs for shutdown message
-ssh ${VPS_USER}@${VPS_HOST} "sudo journalctl -u a2r-node | grep -i shutdown | tail -5"
+ssh ${VPS_USER}@${VPS_HOST} "sudo journalctl -u allternit-node | grep -i shutdown | tail -5"
 ```
 
 **Expected Result:**
@@ -516,7 +516,7 @@ curl -I http://localhost:3000/health
 sudo ufw status
 
 # Check node logs
-sudo journalctl -u a2r-node -n 50
+sudo journalctl -u allternit-node -n 50
 
 # Test WebSocket connection manually
 websocat ws://localhost:3000/ws/nodes/test-node
@@ -529,7 +529,7 @@ websocat ws://localhost:3000/ws/nodes/test-node
 ssh ${VPS_USER}@${VPS_HOST} "docker ps"
 
 # Check node logs for job errors
-ssh ${VPS_USER}@${VPS_HOST} "sudo journalctl -u a2r-node | grep -i job"
+ssh ${VPS_USER}@${VPS_HOST} "sudo journalctl -u allternit-node | grep -i job"
 
 # Check job queue
 curl -s http://localhost:3000/api/v1/jobs/stats | jq '.'
@@ -539,13 +539,13 @@ curl -s http://localhost:3000/api/v1/jobs/stats | jq '.'
 
 ```bash
 # Check node agent status
-ssh ${VPS_USER}@${VPS_HOST} "systemctl status a2r-node"
+ssh ${VPS_USER}@${VPS_HOST} "systemctl status allternit-node"
 
 # Check network connectivity
 ssh ${VPS_USER}@${VPS_HOST} "curl -I http://localhost:3000/health"
 
 # Restart node agent
-ssh ${VPS_USER}@${VPS_HOST} "sudo systemctl restart a2r-node"
+ssh ${VPS_USER}@${VPS_HOST} "sudo systemctl restart allternit-node"
 ```
 
 ---
@@ -554,17 +554,17 @@ ssh ${VPS_USER}@${VPS_HOST} "sudo systemctl restart a2r-node"
 
 ```bash
 # Stop node agent
-ssh ${VPS_USER}@${VPS_HOST} "sudo systemctl stop a2r-node"
+ssh ${VPS_USER}@${VPS_HOST} "sudo systemctl stop allternit-node"
 
 # Remove service
-ssh ${VPS_USER}@${VPS_HOST} "sudo systemctl disable a2r-node"
-ssh ${VPS_USER}@${VPS_HOST} "sudo rm /etc/systemd/system/a2r-node.service"
+ssh ${VPS_USER}@${VPS_HOST} "sudo systemctl disable allternit-node"
+ssh ${VPS_USER}@${VPS_HOST} "sudo rm /etc/systemd/system/allternit-node.service"
 
 # Remove files
-ssh ${VPS_USER}@${VPS_HOST} "sudo rm -rf /opt/a2r /etc/a2r /var/log/a2r"
+ssh ${VPS_USER}@${VPS_HOST} "sudo rm -rf /opt/allternit /etc/allternit /var/log/allternit"
 
 # Clear database (if testing locally)
-rm -f a2rchitech.db
+rm -f allternit.db
 ```
 
 ---

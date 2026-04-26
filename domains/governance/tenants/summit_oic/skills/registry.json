@@ -22,6 +22,19 @@
       ]
     },
     {
+      "name": "summit.canvas.academic_notice_demo",
+      "entry": "skills/canvas/academic_notice_demo.skill.md",
+      "requires_tools": [
+        "canvas.list_courses",
+        "canvas.list_modules",
+        "canvas.create_module",
+        "canvas.create_page",
+        "canvas.add_module_item",
+        "canvas.upload_file"
+      ],
+      "forms": ["forms/academic_notice_demo.form.json"]
+    },
+    {
       "name": "summit.office.excel_editor",
       "entry": "skills/office/excel_editor.skill.md",
       "requires_tools": ["office.xlsx_read", "office.xlsx_write"],

@@ -1,4 +1,4 @@
-use a2rchitech_memory::{MemoryEntry, MemoryQuery, MemoryService};
+use allternit_memory::{MemoryEntry, MemoryQuery, MemoryService};
 use axum::{
     extract::State,
     http::StatusCode,
@@ -71,7 +71,7 @@ async fn handle_store_memory(
         tenant_id: "default".to_string(),
         session_id: None,
         agent_id: None,
-        memory_type: a2rchitech_memory::MemoryType::Semantic,
+        memory_type: allternit_memory::MemoryType::Semantic,
         content: serde_json::Value::String(req.content),
         metadata: req.metadata,
         embedding: req.embedding,
@@ -80,21 +80,21 @@ async fn handle_store_memory(
         access_count: 0,
         sensitivity_tier: 0,
         tags: vec![],
-        provenance: a2rchitech_memory::MemoryProvenance {
+        provenance: allternit_memory::MemoryProvenance {
             source_session: None,
             source_agent: "system".to_string(),
             derivation_chain: vec![],
             integrity_hash: "".to_string(),
             signature: None,
         },
-        retention_policy: a2rchitech_memory::MemoryRetentionPolicy {
+        retention_policy: allternit_memory::MemoryRetentionPolicy {
             time_to_live: None,
             max_accesses: None,
-            decay_function: a2rchitech_memory::MemoryDecayFunction::Linear { rate: 0.0 },
-            consolidation_trigger: a2rchitech_memory::ConsolidationTrigger::Manual,
-            deletion_policy: a2rchitech_memory::DeletionPolicy::Archival,
+            decay_function: allternit_memory::MemoryDecayFunction::Linear { rate: 0.0 },
+            consolidation_trigger: allternit_memory::ConsolidationTrigger::Manual,
+            deletion_policy: allternit_memory::DeletionPolicy::Archival,
         },
-        consolidation_state: a2rchitech_memory::ConsolidationState::Raw,
+        consolidation_state: allternit_memory::ConsolidationState::Raw,
         status: "active".to_string(),
         valid_from: Some(now),
         valid_to: None,
@@ -187,15 +187,15 @@ async fn main() -> anyhow::Result<()> {
     let backend = if std::env::var("USE_REDIS").is_ok() {
         let redis_url = std::env::var("REDIS_URL").unwrap_or("redis://127.0.0.1/".to_string());
         let redis_store =
-            a2rchitech_memory::RedisMemoryStore::new(&redis_url, "a2rchitech".to_string())?;
-        a2rchitech_memory::MemoryBackend::Redis(redis_store)
+            allternit_memory::RedisMemoryStore::new(&redis_url, "allternit".to_string())?;
+        allternit_memory::MemoryBackend::Redis(redis_store)
     } else if std::env::var("USE_QDRANT").is_ok() {
         let qdrant_url = std::env::var("QDRANT_URL").unwrap_or("http://localhost:6334".to_string());
-        let qdrant_store = a2rchitech_memory::QdrantMemoryStore::new(
+        let qdrant_store = allternit_memory::QdrantMemoryStore::new(
             &qdrant_url,
-            "a2rchitech_memories".to_string(),
+            "allternit_memories".to_string(),
         )?;
-        a2rchitech_memory::MemoryBackend::Qdrant(qdrant_store)
+        allternit_memory::MemoryBackend::Qdrant(qdrant_store)
     } else {
         // Default to Fabric if no specific backend requested, using mock components for now
         // In a real environment, these would be properly initialized
@@ -207,11 +207,11 @@ async fn main() -> anyhow::Result<()> {
         // We'll use Redis as a fallback for the mock since it's easier to initialize in this context
         let redis_url = "redis://127.0.0.1/";
         let redis_store =
-            a2rchitech_memory::RedisMemoryStore::new(redis_url, "a2rchitech".to_string())?;
-        a2rchitech_memory::MemoryBackend::Redis(redis_store)
+            allternit_memory::RedisMemoryStore::new(redis_url, "allternit".to_string())?;
+        allternit_memory::MemoryBackend::Redis(redis_store)
     };
 
-    let memory_service = Arc::new(a2rchitech_memory::MemoryService::new(backend));
+    let memory_service = Arc::new(allternit_memory::MemoryService::new(backend));
 
     let state = AppState { memory_service };
 

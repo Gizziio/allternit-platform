@@ -1,5 +1,5 @@
 {
-  "name": "@a2r/content-ingestion",
+  "name": "@allternit/content-ingestion",
   "version": "1.0.0",
   "description": "Content Ingestion Kernel - HTML → Markdown → Structured Context pipeline",
   "type": "module",
@@ -17,7 +17,7 @@
     "build": "tsc",
     "dev": "tsc --watch"
   },
-  "keywords": ["a2r", "content", "ingestion", "markdown", "living-files", "nlp", "ner"],
+  "keywords": ["allternit", "content", "ingestion", "markdown", "living-files", "nlp", "ner"],
   "license": "MIT",
   "dependencies": {
     "compromise": "^14.14.4",

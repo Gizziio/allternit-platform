@@ -38,7 +38,7 @@ impl Default for AutoEmissionConfig {
             emit_post_tool: true,
             include_inputs: false,
             include_outputs: false,
-            storage_path: "/var/a2r/receipts".to_string(),
+            storage_path: "/var/allternit/receipts".to_string(),
             correlation_prefix: "corr".to_string(),
         }
     }

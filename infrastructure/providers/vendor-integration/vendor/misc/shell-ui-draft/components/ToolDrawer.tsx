@@ -238,7 +238,7 @@ export const ToolDrawer = ({ isOpen, onClose }: ToolDrawerProps) => {
                 className="px-6 py-4 border-t border-white/5 flex items-center justify-between"
                 style={{ background: 'rgba(0, 0, 0, 0.2)' }}
               >
-                <span className="text-xs text-white/40">A2R Shell v1.0.0</span>
+                <span className="text-xs text-white/40">Allternit Shell v1.0.0</span>
                 <div className="flex items-center gap-2">
                   <div
                     className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"

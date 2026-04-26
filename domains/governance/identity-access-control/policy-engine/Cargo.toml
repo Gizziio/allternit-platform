@@ -1,8 +1,8 @@
 [package]
-name = "a2rchitech-policy"
+name = "allternit-policy"
 version = "0.1.0"
 edition = "2021"
-description = "A2rchitech policy engine with deny-by-default approach"
+description = "Allternit policy engine with deny-by-default approach"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
@@ -13,9 +13,9 @@ thiserror = "1.0"
 anyhow = "1.0"
 tracing = "0.1"
 utoipa = { version = "4.2", features = ["uuid", "chrono"] }
-a2rchitech-history = { workspace = true }
-a2rchitech-messaging = { workspace = true }
-a2rchitech-security-governance = { workspace = true }
+allternit-history = { workspace = true }
+allternit-messaging = { workspace = true }
+allternit-security-governance = { workspace = true }
 async-trait = "0.1"
 futures = "0.3"
 

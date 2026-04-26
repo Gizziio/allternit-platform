@@ -210,7 +210,7 @@ class HeyApiRegistry<T> {
   get(key?: string): T {
     const instance = this.instances.get(key ?? this.defaultKey);
     if (!instance) {
-      throw new Error(`No SDK client found. Create one with "new A2RClient()" to fix this error.`);
+      throw new Error(`No SDK client found. Create one with "new AllternitClient()" to fix this error.`);
     }
     return instance;
   }
@@ -1210,11 +1210,11 @@ class Workspace extends HeyApiClient {
   get memory() { return this._memory ??= new WorkspaceMemory({ client: this.client }) }
 }
 
-export class A2RClient extends HeyApiClient {
-  static readonly __registry = new HeyApiRegistry<A2RClient>();
+export class AllternitClient extends HeyApiClient {
+  static readonly __registry = new HeyApiRegistry<AllternitClient>();
   constructor(args?: { client?: Client; key?: string }) {
     super(args);
-    A2RClient.__registry.set(this, args?.key);
+    AllternitClient.__registry.set(this, args?.key);
   }
   private _agent?: Agent
   get agent() { return this._agent ??= new Agent({ client: this.client }) }
@@ -1320,7 +1320,7 @@ export class A2RClient extends HeyApiClient {
   }
 }
 
-export function createA2RClient(config?: {
+export function createAllternitClient(config?: {
   baseUrl?: string;
   fetch?: typeof fetch;
   headers?: Record<string, string>;
@@ -1340,7 +1340,7 @@ export function createA2RClient(config?: {
     config.headers = { ...config.headers, "x-opencode-directory": encodedDirectory };
   }
   const clientInstance = createClient(config);
-  return new A2RClient({ client: clientInstance });
+  return new AllternitClient({ client: clientInstance });
 }
 
 export * from "./types.gen.js";

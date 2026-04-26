@@ -20,34 +20,34 @@ reqwest = { workspace = true, features = ["json", "rustls-tls", "stream"] }
 base64 = "0.22"
 lazy_static = "1.4"
 sqlx = { version = "0.7", features = ["runtime-tokio", "sqlite"] }
-a2rchitech-tools = { path = "../../../1-kernel/support/a2r-kernel-tools-components" }
-a2rchitech-providers = { workspace = true }
-a2rchitech-kernel-contracts = { workspace = true }
+allternit-tools = { path = "../../../1-kernel/support/allternit-kernel-tools-components" }
+allternit-providers = { workspace = true }
+allternit-kernel-contracts = { workspace = true }
 voice-service = { path = "../../ml-ai-services/voice-service" }
-webvm-service = { path = "../../../3-adapters/bridge-systems/a2r-webvm" }
-capsule_spec = { path = "../../../0-substrate/schemas/a2r-capsule-spec" }
+webvm-service = { path = "../../../3-adapters/bridge-systems/allternit-webvm" }
+capsule_spec = { path = "../../../../platform/contracts/schemas/allternit-capsule-spec" }
 evidence_store = { path = "../../../2-governance/evidence-management/core-evidence" }
-capsule_compiler = { path = "../../../1-kernel/capsule-system/a2r-capsule-compiler" }
+capsule_compiler = { path = "../../../1-kernel/capsule-system/allternit-capsule-compiler" }
 async-trait = "0.1"
 regex = "1.0"
-a2rchitech-history = { workspace = true }
-a2rchitech-messaging = { workspace = true }
-a2rchitech-policy = { workspace = true }
-a2rchitech-skills = { workspace = true }
-a2rchitech-tools-gateway = { workspace = true }
-a2rchitech-evals = { workspace = true }
-a2rchitech-context-router = { workspace = true }
-a2rchitech-embodiment = { workspace = true }
-a2rchitech-artifact-registry = { workspace = true }
-a2rchitech-memory = { workspace = true }
-a2rchitech-packaging = { workspace = true }
-a2rchitech-runtime-core = { workspace = true }
-a2r-runtime = { path = "../../../1-kernel/infrastructure/a2r-runtime" }
+allternit-history = { workspace = true }
+allternit-messaging = { workspace = true }
+allternit-policy = { workspace = true }
+allternit-skills = { workspace = true }
+allternit-tools-gateway = { workspace = true }
+allternit-evals = { workspace = true }
+allternit-context-router = { workspace = true }
+allternit-embodiment = { workspace = true }
+allternit-artifact-registry = { workspace = true }
+allternit-memory = { workspace = true }
+allternit-packaging = { workspace = true }
+allternit-runtime-core = { workspace = true }
+allternit-runtime = { path = "../../../1-kernel/infrastructure/allternit-runtime" }
 portable-pty = "0.8"
 futures = "0.3"
 tokio-stream = { version = "0.1", features = ["sync"] }
-a2rchitech-workflows = { workspace = true }
+allternit-workflows = { workspace = true }
 ring = "0.17"
 data-encoding = "2.0"
-a2r-governor = { path = "../../../2-governance/governance-workflows/rust-governor" }
-a2r-substrate = { path = "../../../0-substrate/a2r-substrate" }
+allternit-governor = { path = "../../../2-governance/governance-workflows/rust-governor" }
+allternit-substrate = { path = "../../../../platform/types/allternit-substrate" }

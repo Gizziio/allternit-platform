@@ -1,12 +1,12 @@
 #!/bin/bash
 #
-# A2R Node Agent Installation Script
+# Allternit Node Agent Installation Script
 # Supports: Ubuntu, Debian, CentOS, RHEL, Fedora, Alpine Linux
 #
 # This script:
 # - Detects OS and architecture
 # - Installs Docker if not present
-# - Pulls A2R agent Docker image
+# - Pulls Allternit agent Docker image
 # - Sets up systemd service
 # - Configures networking and firewall
 # - Sets up log rotation
@@ -28,12 +28,12 @@ log_warn() { echo -e "${YELLOW}[WARNING]${NC} $1"; }
 log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
 # Configuration
-A2R_VERSION="${A2R_VERSION:-latest}"
-A2R_DIR="/opt/a2r"
-A2R_CONFIG_DIR="/etc/a2r"
-A2R_LOG_DIR="/var/log/a2r"
-A2R_USER="a2r"
-A2R_GROUP="a2r"
+Allternit_VERSION="${Allternit_VERSION:-latest}"
+Allternit_DIR="/opt/allternit"
+Allternit_CONFIG_DIR="/etc/allternit"
+Allternit_LOG_DIR="/var/log/allternit"
+Allternit_USER="allternit"
+Allternit_GROUP="allternit"
 
 # Detect OS
 detect_os() {
@@ -199,27 +199,27 @@ install_docker_generic() {
     rm -f /tmp/get-docker.sh
 }
 
-# Create A2R user and directories
+# Create Allternit user and directories
 setup_directories() {
-    log_info "Setting up A2R directories..."
+    log_info "Setting up Allternit directories..."
     
     # Create user
-    if ! id "$A2R_USER" &>/dev/null; then
-        useradd -r -s /bin/false -d "$A2R_DIR" -m "$A2R_USER"
-        log_info "Created user: $A2R_USER"
+    if ! id "$Allternit_USER" &>/dev/null; then
+        useradd -r -s /bin/false -d "$Allternit_DIR" -m "$Allternit_USER"
+        log_info "Created user: $Allternit_USER"
     fi
     
     # Create directories
-    mkdir -p "$A2R_DIR"/{config,data,logs,scripts}
-    mkdir -p "$A2R_CONFIG_DIR"
-    mkdir -p "$A2R_LOG_DIR"
+    mkdir -p "$Allternit_DIR"/{config,data,logs,scripts}
+    mkdir -p "$Allternit_CONFIG_DIR"
+    mkdir -p "$Allternit_LOG_DIR"
     
     # Set permissions
-    chown -R "$A2R_USER:$A2R_GROUP" "$A2R_DIR"
-    chown -R "$A2R_USER:$A2R_GROUP" "$A2R_LOG_DIR"
-    chmod 750 "$A2R_DIR"
-    chmod 755 "$A2R_CONFIG_DIR"
-    chmod 600 "$A2R_CONFIG_DIR"/config.json 2>/dev/null || true
+    chown -R "$Allternit_USER:$Allternit_GROUP" "$Allternit_DIR"
+    chown -R "$Allternit_USER:$Allternit_GROUP" "$Allternit_LOG_DIR"
+    chmod 750 "$Allternit_DIR"
+    chmod 755 "$Allternit_CONFIG_DIR"
+    chmod 600 "$Allternit_CONFIG_DIR"/config.json 2>/dev/null || true
     
     log_success "Directories created"
 }
@@ -234,7 +234,7 @@ configure_firewall() {
     # ufw (Ubuntu/Debian)
     if command -v ufw &> /dev/null && ufw status | grep -q "Status: active"; then
         for port in "${ports[@]}"; do
-            ufw allow "$port/tcp" comment "A2R Agent" 2>/dev/null || true
+            ufw allow "$port/tcp" comment "Allternit Agent" 2>/dev/null || true
         done
         log_info "Configured ufw firewall"
     fi
@@ -267,18 +267,18 @@ configure_firewall() {
 setup_log_rotation() {
     log_info "Setting up log rotation..."
     
-    cat > /etc/logrotate.d/a2r-agent << 'EOF'
-/var/log/a2r/*.log {
+    cat > /etc/logrotate.d/allternit-agent << 'EOF'
+/var/log/allternit/*.log {
     daily
     rotate 14
     compress
     delaycompress
     missingok
     notifempty
-    create 0640 a2r a2r
+    create 0640 allternit allternit
     sharedscripts
     postrotate
-        /usr/bin/docker kill --signal="USR1" a2r-agent 2>/dev/null || true
+        /usr/bin/docker kill --signal="USR1" allternit-agent 2>/dev/null || true
     endscript
 }
 EOF
@@ -290,35 +290,35 @@ EOF
 create_systemd_service() {
     log_info "Creating systemd service..."
     
-    cat > /etc/systemd/system/a2r-agent.service << EOF
+    cat > /etc/systemd/system/allternit-agent.service << EOF
 [Unit]
-Description=A2R Node Agent
-Documentation=https://docs.a2r.io
+Description=Allternit Node Agent
+Documentation=https://docs.allternit.io
 Requires=docker.service
 After=docker.service network.target
 
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=$A2R_DIR
+WorkingDirectory=$Allternit_DIR
 User=root
 Group=root
 
 # Pull images and start
-ExecStartPre=-/usr/bin/docker compose -f $A2R_DIR/docker-compose.yml pull
-ExecStartPre=-/usr/bin/docker compose -f $A2R_DIR/docker-compose.yml down
+ExecStartPre=-/usr/bin/docker compose -f $Allternit_DIR/docker-compose.yml pull
+ExecStartPre=-/usr/bin/docker compose -f $Allternit_DIR/docker-compose.yml down
 
-ExecStart=/usr/bin/docker compose -f $A2R_DIR/docker-compose.yml up -d
+ExecStart=/usr/bin/docker compose -f $Allternit_DIR/docker-compose.yml up -d
 
-ExecStop=/usr/bin/docker compose -f $A2R_DIR/docker-compose.yml down
-ExecReload=/usr/bin/docker compose -f $A2R_DIR/docker-compose.yml restart
+ExecStop=/usr/bin/docker compose -f $Allternit_DIR/docker-compose.yml down
+ExecReload=/usr/bin/docker compose -f $Allternit_DIR/docker-compose.yml restart
 
 # Restart policy
 Restart=no
 
 # Environment
-Environment="A2R_CONFIG_DIR=$A2R_CONFIG_DIR"
-Environment="A2R_LOG_DIR=$A2R_LOG_DIR"
+Environment="Allternit_CONFIG_DIR=$Allternit_CONFIG_DIR"
+Environment="Allternit_LOG_DIR=$Allternit_LOG_DIR"
 
 [Install]
 WantedBy=multi-user.target
@@ -326,7 +326,7 @@ EOF
     
     # Reload systemd
     systemctl daemon-reload
-    systemctl enable a2r-agent
+    systemctl enable allternit-agent
     
     log_success "Systemd service created"
 }
@@ -335,14 +335,14 @@ EOF
 setup_docker_network() {
     log_info "Setting up Docker network..."
     
-    # Create a2r network if it doesn't exist
-    if ! docker network inspect a2r-network &>/dev/null; then
+    # Create allternit network if it doesn't exist
+    if ! docker network inspect allternit-network &>/dev/null; then
         docker network create \
             --driver bridge \
             --subnet=172.20.0.0/16 \
             --gateway=172.20.0.1 \
-            --opt com.docker.network.bridge.name=a2r-br0 \
-            a2r-network || true
+            --opt com.docker.network.bridge.name=allternit-br0 \
+            allternit-network || true
     fi
     
     log_success "Docker network configured"
@@ -365,19 +365,19 @@ verify_installation() {
     fi
     
     # Check configuration files
-    if [[ ! -f "$A2R_DIR/docker-compose.yml" ]]; then
+    if [[ ! -f "$Allternit_DIR/docker-compose.yml" ]]; then
         log_error "Docker Compose file not found"
         exit 1
     fi
     
     # Validate docker-compose
-    if ! docker compose -f "$A2R_DIR/docker-compose.yml" config &>/dev/null; then
+    if ! docker compose -f "$Allternit_DIR/docker-compose.yml" config &>/dev/null; then
         log_error "Docker Compose configuration is invalid"
         exit 1
     fi
     
     # Check systemd service
-    if [[ ! -f /etc/systemd/system/a2r-agent.service ]]; then
+    if [[ ! -f /etc/systemd/system/allternit-agent.service ]]; then
         log_error "Systemd service file not found"
         exit 1
     fi
@@ -388,8 +388,8 @@ verify_installation() {
 # Main installation function
 main() {
     log_info "======================================"
-    log_info "A2R Node Agent Installer"
-    log_info "Version: $A2R_VERSION"
+    log_info "Allternit Node Agent Installer"
+    log_info "Version: $Allternit_VERSION"
     log_info "======================================"
     
     detect_os
@@ -404,18 +404,18 @@ main() {
     verify_installation
     
     log_success "======================================"
-    log_success "A2R Agent installation completed!"
+    log_success "Allternit Agent installation completed!"
     log_success "======================================"
     log_info ""
     log_info "Next steps:"
-    log_info "  1. Start the agent: sudo systemctl start a2r-agent"
-    log_info "  2. Check status: sudo systemctl status a2r-agent"
-    log_info "  3. View logs: sudo journalctl -u a2r-agent -f"
-    log_info "  4. Docker logs: docker compose -f $A2R_DIR/docker-compose.yml logs -f"
+    log_info "  1. Start the agent: sudo systemctl start allternit-agent"
+    log_info "  2. Check status: sudo systemctl status allternit-agent"
+    log_info "  3. View logs: sudo journalctl -u allternit-agent -f"
+    log_info "  4. Docker logs: docker compose -f $Allternit_DIR/docker-compose.yml logs -f"
     log_info ""
-    log_info "Configuration file: $A2R_CONFIG_DIR/config.json"
-    log_info "Data directory: $A2R_DIR/data"
-    log_info "Log directory: $A2R_LOG_DIR"
+    log_info "Configuration file: $Allternit_CONFIG_DIR/config.json"
+    log_info "Data directory: $Allternit_DIR/data"
+    log_info "Log directory: $Allternit_LOG_DIR"
 }
 
 # Handle script interruption

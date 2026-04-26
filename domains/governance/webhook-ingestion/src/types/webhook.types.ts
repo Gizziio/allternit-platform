@@ -2,7 +2,7 @@
  * Webhook Ingestion Service - Type Definitions
  * 
  * Defines all webhook event types, sources, and normalized schemas
- * for the a2rchitech multi-agent communication layer.
+ * for the allternit multi-agent communication layer.
  */
 
 /**

@@ -1,6 +1,6 @@
 //! Skill Creator - Primitive for creating effective skills
 //!
-//! This module provides the foundational capability for skill creation in the A2R system.
+//! This module provides the foundational capability for skill creation in the Allternit system.
 //! It implements a 6-step process for creating skills:
 //! 1. Understand - Gather concrete examples of skill usage
 //! 2. Plan - Identify reusable resources (scripts, references, assets)
@@ -53,7 +53,7 @@ pub struct SkillCreationConfig {
 impl Default for SkillCreationConfig {
     fn default() -> Self {
         Self {
-            default_author: "A2R Developer".to_string(),
+            default_author: "Allternit Developer".to_string(),
             default_license: "MIT".to_string(),
             skills_dir: PathBuf::from("./skills"),
             auto_validate: true,
@@ -479,7 +479,7 @@ impl SkillCreator {
         };
 
         Ok(serde_json::json!({
-            "id": format!("a2r.skill.{}", session.skill_name.replace("-", ".")),
+            "id": format!("allternit.skill.{}", session.skill_name.replace("-", ".")),
             "name": session.skill_name,
             "version": "0.1.0",
             "description": description,

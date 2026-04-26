@@ -1,5 +1,5 @@
 -- =============================================================================
--- A2R Platform - PostgreSQL Initialization
+-- Allternit Platform - PostgreSQL Initialization
 -- =============================================================================
 -- This script runs when the PostgreSQL container starts for the first time.
 -- It sets up required extensions and initial database configuration.
@@ -21,36 +21,36 @@ END
 $$;
 
 -- Create application schemas
-CREATE SCHEMA IF NOT EXISTS a2r;
-CREATE SCHEMA IF NOT EXISTS a2r_audit;
+CREATE SCHEMA IF NOT EXISTS allternit;
+CREATE SCHEMA IF NOT EXISTS allternit_audit;
 
 -- Set search path
-ALTER DATABASE a2r_platform SET search_path TO a2r, public;
+ALTER DATABASE allternit_platform SET search_path TO allternit, public;
 
 -- Create roles
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'a2r_app') THEN
-        CREATE ROLE a2r_app WITH LOGIN PASSWORD 'a2r-app-password';
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'allternit_app') THEN
+        CREATE ROLE allternit_app WITH LOGIN PASSWORD 'allternit-app-password';
     END IF;
     
-    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'a2r_readonly') THEN
-        CREATE ROLE a2r_readonly WITH LOGIN PASSWORD 'a2r-readonly-password';
+    IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'allternit_readonly') THEN
+        CREATE ROLE allternit_readonly WITH LOGIN PASSWORD 'allternit-readonly-password';
     END IF;
 END
 $$;
 
 -- Grant permissions
-GRANT USAGE ON SCHEMA a2r TO a2r_app;
-GRANT CREATE ON SCHEMA a2r TO a2r_app;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA a2r TO a2r_app;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA a2r TO a2r_app;
+GRANT USAGE ON SCHEMA allternit TO allternit_app;
+GRANT CREATE ON SCHEMA allternit TO allternit_app;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA allternit TO allternit_app;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA allternit TO allternit_app;
 
-GRANT USAGE ON SCHEMA a2r TO a2r_readonly;
-GRANT SELECT ON ALL TABLES IN SCHEMA a2r TO a2r_readonly;
+GRANT USAGE ON SCHEMA allternit TO allternit_readonly;
+GRANT SELECT ON ALL TABLES IN SCHEMA allternit TO allternit_readonly;
 
 -- Create update timestamp function
-CREATE OR REPLACE FUNCTION a2r.update_updated_at_column()
+CREATE OR REPLACE FUNCTION allternit.update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = NOW();
@@ -59,11 +59,11 @@ END;
 $$ language 'plpgsql';
 
 -- Grant execute permission
-GRANT EXECUTE ON FUNCTION a2r.update_updated_at_column() TO a2r_app;
+GRANT EXECUTE ON FUNCTION allternit.update_updated_at_column() TO allternit_app;
 
 -- Log completion
 DO $$
 BEGIN
-    RAISE NOTICE 'A2R Platform database initialized successfully';
+    RAISE NOTICE 'Allternit Platform database initialized successfully';
 END
 $$;

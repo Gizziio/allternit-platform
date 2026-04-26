@@ -1,4 +1,4 @@
-//! A2R Budget Metering System
+//! Allternit Budget Metering System
 //!
 //! Implements SYSTEM_LAW.md LAW-SWM-004 (Budget-Aware Scheduling)
 //!
