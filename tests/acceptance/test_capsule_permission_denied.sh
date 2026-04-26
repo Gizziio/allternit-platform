@@ -42,7 +42,7 @@ cat > "$REGISTRY_PATH" <<EOF
 }
 EOF
 
-export A2R_RUN_ID="test-t0503-perm"
+export Allternit_RUN_ID="test-t0503-perm"
 export PORT=$PORT
 $VENV_PYTHON "$RUNTIME_SCRIPT" > capsule_runtime.log 2>&1 &
 echo $! > $PID_FILE

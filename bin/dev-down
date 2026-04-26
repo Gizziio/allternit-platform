@@ -1,5 +1,5 @@
 #!/bin/bash
-# Stop all a2rchitech launchd services
+# Stop all allternit launchd services
 
 LAUNCH_AGENTS_DIR="$HOME/Library/LaunchAgents"
 
@@ -12,11 +12,12 @@ unload_service() {
     fi
 }
 
-unload_service "com.a2rchitech.intent-graph-kernel"
-unload_service "com.a2rchitech.capsule-runtime"
-unload_service "com.a2rchitech.presentation-kernel"
-unload_service "com.a2rchitech.kernel"
-unload_service "com.a2rchitech.shell"
-unload_service "com.a2rchitech.ui-tars-operator"
+unload_service "com.allternitchitech.intent-graph-kernel"
+unload_service "com.allternitchitech.capsule-runtime"
+unload_service "com.allternitchitech.presentation-kernel"
+unload_service "com.allternitchitech.kernel"
+unload_service "com.allternitchitech.shell"
+unload_service "com.allternitchitech.ui-tars-operator"
+unload_service "com.allternitchitech.agui-gateway"
 
-echo "All a2rchitech development services stopped."
+echo "All allternit development services stopped."

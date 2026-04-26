@@ -1,0 +1,170 @@
+Understood. You’re right to correct this — the name and identity matter, and more importantly the center of gravity matters.
+
+We are not integrating “ElizaOS” as an OS.
+We are extracting ideas and re-expressing them as native Gizzi OS primitives.
+
+⸻
+
+1️⃣ MD-012  — Gizzi OS Native Agent Runtime Integration
+
+This replaces the previous MD-012.
+The earlier framing is superseded and should be considered deprecated.
+
+￼
+
+⸻
+
+MD-012R — Classification
+
+Type: Core OS-level agent runtime policy
+Name: Gizzi OS — Governed Agent Runtime & Coordination Model
+Role: Defines how Gizzi OS agents execute, learn, coordinate, and remain safe inside Allternit
+Stability: Foundational (hard default)
+
+This is not an external OS integration.
+
+This is:
+    •    Gizzi OS
+    •    expressed through
+    •    Allternit’s architecture
+
+External systems (Eliza-like, Claude-like, etc.) are idea sources only.
+
+⸻
+
+Gizzi OS — First-Principles Definition
+
+Gizzi OS is a governed, pattern-adaptive, auditable agent operating system where:
+    •    No agent is trusted by default
+    •    No capability is implicit
+    •    No memory is permanent
+    •    No action is irreversible without verification
+    •    No learning degrades delivery quality
+
+This aligns perfectly with what we already locked:
+    •    Journal
+    •    Tool Registry
+    •    Capsules
+    •    Canvases
+    •    Presentation Kernel
+
+⸻
+
+Gizzi OS Core Primitives (Canonical)
+
+1. Agent Runtime (Native)
+    •    Agents execute in bounded execution windows
+    •    Agents cannot self-authorize
+    •    Agents cannot bypass tool governance
+    •    Agents cannot mutate truth directly
+
+Layer: L1 Runtime
+Anchor: Execution Model + Tool Registry + Journal
+
+⸻
+
+2. Event-Driven Execution (Deterministic)
+    •    All execution is driven by typed events
+    •    No raw text reaches tools
+    •    Every action produces auditable events
+
+Layer: L3 Orchestration + L5 Context
+
+⸻
+
+3. Capability System (Contracts, not Plugins)
+    •    Capabilities are ToolSpecs
+    •    Typed inputs/outputs
+    •    Declared side effects
+    •    Scoped permissions
+
+This is not a plugin free-for-all.
+
+Layer: L6 Providers + Tool Registry
+
+⸻
+
+4. Multi-Agent Coordination (Role-Bound)
+
+Agents do not swarm arbitrarily.
+
+They operate in explicit roles:
+    •    Planner
+    •    Executor
+    •    Verifier
+    •    Observer
+    •    Archivist
+
+Irreversible actions require multi-role consensus.
+
+Layer: L3 Orchestration
+
+⸻
+
+5. Memory & State (Replaced, Not Inherited)
+
+There is:
+    •    No self-modifying memory
+    •    No opaque persistence
+    •    No silent learning
+
+Instead:
+    •    Journaled events
+    •    Versioned knowledge
+    •    Explicit promotion rules
+
+Layer: L5 Context + L7 History
+
+⸻
+
+Gizzi OS Lifecycle (Authoritative)
+    1.    Initialization
+    2.    Context hydration
+    3.    Bounded execution
+    4.    Verification
+    5.    Commit / rollback
+    6.    Journal audit
+
+Violations terminate the agent instance.
+
+⸻
+
+Hard Rules (Native Gizzi OS Law)
+    1.    No agent is trusted by default
+    2.    No memory is permanent by default
+    3.    No action without validation
+    4.    No capability without a contract
+    5.    No coordination without structure
+
+These are system laws, not suggestions.
+
+⸻
+
+PATCH-012R — Gizzi OS Runtime Integration
+
+PATCH-012R — Gizzi OS Native Agent Runtime & Coordination
+
+Replaces:
+- PATCH-012 (ElizaOS framing)
+
+Defines:
+- Gizzi OS as the native agent operating system
+- Pattern-adaptive, governed, auditable agents
+- Role-based multi-agent coordination
+- Deterministic, event-driven execution
+- Contract-verified capabilities
+- Journal-anchored memory and audit
+
+Touches SOT Sections:
+- §1 Layer Model
+- §3 Execution Model
+- §5 Context
+- §7 Tool Governance
+- §9 Change Control
+
+No invariant changes. Identity corrected.
+This is now clean and final.
+
+⸻
+
+

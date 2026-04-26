@@ -15,8 +15,8 @@ WIH_ID="${2:-unknown}"
 DAG_NODE_ID="${3:-unknown}"
 
 # Configuration
-STORYBOOK_DIR="${STORYBOOK_DIR:-./6-ui/a2r-platform}"
-OUTPUT_DIR="${OUTPUT_DIR:-./.a2r/evidence/ui}"
+STORYBOOK_DIR="${STORYBOOK_DIR:-./6-ui/allternit-platform}"
+OUTPUT_DIR="${OUTPUT_DIR:-./.allternit/evidence/ui}"
 TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
 echo "🎨 UI Evidence Lane"

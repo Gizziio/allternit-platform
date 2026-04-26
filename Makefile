@@ -1,7 +1,7 @@
 .PHONY: help build clean dev test logs stop install-deps shell-ui agent-shell
 
 help:
-	@echo "A2rchitech Development Commands"
+	@echo "Allternit Development Commands"
 	@echo ""
 	@echo "Available targets:"
 	@echo "  make build          - Build all release binaries"
@@ -19,7 +19,7 @@ help:
 	@echo "  ./dev/run.sh        # Start all services"
 
 build:
-	cargo build --release --bin a2rchitech
+	cargo build --release --bin allternit
 	cargo build --release --bin voice-service
 	cargo build --release --bin webvm-service
 	cargo build --release --bin kernel

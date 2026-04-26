@@ -1,5 +1,5 @@
 #!/bin/bash
-# A2R Operator - Phase 7: Receipt Generation Proof
+# Allternit Operator - Phase 7: Receipt Generation Proof
 # Purpose: Prove receipts are generated with real data
 
 set -e

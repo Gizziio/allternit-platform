@@ -9,12 +9,12 @@ fn get_api_base_url() -> String { format!("http://{}:{}", std::net::Ipv4Addr::LO
 // Helper function to start the API server
 async fn start_api_server() -> Result<tokio::process::Child, Box<dyn std::error::Error>> {
     let mut child = tokio::process::Command::new("cargo")
-        .args(&["run", "--bin", "a2rchitech-api"])
-        .env("A2RCHITECH_API_BIND", format!("{}:{}", std::net::Ipv4Addr::UNSPECIFIED, 3000))
-        .env("A2RCHITECH_LEDGER_PATH", format!("./test-ledger-{}.jsonl", Uuid::new_v4()))
-        .env("A2RCHITECH_DB_PATH", format!("./test-db-{}.db", Uuid::new_v4()))
-        .env("A2RCHITECH_API_BOOTSTRAP_POLICY", "true")
-        .env("A2RCHITECH_API_POLICY_ENFORCE", "false") // Disable policy enforcement for tests
+        .args(&["run", "--bin", "allternit-api"])
+        .env("Allternit_API_BIND", format!("{}:{}", std::net::Ipv4Addr::UNSPECIFIED, 3000))
+        .env("Allternit_LEDGER_PATH", format!("./test-ledger-{}.jsonl", Uuid::new_v4()))
+        .env("Allternit_DB_PATH", format!("./test-db-{}.db", Uuid::new_v4()))
+        .env("Allternit_API_BOOTSTRAP_POLICY", "true")
+        .env("Allternit_API_POLICY_ENFORCE", "false") // Disable policy enforcement for tests
         .spawn()?;
 
     // Give the server some time to start

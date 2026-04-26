@@ -95,7 +95,7 @@ async function verifyCanvas() {
     console.log('');
     if (week1Found) {
       console.log('✅ SUCCESS: "week 1 ai basics" module FOUND in Canvas!');
-      console.log('   A2R Operator successfully created real modules.');
+      console.log('   Allternit Operator successfully created real modules.');
     } else if (url.includes('canvas.instructure.com')) {
       console.log('❌ Modules not found, but you are on Canvas.');
       console.log('   Check the screenshot to see what\'s on the page.');

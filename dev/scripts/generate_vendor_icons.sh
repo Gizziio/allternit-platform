@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Icon Generation Script for A2rchitech Tools
+# Icon Generation Script for Allternit Tools
 #
 # This script generates SVG icons for all supported CLI tools
 # Icons are created in: apps/shell/src/iconography/vendor/<tool>.svg

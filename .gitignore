@@ -18,7 +18,7 @@ release/
 .aider/
 .claude/
 .gemini/
-.a2r/
+.allternit/
 _tmp_*/
 _archive/
 coverage/
@@ -33,3 +33,19 @@ out/
 !sdk/allternit-sdk/dist/
 .env*.local
 .env.local
+
+# Lima bundled binary (downloaded at build time)
+surfaces/allternit-desktop/resources/lima/
+
+# Virtual environments
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# VM images
+*.ext4.zst
+
+# Trace output
+cmd/gizzi-code/trace_output/

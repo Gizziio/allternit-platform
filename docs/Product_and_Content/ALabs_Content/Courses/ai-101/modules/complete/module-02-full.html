@@ -1,0 +1,215 @@
+<!-- A://labs - Module 2: Machine Learning Basics - Complete Content -->
+<div style="max-width: 850px; margin: 0 auto; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #ffffff; line-height: 1.8;">
+
+<!-- LESSON 2.1: THE ML WORKFLOW -->
+<div style="margin-bottom: 60px;">
+  <div style="background: linear-gradient(135deg, #0a0a0f 0%, #12121a 100%); 
+              padding: 40px; border-radius: 16px; margin-bottom: 30px;
+              border: 1px solid #2a2a3e; position: relative; overflow: hidden;">
+    <div style="position: absolute; top: -30%; right: -10%; width: 300px; height: 300px; 
+                background: radial-gradient(circle, rgba(131, 56, 236, 0.1) 0%, transparent 70%);"></div>
+    <span style="color: #8338ec; font-size: 13px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">Module 2.1</span>
+    <h1 style="margin: 10px 0 0 0; color: #ffffff; font-size: 36px; font-weight: 700;">The Machine Learning Workflow</h1>
+  </div>
+
+  <div style="background: #12121a; padding: 30px; border-radius: 12px; border: 1px solid #2a2a3e; margin-bottom: 30px;">
+    <h3 style="margin: 0 0 15px 0; color: #8338ec; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+      🎯 Learning Objectives
+    </h3>
+    <ul style="margin: 0; padding: 0; list-style: none; color: #a0a0b0; font-size: 15px;">
+      <li style="padding: 8px 0; padding-left: 24px; position: relative;">
+        <span style="position: absolute; left: 0; color: #8338ec;">→</span>
+        Understand the 6-step ML workflow
+      </li>
+      <li style="padding: 8px 0; padding-left: 24px; position: relative;">
+        <span style="position: absolute; left: 0; color: #8338ec;">→</span>
+        Recognize iterative nature of ML development
+      </li>
+      <li style="padding: 8px 0; padding-left: 24px; position: relative;">
+        <span style="position: absolute; left: 0; color: #8338ec;">→</span>
+        Apply workflow thinking to agentic system design
+      </li>
+    </ul>
+  </div>
+
+  <p style="color: #a0a0b0; font-size: 16px; margin-bottom: 25px;">
+    Machine learning projects follow a systematic workflow. Understanding this process helps you approach ML problems methodically and avoid common pitfalls that plague agentic system development.
+  </p>
+
+  <h2 style="color: #ffffff; font-size: 24px; font-weight: 700; margin: 35px 0 20px 0; display: flex; align-items: center; gap: 12px;">
+    <span style="width: 4px; height: 28px; background: linear-gradient(180deg, #8338ec, #ff006e); border-radius: 2px;"></span>
+    The 6-Step Protocol
+  </h2>
+
+  <!-- Workflow Steps -->
+  <div style="display: flex; flex-direction: column; gap: 25px; margin: 30px 0;">
+    
+    <!-- Step 1 -->
+    <div style="display: flex; gap: 20px;">
+      <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #00d4ff, #0099cc); 
+                  border-radius: 12px; display: flex; align-items: center; justify-content: center;
+                  color: #0a0a0f; font-size: 24px; font-weight: 700; flex-shrink: 0;">1</div>
+      <div style="flex: 1; background: #12121a; padding: 25px; border-radius: 12px; border: 1px solid #2a2a3e;">
+        <h3 style="margin: 0 0 10px 0; color: #ffffff; font-size: 18px; font-weight: 600;">Define the Problem</h3>
+        <p style="margin: 0; color: #a0a0b0; font-size: 15px; line-height: 1.7;">
+          Articulate what you want to predict or optimize. Is it classification (categories) or regression (continuous values)? 
+          What specific agentic capability are you trying to enable? A well-defined problem is half solved.
+        </p>
+      </div>
+    </div>
+
+    <!-- Step 2 -->
+    <div style="display: flex; gap: 20px;">
+      <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #8338ec, #6622cc); 
+                  border-radius: 12px; display: flex; align-items: center; justify-content: center;
+                  color: #ffffff; font-size: 24px; font-weight: 700; flex-shrink: 0;">2</div>
+      <div style="flex: 1; background: #12121a; padding: 25px; border-radius: 12px; border: 1px solid #2a2a3e;">
+        <h3 style="margin: 0 0 10px 0; color: #ffffff; font-size: 18px; font-weight: 600;">Collect Data</h3>
+        <p style="margin: 0; color: #a0a0b0; font-size: 15px; line-height: 1.7;">
+          Gather relevant data from databases, APIs, logs, or synthetic generation. 
+          In agentic systems, this might include interaction logs, environment states, or human feedback. 
+          Quality and quantity often matter more than algorithm choice.
+        </p>
+      </div>
+    </div>
+
+    <!-- Step 3 -->
+    <div style="display: flex; gap: 20px;">
+      <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #ff006e, #cc0055); 
+                  border-radius: 12px; display: flex; align-items: center; justify-content: center;
+                  color: #ffffff; font-size: 24px; font-weight: 700; flex-shrink: 0;">3</div>
+      <div style="flex: 1; background: #12121a; padding: 25px; border-radius: 12px; border: 1px solid #2a2a3e;">
+        <h3 style="margin: 0 0 10px 0; color: #ffffff; font-size: 18px; font-weight: 600;">Prepare Data</h3>
+        <p style="margin: 0; color: #a0a0b0; font-size: 15px; line-height: 1.7;">
+          Clean the data: handle missing values, remove duplicates, fix errors. Transform features: scale, encode categories, 
+          engineer new features. Split into training, validation, and test sets. This step typically consumes 60-80% of project time.
+        </p>
+      </div>
+    </div>
+
+    <!-- Step 4 -->
+    <div style="display: flex; gap: 20px;">
+      <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #ffbe0b, #cc9900); 
+                  border-radius: 12px; display: flex; align-items: center; justify-content: center;
+                  color: #0a0a0f; font-size: 24px; font-weight: 700; flex-shrink: 0;">4</div>
+      <div style="flex: 1; background: #12121a; padding: 25px; border-radius: 12px; border: 1px solid #2a2a3e;">
+        <h3 style="margin: 0 0 10px 0; color: #ffffff; font-size: 18px; font-weight: 600;">Choose & Train Model</h3>
+        <p style="margin: 0; color: #a0a0b0; font-size: 15px; line-height: 1.7;">
+          Select an appropriate algorithm based on your problem type, data size, and requirements. 
+          Train the model on your training data—this is where the "learning" happens. 
+          For agentic systems, consider inference speed and resource constraints.
+        </p>
+      </div>
+    </div>
+
+    <!-- Step 5 -->
+    <div style="display: flex; gap: 20px;">
+      <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #06ffa5, #00cc84); 
+                  border-radius: 12px; display: flex; align-items: center; justify-content: center;
+                  color: #0a0a0f; font-size: 24px; font-weight: 700; flex-shrink: 0;">5</div>
+      <div style="flex: 1; background: #12121a; padding: 25px; border-radius: 12px; border: 1px solid #2a2a3e;">
+        <h3 style="margin: 0 0 10px 0; color: #ffffff; font-size: 18px; font-weight: 600;">Evaluate Model</h3>
+        <p style="margin: 0; color: #a0a0b0; font-size: 15px; line-height: 1.7;">
+          Test the trained model on unseen data (test set). Use appropriate metrics to measure performance. 
+          Analyze errors to understand failure modes. In agentic contexts, evaluate not just accuracy but also 
+          robustness and safety.
+        </p>
+      </div>
+    </div>
+
+    <!-- Step 6 -->
+    <div style="display: flex; gap: 20px;">
+      <div style="width: 60px; height: 60px; background: linear-gradient(135deg, #ffffff, #cccccc); 
+                  border-radius: 12px; display: flex; align-items: center; justify-content: center;
+                  color: #0a0a0f; font-size: 24px; font-weight: 700; flex-shrink: 0;">6</div>
+      <div style="flex: 1; background: #12121a; padding: 25px; border-radius: 12px; border: 1px solid #2a2a3e;">
+        <h3 style="margin: 0 0 10px 0; color: #ffffff; font-size: 18px; font-weight: 600;">Deploy & Monitor</h3>
+        <p style="margin: 0; color: #a0a0b0; font-size: 15px; line-height: 1.7;">
+          Integrate the model into production systems. Monitor performance over time as data distributions change 
+          (concept drift). Retrain periodically with new data. For A:// agents, this means continuous learning and adaptation.
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="background: rgba(255, 0, 110, 0.05); padding: 25px; border-radius: 12px; border: 1px solid rgba(255, 0, 110, 0.2); margin: 30px 0;">
+    <h4 style="margin: 0 0 10px 0; color: #ff006e; font-size: 16px; font-weight: 600;">⚠️ Critical Protocol Note</h4>
+    <p style="margin: 0; color: #a0a0b0; font-size: 15px; line-height: 1.7;">
+      This workflow is <strong style="color: #ffffff;">iterative</strong>, not linear. You will constantly loop back: 
+      discovering you need more data, trying different features, selecting a different model based on evaluation results. 
+      This iteration is normal and expected in agentic system development.
+    </p>
+  </div>
+
+  <h2 style="color: #ffffff; font-size: 24px; font-weight: 700; margin: 35px 0 20px 0; display: flex; align-items: center; gap: 12px;">
+    <span style="width: 4px; height: 28px; background: linear-gradient(180deg, #00d4ff, #8338ec); border-radius: 2px;"></span>
+    The Iteration Cycle
+  </h2>
+
+  <p style="color: #a0a0b0; font-size: 16px; margin-bottom: 25px;">
+    Real-world ML development looks more like this:
+  </p>
+
+  <div style="background: #12121a; padding: 30px; border-radius: 12px; border: 1px solid #2a2a3e; margin: 30px 0;">
+    <div style="text-align: center; color: #a0a0b0; font-family: 'JetBrains Mono', monospace; font-size: 14px; line-height: 2;">
+      <span style="color: #00d4ff;">Define</span> → 
+      <span style="color: #8338ec;">Collect</span> → 
+      <span style="color: #ff006e;">Prepare</span> → 
+      <span style="color: #ffbe0b;">Train</span> → 
+      <span style="color: #06ffa5;">Evaluate</span> → 
+      <span style="color: #ffffff;">Deploy</span><br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↺<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(loop back as needed)
+    </div>
+  </div>
+
+  <p style="color: #a0a0b0; font-size: 16px; margin-bottom: 25px;">
+    Common iteration patterns:
+  </p>
+
+  <ul style="color: #a0a0b0; font-size: 15px; line-height: 2; margin-bottom: 30px;">
+    <li><strong style="color: #ff006e;">Evaluation → Prepare:</strong> Model underperforming? Engineer better features or collect more diverse data.</li>
+    <li><strong style="color: #ffbe0b;">Evaluation → Train:</strong> Good features but wrong model? Try different algorithms or architectures.</li>
+    <li><strong style="color: #06ffa5;">Deploy → Prepare:</strong> Production data differs from training? Update your data pipeline.</li>
+  </ul>
+
+  <!-- Knowledge Check -->
+  <div style="background: #12121a; padding: 30px; border-radius: 12px; border: 1px solid #2a2a3e; margin-top: 40px;">
+    <h3 style="margin: 0 0 20px 0; color: #ffffff; font-size: 20px; font-weight: 700;">✅ Knowledge Check</h3>
+    
+    <div style="margin-bottom: 20px;">
+      <p style="color: #a0a0b0; font-size: 15px; margin: 0 0 12px 0;">
+        <strong style="color: #ffffff;">Q1:</strong> In which step would you handle missing values in your dataset?
+      </p>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <label style="display: flex; align-items: center; gap: 10px; color: #a0a0b0; font-size: 14px; cursor: pointer;">
+          <input type="radio" name="q1" style="accent-color: #8338ec;"> Define the Problem
+        </label>
+        <label style="display: flex; align-items: center; gap: 10px; color: #a0a0b0; font-size: 14px; cursor: pointer;">
+          <input type="radio" name="q1" style="accent-color: #8338ec;"> Collect Data
+        </label>
+        <label style="display: flex; align-items: center; gap: 10px; color: #a0a0b0; font-size: 14px; cursor: pointer;">
+          <input type="radio" name="q1" style="accent-color: #8338ec;"> Prepare Data ✓
+        </label>
+      </div>
+    </div>
+
+    <div>
+      <p style="color: #a0a0b0; font-size: 15px; margin: 0 0 12px 0;">
+        <strong style="color: #ffffff;">Q2:</strong> True or False: The ML workflow is strictly linear, and you should never go back to previous steps.
+      </p>
+      <div style="display: flex; gap: 20px;">
+        <label style="display: flex; align-items: center; gap: 10px; color: #a0a0b0; font-size: 14px; cursor: pointer;">
+          <input type="radio" name="q2" style="accent-color: #8338ec;"> True
+        </label>
+        <label style="display: flex; align-items: center; gap: 10px; color: #a0a0b0; font-size: 14px; cursor: pointer;">
+          <input type="radio" name="q2" style="accent-color: #8338ec;"> False ✓
+        </label>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</div>

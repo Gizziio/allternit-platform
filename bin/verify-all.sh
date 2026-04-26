@@ -1,5 +1,5 @@
 #!/bin/bash
-# A2R Operator - Complete Verification Suite
+# Allternit Operator - Complete Verification Suite
 # Purpose: Run all verification phases and generate report
 
 set -e
@@ -9,14 +9,14 @@ REPORT_FILE="/Users/macbook/Desktop/verification_report.md"
 TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
 
 echo "========================================"
-echo "A2R Operator Verification Suite"
+echo "Allternit Operator Verification Suite"
 echo "Started: $TIMESTAMP"
 echo "========================================"
 echo ""
 
 # Initialize report
 cat > "$REPORT_FILE" << EOF
-# A2R Operator Verification Report
+# Allternit Operator Verification Report
 
 **Date:** $TIMESTAMP
 **Tester:** Automated Verification Suite

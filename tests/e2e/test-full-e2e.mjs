@@ -27,7 +27,7 @@ function log(source, message, isError = false) {
 }
 
 // ============================================================================
-// Mock Extension (simulates the A2R Chrome Extension)
+// Mock Extension (simulates the Allternit Chrome Extension)
 // ============================================================================
 
 class MockExtension {

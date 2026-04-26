@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# A2rchitech Development Utility Script
+# Allternit Development Utility Script
 # Provides various utility functions for development and debugging
 
 set -e
 
-A2RCHITECH_ROOT="$(cd "$(dirname "$0")" && pwd)"
-cd "$A2RCHITECH_ROOT"
+Allternit_ROOT="$(cd "$(dirname "$0")" && pwd)"
+cd "$Allternit_ROOT"
 
 # Colors for output
 RED='\033[0;31m'
@@ -34,7 +34,7 @@ print_error() {
 
 # Function to show service status
 show_status() {
-    print_info "Checking A2rchitech service status..."
+    print_info "Checking Allternit service status..."
     
     echo ""
     echo "🔍 Service Status:"
@@ -192,7 +192,7 @@ build_component() {
             ;;
         "cli")
             print_info "Building CLI..."
-            cargo build --release --bin a2rchitech
+            cargo build --release --bin allternit
             ;;
         "all")
             print_info "Building all components..."
@@ -207,9 +207,9 @@ build_component() {
 
 # Function to show system info
 show_system_info() {
-    print_info "A2rchitech System Information"
+    print_info "Allternit System Information"
     echo ""
-    echo "📁 Root Directory: $A2RCHITECH_ROOT"
+    echo "📁 Root Directory: $Allternit_ROOT"
     echo "💻 System: $(uname -s)"
     echo "🔧 Architecture: $(uname -m)"
     echo "⚙️  Rust Version: $(rustc --version 2>/dev/null || echo 'Not installed')"
@@ -220,7 +220,7 @@ show_system_info() {
     
     # Show disk usage
     echo "💾 Disk Usage:"
-    df -h "$A2RCHITECH_ROOT" | tail -n 1
+    df -h "$Allternit_ROOT" | tail -n 1
     echo ""
 }
 
@@ -235,14 +235,14 @@ restart_service() {
             sleep 2
             cd 4-services/ai/voice-service/api
             source .venv/bin/activate
-            export AUDIO_OUTPUT_DIR="$A2RCHITECH_ROOT/tmp/voice-service"
+            export AUDIO_OUTPUT_DIR="$Allternit_ROOT/tmp/voice-service"
             local_voice_port=8001
             export PORT=${local_voice_port}
             bind_any="0.0.0"
             bind_any="${bind_any}.0"
             nohup uvicorn main:app --host ${bind_any} --port ${local_voice_port} > ../../logs/voice-service.log 2>&1 &
             echo "Voice Service restarted with PID $!"
-            cd "$A2RCHITECH_ROOT"
+            cd "$Allternit_ROOT"
             ;;
         "webvm")
             print_info "Restarting WebVM Service..."
@@ -303,7 +303,7 @@ main() {
             restart_service "$ARGUMENT"
             ;;
         "help"|"h"|"-h"|"--help")
-            echo "A2rchitech Development Utility"
+            echo "Allternit Development Utility"
             echo ""
             echo "Usage: $0 [command] [argument]"
             echo ""

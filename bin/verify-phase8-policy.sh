@@ -1,5 +1,5 @@
 #!/bin/bash
-# A2R Operator - Phase 8: Policy Enforcement Test
+# Allternit Operator - Phase 8: Policy Enforcement Test
 # Purpose: Prove policy blocks external models for student data
 
 set -e

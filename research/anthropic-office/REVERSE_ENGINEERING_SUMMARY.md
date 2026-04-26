@@ -25,15 +25,15 @@
 
 ---
 
-### 2. a2r-mapping.md ✅
+### 2. allternit-mapping.md ✅
 
-**Location:** `research/anthropic-office/excel-ppt-plugin/extracted/a2r-mapping.md`
+**Location:** `research/anthropic-office/excel-ppt-plugin/extracted/allternit-mapping.md`
 
 **Contents:**
-- 17 capability mappings (Observed → Inferred → A2R Tool → Backend)
+- 17 capability mappings (Observed → Inferred → Allternit Tool → Backend)
 - Golden workflow spec (excel_to_ppt_report)
 - Future workflow spec (active_workbook_to_slide_deck)
-- Existing A2R code we can reuse
+- Existing Allternit code we can reuse
 - Dependencies to research (xlsx, officegen, etc.)
 - Implementation phases
 - Success metrics
@@ -170,7 +170,7 @@ Output: pptx_path, slide_count, receipt
 ### Immediate (Today)
 
 1. ✅ Analysis complete
-2. ✅ A2R mapping complete
+2. ✅ Allternit mapping complete
 3. ✅ Implementation priority complete
 4. ⏳ **Start Phase 1 implementation**
 
@@ -198,7 +198,7 @@ research/anthropic-office/excel-ppt-plugin/
 ├── notes/
 │   └── analysis.md           # ✅ Complete
 └── extracted/
-    ├── a2r-mapping.md        # ✅ Complete
+    ├── allternit-mapping.md        # ✅ Complete
     └── implementation-priority.md  # ✅ Complete
 ```
 

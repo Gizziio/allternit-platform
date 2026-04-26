@@ -1,13 +1,13 @@
 #!/bin/bash
-# A2R File Staging Pipeline Manager
+# Allternit File Staging Pipeline Manager
 #
-# Usage: a2r-stage [command] [file]
+# Usage: allternit-stage [command] [file]
 
-WORKSPACE="a2r-workspace"
+WORKSPACE="allternit-workspace"
 
 show_help() {
     cat << 'HELP'
-A2R Agent Workspace Pipeline
+Allternit Agent Workspace Pipeline
 
 Commands:
     status                  Show workspace status
@@ -26,15 +26,15 @@ Workflow:
     New → inbox/ → categorize → active/ → completed/ → archive/
 
 Examples:
-    a2r-stage inbox PLAN_new.md
-    a2r-stage to-active inbox/PLAN_new.md
-    a2r-stage finalize output/specs/SPEC_protocol.md
-    a2r-stage to-completed active/PLAN_done.md
+    allternit-stage inbox PLAN_new.md
+    allternit-stage to-active inbox/PLAN_new.md
+    allternit-stage finalize output/specs/SPEC_protocol.md
+    allternit-stage to-completed active/PLAN_done.md
 HELP
 }
 
 show_status() {
-    echo "=== A2R Workspace Status ==="
+    echo "=== Allternit Workspace Status ==="
     echo "Location: $WORKSPACE/"
     echo ""
     
@@ -116,12 +116,12 @@ finalize_file() {
         # Move to completed instead of docs_active
         dst="$WORKSPACE/completed/${clean_name}.md"
         move_file "$file" "$dst"
-        echo "✅ Finalized to a2r-workspace/completed/${clean_name}.md"
+        echo "✅ Finalized to allternit-workspace/completed/${clean_name}.md"
         
     else
         dst="$WORKSPACE/completed/${clean_name}.md"
         move_file "$file" "$dst"
-        echo "✅ Finalized to a2r-workspace/completed/${clean_name}.md"
+        echo "✅ Finalized to allternit-workspace/completed/${clean_name}.md"
     fi
 }
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-# A2R Operator - Phase 4: Router Decision Verification
+# Allternit Operator - Phase 4: Router Decision Verification
 # Purpose: Prove router selects correct backend
 
 set -e

@@ -17,13 +17,13 @@ for line in lines:
 # Update all RLM-related issues to mark as completed
 updated_count = 0
 for i, issue in enumerate(existing_issues):
-    if issue['id'].startswith('a2rchitech-rlm'):
+    if issue['id'].startswith('allternit-rlm'):
         issue['status'] = 'completed'
         issue['closed_at'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%S-06:00')
         
         # Add appropriate close reason based on the issue
-        if issue['id'] == 'a2rchitech-rlm':
-            issue['close_reason'] = 'RLM implementation completed with Unix-like architecture. All sub-issues implemented: core mode infrastructure, Unix mode executor, RLM executor with sub-LLM orchestration, hybrid mode with auto-selection, and proper integration with existing A2rchitech components. Python REPL environment integrated with Python Gateway service, context slicing implemented with memory fabric, and API endpoints added with proper mode selection. The implementation follows Unix philosophy with clear separation of concerns, leveraging existing infrastructure without duplication.'
+        if issue['id'] == 'allternit-rlm':
+            issue['close_reason'] = 'RLM implementation completed with Unix-like architecture. All sub-issues implemented: core mode infrastructure, Unix mode executor, RLM executor with sub-LLM orchestration, hybrid mode with auto-selection, and proper integration with existing Allternit components. Python REPL environment integrated with Python Gateway service, context slicing implemented with memory fabric, and API endpoints added with proper mode selection. The implementation follows Unix philosophy with clear separation of concerns, leveraging existing infrastructure without duplication.'
         else:
             issue['close_reason'] = 'Component completed as part of main RLM implementation.'
         

@@ -25,7 +25,7 @@ WARNINGS=0
 print_header() {
     echo ""
     echo -e "${CYAN}╔════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║${NC}     ${GREEN}A2RCHITECH Architecture Compliance Check${NC}             ${CYAN}║${NC}"
+    echo -e "${CYAN}║${NC}     ${GREEN}Allternit Architecture Compliance Check${NC}             ${CYAN}║${NC}"
     echo -e "${CYAN}╚════════════════════════════════════════════════════════════╝${NC}"
     echo ""
 }
@@ -71,11 +71,11 @@ check_no_direct_kernel() {
 check_gateway_url() {
     print_check "Checking for Gateway URL configuration..."
     
-    if grep -r "VITE_A2R_GATEWAY_URL" "$PROJECT_ROOT/6-apps/shell-ui/" 2>/dev/null | grep -v "node_modules" > /dev/null; then
+    if grep -r "VITE_Allternit_GATEWAY_URL" "$PROJECT_ROOT/6-apps/shell-ui/" 2>/dev/null | grep -v "node_modules" > /dev/null; then
         print_pass "Gateway URL environment variable found"
         return 0
     else
-        print_fail "VITE_A2R_GATEWAY_URL not found in shell-ui"
+        print_fail "VITE_Allternit_GATEWAY_URL not found in shell-ui"
         return 1
     fi
 }
@@ -84,8 +84,8 @@ check_gateway_url() {
 check_no_old_kernel_env() {
     print_check "Checking for deprecated kernel URL environment variable..."
     
-    if grep -r "VITE_A2R_KERNEL_URL" "$PROJECT_ROOT/6-apps/shell-ui/" 2>/dev/null | grep -v "node_modules" > /dev/null; then
-        print_fail "Found deprecated VITE_A2R_KERNEL_URL"
+    if grep -r "VITE_Allternit_KERNEL_URL" "$PROJECT_ROOT/6-apps/shell-ui/" 2>/dev/null | grep -v "node_modules" > /dev/null; then
+        print_fail "Found deprecated VITE_Allternit_KERNEL_URL"
         return 1
     else
         print_pass "No deprecated kernel URL env var found"
@@ -97,11 +97,11 @@ check_no_old_kernel_env() {
 check_api_client_exists() {
     print_check "Checking for API client..."
     
-    if [ -f "$PROJECT_ROOT/5-ui/a2r-platform/src/integration/api-client.ts" ]; then
+    if [ -f "$PROJECT_ROOT/5-ui/allternit-platform/src/integration/api-client.ts" ]; then
         print_pass "API client exists"
         return 0
     else
-        print_fail "API client not found at 5-ui/a2r-platform/src/integration/api-client.ts"
+        print_fail "API client not found at 5-ui/allternit-platform/src/integration/api-client.ts"
         return 1
     fi
 }
@@ -144,9 +144,9 @@ check_deprecated_moved() {
 check_services_json() {
     print_check "Checking services.json is canonical..."
     
-    if [ -f "$PROJECT_ROOT/.a2r/services.json" ]; then
+    if [ -f "$PROJECT_ROOT/.allternit/services.json" ]; then
         # Check if it has the new canonical version
-        if grep -q "2026-02-06-enterprise" "$PROJECT_ROOT/.a2r/services.json"; then
+        if grep -q "2026-02-06-enterprise" "$PROJECT_ROOT/.allternit/services.json"; then
             print_pass "services.json is canonical enterprise version"
             return 0
         else
@@ -163,7 +163,7 @@ check_services_json() {
 check_ui_exports_api() {
     print_check "Checking UI exports API client..."
     
-    if grep -q "api-client" "$PROJECT_ROOT/5-ui/a2r-platform/src/index.ts"; then
+    if grep -q "api-client" "$PROJECT_ROOT/5-ui/allternit-platform/src/index.ts"; then
         print_pass "UI exports API client"
         return 0
     else

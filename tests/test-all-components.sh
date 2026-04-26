@@ -1,11 +1,11 @@
 #!/bin/bash
-# A2R Full Integration Test
+# Allternit Full Integration Test
 # Starts all components and tests their connections
 
 set -e
 
 echo "======================================"
-echo "A2R Full Integration Test"
+echo "Allternit Full Integration Test"
 echo "======================================"
 echo ""
 echo "This script will:"

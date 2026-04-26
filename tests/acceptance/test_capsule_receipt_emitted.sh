@@ -12,7 +12,7 @@ VENV_PYTHON=".venv-capsule/bin/python3"
 PORT=3067
 PID_FILE="capsule_t0503_receipt.pid"
 RUN_ID="test-t0503-receipt"
-RECEIPT_DIR=".a2r/receipts/$RUN_ID"
+RECEIPT_DIR=".allternit/receipts/$RUN_ID"
 
 if [ ! -f "$VENV_PYTHON" ]; then
     echo "Error: .venv-capsule missing."
@@ -47,7 +47,7 @@ cat > "$REGISTRY_PATH" <<EOF
 }
 EOF
 
-export A2R_RUN_ID="$RUN_ID"
+export Allternit_RUN_ID="$RUN_ID"
 export PORT=$PORT
 $VENV_PYTHON "$RUNTIME_SCRIPT" > capsule_runtime_receipt.log 2>&1 &
 echo $! > $PID_FILE

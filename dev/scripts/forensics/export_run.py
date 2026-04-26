@@ -27,7 +27,7 @@ def load_json_file(filepath: Path) -> Any:
 
 def collect_receipts(run_id: str) -> Dict[str, Any]:
     """Collect all receipts for a given run."""
-    receipts_dir = Path(f"/.a2r/receipts/{run_id}")
+    receipts_dir = Path(f"/.allternit/receipts/{run_id}")
     if not receipts_dir.exists():
         print(f"WARNING: Receipts directory {receipts_dir} does not exist", file=sys.stderr)
         return {"total_receipts": 0, "receipt_paths": [], "tool_receipts": [], 
@@ -120,7 +120,7 @@ def export_run_forensics(run_id: str, output_path: str) -> bool:
     print(f"Exporting forensics for run {run_id}...")
     
     # Load run state
-    run_state_path = Path(f"/.a2r/run_state/{run_id}.json")
+    run_state_path = Path(f"/.allternit/run_state/{run_id}.json")
     if not run_state_path.exists():
         print(f"ERROR: Run state file {run_state_path} does not exist", file=sys.stderr)
         return False

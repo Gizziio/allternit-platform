@@ -1,5 +1,5 @@
 #!/bin/bash
-# A2R Operator - Phase 2: Operator Request Flow
+# Allternit Operator - Phase 2: Operator Request Flow
 # Purpose: Prove UI → API → DAK execution path works
 
 set -e

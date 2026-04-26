@@ -2,7 +2,7 @@
 set -e
 
 # ROOT is one level up from tests/acceptance/ui/.. wait
-# /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/tests/acceptance/ui
+# /Users/macbook/Desktop/allternit-workspace/allternit/tests/acceptance/ui
 ROOT="$(pwd)"
 
 echo "Running AT-UI-0001: UI registry is required"

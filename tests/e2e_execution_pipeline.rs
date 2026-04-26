@@ -7,16 +7,16 @@
 use std::sync::Arc;
 use tempfile::TempDir;
 use semver::Version;
-use a2r_capsule::{CapsuleBundle, CapsuleStore, CapsuleStoreConfig, CapsuleBundler, ManifestBuilder, CapsuleCapabilities, SafetyTier, IdempotencyBehavior, ToolABISpec};
-use a2r_capsule::signing::SigningKey;
-use a2r_policy::{
+use allternit_capsule::{CapsuleBundle, CapsuleStore, CapsuleStoreConfig, CapsuleBundler, ManifestBuilder, CapsuleCapabilities, SafetyTier, IdempotencyBehavior, ToolABISpec};
+use allternit_capsule::signing::SigningKey;
+use allternit_policy::{
     PolicyEngine, PolicyRule, PolicyEffect, Identity, IdentityType, CapsuleLoadRequest, 
     WasmCapability, WasmCapabilityGrant, CapsuleLoadDecision
 };
-use a2r_registry::{UnifiedRegistry, AgentDefinition};
-use a2r_cloud_runner::{CloudRunner, CloudRunnerConfig, ExecutionRequest};
-use a2rchitech_history::HistoryLedger;
-use a2rchitech_messaging::MessagingSystem;
+use allternit_registry::{UnifiedRegistry, AgentDefinition};
+use allternit_cloud_runner::{CloudRunner, CloudRunnerConfig, ExecutionRequest};
+use allternit_history::HistoryLedger;
+use allternit_messaging::MessagingSystem;
 use sqlx::AnyPool;
 use tokio::sync::Mutex;
 use anyhow::Result;
@@ -135,7 +135,7 @@ async fn test_valid_capsule_execution_pipeline() -> Result<()> {
 /// Test that the pipeline rejects tampered capsules
 #[tokio::test]
 async fn test_tampered_capsule_rejection() -> Result<()> {
-    use a2r_capsule::{CapsuleBundle, CapsuleManifest, ContentHash, Signature};
+    use allternit_capsule::{CapsuleBundle, CapsuleManifest, ContentHash, Signature};
     
     // Setup temporary directories
     let temp_dir = TempDir::new()?;
@@ -235,7 +235,7 @@ fn create_test_capsule() -> Result<CapsuleBundle> {
 
     // Build manifest
     let manifest = ManifestBuilder::new(
-        "com.a2rchitech.test.pipeline",
+        "com.allternit.test.pipeline",
         Version::parse("1.0.0")?,
         "Test Pipeline Capsule",
         "Test capsule for end-to-end pipeline validation",

@@ -93,7 +93,7 @@ start_terminal_server() {
         (cd "$TERMINAL_SERVER_DIR" && bun install)
     fi
 
-    export A2R_DATA_DIR="${A2R_DATA_DIR:-$PROJECT_ROOT/.a2r}"
+    export Allternit_DATA_DIR="${Allternit_DATA_DIR:-$PROJECT_ROOT/.allternit}"
     
     (
         cd "$TERMINAL_SERVER_DIR"
@@ -151,7 +151,7 @@ $PATCH_CONTENT")
     MODIFIED_CONTENT=$(echo "$MODIFIED_CONTENT" | sed "s/start_voice_service/start_terminal_server || exit 1\n    start_voice_service/")
     
     # Add terminal server stop to stop_services function
-    MODIFIED_CONTENT=$(echo "$MODIFIED_CONTENT" | sed "s/print_status \"Stopping all A2rchitech services...\"/print_status \"Stopping all A2rchitech services...\"\n    stop_terminal_server/")
+    MODIFIED_CONTENT=$(echo "$MODIFIED_CONTENT" | sed "s/print_status \"Stopping all Allternit services...\"/print_status \"Stopping all Allternit services...\"\n    stop_terminal_server/")
     
     # Add terminal server to status check
     MODIFIED_CONTENT=$(echo "$MODIFIED_CONTENT" | sed "s/echo -e \"\${CYAN}Service Status:\${NC}\"/echo -e \"\${CYAN}Service Status:\${NC}\"\n    if curl -s \"http:\/\/\${TERMINAL_SERVER_HOST}:\${TERMINAL_SERVER_PORT}\/doc\" > \/dev\/null 2>\&1; then\n        echo -e \"  \${GREEN}\u2713\${NC} Terminal Server (port \${TERMINAL_SERVER_PORT})\"\n    else\n        echo -e \"  \${RED}\u2717\${NC} Terminal Server (port \${TERMINAL_SERVER_PORT})\"\n    fi/")

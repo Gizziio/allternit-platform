@@ -1,6 +1,6 @@
 #!/bin/bash
 # =============================================================================
-# A2RCHITECH PLATFORM - SERVICE STATUS CHECKER
+# Allternit PLATFORM - SERVICE STATUS CHECKER
 # =============================================================================
 # Usage: ./check-services.sh [options]
 #
@@ -68,18 +68,18 @@ print_status_table() {
     printf "%s\n" "--------------------------------------------------------------------------------"
     
     declare -a services=(
-        "API:$A2R_API_PORT:/health"
+        "API:$Allternit_API_PORT:/health"
         "Workspace:3021:/health"
-        "Rails:$A2R_RAILS_PORT:/"
-        "Kernel:$A2R_KERNEL_PORT:/health"
-        "Policy:$A2R_POLICY_PORT:/health"
-        "Voice:$A2R_VOICE_PORT:/health"
-        "WebVM:$A2R_WEBVM_PORT:/health"
-        "Terminal:$A2R_TERMINAL_PORT:/doc"
-        "Gateway:$A2R_GATEWAY_PORT:/health"
-        "Memory:$A2R_MEMORY_PORT:/health"
-        "Registry:$A2R_REGISTRY_PORT:/health"
-        "Shell UI:$A2R_SHELL_UI_PORT:/"
+        "Rails:$Allternit_RAILS_PORT:/"
+        "Kernel:$Allternit_KERNEL_PORT:/health"
+        "Policy:$Allternit_POLICY_PORT:/health"
+        "Voice:$Allternit_VOICE_PORT:/health"
+        "WebVM:$Allternit_WEBVM_PORT:/health"
+        "Terminal:$Allternit_TERMINAL_PORT:/doc"
+        "Gateway:$Allternit_GATEWAY_PORT:/health"
+        "Memory:$Allternit_MEMORY_PORT:/health"
+        "Registry:$Allternit_REGISTRY_PORT:/health"
+        "Shell UI:$Allternit_SHELL_UI_PORT:/"
         "Redis:6379:"
         "Postgres:5432:"
     )
@@ -120,17 +120,17 @@ print_status_json() {
     echo '  "services": ['
     
     declare -a services=(
-        "API:$A2R_API_PORT:/health"
+        "API:$Allternit_API_PORT:/health"
         "Workspace:3021:/health"
-        "Rails:$A2R_RAILS_PORT:/"
-        "Kernel:$A2R_KERNEL_PORT:/health"
-        "Policy:$A2R_POLICY_PORT:/health"
-        "Voice:$A2R_VOICE_PORT:/health"
-        "WebVM:$A2R_WEBVM_PORT:/health"
-        "Terminal:$A2R_TERMINAL_PORT:/doc"
-        "Gateway:$A2R_GATEWAY_PORT:/health"
-        "Memory:$A2R_MEMORY_PORT:/health"
-        "Shell UI:$A2R_SHELL_UI_PORT:/"
+        "Rails:$Allternit_RAILS_PORT:/"
+        "Kernel:$Allternit_KERNEL_PORT:/health"
+        "Policy:$Allternit_POLICY_PORT:/health"
+        "Voice:$Allternit_VOICE_PORT:/health"
+        "WebVM:$Allternit_WEBVM_PORT:/health"
+        "Terminal:$Allternit_TERMINAL_PORT:/doc"
+        "Gateway:$Allternit_GATEWAY_PORT:/health"
+        "Memory:$Allternit_MEMORY_PORT:/health"
+        "Shell UI:$Allternit_SHELL_UI_PORT:/"
     )
     
     local first=true
@@ -183,7 +183,7 @@ check_all() {
 if [[ "$WATCH" == true ]]; then
     while true; do
         clear
-        echo "A2RCHITECH Service Monitor (Ctrl+C to exit)"
+        echo "Allternit Service Monitor (Ctrl+C to exit)"
         echo "Last update: $(date)"
         check_all
         sleep 2

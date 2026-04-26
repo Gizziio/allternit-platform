@@ -1,13 +1,13 @@
-import { A2RRuntimeBridge } from '@a2r/runtime';
+import { AllternitRuntimeBridge } from '@allternit/runtime';
 import path from 'path';
 
 async function runBenchmark() {
-  console.log('Starting Benchmark: A2R Engine Cold Start');
+  console.log('Starting Benchmark: Allternit Engine Cold Start');
   
   const startInit = performance.now();
-  const bridge = new A2RRuntimeBridge({
+  const bridge = new AllternitRuntimeBridge({
     rootDir: process.cwd(),
-    storageDir: path.join(process.cwd(), '.a2r/bench-receipts'),
+    storageDir: path.join(process.cwd(), '.allternit/bench-receipts'),
     enforceWih: false
   });
   const endInit = performance.now();

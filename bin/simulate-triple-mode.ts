@@ -1,8 +1,8 @@
 // Mocking the interaction flow
-import { A2RRuntimeBridge } from '../3-adapters/a2r-runtime/src/runtime-bridge.js';
+import { AllternitRuntimeBridge } from '../3-adapters/allternit-runtime/src/runtime-bridge.js';
 
 async function simulate() {
-  const bridge = new A2RRuntimeBridge();
+  const bridge = new AllternitRuntimeBridge();
   let context: any = { sessionId: 'sess-123', history: [] };
 
   console.log('--- Case 1: Standard Mode ---');

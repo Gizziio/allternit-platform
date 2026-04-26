@@ -1,0 +1,108 @@
+<!-- Module 4: Neural Networks - Overview -->
+<div style="max-width: 800px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  
+  <div style="background: linear-gradient(135deg, #e94560 0%, #ff6b6b 100%); 
+              padding: 40px; border-radius: 12px; margin-bottom: 30px;">
+    <span style="color: rgba(255,255,255,0.8); font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">
+      Module 4
+    </span>
+    <h1 style="color: white; margin: 10px 0; font-size: 32px;">Neural Networks</h1>
+    <p style="color: rgba(255,255,255,0.8); margin: 0;">⏱️ Estimated time: 7-8 hours</p>
+  </div>
+
+  <div style="background: #f8f9fa; padding: 25px; border-radius: 12px; 
+              border-left: 5px solid #e94560; margin-bottom: 30px;">
+    <h3 style="margin-top: 0; color: #1a1a2e;">🎯 Learning Objectives</h3>
+    <p style="color: #555; margin-bottom: 15px;">By the end of this module, you will be able to:</p>
+    <ul style="line-height: 2; color: #333;">
+      <li>Explain the biological inspiration behind neural networks</li>
+      <li>Implement a perceptron and understand its limitations</li>
+      <li>Build a multi-layer neural network from scratch</li>
+      <li>Understand activation functions and their purposes</li>
+      <li>Implement backpropagation for training networks</li>
+      <li>Use TensorFlow/Keras to build neural networks efficiently</li>
+    </ul>
+  </div>
+
+  <div style="background: #ffffff; padding: 25px; border-radius: 12px; 
+              box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 30px;">
+    <h3 style="margin-top: 0; color: #1a1a2e;">📚 Topics Covered</h3>
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="background: #e94560; color: white; width: 28px; height: 28px; 
+                     border-radius: 50%; display: flex; align-items: center; justify-content: center;
+                     font-size: 12px; font-weight: 600;">4.1</span>
+        <span>Biological Inspiration</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="background: #e94560; color: white; width: 28px; height: 28px; 
+                     border-radius: 50%; display: flex; align-items: center; justify-content: center;
+                     font-size: 12px; font-weight: 600;">4.2</span>
+        <span>The Perceptron</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="background: #e94560; color: white; width: 28px; height: 28px; 
+                     border-radius: 50%; display: flex; align-items: center; justify-content: center;
+                     font-size: 12px; font-weight: 600;">4.3</span>
+        <span>Multi-Layer Networks</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="background: #e94560; color: white; width: 28px; height: 28px; 
+                     border-radius: 50%; display: flex; align-items: center; justify-content: center;
+                     font-size: 12px; font-weight: 600;">4.4</span>
+        <span>Backpropagation</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="background: #e94560; color: white; width: 28px; height: 28px; 
+                     border-radius: 50%; display: flex; align-items: center; justify-content: center;
+                     font-size: 12px; font-weight: 600;">4.5</span>
+        <span>Activation Functions</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="background: #e94560; color: white; width: 28px; height: 28px; 
+                     border-radius: 50%; display: flex; align-items: center; justify-content: center;
+                     font-size: 12px; font-weight: 600;">4.6</span>
+        <span>TensorFlow & Keras</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="background: #fff3cd; padding: 20px; border-radius: 12px; margin-bottom: 30px;">
+    <h4 style="margin-top: 0; color: #856404;">📋 Prerequisites</h4>
+    <p style="margin: 0; color: #856404;">
+      Completion of Modules 1-3. Comfort with Python, NumPy, and matrix operations. 
+      Basic calculus understanding (derivatives) is essential for backpropagation.
+    </p>
+  </div>
+
+  <h3 style="color: #1a1a2e;">Module Structure</h3>
+  
+  <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 15px;">
+    <h4 style="margin: 0 0 10px 0; color: #1a1a2e;">📖 Content Pages</h4>
+    <ul style="margin: 0; color: #555;">
+      <li>4.1 From Biology to Computation: The Neuron</li>
+      <li>4.2 The Perceptron: A Single Neuron Model</li>
+      <li>4.3 Multi-Layer Neural Networks</li>
+      <li>4.4 Backpropagation: How Networks Learn</li>
+      <li>4.5 Activation Functions and Their Properties</li>
+      <li>4.6 Building Networks with TensorFlow/Keras</li>
+    </ul>
+  </div>
+
+  <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 15px;">
+    <h4 style="margin: 0 0 10px 0; color: #1a1a2e;">💬 Discussion</h4>
+    <p style="margin: 0; color: #555;">
+      The Black Box Problem: How much should we care about interpretability in neural networks?
+    </p>
+  </div>
+
+  <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 30px;">
+    <h4 style="margin: 0 0 10px 0; color: #1a1a2e;">📝 Assessments</h4>
+    <ul style="margin: 0; color: #555;">
+      <li>Lab: Build a Neural Network from Scratch</li>
+      <li>Assignment: Digit Recognition with TensorFlow</li>
+      <li>Module 4 Quiz: Neural Network Fundamentals</li>
+    </ul>
+  </div>
+
+</div>

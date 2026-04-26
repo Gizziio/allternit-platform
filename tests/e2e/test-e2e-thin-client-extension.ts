@@ -1,5 +1,5 @@
 /**
- * E2E Test: Thin Client ↔ A2R Extension
+ * E2E Test: Thin Client ↔ Allternit Extension
  * 
  * This test verifies the full flow:
  * 1. Thin Client starts WebSocket server on port 3000
@@ -55,7 +55,7 @@ function recordTest(name: string, passed: boolean, error?: string) {
 }
 
 // ============================================================================
-// Mock Extension (Simulates the A2R Chrome Extension)
+// Mock Extension (Simulates the Allternit Chrome Extension)
 // ============================================================================
 
 class MockExtension {
@@ -308,7 +308,7 @@ async function testGetTabs(): Promise<void> {
 async function runTests(): Promise<void> {
   console.log('\n');
   console.log('='.repeat(60));
-  console.log('  E2E Test: Thin Client ↔ A2R Extension');
+  console.log('  E2E Test: Thin Client ↔ Allternit Extension');
   console.log('='.repeat(60));
   console.log('\n');
 

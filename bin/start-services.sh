@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # =============================================================================
-# A2RCHITECH PLATFORM - Service Launcher
+# Allternit PLATFORM - Service Launcher
 # =============================================================================
-# Starts all required backend services for the A2rchitect platform:
+# Starts all required backend services for the allternit platform:
 # - Terminal Server (port 4096) - AI Model API
 # - API Service (port 3000) - Core Rust API
 # - Voice Service (port 8001) - TTS Service (optional)
@@ -28,7 +28,7 @@ OPENCLAW_PORT=18789
 TERMINAL_DIR="$PROJECT_ROOT/cmd/gizzi-code"  # Terminal server is in cmd/gizzi-code
 API_DIR="$PROJECT_ROOT/7-apps/api"
 VOICE_DIR="$PROJECT_ROOT/4-services/ml-ai-services/voice-service"
-RAILS_DIR="$PROJECT_ROOT/0-substrate/a2r-agent-system-rails"
+RAILS_DIR="$PROJECT_ROOT/0-substrate/allternit-agent-system-rails"
 SHELL_DIR="$PROJECT_ROOT/7-apps/shell/web"
 
 # Colors
@@ -44,7 +44,7 @@ mkdir -p "$LOG_DIR"
 print_header() {
     echo ""
     echo -e "${CYAN}╔═══════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║${NC}          ${GREEN}A2RCHITECH PLATFORM${NC}                           ${CYAN}║${NC}"
+    echo -e "${CYAN}║${NC}          ${GREEN}Allternit PLATFORM${NC}                           ${CYAN}║${NC}"
     echo -e "${CYAN}║${NC}              ${BLUE}Service Launcher${NC}                          ${CYAN}║${NC}"
     echo -e "${CYAN}╚═══════════════════════════════════════════════════════════╝${NC}"
     echo ""
@@ -262,7 +262,7 @@ start_rails_service() {
     # Start the Rails service
     (
         cd "$RAILS_DIR"
-        cargo run --bin a2r-rails-service --release > "$LOG_DIR/rails-service.log" 2>&1
+        cargo run --bin allternit-rails-service --release > "$LOG_DIR/rails-service.log" 2>&1
     ) &
     
     local pid=$!
@@ -453,7 +453,7 @@ start_all() {
 }
 
 stop_all() {
-    print_status "Stopping all A2rchitech services..."
+    print_status "Stopping all Allternit services..."
     
     stop_shell_ui
     stop_openclaw

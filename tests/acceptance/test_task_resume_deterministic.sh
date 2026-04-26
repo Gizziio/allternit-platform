@@ -16,8 +16,8 @@ if [ "$out1" != "$out2" ]; then
   echo "Resume output not deterministic" >&2
   echo "$out1" >&2
   echo "$out2" >&2
-  rm -f ".a2r/run_state/${run_id}.json"
+  rm -f ".allternit/run_state/${run_id}.json"
   exit 1
 fi
 
-rm -f ".a2r/run_state/${run_id}.json"
+rm -f ".allternit/run_state/${run_id}.json"

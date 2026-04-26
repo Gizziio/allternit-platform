@@ -2,16 +2,16 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-STATE_DIR="${A2R_DEV_STATE_DIR:-/tmp/a2r-dev}"
+STATE_DIR="${Allternit_DEV_STATE_DIR:-/tmp/allternit-dev}"
 PID_DIR="$STATE_DIR/pids"
 LOG_DIR="$STATE_DIR/logs"
-VENV_DIR="${A2R_DEV_VENV_DIR:-$ROOT_DIR/.venv}"
+VENV_DIR="${Allternit_DEV_VENV_DIR:-$ROOT_DIR/.venv}"
 VENV_PYTHON="$VENV_DIR/bin/python3"
-REQUIRE_VOICE="${A2R_DEV_REQUIRE_VOICE:-0}"
-VOICE_HEALTH_ATTEMPTS="${A2R_DEV_VOICE_HEALTH_ATTEMPTS:-20}"
-START_UI="${A2R_DEV_START_UI:-1}"
-REQUIRE_UI="${A2R_DEV_REQUIRE_UI:-1}"
-UI_HEALTH_ATTEMPTS="${A2R_DEV_UI_HEALTH_ATTEMPTS:-60}"
+REQUIRE_VOICE="${Allternit_DEV_REQUIRE_VOICE:-0}"
+VOICE_HEALTH_ATTEMPTS="${Allternit_DEV_VOICE_HEALTH_ATTEMPTS:-20}"
+START_UI="${Allternit_DEV_START_UI:-1}"
+REQUIRE_UI="${Allternit_DEV_REQUIRE_UI:-1}"
+UI_HEALTH_ATTEMPTS="${Allternit_DEV_UI_HEALTH_ATTEMPTS:-60}"
 
 mkdir -p "$PID_DIR" "$LOG_DIR" "$ROOT_DIR/workspace"
 
@@ -104,7 +104,7 @@ wait_http() {
 
 VOICE_CMD="cd '$ROOT_DIR/4-services/ml-ai-services/voice-service' && python3 launch.py"
 KERNEL_CMD="cd '$ROOT_DIR' && export PATH='$VENV_DIR/bin':\$PATH && cargo run -p kernel"
-API_CMD="cd '$ROOT_DIR/7-apps/api' && A2RCHITECH_DB_PATH='$ROOT_DIR/workspace/a2rchitech-api.db' A2RCHITECH_LEDGER_PATH='$ROOT_DIR/workspace/a2rchitech-api.jsonl' A2RCHITECH_KERNEL_URL='http://127.0.0.1:3004' A2RCHITECH_API_POLICY_ENFORCE='false' cargo run"
+API_CMD="cd '$ROOT_DIR/7-apps/api' && Allternit_DB_PATH='$ROOT_DIR/workspace/allternit-api.db' Allternit_LEDGER_PATH='$ROOT_DIR/workspace/allternit-api.jsonl' Allternit_KERNEL_URL='http://127.0.0.1:3004' Allternit_API_POLICY_ENFORCE='false' cargo run"
 SHELL_UI_CMD="cd '$ROOT_DIR' && pnpm --dir 7-apps/shell-ui dev"
 
 # Kernel boot depends on jsonschema via scripts/validate_law.py.
@@ -116,7 +116,7 @@ if ! wait_http "voice" "http://127.0.0.1:8001/health" "$VOICE_HEALTH_ATTEMPTS" "
   if [[ "$REQUIRE_VOICE" == "1" ]]; then
     exit 1
   fi
-  echo "[up] continuing without voice (set A2R_DEV_REQUIRE_VOICE=1 to make this fatal)"
+  echo "[up] continuing without voice (set Allternit_DEV_REQUIRE_VOICE=1 to make this fatal)"
 fi
 
 start_if_needed "kernel" "$KERNEL_CMD"
@@ -141,7 +141,7 @@ if [[ "$START_UI" == "1" ]]; then
       if [[ "$REQUIRE_UI" == "1" ]]; then
         exit 1
       fi
-      echo "[up] continuing without shell-ui (set A2R_DEV_REQUIRE_UI=1 to make this fatal)"
+      echo "[up] continuing without shell-ui (set Allternit_DEV_REQUIRE_UI=1 to make this fatal)"
     fi
   fi
 fi

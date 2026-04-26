@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # =============================================================================
-# A2RCHITECH PLATFORM - Complete Service Launcher (FIXED)
+# Allternit PLATFORM - Complete Service Launcher (FIXED)
 # =============================================================================
 # Starts ALL required backend services:
 # - Gateway (port 8013) - API Gateway (REQUIRED for UI)
@@ -34,7 +34,7 @@ GATEWAY_DIR="$PROJECT_ROOT/4-services/gateway"
 TERMINAL_DIR="$PROJECT_ROOT/cmd/gizzi-code"
 GIZZI_DIR="$PROJECT_ROOT/cmd/gizzi-code"
 API_DIR="$PROJECT_ROOT/7-apps/api"
-RAILS_DIR="$PROJECT_ROOT/0-substrate/a2r-agent-system-rails"
+RAILS_DIR="$PROJECT_ROOT/0-substrate/allternit-agent-system-rails"
 VOICE_DIR="$PROJECT_ROOT/4-services/ml-ai-services/voice-service"
 
 # Colors
@@ -50,7 +50,7 @@ mkdir -p "$LOG_DIR"
 print_header() {
     echo ""
     echo -e "${CYAN}╔═══════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║${NC}          ${GREEN}A2RCHITECH PLATFORM${NC}                           ${CYAN}║${NC}"
+    echo -e "${CYAN}║${NC}          ${GREEN}Allternit PLATFORM${NC}                           ${CYAN}║${NC}"
     echo -e "${CYAN}║${NC}         ${BLUE}Complete Service Launcher${NC}                      ${CYAN}║${NC}"
     echo -e "${CYAN}╚═══════════════════════════════════════════════════════════╝${NC}"
     echo ""
@@ -141,7 +141,7 @@ stop_gateway() {
 }
 
 # ============================================================================
-# Gizzi Code Server (Port 3210) - REQUIRED for A2R Platform
+# Gizzi Code Server (Port 3210) - REQUIRED for Allternit Platform
 # ============================================================================
 
 start_gizzi_code() {
@@ -329,7 +329,7 @@ start_rails_service() {
     # Start the Rails service
     (
         cd "$RAILS_DIR"
-        cargo run --bin a2r-rails-service --release > "$LOG_DIR/rails-service.log" 2>&1
+        cargo run --bin allternit-rails-service --release > "$LOG_DIR/rails-service.log" 2>&1
     ) &
     
     local pid=$!
@@ -423,7 +423,7 @@ start_all() {
     # 1. Terminal Server first (provides AI models) - REQUIRED
     start_terminal_server || exit 1
     
-    # 2. Gizzi Code Server - REQUIRED for A2R Platform
+    # 2. Gizzi Code Server - REQUIRED for Allternit Platform
     start_gizzi_code || exit 1
     
     # 3. API Service - REQUIRED for Gateway
@@ -468,7 +468,7 @@ start_all() {
 }
 
 stop_all() {
-    print_status "Stopping all A2rchitech services..."
+    print_status "Stopping all Allternit services..."
     
     stop_gateway
     stop_gizzi_code

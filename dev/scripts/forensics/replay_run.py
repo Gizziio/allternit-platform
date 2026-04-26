@@ -36,7 +36,7 @@ def validate_replay_prerequisites(original_run_data: Dict[str, Any]) -> bool:
     
     # Check if graph exists
     graph_id = original_run_data.get("graph_id", "")
-    graph_path = Path(f"/.a2r/graphs/{graph_id}.json")
+    graph_path = Path(f"/.allternit/graphs/{graph_id}.json")
     if not graph_path.exists():
         print(f"ERROR: Required graph file does not exist: {graph_path}", file=sys.stderr)
         return False

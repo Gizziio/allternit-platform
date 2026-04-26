@@ -1,9 +1,9 @@
 #!/bin/bash
 #
-# Build A2rchitect Services
+# Build allternit Services
 #
 # This script compiles all Rust services to binaries for production use.
-# Run this once, then use 'a2r start' to launch pre-built binaries.
+# Run this once, then use 'allternit start' to launch pre-built binaries.
 #
 
 set -e
@@ -23,7 +23,7 @@ NC='\033[0m'
 print_header() {
     echo ""
     echo -e "${CYAN}╔════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║${NC}     ${GREEN}A2RCHITECH - Build Services${NC}                        ${CYAN}║${NC}"
+    echo -e "${CYAN}║${NC}     ${GREEN}Allternit - Build Services${NC}                        ${CYAN}║${NC}"
     echo -e "${CYAN}║${NC}     ${BLUE}Compiling for Production${NC}                             ${CYAN}║${NC}"
     echo -e "${CYAN}╚════════════════════════════════════════════════════════════╝${NC}"
     echo ""
@@ -131,7 +131,7 @@ else
 fi
 
 # Build Platform Orchestrator
-if build_rust_service "platform" "4-services/orchestration/platform-orchestration-service/Cargo.toml" "a2rchitech-platform"; then
+if build_rust_service "platform" "4-services/orchestration/platform-orchestration-service/Cargo.toml" "allternit-platform"; then
     ((BUILT++))
 else
     ((FAILED++))
@@ -146,4 +146,4 @@ echo ""
 echo "Binaries are in: $DIST_DIR"
 echo ""
 echo "To start with pre-built binaries:"
-echo "  a2r start"
+echo "  allternit start"

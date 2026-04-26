@@ -1,11 +1,11 @@
 #!/bin/bash
-# A2Rchitech Mode & Provider Logo Testing Script
+# Allternit Mode & Provider Logo Testing Script
 # Run this to verify all implementations
 
 set -e
 
 echo "======================================"
-echo "A2Rchitech Implementation Testing"
+echo "Allternit Implementation Testing"
 echo "======================================"
 echo ""
 
@@ -53,7 +53,7 @@ echo ""
 
 echo "2. Checking Provider Logos..."
 echo "------------------------------"
-LOGO_DIR="6-ui/a2r-platform/public/assets/runtime-logos"
+LOGO_DIR="6-ui/allternit-platform/public/assets/runtime-logos"
 check_file "$LOGO_DIR/anthropic-logo.svg"
 check_file "$LOGO_DIR/openai-logo.svg"
 check_file "$LOGO_DIR/google-logo.svg"
@@ -66,11 +66,11 @@ echo ""
 
 echo "3. Checking Frontend Mode Integration..."
 echo "-----------------------------------------"
-check_string_in_file "6-ui/a2r-platform/src/views/chat/ChatComposer.tsx" "Compass\|Hammer"
-check_string_in_file "6-ui/a2r-platform/src/views/ChatView.tsx" "useRuntimeExecutionMode"
-check_string_in_file "6-ui/a2r-platform/src/views/ChatView.tsx" "mode,"
-check_string_in_file "6-ui/a2r-platform/src/lib/ai/rust-stream-adapter.ts" "mode?: 'plan' | 'build'"
-check_string_in_file "6-ui/a2r-platform/src/integration/api-client.ts" "mode?: 'plan' | 'build'"
+check_string_in_file "6-ui/allternit-platform/src/views/chat/ChatComposer.tsx" "Compass\|Hammer"
+check_string_in_file "6-ui/allternit-platform/src/views/ChatView.tsx" "useRuntimeExecutionMode"
+check_string_in_file "6-ui/allternit-platform/src/views/ChatView.tsx" "mode,"
+check_string_in_file "6-ui/allternit-platform/src/lib/ai/rust-stream-adapter.ts" "mode?: 'plan' | 'build'"
+check_string_in_file "6-ui/allternit-platform/src/integration/api-client.ts" "mode?: 'plan' | 'build'"
 echo ""
 
 echo "4. Checking Gizmi Mode Integration..."
@@ -84,9 +84,9 @@ echo ""
 
 echo "5. Checking Provider Logo Implementation..."
 echo "--------------------------------------------"
-check_string_in_file "6-ui/a2r-platform/src/views/chat/ChatComposer.tsx" "selectedProviderMeta"
-check_string_in_file "6-ui/a2r-platform/src/views/chat/ChatComposer.tsx" "/assets/runtime-logos/"
-check_string_in_file "6-ui/a2r-platform/src/lib/providers/provider-registry.ts" "PROVIDER_REGISTRY"
+check_string_in_file "6-ui/allternit-platform/src/views/chat/ChatComposer.tsx" "selectedProviderMeta"
+check_string_in_file "6-ui/allternit-platform/src/views/chat/ChatComposer.tsx" "/assets/runtime-logos/"
+check_string_in_file "6-ui/allternit-platform/src/lib/providers/provider-registry.ts" "PROVIDER_REGISTRY"
 echo ""
 
 echo "======================================"
@@ -100,7 +100,7 @@ if [ $TESTS_FAILED -eq 0 ]; then
     echo -e "${GREEN}✓ All tests passed!${NC}"
     echo ""
     echo "Next Steps:"
-    echo "1. Start the frontend: cd 6-ui/a2r-platform && npm run dev"
+    echo "1. Start the frontend: cd 6-ui/allternit-platform && npm run dev"
     echo "2. Start Gizmi: cd cmd/gizzi-code && bun run start"
     echo "3. Test mode toggle in the UI"
     echo "4. Verify provider logos display"

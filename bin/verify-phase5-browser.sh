@@ -1,5 +1,5 @@
 #!/bin/bash
-# A2R Operator - Phase 5: Browser Automation Test
+# Allternit Operator - Phase 5: Browser Automation Test
 # Purpose: Prove browser actions execute
 
 set -e

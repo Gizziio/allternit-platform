@@ -1,0 +1,104 @@
+---
+wih_version: 1
+work_item_id: "T4.2"
+title: "Create Terminal Grid Component"
+owner_role: "orchestrator"
+assigned_roles:
+  builder: "agent.builder"
+  validator: "agent.validator"
+inputs:
+  sot: "/docs/research/txtx-axel-analysis.md"
+  requirements:
+    - "Create terminal grid component"
+    - "Show multiple panes"
+    - "Handle pane selection"
+  context_packs:
+    - "surfaces/shell/"
+    - "services/orchestration/workspace-service/"
+  artifacts_from_deps:
+    - "T4.1"
+scope:
+  allowed_paths:
+    - "surfaces/shell/src/components/terminal/"
+  allowed_tools:
+    - "fs.read"
+    - "fs.write"
+    - "npm.build"
+    - "npm.test"
+  execution_permission:
+    mode: "write_leased"
+outputs:
+  required_artifacts:
+    - "surfaces/shell/src/components/terminal/TerminalGrid.tsx"
+    - "surfaces/shell/src/components/terminal/TerminalPane.tsx"
+  required_reports:
+    - "terminal_grid_report.md"
+acceptance:
+  tests:
+    - "npm test -- terminal"
+  invariants:
+    - "Grid shows all active panes"
+    - "Pane selection works"
+  evidence:
+    - "terminal_grid_report.md"
+blockers:
+  fail_on:
+    - "render_error"
+stop_conditions:
+  escalate_if:
+    - "performance_issue"
+  max_iterations: 5
+---
+
+# Create Terminal Grid Component
+
+## Objective
+Create a component to display and manage terminal panes.
+
+## Components
+
+### TerminalGrid
+```tsx
+interface TerminalGridProps {
+  sessionId: string;
+  panes: Pane[];
+  layout: 'grid' | 'stack' | 'custom';
+  onPaneSelect: (pane: Pane) => void;
+  onPaneClose: (paneId: string) => void;
+}
+
+export const TerminalGrid: React.FC<TerminalGridProps> = ({
+  panes,
+  layout,
+  onPaneSelect,
+  onPaneClose,
+}) => {
+  // Render panes in grid/stack layout
+};
+```
+
+### TerminalPane
+```tsx
+interface TerminalPaneProps {
+  pane: Pane;
+  isActive: boolean;
+  onClick: () => void;
+  onClose: () => void;
+}
+
+export const TerminalPane: React.FC<TerminalPaneProps> = ({
+  pane,
+  isActive,
+  onClick,
+  onClose,
+}) => {
+  // Show pane preview/thumbnail
+  // Display agent info
+};
+```
+
+## Features
+- Pane grid layout
+- Active pane highlighting
+- Close/minimize controls
+- Live output preview

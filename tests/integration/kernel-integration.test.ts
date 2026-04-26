@@ -6,7 +6,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
-  A2RKernelImpl,
+  AllternitKernelImpl,
   preToolUseRouter,
   wihGatedRouter,
   fileAccessRouter,
@@ -14,7 +14,7 @@ import {
   type WihStorage,
   type WihItem,
   type Receipt,
-} from '@a2r/governor';
+} from '@allternit/governor';
 
 // Test storage implementation
 class TestStorage implements WihStorage {
@@ -70,11 +70,11 @@ class TestStorage implements WihStorage {
 
 describe('Kernel Integration', () => {
   let storage: TestStorage;
-  let kernel: A2RKernelImpl;
+  let kernel: AllternitKernelImpl;
 
   beforeEach(() => {
     storage = new TestStorage();
-    kernel = new A2RKernelImpl(storage);
+    kernel = new AllternitKernelImpl(storage);
   });
 
   describe('WIH Lifecycle', () => {

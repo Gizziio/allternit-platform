@@ -67,7 +67,7 @@ test.describe('Agent-Assisted Wizard', () => {
     expect(hasWizardComponents).toBe(true);
     
     // Note: Full integration requires mounting CloudDeployView
-    console.log('Note: HumanCheckpointBanner exists in 6-ui/a2r-platform/src/views/cloud-deploy/');
+    console.log('Note: HumanCheckpointBanner exists in 6-ui/allternit-platform/src/views/cloud-deploy/');
   });
 
   test('error handling via custom events', async ({ page }) => {

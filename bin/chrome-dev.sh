@@ -5,7 +5,7 @@
 
 CHROME_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 APP_URL="http://127.0.0.1:5177"
-USER_DATA_DIR="$HOME/.config/a2r-chrome-dev"
+USER_DATA_DIR="$HOME/.config/allternit-chrome-dev"
 
 echo "🚀 Launching Chrome in app mode with CDP..."
 echo "   URL: $APP_URL"
@@ -16,7 +16,7 @@ echo ""
 mkdir -p "$USER_DATA_DIR"
 
 # Kill any existing Chrome with same profile
-pkill -f "a2r-chrome-dev" 2>/dev/null || true
+pkill -f "allternit-chrome-dev" 2>/dev/null || true
 
 # Launch Chrome with CDP
 "$CHROME_PATH" \

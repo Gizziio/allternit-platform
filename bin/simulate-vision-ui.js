@@ -1,11 +1,11 @@
 /**
- * A2R Vision UI Simulation Script
+ * Allternit Vision UI Simulation Script
  * Run this in your Browser Console (Cmd+Option+I in Electron) 
  * to see the pulsing markers and thought trace.
  */
 
 function simulateVision() {
-  console.log("🚀 Starting A2R Vision Simulation...");
+  console.log("🚀 Starting Allternit Vision Simulation...");
 
   const traceMessages = [
     "Analyzing desktop layout...",
@@ -26,7 +26,7 @@ function simulateVision() {
     const x = 300 + (Math.random() * 400);
     const y = 200 + (Math.random() * 300);
     
-    const actionEvent = new CustomEvent("a2r:vision_action", {
+    const actionEvent = new CustomEvent("allternit:vision_action", {
       detail: {
         type: "vision_target",
         action: {
@@ -34,7 +34,7 @@ function simulateVision() {
           x: x,
           y: y,
           type: "click",
-          label: "A2R Vision: " + traceMessages[i]
+          label: "Allternit Vision: " + traceMessages[i]
         }
       }
     });

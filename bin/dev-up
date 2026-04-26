@@ -5,6 +5,7 @@ set -e
 WORKING_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LAUNCH_AGENTS_DIR="$HOME/Library/LaunchAgents"
 LOGS_DIR="$WORKING_DIR/.logs"
+TEMPLATE_DIR="tools/deployment"
 
 # Ensure logs directory exists
 mkdir -p "$LOGS_DIR"
@@ -14,7 +15,8 @@ echo "Working Dir: $WORKING_DIR"
 
 # Function to process and install plist
 install_plist() {
-    local template="$1"
+    local template_name="$1"
+    local template="$TEMPLATE_DIR/$template_name"
     local name=$(basename "$template" .plist.template)
     local target="$LAUNCH_AGENTS_DIR/$name.plist"
 
@@ -37,20 +39,24 @@ install_plist() {
 
 # Build Monolith Kernel
 echo "Building monolith kernel..."
-cd "$WORKING_DIR/4-services/orchestration/kernel-service"
-cargo build --release
+if [ -d "$WORKING_DIR/services/orchestration/orchestration/kernel-service" ]; then
+    cd "$WORKING_DIR/services/orchestration/orchestration/kernel-service"
+    cargo build --release
+else
+    echo "Warning: kernel-service directory not found, skipping build."
+fi
 
 # Install and Load LaunchAgents
 cd "$WORKING_DIR"
 ./bin/dev-down 2>/dev/null || true
 
-install_plist "launchd/com.a2rchitech.intent-graph-kernel.plist.template"
-install_plist "launchd/com.a2rchitech.capsule-runtime.plist.template"
-install_plist "launchd/com.a2rchitech.presentation-kernel.plist.template"
-install_plist "launchd/com.a2rchitech.kernel.plist.template"
-install_plist "launchd/com.a2rchitech.shell.plist.template"
-install_plist "launchd/com.a2rchitech.ui-tars-operator.plist.template"
-install_plist "launchd/com.a2rchitech.agui-gateway.plist.template"
+install_plist "com.allternitchitech.intent-graph-kernel.plist.template"
+install_plist "com.allternitchitech.capsule-runtime.plist.template"
+install_plist "com.allternitchitech.presentation-kernel.plist.template"
+install_plist "com.allternitchitech.kernel.plist.template"
+install_plist "com.allternitchitech.shell.plist.template"
+install_plist "com.allternitchitech.ui-tars-operator.plist.template"
+install_plist "com.allternitchitech.agui-gateway.plist.template"
 
 echo "All services started via launchd."
 echo "Gateway listening on http://localhost:3000"

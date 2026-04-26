@@ -1,0 +1,185 @@
+<!-- A://labs - Module 3: Supervised Learning - Complete Content -->
+<div style="max-width: 850px; margin: 0 auto; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #ffffff; line-height: 1.8;">
+
+<!-- LESSON 3.1: LINEAR REGRESSION -->
+<div style="margin-bottom: 60px;">
+  <div style="background: linear-gradient(135deg, #0a0a0f 0%, #12121a 100%); 
+              padding: 40px; border-radius: 16px; margin-bottom: 30px;
+              border: 1px solid #2a2a3e; position: relative; overflow: hidden;">
+    <div style="position: absolute; top: -30%; right: -10%; width: 300px; height: 300px; 
+                background: radial-gradient(circle, rgba(255, 0, 110, 0.1) 0%, transparent 70%);"></div>
+    <span style="color: #ff006e; font-size: 13px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">Module 3.1</span>
+    <h1 style="margin: 10px 0 0 0; color: #ffffff; font-size: 36px; font-weight: 700;">Linear Regression</h1>
+  </div>
+
+  <div style="background: #12121a; padding: 30px; border-radius: 12px; border: 1px solid #2a2a3e; margin-bottom: 30px;">
+    <h3 style="margin: 0 0 15px 0; color: #ff006e; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+      🎯 Learning Objectives
+    </h3>
+    <ul style="margin: 0; padding: 0; list-style: none; color: #a0a0b0; font-size: 15px;">
+      <li style="padding: 8px 0; padding-left: 24px; position: relative;">
+        <span style="position: absolute; left: 0; color: #ff006e;">→</span>
+        Understand the mathematics behind linear regression
+      </li>
+      <li style="padding: 8px 0; padding-left: 24px; position: relative;">
+        <span style="position: absolute; left: 0; color: #ff006e;">→</span>
+        Implement regression using scikit-learn
+      </li>
+      <li style="padding: 8px 0; padding-left: 24px; position: relative;">
+        <span style="position: absolute; left: 0; color: #ff006e;">→</span>
+        Apply regression to predict continuous values
+      </li>
+    </ul>
+  </div>
+
+  <h2 style="color: #ffffff; font-size: 24px; font-weight: 700; margin: 35px 0 20px 0; display: flex; align-items: center; gap: 12px;">
+    <span style="width: 4px; height: 28px; background: linear-gradient(180deg, #ff006e, #ffbe0b); border-radius: 2px;"></span>
+    Predicting Continuous Values
+  </h2>
+
+  <p style="color: #a0a0b0; font-size: 16px; margin-bottom: 20px;">
+    Linear regression is the foundation of supervised learning for <strong style="color: #ffffff;">regression problems</strong>—
+    predicting continuous numerical values rather than discrete categories. Within the allternit protocol, 
+    regression powers agentic systems that predict resource usage, estimate completion times, and forecast behavior.
+  </p>
+
+  <div style="background: #12121a; padding: 25px; border-radius: 12px; border: 1px solid #2a2a3e; margin: 30px 0;">
+    <h4 style="margin: 0 0 15px 0; color: #ffbe0b; font-size: 16px; font-weight: 600;">📐 The Core Equation</h4>
+    <div style="background: #0a0a0f; padding: 20px; border-radius: 8px; text-align: center;">
+      <code style="color: #00d4ff; font-family: 'JetBrains Mono', monospace; font-size: 20px;">
+        y = mx + b
+      </code>
+    </div>
+    <p style="margin: 15px 0 0 0; color: #a0a0b0; font-size: 14px; text-align: center;">
+      <strong style="color: #ffffff;">y</strong> = predicted value | 
+      <strong style="color: #ffffff;">m</strong> = slope | 
+      <strong style="color: #ffffff;">x</strong> = input feature | 
+      <strong style="color: #ffffff;">b</strong> = intercept
+    </p>
+  </div>
+
+  <p style="color: #a0a0b0; font-size: 16px; margin-bottom: 20px;">
+    In multiple linear regression (the common case), we extend this to multiple input features:
+  </p>
+
+  <div style="background: #0a0a0f; padding: 20px; border-radius: 8px; margin: 25px 0; text-align: center;">
+    <code style="color: #8338ec; font-family: 'JetBrains Mono', monospace; font-size: 16px;">
+      y = w₁x₁ + w₂x₂ + ... + wₙxₙ + b
+    </code>
+  </div>
+
+  <h2 style="color: #ffffff; font-size: 24px; font-weight: 700; margin: 35px 0 20px 0; display: flex; align-items: center; gap: 12px;">
+    <span style="width: 4px; height: 28px; background: linear-gradient(180deg, #ffbe0b, #06ffa5); border-radius: 2px;"></span>
+    How It Works: Finding the Best Fit
+  </h2>
+
+  <p style="color: #a0a0b0; font-size: 16px; margin-bottom: 20px;">
+    Linear regression finds the line (or hyperplane) that minimizes the <strong style="color: #ffffff;">sum of squared errors</strong> 
+    between predicted and actual values. This is called the <span style="color: #06ffa5;">Ordinary Least Squares (OLS)</span> method.
+  </p>
+
+  <div style="background: rgba(6, 255, 165, 0.05); padding: 25px; border-radius: 12px; border: 1px solid rgba(6, 255, 165, 0.2); margin: 30px 0;">
+    <h4 style="margin: 0 0 10px 0; color: #06ffa5; font-size: 16px; font-weight: 600;">🎯 Cost Function (Mean Squared Error)</h4>
+    <div style="background: #0a0a0f; padding: 20px; border-radius: 8px; text-align: center; margin-top: 15px;">
+      <code style="color: #06ffa5; font-family: 'JetBrains Mono', monospace; font-size: 16px;">
+        MSE = (1/n) × Σ(yᵢ - ŷᵢ)²
+      </code>
+    </div>
+    <p style="margin: 15px 0 0 0; color: #a0a0b0; font-size: 14px;">
+      Where <strong style="color: #ffffff;">yᵢ</strong> is the actual value and <strong style="color: #ffffff;">ŷᵢ</strong> is the predicted value.
+      The algorithm finds weights that minimize this error.
+    </p>
+  </div>
+
+  <h2 style="color: #ffffff; font-size: 24px; font-weight: 700; margin: 35px 0 20px 0; display: flex; align-items: center; gap: 12px;">
+    <span style="width: 4px; height: 28px; background: linear-gradient(180deg, #06ffa5, #00d4ff); border-radius: 2px;"></span>
+    Code Implementation
+  </h2>
+
+  <div style="background: #0a0a0f; padding: 25px; border-radius: 12px; border: 1px solid #1e1e2e; margin: 25px 0;">
+    <pre style="margin: 0; color: #a0a0b0; font-family: 'JetBrains Mono', monospace; font-size: 14px; line-height: 1.8; overflow-x: auto;"><code style="color: #8338ec;">import</code> numpy <code style="color: #8338ec;">as</code> np
+<code style="color: #8338ec;">from</code> sklearn.linear_model <code style="color: #8338ec;">import</code> LinearRegression
+<code style="color: #8338ec;">from</code> sklearn.model_selection <code style="color: #8338ec;">import</code> train_test_split
+
+<code style="color: #6b6b7b;"># Prepare data</code>
+X = data[[<code style="color: #00d4ff;">'feature1'</code>, <code style="color: #00d4ff;">'feature2'</code>]]
+y = data[<code style="color: #00d4ff;">'target'</code>]
+
+<code style="color: #6b6b7b;"># Split into train/test</code>
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=<code style="color: #ffbe0b;">0.2</code>, random_state=<code style="color: #ffbe0b;">42</code>
+)
+
+<code style="color: #6b6b7b;"># Create and train model</code>
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+<code style="color: #6b6b7b;"># Make predictions</code>
+predictions = model.predict(X_test)
+
+<code style="color: #6b6b7b;"># Model coefficients</code>
+<code style="color: #ff006e;">print</code>(<code style="color: #00d4ff;">f"Coefficients: {model.coef_}"</code>)
+<code style="color: #ff006e;">print</code>(<code style="color: #00d4ff;">f"Intercept: {model.intercept_}"</code>)</pre>
+  </div>
+
+  <h2 style="color: #ffffff; font-size: 24px; font-weight: 700; margin: 35px 0 20px 0; display: flex; align-items: center; gap: 12px;">
+    <span style="width: 4px; height: 28px; background: linear-gradient(180deg, #00d4ff, #8338ec); border-radius: 2px;"></span>
+    Evaluating Regression Models
+  </h2>
+
+  <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin: 30px 0;">
+    <div style="background: #12121a; padding: 25px; border-radius: 12px; border: 1px solid #2a2a3e;">
+      <h4 style="margin: 0 0 10px 0; color: #00d4ff; font-size: 16px; font-weight: 600;">R² Score</h4>
+      <p style="margin: 0 0 10px 0; color: #a0a0b0; font-size: 14px;">
+        Proportion of variance explained. Range: 0 to 1 (higher is better).
+      </p>
+      <code style="color: #00d4ff; font-family: 'JetBrains Mono', monospace; font-size: 13px;">
+        from sklearn.metrics import r2_score
+      </code>
+    </div>
+
+    <div style="background: #12121a; padding: 25px; border-radius: 12px; border: 1px solid #2a2a3e;">
+      <h4 style="margin: 0 0 10px 0; color: #8338ec; font-size: 16px; font-weight: 600;">RMSE</h4>
+      <p style="margin: 0 0 10px 0; color: #a0a0b0; font-size: 14px;">
+        Root Mean Squared Error. Same units as target (lower is better).
+      </p>
+      <code style="color: #8338ec; font-family: 'JetBrains Mono', monospace; font-size: 13px;">
+        from sklearn.metrics import mean_squared_error
+      </code>
+    </div>
+  </div>
+
+  <div style="background: rgba(255, 190, 11, 0.05); padding: 25px; border-radius: 12px; border: 1px solid rgba(255, 190, 11, 0.2); margin: 30px 0;">
+    <h4 style="margin: 0 0 10px 0; color: #ffbe0b; font-size: 16px; font-weight: 600;">💡 Protocol Application</h4>
+    <p style="margin: 0; color: #a0a0b0; font-size: 15px; line-height: 1.7;">
+      In A:// agentic systems, linear regression powers resource prediction: estimating computation time, 
+      forecasting memory usage, or predicting API call latency. Its interpretability makes it valuable for 
+      agents that must explain their reasoning.
+    </p>
+  </div>
+
+  <!-- Knowledge Check -->
+  <div style="background: #12121a; padding: 30px; border-radius: 12px; border: 1px solid #2a2a3e; margin-top: 40px;">
+    <h3 style="margin: 0 0 20px 0; color: #ffffff; font-size: 20px; font-weight: 700;">✅ Knowledge Check</h3>
+    
+    <div>
+      <p style="color: #a0a0b0; font-size: 15px; margin: 0 0 12px 0;">
+        <strong style="color: #ffffff;">Q:</strong> What type of problem does linear regression solve?
+      </p>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <label style="display: flex; align-items: center; gap: 10px; color: #a0a0b0; font-size: 14px; cursor: pointer;">
+          <input type="radio" name="q1" style="accent-color: #ff006e;"> Classification (predicting categories)
+        </label>
+        <label style="display: flex; align-items: center; gap: 10px; color: #a0a0b0; font-size: 14px; cursor: pointer;">
+          <input type="radio" name="q1" style="accent-color: #ff006e;"> Regression (predicting continuous values) ✓
+        </label>
+        <label style="display: flex; align-items: center; gap: 10px; color: #a0a0b0; font-size: 14px; cursor: pointer;">
+          <input type="radio" name="q1" style="accent-color: #ff006e;"> Clustering (grouping similar data)
+        </label>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</div>

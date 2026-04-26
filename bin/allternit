@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# A2R - A2rchitect Platform Command
+# Allternit - allternit Platform Command
 #
-# Unified entry point for the A2R platform.
+# Unified entry point for the Allternit platform.
 # Delegates to the TypeScript CLI in 7-apps/shell/terminal
 #
 
@@ -12,7 +12,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 TUI_DIR="$PROJECT_ROOT/7-apps/shell/terminal"
-A2R_TS="$TUI_DIR/src/cli/a2r.ts"
+Allternit_TS="$TUI_DIR/src/cli/allternit.ts"
 
 # Colors
 RED='\033[0;31m'
@@ -46,4 +46,4 @@ if [ ! -d "$TUI_DIR" ]; then
 fi
 
 # Run the TypeScript CLI
-exec bun run "$A2R_TS" "$@"
+exec bun run "$Allternit_TS" "$@"

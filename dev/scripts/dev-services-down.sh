@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-STATE_DIR="${A2R_DEV_STATE_DIR:-/tmp/a2r-dev}"
+STATE_DIR="${Allternit_DEV_STATE_DIR:-/tmp/allternit-dev}"
 PID_DIR="$STATE_DIR/pids"
 
 stop_pid_file() {

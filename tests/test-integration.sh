@@ -1,11 +1,11 @@
 #!/bin/bash
-# A2R Integration Test Script
+# Allternit Integration Test Script
 # Tests connectivity between all components
 
 # set -e  # Don't exit on error, show all test results
 
 echo "======================================"
-echo "A2R Product Integration Test"
+echo "Allternit Product Integration Test"
 echo "======================================"
 echo ""
 

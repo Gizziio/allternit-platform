@@ -8,15 +8,17 @@ const repoRoot = path.resolve(__dirname, '..');
 export default defineConfig({
   resolve: {
     alias: {
-      '@a2r/runtime': path.resolve(repoRoot, '3-adapters/runtime-adapters/a2r-runtime/dist/index.js'),
-      '@a2r/governor': path.resolve(repoRoot, '2-governance/governance-workflows/a2r-governor/dist/index.js'),
-      '@a2r/lawlayer': path.resolve(repoRoot, '2-governance/legal-compliance/a2r-lawlayer/dist/index.js'),
-      '@a2r/shell': path.resolve(repoRoot, '7-apps/_legacy/shell/src/index.ts'),
+      '@allternit/runtime': path.resolve(repoRoot, '3-adapters/runtime-adapters/allternit-runtime/dist/index.js'),
+      '@allternit/governor': path.resolve(repoRoot, '2-governance/governance-workflows/allternit-governor/dist/index.js'),
+      '@allternit/lawlayer': path.resolve(repoRoot, '2-governance/legal-compliance/allternit-lawlayer/dist/index.js'),
+      '@allternit/shell': path.resolve(repoRoot, '7-apps/_legacy/shell/src/index.ts'),
+      '@': path.resolve(repoRoot, 'surfaces/allternit-platform/src'),
     },
   },
   test: {
     globals: true,
     environment: 'node',
+    setupFiles: ['./setup-localstorage.ts'],
     include: [
       'integration/**/*.test.ts',
       'e2e/**/*.test.ts',

@@ -73,7 +73,7 @@
       "preconditions": [
         "WIH_VALID",
         "TASK_RUNNING",
-        "PATH_UNDER_A2R",
+        "PATH_UNDER_Allternit",
         "PATH_MATCHES_GLOBS"
       ]
     },

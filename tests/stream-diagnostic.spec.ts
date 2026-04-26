@@ -14,7 +14,7 @@ import { test, expect, type Page } from '@playwright/test';
 // Configuration
 const TEST_URL = process.env.TEST_URL || 'http://localhost:3000';
 const CHAT_PATH = process.env.CHAT_PATH || '/chat';
-const EXPECTED_TEXT = "Hello! I'm A2R. How can I help you today?";
+const EXPECTED_TEXT = "Hello! I'm Allternit. How can I help you today?";
 
 interface StreamEvent {
   type: string;

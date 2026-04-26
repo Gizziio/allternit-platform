@@ -1,0 +1,175 @@
+<!-- A://labs - Module 4: Neural Networks - Complete Content -->
+<div style="max-width: 850px; margin: 0 auto; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #ffffff; line-height: 1.8;">
+
+<!-- LESSON 4.1: THE PERCEPTRON -->
+<div style="margin-bottom: 60px;">
+  <div style="background: linear-gradient(135deg, #0a0a0f 0%, #12121a 100%); 
+              padding: 40px; border-radius: 16px; margin-bottom: 30px;
+              border: 1px solid #2a2a3e; position: relative; overflow: hidden;">
+    <div style="position: absolute; top: -30%; right: -10%; width: 300px; height: 300px; 
+                background: radial-gradient(circle, rgba(255, 190, 11, 0.1) 0%, transparent 70%);"></div>
+    <span style="color: #ffbe0b; font-size: 13px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">Module 4.1</span>
+    <h1 style="margin: 10px 0 0 0; color: #ffffff; font-size: 36px; font-weight: 700;">The Perceptron</h1>
+  </div>
+
+  <div style="background: #12121a; padding: 30px; border-radius: 12px; border: 1px solid #2a2a3e; margin-bottom: 30px;">
+    <h3 style="margin: 0 0 15px 0; color: #ffbe0b; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+      🎯 Learning Objectives
+    </h3>
+    <ul style="margin: 0; padding: 0; list-style: none; color: #a0a0b0; font-size: 15px;">
+      <li style="padding: 8px 0; padding-left: 24px; position: relative;">
+        <span style="position: absolute; left: 0; color: #ffbe0b;">→</span>
+        Understand the biological inspiration behind neural networks
+      </li>
+      <li style="padding: 8px 0; padding-left: 24px; position: relative;">
+        <span style="position: absolute; left: 0; color: #ffbe0b;">→</span>
+        Implement a perceptron from scratch
+      </li>
+      <li style="padding: 8px 0; padding-left: 24px; position: relative;">
+        <span style="position: absolute; left: 0; color: #ffbe0b;">→</span>
+        Recognize the limitations of single-layer networks
+      </li>
+    </ul>
+  </div>
+
+  <h2 style="color: #ffffff; font-size: 24px; font-weight: 700; margin: 35px 0 20px 0; display: flex; align-items: center; gap: 12px;">
+    <span style="width: 4px; height: 28px; background: linear-gradient(180deg, #ffbe0b, #06ffa5); border-radius: 2px;"></span>
+    From Biology to Computation
+  </h2>
+
+  <p style="color: #a0a0b0; font-size: 16px; margin-bottom: 20px;">
+    Neural networks are inspired by the human brain—specifically, how biological neurons process information. 
+    A biological neuron receives signals through dendrites, processes them in the cell body, and transmits 
+    output through the axon. Artificial neurons mimic this structure mathematically.
+  </p>
+
+  <div style="background: #12121a; padding: 30px; border-radius: 12px; border: 1px solid #2a2a3e; margin: 30px 0;">
+    <h4 style="margin: 0 0 20px 0; color: #06ffa5; font-size: 16px; font-weight: 600; text-align: center;">The Artificial Neuron</h4>
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 15px;">
+      <!-- Input Layer -->
+      <div style="display: flex; gap: 30px;">
+        <div style="width: 50px; height: 50px; background: #1e1e2e; border-radius: 50%; 
+                    display: flex; align-items: center; justify-content: center;
+                    border: 2px solid #00d4ff; color: #00d4ff; font-weight: 600;">x₁</div>
+        <div style="width: 50px; height: 50px; background: #1e1e2e; border-radius: 50%; 
+                    display: flex; align-items: center; justify-content: center;
+                    border: 2px solid #00d4ff; color: #00d4ff; font-weight: 600;">x₂</div>
+        <div style="width: 50px; height: 50px; background: #1e1e2e; border-radius: 50%; 
+                    display: flex; align-items: center; justify-content: center;
+                    border: 2px solid #00d4ff; color: #00d4ff; font-weight: 600;">x₃</div>
+      </div>
+      
+      <!-- Weights -->
+      <div style="color: #6b6b7b; font-size: 12px;">weighted sum + bias → activation</div>
+      
+      <!-- Neuron -->
+      <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #ffbe0b, #ff006e); 
+                  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+                  color: #0a0a0f; font-weight: 700; font-size: 18px;">∑ ƒ</div>
+      
+      <!-- Output -->
+      <div style="width: 50px; height: 50px; background: #1e1e2e; border-radius: 50%; 
+                  display: flex; align-items: center; justify-content: center;
+                  border: 2px solid #06ffa5; color: #06ffa5; font-weight: 600;">y</div>
+    </div>
+  </div>
+
+  <h2 style="color: #ffffff; font-size: 24px; font-weight: 700; margin: 35px 0 20px 0; display: flex; align-items: center; gap: 12px;">
+    <span style="width: 4px; height: 28px; background: linear-gradient(180deg, #06ffa5, #00d4ff); border-radius: 2px;"></span>
+    The Perceptron Algorithm
+  </h2>
+
+  <p style="color: #a0a0b0; font-size: 16px; margin-bottom: 20px;">
+    The perceptron, developed by Frank Rosenblatt in 1958, is the simplest neural network—a single neuron 
+    that makes binary classifications. It takes multiple inputs, applies weights, adds a bias, and passes 
+    the result through a step function.
+  </p>
+
+  <div style="background: #0a0a0f; padding: 25px; border-radius: 12px; border: 1px solid #1e1e2e; margin: 25px 0;">
+    <h4 style="margin: 0 0 15px 0; color: #ffffff; font-size: 14px; font-weight: 600;">Python Implementation</h4>
+    <pre style="margin: 0; color: #a0a0b0; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.8; overflow-x: auto;"><code style="color: #8338ec;">import</code> numpy <code style="color: #8338ec;">as</code> np
+
+<code style="color: #ff006e;">class</code> <code style="color: #ffbe0b;">Perceptron</code>:
+    <code style="color: #ff006e;">def</code> <code style="color: #00d4ff;">__init__</code>(self, learning_rate=<code style="color: #ffbe0b;">0.01</code>, n_iterations=<code style="color: #ffbe0b;">1000</code>):
+        self.lr = learning_rate
+        self.n_iter = n_iterations
+        
+    <code style="color: #ff006e;">def</code> <code style="color: #00d4ff;">fit</code>(self, X, y):
+        <code style="color: #6b6b7b;"># Initialize weights and bias</code>
+        self.weights = np.zeros(X.shape[<code style="color: #ffbe0b;">1</code>])
+        self.bias = <code style="color: #ffbe0b;">0</code>
+        
+        <code style="color: #6b6b7b;"># Training loop</code>
+        <code style="color: #ff006e;">for</code> _ <code style="color: #ff006e;">in</code> <code style="color: #ff006e;">range</code>(self.n_iter):
+            <code style="color: #ff006e;">for</code> idx, x_i <code style="color: #ff006e;">in</code> <code style="color: #ff006e;">enumerate</code>(X):
+                linear_output = np.dot(x_i, self.weights) + self.bias
+                prediction = <code style="color: #ffbe0b;">1</code> <code style="color: #ff006e;">if</code> linear_output >= <code style="color: #ffbe0b;">0</code> <code style="color: #ff006e;">else</code> <code style="color: #ffbe0b;">0</code>
+                
+                <code style="color: #6b6b7b;"># Update weights if prediction is wrong</code>
+                update = self.lr * (y[idx] - prediction)
+                self.weights += update * x_i
+                self.bias += update
+                
+    <code style="color: #ff006e;">def</code> <code style="color: #00d4ff;">predict</code>(self, X):
+        linear_output = np.dot(X, self.weights) + self.bias
+        <code style="color: #ff006e;">return</code> np.where(linear_output >= <code style="color: #ffbe0b;">0</code>, <code style="color: #ffbe0b;">1</code>, <code style="color: #ffbe0b;">0</code>)</pre>
+  </div>
+
+  <h2 style="color: #ffffff; font-size: 24px; font-weight: 700; margin: 35px 0 20px 0; display: flex; align-items: center; gap: 12px;">
+    <span style="width: 4px; height: 28px; background: linear-gradient(180deg, #00d4ff, #8338ec); border-radius: 2px;"></span>
+    The Limitation: Linear Separability
+  </h2>
+
+  <p style="color: #a0a0b0; font-size: 16px; margin-bottom: 20px;">
+    The perceptron can only solve <strong style="color: #ffffff;">linearly separable</strong> problems—those where a straight line 
+    (or hyperplane) can separate the classes. This limitation was famously exposed by Marvin Minsky and Seymour Papert 
+    in their 1969 book "Perceptrons," which showed that perceptrons cannot solve the XOR problem.
+  </p>
+
+  <div style="background: rgba(255, 0, 110, 0.05); padding: 25px; border-radius: 12px; border: 1px solid rgba(255, 0, 110, 0.2); margin: 30px 0;">
+    <h4 style="margin: 0 0 10px 0; color: #ff006e; font-size: 16px; font-weight: 600;">❌ The XOR Problem</h4>
+    <p style="margin: 0 0 15px 0; color: #a0a0b0; font-size: 15px; line-height: 1.7;">
+      XOR (exclusive OR) outputs 1 when inputs are different, 0 when they're the same. 
+      No single straight line can separate the two classes. This requires a <strong style="color: #ffffff;">multi-layer network</strong>.
+    </p>
+    <div style="background: #0a0a0f; padding: 15px; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 14px; color: #a0a0b0;">
+      0 XOR 0 = 0<br>
+      0 XOR 1 = 1<br>
+      1 XOR 0 = 1<br>
+      1 XOR 1 = 0
+    </div>
+  </div>
+
+  <div style="background: rgba(6, 255, 165, 0.05); padding: 25px; border-radius: 12px; border: 1px solid rgba(6, 255, 165, 0.2); margin: 30px 0;">
+    <h4 style="margin: 0 0 10px 0; color: #06ffa5; font-size: 16px; font-weight: 600;">🚀 The Solution: Multi-Layer Networks</h4>
+    <p style="margin: 0; color: #a0a0b0; font-size: 15px; line-height: 1.7;">
+      By stacking multiple layers of neurons and using non-linear activation functions, we can solve arbitrarily 
+      complex problems. This is the foundation of deep learning and the agentic systems you'll build in the allternit protocol.
+    </p>
+  </div>
+
+  <!-- Knowledge Check -->
+  <div style="background: #12121a; padding: 30px; border-radius: 12px; border: 1px solid #2a2a3e; margin-top: 40px;">
+    <h3 style="margin: 0 0 20px 0; color: #ffffff; font-size: 20px; font-weight: 700;">✅ Knowledge Check</h3>
+    
+    <div>
+      <p style="color: #a0a0b0; font-size: 15px; margin: 0 0 12px 0;">
+        <strong style="color: #ffffff;">Q:</strong> What is the main limitation of a single perceptron?
+      </p>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <label style="display: flex; align-items: center; gap: 10px; color: #a0a0b0; font-size: 14px; cursor: pointer;">
+          <input type="radio" name="q1" style="accent-color: #ffbe0b;"> It requires too much training data
+        </label>
+        <label style="display: flex; align-items: center; gap: 10px; color: #a0a0b0; font-size: 14px; cursor: pointer;">
+          <input type="radio" name="q1" style="accent-color: #ffbe0b;"> It can only solve linearly separable problems ✓
+        </label>
+        <label style="display: flex; align-items: center; gap: 10px; color: #a0a0b0; font-size: 14px; cursor: pointer;">
+          <input type="radio" name="q1" style="accent-color: #ffbe0b;"> It cannot handle numerical inputs
+        </label>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</div>

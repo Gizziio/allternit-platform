@@ -5,17 +5,17 @@ export CANVAS_BASE_URL="https://canvas.instructure.com"
 export CANVAS_API_TOKEN="7~xG8tXkuEFa4fQ7zykECKhmKNuWVw9Feh84BGaeL92xP4nGxVJ8wQ89rEFZvH4uEr"
 export COURSE_ID="14389375"
 
-echo "=== A2R Golden Path Test - REAL CANVAS EXECUTION ==="
+echo "=== Allternit Golden Path Test - REAL CANVAS EXECUTION ==="
 echo ""
 echo "Course ID: $COURSE_ID"
 echo ""
 
 # Start the operator daemon
-echo "Starting A2R Operator daemon..."
+echo "Starting Allternit Operator daemon..."
 pkill -f operator-daemon.js 2>/dev/null || true
 sleep 1
 
-cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/1-kernel/agent-systems/a2r-dak-runner
+cd /Users/macbook/Desktop/allternit-workspace/allternit/1-kernel/agent-systems/allternit-dak-runner
 nohup node dist/operator-daemon.js --port 3010 > /tmp/operator.log 2>&1 &
 sleep 3
 

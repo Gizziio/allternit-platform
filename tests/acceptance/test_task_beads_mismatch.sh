@@ -6,7 +6,7 @@ if [ -x ".venv-law/bin/python" ]; then
   PYTHON_BIN=".venv-law/bin/python"
 fi
 
-wih_file=".a2r/wih/T0004.wih.json"
+wih_file=".allternit/wih/T0004.wih.json"
 backup="${wih_file}.bak"
 
 if [ ! -f "$wih_file" ]; then
@@ -27,7 +27,7 @@ cp "$wih_file" "$backup"
 $PYTHON_BIN - <<'PY'
 import json
 from pathlib import Path
-path = Path('.a2r/wih/T0004.wih.json')
+path = Path('.allternit/wih/T0004.wih.json')
 obj = json.loads(path.read_text())
 beads = obj.get('beads', {})
 beads['blocked_by'] = ['T0009']

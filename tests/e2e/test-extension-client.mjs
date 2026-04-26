@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /**
- * Mock A2R Extension Client
+ * Mock Allternit Extension Client
  * 
- * This script simulates the A2R Chrome Extension connecting to the Thin Client.
+ * This script simulates the Allternit Chrome Extension connecting to the Thin Client.
  * It tests the full E2E WebSocket protocol between extension and thin client.
  */
 
@@ -165,7 +165,7 @@ class MockExtension {
 async function runTests() {
   console.log('\n');
   console.log('='.repeat(70));
-  console.log('  E2E Test: A2R Extension ↔ Thin Client WebSocket');
+  console.log('  E2E Test: Allternit Extension ↔ Thin Client WebSocket');
   console.log('='.repeat(70));
   console.log('\n');
 

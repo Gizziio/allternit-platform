@@ -6,7 +6,7 @@ bash scripts/law_setup.sh > /dev/null
 PYTHON=".venv-law/bin/python3"
 
 echo "==========================================="
-echo "   A2RCHITECH UNIFIED EXECUTION RUNNER     "
+echo "   Allternit UNIFIED EXECUTION RUNNER     "
 echo "==========================================="
 
 echo ">>> Phase 0: Law Anchors + Boot Gates"

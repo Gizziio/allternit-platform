@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "📦 Packaging A2rchitech..."
+echo "📦 Packaging Allternit..."
 
 # Create dist structure
 mkdir -p dist/bin
@@ -26,10 +26,10 @@ echo "📂 Initializing Workspace..."
 cp -r workspace/* dist/workspace/ 2>/dev/null || true
 
 # 4. Create Entry Script
-cat <<EOF > dist/a2rchitech.sh
+cat <<EOF > dist/allternit.sh
 #!/bin/bash
-# A2rchitech OS Entry Script
-echo "🚀 Starting A2rchitech Kernel..."
+# Allternit OS Entry Script
+echo "🚀 Starting Allternit Kernel..."
 ./bin/kernel &
 KERNEL_PID=\$!
 
@@ -45,6 +45,6 @@ trap "kill \$KERNEL_PID" EXIT
 wait \$KERNEL_PID
 EOF
 
-chmod +x dist/a2rchitech.sh
+chmod +x dist/allternit.sh
 
 echo "✅ Distribution ready in ./dist/"

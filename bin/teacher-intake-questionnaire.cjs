@@ -19,11 +19,11 @@ const QUESTIONS = [
   // Introduction
   {
     type: 'intro',
-    text: '\n=== A2R Teacher Preference Intake ===\n',
+    text: '\n=== Allternit Teacher Preference Intake ===\n',
   },
   {
     type: 'info',
-    text: 'This questionnaire helps A2R learn your teaching style.\nAnswer these questions to personalize the system.\n',
+    text: 'This questionnaire helps Allternit learn your teaching style.\nAnswer these questions to personalize the system.\n',
   },
   
   // Formatting Preferences
@@ -183,7 +183,7 @@ const QUESTIONS = [
   },
   {
     type: 'info',
-    text: 'Your preferences have been saved.\nA2R will now use these settings for all assignment creation.\n',
+    text: 'Your preferences have been saved.\nAllternit will now use these settings for all assignment creation.\n',
   },
 ];
 
@@ -231,7 +231,7 @@ function askQuestion(question) {
 
 async function runQuestionnaire() {
   console.log('\n╔════════════════════════════════════════════╗');
-  console.log('║   A2R Teacher Preference Intake            ║');
+  console.log('║   Allternit Teacher Preference Intake            ║');
   console.log('║   Record this session for demo video       ║');
   console.log('╚════════════════════════════════════════════╝\n');
   
@@ -277,7 +277,7 @@ async function runQuestionnaire() {
   console.log('🎬 You can stop recording now.\n');
   
   // Save profile
-  const profilePath = '/Users/macbook/Desktop/A2R_Skills_Test_Results/teacher_profile.json';
+  const profilePath = '/Users/macbook/Desktop/Allternit_Skills_Test_Results/teacher_profile.json';
   const fs = require('fs');
   fs.writeFileSync(profilePath, JSON.stringify({
     teacher_id: 'demo_teacher',

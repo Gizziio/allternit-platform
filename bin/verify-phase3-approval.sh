@@ -1,5 +1,5 @@
 #!/bin/bash
-# A2R Operator - Phase 3: Plan Approval Execution
+# Allternit Operator - Phase 3: Plan Approval Execution
 # Purpose: Prove approval triggers Ralph loop execution
 
 set -e

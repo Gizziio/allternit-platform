@@ -8,7 +8,7 @@ REPO_ROOT=$(pwd)
 GATEWAY_PORT=3098
 VENV_PYTHON=".venv-gateway/bin/python3"
 PID_FILE="gateway_t0412.pid"
-RECEIPT_DIR=".a2r/receipts/test-t0412"
+RECEIPT_DIR=".allternit/receipts/test-t0412"
 
 # Ensure venv exists
 if [ ! -f "$VENV_PYTHON" ]; then
@@ -23,7 +23,7 @@ rm -rf "$RECEIPT_DIR"
 mkdir -p "$RECEIPT_DIR"
 
 export GATEWAY_PORT=$GATEWAY_PORT
-export A2R_RUN_ID="test-t0412"
+export Allternit_RUN_ID="test-t0412"
 export PYTHONPATH=$REPO_ROOT
 
 # Start Gateway

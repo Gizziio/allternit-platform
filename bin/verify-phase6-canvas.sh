@@ -1,5 +1,5 @@
 #!/bin/bash
-# A2R Operator - Phase 6: Canvas Verification
+# Allternit Operator - Phase 6: Canvas Verification
 # Purpose: Prove Canvas objects are created
 
 set -e

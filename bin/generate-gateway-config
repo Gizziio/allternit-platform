@@ -5,8 +5,8 @@ import sys
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 REGISTRY_PATH = os.path.join(ROOT_DIR, "infra", "gateway", "gateway_registry.json")
-OUTPUT_DIR = os.path.join(ROOT_DIR, ".a2r", "config", "gateway")
-PORTS_PATH = os.path.join(ROOT_DIR, ".a2r", "config", "ports.json")
+OUTPUT_DIR = os.path.join(ROOT_DIR, ".allternit", "config", "gateway")
+PORTS_PATH = os.path.join(ROOT_DIR, ".allternit", "config", "ports.json")
 
 
 def generate() -> None:

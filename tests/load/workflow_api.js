@@ -2,13 +2,13 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 
 export const options = {
-	vus: __ENV.A2RCHITECH_VUS ? parseInt(__ENV.A2RCHITECH_VUS, 10) : 10,
-	duration: __ENV.A2RCHITECH_DURATION || '30s'
+	vus: __ENV.Allternit_VUS ? parseInt(__ENV.Allternit_VUS, 10) : 10,
+	duration: __ENV.Allternit_DURATION || '30s'
 };
 
-const BASE_URL = __ENV.A2RCHITECH_BASE_URL || ('http://' + '127.0.0.1' + ':3000');
-const IDENTITY = __ENV.A2RCHITECH_IDENTITY || 'api-service';
-const TENANT = __ENV.A2RCHITECH_TENANT || 'default';
+const BASE_URL = __ENV.Allternit_BASE_URL || ('http://' + '127.0.0.1' + ':3000');
+const IDENTITY = __ENV.Allternit_IDENTITY || 'api-service';
+const TENANT = __ENV.Allternit_TENANT || 'default';
 
 const workflowYaml = `version: "1.0"
 workflow:

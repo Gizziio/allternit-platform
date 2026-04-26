@@ -489,7 +489,7 @@ test.describe('Full Wizard Flow (Mocked API)', () => {
         </head>
         <body>
           <div class="wizard-container">
-            <h1>Deploy A2R to Cloud</h1>
+            <h1>Deploy Allternit to Cloud</h1>
             
             <!-- Step 1: Provider Selection -->
             <div id="step-provider">
@@ -536,7 +536,7 @@ test.describe('Full Wizard Flow (Mocked API)', () => {
             <!-- Step 4: Complete -->
             <div id="step-complete" class="hidden">
               <h2>✅ Setup Complete!</h2>
-              <p>Your A2R instance is being deployed.</p>
+              <p>Your Allternit instance is being deployed.</p>
               <div class="guidance-bar" style="border-left-color: #22c55e; background: rgba(34, 197, 94, 0.1);">
                 <span>🚀</span>
                 <span id="complete-text">Deployment in progress...</span>
@@ -588,7 +588,7 @@ test.describe('Full Wizard Flow (Mocked API)', () => {
     `);
 
     // Step 1: Select provider and start wizard
-    await expect(page.locator('h1')).toContainText('Deploy A2R');
+    await expect(page.locator('h1')).toContainText('Deploy Allternit');
     await expect(page).toHaveScreenshot('flow-01-provider-selection.png');
 
     // Select Hetzner

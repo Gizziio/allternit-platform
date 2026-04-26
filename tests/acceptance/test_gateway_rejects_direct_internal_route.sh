@@ -60,7 +60,7 @@ echo "Starting Gateway on port $GATEWAY_PORT..."
 # I will update main.py to read PORT env var.
 
 export GATEWAY_PORT=$GATEWAY_PORT
-export A2R_RUN_ID="test-t0411"
+export Allternit_RUN_ID="test-t0411"
 
 # Temporary modification to main.py to support PORT env var
 # Actually I'll just write a wrapper or use uvicorn CLI if I can.

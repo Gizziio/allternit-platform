@@ -16,7 +16,7 @@ for line in lines:
 
 # Update the MCP bridge issue to mark as completed
 for i, issue in enumerate(existing_issues):
-    if issue['id'] == 'a2rchitech-1gr.8':
+    if issue['id'] == 'allternit-1gr.8':
         issue['status'] = 'completed'
         issue['close_reason'] = 'MCP (Multi-Agent Coordination Protocol) bridge successfully implemented. Connected agent mail system with coordination leases through unified DataFabric bridge methods: bridge_agent_mail_coordination(), get_coordinated_messages(), and release_coordination_bridge(). The implementation follows Unix philosophy with clear separation of concerns, leveraging existing messaging infrastructure without duplication. API endpoints added at /api/v1/mcp/bridge, /api/v1/mcp/messages/coordinated, and /api/v1/mcp/release. All functionality properly integrated with existing context router, provider router, memory fabric, and policy engine components.'
         issue['closed_at'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%S-06:00')
@@ -28,4 +28,4 @@ with open('.beads/issues.jsonl', 'w') as f:
     for issue in existing_issues:
         f.write(json.dumps(issue) + '\n')
 
-print("MCP bridge issue (a2rchitech-1gr.8) updated to completed status!")
+print("MCP bridge issue (allternit-1gr.8) updated to completed status!")

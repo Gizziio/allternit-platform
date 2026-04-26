@@ -1,5 +1,5 @@
 #!/bin/bash
-# A2R Operator - Phase 9: Failure Path Handling
+# Allternit Operator - Phase 9: Failure Path Handling
 # Purpose: Prove system handles failures gracefully
 
 set -e

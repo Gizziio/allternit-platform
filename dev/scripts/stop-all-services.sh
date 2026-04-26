@@ -1,12 +1,12 @@
 #!/bin/bash
 # =============================================================================
-# A2RCHITECH PLATFORM - STOP ALL SERVICES SCRIPT
+# Allternit PLATFORM - STOP ALL SERVICES SCRIPT
 # =============================================================================
 # Usage: ./stop-all-services.sh [options]
 #
 # Options:
 #   --force   - Force kill with SIGKILL instead of SIGTERM
-#   --all     - Kill all processes on known A2R ports (not just tracked ones)
+#   --all     - Kill all processes on known Allternit ports (not just tracked ones)
 # =============================================================================
 
 set -euo pipefail
@@ -46,7 +46,7 @@ done
 SIGNAL="TERM"
 [[ "$FORCE" == true ]] && SIGNAL="KILL"
 
-log_info "Stopping A2R services..."
+log_info "Stopping Allternit services..."
 
 # Stop tracked services first
 if [[ -d "${PROJECT_ROOT}/.pids" ]]; then
@@ -81,11 +81,11 @@ if [[ -d "${PROJECT_ROOT}/.pids" ]]; then
     done
 fi
 
-# Kill all known A2R ports if --all flag is set
+# Kill all known Allternit ports if --all flag is set
 if [[ "$KILL_ALL" == true ]]; then
-    log_info "Checking all known A2R ports..."
+    log_info "Checking all known Allternit ports..."
     
-    for port in $A2R_ALL_PORTS; do
+    for port in $Allternit_ALL_PORTS; do
         if lsof -Pi :"$port" -sTCP:LISTEN -t >/dev/null 2>&1; then
             log_warn "Found process on port $port, killing..."
             lsof -ti :"$port" | xargs kill -${SIGNAL} 2>/dev/null || true

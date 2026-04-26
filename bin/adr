@@ -33,7 +33,7 @@ if (command === 'new') {
 ' +
 '## Context
 ' +
-'We need to internalize the legacy execution engine into A2R first-party code to ensure interface stability before migrating to Rust.
+'We need to internalize the legacy execution engine into Allternit first-party code to ensure interface stability before migrating to Rust.
 
 ' +
 '## Decision

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # =============================================================================
-# A2RCHITECH PLATFORM - Unified Launcher (ALL SERVICES)
+# Allternit PLATFORM - Unified Launcher (ALL SERVICES)
 # =============================================================================
 # Single command to start EVERY service in the platform
 # Uses centralized port configuration from service-config.sh
@@ -33,7 +33,7 @@ declare -a RUNNING_SERVICES=()
 print_header() {
     echo ""
     echo -e "${CYAN}╔═══════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║${NC}          ${GREEN}A2RCHITECH PLATFORM${NC}                         ${CYAN}║${NC}"
+    echo -e "${CYAN}║${NC}          ${GREEN}Allternit PLATFORM${NC}                         ${CYAN}║${NC}"
     echo -e "${CYAN}║${NC}              ${BLUE}Full Platform Launcher${NC}                    ${CYAN}║${NC}"
     echo -e "${CYAN}╚═══════════════════════════════════════════════════════════╝${NC}"
     echo ""
@@ -47,16 +47,16 @@ print_warning() { echo -e "${YELLOW}[!]${NC} $1"; }
 # Cleanup on exit
 cleanup() {
     echo ""
-    print_status "Stopping A2rchitech Platform..."
+    print_status "Stopping Allternit Platform..."
     
     # Kill by port
-    for port in $A2R_ALL_PORTS; do
+    for port in $Allternit_ALL_PORTS; do
         lsof -ti :$port | xargs kill -9 2>/dev/null || true
     done
     
     # Kill electron/node processes
     pkill -f "electron.*desktop" 2>/dev/null || true
-    pkill -f "vite.*${A2R_SHELL_UI_PORT}" 2>/dev/null || true
+    pkill -f "vite.*${Allternit_SHELL_UI_PORT}" 2>/dev/null || true
     
     # Kill by PID files
     for pidfile in "$LOG_DIR"/*.pid; do
@@ -75,7 +75,7 @@ trap cleanup EXIT INT TERM
 # Kill existing services
 cleanup_existing() {
     print_status "Cleaning up existing processes..."
-    for port in $A2R_ALL_PORTS; do
+    for port in $Allternit_ALL_PORTS; do
         lsof -ti :$port | xargs kill -9 2>/dev/null || true
     done
     sleep 1
@@ -107,12 +107,12 @@ start_terminal() {
         return 0
     fi
     
-    (cd "$TERMINAL_DIR" && bun run src/index.ts serve --port $A2R_TERMINAL_PORT --hostname 127.0.0.1 > "$LOG_DIR/terminal.log" 2>&1) &
+    (cd "$TERMINAL_DIR" && bun run src/index.ts serve --port $Allternit_TERMINAL_PORT --hostname 127.0.0.1 > "$LOG_DIR/terminal.log" 2>&1) &
     echo $! > "$LOG_DIR/terminal.pid"
     
-    if wait_for_service $A2R_TERMINAL_PORT "Terminal" 30 "/doc"; then
-        print_success "Terminal Server started (port $A2R_TERMINAL_PORT)"
-        RUNNING_SERVICES+=("Terminal:$A2R_TERMINAL_PORT")
+    if wait_for_service $Allternit_TERMINAL_PORT "Terminal" 30 "/doc"; then
+        print_success "Terminal Server started (port $Allternit_TERMINAL_PORT)"
+        RUNNING_SERVICES+=("Terminal:$Allternit_TERMINAL_PORT")
         return 0
     else
         print_error "Terminal Server failed to start"
@@ -130,12 +130,12 @@ start_policy() {
         return 0
     fi
     
-    (cd "$POLICY_DIR" && PORT=$A2R_POLICY_PORT cargo run --release > "$LOG_DIR/policy.log" 2>&1) &
+    (cd "$POLICY_DIR" && PORT=$Allternit_POLICY_PORT cargo run --release > "$LOG_DIR/policy.log" 2>&1) &
     echo $! > "$LOG_DIR/policy.pid"
     
     sleep 3
-    print_success "Policy Service started (port $A2R_POLICY_PORT)"
-    RUNNING_SERVICES+=("Policy:$A2R_POLICY_PORT")
+    print_success "Policy Service started (port $Allternit_POLICY_PORT)"
+    RUNNING_SERVICES+=("Policy:$Allternit_POLICY_PORT")
 }
 
 # Start Memory Service
@@ -148,12 +148,12 @@ start_memory() {
         return 0
     fi
     
-    (cd "$MEMORY_DIR" && PORT=$A2R_MEMORY_PORT cargo run --release > "$LOG_DIR/memory.log" 2>&1) &
+    (cd "$MEMORY_DIR" && PORT=$Allternit_MEMORY_PORT cargo run --release > "$LOG_DIR/memory.log" 2>&1) &
     echo $! > "$LOG_DIR/memory.pid"
     
     sleep 3
-    print_success "Memory Service started (port $A2R_MEMORY_PORT)"
-    RUNNING_SERVICES+=("Memory:$A2R_MEMORY_PORT")
+    print_success "Memory Service started (port $Allternit_MEMORY_PORT)"
+    RUNNING_SERVICES+=("Memory:$Allternit_MEMORY_PORT")
 }
 
 # Start Registry Service
@@ -166,12 +166,12 @@ start_registry() {
         return 0
     fi
     
-    (cd "$REGISTRY_DIR" && PORT=$A2R_REGISTRY_PORT cargo run --release > "$LOG_DIR/registry.log" 2>&1) &
+    (cd "$REGISTRY_DIR" && PORT=$Allternit_REGISTRY_PORT cargo run --release > "$LOG_DIR/registry.log" 2>&1) &
     echo $! > "$LOG_DIR/registry.pid"
     
     sleep 3
-    print_success "Registry Service started (port $A2R_REGISTRY_PORT)"
-    RUNNING_SERVICES+=("Registry:$A2R_REGISTRY_PORT")
+    print_success "Registry Service started (port $Allternit_REGISTRY_PORT)"
+    RUNNING_SERVICES+=("Registry:$Allternit_REGISTRY_PORT")
 }
 
 # Start Voice Service
@@ -184,12 +184,12 @@ start_voice() {
         return 0
     fi
     
-    (cd "$VOICE_DIR" && source .venv/bin/activate 2>/dev/null || true && PORT=$A2R_VOICE_PORT python api/main.py > "$LOG_DIR/voice.log" 2>&1) &
+    (cd "$VOICE_DIR" && source .venv/bin/activate 2>/dev/null || true && PORT=$Allternit_VOICE_PORT python api/main.py > "$LOG_DIR/voice.log" 2>&1) &
     echo $! > "$LOG_DIR/voice.pid"
     
     sleep 2
-    print_success "Voice Service started (port $A2R_VOICE_PORT)"
-    RUNNING_SERVICES+=("Voice:$A2R_VOICE_PORT")
+    print_success "Voice Service started (port $Allternit_VOICE_PORT)"
+    RUNNING_SERVICES+=("Voice:$Allternit_VOICE_PORT")
 }
 
 # Start WebVM Service
@@ -202,48 +202,48 @@ start_webvm() {
         return 0
     fi
     
-    (cd "$WEBVM_DIR" && PORT=$A2R_WEBVM_PORT cargo run --release --bin webvm-service > "$LOG_DIR/webvm.log" 2>&1) &
+    (cd "$WEBVM_DIR" && PORT=$Allternit_WEBVM_PORT cargo run --release --bin webvm-service > "$LOG_DIR/webvm.log" 2>&1) &
     echo $! > "$LOG_DIR/webvm.pid"
     
     sleep 3
-    print_success "WebVM Service started (port $A2R_WEBVM_PORT)"
-    RUNNING_SERVICES+=("WebVM:$A2R_WEBVM_PORT")
+    print_success "WebVM Service started (port $Allternit_WEBVM_PORT)"
+    RUNNING_SERVICES+=("WebVM:$Allternit_WEBVM_PORT")
 }
 
 # Start Operator Service
 start_operator() {
     print_status "Starting Operator Service..."
-    OPERATOR_DIR="$PROJECT_ROOT/4-services/a2r-operator"
+    OPERATOR_DIR="$PROJECT_ROOT/4-services/allternit-operator"
     
     if [ ! -d "$OPERATOR_DIR" ]; then
         print_warning "Operator directory not found, skipping..."
         return 0
     fi
     
-    (cd "$OPERATOR_DIR" && source .venv/bin/activate 2>/dev/null || true && PORT=$A2R_OPERATOR_PORT python src/main.py > "$LOG_DIR/operator.log" 2>&1) &
+    (cd "$OPERATOR_DIR" && source .venv/bin/activate 2>/dev/null || true && PORT=$Allternit_OPERATOR_PORT python src/main.py > "$LOG_DIR/operator.log" 2>&1) &
     echo $! > "$LOG_DIR/operator.pid"
     
     sleep 3
-    print_success "Operator Service started (port $A2R_OPERATOR_PORT)"
-    RUNNING_SERVICES+=("Operator:$A2R_OPERATOR_PORT")
+    print_success "Operator Service started (port $Allternit_OPERATOR_PORT)"
+    RUNNING_SERVICES+=("Operator:$Allternit_OPERATOR_PORT")
 }
 
 # Start Rails Service
 start_rails() {
     print_status "Starting Rails Service..."
-    RAILS_DIR="$PROJECT_ROOT/a2r-agent-system-rails"
+    RAILS_DIR="$PROJECT_ROOT/allternit-agent-system-rails"
     
     if [ ! -d "$RAILS_DIR" ]; then
         print_warning "Rails directory not found, skipping..."
         return 0
     fi
     
-    (cd "$RAILS_DIR" && PORT=$A2R_RAILS_PORT cargo run --bin a2r-rails-service --release > "$LOG_DIR/rails.log" 2>&1) &
+    (cd "$RAILS_DIR" && PORT=$Allternit_RAILS_PORT cargo run --bin allternit-rails-service --release > "$LOG_DIR/rails.log" 2>&1) &
     echo $! > "$LOG_DIR/rails.pid"
     
     sleep 3
-    print_success "Rails Service started (port $A2R_RAILS_PORT)"
-    RUNNING_SERVICES+=("Rails:$A2R_RAILS_PORT")
+    print_success "Rails Service started (port $Allternit_RAILS_PORT)"
+    RUNNING_SERVICES+=("Rails:$Allternit_RAILS_PORT")
 }
 
 # Start Kernel Service
@@ -256,12 +256,12 @@ start_kernel() {
         return 0
     fi
     
-    (cd "$KERNEL_DIR" && PORT=$A2R_KERNEL_PORT cargo run --release > "$LOG_DIR/kernel.log" 2>&1) &
+    (cd "$KERNEL_DIR" && PORT=$Allternit_KERNEL_PORT cargo run --release > "$LOG_DIR/kernel.log" 2>&1) &
     echo $! > "$LOG_DIR/kernel.pid"
     
     sleep 3
-    print_success "Kernel Service started (port $A2R_KERNEL_PORT)"
-    RUNNING_SERVICES+=("Kernel:$A2R_KERNEL_PORT")
+    print_success "Kernel Service started (port $Allternit_KERNEL_PORT)"
+    RUNNING_SERVICES+=("Kernel:$Allternit_KERNEL_PORT")
 }
 
 # Start Gateway (Main)
@@ -274,12 +274,12 @@ start_gateway() {
         return 0
     fi
     
-    (cd "$GATEWAY_DIR" && PORT=$A2R_GATEWAY_PORT python -m uvicorn src.main:app --port $A2R_GATEWAY_PORT --host 127.0.0.1 > "$LOG_DIR/gateway.log" 2>&1) &
+    (cd "$GATEWAY_DIR" && PORT=$Allternit_GATEWAY_PORT python -m uvicorn src.main:app --port $Allternit_GATEWAY_PORT --host 127.0.0.1 > "$LOG_DIR/gateway.log" 2>&1) &
     echo $! > "$LOG_DIR/gateway.pid"
     
     sleep 3
-    print_success "Main Gateway started (port $A2R_GATEWAY_PORT)"
-    RUNNING_SERVICES+=("Gateway:$A2R_GATEWAY_PORT")
+    print_success "Main Gateway started (port $Allternit_GATEWAY_PORT)"
+    RUNNING_SERVICES+=("Gateway:$Allternit_GATEWAY_PORT")
 }
 
 # Start AGUI Gateway
@@ -292,12 +292,12 @@ start_agui() {
         return 0
     fi
     
-    (cd "$AGUI_DIR" && PORT=$A2R_AGUI_PORT npm run dev > "$LOG_DIR/agui.log" 2>&1) &
+    (cd "$AGUI_DIR" && PORT=$Allternit_AGUI_PORT npm run dev > "$LOG_DIR/agui.log" 2>&1) &
     echo $! > "$LOG_DIR/agui.pid"
     
     sleep 3
-    print_success "AGUI Gateway started (port $A2R_AGUI_PORT)"
-    RUNNING_SERVICES+=("AGUI:$A2R_AGUI_PORT")
+    print_success "AGUI Gateway started (port $Allternit_AGUI_PORT)"
+    RUNNING_SERVICES+=("AGUI:$Allternit_AGUI_PORT")
 }
 
 # Start A2A Gateway
@@ -310,12 +310,12 @@ start_a2a() {
         return 0
     fi
     
-    (cd "$A2A_DIR" && PORT=$A2R_A2A_PORT npm run dev > "$LOG_DIR/a2a.log" 2>&1) &
+    (cd "$A2A_DIR" && PORT=$Allternit_A2A_PORT npm run dev > "$LOG_DIR/a2a.log" 2>&1) &
     echo $! > "$LOG_DIR/a2a.pid"
     
     sleep 3
-    print_success "A2A Gateway started (port $A2R_A2A_PORT)"
-    RUNNING_SERVICES+=("A2A:$A2R_A2A_PORT")
+    print_success "A2A Gateway started (port $Allternit_A2A_PORT)"
+    RUNNING_SERVICES+=("A2A:$Allternit_A2A_PORT")
 }
 
 # Start OpenClaw
@@ -357,14 +357,14 @@ start_api() {
         return 1
     fi
     
-    (cd "$API_DIR" && PORT=$A2R_API_PORT cargo run --release > "$LOG_DIR/api.log" 2>&1) &
+    (cd "$API_DIR" && PORT=$Allternit_API_PORT cargo run --release > "$LOG_DIR/api.log" 2>&1) &
     echo $! > "$LOG_DIR/api.pid"
     
     print_status "Waiting for API to compile and start..."
     for i in {1..90}; do
-        if curl -s "http://127.0.0.1:${A2R_API_PORT}/health" > /dev/null 2>&1; then
-            print_success "API Service ready (port $A2R_API_PORT)"
-            RUNNING_SERVICES+=("API:$A2R_API_PORT")
+        if curl -s "http://127.0.0.1:${Allternit_API_PORT}/health" > /dev/null 2>&1; then
+            print_success "API Service ready (port $Allternit_API_PORT)"
+            RUNNING_SERVICES+=("API:$Allternit_API_PORT")
             return 0
         fi
         sleep 2
@@ -374,7 +374,7 @@ start_api() {
     done
     
     print_warning "API still starting in background..."
-    RUNNING_SERVICES+=("API:$A2R_API_PORT")
+    RUNNING_SERVICES+=("API:$Allternit_API_PORT")
 }
 
 # Start Shell UI
@@ -388,15 +388,15 @@ start_shell_ui() {
     fi
     
     cat > "$SHELL_DIR/.env.development.local" << EOF
-VITE_TERMINAL_SERVER_URL=http://127.0.0.1:${A2R_TERMINAL_PORT}
+VITE_TERMINAL_SERVER_URL=http://127.0.0.1:${Allternit_TERMINAL_PORT}
 EOF
     
-    (cd "$SHELL_DIR" && PORT=$A2R_SHELL_UI_PORT npm run dev > "$LOG_DIR/shell-ui.log" 2>&1) &
+    (cd "$SHELL_DIR" && PORT=$Allternit_SHELL_UI_PORT npm run dev > "$LOG_DIR/shell-ui.log" 2>&1) &
     echo $! > "$LOG_DIR/shell-ui.pid"
     
     sleep 3
-    print_success "Shell UI started (port $A2R_SHELL_UI_PORT)"
-    RUNNING_SERVICES+=("ShellUI:$A2R_SHELL_UI_PORT")
+    print_success "Shell UI started (port $Allternit_SHELL_UI_PORT)"
+    RUNNING_SERVICES+=("ShellUI:$Allternit_SHELL_UI_PORT")
 }
 
 # Start Electron Desktop App
@@ -426,7 +426,7 @@ check_chrome_streaming() {
     fi
     
     # Check if Docker image exists
-    if ! docker image inspect a2r/chrome-stream &> /dev/null; then
+    if ! docker image inspect allternit/chrome-stream &> /dev/null; then
         return 1
     fi
     
@@ -501,7 +501,7 @@ start_chrome_streaming() {
 show_status() {
     echo ""
     echo -e "${CYAN}═══════════════════════════════════════════════════════════${NC}"
-    echo -e "${GREEN}A2RCHITECH PLATFORM - ALL SERVICES RUNNING${NC}"
+    echo -e "${GREEN}Allternit PLATFORM - ALL SERVICES RUNNING${NC}"
     echo -e "${CYAN}═══════════════════════════════════════════════════════════${NC}"
     echo ""
     

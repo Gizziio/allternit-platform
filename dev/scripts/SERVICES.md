@@ -1,4 +1,4 @@
-# A2RCHITECH Platform Services
+# Allternit Platform Services
 
 ## Quick Start
 
@@ -17,9 +17,9 @@
 
 | Service | Port | Purpose | Binary | Status |
 |---------|------|---------|--------|--------|
-| **API** | 3000 | Main API service | `a2rchitech-api` | ✅ Running |
+| **API** | 3000 | Main API service | `allternit-api` | ✅ Running |
 | **Workspace** | 3021 | Terminal workspace with tmux | `workspace-service` | ✅ Running |
-| **Rails** | 3011 | Agent system rails | `a2r-rails-service` | ✅ Running |
+| **Rails** | 3011 | Agent system rails | `allternit-rails-service` | ✅ Running |
 | Kernel | 3004 | Orchestration kernel | `kernel` | ⏸️ Not started |
 | Policy | 3003 | Policy enforcement | `policy-service` | ⏸️ Not started |
 | Voice | 8001 | AI Voice/TTS | `voice-service` | ⏸️ Not started |
@@ -53,16 +53,16 @@ For the **Console Drawer Terminal** to work fully, you need:
 
 ```bash
 # API (already running)
-export A2RCHITECH_API_BIND="0.0.0.0:3000"
-./target/release/a2rchitech-api
+export Allternit_API_BIND="0.0.0.0:3000"
+./target/release/allternit-api
 
 # Workspace (already running)
 export WORKSPACE_SERVICE_PORT=3021
 ./target/release/workspace-service
 
 # Rails (already running)
-export A2R_RAILS_PORT=3011
-./target/release/a2r-rails-service
+export Allternit_RAILS_PORT=3011
+./target/release/allternit-rails-service
 ```
 
 ### Check logs
@@ -82,8 +82,8 @@ Source the service config to get all ports:
 
 ```bash
 source ./dev/scripts/service-config.sh
-echo $A2R_API_PORT      # 3000
-echo $A2R_RAILS_PORT    # 3011
+echo $Allternit_API_PORT      # 3000
+echo $Allternit_RAILS_PORT    # 3011
 echo $WORKSPACE_SERVICE_PORT  # 3021 (not in config, defaults to 3021)
 ```
 
@@ -115,14 +115,14 @@ kill $(lsof -ti :3021)
 
 ### Build failures
 
-If workspace-service or a2r-agent-system-rails fail to build:
+If workspace-service or allternit-agent-system-rails fail to build:
 
 ```bash
 # Ensure they're in workspace members
 grep "workspace-service" Cargo.toml
-grep "a2r-agent-system-rails" Cargo.toml
+grep "allternit-agent-system-rails" Cargo.toml
 
 # Build from project root
 cargo build --release -p workspace-service
-cargo build --release -p a2r-agent-system-rails
+cargo build --release -p allternit-agent-system-rails
 ```

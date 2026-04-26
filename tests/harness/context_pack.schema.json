@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://a2rchitech.com/schemas/context_pack.v1.schema.json",
+  "$id": "https://allternit.com/schemas/context_pack.v1.schema.json",
   "title": "ContextPack",
   "description": "Deterministic context bundle for WIH execution. Must include LAW + SOT + Architecture + Contracts + WIH.",
   "version": "1.0.0",

@@ -1,0 +1,442 @@
+<!-- A://labs Courses Page -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Courses - A://labs</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0f;
+      color: #ffffff;
+      line-height: 1.6;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+    
+    /* Header */
+    .header {
+      background: #12121a;
+      border-bottom: 1px solid #2a2a3e;
+      padding: 20px 0;
+    }
+    
+    .header-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 20px;
+      font-weight: 700;
+      color: #ffffff;
+      text-decoration: none;
+    }
+    
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #00d4ff, #8338ec);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .nav {
+      display: flex;
+      gap: 32px;
+    }
+    
+    .nav a {
+      color: #a0a0b0;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: color 0.3s ease;
+    }
+    
+    .nav a:hover {
+      color: #00d4ff;
+    }
+    
+    .nav a.active {
+      color: #00d4ff;
+    }
+    
+    /* Hero Section */
+    .hero {
+      background: linear-gradient(135deg, #0a0a0f 0%, #12121a 100%);
+      padding: 80px 0;
+      text-align: center;
+      border-bottom: 1px solid #2a2a3e;
+    }
+    
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0, 212, 255, 0.1);
+      border: 1px solid rgba(0, 212, 255, 0.25);
+      padding: 8px 16px;
+      border-radius: 20px;
+      margin-bottom: 24px;
+    }
+    
+    .hero-badge span {
+      color: #00d4ff;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    
+    .hero h1 {
+      font-size: 48px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+    
+    .hero h1 span {
+      background: linear-gradient(135deg, #00d4ff 0%, #8338ec 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .hero p {
+      color: #a0a0b0;
+      font-size: 19px;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    
+    /* Courses Grid */
+    .courses-section {
+      padding: 60px 0;
+    }
+    
+    .section-header {
+      margin-bottom: 40px;
+    }
+    
+    .section-header h2 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    
+    .section-header p {
+      color: #a0a0b0;
+      font-size: 15px;
+    }
+    
+    .courses-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 24px;
+    }
+    
+    /* Course Card */
+    .course-card {
+      background: #12121a;
+      border: 1px solid #2a2a3e;
+      border-radius: 16px;
+      overflow: hidden;
+      transition: all 0.3s ease;
+    }
+    
+    .course-card:hover {
+      border-color: rgba(0, 212, 255, 0.3);
+      box-shadow: 0 4px 20px rgba(0, 212, 255, 0.1);
+      transform: translateY(-4px);
+    }
+    
+    .course-banner {
+      height: 180px;
+      background: linear-gradient(135deg, #0a0a0f 0%, #1e1e2e 100%);
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .course-banner::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 30% 50%, rgba(0, 212, 255, 0.15) 0%, transparent 60%);
+    }
+    
+    .course-badge {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      background: rgba(0, 212, 255, 0.15);
+      color: #00d4ff;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      border: 1px solid rgba(0, 212, 255, 0.3);
+    }
+    
+    .course-icon {
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, #00d4ff, #8338ec);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 40px rgba(0, 212, 255, 0.3);
+      position: relative;
+      z-index: 1;
+    }
+    
+    .course-content {
+      padding: 24px;
+    }
+    
+    .course-content h3 {
+      font-size: 19px;
+      font-weight: 700;
+      margin-bottom: 10px;
+      color: #ffffff;
+    }
+    
+    .course-content p {
+      color: #a0a0b0;
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+    
+    .course-meta {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #2a2a3e;
+    }
+    
+    .course-meta span {
+      color: #6b6b7b;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    
+    .enroll-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #00d4ff, #0099cc);
+      color: #0a0a0f;
+      padding: 14px 24px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 15px;
+      transition: all 0.3s ease;
+    }
+    
+    .enroll-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3);
+    }
+    
+    .syllabus-link {
+      display: block;
+      text-align: center;
+      margin-top: 12px;
+      color: #6b6b7b;
+      font-size: 13px;
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+    
+    .syllabus-link:hover {
+      color: #00d4ff;
+    }
+    
+    /* Footer */
+    .footer {
+      background: #12121a;
+      border-top: 1px solid #2a2a3e;
+      padding: 40px 0;
+      margin-top: 80px;
+      text-align: center;
+    }
+    
+    .footer p {
+      color: #6b6b7b;
+      font-size: 14px;
+    }
+    
+    .footer span {
+      color: #00d4ff;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="container">
+      <div class="header-content">
+        <a href="/" class="logo">
+          <div class="logo-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0a0a0f" stroke-width="2.5">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+              <path d="M2 17l10 5 10-5"/>
+              <path d="M2 12l10 5 10-5"/>
+            </svg>
+          </div>
+          A://labs
+        </a>
+        <nav class="nav">
+          <a href="/">Home</a>
+          <a href="/marketplace">Marketplace</a>
+          <a href="/courses" class="active">Courses</a>
+          <a href="/docs">Docs</a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-badge">
+        <span>LEARNING PATHS</span>
+      </div>
+      <h1>Master <span>Agentic Systems</span></h1>
+      <p>Comprehensive courses designed to take you from fundamentals to building production-ready AI applications within the allternit protocol.</p>
+    </div>
+  </section>
+
+  <!-- Courses -->
+  <section class="courses-section">
+    <div class="container">
+      <div class="section-header">
+        <h2>Featured Courses</h2>
+        <p>Begin your journey into agentic intelligence</p>
+      </div>
+      
+      <div class="courses-grid">
+        <!-- Course Card: AI-101 -->
+        <div class="course-card">
+          <div class="course-banner">
+            <div class="course-badge">A://AI-101</div>
+            <div class="course-icon">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#0a0a0f" stroke-width="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                <path d="M2 17l10 5 10-5"/>
+                <path d="M2 12l10 5 10-5"/>
+              </svg>
+            </div>
+          </div>
+          <div class="course-content">
+            <h3>Agentic Intelligence & Machine Learning</h3>
+            <p>Master AI fundamentals and build intelligent agentic systems within the allternit protocol. From neural networks to transformers.</p>
+            <div class="course-meta">
+              <span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M12 6v6l4 2"/>
+                </svg>
+                8 Weeks
+              </span>
+              <span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                </svg>
+                6 Modules
+              </span>
+              <span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                  <path d="M2 17l10 5 10-5"/>
+                </svg>
+                Beginner
+              </span>
+            </div>
+            <a href="https://canvas.instructure.com/enroll/14389375" class="enroll-btn">
+              Enroll Now
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M5 12h14"/>
+                <path d="M12 5l7 7-7 7"/>
+              </svg>
+            </a>
+            <a href="https://canvas.instructure.com/courses/14389375/pages/syllabus" class="syllabus-link">
+              View Syllabus →
+            </a>
+          </div>
+        </div>
+
+        <!-- Placeholder for future courses -->
+        <div class="course-card" style="opacity: 0.6;">
+          <div class="course-banner" style="background: linear-gradient(135deg, #1e1e2e 0%, #0a0a0f 100%);">
+            <div class="course-badge" style="background: rgba(131, 56, 236, 0.15); color: #8338ec; border-color: rgba(131, 56, 236, 0.3);">COMING SOON</div>
+            <div class="course-icon" style="background: linear-gradient(135deg, #8338ec, #6622cc);">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#0a0a0f" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+            </div>
+          </div>
+          <div class="course-content">
+            <h3>Advanced Agentic Systems</h3>
+            <p>Build production-grade autonomous agents. Multi-agent orchestration, safety, and deployment at scale.</p>
+            <div class="course-meta">
+              <span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M12 6v6l4 2"/>
+                </svg>
+                10 Weeks
+              </span>
+              <span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                  <path d="M2 17l10 5 10-5"/>
+                </svg>
+                Advanced
+              </span>
+            </div>
+            <a href="#" class="enroll-btn" style="background: #2a2a3e; color: #6b6b7b; cursor: not-allowed;" onclick="return false;">
+              Coming Soon
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <p><span>A://labs</span> — powered by allternit protocol</p>
+    </div>
+  </footer>
+</body>
+</html>

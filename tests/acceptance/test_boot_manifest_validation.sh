@@ -6,7 +6,7 @@ if [ -x ".venv-law/bin/python" ]; then
   PYTHON_BIN=".venv-law/bin/python"
 fi
 
-boot_dir=".a2r/boot"
+boot_dir=".allternit/boot"
 manifest_path="$boot_dir/boot_manifest.json"
 
 mkdir -p "$boot_dir"

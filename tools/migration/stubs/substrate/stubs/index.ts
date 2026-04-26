@@ -6,9 +6,9 @@ export * from './logger.stub';
 export * from './config.stub';
 
 // 0-substrate/stubs/logger.stub.ts
-import type { A2RLogger } from '../types/contracts';
+import type { AllternitLogger } from '../types/contracts';
 
-export class StubLogger implements A2RLogger {
+export class StubLogger implements AllternitLogger {
   info(message: string, meta?: any): void {
     console.log(`[INFO] ${message}`, meta || '');
   }
@@ -29,9 +29,9 @@ export class StubLogger implements A2RLogger {
 }
 
 // 0-substrate/stubs/config.stub.ts
-import type { A2RConfig } from '../types/contracts';
+import type { AllternitConfig } from '../types/contracts';
 
-export class StubConfig implements A2RConfig {
+export class StubConfig implements AllternitConfig {
   private config: Record<string, any> = {};
 
   constructor(initialConfig?: Record<string, any>) {
@@ -46,7 +46,7 @@ export class StubConfig implements A2RConfig {
     this.config[key] = value;
   }
 
-  merge(other: A2RConfig): void {
+  merge(other: AllternitConfig): void {
     this.config = { ...this.config, ...other };
   }
 

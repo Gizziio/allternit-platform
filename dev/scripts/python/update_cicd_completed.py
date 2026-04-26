@@ -16,7 +16,7 @@ for line in lines:
 
 # Update the CI/CD pipeline issue to mark as completed
 for i, issue in enumerate(existing_issues):
-    if issue['id'] == 'a2rchitech-1gr.10':
+    if issue['id'] == 'allternit-1gr.10':
         issue['status'] = 'completed'
         issue['close_reason'] = 'CI/CD pipeline fully implemented with comprehensive workflow covering linting (fmt, clippy), testing (unit, integration, e2e), building (cross-platform for Linux/Windows/Mac), and container builds. Release workflow documented in RELEASE_WORKFLOW.md with proper versioning strategy, pre-release checklist, and rollback procedures. Container build jobs added for API, CLI, and Python Gateway services with optimized Dockerfiles for production deployment.'
         issue['closed_at'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%S-06:00')
@@ -28,4 +28,4 @@ with open('.beads/issues.jsonl', 'w') as f:
     for issue in existing_issues:
         f.write(json.dumps(issue) + '\n')
 
-print("CI/CD pipeline issue (a2rchitech-1gr.10) updated to completed status!")
+print("CI/CD pipeline issue (allternit-1gr.10) updated to completed status!")

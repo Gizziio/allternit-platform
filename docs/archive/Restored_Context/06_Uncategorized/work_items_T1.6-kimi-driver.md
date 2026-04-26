@@ -1,0 +1,79 @@
+---
+wih_version: 1
+work_item_id: "T1.6"
+title: "Implement Kimi Driver"
+owner_role: "orchestrator"
+assigned_roles:
+  builder: "agent.builder"
+  validator: "agent.validator"
+inputs:
+  sot: "/docs/research/txtx-axel-analysis.md"
+  requirements:
+    - "Implement SkillDriver for Kimi CLI"
+    - "Handle .kimi/skills/ directory"
+  context_packs:
+    - "infrastructure/allternit-skill-portability/src/drivers/mod.rs"
+    - "~/.kimi/ structure"
+  artifacts_from_deps:
+    - "T1.2"
+scope:
+  allowed_paths:
+    - "infrastructure/allternit-skill-portability/src/drivers/kimi.rs"
+    - "infrastructure/allternit-skill-portability/src/drivers/mod.rs"
+  allowed_tools:
+    - "fs.read"
+    - "fs.write"
+    - "cargo.build"
+    - "cargo.test"
+  execution_permission:
+    mode: "write_leased"
+outputs:
+  required_artifacts:
+    - "infrastructure/allternit-skill-portability/src/drivers/kimi.rs"
+  required_reports:
+    - "kimi_driver_report.md"
+acceptance:
+  tests:
+    - "cargo test -p allternit-skill-portability kimi"
+  invariants:
+    - "Driver installs skills to ~/.kimi/skills/"
+  evidence:
+    - "kimi_driver_report.md"
+blockers:
+  fail_on:
+    - "invalid_kimi_path"
+stop_conditions:
+  escalate_if:
+    - "kimi_api_change"
+  max_iterations: 5
+---
+
+# Implement Kimi Driver
+
+## Objective
+Implement the SkillDriver trait for Kimi CLI integration.
+
+## Implementation Details
+
+### Target Directory
+- `~/.kimi/skills/` for global skills
+- `.kimi/skills/` for workspace-local skills
+
+### Configuration Format
+Kimi uses individual skill files in a skills directory:
+```
+.kimi/
+└── skills/
+    ├── skill1.md
+    └── skill2.md
+```
+
+### Methods to Implement
+1. `install_skill()` - Copy skill to skills dir
+2. `remove_skill()` - Remove skill file
+3. `list_skills()` - List skills directory
+4. `skill_format()` - Return Markdown format
+
+## Notes
+- Similar structure to OpenCode
+- May need to handle Kimi-specific metadata

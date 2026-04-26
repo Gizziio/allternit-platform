@@ -1,0 +1,222 @@
+{
+  "course": {
+    "title": "Introduction to AI & Machine Learning",
+    "code": "AI-ML-101",
+    "version": "1.0.0",
+    "description": "A comprehensive 8-week course on artificial intelligence and machine learning fundamentals",
+    "author": "AI Course Development Team",
+    "license": "Educational Use",
+    "prerequisites": [
+      "Basic Python programming",
+      "High school mathematics"
+    ],
+    "duration": {
+      "weeks": 8,
+      "hours_per_week": 5,
+      "total_hours": "40-50"
+    },
+    "level": "Beginner",
+    "format": "Self-paced online"
+  },
+  "structure": {
+    "pages": [
+      {
+        "id": "home",
+        "title": "Home Page",
+        "file": "home-page.html",
+        "type": "home"
+      },
+      {
+        "id": "syllabus",
+        "title": "Syllabus",
+        "file": "syllabus.html",
+        "type": "syllabus"
+      },
+      {
+        "id": "resources",
+        "title": "Resources",
+        "file": "resources.html",
+        "type": "resource"
+      }
+    ],
+    "modules": [
+      {
+        "id": "module-01",
+        "name": "Module 1: Foundations of AI",
+        "position": 1,
+        "duration_hours": 4,
+        "items": [
+          { "type": "page", "title": "Module 1 Overview", "file": "modules/module-01-overview.html" },
+          { "type": "page", "title": "1.1 What is Artificial Intelligence?", "file": "modules/module-01-content.html", "section": "1.1" },
+          { "type": "page", "title": "1.2 History of AI", "file": "modules/module-01-content.html", "section": "1.2" },
+          { "type": "page", "title": "1.3 Types of AI", "file": "modules/module-01-content.html", "section": "1.3" },
+          { "type": "discussion", "title": "Discussion: Introductions & Your AI Journey", "file": "modules/module-01-discussion.html" },
+          { "type": "quiz", "title": "Module 1 Quiz: Foundations of AI", "file": "modules/module-01-quiz.md", "questions": 10, "time_minutes": 20 }
+        ]
+      },
+      {
+        "id": "module-02",
+        "name": "Module 2: Machine Learning Basics",
+        "position": 2,
+        "duration_hours": 5,
+        "items": [
+          { "type": "page", "title": "Module 2 Overview", "file": "modules/module-02-overview.html" },
+          { "type": "page", "title": "2.1 The ML Workflow", "file": "modules/module-02-content.html", "section": "2.1" },
+          { "type": "page", "title": "2.2 Data Preparation", "file": "modules/module-02-content.html", "section": "2.2" },
+          { "type": "page", "title": "2.3 Evaluation Metrics", "file": "modules/module-02-content.html", "section": "2.3" },
+          { "type": "discussion", "title": "Discussion: Real-World ML Applications" },
+          { "type": "assignment", "title": "Lab: Exploring the Iris Dataset", "file": "modules/module-02-lab.ipynb", "points": 50 },
+          { "type": "quiz", "title": "Module 2 Quiz: ML Fundamentals", "questions": 10, "time_minutes": 20 }
+        ]
+      },
+      {
+        "id": "module-03",
+        "name": "Module 3: Supervised Learning",
+        "position": 3,
+        "duration_hours": 6,
+        "items": [
+          { "type": "page", "title": "Module 3 Overview", "file": "modules/module-03-overview.html" },
+          { "type": "page", "title": "3.1 Linear Regression" },
+          { "type": "page", "title": "3.2 Logistic Regression" },
+          { "type": "page", "title": "3.3 Decision Trees" },
+          { "type": "page", "title": "3.4 Ensemble Methods" },
+          { "type": "discussion", "title": "Discussion: Interpretability vs Performance" },
+          { "type": "assignment", "title": "Assignment: Housing Price Prediction", "points": 100 },
+          { "type": "quiz", "title": "Module 3 Quiz: Supervised Learning", "questions": 12, "time_minutes": 25 }
+        ]
+      },
+      {
+        "id": "module-04",
+        "name": "Module 4: Neural Networks",
+        "position": 4,
+        "duration_hours": 7,
+        "items": [
+          { "type": "page", "title": "Module 4 Overview", "file": "modules/module-04-overview.html" },
+          { "type": "page", "title": "4.1 Biological Inspiration" },
+          { "type": "page", "title": "4.2 The Perceptron" },
+          { "type": "page", "title": "4.3 Multi-Layer Networks" },
+          { "type": "page", "title": "4.4 Backpropagation" },
+          { "type": "page", "title": "4.5 Activation Functions" },
+          { "type": "page", "title": "4.6 TensorFlow & Keras" },
+          { "type": "discussion", "title": "Discussion: The Black Box Problem" },
+          { "type": "assignment", "title": "Lab: Neural Network from Scratch", "points": 75 },
+          { "type": "assignment", "title": "Assignment: Digit Recognition", "points": 100 },
+          { "type": "quiz", "title": "Module 4 Quiz: Neural Networks", "questions": 15, "time_minutes": 30 }
+        ]
+      },
+      {
+        "id": "module-05",
+        "name": "Module 5: Deep Learning",
+        "position": 5,
+        "duration_hours": 8,
+        "items": [
+          { "type": "page", "title": "Module 5 Overview", "file": "modules/module-05-overview.html" },
+          { "type": "page", "title": "5.1 The Deep Learning Revolution" },
+          { "type": "page", "title": "5.2 CNNs for Computer Vision" },
+          { "type": "page", "title": "5.3 RNNs for Sequences" },
+          { "type": "page", "title": "5.4 Regularization Techniques" },
+          { "type": "page", "title": "5.5 Transfer Learning" },
+          { "type": "page", "title": "5.6 PyTorch Introduction" },
+          { "type": "discussion", "title": "Discussion: Deep Learning Applications" },
+          { "type": "assignment", "title": "Lab: Image Classification with CNNs", "points": 100 },
+          { "type": "assignment", "title": "Assignment: Sentiment with RNNs", "points": 100 },
+          { "type": "quiz", "title": "Module 5 Quiz: Deep Learning", "questions": 15, "time_minutes": 30 }
+        ]
+      },
+      {
+        "id": "module-06",
+        "name": "Module 6: NLP & Transformers",
+        "position": 6,
+        "duration_hours": 9,
+        "items": [
+          { "type": "page", "title": "Module 6 Overview", "file": "modules/module-06-overview.html" },
+          { "type": "page", "title": "6.1 NLP Fundamentals" },
+          { "type": "page", "title": "6.2 Word Embeddings" },
+          { "type": "page", "title": "6.3 Attention Mechanisms" },
+          { "type": "page", "title": "6.4 The Transformer Architecture" },
+          { "type": "page", "title": "6.5 BERT and Modern NLP" },
+          { "type": "page", "title": "6.6 Generative AI & Ethics" },
+          { "type": "discussion", "title": "Discussion: AI Ethics and Responsibility" },
+          { "type": "assignment", "title": "Lab: Fine-tuning BERT", "points": 100 },
+          { "type": "assignment", "title": "Final Project: Build an AI Application", "file": "final-project.md", "points": 250 },
+          { "type": "quiz", "title": "Module 6 Quiz: NLP & Transformers", "questions": 15, "time_minutes": 30 }
+        ]
+      }
+    ]
+  },
+  "assessments": {
+    "quizzes": {
+      "total": 6,
+      "format": "Multiple choice, true/false",
+      "passing_score": 70
+    },
+    "assignments": {
+      "labs": 5,
+      "projects": 4,
+      "total_points": 925
+    },
+    "discussions": {
+      "total": 6,
+      "participation_weight": 15
+    }
+  },
+  "resources": {
+    "external_courses": [
+      {
+        "name": "MIT OpenCourseWare",
+        "url": "https://ocw.mit.edu/",
+        "license": "CC BY-NC-SA",
+        "topics": ["CS", "AI", "Engineering"]
+      },
+      {
+        "name": "Stanford Online",
+        "url": "https://online.stanford.edu/",
+        "license": "Free audit",
+        "topics": ["ML", "AI", "Robotics"]
+      },
+      {
+        "name": "Fast.ai",
+        "url": "https://www.fast.ai/",
+        "license": "Free/Apache",
+        "topics": ["Deep Learning"]
+      },
+      {
+        "name": "Hugging Face",
+        "url": "https://huggingface.co/learn",
+        "license": "Free",
+        "topics": ["NLP", "Transformers"]
+      },
+      {
+        "name": "Google AI Education",
+        "url": "https://ai.google/education/",
+        "license": "Free",
+        "topics": ["ML Fundamentals"]
+      }
+    ],
+    "tools": [
+      "Google Colab",
+      "Jupyter Notebook",
+      "Anaconda",
+      "Kaggle"
+    ],
+    "libraries": [
+      "NumPy",
+      "Pandas",
+      "Matplotlib",
+      "Scikit-learn",
+      "TensorFlow",
+      "PyTorch",
+      "Transformers (Hugging Face)"
+    ]
+  },
+  "learning_outcomes": [
+    "Explain AI fundamentals and relationships between AI, ML, and deep learning",
+    "Implement supervised learning algorithms for classification and regression",
+    "Design and train neural networks using modern frameworks",
+    "Apply CNNs and RNNs to computer vision and NLP tasks",
+    "Use pre-trained transformer models for various applications",
+    "Evaluate model performance using appropriate metrics",
+    "Deploy AI models to production environments",
+    "Discuss ethical considerations in AI development"
+  ]
+}

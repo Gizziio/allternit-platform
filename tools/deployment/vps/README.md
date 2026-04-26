@@ -1,4 +1,4 @@
-# A2R Platform - VPS Partnership Integrations
+# Allternit Platform - VPS Partnership Integrations
 
 **Status:** ✅ COMPLETE  
 **Effort:** 1 week  
@@ -8,7 +8,7 @@
 
 ## Overview
 
-One-click installation scripts for deploying A2R Platform on major VPS providers.
+One-click installation scripts for deploying Allternit Platform on major VPS providers.
 
 ### Supported Providers
 
@@ -27,7 +27,7 @@ One-click installation scripts for deploying A2R Platform on major VPS providers
 ```bash
 # Create a new Ubuntu 22.04 Droplet
 # Then run:
-curl -fsSL https://raw.githubusercontent.com/a2rchitech/a2rchitech/main/8-cloud/vps-integrations/digitalocean/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/allternit/allternit/main/8-cloud/vps-integrations/digitalocean/install.sh | sudo bash
 ```
 
 ### Vultr
@@ -35,7 +35,7 @@ curl -fsSL https://raw.githubusercontent.com/a2rchitech/a2rchitech/main/8-cloud/
 ```bash
 # Create a new Ubuntu 22.04 VPS
 # Then run:
-curl -fsSL https://raw.githubusercontent.com/a2rchitech/a2rchitech/main/8-cloud/vps-integrations/vultr/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/allternit/allternit/main/8-cloud/vps-integrations/vultr/install.sh | sudo bash
 ```
 
 ### Hetzner
@@ -43,7 +43,7 @@ curl -fsSL https://raw.githubusercontent.com/a2rchitech/a2rchitech/main/8-cloud/
 ```bash
 # Create a new Ubuntu 22.04 Cloud server
 # Then run:
-curl -fsSL https://raw.githubusercontent.com/a2rchitech/a2rchitech/main/8-cloud/vps-integrations/hetzner/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/allternit/allternit/main/8-cloud/vps-integrations/hetzner/install.sh | sudo bash
 ```
 
 ---
@@ -54,10 +54,10 @@ curl -fsSL https://raw.githubusercontent.com/a2rchitech/a2rchitech/main/8-cloud/
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `A2R_VERSION` | `latest` | Version to install |
-| `A2R_PORT` | `3000` | Port to expose |
-| `INSTALL_DIR` | `/opt/a2rchitech` | Installation directory |
-| `DATA_DIR` | `/var/lib/a2rchitech` | Data directory |
+| `Allternit_VERSION` | `latest` | Version to install |
+| `Allternit_PORT` | `3000` | Port to expose |
+| `INSTALL_DIR` | `/opt/allternit` | Installation directory |
+| `DATA_DIR` | `/var/lib/allternit` | Data directory |
 | `ENABLE_IPV6` | `true` | (Vultr) Enable IPv6 |
 | `ENABLE_BACKUP` | `true` | (Hetzner) Enable daily backups |
 
@@ -65,9 +65,9 @@ curl -fsSL https://raw.githubusercontent.com/a2rchitech/a2rchitech/main/8-cloud/
 
 ```bash
 # Install specific version on custom port
-export A2R_VERSION=v1.0.0
-export A2R_PORT=8080
-curl -fsSL https://raw.githubusercontent.com/a2rchitech/a2rchitech/main/8-cloud/vps-integrations/digitalocean/install.sh | sudo bash
+export Allternit_VERSION=v1.0.0
+export Allternit_PORT=8080
+curl -fsSL https://raw.githubusercontent.com/allternit/allternit/main/8-cloud/vps-integrations/digitalocean/install.sh | sudo bash
 ```
 
 ---
@@ -87,7 +87,7 @@ curl -fsSL https://raw.githubusercontent.com/a2rchitech/a2rchitech/main/8-cloud/
 2. **Docker Compose** - Multi-container orchestration
 3. **UFW Firewall** - Security hardening
 4. **Fail2ban** - Intrusion prevention
-5. **A2R Platform** - Main application
+5. **Allternit Platform** - Main application
 6. **Systemd Service** - Auto-start on boot
 
 ### Ports Opened
@@ -95,7 +95,7 @@ curl -fsSL https://raw.githubusercontent.com/a2rchitech/a2rchitech/main/8-cloud/
 | Port | Protocol | Purpose |
 |------|----------|---------|
 | 22 | TCP | SSH |
-| 3000 | TCP | A2R Platform (configurable) |
+| 3000 | TCP | Allternit Platform (configurable) |
 | 80 | TCP | HTTP (reverse proxy) |
 | 443 | TCP | HTTPS (reverse proxy) |
 
@@ -106,29 +106,29 @@ curl -fsSL https://raw.githubusercontent.com/a2rchitech/a2rchitech/main/8-cloud/
 ### Check Status
 
 ```bash
-sudo systemctl status a2rchitech
+sudo systemctl status allternit
 ```
 
 ### View Logs
 
 ```bash
-sudo journalctl -u a2rchitech -f
+sudo journalctl -u allternit -f
 ```
 
 ### Stop/Start/Restart
 
 ```bash
-sudo systemctl stop a2rchitech
-sudo systemctl start a2rchitech
-sudo systemctl restart a2rchitech
+sudo systemctl stop allternit
+sudo systemctl start allternit
+sudo systemctl restart allternit
 ```
 
 ### Update
 
 ```bash
 # Re-run the install script with new version
-export A2R_VERSION=v1.1.0
-curl -fsSL https://raw.githubusercontent.com/a2rchitech/a2rchitech/main/8-cloud/vps-integrations/digitalocean/install.sh | sudo bash
+export Allternit_VERSION=v1.1.0
+curl -fsSL https://raw.githubusercontent.com/allternit/allternit/main/8-cloud/vps-integrations/digitalocean/install.sh | sudo bash
 ```
 
 ---
@@ -150,8 +150,8 @@ curl -fsSL https://raw.githubusercontent.com/a2rchitech/a2rchitech/main/8-cloud/
 ### Hetzner
 
 - Daily automatic backups (7-day retention)
-- Backup directory: `/var/backups/a2rchitech`
-- Cron job: `/etc/cron.daily/a2r-backup`
+- Backup directory: `/var/backups/allternit`
+- Cron job: `/etc/cron.daily/allternit-backup`
 
 ---
 
@@ -191,7 +191,7 @@ To list on provider marketplaces:
 
 - ✅ Enables UFW firewall
 - ✅ Opens only required ports
-- ✅ Creates dedicated user (`a2r`)
+- ✅ Creates dedicated user (`allternit`)
 - ✅ Sets proper file permissions
 - ✅ Installs fail2ban for intrusion prevention
 
@@ -211,7 +211,7 @@ To list on provider marketplaces:
 
 ```bash
 # Check logs
-tail -f /var/log/a2rchitech/install.log
+tail -f /var/log/allternit/install.log
 
 # Run script with debug output
 bash -x install.sh
@@ -221,10 +221,10 @@ bash -x install.sh
 
 ```bash
 # Check systemd status
-sudo systemctl status a2rchitech
+sudo systemctl status allternit
 
 # Check Docker logs
-sudo docker-compose -f /opt/a2rchitech/docker-compose.yml logs
+sudo docker-compose -f /opt/allternit/docker-compose.yml logs
 ```
 
 ### Port Already in Use
@@ -234,7 +234,7 @@ sudo docker-compose -f /opt/a2rchitech/docker-compose.yml logs
 sudo lsof -i :3000
 
 # Install on different port
-export A2R_PORT=8080
+export Allternit_PORT=8080
 # Re-run install script
 ```
 
@@ -247,10 +247,10 @@ export A2R_PORT=8080
 | `8-cloud/vps-integrations/digitalocean/install.sh` | DO installer |
 | `8-cloud/vps-integrations/vultr/install.sh` | Vultr installer |
 | `8-cloud/vps-integrations/hetzner/install.sh` | Hetzner installer |
-| `/opt/a2rchitech/` | Installation directory |
-| `/var/lib/a2rchitech/` | Data directory |
-| `/var/log/a2rchitech/` | Log directory |
-| `/etc/systemd/system/a2rchitech.service` | Systemd service |
+| `/opt/allternit/` | Installation directory |
+| `/var/lib/allternit/` | Data directory |
+| `/var/log/allternit/` | Log directory |
+| `/etc/systemd/system/allternit.service` | Systemd service |
 
 ---
 
@@ -262,7 +262,7 @@ export A2R_PORT=8080
 - Affiliate revenue share for referrals
 - Marketplace listing drives new customers
 
-### For A2R Platform
+### For Allternit Platform
 
 - Simplified deployment for users
 - Credibility from marketplace presence
@@ -272,7 +272,7 @@ export A2R_PORT=8080
 
 - Verified, tested installation
 - Provider-optimized configuration
-- Support from both A2R and VPS provider
+- Support from both Allternit and VPS provider
 
 ---
 

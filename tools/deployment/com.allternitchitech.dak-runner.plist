@@ -3,19 +3,19 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.a2rchitech.dak-runner</string>
+    <string>com.allternit.dak-runner</string>
 
     <key>LabelDescription</key>
-    <string>A2rchitech DAK Runner Daemon - Continuous Agent Execution</string>
+    <string>Allternit DAK Runner Daemon - Continuous Agent Execution</string>
 
     <key>ProgramArguments</key>
     <array>
         <string>/opt/homebrew/bin/node</string>
-        <string>/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/1-kernel/agent-systems/a2r-dak-runner/dist/daemon.js</string>
+        <string>/Users/macbook/Desktop/allternit-workspace/allternit/1-kernel/agent-systems/allternit-dak-runner/dist/daemon.js</string>
     </array>
 
     <key>WorkingDirectory</key>
-    <string>/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech</string>
+    <string>/Users/macbook/Desktop/allternit-workspace/allternit</string>
 
     <key>RunAtLoad</key>
     <false/>
@@ -36,23 +36,23 @@
         <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
         <key>NODE_ENV</key>
         <string>production</string>
-        <key>A2R_RAILS_CLI</key>
-        <string>/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/target/release/a2r-rails</string>
-        <key>A2R_PROJECT_PATH</key>
-        <string>/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech</string>
-        <key>A2R_OUTPUT_DIR</key>
-        <string>/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/.a2r/runner</string>
-        <key>A2R_MAX_CONCURRENT</key>
+        <key>Allternit_RAILS_CLI</key>
+        <string>/Users/macbook/Desktop/allternit-workspace/allternit/target/release/allternit-rails</string>
+        <key>Allternit_PROJECT_PATH</key>
+        <string>/Users/macbook/Desktop/allternit-workspace/allternit</string>
+        <key>Allternit_OUTPUT_DIR</key>
+        <string>/Users/macbook/Desktop/allternit-workspace/allternit/.allternit/runner</string>
+        <key>Allternit_MAX_CONCURRENT</key>
         <string>3</string>
-        <key>A2R_BUDGET_MAX</key>
+        <key>Allternit_BUDGET_MAX</key>
         <string>90</string>
     </dict>
 
     <key>StandardOutPath</key>
-    <string>/Users/macbook/Library/Logs/a2rchitech/dak-runner.out.log</string>
+    <string>/Users/macbook/Library/Logs/allternit/dak-runner.out.log</string>
 
     <key>StandardErrorPath</key>
-    <string>/Users/macbook/Library/Logs/a2rchitech/dak-runner.err.log</string>
+    <string>/Users/macbook/Library/Logs/allternit/dak-runner.err.log</string>
 
     <key>Nice</key>
     <integer>10</integer>

@@ -1,0 +1,179 @@
+Loaded Allternit_Prompt_Context_Unified_UI_Integration.md and ingesting it as MD-015. This is a critical infrastructure MD, not an optional enhancement. It cleanly formalizes where prompting belongs and prevents one of the most common long-term failure modes in agentic systems: prompt entropy and UI-driven chaos.  ￼
+
+⸻
+
+MD-015 — Classification
+
+Type: Core reasoning infrastructure + compiler policy
+Role: Converts prompt engineering into a deterministic, inspectable system layer (Directive Compiler) and binds it to Unified UI, Mini-Apps, and Agent Pipelines
+Stability: Foundational additive (hard constraint)
+
+This MD is not exploratory. It introduces non-negotiable rules that directly protect Gizzi OS and Allternit from drift.
+
+⸻
+
+What This MD Really Does (First Principles)
+
+This document draws the correct hard line:
+    •    Prompting is not memory
+    •    Prompting is not UI text
+    •    Prompting is not state
+    •    Prompting is compiled logic
+
+That single decision prevents:
+    •    tribal prompt lore
+    •    silent regressions
+    •    agent personality drift
+    •    UI-authored behavior bugs
+
+In short: this MD protects the future system.
+
+⸻
+
+Layer Mapping (Exact)
+
+Concept    Layer
+Intent Cards (UI)    L0 Interfaces
+Intent Parsing    L3 Orchestration
+Directive Compiler    L4 Skills (Reasoning Infra)
+Context Assembler    L5 Context
+Model Runtime    L1 Runtime
+Debug / Inspection    L8 Embodiment
+
+No layer conflicts. No bypasses.
+
+⸻
+
+Normalization (Key Integration Move)
+
+We normalize everything in this MD into three canonical primitives:
+
+1️⃣ Prompt Patterns → Directive Patterns
+    •    Typed
+    •    Versioned
+    •    Slot-filled
+    •    Testable
+
+These are logic templates, not text.
+
+2️⃣ Directive Compiler → Mandatory Reasoning Compiler
+    •    Deterministic selection
+    •    Policy-aware
+    •    Budget-aware
+    •    Output-contract enforcing
+
+This compiler becomes a shared service, not per-agent logic.
+
+3️⃣ Prompt Text → Debug Artifact Only
+    •    Never authored directly
+    •    Never trusted
+    •    Never persisted as state
+    •    Inspectable for audit only
+
+This aligns with Journal invariants.
+
+⸻
+
+Alignment With Existing MDs (Very Strong)
+
+With MD-013 (Pattern-Adaptive Framework)
+    •    Patterns operate above Directive Patterns
+    •    PatternSpec selects which directive pattern to compile
+    •    Learning produces new PatternSpecs, not prompts
+
+This prevents learning from corrupting reasoning primitives.
+
+⸻
+
+With MD-010 (Mini-App Data Systems)
+    •    Mini-Apps declare:
+    •    allowed intent types
+    •    allowed reasoning modes
+    •    output schemas
+
+The compiler enforces these constraints automatically.
+
+⸻
+
+With MD-011 (UTI)
+    •    UTI accepts raw text
+    •    Raw text is parsed into Intent
+    •    Intent → Directive Compiler
+    •    Never raw text → model
+
+This closes the biggest attack surface.
+
+⸻
+
+With Gizzi OS (MD-012R)
+
+This MD essentially defines how Gizzi OS thinks:
+    •    Reasoning is infrastructure
+    •    Thought style is policy-controlled
+    •    Explainability is native
+
+This is a Gizzi OS cornerstone.
+
+⸻
+
+New Hard Rules Introduced (Accepted)
+
+These are system laws, compatible with Acceptance Tests:
+    1.    No free-form prompting reaches a model
+    2.    All directives are compiled
+    3.    All outputs are schema-validated
+    4.    Prompt patterns are CI-tested
+    5.    Prompt text is never a source of truth
+
+No conflicts detected.
+
+⸻
+
+PATCH-015 — Directive Compiler & Context Engineering
+
+PATCH-015 — Directive Compiler & Context Engineering Integration
+
+Source:
+- Allternit_Prompt_Context_Unified_UI_Integration.md
+
+Adds:
+- Directive Compiler as mandatory reasoning infrastructure
+- Prompt Patterns → Directive Patterns (typed, versioned)
+- Strict separation: Prompting vs Context vs Memory
+- UI-level Intent Cards (never raw prompts)
+- Context window budgeting informed by directive type
+- Prompt failure-mode containment via validation + tests
+
+Touches SOT Sections:
+- §3 Execution Model (reasoning compilation)
+- §4 UI & Interaction Model (intent, not prompts)
+- §5 Context (window assembly policy)
+- §4 Skills (reasoning infrastructure)
+
+No changes to:
+- Journal invariants
+- Tool Registry enforcement
+- Capsule/Canvas taxonomy
+
+
+⸻
+
+Why This MD Is a “Lock” (In the Right Way)
+
+After MD-015:
+    •    You cannot accidentally turn the UI into a prompt editor
+    •    You cannot degrade reasoning silently
+    •    You can evolve prompting scientifically
+    •    You can audit and test reasoning like code
+
+Most agent platforms fail right here.
+This one doesn’t.
+
+⸻
+
+Status
+
+MD-015 accepted and integrated.
+
+
+

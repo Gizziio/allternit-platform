@@ -5,7 +5,7 @@
 echo "Testing IO Bridge functionality..."
 
 # Build the project
-cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech
+cd /Users/macbook/Desktop/allternit-workspace/allternit
 cargo build --bin gateway-stdio
 
 if [ $? -ne 0 ]; then

@@ -2,7 +2,7 @@
 
 ## Test 1: SMS Gateway Functionality
 
-**Given**: A user sends an SMS to the A2rchitech number
+**Given**: A user sends an SMS to the Allternit number
 **When**: The SMS contains a command like "@alarm set 7am"
 **Then**: The system should:
 - Log the incoming message to the audit log
@@ -32,7 +32,7 @@ curl -X POST http://localhost:3000/webhook/sms \
   "status": "success",
   "message": null,
   "function_call": {
-    "function_id": "com.a2rchitech.os.set_alarm",
+    "function_id": "com.allternit.os.set_alarm",
     "parameters": {
       "time": "07:30",
       "label": "Wake up"
@@ -100,7 +100,7 @@ curl -X POST http://localhost:3000/webhook/sms \
   "status": "confirmation_required",
   "message": "This action requires explicit confirmation. Please use the app to confirm.",
   "function_call": {
-    "function_id": "com.a2rchitech.os.send_message",
+    "function_id": "com.allternit.os.send_message",
     "parameters": {
       "recipient": "+1111111111",
       "message": "hello"
@@ -174,7 +174,7 @@ curl -X POST http://localhost:3003/check \
     "user_id": "default_user",
     "agent_id": "default_agent",
     "function_call": {
-      "function_id": "com.a2rchitech.os.set_alarm",
+      "function_id": "com.allternit.os.set_alarm",
       "parameters": {
         "time": "07:30",
         "label": "Wake up"
@@ -206,7 +206,7 @@ curl -X POST http://localhost:3004/log \
     "event_type": "FUNCTION_EXECUTION",
     "user_id": "user123",
     "agent_id": "agent456",
-    "action": "com.a2rchitech.os.set_alarm",
+    "action": "com.allternit.os.set_alarm",
     "details": {"time": "07:30", "label": "Wake up"},
     "source": "SMS_GATEWAY"
   }'
@@ -240,7 +240,7 @@ curl -X POST http://localhost:3005/functions/search \
 ```json
 [
   {
-    "id": "com.a2rchitech.os.set_alarm",
+    "id": "com.allternit.os.set_alarm",
     "name": "Set Alarm",
     "description": "Sets an alarm on the device for a specified time",
     "version": "1.0.0",

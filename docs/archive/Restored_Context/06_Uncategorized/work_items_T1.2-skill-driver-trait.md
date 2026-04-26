@@ -1,0 +1,100 @@
+---
+wih_version: 1
+work_item_id: "T1.2"
+title: "Define SkillDriver Trait and Types"
+owner_role: "orchestrator"
+assigned_roles:
+  builder: "agent.builder"
+  validator: "agent.validator"
+inputs:
+  sot: "/docs/research/txtx-axel-analysis.md"
+  requirements:
+    - "Define SkillDriver trait"
+    - "Define Skill and SkillManifest types"
+    - "Define LLMType enum"
+    - "Create error types"
+  context_packs:
+    - "infrastructure/allternit-skill-portability/"
+    - "vendor/txtx-axel/crates/core/src/drivers/"
+  artifacts_from_deps:
+    - "T1.1"
+scope:
+  allowed_paths:
+    - "infrastructure/allternit-skill-portability/src/**"
+  allowed_tools:
+    - "fs.read"
+    - "fs.write"
+    - "cargo.build"
+    - "cargo.test"
+  execution_permission:
+    mode: "write_leased"
+outputs:
+  required_artifacts:
+    - "infrastructure/allternit-skill-portability/src/types.rs"
+    - "infrastructure/allternit-skill-portability/src/drivers/mod.rs"
+  required_reports:
+    - "trait_design_report.md"
+acceptance:
+  tests:
+    - "cargo test -p allternit-skill-portability --lib"
+    - "cargo doc -p allternit-skill-portability"
+  invariants:
+    - "All types are documented"
+    - "Trait is object-safe"
+  evidence:
+    - "trait_design_report.md"
+blockers:
+  fail_on:
+    - "trait_not_object_safe"
+    - "missing_documentation"
+stop_conditions:
+  escalate_if:
+    - "design_flaw_found"
+  max_iterations: 5
+---
+
+# Define SkillDriver Trait and Types
+
+## Objective
+Define the core trait and types for skill portability.
+
+## Types to Define
+
+### Skill
+```rust
+pub struct Skill {
+    pub id: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub content: String,
+    pub metadata: SkillMetadata,
+}
+```
+
+### SkillDriver Trait
+```rust
+#[async_trait]
+pub trait SkillDriver: Send + Sync {
+    fn llm_type(&self) -> LLMType;
+    fn target_dir(&self) -> PathBuf;
+    async fn install_skill(&self, skill: &Skill) -> Result<()>;
+    async fn remove_skill(&self, skill_id: &str) -> Result<()>;
+    async fn list_skills(&self) -> Result<Vec<Skill>>;
+    fn skill_format(&self) -> SkillFormat;
+}
+```
+
+### LLMType Enum
+```rust
+pub enum LLMType {
+    Claude,
+    Codex,
+    OpenCode,
+    Kimi,
+}
+```
+
+## Deliverables
+1. Complete type definitions
+2. Trait implementations
+3. Unit tests for types

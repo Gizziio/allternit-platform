@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * A2R Canvas Plugin - Full Skills Test
+ * Allternit Canvas Plugin - Full Skills Test
  * 
  * Tests EVERY skill in the plugin with real Canvas account.
  * Takes screenshots of everything created.
@@ -17,14 +17,14 @@ const CANVAS_API_TOKEN = '7~xG8tXkuEFa4fQ7zykECKhmKNuWVw9Feh84BGaeL92xP4nGxVJ8wQ
 const COURSE_ID = '14389375';
 
 // Output directory for screenshots and results
-const OUTPUT_DIR = '/Users/macbook/Desktop/A2R_Skills_Test_Results';
+const OUTPUT_DIR = '/Users/macbook/Desktop/Allternit_Skills_Test_Results';
 
 // Create output directory
 if (!fs.existsSync(OUTPUT_DIR)) {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 }
 
-console.log('=== A2R Canvas Plugin - Full Skills Test ===\n');
+console.log('=== Allternit Canvas Plugin - Full Skills Test ===\n');
 console.log(`Course ID: ${COURSE_ID}`);
 console.log(`Output: ${OUTPUT_DIR}\n`);
 
@@ -62,7 +62,7 @@ async function testModuleCreation() {
       'POST',
       {
         module: {
-          name: 'A2R Test Module - Week 1 AI Fundamentals',
+          name: 'Allternit Test Module - Week 1 AI Fundamentals',
           position: 5,
           published: false,
         }
@@ -96,7 +96,7 @@ async function testAssignmentCreation(moduleId) {
       'POST',
       {
         assignment: {
-          name: 'A2R Test Assignment - Week 1 Discussion: AI Ethics',
+          name: 'Allternit Test Assignment - Week 1 Discussion: AI Ethics',
           description: `
 ## 📋 Learning Objectives
 - Identify key ethical concerns in AI development
@@ -203,7 +203,7 @@ async function testPageCreation() {
       'POST',
       {
         wiki_page: {
-          title: 'A2R Test - AI Fundamentals Overview',
+          title: 'Allternit Test - AI Fundamentals Overview',
           body: `
 # AI Fundamentals Overview
 
@@ -259,8 +259,8 @@ async function testListContent() {
     const modules = await canvasAPI(`/courses/${COURSE_ID}/modules`);
     console.log(`\n📚 Modules in course: ${modules.length}`);
     
-    const testModules = modules.filter(m => m.name.includes('A2R Test'));
-    console.log(`   A2R Test Modules: ${testModules.length}`);
+    const testModules = modules.filter(m => m.name.includes('Allternit Test'));
+    console.log(`   Allternit Test Modules: ${testModules.length}`);
     testModules.forEach(m => {
       console.log(`   - ${m.name} (ID: ${m.id})`);
     });
@@ -269,8 +269,8 @@ async function testListContent() {
     const assignments = await canvasAPI(`/courses/${COURSE_ID}/assignments`);
     console.log(`\n📝 Assignments in course: ${assignments.length}`);
     
-    const testAssignments = assignments.filter(a => a.name.includes('A2R Test'));
-    console.log(`   A2R Test Assignments: ${testAssignments.length}`);
+    const testAssignments = assignments.filter(a => a.name.includes('Allternit Test'));
+    console.log(`   Allternit Test Assignments: ${testAssignments.length}`);
     testAssignments.forEach(a => {
       console.log(`   - ${a.name} (ID: ${a.id}, Points: ${a.points_possible})`);
     });
@@ -279,8 +279,8 @@ async function testListContent() {
     const pages = await canvasAPI(`/courses/${COURSE_ID}/pages`);
     console.log(`\n📄 Pages in course: ${pages.length}`);
     
-    const testPages = pages.filter(p => p.title.includes('A2R Test'));
-    console.log(`   A2R Test Pages: ${testPages.length}`);
+    const testPages = pages.filter(p => p.title.includes('Allternit Test'));
+    console.log(`   Allternit Test Pages: ${testPages.length}`);
     testPages.forEach(p => {
       console.log(`   - ${p.title} (ID: ${p.id})`);
     });
@@ -288,9 +288,9 @@ async function testListContent() {
     // Save verification results
     const verification = {
       timestamp: new Date().toISOString(),
-      modules: { total: modules.length, a2r_test: testModules.length },
-      assignments: { total: assignments.length, a2r_test: testAssignments.length },
-      pages: { total: pages.length, a2r_test: testPages.length },
+      modules: { total: modules.length, allternit_test: testModules.length },
+      assignments: { total: assignments.length, allternit_test: testAssignments.length },
+      pages: { total: pages.length, allternit_test: testPages.length },
     };
     
     fs.writeFileSync(
@@ -311,7 +311,7 @@ async function testListContent() {
 async function generateTestReport(results) {
   console.log('\n=== GENERATING TEST REPORT ===\n');
   
-  const report = `# A2R Canvas Plugin - Skills Test Report
+  const report = `# Allternit Canvas Plugin - Skills Test Report
 
 **Test Date:** ${new Date().toISOString()}
 **Course ID:** ${COURSE_ID}
@@ -327,7 +327,7 @@ async function generateTestReport(results) {
 | Assignment Creation | ${results.assignment ? '✅ PASS' : '❌ FAIL'} | ${results.assignment ? `Created: ${results.assignment.name}` : 'Failed'} |
 | Add to Module | ${results.moduleItem ? '✅ PASS' : '❌ FAIL'} | ${results.moduleItem ? 'Added successfully' : 'Failed'} |
 | Page Creation | ${results.page ? '✅ PASS' : '❌ FAIL'} | ${results.page ? `Created: ${results.page.title}` : 'Failed'} |
-| Content Verification | ${results.verification ? '✅ PASS' : '❌ FAIL'} | ${results.verification ? `${results.verification.modules.a2r_test} modules, ${results.verification.assignments.a2r_test} assignments, ${results.verification.pages.a2r_test} pages` : 'Failed'} |
+| Content Verification | ${results.verification ? '✅ PASS' : '❌ FAIL'} | ${results.verification ? `${results.verification.modules.allternit_test} modules, ${results.verification.assignments.allternit_test} assignments, ${results.verification.pages.allternit_test} pages` : 'Failed'} |
 
 ---
 
@@ -370,7 +370,7 @@ For the demo video, take screenshots of:
 ---
 
 *Generated: ${new Date().toISOString()}*
-*A2R Canvas Plugin v1.0*
+*Allternit Canvas Plugin v1.0*
 `;
 
   fs.writeFileSync(

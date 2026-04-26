@@ -1,5 +1,5 @@
 /**
- * Standalone script to capture console errors from the A2R Platform UI
+ * Standalone script to capture console errors from the Allternit Platform UI
  * Run this against your local server at http://127.0.0.1:5177
  */
 

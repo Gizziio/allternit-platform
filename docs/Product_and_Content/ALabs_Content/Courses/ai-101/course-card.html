@@ -1,0 +1,232 @@
+<!-- A://AI-101 Course Card - For Website Integration -->
+<!-- Copy this HTML into your website's courses/marketplace page -->
+
+<div class="course-card" style="
+  background: #12121a;
+  border: 1px solid #2a2a3e;
+  border-radius: 16px;
+  overflow: hidden;
+  max-width: 400px;
+  transition: all 0.3s ease;
+">
+  <!-- Course Image/Banner -->
+  <div style="
+    height: 200px;
+    background: linear-gradient(135deg, #0a0a0f 0%, #1e1e2e 100%);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  ">
+    <!-- Gradient overlay -->
+    <div style="
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 30% 50%, rgba(0, 212, 255, 0.15) 0%, transparent 60%);
+    "></div>
+    
+    <!-- Course Code Badge -->
+    <div style="
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      background: rgba(0, 212, 255, 0.15);
+      color: #00d4ff;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      border: 1px solid rgba(0, 212, 255, 0.3);
+    ">
+      A://AI-101
+    </div>
+    
+    <!-- Course Icon -->
+    <div style="
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #00d4ff, #8338ec);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 40px rgba(0, 212, 255, 0.3);
+      position: relative;
+      z-index: 1;
+    ">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#0a0a0f" stroke-width="2">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+        <path d="M2 17l10 5 10-5"/>
+        <path d="M2 12l10 5 10-5"/>
+      </svg>
+    </div>
+  </div>
+  
+  <!-- Course Info -->
+  <div style="padding: 24px;">
+    <!-- Title -->
+    <h3 style="
+      margin: 0 0 12px 0;
+      color: #ffffff;
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 1.3;
+    ">
+      Agentic Intelligence & Machine Learning
+    </h3>
+    
+    <!-- Description -->
+    <p style="
+      margin: 0 0 20px 0;
+      color: #a0a0b0;
+      font-size: 14px;
+      line-height: 1.6;
+    ">
+      Master AI fundamentals and build intelligent agentic systems within the allternit protocol.
+    </p>
+    
+    <!-- Meta Info -->
+    <div style="
+      display: flex;
+      gap: 16px;
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #2a2a3e;
+    ">
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b6b7b" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 6v6l4 2"/>
+        </svg>
+        <span style="color: #6b6b7b; font-size: 13px;">8 Weeks</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b6b7b" stroke-width="2">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg>
+        <span style="color: #6b6b7b; font-size: 13px;">6 Modules</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6b6b7b" stroke-width="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+          <path d="M2 17l10 5 10-5"/>
+          <path d="M2 12l10 5 10-5"/>
+        </svg>
+        <span style="color: #6b6b7b; font-size: 13px;">Beginner</span>
+      </div>
+    </div>
+    
+    <!-- CTA Button -->
+    <a href="https://canvas.instructure.com/enroll/14389375" 
+       style="
+         display: flex;
+         align-items: center;
+         justify-content: center;
+         gap: 8px;
+         background: linear-gradient(135deg, #00d4ff, #0099cc);
+         color: #0a0a0f;
+         padding: 14px 24px;
+         border-radius: 10px;
+         text-decoration: none;
+         font-weight: 700;
+         font-size: 15px;
+         transition: all 0.3s ease;
+       "
+       onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 20px rgba(0, 212, 255, 0.3)';"
+       onmouseout="this.style.transform=''; this.style.boxShadow='';"
+    >
+      Enroll Now
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M5 12h14"/>
+        <path d="M12 5l7 7-7 7"/>
+      </svg>
+    </a>
+    
+    <!-- Secondary Link -->
+    <div style="text-align: center; margin-top: 12px;">
+      <a href="https://canvas.instructure.com/courses/14389375/pages/syllabus" 
+         style="
+           color: #6b6b7b;
+           font-size: 13px;
+           text-decoration: none;
+           transition: color 0.3s ease;
+         "
+         onmouseover="this.style.color='#00d4ff';"
+         onmouseout="this.style.color='#6b6b7b';"
+      >
+        View Syllabus →
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Course Preview Card (Smaller version for grids) -->
+<div class="course-preview" style="
+  background: #12121a;
+  border: 1px solid #2a2a3e;
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 320px;
+  transition: all 0.3s ease;
+" onmouseover="this.style.borderColor='rgba(0, 212, 255, 0.3)'; this.style.boxShadow='0 4px 20px rgba(0, 212, 255, 0.1)';" onmouseout="this.style.borderColor='#2a2a3e'; this.style.boxShadow='';"
+>
+  <div style="display: flex; align-items: flex-start; gap: 16px; margin-bottom: 16px;">
+    <div style="
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, #00d4ff, #8338ec);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    ">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0a0a0f" stroke-width="2">
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+        <path d="M2 17l10 5 10-5"/>
+        <path d="M2 12l10 5 10-5"/>
+      </svg>
+    </div>
+    <div>
+      <div style="
+        background: rgba(0, 212, 255, 0.1);
+        color: #00d4ff;
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 600;
+        display: inline-block;
+        margin-bottom: 6px;
+      ">A://AI-101</div>
+      <h4 style="margin: 0; color: #ffffff; font-size: 15px; font-weight: 600; line-height: 1.3;">
+        Agentic Intelligence & ML
+      </h4>
+    </div>
+  </div>
+  
+  <p style="margin: 0 0 16px 0; color: #a0a0b0; font-size: 13px; line-height: 1.5;">
+    Master AI fundamentals and build agentic systems.
+  </p>
+  
+  <div style="display: flex; align-items: center; justify-content: space-between;">
+    <div style="display: flex; gap: 12px;">
+      <span style="color: #6b6b7b; font-size: 12px;">8 Weeks</span>
+      <span style="color: #6b6b7b; font-size: 12px;">•</span>
+      <span style="color: #6b6b7b; font-size: 12px;">6 Modules</span>
+    </div>
+    <a href="https://canvas.instructure.com/enroll/14389375" style="
+      background: rgba(0, 212, 255, 0.1);
+      color: #00d4ff;
+      padding: 8px 16px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    " onmouseover="this.style.background='rgba(0, 212, 255, 0.2)';" onmouseout="this.style.background='rgba(0, 212, 255, 0.1)';">
+      Enroll →
+    </a>
+  </div>
+</div>

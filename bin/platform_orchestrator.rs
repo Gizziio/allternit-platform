@@ -16,12 +16,12 @@ fn workspace_root() -> PathBuf {
 fn main() {
     let root = workspace_root();
 
-    println!("🚀 Starting A2rchitech Platform Orchestrator (legacy wrapper)");
+    println!("🚀 Starting Allternit Platform Orchestrator (legacy wrapper)");
     println!("===========================================");
     println!("→ Delegating to 4-services/orchestration/platform-orchestration-service");
 
     let status = Command::new("cargo")
-        .args(["run", "-p", "a2rchitech-platform"])
+        .args(["run", "-p", "allternit-platform"])
         .current_dir(root)
         .status()
         .expect("failed to spawn orchestrator");

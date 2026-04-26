@@ -1,0 +1,159 @@
+<!-- A://labs - Module 5: Deep Learning - Complete Content -->
+<div style="max-width: 850px; margin: 0 auto; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #ffffff; line-height: 1.8;">
+
+<!-- LESSON 5.1: CONVOLUTIONAL NEURAL NETWORKS -->
+<div style="margin-bottom: 60px;">
+  <div style="background: linear-gradient(135deg, #0a0a0f 0%, #12121a 100%); 
+              padding: 40px; border-radius: 16px; margin-bottom: 30px;
+              border: 1px solid #2a2a3e; position: relative; overflow: hidden;">
+    <div style="position: absolute; top: -30%; right: -10%; width: 300px; height: 300px; 
+                background: radial-gradient(circle, rgba(6, 255, 165, 0.1) 0%, transparent 70%);"></div>
+    <span style="color: #06ffa5; font-size: 13px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase;">Module 5.1</span>
+    <h1 style="margin: 10px 0 0 0; color: #ffffff; font-size: 36px; font-weight: 700;">Convolutional Neural Networks</h1>
+  </div>
+
+  <div style="background: #12121a; padding: 30px; border-radius: 12px; border: 1px solid #2a2a3e; margin-bottom: 30px;">
+    <h3 style="margin: 0 0 15px 0; color: #06ffa5; font-size: 16px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+      🎯 Learning Objectives
+    </h3>
+    <ul style="margin: 0; padding: 0; list-style: none; color: #a0a0b0; font-size: 15px;">
+      <li style="padding: 8px 0; padding-left: 24px; position: relative;">
+        <span style="position: absolute; left: 0; color: #06ffa5;">→</span>
+        Understand convolution operations and their purpose
+      </li>
+      <li style="padding: 8px 0; padding-left: 24px; position: relative;">
+        <span style="position: absolute; left: 0; color: #06ffa5;">→</span>
+        Design CNN architectures for computer vision
+      </li>
+      <li style="padding: 8px 0; padding-left: 24px; position: relative;">
+        <span style="position: absolute; left: 0; color: #06ffa5;">→</span>
+        Apply CNNs to image classification tasks
+      </li>
+    </ul>
+  </div>
+
+  <h2 style="color: #ffffff; font-size: 24px; font-weight: 700; margin: 35px 0 20px 0; display: flex; align-items: center; gap: 12px;">
+    <span style="width: 4px; height: 28px; background: linear-gradient(180deg, #06ffa5, #00d4ff); border-radius: 2px;"></span>
+    Seeing Through Neural Networks
+  </h2>
+
+  <p style="color: #a0a0b0; font-size: 16px; margin-bottom: 20px;">
+    Convolutional Neural Networks (CNNs) are the dominant architecture for computer vision. 
+    Unlike standard neural networks that treat input as a flat vector, CNNs preserve spatial relationships 
+    in images through the <strong style="color: #ffffff;">convolution operation</strong>—scanning filters across the image 
+    to detect features like edges, textures, and shapes.
+  </p>
+
+  <div style="background: #12121a; padding: 30px; border-radius: 12px; border: 1px solid #2a2a3e; margin: 30px 0;">
+    <h4 style="margin: 0 0 20px 0; color: #00d4ff; font-size: 16px; font-weight: 600;">🔍 The Convolution Operation</h4>
+    <p style="margin: 0 0 20px 0; color: #a0a0b0; font-size: 15px; line-height: 1.7;">
+      A convolution slides a small filter (kernel) across the image, computing dot products at each position. 
+      This detects local patterns regardless of their position in the image—a property called <strong style="color: #ffffff;">translation invariance</strong>.
+    </p>
+    
+    <div style="background: #0a0a0f; padding: 20px; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 13px; color: #a0a0b0; line-height: 1.8;">
+      <code style="color: #6b6b7b;"># Simple 3x3 edge detection kernel</code>
+kernel = np.array([[
+    [<code style="color: #ffbe0b;">-1</code>, <code style="color: #ffbe0b;">-1</code>, <code style="color: #ffbe0b;">-1</code>],
+    [<code style="color: #ffbe0b;">-1</code>,  <code style="color: #ffbe0b;">8</code>, <code style="color: #ffbe0b;">-1</code>],
+    [<code style="color: #ffbe0b;">-1</code>, <code style="color: #ffbe0b;">-1</code>, <code style="color: #ffbe0b;">-1</code>]
+]])
+    </div>
+  </div>
+
+  <h2 style="color: #ffffff; font-size: 24px; font-weight: 700; margin: 35px 0 20px 0; display: flex; align-items: center; gap: 12px;">
+    <span style="width: 4px; height: 28px; background: linear-gradient(180deg, #00d4ff, #8338ec); border-radius: 2px;"></span>
+    CNN Architecture Components
+  </h2>
+
+  <div style="display: flex; flex-direction: column; gap: 20px; margin: 30px 0;">
+    <div style="background: #12121a; padding: 25px; border-radius: 12px; border: 1px solid #2a2a3e;">
+      <h4 style="margin: 0 0 10px 0; color: #00d4ff; font-size: 17px; font-weight: 600;">🔄 Convolutional Layer</h4>
+      <p style="margin: 0; color: #a0a0b0; font-size: 15px; line-height: 1.7;">
+        Applies learnable filters to detect features. Early layers detect edges and textures; 
+        deeper layers combine these into complex patterns like eyes, wheels, or text.
+      </p>
+    </div>
+
+    <div style="background: #12121a; padding: 25px; border-radius: 12px; border: 1px solid #2a2a3e;">
+      <h4 style="margin: 0 0 10px 0; color: #8338ec; font-size: 17px; font-weight: 600;">📉 Pooling Layer</h4>
+      <p style="margin: 0; color: #a0a0b0; font-size: 15px; line-height: 1.7;">
+        Reduces spatial dimensions (typically 2x) by taking max or average values. 
+        Decreases computation and provides translation invariance.
+      </p>
+    </div>
+
+    <div style="background: #12121a; padding: 25px; border-radius: 12px; border: 1px solid #2a2a3e;">
+      <h4 style="margin: 0 0 10px 0; color: #ff006e; font-size: 17px; font-weight: 600;">🔗 Fully Connected Layer</h4>
+      <p style="margin: 0; color: #a0a0b0; font-size: 15px; line-height: 1.7;">
+        Traditional neural network layer at the end that combines all features 
+        to make the final classification decision.
+      </p>
+    </div>
+  </div>
+
+  <h2 style="color: #ffffff; font-size: 24px; font-weight: 700; margin: 35px 0 20px 0; display: flex; align-items: center; gap: 12px;">
+    <span style="width: 4px; height: 28px; background: linear-gradient(180deg, #8338ec, #ff006e); border-radius: 2px;"></span>
+    Building a CNN with TensorFlow
+  </h2>
+
+  <div style="background: #0a0a0f; padding: 25px; border-radius: 12px; border: 1px solid #1e1e2e; margin: 25px 0;">
+    <pre style="margin: 0; color: #a0a0b0; font-family: 'JetBrains Mono', monospace; font-size: 13px; line-height: 1.8; overflow-x: auto;"><code style="color: #ff006e;">import</code> tensorflow <code style="color: #ff006e;">as</code> tf
+<code style="color: #ff006e;">from</code> tensorflow.keras <code style="color: #ff006e;">import</code> layers, models
+
+<code style="color: #6b6b7b;"># Build CNN architecture</code>
+model = models.Sequential([
+    <code style="color: #6b6b7b;"># First convolutional block</code>
+    layers.Conv2D(<code style="color: #ffbe0b;">32</code>, (<code style="color: #ffbe0b;">3</code>, <code style="color: #ffbe0b;">3</code>), activation=<code style="color: #00d4ff;">'relu'</code>, 
+                  input_shape=(<code style="color: #ffbe0b;">28</code>, <code style="color: #ffbe0b;">28</code>, <code style="color: #ffbe0b;">1</code>)),
+    layers.MaxPooling2D((<code style="color: #ffbe0b;">2</code>, <code style="color: #ffbe0b;">2</code>)),
+    
+    <code style="color: #6b6b7b;"># Second convolutional block</code>
+    layers.Conv2D(<code style="color: #ffbe0b;">64</code>, (<code style="color: #ffbe0b;">3</code>, <code style="color: #ffbe0b;">3</code>), activation=<code style="color: #00d4ff;">'relu'</code>),
+    layers.MaxPooling2D((<code style="color: #ffbe0b;">2</code>, <code style="color: #ffbe0b;">2</code>)),
+    
+    <code style="color: #6b6b7b;"># Flatten and classify</code>
+    layers.Flatten(),
+    layers.Dense(<code style="color: #ffbe0b;">64</code>, activation=<code style="color: #00d4ff;">'relu'</code>),
+    layers.Dense(<code style="color: #ffbe0b;">10</code>, activation=<code style="color: #00d4ff;">'softmax'</code>)
+])
+
+model.compile(optimizer=<code style="color: #00d4ff;">'adam'</code>,
+              loss=<code style="color: #00d4ff;">'sparse_categorical_crossentropy'</code>,
+              metrics=[<code style="color: #00d4ff;">'accuracy'</code>])</pre>
+  </div>
+
+  <div style="background: rgba(255, 190, 11, 0.05); padding: 25px; border-radius: 12px; border: 1px solid rgba(255, 190, 11, 0.2); margin: 30px 0;">
+    <h4 style="margin: 0 0 10px 0; color: #ffbe0b; font-size: 16px; font-weight: 600;">💡 Agentic Application</h4>
+    <p style="margin: 0; color: #a0a0b0; font-size: 15px; line-height: 1.7;">
+      Within the allternit protocol, CNNs enable agents to interpret visual interfaces, validate UI states, 
+      analyze screenshots for debugging, and navigate visual environments. Computer vision transforms agents 
+      from text-only systems into multimodal intelligences.
+    </p>
+  </div>
+
+  <!-- Knowledge Check -->
+  <div style="background: #12121a; padding: 30px; border-radius: 12px; border: 1px solid #2a2a3e; margin-top: 40px;">
+    <h3 style="margin: 0 0 20px 0; color: #ffffff; font-size: 20px; font-weight: 700;">✅ Knowledge Check</h3>
+    
+    <div>
+      <p style="color: #a0a0b0; font-size: 15px; margin: 0 0 12px 0;">
+        <strong style="color: #ffffff;">Q:</strong> What is the main advantage of convolution over fully connected layers for images?
+      </p>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <label style="display: flex; align-items: center; gap: 10px; color: #a0a0b0; font-size: 14px; cursor: pointer;">
+          <input type="radio" name="q1" style="accent-color: #06ffa5;"> Fewer parameters and translation invariance ✓
+        </label>
+        <label style="display: flex; align-items: center; gap: 10px; color: #a0a0b0; font-size: 14px; cursor: pointer;">
+          <input type="radio" name="q1" style="accent-color: #06ffa5;"> It always produces better accuracy
+        </label>
+        <label style="display: flex; align-items: center; gap: 10px; color: #a0a0b0; font-size: 14px; cursor: pointer;">
+          <input type="radio" name="q1" style="accent-color: #06ffa5;"> It requires less training data
+        </label>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</div>

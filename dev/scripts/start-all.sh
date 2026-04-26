@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# A2rchitech - Unified Startup Script
+# Allternit - Unified Startup Script
 # Runs all required services in the background with a single command
 
 set -e
@@ -23,7 +23,7 @@ mkdir -p "$LOG_DIR"
 print_header() {
     echo ""
     echo -e "${CYAN}╔═══════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║${NC}          ${GREEN}A2RCHITECH - Spatial Agent Shell${NC}              ${CYAN}║${NC}"
+    echo -e "${CYAN}║${NC}          ${GREEN}Allternit - Spatial Agent Shell${NC}              ${CYAN}║${NC}"
     echo -e "${CYAN}║${NC}              ${BLUE}Unified Service Launcher${NC}                   ${CYAN}║${NC}"
     echo -e "${CYAN}╚═══════════════════════════════════════════════════════════╝${NC}"
     echo ""
@@ -276,16 +276,16 @@ start_api_service() {
     print_warning "API Service still starting in background..."
 }
 
-# Start Rails Service (A2R Agent System)
+# Start Rails Service (Allternit Agent System)
 start_rails_service() {
-    print_status "Starting Rails Service (A2R Agent System)..."
+    print_status "Starting Rails Service (Allternit Agent System)..."
 
-    RAILS_DIR="$PROJECT_ROOT/a2r-agent-system-rails"
+    RAILS_DIR="$PROJECT_ROOT/allternit-agent-system-rails"
 
     # Start the Rails service
     (
         cd "$RAILS_DIR"
-        cargo run --bin a2r-rails-service --release > "$LOG_DIR/rails-service.log" 2>&1
+        cargo run --bin allternit-rails-service --release > "$LOG_DIR/rails-service.log" 2>&1
     ) &
 
     RAILS_PID=$!
@@ -389,7 +389,7 @@ start_openclaw_service() {
 
 # Stop all services
 stop_services() {
-    print_status "Stopping all A2rchitech services..."
+    print_status "Stopping all Allternit services..."
 
     # Kill by PID files
     for pidfile in "$LOG_DIR"/*.pid; do
@@ -415,10 +415,10 @@ stop_services() {
 }
 
 run_bootstrap_quickjs() {
-    print_status "Bootstrapping A2R Usage QuickJS env..."
+    print_status "Bootstrapping Allternit Usage QuickJS env..."
     if [ -x "$PROJECT_ROOT/scripts/bootstrap-operator-quickjs-venv.sh" ]; then
         "$PROJECT_ROOT/scripts/bootstrap-operator-quickjs-venv.sh"
-        print_success "A2R Usage QuickJS runtime bootstrapped"
+        print_success "Allternit Usage QuickJS runtime bootstrapped"
     else
         print_warning "QuickJS bootstrap missing; install manually before running the operator"
     fi

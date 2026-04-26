@@ -118,15 +118,19 @@ jobs:
           chmod +x surfaces/allternit-desktop/resources/bin/allternit-api
           lipo -info surfaces/allternit-desktop/resources/bin/allternit-api
 
-      # ── Step 3: Build Swift VM manager CLI ───────────────────────────────────
-      - name: Build Swift VM manager CLI
-        run: swift build -c release --package-path surfaces/allternit-desktop/native/vm-manager
-
-      - name: Copy vm-manager-cli
+      # ── Step 3: Bundle Lima (universal limactl binary) ───────────────────────
+      - name: Download Lima and create universal binary
         run: |
-          cp surfaces/allternit-desktop/native/vm-manager/.build/release/vm-manager-cli \
-             surfaces/allternit-desktop/resources/bin/vm-manager-cli
-          chmod +x surfaces/allternit-desktop/resources/bin/vm-manager-cli
+          node scripts/download-lima.cjs arm64
+          mv resources/lima/limactl resources/lima/limactl-arm64
+          node scripts/download-lima.cjs x86_64
+          mv resources/lima/limactl resources/lima/limactl-x86_64
+          lipo -create resources/lima/limactl-arm64 resources/lima/limactl-x86_64 \
+               -output resources/lima/limactl
+          chmod +x resources/lima/limactl
+          rm resources/lima/limactl-arm64 resources/lima/limactl-x86_64
+          lipo -info resources/lima/limactl
+        working-directory: surfaces/allternit-desktop
 
       # ── Step 4: Patch checksums into manifest.ts ─────────────────────────────
       - name: Patch manifest.ts checksums

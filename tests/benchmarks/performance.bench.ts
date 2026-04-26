@@ -1,12 +1,12 @@
 /**
  * Performance Benchmarks
  * 
- * Benchmarks for critical paths in A2R system.
+ * Benchmarks for critical paths in Allternit system.
  */
 
 import { bench, describe } from 'vitest';
-import { A2RKernelImpl, preToolUseRouter, fileAccessRouter } from '@a2r/governor';
-import { LawPolicyEngine, PolicyTemplates } from '@a2r/lawlayer';
+import { AllternitKernelImpl, preToolUseRouter, fileAccessRouter } from '@allternit/governor';
+import { LawPolicyEngine, PolicyTemplates } from '@allternit/lawlayer';
 
 // Mock storage
 class BenchStorage {
@@ -46,7 +46,7 @@ class BenchStorage {
 
 describe('Kernel Performance', () => {
   const storage = new BenchStorage();
-  const kernel = new A2RKernelImpl(storage);
+  const kernel = new AllternitKernelImpl(storage);
 
   // Pre-populate with test data
   const testWihs: string[] = [];
@@ -79,7 +79,7 @@ describe('Kernel Performance', () => {
 
 describe('Routing Performance', () => {
   const storage = new BenchStorage();
-  const kernel = new A2RKernelImpl(storage);
+  const kernel = new AllternitKernelImpl(storage);
 
   // Register routers
   kernel.registerPreToolUse('default', preToolUseRouter);
@@ -112,7 +112,7 @@ describe('Routing Performance', () => {
 
 describe('Policy Engine Performance', () => {
   const storage = new BenchStorage();
-  const kernel = new A2RKernelImpl(storage);
+  const kernel = new AllternitKernelImpl(storage);
   const engine = new LawPolicyEngine({ kernel });
 
   // Register multiple policies
@@ -165,7 +165,7 @@ describe('Policy Engine Performance', () => {
 
 describe('Receipt Generation Performance', () => {
   const storage = new BenchStorage();
-  const kernel = new A2RKernelImpl(storage);
+  const kernel = new AllternitKernelImpl(storage);
 
   // Pre-create WIH
   let testWihId: string;
@@ -202,9 +202,9 @@ describe('Receipt Generation Performance', () => {
 });
 
 describe('Shell Performance', async () => {
-  const { createShell } = await import('@a2r/shell');
+  const { createShell } = await import('@allternit/shell');
   const storage = new BenchStorage();
-  const kernel = new A2RKernelImpl(storage);
+  const kernel = new AllternitKernelImpl(storage);
 
   // Pre-create WIH and shell
   let shell: ReturnType<typeof createShell>;
@@ -244,7 +244,7 @@ describe('Shell Performance', async () => {
 // Memory usage benchmarks
 describe('Memory Usage', () => {
   const storage = new BenchStorage();
-  const kernel = new A2RKernelImpl(storage);
+  const kernel = new AllternitKernelImpl(storage);
 
   bench('create 100 WIHs', async () => {
     for (let i = 0; i < 100; i++) {

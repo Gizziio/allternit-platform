@@ -1,0 +1,294 @@
+# P3.13: JSON Render / UGI Integration (3 weeks)
+
+**Objective:** Integrate Vercel Labs json-render for declarative UI execution with Allternit-IX kernel.
+
+**Status:** 🔴 NOT STARTED  
+**Priority:** MEDIUM  
+**Estimated Effort:** 3 weeks
+
+---
+
+## Week 1: Allternit-IX Core
+
+### P3.13.1: Allternit-IX UI IR Schema (2 days)
+
+**Files to Create:**
+```
+packages/allternit-ix/
+├── package.json
+├── src/
+│   ├── schema/
+│   │   ├── ui-ir.ts
+│   │   ├── component-catalog.ts
+│   │   ├── state-binding.ts
+│   │   ├── action-schema.ts
+│   │   └── index.ts
+│   ├── types/
+│   │   ├── UIRoot.ts
+│   │   ├── UIComponent.ts
+│   │   ├── UIState.ts
+│   │   └── index.ts
+│   └── index.ts
+└── schemas/
+    └── ui-ir.json
+```
+
+**Tasks:**
+- [ ] Create `packages/allternit-ix/` package
+- [ ] Define UI IR (Intermediate Representation) schema
+  ```typescript
+  interface UIRoot {
+    version: string;
+    components: UIComponent[];
+    state: UIState;
+    actions: UIAction[];
+    css?: string;
+  }
+  
+  interface UIComponent {
+    id: string;
+    type: string;
+    props: Record<string, unknown>;
+    children?: UIComponent[];
+    bindings?: StateBinding[];
+    events?: EventHandler[];
+  }
+  ```
+- [ ] Create component catalog schema
+- [ ] Define state binding schema
+- [ ] Implement expression evaluation grammar
+- [ ] Create action schema (events → handlers)
+
+---
+
+### P3.13.2: Catalog Registry (1 day)
+
+**Files to Create:**
+```
+packages/allternit-ix/src/
+├── catalog/
+│   ├── registry.ts
+│   ├── validator.ts
+│   └── discovery.ts
+└── components/
+    └── built-ins.ts
+```
+
+**Tasks:**
+- [ ] Implement versioned component catalog
+- [ ] Create catalog registration API
+- [ ] Add component validation
+- [ ] Implement catalog versioning
+- [ ] Create catalog discovery endpoint
+
+**Built-in Components:**
+```typescript
+const BUILT_INS = [
+  'Box', 'Stack', 'Flex', 'Grid',
+  'Text', 'Heading', 'Paragraph',
+  'Button', 'Input', 'Select', 'Checkbox',
+  'Table', 'List', 'Card',
+  'Image', 'Icon',
+  'Form', 'Field',
+];
+```
+
+---
+
+### P3.13.3: State Store (2 days)
+
+**Files to Create:**
+```
+packages/allternit-ix/src/
+├── state/
+│   ├── store.ts
+│   ├── binding.ts
+│   ├── computed.ts
+│   └── persistence.ts
+└── scope/
+    └── index.ts
+```
+
+**Tasks:**
+- [ ] Implement scoped state store (per capsule/agent/user)
+- [ ] Add two-way binding system
+- [ ] Create computed state support
+- [ ] Implement state persistence
+- [ ] Add state encryption for sensitive data
+
+**State Store API:**
+```typescript
+interface StateStore {
+  get<T>(path: string): T;
+  set<T>(path: string, value: T): void;
+  subscribe(path: string, callback: (value: unknown) => void): () => void;
+  compute<T>(path: string, deps: string[], compute: () => T): void;
+  bind(componentId: string, prop: string, statePath: string): void;
+}
+```
+
+---
+
+## Week 2: Patch Engine & Runtime
+
+### P3.13.4: Patch Engine (RFC 6902) (2 days)
+
+**Files to Create:**
+```
+packages/allternit-ix/src/
+├── patch/
+│   ├── parser.ts
+│   ├── validator.ts
+│   ├── applicator.ts
+│   ├── audit.ts
+│   └── replay.ts
+└── types/
+    └── patch.ts
+```
+
+**Tasks:**
+- [ ] Implement JSON Patch parser (RFC 6902)
+  ```typescript
+  interface JSONPatch {
+    op: 'add' | 'remove' | 'replace' | 'move' | 'copy' | 'test';
+    path: string;
+    value?: unknown;
+    from?: string;
+  }
+  ```
+- [ ] Add patch validation
+- [ ] Create patch audit log
+- [ ] Implement patch replay
+- [ ] Add patch compression
+
+---
+
+### P3.13.5: Capsule Runtime Integration (2 days)
+
+**Files to Create:**
+```
+surfaces/allternit-platform/src/capsules/
+└── IXCapsule/
+    ├── IXCapsule.tsx
+    ├── IRRenderer.tsx
+    ├── ComponentMapper.tsx
+    └── EventHandler.tsx
+```
+
+**Tasks:**
+- [ ] Create IX capsule type
+- [ ] Implement IR → React component mapping
+- [ ] Add event handling pipeline
+- [ ] Create action execution context
+- [ ] Implement state synchronization
+
+---
+
+### P3.13.6: Policy Gate Integration (1 day)
+
+**Files to Create:**
+```
+packages/allternit-ix/src/
+└── policy/
+    ├── gate.ts
+    ├── evaluator.ts
+    └── audit.ts
+```
+
+**Tasks:**
+- [ ] Add action permission checking
+- [ ] Implement policy evaluation
+- [ ] Create policy definition schema
+- [ ] Add policy audit logging
+- [ ] Create policy management UI
+
+---
+
+## Week 3: Catalog-Aware Prompting & Testing
+
+### P3.13.7: Catalog-Aware Prompting (1 day)
+
+**Files to Create:**
+```
+packages/allternit-ix/src/
+└── llm/
+    ├── prompts.ts
+    ├── examples.ts
+    └── optimizer.ts
+```
+
+**Tasks:**
+- [ ] Create LLM prompt templates for UI generation
+- [ ] Add catalog component descriptions to prompts
+- [ ] Implement few-shot examples
+- [ ] Create prompt optimization
+- [ ] Add catalog update → prompt refresh
+
+**Prompt Template:**
+```
+You are a UI generator for Allternit. Generate UI IR (JSON) using these components:
+{{component_catalog}}
+
+Guidelines:
+- Use only components from the catalog
+- Bind state for dynamic values
+- Define actions for user interactions
+- Return valid UIRoot JSON
+
+User request: {{user_request}}
+```
+
+---
+
+### P3.13.8: json-render Compatibility (1 day)
+
+**Tasks:**
+- [ ] Map json-render schema to Allternit-IX
+- [ ] Create migration utilities
+- [ ] Add json-render component adapters
+- [ ] Test Vercel Labs examples
+- [ ] Document differences
+
+---
+
+### P3.13.9: Testing & CI (3 days)
+
+**Tasks:**
+- [ ] Write schema conformance tests
+- [ ] Create component rendering tests
+- [ ] Add patch roundtrip tests
+- [ ] Implement CI checks for schema
+- [ ] Performance benchmarks
+
+---
+
+## 📋 Dependencies
+
+| Task | Depends On |
+|------|-----------|
+| P3.13.2 | P3.13.1 |
+| P3.13.3 | P3.13.1 |
+| P3.13.4 | P3.13.3 |
+| P3.13.5 | P3.13.1, P3.13.3, P3.13.4 |
+| P3.13.6 | P3.13.5 |
+| P3.13.7 | P3.13.2 |
+| P3.13.8 | P3.13.1 |
+| P3.13.9 | All above |
+
+---
+
+## ✅ Definition of Done
+
+- [ ] Allternit-IX schema defined and validated
+- [ ] Catalog registry functional
+- [ ] State store with binding working
+- [ ] Patch engine RFC 6902 compliant
+- [ ] Capsule runtime renders UI
+- [ ] Policy gates enforce permissions
+- [ ] LLM prompting catalog-aware
+- [ ] Tests passing with >80% coverage
+
+---
+
+**Start Date:** TBD  
+**End Date:** TBD + 3 weeks

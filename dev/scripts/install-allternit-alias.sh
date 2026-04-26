@@ -1,15 +1,15 @@
 #!/bin/bash
 #
-# Install A2R Global Command
+# Install Allternit Global Command
 #
-# This script adds the a2r command to your shell PATH
+# This script adds the allternit command to your shell PATH
 #
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-A2R_BIN="$PROJECT_ROOT/bin"
+Allternit_BIN="$PROJECT_ROOT/bin"
 
 # Colors
 RED='\033[0;31m'
@@ -82,19 +82,19 @@ get_profile_file() {
 main() {
     echo ""
     echo "╔════════════════════════════════════════════════════════════════╗"
-    echo "║           A2R Command Installation                             ║"
+    echo "║           Allternit Command Installation                             ║"
     echo "╚════════════════════════════════════════════════════════════════╝"
     echo ""
     
-    # Check if a2r exists
-    if [ ! -f "$A2R_BIN/a2r" ]; then
-        print_error "a2r command not found at $A2R_BIN/a2r"
+    # Check if allternit exists
+    if [ ! -f "$Allternit_BIN/allternit" ]; then
+        print_error "allternit command not found at $Allternit_BIN/allternit"
         exit 1
     fi
     
     # Make sure it's executable
-    chmod +x "$A2R_BIN/a2r"
-    print_success "a2r command is executable"
+    chmod +x "$Allternit_BIN/allternit"
+    print_success "allternit command is executable"
     
     # Detect shell
     local shell=$(detect_shell)
@@ -108,7 +108,7 @@ main() {
         echo ""
         echo "Please manually add the following to your shell profile:"
         echo ""
-        print_cmd "export PATH=\"$A2R_BIN:\$PATH\""
+        print_cmd "export PATH=\"$Allternit_BIN:\$PATH\""
         echo ""
         exit 0
     fi
@@ -116,21 +116,21 @@ main() {
     print_status "Shell profile: $profile"
     
     # Check if already in PATH
-    if echo "$PATH" | grep -q "$A2R_BIN"; then
-        print_success "A2R bin directory is already in PATH"
+    if echo "$PATH" | grep -q "$Allternit_BIN"; then
+        print_success "Allternit bin directory is already in PATH"
         echo ""
-        echo "You can now use the 'a2r' command:"
+        echo "You can now use the 'allternit' command:"
         echo ""
-        print_cmd "  a2r --help"
-        print_cmd "  a2r start"
-        print_cmd "  a2r status"
+        print_cmd "  allternit --help"
+        print_cmd "  allternit start"
+        print_cmd "  allternit status"
         echo ""
         exit 0
     fi
     
     # Check if already in profile
-    if grep -q "$A2R_BIN" "$profile" 2>/dev/null; then
-        print_warning "A2R bin directory is already in $profile"
+    if grep -q "$Allternit_BIN" "$profile" 2>/dev/null; then
+        print_warning "Allternit bin directory is already in $profile"
         print_status "Please reload your shell:"
         echo ""
         print_cmd "  source $profile"
@@ -140,16 +140,16 @@ main() {
     
     # Add to profile
     echo "" >> "$profile"
-    echo "# A2rchitect Platform" >> "$profile"
-    echo "export PATH=\"$A2R_BIN:\$PATH\"" >> "$profile"
+    echo "# allternit Platform" >> "$profile"
+    echo "export PATH=\"$Allternit_BIN:\$PATH\"" >> "$profile"
     
-    print_success "Added A2R to $profile"
+    print_success "Added Allternit to $profile"
     echo ""
     echo "╔════════════════════════════════════════════════════════════════╗"
     echo "║           Installation Complete!                               ║"
     echo "╚════════════════════════════════════════════════════════════════╝"
     echo ""
-    echo "Reload your shell to use the 'a2r' command:"
+    echo "Reload your shell to use the 'allternit' command:"
     echo ""
     print_cmd "  source $profile"
     echo ""
@@ -157,11 +157,11 @@ main() {
     echo ""
     echo "Then you can use:"
     echo ""
-    print_cmd "  a2r --help      # Show help"
-    print_cmd "  a2r start       # Start the platform"
-    print_cmd "  a2r status      # Check service status"
-    print_cmd "  a2r logs        # View logs"
-    print_cmd "  a2r open        # Open UI in browser"
+    print_cmd "  allternit --help      # Show help"
+    print_cmd "  allternit start       # Start the platform"
+    print_cmd "  allternit status      # Check service status"
+    print_cmd "  allternit logs        # View logs"
+    print_cmd "  allternit open        # Open UI in browser"
     echo ""
 }
 

@@ -2,7 +2,7 @@ import json
 import glob
 import os
 
-files = glob.glob(".a2r/wih/T0*.wih.json")
+files = glob.glob(".allternit/wih/T0*.wih.json")
 print(f"Found {len(files)} WIH files to check.")
 
 for file_path in files:

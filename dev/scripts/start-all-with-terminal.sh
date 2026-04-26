@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# A2rchitect - Unified Startup Script (with Terminal Server)
+# allternit - Unified Startup Script (with Terminal Server)
 # Runs all required services in the background with a single command
 # Includes Terminal Server for AI model serving to Web/Desktop apps
 
@@ -24,7 +24,7 @@ mkdir -p "$LOG_DIR"
 print_header() {
     echo ""
     echo -e "${CYAN}╔═══════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}║${NC}          ${GREEN}A2RCHITECH - Spatial Agent Shell${NC}              ${CYAN}║${NC}"
+    echo -e "${CYAN}║${NC}          ${GREEN}Allternit - Spatial Agent Shell${NC}              ${CYAN}║${NC}"
     echo -e "${CYAN}║${NC}        ${BLUE}Unified Service Launcher + Terminal Server${NC}       ${CYAN}║${NC}"
     echo -e "${CYAN}╚═══════════════════════════════════════════════════════════╝${NC}"
     echo ""
@@ -94,8 +94,8 @@ start_terminal_server() {
     fi
 
     # Set environment variables for terminal server
-    export A2R_SERVER_PASSWORD="${A2R_SERVER_PASSWORD:-}"
-    export A2R_DATA_DIR="${A2R_DATA_DIR:-$PROJECT_ROOT/.a2r}"
+    export Allternit_SERVER_PASSWORD="${Allternit_SERVER_PASSWORD:-}"
+    export Allternit_DATA_DIR="${Allternit_DATA_DIR:-$PROJECT_ROOT/.allternit}"
     
     # Start the terminal server with explicit host/port
     (
@@ -419,7 +419,7 @@ show_urls() {
 
 # Stop all services
 stop_services() {
-    print_status "Stopping all A2rchitech services..."
+    print_status "Stopping all Allternit services..."
 
     stop_terminal_server
 

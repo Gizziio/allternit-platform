@@ -7,7 +7,7 @@ PORT=3009 # Use a different port for testing
 echo "Running AT-UI-0002: UI denies unknown action"
 
 # Start gateway service in background
-A2R_RUN_ID="test-run-ui" python3 services/gateway/src/main.py serve > /tmp/gateway_test.log 2>&1 &
+Allternit_RUN_ID="test-run-ui" python3 services/gateway/src/main.py serve > /tmp/gateway_test.log 2>&1 &
 PID=$!
 
 # Ensure cleanup on exit

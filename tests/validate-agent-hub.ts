@@ -5,8 +5,8 @@
  * Run with: bun run validate-agent-hub.ts
  */
 
-import { SPECIALIST_TEMPLATES, getTemplateById, createAgentFromTemplate } from './6-ui/a2r-platform/src/lib/agents/agent-templates.specialist';
-import { exportAgent, importAgentFromString, validateAgentConfig } from './6-ui/a2r-platform/src/lib/agents/agent-template-io';
+import { SPECIALIST_TEMPLATES, getTemplateById, createAgentFromTemplate } from './6-ui/allternit-platform/src/lib/agents/agent-templates.specialist';
+import { exportAgent, importAgentFromString, validateAgentConfig } from './6-ui/allternit-platform/src/lib/agents/agent-template-io';
 
 console.log('🔍 Agent Hub Validation Test\n');
 
@@ -156,7 +156,7 @@ if (failed > 0) {
   console.log('   - AgentHubModal (ShellUI modal)');
   console.log('   - AgentSelectorWizard (Step-by-step wizard)');
   console.log('   - AgentCreationWizardWithTemplates (Integrated wizard)');
-  console.log('   - CLI commands (a2r agent-hub)');
+  console.log('   - CLI commands (allternit agent-hub)');
   console.log('   - Import/Export service');
   console.log('\n🚀 Ready for production use!');
   process.exit(0);

@@ -1,0 +1,90 @@
+---
+wih_version: 1
+work_item_id: "T3.4"
+title: "Extend DAG Schema with Worktree Config"
+owner_role: "orchestrator"
+assigned_roles:
+  builder: "agent.builder"
+  validator: "agent.validator"
+inputs:
+  sot: "/agent/Agentic Prompts/formats/dag-schema.md"
+  requirements:
+    - "Add worktree config to DAG nodes"
+    - "Update DAG parser"
+    - "Update validation"
+  context_packs:
+    - "infrastructure/allternit-agent-system-rails/src/work/"
+    - "agent/Agentic Prompts/formats/dag-schema.md"
+  artifacts_from_deps:
+    - "T3.3"
+scope:
+  allowed_paths:
+    - "infrastructure/allternit-agent-system-rails/src/work/types.rs"
+    - "infrastructure/allternit-agent-system-rails/src/work/projection.rs"
+  allowed_tools:
+    - "fs.read"
+    - "fs.write"
+    - "cargo.build"
+    - "cargo.test"
+  execution_permission:
+    mode: "write_leased"
+outputs:
+  required_artifacts:
+    - "infrastructure/allternit-agent-system-rails/src/work/types.rs"
+  required_reports:
+    - "dag_schema_extension.md"
+acceptance:
+  tests:
+    - "cargo test -p allternit-agent-system-rails dag"
+  invariants:
+    - "Backward compatibility"
+    - "Worktree config is optional"
+  evidence:
+    - "dag_schema_extension.md"
+blockers:
+  fail_on:
+    - "breaking_change"
+stop_conditions:
+  escalate_if:
+    - "schema_conflict"
+  max_iterations: 5
+---
+
+# Extend DAG Schema with Worktree Config
+
+## Objective
+Add worktree configuration to DAG nodes.
+
+## Schema Extension
+```rust
+pub struct DagNode {
+    // ... existing fields ...
+    
+    #[serde(default)]
+    pub worktree: Option<WorktreeConfig>,
+}
+
+pub struct WorktreeConfig {
+    pub auto_create: bool,
+    pub branch_prefix: String,
+    pub cleanup_on_done: CleanupPolicy,
+}
+
+pub enum CleanupPolicy {
+    OnDone,        // Clean up when node completes
+    OnDagComplete, // Clean up when entire DAG completes
+    Never,         // Keep for manual review
+}
+```
+
+## YAML Example
+```yaml
+nodes:
+  - id: "N1"
+    wih: "work_items/T1042.md"
+    depends_on: []
+    worktree:
+      auto_create: true
+      branch_prefix: "agent/"
+      cleanup_on_done: "on_dag_complete"
+```

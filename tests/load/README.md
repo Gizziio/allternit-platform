@@ -1,6 +1,6 @@
 # Load Testing (k6)
 
-This directory contains k6 scripts for exercising the A2rchitech API.
+This directory contains k6 scripts for exercising the Allternit API.
 
 ## Quick Start
 
@@ -15,17 +15,17 @@ k6 run tests/load/workflow_api.js
 
 Environment variables:
 
-- `A2RCHITECH_BASE_URL` (default: `http://localhost:3000`)
-- `A2RCHITECH_IDENTITY` (default: `api-service`)
-- `A2RCHITECH_TENANT` (default: `default`)
-- `A2RCHITECH_VUS` (default: `10`)
-- `A2RCHITECH_DURATION` (default: `30s`)
+- `Allternit_BASE_URL` (default: `http://localhost:3000`)
+- `Allternit_IDENTITY` (default: `api-service`)
+- `Allternit_TENANT` (default: `default`)
+- `Allternit_VUS` (default: `10`)
+- `Allternit_DURATION` (default: `30s`)
 
 Example:
 
 ```bash
-A2RCHITECH_BASE_URL=http://localhost:3000 \
-A2RCHITECH_VUS=25 \
-A2RCHITECH_DURATION=2m \
+Allternit_BASE_URL=http://localhost:3000 \
+Allternit_VUS=25 \
+Allternit_DURATION=2m \
 k6 run tests/load/workflow_api.js
 ```

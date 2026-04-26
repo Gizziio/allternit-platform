@@ -1,5 +1,5 @@
 #!/bin/bash
-# A2R Operator - Complete Verification Suite
+# Allternit Operator - Complete Verification Suite
 # Purpose: Run all 9 verification phases and prove the system works
 # Rule: If it isn't verified running, it isn't done.
 
@@ -18,14 +18,14 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 echo "========================================"
-echo "A2R Operator Verification Suite"
+echo "Allternit Operator Verification Suite"
 echo "Started: $TIMESTAMP"
 echo "========================================"
 echo ""
 
 # Initialize report
 cat > "$REPORT_FILE" << 'EOF'
-# A2R Operator - Full Verification Report
+# Allternit Operator - Full Verification Report
 
 **Date:** TIMESTAMP_PLACEHOLDER
 **Tester:** Automated Verification Suite
@@ -114,7 +114,7 @@ run_phase() {
 echo "Checking operator daemon status..."
 if ! pgrep -f "operator-daemon.js" > /dev/null; then
     echo -e "${YELLOW}Daemon not running, starting...${NC}"
-    cd "$PROJECT_ROOT/1-kernel/agent-systems/a2r-dak-runner"
+    cd "$PROJECT_ROOT/1-kernel/agent-systems/allternit-dak-runner"
     nohup node dist/operator-daemon.js --port 3010 > /tmp/operator-daemon.log 2>&1 &
     sleep 3
     

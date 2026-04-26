@@ -1,4 +1,4 @@
-# A2R Test Suite
+# Allternit Test Suite
 
 ## Test Structure
 
@@ -21,8 +21,8 @@ tests/
 pnpm test
 
 # Unit tests only (packages)
-pnpm --filter @a2r/governor test
-pnpm --filter @a2r/runtime test
+pnpm --filter @allternit/governor test
+pnpm --filter @allternit/runtime test
 
 # Integration tests
 pnpm test:integration

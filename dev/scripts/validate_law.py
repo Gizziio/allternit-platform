@@ -62,9 +62,9 @@ REQUIRED_FILES = [
 TOOLS_REGISTRY_PATH = ROOT / "tools" / "tool_registry.json"
 WORKER_REGISTRY_PATH = ROOT / "workers" / "worker_registry.json"
 
-GRAPH_DIR = ROOT / ".a2r" / "graphs"
-WIH_DIR = ROOT / ".a2r" / "wih"
-BEADS_GRAPH_DIR = ROOT / ".a2r" / "beads" / "graphs"
+GRAPH_DIR = ROOT / ".allternit" / "graphs"
+WIH_DIR = ROOT / ".allternit" / "wih"
+BEADS_GRAPH_DIR = ROOT / ".allternit" / "beads" / "graphs"
 
 ACCEPTANCE_FILE = ROOT / "spec" / "AcceptanceTests.md"
 
@@ -93,17 +93,17 @@ ALLOWED_SCAN_EXTS = {
     ".sh",
 }
 
-GRAPH_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/Graph.schema.json"
-WIH_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/WIH.schema.json"
-TOOL_REGISTRY_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/ToolRegistry.schema.json"
-WORKER_REGISTRY_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/WorkerRegistry.schema.json"
-BOOT_MANIFEST_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/BootManifest.schema.json"
-BEADS_GRAPH_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/BeadsGraph.schema.json"
-UI_REGISTRY_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/UIRegistry.schema.json"
-UI_ACTION_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/UIAction.schema.json"
-UI_NAV_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/UINav.schema.json"
-UI_WORKSPACE_LAYOUT_SCHEMA_ID = "https://a2rchitech.local/spec/contracts/UIWorkspaceLayout.schema.json"
-DEFAULT_BOOT_MANIFEST_PATH = ROOT / ".a2r" / "boot" / "boot_manifest.json"
+GRAPH_SCHEMA_ID = "https://allternit.local/spec/contracts/Graph.schema.json"
+WIH_SCHEMA_ID = "https://allternit.local/spec/contracts/WIH.schema.json"
+TOOL_REGISTRY_SCHEMA_ID = "https://allternit.local/spec/contracts/ToolRegistry.schema.json"
+WORKER_REGISTRY_SCHEMA_ID = "https://allternit.local/spec/contracts/WorkerRegistry.schema.json"
+BOOT_MANIFEST_SCHEMA_ID = "https://allternit.local/spec/contracts/BootManifest.schema.json"
+BEADS_GRAPH_SCHEMA_ID = "https://allternit.local/spec/contracts/BeadsGraph.schema.json"
+UI_REGISTRY_SCHEMA_ID = "https://allternit.local/spec/contracts/UIRegistry.schema.json"
+UI_ACTION_SCHEMA_ID = "https://allternit.local/spec/contracts/UIAction.schema.json"
+UI_NAV_SCHEMA_ID = "https://allternit.local/spec/contracts/UINav.schema.json"
+UI_WORKSPACE_LAYOUT_SCHEMA_ID = "https://allternit.local/spec/contracts/UIWorkspaceLayout.schema.json"
+DEFAULT_BOOT_MANIFEST_PATH = ROOT / ".allternit" / "boot" / "boot_manifest.json"
 
 
 def fail(msg: str) -> None:
@@ -172,7 +172,7 @@ def validate_graph(graph, path: Path):
             if key not in node:
                 fail(f"Graph node missing '{key}' in {path}")
         ensure_list(node["blocked_by"], f"{path} node.blocked_by")
-        if not str(node["wih_path"]).startswith("/.a2r/wih/"):
+        if not str(node["wih_path"]).startswith("/.allternit/wih/"):
             fail(f"Invalid wih_path in {path}: {node['wih_path']}")
 
 
@@ -200,8 +200,8 @@ def validate_wih(wih, path: Path):
     ensure_nonempty_list(outputs.get("artifact_paths"), f"{path} outputs.artifact_paths")
 
     write_scope = wih.get("write_scope", {})
-    if write_scope.get("root") != "/.a2r/":
-        fail(f"WIH write_scope.root must be '/.a2r/' in {path}")
+    if write_scope.get("root") != "/.allternit/":
+        fail(f"WIH write_scope.root must be '/.allternit/' in {path}")
     ensure_nonempty_list(write_scope.get("allowed_globs"), f"{path} write_scope.allowed_globs")
 
     tools = wih.get("tools", {})
@@ -272,8 +272,8 @@ def validate_worker_registry(registry, path: Path):
         roots = fs_policy.get("allowed_output_roots", [])
         ensure_nonempty_list(roots, f"{path} fs_policy.allowed_output_roots")
         for root in roots:
-            if not str(root).startswith("/.a2r/"):
-                fail(f"Worker allowed_output_roots must be under /.a2r/ in {path}: {worker_id}")
+            if not str(root).startswith("/.allternit/"):
+                fail(f"Worker allowed_output_roots must be under /.allternit/ in {path}: {worker_id}")
 
 
 def validate_ui_registry(registry, path: Path):
@@ -509,7 +509,7 @@ def normalize_graph_for_compare(graph):
     }
 
 def write_beacon():
-    boot_dir = ROOT / ".a2r" / "boot"
+    boot_dir = ROOT / ".allternit" / "boot"
     boot_dir.mkdir(parents=True, exist_ok=True)
     beacon_path = boot_dir / "validator.json"
     beacon = {
@@ -534,11 +534,11 @@ def main():
     schemas = validate_schema_files()
 
     if not GRAPH_DIR.exists() or not any(GRAPH_DIR.glob("*.json")):
-        fail("Missing .a2r/graphs/*.json")
+        fail("Missing .allternit/graphs/*.json")
     if not WIH_DIR.exists() or not any(WIH_DIR.glob("*.json")):
-        fail("Missing .a2r/wih/*.json")
+        fail("Missing .allternit/wih/*.json")
     if not BEADS_GRAPH_DIR.exists() or not any(BEADS_GRAPH_DIR.glob("*.json")):
-        fail("Missing .a2r/beads/graphs/*.json")
+        fail("Missing .allternit/beads/graphs/*.json")
 
     if not TOOLS_REGISTRY_PATH.exists():
         fail("Missing tools/tool_registry.json")
@@ -591,7 +591,7 @@ def main():
         validate_instance(beads_graph, BEADS_GRAPH_SCHEMA_ID, schemas, str(beads_graph_path))
         beads_id = beads_graph.get("graph_id")
         if beads_id not in graph_by_id:
-            fail(f"Beads graph {beads_id} missing matching graph in .a2r/graphs")
+            fail(f"Beads graph {beads_id} missing matching graph in .allternit/graphs")
         base_graph = graph_by_id[beads_id]
         if normalize_graph_for_compare(beads_graph) != normalize_graph_for_compare(base_graph):
             fail(f"Beads graph {beads_id} inconsistent with graph definition")

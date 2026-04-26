@@ -38,7 +38,7 @@ if [ "$HTTP_CODE" = "200" ]; then
     echo "$COURSES" | jq -r '.[] | "  - \(.name) (ID: \(.id))"' 2>/dev/null || echo "  (no courses found)"
     
     echo ""
-    echo "✅ Canvas is ready for A2R Operator!"
+    echo "✅ Canvas is ready for Allternit Operator!"
     echo ""
     echo "To create a test course, go to: $CANVAS_BASE_URL"
     echo "Then run the golden path test."

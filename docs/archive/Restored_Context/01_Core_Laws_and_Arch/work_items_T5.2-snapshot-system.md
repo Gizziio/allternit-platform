@@ -1,0 +1,93 @@
+---
+wih_version: 1
+work_item_id: "T5.2"
+title: "Implement Snapshot System"
+owner_role: "orchestrator"
+assigned_roles:
+  builder: "agent.builder"
+  validator: "agent.validator"
+inputs:
+  sot: "/docs/research/txtx-axel-analysis.md"
+  requirements:
+    - "Implement snapshot creation"
+    - "Store snapshots persistently"
+    - "Handle snapshot versioning"
+  context_packs:
+    - "services/orchestration/session-recovery/"
+  artifacts_from_deps:
+    - "T5.1"
+scope:
+  allowed_paths:
+    - "services/orchestration/session-recovery/src/snapshot.rs"
+  allowed_tools:
+    - "fs.read"
+    - "fs.write"
+    - "cargo.build"
+    - "cargo.test"
+  execution_permission:
+    mode: "write_leased"
+outputs:
+  required_artifacts:
+    - "services/orchestration/session-recovery/src/snapshot.rs"
+  required_reports:
+    - "snapshot_system_report.md"
+acceptance:
+  tests:
+    - "cargo test -p session-recovery snapshot"
+  invariants:
+    - "Snapshots are complete"
+    - "Snapshots are restorable"
+  evidence:
+    - "snapshot_system_report.md"
+blockers:
+  fail_on:
+    - "snapshot_incomplete"
+stop_conditions:
+  escalate_if:
+    - "storage_issue"
+  max_iterations: 5
+---
+
+# Implement Snapshot System
+
+## Objective
+Create and store session snapshots.
+
+## Snapshot Creation
+```rust
+impl SessionRecovery {
+    pub async fn snapshot(&self, session_id: &str) -> Result<Snapshot> {
+        // 1. Capture DAG state from ledger
+        let dag_state = self.get_dag_state(session_id).await?;
+        
+        // 2. Capture active WIHs
+        let active_wihs = self.get_active_wihs(session_id).await?;
+        
+        // 3. Capture terminal layout
+        let terminal_layout = self.workspace.get_layout(session_id).await?;
+        
+        // 4. Capture worktree info
+        let worktrees = self.get_worktrees(session_id).await?;
+        
+        // 5. Create snapshot
+        let snapshot = Snapshot {
+            id: generate_id(),
+            created_at: Utc::now(),
+            dag_state,
+            active_wihs,
+            terminal_layout,
+            worktrees,
+        };
+        
+        // 6. Store snapshot
+        self.storage.save(&snapshot).await?;
+        
+        Ok(snapshot)
+    }
+}
+```
+
+## Storage Backends
+- Local filesystem (default)
+- S3-compatible (optional)
+- Database (optional)

@@ -1,4 +1,4 @@
-# A2R Mapping: Excel to PowerPoint Plugin
+# Allternit Mapping: Excel to PowerPoint Plugin
 
 **Source:** Anthropic Office Plugin Analysis  
 **Date:** March 13, 2026  
@@ -8,7 +8,7 @@
 
 ## Capability Mapping Table
 
-| # | Observed Plugin Capability | Inferred Contract | A2R Tool Name | Backend | Priority |
+| # | Observed Plugin Capability | Inferred Contract | Allternit Tool Name | Backend | Priority |
 |---|---------------------------|-------------------|---------------|---------|----------|
 | 1 | Open/read Excel workbook | workbook_path → workbook_data | office-local.excel.read-workbook | office-local | NOW |
 | 2 | List sheets in workbook | workbook → sheet_names[] | office-local.excel.list-sheets | office-local | NOW |
@@ -94,11 +94,11 @@ OUTPUT:
 
 ---
 
-## Existing A2R Code We Can Use
+## Existing Allternit Code We Can Use
 
 From codebase search:
 
-### Export Utilities (6-ui/a2r-platform/src/a2r-os/utils/ExportUtilities.ts)
+### Export Utilities (6-ui/allternit-platform/src/allternit-os/utils/ExportUtilities.ts)
 
 ```typescript
 // Already exists:
@@ -107,7 +107,7 @@ From codebase search:
 - exportToPDF() - Export to PDF
 ```
 
-### File Type Detection (6-ui/a2r-platform/src/lib/attachments/extract-text.ts)
+### File Type Detection (6-ui/allternit-platform/src/lib/attachments/extract-text.ts)
 
 ```typescript
 // Already exists:

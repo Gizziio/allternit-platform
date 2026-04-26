@@ -7,11 +7,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-GRAPH_DIR = ROOT / ".a2r" / "graphs"
-WIH_DIR = ROOT / ".a2r" / "wih"
-RUN_STATE_DIR = ROOT / ".a2r" / "run_state"
-RECEIPTS_DIR = ROOT / ".a2r" / "receipts"
-ARTIFACTS_DIR = ROOT / ".a2r" / "artifacts"
+GRAPH_DIR = ROOT / ".allternit" / "graphs"
+WIH_DIR = ROOT / ".allternit" / "wih"
+RUN_STATE_DIR = ROOT / ".allternit" / "run_state"
+RECEIPTS_DIR = ROOT / ".allternit" / "receipts"
+ARTIFACTS_DIR = ROOT / ".allternit" / "artifacts"
 
 BEADS_KEYS = [
     "wih_version",
@@ -281,7 +281,7 @@ def write_agent_execution_receipt(
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="A2R task graph runner")
+    parser = argparse.ArgumentParser(description="Allternit task graph runner")
     sub = parser.add_subparsers(dest="command", required=True)
 
     install_parser = sub.add_parser("install", help="Create run_state for a graph")

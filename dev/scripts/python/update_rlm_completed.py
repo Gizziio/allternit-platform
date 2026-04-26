@@ -16,16 +16,16 @@ for line in lines:
 
 # Update the main RLM issue to mark as completed
 for i, issue in enumerate(existing_issues):
-    if issue['id'] == 'a2rchitech-rlm':
+    if issue['id'] == 'allternit-rlm':
         issue['status'] = 'completed'
-        issue['close_reason'] = 'RLM implementation completed with Unix-like architecture. All sub-issues implemented: core mode infrastructure, Unix mode executor, RLM executor with sub-LLM orchestration, hybrid mode with auto-selection, and proper integration with existing A2rchitech components. Python REPL environment created with proper sandboxing, helper model orchestration implemented, and memory fabric integration completed.'
+        issue['close_reason'] = 'RLM implementation completed with Unix-like architecture. All sub-issues implemented: core mode infrastructure, Unix mode executor, RLM executor with sub-LLM orchestration, hybrid mode with auto-selection, and proper integration with existing Allternit components. Python REPL environment created with proper sandboxing, helper model orchestration implemented, and memory fabric integration completed.'
         issue['closed_at'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%S-06:00')
         existing_issues[i] = issue
         break
 
 # Update sub-issues to mark them as completed too
 for i, issue in enumerate(existing_issues):
-    if issue['id'].startswith('a2rchitech-rlm.'):
+    if issue['id'].startswith('allternit-rlm.'):
         issue['status'] = 'completed'
         issue['close_reason'] = 'Component completed as part of main RLM implementation.'
         issue['closed_at'] = datetime.now().strftime('%Y-%m-%dT%H:%M:%S-06:00')
@@ -37,4 +37,4 @@ with open('.beads/issues.jsonl', 'w') as f:
         f.write(json.dumps(issue) + '\n')
 
 print("RLM issues updated to completed status!")
-print(f"Updated {len([i for i in existing_issues if i['id'].startswith('a2rchitech-rlm')])} issues")
+print(f"Updated {len([i for i in existing_issues if i['id'].startswith('allternit-rlm')])} issues")

@@ -9,7 +9,7 @@ fi
 out=$($PYTHON_BIN scripts/taskgraph.py install graph-0001)
 run_id=$(echo "$out" | $PYTHON_BIN -c 'import json,sys; print(json.load(sys.stdin)["run_id"])')
 
-run_path=".a2r/run_state/${run_id}.json"
+run_path=".allternit/run_state/${run_id}.json"
 
 $PYTHON_BIN - <<PY
 import json

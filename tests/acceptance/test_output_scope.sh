@@ -6,4 +6,4 @@ if [ ! -f spec/Contracts/Receipt.schema.json ]; then
   exit 1
 fi
 
-cargo test -p a2rchitech-tools-gateway test_write_scope_enforced
+cargo test -p allternit-tools-gateway test_write_scope_enforced

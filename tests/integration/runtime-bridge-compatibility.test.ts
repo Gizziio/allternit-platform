@@ -1,12 +1,12 @@
 /**
  * Runtime Bridge Compatibility Tests
  * 
- * Verifies that A2R runtime properly integrates with the runtime bridge interfaces.
- * These tests ensure the integration points documented in A2R runtime wiring status work correctly.
+ * Verifies that Allternit runtime properly integrates with the runtime bridge interfaces.
+ * These tests ensure the integration points documented in Allternit runtime wiring status work correctly.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { A2RKernel, WihItem } from '@a2r/governor';
+import type { AllternitKernel, WihItem } from '@allternit/governor';
 import {
   prepareSessionInit,
   cleanupSession,
@@ -14,9 +14,9 @@ import {
   _clearActiveSessions,
   wrapToolExecution,
   createWrappedFileOperations,
-  type A2RGatewayOptions,
-} from '@a2r/runtime';
-import { LawLayer, PolicyTemplates } from '@a2r/lawlayer';
+  type AllternitGatewayOptions,
+} from '@allternit/runtime';
+import { LawLayer, PolicyTemplates } from '@allternit/lawlayer';
 
 // Mock gateway types
 interface MockGatewayClient {
@@ -69,13 +69,13 @@ class MockStorage {
 
 describe('Runtime Bridge Compatibility', () => {
   let storage: MockStorage;
-  let kernel: A2RKernel;
+  let kernel: AllternitKernel;
 
   beforeEach(async () => {
     storage = new MockStorage();
-    // Use A2RKernelImpl
-    const { A2RKernelImpl } = await import('@a2r/governor');
-    kernel = new A2RKernelImpl(storage);
+    // Use AllternitKernelImpl
+    const { AllternitKernelImpl } = await import('@allternit/governor');
+    kernel = new AllternitKernelImpl(storage);
     _clearActiveSessions();
   });
 
@@ -92,8 +92,8 @@ describe('Runtime Bridge Compatibility', () => {
         priority: 50,
       });
 
-      const options: A2RGatewayOptions = {
-        a2rKernel: kernel,
+      const options: AllternitGatewayOptions = {
+        allternitKernel: kernel,
         wihId: wih.id,
         enforceWih: true,
         workspaceRoot: '/test',
@@ -136,7 +136,7 @@ describe('Runtime Bridge Compatibility', () => {
 
       await expect(
         prepareSessionInit({
-          a2rKernel: kernel,
+          allternitKernel: kernel,
           wihId: wih.id,
           enforceWih: true,
           workspaceRoot: '/test',
@@ -157,7 +157,7 @@ describe('Runtime Bridge Compatibility', () => {
       });
 
       await prepareSessionInit({
-        a2rKernel: kernel,
+        allternitKernel: kernel,
         wihId: wih.id,
         enforceWih: true,
         workspaceRoot: '/test',
@@ -169,7 +169,7 @@ describe('Runtime Bridge Compatibility', () => {
   });
 
   describe('Tool Execution (src/agents/tool-policy.ts)', () => {
-    it('should wrap tool execution with A2R routing', async () => {
+    it('should wrap tool execution with Allternit routing', async () => {
       const lawLayer = new LawLayer({ kernel });
       lawLayer.policies.registerPolicy(PolicyTemplates.denyTools(['dangerous_cmd']));
 
@@ -293,7 +293,7 @@ describe('Runtime Bridge Compatibility', () => {
 
   describe('Plugin Loading (src/plugins/tools.ts:43-129)', () => {
     it('should validate plugins against allowlist', async () => {
-      const { PluginAdapter } = await import('@a2r/runtime');
+      const { PluginAdapter } = await import('@allternit/runtime');
       
       const adapter = new PluginAdapter({
         kernel,
@@ -313,7 +313,7 @@ describe('Runtime Bridge Compatibility', () => {
     });
 
     it('should reject plugins not in allowlist', async () => {
-      const { PluginAdapter } = await import('@a2r/runtime');
+      const { PluginAdapter } = await import('@allternit/runtime');
       
       const adapter = new PluginAdapter({
         kernel,
@@ -333,7 +333,7 @@ describe('Runtime Bridge Compatibility', () => {
     });
 
     it('should require WIH for plugin loading when configured', async () => {
-      const { PluginAdapter } = await import('@a2r/runtime');
+      const { PluginAdapter } = await import('@allternit/runtime');
       
       const adapter = new PluginAdapter({
         kernel,
@@ -369,7 +369,7 @@ describe('Runtime Bridge Compatibility', () => {
 
       // 2. Initialize session
       const session = await prepareSessionInit({
-        a2rKernel: kernel,
+        allternitKernel: kernel,
         wihId: wih.id,
         enforceWih: true,
         workspaceRoot: '/test',
@@ -395,7 +395,7 @@ describe('Runtime Bridge Compatibility', () => {
       expect(toolResult.decision).toBe('allow');
 
       // 4. Complete WIH and generate receipt
-      const { LawReceiptGenerator } = await import('@a2r/lawlayer');
+      const { LawReceiptGenerator } = await import('@allternit/lawlayer');
       const receiptGen = new LawReceiptGenerator({ kernel });
       
       const receipt = await receiptGen.generate(

@@ -2,8 +2,8 @@
 set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-OPERATOR_DIR="$SCRIPT_DIR/../4-services/a2r-operator"
-VENV_DIR="$OPERATOR_DIR/.venv-a2r-usage"
+OPERATOR_DIR="$SCRIPT_DIR/../4-services/allternit-operator"
+VENV_DIR="$OPERATOR_DIR/.venv-allternit-usage"
 WHEELHOUSE_DIR="$SCRIPT_DIR/../wheelhouse"
 
 mkdir -p "$OPERATOR_DIR"

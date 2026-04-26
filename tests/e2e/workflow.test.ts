@@ -5,9 +5,9 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createShell, type ShellConfig } from '@a2r/shell';
-import { A2RKernelImpl } from '@a2r/governor';
-import type { WihStorage, WihItem, Receipt } from '@a2r/governor';
+import { createShell, type ShellConfig } from '@allternit/shell';
+import { AllternitKernelImpl } from '@allternit/governor';
+import type { WihStorage, WihItem, Receipt } from '@allternit/governor';
 
 // E2E test storage
 class E2EStorage implements WihStorage {
@@ -74,11 +74,11 @@ class E2EStorage implements WihStorage {
 
 describe('E2E Workflows', () => {
   let storage: E2EStorage;
-  let kernel: A2RKernelImpl;
+  let kernel: AllternitKernelImpl;
 
   beforeEach(() => {
     storage = new E2EStorage();
-    kernel = new A2RKernelImpl(storage);
+    kernel = new AllternitKernelImpl(storage);
   });
 
   afterEach(async () => {
@@ -114,7 +114,7 @@ describe('E2E Workflows', () => {
       // 4. Execute commands
       const helpResult = await shell.executeCommand('/help');
       expect(helpResult.success).toBe(true);
-      expect(helpResult.message).toContain('A2R Shell Commands');
+      expect(helpResult.message).toContain('Allternit Shell Commands');
 
       const statusResult = await shell.executeCommand('/status');
       expect(statusResult.success).toBe(true);
