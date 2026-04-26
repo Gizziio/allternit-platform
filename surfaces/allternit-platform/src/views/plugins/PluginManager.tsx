@@ -3876,7 +3876,7 @@ function ConnectorContent({
           ))}
         </ul>
         <button
-          onClick={() => window.open('https://docs.a2r.dev/connectors', '_blank')}
+          onClick={() => window.open('https://docs.allternit.dev/connectors', '_blank')}
           style={{
             marginTop: 12,
             border: 'none',

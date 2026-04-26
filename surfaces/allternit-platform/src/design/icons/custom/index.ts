@@ -1,7 +1,7 @@
 /**
- * Custom A2rchitect Brand Icons
+ * Custom allternit Brand Icons
  * 
- * Custom SVG icons for the A2rchitect brand identity.
+ * Custom SVG icons for the allternit brand identity.
  * These icons follow the Lucide style guidelines for consistency.
  * 
  * @module @allternit/platform/icons/custom

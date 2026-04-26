@@ -370,5 +370,6 @@ export function useFrameRateMonitor(enabled: boolean = true): { fps: number; isS
 }
 
 // Re-export memoization utilities
-export * from './memoization';
-export * from './throttle';
+export { memo, memoIgnoring, memoWithComparison, memoWithDeepComparison, useBatchedCallback, useCallback, useCallbackDebug, useConditionalRef, useMemo, useMemoDebug, useMemoizedComputation, useMemoizedDerived, useMemoizedList, useRenderPerformance, useStableCallback, useUpdatingRef, useWhyDidYouUpdate } from './memoization';
+export { // Aliases for convenience
+  debounce, type DebouncedFunction, type ThrottledFunction, debounceLeadingTrailing, rafThrottle, throttle, useDebouncedCallback, useDebouncedValue, useRafCallback, useResizeHandler, useScrollHandler, useThrottledCallback, useThrottledValue } from './throttle';

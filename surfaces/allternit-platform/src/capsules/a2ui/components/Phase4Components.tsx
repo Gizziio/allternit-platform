@@ -236,7 +236,7 @@ export function DockPanelRenderer({
             >
               <div className="flex-1">{/* Header content */}</div>
               {props.collapsible && (
-                <Button variant="ghost" size="icon" size={24} onClick={handleCollapse}>
+                <Button variant="ghost" size="icon" onClick={handleCollapse}>
                   {getCollapseIcon()}
                 </Button>
               )}
@@ -253,7 +253,7 @@ export function DockPanelRenderer({
       {/* Collapsed state */}
       {isCollapsed && props.collapsible && (
         <div className="flex flex-col items-center py-2">
-          <Button variant="ghost" size="icon" size={32} onClick={handleCollapse}>
+          <Button variant="ghost" size="icon" onClick={handleCollapse}>
             {getPositionIcon()}
           </Button>
         </div>

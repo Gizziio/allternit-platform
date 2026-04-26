@@ -61,7 +61,7 @@ export function CoworkRail() {
 
   // Tasks not in any project, filtered by active tab and search
   const rootTasks = useMemo(() => {
-    const base = tasks
+    const base = (tasks || [])
       .filter((t) => !t.projectId)
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
@@ -75,11 +75,11 @@ export function CoworkRail() {
   }, [tasks, activeTab, searchQuery]);
 
   const agentTaskCount = useMemo(
-    () => tasks.filter((t) => !t.projectId && t.mode === 'agent').length,
+    () => (tasks || []).filter((t) => !t.projectId && t.mode === 'agent').length,
     [tasks],
   );
   const regularTaskCount = useMemo(
-    () => tasks.filter((t) => !t.projectId && t.mode !== 'agent').length,
+    () => (tasks || []).filter((t) => !t.projectId && t.mode !== 'agent').length,
     [tasks],
   );
 
@@ -206,7 +206,7 @@ export function CoworkRail() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {projects.map((project) => {
               const isExpanded = expandedProjects.has(project.id);
-              const projectTasks = tasks.filter((t) => t.projectId === project.id);
+              const projectTasks = (tasks || []).filter((t) => t.projectId === project.id);
               const isActive = activeProjectId === project.id;
 
               return (
@@ -359,7 +359,7 @@ function TimeGroupLabel({ label }: { label: string }) {
 // ---------------------------------------------------------------------------
 
 interface QuickActionButtonProps {
-  icon: React.ComponentType<{ size?: number; weight?: string }>;
+  icon: React.ElementType;
   label: string;
   shortcut?: string;
   onClick: () => void;
@@ -525,7 +525,7 @@ function SectionHeader({ title, count, onAdd }: SectionHeaderProps) {
 // ---------------------------------------------------------------------------
 
 interface CoworkRailItemProps {
-  icon: React.ComponentType<{ size?: number; weight?: string; color?: string; style?: React.CSSProperties }>;
+  icon: React.ElementType;
   label: string;
   isActive?: boolean;
   isNested?: boolean;
@@ -682,7 +682,7 @@ function CoworkRailItem({
 // ---------------------------------------------------------------------------
 
 interface NewItemButtonProps {
-  icon: React.ComponentType<{ size?: number; weight?: string }>;
+  icon: React.ElementType;
   label: string;
   onClick: () => void;
 }

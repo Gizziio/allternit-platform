@@ -22,6 +22,7 @@ import {
   executeVendorCommand 
 } from './vendor-integration';
 import { getBundledPlugin } from './marketplace-integration';
+import { getPluginById } from './registry';
 
 // =============================================================================
 // UNIFIED EXECUTION REQUEST
@@ -71,8 +72,7 @@ export interface PluginExecutionResult {
 }
 
 // =============================================================================
-# 
-# UNIFIED RUNTIME
+// UNIFIED RUNTIME
 // =============================================================================
 
 class PluginRuntime {
@@ -303,7 +303,7 @@ class PluginRuntime {
       const plugin = getPluginById(pluginId);
       if (!plugin) return null;
       
-      return plugin.commands.map(c => ({
+      return (plugin as any).commands?.map((c: any) => ({
         name: c.name,
         trigger: c.trigger,
         description: c.description,

@@ -11,7 +11,7 @@ export type Capability = SimpleCapability;
 
 export type ConnectorGroupId = 'desktop' | 'connected' | 'not-connected';
 export type ConnectorMarketplaceTab = 'featured' | 'all';
-export type PluginMarketplaceTab = 'marketplace' | 'personal' | 'directories' | 'publish';
+export type PluginMarketplaceTab = 'marketplace' | 'personal' | 'directories' | 'publish' | 'cowork';
 export type PersonalMarketplaceType = 'github' | 'url' | 'upload' | 'local';
 export type ConnectorConnectionStatus = 'connected' | 'not-connected' | 'connecting';
 

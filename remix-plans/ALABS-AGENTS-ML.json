@@ -1,0 +1,123 @@
+{
+  "courseCode": "ALABS-AGENTS-ML",
+  "courseTitle": "ML as Agent Tools",
+  "tier": "AGENTS",
+  "sources": [
+    {
+      "id": 3288010,
+      "title": "Machine Learning Fundamentals [Python]",
+      "slug": "3288010-machine-learning-fundamentals-python",
+      "totalLectures": 6
+    },
+    {
+      "id": 4111138,
+      "title": "Machine Learning with Python",
+      "slug": "4111138-machine-learning-with-python",
+      "totalLectures": 6
+    }
+  ],
+  "modules": [
+    {
+      "name": "The Problem: Agents Are Bad at Structured Data Math",
+      "sourceLectures": [],
+      "bridgeContent": "Agents are great at language but terrible at structured-data math. ML fills the gap.",
+      "isBridge": true
+    },
+    {
+      "name": "When to Use ML vs. LLMs vs. Rules",
+      "sourceLectures": [
+        {
+          "course": "Machine Learning Fundamentals [Python]",
+          "chapter": "Introduction to Machine Learning",
+          "lecture": "Best Fit Line",
+          "hasFile": false
+        },
+        {
+          "course": "Machine Learning Fundamentals [Python]",
+          "chapter": "Introduction to Machine Learning",
+          "lecture": "Gradient Descent: Mathematics Behind it",
+          "hasFile": false
+        },
+        {
+          "course": "Machine Learning with Python",
+          "chapter": "Introduction",
+          "lecture": "Applications",
+          "hasFile": false
+        },
+        {
+          "course": "Machine Learning with Python",
+          "chapter": "Introduction",
+          "lecture": "Regression Analysis and its Types",
+          "hasFile": false
+        }
+      ],
+      "isBridge": false
+    },
+    {
+      "name": "Scikit-Learn Patterns",
+      "sourceLectures": [
+        {
+          "course": "Machine Learning Fundamentals [Python]",
+          "chapter": "Introduction to Machine Learning",
+          "lecture": "Simple Linear Regression: Concept",
+          "hasFile": false
+        },
+        {
+          "course": "Machine Learning Fundamentals [Python]",
+          "chapter": "Introduction to Machine Learning",
+          "lecture": "Gradient Descent: Learning Rate",
+          "hasFile": false
+        },
+        {
+          "course": "Machine Learning with Python",
+          "chapter": "Introduction",
+          "lecture": "Life cycle",
+          "hasFile": false
+        },
+        {
+          "course": "Machine Learning with Python",
+          "chapter": "Machine Learning Classifications",
+          "lecture": "Numpy overview in Colab",
+          "hasFile": false
+        }
+      ],
+      "isBridge": false
+    },
+    {
+      "name": "Feature Engineering for Structured Data",
+      "sourceLectures": [
+        {
+          "course": "Machine Learning Fundamentals [Python]",
+          "chapter": "Introduction to Machine Learning",
+          "lecture": "Ordinary Least Square(OLS)",
+          "hasFile": false
+        },
+        {
+          "course": "Machine Learning Fundamentals [Python]",
+          "chapter": "Introduction to Machine Learning",
+          "lecture": "Gradient Descent: Algorithm",
+          "hasFile": false
+        },
+        {
+          "course": "Machine Learning with Python",
+          "chapter": "Introduction",
+          "lecture": "How Supervised and Unsupervised learning Works?",
+          "hasFile": false
+        }
+      ],
+      "isBridge": false
+    },
+    {
+      "name": "Bridge: Wrapping ML Models as MCP Tools",
+      "sourceLectures": [],
+      "bridgeContent": "How Allternit wraps ML models as MCP tools so agui-gateway can delegate numerical reasoning.",
+      "isBridge": true
+    },
+    {
+      "name": "Capstone: Wrap a Scikit-Learn Model as an MCP Tool",
+      "sourceLectures": [],
+      "bridgeContent": "Build an agent that selects, trains, and exposes an ML model as an MCP tool.",
+      "isBridge": true
+    }
+  ]
+}

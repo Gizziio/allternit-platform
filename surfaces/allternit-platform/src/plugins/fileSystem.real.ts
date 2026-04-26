@@ -83,7 +83,7 @@ export class RealFileSystem implements FileSystemAPI {
       }
     } catch (e) {
       // Silent fail - Node.js fs not available in browser, using fallback
-      if (import.meta.env.DEV) {
+      if (process.env.NODE_ENV === 'development') {
         console.debug('[RealFileSystem] Browser environment detected, using API-backed filesystem');
       }
     }

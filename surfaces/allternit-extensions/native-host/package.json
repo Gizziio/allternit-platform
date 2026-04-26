@@ -1,0 +1,15 @@
+{
+  "name": "@allternit/desktop-native-host",
+  "version": "0.1.0",
+  "description": "Chrome extension ↔ Allternit Desktop native messaging bridge",
+  "private": true,
+  "scripts": {
+    "build": "bun build --compile --target=bun native-host.ts --outfile dist/native-host",
+    "register": "bash register.sh",
+    "unregister": "bash register.sh --uninstall"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.0.0"
+  }
+}

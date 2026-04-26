@@ -395,7 +395,7 @@ export function RemoteSessionView() {
                     </>
                   ) : (
                     <>
-                      <WifiHighSlash className="w-4 h-4 text-red-500" />
+                      <WifiSlash className="w-4 h-4 text-red-500" />
                       <span className="text-sm text-red-400">Disconnected</span>
                     </>
                   )}

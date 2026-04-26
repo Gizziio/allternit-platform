@@ -111,7 +111,7 @@ export function useMemoDebug<T>(
   
   const hasChanged = deps.some((dep, i) => dep !== depsRef.current[i]);
   
-  if (import.meta.env?.DEV || process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV === 'development') {
     if (hasChanged) {
       console.log(`[useMemoDebug] ${name}: dependencies changed`);
     }
@@ -200,7 +200,7 @@ export function useCallbackDebug<T extends (...args: any[]) => any>(
   deps: DependencyList,
   name: string
 ): T {
-  if (import.meta.env?.DEV || process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV === 'development') {
     const depsRef = useRef<DependencyList>(deps);
     const hasChanged = deps.some((dep, i) => dep !== depsRef.current[i]);
     
@@ -344,7 +344,7 @@ export function useRenderPerformance(
     const duration = endTime - startTime.current;
     setRenderTime(duration);
     
-    if (duration > threshold && (import.meta.env?.DEV || process.env.NODE_ENV === 'development')) {
+    if (duration > threshold && process.env.NODE_ENV === 'development') {
       console.warn(`[Performance] ${componentName} took ${duration.toFixed(2)}ms to render`);
     }
     

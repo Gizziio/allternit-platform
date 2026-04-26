@@ -202,7 +202,7 @@ export function ProgressPanel({ className }: ProgressPanelProps) {
         waveNumber: i + 1,
         tasks: tasks
           .filter((t) => t.status === status)
-          .map((t) => ({ id: t.id.id, name: t.name, status: t.status as 'pending' | 'in_progress' | 'completed' | 'failed' })),
+          .map((t) => ({ id: t.id.id, name: t.description, status: t.status as 'pending' | 'in_progress' | 'completed' | 'failed' })),
       }))
       .filter((w) => w.tasks.length > 0);
   }, [tasks]);
@@ -211,7 +211,7 @@ export function ProgressPanel({ className }: ProgressPanelProps) {
   const dagNodes: DAGNodeProps[] = React.useMemo(() =>
     tasks.map((t, i) => ({
       id: t.id.id,
-      name: t.name,
+      name: t.description,
       status: t.status as 'pending' | 'in_progress' | 'completed' | 'failed',
       x: 100 + i * 200,
       y: 50,

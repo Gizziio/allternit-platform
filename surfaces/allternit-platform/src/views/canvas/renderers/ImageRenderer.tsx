@@ -24,12 +24,13 @@ import {
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
+import type { MoATask } from '@/lib/api/moa-client';
 import { cn } from '@/lib/utils';
 
 interface ImageRendererProps {
   artifact: ArtifactUIPart;
   sessionId?: string;
-  onMoATaskUpdate?: (tasks: any[]) => void;
+  onMoATaskUpdate?: (tasks: MoATask[]) => void;
 }
 
 interface ImageAsset {
@@ -81,7 +82,7 @@ export function ImageRenderer({
   };
 
   // Grid view
-  const renderGridView = () => (
+  const renderGridView = (): JSX.Element => (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4">
       {images.map((image, index) => (
         <motion.div
@@ -151,7 +152,7 @@ export function ImageRenderer({
   );
 
   // List view
-  const renderListView = () => (
+  const renderListView = (): JSX.Element => (
     <div className="divide-y divide-[var(--border-subtle)]">
       {images.map((image, index) => (
         <div

@@ -1,6 +1,6 @@
 {
-  "$schema": "https://schemas.a2r.dev/marketplace.json",
-  "_comment": "Marketplace listing configuration for A2R Plugin Template",
+  "$schema": "https://schemas.allternit.dev/marketplace.json",
+  "_comment": "Marketplace listing configuration for Allternit Plugin Template",
   
   "// ============ DISPLAY INFORMATION ============": "",
   
@@ -14,7 +14,7 @@
   
   "// Full description (supports Markdown)": "",
   "// This appears on the plugin detail page": "",
-  "description": "{{PLUGIN_DESCRIPTION}}\n\n## Features\n\n- ✨ Feature 1: Description of feature 1\n- 🚀 Feature 2: Description of feature 2\n- 🔧 Feature 3: Description of feature 3\n\n## Installation\n\n```bash\na2r plugin install {{PLUGIN_ID}}\n```\n\n## Usage\n\nSee [documentation](./docs/README.md) for detailed usage instructions.",
+  "description": "{{PLUGIN_DESCRIPTION}}\n\n## Features\n\n- ✨ Feature 1: Description of feature 1\n- 🚀 Feature 2: Description of feature 2\n- 🔧 Feature 3: Description of feature 3\n\n## Installation\n\n```bash\nallternit plugin install {{PLUGIN_ID}}\n```\n\n## Usage\n\nSee [documentation](./docs/README.md) for detailed usage instructions.",
   
   "// ============ CATEGORIZATION ============": "",
   
@@ -164,8 +164,8 @@
   "// Supported platforms": "",
   "platforms": ["macOS", "Windows", "Linux"],
   
-  "// Minimum A2R Platform version": "",
-  "minA2RVersion": "2.0.0",
+  "// Minimum Allternit Platform version": "",
+  "minAllternitVersion": "2.0.0",
   
   "// ============ STATS & RATINGS ============": "",
   

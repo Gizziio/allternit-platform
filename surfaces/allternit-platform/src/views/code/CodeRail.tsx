@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import {
   CaretDown,
   CaretRight,
@@ -12,6 +13,7 @@ import {
   ShieldCheck,
   Stack,
   WarningCircle,
+  Pulse,
 } from '@phosphor-icons/react';
 import {
   CodeIsolation,
@@ -23,7 +25,7 @@ import {
   useCodeModeStore,
 } from './CodeModeStore';
 
-type RailViewId = 'diff-review' | 'file-tree' | 'tests' | 'pr-monitor';
+type RailViewId = 'diff-review' | 'file-tree' | 'tests' | 'pr-monitor' | 'telemetry';
 
 interface CodeRailProps {
   onOpen?: (viewId: RailViewId) => void;
@@ -32,12 +34,13 @@ interface CodeRailProps {
 const VIEW_ITEMS: Array<{
   id: RailViewId;
   label: string;
-  icon: React.ComponentType<any>;
+  icon: PhosphorIcon;
 }> = [
   { id: 'diff-review', label: 'Diff Review', icon: Files },
   { id: 'file-tree', label: 'File Tree', icon: FileCode },
   { id: 'tests', label: 'Tests', icon: Lightning },
   { id: 'pr-monitor', label: 'PR Monitor', icon: GitBranch },
+  { id: 'telemetry', label: 'Telemetry', icon: Pulse },
 ];
 
 const modeColors: Record<CodeSessionMode, string> = {

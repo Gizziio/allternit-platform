@@ -680,7 +680,7 @@ export class MeshAgent {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.config.setupToken}`,
+          'Authorization': `Bearer ${(this.config as any).setupToken}`,
         },
         body: JSON.stringify(health),
       });

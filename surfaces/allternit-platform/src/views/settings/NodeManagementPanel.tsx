@@ -1439,7 +1439,7 @@ export const NodeManagementPanel: React.FC = () => {
       {/* Filters */}
       <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
         <div style={{ position: 'relative', flex: 1, maxWidth: '300px' }}>
-          <Search
+          <MagnifyingGlass
             size={16}
             style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#666' }}
           />

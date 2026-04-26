@@ -1,6 +1,6 @@
 // packages/executor-superconductor/src/superconductor.executor.ts
 
-import { Executor, ParallelRun, ExecutionResult, ExecutionStatus, ExecutionUpdate, VariantResult } from '@a2rchitech/executor-core';
+import { Executor, ParallelRun, ExecutionResult, ExecutionStatus, ExecutionUpdate, VariantResult } from '@allternit/executor-core';
 import { CanvasEventMapper } from './canvas-event-mapper';
 
 interface SuperconductorConfig {
@@ -48,7 +48,7 @@ export class SuperconductorExecutor implements Executor {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${this.config.apiKey}`,
-        'X-A2rchitech-Run-ID': run.runId,
+        'X-Allternit-Run-ID': run.runId,
         'X-Request-ID': run.runId
       },
       body: JSON.stringify(this.mapToSuperconductorFormat(run))
@@ -67,7 +67,7 @@ export class SuperconductorExecutor implements Executor {
   }
 
   private mapToSuperconductorFormat(run: ParallelRun) {
-    // Map A2rchitech ParallelRun format to Superconductor format
+    // Map Allternit ParallelRun format to Superconductor format
     return {
       jobId: run.runId,
       goal: run.goal,
@@ -122,7 +122,7 @@ export class SuperconductorExecutor implements Executor {
   }
 
   private mapFromSuperconductorResults(superconductorResults: any, runId: string): ExecutionResult {
-    // Validate and map Superconductor results format to A2rchitech format
+    // Validate and map Superconductor results format to Allternit format
     if (!superconductorResults || !superconductorResults.variants) {
       throw new Error(`Invalid results format received from Superconductor for run ${runId}`);
     }
@@ -238,7 +238,7 @@ export class SuperconductorExecutor implements Executor {
               const eventData = line.slice(6); // Remove 'data: ' prefix
               const parsedData = JSON.parse(eventData);
 
-              // Map Superconductor event to A2rchitech format
+              // Map Superconductor event to Allternit format
               const canvasEvent = CanvasEventMapper.mapSuperconductorToCanvas({
                 eventType: parsedData.type || parsedData.eventType,
                 payload: parsedData.payload || parsedData,

@@ -90,7 +90,7 @@ export async function storeStreamChunk(
 export async function storeStreamState(state: StreamState): Promise<void> {
   if (!isRedisAvailable()) return;
 
-  const redis = getRedisClient();
+  const redis = getRedisClient() as any;
   if (!redis) return;
 
   try {
@@ -160,7 +160,7 @@ export async function getStreamState(streamId: string): Promise<StreamState | nu
 export async function getStreamChunks(streamId: string): Promise<StreamChunk[]> {
   if (!isRedisAvailable()) return [];
 
-  const redis = getRedisClient();
+  const redis = getRedisClient() as any;
   if (!redis) return [];
 
   try {
@@ -296,7 +296,7 @@ export async function getStreamStats(): Promise<{
 }> {
   if (!isRedisAvailable()) return { activeStreams: 0, totalChunks: 0 };
 
-  const redis = getRedisClient();
+  const redis = getRedisClient() as any;
   if (!redis) return { activeStreams: 0, totalChunks: 0 };
 
   try {

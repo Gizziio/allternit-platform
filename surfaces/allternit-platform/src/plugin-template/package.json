@@ -1,5 +1,5 @@
 {
-  "name": "{{PLUGIN_ID}}",
+  "name": "@allternit/plugin-template",
   "version": "1.0.0",
   "description": "{{PLUGIN_DESCRIPTION}}",
   "main": "dist/index.js",
@@ -30,9 +30,9 @@
     "init": "node scripts/init.js"
   },
   "keywords": [
-    "a2r",
+    "allternit",
     "plugin",
-    "a2r-plugin",
+    "allternit-plugin",
     "{{PLUGIN_ID}}"
   ],
   "author": "{{AUTHOR_NAME}} <{{AUTHOR_EMAIL}}>",
@@ -66,18 +66,12 @@
     "tslib": "^2.6.0",
     "typescript": "^5.2.0"
   },
-  "peerDependencies": {
-    "@allternit/platform": "^2.0.0"
-  },
-  "peerDependenciesMeta": {
-    "@allternit/platform": {
-      "optional": true
-    }
-  },
+  "peerDependencies": {},
+  "peerDependenciesMeta": {},
   "engines": {
     "node": ">=18.0.0"
   },
-  "a2r": {
+  "allternit": {
     "minPlatformVersion": "2.0.0"
   }
 }

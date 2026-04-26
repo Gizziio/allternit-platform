@@ -63,7 +63,7 @@ All views accessible via command palette until proper homes are built:
 
 | View | Command | Final Destination |
 |------|---------|-------------------|
-| A2R-IX Renderer | "Open A2R-IX" | Inline message renderer |
+| Allternit-IX Renderer | "Open Allternit-IX" | Inline message renderer |
 | Form Surfaces | "Open Form Surfaces" | Inline form renderer |
 | Tambo UI Gen | "Open Tambo" | Agent Studio integration |
 | Canvas Protocol | "Open Canvas" | Visual workflow builder |
@@ -102,7 +102,7 @@ All views accessible via command palette until proper homes are built:
 6. Build Security Dashboard UI (currently placeholder)
 
 ### Medium Priority (Inline Renderers)
-7. Wire A2R-IX to render in chat messages
+7. Wire Allternit-IX to render in chat messages
 8. Wire Form Surfaces to render in chat messages
 9. Integrate Tambo into Agent Studio
 

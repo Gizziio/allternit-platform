@@ -1,0 +1,9 @@
+{
+  "name": "com.allternit.desktop",
+  "description": "Allternit Desktop Native Messaging Host — bridges Chrome extension to Allternit Desktop",
+  "path": "HOST_PATH",
+  "type": "stdio",
+  "allowed_origins": [
+    "chrome-extension://*/"
+  ]
+}

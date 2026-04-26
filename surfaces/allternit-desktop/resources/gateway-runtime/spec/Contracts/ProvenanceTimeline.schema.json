@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/ProvenanceTimeline.schema.json",
+  "title": "Provenance Timeline",
+  "description": "Schema for provenance timelines in the Allternit system",
+  "type": "object",
+  "properties": {
+    "timeline_version": {
+      "type": "string",
+      "description": "Version of the timeline schema"
+    },
+    "timeline_id": {
+      "type": "string",
+      "description": "Unique identifier for the timeline"
+    },
+    "run_id": {
+      "type": "string",
+      "description": "ID of the run this timeline represents"
+    },
+    "graph_id": {
+      "type": "string",
+      "description": "ID of the graph associated with the run"
+    },
+    "creation_timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of timeline creation"
+    },
+    "creator_id": {
+      "type": "string",
+      "description": "ID of the entity creating the timeline"
+    },
+    "events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "NODE_START",
+              "NODE_END",
+              "TOOL_CALL",
+              "SUBPROCESS_EXEC",
+              "AGENT_EXEC",
+              "GATEWAY_ROUTE",
+              "CAPSULE_ACTION",
+              "CLI_EXEC",
+              "UI_ACTION",
+              "MEMORY_PROMOTION",
+              "MEMORY_ROLLBACK",
+              "RECEIPT_WRITTEN",
+              "ARTIFACT_CREATED",
+              "ARTIFACT_ACCESSED",
+              "ARTIFACT_MODIFIED",
+              "ARTIFACT_DELETED"
+            ]
+          },
+          "actor": {
+            "type": "string",
+            "description": "Entity that performed the action"
+          },
+          "target": {
+            "type": "string",
+            "description": "Target of the action"
+          },
+          "details": {
+            "type": "object",
+            "description": "Additional event-specific details"
+          },
+          "receipt_reference": {
+            "type": "string",
+            "description": "Path to the receipt that documents this event"
+          },
+          "correlation_id": {
+            "type": "string",
+            "description": "ID to correlate related events"
+          }
+        },
+        "required": ["event_id", "timestamp", "event_type", "actor", "target"]
+      }
+    },
+    "dependencies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "from_event_id": {
+            "type": "string"
+          },
+          "to_event_id": {
+            "type": "string"
+          },
+          "dependency_type": {
+            "type": "string",
+            "enum": ["SEQUENTIAL", "CAUSAL", "RESOURCE", "DATA_FLOW"]
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": ["from_event_id", "to_event_id", "dependency_type"]
+      }
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "artifact_id": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "artifact_type": {
+            "type": "string",
+            "enum": ["CODE", "CONFIG", "DATA", "LOG", "RECEIPT", "ARTIFACT", "EXPORT"]
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "checksum": {
+            "type": "string"
+          },
+          "size_bytes": {
+            "type": "integer"
+          },
+          "associated_events": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": ["artifact_id", "path", "artifact_type", "created_by", "created_at", "checksum"]
+      }
+    },
+    "integrity": {
+      "type": "object",
+      "properties": {
+        "merkle_tree_root": {
+          "type": "string",
+          "description": "Root hash of the merkle tree of all events"
+        },
+        "chain_integrity": {
+          "type": "boolean",
+          "description": "Whether the event chain is intact"
+        },
+        "tampering_detected": {
+          "type": "boolean",
+          "description": "Whether tampering was detected"
+        },
+        "verification_method": {
+          "type": "string",
+          "description": "Method used for verification"
+        }
+      },
+      "required": ["chain_integrity", "tampering_detected"]
+    }
+  },
+  "required": [
+    "timeline_version",
+    "timeline_id",
+    "run_id",
+    "graph_id",
+    "creation_timestamp",
+    "creator_id",
+    "events",
+    "dependencies",
+    "artifacts",
+    "integrity"
+  ]
+}

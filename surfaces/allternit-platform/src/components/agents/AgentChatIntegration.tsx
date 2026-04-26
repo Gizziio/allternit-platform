@@ -167,7 +167,7 @@ export function EnhancedMessageItem({
           }}
         >
           <ToolCallVisualization
-            toolCalls={message.toolCalls}
+            toolCalls={message.toolCalls as any}
             isLoading={isStreaming}
             accentColor={accentColor}
           />

@@ -55,17 +55,17 @@ export const GitView: React.FC = () => {
       )
       .catch(() => {});
     apiRequest<{ staged: StagedFile[] }>(`${API_BASE_URL}/git/status`, { method: 'POST', body: JSON.stringify({ path: '.' }) })
-      .then((status) => setStagedFiles((status as any).staged ?? []))
+      .then((status) => setStagedFiles(status.staged ?? []))
       .catch(() => {});
   }, []);
 
-  const handleCommit = () => {
+  const handleCommit = (): void => {
     if (commitMessage.trim()) {
       setCommitMessage('');
     }
   };
 
-  const getStatusBadgeColor = (status: 'M' | 'A' | 'D') => {
+  const getStatusBadgeColor = (status: 'M' | 'A' | 'D'): { bg: string; color: string; label: string } => {
     switch (status) {
       case 'M':
         return { bg: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6', label: 'M' };

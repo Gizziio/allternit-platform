@@ -326,7 +326,7 @@ export function TerminalCanvas({
           for (const sessionData of pendingSessions) {
             try {
               // Create new session with same params
-              const session = await nodeTerminalService.createTerminalRuntimeSession(
+              const session = await nodeTerminalService.createSession(
                 sessionData.nodeId || nodeId,
                 {
                   shell: sessionData.shell || '/bin/zsh',
@@ -372,7 +372,7 @@ export function TerminalCanvas({
   const createTerminal = useCallback(async (): Promise<TerminalInstance | null> => {
     try {
       setError(null);
-      const session = await nodeTerminalService.createTerminalRuntimeSession(nodeId, {
+      const session = await nodeTerminalService.createSession(nodeId, {
         shell: '/bin/zsh',
         cols: 80,
         rows: 24,

@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { SwarmDashboard } from "@/views/SwarmDashboard"
 import { IVKGEPanel } from "@/views/IVKGEPanel"
 import { MultimodalInput } from "@/views/MultimodalInput"
-import { TamboStudio } from "@/views/TamboStudio"
+import { UIForge } from "@/views/UIForge"
 
 type DagView = "swarm" | "ivkge" | "multimodal" | "tambo"
 
@@ -80,10 +80,10 @@ export function DagIntegrationPage() {
         <TabsContent value="tambo" className="mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Tambo Studio</CardTitle>
+              <CardTitle>UI Forge</CardTitle>
             </CardHeader>
             <CardContent>
-              <TamboStudio />
+              <UIForge />
             </CardContent>
           </Card>
         </TabsContent>

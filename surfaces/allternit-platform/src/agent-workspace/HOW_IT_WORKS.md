@@ -29,9 +29,9 @@ User calls createWorkspace()
 
 ```typescript
 // Running in Electron?
-if (window.a2rSidecar) {
+if (window.allternitSidecar) {
   // Ask Electron main process: "Is TUI running?"
-  const status = await window.a2rSidecar.getStatus();
+  const status = await window.allternitSidecar.getStatus();
   
   if (status === 'running') {
     // ✅ Found TUI! Use HTTP backend
@@ -67,7 +67,7 @@ for (const port of [3010, 8080, 3000, ...]) {
 
 ```typescript
 // Check if we had a working server before
-const config = await window.a2rSidecar?.getPersistedConfig();
+const config = await window.allternitSidecar?.getPersistedConfig();
 if (config) {
   const isHealthy = await checkHealth(config.apiUrl);
   if (isHealthy) {
@@ -133,9 +133,9 @@ User sees "Offline Mode" indicator
 
 ### Scenario 3: Static Website
 ```
-User visits https://shell.a2r.dev
+User visits https://shell.allternit.dev
          ↓
-No Electron (window.a2rSidecar undefined)
+No Electron (window.allternitSidecar undefined)
          ↓
 No TUI running (can't access localhost)
          ↓
@@ -217,7 +217,7 @@ const workspace = await createWorkspace('/path', {
 ```typescript
 const workspace = await createWorkspace('/path', {
   serverUrl: 'http://localhost:3010',  // Skip discovery
-  auth: { username: 'a2r', password: 'secret' },
+  auth: { username: 'allternit', password: 'secret' },
 });
 ```
 

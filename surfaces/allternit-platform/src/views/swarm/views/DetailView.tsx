@@ -323,7 +323,7 @@ export function DetailView({
               disabled={selectedAgent.status === 'offline'}
               className="flex-1 py-3 rounded-xl text-sm font-medium transition-opacity hover:opacity-80 flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
               style={{
-                background: rgba(239,68,68,0.18),
+                background: 'rgba(239,68,68,0.18)',
                 color: STATUS.error,
                 border: `1px solid ${STATUS.error}30`,
               }}

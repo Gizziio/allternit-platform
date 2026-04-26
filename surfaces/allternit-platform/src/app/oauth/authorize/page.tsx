@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '@clerk/nextjs';
+import { usePlatformAuth } from '@/lib/platform-auth-client';
 import { MatrixLogo } from '@/components/ai-elements/MatrixLogo';
 import { Check } from 'lucide-react';
 import { OAUTH_APPS } from '@/config/oauth-apps';
@@ -49,7 +49,7 @@ function ConnectionBridge() {
 function AuthorizeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { isLoaded, isSignedIn, userId } = useAuth();
+  const { isLoaded, isSignedIn, userId, getToken } = usePlatformAuth();
 
   const [loading, setLoading] = useState(false);
   const [declined, setDeclined] = useState(false);
@@ -82,9 +82,13 @@ function AuthorizeContent() {
     setLoading(true);
     setError(null);
     try {
+      const clerkToken = await getToken().catch(() => null);
       const res = await fetch('/api/oauth/authorize', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(clerkToken ? { Authorization: `Bearer ${clerkToken}` } : {}),
+        },
         body: JSON.stringify({ clientId, redirectUri, state: oauthState, userEmail, codeChallenge, codeChallengeMethod }),
       });
       if (!res.ok) {
@@ -92,7 +96,13 @@ function AuthorizeContent() {
         throw new Error(data.error ?? `Server error ${res.status}`);
       }
       const { code, state } = await res.json() as { code: string; redirectUri: string; state: string };
-      const dest = `/oauth/success?app=${encodeURIComponent(app.name)}&redirect_uri=${encodeURIComponent(redirectUri)}&code=${code}&state=${encodeURIComponent(state)}`;
+      
+      // Append code and state to the redirectUri for the final protocol redirect
+      const finalRedirectUri = new URL(redirectUri);
+      finalRedirectUri.searchParams.set('code', code);
+      finalRedirectUri.searchParams.set('state', state);
+      
+      const dest = `/oauth/success?app=${encodeURIComponent(app.name)}&redirect_uri=${encodeURIComponent(finalRedirectUri.toString())}`;
       router.push(dest);
     } catch (err) {
       setLoading(false);

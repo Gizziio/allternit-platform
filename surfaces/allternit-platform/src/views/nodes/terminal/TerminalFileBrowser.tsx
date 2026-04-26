@@ -522,7 +522,7 @@ export function TerminalFileBrowser({
               )}
               <span className="flex-1 truncate">{transfer.filename}</span>
               {transfer.status === 'transferring' && (
-                <Progress value={transfer.progress} size={80} />
+                <Progress value={transfer.progress} />
               )}
               {transfer.status === 'completed' && (
                 <span className="text-green-500">Done</span>

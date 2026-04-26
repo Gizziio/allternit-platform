@@ -41,7 +41,7 @@ This document explains how the Shell UI integrates with the Agent Shell's server
                               │ File System / Kernel
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                    A2R AGENT WORKSPACE                          │
+│                    Allternit AGENT WORKSPACE                          │
 │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐   │
 │  │  BRAIN  │ │ MEMORY  │ │IDENTITY │ │  POLICY │ │  SKILL  │   │
 │  │   .md   │ │   .md   │ │   .md   │ │   .md   │ │   .md   │   │
@@ -106,7 +106,7 @@ const headers = {
 The Shell UI automatically discovers the server:
 
 ```typescript
-// 6-ui/a2r-platform/src/agent-workspace/discovery.ts
+// 6-ui/allternit-platform/src/agent-workspace/discovery.ts
 
 export async function discoverServer(): Promise<string | null> {
   // 1. Check if running in Tauri (desktop app)
@@ -137,7 +137,7 @@ export async function discoverServer(): Promise<string | null> {
 The API layer automatically selects the best backend:
 
 ```typescript
-// 6-ui/a2r-platform/src/agent-workspace/index.ts
+// 6-ui/allternit-platform/src/agent-workspace/index.ts
 
 export async function createWorkspace(
   path: string,
@@ -161,7 +161,7 @@ export async function createWorkspace(
 For live updates, use WebSocket connection:
 
 ```typescript
-// 6-ui/a2r-platform/src/agent-workspace/websocket.ts
+// 6-ui/allternit-platform/src/agent-workspace/websocket.ts
 
 export class WorkspaceWebSocket {
   private ws: WebSocket;

@@ -21,6 +21,6 @@ This file tracks the parity DAG agreed for Shell OpenClaw integration.
 ## Current status
 
 - `N0` complete: `parity-contract.ts` defines vendor baseline routes and RPC checks.
-- `N1` complete: active `a2r-platform` OpenClaw view now hosts vendored control-ui via iframe.
+- `N1` complete: active `allternit-platform` OpenClaw view now hosts vendored control-ui via iframe.
 - `N2` complete (quarantine phase): runtime config supports gateway HTTP/WS URL + token/password injection without `/api/v1` path coupling.
 - `N3` complete: `pnpm --dir 7-apps/shell-ui openclaw:parity-smoke` validates baseline route/method tokens from served control-ui bundle.

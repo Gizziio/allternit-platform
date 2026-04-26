@@ -166,12 +166,12 @@ export function GlassCard({
   } : {};
 
   // Animation styles
-  const animationStyles = animate ? {
+  const animationStyles: any = animate ? {
     transition: baseStyles.transition,
   } : {};
 
   // Combine all styles
-  const combinedStyles: React.CSSProperties = {
+  const combinedStyles: any = {
     ...baseStyles,
     ...hoverStyles,
     ...activeStyles,

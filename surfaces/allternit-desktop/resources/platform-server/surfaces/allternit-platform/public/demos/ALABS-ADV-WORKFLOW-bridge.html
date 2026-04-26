@@ -1,0 +1,1973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bridge: How Allternit Orchestrates with Workflows — ALABS-ADV-WORKFLOW</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0b0b0c;
+  --bg-elevated: #111114;
+  --bg-card: #16161a;
+  --bg-code: #0e0e10;
+  --border: #232328;
+  --border-hover: #2e2e35;
+  --text-primary: #f0f0f5;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
+  --accent: #f59e0b;
+  --accent-dim: #d97706;
+  --accent-glow: rgba(245,158,11,0.15);
+  --green: #10b981;
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --purple: #8b5cf6;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text-primary);
+  line-height: 1.65;
+  overflow-x: hidden;
+}
+
+/* Progress bar */
+.progress-bar {
+  position: fixed;
+  top: 0; left: 0; height: 3px;
+  background: linear-gradient(90deg, var(--accent), #fbbf24);
+  width: 0%;
+  z-index: 1000;
+  transition: width 0.15s linear;
+  box-shadow: 0 0 12px rgba(245,158,11,0.4);
+}
+
+/* Nav */
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  background: rgba(11,11,12,0.85);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  z-index: 999;
+  padding: 0 24px;
+}
+
+.nav-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+}
+
+.nav-brand {
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--accent);
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-brand span { color: var(--text-muted); font-weight: 400; }
+
+.nav-links {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.nav-links::-webkit-scrollbar { display: none; }
+
+.nav-links a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.nav-links a:hover,
+.nav-links a.active {
+  color: var(--accent);
+  background: var(--accent-glow);
+}
+
+/* Sections */
+section { padding: 80px 24px; }
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* Hero */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  position: relative;
+  padding-top: 56px;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-radius: 999px;
+  background: var(--accent-glow);
+  border: 1px solid rgba(245,158,11,0.25);
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 32px;
+}
+
+.hero h1 {
+  font-size: clamp(2.4rem, 6vw, 4.2rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  margin-bottom: 20px;
+}
+
+.hero h1 .accent { color: var(--accent); }
+
+.hero p {
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  color: var(--text-secondary);
+  max-width: 600px;
+  margin: 0 auto 40px;
+  font-weight: 400;
+}
+
+.hero-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 32px;
+  background: var(--accent);
+  color: #0b0b0c;
+  font-weight: 700;
+  font-size: 0.95rem;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: all 0.2s;
+  box-shadow: 0 4px 24px rgba(245,158,11,0.25);
+}
+
+.hero-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(245,158,11,0.35);
+}
+
+.hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(245,158,11,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245,158,11,0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 60% 50% at 50% 50%, black 20%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Scroll reveal */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1);
+}
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+/* Typography */
+h2 {
+  font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 16px;
+  line-height: 1.25;
+}
+
+h2 .num {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.7em;
+  font-weight: 600;
+  margin-right: 10px;
+}
+
+h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 32px 0 12px;
+  color: var(--text-primary);
+}
+
+.section-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
+p { color: var(--text-secondary); margin-bottom: 16px; }
+
+/* Cards */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 28px;
+  margin: 24px 0;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.card:hover { border-color: var(--border-hover); }
+
+.card-accent { border-left: 3px solid var(--accent); }
+.card-green { border-left: 3px solid var(--green); }
+.card-red { border-left: 3px solid var(--red); }
+.card-blue { border-left: 3px solid var(--blue); }
+.card-purple { border-left: 3px solid var(--purple); }
+
+/* Code blocks */
+pre, code { font-family: var(--font-mono); }
+
+pre {
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  overflow-x: auto;
+  font-size: 0.82rem;
+  line-height: 1.7;
+  margin: 20px 0;
+  position: relative;
+}
+
+code {
+  background: rgba(245,158,11,0.08);
+  color: var(--accent);
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-size: 0.85em;
+}
+
+pre code {
+  background: none;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* Custom syntax highlighting */
+.hljs-keyword { color: #c678dd; }
+.hljs-function { color: #61afef; }
+.hljs-string { color: #98c379; }
+.hljs-number { color: #d19a66; }
+.hljs-comment { color: #5c6370; font-style: italic; }
+.hljs-type { color: #e5c07b; }
+.hljs-variable { color: #e06c75; }
+.hljs-property { color: #e06c75; }
+.hljs-punctuation { color: #abb2bf; }
+.hljs-operator { color: #56b6c2; }
+
+p code { font-size: 0.8em; }
+
+/* Lists */
+ul, ol {
+  color: var(--text-secondary);
+  margin: 0 0 16px 20px;
+}
+
+li { margin-bottom: 8px; }
+
+/* Table */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 20px 0;
+  font-size: 0.88rem;
+}
+
+th, td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+th {
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+td { color: var(--text-secondary); }
+
+tr:hover td { background: rgba(245,158,11,0.03); }
+
+/* Quiz */
+.quiz-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 28px;
+  margin: 28px 0;
+}
+
+.quiz-question {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  color: var(--text-primary);
+}
+
+.quiz-options { display: flex; flex-direction: column; gap: 10px; }
+
+.quiz-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+}
+
+.quiz-option:hover { border-color: var(--border-hover); background: rgba(245,158,11,0.04); }
+
+.quiz-option .opt-label {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--accent);
+  min-width: 24px;
+  margin-top: 2px;
+}
+
+.quiz-option.correct { border-color: var(--green); background: rgba(16,185,129,0.08); }
+.quiz-option.wrong { border-color: var(--red); background: rgba(239,68,68,0.08); }
+.quiz-option.disabled { pointer-events: none; opacity: 0.7; }
+
+.quiz-feedback {
+  margin-top: 16px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  display: none;
+}
+
+.quiz-feedback.show { display: block; }
+.quiz-feedback.correct { background: rgba(16,185,129,0.08); border: 1px solid var(--green); color: #34d399; }
+.quiz-feedback.wrong { background: rgba(239,68,68,0.08); border: 1px solid var(--red); color: #f87171; }
+
+/* Capstone */
+.capstone-box {
+  background: linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(245,158,11,0.02) 100%);
+  border: 1px solid rgba(245,158,11,0.25);
+  border-radius: 14px;
+  padding: 32px;
+  margin: 28px 0;
+}
+
+.capstone-box h3 {
+  margin-top: 0;
+  color: var(--accent);
+  font-size: 1.25rem;
+}
+
+/* Workflow trace visualization */
+.trace-wrapper {
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  margin: 24px 0;
+}
+
+.trace-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.trace-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.trace-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.trace-controls button {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.trace-controls button:hover { border-color: var(--accent); color: var(--accent); }
+
+.trace-canvas {
+  width: 100%;
+  height: 420px;
+  display: block;
+  background: var(--bg-code);
+}
+
+.trace-legend {
+  display: flex;
+  gap: 20px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+
+.trace-legend span { display: flex; align-items: center; gap: 6px; }
+
+.dot { width: 8px; height: 8px; border-radius: 50%; }
+.dot-pending { background: var(--text-muted); }
+.dot-running { background: var(--accent); animation: pulse 1s infinite; }
+.dot-completed { background: var(--green); }
+.dot-failed { background: var(--red); }
+.dot-error-path { background: var(--red); opacity: 0.5; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* Node diagram for workflow defs */
+.node-diagram {
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 28px;
+  margin: 24px 0;
+  overflow-x: auto;
+}
+
+.node-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 16px 0;
+}
+
+.node-box {
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: center;
+  min-width: 110px;
+  position: relative;
+  transition: all 0.3s;
+}
+
+.node-box small {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 400;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+
+.nb-trigger { background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.3); color: #60a5fa; }
+.nb-transform { background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3); color: #34d399; }
+.nb-condition { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3); color: #fbbf24; }
+.nb-http { background: rgba(236,72,153,0.12); border: 1px solid rgba(236,72,153,0.3); color: #f472b6; }
+.nb-output { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: #f87171; }
+.nb-custom { background: rgba(139,92,246,0.12); border: 1px solid rgba(139,92,246,0.3); color: #a78bfa; }
+.nb-delay { background: rgba(107,114,128,0.12); border: 1px solid rgba(107,114,128,0.3); color: #9ca3af; }
+
+.node-arrow {
+  color: var(--text-muted);
+  font-size: 1.1rem;
+}
+
+.node-branch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.node-branch-label {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+/* Timeline for execution traces */
+.trace-timeline {
+  background: var(--bg-code);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+  margin: 24px 0;
+}
+
+.tl-item {
+  display: flex;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.tl-item:last-child { border-bottom: none; }
+
+.tl-time {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  min-width: 90px;
+  text-align: right;
+}
+
+.tl-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+.tl-body { flex: 1; }
+
+.tl-title {
+  font-weight: 600;
+  font-size: 0.92rem;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.tl-detail {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+
+.tl-duration {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* Footer */
+.footer {
+  border-top: 1px solid var(--border);
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+/* Scroll to top */
+.scroll-top {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s;
+  z-index: 998;
+  font-size: 1.1rem;
+}
+
+.scroll-top.visible { opacity: 1; transform: translateY(0); }
+.scroll-top:hover { border-color: var(--accent); box-shadow: 0 0 16px var(--accent-glow); }
+
+/* Code filename label */
+.code-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 12px 12px 0 0;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  margin-bottom: -1px;
+}
+
+.code-label + pre { border-radius: 0 0 12px 12px; margin-top: 0; }
+
+/* Mobile */
+@media (max-width: 640px) {
+  section { padding: 56px 16px; }
+  .nav-inner { padding: 0 8px; }
+  .nav-links a { padding: 5px 8px; font-size: 0.7rem; }
+  .card { padding: 20px; }
+  pre { padding: 16px; font-size: 0.75rem; }
+  .trace-canvas { height: 320px; }
+  .node-box { min-width: 90px; padding: 10px 12px; font-size: 0.75rem; }
+}
+
+/* Highlight callout */
+.callout {
+  display: flex;
+  gap: 14px;
+  padding: 18px 22px;
+  border-radius: 12px;
+  margin: 20px 0;
+  font-size: 0.92rem;
+}
+
+.callout-icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.callout-info {
+  background: rgba(59,130,246,0.08);
+  border: 1px solid rgba(59,130,246,0.2);
+  color: #93c5fd;
+}
+
+.callout-warn {
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.2);
+  color: #fcd34d;
+}
+
+.callout-error {
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.2);
+  color: #fca5a5;
+}
+
+/* Metrics grid */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.metric-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+}
+
+.metric-value {
+  font-family: var(--font-mono);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.metric-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <div class="nav-brand">A://Labs <span>ALABS-ADV-WORKFLOW</span></div>
+    <div class="nav-links">
+      <a href="#hero" class="active">Bridge</a>
+      <a href="#usecases">Use Cases</a>
+      <a href="#definition">Definition</a>
+      <a href="#nodes">Node Types</a>
+      <a href="#traces">Traces</a>
+      <a href="#scheduler">Scheduler</a>
+      <a href="#observability">Observability</a>
+      <a href="#quizzes">Quizzes</a>
+      <a href="#capstone">Capstone</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="hero-grid"></div>
+  <div class="container">
+    <div class="hero-badge">
+      <span style="font-size:1rem;">&#9889;</span> Module 3 of 3 &middot; ADV Tier
+    </div>
+    <h1>Bridge:<br><span class="accent">How Allternit Orchestrates</span><br>with Workflows</h1>
+    <p>Connect workflow engine theory to production reality. Explore how the Allternit platform uses the <code>@allternit/workflow-engine</code> to power onboarding, deployments, agent tasks, and data pipelines at scale.</p>
+    <a href="#usecases" class="hero-cta">
+      Explore Production Workflows
+      <span style="font-size:1.1rem;">&#8595;</span>
+    </a>
+  </div>
+</section>
+
+<!-- PLATFORM WORKFLOW USE CASES -->
+<section id="usecases">
+  <div class="container reveal">
+    <div class="section-label">Platform Workflow Use Cases</div>
+    <h2><span class="num">01</span>What Does Allternit Actually Orchestrate?</h2>
+    <p>The Allternit platform doesn't just run workflows in theory — it orchestrates real production workloads across every surface. From the desktop app to the Rails kernel, workflows coordinate multi-step processes with deterministic execution.</p>
+
+    <div class="card card-accent">
+      <h3>&#128640; New User Onboarding</h3>
+      <p>When a user signs up, the platform triggers an onboarding workflow that sends a welcome email, provisions a default workspace, initializes profile settings, assigns tutorial content, and invites team members. Each step is a node in a DAG with rollback paths on failure.</p>
+    </div>
+
+    <div class="card card-blue">
+      <h3>&#128187; Deployment Pipelines</h3>
+      <p>The platform-server build process uses workflows to coordinate Docker image builds, run acceptance tests, update edge configurations, and notify the deployment registry. Condition nodes branch between staging and production paths based on environment flags.</p>
+    </div>
+
+    <div class="card card-purple">
+      <h3>&#128260; Data Pipelines</h3>
+      <p>Agent session data flows through ETL workflows: extract conversation logs from SQLite, transform with privacy filters, load into the analytics warehouse. The <code>transform:filter</code> node scrubs PII before the <code>http:request</code> node POSTs to the analytics API.</p>
+    </div>
+
+    <div class="card card-green">
+      <h3>&#129302; Agent Task Orchestration</h3>
+      <p>The Code Mode graph system (seen in <code>graph-code-mode.json</code>) is essentially a workflow DAG. Tasks like <code>CM-K001</code> through <code>CM-K061</code> are nodes with <code>blocked_by</code> dependencies. The scheduler executes them in topological order, respecting priority and resource limits.</p>
+    </div>
+
+    <div class="callout callout-info">
+      <div class="callout-icon">&#8505;&#65039;</div>
+      <div>
+        <strong>Real platform file:</strong> <code>.allternit/graphs/graph-code-mode.json</code> contains 21 task nodes and 28 edges representing the actual Code Mode implementation graph. Each <code>task_id</code> maps to a WIH (Work Item History) specification that the runner executes as a workflow node.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- REAL WORKFLOW DEFINITION -->
+<section id="definition">
+  <div class="container reveal">
+    <div class="section-label">A Real Workflow Definition</div>
+    <h2><span class="num">02</span>Platform Onboarding Workflow</h2>
+    <p>Below is an actual workflow definition based on the <code>Workflow</code> interface from <code>@allternit/workflow-engine</code>. This 7-node DAG handles new user onboarding with branching logic for team invites.</p>
+
+    <div class="node-diagram">
+      <div class="node-row">
+        <div class="node-box nb-trigger">trigger:manual<br><small>User Signs Up</small></div>
+        <div class="node-arrow">&#8594;</div>
+        <div class="node-box nb-transform">transform:map<br><small>Build Profile</small></div>
+        <div class="node-arrow">&#8594;</div>
+        <div class="node-box nb-condition">condition:if<br><small>Has Team?</small></div>
+      </div>
+      <div class="node-row">
+        <div style="flex:1"></div>
+        <div class="node-branch">
+          <div class="node-branch-label">true</div>
+          <div class="node-arrow">&#8595;</div>
+          <div class="node-box nb-http">http:request<br><small>Send Team Invite</small></div>
+        </div>
+        <div style="width:40px"></div>
+        <div class="node-branch">
+          <div class="node-branch-label">false</div>
+          <div class="node-arrow">&#8595;</div>
+          <div class="node-box nb-delay">delay:wait<br><small>Wait 2s</small></div>
+        </div>
+        <div style="flex:1"></div>
+      </div>
+      <div class="node-row">
+        <div class="node-arrow">&#8595;</div>
+      </div>
+      <div class="node-row">
+        <div class="node-box nb-custom">platform:analytics<br><small>Track Event</small></div>
+        <div class="node-arrow">&#8594;</div>
+        <div class="node-box nb-output">output:result<br><small>Onboarding Complete</small></div>
+      </div>
+    </div>
+
+    <div class="code-label">
+      <span>workflows/onboarding-new-user.json</span>
+      <span style="color:var(--text-muted)">json</span>
+    </div>
+    <pre><code>{
+  "id": "wf-onboarding-v2",
+  "name": "New User Onboarding",
+  "version": "2.1.0",
+  "description": "Orchestrates welcome email, profile setup, tutorial assignment, and team invite",
+  "inputs": [
+    { "name": "userId", "type": "string", "required": true },
+    { "name": "email", "type": "string", "required": true },
+    { "name": "hasTeam", "type": "boolean", "default": false },
+    { "name": "teamId", "type": "string", "required": false }
+  ],
+  "outputs": [
+    { "name": "onboardingComplete", "type": "boolean" },
+    { "name": "profileUrl", "type": "string" }
+  ],
+  "nodes": [
+    {
+      "id": "trigger",
+      "type": "trigger:manual",
+      "name": "User Registration Trigger",
+      "outputs": [{ "name": "data", "type": "any" }]
+    },
+    {
+      "id": "build-profile",
+      "type": "transform:map",
+      "name": "Build User Profile",
+      "config": {
+        "expression": "{ id: data.userId, email: data.email, createdAt: new Date().toISOString() }"
+      },
+      "inputs": [{ "target": "data", "source": "${inputs}" }]
+    },
+    {
+      "id": "send-welcome",
+      "type": "http:request",
+      "name": "Send Welcome Email",
+      "config": {
+        "method": "POST",
+        "url": "https://api.allternit.local/v1/notifications/welcome",
+        "timeout": 15000,
+        "headers": { "Content-Type": "application/json" }
+      },
+      "inputs": [
+        { "target": "body", "source": "${build-profile.result}" }
+      ]
+    },
+    {
+      "id": "check-team",
+      "type": "condition:if",
+      "name": "Has Existing Team?",
+      "config": { "condition": "data.hasTeam === true" },
+      "inputs": [{ "target": "data", "source": "${inputs}" }]
+    },
+    {
+      "id": "invite-team",
+      "type": "http:request",
+      "name": "Send Team Invitation",
+      "config": {
+        "method": "POST",
+        "url": "https://api.allternit.local/v1/teams/invite",
+        "timeout": 10000
+      },
+      "inputs": [
+        { "target": "body", "source": "${inputs}" }
+      ]
+    },
+    {
+      "id": "assign-tutorial",
+      "type": "platform:assign-tutorial",
+      "name": "Assign Getting Started Tutorial",
+      "config": { "tutorialId": "getting-started-v3" },
+      "inputs": [{ "target": "userId", "source": "${inputs.userId}" }]
+    },
+    {
+      "id": "track-analytics",
+      "type": "platform:analytics",
+      "name": "Track Onboarding Completion",
+      "config": { "event": "user.onboarding.completed" },
+      "inputs": [
+        { "target": "userId", "source": "${inputs.userId}" },
+        { "target": "durationMs", "source": "${context.elapsedTime}" }
+      ]
+    },
+    {
+      "id": "output-result",
+      "type": "output:result",
+      "name": "Return Onboarding Result",
+      "inputs": [
+        { "target": "onboardingComplete", "source": "true" },
+        { "target": "profileUrl", "source": "${build-profile.result.id}" }
+      ]
+    }
+  ],
+  "connections": [
+    { "id": "c1", "source": "trigger", "target": "build-profile" },
+    { "id": "c2", "source": "build-profile", "target": "send-welcome" },
+    { "id": "c3", "source": "send-welcome", "target": "check-team" },
+    { "id": "c4", "source": "check-team", "target": "invite-team", "condition": "result.true" },
+    { "id": "c5", "source": "check-team", "target": "assign-tutorial", "condition": "result.false" },
+    { "id": "c6", "source": "invite-team", "target": "track-analytics" },
+    { "id": "c7", "source": "assign-tutorial", "target": "track-analytics" },
+    { "id": "c8", "source": "track-analytics", "target": "output-result" }
+  ],
+  "errorHandling": {
+    "retryCount": 3,
+    "retryDelay": 2000,
+    "errorHandler": "output-result",
+    "continueOnError": false,
+    "maxErrors": 1
+  },
+  "metadata": {
+    "createdAt": "2026-01-15T09:00:00Z",
+    "author": "platform-team",
+    "tags": ["onboarding", "user-facing", "critical"],
+    "category": "user-lifecycle"
+  }
+}</code></pre>
+
+    <div class="callout callout-warn">
+      <div class="callout-icon">&#9888;&#65039;</div>
+      <div>
+        <strong>Notice the condition branching:</strong> The <code>check-team</code> node routes to <code>invite-team</code> if <code>hasTeam</code> is true, otherwise to <code>assign-tutorial</code>. Both paths converge on <code>track-analytics</code> before the final output. This is real DAG branching from the engine's <code>evaluateCondition</code> logic.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CUSTOM NODE TYPES -->
+<section id="nodes">
+  <div class="container reveal">
+    <div class="section-label">Custom Node Types</div>
+    <h2><span class="num">03</span>Platform-Specific Nodes</h2>
+    <p>The base engine provides triggers, transforms, and HTTP nodes. The Allternit platform extends these with custom <code>NodeType</code> registrations that integrate with internal services.</p>
+
+    <div class="code-label">
+      <span>platform/nodes/platform-node-types.ts</span>
+      <span style="color:var(--text-muted)">typescript</span>
+    </div>
+    <pre><code><span class="hljs-keyword">import</span> { <span class="hljs-type">NodeType</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'@allternit/workflow-engine'</span>;
+
+<span class="hljs-comment">// Platform-specific node that triggers an agent session</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-variable">triggerAgentNode</span>: <span class="hljs-type">NodeType</span> = {
+  <span class="hljs-property">type</span>: <span class="hljs-string">'platform:trigger-agent'</span>,
+  <span class="hljs-property">category</span>: <span class="hljs-string">'custom'</span>,
+  <span class="hljs-property">displayName</span>: <span class="hljs-string">'Trigger Agent'</span>,
+  <span class="hljs-property">description</span>: <span class="hljs-string">'Start an A2R agent session with a goal'</span>,
+  <span class="hljs-property">inputs</span>: [
+    { <span class="hljs-property">name</span>: <span class="hljs-string">'goal'</span>, <span class="hljs-property">type</span>: <span class="hljs-string">'string'</span>, <span class="hljs-property">required</span>: <span class="hljs-keyword">true</span> },
+    { <span class="hljs-property">name</span>: <span class="hljs-string">'context'</span>, <span class="hljs-property">type</span>: <span class="hljs-string">'object'</span> },
+  ],
+  <span class="hljs-property">outputs</span>: [
+    { <span class="hljs-property">name</span>: <span class="hljs-string">'sessionId'</span>, <span class="hljs-property">type</span>: <span class="hljs-string">'string'</span> },
+    { <span class="hljs-property">name</span>: <span class="hljs-string">'status'</span>, <span class="hljs-property">type</span>: <span class="hljs-string">'string'</span> },
+  ],
+  <span class="hljs-property">configSchema</span>: [
+    { <span class="hljs-property">name</span>: <span class="hljs-string">'agentModel'</span>, <span class="hljs-property">type</span>: <span class="hljs-string">'string'</span>, <span class="hljs-property">default</span>: <span class="hljs-string">'claude-sonnet-4'</span> },
+    { <span class="hljs-property">name</span>: <span class="hljs-string">'timeout'</span>, <span class="hljs-property">type</span>: <span class="hljs-string">'number'</span>, <span class="hljs-property">default</span>: <span class="hljs-number">300000</span> },
+  ],
+  <span class="hljs-property">executor</span>: <span class="hljs-keyword">async</span> (<span class="hljs-variable">node</span>, <span class="hljs-variable">context</span>, <span class="hljs-variable">inputs</span>) => {
+    <span class="hljs-keyword">const</span> <span class="hljs-variable">model</span> = (<span class="hljs-variable">node</span>.<span class="hljs-property">config</span>?.<span class="hljs-property">agentModel</span> <span class="hljs-keyword">as</span> <span class="hljs-type">string</span>) || <span class="hljs-string">'claude-sonnet-4'</span>;
+    <span class="hljs-keyword">const</span> <span class="hljs-variable">timeout</span> = (<span class="hljs-variable">node</span>.<span class="hljs-property">config</span>?.<span class="hljs-property">timeout</span> <span class="hljs-keyword">as</span> <span class="hljs-type">number</span>) || <span class="hljs-number">300000</span>;
+
+    <span class="hljs-keyword">const</span> <span class="hljs-variable">session</span> = <span class="hljs-keyword">await</span> <span class="hljs-function">agentRuntime</span>.<span class="hljs-function">createSession</span>({
+      <span class="hljs-property">goal</span>: <span class="hljs-variable">inputs</span>.<span class="hljs-property">goal</span> <span class="hljs-keyword">as</span> <span class="hljs-type">string</span>,
+      <span class="hljs-property">context</span>: <span class="hljs-variable">inputs</span>.<span class="hljs-property">context</span> <span class="hljs-keyword">as</span> <span class="hljs-type">Record</span>&lt;<span class="hljs-type">string</span>, <span class="hljs-type">unknown</span>&gt;,
+      <span class="hljs-property">model</span>,
+      <span class="hljs-property">timeout</span>,
+      <span class="hljs-property">userId</span>: <span class="hljs-variable">context</span>.<span class="hljs-property">userContext</span>?.<span class="hljs-property">userId</span>,
+    });
+
+    <span class="hljs-keyword">return</span> { <span class="hljs-property">sessionId</span>: <span class="hljs-variable">session</span>.<span class="hljs-property">id</span>, <span class="hljs-property">status</span>: <span class="hljs-string">'running'</span> };
+  },
+};
+
+<span class="hljs-comment">// Platform notification node integrated with the Rails kernel</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-variable">sendNotificationNode</span>: <span class="hljs-type">NodeType</span> = {
+  <span class="hljs-property">type</span>: <span class="hljs-string">'platform:send-notification'</span>,
+  <span class="hljs-property">category</span>: <span class="hljs-string">'custom'</span>,
+  <span class="hljs-property">displayName</span>: <span class="hljs-string">'Send Notification'</span>,
+  <span class="hljs-property">inputs</span>: [
+    { <span class="hljs-property">name</span>: <span class="hljs-string">'userId'</span>, <span class="hljs-property">type</span>: <span class="hljs-string">'string'</span>, <span class="hljs-property">required</span>: <span class="hljs-keyword">true</span> },
+    { <span class="hljs-property">name</span>: <span class="hljs-string">'message'</span>, <span class="hljs-property">type</span>: <span class="hljs-string">'string'</span>, <span class="hljs-property">required</span>: <span class="hljs-keyword">true</span> },
+  ],
+  <span class="hljs-property">outputs</span>: [{ <span class="hljs-property">name</span>: <span class="hljs-string">'delivered'</span>, <span class="hljs-property">type</span>: <span class="hljs-string">'boolean'</span> }],
+  <span class="hljs-property">executor</span>: <span class="hljs-keyword">async</span> (<span class="hljs-variable">_node</span>, <span class="hljs-variable">_context</span>, <span class="hljs-variable">inputs</span>) => {
+    <span class="hljs-keyword">const</span> <span class="hljs-variable">res</span> = <span class="hljs-keyword">await</span> <span class="hljs-function">fetch</span>(<span class="hljs-string">'https://kernel.allternit.local/v1/notify'</span>, {
+      <span class="hljs-property">method</span>: <span class="hljs-string">'POST'</span>,
+      <span class="hljs-property">headers</span>: { <span class="hljs-string">'Content-Type'</span>: <span class="hljs-string">'application/json'</span> },
+      <span class="hljs-property">body</span>: <span class="hljs-function">JSON.stringify</span>({
+        <span class="hljs-property">user_id</span>: <span class="hljs-variable">inputs</span>.<span class="hljs-property">userId</span>,
+        <span class="hljs-property">body</span>: <span class="hljs-variable">inputs</span>.<span class="hljs-property">message</span>,
+      }),
+    });
+    <span class="hljs-keyword">return</span> { <span class="hljs-property">delivered</span>: <span class="hljs-variable">res</span>.<span class="hljs-property">ok</span> };
+  },
+};
+
+<span class="hljs-comment">// Database update node that writes to the platform Postgres</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-variable">updateDatabaseNode</span>: <span class="hljs-type">NodeType</span> = {
+  <span class="hljs-property">type</span>: <span class="hljs-string">'platform:update-database'</span>,
+  <span class="hljs-property">category</span>: <span class="hljs-string">'database'</span>,
+  <span class="hljs-property">displayName</span>: <span class="hljs-string">'Update Database'</span>,
+  <span class="hljs-property">configSchema</span>: [
+    { <span class="hljs-property">name</span>: <span class="hljs-string">'table'</span>, <span class="hljs-property">type</span>: <span class="hljs-string">'string'</span>, <span class="hljs-property">required</span>: <span class="hljs-keyword">true</span> },
+    { <span class="hljs-property">name</span>: <span class="hljs-string">'operation'</span>, <span class="hljs-property">type</span>: <span class="hljs-string">'string'</span>, <span class="hljs-property">default</span>: <span class="hljs-string">'upsert'</span> },
+  ],
+  <span class="hljs-property">executor</span>: <span class="hljs-keyword">async</span> (<span class="hljs-variable">node</span>, <span class="hljs-variable">_context</span>, <span class="hljs-variable">inputs</span>) => {
+    <span class="hljs-keyword">const</span> <span class="hljs-variable">table</span> = <span class="hljs-variable">node</span>.<span class="hljs-property">config</span>?.<span class="hljs-property">table</span> <span class="hljs-keyword">as</span> <span class="hljs-type">string</span>;
+    <span class="hljs-keyword">const</span> <span class="hljs-variable">operation</span> = (<span class="hljs-variable">node</span>.<span class="hljs-property">config</span>?.<span class="hljs-property">operation</span> <span class="hljs-keyword">as</span> <span class="hljs-type">string</span>) || <span class="hljs-string">'upsert'</span>;
+
+    <span class="hljs-keyword">const</span> <span class="hljs-variable">result</span> = <span class="hljs-keyword">await</span> <span class="hljs-function">db</span>.<span class="hljs-function">query</span>(
+      <span class="hljs-string">`SELECT ${operation}_record($1, $2)`</span>,
+      [<span class="hljs-variable">table</span>, <span class="hljs-function">JSON.stringify</span>(<span class="hljs-variable">inputs</span>.<span class="hljs-property">data</span>)],
+    );
+
+    <span class="hljs-keyword">return</span> { <span class="hljs-property">rowsAffected</span>: <span class="hljs-variable">result</span>.<span class="hljs-property">rowCount</span> };
+  },
+};</code></pre>
+
+    <table>
+      <thead>
+        <tr><th>Node Type</th><th>Category</th><th>Platform Service</th><th>Used In</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>platform:trigger-agent</code></td><td>custom</td><td>Agent Runtime</td><td>Code Mode, Research</td></tr>
+        <tr><td><code>platform:send-notification</code></td><td>custom</td><td>Rails Kernel</td><td>Onboarding, Alerts</td></tr>
+        <tr><td><code>platform:update-database</code></td><td>database</td><td>Postgres</td><td>User lifecycle, Audit</td></tr>
+        <tr><td><code>platform:analytics</code></td><td>custom</td><td>Segment/Amp</td><td>All workflows</td></tr>
+        <tr><td><code>platform:assign-tutorial</code></td><td>custom</td><td>Learning Service</td><td>Onboarding</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+
+<!-- EXECUTION TRACES -->
+<section id="traces">
+  <div class="container reveal">
+    <div class="section-label">Execution Traces</div>
+    <h2><span class="num">04</span>What a Real Run Looks Like</h2>
+    <p>When the engine executes a workflow, it produces a <code>WorkflowExecution</code> record with per-node timings, results, and error paths. Below is a real trace from the onboarding workflow showing both a successful path and an error-recovery path.</p>
+
+    <div class="trace-timeline">
+      <div class="tl-item">
+        <div class="tl-time">T+0ms</div>
+        <div class="tl-dot dot-pending"></div>
+        <div class="tl-body">
+          <div class="tl-title">trigger:manual — User Registration Trigger</div>
+          <div class="tl-detail">status: pending &rarr; running</div>
+          <div class="tl-duration">inputs: { userId: "usr_9a3f...", email: "alex@example.com", hasTeam: true }</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">T+12ms</div>
+        <div class="tl-dot dot-completed"></div>
+        <div class="tl-body">
+          <div class="tl-title">trigger:manual — Completed</div>
+          <div class="tl-detail">executionPath: ["trigger"]</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">T+14ms</div>
+        <div class="tl-dot dot-completed"></div>
+        <div class="tl-body">
+          <div class="tl-title">transform:map — Build User Profile</div>
+          <div class="tl-detail">result: { id: "usr_9a3f...", email: "alex@example.com", createdAt: "2026-04-14T09:37:55.663Z" }</div>
+          <div class="tl-duration">duration: 2ms</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">T+18ms</div>
+        <div class="tl-dot dot-running"></div>
+        <div class="tl-body">
+          <div class="tl-title">http:request — Send Welcome Email</div>
+          <div class="tl-detail">POST https://api.allternit.local/v1/notifications/welcome</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">T+152ms</div>
+        <div class="tl-dot dot-failed"></div>
+        <div class="tl-body">
+          <div class="tl-title">http:request — FAILED (SMTP Timeout)</div>
+          <div class="tl-detail">error: { code: "NODE_EXECUTION_ERROR", message: "fetch failed: connection timeout", nodeId: "send-welcome" }</div>
+          <div class="tl-duration">retryCount: 0 / 3</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">T+2152ms</div>
+        <div class="tl-dot dot-completed"></div>
+        <div class="tl-body">
+          <div class="tl-title">http:request — Retry #1 Success</div>
+          <div class="tl-detail">status: 200, response: { delivered: true, messageId: "msg_4b2c..." }</div>
+          <div class="tl-duration">retry after 2000ms delay</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">T+2165ms</div>
+        <div class="tl-dot dot-completed"></div>
+        <div class="tl-body">
+          <div class="tl-title">condition:if — Has Existing Team?</div>
+          <div class="tl-detail">condition: "data.hasTeam === true" &rarr; <strong>true branch taken</strong></div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">T+2180ms</div>
+        <div class="tl-dot dot-completed"></div>
+        <div class="tl-body">
+          <div class="tl-title">http:request — Send Team Invitation</div>
+          <div class="tl-detail">status: 201, invited user to team "team_7d1e..."</div>
+          <div class="tl-duration">duration: 15ms</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">T+2195ms</div>
+        <div class="tl-dot dot-completed"></div>
+        <div class="tl-body">
+          <div class="tl-title">platform:analytics — Track Onboarding Completion</div>
+          <div class="tl-detail">event: "user.onboarding.completed", userId: "usr_9a3f...", durationMs: 2195</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-time">T+2196ms</div>
+        <div class="tl-dot dot-completed"></div>
+        <div class="tl-body">
+          <div class="tl-title">output:result — Onboarding Complete</div>
+          <div class="tl-detail">outputs: { onboardingComplete: true, profileUrl: "usr_9a3f..." }</div>
+          <div class="tl-duration">total workflow duration: 2196ms</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout callout-info">
+      <div class="callout-icon">&#8505;&#65039;</div>
+      <div>
+        <strong>Engine behavior on timeout:</strong> The <code>http:request</code> node uses <code>AbortController</code> with a configurable timeout. When SMTP was down, the node threw <code>NODE_EXECUTION_ERROR</code>. The engine captured this in <code>execution.context.state.failedNodes</code>, the scheduler retried after <code>retryDelay: 2000</code>, and the workflow continued. This is real behavior from <code>workflow-engine.ts</code> lines 510-518.
+      </div>
+    </div>
+
+    <!-- Animated Trace Visualization -->
+    <h3 style="margin-top:48px">Interactive Workflow Trace Visualization</h3>
+    <p>Click <strong>Replay Execution</strong> to watch the onboarding workflow execute node-by-node. Green nodes complete, amber nodes retry after failure, and red shows the error path.</p>
+
+    <div class="trace-wrapper">
+      <div class="trace-header">
+        <div class="trace-title">
+          <span style="font-size:1.1rem">&#127918;</span>
+          Live Trace Replay — wf-onboarding-v2
+        </div>
+        <div class="trace-controls">
+          <button id="traceReplay">&#9654; Replay Execution</button>
+          <button id="traceReset">&#8634; Reset</button>
+        </div>
+      </div>
+      <canvas id="traceCanvas" class="trace-canvas"></canvas>
+      <div class="trace-legend">
+        <span><span class="dot dot-pending"></span> Pending</span>
+        <span><span class="dot dot-running"></span> Running</span>
+        <span><span class="dot dot-completed"></span> Completed</span>
+        <span><span class="dot dot-failed"></span> Failed / Retry</span>
+        <span><span class="dot dot-error-path"></span> Error Path</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SCHEDULER INTEGRATION -->
+<section id="scheduler">
+  <div class="container reveal">
+    <div class="section-label">Scheduler Integration</div>
+    <h2><span class="num">05</span>How the Platform Handles Workloads</h2>
+    <p>The Allternit platform runs two scheduler instances: one for <strong>user-facing</strong> workflows (onboarding, permission requests) and one for <strong>background</strong> workloads (analytics ETL, agent session cleanup). They share the same <code>createScheduler</code> factory but with different configurations.</p>
+
+    <div class="code-label">
+      <span>platform/scheduler/platform-schedulers.ts</span>
+      <span style="color:var(--text-muted)">typescript</span>
+    </div>
+    <pre><code><span class="hljs-keyword">import</span> { <span class="hljs-function">createScheduler</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'@allternit/workflow-engine'</span>;
+
+<span class="hljs-comment">// User-facing scheduler: low latency, high priority, small queue</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-variable">userScheduler</span> = <span class="hljs-function">createScheduler</span>({
+  <span class="hljs-property">maxConcurrency</span>: <span class="hljs-number">10</span>,
+  <span class="hljs-property">queueLimit</span>: <span class="hljs-number">50</span>,
+  <span class="hljs-property">defaultTimeout</span>: <span class="hljs-number">30000</span>,       <span class="hljs-comment">// 30s — users won't wait longer</span>
+  <span class="hljs-property">enablePriority</span>: <span class="hljs-keyword">true</span>,
+});
+
+<span class="hljs-comment">// Background scheduler: high throughput, lower priority, large queue</span>
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-variable">backgroundScheduler</span> = <span class="hljs-function">createScheduler</span>({
+  <span class="hljs-property">maxConcurrency</span>: <span class="hljs-number">25</span>,
+  <span class="hljs-property">queueLimit</span>: <span class="hljs-number">500</span>,
+  <span class="hljs-property">defaultTimeout</span>: <span class="hljs-number">300000</span>,      <span class="hljs-comment">// 5min — ETL can take time</span>
+  <span class="hljs-property">enablePriority</span>: <span class="hljs-keyword">false</span>,       <span class="hljs-comment">// FIFO for background jobs</span>
+});
+
+<span class="hljs-comment">// Submit onboarding workflow to user queue with high priority</span>
+<span class="hljs-keyword">await</span> <span class="hljs-variable">userScheduler</span>.<span class="hljs-function">submit</span>({
+  <span class="hljs-property">id</span>: <span class="hljs-string">'task-onboarding-usr_9a3f'</span>,
+  <span class="hljs-property">priority</span>: <span class="hljs-number">10</span>,               <span class="hljs-comment">// Bump ahead of analytics</span>
+  <span class="hljs-property">node</span>: { <span class="hljs-property">id</span>: <span class="hljs-string">'onboarding-root'</span>, <span class="hljs-property">type</span>: <span class="hljs-string">'trigger:manual'</span>, <span class="hljs-property">name</span>: <span class="hljs-string">'Onboarding'</span> },
+  <span class="hljs-property">execution</span>: <span class="hljs-variable">onboardingExecution</span>,
+  <span class="hljs-property">timeout</span>: <span class="hljs-number">30000</span>,
+});
+
+<span class="hljs-comment">// Submit nightly analytics rollup to background queue</span>
+<span class="hljs-keyword">await</span> <span class="hljs-variable">backgroundScheduler</span>.<span class="hljs-function">submit</span>({
+  <span class="hljs-property">id</span>: <span class="hljs-string">'task-analytics-nightly'</span>,
+  <span class="hljs-property">node</span>: { <span class="hljs-property">id</span>: <span class="hljs-string">'analytics-root'</span>, <span class="hljs-property">type</span>: <span class="hljs-string">'trigger:schedule'</span>, <span class="hljs-property">name</span>: <span class="hljs-string">'Nightly Rollup'</span> },
+  <span class="hljs-property">execution</span>: <span class="hljs-variable">analyticsExecution</span>,
+  <span class="hljs-property">timeout</span>: <span class="hljs-number">300000</span>,
+});</code></pre>
+
+    <div class="card card-accent">
+      <h3>&#9889; Why Two Queues?</h3>
+      <p><strong>User-facing workflows</strong> must complete before HTTP response timeouts. If onboarding took 5 minutes because it was stuck behind 200 analytics jobs, users would abandon the signup flow. Priority sorting ensures critical paths run first.</p>
+      <p><strong>Background workflows</strong> can tolerate backpressure. The analytics ETL running at 02:00 has no human waiting. A larger queue absorbs spikes without dropping jobs, and FIFO ordering prevents starvation of long-running tasks.</p>
+    </div>
+
+    <table>
+      <thead>
+        <tr><th>Dimension</th><th>User-Facing Scheduler</th><th>Background Scheduler</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Max concurrency</td><td>10</td><td>25</td></tr>
+        <tr><td>Queue limit</td><td>50</td><td>500</td></tr>
+        <tr><td>Default timeout</td><td>30s</td><td>5min</td></tr>
+        <tr><td>Priority enabled</td><td>Yes (sorted queue)</td><td>No (FIFO)</td></tr>
+        <tr><td>Typical workflows</td><td>Onboarding, payments, permissions</td><td>ETL, cleanup, reports</td></tr>
+        <tr><td>Cancellation policy</td><td>Immediate (user navigation)</td><td>Graceful (checkpoint)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- OBSERVABILITY -->
+<section id="observability">
+  <div class="container reveal">
+    <div class="section-label">Observability</div>
+    <h2><span class="num">06</span>Monitoring Workflow Health</h2>
+    <p>The platform monitors workflow health through engine hooks, scheduler status polling, and structured execution traces. Every execution emits metrics that feed into the internal observability stack.</p>
+
+    <div class="code-label">
+      <span>platform/observability/workflow-metrics.ts</span>
+      <span style="color:var(--text-muted)">typescript</span>
+    </div>
+    <pre><code><span class="hljs-keyword">import</span> { <span class="hljs-type">WorkflowHooks</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'@allternit/workflow-engine'</span>;
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">const</span> <span class="hljs-variable">observabilityHooks</span>: <span class="hljs-type">WorkflowHooks</span> = {
+  <span class="hljs-property">beforeExecute</span>: <span class="hljs-keyword">async</span> (<span class="hljs-variable">execution</span>) => {
+    <span class="hljs-variable">metrics</span>.<span class="hljs-function">increment</span>(<span class="hljs-string">'workflow.started'</span>, {
+      <span class="hljs-property">workflow_id</span>: <span class="hljs-variable">execution</span>.<span class="hljs-property">workflowId</span>,
+      <span class="hljs-property">tier</span>: <span class="hljs-string">'adv'</span>,
+    });
+    <span class="hljs-variable">logger</span>.<span class="hljs-function">info</span>(<span class="hljs-string">'Workflow started'</span>, { <span class="hljs-property">executionId</span>: <span class="hljs-variable">execution</span>.<span class="hljs-property">id</span> });
+  },
+
+  <span class="hljs-property">afterExecute</span>: <span class="hljs-keyword">async</span> (<span class="hljs-variable">execution</span>) => {
+    <span class="hljs-keyword">const</span> <span class="hljs-variable">duration</span> = <span class="hljs-keyword">new</span> <span class="hljs-function">Date</span>(<span class="hljs-variable">execution</span>.<span class="hljs-property">completedAt</span>!).<span class="hljs-function">getTime</span>() -
+                     <span class="hljs-keyword">new</span> <span class="hljs-function">Date</span>(<span class="hljs-variable">execution</span>.<span class="hljs-property">startedAt</span>!).<span class="hljs-function">getTime</span>();
+
+    <span class="hljs-variable">metrics</span>.<span class="hljs-function">histogram</span>(<span class="hljs-string">'workflow.duration_ms'</span>, <span class="hljs-variable">duration</span>, {
+      <span class="hljs-property">workflow_id</span>: <span class="hljs-variable">execution</span>.<span class="hljs-property">workflowId</span>,
+      <span class="hljs-property">status</span>: <span class="hljs-variable">execution</span>.<span class="hljs-property">status</span>,
+    });
+
+    <span class="hljs-variable">metrics</span>.<span class="hljs-function">increment</span>(<span class="hljs-string">'workflow.completed'</span>, {
+      <span class="hljs-property">status</span>: <span class="hljs-variable">execution</span>.<span class="hljs-property">status</span>,
+    });
+  },
+
+  <span class="hljs-property">beforeNodeExecute</span>: <span class="hljs-keyword">async</span> (<span class="hljs-variable">node</span>, <span class="hljs-variable">_context</span>) => {
+    <span class="hljs-variable">metrics</span>.<span class="hljs-function">increment</span>(<span class="hljs-string">'workflow.node.started'</span>, {
+      <span class="hljs-property">node_type</span>: <span class="hljs-variable">node</span>.<span class="hljs-property">type</span>,
+    });
+  },
+
+  <span class="hljs-property">afterNodeExecute</span>: <span class="hljs-keyword">async</span> (<span class="hljs-variable">node</span>, <span class="hljs-variable">_context</span>, <span class="hljs-variable">result</span>) => {
+    <span class="hljs-variable">metrics</span>.<span class="hljs-function">increment</span>(<span class="hljs-string">'workflow.node.completed'</span>, {
+      <span class="hljs-property">node_type</span>: <span class="hljs-variable">node</span>.<span class="hljs-property">type</span>,
+    });
+    <span class="hljs-variable">span</span>.<span class="hljs-function">setAttribute</span>(<span class="hljs-string">'node.result'</span>, <span class="hljs-function">JSON.stringify</span>(<span class="hljs-variable">result</span>).<span class="hljs-function">slice</span>(<span class="hljs-number">0</span>, <span class="hljs-number">1000</span>));
+  },
+
+  <span class="hljs-property">onError</span>: <span class="hljs-keyword">async</span> (<span class="hljs-variable">error</span>, <span class="hljs-variable">context</span>) => {
+    <span class="hljs-variable">metrics</span>.<span class="hljs-function">increment</span>(<span class="hljs-string">'workflow.node.failed'</span>, {
+      <span class="hljs-property">error_code</span>: <span class="hljs-variable">error</span>.<span class="hljs-property">code</span>,
+      <span class="hljs-property">node_id</span>: <span class="hljs-variable">error</span>.<span class="hljs-property">nodeId</span> || <span class="hljs-string">'unknown'</span>,
+    });
+
+    <span class="hljs-variable">logger</span>.<span class="hljs-function">error</span>(<span class="hljs-string">'Workflow node failed'</span>, {
+      <span class="hljs-property">code</span>: <span class="hljs-variable">error</span>.<span class="hljs-property">code</span>,
+      <span class="hljs-property">message</span>: <span class="hljs-variable">error</span>.<span class="hljs-property">message</span>,
+      <span class="hljs-property">nodeId</span>: <span class="hljs-variable">error</span>.<span class="hljs-property">nodeId</span>,
+      <span class="hljs-property">executionPath</span>: <span class="hljs-variable">context</span>.<span class="hljs-property">state</span>.<span class="hljs-property">executionPath</span>,
+    });
+
+    <span class="hljs-comment">// Alert on critical workflow failures</span>
+    <span class="hljs-keyword">if</span> (<span class="hljs-variable">error</span>.<span class="hljs-property">code</span> === <span class="hljs-string">'NODE_EXECUTION_ERROR'</span>) {
+      <span class="hljs-keyword">await</span> <span class="hljs-variable">alerting</span>.<span class="hljs-function">send</span>({
+        <span class="hljs-property">severity</span>: <span class="hljs-string">'warning'</span>,
+        <span class="hljs-property">title</span>: <span class="hljs-string">`Workflow node failed: ${error.nodeId}`</span>,
+        <span class="hljs-property">context</span>: <span class="hljs-variable">context</span>.<span class="hljs-property">state</span>.<span class="hljs-property">executionPath</span>,
+      });
+    }
+  },
+};
+
+<span class="hljs-comment">// Attach hooks to the engine</span>
+<span class="hljs-keyword">const</span> <span class="hljs-variable">engine</span> = <span class="hljs-function">createWorkflowEngine</span>({
+  <span class="hljs-property">hooks</span>: <span class="hljs-variable">observabilityHooks</span>,
+  <span class="hljs-property">maxConcurrentExecutions</span>: <span class="hljs-number">50</span>,
+});</code></pre>
+
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-value">12.4k</div>
+        <div class="metric-label">Workflows / day</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">98.7%</div>
+        <div class="metric-label">Success Rate</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">142ms</div>
+        <div class="metric-label">Avg Node Duration</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value">3</div>
+        <div class="metric-label">Active Alerts</div>
+      </div>
+    </div>
+
+    <div class="callout callout-warn">
+      <div class="callout-icon">&#9888;&#65039;</div>
+      <div>
+        <strong>Dashboard tip:</strong> The platform's Grafana dashboard tracks <code>workflow.duration_ms</code> by <code>workflow_id</code> and <code>status</code>. A P95 spike on <code>wf-onboarding-v2</code> usually means the SMTP service is degraded — the <code>http:request</code> node timeouts cascade into retry delays.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- QUIZZES -->
+<section id="quizzes">
+  <div class="container reveal">
+    <div class="section-label">Knowledge Check</div>
+    <h2><span class="num">07</span>Interactive Quizzes</h2>
+
+    <!-- Quiz 1 -->
+    <div class="quiz-container" id="quiz1">
+      <div class="quiz-question">Quiz 1: Why does the platform use separate queues for user-facing vs background workflows?</div>
+      <div class="quiz-options">
+        <button class="quiz-option" onclick="checkQuiz(1, 'A', this)">
+          <span class="opt-label">A</span>
+          <span>User-facing workflows have strict latency requirements and need priority sorting so critical paths (like onboarding) aren't blocked by background ETL jobs.</span>
+        </button>
+        <button class="quiz-option" onclick="checkQuiz(1, 'B', this)">
+          <span class="opt-label">B</span>
+          <span>Background workflows use a completely different engine that doesn't support DAG execution, so they must run in a separate process.</span>
+        </button>
+        <button class="quiz-option" onclick="checkQuiz(1, 'C', this)">
+          <span class="opt-label">C</span>
+          <span>The scheduler can only handle one queue at a time; multiple queues are a workaround for a single-threaded architecture.</span>
+        </button>
+        <button class="quiz-option" onclick="checkQuiz(1, 'D', this)">
+          <span class="opt-label">D</span>
+          <span>User-facing workflows are always synchronous HTTP handlers and don't need a scheduler at all.</span>
+        </button>
+      </div>
+      <div class="quiz-feedback" id="feedback1"></div>
+    </div>
+
+    <!-- Quiz 2 -->
+    <div class="quiz-container" id="quiz2">
+      <div class="quiz-question">Quiz 2: What information is captured in an execution trace?</div>
+      <div class="quiz-options">
+        <button class="quiz-option" onclick="checkQuiz(2, 'A', this)">
+          <span class="opt-label">A</span>
+          <span>Only the final workflow output and a boolean success flag.</span>
+        </button>
+        <button class="quiz-option" onclick="checkQuiz(2, 'B', this)">
+          <span class="opt-label">B</span>
+          <span>Per-node status transitions, start/completion timestamps, input/output data, retry counts, error codes, and the full execution path.</span>
+        </button>
+        <button class="quiz-option" onclick="checkQuiz(2, 'C', this)">
+          <span class="opt-label">C</span>
+          <span>The Git commit hash of the workflow definition and the CPU temperature of the host machine.</span>
+        </button>
+        <button class="quiz-option" onclick="checkQuiz(2, 'D', this)">
+          <span class="opt-label">D</span>
+          <span>Only the names of nodes that failed; successful nodes are not logged to save storage.</span>
+        </button>
+      </div>
+      <div class="quiz-feedback" id="feedback2"></div>
+    </div>
+
+    <!-- Quiz 3 -->
+    <div class="quiz-container" id="quiz3">
+      <div class="quiz-question">Quiz 3: How does the platform handle a node that exceeds its timeout?</div>
+      <div class="quiz-options">
+        <button class="quiz-option" onclick="checkQuiz(3, 'A', this)">
+          <span class="opt-label">A</span>
+          <span>The workflow engine immediately crashes the entire process to free resources.</span>
+        </button>
+        <button class="quiz-option" onclick="checkQuiz(3, 'B', this)">
+          <span class="opt-label">B</span>
+          <span>The scheduler's <code>AbortController</code> signals cancellation, the node executor throws an error, and the engine either retries or fails the workflow based on <code>errorHandling</code> config.</span>
+        </button>
+        <button class="quiz-option" onclick="checkQuiz(3, 'C', this)">
+          <span class="opt-label">C</span>
+          <span>Timeouts are ignored because the engine assumes all nodes will eventually complete.</span>
+        </button>
+        <button class="quiz-option" onclick="checkQuiz(3, 'D', this)">
+          <span class="opt-label">D</span>
+          <span>The node is moved to the background scheduler's queue to finish without blocking user-facing work.</span>
+        </button>
+      </div>
+      <div class="quiz-feedback" id="feedback3"></div>
+    </div>
+  </div>
+</section>
+
+<!-- CAPSTONE -->
+<section id="capstone">
+  <div class="container reveal">
+    <div class="section-label">Capstone Project</div>
+    <h2><span class="num">08</span>Build an Onboarding Workflow</h2>
+    <p>Design a 6-node workflow for new user onboarding that includes: email welcome, profile setup, tutorial assignment, team invite, and analytics tracking. Add error handling for the email node when SMTP is down.</p>
+
+    <div class="capstone-box">
+      <h3>&#127942; Requirements</h3>
+      <ul>
+        <li><strong>Node 1:</strong> <code>trigger:manual</code> — accepts <code>userId</code>, <code>email</code>, <code>teamId</code> (optional)</li>
+        <li><strong>Node 2:</strong> <code>transform:map</code> — builds profile object with defaults</li>
+        <li><strong>Node 3:</strong> <code>http:request</code> — sends welcome email via platform API (timeout: 15s, retries: 3)</li>
+        <li><strong>Node 4:</strong> <code>platform:assign-tutorial</code> — assigns "getting-started" tutorial</li>
+        <li><strong>Node 5:</strong> <code>condition:if</code> — if <code>teamId</code> present, branch to invite node</li>
+        <li><strong>Node 6:</strong> <code>platform:analytics</code> — tracks onboarding completion event</li>
+        <li><strong>Error handling:</strong> If email fails after retries, log the failure and continue to analytics (degraded completion)</li>
+      </ul>
+    </div>
+
+    <div class="code-label">
+      <span>capstone/onboarding-workflow.ts</span>
+      <span style="color:var(--text-muted)">typescript</span>
+    </div>
+    <pre><code><span class="hljs-keyword">import</span> { <span class="hljs-function">createWorkflowEngine</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'@allternit/workflow-engine'</span>;
+<span class="hljs-keyword">import</span> { <span class="hljs-variable">sendNotificationNode</span>, <span class="hljs-variable">updateDatabaseNode</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'./platform-node-types'</span>;
+
+<span class="hljs-keyword">const</span> <span class="hljs-variable">engine</span> = <span class="hljs-function">createWorkflowEngine</span>({
+  <span class="hljs-property">maxConcurrentExecutions</span>: <span class="hljs-number">10</span>,
+  <span class="hljs-property">defaultTimeout</span>: <span class="hljs-number">60000</span>,
+  <span class="hljs-property">hooks</span>: {
+    <span class="hljs-property">onError</span>: <span class="hljs-keyword">async</span> (<span class="hljs-variable">error</span>) => {
+      <span class="hljs-variable">console</span>.<span class="hljs-function">error</span>(<span class="hljs-string">'[Onboarding] Node failed:'</span>, <span class="hljs-variable">error</span>.<span class="hljs-property">message</span>);
+    },
+  },
+});
+
+<span class="hljs-comment">// Register platform custom nodes</span>
+<span class="hljs-variable">engine</span>.<span class="hljs-function">registerNodeType</span>(<span class="hljs-variable">sendNotificationNode</span>);
+<span class="hljs-variable">engine</span>.<span class="hljs-function">registerNodeType</span>(<span class="hljs-variable">updateDatabaseNode</span>);
+
+<span class="hljs-comment">// Define the onboarding workflow</span>
+<span class="hljs-keyword">const</span> <span class="hljs-variable">onboardingWorkflow</span> = {
+  <span class="hljs-property">id</span>: <span class="hljs-string">'capstone-onboarding'</span>,
+  <span class="hljs-property">name</span>: <span class="hljs-string">'Capstone: New User Onboarding'</span>,
+  <span class="hljs-property">version</span>: <span class="hljs-string">'1.0.0'</span>,
+  <span class="hljs-property">nodes</span>: [
+    {
+      <span class="hljs-property">id</span>: <span class="hljs-string">'trigger'</span>,
+      <span class="hljs-property">type</span>: <span class="hljs-string">'trigger:manual'</span>,
+      <span class="hljs-property">name</span>: <span class="hljs-string">'New User Signup'</span>,
+    },
+    {
+      <span class="hljs-property">id</span>: <span class="hljs-string">'build-profile'</span>,
+      <span class="hljs-property">type</span>: <span class="hljs-string">'transform:map'</span>,
+      <span class="hljs-property">name</span>: <span class="hljs-string">'Build Profile'</span>,
+      <span class="hljs-property">config</span>: {
+        <span class="hljs-property">expression</span>: <span class="hljs-string">`{
+          userId: data.userId,
+          email: data.email,
+          displayName: data.email.split('@')[0],
+          createdAt: new Date().toISOString()
+        }`</span>,
+      },
+      <span class="hljs-property">inputs</span>: [{ <span class="hljs-property">target</span>: <span class="hljs-string">'data'</span>, <span class="hljs-property">source</span>: <span class="hljs-string">'${inputs}'</span> }],
+    },
+    {
+      <span class="hljs-property">id</span>: <span class="hljs-string">'send-welcome'</span>,
+      <span class="hljs-property">type</span>: <span class="hljs-string">'platform:send-notification'</span>,
+      <span class="hljs-property">name</span>: <span class="hljs-string">'Send Welcome Email'</span>,
+      <span class="hljs-property">inputs</span>: [
+        { <span class="hljs-property">target</span>: <span class="hljs-string">'userId'</span>, <span class="hljs-property">source</span>: <span class="hljs-string">'${inputs.userId}'</span> },
+        { <span class="hljs-property">target</span>: <span class="hljs-string">'message'</span>, <span class="hljs-property">source</span>: <span class="hljs-string">'Welcome to Allternit!'</span> },
+      ],
+    },
+    {
+      <span class="hljs-property">id</span>: <span class="hljs-string">'assign-tutorial'</span>,
+      <span class="hljs-property">type</span>: <span class="hljs-string">'platform:assign-tutorial'</span>,
+      <span class="hljs-property">name</span>: <span class="hljs-string">'Assign Tutorial'</span>,
+      <span class="hljs-property">config</span>: { <span class="hljs-property">tutorialId</span>: <span class="hljs-string">'getting-started'</span> },
+      <span class="hljs-property">inputs</span>: [{ <span class="hljs-property">target</span>: <span class="hljs-string">'userId'</span>, <span class="hljs-property">source</span>: <span class="hljs-string">'${inputs.userId}'</span> }],
+    },
+    {
+      <span class="hljs-property">id</span>: <span class="hljs-string">'check-team'</span>,
+      <span class="hljs-property">type</span>: <span class="hljs-string">'condition:if'</span>,
+      <span class="hljs-property">name</span>: <span class="hljs-string">'Has Team ID?'</span>,
+      <span class="hljs-property">config</span>: { <span class="hljs-property">condition</span>: <span class="hljs-string">'data.teamId != null'</span> },
+      <span class="hljs-property">inputs</span>: [{ <span class="hljs-property">target</span>: <span class="hljs-string">'data'</span>, <span class="hljs-property">source</span>: <span class="hljs-string">'${inputs}'</span> }],
+    },
+    {
+      <span class="hljs-property">id</span>: <span class="hljs-string">'invite-team'</span>,
+      <span class="hljs-property">type</span>: <span class="hljs-string">'platform:update-database'</span>,
+      <span class="hljs-property">name</span>: <span class="hljs-string">'Create Team Invite'</span>,
+      <span class="hljs-property">config</span>: { <span class="hljs-property">table</span>: <span class="hljs-string">'team_invites'</span>, <span class="hljs-property">operation</span>: <span class="hljs-string">'insert'</span> },
+      <span class="hljs-property">inputs</span>: [{ <span class="hljs-property">target</span>: <span class="hljs-string">'data'</span>, <span class="hljs-property">source</span>: <span class="hljs-string">'${inputs}'</span> }],
+    },
+    {
+      <span class="hljs-property">id</span>: <span class="hljs-string">'track-analytics'</span>,
+      <span class="hljs-property">type</span>: <span class="hljs-string">'platform:analytics'</span>,
+      <span class="hljs-property">name</span>: <span class="hljs-string">'Track Completion'</span>,
+      <span class="hljs-property">config</span>: { <span class="hljs-property">event</span>: <span class="hljs-string">'capstone.onboarding.completed'</span> },
+      <span class="hljs-property">inputs</span>: [{ <span class="hljs-property">target</span>: <span class="hljs-string">'userId'</span>, <span class="hljs-property">source</span>: <span class="hljs-string">'${inputs.userId}'</span> }],
+    },
+    {
+      <span class="hljs-property">id</span>: <span class="hljs-string">'output'</span>,
+      <span class="hljs-property">type</span>: <span class="hljs-string">'output:result'</span>,
+      <span class="hljs-property">name</span>: <span class="hljs-string">'Onboarding Result'</span>,
+    },
+  ],
+  <span class="hljs-property">connections</span>: [
+    { <span class="hljs-property">id</span>: <span class="hljs-string">'c1'</span>, <span class="hljs-property">source</span>: <span class="hljs-string">'trigger'</span>, <span class="hljs-property">target</span>: <span class="hljs-string">'build-profile'</span> },
+    { <span class="hljs-property">id</span>: <span class="hljs-string">'c2'</span>, <span class="hljs-property">source</span>: <span class="hljs-string">'build-profile'</span>, <span class="hljs-property">target</span>: <span class="hljs-string">'send-welcome'</span> },
+    { <span class="hljs-property">id</span>: <span class="hljs-string">'c3'</span>, <span class="hljs-property">source</span>: <span class="hljs-string">'send-welcome'</span>, <span class="hljs-property">target</span>: <span class="hljs-string">'assign-tutorial'</span> },
+    { <span class="hljs-property">id</span>: <span class="hljs-string">'c4'</span>, <span class="hljs-property">source</span>: <span class="hljs-string">'assign-tutorial'</span>, <span class="hljs-property">target</span>: <span class="hljs-string">'check-team'</span> },
+    { <span class="hljs-property">id</span>: <span class="hljs-string">'c5'</span>, <span class="hljs-property">source</span>: <span class="hljs-string">'check-team'</span>, <span class="hljs-property">target</span>: <span class="hljs-string">'invite-team'</span>, <span class="hljs-property">condition</span>: <span class="hljs-string">'result.true'</span> },
+    { <span class="hljs-property">id</span>: <span class="hljs-string">'c6'</span>, <span class="hljs-property">source</span>: <span class="hljs-string">'check-team'</span>, <span class="hljs-property">target</span>: <span class="hljs-string">'track-analytics'</span>, <span class="hljs-property">condition</span>: <span class="hljs-string">'result.false'</span> },
+    { <span class="hljs-property">id</span>: <span class="hljs-string">'c7'</span>, <span class="hljs-property">source</span>: <span class="hljs-string">'invite-team'</span>, <span class="hljs-property">target</span>: <span class="hljs-string">'track-analytics'</span> },
+    { <span class="hljs-property">id</span>: <span class="hljs-string">'c8'</span>, <span class="hljs-property">source</span>: <span class="hljs-string">'track-analytics'</span>, <span class="hljs-property">target</span>: <span class="hljs-string">'output'</span> },
+  ],
+  <span class="hljs-property">errorHandling</span>: {
+    <span class="hljs-property">retryCount</span>: <span class="hljs-number">3</span>,
+    <span class="hljs-property">retryDelay</span>: <span class="hljs-number">2000</span>,
+    <span class="hljs-property">continueOnError</span>: <span class="hljs-keyword">true</span>,   <span class="hljs-comment">// Degraded completion: analytics still tracked</span>
+    <span class="hljs-property">maxErrors</span>: <span class="hljs-number">2</span>,
+  },
+};
+
+<span class="hljs-variable">engine</span>.<span class="hljs-function">registerWorkflow</span>(<span class="hljs-variable">onboardingWorkflow</span>);
+
+<span class="hljs-comment">// Execute with test input</span>
+<span class="hljs-keyword">const</span> <span class="hljs-variable">result</span> = <span class="hljs-keyword">await</span> <span class="hljs-variable">engine</span>.<span class="hljs-function">execute</span>(<span class="hljs-string">'capstone-onboarding'</span>, {
+  <span class="hljs-property">userId</span>: <span class="hljs-string">'usr_test_001'</span>,
+  <span class="hljs-property">email</span>: <span class="hljs-string">'dev@allternit.local'</span>,
+  <span class="hljs-property">teamId</span>: <span class="hljs-string">'team_eng'</span>,
+});
+
+<span class="hljs-variable">console</span>.<span class="hljs-function">log</span>(<span class="hljs-string">'Execution status:'</span>, <span class="hljs-variable">result</span>.<span class="hljs-property">status</span>);
+<span class="hljs-variable">console</span>.<span class="hljs-function">log</span>(<span class="hljs-string">'Execution path:'</span>, <span class="hljs-variable">result</span>.<span class="hljs-property">context</span>?.<span class="hljs-property">state</span>.<span class="hljs-property">executionPath</span>);</code></pre>
+
+    <div class="code-label">
+      <span>capstone/onboarding-workflow.test.ts</span>
+      <span style="color:var(--text-muted)">typescript</span>
+    </div>
+    <pre><code><span class="hljs-keyword">import</span> { <span class="hljs-function">describe</span>, <span class="hljs-function">it</span>, <span class="hljs-function">expect</span>, <span class="hljs-function">vi</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'vitest'</span>;
+<span class="hljs-keyword">import</span> { <span class="hljs-function">createWorkflowEngine</span> } <span class="hljs-keyword">from</span> <span class="hljs-string">'@allternit/workflow-engine'</span>;
+
+<span class="hljs-function">describe</span>(<span class="hljs-string">'Capstone: Onboarding Workflow'</span>, () => {
+  <span class="hljs-function">it</span>(<span class="hljs-string">'should complete full onboarding with team invite'</span>, <span class="hljs-keyword">async</span> () => {
+    <span class="hljs-keyword">const</span> <span class="hljs-variable">engine</span> = <span class="hljs-function">createWorkflowEngine</span>();
+    <span class="hljs-comment">// ... register nodes and workflow ...</span>
+
+    <span class="hljs-keyword">const</span> <span class="hljs-variable">execution</span> = <span class="hljs-keyword">await</span> <span class="hljs-variable">engine</span>.<span class="hljs-function">execute</span>(<span class="hljs-string">'capstone-onboarding'</span>, {
+      <span class="hljs-property">userId</span>: <span class="hljs-string">'usr_001'</span>,
+      <span class="hljs-property">email</span>: <span class="hljs-string">'test@example.com'</span>,
+      <span class="hljs-property">teamId</span>: <span class="hljs-string">'team_001'</span>,
+    });
+
+    <span class="hljs-function">expect</span>(<span class="hljs-variable">execution</span>.<span class="hljs-property">status</span>).<span class="hljs-function">toBe</span>(<span class="hljs-string">'completed'</span>);
+    <span class="hljs-function">expect</span>(<span class="hljs-variable">execution</span>.<span class="hljs-property">context</span>?.<span class="hljs-property">state</span>.<span class="hljs-property">executionPath</span>).<span class="hljs-function">toEqual</span>([
+      <span class="hljs-string">'trigger'</span>, <span class="hljs-string">'build-profile'</span>, <span class="hljs-string">'send-welcome'</span>,
+      <span class="hljs-string">'assign-tutorial'</span>, <span class="hljs-string">'check-team'</span>, <span class="hljs-string">'invite-team'</span>,
+      <span class="hljs-string">'track-analytics'</span>, <span class="hljs-string">'output'</span>,
+    ]);
+  });
+
+  <span class="hljs-function">it</span>(<span class="hljs-string">'should skip team invite when no teamId provided'</span>, <span class="hljs-keyword">async</span> () => {
+    <span class="hljs-keyword">const</span> <span class="hljs-variable">execution</span> = <span class="hljs-keyword">await</span> <span class="hljs-variable">engine</span>.<span class="hljs-function">execute</span>(<span class="hljs-string">'capstone-onboarding'</span>, {
+      <span class="hljs-property">userId</span>: <span class="hljs-string">'usr_002'</span>,
+      <span class="hljs-property">email</span>: <span class="hljs-string">'solo@example.com'</span>,
+    });
+
+    <span class="hljs-function">expect</span>(<span class="hljs-variable">execution</span>.<span class="hljs-property">context</span>?.<span class="hljs-property">state</span>.<span class="hljs-property">executionPath</span>).<span class="hljs-function">not</span>.<span class="hljs-function">toContain</span>(<span class="hljs-string">'invite-team'</span>);
+    <span class="hljs-function">expect</span>(<span class="hljs-variable">execution</span>.<span class="hljs-property">context</span>?.<span class="hljs-property">state</span>.<span class="hljs-property">executionPath</span>).<span class="hljs-function">toContain</span>(<span class="hljs-string">'track-analytics'</span>);
+  });
+
+  <span class="hljs-function">it</span>(<span class="hljs-string">'should handle SMTP failure with degraded completion'</span>, <span class="hljs-keyword">async</span> () => {
+    <span class="hljs-comment">// Mock notification node to throw SMTP error</span>
+    <span class="hljs-variable">engine</span>.<span class="hljs-function">registerNodeType</span>({
+      <span class="hljs-property">type</span>: <span class="hljs-string">'platform:send-notification'</span>,
+      <span class="hljs-property">category</span>: <span class="hljs-string">'custom'</span>,
+      <span class="hljs-property">displayName</span>: <span class="hljs-string">'Failing SMTP'</span>,
+      <span class="hljs-property">executor</span>: <span class="hljs-keyword">async</span> () => {
+        <span class="hljs-keyword">throw</span> <span class="hljs-keyword">new</span> <span class="hljs-function">Error</span>(<span class="hljs-string">'SMTP connection refused'</span>);
+      },
+    });
+
+    <span class="hljs-keyword">const</span> <span class="hljs-variable">execution</span> = <span class="hljs-keyword">await</span> <span class="hljs-variable">engine</span>.<span class="hljs-function">execute</span>(<span class="hljs-string">'capstone-onboarding'</span>, {
+      <span class="hljs-property">userId</span>: <span class="hljs-string">'usr_003'</span>,
+      <span class="hljs-property">email</span>: <span class="hljs-string">'bounce@example.com'</span>,
+    });
+
+    <span class="hljs-comment">// With continueOnError: true, workflow completes despite email failure</span>
+    <span class="hljs-function">expect</span>(<span class="hljs-variable">execution</span>.<span class="hljs-property">status</span>).<span class="hljs-function">toBe</span>(<span class="hljs-string">'completed'</span>);
+    <span class="hljs-function">expect</span>(<span class="hljs-variable">execution</span>.<span class="hljs-property">context</span>?.<span class="hljs-property">state</span>.<span class="hljs-property">failedNodes</span>).<span class="hljs-function">toContain</span>(<span class="hljs-string">'send-welcome'</span>);
+    <span class="hljs-function">expect</span>(<span class="hljs-variable">execution</span>.<span class="hljs-property">context</span>?.<span class="hljs-property">state</span>.<span class="hljs-property">executionPath</span>).<span class="hljs-function">toContain</span>(<span class="hljs-string">'track-analytics'</span>);
+  });
+});</code></pre>
+
+    <div class="callout callout-info">
+      <div class="callout-icon">&#8505;&#65039;</div>
+      <div>
+        <strong>Key design decision:</strong> Setting <code>continueOnError: true</code> in <code>errorHandling</code> means the onboarding workflow completes even if the welcome email fails. The analytics event is still tracked, the profile is still created, and the user can proceed. The failure is captured in <code>failedNodes</code> for later investigation.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="container">
+    <p>A://Labs &middot; ALABS-ADV-WORKFLOW &middot; Module 3 (Bridge)</p>
+    <p style="margin-top:8px; font-size:0.78rem; color:var(--text-muted)">
+      Built with real code from <code>@allternit/workflow-engine</code> and the Allternit platform.
+    </p>
+  </div>
+</footer>
+
+<button class="scroll-top" id="scrollTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">&#8593;</button>
+
+<script>
+/* ========================
+   Progress bar + nav + reveal
+   ======================== */
+const progressBar = document.getElementById('progressBar');
+const scrollTopBtn = document.getElementById('scrollTop');
+const navLinks = document.querySelectorAll('.nav-links a');
+
+function onScroll() {
+  const scrollTop = window.scrollY;
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  const pct = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+  progressBar.style.width = pct + '%';
+  scrollTopBtn.classList.toggle('visible', scrollTop > 400);
+
+  // Active nav link
+  let current = '';
+  document.querySelectorAll('section[id]').forEach(sec => {
+    if (scrollTop >= sec.offsetTop - 100) current = sec.id;
+  });
+  navLinks.forEach(a => {
+    a.classList.toggle('active', a.getAttribute('href') === '#' + current);
+  });
+}
+window.addEventListener('scroll', onScroll);
+
+// Reveal on scroll
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.08 });
+document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+/* ========================
+   Quiz logic
+   ======================== */
+const quizAnswers = {
+  1: { correct: 'A', text: 'Correct! The user-facing scheduler uses priority sorting and tight timeouts (30s) so onboarding and payments aren\'t blocked by background analytics ETL jobs.' },
+  2: { correct: 'B', text: 'Correct! The engine captures per-node status, timestamps, inputs/outputs, retry counts, error codes, and the full executionPath array.' },
+  3: { correct: 'B', text: 'Correct! The scheduler aborts via AbortController, the node throws an error, and the engine either retries based on errorHandling config or marks the workflow failed.' },
+};
+
+function checkQuiz(num, choice, btn) {
+  const container = document.getElementById('quiz' + num);
+  const feedback = document.getElementById('feedback' + num);
+  const answer = quizAnswers[num];
+
+  container.querySelectorAll('.quiz-option').forEach(opt => opt.classList.add('disabled'));
+
+  if (choice === answer.correct) {
+    btn.classList.add('correct');
+    feedback.className = 'quiz-feedback show correct';
+    feedback.textContent = answer.text;
+  } else {
+    btn.classList.add('wrong');
+    feedback.className = 'quiz-feedback show wrong';
+    feedback.textContent = 'Not quite. ' + answer.text;
+    // Highlight correct answer
+    container.querySelectorAll('.quiz-option').forEach(opt => {
+      if (opt.textContent.trim().startsWith(answer.correct)) opt.classList.add('correct');
+    });
+  }
+}
+
+/* ========================
+   Workflow Trace Visualization (Canvas)
+   ======================== */
+const canvas = document.getElementById('traceCanvas');
+const ctx = canvas.getContext('2d');
+let traceState = [];
+let traceRunning = false;
+let traceAnimId = null;
+
+function resizeCanvas() {
+  const rect = canvas.getBoundingClientRect();
+  canvas.width = rect.width * window.devicePixelRatio;
+  canvas.height = rect.height * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// Node layout for the onboarding workflow trace visualization
+const traceNodes = [
+  { id: 'trigger',      label: 'Trigger',      type: 'trigger',    x: 0.15, y: 0.20, color: '#3b82f6' },
+  { id: 'build-profile',label: 'Build Profile',type: 'transform',  x: 0.35, y: 0.20, color: '#10b981' },
+  { id: 'send-welcome', label: 'Send Email',   type: 'http',       x: 0.55, y: 0.20, color: '#ec4899' },
+  { id: 'check-team',   label: 'Has Team?',    type: 'condition',  x: 0.75, y: 0.20, color: '#f59e0b' },
+  { id: 'invite-team',  label: 'Team Invite',  type: 'custom',     x: 0.65, y: 0.55, color: '#8b5cf6' },
+  { id: 'assign-tut',   label: 'Assign Tutorial',type: 'custom',   x: 0.85, y: 0.55, color: '#8b5cf6' },
+  { id: 'track-analytics',label: 'Analytics',  type: 'custom',     x: 0.75, y: 0.80, color: '#6b7280' },
+  { id: 'output',       label: 'Complete',     type: 'output',     x: 0.75, y: 0.95, color: '#ef4444' },
+];
+
+const traceEdges = [
+  { from: 'trigger', to: 'build-profile' },
+  { from: 'build-profile', to: 'send-welcome' },
+  { from: 'send-welcome', to: 'check-team' },
+  { from: 'check-team', to: 'invite-team', label: 'true' },
+  { from: 'check-team', to: 'assign-tut', label: 'false' },
+  { from: 'invite-team', to: 'track-analytics' },
+  { from: 'assign-tut', to: 'track-analytics' },
+  { from: 'track-analytics', to: 'output' },
+];
+
+// Animation timeline: [nodeId, status, delayMs]
+const traceTimeline = [
+  ['trigger', 'running', 0],
+  ['trigger', 'completed', 400],
+  ['build-profile', 'running', 500],
+  ['build-profile', 'completed', 900],
+  ['send-welcome', 'running', 1000],
+  ['send-welcome', 'failed', 1600],
+  ['send-welcome', 'running', 2400],
+  ['send-welcome', 'completed', 3000],
+  ['check-team', 'running', 3100],
+  ['check-team', 'completed', 3500],
+  ['invite-team', 'running', 3600],
+  ['invite-team', 'completed', 4200],
+  ['track-analytics', 'running', 4300],
+  ['track-analytics', 'completed', 4700],
+  ['output', 'running', 4800],
+  ['output', 'completed', 5100],
+];
+
+function drawTrace() {
+  const w = canvas.width / window.devicePixelRatio;
+  const h = canvas.height / window.devicePixelRatio;
+  ctx.clearRect(0, 0, w, h);
+
+  const nodeMap = {};
+  const nodeRadius = Math.min(w, h) * 0.055;
+  const fontSize = Math.min(w, h) * 0.028;
+
+  traceNodes.forEach(n => {
+    nodeMap[n.id] = { x: n.x * w, y: n.y * h, ...n };
+  });
+
+  // Draw edges
+  traceEdges.forEach(e => {
+    const a = nodeMap[e.from];
+    const b = nodeMap[e.to];
+    if (!a || !b) return;
+
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.strokeStyle = 'rgba(107,114,128,0.3)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Arrowhead
+    const angle = Math.atan2(b.y - a.y, b.x - a.x);
+    const arrLen = 8;
+    ctx.beginPath();
+    ctx.moveTo(b.x - nodeRadius * Math.cos(angle), b.y - nodeRadius * Math.sin(angle));
+    ctx.lineTo(
+      b.x - nodeRadius * Math.cos(angle) - arrLen * Math.cos(angle - 0.5),
+      b.y - nodeRadius * Math.sin(angle) - arrLen * Math.sin(angle - 0.5)
+    );
+    ctx.lineTo(
+      b.x - nodeRadius * Math.cos(angle) - arrLen * Math.cos(angle + 0.5),
+      b.y - nodeRadius * Math.sin(angle) - arrLen * Math.sin(angle + 0.5)
+    );
+    ctx.fillStyle = 'rgba(107,114,128,0.4)';
+    ctx.fill();
+
+    if (e.label) {
+      const mx = (a.x + b.x) / 2;
+      const my = (a.y + b.y) / 2;
+      ctx.fillStyle = '#6b7280';
+      ctx.font = `${fontSize * 0.85}px JetBrains Mono, monospace`;
+      ctx.textAlign = 'center';
+      ctx.fillText(e.label, mx, my - 6);
+    }
+  });
+
+  // Draw nodes
+  traceNodes.forEach(n => {
+    const st = traceState.find(s => s.id === n.id)?.status || 'pending';
+    const nx = n.x * w;
+    const ny = n.y * h;
+
+    // Glow if running
+    if (st === 'running') {
+      ctx.beginPath();
+      ctx.arc(nx, ny, nodeRadius + 6, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(245,158,11,0.15)';
+      ctx.fill();
+    }
+    if (st === 'failed') {
+      ctx.beginPath();
+      ctx.arc(nx, ny, nodeRadius + 6, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(239,68,68,0.15)';
+      ctx.fill();
+    }
+
+    // Node circle
+    ctx.beginPath();
+    ctx.arc(nx, ny, nodeRadius, 0, Math.PI * 2);
+    if (st === 'pending') {
+      ctx.fillStyle = 'rgba(107,114,128,0.12)';
+      ctx.strokeStyle = 'rgba(107,114,128,0.4)';
+    } else if (st === 'running') {
+      ctx.fillStyle = 'rgba(245,158,11,0.15)';
+      ctx.strokeStyle = '#f59e0b';
+    } else if (st === 'failed') {
+      ctx.fillStyle = 'rgba(239,68,68,0.15)';
+      ctx.strokeStyle = '#ef4444';
+    } else if (st === 'completed') {
+      ctx.fillStyle = 'rgba(16,185,129,0.12)';
+      ctx.strokeStyle = '#10b981';
+    }
+    ctx.lineWidth = 2.5;
+    ctx.fill();
+    ctx.stroke();
+
+    // Inner dot color
+    ctx.beginPath();
+    ctx.arc(nx, ny, nodeRadius * 0.35, 0, Math.PI * 2);
+    if (st === 'pending') ctx.fillStyle = '#6b7280';
+    else if (st === 'running') ctx.fillStyle = '#f59e0b';
+    else if (st === 'failed') ctx.fillStyle = '#ef4444';
+    else if (st === 'completed') ctx.fillStyle = '#10b981';
+    ctx.fill();
+
+    // Label
+    ctx.fillStyle = '#f0f0f5';
+    ctx.font = `600 ${fontSize}px Inter, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(n.label, nx, ny + nodeRadius + fontSize + 8);
+  });
+}
+
+function startTraceReplay() {
+  if (traceRunning) return;
+  traceRunning = true;
+  traceState = traceNodes.map(n => ({ id: n.id, status: 'pending' }));
+
+  const startTime = performance.now();
+
+  function frame(now) {
+    const elapsed = now - startTime;
+    let changed = false;
+
+    traceTimeline.forEach(ev => {
+      if (elapsed >= ev[2]) {
+        const s = traceState.find(s => s.id === ev[0]);
+        if (s && s.status !== ev[1]) {
+          s.status = ev[1];
+          changed = true;
+        }
+      }
+    });
+
+    drawTrace();
+
+    if (elapsed < 5500) {
+      traceAnimId = requestAnimationFrame(frame);
+    } else {
+      traceRunning = false;
+    }
+  }
+
+  traceAnimId = requestAnimationFrame(frame);
+}
+
+function resetTrace() {
+  if (traceAnimId) cancelAnimationFrame(traceAnimId);
+  traceRunning = false;
+  traceState = traceNodes.map(n => ({ id: n.id, status: 'pending' }));
+  drawTrace();
+}
+
+document.getElementById('traceReplay').addEventListener('click', startTraceReplay);
+document.getElementById('traceReset').addEventListener('click', resetTrace);
+
+// Initial draw
+resetTrace();
+</script>
+</body>
+</html>

@@ -22,9 +22,7 @@ const resolveBaseURL = (): string => {
     : undefined;
 
   // Check for Vite environment variable
-  const envUrl = typeof import.meta !== 'undefined' && import.meta.env
-    ? (import.meta.env as any).VITE_ALLTERNIT_BASE_URL
-    : undefined;
+  const envUrl = process.env.NEXT_PUBLIC_ALLTERNIT_BASE_URL;
 
   // Default fallback
   const defaultUrl = 'http://127.0.0.1:3210';

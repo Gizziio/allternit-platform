@@ -1,5 +1,5 @@
 /**
- * A2R-IX (A2R Interface) Types
+ * Allternit-IX (Allternit Interface) Types
  * 
  * Declarative UI Intermediate Representation
  */

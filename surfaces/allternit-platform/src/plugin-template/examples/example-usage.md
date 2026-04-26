@@ -1,6 +1,6 @@
-# My A2R Plugin - Usage Examples
+# My Allternit Plugin - Usage Examples
 
-This document provides practical examples of using My A2R Plugin in various scenarios.
+This document provides practical examples of using My Allternit Plugin in various scenarios.
 
 ## Table of Contents
 
@@ -21,7 +21,7 @@ After installing the plugin, verify it's working:
 
 ```typescript
 // Check plugin status
-const status = await a2r.commands.executeCommand('myPlugin.status');
+const status = await allternit.commands.executeCommand('myPlugin.status');
 console.log('Plugin status:', JSON.parse(status));
 ```
 
@@ -29,9 +29,9 @@ console.log('Plugin status:', JSON.parse(status));
 
 ```typescript
 // Configure the plugin programmatically
-await a2r.configuration.update('myPlugin.enabled', true);
-await a2r.configuration.update('myPlugin.debug', false);
-await a2r.configuration.update('myPlugin.timeout', 10000);
+await allternit.configuration.update('myPlugin.enabled', true);
+await allternit.configuration.update('myPlugin.debug', false);
+await allternit.configuration.update('myPlugin.timeout', 10000);
 ```
 
 ---
@@ -47,7 +47,7 @@ await a2r.configuration.update('myPlugin.timeout', 10000);
 async function basicUsage() {
   try {
     // Execute the main plugin command
-    const result = await a2r.commands.executeCommand('myPlugin.run');
+    const result = await allternit.commands.executeCommand('myPlugin.run');
     
     console.log('✓ Plugin executed successfully');
     console.log('Result:', result);
@@ -76,7 +76,7 @@ async function customOptionsExample() {
     timeout: 15000
   };
   
-  const result = await a2r.commands.executeCommand('myPlugin.run', {
+  const result = await allternit.commands.executeCommand('myPlugin.run', {
     input: 'custom input data',
     options
   });
@@ -95,7 +95,7 @@ async function batchProcessingExample(items: string[]) {
   const results = [];
   
   for (const item of items) {
-    const result = await a2r.commands.executeCommand('myPlugin.run', {
+    const result = await allternit.commands.executeCommand('myPlugin.run', {
       input: item
     });
     results.push(result);
@@ -127,7 +127,7 @@ async function robustExecution(maxRetries = 3) {
     try {
       console.log(`Attempt ${attempt}/${maxRetries}...`);
       
-      const result = await a2r.commands.executeCommand('myPlugin.run');
+      const result = await allternit.commands.executeCommand('myPlugin.run');
       
       console.log('✓ Success!');
       return result;
@@ -160,7 +160,7 @@ function sleep(ms: number): Promise<void> {
  * Track progress of long-running operations
  */
 async function trackProgress() {
-  const progressHandler = await a2r.notifications.withProgress({
+  const progressHandler = await allternit.notifications.withProgress({
     title: 'Processing with My Plugin',
     cancellable: true
   }, async (progress, token) => {
@@ -183,7 +183,7 @@ async function trackProgress() {
         increment: stage.increment
       });
       
-      await a2r.commands.executeCommand('myPlugin.run', {
+      await allternit.commands.executeCommand('myPlugin.run', {
         stage: stage.name
       });
     }
@@ -203,7 +203,7 @@ async function trackProgress() {
  */
 function setupEventListeners() {
   // Listen for completion events
-  const disposable = a2r.events.on('myPlugin.onDidComplete', (event) => {
+  const disposable = allternit.events.on('myPlugin.onDidComplete', (event) => {
     console.log('Plugin completed:', {
       timestamp: new Date(event.timestamp).toISOString(),
       duration: event.duration,
@@ -226,17 +226,17 @@ const listener = setupEventListeners();
 
 ## Integration Examples
 
-### Example 7: Integration with A2R Agents
+### Example 7: Integration with Allternit Agents
 
 ```typescript
 /**
- * Use the plugin within an A2R agent
+ * Use the plugin within an Allternit agent
  */
 async function agentIntegration() {
   // Create an agent that uses the plugin
-  const agent = await a2r.agents.create({
+  const agent = await allternit.agents.create({
     name: 'Plugin-Enhanced Agent',
-    description: 'An agent that leverages My A2R Plugin',
+    description: 'An agent that leverages My Allternit Plugin',
     capabilities: ['myPlugin.skill1', 'myPlugin.skill2']
   });
   
@@ -245,7 +245,7 @@ async function agentIntegration() {
     const { input } = context.params;
     
     // Use the plugin
-    const result = await a2r.commands.executeCommand('myPlugin.run', {
+    const result = await allternit.commands.executeCommand('myPlugin.run', {
       input,
       options: { agentMode: true }
     });
@@ -271,12 +271,12 @@ async function agentIntegration() {
  */
 async function workspaceIntegration() {
   // Listen for workspace open events
-  a2r.workspace.onDidOpen(async (workspace) => {
+  allternit.workspace.onDidOpen(async (workspace) => {
     console.log('Workspace opened:', workspace.name);
     
     // Automatically run plugin for certain workspace types
     if (workspace.type === 'project') {
-      await a2r.commands.executeCommand('myPlugin.run', {
+      await allternit.commands.executeCommand('myPlugin.run', {
         context: 'workspace-open',
         workspaceId: workspace.id
       });
@@ -284,10 +284,10 @@ async function workspaceIntegration() {
   });
   
   // Listen for file changes
-  a2r.workspace.onDidChangeFiles(async (event) => {
+  allternit.workspace.onDidChangeFiles(async (event) => {
     for (const change of event.changes) {
       if (change.uri.endsWith('.myext')) {
-        await a2r.commands.executeCommand('myPlugin.processFile', {
+        await allternit.commands.executeCommand('myPlugin.processFile', {
           file: change.uri
         });
       }
@@ -304,7 +304,7 @@ async function workspaceIntegration() {
  */
 async function customUIIntegration() {
   // Create a webview panel
-  const panel = await a2r.ui.createWebviewPanel({
+  const panel = await allternit.ui.createWebviewPanel({
     id: 'myPlugin.panel',
     title: 'My Plugin Dashboard',
     iconPath: 'assets/icon.png'
@@ -314,7 +314,7 @@ async function customUIIntegration() {
   panel.onDidReceiveMessage(async (message) => {
     switch (message.command) {
       case 'run':
-        const result = await a2r.commands.executeCommand('myPlugin.run', {
+        const result = await allternit.commands.executeCommand('myPlugin.run', {
           input: message.data
         });
         panel.postMessage({
@@ -324,7 +324,7 @@ async function customUIIntegration() {
         break;
         
       case 'configure':
-        await a2r.commands.executeCommand('myPlugin.configure');
+        await allternit.commands.executeCommand('myPlugin.configure');
         break;
     }
   });
@@ -351,20 +351,20 @@ async function scheduledTask() {
     handler: async () => {
       console.log('Running scheduled task...');
       
-      await a2r.commands.executeCommand('myPlugin.run', {
+      await allternit.commands.executeCommand('myPlugin.run', {
         context: 'scheduled',
         timestamp: Date.now()
       });
       
       // Send notification
-      await a2r.notifications.showInformationMessage(
+      await allternit.notifications.showInformationMessage(
         'Daily task completed successfully!'
       );
     }
   };
   
   // Register the task
-  await a2r.tasks.register(task);
+  await allternit.tasks.register(task);
   
   console.log('Scheduled task registered');
 }
@@ -381,26 +381,26 @@ async function pipelineWorkflow(inputData: unknown) {
     {
       name: 'validation',
       execute: async (data) => {
-        await a2r.commands.executeCommand('myPlugin.validate', { data });
+        await allternit.commands.executeCommand('myPlugin.validate', { data });
         return data;
       }
     },
     {
       name: 'transformation',
       execute: async (data) => {
-        return await a2r.commands.executeCommand('myPlugin.transform', { data });
+        return await allternit.commands.executeCommand('myPlugin.transform', { data });
       }
     },
     {
       name: 'processing',
       execute: async (data) => {
-        return await a2r.commands.executeCommand('myPlugin.process', { data });
+        return await allternit.commands.executeCommand('myPlugin.process', { data });
       }
     },
     {
       name: 'export',
       execute: async (data) => {
-        await a2r.commands.executeCommand('myPlugin.export', { data });
+        await allternit.commands.executeCommand('myPlugin.export', { data });
         return data;
       }
     }
@@ -426,30 +426,30 @@ async function pipelineWorkflow(inputData: unknown) {
  */
 async function conditionalWorkflow(input: unknown) {
   // Initial processing
-  const result = await a2r.commands.executeCommand('myPlugin.analyze', {
+  const result = await allternit.commands.executeCommand('myPlugin.analyze', {
     input
   });
   
   // Branch based on result
   switch (result.type) {
     case 'typeA':
-      await a2r.commands.executeCommand('myPlugin.handleTypeA', {
+      await allternit.commands.executeCommand('myPlugin.handleTypeA', {
         data: result.data
       });
       break;
       
     case 'typeB':
-      await a2r.commands.executeCommand('myPlugin.handleTypeB', {
+      await allternit.commands.executeCommand('myPlugin.handleTypeB', {
         data: result.data
       });
       break;
       
     case 'typeC':
       // Chain multiple operations
-      await a2r.commands.executeCommand('myPlugin.preprocess', {
+      await allternit.commands.executeCommand('myPlugin.preprocess', {
         data: result.data
       });
-      await a2r.commands.executeCommand('myPlugin.process', {
+      await allternit.commands.executeCommand('myPlugin.process', {
         data: result.data
       });
       break;
@@ -475,7 +475,7 @@ async function safeExecution<T>(
   args?: unknown
 ): Promise<{ success: true; data: T } | { success: false; error: Error }> {
   try {
-    const result = await a2r.commands.executeCommand(command, args);
+    const result = await allternit.commands.executeCommand(command, args);
     return { success: true, data: result as T };
   } catch (error) {
     console.error(`Command ${command} failed:`, error);
@@ -500,7 +500,7 @@ async function withCleanup<T>(
   
   try {
     // Register cleanup handlers
-    const disposable = a2r.events.on('myPlugin.onDidComplete', () => {
+    const disposable = allternit.events.on('myPlugin.onDidComplete', () => {
       console.log('Cleanup: operation completed');
     });
     disposables.push(() => disposable.dispose());
@@ -547,18 +547,18 @@ To run these examples:
 1. **Setup**:
    ```bash
    # Ensure the plugin is installed
-   a2r plugin list | grep my-plugin
+   allternit plugin list | grep my-plugin
    ```
 
-2. **Run in A2R Dev Console**:
-   - Open A2R Platform
+2. **Run in Allternit Dev Console**:
+   - Open Allternit Platform
    - Open Developer Console (Ctrl+Shift+I)
    - Paste and run the example code
 
 3. **Run in a Script**:
    ```typescript
    // Save as example.ts
-   import { a2r } from '@allternit/platform';
+   import { allternit } from '@allternit/platform';
    
    // Copy example code here
    
@@ -568,4 +568,4 @@ To run these examples:
 
 ---
 
-**Need more examples?** Check the [full documentation](../docs/README.md) or [create an issue](https://github.com/yourusername/my-a2r-plugin/issues).
+**Need more examples?** Check the [full documentation](../docs/README.md) or [create an issue](https://github.com/yourusername/my-allternit-plugin/issues).

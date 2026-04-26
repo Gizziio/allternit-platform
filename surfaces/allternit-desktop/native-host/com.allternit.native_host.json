@@ -1,9 +1,0 @@
-{
-  "name": "com.allternit.native_host",
-  "description": "Allternit Desktop Native Messaging Host — enables browser extension communication",
-  "path": "HOST_PATH",
-  "type": "stdio",
-  "allowed_origins": [
-    "chrome-extension://*/"
-  ]
-}

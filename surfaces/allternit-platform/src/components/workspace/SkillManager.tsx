@@ -22,7 +22,7 @@ export function SkillManager({ api }: SkillManagerProps) {
     api.listSkills().then(setSkills).catch(() => {});
   }, [api]);
 
-  const categories = Array.from(new Set(skills.map(s => s.category)));
+  const categories = Array.from(new Set(skills.map(s => s.category).filter((c): c is string => !!c)));
 
   const filteredSkills = skills.filter(skill => {
     const matchesFilter = filter === 'all' || 
@@ -31,7 +31,7 @@ export function SkillManager({ api }: SkillManagerProps) {
     const matchesSearch = !searchQuery ||
       skill.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       skill.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      skill.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
+      skill.tags?.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesCategory = categoryFilter === 'all' || skill.category === categoryFilter;
     return matchesFilter && matchesSearch && matchesCategory;
   });
@@ -187,7 +187,7 @@ function SkillCard({
       </div>
       
       <div className="skill-card__tags">
-        {skill.tags.slice(0, 3).map(tag => (
+        {(skill.tags ?? []).slice(0, 3).map(tag => (
           <span key={tag} className="skill-card__tag">{tag}</span>
         ))}
       </div>
@@ -258,11 +258,11 @@ function SkillDetailModal({
             </div>
           </div>
 
-          {skill.dependencies.length > 0 && (
+          {(skill.dependencies ?? []).length > 0 && (
             <div className="skill-modal__section">
               <h3>Dependencies</h3>
               <div className="skill-modal__dependencies">
-                {skill.dependencies.map(dep => (
+                {skill.dependencies?.map(dep => (
                   <span key={dep} className="dependency-tag">{dep}</span>
                 ))}
               </div>
@@ -272,7 +272,7 @@ function SkillDetailModal({
           <div className="skill-modal__section">
             <h3>Tags</h3>
             <div className="skill-modal__tags">
-              {skill.tags.map(tag => (
+              {skill.tags?.map(tag => (
                 <span key={tag} className="skill-tag">{tag}</span>
               ))}
             </div>

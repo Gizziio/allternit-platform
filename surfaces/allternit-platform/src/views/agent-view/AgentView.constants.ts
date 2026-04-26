@@ -199,11 +199,15 @@ export const ENHANCED_HARD_BAN_CATEGORIES = {
 };
 
 // Studio theme for agent creation UI
+// NOTE: Heavy components should use useStudioTheme() hook for perf (caches getComputedStyle).
+// This export is a lightweight fallback for smaller components that don't warrant a hook.
 export const STUDIO_THEME = {
-  bg: '#0f0f0f',
-  bgCard: '#1a1a1a',
-  border: '#2a2a2a',
-  textPrimary: '#e0e0e0',
-  textSecondary: '#888888',
-  accent: '#D4956A',
+  accent: '#D4B08C',
+  bg: '#1A1612',
+  bgCard: 'rgba(26, 22, 18, 0.95)',
+  border: 'rgba(212, 176, 140, 0.16)',
+  borderSubtle: 'rgba(212, 176, 140, 0.10)',
+  textPrimary: '#ECECEC',
+  textSecondary: '#9B9B9B',
+  textMuted: '#6E6E6E',
 };

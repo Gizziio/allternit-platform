@@ -30,7 +30,7 @@ export const ActiveTasksBar: React.FC<ActiveTasksBarProps> = ({
   const { wihs, closeWih } = useUnifiedStore();
 
   // Filter to active WIHs only
-  const activeWihs = wihs.filter(w => 
+  const activeWihs = (wihs ?? []).filter(w => 
     w.status === 'in_progress' || 
     w.status === 'ready' || 
     w.status === 'open' ||
@@ -135,11 +135,11 @@ export const ActiveTasksBar: React.FC<ActiveTasksBarProps> = ({
             </motion.div>
           ))}
 
-          {wihs.filter(w => 
+          {(wihs ?? []).filter(w => 
             w.status === 'in_progress' || w.status === 'ready' || w.status === 'open'
           ).length > maxTasks && (
             <span className="text-xs text-white/30 shrink-0">
-              +{wihs.filter(w => 
+              +{(wihs ?? []).filter(w => 
                 w.status === 'in_progress' || w.status === 'ready' || w.status === 'open'
               ).length - maxTasks} more
             </span>

@@ -1,5 +1,5 @@
 /**
- * HTML to Figma Integration for A2R Extension
+ * HTML to Figma Integration for Allternit Extension
  * Types and interfaces for the capture system
  */
 

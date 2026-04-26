@@ -1,4 +1,5 @@
 import React, { useState, useCallback, memo, useEffect, useMemo } from 'react';
+import type { Icon } from '@phosphor-icons/react';
 import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/shallow';
 import { DeleteConfirmModal } from './DeleteConfirmModal';
@@ -22,6 +23,7 @@ import {
   ClockCounterClockwise,
   CheckSquare,
   Plus,
+  GraduationCap,
 } from '@phosphor-icons/react';
 import { useChatStore, type ChatProject } from '../views/chat/ChatStore';
 import { useArtifactStore } from '../views/cowork/ArtifactStore';
@@ -38,11 +40,15 @@ import { ProjectRailSection, type UnifiedProject, type UnifiedItem } from './rai
 import {
   getOpenClawWorkspacePathFromAgent,
   useAgentStore,
-  useEmbeddedAgentSession,
-  useEmbeddedAgentSessionStore,
-  useNativeAgentStore,
-  type NativeSession,
 } from '../lib/agents';
+import { useSurfaceAgentModeEnabled } from '../lib/agents/surface-agent-context';
+import { useChatSessionStore, type ChatSession } from '../views/chat/ChatSessionStore';
+import { useCodeSessionStore, type CodeSession } from '../views/code/CodeSessionStore';
+import { useBrowserSessionStore } from '../views/browser/BrowserSessionStore';
+import { useCoworkSessionStore } from '../views/cowork/CoworkSessionStore';
+import type { ModeSession } from '../lib/agents/mode-session-store';
+
+type NativeSession = ModeSession;  // For backward compatibility
 import {
   formatAgentSessionMetaLabel,
   getAgentSessionDescriptor,
@@ -58,10 +64,10 @@ interface ShellRailProps {
   activeViewType?: string;
   onOpen?: (view: string) => void;
   onNew?: () => void;
-  mode?: 'chat' | 'cowork' | 'code';
+  mode?: 'chat' | 'cowork' | 'code' | 'design';
   isCollapsed?: boolean;
   onToggle?: () => void;
-  onModeChange?: (mode: 'chat' | 'cowork' | 'code') => void;
+  onModeChange?: (mode: 'chat' | 'cowork' | 'code' | 'design') => void;
   theme?: 'light' | 'dark';
   onThemeToggle?: () => void;
   onOpenControlCenter?: () => void;
@@ -78,14 +84,13 @@ export function ShellRail({
   mode = 'chat',
   isCollapsed,
   onModeChange,
-}: ShellRailProps) {
+}: ShellRailProps): JSX.Element | null {
   // Determine current surface for agent mode glow
   const currentSurface: AgentModeSurface = 
     mode === 'cowork' ? 'cowork' : 
     mode === 'code' ? 'code' : 'chat';
   
-  const currentSurfaceSession = useEmbeddedAgentSession(currentSurface);
-  const isAgentActive = currentSurfaceSession.isEmbedded && currentSurfaceSession.descriptor.sessionMode === 'agent';
+  const isAgentActive = useSurfaceAgentModeEnabled(currentSurface);
   const surfaceTheme = isAgentActive ? getAgentModeSurfaceTheme(currentSurface) : null;
   const [foldedCategories, setFoldedCategories] = useState<Set<string>>(new Set(['workspace', 'ai_vision', 'infrastructure', 'security', 'execution', 'observability', 'services']));
   const [isLoading, setIsLoading] = useState(false);
@@ -94,13 +99,25 @@ export function ShellRail({
   const chatStore = useChatStore();
   const chatProjects = useStoreWithEqualityFn(useChatStore, (s) => s.projects, shallow);
   
-  // Native Agent Store
-  const nativeSessions = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.sessions, shallow);
-  const activeNativeSessionId = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.activeSessionId);
-  const createNativeSession = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.createSession);
-  const setActiveNativeSession = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.setActiveSession);
-  const updateNativeSession = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.updateSession);
-  const deleteNativeSession = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.deleteSession);
+  // Mode-specific session stores
+  const chatSessions = useStoreWithEqualityFn(useChatSessionStore, (s) => s.sessions, shallow);
+  const codeSessions = useStoreWithEqualityFn(useCodeSessionStore, (s) => s.sessions, shallow);
+  const nativeSessions = mode === 'code' ? codeSessions : chatSessions;
+  const activeChatSessionId = useStoreWithEqualityFn(useChatSessionStore, (s) => s.activeSessionId);
+  const activeCodeSessionId = useStoreWithEqualityFn(useCodeSessionStore, (s) => s.activeSessionId);
+  const activeNativeSessionId = mode === 'code' ? activeCodeSessionId : activeChatSessionId;
+  const createChatSession = useStoreWithEqualityFn(useChatSessionStore, (s) => s.createSession);
+  const createCodeSession = useStoreWithEqualityFn(useCodeSessionStore, (s) => s.createSession);
+  const setActiveChatSession = useStoreWithEqualityFn(useChatSessionStore, (s) => s.setActiveSession);
+  const setActiveCodeSession = useStoreWithEqualityFn(useCodeSessionStore, (s) => s.setActiveSession);
+  const updateChatSession = useStoreWithEqualityFn(useChatSessionStore, (s) => s.updateSession);
+  const updateCodeSession = useStoreWithEqualityFn(useCodeSessionStore, (s) => s.updateSession);
+  const deleteChatSession = useStoreWithEqualityFn(useChatSessionStore, (s) => s.deleteSession);
+  const deleteCodeSession = useStoreWithEqualityFn(useCodeSessionStore, (s) => s.deleteSession);
+  const createNativeSession = mode === 'code' ? createCodeSession : createChatSession;
+  const setActiveNativeSession = mode === 'code' ? setActiveCodeSession : setActiveChatSession;
+  const updateNativeSession = mode === 'code' ? updateCodeSession : updateChatSession;
+  const deleteNativeSession = mode === 'code' ? deleteCodeSession : deleteChatSession;
   
   // Cowork Store
   const coworkStore = useCoworkStore();
@@ -108,9 +125,7 @@ export function ShellRail({
   // Code Mode Store
   const codeStore = useCodeModeStore();
 
-  const embeddedSessionIdBySurface = useEmbeddedAgentSessionStore((s) => s.sessionIdBySurface);
-  const setEmbeddedSession = useEmbeddedAgentSessionStore((s) => s.setSurfaceSession);
-  const clearEmbeddedSession = useEmbeddedAgentSessionStore((s) => s.clearSurfaceSession);
+  const activeCoworkSessionId = useStoreWithEqualityFn(useCoworkSessionStore, (s) => s.activeSessionId);
   
   const setSelectedSurfaceAgent = useStoreWithEqualityFn(useAgentSurfaceModeStore, (s) => s.setSelectedAgent);
   const selectedAgentIdBySurface = useStoreWithEqualityFn(useAgentSurfaceModeStore, (s) => s.selectedAgentIdBySurface, shallow);
@@ -133,15 +148,15 @@ export function ShellRail({
         itemIds: p.threadIds
       }));
       const chatSessions = nativeSessions.filter(s => {
-        const surface = (s.metadata as any)?.surface;
+        const surface = (s.metadata as Record<string, unknown> | undefined)?.surface;
         return !surface || surface === 'chat';
       });
       const items: UnifiedItem[] = chatSessions.map(s => ({
         id: s.id,
         title: s.name || 'Untitled Session',
-        icon: (s.metadata as any)?.sessionMode === 'agent' ? Robot : ChatTeardropText,
-        projectId: (s.metadata as any)?.projectId,
-        isActive: activeNativeSessionId === s.id || embeddedSessionIdBySurface.chat === s.id,
+        icon: (s.metadata as Record<string, unknown> | undefined)?.sessionMode === 'agent' ? Robot : ChatTeardropText,
+        projectId: (s.metadata as Record<string, unknown> | undefined)?.projectId as string | undefined,
+        isActive: activeNativeSessionId === s.id || activeChatSessionId === s.id,
         metaLabel: formatAgentSessionMetaLabel(s.metadata)
       }));
       return { projects, items };
@@ -181,7 +196,7 @@ export function ShellRail({
       return { projects, items };
     }
     return { projects: [], items: [] };
-  }, [mode, chatProjects, nativeSessions, activeNativeSessionId, embeddedSessionIdBySurface, coworkStore, codeStore]);
+  }, [mode, chatProjects, nativeSessions, activeNativeSessionId, activeChatSessionId, coworkStore, codeStore]);
 
   // Build active config, then inject any enabled-plugin rail items
   let activeConfig: RailConfigSection[];
@@ -199,7 +214,7 @@ export function ShellRail({
           section.items.push({
             id: view.viewType,
             label: view.label,
-            icon: (existingIcon ?? Sparkle) as any,
+            icon: (existingIcon ?? Sparkle) as Icon,
             payload: view.viewType,
           });
         }
@@ -207,7 +222,7 @@ export function ShellRail({
     });
   }
 
-  const toggleFold = useCallback((id: string) => {
+  const toggleFold = useCallback((id: string): void => {
     setFoldedCategories(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -215,8 +230,6 @@ export function ShellRail({
       return next;
     });
   }, []);
-
-  if (isCollapsed) return null;
 
   const currentAgentSurface: AgentSessionSurface =
     activeViewType === 'browser' || activeViewType === 'browserview'
@@ -232,33 +245,41 @@ export function ShellRail({
       ? agents.find((agent) => agent.id === selectedAgentId) ?? null
       : null;
 
-  const openChatSurface = useCallback(() => {
-    clearEmbeddedSession('chat');
+  const openChatSurface = useCallback((): void => {
+    useChatSessionStore.getState().setActiveSession(null);
     if (onModeChange) {
       onModeChange('chat');
       return;
     }
     onOpen?.('chat');
-  }, [clearEmbeddedSession, onModeChange, onOpen]);
+  }, [onModeChange, onOpen]);
 
-  const openCoworkSurface = useCallback(() => {
-    clearEmbeddedSession('cowork');
+  const openCoworkSurface = useCallback((): void => {
+    useCoworkSessionStore.getState().setActiveSession(null);
     if (onModeChange) {
       onModeChange('cowork');
       return;
     }
     onOpen?.('workspace');
-  }, [clearEmbeddedSession, onModeChange, onOpen]);
+  }, [onModeChange, onOpen]);
 
-  const openNativeSessionSurface = useCallback((session: NativeSession) => {
+  const openNativeSessionSurface = useCallback((session: NativeSession): void => {
     const descriptor = getAgentSessionDescriptor(session.metadata);
     // Default to 'chat' if no originSurface is set - this ensures sessions always navigate
     const originSurface = descriptor.originSurface || 'chat';
 
     setActiveNativeSession(session.id);
 
-    // Always embed the session to the appropriate surface
-    setEmbeddedSession(originSurface, session.id);
+    // Always set as active session in the appropriate mode-specific store
+    if (originSurface === 'code') {
+      useCodeSessionStore.getState().setActiveSession(session.id);
+    } else if (originSurface === 'cowork') {
+      useCoworkSessionStore.getState().setActiveSession(session.id);
+    } else if (originSurface === 'browser') {
+      useBrowserSessionStore.getState().setActiveSession(session.id);
+    } else {
+      useChatSessionStore.getState().setActiveSession(session.id);
+    }
     if (descriptor.agentId) {
       setSelectedSurfaceAgent(originSurface, descriptor.agentId);
     }
@@ -285,12 +306,13 @@ export function ShellRail({
     onModeChange,
     onOpen,
     setActiveNativeSession,
-    setEmbeddedSession,
     setSelectedSurfaceAgent,
     setSidecarOpen,
   ]);
 
   const isCodeMode = mode === 'code';
+
+  if (isCollapsed) return null;
 
   return (
     <div style={{ 
@@ -488,7 +510,7 @@ export function ShellRail({
                       }
                     />
                   ) : (
-                    category.items.map((item: any) => (
+                    category.items.map((item: { id: string; icon: Icon; label: string; isAction?: boolean; payload: string }) => (
                       <RailItem
                         key={item.id}
                         id={item.id}
@@ -496,6 +518,9 @@ export function ShellRail({
                         label={item.label}
                         isActive={!item.isAction && activeViewType === item.payload}
                         onClick={() => {
+                          if (item.id === 'new-chat') {
+                            chatStore.setActiveThread(null);
+                          }
                           onOpen?.(item.payload);
                           if (item.payload === 'chat') onModeChange?.('chat');
                           else if (item.payload === 'workspace') onModeChange?.('cowork');
@@ -552,6 +577,33 @@ export function ShellRail({
           <div style={{ color: 'var(--shell-item-muted)', fontSize: 11, fontWeight: 500 }}>Pro Plan</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            onClick={() => onOpen?.('labs')}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = 'var(--accent-primary)';
+              e.currentTarget.style.background = 'var(--shell-item-hover)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'var(--shell-item-muted)';
+              e.currentTarget.style.background = 'transparent';
+            }}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--shell-item-muted)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+            }}
+            title="A://Labs - Learning Portal"
+          >
+            <GraduationCap size={18} weight="bold" />
+          </button>
           <button
             onClick={() => onOpen?.('products')}
             onMouseEnter={(e) => {
@@ -634,137 +686,8 @@ function formatNativeSessionTimestamp(value?: string): string {
   return `${diffDays}d`;
 }
 
-const SessionsSection = memo(function SessionsSection({
-  projects,
-  activeProjectId,
-  onCreateProject,
-  onSetActiveProject,
-  onOpenChatSurface,
-  onOpen,
-  onRenameProject,
-  onDeleteProject,
-  activeViewType,
-  nativeSessions,
-  activeNativeSessionId,
-  embeddedSessionIdBySurface,
-  onOpenHistory,
-  onOpenArchived,
-  onOpenNativeWorkspace,
-  onOpenNativeSession,
-  onCreateNativeSession,
-}: {
-  projects: ChatProject[];
-  activeProjectId: string | null;
-  onCreateProject: () => void;
-  onSetActiveProject: (id: string | null) => void;
-  onOpenChatSurface: () => void;
-  onOpen?: (view: string) => void;
-  onRenameProject: (id: string, title: string) => void;
-  onDeleteProject: (id: string) => void;
-  activeViewType?: string;
-  nativeSessions: NativeSession[];
-  activeNativeSessionId: string | null;
-  embeddedSessionIdBySurface: Record<AgentSessionSurface, string | null>;
-  onOpenHistory?: () => void;
-  onOpenArchived?: () => void;
-  onOpenNativeWorkspace?: () => void;
-  onOpenNativeSession: (session: NativeSession) => void;
-  onCreateNativeSession: () => Promise<void>;
-}) {
-  // Build a flat list of all sessions sorted by recency
-  const allItems = nativeSessions
-    .map((session) => ({
-      data: session,
-      key: `session-${session.id}`,
-      timestamp: Date.parse(session.updatedAt || session.createdAt) || 0,
-    }))
-    .sort((a, b) => b.timestamp - a.timestamp);
-
-  const GROUP_ORDER = ['Today', 'Yesterday', 'Past 7 days', 'Older'] as const;
-  type GroupName = typeof GROUP_ORDER[number];
-
-  function getDateGroup(timestamp: number): GroupName {
-    const diff = Date.now() - timestamp;
-    const day = 86400000;
-    if (diff < day) return 'Today';
-    if (diff < 2 * day) return 'Yesterday';
-    if (diff < 7 * day) return 'Past 7 days';
-    return 'Older';
-  }
-
-  const grouped = new Map<GroupName, UnifiedItem[]>();
-  for (const item of allItems) {
-    const group = getDateGroup(item.timestamp);
-    const bucket = grouped.get(group);
-    if (bucket) bucket.push(item);
-    else grouped.set(group, [item]);
-  }
-
-  const isEmpty = allItems.length === 0;
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingBottom: 6 }}>
-      {/* Projects */}
-      <ProjectsStack
-        projects={projects}
-        activeProjectId={activeProjectId}
-        onCreateProject={onCreateProject}
-        onOpenProject={(projectId: string) => {
-          onSetActiveProject(projectId);
-          onOpenChatSurface();
-        }}
-        onRenameProject={onRenameProject}
-        onDeleteProject={onDeleteProject}
-      />
-
-      {/* Flat unified session list grouped by date */}
-      <div style={{ padding: '0 8px' }}>
-        {isEmpty ? (
-          <GhostRailNotice
-            icon={ChatTeardropText}
-            title="No sessions yet"
-            description="Start a chat or create an agent session."
-            actionLabel="Open chat"
-            onClick={() => onOpen?.('chat')}
-          />
-        ) : (
-          GROUP_ORDER.filter((g) => grouped.has(g)).map((group) => (
-            <div key={group}>
-              <div style={{
-                fontSize: 10,
-                fontWeight: 600,
-                color: 'var(--shell-item-muted)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                padding: '8px 4px 4px',
-              }}>
-                {group}
-              </div>
-              {grouped.get(group)!.map((item) => {
-                const session = item.data;
-                return (
-                  <NativeSessionRailItem
-                    key={item.key}
-                    session={session}
-                    isActive={
-                      (activeViewType === 'native-agent' && activeNativeSessionId === session.id) ||
-                      (activeViewType === 'chat' && embeddedSessionIdBySurface.chat === session.id) ||
-                      (activeViewType === 'code' && embeddedSessionIdBySurface.code === session.id)
-                    }
-                    onClick={() => onOpenNativeSession(session)}
-                  />
-                );
-              })}
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  );
-});
-
 // ============================================================================
-// Tasks Section (for Cowork mode) - Mirrors SessionsSection structure
+// Tasks Section (for Cowork mode)
 // ============================================================================
 
 const TasksSection = memo(function TasksSection({
@@ -881,7 +804,7 @@ function TaskProjectsStack({
   onOpenProject: (projectId: string) => void;
   onRenameProject: (id: string, title: string) => void;
   onDeleteProject: (id: string) => void;
-}) {
+}): JSX.Element {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       <WorkstreamSectionLabel
@@ -955,31 +878,31 @@ function TaskProjectRailItem({
 }: {
   id: string;
   project: TaskProject;
-  icon: any;
+  icon: Icon;
   label: string;
   isActive: boolean;
   onClick: () => void;
   onRename?: (newTitle: string) => void;
   onDelete?: () => void;
-}) {
+}): JSX.Element {
   const [showMenu, setShowMenu] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editTitle, setEditTitle] = useState(label);
 
-  const handleRename = () => {
+  const handleRename = (): void => {
     setIsEditing(true);
     setShowMenu(false);
   };
 
-  const handleSaveRename = () => {
+  const handleSaveRename = (): void => {
     if (editTitle.trim() && editTitle !== label) {
       onRename?.(editTitle.trim());
     }
     setIsEditing(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === 'Enter') {
       handleSaveRename();
     } else if (e.key === 'Escape') {
@@ -988,18 +911,18 @@ function TaskProjectRailItem({
     }
   };
 
-  const handleDeleteClick = (e: React.MouseEvent) => {
+  const handleDeleteClick = (e: React.MouseEvent<HTMLButtonElement>): void => {
     e.stopPropagation();
     setShowDeleteConfirm(true);
     setShowMenu(false);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = (): void => {
     onDelete?.();
     setShowDeleteConfirm(false);
   };
 
-  const cancelDelete = () => {
+  const cancelDelete = (): void => {
     setShowDeleteConfirm(false);
   };
 
@@ -1225,7 +1148,7 @@ function TaskRailItem({
 }: {
   id: string;
   task: Task;
-  icon: any;
+  icon: Icon;
   label: string;
   isActive: boolean;
   projects: TaskProject[];
@@ -1234,7 +1157,7 @@ function TaskRailItem({
   onRename?: (newTitle: string) => void;
   onDelete?: () => void;
   onMoveToProject?: (projectId: string) => void;
-}) {
+}): JSX.Element {
   const [showMenu, setShowMenu] = useState(false);
   const [showProjects, setShowProjects] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -1253,7 +1176,7 @@ function TaskRailItem({
     setIsEditing(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === 'Enter') {
       handleSaveRename();
     } else if (e.key === 'Escape') {
@@ -1268,7 +1191,7 @@ function TaskRailItem({
     setShowMenu(false);
   };
 
-  const handleDeleteClick = (e: React.MouseEvent) => {
+  const handleDeleteClick = (e: React.MouseEvent<HTMLButtonElement>): void => {
     e.stopPropagation();
     setShowDeleteConfirm(true);
     setShowMenu(false);
@@ -1587,7 +1510,7 @@ function TaskRailItem({
   );
 }
 
-function SectionDivider() {
+function SectionDivider(): JSX.Element {
   return (
     <div
       style={{
@@ -1613,7 +1536,7 @@ function ConversationSurfaceHeader({
   activeViewType?: string;
   onOpenHistory?: () => void;
   onOpenArchived?: () => void;
-}) {
+}): JSX.Element {
   const pills = [
     `Chats ${conversationCount}`,
     `Agent Sessions ${agentSessionCount}`,
@@ -1672,7 +1595,7 @@ function ConversationSurfaceHeader({
   );
 }
 
-function CompactMetaPill({ label }: { label: string }) {
+function CompactMetaPill({ label }: { label: string }): JSX.Element {
   return (
     <span
       style={{
@@ -1696,11 +1619,11 @@ function IconWidgetButton({
   isActive,
   onClick,
 }: {
-  icon: React.ComponentType<any>;
+  icon: Icon;
   label: string;
   isActive?: boolean;
   onClick?: () => void;
-}) {
+}): JSX.Element {
   return (
     <button
       type="button"
@@ -1740,7 +1663,7 @@ function ProjectsStack({
   onOpenProject: (projectId: string) => void;
   onRenameProject: (id: string, title: string) => void;
   onDeleteProject: (id: string) => void;
-}) {
+}): JSX.Element {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       <WorkstreamSectionLabel
@@ -1810,7 +1733,7 @@ function WorkstreamSectionLabel({
   caption?: string;
   actionLabel?: string;
   onAction?: () => void;
-}) {
+}): JSX.Element {
   return (
     <div
       style={{
@@ -1889,12 +1812,12 @@ function GhostRailNotice({
   actionLabel,
   onClick,
 }: {
-  icon: React.ComponentType<any>;
+  icon: Icon;
   title: string;
   description: string;
   actionLabel: string;
   onClick?: () => void;
-}) {
+}): JSX.Element {
   return (
     <button
       type="button"
@@ -1954,17 +1877,24 @@ function NativeSessionRailItem({
   session,
   isActive,
   onClick,
+  mode = 'chat',
 }: {
   session: NativeSession;
   isActive: boolean;
   onClick: () => void;
-}) {
+  mode?: 'chat' | 'code';
+}): JSX.Element {
   const metaLabel = formatAgentSessionMetaLabel(session.metadata);
   const descriptor = getAgentSessionDescriptor(session.metadata);
   const isAgentMode = descriptor.sessionMode === 'agent';
-  const unreadCount = useNativeAgentStore((state) => state.unreadCounts[session.id] ?? 0);
-  const updateSession = useNativeAgentStore((s) => s.updateSession);
-  const deleteSession = useNativeAgentStore((s) => s.deleteSession);
+  // Unread counts not implemented in mode-specific stores yet
+  const unreadCount = 0;
+  const updateChatSession = useChatSessionStore((s) => s.updateSession);
+  const updateCodeSession = useCodeSessionStore((s) => s.updateSession);
+  const deleteChatSession = useChatSessionStore((s) => s.deleteSession);
+  const deleteCodeSession = useCodeSessionStore((s) => s.deleteSession);
+  const updateSession = mode === 'code' ? updateCodeSession : updateChatSession;
+  const deleteSession = mode === 'code' ? deleteCodeSession : deleteChatSession;
   const SessionIcon = isAgentMode ? Robot : Cpu;
 
   const [showMenu, setShowMenu] = useState(false);
@@ -2013,17 +1943,12 @@ function NativeSessionRailItem({
       {showDeleteConfirm && (
         <DeleteConfirmModal
           title="Delete session"
-          message={`Delete "${session.name || 'Untitled Session'}"? This cannot be undone.`}
-          onConfirm={async () => { 
-                            console.log('[ShellRail] Deleting session:', session.id);
-                            try {
-                              await deleteSession(session.id);
-                              console.log('[ShellRail] Session deleted successfully:', session.id);
-                            } catch (err) {
-                              console.error('[ShellRail] Failed to delete session:', session.id, err);
-                            }
-                            setShowDeleteConfirm(false); 
-                          }}
+          itemName={session.name || 'Untitled Session'}
+          itemType="session"
+          onConfirm={() => {
+            deleteSession(session.id).catch(console.error);
+            setShowDeleteConfirm(false);
+          }}
           onCancel={() => setShowDeleteConfirm(false)}
         />
       )}
@@ -2241,7 +2166,13 @@ function NativeSessionRailItem({
   );
 }
 
-function RailItem({ id, icon: Icon, label, isActive, onClick }: any) {
+function RailItem({ id, icon: Icon, label, isActive, onClick }: {
+  id?: string;
+  icon: Icon;
+  label: string;
+  isActive?: boolean;
+  onClick?: () => void;
+}): JSX.Element {
   return (
     <button
       onClick={onClick}
@@ -2293,7 +2224,16 @@ function ProjectRailItem({
   onClick,
   onRename,
   onDelete,
-}: any) {
+}: {
+  id: string;
+  project: ChatProject;
+  icon: Icon;
+  label: string;
+  isActive: boolean;
+  onClick: () => void;
+  onRename?: (newTitle: string) => void;
+  onDelete?: () => void;
+}): JSX.Element {
   const [showMenu, setShowMenu] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -2311,7 +2251,7 @@ function ProjectRailItem({
     setIsEditing(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === 'Enter') {
       handleSaveRename();
     } else if (e.key === 'Escape') {
@@ -2320,7 +2260,7 @@ function ProjectRailItem({
     }
   };
 
-  const handleDeleteClick = (e: React.MouseEvent) => {
+  const handleDeleteClick = (e: React.MouseEvent<HTMLButtonElement>): void => {
     e.stopPropagation();
     setShowDeleteConfirm(true);
     setShowMenu(false);
@@ -2556,7 +2496,7 @@ function CodeThreadsSection({
 }: {
   onOpen?: (view: string) => void;
   activeViewType?: string;
-}) {
+}): JSX.Element {
   // Get code mode store data
   const sessions = useCodeModeStore((state) => state.sessions);
   const activeSessionId = useCodeModeStore((state) => state.activeSessionId);
@@ -2566,10 +2506,10 @@ function CodeThreadsSection({
   const createWorkspace = useCodeModeStore((state) => state.createWorkspace);
   const workspaces = useCodeModeStore((state) => state.workspaces);
 
-  // Native agent sessions for code mode
-  const nativeSessions = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.sessions, shallow);
-  const activeNativeSessionId = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.activeSessionId, shallow);
-  const setActiveNativeSession = useStoreWithEqualityFn(useNativeAgentStore, (s) => s.setActiveSession, shallow);
+  // Code session store
+  const nativeSessions = useStoreWithEqualityFn(useCodeSessionStore, (s) => s.sessions, shallow);
+  const activeNativeSessionId = useStoreWithEqualityFn(useCodeSessionStore, (s) => s.activeSessionId, shallow);
+  const setActiveNativeSession = useStoreWithEqualityFn(useCodeSessionStore, (s) => s.setActiveSession, shallow);
 
   // Filter sessions for active workspace
   const workspaceSessions = useMemo(() => {

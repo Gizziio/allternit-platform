@@ -1,0 +1,9 @@
+# macOS VM Images
+
+Place VM files here:
+- disk.img - Root filesystem (raw)
+- kernel - Linux kernel
+- initrd - Initial ramdisk
+
+Or for Apple Virtualization:
+- restore.ipsw - IPSW firmware

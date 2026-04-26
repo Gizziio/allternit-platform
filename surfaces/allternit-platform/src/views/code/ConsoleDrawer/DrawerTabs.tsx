@@ -1,4 +1,5 @@
 import React from 'react';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import {
   Terminal,
   Scroll,
@@ -15,6 +16,10 @@ import {
   Shield,
   Warning,
   Gear,
+  ChartBar,
+  ChartLine,
+  Bell,
+  Cpu,
 } from '@phosphor-icons/react';
 
 export type DrawerTabId = 
@@ -24,16 +29,21 @@ export type DrawerTabId =
   | 'problems' 
   | 'queue' 
   | 'agents' 
-  | 'automation' // NEW - Automation sequences
+  | 'automation'
   | 'scheduler' 
   | 'context'
   | 'changes'
   | 'receipts'
   | 'dag-graph'
   | 'trace'
-  | 'swarm'      // NEW - Multi-agent orchestration
-  | 'policy'     // NEW - Policy & governance
-  | 'security';  // NEW - Security dashboard
+  | 'swarm'
+  | 'policy'
+  | 'security'
+  | 'board'      // NEW - Workspace Kanban board
+  | 'gantt'      // NEW - Gantt chart
+  | 'workload'   // NEW - Workload analysis
+  | 'inbox'      // NEW - Assignment inbox
+  | 'runtime';   // NEW - Agent Runtime dashboard
 
 interface DrawerTabsProps {
   activeTab: DrawerTabId;
@@ -69,13 +79,30 @@ export function DrawerTabs({ activeTab, onTabChange }: DrawerTabsProps) {
       <Tab id="scheduler" label="Scheduler" icon={Clock} active={activeTab === 'scheduler'} onClick={onTabChange} />
       <Tab id="dag-graph" label="DAG" icon={TreeStructure} active={activeTab === 'dag-graph'} onClick={onTabChange} />
       
+      {/* Board & Planning */}
+      <Tab id="board" label="Board" icon={Kanban} active={activeTab === 'board'} onClick={onTabChange} />
+      <Tab id="gantt" label="Gantt" icon={ChartBar} active={activeTab === 'gantt'} onClick={onTabChange} />
+      <Tab id="workload" label="Workload" icon={ChartLine} active={activeTab === 'workload'} onClick={onTabChange} />
+      <Tab id="inbox" label="Inbox" icon={Bell} active={activeTab === 'inbox'} onClick={onTabChange} />
+      <Tab id="runtime" label="Runtimes" icon={Cpu} active={activeTab === 'runtime'} onClick={onTabChange} />
+      
       {/* Execution Trace */}
       <Tab id="trace" label="Trace" icon={ListDashes} active={activeTab === 'trace'} onClick={onTabChange} />
     </div>
   );
 }
 
-function Tab({ id, label, icon: Icon, active, onClick, disabled = false, tooltip }: any) {
+interface TabProps {
+  id: DrawerTabId;
+  label: string;
+  icon: PhosphorIcon;
+  active: boolean;
+  onClick: (id: DrawerTabId) => void;
+  disabled?: boolean;
+  tooltip?: string;
+}
+
+function Tab({ id, label, icon: Icon, active, onClick, disabled = false, tooltip }: TabProps) {
   return (
     <button
       onClick={() => !disabled && onClick(id)}

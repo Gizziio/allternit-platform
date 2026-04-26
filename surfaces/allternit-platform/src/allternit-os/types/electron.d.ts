@@ -1,9 +1,9 @@
 /**
- * A2rchitect Super-Agent OS - Electron API Type Definitions
+ * allternit Super-Agent OS - Electron API Type Definitions
  * 
  * Unified type declarations for the window.electron API.
  * This file provides type definitions for all Electron IPC channels
- * used by the A2rOS system.
+ * used by the AllternitOS system.
  */
 
 import type { DriveEntry, FileUpload } from '../services/FileSystemService';
@@ -109,6 +109,8 @@ declare global {
       python?: ElectronPythonAPI;
       /** Browser automation */
       browser?: ElectronBrowserAPI;
+      /** Computer use / desktop automation */
+      computerUse?: any;
     };
   }
 }

@@ -34,6 +34,7 @@ export interface MemoryEntry {
   content: string;
   tags: string[];
   relatedTasks: string[];
+  importance?: number;
 }
 
 export interface PolicyRule {

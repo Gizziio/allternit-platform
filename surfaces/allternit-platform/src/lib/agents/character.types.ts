@@ -191,9 +191,13 @@ export interface AvatarConfig {
   currentEmotion?: AvatarEmotion;
   
   // Legacy/simple config support
-  type?: "glb" | "image" | "color";
+  type?: "glb" | "image" | "color" | "mascot";
   uri?: string;
   fallbackColor?: string;
+  mascotTemplate?: string;
+
+  // UI positioning (for draggable floating avatars)
+  position?: { x: number; y: number };
 }
 
 /**

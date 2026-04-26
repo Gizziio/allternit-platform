@@ -5,6 +5,11 @@ import { GlassCard } from '../../design/GlassCard';
 
 type StepType = 'tool_call' | 'llm_response' | 'human_message' | 'system_log';
 
+type ReplayContent = {
+  tokens?: { input: number; output: number };
+  [key: string]: unknown;
+};
+
 interface ReplayStep {
   id: number;
   type: StepType;
@@ -12,7 +17,7 @@ interface ReplayStep {
   duration: number;
   title: string;
   preview: string;
-  content: any;
+  content: ReplayContent;
   expanded?: boolean;
 }
 
@@ -63,7 +68,7 @@ export function RunReplayView() {
   const totalDuration = steps.reduce((sum, s) => sum + s.duration, 0);
   const totalTokens = steps
     .filter(s => s.type === 'llm_response' && s.content.tokens)
-    .reduce((sum, s) => sum + s.content.tokens.input + s.content.tokens.output, 0);
+    .reduce((sum, s) => sum + (s.content.tokens?.input ?? 0) + (s.content.tokens?.output ?? 0), 0);
 
   const toggleExpanded = (stepId: number) => {
     setExpandedSteps(prev => 

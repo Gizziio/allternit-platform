@@ -1,7 +1,7 @@
 /**
- * A2rchitect Super-Agent OS - FileSystem Service
+ * allternit Super-Agent OS - FileSystem Service
  * 
- * Production-ready filesystem operations for the .a2r/drive virtual filesystem.
+ * Production-ready filesystem operations for the .allternit/drive virtual filesystem.
  * Supports both Electron main process (Node.js fs) and browser (HTTP API) modes.
  */
 
@@ -55,7 +55,7 @@ export type FileSystemBackend = 'electron' | 'http' | 'memory';
 
 export interface FileSystemConfig {
   backend: FileSystemBackend;
-  /** Base path for the drive (e.g., ~/.a2r/drive) */
+  /** Base path for the drive (e.g., ~/.allternit/drive) */
   basePath: string;
   /** HTTP endpoint for file operations (HTTP mode) */
   httpEndpoint?: string;
@@ -122,9 +122,9 @@ export class FileSystemService {
 
   private getDefaultBasePath(): string {
     if (typeof process !== 'undefined' && process.env.HOME) {
-      return `${process.env.HOME}/.a2r/drive`;
+      return `${process.env.HOME}/.allternit/drive`;
     }
-    return '/.a2r/drive';
+    return '/.allternit/drive';
   }
 
   private log(...args: unknown[]): void {

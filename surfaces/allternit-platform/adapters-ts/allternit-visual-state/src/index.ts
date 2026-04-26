@@ -1,5 +1,5 @@
 /**
- * A2R Visual State Protocol (AVSP)
+ * Allternit Visual State Protocol (AVSP)
  * 
  * Agent mood, intensity, and confidence visualization system.
  * 

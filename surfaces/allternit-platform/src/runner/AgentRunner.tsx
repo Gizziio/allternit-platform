@@ -18,6 +18,7 @@ import {
   CircleNotch,
 } from '@phosphor-icons/react';
 import { GizziMascot } from "@/components/ai-elements/GizziMascot";
+import { ContextWindowCard } from "@/components/ai-elements/ContextWindowCard";
 
 const THEME = {
   bg: '#2B2520',
@@ -813,10 +814,14 @@ export function AgentRunner() {
         ...({'WebkitAppRegion': 'drag'} as React.CSSProperties),
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div className="gizzi-focused"><GizziMascot size={28} emotion="focused" /></div>
-          <span style={{ color: THEME.textPrimary, fontSize: 14, fontWeight: 600 }}>
-            Agent Session
-          </span>
+          <ContextWindowCard>
+            <button style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div className="gizzi-focused"><GizziMascot size={28} emotion="focused" /></div>
+              <span style={{ color: THEME.textPrimary, fontSize: 14, fontWeight: 600 }}>
+                Agent Session
+              </span>
+            </button>
+          </ContextWindowCard>
           {isLoading && (
             <span style={{ color: AGENT_THEME.accent, fontSize: 12 }}>
               <span style={{ animation: 'pulse 1s infinite' }}>● running</span>

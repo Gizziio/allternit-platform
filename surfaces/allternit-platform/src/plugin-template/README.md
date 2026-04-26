@@ -1,8 +1,8 @@
-# 🧩 A2R Plugin Template
+# 🧩 Allternit Plugin Template
 
-> A production-ready template for creating plugins for the A2R (Agent-to-Resource) Platform.
+> A production-ready template for creating plugins for the Allternit (Agent-to-Resource) Platform.
 
-[![Use this template](https://img.shields.io/badge/Use%20this%20template-2ea44f?style=for-the-badge&logo=github)](https://github.com/new?template_name=a2r-plugin-template&template_owner=allternit)
+[![Use this template](https://img.shields.io/badge/Use%20this%20template-2ea44f?style=for-the-badge&logo=github)](https://github.com/new?template_name=allternit-plugin-template&template_owner=allternit)
 [![Validate](https://img.shields.io/github/actions/workflow/status/YOUR_USERNAME/YOUR_REPO/validate.yml?style=for-the-badge&logo=github&label=Validation)](https://github.com/YOUR_USERNAME/YOUR_REPO/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 
@@ -12,8 +12,8 @@
 
 ### Option 1: Use GitHub Template (Recommended)
 
-1. Click the **"Use this template"** button above (or [click here](https://github.com/new?template_name=a2r-plugin-template&template_owner=allternit))
-2. Choose a name for your repository (e.g., `my-a2r-plugin`)
+1. Click the **"Use this template"** button above (or [click here](https://github.com/new?template_name=allternit-plugin-template&template_owner=allternit))
+2. Choose a name for your repository (e.g., `my-allternit-plugin`)
 3. Select **"Create a new repository"**
 4. Clone your new repository locally
 
@@ -21,7 +21,7 @@
 
 ```bash
 # Clone the template
-git clone https://github.com/allternit/a2r-plugin-template.git my-plugin
+git clone https://github.com/allternit/allternit-plugin-template.git my-plugin
 cd my-plugin
 rm -rf .git
 git init
@@ -72,9 +72,9 @@ See [plugin.json documentation](#pluginjson-reference) for all available fields.
 Replace the stub in `src/index.ts` (or `src/index.js`) with your plugin code:
 
 ```typescript
-import { A2RPlugin } from '@allternit/platform';
+import { AllternitPlugin } from '@allternit/platform';
 
-export default class MyPlugin extends A2RPlugin {
+export default class MyPlugin extends AllternitPlugin {
   async onActivate() {
     console.log('My plugin is activated!');
     // Your initialization code here
@@ -116,7 +116,7 @@ npm run validate
 ## 📦 Plugin Structure
 
 ```
-my-a2r-plugin/
+my-allternit-plugin/
 ├── .github/
 │   └── workflows/
 │       └── validate.yml      # CI validation
@@ -190,8 +190,8 @@ my-a2r-plugin/
       "description": "Auto-save charts"
     }
   },
-  "repository": "https://github.com/janedoe/a2r-data-visualizer",
-  "homepage": "https://janedoe.github.io/a2r-data-visualizer",
+  "repository": "https://github.com/janedoe/allternit-data-visualizer",
+  "homepage": "https://janedoe.github.io/allternit-data-visualizer",
   "license": "MIT"
 }
 ```
@@ -203,7 +203,7 @@ my-a2r-plugin/
 ### Prerequisites
 
 - Node.js 18+ or Bun 1.0+
-- A2R Platform CLI (optional): `npm install -g @allternit/cli`
+- Allternit Platform CLI (optional): `npm install -g @allternit/cli`
 
 ### Test Commands
 
@@ -237,14 +237,14 @@ npm run validate:full
    npm run build
    ```
 
-2. Link locally in A2R Platform:
+2. Link locally in Allternit Platform:
    ```bash
-   a2r plugin link ./dist
+   allternit plugin link ./dist
    ```
 
 3. Or copy to plugins directory:
    ```bash
-   cp -r dist ~/.a2r/plugins/my-awesome-plugin
+   cp -r dist ~/.allternit/plugins/my-awesome-plugin
    ```
 
 ---
@@ -270,9 +270,9 @@ npm run validate:full
 5. Attach your built plugin (`dist/` folder as zip)
 6. Publish release
 
-### Step 3: Submit to A2R Marketplace
+### Step 3: Submit to Allternit Marketplace
 
-1. Go to [A2R Marketplace](https://marketplace.a2r.dev)
+1. Go to [Allternit Marketplace](https://marketplace.allternit.dev)
 2. Click **"Submit Plugin"**
 3. Fill in the form with your repository URL
 4. Your plugin will be reviewed and published
@@ -309,7 +309,7 @@ jobs:
 
 - **Plugin ID**: Use kebab-case (e.g., `my-awesome-plugin`)
 - **Display Name**: Use Title Case (e.g., `My Awesome Plugin`)
-- **Repository**: Prefix with `a2r-` (e.g., `a2r-my-plugin`)
+- **Repository**: Prefix with `allternit-` (e.g., `allternit-my-plugin`)
 
 ### Versioning
 
@@ -348,7 +348,7 @@ Update your `docs/README.md` with:
 
 ## Installation
 \`\`\`bash
-a2r plugin install my-plugin
+allternit plugin install my-plugin
 \`\`\`
 
 ## Configuration
@@ -392,12 +392,12 @@ This template is [MIT](LICENSE) licensed.
 
 ## 💬 Support
 
-- 📖 [A2R Platform Documentation](https://docs.a2r.dev)
-- 🐛 [Report Issues](https://github.com/allternit/a2r-plugin-template/issues)
-- 💬 [Discord Community](https://discord.gg/a2r)
+- 📖 [Allternit Platform Documentation](https://docs.allternit.dev)
+- 🐛 [Report Issues](https://github.com/allternit/allternit-plugin-template/issues)
+- 💬 [Discord Community](https://discord.gg/allternit)
 
 ---
 
 <p align="center">
-  Made with ❤️ for the A2R Community
+  Made with ❤️ for the Allternit Community
 </p>

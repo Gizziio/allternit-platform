@@ -21,13 +21,14 @@ import {
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
+import type { MoATask } from '@/lib/api/moa-client';
 import { cn } from '@/lib/utils';
 import { SyntaxHighlighter } from '@/views/plugins/SyntaxHighlighter';
 
 interface CodeRendererProps {
   artifact: ArtifactUIPart;
   sessionId?: string;
-  onMoATaskUpdate?: (tasks: any[]) => void;
+  onMoATaskUpdate?: (tasks: MoATask[]) => void;
 }
 
 export function CodeRenderer({
@@ -130,9 +131,9 @@ export function CodeRenderer({
       try {
         // Create a safe execution context
         const mockConsole = {
-          log: (...args: any[]) => logs.push(args.join(' ')),
-          error: (...args: any[]) => logs.push('ERROR: ' + args.join(' ')),
-          warn: (...args: any[]) => logs.push('WARN: ' + args.join(' ')),
+          log: (...args: unknown[]) => logs.push(args.map(String).join(' ')),
+          error: (...args: unknown[]) => logs.push('ERROR: ' + args.map(String).join(' ')),
+          warn: (...args: unknown[]) => logs.push('WARN: ' + args.map(String).join(' ')),
         };
         
         // Execute in iframe for isolation
@@ -154,8 +155,9 @@ export function CodeRenderer({
           setConsoleOutput(logs);
           setIsRunning(false);
         }, 500);
-      } catch (e: any) {
-        setConsoleOutput([`ERROR: ${e.message}`]);
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : 'Execution error';
+        setConsoleOutput([`ERROR: ${message}`]);
         setIsRunning(false);
       }
     }
@@ -180,7 +182,7 @@ export function CodeRenderer({
   }, []);
 
   // Render code with syntax highlighting
-  const renderCode = () => {
+  const renderCode = (): JSX.Element => {
     return (
       <SyntaxHighlighter
         code={code}

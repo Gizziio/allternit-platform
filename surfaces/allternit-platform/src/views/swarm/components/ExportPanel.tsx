@@ -14,7 +14,7 @@ import { TEXT, BACKGROUND } from '@/design/allternit.tokens';
 import { useAgents, useMetrics } from '../SwarmMonitor.store';
 import { exportAndDownloadAgents, copyToClipboard, ExportFormat } from '../lib/export-utils';
 import { metricsHistory } from '../lib/metrics-history';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 interface ExportPanelProps {
   modeColors: { accent: string };
@@ -24,6 +24,9 @@ interface ExportPanelProps {
 export function ExportPanel({ modeColors, onClose }: ExportPanelProps) {
   const agents = useAgents();
   const metrics = useMetrics();
+  const { addToast } = useToast();
+  const toast = ({ title, description, variant }: { title: string; description?: string; variant?: string }) =>
+    addToast({ title, description, type: variant === 'destructive' ? 'error' : 'success' });
   const [activeTab, setActiveTab] = useState<'agents' | 'metrics'>('agents');
   const [isExporting, setIsExporting] = useState(false);
 

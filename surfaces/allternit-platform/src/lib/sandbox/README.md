@@ -1,6 +1,6 @@
-# A2R Sandbox System
+# Allternit Sandbox System
 
-Multi-tier secure code execution for the A2rchitect platform. Automatically selects the best execution environment based on code requirements.
+Multi-tier secure code execution for the allternit platform. Automatically selects the best execution environment based on code requirements.
 
 ## Overview
 
@@ -291,7 +291,7 @@ Error: WebVM service not available
 
 Solution:
 1. Start WebVM service:
-   cd 3-adapters/bridges/a2r-webvm && cargo run
+   cd 3-adapters/bridges/allternit-webvm && cargo run
 2. Or via docker-compose:
    docker-compose up webvm-service
 ```
@@ -377,4 +377,4 @@ When adding new sandboxes:
 
 ## License
 
-MIT - Part of A2rchitect Platform
+MIT - Part of allternit Platform

@@ -17,6 +17,11 @@ import { SecurityDashboard } from '../../dag/SecurityDashboard';
 import { KanbanDAG } from '../KanbanDAG';
 import { RunTraceView } from '../runtime/RunTraceView';
 import { AutomationHub } from './AutomationHub';
+import { WorkspaceBoardView } from './WorkspaceBoardView';
+import { GanttChartView } from './GanttChartView';
+import { WorkloadPanel } from './WorkloadPanel';
+import { InboxView } from './InboxView';
+import { AgentRuntimeDashboard } from '../../runtime/AgentRuntimeDashboard';
 
 export function DrawerRoot() {
   const consoleDrawer = useDrawerStore((state) => state.drawers.console);
@@ -113,6 +118,11 @@ export function DrawerRoot() {
       case 'security': return <SecurityDashboard />;
       case 'dag-graph': return <KanbanDAG />;
       case 'trace': return <RunTraceView />;
+      case 'board': return <WorkspaceBoardView />;
+      case 'gantt': return <GanttChartView />;
+      case 'workload': return <WorkloadPanel />;
+      case 'inbox': return <InboxView />;
+      case 'runtime': return <AgentRuntimeDashboard />;
       default: return null;
     }
   };

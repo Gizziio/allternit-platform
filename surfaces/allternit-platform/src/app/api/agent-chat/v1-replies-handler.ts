@@ -32,6 +32,13 @@ const GATEWAY_BASE_URL =
     ? process.env.VITE_ALLTERNIT_GATEWAY_URL.replace(/\/api\/v1\/?$/, "").replace(/\/+$/, "")
     : null;
 
+function shouldPreferLocalDesktopRuntime(): boolean {
+  return (
+    process.env.ALLTERNIT_DESKTOP_AUTH_ENABLED === "1" ||
+    process.env.NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH === "1"
+  );
+}
+
 function getGizziAuthHeader(): string | undefined {
   const user =
     process.env.GIZZI_USERNAME ?? process.env.NEXT_PUBLIC_GIZZI_USERNAME ?? "gizzi";
@@ -493,18 +500,21 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   const { chatId, message, modelId, runtimeModelId, gatewayUrl, gatewayToken, raw } = norm;
 
-  const authState = await getAuth();
+  const preferLocalDesktopRuntime = shouldPreferLocalDesktopRuntime();
+  const authState = preferLocalDesktopRuntime ? { userId: null } : await getAuth();
   const resolvedRuntime =
-    authState.userId
+    !preferLocalDesktopRuntime && authState.userId
       ? await resolveRuntimeBackendForAuthUserId(authState.userId)
       : null;
 
-  const resolvedGatewayUrl =
-    gatewayUrl ??
-    (resolvedRuntime?.mode === "byoc-vps" ? resolvedRuntime.gatewayUrl : null);
-  const resolvedGatewayToken =
-    gatewayToken ??
-    (resolvedRuntime?.mode === "byoc-vps" ? resolvedRuntime.gatewayToken : null);
+  const resolvedGatewayUrl = preferLocalDesktopRuntime
+    ? null
+    : gatewayUrl ??
+      (resolvedRuntime?.mode === "byoc-vps" ? resolvedRuntime.gatewayUrl : null);
+  const resolvedGatewayToken = preferLocalDesktopRuntime
+    ? null
+    : gatewayToken ??
+      (resolvedRuntime?.mode === "byoc-vps" ? resolvedRuntime.gatewayToken : null);
 
   // 1. Caller-provided gateway
   if (resolvedGatewayUrl) {

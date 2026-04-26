@@ -37,7 +37,7 @@ import { ChatComposer } from '../chat/ChatComposer';
 import { useModelSelection } from '@/providers/model-selection-provider';
 import { ModelPicker } from '@/components/model-picker';
 import { useCoworkStore } from './CoworkStore';
-import { useEmbeddedAgentSession } from '@/lib/agents/embedded-agent-session.store';
+import { useSurfaceAgentModeEnabled } from '@/lib/agents/surface-agent-context';
 import { AgentModeBackdrop } from '../chat/agentModeSurfaceTheme';
 import { AgentCapabilitiesPanel } from './AgentCapabilitiesPanel';
 
@@ -256,9 +256,7 @@ const COWORK_TAGLINES = [
 ];
 
 export function CoworkLaunchpad({ onStartChat, onResumeThread }: CoworkLaunchpadProps) {
-  const { sessionHistory } = useCoworkStore();
-  const coworkSession = useEmbeddedAgentSession('cowork');
-  const agentModeEnabled = coworkSession.isEmbedded && coworkSession.descriptor.sessionMode === 'agent';
+  const agentModeEnabled = useSurfaceAgentModeEnabled('cowork');
   const { selection: modelSelection, selectModel, startSelection, isSelecting, cancelSelection } = useModelSelection();
   const [composerInput, setComposerInput] = useState('');
   const [showPluginsOverlay, setShowPluginsOverlay] = useState(false);
@@ -278,22 +276,9 @@ export function CoworkLaunchpad({ onStartChat, onResumeThread }: CoworkLaunchpad
     setTaglineAnimation(randomTaglineAnim);
   }, []);
 
-  // Get recent Cowork sessions (not Chat threads)
-  const recentSessions = useMemo(() => {
-    return sessionHistory
-      .filter(s => s.status !== 'error')
-      .sort((a, b) => b.events[0]?.timestamp - a.events[0]?.timestamp)
-      .slice(0, 5);
-  }, [sessionHistory]);
-
   const handleTaskClick = (prompt: string) => {
     // Start the chat immediately with the task prompt
     onStartChat(prompt);
-  };
-
-  const handleResumeSession = (sessionId: string) => {
-    // Resume the cowork session
-    onResumeThread(sessionId);
   };
 
   return (
@@ -365,68 +350,6 @@ export function CoworkLaunchpad({ onStartChat, onResumeThread }: CoworkLaunchpad
             agentModeSurface="cowork"
           />
         </div>
-
-        {/* Active Cowork sessions */}
-        {recentSessions.length > 0 && (
-          <section style={{ marginBottom: '48px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <h2 style={{ fontSize: '12px', fontWeight: 700, color: '#444', textTransform: 'uppercase' }}>Active Cowork Sessions</h2>
-            </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {recentSessions.map((session, idx) => {
-                const startEvent = session.events.find(e => e.type === 'cowork.session.start');
-                const task = (startEvent as any)?.context?.task || 'Working session';
-                const messageCount = session.events.filter(e => e.type === 'cowork.narration').length;
-                
-                return (
-                  <button 
-                    key={session.id}
-                    onClick={() => handleResumeSession(session.id)}
-                    style={{ 
-                      background: 'none', 
-                      border: 'none', 
-                      padding: 0, 
-                      textAlign: 'left', 
-                      cursor: 'pointer', 
-                      width: '100%',
-                      borderTop: idx === 0 ? 'none' : '1px solid #222'
-                    }}
-                  >
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: 16, 
-                      padding: '16px 0',
-                      transition: 'opacity 0.2s'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
-                    onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
-                    >
-                      <div style={{ 
-                        width: 32, height: 32, borderRadius: '50%', 
-                        border: '2px solid #333',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                        color: session.status === 'running' ? '#4ade80' : '#666'
-                      }}>
-                        <div style={{ 
-                          width: 8, height: 8, borderRadius: '50%', 
-                          background: session.status === 'running' ? '#4ade80' : '#666' 
-                        }} />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 500, fontSize: '14px', color: '#aaa' }}>{task.slice(0, 50)}{task.length > 50 ? '...' : ''}</div>
-                        <div style={{ fontSize: '12px', color: '#444' }}>
-                          {messageCount} messages • {session.status}
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        )}
 
         {/* Pick a task section - Restored with tailored prompts */}
         <section>

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * A2R Plugin Template Initialization Script
+ * Allternit Plugin Template Initialization Script
  * 
  * This script replaces template placeholders with actual values provided by the user.
  * It should be run after creating a new repository from the template.
@@ -235,7 +235,7 @@ async function collectInfo() {
   
   console.log('\n');
   console.log('╔══════════════════════════════════════════════════════════╗');
-  console.log('║     🧩 A2R Plugin Template Initialization               ║');
+  console.log('║     🧩 Allternit Plugin Template Initialization               ║');
   console.log('╚══════════════════════════════════════════════════════════╝');
   console.log('\n');
   console.log('This script will customize the template for your plugin.');
@@ -266,7 +266,7 @@ async function collectInfo() {
   info.PLUGIN_TAGLINE = await ask(rl, 'Short tagline (max 100 chars)', `A powerful plugin for ${info.PLUGIN_NAME}`);
 
   // Plugin Description
-  info.PLUGIN_DESCRIPTION = await ask(rl, 'Description', `${info.PLUGIN_NAME} extends the A2R Platform with amazing features.`);
+  info.PLUGIN_DESCRIPTION = await ask(rl, 'Description', `${info.PLUGIN_NAME} extends the Allternit Platform with amazing features.`);
 
   // Author Name
   info.AUTHOR_NAME = await ask(rl, 'Your name');
@@ -297,8 +297,8 @@ async function collectInfo() {
     info.GITHUB_USERNAME = await ask(rl, 'GitHub username');
   }
 
-  // Repository Name (default: a2r-{plugin-id})
-  const defaultRepo = `a2r-${info.PLUGIN_ID}`;
+  // Repository Name (default: allternit-{plugin-id})
+  const defaultRepo = `allternit-${info.PLUGIN_ID}`;
   info.REPO_NAME = await ask(rl, 'Repository name', defaultRepo);
 
   // Year
@@ -381,9 +381,9 @@ function updatePackageJson(info) {
     const content = JSON.parse(fs.readFileSync(packagePath, 'utf-8'));
     
     // Update fields
-    content.name = info.PLUGIN_ID.startsWith('a2r-') 
+    content.name = info.PLUGIN_ID.startsWith('allternit-') 
       ? info.PLUGIN_ID 
-      : `a2r-${info.PLUGIN_ID}`;
+      : `allternit-${info.PLUGIN_ID}`;
     content.version = '1.0.0';
     content.description = info.PLUGIN_DESCRIPTION;
     content.author = `${info.AUTHOR_NAME} <${info.AUTHOR_EMAIL}>`;
@@ -515,7 +515,7 @@ Please use the [GitHub issue tracker](https://github.com/${info.GITHUB_USERNAME}
 
 ## Questions?
 
-Join our [Discord community](https://discord.gg/a2r)!
+Join our [Discord community](https://discord.gg/allternit)!
 `;
     fs.writeFileSync(contributingPath, contributingContent, 'utf-8');
     console.log('  ✅ CONTRIBUTING.md created');
@@ -579,8 +579,8 @@ function printNextSteps(info) {
   console.log(`     git remote add origin https://github.com/${info.GITHUB_USERNAME}/${info.REPO_NAME}.git`);
   console.log(`     git push -u origin main`);
   console.log('');
-  console.log('  6. 🚀 Publish to A2R Marketplace');
-  console.log('     Visit: https://marketplace.a2r.dev/submit');
+  console.log('  6. 🚀 Publish to Allternit Marketplace');
+  console.log('     Visit: https://marketplace.allternit.dev/submit');
   console.log('');
   console.log('Happy coding! 🎈');
   console.log('\n');

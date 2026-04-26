@@ -9,7 +9,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { useUnifiedStore } from '@/lib/agents/unified.store';
+import { useUnifiedStore, type DagNode as ApiDagNode } from '@/lib/agents/unified.store';
 import {
   GitBranch,
   Play,
@@ -64,12 +64,12 @@ export function KanbanDAG() {
       fetchDagDetails(selectedDagId).then(dag => {
         if (dag && dag.nodes) {
           // Transform nodes to include status from WIHs if available
-          const nodesWithStatus = dag.nodes.map((node: any) => ({
-            id: node.node_id || node.id,
-            title: node.title || node.node_id || node.id,
-            status: node.status || 'pending',
-            dependencies: node.dependencies || node.parents || [],
-            wih_id: node.wih_id,
+          const nodesWithStatus = dag.nodes.map((node: ApiDagNode) => ({
+            id: node.nodeId,
+            title: node.title || node.nodeId,
+            status: node.status,
+            dependencies: node.dependencies,
+            wih_id: node.wihId,
           }));
           setDagData({
             nodes: nodesWithStatus,
@@ -80,7 +80,7 @@ export function KanbanDAG() {
     }
   }, [selectedDagId, fetchDagDetails, executions]);
 
-  const handleExecuteDag = async (dagId: string) => {
+  const handleExecuteDag = async (dagId: string): Promise<void> => {
     try {
       await executeDag(dagId);
     } catch (err) {
@@ -88,7 +88,7 @@ export function KanbanDAG() {
     }
   };
 
-  const handleOpenInPlan = () => {
+  const handleOpenInPlan = (): void => {
     setActiveMainTab('plan');
     if (selectedDagId) {
       selectDag(selectedDagId);
@@ -96,7 +96,7 @@ export function KanbanDAG() {
   };
 
   // Calculate node positions for simple tree layout
-  const calculateLayout = () => {
+  const calculateLayout = (): Record<string, number> => {
     const levels: Record<string, number> = {};
     const visited = new Set<string>();
 

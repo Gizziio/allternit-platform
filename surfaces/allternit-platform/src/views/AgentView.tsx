@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useAgentStore } from "@/lib/agents/agent.store";
+import type { Agent } from "@/lib/agents/agent.types";
 import { 
   STUDIO_THEME 
 } from "./agent-view/AgentView.constants";
@@ -10,11 +11,12 @@ export { STUDIO_THEME };
 import { AgentDetailView } from "./agent-view/components/AgentDetailView";
 import { CreateAgentForm, CreationProgressAnimation } from "./agent-view/components/CreateAgentForm";
 import { AgentCard } from "./agent-view/components/AgentCard";
+import { AgentGalleryCard } from "./agent-view/components/AgentGalleryCard";
 import { EmptyAgentState } from "./agent-view/components/EmptyAgentState";
 import { EditAgentForm } from "./agent-view/components/EditAgentForm";
 
 // UI Components
-import { CircleNotch, Plus, Warning } from '@phosphor-icons/react';
+import { CircleNotch, Plus, Warning, MagnifyingGlass, Faders } from '@phosphor-icons/react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface AgentViewProps {
@@ -61,6 +63,7 @@ export function AgentView({ hideCreateButton = false, forceListMode = false, tit
   // Global forge animation state
   const [globalForgeVisible, setGlobalForgeVisible] = useState(false);
   const [globalForgeAgentName, setGlobalForgeAgentName] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Render based on view mode
   if (viewMode === 'create' && !forceListMode) {
@@ -210,26 +213,13 @@ export function AgentView({ hideCreateButton = false, forceListMode = false, tit
             }}
           />
         ) : (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))',
-            gap: '16px',
-            padding: '8px'
-          }}>
-            {agents.map((agent, index) => (
-              <motion.div
-                key={agent.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05, duration: 0.3 }}
-              >
-                <AgentCard 
-                  agent={agent} 
-                  onClick={() => selectAgent(agent.id)}
-                />
-              </motion.div>
-            ))}
-          </div>
+          <AgentGalleryGrid
+            agents={agents}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            onSelectAgent={selectAgent}
+            forceListMode={forceListMode}
+          />
         )}
       </div>
     </div>
@@ -238,3 +228,190 @@ export function AgentView({ hideCreateButton = false, forceListMode = false, tit
 
 // Re-export CreateAgentForm for AgentHub
 export { CreateAgentForm } from "./agent-view/components/CreateAgentForm";
+
+// ─── Gemini-style Gallery Grid ─────────────────────────────────────────────
+
+interface AgentGalleryGridProps {
+  agents: Agent[];
+  searchQuery: string;
+  onSearchChange: (q: string) => void;
+  onSelectAgent: (id: string) => void;
+  forceListMode?: boolean;
+}
+
+function AgentGalleryGrid({ agents, searchQuery, onSearchChange, onSelectAgent, forceListMode }: AgentGalleryGridProps) {
+  const filtered = agents.filter((a) => {
+    const q = searchQuery.toLowerCase();
+    return (
+      a.name.toLowerCase().includes(q) ||
+      a.description.toLowerCase().includes(q) ||
+      a.capabilities.some((c) => c.toLowerCase().includes(q))
+    );
+  });
+
+  const myAgents = filtered.filter((a) => (a.source || "personal") === "personal");
+  const vendorAgents = filtered.filter((a) => a.source === "vendor");
+  const orgAgents = filtered.filter((a) => a.source === "organization");
+
+  return (
+    <div style={{ padding: "8px 0", display: "flex", flexDirection: "column", gap: "28px" }}>
+      {/* Search bar */}
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "0 8px" }}>
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            padding: "10px 14px",
+            borderRadius: "10px",
+            background: "rgba(255,255,255,0.03)",
+            border: "1px solid rgba(255,255,255,0.06)",
+            transition: "border-color 0.2s",
+          }}
+        >
+          <MagnifyingGlass size={16} color={STUDIO_THEME.textMuted} />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Search for agents"
+            style={{
+              flex: 1,
+              background: "transparent",
+              border: "none",
+              outline: "none",
+              color: STUDIO_THEME.textPrimary,
+              fontSize: "14px",
+              fontFamily: "system-ui, sans-serif",
+            }}
+          />
+        </div>
+        <button
+          style={{
+            width: "36px",
+            height: "36px",
+            borderRadius: "10px",
+            border: "1px solid rgba(255,255,255,0.06)",
+            background: "rgba(255,255,255,0.03)",
+            color: STUDIO_THEME.textMuted,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+          }}
+        >
+          <Faders size={16} />
+        </button>
+      </div>
+
+      {/* My agents */}
+      <AgentSection
+        title="My agents"
+        agents={myAgents}
+        onSelectAgent={onSelectAgent}
+        startIndex={0}
+      />
+
+      {/* From vendor */}
+      {vendorAgents.length > 0 && (
+        <AgentSection
+          title="From Allternit"
+          agents={vendorAgents}
+          onSelectAgent={onSelectAgent}
+          startIndex={myAgents.length}
+        />
+      )}
+
+      {/* From organization */}
+      {orgAgents.length > 0 && (
+        <AgentSection
+          title="From my organization"
+          agents={orgAgents}
+          onSelectAgent={onSelectAgent}
+          startIndex={myAgents.length + vendorAgents.length}
+        />
+      )}
+
+      {filtered.length === 0 && (
+        <div style={{ textAlign: "center", padding: "48px 16px", color: STUDIO_THEME.textMuted }}>
+          <MagnifyingGlass size={32} style={{ margin: "0 auto 12px", opacity: 0.3 }} />
+          <p style={{ fontSize: "14px" }}>No agents match "{searchQuery}"</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function AgentSection({
+  title,
+  agents,
+  onSelectAgent,
+  startIndex,
+}: {
+  title: string;
+  agents: Agent[];
+  onSelectAgent: (id: string) => void;
+  startIndex: number;
+}) {
+  const [expanded, setExpanded] = useState(true);
+  if (agents.length === 0) return null;
+
+  return (
+    <div style={{ padding: "0 8px" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: "12px",
+        }}
+      >
+        <h2
+          style={{
+            fontSize: "15px",
+            fontWeight: 600,
+            color: STUDIO_THEME.textPrimary,
+            margin: 0,
+          }}
+        >
+          {title}
+        </h2>
+        {agents.length > 6 && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: STUDIO_THEME.textMuted,
+              fontSize: "12px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "4px",
+            }}
+          >
+            {expanded ? "Show less" : "Show more"}
+          </button>
+        )}
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+          gap: "12px",
+        }}
+      >
+        {(expanded ? agents : agents.slice(0, 6)).map((agent, i) => (
+          <AgentGalleryCard
+            key={agent.id}
+            agent={agent}
+            onClick={() => onSelectAgent(agent.id)}
+            index={startIndex + i}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}

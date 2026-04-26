@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-A2R Platform UI Audit using browser-use
+Allternit Platform UI Audit using browser-use
 
 This script uses the browser-use library to systematically test and audit
-the A2R Platform UI, identifying rendering issues, layout problems, and bugs.
+the Allternit Platform UI, identifying rendering issues, layout problems, and bugs.
 
 Requirements:
     pip install browser-use==0.1.40 playwright==1.49.0
@@ -407,7 +407,7 @@ class UIAuditor:
         # Also save markdown summary
         md_path = Path("test-results/ui-audit-summary.md")
         with open(md_path, 'w') as f:
-            f.write("# A2R Platform UI Audit Summary\n\n")
+            f.write("# Allternit Platform UI Audit Summary\n\n")
             f.write(f"**Date:** {report['audit_date']}\n")
             f.write(f"**Base URL:** {report['base_url']}\n\n")
             f.write(f"**Total Issues:** {report['total_issues']}\n\n")
@@ -427,7 +427,7 @@ class UIAuditor:
 async def main():
     """Main entry point"""
     print("=" * 60)
-    print("A2R Platform UI Audit")
+    print("Allternit Platform UI Audit")
     print("=" * 60)
     print()
     

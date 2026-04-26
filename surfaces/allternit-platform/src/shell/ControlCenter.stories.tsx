@@ -18,7 +18,7 @@ const meta: Meta<typeof ControlCenter> = {
   tags: ['autodocs'],
   parameters: {
     layout: 'fullscreen',
-    a2r: {
+    allternit: {
       componentId: 'shell-control-center',
       evidence: {
         types: ['INTERACTION_TEST', 'VISUAL_SNAPSHOT'],

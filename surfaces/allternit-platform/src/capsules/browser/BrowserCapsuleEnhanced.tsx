@@ -1961,7 +1961,7 @@ export function BrowserCapsuleEnhanced({
           )}
 
           {/* ACI overlays — float above web content */}
-          <BrowserAgentOverlay status={agentStatus} currentAction={agentCurrentAction} />
+          <BrowserAgentOverlay status={agentStatus} currentAction={agentCurrentAction as any} />
 
           {/* Glass pill — bottom-center execution status */}
           <ACIGlassPill placement="bottom-center" />
@@ -1976,7 +1976,7 @@ export function BrowserCapsuleEnhanced({
                   data-testid="allternit-webview-content"
                   src={(activeTab as WebTab).url}
                   style={{ width: '100%', height: '100%', border: 'none', background: 'white' }}
-                  allowpopups="true"
+                  allowpopups={true}
                 />
               ) : (
                 <iframe

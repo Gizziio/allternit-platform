@@ -1,0 +1,120 @@
+---
+title: Architecture
+description: Understanding the One Brain, Many Faces model
+---
+
+## Overview
+
+The Allternit platform follows a unique architectural pattern that separates the core intelligence (Brain) from the user interfaces (Faces) while maintaining a unified communication layer (Nervous System).
+
+## The Brain (Gizzi)
+
+Gizzi is the central orchestration engine responsible for:
+
+- **Agent lifecycle management** - Creating, running, and terminating agents
+- **Code execution and sandboxing** - Secure environment for agent code
+- **Model interaction** - Prompt engineering and LLM communication
+- **State management** - Persistence and memory for agents
+- **Event coordination** - Message routing between agents
+
+```typescript
+import { GizziRuntime } from '@allternit/core';
+
+const runtime = new GizziRuntime({
+  model: 'gpt-4',
+  sandbox: true,
+  memory: 'persistent',
+});
+
+await runtime.initialize();
+```
+
+## The Faces (Surfaces)
+
+Surfaces are the user-facing interfaces that interact with the Brain:
+
+<CardGroup cols={3}>
+  <Card title="Desktop App" icon="desktop" href="/surfaces/desktop">
+    Packaged Electron app — loads the platform, manages local VMs, global hotkeys
+  </Card>
+  <Card title="Platform" icon="browser" href="/surfaces/platform">
+    Next.js 15 web shell — chat, code, workspace, design, and Agent Hub
+  </Card>
+  <Card title="Extensions" icon="puzzle" href="/surfaces/extensions">
+    Chrome extension for browser automation + Office add-ins for Excel/Word/PowerPoint
+  </Card>
+</CardGroup>
+
+## The Nervous System (SDK)
+
+The SDK provides a unified interface for all surfaces to communicate with the Brain:
+
+```typescript
+import { AllternitClient } from '@allternit/sdk';
+
+const client = new AllternitClient({
+  endpoint: 'http://localhost:8013',
+  token: process.env.ALLTERNIT_TOKEN,
+});
+
+// Start an agent
+await client.agents.run({
+  agentId: 'my-agent',
+  input: 'Hello, world!',
+});
+```
+
+## Communication Layer
+
+The **ac (Agent Communication)** protocol is Allternit's inter-agent messaging layer. It provides:
+
+- **Message Board** - Persistent, ordered message log per channel
+- **Git DAG** - Cryptographically auditable lineage for every message
+- **API Keys** - Per-agent scoped keys with rate limiting
+
+```typescript
+import { AcClient } from '@allternit/ac';
+
+const ac = new AcClient({ apiKey: process.env.AC_API_KEY });
+
+// Subscribe to a channel
+const unsub = ac.channels.subscribe('agent.events', (msg) => {
+  console.log(msg.type, msg.payload);
+});
+
+// Publish a message
+await ac.channels.publish('agent.events', {
+  type: 'task.completed',
+  payload: { taskId: 'abc123', result: 'ok' },
+});
+```
+
+## Deployment Models
+
+<AccordionGroup>
+  <Accordion title="Allternit Cloud (SaaS)">
+    Fully managed deployment on Allternit's infrastructure. Best for:
+    - Quick prototyping
+    - Teams without DevOps resources
+    - Automatic scaling
+  </Accordion>
+  
+  <Accordion title="BYOC (Bring Your Own Cloud)">
+    Deploy the runtime agent to your own infrastructure:
+    ```bash
+    curl -fsSL https://install.allternit.com | bash
+    ```
+    Best for:
+    - Data privacy requirements
+    - Compliance (SOC2, HIPAA)
+    - Existing infrastructure
+  </Accordion>
+  
+  <Accordion title="Hybrid">
+    Control plane on Allternit Cloud, data plane on your infrastructure.
+    Best for:
+    - Sensitive data processing
+    - Cost optimization
+    - Gradual migration
+  </Accordion>
+</AccordionGroup>

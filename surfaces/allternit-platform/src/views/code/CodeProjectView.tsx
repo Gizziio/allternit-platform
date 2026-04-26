@@ -16,6 +16,7 @@ import {
 } from '../BaseProjectView';
 import { useCodeModeStore } from './CodeModeStore';
 import { ChatComposer } from '../chat/ChatComposer';
+import { ResourceUsageDashboard } from '@/components/usage/ResourceUsageDashboard';
 import {
   Terminal,
   PencilSimple,
@@ -23,6 +24,7 @@ import {
   Trash,
   FileCode,
   Robot,
+  ActivityIcon,
 } from '@phosphor-icons/react';
 import { useNav } from '@/nav/useNav';
 
@@ -77,12 +79,12 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
   const displayThreads = activeTab === 'threads' ? workspaceThreads : workspaceAgentThreads;
   const hasContent = displayThreads.length > 0 || workspaceFiles.length > 0;
 
-  const handleBack = () => {
+  const handleBack = (): void => {
     setActiveWorkspace(''); // Clear active workspace
     dispatch({ type: 'OPEN_VIEW', viewType: 'code' });
   };
 
-  const handleSend = (text: string) => {
+  const handleSend = (text: string): void => {
     if (!text.trim() || !currentWorkspaceId) return;
     console.log('Creating new thread in workspace:', currentWorkspaceId, 'with text:', text);
     setComposerInput('');
@@ -90,27 +92,27 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
     dispatch({ type: 'OPEN_VIEW', viewType: 'code' });
   };
 
-  const handleNewThread = () => {
+  const handleNewThread = (): void => {
     if (!currentWorkspaceId) return;
     createSession('New Thread', currentWorkspaceId);
     dispatch({ type: 'OPEN_VIEW', viewType: 'code' });
   };
 
-  const handleSessionSelect = (sessionId: string) => {
+  const handleSessionSelect = (sessionId: string): void => {
     setActiveSession(sessionId);
     // Navigate back to code view to show the canvas with the selected session
     dispatch({ type: 'OPEN_VIEW', viewType: 'code' });
   };
 
-  const handleRename = () => {
+  const handleRename = (): void => {
     setShowRenameModal(true);
   };
 
-  const handleDelete = () => {
+  const handleDelete = (): void => {
     setShowDeleteModal(true);
   };
 
-  const handleAddInstruction = () => {
+  const handleAddInstruction = (): void => {
     if (instructionText.trim()) {
       setWorkspaceInstructions([...workspaceInstructions, instructionText.trim()]);
       setInstructionText('');
@@ -118,7 +120,7 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
     setShowAddInstruction(false);
   };
 
-  const handleAddFile = (name: string) => {
+  const handleAddFile = (name: string): void => {
     setWorkspaceFiles([...workspaceFiles, { id: Date.now().toString(), name, size: 1024 }]);
     setShowAddFile(false);
   };
@@ -249,6 +251,7 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
         tabs={[
           { id: 'threads', label: 'Threads', count: workspaceThreads.length },
           { id: 'agent-threads', label: 'Agent Threads', count: workspaceAgentThreads.length },
+          { id: 'telemetry', label: 'Telemetry', icon: <ActivityIcon size={14} /> },
           { id: 'sources', label: 'Sources', count: workspaceFiles.length },
         ]}
         activeTab={activeTab}
@@ -273,6 +276,11 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
         }}
       >
         {/* Content based on active tab */}
+        {activeTab === 'telemetry' && (
+          <div style={{ padding: '20px 0' }}>
+            <ResourceUsageDashboard />
+          </div>
+        )}
         {(activeTab === 'threads' || activeTab === 'agent-threads') && (
           <div>
             {displayThreads.map(session => (

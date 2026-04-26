@@ -81,7 +81,7 @@ export function BatchToolbar({ modeColors }: BatchToolbarProps) {
           onClick={batchStop}
           disabled={selectedCount === 0}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-opacity disabled:opacity-40"
-          style={{ background: rgba(239,68,68,0.18), color: STATUS.error }}
+          style={{ background: 'rgba(239,68,68,0.18)', color: STATUS.error }}
         >
           <Stop size={11} weight="fill" />
           Stop

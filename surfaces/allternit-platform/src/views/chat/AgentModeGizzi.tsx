@@ -85,6 +85,13 @@ const SURFACE_CONFIG: Record<AgentModeSurface, {
     selectedEmotion: 'focused',
     peekEmotion: 'mischief',
   },
+  design: {
+    entrySide: 'left',
+    mascotSize: 72,
+    baseEmotion: 'pleased',
+    selectedEmotion: 'proud',
+    peekEmotion: 'mischief',
+  },
 };
 
 const SURFACE_THOUGHTS: Record<AgentModeSurface, string[]> = {
@@ -119,6 +126,14 @@ const SURFACE_THOUGHTS: Record<AgentModeSurface, string[]> = {
     'If a flow loops, I start getting very judgmental.',
     'We can automate this. We just should not automate confusion.',
     'I am here for deliberate clicks, not digital wandering.',
+  ],
+  design: [
+    'Design mode. I watch the pixels so the vision does not drift.',
+    '{agent} is shaping this. I keep the intent anchored.',
+    'Good design is deliberate. I am here for that part.',
+    'If the layout wobbles, I raise an eyebrow and a note.',
+    'Craft the interface first. Style follows the structure.',
+    'I perch here so the aesthetics match the ambition.',
   ],
 };
 

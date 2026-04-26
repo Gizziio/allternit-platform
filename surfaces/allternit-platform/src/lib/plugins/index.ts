@@ -121,7 +121,7 @@ export async function loadPlugin(id: PluginId): Promise<ModePlugin> {
   }
 
   const module = await definition.lazyImport();
-  const plugin = module.default || module.plugin;
+  const plugin = (module as any).default || (module as any).plugin;
   
   // Initialize the plugin
   await plugin.initialize();
@@ -144,7 +144,7 @@ export function getPluginInfo(id: PluginId) {
     icon: def.icon,
     capabilities: def.capabilities,
     requiresConfig: def.requiresConfig,
-    configType: def.configType,
+    configType: (def as any).configType,
   };
 }
 
@@ -159,7 +159,7 @@ export function listPlugins() {
     icon: p.icon,
     capabilities: p.capabilities,
     requiresConfig: p.requiresConfig,
-    configType: p.configType,
+    configType: (p as any).configType,
   }));
 }
 
@@ -182,4 +182,4 @@ export async function unloadPlugin(id: PluginId): Promise<void> {
 }
 
 // Re-export types
-export * from './types';
+export { type ExecutionContext, type ModePlugin, type PluginCapability, type PluginConfig, type PluginEvent, type PluginEventHandler, type PluginEventType, type PluginFactory, type PluginInput, type PluginOutput, type PluginRegistryEntry } from './types';

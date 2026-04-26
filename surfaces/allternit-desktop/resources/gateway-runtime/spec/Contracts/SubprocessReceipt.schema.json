@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/SubprocessReceipt.schema.json",
+  "title": "Allternit Subprocess Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "receipt_id",
+    "created_at",
+    "run_id",
+    "worker_id",
+    "argv",
+    "cwd",
+    "env_allowlist",
+    "exit_code",
+    "stdout_hash",
+    "stderr_hash",
+    "stdout_preview",
+    "stderr_preview",
+    "artifact_paths"
+  ],
+  "properties": {
+    "receipt_id": { "type": "string" },
+    "created_at": { "type": "string" },
+    "run_id": { "type": "string" },
+    "worker_id": { "type": "string" },
+    "argv": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "cwd": { "type": "string" },
+    "env_allowlist": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "exit_code": { "type": "integer" },
+    "stdout_hash": { "type": "string" },
+    "stderr_hash": { "type": "string" },
+    "stdout_preview": { "type": "string" },
+    "stderr_preview": { "type": "string" },
+    "artifact_paths": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

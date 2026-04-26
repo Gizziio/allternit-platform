@@ -1,7 +1,7 @@
 /**
  * WebSocket Client
  * 
- * Manages WebSocket connection to A2R API from service worker.
+ * Manages WebSocket connection to Allternit API from service worker.
  * Handles reconnection, message queuing, and heartbeat.
  */
 

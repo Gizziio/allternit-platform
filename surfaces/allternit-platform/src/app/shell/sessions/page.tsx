@@ -69,8 +69,8 @@ export default function SessionsPage() {
           const info: GizziSession = evt.properties.info
           setSessions((prev) => {
             const idx = prev.findIndex((s) => s.id === info.id)
-            const next = idx >= 0 ? prev.with(idx, info) : [info, ...prev]
-            return next.sort((a, b) => b.time.updated - a.time.updated)
+            const next = idx >= 0 ? prev.map((s, i) => i === idx ? info : s) : [info, ...prev]
+            return [...next].sort((a: GizziSession, b: GizziSession) => b.time.updated - a.time.updated)
           })
         }
 

@@ -65,12 +65,20 @@ export async function createAuthCode(params: {
 
   const redis = getRedisClient();
   if (redis) {
-    await redis.set(
-      `${KEY_PREFIX}${code}`,
-      JSON.stringify(entry),
-      'EX',
-      CODE_TTL_SECONDS,
-    );
+    try {
+      await redis.set(
+        `${KEY_PREFIX}${code}`,
+        JSON.stringify(entry),
+        'EX',
+        CODE_TTL_SECONDS,
+      );
+    } catch (error) {
+      console.warn('[oauth-codes] Redis set failed, falling back to in-memory store:', error);
+      memStore.set(code, {
+        ...entry,
+        expiresAt: Date.now() + CODE_TTL_SECONDS * 1000,
+      });
+    }
   } else {
     memStore.set(code, {
       ...entry,
@@ -85,14 +93,18 @@ export async function consumeAuthCode(code: string): Promise<StoredCode | null> 
   const redis = getRedisClient();
 
   if (redis) {
-    const key = `${KEY_PREFIX}${code}`;
-    const raw = await redis.get(key);
-    if (!raw) return null;
-    await redis.del(key); // single-use: delete immediately on consume
     try {
-      return JSON.parse(raw) as StoredCode;
-    } catch {
-      return null;
+      const key = `${KEY_PREFIX}${code}`;
+      const raw = await redis.get(key);
+      if (!raw) return null;
+      await redis.del(key); // single-use: delete immediately on consume
+      try {
+        return JSON.parse(raw) as StoredCode;
+      } catch {
+        return null;
+      }
+    } catch (error) {
+      console.warn('[oauth-codes] Redis read failed, falling back to in-memory store:', error);
     }
   }
 

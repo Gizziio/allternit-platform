@@ -337,7 +337,7 @@ export function getPolicyStore(): PolicyStore {
     const redis = getRedisClient();
     if (redis) {
       const { RedisPolicyStore } = require('./redisStores') as typeof import('./redisStores');
-      _policyStore = new RedisPolicyStore(redis);
+      _policyStore = new RedisPolicyStore(redis as any);
     } else {
       _policyStore = new InMemoryPolicyStore();
     }

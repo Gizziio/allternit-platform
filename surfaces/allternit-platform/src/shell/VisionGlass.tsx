@@ -10,20 +10,21 @@ export interface VisionAction {
   label?: string;
 }
 
-function extractPoint(args: any): { x: number; y: number } | null {
-  if (!args) return null;
-  if (typeof args.x === "number" && typeof args.y === "number") return { x: args.x, y: args.y };
-  if (Array.isArray(args) && args.length >= 2 && args.every((v) => typeof v === "number")) {
-    return { x: args[0], y: args[1] };
+function extractPoint(args: unknown): { x: number; y: number } | null {
+  if (typeof args !== 'object' || args === null) return null;
+  const a = args as Record<string, unknown>;
+  if (typeof a.x === "number" && typeof a.y === "number") return { x: a.x, y: a.y };
+  if (Array.isArray(a) && a.length >= 2 && a.every((v) => typeof v === "number")) {
+    return { x: a[0], y: a[1] };
   }
-  if (Array.isArray(args.position) && args.position.length >= 2) {
-    return { x: args.position[0], y: args.position[1] };
+  if (Array.isArray(a.position) && a.position.length >= 2) {
+    return { x: a.position[0], y: a.position[1] };
   }
-  if (Array.isArray(args.point) && args.point.length >= 2) {
-    return { x: args.point[0], y: args.point[1] };
+  if (Array.isArray(a.point) && a.point.length >= 2) {
+    return { x: a.point[0], y: a.point[1] };
   }
-  if (Array.isArray(args.start_box) && args.start_box.length >= 2) {
-    return { x: args.start_box[0], y: args.start_box[1] };
+  if (Array.isArray(a.start_box) && a.start_box.length >= 2) {
+    return { x: a.start_box[0], y: a.start_box[1] };
   }
   return null;
 }
@@ -35,20 +36,21 @@ function mapToolType(toolName: string): VisionAction["type"] {
   return "click";
 }
 
-function labelForCall(call: ToolCall) {
+function labelForCall(call: ToolCall): string {
   const args = call.args ? JSON.stringify(call.args) : "";
   return `${call.toolName}${args ? " " + args.slice(0, 64) : ""}`;
 }
 
-export function VisionGlass() {
+export function VisionGlass(): JSX.Element {
   const [actions, setActions] = useState<VisionAction[]>([]);
 
   useEffect(() => {
-    const handleAction = (event: any) => {
+    const handleAction = (event: CustomEvent<{ type: string; action: VisionAction }>): void => {
       if (event.detail?.type === "vision_target") {
-        setActions(prev => [...prev, event.detail.action]);
+        const action = event.detail.action;
+        setActions(prev => [...prev, action]);
         setTimeout(() => {
-          setActions(prev => prev.filter(a => a.id !== event.detail.action.id));
+          setActions(prev => prev.filter(a => a.id !== action.id));
         }, 3000);
       }
     };
@@ -69,9 +71,9 @@ export function VisionGlass() {
       }, 3000);
     });
 
-    window.addEventListener("allternit:vision_action", handleAction);
+    window.addEventListener("allternit:vision_action", handleAction as EventListener);
     return () => {
-      window.removeEventListener("allternit:vision_action", handleAction);
+      window.removeEventListener("allternit:vision_action", handleAction as EventListener);
       unsubTool();
     };
   }, []);

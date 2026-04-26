@@ -11,7 +11,7 @@
  * - DETAIL: Deep agent inspection
  * 
  * Features:
- * - Real-time SSE updates from NativeAgentStore
+ * - Real-time SSE updates from session stores
  * - Search & filter functionality
  * - Agent actions (restart, stop, view logs)
  * - Error boundary protection
@@ -35,13 +35,14 @@ import { SwarmErrorBoundary } from './components/SwarmErrorBoundary';
 import { SwarmMonitorLayout } from './components/SwarmMonitorLayout';
 import { FilterBar } from './components/FilterBar';
 import { ExportPanel } from './components/ExportPanel';
-import { 
-  GridLoading, 
-  DetailLoading, 
-  InitialLoading, 
+import {
+  GridLoading,
+  DetailLoading,
+  InitialLoading,
   EmptyState,
-  RefreshIndicator 
+  RefreshIndicator
 } from './components/LoadingStates';
+import { SwarmSetup } from './components/SwarmSetup';
 import { GridView } from './views/GridView';
 import { TopologyView } from './views/TopologyView';
 import { KanbanView } from './views/KanbanView';
@@ -262,16 +263,6 @@ function SwarmMonitorContent({ className }: SwarmMonitorProps) {
       );
     }
 
-    // Show empty state if no agents
-    if (allAgents.length === 0) {
-      return (
-        <EmptyState 
-          type="no-agents"
-          onRefresh={refreshAgents}
-        />
-      );
-    }
-
     // Show no results if filters are applied and no matches
     if (agents.length === 0 && (searchQuery)) {
       return (
@@ -349,6 +340,15 @@ function SwarmMonitorContent({ className }: SwarmMonitorProps) {
     }
   };
 
+  // No agents yet — render the setup panel full-screen, no header chrome
+  if (!isLoading && !error && allAgents.length === 0) {
+    return (
+      <div className={`relative h-full ${className || ''}`}>
+        <SwarmSetup onLaunched={() => { refreshAgents(); }} />
+      </div>
+    );
+  }
+
   return (
     <div className={`relative ${className || ''}`}>
       <SwarmMonitorLayout
@@ -372,20 +372,20 @@ function SwarmMonitorContent({ className }: SwarmMonitorProps) {
           <DownloadSimple size={12} weight="bold" />
           Export
         </button>
-        
+
         {/* Export Panel */}
         {showExportPanel && (
-          <ExportPanel 
-            modeColors={modeColors} 
-            onClose={() => setShowExportPanel(false)} 
+          <ExportPanel
+            modeColors={modeColors}
+            onClose={() => setShowExportPanel(false)}
           />
         )}
-        
+
         {/* Real-time indicator */}
         {isConnected && (
-          <div 
+          <div
             className="absolute top-2 right-2 flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-medium z-10"
-            style={{ 
+            style={{
               background: `${STATUS.success}1a`,
               color: STATUS.success,
             }}
@@ -394,10 +394,10 @@ function SwarmMonitorContent({ className }: SwarmMonitorProps) {
             LIVE
           </div>
         )}
-        
+
         {/* Loading indicator */}
         {isLoading && allAgents.length > 0 && <RefreshIndicator />}
-        
+
         {/* Main content */}
         {renderContent()}
       </SwarmMonitorLayout>

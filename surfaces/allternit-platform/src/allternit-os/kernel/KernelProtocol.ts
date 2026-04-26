@@ -1,5 +1,5 @@
 /**
- * A2rchitect Super-Agent OS - Kernel Protocol Handler
+ * allternit Super-Agent OS - Kernel Protocol Handler
  * 
  * Processes messages from the 1-kernel Brain Runtime and routes them
  * to the appropriate programs in the Utility Pane.
@@ -15,8 +15,8 @@
 
 import { useSidecarStore } from '../stores/useSidecarStore';
 import type {
-  A2rProgramType,
-  A2rProgramState,
+  AllternitProgramType,
+  AllternitProgramState,
   ResearchDocState,
   DataGridState,
   PresentationState,
@@ -52,7 +52,7 @@ export interface KernelMessage {
   timestamp: number;
   threadId: string;
   programId?: string;
-  programType?: A2rProgramType;
+  programType?: AllternitProgramType;
   payload: unknown;
 }
 
@@ -132,7 +132,7 @@ export class KernelProtocolHandler {
     const store = useSidecarStore.getState();
     const payload = msg.payload as {
       title: string;
-      type: A2rProgramType;
+      type: AllternitProgramType;
       initialState?: Record<string, unknown>;
       options?: { focus?: boolean; replaceExisting?: boolean };
     };
@@ -152,7 +152,7 @@ export class KernelProtocolHandler {
     if (!msg.programId) return;
     
     const store = useSidecarStore.getState();
-    store.setProgramState(msg.programId, msg.payload as A2rProgramState);
+    store.setProgramState(msg.programId, msg.payload as AllternitProgramState);
   }
 
   private handleProgramStream(msg: KernelMessage): void {
@@ -381,7 +381,7 @@ export class KernelProtocolHandler {
 // ============================================================================
 
 interface LaunchDirective {
-  type: A2rProgramType;
+  type: AllternitProgramType;
   title: string;
   detected: boolean;
 }
@@ -479,7 +479,7 @@ export function useKernelProtocol(threadId: string) {
     let match;
     
     while ((match = explicitLaunchRegex.exec(content)) !== null) {
-      const type = match[1] as A2rProgramType;
+      const type = match[1] as AllternitProgramType;
       const title = match[2];
       
       handlerRef.current.processMessage({

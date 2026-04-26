@@ -34,7 +34,7 @@ tools:
   - a11y_audit
 
 constraints:
-  - Must follow A2R Design System
+  - Must follow Allternit Design System
   - All components must have accessibility attributes
   - Props must be typed with TypeScript
   - Must generate schema files for complex props

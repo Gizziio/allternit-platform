@@ -10,7 +10,7 @@
  * - Network: Make HTTP requests
  * - Events: Listen to platform events
  * 
- * @see https://docs.a2r.dev/plugins/api-reference
+ * @see https://docs.allternit.dev/plugins/api-reference
  */
 
 // ============================================================================
@@ -18,11 +18,11 @@
 // ============================================================================
 
 // Allternit Platform SDK (when available)
-// import { A2RPlugin, Panel, Command, Storage } from '@allternit/platform';
+// import { AllternitPlugin, Panel, Command, Storage } from '@allternit/platform';
 
 // Or use the global Allternit object provided by the platform
 // declare const Allternit: {
-//   registerPlugin: (plugin: A2RPlugin) => void;
+//   registerPlugin: (plugin: AllternitPlugin) => void;
 //   // ... other APIs
 // };
 
@@ -41,7 +41,7 @@ const PLUGIN_VERSION = '1.0.0';
 /**
  * Main plugin class
  * 
- * Implement the A2RPlugin interface to create a fully functional plugin.
+ * Implement the AllternitPlugin interface to create a fully functional plugin.
  * This template provides stubs for all lifecycle methods and common features.
  */
 export class MyAllternitPlugin {
@@ -450,8 +450,8 @@ export interface IMyPluginEvents {
  * 
  * ## Resources
  * 
- * - Documentation: https://docs.a2r.dev/plugins
- * - API Reference: https://docs.a2r.dev/plugins/api-reference
- * - Examples: https://github.com/allternit/a2r-plugin-examples
- * - Community: https://discord.gg/a2r
+ * - Documentation: https://docs.allternit.dev/plugins
+ * - API Reference: https://docs.allternit.dev/plugins/api-reference
+ * - Examples: https://github.com/allternit/allternit-plugin-examples
+ * - Community: https://discord.gg/allternit
  */

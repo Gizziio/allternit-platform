@@ -1,5 +1,5 @@
 /**
- * A2rchitect Super-Agent OS - Orchestrator Engine (MoA)
+ * allternit Super-Agent OS - Orchestrator Engine (MoA)
  * 
  * Mixture-of-Agents orchestration for parallel execution.
  * Implements task decomposition, parallel agent spawning, and result synthesis.

@@ -19,7 +19,7 @@ describe('CodePreviewPane', () => {
       ...initialState,
       sessions: initialState.sessions.map((session) =>
         session.session_id === initialState.activeSessionId
-          ? ({ ...session, preview_sessions: undefined } as any)
+          ? ({ ...session, preview_sessions: undefined } as typeof session)
           : session,
       ),
     });

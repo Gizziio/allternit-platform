@@ -7,6 +7,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSession, destroySession } from '@/lib/aci/session-store';
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },

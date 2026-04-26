@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useCallback, ReactNode, useMemo } from "react";
+import { createContext, useContext, useState, useCallback, ReactNode, useMemo, useRef, useEffect } from "react";
 import type { ModelSelection } from "@/components/model-picker";
 
 interface ModelSelectionContextType {
@@ -37,6 +37,15 @@ export function ModelSelectionProvider({
 }: ModelSelectionProviderProps) {
   const [selection, setSelection] = useState<ModelSelection | null>(defaultSelection);
   const [isSelecting, setIsSelecting] = useState(false);
+  const hasAppliedDefault = useRef(false);
+
+  // Sync with defaultSelection when it becomes available (e.g. after onboarding completes)
+  useEffect(() => {
+    if (defaultSelection && !hasAppliedDefault.current) {
+      hasAppliedDefault.current = true;
+      setSelection(defaultSelection);
+    }
+  }, [defaultSelection]);
 
   const selectModel = useCallback((newSelection: ModelSelection) => {
     setSelection(newSelection);

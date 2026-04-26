@@ -14,14 +14,12 @@
 
 export { ChatModeAgentSession } from './ChatModeAgentSession';
 export { CoworkModeAgentTasks } from './CoworkModeAgentTasks';
-export { CodeModeADE } from './CodeModeADE';
 export { BrowserModeAgentSession } from './BrowserModeAgentSession';
 export { AgentSessionLayout } from './AgentSessionLayout';
 
 export type {
   ChatModeAgentSessionProps,
   CoworkModeAgentTasksProps,
-  CodeModeADEProps,
   BrowserModeAgentSessionProps,
   AgentSessionMode,
   AgentSessionState,

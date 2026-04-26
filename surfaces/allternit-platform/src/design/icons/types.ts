@@ -1,7 +1,7 @@
 /**
  * Icon System - Type Definitions
  * 
- * Comprehensive type-safe icon definitions for the A2rchitect platform.
+ * Comprehensive type-safe icon definitions for the allternit platform.
  * All icons are typed (no string fall-through) to ensure consistency.
  * 
  * @module @allternit/platform/icons/types
@@ -236,7 +236,7 @@ export type IconName =
   | 'star'
   | 'thumbs-up'
   
-  // Custom A2rchitect brand icons (8 icons)
+  // Custom allternit brand icons (8 icons)
   | 'allternit-logo' 
   | 'allternit-mark' 
   | 'shell' 

@@ -21,7 +21,8 @@ import { MCP_APPS_CLIENT_CAPABILITIES } from "./apps";
 const log = createModuleLogger("mcp-client");
 
 type McpClientInstance = Awaited<ReturnType<typeof createMCPClient>>;
-type McpListToolsResult = Awaited<ReturnType<McpClientInstance["listTools"]>>;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type McpListToolsResult = any;
 type McpReadResourceResult = Awaited<
   ReturnType<McpClientInstance["readResource"]>
 >;
@@ -244,7 +245,7 @@ export class MCPClient {
       throw new Error("Client not connected");
     }
     try {
-      return await this.client.listTools({ params });
+      return await (this.client as any).listTools({ params });
     } catch (error) {
       this.handlePotentialAuthError(error);
       throw error;
@@ -264,8 +265,8 @@ export class MCPClient {
     }
 
     try {
-      const resolvedDefinitions = definitions ?? (await this.client.listTools());
-      const tools = this.client.toolsFromDefinitions(resolvedDefinitions);
+      const resolvedDefinitions = definitions ?? (await (this.client as any).listTools());
+      const tools = (this.client as any).toolsFromDefinitions(resolvedDefinitions);
       const tool = tools[name];
 
       if (!tool?.execute) {

@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/CodePlan.schema.json",
+  "title": "Code Plan — Structured Execution Plan Contract",
+  "description": "A structured plan artifact produced in PLAN mode. Separates cognitive planning from action execution.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "plan_id",
+    "session_id",
+    "goal",
+    "steps",
+    "risk",
+    "rollback"
+  ],
+  "properties": {
+    "plan_id": {
+      "type": "string",
+      "pattern": "^plan_",
+      "description": "Unique plan identifier"
+    },
+    "session_id": {
+      "type": "string",
+      "pattern": "^sess_"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "ready", "approved", "rejected", "executing", "completed", "failed"],
+      "default": "draft"
+    },
+    "goal": {
+      "type": "string",
+      "minLength": 10,
+      "description": "Clear statement of what this plan achieves"
+    },
+    "files_involved": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Files likely to be read or modified"
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/PlanStep"
+      }
+    },
+    "risk": {
+      "type": "object",
+      "required": ["exec_needed"],
+      "properties": {
+        "exec_needed": {
+          "type": "boolean",
+          "description": "Does this plan require shell execution?"
+        },
+        "deps_install": {
+          "type": "boolean",
+          "description": "Does this plan require installing dependencies?"
+        },
+        "network_needed": {
+          "type": "boolean",
+          "description": "Does this plan require network access?"
+        },
+        "destructive_actions": {
+          "type": "boolean",
+          "description": "Does this plan involve destructive actions?"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional risk context"
+        }
+      }
+    },
+    "rollback": {
+      "type": "object",
+      "required": ["strategy"],
+      "properties": {
+        "strategy": {
+          "type": "string",
+          "enum": ["git_revert", "changeset_revert", "patch_revert", "manual"],
+          "description": "How to undo this plan's effects"
+        },
+        "notes": { "type": "string" }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "properties": {
+        "commands": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Commands to run to verify plan succeeded"
+        },
+        "acceptance_criteria": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Human-readable criteria for success"
+        }
+      }
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "approved_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    }
+  },
+  "$defs": {
+    "PlanStep": {
+      "type": "object",
+      "required": ["id", "type", "tools", "expected_output"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Step identifier (e.g. s1, s2)"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["inspect", "patch", "shell", "verify", "git", "deps"],
+          "description": "Category of work this step performs"
+        },
+        "description": {
+          "type": "string",
+          "description": "What this step does"
+        },
+        "tools": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Tool IDs this step will invoke"
+        },
+        "targets": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Files or glob patterns this step targets"
+        },
+        "commands": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Shell commands (for shell/verify steps)"
+        },
+        "expected_output": {
+          "type": "string",
+          "description": "What this step should produce"
+        },
+        "depends_on": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Step IDs that must complete before this one"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["pending", "running", "completed", "failed", "skipped"],
+          "default": "pending"
+        }
+      }
+    }
+  }
+}

@@ -87,9 +87,6 @@ Prisma.NullTypes = {
  * Enums
  */
 exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
-  ReadUncommitted: 'ReadUncommitted',
-  ReadCommitted: 'ReadCommitted',
-  RepeatableRead: 'RepeatableRead',
   Serializable: 'Serializable'
 });
 
@@ -116,8 +113,8 @@ exports.Prisma.SshConnectionScalarFieldEnum = {
   os: 'os',
   architecture: 'architecture',
   dockerInstalled: 'dockerInstalled',
-  a2rInstalled: 'a2rInstalled',
-  a2rVersion: 'a2rVersion',
+  allternitInstalled: 'allternitInstalled',
+  allternitVersion: 'allternitVersion',
   lastConnectedAt: 'lastConnectedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -156,14 +153,255 @@ exports.Prisma.UserBackendPreferenceScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.WorkflowScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  title: 'title',
+  description: 'description',
+  userId: 'userId',
+  nodes: 'nodes',
+  edges: 'edges'
+};
+
+exports.Prisma.WorkflowExecutionScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  workflowId: 'workflowId',
+  status: 'status',
+  startedAt: 'startedAt',
+  completedAt: 'completedAt',
+  result: 'result',
+  error: 'error'
+};
+
+exports.Prisma.ConversationScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  title: 'title',
+  userId: 'userId',
+  parentConversationId: 'parentConversationId',
+  gizziSessionId: 'gizziSessionId'
+};
+
+exports.Prisma.ConversationMessageScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  conversationId: 'conversationId',
+  role: 'role',
+  content: 'content',
+  parentMessageId: 'parentMessageId',
+  metadata: 'metadata'
+};
+
+exports.Prisma.WorkspaceScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  slug: 'slug',
+  ownerId: 'ownerId',
+  description: 'description',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.WorkspaceMemberScalarFieldEnum = {
+  id: 'id',
+  workspaceId: 'workspaceId',
+  userId: 'userId',
+  agentId: 'agentId',
+  role: 'role',
+  joinedAt: 'joinedAt'
+};
+
+exports.Prisma.WorkspaceInvitationScalarFieldEnum = {
+  id: 'id',
+  workspaceId: 'workspaceId',
+  email: 'email',
+  role: 'role',
+  token: 'token',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.BoardItemScalarFieldEnum = {
+  id: 'id',
+  workspaceId: 'workspaceId',
+  title: 'title',
+  description: 'description',
+  status: 'status',
+  assigneeType: 'assigneeType',
+  assigneeId: 'assigneeId',
+  reporterId: 'reporterId',
+  priority: 'priority',
+  labels: 'labels',
+  estimatedMinutes: 'estimatedMinutes',
+  deadline: 'deadline',
+  dependencies: 'dependencies',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.BoardCommentScalarFieldEnum = {
+  id: 'id',
+  itemId: 'itemId',
+  authorType: 'authorType',
+  authorId: 'authorId',
+  body: 'body',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.TeamSkillScalarFieldEnum = {
+  id: 'id',
+  workspaceId: 'workspaceId',
+  name: 'name',
+  description: 'description',
+  manifest: 'manifest',
+  sourceRepo: 'sourceRepo',
+  version: 'version',
+  installedBy: 'installedBy',
+  installedAt: 'installedAt'
+};
+
+exports.Prisma.TaskAuditLogScalarFieldEnum = {
+  id: 'id',
+  taskId: 'taskId',
+  action: 'action',
+  actorType: 'actorType',
+  actorId: 'actorId',
+  payload: 'payload',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.AgentRuntimeScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  host: 'host',
+  agentClis: 'agentClis',
+  status: 'status',
+  lastHeartbeat: 'lastHeartbeat',
+  workspaceId: 'workspaceId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.AgentScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  name: 'name',
+  description: 'description',
+  type: 'type',
+  parentAgentId: 'parentAgentId',
+  model: 'model',
+  provider: 'provider',
+  capabilities: 'capabilities',
+  systemPrompt: 'systemPrompt',
+  tools: 'tools',
+  maxIterations: 'maxIterations',
+  temperature: 'temperature',
+  config: 'config',
+  status: 'status',
+  workspaceId: 'workspaceId',
+  avatar: 'avatar',
+  identityKey: 'identityKey',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  lastRunAt: 'lastRunAt'
+};
+
+exports.Prisma.MemoryEventScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  agentId: 'agentId',
+  type: 'type',
+  payload: 'payload',
+  source: 'source',
+  timestamp: 'timestamp'
+};
+
+exports.Prisma.MemoryEntityScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  agentId: 'agentId',
+  entityId: 'entityId',
+  name: 'name',
+  type: 'type',
+  content: 'content',
+  properties: 'properties',
+  propertyCount: 'propertyCount',
+  vectorId: 'vectorId',
+  lastUpdated: 'lastUpdated',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.MemoryEdgeScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  source: 'source',
+  relationship: 'relationship',
+  target: 'target',
+  confidence: 'confidence',
+  metadata: 'metadata',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.MemoryDocumentScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  agentId: 'agentId',
+  title: 'title',
+  content: 'content',
+  sourceType: 'sourceType',
+  sourceUrl: 'sourceUrl',
+  chunkCount: 'chunkCount',
+  vectorIds: 'vectorIds',
+  isIndexed: 'isIndexed',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.TestSuiteScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  agentId: 'agentId',
+  name: 'name',
+  description: 'description',
+  cases: 'cases',
+  runs: 'runs',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.AgentMetricScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  agentId: 'agentId',
+  runId: 'runId',
+  metricType: 'metricType',
+  value: 'value',
+  unit: 'unit',
+  metadata: 'metadata',
+  timestamp: 'timestamp'
+};
+
+exports.Prisma.InboxItemScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  agentId: 'agentId',
+  type: 'type',
+  title: 'title',
+  body: 'body',
+  severity: 'severity',
+  status: 'status',
+  actionUrl: 'actionUrl',
+  metadata: 'metadata',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
-};
-
-exports.Prisma.QueryMode = {
-  default: 'default',
-  insensitive: 'insensitive'
 };
 
 exports.Prisma.NullsOrder = {
@@ -176,7 +414,27 @@ exports.Prisma.ModelName = {
   User: 'User',
   SshConnection: 'SshConnection',
   RemoteBackendTarget: 'RemoteBackendTarget',
-  UserBackendPreference: 'UserBackendPreference'
+  UserBackendPreference: 'UserBackendPreference',
+  Workflow: 'Workflow',
+  WorkflowExecution: 'WorkflowExecution',
+  Conversation: 'Conversation',
+  ConversationMessage: 'ConversationMessage',
+  Workspace: 'Workspace',
+  WorkspaceMember: 'WorkspaceMember',
+  WorkspaceInvitation: 'WorkspaceInvitation',
+  BoardItem: 'BoardItem',
+  BoardComment: 'BoardComment',
+  TeamSkill: 'TeamSkill',
+  TaskAuditLog: 'TaskAuditLog',
+  AgentRuntime: 'AgentRuntime',
+  Agent: 'Agent',
+  MemoryEvent: 'MemoryEvent',
+  MemoryEntity: 'MemoryEntity',
+  MemoryEdge: 'MemoryEdge',
+  MemoryDocument: 'MemoryDocument',
+  TestSuite: 'TestSuite',
+  AgentMetric: 'AgentMetric',
+  InboxItem: 'InboxItem'
 };
 /**
  * Create the Client
@@ -189,7 +447,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/Users/macbook/Desktop/allternit-workspace/allternit/surfaces/platform/src/generated/prisma",
+      "value": "/Users/macbook/Desktop/allternit-workspace/allternit/surfaces/allternit-platform/src/generated/prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -207,11 +465,12 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/Users/macbook/Desktop/allternit-workspace/allternit/surfaces/platform/prisma/schema.prisma",
+    "sourceFilePath": "/Users/macbook/Desktop/allternit-workspace/allternit/surfaces/allternit-platform/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
-    "rootEnvPath": null
+    "rootEnvPath": null,
+    "schemaEnvPath": "../../../.env"
   },
   "relativePath": "../../../prisma",
   "clientVersion": "6.19.3",
@@ -219,8 +478,7 @@ const config = {
   "datasourceNames": [
     "db"
   ],
-  "activeProvider": "postgresql",
-  "postinstall": false,
+  "activeProvider": "sqlite",
   "inlineDatasources": {
     "db": {
       "url": {
@@ -229,13 +487,13 @@ const config = {
       }
     }
   },
-  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\ngenerator client {\n  provider      = \"prisma-client-js\"\n  output        = \"../src/generated/prisma\"\n  binaryTargets = [\"native\", \"debian-openssl-3.0.x\"]\n}\n\ndatasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\n// ============================================================================\n// User Model (assuming Clerk integration)\n// ============================================================================\n\nmodel User {\n  id        String   @id @default(cuid())\n  clerkId   String   @unique\n  email     String   @unique\n  name      String?\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  // Relations\n  sshConnections       SshConnection[]\n  remoteBackendTargets RemoteBackendTarget[]\n  backendPreference    UserBackendPreference?\n\n  @@map(\"users\")\n}\n\n// ============================================================================\n// SSH Connection Model\n// ============================================================================\n\nmodel SshConnection {\n  id                  String    @id @default(cuid())\n  userId              String\n  name                String\n  host                String\n  port                Int       @default(22)\n  username            String\n  authType            String    @map(\"auth_type\") // 'key' or 'password'\n  encryptedPrivateKey String?   @map(\"encrypted_private_key\")\n  encryptedPassword   String?   @map(\"encrypted_password\")\n  status              String    @default(\"disconnected\") // 'connected', 'disconnected', 'connecting', 'error'\n  os                  String?\n  architecture        String?\n  dockerInstalled     Boolean?  @map(\"docker_installed\")\n  a2rInstalled        Boolean?  @map(\"a2r_installed\")\n  a2rVersion          String?   @map(\"a2r_version\")\n  lastConnectedAt     DateTime? @map(\"last_connected_at\")\n  createdAt           DateTime  @default(now()) @map(\"created_at\")\n  updatedAt           DateTime  @updatedAt @map(\"updated_at\")\n\n  // Relations\n  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)\n  backendTarget RemoteBackendTarget?\n\n  @@index([userId])\n  @@index([status])\n  @@map(\"ssh_connections\")\n}\n\nmodel RemoteBackendTarget {\n  id                    String    @id @default(cuid())\n  userId                String\n  sshConnectionId       String    @unique @map(\"ssh_connection_id\")\n  name                  String\n  status                String    @default(\"disconnected\")\n  installState          String    @default(\"unknown\") @map(\"install_state\")\n  backendUrl            String?   @map(\"backend_url\")\n  gatewayUrl            String?   @map(\"gateway_url\")\n  gatewayWsUrl          String?   @map(\"gateway_ws_url\")\n  encryptedGatewayToken String?   @map(\"encrypted_gateway_token\")\n  installedVersion      String?   @map(\"installed_version\")\n  supportedClientRange  String?   @map(\"supported_client_range\")\n  lastVerifiedAt        DateTime? @map(\"last_verified_at\")\n  lastHeartbeatAt       DateTime? @map(\"last_heartbeat_at\")\n  lastError             String?   @map(\"last_error\")\n  createdAt             DateTime  @default(now()) @map(\"created_at\")\n  updatedAt             DateTime  @updatedAt @map(\"updated_at\")\n\n  user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)\n  sshConnection  SshConnection           @relation(fields: [sshConnectionId], references: [id], onDelete: Cascade)\n  activeForUsers UserBackendPreference[] @relation(\"ActiveRemoteBackendTarget\")\n\n  @@index([userId])\n  @@index([status])\n  @@map(\"remote_backend_targets\")\n}\n\nmodel UserBackendPreference {\n  id                          String   @id @default(cuid())\n  userId                      String   @unique\n  orgId                       String?  @map(\"org_id\")\n  mode                        String   @default(\"local\")\n  fallbackMode                String   @default(\"local\") @map(\"fallback_mode\")\n  executionMode               String   @default(\"auto\") @map(\"execution_mode\")\n  executionModeUpdatedAt      DateTime @default(now()) @map(\"execution_mode_updated_at\")\n  activeRemoteBackendTargetId String?  @map(\"active_remote_backend_target_id\")\n  createdAt                   DateTime @default(now()) @map(\"created_at\")\n  updatedAt                   DateTime @updatedAt @map(\"updated_at\")\n\n  user                      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)\n  activeRemoteBackendTarget RemoteBackendTarget? @relation(\"ActiveRemoteBackendTarget\", fields: [activeRemoteBackendTargetId], references: [id], onDelete: SetNull)\n\n  @@index([activeRemoteBackendTargetId])\n  @@map(\"user_backend_preferences\")\n}\n",
-  "inlineSchemaHash": "87f3c3558af8111cb1b1cdf2140b5906d197f50554fa7fef5a8e20ce61872d65",
+  "inlineSchema": "// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\ngenerator client {\n  provider      = \"prisma-client-js\"\n  output        = \"../src/generated/prisma\"\n  binaryTargets = [\"native\", \"debian-openssl-3.0.x\"]\n}\n\ndatasource db {\n  provider = \"sqlite\"\n  url      = env(\"DATABASE_URL\")\n}\n\n// ============================================================================\n// User Model (assuming Clerk integration)\n// ============================================================================\n\nmodel User {\n  id        String   @id @default(cuid())\n  clerkId   String   @unique\n  email     String   @unique\n  name      String?\n  createdAt DateTime @default(now())\n  updatedAt DateTime @updatedAt\n\n  // Relations\n  sshConnections       SshConnection[]\n  remoteBackendTargets RemoteBackendTarget[]\n  backendPreference    UserBackendPreference?\n\n  @@map(\"users\")\n}\n\n// ============================================================================\n// SSH Connection Model\n// ============================================================================\n\nmodel SshConnection {\n  id                  String    @id @default(cuid())\n  userId              String\n  name                String\n  host                String\n  port                Int       @default(22)\n  username            String\n  authType            String    @map(\"auth_type\") // 'key' or 'password'\n  encryptedPrivateKey String?   @map(\"encrypted_private_key\")\n  encryptedPassword   String?   @map(\"encrypted_password\")\n  status              String    @default(\"disconnected\") // 'connected', 'disconnected', 'connecting', 'error'\n  os                  String?\n  architecture        String?\n  dockerInstalled     Boolean?  @map(\"docker_installed\")\n  allternitInstalled  Boolean?  @map(\"a2r_installed\")\n  allternitVersion    String?   @map(\"a2r_version\")\n  lastConnectedAt     DateTime? @map(\"last_connected_at\")\n  createdAt           DateTime  @default(now()) @map(\"created_at\")\n  updatedAt           DateTime  @updatedAt @map(\"updated_at\")\n\n  // Relations\n  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)\n  backendTarget RemoteBackendTarget?\n\n  @@index([userId])\n  @@index([status])\n  @@map(\"ssh_connections\")\n}\n\nmodel RemoteBackendTarget {\n  id                    String    @id @default(cuid())\n  userId                String\n  sshConnectionId       String    @unique @map(\"ssh_connection_id\")\n  name                  String\n  status                String    @default(\"disconnected\")\n  installState          String    @default(\"unknown\") @map(\"install_state\")\n  backendUrl            String?   @map(\"backend_url\")\n  gatewayUrl            String?   @map(\"gateway_url\")\n  gatewayWsUrl          String?   @map(\"gateway_ws_url\")\n  encryptedGatewayToken String?   @map(\"encrypted_gateway_token\")\n  installedVersion      String?   @map(\"installed_version\")\n  supportedClientRange  String?   @map(\"supported_client_range\")\n  lastVerifiedAt        DateTime? @map(\"last_verified_at\")\n  lastHeartbeatAt       DateTime? @map(\"last_heartbeat_at\")\n  lastError             String?   @map(\"last_error\")\n  createdAt             DateTime  @default(now()) @map(\"created_at\")\n  updatedAt             DateTime  @updatedAt @map(\"updated_at\")\n\n  user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)\n  sshConnection  SshConnection           @relation(fields: [sshConnectionId], references: [id], onDelete: Cascade)\n  activeForUsers UserBackendPreference[] @relation(\"ActiveRemoteBackendTarget\")\n\n  @@index([userId])\n  @@index([status])\n  @@map(\"remote_backend_targets\")\n}\n\nmodel UserBackendPreference {\n  id                          String   @id @default(cuid())\n  userId                      String   @unique\n  orgId                       String?  @map(\"org_id\")\n  mode                        String   @default(\"local\")\n  fallbackMode                String   @default(\"local\") @map(\"fallback_mode\")\n  executionMode               String   @default(\"auto\") @map(\"execution_mode\")\n  executionModeUpdatedAt      DateTime @default(now()) @map(\"execution_mode_updated_at\")\n  activeRemoteBackendTargetId String?  @map(\"active_remote_backend_target_id\")\n  createdAt                   DateTime @default(now()) @map(\"created_at\")\n  updatedAt                   DateTime @updatedAt @map(\"updated_at\")\n\n  user                      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)\n  activeRemoteBackendTarget RemoteBackendTarget? @relation(\"ActiveRemoteBackendTarget\", fields: [activeRemoteBackendTargetId], references: [id], onDelete: SetNull)\n\n  @@index([activeRemoteBackendTargetId])\n  @@map(\"user_backend_preferences\")\n}\n\n// ============================================================================\n// Workflow Models\n// ============================================================================\n\nmodel Workflow {\n  id          String              @id @default(cuid())\n  createdAt   DateTime            @default(now())\n  updatedAt   DateTime            @updatedAt\n  title       String\n  description String?\n  userId      String?\n  nodes       String // JSON: WorkflowNode[]\n  edges       String // JSON: WorkflowEdge[]\n  executions  WorkflowExecution[]\n\n  @@map(\"workflows\")\n}\n\nmodel WorkflowExecution {\n  id          String    @id @default(cuid())\n  createdAt   DateTime  @default(now())\n  updatedAt   DateTime  @updatedAt\n  workflowId  String\n  workflow    Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)\n  status      String // \"pending\" | \"running\" | \"completed\" | \"failed\" | \"cancelled\"\n  startedAt   DateTime?\n  completedAt DateTime?\n  result      String? // JSON\n  error       String?\n\n  @@index([workflowId])\n  @@map(\"workflow_executions\")\n}\n\n// ============================================================================\n// Conversation Branching Models\n// ============================================================================\n\nmodel Conversation {\n  id                   String                @id @default(cuid())\n  createdAt            DateTime              @default(now())\n  updatedAt            DateTime              @updatedAt\n  title                String?\n  userId               String?\n  parentConversationId String?\n  gizziSessionId       String?               @map(\"gizzi_session_id\")\n  parentConversation   Conversation?         @relation(\"ConversationBranches\", fields: [parentConversationId], references: [id])\n  branches             Conversation[]        @relation(\"ConversationBranches\")\n  messages             ConversationMessage[]\n\n  @@index([userId])\n  @@index([parentConversationId])\n  @@index([gizziSessionId])\n  @@map(\"conversations\")\n}\n\nmodel ConversationMessage {\n  id              String       @id @default(cuid())\n  createdAt       DateTime     @default(now())\n  conversationId  String\n  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)\n  role            String // \"user\" | \"assistant\" | \"system\"\n  content         String\n  parentMessageId String?\n  metadata        String? // JSON\n\n  @@index([conversationId])\n  @@index([parentMessageId])\n  @@map(\"conversation_messages\")\n}\n\n// ============================================================================\n// Workspace Models (Team isolation — from Multica)\n// ============================================================================\n\nmodel Workspace {\n  id          String   @id @default(cuid())\n  name        String\n  slug        String   @unique\n  ownerId     String   @map(\"owner_id\")\n  description String?\n  createdAt   DateTime @default(now()) @map(\"created_at\")\n  updatedAt   DateTime @updatedAt @map(\"updated_at\")\n\n  members     WorkspaceMember[]\n  invitations WorkspaceInvitation[]\n  boardItems  BoardItem[]\n  skills      TeamSkill[]\n  runtimes    AgentRuntime[]\n\n  @@map(\"workspaces\")\n}\n\nmodel WorkspaceMember {\n  id          String   @id @default(cuid())\n  workspaceId String   @map(\"workspace_id\")\n  userId      String?  @map(\"user_id\")\n  agentId     String?  @map(\"agent_id\")\n  role        String // 'owner' | 'admin' | 'member' | 'agent'\n  joinedAt    DateTime @default(now()) @map(\"joined_at\")\n\n  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)\n\n  @@unique([workspaceId, userId])\n  @@unique([workspaceId, agentId])\n  @@map(\"workspace_members\")\n}\n\nmodel WorkspaceInvitation {\n  id          String   @id @default(cuid())\n  workspaceId String   @map(\"workspace_id\")\n  email       String\n  role        String // 'admin' | 'member' | 'agent'\n  token       String   @unique\n  expiresAt   DateTime @map(\"expires_at\")\n  createdAt   DateTime @default(now()) @map(\"created_at\")\n\n  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)\n\n  @@map(\"workspace_invitations\")\n}\n\n// ============================================================================\n// Board Models (Kanban — from Multica)\n// ============================================================================\n\nmodel BoardItem {\n  id               String    @id @default(cuid())\n  workspaceId      String    @map(\"workspace_id\")\n  title            String\n  description      String?\n  status           String // 'backlog' | 'todo' | 'in_progress' | 'in_review' | 'done' | 'blocked'\n  assigneeType     String?   @map(\"assignee_type\") // 'human' | 'agent'\n  assigneeId       String?   @map(\"assignee_id\")\n  reporterId       String    @map(\"reporter_id\")\n  priority         Int       @default(0)\n  labels           String? // JSON string[]\n  estimatedMinutes Int?      @map(\"estimated_minutes\")\n  deadline         DateTime?\n  dependencies     String? // JSON string[]\n  createdAt        DateTime  @default(now()) @map(\"created_at\")\n  updatedAt        DateTime  @updatedAt @map(\"updated_at\")\n\n  workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)\n  comments  BoardComment[]\n\n  @@index([workspaceId])\n  @@index([status])\n  @@map(\"board_items\")\n}\n\nmodel BoardComment {\n  id         String   @id @default(cuid())\n  itemId     String   @map(\"item_id\")\n  authorType String   @map(\"author_type\") // 'human' | 'agent'\n  authorId   String   @map(\"author_id\")\n  body       String\n  createdAt  DateTime @default(now()) @map(\"created_at\")\n\n  item BoardItem @relation(fields: [itemId], references: [id], onDelete: Cascade)\n\n  @@index([itemId])\n  @@map(\"board_comments\")\n}\n\n// ============================================================================\n// Team Skill Model (Skills Marketplace — from Multica)\n// ============================================================================\n\nmodel TeamSkill {\n  id          String   @id @default(cuid())\n  workspaceId String   @map(\"workspace_id\")\n  name        String\n  description String?\n  manifest    String? // JSON: Plugin SDK manifest\n  sourceRepo  String?  @map(\"source_repo\")\n  version     String\n  installedBy String   @map(\"installed_by\")\n  installedAt DateTime @default(now()) @map(\"installed_at\")\n\n  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)\n\n  @@index([workspaceId])\n  @@map(\"team_skills\")\n}\n\n// ============================================================================\n// Task Audit Log Model (from Taskdog)\n// ============================================================================\n\nmodel TaskAuditLog {\n  id        String   @id @default(cuid())\n  taskId    String   @map(\"task_id\")\n  action    String // 'created' | 'updated' | 'deleted' | 'status_changed' | 'assigned' | 'commented' | 'time_tracked'\n  actorType String   @map(\"actor_type\") // 'human' | 'agent' | 'system'\n  actorId   String   @map(\"actor_id\")\n  payload   String? // JSON: before/after diff\n  createdAt DateTime @default(now()) @map(\"created_at\")\n\n  @@index([taskId])\n  @@index([createdAt])\n  @@map(\"task_audit_logs\")\n}\n\n// ============================================================================\n// Agent Runtime Model (Runtime Discovery — from Multica)\n// ============================================================================\n\nmodel AgentRuntime {\n  id            String    @id @default(cuid())\n  name          String\n  host          String\n  agentClis     String?   @map(\"agent_clis\") // JSON string[]\n  status        String // 'online' | 'offline' | 'busy'\n  lastHeartbeat DateTime? @map(\"last_heartbeat\")\n  workspaceId   String?   @map(\"workspace_id\")\n  createdAt     DateTime  @default(now()) @map(\"created_at\")\n  updatedAt     DateTime  @updatedAt @map(\"updated_at\")\n\n  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)\n\n  @@index([workspaceId])\n  @@index([status])\n  @@map(\"agent_runtimes\")\n}\n\n// ============================================================================\n// Agent Platform Models (Memory, Testing, Metrics, Identity)\n// ============================================================================\n\nmodel Agent {\n  id            String    @id @default(cuid())\n  userId        String    @map(\"user_id\")\n  name          String\n  description   String?\n  type          String    @default(\"worker\") // orchestrator | sub-agent | worker | specialist | reviewer\n  parentAgentId String?   @map(\"parent_agent_id\")\n  model         String\n  provider      String // openai | anthropic | local | custom\n  capabilities  String? // JSON string[]\n  systemPrompt  String?   @map(\"system_prompt\")\n  tools         String? // JSON string[]\n  maxIterations Int       @default(10) @map(\"max_iterations\")\n  temperature   Float     @default(0.7)\n  config        String? // JSON Record<string, unknown>\n  status        String    @default(\"idle\") // idle | running | paused | error\n  workspaceId   String?   @map(\"workspace_id\")\n  avatar        String? // JSON AvatarConfig\n  identityKey   String?   @map(\"identity_key\") // Ed25519 public key for agent signing\n  createdAt     DateTime  @default(now()) @map(\"created_at\")\n  updatedAt     DateTime  @updatedAt @map(\"updated_at\")\n  lastRunAt     DateTime? @map(\"last_run_at\")\n\n  // Relations\n  memoryEvents   MemoryEvent[]\n  memoryEntities MemoryEntity[]\n  testSuites     TestSuite[]\n  metrics        AgentMetric[]\n\n  @@index([userId])\n  @@index([status])\n  @@map(\"agents\")\n}\n\nmodel MemoryEvent {\n  id        String   @id @default(cuid())\n  userId    String   @map(\"user_id\")\n  agentId   String?  @map(\"agent_id\")\n  type      String // message_sent | tool_called | file_read | session_start | knowledge_added\n  payload   String // JSON or text payload\n  source    String   @default(\"user\") // user | agent | system\n  timestamp DateTime @default(now())\n\n  agent Agent? @relation(fields: [agentId], references: [id], onDelete: SetNull)\n\n  @@index([userId])\n  @@index([agentId])\n  @@index([type])\n  @@index([timestamp])\n  @@map(\"memory_events\")\n}\n\nmodel MemoryEntity {\n  id            String   @id @default(cuid())\n  userId        String   @map(\"user_id\")\n  agentId       String?  @map(\"agent_id\")\n  entityId      String   @map(\"entity_id\") // Stable external ID\n  name          String\n  type          String   @default(\"General\") // Person | Company | Project | File | Session | Tool | Concept\n  content       String? // Full content or summary\n  properties    String? // JSON Record<string, unknown>\n  propertyCount Int      @default(0) @map(\"property_count\")\n  vectorId      String?  @map(\"vector_id\") // External vector DB reference\n  lastUpdated   DateTime @updatedAt @map(\"last_updated\")\n  createdAt     DateTime @default(now()) @map(\"created_at\")\n\n  agent Agent? @relation(fields: [agentId], references: [id], onDelete: SetNull)\n\n  @@index([userId])\n  @@index([agentId])\n  @@index([entityId])\n  @@index([type])\n  @@map(\"memory_entities\")\n}\n\nmodel MemoryEdge {\n  id           String   @id @default(cuid())\n  userId       String   @map(\"user_id\")\n  source       String\n  relationship String\n  target       String\n  confidence   Float    @default(1.0)\n  metadata     String? // JSON\n  createdAt    DateTime @default(now()) @map(\"created_at\")\n\n  @@index([userId])\n  @@index([source])\n  @@index([target])\n  @@map(\"memory_edges\")\n}\n\nmodel MemoryDocument {\n  id         String   @id @default(cuid())\n  userId     String   @map(\"user_id\")\n  agentId    String?  @map(\"agent_id\")\n  title      String\n  content    String\n  sourceType String   @map(\"source_type\") // upload | url | paste | generated\n  sourceUrl  String?  @map(\"source_url\")\n  chunkCount Int      @default(0) @map(\"chunk_count\")\n  vectorIds  String?  @map(\"vector_ids\") // JSON string[] of vector DB IDs\n  isIndexed  Boolean  @default(false) @map(\"is_indexed\")\n  createdAt  DateTime @default(now()) @map(\"created_at\")\n  updatedAt  DateTime @updatedAt @map(\"updated_at\")\n\n  @@index([userId])\n  @@index([agentId])\n  @@index([isIndexed])\n  @@map(\"memory_documents\")\n}\n\nmodel TestSuite {\n  id          String   @id @default(cuid())\n  userId      String   @map(\"user_id\")\n  agentId     String   @map(\"agent_id\")\n  name        String\n  description String?\n  cases       String // JSON TestCase[]\n  runs        String? // JSON TestRun[]\n  createdAt   DateTime @default(now()) @map(\"created_at\")\n  updatedAt   DateTime @updatedAt @map(\"updated_at\")\n\n  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)\n\n  @@index([userId])\n  @@index([agentId])\n  @@map(\"test_suites\")\n}\n\nmodel AgentMetric {\n  id         String   @id @default(cuid())\n  userId     String   @map(\"user_id\")\n  agentId    String   @map(\"agent_id\")\n  runId      String?  @map(\"run_id\")\n  metricType String   @map(\"metric_type\") // latency | tokens | cost | success | tool_calls\n  value      Float\n  unit       String // ms | tokens | usd | percent | count\n  metadata   String? // JSON\n  timestamp  DateTime @default(now())\n\n  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)\n\n  @@index([userId])\n  @@index([agentId])\n  @@index([metricType])\n  @@index([timestamp])\n  @@map(\"agent_metrics\")\n}\n\nmodel InboxItem {\n  id        String   @id @default(cuid())\n  userId    String   @map(\"user_id\")\n  agentId   String?  @map(\"agent_id\")\n  type      String // mail | gate_review | run_complete | system_alert | ban_triggered\n  title     String\n  body      String\n  severity  String   @default(\"info\") // info | warning | critical\n  status    String   @default(\"unread\") // unread | read | acknowledged | dismissed\n  actionUrl String?  @map(\"action_url\")\n  metadata  String? // JSON\n  createdAt DateTime @default(now()) @map(\"created_at\")\n\n  @@index([userId])\n  @@index([agentId])\n  @@index([status])\n  @@index([createdAt])\n  @@map(\"inbox_items\")\n}\n",
+  "inlineSchemaHash": "7791d419fb48a29e26e3ce8c4c24c40c0b3377c76cd5e753991bf7490abcfd0f",
   "copyEngine": true
 }
 config.dirname = '/'
 
-config.runtimeDataModel = JSON.parse("{\"models\":{\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"clerkId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"sshConnections\",\"kind\":\"object\",\"type\":\"SshConnection\",\"relationName\":\"SshConnectionToUser\"},{\"name\":\"remoteBackendTargets\",\"kind\":\"object\",\"type\":\"RemoteBackendTarget\",\"relationName\":\"RemoteBackendTargetToUser\"},{\"name\":\"backendPreference\",\"kind\":\"object\",\"type\":\"UserBackendPreference\",\"relationName\":\"UserToUserBackendPreference\"}],\"dbName\":\"users\"},\"SshConnection\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"host\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"port\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"username\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"authType\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"auth_type\"},{\"name\":\"encryptedPrivateKey\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"encrypted_private_key\"},{\"name\":\"encryptedPassword\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"encrypted_password\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"os\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"architecture\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"dockerInstalled\",\"kind\":\"scalar\",\"type\":\"Boolean\",\"dbName\":\"docker_installed\"},{\"name\":\"a2rInstalled\",\"kind\":\"scalar\",\"type\":\"Boolean\",\"dbName\":\"a2r_installed\"},{\"name\":\"a2rVersion\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"a2r_version\"},{\"name\":\"lastConnectedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"last_connected_at\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"created_at\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"updated_at\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"SshConnectionToUser\"},{\"name\":\"backendTarget\",\"kind\":\"object\",\"type\":\"RemoteBackendTarget\",\"relationName\":\"RemoteBackendTargetToSshConnection\"}],\"dbName\":\"ssh_connections\"},\"RemoteBackendTarget\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"sshConnectionId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"ssh_connection_id\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"installState\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"install_state\"},{\"name\":\"backendUrl\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"backend_url\"},{\"name\":\"gatewayUrl\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"gateway_url\"},{\"name\":\"gatewayWsUrl\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"gateway_ws_url\"},{\"name\":\"encryptedGatewayToken\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"encrypted_gateway_token\"},{\"name\":\"installedVersion\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"installed_version\"},{\"name\":\"supportedClientRange\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"supported_client_range\"},{\"name\":\"lastVerifiedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"last_verified_at\"},{\"name\":\"lastHeartbeatAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"last_heartbeat_at\"},{\"name\":\"lastError\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"last_error\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"created_at\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"updated_at\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"RemoteBackendTargetToUser\"},{\"name\":\"sshConnection\",\"kind\":\"object\",\"type\":\"SshConnection\",\"relationName\":\"RemoteBackendTargetToSshConnection\"},{\"name\":\"activeForUsers\",\"kind\":\"object\",\"type\":\"UserBackendPreference\",\"relationName\":\"ActiveRemoteBackendTarget\"}],\"dbName\":\"remote_backend_targets\"},\"UserBackendPreference\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"orgId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"org_id\"},{\"name\":\"mode\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"fallbackMode\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"fallback_mode\"},{\"name\":\"executionMode\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"execution_mode\"},{\"name\":\"executionModeUpdatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"execution_mode_updated_at\"},{\"name\":\"activeRemoteBackendTargetId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"active_remote_backend_target_id\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"created_at\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"updated_at\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"UserToUserBackendPreference\"},{\"name\":\"activeRemoteBackendTarget\",\"kind\":\"object\",\"type\":\"RemoteBackendTarget\",\"relationName\":\"ActiveRemoteBackendTarget\"}],\"dbName\":\"user_backend_preferences\"}},\"enums\":{},\"types\":{}}")
+config.runtimeDataModel = JSON.parse("{\"models\":{\"User\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"clerkId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"sshConnections\",\"kind\":\"object\",\"type\":\"SshConnection\",\"relationName\":\"SshConnectionToUser\"},{\"name\":\"remoteBackendTargets\",\"kind\":\"object\",\"type\":\"RemoteBackendTarget\",\"relationName\":\"RemoteBackendTargetToUser\"},{\"name\":\"backendPreference\",\"kind\":\"object\",\"type\":\"UserBackendPreference\",\"relationName\":\"UserToUserBackendPreference\"}],\"dbName\":\"users\"},\"SshConnection\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"host\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"port\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"username\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"authType\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"auth_type\"},{\"name\":\"encryptedPrivateKey\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"encrypted_private_key\"},{\"name\":\"encryptedPassword\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"encrypted_password\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"os\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"architecture\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"dockerInstalled\",\"kind\":\"scalar\",\"type\":\"Boolean\",\"dbName\":\"docker_installed\"},{\"name\":\"allternitInstalled\",\"kind\":\"scalar\",\"type\":\"Boolean\",\"dbName\":\"a2r_installed\"},{\"name\":\"allternitVersion\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"a2r_version\"},{\"name\":\"lastConnectedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"last_connected_at\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"created_at\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"updated_at\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"SshConnectionToUser\"},{\"name\":\"backendTarget\",\"kind\":\"object\",\"type\":\"RemoteBackendTarget\",\"relationName\":\"RemoteBackendTargetToSshConnection\"}],\"dbName\":\"ssh_connections\"},\"RemoteBackendTarget\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"sshConnectionId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"ssh_connection_id\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"installState\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"install_state\"},{\"name\":\"backendUrl\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"backend_url\"},{\"name\":\"gatewayUrl\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"gateway_url\"},{\"name\":\"gatewayWsUrl\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"gateway_ws_url\"},{\"name\":\"encryptedGatewayToken\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"encrypted_gateway_token\"},{\"name\":\"installedVersion\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"installed_version\"},{\"name\":\"supportedClientRange\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"supported_client_range\"},{\"name\":\"lastVerifiedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"last_verified_at\"},{\"name\":\"lastHeartbeatAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"last_heartbeat_at\"},{\"name\":\"lastError\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"last_error\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"created_at\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"updated_at\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"RemoteBackendTargetToUser\"},{\"name\":\"sshConnection\",\"kind\":\"object\",\"type\":\"SshConnection\",\"relationName\":\"RemoteBackendTargetToSshConnection\"},{\"name\":\"activeForUsers\",\"kind\":\"object\",\"type\":\"UserBackendPreference\",\"relationName\":\"ActiveRemoteBackendTarget\"}],\"dbName\":\"remote_backend_targets\"},\"UserBackendPreference\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"orgId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"org_id\"},{\"name\":\"mode\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"fallbackMode\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"fallback_mode\"},{\"name\":\"executionMode\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"execution_mode\"},{\"name\":\"executionModeUpdatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"execution_mode_updated_at\"},{\"name\":\"activeRemoteBackendTargetId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"active_remote_backend_target_id\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"created_at\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"updated_at\"},{\"name\":\"user\",\"kind\":\"object\",\"type\":\"User\",\"relationName\":\"UserToUserBackendPreference\"},{\"name\":\"activeRemoteBackendTarget\",\"kind\":\"object\",\"type\":\"RemoteBackendTarget\",\"relationName\":\"ActiveRemoteBackendTarget\"}],\"dbName\":\"user_backend_preferences\"},\"Workflow\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"nodes\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"edges\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"executions\",\"kind\":\"object\",\"type\":\"WorkflowExecution\",\"relationName\":\"WorkflowToWorkflowExecution\"}],\"dbName\":\"workflows\"},\"WorkflowExecution\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"workflowId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"workflow\",\"kind\":\"object\",\"type\":\"Workflow\",\"relationName\":\"WorkflowToWorkflowExecution\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"startedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"completedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"result\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"error\",\"kind\":\"scalar\",\"type\":\"String\"}],\"dbName\":\"workflow_executions\"},\"Conversation\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"parentConversationId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"gizziSessionId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"gizzi_session_id\"},{\"name\":\"parentConversation\",\"kind\":\"object\",\"type\":\"Conversation\",\"relationName\":\"ConversationBranches\"},{\"name\":\"branches\",\"kind\":\"object\",\"type\":\"Conversation\",\"relationName\":\"ConversationBranches\"},{\"name\":\"messages\",\"kind\":\"object\",\"type\":\"ConversationMessage\",\"relationName\":\"ConversationToConversationMessage\"}],\"dbName\":\"conversations\"},\"ConversationMessage\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"conversationId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"conversation\",\"kind\":\"object\",\"type\":\"Conversation\",\"relationName\":\"ConversationToConversationMessage\"},{\"name\":\"role\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"content\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"parentMessageId\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"metadata\",\"kind\":\"scalar\",\"type\":\"String\"}],\"dbName\":\"conversation_messages\"},\"Workspace\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"slug\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"ownerId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"owner_id\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"created_at\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"updated_at\"},{\"name\":\"members\",\"kind\":\"object\",\"type\":\"WorkspaceMember\",\"relationName\":\"WorkspaceToWorkspaceMember\"},{\"name\":\"invitations\",\"kind\":\"object\",\"type\":\"WorkspaceInvitation\",\"relationName\":\"WorkspaceToWorkspaceInvitation\"},{\"name\":\"boardItems\",\"kind\":\"object\",\"type\":\"BoardItem\",\"relationName\":\"BoardItemToWorkspace\"},{\"name\":\"skills\",\"kind\":\"object\",\"type\":\"TeamSkill\",\"relationName\":\"TeamSkillToWorkspace\"},{\"name\":\"runtimes\",\"kind\":\"object\",\"type\":\"AgentRuntime\",\"relationName\":\"AgentRuntimeToWorkspace\"}],\"dbName\":\"workspaces\"},\"WorkspaceMember\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"workspaceId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"workspace_id\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"user_id\"},{\"name\":\"agentId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"agent_id\"},{\"name\":\"role\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"joinedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"joined_at\"},{\"name\":\"workspace\",\"kind\":\"object\",\"type\":\"Workspace\",\"relationName\":\"WorkspaceToWorkspaceMember\"}],\"dbName\":\"workspace_members\"},\"WorkspaceInvitation\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"workspaceId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"workspace_id\"},{\"name\":\"email\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"role\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"token\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"expiresAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"expires_at\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"created_at\"},{\"name\":\"workspace\",\"kind\":\"object\",\"type\":\"Workspace\",\"relationName\":\"WorkspaceToWorkspaceInvitation\"}],\"dbName\":\"workspace_invitations\"},\"BoardItem\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"workspaceId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"workspace_id\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"assigneeType\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"assignee_type\"},{\"name\":\"assigneeId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"assignee_id\"},{\"name\":\"reporterId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"reporter_id\"},{\"name\":\"priority\",\"kind\":\"scalar\",\"type\":\"Int\"},{\"name\":\"labels\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"estimatedMinutes\",\"kind\":\"scalar\",\"type\":\"Int\",\"dbName\":\"estimated_minutes\"},{\"name\":\"deadline\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"dependencies\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"created_at\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"updated_at\"},{\"name\":\"workspace\",\"kind\":\"object\",\"type\":\"Workspace\",\"relationName\":\"BoardItemToWorkspace\"},{\"name\":\"comments\",\"kind\":\"object\",\"type\":\"BoardComment\",\"relationName\":\"BoardCommentToBoardItem\"}],\"dbName\":\"board_items\"},\"BoardComment\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"itemId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"item_id\"},{\"name\":\"authorType\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"author_type\"},{\"name\":\"authorId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"author_id\"},{\"name\":\"body\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"created_at\"},{\"name\":\"item\",\"kind\":\"object\",\"type\":\"BoardItem\",\"relationName\":\"BoardCommentToBoardItem\"}],\"dbName\":\"board_comments\"},\"TeamSkill\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"workspaceId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"workspace_id\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"manifest\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"sourceRepo\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"source_repo\"},{\"name\":\"version\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"installedBy\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"installed_by\"},{\"name\":\"installedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"installed_at\"},{\"name\":\"workspace\",\"kind\":\"object\",\"type\":\"Workspace\",\"relationName\":\"TeamSkillToWorkspace\"}],\"dbName\":\"team_skills\"},\"TaskAuditLog\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"taskId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"task_id\"},{\"name\":\"action\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"actorType\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"actor_type\"},{\"name\":\"actorId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"actor_id\"},{\"name\":\"payload\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"created_at\"}],\"dbName\":\"task_audit_logs\"},\"AgentRuntime\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"host\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"agentClis\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"agent_clis\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"lastHeartbeat\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"last_heartbeat\"},{\"name\":\"workspaceId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"workspace_id\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"created_at\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"updated_at\"},{\"name\":\"workspace\",\"kind\":\"object\",\"type\":\"Workspace\",\"relationName\":\"AgentRuntimeToWorkspace\"}],\"dbName\":\"agent_runtimes\"},\"Agent\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"user_id\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"parentAgentId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"parent_agent_id\"},{\"name\":\"model\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"provider\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"capabilities\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"systemPrompt\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"system_prompt\"},{\"name\":\"tools\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"maxIterations\",\"kind\":\"scalar\",\"type\":\"Int\",\"dbName\":\"max_iterations\"},{\"name\":\"temperature\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"config\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"workspaceId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"workspace_id\"},{\"name\":\"avatar\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"identityKey\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"identity_key\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"created_at\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"updated_at\"},{\"name\":\"lastRunAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"last_run_at\"},{\"name\":\"memoryEvents\",\"kind\":\"object\",\"type\":\"MemoryEvent\",\"relationName\":\"AgentToMemoryEvent\"},{\"name\":\"memoryEntities\",\"kind\":\"object\",\"type\":\"MemoryEntity\",\"relationName\":\"AgentToMemoryEntity\"},{\"name\":\"testSuites\",\"kind\":\"object\",\"type\":\"TestSuite\",\"relationName\":\"AgentToTestSuite\"},{\"name\":\"metrics\",\"kind\":\"object\",\"type\":\"AgentMetric\",\"relationName\":\"AgentToAgentMetric\"}],\"dbName\":\"agents\"},\"MemoryEvent\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"user_id\"},{\"name\":\"agentId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"agent_id\"},{\"name\":\"type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"payload\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"source\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"timestamp\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"agent\",\"kind\":\"object\",\"type\":\"Agent\",\"relationName\":\"AgentToMemoryEvent\"}],\"dbName\":\"memory_events\"},\"MemoryEntity\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"user_id\"},{\"name\":\"agentId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"agent_id\"},{\"name\":\"entityId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"entity_id\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"content\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"properties\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"propertyCount\",\"kind\":\"scalar\",\"type\":\"Int\",\"dbName\":\"property_count\"},{\"name\":\"vectorId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"vector_id\"},{\"name\":\"lastUpdated\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"last_updated\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"created_at\"},{\"name\":\"agent\",\"kind\":\"object\",\"type\":\"Agent\",\"relationName\":\"AgentToMemoryEntity\"}],\"dbName\":\"memory_entities\"},\"MemoryEdge\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"user_id\"},{\"name\":\"source\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"relationship\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"target\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"confidence\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"metadata\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"created_at\"}],\"dbName\":\"memory_edges\"},\"MemoryDocument\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"user_id\"},{\"name\":\"agentId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"agent_id\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"content\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"sourceType\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"source_type\"},{\"name\":\"sourceUrl\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"source_url\"},{\"name\":\"chunkCount\",\"kind\":\"scalar\",\"type\":\"Int\",\"dbName\":\"chunk_count\"},{\"name\":\"vectorIds\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"vector_ids\"},{\"name\":\"isIndexed\",\"kind\":\"scalar\",\"type\":\"Boolean\",\"dbName\":\"is_indexed\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"created_at\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"updated_at\"}],\"dbName\":\"memory_documents\"},\"TestSuite\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"user_id\"},{\"name\":\"agentId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"agent_id\"},{\"name\":\"name\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"description\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"cases\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"runs\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"created_at\"},{\"name\":\"updatedAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"updated_at\"},{\"name\":\"agent\",\"kind\":\"object\",\"type\":\"Agent\",\"relationName\":\"AgentToTestSuite\"}],\"dbName\":\"test_suites\"},\"AgentMetric\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"user_id\"},{\"name\":\"agentId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"agent_id\"},{\"name\":\"runId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"run_id\"},{\"name\":\"metricType\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"metric_type\"},{\"name\":\"value\",\"kind\":\"scalar\",\"type\":\"Float\"},{\"name\":\"unit\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"metadata\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"timestamp\",\"kind\":\"scalar\",\"type\":\"DateTime\"},{\"name\":\"agent\",\"kind\":\"object\",\"type\":\"Agent\",\"relationName\":\"AgentToAgentMetric\"}],\"dbName\":\"agent_metrics\"},\"InboxItem\":{\"fields\":[{\"name\":\"id\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"userId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"user_id\"},{\"name\":\"agentId\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"agent_id\"},{\"name\":\"type\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"title\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"body\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"severity\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"status\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"actionUrl\",\"kind\":\"scalar\",\"type\":\"String\",\"dbName\":\"action_url\"},{\"name\":\"metadata\",\"kind\":\"scalar\",\"type\":\"String\"},{\"name\":\"createdAt\",\"kind\":\"scalar\",\"type\":\"DateTime\",\"dbName\":\"created_at\"}],\"dbName\":\"inbox_items\"}},\"enums\":{},\"types\":{}}")
 defineDmmfProperty(exports.Prisma, config.runtimeDataModel)
 config.engineWasm = {
   getRuntime: async () => require('./query_engine_bg.js'),

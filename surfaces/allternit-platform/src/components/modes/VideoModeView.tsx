@@ -350,11 +350,11 @@ export function VideoModeView({ initialPrompt = '' }: VideoModeViewProps) {
                 <label className="text-xs text-white/40">Provider</label>
                 <Select 
                   value={config.provider} 
-                  onValueChange={(v: 'minimax' | 'kling') => {
-                    setConfig(prev => ({ 
-                      ...prev, 
-                      provider: v,
-                      model: VIDEO_PROVIDERS[v].models[0].id 
+                  onValueChange={(v: string) => {
+                    setConfig(prev => ({
+                      ...prev,
+                      provider: v as 'minimax' | 'kling',
+                      model: (VIDEO_PROVIDERS as any)[v]?.models?.[0]?.id ?? prev.model,
                     }));
                   }}
                 >
@@ -427,7 +427,7 @@ export function VideoModeView({ initialPrompt = '' }: VideoModeViewProps) {
                 <label className="text-xs text-white/40">Aspect Ratio</label>
                 <Select 
                   value={config.aspectRatio} 
-                  onValueChange={(v: '16:9' | '9:16' | '1:1') => setConfig(prev => ({ ...prev, aspectRatio: v }))}
+                  onValueChange={(v: string) => setConfig(prev => ({ ...prev, aspectRatio: v as '16:9' | '9:16' | '1:1' }))}
                 >
                   <SelectTrigger className="bg-white/5 border-white/10 text-white text-sm h-9">
                     <SelectValue />

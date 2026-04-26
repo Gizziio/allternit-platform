@@ -1,7 +1,7 @@
 /**
- * A2rchitect Super-Agent OS - Workspace Service
+ * allternit Super-Agent OS - Workspace Service
  * 
- * Integration with the A2R Rails workspace service (port 3021):
+ * Integration with the Allternit Rails workspace service (port 3021):
  * - DAG state management
  * - Bus message queue
  * - Ledger event tracking

@@ -47,28 +47,6 @@ export interface CoworkModeAgentTasksProps extends BaseAgentSessionProps {
   taskFilter?: 'all' | 'pending' | 'running' | 'completed';
 }
 
-// Code Mode: Agent Development Environment
-export interface CodeModeADEProps extends BaseAgentSessionProps {
-  mode: 'code';
-  /** Workspace root path */
-  workspacePath?: string;
-  /** Current file being edited */
-  currentFile?: string;
-  /** Show file explorer */
-  showExplorer?: boolean;
-  /** Show git panel */
-  showGitPanel?: boolean;
-  /** Agent being developed */
-  targetAgentId?: string;
-  /** IDE features enabled */
-  features?: {
-    linting?: boolean;
-    debugging?: boolean;
-    testing?: boolean;
-    deployment?: boolean;
-  };
-}
-
 // Browser Mode: Agent-driven browsing
 export interface BrowserModeAgentSessionProps extends BaseAgentSessionProps {
   mode: 'browser';

@@ -472,7 +472,7 @@ export const iconMapping: Record<IconName, LucideIcon | CustomIconComponent> = {
   'thumbs-up': ThumbsUp,
 
   // ==========================================================================
-  // Custom A2rchitect Brand Icons (8 icons)
+  // Custom allternit Brand Icons (8 icons)
   // ==========================================================================
   'allternit-logo': AllternitLogo,
   'allternit-mark': AllternitMark,

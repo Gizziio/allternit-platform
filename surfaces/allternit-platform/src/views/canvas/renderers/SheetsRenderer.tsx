@@ -7,13 +7,14 @@
 
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { AllternitDataGrid } from '@/components/a2r';
+import { AllternitDataGrid } from '@/components/allternit';
 import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
+import type { MoATask } from '@/lib/api/moa-client';
 
 interface SheetsRendererProps {
   artifact: ArtifactUIPart;
   sessionId?: string;
-  onMoATaskUpdate?: (tasks: any[]) => void;
+  onMoATaskUpdate?: (tasks: MoATask[]) => void;
 }
 
 /**
@@ -57,7 +58,7 @@ export function SheetsRenderer({
 
     const parsedData = lines.slice(1).map((line, index) => {
       const values = line.split(',').map(v => v.trim());
-      const row: Record<string, any> = { id: `row-${index}` };
+      const row: Record<string, string | number> = { id: `row-${index}` };
       headers.forEach((header, i) => {
         const key = header.toLowerCase().replace(/\s+/g, '_');
         const value = values[i];

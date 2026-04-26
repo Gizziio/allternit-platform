@@ -25,12 +25,7 @@ import {
   ForkKnife as Utensils 
 } from "@phosphor-icons/react";
 
-// Assuming STUDIO_THEME is shared or defined similarly
-const STUDIO_THEME = {
-  accent: "#D4956A",
-  borderSubtle: "rgba(212, 176, 140, 0.1)",
-  textMuted: "#A8A29E"
-};
+import { STUDIO_THEME } from "../AgentView.constants";
 
 export function MascotPreview({ config, name }: { config: any; name: string }) {
   const getAvatarIcon = () => {

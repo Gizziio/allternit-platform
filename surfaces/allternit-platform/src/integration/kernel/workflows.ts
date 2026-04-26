@@ -1,5 +1,3 @@
-import { api } from '../api-client';
-
 export interface WorkflowStep {
   tool: string;
   params: Record<string, unknown>;
@@ -43,14 +41,18 @@ export const PREDEFINED_WORKFLOWS: Workflow[] = [
   }
 ];
 
-export async function runWorkflow(workflowId: string) {
+export async function runWorkflow(workflowId: string): Promise<string> {
   const workflow = PREDEFINED_WORKFLOWS.find(w => w.id === workflowId);
   if (!workflow) throw new Error('Workflow not found');
 
-  // Use API client to run workflow
-  const result = await api.runWorkflow(workflowId, {
-    steps: workflow.steps
+  const res = await fetch(`/api/v1/workflows/${workflowId}/execute`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ steps: workflow.steps }),
   });
 
-  return result.run_id;
+  if (!res.ok) throw new Error(`Failed to execute workflow: ${res.statusText}`);
+
+  const result = await res.json() as { execution_id: string };
+  return result.execution_id;
 }

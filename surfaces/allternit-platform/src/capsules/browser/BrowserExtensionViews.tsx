@@ -455,10 +455,9 @@ export function BrowserExtensionConfigView({
           className="mt-1 flex cursor-pointer items-center gap-1 text-xs font-bold text-muted-foreground hover:text-foreground"
         >
           Advanced
-          <ChevronDown
-            className="size-3 transition-transform"
-            style={{ transform: advancedOpen ? "rotate(0deg)" : "rotate(90deg)" }}
-          />
+          <span className="size-3 transition-transform inline-block" style={{ transform: advancedOpen ? "rotate(0deg)" : "rotate(90deg)" }}>
+            <ChevronDown className="size-3" />
+          </span>
         </button>
 
         {advancedOpen && (

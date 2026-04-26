@@ -88,6 +88,18 @@ export const MODE_COLORS = {
     shadow: 'rgba(29,62,80,0.14)',
     base: '#20262B',
   },
+  design: {
+    accent: '#D4B08C',           // Identity Sand
+    glow: 'rgba(212,176,140,0.28)',
+    soft: 'rgba(212,176,140,0.14)',
+    border: 'rgba(212,176,140,0.16)',
+    wash: 'rgba(212,176,140,0.18)',
+    fog: 'rgba(115,96,76,0.2)',
+    edge: 'rgba(212,176,140,0.16)',
+    panelTint: 'rgba(212,176,140,0.08)',
+    shadow: 'rgba(61,48,36,0.14)',
+    base: '#1E1A16',             // Warm Nude Obsidian
+  },
 } as const;
 
 export type AgentMode = keyof typeof MODE_COLORS;

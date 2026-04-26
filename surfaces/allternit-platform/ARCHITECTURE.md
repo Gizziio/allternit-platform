@@ -7,7 +7,7 @@
 
 ## Overview
 
-The 6-ui layer serves as the user interface layer for the A2R platform. This layer owns the user-facing UI platforms: shell components, shared UI kits, and UI components that render DAGs, receipts, and memory workflows. It provides the primary interaction surface for users with the A2R platform.
+The 6-ui layer serves as the user interface layer for the Allternit platform. This layer owns the user-facing UI platforms: shell components, shared UI kits, and UI components that render DAGs, receipts, and memory workflows. It provides the primary interaction surface for users with the Allternit platform.
 
 ### Key Changes (February 2026)
 
@@ -23,8 +23,8 @@ The 6-ui layer serves as the user interface layer for the A2R platform. This lay
 
 ### Platform UI Components
 
-#### `a2r-platform/`
-- **Location**: `6-ui/a2r-platform/`
+#### `allternit-platform/`
+- **Location**: `6-ui/allternit-platform/`
 - **Purpose**: UI platform primitives, vendor wrappers, and business logic services
 - **Components**:
   - Cross-platform UI primitives
@@ -98,7 +98,7 @@ The `src/hooks/` directory has been updated to use the new services:
 ```
 ┌─────────────┐    ┌─────────────────────────┐    ┌─────────────────────┐
 │ User        │───▶│ React Component        │───▶│ Service (Business   │
-│ Interaction │    │ (a2r-platform/views/)  │    │ Logic)              │
+│ Interaction │    │ (allternit-platform/views/)  │    │ Logic)              │
 └─────────────┘    └─────────────────────────┘    └─────────────────────┘
                           │                               │
                           ▼                               ▼

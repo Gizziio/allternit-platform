@@ -21,4 +21,4 @@ export { ObservabilityDashboard } from './ObservabilityDashboard';
 export { SwarmDashboard } from '../SwarmDashboard';
 export { IVKGEPanel } from '../IVKGEPanel';
 export { MultimodalInput } from '../MultimodalInput';
-export { TamboStudio } from '../TamboStudio';
+export { UIForge } from '../UIForge';

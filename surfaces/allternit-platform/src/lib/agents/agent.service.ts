@@ -1128,10 +1128,210 @@ export function getStatusColor(status: string): string {
   }
 }
 
-// Stubs for missing exports
-export function setupSeedDefaults() { return {}; }
-export function createDefaultAvatarConfig() { return {}; }
-export function detectPluginConflicts() { return { hasConflicts: false, conflicts: [] }; }
-export function splitLines(text: string): string[] { return text.split('\n'); }
-export function generateEnhancedWorkspaceDocuments() { return []; }
-export function buildSeedTelemetryEvents() { return []; }
+import { createDefaultAvatarConfig } from './character.types';
+import type { CreationCardSeedState, CreationBlueprintState } from './agent.types';
+import type { CharacterTelemetryEvent } from './character.types';
+export { createDefaultAvatarConfig };
+
+export function setupSeedDefaults(setup?: string): CreationCardSeedState {
+  const voiceStyleMap: Record<string, string> = {
+    coding: 'precise',
+    creative: 'expressive',
+    research: 'analytical',
+    operations: 'professional',
+    generalist: 'conversational',
+  };
+  return {
+    domainFocus: setup || 'general',
+    definitionOfDone: 'Task completed successfully with all requirements met',
+    escalationRules: 'Escalate if stuck for more than 3 iterations\nEscalate on security or data concerns',
+    voiceRules: 'Be concise and clear\nUse active voice',
+    voiceMicroBans: 'Avoid jargon\nNo excessive hedging',
+    voiceStyle: voiceStyleMap[setup || ''] || 'professional',
+    hardBanCategories: [],
+  };
+}
+
+export function detectPluginConflicts(tools: string[]): { hasConflicts: boolean; hasConflict: boolean; severity: string | null; conflicts: string[] } {
+  const conflictPairs: [string, string][] = [
+    ['browser-automation', 'terminal'],
+    ['file-operations', 'database'],
+  ];
+  const conflicts: string[] = [];
+  for (const [a, b] of conflictPairs) {
+    if (tools.includes(a) && tools.includes(b)) {
+      conflicts.push(`${a} conflicts with ${b}`);
+    }
+  }
+  return {
+    hasConflicts: conflicts.length > 0,
+    hasConflict: conflicts.length > 0,
+    severity: conflicts.length > 0 ? 'warning' : null,
+    conflicts,
+  };
+}
+
+export function splitLines(text: string): string[] {
+  return text.split('\n').map(l => l.trim()).filter(Boolean);
+}
+
+export function generateEnhancedWorkspaceDocuments(config: unknown, metadata: Record<string, unknown>): Array<{ path: string; content: string }> {
+  const name = (metadata?.name as string) || 'Agent';
+  const description = (metadata?.description as string) || '';
+  const model = (metadata?.model as string) || 'gpt-4o';
+  const provider = (metadata?.provider as string) || 'openai';
+  const c = (config as Record<string, unknown>) || {};
+  const personality = (c.personality as Record<string, unknown>) || {};
+  const character = (c.character as Record<string, unknown>) || {};
+  const tools = (metadata?.tools as string[]) || (c.tools as string[]) || [];
+  const capabilities = (metadata?.capabilities as string[]) || (c.capabilities as string[]) || [];
+  const hardBans = (character.hardBans as Array<{ category: string }>) || [];
+  const specialtySkills = (character.specialtySkills as string[]) || [];
+  const setup = (character.setup as string) || 'generalist';
+  const temperament = (character.temperament as string) || 'balanced';
+  const now = new Date().toISOString();
+
+  return [
+    {
+      path: 'README.md',
+      content: `# ${name}
+
+${description}
+
+## Configuration
+- **Model**: ${model} (${provider})
+- **Setup**: ${setup}
+- **Temperament**: ${temperament}
+- **Created**: ${now.split('T')[0]}
+
+## Capabilities
+${capabilities.length > 0 ? capabilities.map(c => `- ${c}`).join('\n') : '*No capabilities configured*'}
+
+## Tools
+${tools.length > 0 ? tools.map(t => `- ${t}`).join('\n') : '*No tools configured*'}
+`
+    },
+    {
+      path: 'identity/IDENTITY.md',
+      content: `# IDENTITY.md — Who Is ${name}?
+
+| Field | Value |
+|-------|-------|
+| **Name** | ${name} |
+| **Type** | ${setup} |
+| **Temperament** | ${temperament} |
+| **Model** | ${model} |
+| **Provider** | ${provider} |
+
+## Purpose
+${description || 'To assist effectively and deliver high-quality results.'}
+
+## Specialty Skills
+${specialtySkills.length > 0 ? specialtySkills.map(s => `- ${s}`).join('\n') : '- General assistance'}
+`
+    },
+    {
+      path: 'identity/SOUL.md',
+      content: `# SOUL.md — ${name}'s Core Principles
+
+## Communication Style
+- **Approach**: ${(personality.communicationStyle as string) || 'direct'}
+- **Work Style**: ${(personality.workStyle as string) || 'independent'}
+- **Decision Making**: ${(personality.decisionMaking as string) || 'data-driven'}
+
+## Personality Traits
+${((c.personalityTraits as string[]) || []).map(t => `- ${t}`).join('\n') || '- Adaptable and professional'}
+
+## Backstory
+${(c.backstory as string) || 'An AI assistant created to serve with accuracy and efficiency.'}
+`
+    },
+    {
+      path: 'governance/PLAYBOOK.md',
+      content: `# PLAYBOOK.md — ${name}'s Execution Rules
+
+## Standard Operating Procedures
+
+### Communication
+- Be ${(personality.communicationStyle as string) || 'direct'} and clear
+- Adapt tone to context
+- Acknowledge uncertainty honestly
+
+### Error Handling
+- Acknowledge limitations honestly
+- Offer alternatives when stuck
+- Log errors for improvement
+
+### Boundaries
+${hardBans.length > 0 ? hardBans.map(b => `- **${b.category}**: Prohibited`).join('\n') : '- No hard bans configured'}
+`
+    },
+    {
+      path: 'governance/TOOLS.md',
+      content: `# TOOLS.md — ${name}'s Tool Inventory
+
+## Available Tools
+${tools.length > 0 ? tools.map(t => `- ${t}`).join('\n') : '*No tools configured*'}
+
+## Capabilities
+${capabilities.length > 0 ? capabilities.map(c => `- ${c}`).join('\n') : '*No capabilities configured*'}
+
+## Tool Usage Guidelines
+- Verify permissions before use
+- Explain what tools will do
+- Report results clearly
+`
+    },
+    {
+      path: 'governance/HEARTBEAT.md',
+      content: `# HEARTBEAT.md — ${name}'s Periodic Tasks
+
+## Scheduled Tasks
+*Configure in CronJob wizard*
+
+### Daily
+- [ ] Self-check
+- [ ] Memory review
+
+### Weekly
+- [ ] Performance review
+- [ ] Archive old data
+`
+    },
+    {
+      path: 'memory/active-tasks.md',
+      content: `# Active Tasks
+
+*No active tasks*
+
+> Tasks will be automatically added when ${name} receives work.
+`
+    },
+    {
+      path: 'CHANGELOG.md',
+      content: `# Changelog
+
+## 1.0.0 — ${now.split('T')[0]}
+- Agent created
+- Workspace initialized with ${tools.length} tools, ${capabilities.length} capabilities
+- ${hardBans.length} hard bans configured
+`
+    },
+  ];
+}
+
+export function buildSeedTelemetryEvents(blueprint: CreationBlueprintState): CharacterTelemetryEvent[] {
+  return [
+    {
+      id: `evt-${Date.now()}`,
+      type: 'mission_created',
+      timestamp: Date.now(),
+      runId: `run-${Date.now()}`,
+      payload: {
+        setup: blueprint.setup,
+        temperament: blueprint.temperament,
+        specialtySkills: blueprint.specialtySkills ?? [],
+      },
+    },
+  ];
+}

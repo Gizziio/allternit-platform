@@ -44,7 +44,7 @@ export function TemplatePreview({
   const generateDevContainerJson = (): string => {
     const imageMap: Record<string, string> = {
       'allternit-platform-dev': 'mcr.microsoft.com/devcontainers/typescript-node:20',
-      'a2r-agent-workspace': 'mcr.microsoft.com/devcontainers/python:3.11',
+      'allternit-agent-workspace': 'mcr.microsoft.com/devcontainers/python:3.11',
       'nodejs-typescript': 'mcr.microsoft.com/devcontainers/typescript-node:20',
       'python-ml': 'mcr.microsoft.com/devcontainers/python:3.11',
       'rust-systems': 'mcr.microsoft.com/devcontainers/rust:latest',
@@ -85,7 +85,7 @@ export function TemplatePreview({
   const generateDockerfile = (): string => {
     const baseImages: Record<string, string> = {
       'allternit-platform-dev': 'node:20-alpine',
-      'a2r-agent-workspace': 'python:3.11-slim',
+      'allternit-agent-workspace': 'python:3.11-slim',
       'nodejs-typescript': 'node:20-alpine',
       'python-ml': 'python:3.11-slim',
       'rust-systems': 'rust:latest',

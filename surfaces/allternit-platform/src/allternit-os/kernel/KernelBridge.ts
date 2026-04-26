@@ -1,5 +1,5 @@
 /**
- * A2rchitect Super-Agent OS - Kernel Bridge
+ * allternit Super-Agent OS - Kernel Bridge
  * 
  * Connects the Utility Pane to the 1-kernel Brain Runtime.
  * Supports multiple backends:
@@ -17,7 +17,7 @@ import type {
   DataGridState,
   PresentationState,
   OrchestratorState,
-  A2rProgramState,
+  AllternitProgramState,
 } from '../types/programs';
 
 // ============================================================================
@@ -114,7 +114,7 @@ export class KernelElectronBridge implements KernelBridge {
     switch (event.event) {
       case 'state-update':
         if (event.programId) {
-          store.setProgramState(event.programId, event.payload as A2rProgramState);
+          store.setProgramState(event.programId, event.payload as AllternitProgramState);
         }
         break;
 
@@ -252,7 +252,7 @@ export class KernelWebSocketBridge implements KernelBridge {
     switch (event.event) {
       case 'state-update':
         if (event.programId) {
-          store.setProgramState(event.programId, event.payload as A2rProgramState);
+          store.setProgramState(event.programId, event.payload as AllternitProgramState);
         }
         break;
 

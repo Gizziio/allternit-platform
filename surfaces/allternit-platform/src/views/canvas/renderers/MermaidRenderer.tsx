@@ -17,12 +17,21 @@ import {
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
+import type { MoATask } from '@/lib/api/moa-client';
 import { cn } from '@/lib/utils';
+
+declare global {
+  interface Window {
+    mermaid?: {
+      render: (id: string, code: string) => Promise<{ svg: string }>;
+    };
+  }
+}
 
 interface MermaidRendererProps {
   artifact: ArtifactUIPart;
   sessionId?: string;
-  onMoATaskUpdate?: (tasks: any[]) => void;
+  onMoATaskUpdate?: (tasks: MoATask[]) => void;
 }
 
 export function MermaidRenderer({
@@ -59,8 +68,8 @@ export function MermaidRenderer({
       
       try {
         // Try to use mermaid if available, otherwise use fallback
-        if (typeof window !== 'undefined' && (window as any).mermaid) {
-          const mermaid = (window as any).mermaid;
+        if (typeof window !== 'undefined' && window.mermaid) {
+          const mermaid = window.mermaid;
           const id = `mermaid-${Date.now()}`;
           const { svg } = await mermaid.render(id, mermaidCode);
           svgRef.current = svg;

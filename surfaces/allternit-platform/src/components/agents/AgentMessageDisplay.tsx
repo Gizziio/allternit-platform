@@ -12,6 +12,7 @@ import {
   Hash,
   Radio,
   Check,
+  CheckFat,
 
   Clock,
 } from '@phosphor-icons/react';

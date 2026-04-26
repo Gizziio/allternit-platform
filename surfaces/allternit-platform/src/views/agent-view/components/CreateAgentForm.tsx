@@ -22,9 +22,12 @@ import {
   Warning, 
   Check, 
   Stack,
-  Plus
+  Plus,
+  Sun,
+  Moon,
 } from "@phosphor-icons/react";
 import { useAgentStore } from "@/lib/agents/agent.store";
+import { useThemeStore, resolveTheme } from "@/design/ThemeStore";
 import type { 
   Agent, 
   CreateAgentInput, 
@@ -54,6 +57,7 @@ import {
   detectPluginConflicts,
   generateEnhancedWorkspaceDocuments,
 } from "@/lib/agents/agent.service";
+import { agentWorkspaceService } from "@/lib/agents/agent-workspace.service";
 import {
   getDefaultCharacterLayer, 
   computeCharacterStats, 
@@ -64,12 +68,25 @@ import { useWizardPersistence } from "@/components/agents/AgentCreationWizard.pe
 import { useAvatarCreatorStore } from "@/stores/avatar-creator.store";
 import { AvatarCreatorStep } from "@/views/agent-creation/AvatarCreatorStep";
 import { MascotPreview } from "./AgentMascotPreview";
+import { AgentTemplateSelector } from "./AgentTemplateSelector";
+import { AgentToolConfigurator } from "./AgentToolConfigurator";
+import {
+  AgentAvatarPicker,
+  createDefaultAvatarPickerConfig,
+  type AvatarPickerConfig,
+} from "./AgentAvatarPicker";
+import {
+  AgentWorkspacePreview,
+  generateWorkspaceDocs,
+  type WorkspaceDocument,
+} from "./AgentWorkspacePreview";
 import { 
   MASCOT_TEMPLATES, 
   CAPABILITY_CATEGORIES, 
   AGENT_CAPABILITIES_ENHANCED, 
-  ENHANCED_HARD_BAN_CATEGORIES 
+  ENHANCED_HARD_BAN_CATEGORIES,
 } from "../AgentView.constants";
+import { useStudioTheme } from "../useStudioTheme";
 import * as voiceService from "@/lib/agents/voice.service";
 import { api, GATEWAY_URL } from "@/integration/api-client";
 import { Input } from "@/components/ui/input";
@@ -82,22 +99,13 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TagInput } from "@/components/ui/tag-input";
 import { WorkspaceLayerConfigurator } from "@/components/WorkspaceLayerConfigurator";
-import { AllternitSystemPromptEditor } from "@/components/agents/A2RSystemPromptEditor";
+import { AllternitSystemPromptEditor } from "@/components/agents/AllternitSystemPromptEditor";
 import { BrowserCompatibilityWarning as BrowserCompatibilityWarningComponent } from "@/components/BrowserCompatibilityWarning";
-import { DuplicateNameWarning } from "@/components/DuplicateNameWarning";
 import { DraftSavedIndicator } from "@/components/agents/AgentCreationWizard.persistence";
 import type { AvatarConfig, CharacterStats } from "@/lib/agents/character.types";
 import { CHARACTER_SETUPS } from "@/lib/agents/character.service";
-
-const STUDIO_THEME = {
-  accent: "#D4956A",
-  bg: "#1A1612",
-  bgCard: "rgba(26, 22, 18, 0.95)",
-  borderSubtle: "rgba(212, 176, 140, 0.1)",
-  textPrimary: "#E7E5E4",
-  textSecondary: "#A8A29E",
-  textMuted: "#78716C"
-};
+import { SPECIALIST_TEMPLATES } from "@/lib/agents/agent-templates.specialist";
+import type { SpecialistTemplate } from "@/lib/agents/agent-templates.specialist";
 
 export function CreateAgentForm({ 
   onCancel, 
@@ -109,6 +117,7 @@ export function CreateAgentForm({
   onComplete?: (createdAgent: Agent, workspaceCreated: boolean) => void;
 }) {
   const { createAgent, isCreating, error, clearError, agents, recordCharacterTelemetry, setIsCreating } = useAgentStore();
+  const STUDIO_THEME = useStudioTheme();
   
   // Reset error and isCreating when form mounts
   useEffect(() => {
@@ -142,12 +151,24 @@ export function CreateAgentForm({
     temperament: "precision",
   });
   const [cardSeed, setCardSeed] = useState<CreationCardSeedState>(setupSeedDefaults("coding"));
-  const [activeStep, setActiveStep] = useState<CreateFlowStepId>("welcome");
+  const [activeStep, setActiveStep] = useState<CreateFlowStepId>("identity");
 
-  // Avatar state - Initialize avatar config - MUST be stable to prevent infinite loops
-  const [avatarConfig, setAvatarConfig] = useState<AvatarConfig>(() => 
+  // Template selection
+  const [selectedTemplate, setSelectedTemplate] = useState<SpecialistTemplate | null>(null);
+
+  // Avatar state - clean picker config
+  const [avatarPickerConfig, setAvatarPickerConfig] = useState<AvatarPickerConfig>(
+    createDefaultAvatarPickerConfig("Agent")
+  );
+
+  // Legacy avatar config (kept for compatibility)
+  const [avatarConfig, setAvatarConfig] = useState<AvatarConfig>(() =>
     createDefaultAvatarConfig("coding")
   );
+
+  // Workspace document selection
+  const [workspaceDocs, setWorkspaceDocs] = useState<WorkspaceDocument[]>([]);
+  const [selectedWorkspacePaths, setSelectedWorkspacePaths] = useState<string[]>([]);
 
   // UPGRADE: New Personality State
   const [personality, setPersonality] = useState({
@@ -420,11 +441,11 @@ export function CreateAgentForm({
       return;
     }
 
-    const definitionOfDone = splitLines(cardSeed.definitionOfDone);
-    const escalation = splitLines(cardSeed.escalationRules);
-    const voiceRules = splitLines(cardSeed.voiceRules);
-    const voiceMicroBans = splitLines(cardSeed.voiceMicroBans);
-    const domainFocus = cardSeed.domainFocus.trim();
+    const definitionOfDone = splitLines(cardSeed.definitionOfDone as string);
+    const escalation = splitLines(cardSeed.escalationRules as string);
+    const voiceRules = splitLines(cardSeed.voiceRules as string);
+    const voiceMicroBans = splitLines(cardSeed.voiceMicroBans as string);
+    const domainFocus = (cardSeed.domainFocus as string || '').trim();
 
     const payload: CreateAgentInput = {
       ...formData,
@@ -441,7 +462,7 @@ export function CreateAgentForm({
           escalation,
         },
         voice: {
-          style: cardSeed.voiceStyle.trim(),
+          style: (cardSeed.voiceStyle as string || '').trim(),
           rules: voiceRules,
           microBans: voiceMicroBans,
           tone: {
@@ -462,14 +483,12 @@ export function CreateAgentForm({
       activeStep 
     });
     
-    // Show forge animation FIRST, then create agent after animation completes
+    // Create agent immediately — no artificial delay
     setWorkspaceWarning(null);
     setSubmitStatus(null);
-    setIsForgeQueued(true);
-    onShowForge?.(formData.name || 'Your Agent');
+    setIsForgeQueued(false);
     
-    // Delay agent creation to let animation play (6 seconds)
-    window.setTimeout(async () => {
+    (async () => {
       let createdAgent: Agent | null = null;
       let workspaceCreated = false;
       try {
@@ -553,7 +572,7 @@ export function CreateAgentForm({
       } finally {
         setIsForgeQueued(false);
       }
-    }, 6000);
+    })();
   };
 
   const toggleCapability = (capId: string) => {
@@ -567,10 +586,11 @@ export function CreateAgentForm({
 
   const toggleSpecialty = (skill: string) => {
     setBlueprint((prev) => {
-      const selected = prev.specialtySkills.includes(skill);
+      const skills = prev.specialtySkills ?? [];
+      const selected = skills.includes(skill);
       const nextSkills = selected
-        ? prev.specialtySkills.filter((s) => s !== skill)
-        : [...prev.specialtySkills, skill].slice(0, 4);
+        ? skills.filter((s) => s !== skill)
+        : [...skills, skill].slice(0, 4);
       return {
         ...prev,
         specialtySkills: nextSkills,
@@ -636,12 +656,12 @@ export function CreateAgentForm({
       getDefaultCharacterLayer(
       "preview",
       formData.name.trim() || "Preview Agent",
-      blueprint,
+      blueprint as any,
     ),
     [blueprint, formData.name],
   );
   const projectedStats = useMemo<CharacterStats>(
-    () => computeCharacterStats(previewCharacterConfig, buildSeedTelemetryEvents(blueprint)),
+    () => computeCharacterStats(previewCharacterConfig, buildSeedTelemetryEvents(blueprint) as any),
     [blueprint, previewCharacterConfig],
   );
   
@@ -654,7 +674,7 @@ export function CreateAgentForm({
       (formData.type !== "sub-agent" || formData.parentAgentId),
   );
   const characterComplete = Boolean(
-    blueprint.specialtySkills.length > 0 &&
+    (blueprint.specialtySkills ?? []).length > 0 &&
       cardSeed.hardBanCategories.length > 0 &&
       cardSeed.domainFocus.trim() &&
       splitLines(cardSeed.definitionOfDone).length > 0 &&
@@ -668,14 +688,11 @@ export function CreateAgentForm({
       (formData.capabilities?.length || 0) > 0 &&
       (formData.maxIterations || 0) > 0,
   );
-  const personalityComplete = true; // Personality sliders are optional but shown
   const avatarComplete = true; // Avatar is optional
   const workspaceComplete = true; // Workspace layers always have valid default
   
   const stepValidation: Record<CreateFlowStepId, boolean> = {
-    welcome: true,
     identity: identityComplete,
-    personality: personalityComplete,
     character: characterComplete,
     avatar: avatarComplete,
     runtime: runtimeComplete,
@@ -920,11 +937,17 @@ export function CreateAgentForm({
       )}
 
       <div style={headerStyle}>
+        {/* Theme Toggle — Left */}
+        <ThemeToggle />
+
         {/* Centered Title */}
-        <div style={{ textAlign: 'center' }}>
+        <div style={{ textAlign: 'center', flex: 1 }}>
           <h1 style={titleStyle}>Create New Agent</h1>
           <p style={subtitleStyle}>Configure your AI agent with voice, type, and capabilities</p>
         </div>
+
+        {/* Spacer to balance layout */}
+        <div style={{ width: 40 }} />
       </div>
 
       {error && (
@@ -1004,314 +1027,7 @@ export function CreateAgentForm({
             transition={{ duration: 0.3 }}
           >
         {/* WELCOME STEP */}
-        {activeStep === "welcome" && (
-          <section style={{ padding: '40px 0', position: 'relative', overflow: 'hidden' }}>
-            {/* Animated Background Particles */}
-            <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
-              {[...Array(6)].map((_, i) => (
-                <motion.div
-                  key={`particle-${i}`}
-                  style={{
-                    position: 'absolute',
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    background: `${STUDIO_THEME.accent}30`,
-                    left: `${20 + i * 15}%`,
-                    top: `${60 + (i % 3) * 10}%`,
-                  }}
-                  initial={{ 
-                    x: Math.random() * 800 - 400, 
-                    y: Math.random() * 600 - 300,
-                    opacity: 0 
-                  }}
-                  animate={{ 
-                    y: [null, -100, -200],
-                    opacity: [0, 0.6, 0],
-                    scale: [0.5, 1.5, 0.5]
-                  }}
-                  transition={{ 
-                    duration: 4 + Math.random() * 2,
-                    repeat: Infinity,
-                    delay: i * 0.5,
-                    ease: "easeOut"
-                  }}
-                />
-              ))}
-            </div>
-
-            <div style={{ textAlign: 'center', position: 'relative', zIndex: 10 }}>
-              {/* Animated Icon with Orbiting Elements */}
-              <div style={{ position: 'relative', width: 128, height: 128, margin: '0 auto 32px' }}>
-                {/* Orbiting dots */}
-                <motion.div
-                  style={{ position: 'absolute', inset: 0 }}
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-                >
-                  <div style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: '50%',
-                    width: 12,
-                    height: 12,
-                    background: STUDIO_THEME.accent,
-                    borderRadius: '50%',
-                    boxShadow: `0 0 10px ${STUDIO_THEME.accent}80`,
-                  }} />
-                </motion.div>
-                <motion.div
-                  style={{ position: 'absolute', inset: 8 }}
-                  animate={{ rotate: -360 }}
-                  transition={{ duration: 12, repeat: Infinity, ease: "linear" }}
-                >
-                  <div style={{
-                    position: 'absolute',
-                    bottom: 0,
-                    left: '50%',
-                    width: 8,
-                    height: 8,
-                    background: '#B08D6E',
-                    borderRadius: '50%',
-                    boxShadow: '0 0 10px rgba(176, 141, 110, 0.8)',
-                  }} />
-                </motion.div>
-                
-                {/* Main Icon */}
-                <motion.div
-                  initial={{ scale: 0, rotate: -180 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ 
-                    type: "spring",
-                    stiffness: 200,
-                    damping: 15,
-                    duration: 0.8 
-                  }}
-                  style={{
-                    width: 96,
-                    height: 96,
-                    margin: '0 auto',
-                    borderRadius: '50%',
-                    background: `linear-gradient(135deg, ${STUDIO_THEME.accent}, #B08D6E)`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: `0 0 40px ${STUDIO_THEME.accent}40`,
-                  }}
-                >
-                  <motion.div
-                    animate={{ 
-                      scale: [1, 1.1, 1],
-                      rotate: [0, 5, -5, 0]
-                    }}
-                    transition={{ 
-                      duration: 3,
-                      repeat: Infinity,
-                      ease: "easeInOut"
-                    }}
-                  >
-                    <Robot style={{ width: 48, height: 48, color: '#fff' }} />
-                  </motion.div>
-                </motion.div>
-              </div>
-
-              {/* Title with staggered animation */}
-              <div style={{ marginBottom: '24px' }}>
-                <motion.h2 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2, duration: 0.5 }}
-                  style={{
-                    fontSize: '36px',
-                    fontWeight: 500,
-                    fontFamily: 'Georgia, serif',
-                    color: STUDIO_THEME.textPrimary,
-                    margin: '0 0 12px 0',
-                  }}
-                >
-                  <span style={{
-                    background: `linear-gradient(to right, ${STUDIO_THEME.accent}, #B08D6E)`,
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                  }}>
-                    Create Your AI Agent
-                  </span>
-                </motion.h2>
-                <motion.p 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4, duration: 0.5 }}
-                  style={{
-                    fontSize: '16px',
-                    color: STUDIO_THEME.textSecondary,
-                    maxWidth: '480px',
-                    margin: '0 auto',
-                    lineHeight: 1.6,
-                  }}
-                >
-                  Build intelligent agents that automate tasks, make decisions, and collaborate with your team.
-                </motion.p>
-              </div>
-            </div>
-
-            {/* Feature Cards with Stagger Animation */}
-            <motion.div 
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                gap: '16px',
-                maxWidth: '800px',
-                margin: '0 auto 32px',
-                position: 'relative',
-                zIndex: 10,
-              }}
-              initial="hidden"
-              animate="visible"
-              variants={{
-                hidden: {},
-                visible: {
-                  transition: {
-                    staggerChildren: 0.15,
-                    delayChildren: 0.6
-                  }
-                }
-              }}
-            >
-              {[
-                { 
-                  icon: Sparkle, 
-                  title: "Define Personality", 
-                  desc: "Configure creativity, verbosity, and temperament to match your workflow." 
-                },
-                { 
-                  icon: GearSix, 
-                  title: "Equip Tools", 
-                  desc: "Grant capabilities like code generation, web search, and file operations." 
-                },
-                { 
-                  icon: Network, 
-                  title: "Deploy & Monitor", 
-                  desc: "Launch your agent and track progress through checkpoints and telemetry." 
-                }
-              ].map((feature) => (
-                <motion.div
-                  key={feature.title}
-                  variants={{
-                    hidden: { opacity: 0, y: 30, scale: 0.9 },
-                    visible: { 
-                      opacity: 1, 
-                      y: 0, 
-                      scale: 1,
-                      transition: { type: "spring", stiffness: 200, damping: 20 }
-                    }
-                  }}
-                  whileHover={{ 
-                    scale: 1.03, 
-                    y: -5,
-                    transition: { duration: 0.2 }
-                  }}
-                  style={{
-                    padding: '24px',
-                    borderRadius: '12px',
-                    border: `1px solid ${STUDIO_THEME.borderSubtle}`,
-                    background: STUDIO_THEME.bgCard,
-                    cursor: 'pointer',
-                  }}
-                >
-                  <motion.div 
-                    style={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: '50%',
-                      background: `${STUDIO_THEME.accent}15`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      marginBottom: '12px',
-                    }}
-                    whileHover={{ rotate: 360 }}
-                    transition={{ duration: 0.5 }}
-                  >
-                    <feature.icon style={{ width: 24, height: 24, color: STUDIO_THEME.accent }} />
-                  </motion.div>
-                  <h3 style={{
-                    fontSize: '16px',
-                    fontWeight: 600,
-                    color: STUDIO_THEME.textPrimary,
-                    margin: '0 0 8px 0',
-                  }}>{feature.title}</h3>
-                  <p style={{
-                    fontSize: '13px',
-                    color: STUDIO_THEME.textSecondary,
-                    lineHeight: 1.5,
-                    margin: 0,
-                  }}>
-                    {feature.desc}
-                  </p>
-                </motion.div>
-              ))}
-            </motion.div>
-
-            {/* CTA Button with enhanced animation */}
-            <motion.div 
-              style={{ display: 'flex', justifyContent: 'center', position: 'relative', zIndex: 10 }}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.2, duration: 0.5 }}
-            >
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={goToNextStep}
-                style={{
-                  ...primaryButtonStyle,
-                  padding: '14px 32px',
-                  fontSize: '16px',
-                }}
-              >
-                <motion.span
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 1.4 }}
-                >
-                  Get Started
-                </motion.span>
-                <motion.span
-                  animate={{ x: [0, 6, 0] }}
-                  transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
-                >
-                  →
-                </motion.span>
-              </motion.button>
-            </motion.div>
-
-            {/* Progress indicator */}
-            <motion.div 
-              style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: '24px', position: 'relative', zIndex: 10 }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1.5 }}
-            >
-              {[...Array(7)].map((_, i) => (
-                <motion.div
-                  key={`dot-${i}`}
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    background: i === 0 ? STUDIO_THEME.accent : `${STUDIO_THEME.accent}40`,
-                  }}
-                  animate={{ 
-                    scale: i === 0 ? [1, 1.3, 1] : 1,
-                  }}
-                  transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.1 }}
-                />
-              ))}
-            </motion.div>
-          </section>
-        )}
-
-        {/* IDENTITY STEP */}
+        {/* IDENTITY STEP -- includes template selector + personality */}
         {activeStep === "identity" && (
           <section style={formSectionStyle}>
             <div style={{ marginBottom: '24px' }}>
@@ -1323,6 +1039,44 @@ export function CreateAgentForm({
                 Define the ownership boundary and runtime role for this agent.
               </p>
             </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <AgentTemplateSelector
+                selectedTemplateId={selectedTemplate?.id || null}
+                onSelect={(template) => {
+                  setSelectedTemplate(template);
+                  if (template) {
+                    setFormData(prev => ({
+                      ...prev,
+                      name: template.name,
+                      description: template.description,
+                      type: template.agentConfig.type || 'worker',
+                      model: template.agentConfig.model || 'gpt-4o',
+                      provider: template.agentConfig.provider || 'openai',
+                      capabilities: template.agentConfig.capabilities || [],
+                      tools: template.agentConfig.tools || [],
+                      systemPrompt: template.systemPrompt || '',
+                      temperature: template.agentConfig.temperature ?? 0.7,
+                      maxIterations: template.agentConfig.maxIterations ?? 10,
+                    }));
+                    setBlueprint(prev => ({
+                      ...prev,
+                      setup: template.characterSetup as any || 'coding',
+                      specialtySkills: template.agentConfig.capabilities?.slice(0, 4) || [],
+                    }));
+                    const docs = generateWorkspaceDocs(
+                      template.name,
+                      template.description,
+                      template.agentConfig.tools || []
+                    );
+                    setWorkspaceDocs(docs);
+                    setSelectedWorkspacePaths(docs.map(d => d.path));
+                  }
+                }}
+              />
+            </div>
+
+            <div style={{ height: 1, background: STUDIO_THEME.borderSubtle, margin: '24px 0' }} />
 
             <div style={{ marginBottom: '20px' }}>
               <label style={inputLabelStyle}>Agent Name</label>
@@ -1441,37 +1195,34 @@ export function CreateAgentForm({
                 )}
               </div>
             )}
-          </section>
-        )}
 
-        {/* PERSONALITY STEP */}
-        {activeStep === "personality" && (
-          <section style={formSectionStyle}>
-            <div style={{ marginBottom: '24px' }}>
-              <h2 style={sectionTitleStyle}>
-                <Sparkle style={{ width: 20, height: 20, color: STUDIO_THEME.accent }} />
-                Personality Profile
-              </h2>
-              <p style={sectionSubtitleStyle}>
-                Define your agent&apos;s personality and operational style using the Big Five model.
-              </p>
-            </div>
+            <div style={{ height: 1, background: STUDIO_THEME.borderSubtle, margin: '24px 0' }} />
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px' }}>
-              {/* Big Five Sliders */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: 600, color: STUDIO_THEME.textPrimary, margin: 0 }}>Big Five Traits</h3>
-                
+            <div style={{ marginBottom: '20px' }}>
+              <h3 style={{
+                fontSize: '16px',
+                fontWeight: 600,
+                color: STUDIO_THEME.textPrimary,
+                margin: '0 0 16px 0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}>
+                <Sparkle style={{ width: 18, height: 18, color: STUDIO_THEME.accent }} />
+                Personality & Style
+              </h3>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
                 {[
                   { id: 'openness', label: 'Openness', low: 'Conventional', high: 'Inventive' },
                   { id: 'conscientiousness', label: 'Conscientiousness', low: 'Spontaneous', high: 'Organized' },
                   { id: 'extraversion', label: 'Extraversion', low: 'Reserved', high: 'Outgoing' },
                   { id: 'agreeableness', label: 'Agreeableness', low: 'Critical', high: 'Cooperative' }
                 ].map((trait) => (
-                  <div key={trait.id} style={{ background: STUDIO_THEME.bg, padding: '16px', borderRadius: '12px', border: `1px solid ${STUDIO_THEME.borderSubtle}` }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                      <Label style={{ color: STUDIO_THEME.textPrimary }}>{trait.label}</Label>
-                      <span style={{ fontSize: '14px', fontWeight: 700, color: STUDIO_THEME.accent, background: `${STUDIO_THEME.accent}20`, padding: '2px 8px', borderRadius: '6px' }}>
+                  <div key={trait.id} style={{ background: STUDIO_THEME.bg, padding: '12px', borderRadius: '12px', border: `1px solid ${STUDIO_THEME.borderSubtle}` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                      <Label style={{ color: STUDIO_THEME.textPrimary, fontSize: '13px' }}>{trait.label}</Label>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: STUDIO_THEME.accent, background: `${STUDIO_THEME.accent}20`, padding: '2px 8px', borderRadius: '6px' }}>
                         {personality[trait.id as keyof typeof personality] as number}%
                       </span>
                     </div>
@@ -1482,7 +1233,7 @@ export function CreateAgentForm({
                       max={100}
                       step={1}
                     />
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px' }}>
                       <span style={{ fontSize: '11px', color: STUDIO_THEME.textMuted }}>{trait.low}</span>
                       <span style={{ fontSize: '11px', color: STUDIO_THEME.textMuted }}>{trait.high}</span>
                     </div>
@@ -1490,17 +1241,14 @@ export function CreateAgentForm({
                 ))}
               </div>
 
-              {/* Working Styles */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                <h3 style={{ fontSize: '16px', fontWeight: 600, color: STUDIO_THEME.textPrimary, margin: 0 }}>Operational Style</h3>
-
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '20px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <Label style={{ color: STUDIO_THEME.textPrimary }}>Communication Style</Label>
+                  <Label style={{ color: STUDIO_THEME.textPrimary, fontSize: '13px' }}>Communication Style</Label>
                   <Select
                     value={personality.communicationStyle}
                     onValueChange={(value: any) => setPersonality(prev => ({ ...prev, communicationStyle: value }))}
                   >
-                    <SelectTrigger style={{ background: STUDIO_THEME.bg, border: `1px solid ${STUDIO_THEME.borderSubtle}`, color: STUDIO_THEME.textPrimary, height: '44px' }}>
+                    <SelectTrigger style={{ background: STUDIO_THEME.bg, border: `1px solid ${STUDIO_THEME.borderSubtle}`, color: STUDIO_THEME.textPrimary, height: '40px' }}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent style={{ background: STUDIO_THEME.bgCard, border: `1px solid ${STUDIO_THEME.borderSubtle}` }}>
@@ -1513,12 +1261,12 @@ export function CreateAgentForm({
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <Label style={{ color: STUDIO_THEME.textPrimary }}>Work Style</Label>
+                  <Label style={{ color: STUDIO_THEME.textPrimary, fontSize: '13px' }}>Work Style</Label>
                   <Select
                     value={personality.workStyle}
                     onValueChange={(value: any) => setPersonality(prev => ({ ...prev, workStyle: value }))}
                   >
-                    <SelectTrigger style={{ background: STUDIO_THEME.bg, border: `1px solid ${STUDIO_THEME.borderSubtle}`, color: STUDIO_THEME.textPrimary, height: '44px' }}>
+                    <SelectTrigger style={{ background: STUDIO_THEME.bg, border: `1px solid ${STUDIO_THEME.borderSubtle}`, color: STUDIO_THEME.textPrimary, height: '40px' }}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent style={{ background: STUDIO_THEME.bgCard, border: `1px solid ${STUDIO_THEME.borderSubtle}` }}>
@@ -1530,12 +1278,12 @@ export function CreateAgentForm({
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <Label style={{ color: STUDIO_THEME.textPrimary }}>Decision Making</Label>
+                  <Label style={{ color: STUDIO_THEME.textPrimary, fontSize: '13px' }}>Decision Making</Label>
                   <Select
                     value={personality.decisionMaking}
                     onValueChange={(value: any) => setPersonality(prev => ({ ...prev, decisionMaking: value }))}
                   >
-                    <SelectTrigger style={{ background: STUDIO_THEME.bg, border: `1px solid ${STUDIO_THEME.borderSubtle}`, color: STUDIO_THEME.textPrimary, height: '44px' }}>
+                    <SelectTrigger style={{ background: STUDIO_THEME.bg, border: `1px solid ${STUDIO_THEME.borderSubtle}`, color: STUDIO_THEME.textPrimary, height: '40px' }}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent style={{ background: STUDIO_THEME.bgCard, border: `1px solid ${STUDIO_THEME.borderSubtle}` }}>
@@ -1545,26 +1293,26 @@ export function CreateAgentForm({
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <Label style={{ color: STUDIO_THEME.textPrimary }}>Personality Traits</Label>
-                  <TagInput
-                    tags={(formData.config as any)?.personalityTraits || []}
-                    onChange={(tags: string[]) => setFormData(prev => ({ ...prev, config: { ...(prev.config || {}), personalityTraits: tags } }))}
-                    placeholder="Add traits (e.g. Stoic, Sarcastic, Highly Technical)..."
-                  />
-                </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+                <Label style={{ color: STUDIO_THEME.textPrimary, fontSize: '13px' }}>Personality Traits</Label>
+                <TagInput
+                  value={(formData.config as any)?.personalityTraits || []}
+                  onChange={(tags: string[]) => setFormData(prev => ({ ...prev, config: { ...(prev.config || {}), personalityTraits: tags } }))}
+                  placeholder="Add traits (e.g. Stoic, Sarcastic, Highly Technical)..."
+                />
+              </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <Label style={{ color: STUDIO_THEME.textPrimary }}>Backstory & Context</Label>
-                  <Textarea
-                    value={(formData.config as any)?.backstory || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, config: { ...(prev.config || {}), backstory: e.target.value } }))}
-                    placeholder="Provide background context that shapes this agent's behavior..."
-                    rows={4}
-                    style={{ background: STUDIO_THEME.bg, border: `1px solid ${STUDIO_THEME.borderSubtle}`, color: STUDIO_THEME.textPrimary }}
-                  />
-                </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <Label style={{ color: STUDIO_THEME.textPrimary, fontSize: '13px' }}>Backstory & Context</Label>
+                <Textarea
+                  value={(formData.config as any)?.backstory || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, config: { ...(prev.config || {}), backstory: e.target.value } }))}
+                  placeholder="Provide background context that shapes this agent's behavior..."
+                  rows={4}
+                  style={{ background: STUDIO_THEME.bg, border: `1px solid ${STUDIO_THEME.borderSubtle}`, color: STUDIO_THEME.textPrimary }}
+                />
               </div>
             </div>
           </section>
@@ -1674,11 +1422,11 @@ export function CreateAgentForm({
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                       <Label style={{ color: STUDIO_THEME.textPrimary }}>Specialty Skills</Label>
-                      <span style={{ fontSize: '11px', color: STUDIO_THEME.textMuted }}>{blueprint.specialtySkills.length}/4</span>
+                      <span style={{ fontSize: '11px', color: STUDIO_THEME.textMuted }}>{(blueprint.specialtySkills ?? []).length}/4</span>
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                       {getSpecialtyOptions(blueprint.setup).map((skill) => {
-                        const selected = blueprint.specialtySkills.includes(skill);
+                        const selected = (blueprint.specialtySkills ?? []).includes(skill);
                         return (
                           <button
                             key={skill}
@@ -1702,7 +1450,7 @@ export function CreateAgentForm({
                   <div>
                     <Label style={{ color: STUDIO_THEME.textPrimary, marginBottom: '8px', display: 'block' }}>Escalation Triggers</Label>
                     <TagInput
-                      tags={splitLines(cardSeed.escalationRules)}
+                      value={splitLines(cardSeed.escalationRules)}
                       onChange={(tags: string[]) => setCardSeed(prev => ({ ...prev, escalationRules: tags.join('\n') }))}
                       placeholder="Add triggers..."
                     />
@@ -1735,7 +1483,7 @@ export function CreateAgentForm({
                     <span style={{ fontSize: '13px', fontWeight: 500, color: STUDIO_THEME.textPrimary }}>{projectedStats.xp.toFixed(2)}</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {blueprint.specialtySkills.slice(0, 3).map((skill) => (
+                    {(blueprint.specialtySkills ?? []).slice(0, 3).map((skill) => (
                       <div key={skill} style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -2000,23 +1748,25 @@ export function CreateAgentForm({
             <div style={{ marginBottom: '24px' }}>
               <h2 style={sectionTitleStyle}>
                 <Palette style={{ width: 20, height: 20, color: STUDIO_THEME.accent }} />
-                Avatar Customization
+                Avatar
               </h2>
               <p style={sectionSubtitleStyle}>
-                Fine-tune your agent&apos;s visual identity.
+                Choose a visual identity for your agent.
               </p>
             </div>
 
-            <div style={{ flex: 1, minHeight: '600px' }}>
-              <AvatarCreatorStep
-                agentSetup={blueprint.setup}
-                agentTemperament={blueprint.temperament}
-                onAvatarChange={(config) => {
-                  lastUpdateFromStoreRef.current = true;
-                  setAvatarConfig((prev) => {
-                    const current = (config as any) || {};
-                    return { ...current, mascotTemplate: (prev as any).mascotTemplate };
-                  });
+            <div style={{ maxWidth: '400px' }}>
+              <AgentAvatarPicker
+                name={formData.name || 'Agent'}
+                config={avatarPickerConfig}
+                onChange={(config) => {
+                  setAvatarPickerConfig(config);
+                  // Sync with legacy avatar config for compatibility
+                  setAvatarConfig(prev => ({
+                    ...prev,
+                    primary: config.bgColor,
+                    secondary: config.textColor,
+                  }));
                 }}
               />
             </div>
@@ -2053,7 +1803,7 @@ export function CreateAgentForm({
                   <div>
                     <label style={inputLabelStyle}>Intelligence Model</label>
                     {isModelsLoading ? (
-                      <Skeleton height="42px" borderRadius="8px" />
+                      <Skeleton height="42px" />
                     ) : (
                       <Select
                         value={formData.model}
@@ -2373,80 +2123,20 @@ export function CreateAgentForm({
                   <Lightning style={{ width: 18, height: 18, color: STUDIO_THEME.accent }} />
                   Capabilities Marketplace
                 </h3>
-                <PluginConflictWarning selectedTools={formData.tools || []} />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                  {isCapabilitiesLoading ? (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
-                      {Array(6).fill(0).map((_, i) => <Skeleton key={i} height="60px" borderRadius="10px" />)}
-                    </div>
-                  ) : (
-                    CAPABILITY_CATEGORIES.map((cat) => {
-                      const catCaps = (apiCapabilities.length > 0 ? apiCapabilities : AGENT_CAPABILITIES_ENHANCED)
-                        .filter(cap => (cap as any).category === cat.id || (!cap.category && cat.id === 'core'));
-                      
-                      if (catCaps.length === 0) return null;
-                      
-                      const Icon = cat.icon;
-                      
-                      return (
-                        <div key={cat.id} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <Icon size={14} style={{ color: STUDIO_THEME.accent }} />
-                            <span style={{ fontSize: '12px', fontWeight: 600, color: STUDIO_THEME.textSecondary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{cat.label}</span>
-                          </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '10px' }}>
-                            {catCaps.map((cap) => {
-                              const isSelected = formData.capabilities?.includes(cap.id);
-                              return (
-                                <button
-                                  key={cap.id}
-                                  type="button"
-                                  onClick={() => toggleCapability(cap.id)}
-                                  style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '10px',
-                                    padding: '12px 16px',
-                                    borderRadius: '10px',
-                                    textAlign: 'left',
-                                    transition: 'all 0.2s ease',
-                                    background: isSelected ? `${STUDIO_THEME.accent}15` : STUDIO_THEME.bg,
-                                    border: `1px solid ${isSelected ? STUDIO_THEME.accent : STUDIO_THEME.borderSubtle}`,
-                                  }}
-                                >
-                                  <div style={{
-                                    width: '8px',
-                                    height: '8px',
-                                    borderRadius: '50%',
-                                    background: isSelected ? STUDIO_THEME.accent : STUDIO_THEME.textMuted
-                                  }} />
-                                  <div style={{ flex: 1 }}>
-                                    <div style={{ fontWeight: 500, color: isSelected ? STUDIO_THEME.textPrimary : STUDIO_THEME.textSecondary, fontSize: '13px' }}>{cap.name}</div>
-                                    {cap.description && <div style={{ fontSize: '10px', color: STUDIO_THEME.textMuted, marginTop: '1px' }}>{cap.description}</div>}
-                                  </div>
-                                  {isSelected && <Check size={14} style={{ color: STUDIO_THEME.accent }} />}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
-                  <div style={{ marginTop: '8px' }}>
-                    <label style={{ fontSize: '12px', color: STUDIO_THEME.textSecondary, marginBottom: '8px', display: 'block' }}>Custom Capabilities</label>
-                    <TagInput
-                      tags={formData.capabilities?.filter(c => !(apiCapabilities.length > 0 ? apiCapabilities : AGENT_CAPABILITIES_ENHANCED).some(ac => ac.id === c)) || []}
-                      onChange={(tags: string[]) => {
-                        const coreIds = (apiCapabilities.length > 0 ? apiCapabilities : AGENT_CAPABILITIES_ENHANCED)
-                          .filter(ac => formData.capabilities?.includes(ac.id))
-                          .map(ac => ac.id);
-                        setFormData(prev => ({ ...prev, capabilities: [...coreIds, ...tags] }));
-                      }}
-                      placeholder="Type a custom capability and press Enter..."
-                    />
-                  </div>
-                </div>
+                <AgentToolConfigurator
+                  enabledToolIds={formData.tools || []}
+                  onChange={(toolIds) => {
+                    setFormData(prev => ({ ...prev, tools: toolIds }));
+                    // Update workspace docs tool list
+                    setWorkspaceDocs(prev =>
+                      prev.map(doc =>
+                        doc.path === 'governance/TOOLS.md'
+                          ? { ...doc, content: doc.content.replace(/## Available Tools[\s\S]*?(?=## Tool Usage|$)/, `## Available Tools\n${toolIds.length > 0 ? toolIds.map(t => `- ${t}`).join('\n') : '*No tools configured*'}\n`) }
+                          : doc
+                      )
+                    );
+                  }}
+                />
               </div>
 
               <div style={{ height: 1, background: STUDIO_THEME.borderSubtle, margin: '24px 0' }} />
@@ -2645,39 +2335,65 @@ export function CreateAgentForm({
                   border: `1px solid ${STUDIO_THEME.borderSubtle}`,
                   borderRadius: '12px',
                   padding: '20px',
-                  fontFamily: 'monospace',
-                  fontSize: '12px',
-                  color: STUDIO_THEME.textSecondary,
                   maxHeight: '300px',
                   overflow: 'auto',
-                  position: 'relative'
                 }}>
-                  <div style={{ position: 'absolute', top: '12px', right: '12px', background: `${STUDIO_THEME.accent}20`, color: STUDIO_THEME.accent, padding: '2px 8px', borderRadius: '4px', fontSize: '10px' }}>
-                    identity.yaml
-                  </div>
-                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-                    {`# Agent Identity Layer
-name: ${formData.name || 'Agent'}
-type: ${formData.type}
-model: ${formData.model}
-provider: ${formData.provider}
-
-# Character Profile
-personality:
-  openness: ${personality.openness}
-  conscientiousness: ${personality.conscientiousness}
-  extraversion: ${personality.extraversion}
-  agreeableness: ${personality.agreeableness}
-  
-style:
-  communication: ${personality.communicationStyle}
-  work: ${personality.workStyle}
-  decision_making: ${personality.decisionMaking}
-
-# Layers Enabled
-${Object.entries(workspaceLayers).filter(([_, enabled]) => enabled).map(([key]) => `- ${key}`).join('\n')}
-`}
-                  </pre>
+                  {(() => {
+                    const docs = generateEnhancedWorkspaceDocuments(
+                      {
+                        ...(formData.config || {}),
+                        personality,
+                        character: {
+                          setup: blueprint.setup,
+                          specialtySkills: blueprint.specialtySkills,
+                          temperament: blueprint.temperament,
+                          hardBans: (formData.config as any)?.hardBans || [],
+                          domain: cardSeed.domainFocus || '',
+                          definitionOfDone: splitLines(cardSeed.definitionOfDone as string),
+                          escalation: splitLines(cardSeed.escalationRules as string),
+                        },
+                        voice: {
+                          style: cardSeed.voiceStyle || '',
+                          rules: splitLines(cardSeed.voiceRules as string),
+                          microBans: splitLines(cardSeed.voiceMicroBans as string),
+                          tone: {
+                            formality: 0.5,
+                            enthusiasm: 0.5,
+                            empathy: 0.5,
+                            directness: 0.5
+                          }
+                        },
+                        workspaceLayers,
+                      } as any,
+                      {
+                        name: formData.name,
+                        description: formData.description,
+                        model: formData.model,
+                        provider: formData.provider
+                      }
+                    );
+                    return (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {docs.map((doc: any) => (
+                          <div key={doc.path} style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '8px 12px',
+                            borderRadius: '6px',
+                            background: STUDIO_THEME.bgCard,
+                            border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+                          }}>
+                            <FileText style={{ width: 14, height: 14, color: STUDIO_THEME.accent, flexShrink: 0 }} />
+                            <span style={{ fontFamily: 'monospace', fontSize: '12px', color: STUDIO_THEME.textPrimary }}>{doc.path}</span>
+                            <span style={{ fontSize: '10px', color: STUDIO_THEME.textMuted, marginLeft: 'auto' }}>
+                              {doc.content.length} chars
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
                 <p style={{ fontSize: '12px', color: STUDIO_THEME.textMuted, marginTop: '8px' }}>
                   These configuration files will be automatically generated and committed to your agent's capsule repository upon creation.
@@ -2694,10 +2410,10 @@ ${Object.entries(workspaceLayers).filter(([_, enabled]) => enabled).map(([key]) 
               <div style={{ marginBottom: '24px' }}>
                 <h2 style={sectionTitleStyle}>
                   <ShieldCheck style={{ width: 20, height: 20, color: STUDIO_THEME.accent }} />
-                  Review and Forge
+                  Review and Create
                 </h2>
                 <p style={sectionSubtitleStyle}>
-                  Final validation before creation. This summary is what gets compiled into the Character Layer.
+                  Final validation before creation. Review your agent configuration.
                 </p>
               </div>
 
@@ -2742,7 +2458,7 @@ ${Object.entries(workspaceLayers).filter(([_, enabled]) => enabled).map(([key]) 
                       border: `1px solid ${STUDIO_THEME.borderSubtle}`,
                       color: STUDIO_THEME.textSecondary,
                     }}>
-                      {projectedStats.class}
+                      {formData.model}
                     </span>
                     <span style={{
                       fontSize: '11px',
@@ -2751,10 +2467,10 @@ ${Object.entries(workspaceLayers).filter(([_, enabled]) => enabled).map(([key]) 
                       border: `1px solid ${STUDIO_THEME.borderSubtle}`,
                       color: STUDIO_THEME.textSecondary,
                     }}>
-                      Lv {projectedStats.level}
+                      {formData.provider}
                     </span>
                   </div>
-                  
+
                   <div style={{ marginBottom: '16px' }}>
                     <label style={{
                       fontSize: '11px',
@@ -2763,8 +2479,20 @@ ${Object.entries(workspaceLayers).filter(([_, enabled]) => enabled).map(([key]) 
                       color: STUDIO_THEME.textMuted,
                       marginBottom: '8px',
                       display: 'block',
-                    }}>Operational Style</label>
+                    }}>Configuration Summary</label>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                        <span style={{ color: STUDIO_THEME.textSecondary }}>Tools Selected</span>
+                        <span style={{ color: STUDIO_THEME.textPrimary }}>{(formData.tools || []).length}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                        <span style={{ color: STUDIO_THEME.textSecondary }}>Capabilities</span>
+                        <span style={{ color: STUDIO_THEME.textPrimary }}>{(formData.capabilities || []).length}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                        <span style={{ color: STUDIO_THEME.textSecondary }}>Workspace Layers</span>
+                        <span style={{ color: STUDIO_THEME.textPrimary }}>{Object.entries(workspaceLayers).filter(([_, enabled]) => enabled).length} enabled</span>
+                      </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
                         <span style={{ color: STUDIO_THEME.textSecondary }}>Communication</span>
                         <span style={{ color: STUDIO_THEME.textPrimary, textTransform: 'capitalize' }}>{personality.communicationStyle}</span>
@@ -2773,82 +2501,6 @@ ${Object.entries(workspaceLayers).filter(([_, enabled]) => enabled).map(([key]) 
                         <span style={{ color: STUDIO_THEME.textSecondary }}>Work Style</span>
                         <span style={{ color: STUDIO_THEME.textPrimary, textTransform: 'capitalize' }}>{personality.workStyle}</span>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                        <span style={{ color: STUDIO_THEME.textSecondary }}>Decision</span>
-                        <span style={{ color: STUDIO_THEME.textPrimary, textTransform: 'capitalize' }}>{personality.decisionMaking.replace('-', ' ')}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {(() => {
-                    const bigFive = Object.entries(personality).filter(([k]) => ['openness', 'conscientiousness', 'extraversion', 'agreeableness'].includes(k));
-                    const customTraits = (formData.config as any)?.personalityTraits || [];
-                    return (
-                      <div style={{ marginBottom: '16px' }}>
-                        <label style={{
-                          fontSize: '11px',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.05em',
-                          color: STUDIO_THEME.textMuted,
-                          marginBottom: '8px',
-                          display: 'block',
-                        }}>Personality & Style</label>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: customTraits.length > 0 ? '12px' : 0 }}>
-                          {bigFive.map(([key, val]) => (
-                            <div key={key} style={{ display: 'flex', flexDirection: 'column' }}>
-                              <span style={{ fontSize: '9px', color: STUDIO_THEME.textMuted, textTransform: 'uppercase' }}>{key}</span>
-                              <span style={{ fontSize: '11px', fontWeight: 600, color: STUDIO_THEME.accent }}>{val}%</span>
-                            </div>
-                          ))}
-                        </div>
-                        {customTraits.length > 0 && (
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                            {customTraits.map((t: string) => (
-                              <span key={t} style={{ fontSize: '10px', background: `${STUDIO_THEME.accent}10`, color: STUDIO_THEME.accent, padding: '2px 6px', borderRadius: '4px' }}>{t}</span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-
-                  {(formData.config as any)?.backstory && (
-                    <div style={{ marginBottom: '16px' }}>
-                      <label style={{
-                        fontSize: '11px',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.05em',
-                        color: STUDIO_THEME.textMuted,
-                        marginBottom: '4px',
-                        display: 'block',
-                      }}>Backstory</label>
-                      <p style={{ fontSize: '12px', color: STUDIO_THEME.textSecondary, margin: 0, lineClamp: 3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
-                        {(formData.config as any).backstory}
-                      </p>
-                    </div>
-                  )}
-
-                  <div style={{ marginBottom: '16px' }}>
-                    <label style={{
-                      fontSize: '11px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.05em',
-                      color: STUDIO_THEME.textMuted,
-                      marginBottom: '8px',
-                      display: 'block',
-                    }}>Specialties</label>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                      {blueprint.specialtySkills.map((skill) => (
-                        <span key={skill} style={{
-                          fontSize: '11px',
-                          padding: '4px 10px',
-                          borderRadius: '10px',
-                          border: `1px solid ${STUDIO_THEME.borderSubtle}`,
-                          color: STUDIO_THEME.textSecondary,
-                        }}>
-                          {skill} {projectedStats.specialtyScores[skill] ?? 0}
-                        </span>
-                      ))}
                     </div>
                   </div>
 
@@ -2888,34 +2540,25 @@ ${Object.entries(workspaceLayers).filter(([_, enabled]) => enabled).map(([key]) 
                     border: `1px solid ${STUDIO_THEME.borderSubtle}`,
                     background: STUDIO_THEME.bg,
                   }}>
-                    <h3 style={{ fontSize: '16px', fontWeight: 600, color: STUDIO_THEME.textPrimary, margin: '0 0 8px 0' }}>Professional Effectiveness Metrics</h3>
-                    <p style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary, margin: '0 0 16px 0' }}>Derived from setup telemetry model.</p>
+                    <h3 style={{ fontSize: '16px', fontWeight: 600, color: STUDIO_THEME.textPrimary, margin: '0 0 8px 0' }}>Runtime</h3>
+                    <p style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary, margin: '0 0 16px 0' }}>Model and execution settings.</p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {projectedStatEntries.map((entry) => (
-                        <div key={entry.key}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                            <span style={{ fontSize: '12px', color: STUDIO_THEME.textSecondary }}>
-                              {entry.definition?.label || entry.key}
-                            </span>
-                            <span style={{ fontSize: '13px', fontWeight: 500, color: STUDIO_THEME.textPrimary }}>{entry.value}</span>
-                          </div>
-                          <div style={{
-                            height: 6,
-                            borderRadius: '3px',
-                            background: STUDIO_THEME.bgCard,
-                            overflow: 'hidden',
-                          }}>
-                            <div
-                              style={{
-                                height: '100%',
-                                borderRadius: '3px',
-                                background: `linear-gradient(to right, ${STUDIO_THEME.accent}, #B08D6E)`,
-                                width: `${Math.max(4, entry.value)}%`,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      ))}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                        <span style={{ color: STUDIO_THEME.textSecondary }}>Model</span>
+                        <span style={{ color: STUDIO_THEME.textPrimary }}>{formData.model}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                        <span style={{ color: STUDIO_THEME.textSecondary }}>Provider</span>
+                        <span style={{ color: STUDIO_THEME.textPrimary }}>{formData.provider}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                        <span style={{ color: STUDIO_THEME.textSecondary }}>Temperature</span>
+                        <span style={{ color: STUDIO_THEME.textPrimary }}>{formData.temperature}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
+                        <span style={{ color: STUDIO_THEME.textSecondary }}>Max Iterations</span>
+                        <span style={{ color: STUDIO_THEME.textPrimary }}>{formData.maxIterations}</span>
+                      </div>
                     </div>
                   </div>
 
@@ -2986,10 +2629,8 @@ ${Object.entries(workspaceLayers).filter(([_, enabled]) => enabled).map(([key]) 
           <div style={{ fontSize: '12px', color: STUDIO_THEME.textSecondary, flex: 1, textAlign: 'center' }}>
             {!stepValidation[activeStep]
               ? "Complete required fields in this step to continue."
-              : isForgeQueued
-              ? "Preparing forge sequence..."
               : activeStep === "review"
-              ? "All checks passed. Forge will animate and compile the character layer."
+              ? "All checks passed. Ready to create your agent."
               : "Step complete. Continue to the next stage."}
           </div>
 
@@ -3130,7 +2771,7 @@ function PluginConflictWarning({ selectedTools }: { selectedTools: string[] }) {
       <Warning size={18} style={{ flexShrink: 0 }} />
       <div>
         <div style={{ fontWeight: 600 }}>Tool Conflict Detected</div>
-        <p style={{ margin: '4px 0 0 0', opacity: 0.9 }}>{conflicts.message}</p>
+        <p style={{ margin: '4px 0 0 0', opacity: 0.9 }}>{conflicts.conflicts.join(', ')}</p>
       </div>
     </div>
   );
@@ -3138,7 +2779,7 @@ function PluginConflictWarning({ selectedTools }: { selectedTools: string[] }) {
 
 function DuplicateNameWarning({ agentName }: { agentName: string }) {
   const { agents } = useAgentStore();
-  const exists = useMemo(() => 
+  const exists = useMemo(() =>
     agents.some(a => a.name.toLowerCase() === agentName.trim().toLowerCase()),
     [agents, agentName]
   );
@@ -3160,5 +2801,54 @@ function DuplicateNameWarning({ agentName }: { agentName: string }) {
       <Warning size={14} />
       An agent with this name already exists. Using it might cause confusion.
     </div>
+  );
+}
+
+
+function ThemeToggle() {
+  const theme = useThemeStore((state) => state.theme);
+  const setTheme = useThemeStore((state) => state.setTheme);
+  const resolved = resolveTheme(theme);
+  const STUDIO_THEME = useStudioTheme();
+
+  const cycle = () => {
+    if (resolved === 'dark') setTheme('light');
+    else setTheme('dark');
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={cycle}
+      title={`Theme: ${resolved}. Click to toggle.`}
+      aria-label={`Switch to ${resolved === 'dark' ? 'light' : 'dark'} mode`}
+      style={{
+        width: 36,
+        height: 36,
+        borderRadius: '10px',
+        border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+        background: STUDIO_THEME.bgCard,
+        color: STUDIO_THEME.textSecondary,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+      }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.color = STUDIO_THEME.accent;
+        (e.currentTarget as HTMLButtonElement).style.borderColor = STUDIO_THEME.accent;
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.color = STUDIO_THEME.textSecondary;
+        (e.currentTarget as HTMLButtonElement).style.borderColor = STUDIO_THEME.borderSubtle;
+      }}
+    >
+      {resolved === 'dark' ? (
+        <Moon style={{ width: 18, height: 18 }} />
+      ) : (
+        <Sun style={{ width: 18, height: 18 }} />
+      )}
+    </button>
   );
 }

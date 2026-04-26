@@ -19,12 +19,13 @@ import {
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
+import type { MoATask } from '@/lib/api/moa-client';
 import { cn } from '@/lib/utils';
 
 interface VideoRendererProps {
   artifact: ArtifactUIPart;
   sessionId?: string;
-  onMoATaskUpdate?: (tasks: any[]) => void;
+  onMoATaskUpdate?: (tasks: MoATask[]) => void;
 }
 
 export function VideoRenderer({
@@ -102,7 +103,7 @@ export function VideoRenderer({
   };
 
   // Format time
-  const formatTime = (seconds: number) => {
+  const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;

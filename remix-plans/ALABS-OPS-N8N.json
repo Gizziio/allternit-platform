@@ -1,0 +1,369 @@
+{
+  "courseCode": "ALABS-OPS-N8N",
+  "courseTitle": "Orchestrate Agents & Automations with n8n",
+  "tier": "OPS",
+  "sources": [
+    {
+      "id": 6687257,
+      "title": "Build AI Agents with n8n: Free Hands-On Training",
+      "slug": "6687257-build-ai-agents-with-n8n-free-hands-on-training",
+      "totalLectures": 6
+    },
+    {
+      "id": 6803857,
+      "title": "N8N for Beginners: Lead Generation, Automation & AI Agents",
+      "slug": "6803857-n8n-for-beginners-lead-generation-automation-ai-agents",
+      "totalLectures": 13
+    },
+    {
+      "id": 6926701,
+      "title": "Master N8N Automations in 2 hours",
+      "slug": "6926701-master-n8n-automations-in-2-hours",
+      "totalLectures": 0
+    },
+    {
+      "id": 6576133,
+      "title": "Automate Data Analysis with AI Agents and n8n No-Code Power",
+      "slug": "6576133-automate-data-analysis-with-ai-agents-and-n8n-no-code-power",
+      "totalLectures": 4
+    },
+    {
+      "id": 6761021,
+      "title": "N8N Part 1 — Getting Started with N8N",
+      "slug": "6761021-n8n-part-1-getting-started-with-n8n",
+      "totalLectures": 11
+    },
+    {
+      "id": 6791343,
+      "title": "AI Agent, N8N, & Automation Masterclass: Free Course Part 1",
+      "slug": "6791343-ai-agent-n8n-automation-masterclass-free-course-part-1",
+      "totalLectures": 7
+    },
+    {
+      "id": 6831531,
+      "title": "N8N Masterclass: Learn Basic AI & Automation using N8N",
+      "slug": "6831531-n8n-masterclass-learn-basic-ai-automation-using-n8n",
+      "totalLectures": 7
+    }
+  ],
+  "modules": [
+    {
+      "name": "The Problem: Why n8n Over SaaS Automation",
+      "sourceLectures": [],
+      "bridgeContent": "Compare Zapier pricing/lock-in vs self-hosted n8n. Introduce owning your automation infrastructure.",
+      "isBridge": true
+    },
+    {
+      "name": "n8n Architecture",
+      "sourceLectures": [
+        {
+          "course": "Build AI Agents with n8n: Free Hands-On Training",
+          "chapter": "Welcome + Course Overview",
+          "lecture": "Create a Free n8n Trial Account",
+          "hasFile": false
+        },
+        {
+          "course": "Build AI Agents with n8n: Free Hands-On Training",
+          "chapter": "Build Your First AI Agent — Lead Qualifier",
+          "lecture": "Build Your Second AI Agent — Ecommerce Chat",
+          "hasFile": false
+        },
+        {
+          "course": "N8N for Beginners: Lead Generation, Automation & AI Agents",
+          "chapter": "Introduction to N8N",
+          "lecture": "Method to Setup N8N",
+          "hasFile": false
+        },
+        {
+          "course": "N8N for Beginners: Lead Generation, Automation & AI Agents",
+          "chapter": "Introduction to N8N",
+          "lecture": "Termius Setup",
+          "hasFile": false
+        },
+        {
+          "course": "N8N for Beginners: Lead Generation, Automation & AI Agents",
+          "chapter": "N8N Setup: Step by Step",
+          "lecture": "N8N Credentials",
+          "hasFile": false
+        },
+        {
+          "course": "N8N for Beginners: Lead Generation, Automation & AI Agents",
+          "chapter": "Basics of Nodes & Credentials",
+          "lecture": "Utility",
+          "hasFile": false
+        },
+        {
+          "course": "Automate Data Analysis with AI Agents and n8n No-Code Power",
+          "chapter": "Introduction to n8n",
+          "lecture": "Merge Data Sets 1",
+          "hasFile": false
+        },
+        {
+          "course": "Automate Data Analysis with AI Agents and n8n No-Code Power",
+          "chapter": "AI Data Analyst Chatbot 1",
+          "lecture": "AI Data Analyst Chatbot 2",
+          "hasFile": false
+        },
+        {
+          "course": "N8N Part 1 — Getting Started with N8N",
+          "chapter": "Introduction",
+          "lecture": "Summary: What is N8N",
+          "hasFile": true
+        },
+        {
+          "course": "N8N Part 1 — Getting Started with N8N",
+          "chapter": "What is N8N",
+          "lecture": "Summary: Getting Started With N8N",
+          "hasFile": true
+        },
+        {
+          "course": "N8N Part 1 — Getting Started with N8N",
+          "chapter": "Getting Started With N8N",
+          "lecture": "Summary: N8N Workspace",
+          "hasFile": true
+        },
+        {
+          "course": "AI Agent, N8N, & Automation Masterclass: Free Course Part 1",
+          "chapter": "Introduction to AI Agent",
+          "lecture": "Workflow and Executions",
+          "hasFile": false
+        },
+        {
+          "course": "AI Agent, N8N, & Automation Masterclass: Free Course Part 1",
+          "chapter": "AI Agents ( LLM AI Models + Tools )",
+          "lecture": "Credentials (API/Token/Key)",
+          "hasFile": false
+        },
+        {
+          "course": "N8N Masterclass: Learn Basic AI & Automation using N8N",
+          "chapter": "Introduction",
+          "lecture": "Create a booking agent",
+          "hasFile": false
+        },
+        {
+          "course": "N8N Masterclass: Learn Basic AI & Automation using N8N",
+          "chapter": "Whatsapp agent",
+          "lecture": "Integrating Google sheets with N8N",
+          "hasFile": false
+        }
+      ],
+      "isBridge": false
+    },
+    {
+      "name": "Business Workflow Patterns",
+      "sourceLectures": [
+        {
+          "course": "Build AI Agents with n8n: Free Hands-On Training",
+          "chapter": "Welcome + Course Overview",
+          "lecture": "Sign Up for OpenAI & Get Your API Key",
+          "hasFile": false
+        },
+        {
+          "course": "Build AI Agents with n8n: Free Hands-On Training",
+          "chapter": "Build Your Second AI Agent — Ecommerce Chat",
+          "lecture": "See a Demo of a Retrieval-Augmented Generation (RAG) Agent",
+          "hasFile": false
+        },
+        {
+          "course": "N8N for Beginners: Lead Generation, Automation & AI Agents",
+          "chapter": "Introduction to N8N",
+          "lecture": "Domain Setup",
+          "hasFile": false
+        },
+        {
+          "course": "N8N for Beginners: Lead Generation, Automation & AI Agents",
+          "chapter": "Introduction to N8N",
+          "lecture": "Coolify Setup",
+          "hasFile": false
+        },
+        {
+          "course": "N8N for Beginners: Lead Generation, Automation & AI Agents",
+          "chapter": "N8N Setup: Step by Step",
+          "lecture": "Concept of Nodes",
+          "hasFile": false
+        },
+        {
+          "course": "N8N for Beginners: Lead Generation, Automation & AI Agents",
+          "chapter": "Basics of Nodes & Credentials",
+          "lecture": "AI & Action Node",
+          "hasFile": false
+        },
+        {
+          "course": "Automate Data Analysis with AI Agents and n8n No-Code Power",
+          "chapter": "Merge Data Sets 1",
+          "lecture": "Merge Data Sets 2",
+          "hasFile": false
+        },
+        {
+          "course": "N8N Part 1 — Getting Started with N8N",
+          "chapter": "Introduction",
+          "lecture": "What is N8N",
+          "hasFile": false
+        },
+        {
+          "course": "N8N Part 1 — Getting Started with N8N",
+          "chapter": "What is N8N",
+          "lecture": "Getting Started With N8N",
+          "hasFile": false
+        },
+        {
+          "course": "N8N Part 1 — Getting Started with N8N",
+          "chapter": "Getting Started With N8N",
+          "lecture": "Understanding the N8N Workspace",
+          "hasFile": false
+        },
+        {
+          "course": "N8N Part 1 — Getting Started with N8N",
+          "chapter": "The N8N Workspace",
+          "lecture": "Parameters and Settings",
+          "hasFile": false
+        },
+        {
+          "course": "AI Agent, N8N, & Automation Masterclass: Free Course Part 1",
+          "chapter": "Introduction to AI Agent",
+          "lecture": "Tools Setup for AI Agents",
+          "hasFile": false
+        },
+        {
+          "course": "AI Agent, N8N, & Automation Masterclass: Free Course Part 1",
+          "chapter": "AI Agents ( LLM AI Models + Tools )",
+          "lecture": "AI Agent Full Class",
+          "hasFile": false
+        },
+        {
+          "course": "N8N Masterclass: Learn Basic AI & Automation using N8N",
+          "chapter": "Booking Agent",
+          "lecture": "Using Schedule Trigger and HTTP Request nodes to send automated emails",
+          "hasFile": false
+        },
+        {
+          "course": "N8N Masterclass: Learn Basic AI & Automation using N8N",
+          "chapter": "Integrating Google sheets",
+          "lecture": "Automating Weekly Subscriber Reports Using n8n",
+          "hasFile": false
+        }
+      ],
+      "isBridge": false
+    },
+    {
+      "name": "OpenAI Agent Nodes",
+      "sourceLectures": [
+        {
+          "course": "Build AI Agents with n8n: Free Hands-On Training",
+          "chapter": "Get Set Up (n8n + OpenAI)",
+          "lecture": "Build Your First AI Agent — Lead Qualifier",
+          "hasFile": false
+        },
+        {
+          "course": "Build AI Agents with n8n: Free Hands-On Training",
+          "chapter": "Demo — Advanced Agent with RAG",
+          "lecture": "Keep Building with Free Templates & Resources",
+          "hasFile": false
+        },
+        {
+          "course": "N8N for Beginners: Lead Generation, Automation & AI Agents",
+          "chapter": "Introduction to N8N",
+          "lecture": "VPS Setup",
+          "hasFile": false
+        },
+        {
+          "course": "N8N for Beginners: Lead Generation, Automation & AI Agents",
+          "chapter": "Introduction to N8N",
+          "lecture": "N8N Setup",
+          "hasFile": false
+        },
+        {
+          "course": "N8N for Beginners: Lead Generation, Automation & AI Agents",
+          "chapter": "Basics of Nodes & Credentials",
+          "lecture": "Trigger",
+          "hasFile": false
+        },
+        {
+          "course": "N8N for Beginners: Lead Generation, Automation & AI Agents",
+          "chapter": "Basics of Nodes & Credentials",
+          "lecture": "Role Play",
+          "hasFile": true
+        },
+        {
+          "course": "Automate Data Analysis with AI Agents and n8n No-Code Power",
+          "chapter": "Merge Data Sets 2",
+          "lecture": "AI Data Analyst Chatbot 1",
+          "hasFile": false
+        },
+        {
+          "course": "N8N Part 1 — Getting Started with N8N",
+          "chapter": "Introduction",
+          "lecture": "What is N8N",
+          "hasFile": true
+        },
+        {
+          "course": "N8N Part 1 — Getting Started with N8N",
+          "chapter": "What is N8N",
+          "lecture": "Getting Started With N8N",
+          "hasFile": true
+        },
+        {
+          "course": "N8N Part 1 — Getting Started with N8N",
+          "chapter": "Getting Started With N8N",
+          "lecture": "N8N Workspace",
+          "hasFile": true
+        },
+        {
+          "course": "N8N Part 1 — Getting Started with N8N",
+          "chapter": "The N8N Workspace",
+          "lecture": "Summary: Parameters and Settings",
+          "hasFile": true
+        },
+        {
+          "course": "AI Agent, N8N, & Automation Masterclass: Free Course Part 1",
+          "chapter": "Introduction to AI Agent",
+          "lecture": "LLM AI Models for AI Agents",
+          "hasFile": false
+        },
+        {
+          "course": "AI Agent, N8N, & Automation Masterclass: Free Course Part 1",
+          "chapter": "AI Agents ( LLM AI Models + Tools )",
+          "lecture": "Role Play",
+          "hasFile": true
+        },
+        {
+          "course": "N8N Masterclass: Learn Basic AI & Automation using N8N",
+          "chapter": "Using Schedule Trigger and HTTP Request nodes",
+          "lecture": "Create a Whatsapp agent with N8N",
+          "hasFile": false
+        },
+        {
+          "course": "N8N Masterclass: Learn Basic AI & Automation using N8N",
+          "chapter": "Automating Reports",
+          "lecture": "Final thoughts on N8N",
+          "hasFile": false
+        }
+      ],
+      "isBridge": false
+    },
+    {
+      "name": "n8n as Connector Layer",
+      "sourceLectures": [],
+      "bridgeContent": "Show HTTP Request nodes and webhooks connecting n8n to Claude, ChatGPT, and Allternit APIs. n8n as integration layer.",
+      "isBridge": true
+    },
+    {
+      "name": "Self-Hosting & Scaling",
+      "sourceLectures": [],
+      "bridgeContent": "Docker deployment, env vars, unlimited executions. Exposing n8n workflows as MCP tools.",
+      "isBridge": true
+    },
+    {
+      "name": "Bridge: How Allternit Uses n8n",
+      "sourceLectures": [],
+      "bridgeContent": "How workflow-engine delegates orchestration to n8n while retaining state in its own runtime.",
+      "isBridge": true
+    },
+    {
+      "name": "Capstone: Build a Self-Hosted n8n MCP Workflow",
+      "sourceLectures": [],
+      "bridgeContent": "Project brief: Slack → LLM classification → Route to Notion or Allternit webhook. Exposed as MCP tool.",
+      "isBridge": true
+    }
+  ]
+}

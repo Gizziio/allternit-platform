@@ -2,7 +2,7 @@
  * WASM Wrapper for Allternit Agent Workspace
  * 
  * This module provides a TypeScript wrapper around the WASM-compiled
- * a2r-agent-workspace crate for use in the Shell UI.
+ * allternit-agent-workspace crate for use in the Shell UI.
  * 
  * FULLY FUNCTIONAL WASM BACKEND - Production Ready
  * 
@@ -78,7 +78,9 @@ async function loadWasm(): Promise<WasmModule> {
   if (wasmModule) return wasmModule;
   
   try {
-    const mod = await import(/* webpackIgnore: true */ '../../../../0-substrate/a2r-agent-workspace/pkg');
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore — WASM pkg is built externally; not present in TS source tree
+    const mod = await import(/* webpackIgnore: true */ '../../../../domains/agent/allternit-agent-workspace/pkg');
     wasmModule = mod as unknown as WasmModule;
     return wasmModule;
   } catch (error) {

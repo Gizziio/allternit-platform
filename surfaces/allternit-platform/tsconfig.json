@@ -9,7 +9,7 @@
     ],
     "module": "ESNext",
     "skipLibCheck": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
@@ -24,27 +24,28 @@
       "@/*": [
         "src/*"
       ],
-      "@a2r/visual-state": [
-        "../../3-adapters/ts/a2r-visual-state/src/index.ts"
+      "@allternit/visual-state": [
+        "../../3-adapters/ts/allternit-visual-state/src/index.ts"
       ],
-      "@a2r/visual-state/*": [
-        "../../3-adapters/ts/a2r-visual-state/src/*"
+      "@allternit/visual-state/*": [
+        "../../3-adapters/ts/allternit-visual-state/src/*"
       ],
-      "@a2r/avatar-adapters": [
-        "../../3-adapters/ts/a2r-avatar-adapters/src/index.ts"
+      "@allternit/avatar-adapters": [
+        "../../3-adapters/ts/allternit-avatar-adapters/src/index.ts"
       ],
-      "@a2r/avatar-adapters/*": [
-        "../../3-adapters/ts/a2r-avatar-adapters/src/*"
+      "@allternit/avatar-adapters/*": [
+        "../../3-adapters/ts/allternit-avatar-adapters/src/*"
       ],
-      "@a2r/governor": [
+      "@allternit/governor": [
         "../../2-governance/governor/src/index.ts"
       ],
-      "@a2r/governor/*": [
+      "@allternit/governor/*": [
         "../../2-governance/governor/src/*"
       ]
     },
     "allowJs": true,
     "incremental": true,
+    "tsBuildInfoFile": ".tsbuildinfo",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "plugins": [
@@ -54,14 +55,13 @@
     ]
   },
   "include": [
-    ".next/types/**/*.ts",
     "src/**/*",
-    "dist/types/**/*.ts"
+    ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     "src/dev-portal/**/*",
-    "src/a2r-usage-example/**/*",
+    "src/allternit-usage-example/**/*",
     "**/*.test.ts",
     "**/*.test.tsx",
     "**/*.spec.ts",

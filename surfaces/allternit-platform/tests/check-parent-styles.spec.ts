@@ -7,7 +7,7 @@ test('check parent styles', async ({ page }) => {
   await page.waitForTimeout(2000);
   
   const parentInfo = await page.evaluate(() => {
-    const iframeEl = document.querySelector('iframe[data-testid="a2r-iframe-content"]');
+    const iframeEl = document.querySelector('iframe[data-testid="allternit-iframe-content"]');
     if (!iframeEl) return null;
     
     const chain = [];

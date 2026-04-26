@@ -22,7 +22,8 @@ export interface PersistedSession {
   createdAt: string;
   lastActivity: string;
   snapshot?: string;
-  panePath?: string[]; // Path in split tree for MultiPaneTerminal
+  panePath?: string[];
+  profile?: string;
 }
 
 export interface SessionSnapshot {

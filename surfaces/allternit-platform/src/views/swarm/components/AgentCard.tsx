@@ -37,6 +37,9 @@ interface AgentCardProps {
   };
   onClick: () => void;
   className?: string;
+  isSelected?: boolean;
+  isBatchMode?: boolean;
+  onToggleSelect?: () => void;
 }
 
 export function AgentCard({ 

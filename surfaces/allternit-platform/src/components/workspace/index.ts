@@ -14,7 +14,7 @@ export { IdentityEditor } from './IdentityEditor';
 export { SessionView } from './SessionView';
 
 // Types
-export * from './types';
+export { type BadgeProps, type CardProps, type EditorProps, type IdentityConfig, type MemoryEntry, type PolicyRule, type Skill, type SoulConfig, type Task, type TaskGraph, type WorkspaceLayers, type WorkspaceMetadata, type WorkspaceViewProps } from './types';
 
 // Styles (for reference - import in your CSS/SCSS)
 export { workspaceBrowserStyles } from './WorkspaceBrowser';

@@ -1,22 +1,24 @@
 'use client'
 import React, { useState, useRef, useEffect } from 'react';
-import { usePlatformSignOut } from '@/lib/platform-auth-client';
+import { usePlatformSignOut, usePlatformUser } from '@/lib/platform-auth-client';
 import * as Popover from '@radix-ui/react-popover';
 import ReactDOM from 'react-dom';
 import { useResolvedTheme, useThemeStore } from '@/design/ThemeStore';
-import { 
-  Gear, 
-  SignOut, 
-  Sun, 
-  Moon, 
-  Globe, 
-  Question, 
-  ArrowUpRight, 
+import {
+  Gear,
+  SignOut,
+  Sun,
+  Moon,
+  Globe,
+  Question,
+  ArrowUpRight,
   DownloadSimple,
   Gift,
   Info,
   CaretRight,
   PuzzlePiece as Puzzle,
+  ArrowCounterClockwise,
+  User as UserIcon,
 } from '@phosphor-icons/react';
 
 interface MenuItem {
@@ -42,7 +44,7 @@ function SubmenuFlyout({
   isOpen: boolean;
   anchorRect: DOMRect | null;
   onClose: () => void;
-}) {
+}): JSX.Element | null {
   const [position, setPosition] = useState({ left: 0, top: 0 });
   const submenuRef = useRef<HTMLDivElement>(null);
 
@@ -149,19 +151,19 @@ function SubmenuFlyout({
   );
 }
 
-export function SettingsDrilldown({ children }: { children?: React.ReactNode }) {
+export function SettingsDrilldown({ children }: { children?: React.ReactNode }): JSX.Element {
+  const { user, isSignedIn } = usePlatformUser();
   const signOut = usePlatformSignOut()
   const [open, setOpen] = useState(false);
   const [activeSubmenuId, setActiveSubmenuId] = useState<string | null>(null);
   const [submenuAnchor, setSubmenuAnchor] = useState<DOMRect | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const submenuTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const submenuTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const themePreference = useThemeStore((state) => state.theme);
   const setThemePreference = useThemeStore((state) => state.setTheme);
   const resolvedTheme = useResolvedTheme(themePreference);
   const isDark = resolvedTheme === 'dark';
-
-  const handleOpenSettings = (section?: string) => {
+  const handleOpenSettings = (section?: string): void => {
     setOpen(false);
     setActiveSubmenuId(null);
     window.dispatchEvent(new CustomEvent('allternit:open-settings', { 
@@ -169,14 +171,14 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }) 
     }));
   };
 
-  const toggleTheme = () => {
+  const toggleTheme = (): void => {
     setThemePreference(isDark ? 'light' : 'dark');
   };
 
-  const handleLogout = () => {
+  const handleLogout = (): void => {
     setOpen(false);
     setActiveSubmenuId(null);
-    signOut({ redirectUrl: '/sign-in' });
+    signOut();
   };
 
   // Submenu data
@@ -274,9 +276,15 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }) 
       hasSubmenu: true,
       children: learnItems
     },
-    { 
-      id: 'logout', 
-      label: 'Log out', 
+    {
+      id: 'reset-layout',
+      label: 'Layout',
+      icon: <ArrowCounterClockwise size={18} weight="regular" />,
+      onClick: () => handleOpenSettings('appearance'),
+    },
+    {
+      id: 'logout',
+      label: 'Sign out',
       icon: <SignOut size={18} weight="regular" />,
       onClick: handleLogout
     },
@@ -284,7 +292,7 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }) 
 
   const activeSubmenuItem = menuItems.find(item => item.id === activeSubmenuId);
 
-  const handleItemHover = (item: MenuItem, el: HTMLButtonElement) => {
+  const handleItemHover = (item: MenuItem, el: HTMLButtonElement): void => {
     if (submenuTimeoutRef.current) {
       clearTimeout(submenuTimeoutRef.current);
       submenuTimeoutRef.current = null;
@@ -302,21 +310,21 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }) 
     }
   };
 
-  const handleSubmenuEnter = () => {
+  const handleSubmenuEnter = (): void => {
     if (submenuTimeoutRef.current) {
       clearTimeout(submenuTimeoutRef.current);
       submenuTimeoutRef.current = null;
     }
   };
 
-  const handleSubmenuLeave = () => {
+  const handleSubmenuLeave = (): void => {
     submenuTimeoutRef.current = setTimeout(() => {
       setActiveSubmenuId(null);
       setSubmenuAnchor(null);
     }, 150);
   };
 
-  const SectionDivider = () => (
+  const SectionDivider = (): JSX.Element => (
     <div style={{ 
       height: '1px', 
       backgroundColor: 'var(--shell-divider)',
@@ -362,8 +370,47 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }) 
             }}
           >
             <div ref={menuRef}>
+              {/* User Profile Header */}
+              {isSignedIn && user && (
+                <>
+                  <button
+                    onClick={() => handleOpenSettings('signin')}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      textAlign: 'left',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--shell-item-hover)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+                  >
+                    {user.imageUrl ? (
+                      <img src={user.imageUrl} style={{ width: 32, height: 32, borderRadius: '50%' }} alt="Avatar" />
+                    ) : (
+                      <div style={{ width: 32, height: 32, borderRadius: '50%', backgroundColor: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '12px', fontWeight: 600 }}>
+                        {(user.firstName?.[0] || user.userEmail?.[0] || 'U').toUpperCase()}
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--shell-item-fg)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {user.firstName ? `${user.firstName} ${user.lastName || ''}` : 'User'}
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--shell-item-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {user.primaryEmailAddress?.emailAddress || user.userEmail || ''}
+                      </div>
+                    </div>
+                  </button>
+                  <SectionDivider />
+                </>
+              )}
+
               {/* Menu Items - dynamically rendered with bounds checking */}
-              {menuItems.slice(0, 9).map((item, index) => (
+              {menuItems.map((item) => (
                 <MenuItem 
                   key={item.id}
                   item={item} 
@@ -406,7 +453,7 @@ function MenuItem({
   isActive: boolean;
   onHover: (item: MenuItem, el: HTMLButtonElement) => void;
   onClick: () => void;
-}) {
+}): JSX.Element {
   const hasSubmenu = item.hasSubmenu && item.children;
   const buttonRef = useRef<HTMLButtonElement>(null);
 

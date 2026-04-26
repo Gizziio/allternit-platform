@@ -258,6 +258,6 @@ export const defaultConfig: YjsConfig = {
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
   ],
-  roomPrefix: 'a2r-collab',
+  roomPrefix: 'allternit-collab',
   maxPeers: 20,
 };

@@ -12,21 +12,60 @@ function safeJSONParse<T>(text: string | null, defaultValue: T): T {
     return defaultValue;
   }
 }
-// @ts-ignore - Hook stub for now
+interface Job {
+  job_id: string;
+  status: string;
+  job_spec: string | null;
+  node_id?: string;
+  priority: number;
+  created_at: string;
+}
+
+interface JobStats {
+  pending: number;
+  running: number;
+  completed: number;
+  failed: number;
+  cancelled: number;
+}
+
+interface CreateJobData {
+  name: string;
+  wih: {
+    handler: string;
+    version: string;
+    task: {
+      type: string;
+      command: string;
+      working_dir: string | null;
+    };
+    tools: unknown[];
+  };
+  resources: {
+    cpu_cores: number;
+    memory_gb: number;
+    disk_gb: number;
+    gpu: boolean;
+  };
+  priority: number;
+  timeout_secs: number;
+  node_id: string | null;
+}
+
 const useJobs = () => ({
-  jobs: [] as any[],
-  stats: null as any,
+  jobs: [] as Job[],
+  stats: null as JobStats | null,
   loading: false,
   error: null as string | null,
   refresh: () => {},
-  createJob: async (_data: any) => ({} as any),
+  createJob: async (_data: CreateJobData) => ({ job_id: '' } as Job),
   cancelJob: async (_id: string) => {},
 });
-// @ts-ignore
-const useJob = (_id: string) => ({ job: null as any, loading: false });
+
+const useJob = (_id: string) => ({ job: null as Job | null, loading: false });
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Badge, type BadgeProps } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import {
   Table,
@@ -74,13 +113,14 @@ export function JobsView() {
 
   const handleRefresh = useCallback(() => {
     refresh();
-    (addToast as any)({
+    addToast({
       title: 'Refreshing',
       description: 'Job queue updated',
+      type: 'info',
     });
   }, [refresh, addToast]);
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: string): React.ReactNode => {
     switch (status) {
       case 'running':
         return <Play className="h-4 w-4 text-blue-500" />;
@@ -97,18 +137,18 @@ export function JobsView() {
     }
   };
 
-  const getStatusBadgeVariant = (status: string) => {
+  const getStatusBadgeVariant = (status: string): BadgeProps['variant'] => {
     switch (status) {
       case 'running':
-        return 'default' as const;
+        return 'default';
       case 'completed':
-        return 'success' as any;
+        return 'default';
       case 'failed':
-        return 'destructive' as const;
+        return 'destructive';
       case 'scheduled':
-        return 'secondary' as const;
+        return 'secondary';
       default:
-        return 'outline' as const;
+        return 'outline';
     }
   };
 
@@ -226,7 +266,7 @@ export function JobsView() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {jobs.map((job: any) => (
+              {jobs.map((job: Job) => (
                 <TableRow key={job.job_id}>
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -316,16 +356,18 @@ function CreateJobDialog({ onClose }: { onClose: () => void }) {
       });
 
       if (result) {
-        (addToast as any)({
+        addToast({
           title: 'Job Created',
           description: `Job ${result.job_id} has been queued`,
+          type: 'success',
         });
         onClose();
       }
     } catch (error) {
-      (addToast as any)({
+      addToast({
         title: 'Error',
         description: 'Failed to create job',
+        type: 'error',
       });
     } finally {
       setLoading(false);

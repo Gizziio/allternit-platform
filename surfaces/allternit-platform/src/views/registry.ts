@@ -8,7 +8,7 @@ export interface ViewInstance {
   type: ViewType;
   title: string;
   context: ViewContext;
-  component: React.ComponentType<{ context: ViewContext }>;
+  component: React.ComponentType<{ context?: ViewContext }>;
   lifecycle?: ViewLifecycle;
 }
 
@@ -16,7 +16,7 @@ export interface ViewRegistry {
   create: (ctx: ViewContext) => ViewInstance;
 }
 
-export function createViewRegistry(map: Record<ViewType, React.ComponentType<{ context: ViewContext }>>): ViewRegistry {
+export function createViewRegistry(map: Record<ViewType, React.ComponentType<{ context?: ViewContext }>>): ViewRegistry {
   return {
     create(ctx) {
       const Cmp = map[ctx.viewType];

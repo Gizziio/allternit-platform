@@ -18,7 +18,7 @@ function createStorage(): StorageLike & { values: Map<string, string> } {
 }
 
 describe('codeModeBrand', () => {
-  it('contains at least eight A2rchitech-specific greetings', () => {
+  it('contains at least eight Allternit-specific greetings', () => {
     expect(CODE_MODE_GREETINGS.length).toBe(8);
     expect(CODE_MODE_GREETINGS.every((greeting) => greeting.title.trim().length > 0)).toBe(true);
     expect(CODE_MODE_GREETINGS.every((greeting) => greeting.helper_locked.trim().length > 0)).toBe(true);

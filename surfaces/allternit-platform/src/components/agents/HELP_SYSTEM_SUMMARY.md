@@ -8,7 +8,7 @@ A complete help system has been designed and documented for the Agent Creation W
 
 ### 1. Documentation Files
 
-#### `/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/6-ui/a2r-platform/src/components/agents/HELP_SYSTEM_DOCUMENTATION.md`
+#### `/Users/macbook/Desktop/allternit-workspace/allternit/6-ui/allternit-platform/src/components/agents/HELP_SYSTEM_DOCUMENTATION.md`
 Comprehensive documentation covering:
 - All 16 help features implemented
 - File structure and organization
@@ -18,14 +18,14 @@ Comprehensive documentation covering:
 - Testing checklist
 - Browser compatibility
 
-#### `/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/6-ui/a2r-platform/src/components/agents/AGENT_CREATION_WIZARD_HELP_INTEGRATION_GUIDE.tsx`
+#### `/Users/macbook/Desktop/allternit-workspace/allternit/6-ui/allternit-platform/src/components/agents/AGENT_CREATION_WIZARD_HELP_INTEGRATION_GUIDE.tsx`
 Step-by-step integration guide with:
 - 9 detailed integration steps
 - Code examples for each step
 - Copy-paste ready code snippets
 - Complete component modifications
 
-#### `/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/6-ui/a2r-platform/src/components/agents/AGENT_CREATION_WIZARD_HELP_INTEGRATION.tsx`
+#### `/Users/macbook/Desktop/allternit-workspace/allternit/6-ui/allternit-platform/src/components/agents/AGENT_CREATION_WIZARD_HELP_INTEGRATION.tsx`
 Working example components showing:
 - Main wizard with help integration
 - IdentityStep with full help features
@@ -34,7 +34,7 @@ Working example components showing:
 - VoiceStep with help components
 - ToolsStep with smart suggestions
 
-#### `/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/6-ui/a2r-platform/src/components/agents/AgentCreationWizardEnhanced.with-help.tsx`
+#### `/Users/macbook/Desktop/allternit-workspace/allternit/6-ui/allternit-platform/src/components/agents/AgentCreationWizardEnhanced.with-help.tsx`
 Complete implementation reference with:
 - Modified main wizard component
 - Updated WizardHeader with help button
@@ -45,7 +45,7 @@ Complete implementation reference with:
 ## Existing Files Leveraged
 
 ### Help Components (Already Existed)
-`/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/6-ui/a2r-platform/src/components/agents/wizard-help-components.tsx`
+`/Users/macbook/Desktop/allternit-workspace/allternit/6-ui/allternit-platform/src/components/agents/wizard-help-components.tsx`
 
 **Components Available:**
 - `HelpPanel` - Slide-out help panel
@@ -60,7 +60,7 @@ Complete implementation reference with:
 - `useHelpContext` - Hook for help context
 
 ### Help Constants (Already Existed)
-`/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/6-ui/a2r-platform/src/lib/agents/wizard-help.constants.ts`
+`/Users/macbook/Desktop/allternit-workspace/allternit/6-ui/allternit-platform/src/lib/agents/wizard-help.constants.ts`
 
 **Content Available:**
 - `STEP_HELP_CONTENT` - Help content for all 10 wizard steps

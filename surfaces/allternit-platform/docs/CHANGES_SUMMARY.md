@@ -1,7 +1,7 @@
 # Chat Mode Rail Consolidation - Changes Summary
 
 ## Files Deleted
-- `6-ui/a2r-platform/src/views/ElementsLab.tsx` (693 lines of demo-only code)
+- `6-ui/allternit-platform/src/views/ElementsLab.tsx` (693 lines of demo-only code)
 
 ## Files Modified
 
@@ -82,5 +82,5 @@ Documentation mapping where all removed items are accessible:
 
 1. Build Settings sections for Infrastructure, Security, Agents
 2. Enhance placeholder views (SwarmMonitor, PolicyManager, SecurityDashboard)
-3. Wire inline renderers for A2R-IX and Form Surfaces
+3. Wire inline renderers for Allternit-IX and Form Surfaces
 4. Implement Command Palette commands for hidden views

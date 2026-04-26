@@ -139,6 +139,18 @@ export interface Agent {
   lastRunAt?: string;
   workspaceId?: string; // Reference to agent workspace
   ownerId?: string; // User who created the agent
+  source?: 'personal' | 'vendor' | 'organization'; // Where the agent came from
+
+  // Agent-as-teammate fields (from Multica)
+  teammateProfile?: {
+    avatar?: string;
+    bio?: string;
+    specialties?: string[];
+    runtimeId?: string;
+    status: 'idle' | 'busy' | 'offline';
+  };
+  assignedBoardItemIds?: string[];
+  assignedTaskIds?: string[];
 }
 
 // Zod Schema for Agent
@@ -163,6 +175,16 @@ export const agentSchema = z.object({
   lastRunAt: z.string().optional(),
   workspaceId: z.string().optional(),
   ownerId: z.string().optional(),
+  source: z.enum(['personal', 'vendor', 'organization']).optional(),
+  teammateProfile: z.object({
+    avatar: z.string().optional(),
+    bio: z.string().optional(),
+    specialties: z.array(z.string()).optional(),
+    runtimeId: z.string().optional(),
+    status: z.enum(['idle', 'busy', 'offline']).default('idle'),
+  }).optional(),
+  assignedBoardItemIds: z.array(z.string()).optional(),
+  assignedTaskIds: z.array(z.string()).optional(),
 });
 
 // Schema for validating array of agents (API response)
@@ -231,6 +253,7 @@ export interface CreateAgentInput {
   avatar?: AvatarConfig;  // Agent visual avatar configuration
   workspaceId?: string;  // Optional workspace ID
   ownerId?: string;  // User who created the agent
+  source?: 'personal' | 'vendor' | 'organization';
 }
 
 // Zod Schema for CreateAgentInput
@@ -751,17 +774,120 @@ export function safeValidate<T>(schema: z.ZodType<T>, data: unknown): T | null {
   } catch (error) {
     // Silent fail - validation errors are expected when backend returns incomplete data
     // Only log in development with verbose flag
-    if (import.meta.env.DEV && import.meta.env.VITE_LOG_VALIDATION_ERRORS === 'true') {
+    if (process.env.NODE_ENV === 'development' && process.env.NEXT_PUBLIC_LOG_VALIDATION_ERRORS === 'true') {
       console.error('[AgentTypes] Validation error:', error);
     }
     return null;
   }
 }
 
-// Stubs for missing exports
-export const CHARACTER_SPECIALTY_OPTIONS: Record<string, { id: string; name: string; description: string }> = {};
-export const DEFAULT_LAYER_CONFIG = {};
-export const SETUP_CAPABILITY_PRESETS: Record<string, string[]> = {};
-export const CREATE_FLOW_STEPS: Array<{ id: string; title: string }> = [];
-export const BAN_CATEGORY_OPTIONS: Array<{ id: string; label: string; description: string }> = [];
+export const CHARACTER_SPECIALTY_OPTIONS: Record<string, string[]> = {
+  coding: ['TypeScript', 'Python', 'React', 'Node.js', 'SQL', 'APIs', 'Testing', 'DevOps'],
+  creative: ['Copywriting', 'Storytelling', 'Brainstorming', 'Design Thinking', 'Content Strategy', 'Brand Voice'],
+  research: ['Literature Review', 'Data Analysis', 'Fact-checking', 'Synthesis', 'Citation', 'Summarization'],
+  operations: ['Project Management', 'Process Design', 'Documentation', 'Scheduling', 'Budgeting', 'Reporting'],
+  generalist: ['Problem Solving', 'Communication', 'Planning', 'Analysis', 'Coordination', 'Execution'],
+};
 
+export const DEFAULT_LAYER_CONFIG = { cognitive: true, identity: true, governance: true, skills: true, business: false };
+
+export const SETUP_CAPABILITY_PRESETS: Record<string, string[]> = {
+  coding: ['code-generation', 'file-operations', 'terminal', 'reasoning'],
+  creative: ['reasoning', 'web-search', 'code-generation'],
+  research: ['web-search', 'reasoning', 'memory'],
+  operations: ['planning', 'file-operations', 'api-integration', 'memory'],
+  generalist: ['reasoning', 'web-search', 'code-generation', 'memory'],
+};
+
+export type CreateFlowStepId = 'identity' | 'character' | 'avatar' | 'runtime' | 'workspace' | 'review';
+
+export interface CreateFlowStep {
+  id: CreateFlowStepId;
+  title: string;
+  label: string;
+  description: string;
+}
+
+export const CREATE_FLOW_STEPS: CreateFlowStep[] = [
+  { id: 'identity', title: 'Identity', label: 'Identity', description: 'Name, type, model, and personality' },
+  { id: 'character', title: 'Character', label: 'Character', description: 'Specialty skills, hard bans, and voice' },
+  { id: 'avatar', title: 'Avatar', label: 'Avatar', description: 'Choose a visual identity' },
+  { id: 'runtime', title: 'Runtime', label: 'Runtime', description: 'Tools, model settings, and capabilities' },
+  { id: 'workspace', title: 'Workspace', label: 'Workspace', description: 'Workspace layers and governance documents' },
+  { id: 'review', title: 'Review', label: 'Review', description: 'Review and create your agent' },
+];
+
+export const BAN_CATEGORY_OPTIONS: Array<{ id: string; category: string; label: string; description: string; severity: 'fatal' | 'warning' }> = [
+  { id: 'publishing', category: 'publishing', label: 'Publishing', description: 'No direct posting to public platforms', severity: 'fatal' },
+  { id: 'deploy', category: 'deploy', label: 'Deployment', description: 'No production deployments', severity: 'fatal' },
+  { id: 'data_exfil', category: 'data_exfil', label: 'Data Exfiltration', description: 'No unauthorized data export', severity: 'fatal' },
+  { id: 'payments', category: 'payments', label: 'Financial Transactions', description: 'No payment processing', severity: 'fatal' },
+  { id: 'email_send', category: 'email_send', label: 'Outbound Email', description: 'No sending emails externally', severity: 'warning' },
+  { id: 'file_delete', category: 'file_delete', label: 'Destructive Deletion', description: 'No permanent file deletion', severity: 'warning' },
+];
+
+// ============================================================================
+// Creation Flow Types
+// ============================================================================
+
+export type CreationTemperament = 'precise' | 'precision' | 'balanced' | 'creative' | 'exploratory' | 'systemic';
+
+export interface CreationBlueprintState {
+  name?: string;
+  description?: string;
+  setup: AgentSetup;
+  temperament?: CreationTemperament;
+  specialtySkills?: string[];
+  capabilities?: string[];
+  systemPrompt?: string;
+  color?: string;
+  [key: string]: unknown;
+}
+
+export interface CreationCardSeedState {
+  domainFocus: string;
+  definitionOfDone: string;
+  escalationRules: string;
+  voiceRules: string;
+  voiceMicroBans: string;
+  voiceStyle: string;
+  hardBanCategories: string[];
+}
+
+// ============================================================================
+// Tool Call Type
+// ============================================================================
+
+export interface ToolCall {
+  id: string;
+  name: string;
+  arguments: Record<string, unknown>;
+  status: 'pending' | 'running' | 'completed' | 'error';
+  result?: unknown;
+  error?: string;
+}
+
+// ============================================================================
+// Native Session Type
+// ============================================================================
+
+export type NativeSession = { id: string; [key: string]: unknown };
+
+
+// Local AgentTemplate for CreateAgentForm (richer than agent-advanced.types version)
+export interface AgentTemplate {
+  id: string;
+  name: string;
+  description: string;
+  setup: AgentSetup;
+  capabilities: string[];
+  systemPrompt: string;
+  color: string;
+  mascotTemplate?: string;
+  avatarColors?: { primary?: string; secondary?: string; glow?: string };
+  tags?: string[];
+  category?: string;
+}
+
+// Re-exports for backward compat
+export type { WorkspaceLayerConfig } from '@/components/agent-workspace/WorkspaceLayerConfig';

@@ -88,7 +88,7 @@ export interface CuratedMarketplaceSource {
 // Configuration
 // ============================================================================
 
-const ALLTERNIT_MARKETPLACE_API = 'https://api.a2r.dev/v1/marketplace';
+const ALLTERNIT_MARKETPLACE_API = 'https://api.allternit.dev/v1/marketplace';
 const GITHUB_API = 'https://api.github.com';
 
 // Search queries for finding Allternit plugins on GitHub

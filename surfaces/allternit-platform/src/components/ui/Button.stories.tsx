@@ -13,7 +13,7 @@ const meta: Meta<typeof Button> = {
   component: Button,
   parameters: {
     // Allternit Evidence metadata
-    a2r: {
+    allternit: {
       componentId: 'ui-button',
       evidence: {
         types: ['INTERACTION_TEST', 'VISUAL_SNAPSHOT', 'A11Y_SCAN'],
@@ -81,7 +81,7 @@ export const Sizes: Story = {
     </div>
   ),
   parameters: {
-    a2r: {
+    allternit: {
       evidence: {
         types: ['VISUAL_REGRESSION'],
       },

@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { ArrowBendUpRight, ClockCounterClockwise, GitBranch, WarningCircle } from '@phosphor-icons/react';
+import { ContextWindowCard } from '@/components/ai-elements/ContextWindowCard';
 import {
   getActiveSession,
   getActiveWorkspace,
@@ -179,10 +180,12 @@ export function CodeSessionBar() {
           )}
 
           {activeSession && (
-            <span data-testid="code-sessionbar-state-pill" style={pillStyle('#7db8ff')}>
-              <ClockCounterClockwise size={12} weight="bold" />
-              {`${activeSession.mode}${activeSession.state}`}
-            </span>
+            <ContextWindowCard>
+              <button style={{ ...pillStyle('#7db8ff'), cursor: 'pointer', outline: 'none' }}>
+                <ClockCounterClockwise size={12} weight="bold" />
+                {`${activeSession.mode}${activeSession.state}`}
+              </button>
+            </ContextWindowCard>
           )}
 
           {activeSession && activeSession.pending_approvals_count > 0 && (

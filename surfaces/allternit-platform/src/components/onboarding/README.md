@@ -1,4 +1,4 @@
-# A2R Platform Onboarding
+# Allternit Platform Onboarding
 
 A Claude Code Desktop-inspired 3-screen onboarding flow with an optional wizard setup.
 
@@ -28,7 +28,7 @@ A Claude Code Desktop-inspired 3-screen onboarding flow with an optional wizard 
 
 ## Usage
 
-The onboarding automatically appears for first-time users. The completion state is stored in `localStorage` under the key `a2r-onboarding-storage`.
+The onboarding automatically appears for first-time users. The completion state is stored in `localStorage` under the key `allternit-onboarding-storage`.
 
 ### Accessing the Store
 
@@ -58,7 +58,7 @@ const {
 
 Users can reset onboarding from:
 1. **Settings > About** - Click "Reset Onboarding" button
-2. **Browser Console** - Run: `localStorage.removeItem('a2r-onboarding-storage')`
+2. **Browser Console** - Run: `localStorage.removeItem('allternit-onboarding-storage')`
 
 ## Files
 

@@ -6,7 +6,7 @@
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { useCoworkStore } from './CoworkStore';
-import type { AnyCoworkEvent } from './cowork.types';
+import { useCoworkSessionStore } from './CoworkSessionStore';
 import {
   CheckCircle,
   Circle,
@@ -35,149 +35,32 @@ interface ComposeEventDetail {
   send?: boolean;
 }
 
-// Type guards for cowork events
-import type { CommandEvent, FileEvent, ActionEvent, ToolCallEvent, CheckpointEvent, NarrationEvent } from './cowork.types';
-
-function isCommandEvent(event: AnyCoworkEvent): event is CommandEvent {
-  return event.type === 'cowork.command';
-}
-
-function isFileEvent(event: AnyCoworkEvent): event is FileEvent {
-  return event.type === 'cowork.file';
-}
-
-function isActionEvent(event: AnyCoworkEvent): event is ActionEvent {
-  return event.type === 'cowork.action';
-}
-
-function isToolCallEvent(event: AnyCoworkEvent): event is ToolCallEvent {
-  return event.type === 'cowork.tool_call';
-}
-
-function isCheckpointEvent(event: AnyCoworkEvent): event is CheckpointEvent {
-  return event.type === 'cowork.checkpoint';
-}
-
-function isNarrationEvent(event: AnyCoworkEvent): event is NarrationEvent {
-  return event.type === 'cowork.narration';
-}
-
-function shortText(value: string, max = 56): string {
-  const normalized = value.trim().replace(/\s+/g, ' ');
-  if (!normalized) return '';
-  if (normalized.length <= max) return normalized;
-  return `${normalized.slice(0, max - 3)}...`;
-}
-
-function toTitle(value: string): string {
-  if (!value) return value;
-  return `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
-}
-
-function inferFolderFromPath(path?: string): string | null {
-  if (!path) return null;
-  const normalized = path.replace(/\\/g, '/').trim();
-  const index = normalized.lastIndexOf('/');
-  if (index <= 0) return null;
-  return normalized.slice(0, index);
-}
-
-function summarizeProgressEvent(event: AnyCoworkEvent): string {
-  switch (event.type) {
-    case 'cowork.command': {
-      if (!isCommandEvent(event)) return 'Ran terminal command';
-      const command = event.commands?.[0];
-      return command ? `Ran ${shortText(command, 52)}` : 'Ran terminal command';
-    }
-    case 'cowork.file': {
-      if (!isFileEvent(event)) return 'Updated workspace files';
-      const operation = toTitle(event.operation ?? 'Updated');
-      const firstFile = event.files?.[0];
-      const fileName = firstFile?.path ?? firstFile?.name;
-      return fileName ? `${operation} ${shortText(fileName, 42)}` : `${operation} workspace files`;
-    }
-    case 'cowork.action': {
-      if (!isActionEvent(event)) return 'Executed action';
-      return shortText(event.humanReadable ?? `Executed ${event.actionType ?? 'action'}`, 56);
-    }
-    case 'cowork.tool_call': {
-      if (!isToolCallEvent(event)) return 'Using tool';
-      return `Using ${shortText(event.toolName ?? 'tool', 44)}`;
-    }
-    case 'cowork.tool_result':
-      return 'Received tool results';
-    case 'cowork.checkpoint': {
-      if (!isCheckpointEvent(event)) return 'Saved checkpoint';
-      return shortText(event.label ?? 'Saved checkpoint', 56);
-    }
-    case 'cowork.narration': {
-      if (!isNarrationEvent(event)) return 'Updated analysis';
-      return event.text ? shortText(event.text, 56) : 'Updated analysis';
-    }
-    default:
-      return 'Updated session activity';
-  }
-}
-
 function dispatchCompose(text: string, send = false): void {
   if (typeof window === 'undefined') return;
   const detail: ComposeEventDetail = { text, send };
   window.dispatchEvent(new CustomEvent<ComposeEventDetail>('allternit:cowork-compose', { detail }));
 }
 
-function buildProgressSteps(session: NonNullable<ReturnType<typeof useCoworkStore.getState>['session']>): ProgressStep[] {
-  const workEvents = session.events.filter((event) =>
-    event.type === 'cowork.command' ||
-    event.type === 'cowork.file' ||
-    event.type === 'cowork.action' ||
-    event.type === 'cowork.tool_call' ||
-    event.type === 'cowork.tool_result' ||
-    event.type === 'cowork.checkpoint' ||
-    event.type === 'cowork.narration',
-  );
-
-  if (workEvents.length === 0) {
+function buildProgressSteps(taskStatus?: string): ProgressStep[] {
+  const status = taskStatus ?? 'pending';
+  if (status === 'completed') {
     return [
       { id: 'session-started', label: 'Session started', status: 'complete' },
-      { id: 'gathering-context', label: 'Gathering context for this task', status: 'active' },
-      { id: 'awaiting-next-step', label: 'Awaiting next actionable step', status: 'pending' },
+      { id: 'task-completed', label: 'Task completed', status: 'complete' },
     ];
   }
-
-  const recent = workEvents.slice(-2).map((event, idx) => ({
-    id: `${event.id}-${idx}`,
-    label: summarizeProgressEvent(event),
-  }));
-
-  const steps: ProgressStep[] = [
-    { id: 'session-started', label: 'Session started', status: 'complete' },
-    ...recent.map((entry) => ({
-      id: entry.id,
-      label: entry.label,
-      status: 'pending' as StepStatus,
-    })),
-  ];
-
-  const ended = session.status === 'completed' || session.status === 'error';
-  return steps.map((step, index) => {
-    if (index < steps.length - 1) {
-      return { ...step, status: 'complete' as StepStatus };
-    }
-    return { ...step, status: ended ? 'complete' : 'active' };
-  });
-}
-
-function collectTouchedFiles(events: AnyCoworkEvent[]): string[] {
-  const seen = new Set<string>();
-  for (const event of events) {
-    if (!isFileEvent(event)) continue;
-    for (const file of event.files) {
-      const path = file.path || file.name;
-      if (!path) continue;
-      seen.add(path);
-    }
+  if (status === 'in_progress') {
+    return [
+      { id: 'session-started', label: 'Session started', status: 'complete' },
+      { id: 'working', label: 'Working on task', status: 'active' },
+      { id: 'awaiting-next-step', label: 'Awaiting next step', status: 'pending' },
+    ];
   }
-  return Array.from(seen.values());
+  return [
+    { id: 'session-started', label: 'Session started', status: 'complete' },
+    { id: 'gathering-context', label: 'Gathering context', status: 'active' },
+    { id: 'awaiting-next-step', label: 'Awaiting next step', status: 'pending' },
+  ];
 }
 
 interface RailCardProps {
@@ -204,7 +87,13 @@ const RailCard = memo(function RailCard({ title, open, onToggle, children }: Rai
 });
 
 export const CoworkRightRail = memo(function CoworkRightRail() {
-  const { session } = useCoworkStore();
+  const { tasks, activeTaskId } = useCoworkStore();
+  const activeTask = tasks.find((t) => t.id === activeTaskId);
+
+  const activeSession = useCoworkSessionStore((state) =>
+    state.activeSessionId ? state.sessions.find((s) => s.id === state.activeSessionId) ?? null : null
+  );
+
   const [openCards, setOpenCards] = useState({
     progress: true,
     folder: true,
@@ -252,46 +141,16 @@ export const CoworkRightRail = memo(function CoworkRightRail() {
     }
   }, []);
 
-  const steps = useMemo(() => (session ? buildProgressSteps(session) : []), [session]);
-  const touchedFiles = useMemo(() => (session ? collectTouchedFiles(session.events) : []), [session]);
-
-  const workingFolder = useMemo(() => {
-    if (!session) return null;
-
-    const latestCommandWithCwd = [...session.events]
-      .reverse()
-      .find((event): event is CommandEvent => 
-        isCommandEvent(event) && typeof event.cwd === 'string'
-      );
-
-    if (latestCommandWithCwd) {
-      return latestCommandWithCwd.cwd;
-    }
-
-    for (const filePath of touchedFiles) {
-      const folder = inferFolderFromPath(filePath);
-      if (folder) return folder;
-    }
-
-    return null;
-  }, [session, touchedFiles]);
-
-  const toolCalls = useMemo(
-    () => (session ? session.events.filter((event) => event.type === 'cowork.tool_call') : []),
-    [session],
-  );
-  const commandCount = useMemo(
-    () => (session ? session.events.filter((event) => event.type === 'cowork.command').length : 0),
-    [session],
-  );
-  const fileCount = useMemo(
-    () => (session ? session.events.filter((event) => event.type === 'cowork.file').length : 0),
-    [session],
-  );
-
+  const steps = useMemo(() => buildProgressSteps(activeTask?.status), [activeTask?.status]);
   const activeStep = useMemo(() => steps.find((step) => step.status === 'active'), [steps]);
 
-  if (!session) return null;
+  // Fallbacks for workspace telemetry (to be wired to store)
+  const sessionMeta = activeSession?.metadata as Record<string, unknown> | undefined;
+  const workingFolder = useMemo(() => sessionMeta?.workspacePath as string | undefined, [sessionMeta]);
+  const touchedFiles = useMemo(() => (sessionMeta?.touchedFiles as string[] | undefined) ?? [], [sessionMeta]);
+  const fileCount = useMemo(() => (sessionMeta?.fileCount as number | undefined) ?? 0, [sessionMeta]);
+  const commandCount = useMemo(() => (sessionMeta?.commandCount as number | undefined) ?? 0, [sessionMeta]);
+  const toolCalls = useMemo(() => (sessionMeta?.toolCalls as Array<unknown> | undefined) ?? [], [sessionMeta]);
 
   return (
     <div className="h-full overflow-y-auto p-2.5 space-y-2.5 text-[var(--text-primary,#ececec)]">

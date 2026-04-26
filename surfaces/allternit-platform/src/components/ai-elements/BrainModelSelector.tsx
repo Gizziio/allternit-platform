@@ -58,12 +58,23 @@ interface ProviderGroup {
   status: 'available' | 'locked' | 'terminal-only';
 }
 
-const PROVIDER_GROUPS: ProviderGroup[] = [
-  { providerId: 'opencode', providerName: 'OpenCode', profileId: 'opencode-acp', authProfileId: 'opencode-auth', status: 'available' },
-  { providerId: 'gemini', providerName: 'Gemini CLI', profileId: 'gemini-acp', authProfileId: 'gemini-auth', status: 'available' },
-  { providerId: 'kimi', providerName: 'Kimi CLI', profileId: 'kimi-acp', authProfileId: 'kimi-auth', status: 'available' },
-  { providerId: 'claude-code-tui', providerName: 'Claude Code (TUI)', profileId: 'claude-code-tui', status: 'terminal-only' },
-];
+const PROVIDER_LABELS: Record<string, string> = {
+  'claude-cli': 'Claude CLI',
+  'codex-cli': 'Codex CLI',
+  'gemini-cli': 'Gemini CLI',
+  'qwen-cli': 'Qwen CLI',
+  'kimi-cli': 'Kimi CLI',
+  'opencode': 'OpenCode',
+  'openai': 'OpenAI',
+  'anthropic': 'Anthropic',
+  'google': 'Google',
+  'ollama': 'Ollama',
+  'sidecar': 'Sidecar',
+};
+
+function getProviderLabel(providerId: string): string {
+  return PROVIDER_LABELS[providerId] ?? providerId;
+}
 
 export function BrainModelSelector({
   value,
@@ -73,6 +84,7 @@ export function BrainModelSelector({
 }: BrainModelSelectorProps) {
   const { addToast } = useToast();
   const {
+    providers,
     getProviderState,
     refreshAuthStatus,
     isProviderLocked
@@ -88,17 +100,28 @@ export function BrainModelSelector({
   }, [refreshAuthStatus]);
 
   // Get current auth states
-  const providerStates = PROVIDER_GROUPS.map(group => ({
+  const providerGroups: ProviderGroup[] = Array.from(providers.values())
+    .filter((provider) => provider.chat_profile_ids.length > 0)
+    .map((provider) => ({
+      providerId: provider.provider_id,
+      providerName: getProviderLabel(provider.provider_id),
+      profileId: provider.chat_profile_ids[0] ?? provider.provider_id,
+      authProfileId: provider.auth_profile_id ?? undefined,
+      status: 'available' as const,
+    }))
+    .sort((a, b) => a.providerName.localeCompare(b.providerName));
+
+  const providerStates = providerGroups.map((group) => ({
     ...group,
     isLocked: group.status === 'locked' || (group.status === 'available' && isProviderLocked(group.providerId)),
-    state: getProviderState(group.providerId)
+    state: getProviderState(group.providerId),
   }));
 
   const availableProviders = providerStates.filter(p => p.status === 'available');
   const terminalProviders = providerStates.filter(p => p.status === 'terminal-only');
 
   const handleProviderSelect = (providerId: string) => {
-    const provider = PROVIDER_GROUPS.find(p => p.providerId === providerId);
+    const provider = providerGroups.find((p) => p.providerId === providerId);
     if (!provider) return;
 
     if (provider.status === 'terminal-only') {
@@ -122,7 +145,7 @@ export function BrainModelSelector({
   };
 
   const handleModelSelect = (modelId: string) => {
-    const provider = PROVIDER_GROUPS.find(p => p.providerId === selectedProvider);
+    const provider = providerGroups.find((p) => p.providerId === selectedProvider);
     if (!provider) return;
 
     onChange(modelId, {
@@ -204,9 +227,9 @@ export function BrainModelSelector({
           <label className="text-sm font-medium">Model</label>
           <ProviderModelSelector
             providerId={selectedProvider}
-            providerName={PROVIDER_GROUPS.find(p => p.providerId === selectedProvider)?.providerName || ''}
-            profileId={PROVIDER_GROUPS.find(p => p.providerId === selectedProvider)?.profileId || ''}
-            authProfileId={PROVIDER_GROUPS.find(p => p.providerId === selectedProvider)?.authProfileId}
+            providerName={providerGroups.find((p) => p.providerId === selectedProvider)?.providerName || ''}
+            profileId={providerGroups.find((p) => p.providerId === selectedProvider)?.profileId || ''}
+            authProfileId={providerGroups.find((p) => p.providerId === selectedProvider)?.authProfileId}
             value={value}
             onChange={handleModelSelect}
             onLaunchTerminal={onLaunchTerminal}

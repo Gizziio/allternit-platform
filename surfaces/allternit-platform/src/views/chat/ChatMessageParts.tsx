@@ -9,16 +9,12 @@
 import React from "react";
 import type { RichContentPart, A2UIPart, ArtifactPart } from "./ChatMessageTypes";
 import { MessageA2UI } from "./ChatA2UI";
-import { MessageResponse } from "@/components/ai-elements/message";
+import { Markdown } from "@/components/agent-elements/markdown";
+import { ToolRenderer as AgentElementToolRenderer } from "@/components/agent-elements/tools/tool-renderer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   CircleNotch,
-  CheckCircle,
-  Warning,
-  MagnifyingGlass,
-  Code,
-  Brain,
 } from '@phosphor-icons/react';
 import { cn } from "@/lib/utils";
 
@@ -152,9 +148,11 @@ export function RichMessageParts({
         // Text Part (from UIPart)
         if (part.type === "text") {
           return (
-            <MessageResponse key={`text-${idx}`} className="prose prose-sm dark:prose-invert max-w-none">
-              {part.text}
-            </MessageResponse>
+            <Markdown
+              key={`text-${idx}`}
+              content={part.text}
+              className="[&_p]:text-sm [&_p]:leading-7 [&_p]:text-foreground [&_ul]:text-foreground [&_ol]:text-foreground"
+            />
           );
         }
 
@@ -241,70 +239,27 @@ function AgentThinkingRenderer({
 }: {
   part: Extract<RichContentPart, { type: "agent-thinking" }>;
 }) {
-  const statusIcons: Record<string, React.ReactNode> = {
-    idle: <Brain size={16} />,
-    reasoning: <Brain className="w-4 h-4 animate-pulse" />,
-    searching: <MagnifyingGlass className="w-4 h-4 animate-pulse" />,
-    coding: <Code className="w-4 h-4 animate-pulse" />,
-    waiting: <CircleNotch className="w-4 h-4 animate-spin" />,
-  };
-
-  const statusLabels: Record<string, string> = {
-    idle: "Ready",
-    reasoning: "Thinking",
-    searching: "Searching",
-    coding: "Coding",
-    waiting: "Waiting",
-  };
+  const thoughtContent = [
+    part.message,
+    ...(part.steps?.map((step) =>
+      step.detail ? `${step.label}: ${step.detail}` : step.label,
+    ) ?? []),
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   return (
-    <Card className="bg-muted/50 border-dashed">
-      <CardContent className="p-3 space-y-2">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          {statusIcons[part.status] || statusIcons.idle}
-          <span>{statusLabels[part.status] || "Processing"}</span>
-          {part.message && (
-            <span className="text-xs">- {part.message}</span>
-          )}
-        </div>
-
-        {part.steps && part.steps.length > 0 && (
-          <div className="space-y-1 pl-6">
-            {part.steps.map((step) => (
-              <div
-                key={step.id}
-                className={cn(
-                  "flex items-center gap-2 text-sm",
-                  step.status === "completed" && "text-green-600",
-                  step.status === "active" && "text-primary",
-                  step.status === "error" && "text-destructive",
-                  step.status === "pending" && "text-muted-foreground"
-                )}
-              >
-                {step.status === "completed" && (
-                  <CheckCircle size={12} />
-                )}
-                {step.status === "active" && (
-                  <CircleNotch className="w-3 h-3 animate-spin" />
-                )}
-                {step.status === "error" && (
-                  <Warning size={12} />
-                )}
-                {step.status === "pending" && (
-                  <div className="w-3 h-3 rounded-full border border-muted-foreground/30" />
-                )}
-                <span>{step.label}</span>
-                {step.detail && (
-                  <span className="text-xs text-muted-foreground">
-                    {step.detail}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <AgentElementToolRenderer
+      part={{
+        type: "tool-Thinking",
+        toolCallId: `thinking-${part.status}`,
+        input: {
+          thought: thoughtContent || part.status,
+        },
+        output: thoughtContent || part.status,
+        state: part.status === "waiting" ? "input-streaming" : "output-available",
+      }}
+    />
   );
 }
 
@@ -387,27 +342,7 @@ function ToolRenderer({
 }: {
   part: Extract<RichContentPart, { type: "dynamic-tool" }>;
 }) {
-  // Use the existing Tool component from AI Elements
-  return (
-    <Card className="bg-muted/30">
-      <CardContent className="p-3">
-        <div className="flex items-center gap-2 text-sm">
-          <span className="font-medium">{part.toolName}</span>
-          <span
-            className={cn(
-              "text-xs px-2 py-0.5 rounded",
-              part.state === "output-available" && "bg-green-500/10 text-green-600",
-              part.state === "output-error" && "bg-destructive/10 text-destructive",
-              (part.state === "input-available" || part.state === "input-streaming") &&
-                "bg-primary/10 text-primary"
-            )}
-          >
-            {part.state}
-          </span>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  return <AgentElementToolRenderer part={toAgentElementToolPart(part)} />;
 }
 
 function FileRenderer({
@@ -438,4 +373,16 @@ function SourceDocumentRenderer({
       📄 {part.title}
     </a>
   );
+}
+
+function toAgentElementToolPart(
+  part: Extract<RichContentPart, { type: "dynamic-tool" }>,
+) {
+  return {
+    type: `tool-${part.toolName}`,
+    toolCallId: part.toolCallId,
+    input: part.input ?? {},
+    output: part.output,
+    state: part.state,
+  };
 }

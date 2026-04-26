@@ -11,12 +11,17 @@
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { ErrorBoundary } from '@/components/error-boundary';
+import { getAgentSessionDescriptor } from '@/lib/agents';
 import {
+  ArrowClockwise,
+  ArrowCounterClockwise,
+  ArrowsInLineVertical,
   Clock,
   FolderOpen,
   SidebarSimple,
   Sparkle,
   Wrench,
+  X,
 } from '@phosphor-icons/react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -33,11 +38,14 @@ import { useRustStreamAdapter, type ChatMessage } from '@/lib/ai/rust-stream-ada
 
 // Cowork-specific components
 import { useCoworkStore } from './CoworkStore';
+import { useTaskStore } from './useTaskStore';
+import { useTeamBridge } from './useTeamBridge';
 import { CoworkRightRail } from './CoworkRightRail';
 import { CoworkLaunchpad } from './CoworkLaunchpad';
 import { CoworkProjectView } from './CoworkProjectView';
 import { PermissionModal } from './PermissionModal';
 import { QuestionModal } from './QuestionModal';
+import { sessionLifecycleApi } from '@/lib/agents/native-agent-api';
 
 // Providers (matching ChatRoot structure)
 import { ChatIdProvider } from '@/providers/chat-id-provider';
@@ -56,13 +64,13 @@ import {
 import {
   getOpenClawWorkspacePathFromAgent,
   mapNativeMessagesToStreamMessages,
-  useEmbeddedAgentSession,
-  useEmbeddedAgentSessionStore,
-  useNativeAgentStore,
 } from '@/lib/agents';
+import type { AgentModeSurface } from '@/stores/agent-surface-mode.store';
+import { useCoworkSessionStore } from './CoworkSessionStore';
 import { AgentModeBackdrop } from '../chat/agentModeSurfaceTheme';
 import { useModeCanvasBridge } from '@/hooks/useModeCanvasBridge';
 import { ACIComputerUseBar } from '@/capsules/browser/ACIComputerUseSidecar';
+import { usePermissionGuide } from '@/lib/usePermissionGuide';
 
 // Theme (matching ChatView)
 const THEME = {
@@ -138,12 +146,15 @@ function CoworkRootContent() {
   console.log("COWORKROOT_CHATFIRST_FINGERPRINT");
   
   const {
-    session,
     activeProjectId,
   } = useCoworkStore();
   
   const [showRail, setShowRail] = useState(true);
   const [initialMessage, setInitialMessage] = useState<string | null>(null);
+  // Cowork-owned session ID, local to this mount — null means show launchpad.
+  // Intentionally NOT read from any store on mount so navigating to Cowork
+  // always lands on the launchpad fresh, regardless of persisted state.
+  const [coworkSessionId, setCoworkSessionId] = useState<string | null>(null);
   
   // Dropped files state
   const [droppedFiles, setDroppedFiles] = useState<AttachmentPreviewItem[]>([]);
@@ -152,6 +163,22 @@ function CoworkRootContent() {
   
   // Connect mode tabs to canvas opening (Phase 4)
   useModeCanvasBridge({ surface: 'cowork' });
+
+  // Wire team bridge when active task has a workspaceId
+  const activeTask = useTaskStore((state) =>
+    state.tasks.find((t) => t.id === state.activeTaskId)
+  );
+  useTeamBridge(activeTask?.workspaceId);
+
+  // ViewHost unmounts CoworkRoot when the user switches to another mode.
+  // On each mount (fresh navigation TO Cowork), reset persisted project state so
+  // the launchpad is always shown rather than auto-resuming the last project.
+  useEffect(() => {
+    useCoworkStore.getState().setActiveProject(null);
+    return () => {
+      useCoworkStore.getState().setActiveProject(null);
+    };
+  }, []);
   
   // Handle dropped files from global dropzone
   const handleDroppedFiles = useCallback(async (files: FileWithData[]) => {
@@ -185,34 +212,49 @@ function CoworkRootContent() {
     setPreviewItem(item);
     setPreviewModalOpen(true);
   }, []);
-  const embeddedAgentSession = useEmbeddedAgentSession('cowork');
-  const coworkAgentModeEnabled = embeddedAgentSession.isEmbedded && embeddedAgentSession.descriptor.sessionMode === 'agent';
+  const embeddedSessionId = useCoworkSessionStore((s) => s.activeSessionId);
+  const embeddedSession = useCoworkSessionStore((s) =>
+    s.activeSessionId ? s.sessions.find((sess) => sess.id === s.activeSessionId) ?? null : null,
+  );
+  const embeddedDescriptor = useMemo(
+    () => getAgentSessionDescriptor(embeddedSession?.metadata),
+    [embeddedSession?.metadata],
+  );
+  const isEmbeddedAgentSession = Boolean(embeddedSessionId && embeddedSession);
+  const embeddedAgentSession = useMemo(
+    () => ({
+      sessionId: embeddedSessionId,
+      session: embeddedSession,
+      descriptor: embeddedDescriptor,
+      isEmbedded: isEmbeddedAgentSession,
+    }),
+    [embeddedSessionId, embeddedSession, embeddedDescriptor, isEmbeddedAgentSession],
+  );
+  const coworkAgentModeEnabled = isEmbeddedAgentSession && embeddedDescriptor.sessionMode === 'agent';
 
   // If there's an active project, show CoworkProjectView instead
-  if (activeProjectId && !embeddedAgentSession.isEmbedded) {
+  if (activeProjectId && !isEmbeddedAgentSession) {
     return <CoworkProjectView />;
   }
   
-  // Start a new cowork session via gizzi runtime
+  // Start a new cowork session via gizzi runtime, using Cowork's own session store.
   const handleStartCowork = useCallback(async (task: string) => {
     try {
-      const session = await useNativeAgentStore.getState().createSession(
-        task.slice(0, 64) || 'New Cowork Session',
-        undefined,
-        {
-          sessionMode: 'regular',
-          originSurface: 'cowork',
-        },
-      );
-      useNativeAgentStore.getState().setSurfaceSession('cowork', session.id);
-      void useNativeAgentStore.getState().sendMessageStream(session.id, task);
+      const sessionId = await useCoworkSessionStore.getState().createSession({
+        name: task.slice(0, 64) || 'New Cowork Session',
+        sessionMode: 'regular',
+      });
+      useCoworkSessionStore.getState().setActiveSession(sessionId);
+      setCoworkSessionId(sessionId);
+      setInitialMessage(task);
     } catch (err) {
       console.error('[CoworkRoot] Failed to create cowork session:', err);
     }
   }, []);
-  
-  // Show launchpad if no active session
-  if (!session && !embeddedAgentSession.isEmbedded) {
+
+  // Show launchpad whenever no session has been started in this mount lifecycle.
+  // Ignores persisted `session` so navigating to Cowork always lands on the launchpad.
+  if (!coworkSessionId && !embeddedAgentSession?.isEmbedded) {
     return (
       <ModelSelectionProvider>
         <CoworkLaunchpad 
@@ -227,9 +269,9 @@ function CoworkRootContent() {
   // Uses SAME background tokens as regular Chat mode
   return (
     <DataStreamProvider>
-      <ChatIdProvider 
-        chatId={session?.id || embeddedAgentSession.sessionId || 'cowork-embedded'}
-        isPersisted={Boolean(session || embeddedAgentSession.sessionId)}
+      <ChatIdProvider
+        chatId={coworkSessionId || session?.id || embeddedAgentSession?.sessionId || 'cowork-embedded'}
+        isPersisted={Boolean(coworkSessionId || session?.id || embeddedAgentSession?.sessionId)}
         source="local"
       >
         <MessageTreeProvider>
@@ -314,7 +356,7 @@ function CoworkRootContent() {
                           
                           {/* Cowork Chat - Transcript + Composer integrated */}
                           <CoworkChat
-                            sessionId={session?.id || embeddedAgentSession.sessionId || 'cowork-embedded'}
+                            sessionId={coworkSessionId || session?.id || embeddedAgentSession?.sessionId || 'cowork-embedded'}
                             initialMessage={initialMessage}
                             onInitialMessageSent={() => setInitialMessage(null)}
                           />
@@ -322,10 +364,10 @@ function CoworkRootContent() {
                           {/* Permission + Question gate modals — float above transcript.
                             Only meaningful when using a native gizzi-code session (embedded agent),
                             but harmless to render for legacy CoworkStore sessions (empty pending lists). */}
-                          {(embeddedAgentSession.sessionId || session?.id) && (
+                          {(embeddedAgentSession?.sessionId || session?.id) && (
                             <div className="coworkGateOverlay">
-                              <PermissionModal sessionId={embeddedAgentSession.sessionId || session!.id} />
-                              <QuestionModal sessionId={embeddedAgentSession.sessionId || session!.id} />
+                              <PermissionModal sessionId={embeddedAgentSession?.sessionId || session?.id || ''} />
+                              <QuestionModal sessionId={embeddedAgentSession?.sessionId || session?.id || ''} />
                             </div>
                           )}
 
@@ -352,7 +394,7 @@ function CoworkRootContent() {
                               <div className="coworkRailSliderLine" />
                             </button>
                             <aside className="coworkRail">
-                              {embeddedAgentSession.isEmbedded ? (
+                              {embeddedAgentSession?.isEmbedded ? (
                                 <EmbeddedCoworkAgentRail />
                               ) : (
                                 <CoworkRightRail />
@@ -539,42 +581,50 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
   const { selection: modelSelection, selectModel, startSelection, isSelecting, cancelSelection } = useModelSelection();
   const { agentModeEnabled, selectedAgentId, selectedAgent } =
     useSurfaceAgentSelection('cowork');
-  const embeddedAgentSession = useEmbeddedAgentSession('cowork');
-  const setEmbeddedAgentSession = useEmbeddedAgentSessionStore(
-    (state) => state.setSurfaceSession,
+  const embeddedSessionId = useCoworkSessionStore((s) => s.activeSessionId);
+  const embeddedSession = useCoworkSessionStore((s) =>
+    s.activeSessionId ? s.sessions.find((sess) => sess.id === s.activeSessionId) ?? null : null,
   );
-  const clearEmbeddedAgentSession = useEmbeddedAgentSessionStore(
-    (state) => state.clearSurfaceSession,
+  const embeddedDescriptor = useMemo(
+    () => getAgentSessionDescriptor(embeddedSession?.metadata),
+    [embeddedSession?.metadata],
   );
-  const createNativeSession = useNativeAgentStore((state) => state.createSession);
-  const setActiveNativeSession = useNativeAgentStore((state) => state.setActiveSession);
-  const sendNativeMessageStream = useNativeAgentStore((state) => state.sendMessageStream);
-  const fetchNativeMessages = useNativeAgentStore((state) => state.fetchMessages);
-  const fetchNativeCanvases = useNativeAgentStore((state) => state.fetchSessionCanvases);
-  const abortNativeGeneration = useNativeAgentStore((state) => state.abortGeneration);
-  const nativeStreaming = useNativeAgentStore((state) => ({
-    isStreaming: state.streamingBySession[embeddedAgentSession.sessionId ?? '']?.isStreaming ?? false,
+  const isEmbeddedAgentSession = Boolean(embeddedSessionId && embeddedSession);
+  const embeddedAgentSession = useMemo(
+    () => ({
+      sessionId: embeddedSessionId,
+      session: embeddedSession,
+      descriptor: embeddedDescriptor,
+      isEmbedded: isEmbeddedAgentSession,
+    }),
+    [embeddedSessionId, embeddedSession, embeddedDescriptor, isEmbeddedAgentSession],
+  );
+  const createNativeSession = useCoworkSessionStore((state) => state.createSession);
+  const setActiveNativeSession = useCoworkSessionStore((state) => state.setActiveSession);
+  const sendNativeMessageStream = useCoworkSessionStore((state) => state.sendMessageStream);
+  const fetchNativeMessages = useCoworkSessionStore((state) => state.fetchMessages);
+  const abortNativeGeneration = useCoworkSessionStore((state) => state.abortGeneration);
+  const nativeStreaming = useCoworkSessionStore((state) => ({
+    isStreaming: embeddedAgentSession?.sessionId 
+      ? state.streamingBySession[embeddedAgentSession.sessionId]?.isStreaming ?? false 
+      : false,
   }));
-  const nativeMessages = useNativeAgentStore((state) =>
-    embeddedAgentSession.sessionId
-      ? state.messages[embeddedAgentSession.sessionId] || []
+  const nativeMessages = useCoworkSessionStore((state) =>
+    embeddedAgentSession?.sessionId
+      ? state.sessions.find(s => s.id === embeddedAgentSession.sessionId)?.messages || []
       : [],
   );
   const activeTaskId = useCoworkStore((state) => state.activeTaskId);
   const activeProjectId = useCoworkStore((state) => state.activeProjectId);
   const createTask = useCoworkStore((state) => state.createTask);
-  const bindCurrentSessionToTask = useCoworkStore((state) => state.bindCurrentSessionToTask);
-  const embeddedCanvasIds = useNativeAgentStore((state) =>
-    embeddedAgentSession.sessionId
-      ? state.sessionCanvases[embeddedAgentSession.sessionId] || []
-      : [],
-  );
+  // Canvases not yet implemented in new store - stub for compatibility
+  const embeddedCanvasIds: string[] = [];
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasSentInitialMessage = useRef(false);
   const [composerInputValue, setComposerInputValue] = useState('');
   
-  const selectedModel = modelSelection?.profileId ?? 'kimi/kimi-for-coding';
+  const selectedModel = modelSelection?.profileId ?? 'claude-cli/claude-sonnet-4-6';
   const runtimeModelId = modelSelection?.modelId;
   
   // Use the SAME streaming adapter as Chat mode
@@ -589,25 +639,23 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
   });
 
   useEffect(() => {
-    if (!embeddedAgentSession.sessionId || !embeddedAgentSession.isEmbedded) {
+    if (!embeddedAgentSession?.sessionId || !embeddedAgentSession?.isEmbedded) {
       return;
     }
 
-    setActiveNativeSession(embeddedAgentSession.sessionId);
-    void fetchNativeMessages(embeddedAgentSession.sessionId);
-    void fetchNativeCanvases(embeddedAgentSession.sessionId);
+    setActiveNativeSession(embeddedAgentSession?.sessionId);
+    void fetchNativeMessages(embeddedAgentSession?.sessionId);
   }, [
-    embeddedAgentSession.isEmbedded,
-    embeddedAgentSession.sessionId,
-    fetchNativeCanvases,
+    embeddedAgentSession?.isEmbedded,
+    embeddedAgentSession?.sessionId,
     fetchNativeMessages,
     setActiveNativeSession,
   ]);
 
-  const displayMessages = embeddedAgentSession.isEmbedded
+  const displayMessages = embeddedAgentSession?.isEmbedded
     ? mapNativeMessagesToStreamMessages(nativeMessages)
     : messages;
-  const displayIsLoading = embeddedAgentSession.isEmbedded
+  const displayIsLoading = embeddedAgentSession?.isEmbedded
     ? nativeStreaming.isStreaming
     : isLoading;
 
@@ -622,45 +670,41 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
       taskMode,
       activeProjectId || undefined,
     );
-    bindCurrentSessionToTask(createdTask.id);
-  }, [activeProjectId, activeTaskId, agentModeEnabled, bindCurrentSessionToTask, createTask]);
+  }, [activeProjectId, activeTaskId, agentModeEnabled, createTask]);
 
   const ensureEmbeddedSession = useCallback(async () => {
-    if (embeddedAgentSession.sessionId && embeddedAgentSession.isEmbedded) {
-      setActiveNativeSession(embeddedAgentSession.sessionId);
-      return embeddedAgentSession.sessionId;
+    if (embeddedAgentSession?.sessionId && embeddedAgentSession?.isEmbedded) {
+      setActiveNativeSession(embeddedAgentSession?.sessionId);
+      return embeddedAgentSession?.sessionId;
     }
 
     if (!agentModeEnabled || !selectedAgentId) {
       return null;
     }
 
-    const session = await createNativeSession('Cowork Agent Session', undefined, {
-      originSurface: 'cowork',
+    const sessionId = await createNativeSession({
+      name: 'Cowork Agent Session',
       sessionMode: 'agent',
       agentId: selectedAgent?.id,
       agentName: selectedAgent?.name,
-      workspaceScope: getOpenClawWorkspacePathFromAgent(selectedAgent) ?? undefined,
-      runtimeModel: selectedAgent?.model,
-      agentFeatures: {
-        workspace: true,
-        tools: true,
-        automation: true,
+      metadata: {
+        originSurface: 'cowork',
+        workspaceScope: getOpenClawWorkspacePathFromAgent(selectedAgent) ?? undefined,
+        runtimeModel: selectedAgent?.model,
+        agentFeatures: { workspace: true, tools: true, automation: true },
       },
     });
 
-    setEmbeddedAgentSession('cowork', session.id);
-    setActiveNativeSession(session.id);
-    return session.id;
+    setActiveNativeSession(sessionId);
+    return sessionId;
   }, [
     agentModeEnabled,
     createNativeSession,
-    embeddedAgentSession.isEmbedded,
-    embeddedAgentSession.sessionId,
+    embeddedAgentSession?.isEmbedded,
+    embeddedAgentSession?.sessionId,
     selectedAgent,
     selectedAgentId,
     setActiveNativeSession,
-    setEmbeddedAgentSession,
   ]);
   
   // Send initial message from launchpad on mount
@@ -680,7 +724,7 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
               return;
             }
 
-            return sendNativeMessageStream(nativeSessionId, normalizedInitialMessage);
+            return sendNativeMessageStream(nativeSessionId, { text: normalizedInitialMessage });
           })
           .finally(() => {
             onInitialMessageSent?.();
@@ -739,7 +783,7 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
     if (agentModeEnabled && selectedAgentId) {
       const nativeSessionId = await ensureEmbeddedSession();
       if (nativeSessionId) {
-        await sendNativeMessageStream(nativeSessionId, normalizedText);
+        await sendNativeMessageStream(nativeSessionId, { text: normalizedText });
         return;
       }
     }
@@ -797,9 +841,9 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
   const handleRegenerate = useCallback(() => {
     const lastUserMsg = [...displayMessages].reverse().find((m) => m.role === "user");
     if (lastUserMsg && typeof lastUserMsg.content === "string") {
-      if (embeddedAgentSession.isEmbedded && embeddedAgentSession.sessionId) {
-        setActiveNativeSession(embeddedAgentSession.sessionId);
-        void sendNativeMessageStream(embeddedAgentSession.sessionId, lastUserMsg.content);
+      if (embeddedAgentSession?.isEmbedded && embeddedAgentSession?.sessionId) {
+        setActiveNativeSession(embeddedAgentSession?.sessionId);
+        void sendNativeMessageStream(embeddedAgentSession?.sessionId, { text: lastUserMsg.content });
         return;
       }
 
@@ -819,8 +863,8 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
   }, [
     agentModeEnabled,
     displayMessages,
-    embeddedAgentSession.isEmbedded,
-    embeddedAgentSession.sessionId,
+    embeddedAgentSession?.isEmbedded,
+    embeddedAgentSession?.sessionId,
     regenerate,
     runtimeModelId,
     selectedAgent,
@@ -831,46 +875,79 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
     setActiveNativeSession,
   ]);
 
-  const embeddedAgentDescriptor = embeddedAgentSession.descriptor;
-  const embeddedAgentStrip = embeddedAgentSession.isEmbedded ? (
+  const embeddedAgentDescriptor = embeddedAgentSession?.descriptor;
+  const _embeddedSession = embeddedAgentSession?.session as any;
+  const embeddedAgentStrip = embeddedAgentSession?.isEmbedded ? (
     <AgentContextStrip
       surface="cowork"
-      sessionName={embeddedAgentSession.session?.name || 'Cowork Agent Session'}
-      sessionDescription={embeddedAgentSession.session?.description}
-      agentName={embeddedAgentDescriptor.agentName || selectedAgent?.name || undefined}
+      sessionName={_embeddedSession?.name || 'Cowork Agent Session'}
+      sessionDescription={_embeddedSession?.description}
+      agentName={embeddedAgentDescriptor?.agentName || selectedAgent?.name || undefined}
       statusLabel={
-        embeddedAgentSession.session?.metadata?.allternit_local_draft === true
+        _embeddedSession?.metadata?.allternit_local_draft === true
           ? 'Local Draft'
-          : embeddedAgentSession.session?.isActive
+          : _embeddedSession?.isActive
             ? 'Live'
             : 'Paused'
       }
-      messageCount={embeddedAgentSession.session?.messageCount ?? displayMessages.length}
-      workspaceScope={embeddedAgentDescriptor.workspaceScope}
+      messageCount={_embeddedSession?.messageCount ?? displayMessages.length}
+      workspaceScope={embeddedAgentDescriptor?.workspaceScope}
       canvasCount={embeddedCanvasIds.length}
-      tags={embeddedAgentSession.session?.tags}
-      localDraft={embeddedAgentSession.session?.metadata?.allternit_local_draft === true}
-      toolsEnabled={embeddedAgentDescriptor.agentFeatures?.tools === true}
-      automationEnabled={embeddedAgentDescriptor.agentFeatures?.automation === true}
-      onDismiss={() => clearEmbeddedAgentSession('cowork')}
+      tags={_embeddedSession?.tags}
+      localDraft={_embeddedSession?.metadata?.allternit_local_draft === true}
+      toolsEnabled={embeddedAgentDescriptor?.agentFeatures?.tools === true}
+      automationEnabled={embeddedAgentDescriptor?.agentFeatures?.automation === true}
+      onDismiss={() => setActiveNativeSession(null)}
     />
   ) : null;
   
+  const permissions = usePermissionGuide();
+  const showPermWarning = permissions.isSupported && permissions.anyDenied &&
+    embeddedAgentDescriptor?.agentFeatures?.automation === true;
+
   return (
     <div style={{
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
       width: '100%',
-      background: embeddedAgentSession.isEmbedded
+      background: embeddedAgentSession?.isEmbedded
         ? 'radial-gradient(circle at top right, rgba(167,139,250,0.08), transparent 34%), linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0) 18%)'
         : 'transparent',
       position: 'relative',
       overflow: 'hidden',
-      boxShadow: embeddedAgentSession.isEmbedded
+      boxShadow: embeddedAgentSession?.isEmbedded
         ? 'inset 0 0 0 1px rgba(167,139,250,0.08), inset 0 24px 120px rgba(167,139,250,0.04)'
         : 'none',
     }}>
+      {/* Desktop Automation Permission Warning */}
+      {showPermWarning && (
+        <div style={{
+          padding: '8px 16px', background: 'rgba(245,158,11,0.12)',
+          borderBottom: '1px solid rgba(245,158,11,0.25)', display: 'flex',
+          alignItems: 'center', justifyContent: 'center', gap: 12, fontSize: 12,
+          color: '#fbbf24', flexShrink: 0
+        }}>
+          <span>⚠️ Desktop automation requires system permissions</span>
+          <button
+            onClick={() => {
+              if (permissions.accessibility === 'denied') {
+                permissions.presentGuide('accessibility');
+              } else {
+                permissions.presentGuide('screen-recording');
+              }
+            }}
+            style={{
+              padding: '3px 10px', borderRadius: 4, border: '1px solid #fbbf24',
+              background: 'transparent', color: '#fbbf24', fontSize: 11,
+              fontWeight: 600, cursor: 'pointer'
+            }}
+          >
+            Grant Permissions
+          </button>
+        </div>
+      )}
+
       {/* Message List */}
       <div
         ref={scrollContainerRef}
@@ -894,7 +971,7 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
             messages={displayMessages}
             isLoading={displayIsLoading}
             onRegenerate={handleRegenerate}
-            sessionId={embeddedAgentSession.sessionId ?? undefined}
+            sessionId={embeddedAgentSession?.sessionId ?? undefined}
           />
           <div ref={messagesEndRef} />
         </div>
@@ -924,8 +1001,8 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
             onSend={handleSend}
             isLoading={displayIsLoading}
             onStop={
-              embeddedAgentSession.isEmbedded
-                ? () => void abortNativeGeneration(embeddedAgentSession.sessionId || undefined)
+              embeddedAgentSession?.isEmbedded
+                ? () => void abortNativeGeneration(embeddedAgentSession?.sessionId ?? '')
                 : stop
             }
             selectedModel={selectedModel}
@@ -953,8 +1030,80 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
 }
 
 function EmbeddedCoworkAgentRail() {
-  const embeddedAgentSession = useEmbeddedAgentSession('cowork');
-  const descriptor = embeddedAgentSession.descriptor;
+  const embeddedSessionId = useCoworkSessionStore((s) => s.activeSessionId);
+  const embeddedSession = useCoworkSessionStore((s) =>
+    s.activeSessionId ? s.sessions.find((sess) => sess.id === s.activeSessionId) ?? null : null,
+  );
+  const embeddedDescriptor = useMemo(
+    () => getAgentSessionDescriptor(embeddedSession?.metadata),
+    [embeddedSession?.metadata],
+  );
+  const isEmbeddedAgentSession = Boolean(embeddedSessionId && embeddedSession);
+  const embeddedAgentSession = useMemo(
+    () => ({
+      sessionId: embeddedSessionId,
+      session: embeddedSession,
+      descriptor: embeddedDescriptor,
+      isEmbedded: isEmbeddedAgentSession,
+    }),
+    [embeddedSessionId, embeddedSession, embeddedDescriptor, isEmbeddedAgentSession],
+  );
+  const descriptor = embeddedAgentSession?.descriptor;
+  const _embeddedSession = embeddedAgentSession?.session as any;
+  const sessionId = embeddedAgentSession?.sessionId;
+
+  const [lifecycleLoading, setLifecycleLoading] = React.useState<string | null>(null);
+
+  const handleRevert = React.useCallback(async () => {
+    if (!sessionId) return;
+    const messages = (_embeddedSession as any)?.messages as Array<{ id: string; role: string }> | undefined;
+    const lastAssistantMsg = messages?.slice().reverse().find((m) => m.role === 'assistant');
+    if (!lastAssistantMsg) return;
+    setLifecycleLoading('revert');
+    try {
+      await sessionLifecycleApi.revertSession(sessionId, lastAssistantMsg.id);
+    } catch (e) {
+      console.error('[CoworkRoot] Revert failed:', e);
+    } finally {
+      setLifecycleLoading(null);
+    }
+  }, [sessionId, _embeddedSession]);
+
+  const handleUnrevert = React.useCallback(async () => {
+    if (!sessionId) return;
+    setLifecycleLoading('unrevert');
+    try {
+      await sessionLifecycleApi.unrevertSession(sessionId);
+    } catch (e) {
+      console.error('[CoworkRoot] Unrevert failed:', e);
+    } finally {
+      setLifecycleLoading(null);
+    }
+  }, [sessionId]);
+
+  const handleCompact = React.useCallback(async () => {
+    if (!sessionId) return;
+    setLifecycleLoading('compact');
+    try {
+      await sessionLifecycleApi.compactSession(sessionId);
+    } catch (e) {
+      console.error('[CoworkRoot] Compact failed:', e);
+    } finally {
+      setLifecycleLoading(null);
+    }
+  }, [sessionId]);
+
+  const handleAbort = React.useCallback(async () => {
+    if (!sessionId) return;
+    setLifecycleLoading('abort');
+    try {
+      await sessionLifecycleApi.abortSession(sessionId);
+    } catch (e) {
+      console.error('[CoworkRoot] Abort failed:', e);
+    } finally {
+      setLifecycleLoading(null);
+    }
+  }, [sessionId]);
 
   return (
     <div
@@ -1013,29 +1162,128 @@ function EmbeddedCoworkAgentRail() {
         title="Session"
         icon={<Sparkle size={15} />}
         rows={[
-          ['Mode', embeddedAgentSession.session?.metadata?.allternit_local_draft === true ? 'Local Draft' : embeddedAgentSession.session?.isActive ? 'Live' : 'Paused'],
-          ['Messages', `${embeddedAgentSession.session?.messageCount ?? 0}`],
-          ['Agent', descriptor.agentName || 'Unbound'],
+          ['Mode', String((_embeddedSession as any)?.metadata?.allternit_local_draft === true ? 'Local Draft' : (_embeddedSession as any)?.isActive ? 'Live' : 'Paused')],
+          ['Messages', String((_embeddedSession as any)?.messageCount ?? 0)],
+          ['Agent', String(descriptor?.agentName || 'Unbound')],
         ]}
       />
       <EmbeddedRailCard
         title="Workspace"
         icon={<FolderOpen size={15} />}
         rows={[
-          ['Scope', descriptor.workspaceScope || 'Session scoped'],
-          ['Tags', embeddedAgentSession.session?.tags?.join(', ') || 'None'],
+          ['Scope', String(descriptor?.workspaceScope || 'Session scoped')],
+          ['Tags', String(Array.isArray((_embeddedSession as any)?.tags) ? (_embeddedSession as any).tags.join(', ') : 'None')],
         ]}
       />
       <EmbeddedRailCard
         title="Controls"
         icon={<Clock size={15} />}
         rows={[
-          ['Tools', descriptor.agentFeatures?.tools ? 'Enabled' : 'Not configured'],
-          ['Automation', descriptor.agentFeatures?.automation ? 'Reserved' : 'Pending'],
+          ['Tools', String(descriptor?.agentFeatures?.tools ? 'Enabled' : 'Not configured')],
+          ['Automation', String(descriptor?.agentFeatures?.automation ? 'Reserved' : 'Pending')],
           ['Routing', 'Native session stream'],
         ]}
       />
+      {/* Session Lifecycle Actions */}
+      {sessionId && (
+        <div
+          style={{
+            borderRadius: 18,
+            border: '1px solid rgba(167,139,250,0.14)',
+            background: 'rgba(255,255,255,0.03)',
+            padding: 14,
+            display: 'grid',
+            gap: 10,
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              color: '#d4c5f9',
+              fontSize: 12,
+              fontWeight: 800,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+            }}
+          >
+            <Wrench size={15} />
+            Session Actions
+          </div>
+          <div style={{ display: 'grid', gap: 6 }}>
+            <LifecycleButton
+              icon={<ArrowCounterClockwise size={13} />}
+              label="Undo Last"
+              onClick={handleRevert}
+              loading={lifecycleLoading === 'revert'}
+            />
+            <LifecycleButton
+              icon={<ArrowClockwise size={13} />}
+              label="Redo"
+              onClick={handleUnrevert}
+              loading={lifecycleLoading === 'unrevert'}
+            />
+            <LifecycleButton
+              icon={<ArrowsInLineVertical size={13} />}
+              label="Compact"
+              onClick={handleCompact}
+              loading={lifecycleLoading === 'compact'}
+            />
+            <LifecycleButton
+              icon={<X size={13} />}
+              label="Abort"
+              onClick={handleAbort}
+              loading={lifecycleLoading === 'abort'}
+              variant="danger"
+            />
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function LifecycleButton({
+  icon,
+  label,
+  onClick,
+  loading,
+  variant = 'default',
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  loading?: boolean;
+  variant?: 'default' | 'danger';
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={loading}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        padding: '6px 10px',
+        borderRadius: 8,
+        border: `1px solid ${variant === 'danger' ? 'rgba(239,68,68,0.3)' : 'rgba(167,139,250,0.2)'}`,
+        background: variant === 'danger' ? 'rgba(239,68,68,0.08)' : 'rgba(167,139,250,0.08)',
+        color: variant === 'danger' ? '#fca5a5' : '#d4c5f9',
+        fontSize: 12,
+        fontWeight: 600,
+        cursor: loading ? 'wait' : 'pointer',
+        opacity: loading ? 0.6 : 1,
+        transition: 'opacity 0.15s',
+      }}
+    >
+      {loading ? (
+        <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+      ) : (
+        icon
+      )}
+      {label}
+    </button>
   );
 }
 

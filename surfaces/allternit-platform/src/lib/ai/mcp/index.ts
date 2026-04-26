@@ -1,4 +1,4 @@
-// MCP Apps - Model Context Protocol support for A2rchitect
+// MCP Apps - Model Context Protocol support for allternit
 
 // Core MCP Apps types and utilities
 export {

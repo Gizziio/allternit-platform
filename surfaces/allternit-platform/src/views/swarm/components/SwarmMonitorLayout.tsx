@@ -29,6 +29,7 @@ interface SwarmMonitorLayoutProps {
   onViewModeChange: (mode: SwarmViewMode) => void;
   agents: SwarmAgent[];
   className?: string;
+  modeColors?: { accent: string };
 }
 
 export function SwarmMonitorLayout({

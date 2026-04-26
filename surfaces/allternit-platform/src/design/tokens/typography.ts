@@ -1,7 +1,7 @@
 /**
  * @fileoverview Typography Token System
  * 
- * Comprehensive typography tokens for the A2rchitect platform.
+ * Comprehensive typography tokens for the allternit platform.
  * Includes font families, sizes, weights, line heights, and letter spacing.
  * 
  * @module design/tokens/typography

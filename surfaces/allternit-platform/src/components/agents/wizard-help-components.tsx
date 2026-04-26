@@ -547,7 +547,7 @@ export function SmartSuggestions({ suggestions, onApplySuggestion, modeColors }:
   const getIcon = (type: string) => {
     switch (type) {
       case 'model':
-        return Zap;
+        return Lightning;
       case 'tool':
         return Target;
       case 'capability':
@@ -555,7 +555,7 @@ export function SmartSuggestions({ suggestions, onApplySuggestion, modeColors }:
       case 'prompt':
         return Chat;
       case 'setting':
-        return RotateCcw;
+        return ArrowCounterClockwise;
       default:
         return Info;
     }

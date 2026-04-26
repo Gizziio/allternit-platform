@@ -32,11 +32,17 @@
 import React, {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
 import { createPortal } from 'react-dom';
-import { useBrowserAgentStore } from './browserAgent.store';
+import { useBrowserAgentStore, type AXTreeNode, type NotificationEntry } from './browserAgent.store';
+import { useAgentSurfaceModeStore } from '../../stores/agent-surface-mode.store';
+import { CursorOverlay } from './CursorOverlay';
+import { executeGatewayAction } from '../../integration/computer-use-engine';
+import { ConformanceDashboard } from './ConformanceDashboard';
+import { ContextWindowCard } from '@/components/ai-elements/ContextWindowCard';
 
 // ─────────────────────────────────────────────────────────────
 // Constants
@@ -77,6 +83,10 @@ const STYLES = `
   }
   @keyframes aci-sidecar-spin {
     to { transform: rotate(360deg); }
+  }
+  @keyframes aci-sidecar-click-flash {
+    0%   { transform: scale(0.4); opacity: 1; }
+    100% { transform: scale(2.2); opacity: 0; }
   }
 `;
 
@@ -226,6 +236,65 @@ function ApprovalCard() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// AX Tree diff helpers
+// ─────────────────────────────────────────────────────────────
+
+function axNodeKey(node: AXTreeNode): string {
+  return `${node.role}:${node.name ?? ''}`;
+}
+
+function collectAxNodes(node: AXTreeNode, map: Map<string, AXTreeNode>): void {
+  const key = axNodeKey(node);
+  map.set(key, node);
+  if (node.children) {
+    for (const child of node.children) {
+      collectAxNodes(child, map);
+    }
+  }
+}
+
+function diffAxTrees(
+  prev: AXTreeNode | null,
+  next: AXTreeNode,
+): Map<string, 'added' | 'removed' | 'modified'> {
+  const result = new Map<string, 'added' | 'removed' | 'modified'>();
+  if (!prev) return result;
+
+  const prevMap = new Map<string, AXTreeNode>();
+  const nextMap = new Map<string, AXTreeNode>();
+  collectAxNodes(prev, prevMap);
+  collectAxNodes(next, nextMap);
+
+  // Nodes in next but not prev → added
+  for (const [key] of nextMap) {
+    if (!prevMap.has(key)) {
+      result.set(key, 'added');
+    }
+  }
+
+  // Nodes in prev but not next → removed
+  for (const [key] of prevMap) {
+    if (!nextMap.has(key)) {
+      result.set(key, 'removed');
+    }
+  }
+
+  // Nodes in both — check value/bounds change → modified
+  for (const [key, nextNode] of nextMap) {
+    if (prevMap.has(key)) {
+      const prevNode = prevMap.get(key)!;
+      const valueChanged = prevNode.value !== nextNode.value;
+      const boundsChanged = JSON.stringify(prevNode.bounds) !== JSON.stringify(nextNode.bounds);
+      if (valueChanged || boundsChanged) {
+        result.set(key, 'modified');
+      }
+    }
+  }
+
+  return result;
+}
+
+// ─────────────────────────────────────────────────────────────
 // Main component
 // ─────────────────────────────────────────────────────────────
 
@@ -252,6 +321,18 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
   const isConnecting   = status !== 'Idle' && status !== 'Done' && screenshot === null;
   const serviceError   = (status as string) === 'Error' ? 'Agent run encountered an error.' : null;
 
+  // New store bindings
+  const cursorPosition      = useBrowserAgentStore((s) => s.cursorPosition);
+  const coordinateContract  = useBrowserAgentStore((s) => s.coordinateContract);
+  const axTree              = useBrowserAgentStore((s) => s.axTree);
+  const axSurface           = useBrowserAgentStore((s) => s.axSurface);
+  const lastVerification    = useBrowserAgentStore((s) => s.lastVerification);
+  const windows             = useBrowserAgentStore((s) => s.windows);
+  const notifications       = useBrowserAgentStore((s) => s.notifications);
+  const fetchWindows        = useBrowserAgentStore((s) => s.fetchWindows);
+  const fetchNotifications  = useBrowserAgentStore((s) => s.fetchNotifications);
+  const dismissNotification = useBrowserAgentStore((s) => s.dismissNotification);
+
   const [highlights, setHighlights]         = useState<HighlightBox[]>([]);
   const [imgNaturalSize, setImgNaturalSize] = useState({ w: 0, h: 0 });
   const [imgDisplaySize, setImgDisplaySize] = useState({ w: 0, h: 0 });
@@ -259,13 +340,34 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
   const [mounted, setMounted]               = useState(false);
   const [panelWidth, setPanelWidth]         = useState(PANEL_WIDTH);
   const [viewMode, setViewMode]             = useState<'standard' | 'full'>('standard');
+  const [showAxTree, setShowAxTree]         = useState(false);
+  const [showWindows, setShowWindows]       = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [imgContainerSize, setImgContainerSize]   = useState({ width: 0, height: 0 });
+  const [directControlMode, setDirectControlMode] = useState(false);
+  const [clickFlash, setClickFlash]               = useState<{ x: number; y: number; id: number } | null>(null);
+  const [showConformance, setShowConformance]     = useState(false);
 
-  const imgRef         = useRef<HTMLImageElement | null>(null);
-  const containerRef   = useRef<HTMLDivElement | null>(null);
-  const dragRef        = useRef<{ startX: number; startW: number } | null>(null);
+  const imgRef            = useRef<HTMLImageElement | null>(null);
+  const containerRef      = useRef<HTMLDivElement | null>(null);
+  const imgContainerRef   = useRef<HTMLDivElement | null>(null);
+  const dragRef           = useRef<{ startX: number; startW: number } | null>(null);
+  const prevAxTreeRef     = useRef<AXTreeNode | null>(null);
+
+  // Must be declared before any useEffect that reads it (React hook ordering)
+  const computerUseModeSelected = useAgentSurfaceModeStore(
+    (s) => s.selectedModeBySurface[s.currentSurface] === 'computer-use',
+  );
 
   // Portal needs document.body — only available client-side
   useEffect(() => { setMounted(true); }, []);
+
+  // Auto-expand when computer-use mode is selected
+  useEffect(() => {
+    if (computerUseModeSelected && !expanded) {
+      toggleAciSidecar();
+    }
+  }, [computerUseModeSelected]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Build highlights
   useEffect(() => {
@@ -277,6 +379,34 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
       kind: currentAction.type?.toLowerCase(),
     }]);
   }, [currentAction]);
+
+  // Track img container size for CursorOverlay
+  useEffect(() => {
+    const el = imgContainerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const e of entries) {
+        setImgContainerSize({ width: e.contentRect.width, height: e.contentRect.height });
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // AX tree diff — computed whenever axTree changes
+  const axDiff = useMemo(() => {
+    if (!axTree) return new Map<string, 'added' | 'removed' | 'modified'>();
+    const d = diffAxTrees(prevAxTreeRef.current, axTree);
+    prevAxTreeRef.current = axTree;
+    return d;
+  }, [axTree]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Clear click flash after 400ms
+  useEffect(() => {
+    if (!clickFlash) return;
+    const timer = setTimeout(() => setClickFlash(null), 400);
+    return () => clearTimeout(timer);
+  }, [clickFlash]);
 
   // Recalculate image layout after load/resize
   const recalcImgMetrics = useCallback(() => {
@@ -311,12 +441,29 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
     document.addEventListener('mouseup', onUp);
   }, [panelWidth]);
 
+  // Direct control: click on screenshot → send gateway click action
+  const handleScreenshotClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!directControlMode) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const relX = e.clientX - rect.left;
+    const relY = e.clientY - rect.top;
+    let modelX = relX, modelY = relY;
+    if (coordinateContract) {
+      const scaleX = coordinateContract.model_width / rect.width;
+      const scaleY = coordinateContract.model_height / rect.height;
+      modelX = Math.round(relX * scaleX);
+      modelY = Math.round(relY * scaleY);
+    }
+    void executeGatewayAction('click', { x: modelX, y: modelY });
+    setClickFlash({ x: relX, y: relY, id: Date.now() });
+  }, [directControlMode, coordinateContract]);
+
   const isActive = status !== 'Idle';
-  const isBusy   = status === 'Running' || status === 'WaitingApproval';
+  const isBusy = status === 'Running' || status === 'WaitingApproval';
 
   // Hide conditions
   if (!mounted) return null;
-  if (!isActive) return null;
+  if (!isActive && !computerUseModeSelected) return null;
   if (suppressInBrowserMode && isBrowserCapsuleActive) return null;
 
   const statusColor = status === 'Running'         ? '#10b981'
@@ -401,14 +548,17 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
             flexShrink: 0,
           }} />
 
-          <span style={{
-            fontSize: 9, fontWeight: 700,
-            color: 'rgba(212,176,140,0.45)',
-            textTransform: 'uppercase', letterSpacing: '0.12em',
-            fontFamily: 'monospace', flexShrink: 0,
-          }}>
-            COMPUTER USE
-          </span>
+          <ContextWindowCard>
+            <button style={{
+              background: 'transparent', border: 'none', padding: 0, cursor: 'pointer',
+              fontSize: 9, fontWeight: 700,
+              color: 'rgba(212,176,140,0.45)',
+              textTransform: 'uppercase', letterSpacing: '0.12em',
+              fontFamily: 'monospace', flexShrink: 0,
+            }}>
+              COMPUTER USE
+            </button>
+          </ContextWindowCard>
 
           <div style={{ width: 1, height: 12, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
 
@@ -472,6 +622,44 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
             )}
           </button>
 
+          {/* AX Tree toggle */}
+          <button onClick={() => setShowAxTree((v) => !v)} title="Accessibility Tree"
+            style={{ padding: '2px 5px', fontSize: 9, background: showAxTree ? 'rgba(168,85,247,0.2)' : 'rgba(255,255,255,0.04)', border: `1px solid ${showAxTree ? 'rgba(168,85,247,0.4)' : 'rgba(255,255,255,0.08)'}`, borderRadius: 4, color: showAxTree ? '#a855f7' : 'rgba(255,255,255,0.3)', cursor: 'pointer', flexShrink: 0 }}>
+            AX
+          </button>
+
+          {/* Windows toggle */}
+          <button onClick={() => { setShowWindows((v) => !v); if (!showWindows) void fetchWindows(); }} title="Open Windows"
+            style={{ padding: '2px 5px', fontSize: 9, background: showWindows ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.04)', border: `1px solid ${showWindows ? 'rgba(59,130,246,0.4)' : 'rgba(255,255,255,0.08)'}`, borderRadius: 4, color: showWindows ? '#60a5fa' : 'rgba(255,255,255,0.3)', cursor: 'pointer', flexShrink: 0 }}>
+            ⊞
+          </button>
+
+          {/* Notifications toggle */}
+          <button onClick={() => { setShowNotifications((v) => !v); if (!showNotifications) void fetchNotifications(); }} title="Notifications"
+            style={{ padding: '2px 5px', fontSize: 9, background: showNotifications ? 'rgba(251,191,36,0.2)' : 'rgba(255,255,255,0.04)', border: `1px solid ${showNotifications ? 'rgba(251,191,36,0.4)' : 'rgba(255,255,255,0.08)'}`, borderRadius: 4, color: showNotifications ? '#fbbf24' : 'rgba(255,255,255,0.3)', cursor: 'pointer', flexShrink: 0 }}>
+            🔔
+          </button>
+
+          {/* Direct control toggle */}
+          <button onClick={() => setDirectControlMode((v) => !v)} title="Direct click control"
+            style={{ padding: '2px 5px', fontSize: 9,
+              background: directControlMode ? 'rgba(99,252,241,0.2)' : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${directControlMode ? 'rgba(99,252,241,0.4)' : 'rgba(255,255,255,0.08)'}`,
+              borderRadius: 4, color: directControlMode ? '#63fcf1' : 'rgba(255,255,255,0.3)',
+              cursor: 'pointer', flexShrink: 0 }}>
+            ⊕ Direct
+          </button>
+
+          {/* Conformance dashboard toggle */}
+          <button onClick={() => setShowConformance((v) => !v)} title="Conformance Dashboard"
+            style={{ padding: '2px 5px', fontSize: 9,
+              background: showConformance ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${showConformance ? 'rgba(34,197,94,0.4)' : 'rgba(255,255,255,0.08)'}`,
+              borderRadius: 4, color: showConformance ? '#22c55e' : 'rgba(255,255,255,0.3)',
+              cursor: 'pointer', flexShrink: 0 }}>
+            ✓ Conf
+          </button>
+
           {/* Collapse → minimizes to ACIComputerUseBar above chat input */}
           <button
             onClick={toggleAciSidecar}
@@ -499,89 +687,208 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
               ref={containerRef}
               style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#000', minHeight: 0 }}
             >
-              {/* Live screenshot */}
-              {screenshot ? (
-                <img
-                  ref={imgRef}
-                  src={screenshot}
-                  alt="Live screen"
-                  onLoad={recalcImgMetrics}
-                  style={{
-                    display: 'block',
-                    maxWidth: '100%',
-                    maxHeight: '100%',
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'contain',
-                    objectPosition: 'center',
-                  }}
-                />
-              ) : isConnecting ? (
-                <div style={{
-                  position: 'absolute', inset: 0,
-                  display: 'flex', flexDirection: 'column',
-                  alignItems: 'center', justifyContent: 'center',
-                  gap: 12,
-                }}>
+              {/* Live screenshot + overlays */}
+              <div
+                ref={imgContainerRef}
+                onClick={handleScreenshotClick}
+                style={{
+                  position: 'relative', width: '100%', height: '100%',
+                  cursor: directControlMode ? 'crosshair' : 'default',
+                }}
+              >
+                {screenshot ? (
+                  <img
+                    ref={imgRef}
+                    src={screenshot}
+                    alt="Live screen"
+                    onLoad={recalcImgMetrics}
+                    style={{
+                      display: 'block',
+                      maxWidth: '100%',
+                      maxHeight: '100%',
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain',
+                      objectPosition: 'center',
+                    }}
+                  />
+                ) : isConnecting ? (
                   <div style={{
-                    width: 32, height: 32, border: '2px solid rgba(212,176,140,0.15)',
-                    borderTopColor: 'rgba(212,176,140,0.6)',
-                    borderRadius: '50%',
-                    animation: 'aci-sidecar-spin 0.9s linear infinite',
-                  }} />
-                  <span style={{ fontSize: 10, color: 'rgba(212,176,140,0.3)', fontFamily: 'monospace', letterSpacing: '0.1em' }}>
-                    CONNECTING…
-                  </span>
-                </div>
-              ) : serviceError ? (
-                <div style={{
-                  position: 'absolute', inset: 0,
-                  display: 'flex', flexDirection: 'column',
-                  alignItems: 'center', justifyContent: 'center', gap: 8,
-                  padding: 20,
-                }}>
-                  <span style={{ fontSize: 10, color: 'rgba(239,68,68,0.7)', fontFamily: 'monospace', textAlign: 'center' }}>
-                    {serviceError}
-                  </span>
-                  <span style={{ fontSize: 9, color: 'rgba(212,176,140,0.3)', fontFamily: 'monospace', textAlign: 'center' }}>
-                    Check the agent logs for details.
-                  </span>
-                </div>
-              ) : (
-                <div style={{
-                  position: 'absolute', inset: 0,
-                  background: 'linear-gradient(135deg, #0a0908 0%, #111010 100%)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <span style={{ fontSize: 10, color: 'rgba(212,176,140,0.2)', fontFamily: 'monospace', letterSpacing: '0.1em' }}>
-                    NO SIGNAL
-                  </span>
-                </div>
-              )}
+                    position: 'absolute', inset: 0,
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center',
+                    gap: 12,
+                  }}>
+                    <div style={{
+                      width: 32, height: 32, border: '2px solid rgba(212,176,140,0.15)',
+                      borderTopColor: 'rgba(212,176,140,0.6)',
+                      borderRadius: '50%',
+                      animation: 'aci-sidecar-spin 0.9s linear infinite',
+                    }} />
+                    <span style={{ fontSize: 10, color: 'rgba(212,176,140,0.3)', fontFamily: 'monospace', letterSpacing: '0.1em' }}>
+                      CONNECTING…
+                    </span>
+                  </div>
+                ) : serviceError ? (
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center', gap: 8,
+                    padding: 20,
+                  }}>
+                    <span style={{ fontSize: 10, color: 'rgba(239,68,68,0.7)', fontFamily: 'monospace', textAlign: 'center' }}>
+                      {serviceError}
+                    </span>
+                    <span style={{ fontSize: 9, color: 'rgba(212,176,140,0.3)', fontFamily: 'monospace', textAlign: 'center' }}>
+                      Check the agent logs for details.
+                    </span>
+                  </div>
+                ) : (
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    background: 'linear-gradient(135deg, #0a0908 0%, #111010 100%)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <span style={{ fontSize: 10, color: 'rgba(212,176,140,0.2)', fontFamily: 'monospace', letterSpacing: '0.1em' }}>
+                      NO SIGNAL
+                    </span>
+                  </div>
+                )}
 
-              {/* Element highlights */}
-              {highlights.map((box, i) => (
-                <ElementHighlight
-                  key={i}
-                  box={box}
-                  imgNaturalWidth={imgNaturalSize.w}
-                  imgNaturalHeight={imgNaturalSize.h}
-                  imgDisplayWidth={imgDisplaySize.w}
-                  imgDisplayHeight={imgDisplaySize.h}
-                  imgOffsetX={imgOffset.x}
-                  imgOffsetY={imgOffset.y}
+                {/* Animated cursor overlay */}
+                <CursorOverlay
+                  position={cursorPosition}
+                  containerWidth={imgContainerSize.width}
+                  containerHeight={imgContainerSize.height}
+                  coordinateContract={coordinateContract}
+                  profiles={[{ agentId: 'primary', color: '#a855f7', size: 8 }]}
                 />
-              ))}
 
-              {/* Scan-line texture */}
-              <div style={{
-                position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 5,
-                background: 'repeating-linear-gradient(0deg, transparent 0px, transparent 1px, rgba(0,0,0,0.035) 1px, rgba(0,0,0,0.035) 2px)',
-              }} />
+                {/* Verification badge */}
+                {lastVerification && (
+                  <div style={{
+                    position: 'absolute', bottom: 8, right: 8,
+                    padding: '2px 8px', borderRadius: 4,
+                    background: lastVerification.verified_success ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)',
+                    border: `1px solid ${lastVerification.verified_success ? '#22c55e' : '#ef4444'}`,
+                    fontSize: 10, color: lastVerification.verified_success ? '#22c55e' : '#ef4444',
+                    fontWeight: 600, pointerEvents: 'none', zIndex: 10,
+                  }}>
+                    {lastVerification.verified_success ? '✓ Verified' : '✗ Unverified'} {Math.round(lastVerification.confidence * 100)}%
+                  </div>
+                )}
+
+                {/* Element highlights */}
+                {highlights.map((box, i) => (
+                  <ElementHighlight
+                    key={i}
+                    box={box}
+                    imgNaturalWidth={imgNaturalSize.w}
+                    imgNaturalHeight={imgNaturalSize.h}
+                    imgDisplayWidth={imgDisplaySize.w}
+                    imgDisplayHeight={imgDisplaySize.h}
+                    imgOffsetX={imgOffset.x}
+                    imgOffsetY={imgOffset.y}
+                  />
+                ))}
+
+                {/* Click-to-target flash ripple */}
+                {clickFlash && (
+                  <div key={clickFlash.id} style={{
+                    position: 'absolute',
+                    left: clickFlash.x - 12,
+                    top: clickFlash.y - 12,
+                    width: 24, height: 24, borderRadius: '50%',
+                    border: '2px solid rgba(99,252,241,0.8)',
+                    animation: 'aci-sidecar-click-flash 0.4s ease-out forwards',
+                    pointerEvents: 'none', zIndex: 20,
+                  }} />
+                )}
+
+                {/* Scan-line texture */}
+                <div style={{
+                  position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 5,
+                  background: 'repeating-linear-gradient(0deg, transparent 0px, transparent 1px, rgba(0,0,0,0.035) 1px, rgba(0,0,0,0.035) 2px)',
+                }} />
+              </div>
             </div>
 
             {/* Approval card */}
             {status === 'WaitingApproval' && <ApprovalCard />}
+
+            {/* AX Tree panel */}
+            {showAxTree && axTree && (
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: 8, maxHeight: 200, overflowY: 'auto', flexShrink: 0 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginBottom: 4, fontFamily: 'monospace' }}>
+                  AX · {(axSurface ?? 'WINDOW').toUpperCase()}
+                </div>
+                {axDiff.size > 0 && (
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 9, color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e', display: 'inline-block', flexShrink: 0 }} />
+                      Added
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 9, color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#ef4444', display: 'inline-block', flexShrink: 0 }} />
+                      Removed
+                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 9, color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#f59e0b', display: 'inline-block', flexShrink: 0 }} />
+                      Modified
+                    </span>
+                  </div>
+                )}
+                <AXTreeDisplay node={axTree} depth={0} axDiff={axDiff} />
+              </div>
+            )}
+
+            {/* Windows panel */}
+            {showWindows && (
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: 8, maxHeight: 150, overflowY: 'auto', flexShrink: 0 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>OPEN WINDOWS</div>
+                {windows.length === 0
+                  ? <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>None found</div>
+                  : windows.map((w) => (
+                    <div key={w.window_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 0', fontSize: 10 }}>
+                      <span style={{ color: 'rgba(255,255,255,0.5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>
+                        {w.app_name} — {w.title}
+                      </span>
+                      <button onClick={() => useBrowserAgentStore.getState().focusWindow(w.window_id)}
+                        style={{ fontSize: 9, padding: '1px 6px', background: 'rgba(168,85,247,0.15)', border: '1px solid rgba(168,85,247,0.3)', borderRadius: 3, color: '#a855f7', cursor: 'pointer' }}>
+                        Focus
+                      </button>
+                    </div>
+                  ))
+                }
+              </div>
+            )}
+
+            {/* Notifications panel */}
+            {showNotifications && (
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: 8, maxHeight: 150, overflowY: 'auto', flexShrink: 0 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>NOTIFICATIONS</div>
+                {notifications.length === 0
+                  ? <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>None</div>
+                  : notifications.map((n: NotificationEntry) => (
+                    <div key={n.notification_id} style={{ marginBottom: 6, padding: '4px 6px', background: 'rgba(255,255,255,0.03)', borderRadius: 4 }}>
+                      <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.75)' }}>{n.title}</div>
+                      {n.body && <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>{n.body}</div>}
+                      <button onClick={() => void dismissNotification(n.notification_id)}
+                        style={{ fontSize: 9, padding: '1px 6px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 3, color: '#ef4444', cursor: 'pointer' }}>
+                        Dismiss
+                      </button>
+                    </div>
+                  ))
+                }
+              </div>
+            )}
+
+            {/* Conformance dashboard panel */}
+            {showConformance && (
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', flexShrink: 0, maxHeight: 300, overflowY: 'auto' }}>
+                <ConformanceDashboard />
+              </div>
+            )}
 
             {/* Done banner */}
             {status === 'Done' && (
@@ -615,6 +922,50 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
 }
 
 export default ACIComputerUseSidecar;
+
+// ─────────────────────────────────────────────────────────────
+// AXTreeDisplay
+// ─────────────────────────────────────────────────────────────
+
+function AXTreeDisplay({
+  node,
+  depth,
+  axDiff,
+}: {
+  node: AXTreeNode;
+  depth: number;
+  axDiff?: Map<string, 'added' | 'removed' | 'modified'>;
+}) {
+  const indent = depth * 10;
+  const refLabel = node.ref_id ? `[${node.ref_id}] ` : '';
+  const nameLabel = node.name ?? node.value ?? '';
+  const key = `${node.role}:${node.name ?? ''}`;
+  const change = axDiff?.get(key);
+
+  const diffStyle: React.CSSProperties = change === 'added'
+    ? { borderLeft: '2px solid #22c55e', background: 'rgba(34,197,94,0.07)', paddingLeft: indent + 4 }
+    : change === 'removed'
+    ? { borderLeft: '2px solid #ef4444', opacity: 0.4, textDecoration: 'line-through', paddingLeft: indent + 4 }
+    : change === 'modified'
+    ? { borderLeft: '2px solid #f59e0b', background: 'rgba(245,158,11,0.07)', paddingLeft: indent + 4 }
+    : { paddingLeft: indent };
+
+  return (
+    <div style={diffStyle}>
+      <span style={{ fontSize: 10, fontFamily: 'monospace', color: node.is_interactive ? '#a855f7' : 'rgba(255,255,255,0.3)' }}>
+        {refLabel}<span style={{ color: 'rgba(255,255,255,0.5)' }}>{node.role}</span>
+      </span>
+      {nameLabel && (
+        <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'rgba(255,255,255,0.55)', marginLeft: 4 }}>
+          {nameLabel.slice(0, 40)}
+        </span>
+      )}
+      {node.children?.map((child, i) => (
+        <AXTreeDisplay key={i} node={child} depth={depth + 1} axDiff={axDiff} />
+      ))}
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────
 // ACIComputerUseBar
@@ -699,14 +1050,17 @@ export function ACIComputerUseBar({ suppressInBrowserMode = true, className }: A
         }} />
 
         {/* Label */}
-        <span style={{
-          fontSize: 9, fontWeight: 700,
-          color: 'rgba(212,176,140,0.4)',
-          textTransform: 'uppercase', letterSpacing: '0.12em',
-          fontFamily: 'monospace', flexShrink: 0,
-        }}>
-          Computer Use
-        </span>
+        <ContextWindowCard>
+          <button style={{
+            background: 'transparent', border: 'none', padding: 0, cursor: 'pointer',
+            fontSize: 9, fontWeight: 700,
+            color: 'rgba(212,176,140,0.4)',
+            textTransform: 'uppercase', letterSpacing: '0.12em',
+            fontFamily: 'monospace', flexShrink: 0,
+          }}>
+            Computer Use
+          </button>
+        </ContextWindowCard>
 
         <div style={{ width: 1, height: 10, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
 

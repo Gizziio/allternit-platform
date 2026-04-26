@@ -4,7 +4,7 @@
  * Main entry point for workspace operations.
  * Uses real backends only - no mocks:
  * 1. HTTP API (via sidecar or external server like TUI)
- * 2. WASM (in-browser using a2r-agent-workspace crate)
+ * 2. WASM (in-browser using allternit-agent-workspace crate)
  * 
  * Pattern ported from agent-shell integration guide.
  */
@@ -12,6 +12,7 @@
 import { discoverServer, DiscoveredServer } from './discovery';
 import { createHttpWorkspace, HttpWorkspaceAPI } from './http-client';
 import { createWasmWorkspace, WasmWorkspaceAPI } from './wasm-wrapper';
+import type { AllternitNativeState } from './types';
 
 export enum Backend {
   HTTP = 'http',
@@ -63,6 +64,12 @@ export interface WorkspaceAPI {
   // Connection
   isConnected: () => boolean;
   reconnect: () => Promise<boolean>;
+
+  // Allternit Native state (optional — not available on all backends)
+  allternitNative?: {
+    getState(): Promise<AllternitNativeState>;
+    refreshState(): Promise<AllternitNativeState>;
+  };
 }
 
 export interface WorkspaceInfo {
@@ -131,6 +138,12 @@ export interface Skill {
   description: string;
   version: string;
   installed: boolean;
+  category?: string;
+  tags?: string[];
+  author?: string;
+  entryPoint?: string;
+  dependencies?: string[];
+  documentation?: string;
 }
 
 export interface Identity {
@@ -164,7 +177,7 @@ export interface CreateWorkspaceOptions {
  * 
  * Automatically selects the best available backend:
  * 1. HTTP - Full functionality via API server (TUI, sidecar, etc.)
- * 2. WASM - In-browser functionality using a2r-agent-workspace
+ * 2. WASM - In-browser functionality using allternit-agent-workspace
  * 
  * @param path - Workspace path
  * @param options - Creation options
@@ -238,7 +251,7 @@ export async function createHttpWorkspaceExplicit(
 
 /**
  * Create workspace with explicit WASM backend
- * Uses the a2r-agent-workspace WASM module
+ * Uses the allternit-agent-workspace WASM module
  */
 export async function createWasmWorkspaceExplicit(
   path: string
@@ -258,7 +271,7 @@ export { WorkspaceWebSocket, createWebSocketUrl } from './websocket';
 export { useWorkspaceWebSocket } from './useWorkspaceWebSocket';
 export { useAllternitStream } from './useAllternitStream';
 
-// Types
-export * from './types';
+// Types from types.ts that aren't already declared in this file
+export type { AllternitNativeState, BootEvent, ContextSummary, FileOperation, ICheckpoint, ICheckpointManager, IPolicyEngine, ISkillsRegistry, IWorkspace, IWorkspaceAPI, IdentityConfig, MemoryEntryType, PolicyAction, PolicyCheckResult, PolicyTier, SessionStatus, SkillDefinition, TaskPriority, TaskStatus, ToolPolicy, WorkspaceLayers, WorkspaceMetadata } from './types';
 
 export default createWorkspace;

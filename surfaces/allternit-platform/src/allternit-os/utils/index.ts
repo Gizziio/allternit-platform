@@ -1,5 +1,5 @@
 /**
- * A2rchitect Super-Agent OS - Utilities Index
+ * allternit Super-Agent OS - Utilities Index
  * 
  * Central export point for all utility modules.
  */
@@ -59,8 +59,8 @@ export {
 export {
   programLauncher,
   useProgramLauncher,
-  parseA2rUri,
-  buildA2rUri,
+  parseAllternitUri,
+  buildAllternitUri,
   launchResearchDoc as launchResearchDocFromLauncher,
   launchDataGrid as launchDataGridFromLauncher,
   launchPresentation as launchPresentationFromLauncher,
@@ -69,5 +69,5 @@ export {
   type ProgramLaunchRequest,
   type LaunchOptions,
   type LaunchQueueItem,
-  type ParsedA2rUri,
+  type ParsedAllternitUri,
 } from './ProgramLauncher';

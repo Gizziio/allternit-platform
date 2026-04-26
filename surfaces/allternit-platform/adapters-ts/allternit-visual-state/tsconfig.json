@@ -17,8 +17,8 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@a2r/visual-state": ["./src/index.ts"],
-      "@a2r/visual-state/*": ["./src/*"]
+      "@allternit/visual-state": ["./src/index.ts"],
+      "@allternit/visual-state/*": ["./src/*"]
     }
   },
   "include": ["src/**/*"]

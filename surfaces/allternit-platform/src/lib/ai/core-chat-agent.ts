@@ -90,7 +90,7 @@ export async function createCoreChatAgent({
       filename: "file" in part ? part.file?.name : undefined,
     })) ?? []) as FileUIPart[],
     lastGeneratedImage: lastGeneratedImage 
-      ? { imageUrl: lastGeneratedImage.url, name: "generated-image" }
+      ? { imageUrl: (lastGeneratedImage as any).url, name: "generated-image" }
       : null,
     costAccumulator,
   });

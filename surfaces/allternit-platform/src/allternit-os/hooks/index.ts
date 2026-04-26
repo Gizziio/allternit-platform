@@ -1,5 +1,5 @@
 /**
- * A2rchitect Super-Agent OS - Hooks
+ * allternit Super-Agent OS - Hooks
  */
 
 export {

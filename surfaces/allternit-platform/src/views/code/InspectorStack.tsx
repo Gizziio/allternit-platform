@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { GlassCard } from '../../design/GlassCard';
 import { useRunnerStore } from '../../runner/runner.store';
+import type { RunnerRun } from '../../runner/runner.types';
 import { PatchGate } from './PatchGate';
 import {
   CheckCircle,
@@ -145,7 +147,7 @@ const getFileIcon = (type: 'typescript' | 'json' | 'markdown'): React.ReactNode 
 };
 
 export function InspectorStack() {
-  const activeRun = useRunnerStore((state) => state.activeRun);
+  const activeRun = useRunnerStore((state: { activeRun?: RunnerRun }) => state.activeRun);
   const [activeTab, setActiveTab] = useState<InspectorTab>('diff');
   const [contextFiles, setContextFiles] = useState<ContextFile[]>([]);
 
@@ -406,7 +408,7 @@ function Tab({
   onClick,
 }: {
   id: InspectorTab;
-  icon: React.ComponentType<any>;
+  icon: PhosphorIcon;
   active: boolean;
   onClick: (id: InspectorTab) => void;
 }) {

@@ -1,0 +1,66 @@
+---
+title: Extensions
+description: Browser extensions and Office add-ins for Allternit
+---
+
+## Overview
+
+`allternit-extensions` contains two distinct extension surfaces:
+
+<CardGroup cols={2}>
+  <Card title="Chrome Extension" icon="puzzle">
+    Browser automation + page agent — inject Allternit into any webpage
+  </Card>
+  <Card title="Office Add-ins" icon="file-text">
+    Excel, PowerPoint, and Word task pane integration
+  </Card>
+</CardGroup>
+
+## Chrome Extension (`allternit-extension`)
+
+A unified Chrome extension built with [WXT](https://wxt.dev/) that provides browser automation and an in-page agent presence.
+
+### Features
+
+- **Browser Automation** — Allternit agents can control the browser (click, type, navigate, scrape)
+- **Page Agent** — Floating chat panel injected into any page
+- **Native Messaging** — Connects to the `native-host` bridge for local system access
+
+### Development
+
+```bash
+cd surfaces/allternit-extensions/allternit-extension
+pnpm dev    # launches Chrome with extension loaded
+pnpm build  # builds to dist/
+pnpm zip    # packages for Chrome Web Store submission
+```
+
+### Structure
+
+```
+allternit-extension/
+├── src/
+│   ├── background/    # Service worker — messaging hub
+│   ├── content/       # Content scripts injected into pages
+│   ├── popup/         # Extension popup UI
+│   └── sidepanel/     # Side panel UI
+├── plugins/           # WXT plugins
+└── wxt.config.ts      # Build config
+```
+
+## Office Add-ins (`allternit-office-addin`)
+
+Task pane add-ins for Microsoft Office applications — Excel, PowerPoint, and Word.
+
+```bash
+cd surfaces/allternit-extensions/allternit-office-addin
+pnpm dev    # starts Office Add-in dev server
+```
+
+## Native Host (`native-host`)
+
+A native messaging host that bridges the Chrome extension to the local system and Allternit runtime. Required for file system access and local agent execution from the browser.
+
+## Shared Code (`extension-shared`)
+
+Common utilities and types shared between the Chrome extension and Office add-ins.

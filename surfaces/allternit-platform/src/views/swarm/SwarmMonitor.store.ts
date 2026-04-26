@@ -4,7 +4,12 @@
  */
 
 import { create } from 'zustand';
-import { useNativeAgentStore, type NativeSession, type NativeMessage } from '@/lib/agents/native-agent.store';
+import { useChatSessionStore, type ChatSession } from '@/views/chat/ChatSessionStore';
+import { useCodeSessionStore, type CodeSession } from '@/views/code/CodeSessionStore';
+import { useCoworkSessionStore } from '@/views/cowork/CoworkSessionStore';
+import { useDesignSessionStore } from '@/views/design/DesignSessionStore';
+import { useBrowserSessionStore } from '@/views/browser/BrowserSessionStore';
+import type { ModeSession, ModeSessionMessage } from '@/lib/agents/mode-session-store';
 import { nativeAgentApi } from '@/lib/agents/native-agent-api';
 import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/allternit.tokens';
 import {
@@ -17,6 +22,52 @@ import {
   Task,
   SwarmViewMode 
 } from './types';
+
+// ============================================================================
+// Store Access Helpers
+// ============================================================================
+
+function getAllSessions(): UnifiedSession[] {
+  const chatSessions = useChatSessionStore.getState().sessions;
+  const codeSessions = useCodeSessionStore.getState().sessions;
+  return [...chatSessions, ...codeSessions];
+}
+
+function getAllMessages(): Record<string, UnifiedMessage[]> {
+  const messages: Record<string, UnifiedMessage[]> = {};
+  const chatSessions = useChatSessionStore.getState().sessions;
+  const codeSessions = useCodeSessionStore.getState().sessions;
+  
+  for (const session of [...chatSessions, ...codeSessions]) {
+    messages[session.id] = session.messages || [];
+  }
+  return messages;
+}
+
+function setActiveSession(sessionId: string | null) {
+  // Try chat store first
+  const chatSessions = useChatSessionStore.getState().sessions;
+  if (chatSessions.find(s => s.id === sessionId)) {
+    useChatSessionStore.getState().setActiveSession(sessionId);
+    return;
+  }
+  // Then code store
+  useCodeSessionStore.getState().setActiveSession(sessionId);
+}
+
+function connectSessionSync() {
+  const disconnectChat = useChatSessionStore.getState().connectSessionSync();
+  const disconnectCode = useCodeSessionStore.getState().connectSessionSync();
+  return () => {
+    disconnectChat();
+    disconnectCode();
+  };
+}
+
+function disconnectSessionSync() {
+  useChatSessionStore.getState().disconnectSessionSync();
+  useCodeSessionStore.getState().disconnectSessionSync();
+}
 
 
 // ============================================================================
@@ -37,9 +88,12 @@ const roleIcons: Record<AgentRole, string> = {
   reviewer: 'clipboard-check',
 };
 
-function detectRoleFromSession(session: NativeSession): AgentRole {
+type UnifiedSession = ChatSession | CodeSession;
+type UnifiedMessage = ModeSessionMessage;
+
+function detectRoleFromSession(session: UnifiedSession): AgentRole {
   const name = session.name?.toLowerCase() || '';
-  const tags = session.tags?.map(t => t.toLowerCase()) || [];
+  const tags = (session as any).tags?.map((t: string) => t.toLowerCase()) || [];
   const description = session.description?.toLowerCase() || '';
   
   if (name.includes('orchestrat') || tags.includes('orchestrator') || description.includes('orchestrat')) {
@@ -54,10 +108,9 @@ function detectRoleFromSession(session: NativeSession): AgentRole {
   return 'worker';
 }
 
-function detectStatusFromSession(session: NativeSession): AgentStatus {
-  if (!session.isActive) return 'offline';
+function detectStatusFromSession(session: UnifiedSession): AgentStatus {
   // Check if session has recent activity (within last 5 minutes)
-  const lastAccessed = new Date(session.lastAccessedAt).getTime();
+  const lastAccessed = new Date((session as any).lastAccessedAt ?? session.updatedAt).getTime();
   const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
   if (lastAccessed > fiveMinutesAgo) return 'working';
   return 'idle';
@@ -68,8 +121,8 @@ function detectStatusFromSession(session: NativeSession): AgentStatus {
 // ============================================================================
 
 function mapSessionToAgent(
-  session: NativeSession, 
-  messages: NativeMessage[] = [],
+  session: UnifiedSession, 
+  messages: UnifiedMessage[] = [],
   index: number
 ): SwarmAgent {
   const role = detectRoleFromSession(session);
@@ -106,15 +159,15 @@ function mapSessionToAgent(
     status,
     color: roleColors[role],
     icon: roleIcons[role],
-    model: session.metadata?.model as string || 'gpt-4o',
+    model: (session.metadata as any)?.model as string || 'gpt-4o',
     tasksActive: tasks.filter(t => t.status === 'active').length,
     tokensUsed: Math.round(tokensUsed),
     costAccumulated,
     avgLatency: 150 + Math.floor(Math.random() * 200),
-    lastActivity: session.lastAccessedAt,
+    lastActivity: (session as any).lastAccessedAt ?? session.updatedAt,
     uptime: calculateUptime(session.createdAt),
     currentTasks: tasks,
-    capabilities: session.tags || [],
+    capabilities: (session as any).tags || [],
   };
 }
 
@@ -132,7 +185,7 @@ function calculateUptime(createdAt: string): string {
 // Activity Events Generation
 // ============================================================================
 
-function generateActivityEvents(agents: SwarmAgent[], messages: Record<string, NativeMessage[]>): ActivityEvent[] {
+function generateActivityEvents(agents: SwarmAgent[], messages: Record<string, UnifiedMessage[]>): ActivityEvent[] {
   const events: ActivityEvent[] = [];
   
   agents.forEach(agent => {
@@ -287,20 +340,16 @@ export const useSwarmMonitorStore = create<SwarmMonitorFullState>((set, get) => 
   refreshAgents: async () => {
     set({ isLoading: true, error: null });
     try {
-      // Get native agent store state
-      const nativeStore = useNativeAgentStore.getState();
-      
-      // Fetch sessions if not already loaded
-      if (nativeStore.sessions.length === 0) {
-        await nativeStore.fetchSessions();
-      }
+      // Load sessions from both stores
+      await useChatSessionStore.getState().loadSessions();
+      await useCodeSessionStore.getState().loadSessions();
       
       // Map sessions to agents
-      const nativeSessions = useNativeAgentStore.getState().sessions;
-      const nativeMessages = useNativeAgentStore.getState().messages;
+      const allSessions = getAllSessions();
+      const allMessages = getAllMessages();
       
-      const agents = nativeSessions.map((session, index) => 
-        mapSessionToAgent(session, nativeMessages[session.id], index)
+      const agents = allSessions.map((session, index) => 
+        mapSessionToAgent(session, allMessages[session.id], index)
       );
       
       set({ 
@@ -323,13 +372,13 @@ export const useSwarmMonitorStore = create<SwarmMonitorFullState>((set, get) => 
     if (!agent) return;
     
     try {
-      // Update session to trigger reinitialization
-      const nativeStore = useNativeAgentStore.getState();
-      await nativeStore.updateSession(agentId, { 
-        isActive: true,
-        metadata: { 
-          ...agent,
-          restartedAt: new Date().toISOString(),
+      // Update session metadata to mark as restarted
+      const chatSession = useChatSessionStore.getState().sessions.find(s => s.id === agentId);
+      const store = chatSession ? useChatSessionStore.getState() : useCodeSessionStore.getState();
+      await store.updateSession(agentId, {
+        metadata: {
+          contextRefreshedAt: new Date().toISOString(),
+          originSurface: 'chat' as const,
         }
       });
       
@@ -347,8 +396,10 @@ export const useSwarmMonitorStore = create<SwarmMonitorFullState>((set, get) => 
     if (!agent) return;
     
     try {
-      const nativeStore = useNativeAgentStore.getState();
-      await nativeStore.updateSession(agentId, { isActive: false });
+      // Abort any ongoing generation
+      const chatSession = useChatSessionStore.getState().sessions.find(s => s.id === agentId);
+      const store = chatSession ? useChatSessionStore.getState() : useCodeSessionStore.getState();
+      await store.abortGeneration(agentId);
       
       console.log(`[SwarmMonitor] Agent stopped`);
       
@@ -359,9 +410,12 @@ export const useSwarmMonitorStore = create<SwarmMonitorFullState>((set, get) => 
   },
   
   viewAgentLogs: (agentId: string) => {
-    const nativeStore = useNativeAgentStore.getState();
-    nativeStore.setActiveSession(agentId);
-    nativeStore.fetchMessages(agentId);
+    setActiveSession(agentId);
+    
+    // Fetch messages for the session
+    const chatSession = useChatSessionStore.getState().sessions.find(s => s.id === agentId);
+    const store = chatSession ? useChatSessionStore.getState() : useCodeSessionStore.getState();
+    store.fetchMessages(agentId);
     
     console.log('[SwarmMonitor] Logs opened for agent', agentId);
   },
@@ -369,22 +423,28 @@ export const useSwarmMonitorStore = create<SwarmMonitorFullState>((set, get) => 
   // Thread Management
   createThread: async (name?: string, options?: { originSurface?: string; sessionMode?: string }) => {
     try {
-      const nativeStore = useNativeAgentStore.getState();
-      const session = await nativeStore.createSession(
-        name || 'New Swarm Thread',
-        undefined,
-        {
-          originSurface: (options?.originSurface as any) || 'code',
-          sessionMode: options?.sessionMode || 'agent',
-        }
-      );
+      const originSurface = (options?.originSurface as 'chat' | 'code' | 'browser' | 'cowork' | 'design') || 'code';
+      const store = originSurface === 'code'
+        ? useCodeSessionStore.getState()
+        : originSurface === 'browser'
+          ? useBrowserSessionStore.getState()
+          : originSurface === 'cowork'
+            ? useCoworkSessionStore.getState()
+            : originSurface === 'design'
+              ? useDesignSessionStore.getState()
+              : useChatSessionStore.getState();
       
-      console.log('[SwarmMonitor] Thread created:', session.id);
+      const sessionId = await store.createSession({
+        name: name || 'New Swarm Thread',
+        sessionMode: (options?.sessionMode as 'regular' | 'agent') || 'agent',
+      });
+      
+      console.log('[SwarmMonitor] Thread created:', sessionId);
       
       // Refresh agents to include the new session
       await get().refreshAgents();
       
-      return session.id;
+      return sessionId;
     } catch (err) {
       console.error('[SwarmMonitor] Failed to create thread:', err instanceof Error ? err.message : 'Unknown error');
       return null;
@@ -393,8 +453,9 @@ export const useSwarmMonitorStore = create<SwarmMonitorFullState>((set, get) => 
   
   stopThread: async (sessionId: string) => {
     try {
-      const nativeStore = useNativeAgentStore.getState();
-      await nativeStore.abortGeneration(sessionId);
+      const chatSession = useChatSessionStore.getState().sessions.find(s => s.id === sessionId);
+      const store = chatSession ? useChatSessionStore.getState() : useCodeSessionStore.getState();
+      await store.abortGeneration(sessionId);
       
       console.log('[SwarmMonitor] Thread stopped:', sessionId);
       
@@ -493,26 +554,15 @@ export const useSwarmMonitorStore = create<SwarmMonitorFullState>((set, get) => 
   
   // Real-time SSE
   connectRealtime: () => {
-    const disconnect = useNativeAgentStore.getState().connectSessionSync();
+    const disconnect = connectSessionSync();
     
-    // Subscribe to session changes
-    const unsubscribe = useNativeAgentStore.subscribe(
-      (state) => ({ sessions: state.sessions, messages: state.messages }),
-      (state) => {
-        // Refresh agents when sessions change
-        const { agents } = get();
-        const newAgents = state.sessions.map((session, index) => 
-          mapSessionToAgent(session, state.messages[session.id], index)
-        );
-        
-        // Only update if changed
-        if (JSON.stringify(agents) !== JSON.stringify(newAgents)) {
-          set({ 
-            agents: newAgents,
-            lastUpdate: new Date().toISOString(),
-          });
-        }
-      }
+    // Subscribe to session changes from both stores
+    const unsubscribeChat = useChatSessionStore.subscribe(
+      () => { get().refreshAgents(); }
+    );
+
+    const unsubscribeCode = useCodeSessionStore.subscribe(
+      () => { get().refreshAgents(); }
     );
     
     set({ isRealtimeConnected: true });
@@ -520,13 +570,14 @@ export const useSwarmMonitorStore = create<SwarmMonitorFullState>((set, get) => 
     // Return cleanup function
     return () => {
       disconnect();
-      unsubscribe();
+      unsubscribeChat();
+      unsubscribeCode();
       set({ isRealtimeConnected: false });
     };
   },
   
   disconnectRealtime: () => {
-    useNativeAgentStore.getState().disconnectSessionSync();
+    disconnectSessionSync();
     set({ isRealtimeConnected: false });
   },
 }));
@@ -557,8 +608,8 @@ export function useMetrics(): SwarmMetrics {
 
 export function useEvents(): ActivityEvent[] {
   return useSwarmMonitorStore(state => {
-    const nativeMessages = useNativeAgentStore.getState().messages;
-    return generateActivityEvents(state.agents, nativeMessages);
+    const allMessages = getAllMessages();
+    return generateActivityEvents(state.agents, allMessages);
   });
 }
 

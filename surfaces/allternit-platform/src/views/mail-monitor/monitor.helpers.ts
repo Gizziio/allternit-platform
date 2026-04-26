@@ -5,7 +5,7 @@ import { railsApi, useUnifiedStore } from "@/lib/agents";
 import type { LedgerEvent, LogEntry, MailMessage } from "@/lib/agents";
 import { useTelemetrySnapshot } from "@/lib/telemetry/useTelemetrySnapshot";
 
-const BASE_URL = typeof window !== "undefined" ? window.location.origin : "https://app.a2r.dev";
+const BASE_URL = typeof window !== "undefined" ? window.location.origin : "https://app.allternit.dev";
 
 export function useMonitorData(threadId: string | null) {
   const mailMessages = useUnifiedStore((state) => state.mailMessages);

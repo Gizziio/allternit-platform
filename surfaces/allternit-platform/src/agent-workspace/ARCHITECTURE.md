@@ -6,7 +6,7 @@ You have **TWO DEPLOYMENT TARGETS** for the same workspace API - like having a m
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    A2R PLATFORM (Browser)                       │
+│                    Allternit PLATFORM (Browser)                       │
 │  ┌─────────────────────────────────────────────────────────┐   │
 │  │           WorkspaceAPI (Unified Interface)               │   │
 │  └─────────────────────────────────────────────────────────┘   │
@@ -135,7 +135,7 @@ The TUI provides the "Brain runtime" - the actual execution engine. Shell UI is 
 const workspace = await createHttpWorkspace(
   '/path/to/workspace',
   'http://localhost:3010',
-  { username: 'a2r', password: 'generated-key' }
+  { username: 'allternit', password: 'generated-key' }
 );
 
 // Now the TUI server:

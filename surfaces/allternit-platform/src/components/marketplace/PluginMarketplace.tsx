@@ -13,7 +13,8 @@ import {
   ExternalLink,
   Filter,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
@@ -32,6 +33,7 @@ import {
   type DownloadablePlugin,
   type UnifiedMarketplacePlugin
 } from '@/lib/plugins/marketplace-integration';
+import { TeamSkillsPanel } from './TeamSkillsPanel';
 import { CATEGORY_METADATA, formatAgentDisplayName, type PluginCategory } from '@/lib/plugins/marketplace';
 
 // =============================================================================
@@ -207,7 +209,8 @@ function PluginCard({ plugin, installed, enabled, onInstall, onUninstall, onTogg
               plugin.category === 'analyze' && "bg-blue-600 hover:bg-blue-700",
               plugin.category === 'build' && "bg-emerald-600 hover:bg-emerald-700",
               plugin.category === 'automate' && "bg-amber-600 hover:bg-amber-700",
-              !['create', 'analyze', 'build', 'automate'].includes(plugin.category) && "bg-violet-600 hover:bg-violet-700"
+              plugin.category === 'cowork' && "bg-cyan-600 hover:bg-cyan-700",
+              !['create', 'analyze', 'build', 'automate', 'cowork'].includes(plugin.category) && "bg-violet-600 hover:bg-violet-700"
             )}
             onClick={onInstall}
           >
@@ -298,6 +301,7 @@ export function PluginMarketplace() {
     vendor: true,
     downloadable: true,
     external: false,
+    cowork: true,
   });
 
   // Get all plugins (with fallbacks for SSR safety)
@@ -318,6 +322,12 @@ export function PluginMarketplace() {
   const filteredDownloadable = useMemo(() => 
     search ? searchPlugins(search).filter(p => p.sourceType === 'downloadable') : downloadablePlugins,
     [search, downloadablePlugins]
+  );
+
+  const allPlugins = useMemo(() => [...bundledPlugins, ...downloadablePlugins], [bundledPlugins, downloadablePlugins]);
+  const filteredCowork = useMemo(() => 
+    search ? searchPlugins(search).filter(p => p.category === 'cowork') : allPlugins.filter(p => p.category === 'cowork'),
+    [search, allPlugins]
   );
 
   const toggleSection = (section: keyof typeof expandedSections) => {
@@ -368,6 +378,22 @@ export function PluginMarketplace() {
             <TabsTrigger value="all">All</TabsTrigger>
             <TabsTrigger value="bundled">Bundled</TabsTrigger>
             <TabsTrigger value="downloadable">Downloadable</TabsTrigger>
+            <TabsTrigger value="cowork" className="relative">
+              <span className="relative">
+                Cowork
+                <span className="absolute -top-2 -right-6 flex h-4 items-center justify-center rounded-full bg-cyan-600 px-1.5 text-[9px] font-medium text-white">
+                  NEW
+                </span>
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="team" className="relative">
+              <span className="relative">
+                Team
+                <span className="absolute -top-2 -right-6 flex h-4 items-center justify-center rounded-full bg-violet-600 px-1.5 text-[9px] font-medium text-white">
+                  NEW
+                </span>
+              </span>
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -491,8 +517,29 @@ export function PluginMarketplace() {
             </>
           )}
 
+          {/* === COWORK PLUGINS SECTION === */}
+          {activeTab === 'cowork' && (
+            <section className="bg-zinc-900/50 rounded-xl p-6 border border-zinc-800/50">
+              <SectionHeader
+                title="Cowork Plugins"
+                subtitle="Team skills and agent collaboration tools"
+                icon={Users}
+                color="bg-gradient-to-br from-cyan-600 to-cyan-700"
+                count={filteredCowork.length}
+                expanded={expandedSections.cowork}
+                onToggle={() => toggleSection('cowork')}
+              />
+              {expandedSections.cowork && <PluginGrid plugins={filteredCowork} />}
+            </section>
+          )}
+
+          {/* === TEAM SKILLS SECTION === */}
+          {activeTab === 'team' && (
+            <TeamSkillsPanel />
+          )}
+
           {/* Empty state */}
-          {search && filteredBuiltIn.length === 0 && filteredVendor.length === 0 && filteredDownloadable.length === 0 && (
+          {search && filteredBuiltIn.length === 0 && filteredVendor.length === 0 && filteredDownloadable.length === 0 && filteredCowork.length === 0 && (
             <div className="text-center py-20 text-zinc-500">
               <Search className="w-16 h-16 mx-auto mb-4 text-zinc-700" />
               <p className="text-lg font-medium text-zinc-400">No plugins found</p>

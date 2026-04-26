@@ -1,0 +1,84 @@
+---
+title: Quickstart
+description: Get up and running with Allternit in minutes
+---
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- Node.js 18+
+- Git
+- API key from [platform.gizziio.com](https://platform.gizziio.com)
+
+## Install the CLI
+
+<CodeGroup>
+```bash npm
+npm install -g @allternit/cli
+```
+
+```bash yarn
+yarn global add @allternit/cli
+```
+
+```bash pnpm
+pnpm add -g @allternit/cli
+```
+</CodeGroup>
+
+## Create Your First Project
+
+Initialize a new Allternit project:
+
+```bash
+allternit init my-first-agent
+cd my-first-agent
+```
+
+## Configure Your Environment
+
+Create a `.env` file with your API key:
+
+```bash
+ALLTERNIT_API_KEY=your_api_key_here
+```
+
+## Start Development
+
+Start the development environment:
+
+```bash
+allternit dev
+```
+
+This will start all services and open the Web Platform at `http://localhost:3001`.
+
+## Deploy to Production
+
+### Option 1: Allternit Cloud
+
+```bash
+allternit deploy
+```
+
+### Option 2: BYOC (Your Infrastructure)
+
+```bash
+curl -fsSL https://install.allternit.com | bash
+allternit-runtime --config runtime.yaml
+```
+
+## Next Steps
+
+<CardGroup cols={3}>
+  <Card title="Architecture" icon="building" href="/architecture">
+    Understand how Allternit works
+  </Card>
+  <Card title="Gizzi Runtime" icon="cpu" href="/core/gizzi-runtime">
+    Learn about the core runtime
+  </Card>
+  <Card title="SDK" icon="code" href="/sdk/typescript">
+    Build with our TypeScript SDK
+  </Card>
+</CardGroup>

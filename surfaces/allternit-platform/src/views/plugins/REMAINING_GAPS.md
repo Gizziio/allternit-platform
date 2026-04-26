@@ -1,7 +1,7 @@
 # Plugin Manager Execution Backlog (Locked Scope)
 
 Last updated: March 5, 2026 (afternoon pass)
-Owner: A2R UI platform
+Owner: Allternit UI platform
 Status legend: `[ ]` pending, `[~]` in progress, `[x]` complete
 
 ## Product constraints (locked)
@@ -69,7 +69,7 @@ Status legend: `[ ]` pending, `[~]` in progress, `[x]` complete
 
 ## Phase 5: Data and persistence hardening
 
-- [x] Preserve local source scanning (`.a2r`, `.agents`, `.codex`) while improving model fidelity.
+- [x] Preserve local source scanning (`.allternit`, `.agents`, `.codex`) while improving model fidelity.
 - [x] Evolve connector data model from static local JSON toward account-aware connection state.
 - [x] Ensure toggle/create/edit/delete actions persist through file-system API consistently.
 - [x] Add explicit loading/error/empty states for each tab and modal surface.

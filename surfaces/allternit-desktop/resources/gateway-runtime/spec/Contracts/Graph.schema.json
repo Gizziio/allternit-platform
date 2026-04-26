@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/Graph.schema.json",
+  "title": "Allternit Task Graph",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "graph_id",
+    "title",
+    "nodes",
+    "edges"
+  ],
+  "properties": {
+    "graph_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-_.]+$"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "subgraphs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "graph_id",
+          "purpose"
+        ],
+        "properties": {
+          "graph_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-_.]+$"
+          },
+          "purpose": {
+            "type": "string"
+          }
+        }
+      },
+      "default": []
+    },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "task_id",
+          "title",
+          "blocked_by",
+          "wih_path"
+        ],
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "pattern": "^[A-Z0-9-]+$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "blocked_by": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "wih_path": {
+            "type": "string",
+            "pattern": "^/\\.allternit/wih/.+\\.json$"
+          }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "to"
+        ],
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          }
+        }
+      },
+      "default": []
+    },
+    "meta_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "requires_codebase_regen": {
+          "type": "boolean"
+        },
+        "requires_acceptance_tests": {
+          "type": "boolean"
+        },
+        "requires_adr_for_crosscutting": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

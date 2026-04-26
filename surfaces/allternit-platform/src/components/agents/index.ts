@@ -35,7 +35,7 @@ export {
 
 // Agent Management
 export { AgentCreationWizard } from './AgentCreationWizard';
-export { AllternitSystemPromptEditor } from './A2RSystemPromptEditor';
+export { AllternitSystemPromptEditor } from './AllternitSystemPromptEditor';
 export { AgentCreationWizardWithTemplates } from './AgentCreationWizardWithTemplates';
 export { AgentHubModal } from './AgentHubModal';
 export { AgentSelectorWizard } from './AgentSelectorWizard';

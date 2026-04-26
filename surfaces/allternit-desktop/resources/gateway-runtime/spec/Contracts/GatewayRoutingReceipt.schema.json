@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/GatewayRoutingReceipt.schema.json",
+  "title": "Gateway Routing Receipt",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "receipt_id",
+    "created_at",
+    "gateway_id",
+    "route_id",
+    "service",
+    "upstream_url",
+    "status_code"
+  ],
+  "properties": {
+    "receipt_id": { "type": "string" },
+    "created_at": { "type": "string" },
+    "gateway_id": { "type": "string" },
+    "route_id": { "type": "string" },
+    "service": { "type": "string" },
+    "upstream_url": { "type": "string" },
+    "status_code": { "type": "integer" },
+    "trace_id": { "type": "string" },
+    "run_id": { "type": "string" }
+  }
+}

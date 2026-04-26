@@ -279,7 +279,7 @@ function AgentControlTab({ agent, runs, queue, activeRunId, activeRunOutput, onB
                 {queue.filter((q: any) => q.agentId === agent.id).length === 0 ? <p className="text-sm text-muted-foreground text-center py-4">Queue empty</p> : queue.filter((q: any) => q.agentId === agent.id).map((item: any) => (
                   <div key={item.id} className="flex items-center gap-2 p-2 rounded bg-muted/50">
                     <span className="text-sm flex-1 truncate">{item.content || item.task}</span>
-                    <Button size="icon" variant="ghost" size={24} onClick={() => onDequeue(item.id)}><Trash size={12} /></Button>
+                    <Button size="icon" variant="ghost" onClick={() => onDequeue(item.id)}><Trash size={12} /></Button>
                   </div>
                 ))}
               </div>

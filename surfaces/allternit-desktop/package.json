@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Allternit Desktop — Electron shell loading the Allternit platform with local VM management via Apple Virtualization.framework.",
   "main": "dist/main/unified-main.js",
-  "type": "commonjs",
+  "type": "module",
   "keywords": [
     "allternit",
     "desktop",
@@ -11,16 +11,18 @@
   ],
   "scripts": {
     "dev": "NODE_ENV=development electron .",
+    "prepare:platform-server": "node scripts/prepare-platform-server.cjs",
+    "prepare:gateway-runtime": "node scripts/prepare-gateway-runtime.cjs",
     "build": "npm run build:main && npm run build:preload",
     "build:main": "tsc -p src/main/tsconfig.json",
     "build:preload": "tsc -p src/preload/tsconfig.json",
-    "build:swift": "swift build -c release --package-path native/vm-manager",
-    "build:electron": "npm run build && electron-builder --mac",
-    "build:electron:dmg": "npm run build && electron-builder --mac dmg",
+    "download:lima": "node scripts/download-lima.cjs",
+    "build:electron": "npm run prepare:platform-server && npm run prepare:gateway-runtime && npm run download:lima && npm run build && electron-builder --mac",
+    "build:electron:dmg": "npm run prepare:platform-server && npm run prepare:gateway-runtime && npm run download:lima && npm run build && electron-builder --mac dmg",
     "start": "electron .",
     "typecheck": "tsc --noEmit -p src/main/tsconfig.json && tsc --noEmit -p src/preload/tsconfig.json",
-    "pack": "electron-builder --dir",
-    "dist": "npm run build && electron-builder"
+    "pack": "npm run prepare:platform-server && npm run prepare:gateway-runtime && electron-builder --dir",
+    "dist": "npm run prepare:platform-server && npm run prepare:gateway-runtime && npm run build && electron-builder"
   },
   "dependencies": {
     "electron-log": "^5.2.0",
@@ -42,9 +44,21 @@
   },
   "author": "Allternit",
   "license": "UNLICENSED",
-  "build": {
-    "appId": "com.allternit.desktop",
-    "productName": "Allternit",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/allternit/desktop"
+  },
+    "build": {
+      "appId": "com.allternit.desktop",
+      "productName": "Allternit Desktop",
+      "protocols": [
+        {
+          "name": "Allternit Protocol",
+          "schemes": ["allternit"]
+        }
+      ],
+      "npmRebuild": false,
+    "nodeGypRebuild": false,
     "copyright": "Copyright © 2026 Allternit",
     "directories": {
       "output": "release",
@@ -68,12 +82,23 @@
         "filter": ["**/*"]
       },
       {
-        "from": "native/vm-manager/.build/release/vm-manager-cli",
-        "to": "bin/vm-manager-cli"
+        "from": "resources/gateway-runtime/",
+        "to": "gateway-runtime/",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "resources/lima/",
+        "to": "lima/",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "cmd/gizzi-code/src/runtime/vm/allternit.yaml",
+        "to": "allternit.yaml"
       }
     ],
     "asarUnpack": [
-      "resources/bin/**"
+      "resources/bin/**",
+      "resources/lima/**"
     ],
     "mac": {
       "target": [
@@ -92,7 +117,6 @@
       "title": "Allternit ${version}",
       "icon": "build/icon.icns",
       "background": "build/dmg-background.png",
-      "backgroundColor": "#0a0a14",
       "window": { "width": 540, "height": 380 },
       "contents": [
         { "x": 130, "y": 200, "name": "Allternit" },
@@ -141,7 +165,7 @@
       "deleteAppDataOnUninstall": false,
       "differentialPackage": true,
       "artifactName": "Allternit-Setup-${version}.exe",
-      "license": "LICENSE"
+      "license": "build/LICENSE.txt"
     },
     "publish": [
       {

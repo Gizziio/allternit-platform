@@ -208,11 +208,15 @@ interface InfrastructureError {
   providers?: string;
 }
 
-export const InfrastructureSettings: React.FC = () => {
+interface InfrastructureSettingsProps {
+  initialTab?: 'overview' | 'providers' | 'connections' | 'environments' | 'nodes';
+}
+
+export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ initialTab = 'overview' }) => {
   const { addToast } = useToast();
   
   // Tab state
-  const [activeTab, setActiveTab] = useState<'overview' | 'providers' | 'connections' | 'environments' | 'nodes'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'providers' | 'connections' | 'environments' | 'nodes'>(initialTab);
   
   // Data states
   const [connections, setConnections] = useState<VPSConnection[]>([]);
@@ -245,6 +249,10 @@ export const InfrastructureSettings: React.FC = () => {
   // Wizard state
   const [isWizardOpen, setIsWizardOpen] = useState(false);
   const [wizardInitialTemplate, setWizardInitialTemplate] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   // =============================================================================
   // WEBSOCKET HANDLER

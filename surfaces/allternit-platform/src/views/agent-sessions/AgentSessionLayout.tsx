@@ -90,7 +90,7 @@ export function AgentSessionLayout({
             style={{ color: showTerminal ? modeColors.accent : TEXT.tertiary }}
             title="Toggle Terminal"
           >
-            <TerminalIcon size={16} />
+            <Terminal size={16} />
           </button>
 
           <button
@@ -151,7 +151,7 @@ export function AgentSessionLayout({
           >
             <div className="h-10 flex items-center justify-between px-4 bg-white/5 border-b border-white/10">
               <div className="flex items-center gap-2">
-                <TerminalIcon size={14} className="text-green-500" />
+                <Terminal size={14} className="text-green-500" />
                 <span className="text-xs font-mono text-white/70">root@allternit-orchestrator:~#</span>
               </div>
               <button onClick={() => setShowTerminal(false)} className="text-white/40 hover:text-white">

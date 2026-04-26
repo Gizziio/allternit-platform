@@ -22,7 +22,6 @@ import {
 
 import type { AgentModeSurface } from "@/stores/agent-surface-mode.store";
 import {
-  useNativeAgentStore,
   type Tool,
   useToolRegistryStore,
   type ToolRegistryEntry,
@@ -211,7 +210,7 @@ export function AgentContextStrip({
   messageCount,
   workspaceScope,
   canvasCount = 0,
-  tags = [],
+  tags: rawTags = [],
   localDraft = false,
   toolsEnabled = false,
   automationEnabled = false,
@@ -220,10 +219,16 @@ export function AgentContextStrip({
   const [activeDrawer, setActiveDrawer] = useState<AgentDrawerSection>("workspace");
   const palette = useMemo(() => getSurfacePalette(surface), [surface]);
   
-  // Fetch real tools from store
-  const tools = useNativeAgentStore((state) => state.tools);
-  const isLoadingTools = useNativeAgentStore((state) => state.isLoadingTools);
-  const fetchTools = useNativeAgentStore((state) => state.fetchTools);
+  // Ensure tags is always a valid array of strings (defensive against malformed API responses)
+  const tags = useMemo(() => {
+    if (!Array.isArray(rawTags)) return [];
+    return rawTags.filter((t): t is string => typeof t === 'string');
+  }, [rawTags]);
+  
+  // Fetch real tools from tool registry store
+  const tools = useToolRegistryStore((state) => Object.values(state.tools));
+  const isLoadingTools = useToolRegistryStore((state) => state.isLoading);
+  const fetchTools = useToolRegistryStore((state) => state.fetchKernelTools);
   
   // Fetch tools when drawer is opened
   useEffect(() => {
@@ -1121,11 +1126,12 @@ function WorkspaceDrawer({ workspaceScope, canvasCount, tags, palette }: Workspa
       setIsLoadingFiles(true);
       filesApi.listDirectory({ path: workspaceScope || '.' })
         .then((entries) => {
-          const toNode = (entry: (typeof entries)[number]): FileNode => ({
+          const items = entries.entries ?? [];
+          const toNode = (entry: (typeof items)[number]): FileNode => ({
             name: entry.name,
             type: entry.type === 'directory' ? 'directory' : 'file',
           });
-          setFileTree(entries.map(toNode));
+          setFileTree(items.map(toNode));
         })
         .catch(() => {})
         .finally(() => setIsLoadingFiles(false));

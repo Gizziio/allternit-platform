@@ -5,7 +5,7 @@ Comprehensive help system integrated throughout the Agent Creation Wizard to ass
 
 ## Files Created
 
-### 1. `/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/6-ui/a2r-platform/src/lib/agents/wizard-help.constants.ts`
+### 1. `/Users/macbook/Desktop/allternit-workspace/allternit/6-ui/allternit-platform/src/lib/agents/wizard-help.constants.ts`
 **Purpose**: Centralized help content, tooltips, smart suggestions, and validation utilities
 
 **Key Exports**:
@@ -36,7 +36,7 @@ Comprehensive help system integrated throughout the Agent Creation Wizard to ass
 - `ONBOARDING_TOUR_STEPS`: 13-step onboarding tour covering all wizard steps
 - `QUICK_HELP_TIPS`: Rotating pro tips for users
 
-### 2. `/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/6-ui/a2r-platform/src/components/agents/wizard-help-components.tsx`
+### 2. `/Users/macbook/Desktop/allternit-workspace/allternit/6-ui/allternit-platform/src/components/agents/wizard-help-components.tsx`
 **Purpose**: Reusable help UI components
 
 **Components**:
@@ -90,7 +90,7 @@ Comprehensive help system integrated throughout the Agent Creation Wizard to ass
 
 ## Files Modified
 
-### `/Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/6-ui/a2r-platform/src/components/agents/AgentCreationWizardEnhanced.tsx`
+### `/Users/macbook/Desktop/allternit-workspace/allternit/6-ui/allternit-platform/src/components/agents/AgentCreationWizardEnhanced.tsx`
 
 **Imports Added**:
 ```typescript

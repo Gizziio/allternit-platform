@@ -8,7 +8,8 @@
 export type { FileSystemAPI, FileEntry } from './fileSystem.types';
 import type { FileSystemAPI, FileEntry } from './fileSystem.types';
 
-function safeJSONParse<T>(text: string, fallback: T): T {
+function safeJSONParse<T>(text: string | undefined | null, fallback: T): T {
+  if (!text) return fallback;
   try {
     return JSON.parse(text) as T;
   } catch (error) {
@@ -288,8 +289,8 @@ export class ApiFileSystem implements FileSystemAPI {
     await addChildren('/home');
 
     for (const candidate of candidates) {
-      const hasA2r = await this.pathLooksLikeHome(candidate);
-      if (hasA2r) {
+      const hasAllternit = await this.pathLooksLikeHome(candidate);
+      if (hasAllternit) {
         this.homeDir = candidate;
         if (typeof window !== 'undefined') {
           window.localStorage.setItem(HOME_DIR_STORAGE_KEY, candidate);
@@ -343,8 +344,8 @@ export class ApiFileSystem implements FileSystemAPI {
   }
 
   async readFile(path: string): Promise<string> {
-    const result = await this.requestJson<{ content: string }>(this.buildFilesUrl('read', path));
-    return result.content;
+    const result = await this.requestJson<{ content: string } | null>(this.buildFilesUrl('read', path));
+    return result?.content ?? '';
   }
 
   async writeFile(path: string, content: string): Promise<void> {
@@ -730,7 +731,7 @@ export class CapabilityScanner {
     return Array.from(commands);
   }
 
-  private parseA2rSwitchSubcommands(content: string): string[] {
+  private parseAllternitSwitchSubcommands(content: string): string[] {
     const commands = new Set<string>();
     const matcher = /case\s+["']([^"']+)["']\s*:/g;
     let match: RegExpExecArray | null = matcher.exec(content);
@@ -1340,7 +1341,7 @@ export class CapabilityScanner {
     for (const switchFile of allternitSwitchFiles) {
       try {
         const content = await this.fs.readFile(switchFile);
-        const subcommands = this.parseA2rSwitchSubcommands(content);
+        const subcommands = this.parseAllternitSwitchSubcommands(content);
         for (const subcommand of subcommands) {
           addTool(`allternit:${subcommand}`, `allternit ${subcommand}`, {
             description: `Internal allternit subcommand from ${switchFile}`,

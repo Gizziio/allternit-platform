@@ -1,14 +1,14 @@
 /**
- * A2rchitect Super-Agent OS - Program Launcher
+ * allternit Super-Agent OS - Program Launcher
  * 
  * Centralized program launching with URI scheme support:
- * - Parse a2r:// URIs
+ * - Parse allternit:// URIs
  * - Launch programs by type with initial state
  * - Batch launch multiple programs
  * - Handle launch queue and priorities
  */
 
-import type { A2rProgram, A2rProgramType, LaunchProgramRequest } from '../types/programs';
+import type { AllternitProgram, AllternitProgramType, LaunchProgramRequest } from '../types/programs';
 
 // ============================================================================
 // Types
@@ -28,7 +28,7 @@ export interface LaunchOptions {
 }
 
 export interface ProgramLaunchRequest {
-  type: A2rProgramType;
+  type: AllternitProgramType;
   title: string;
   initialState?: Record<string, unknown>;
   options?: LaunchOptions;
@@ -40,27 +40,27 @@ export interface LaunchQueueItem extends ProgramLaunchRequest {
   priority: number;
   status: 'pending' | 'launching' | 'completed' | 'failed';
   error?: string;
-  result?: A2rProgram;
+  result?: AllternitProgram;
 }
 
-export type LaunchHandler = (request: LaunchProgramRequest) => Promise<A2rProgram>;
+export type LaunchHandler = (request: LaunchProgramRequest) => Promise<AllternitProgram>;
 
 // ============================================================================
 // URI Scheme Parser
 // ============================================================================
 
-const PROGRAM_URI_SCHEME = 'a2r:';
+const PROGRAM_URI_SCHEME = 'allternit:';
 
-export interface ParsedA2rUri {
-  type: A2rProgramType;
+export interface ParsedAllternitUri {
+  type: AllternitProgramType;
   params: Record<string, string>;
   action?: string;
 }
 
-export function parseA2rUri(uri: string): ParsedA2rUri | null {
+export function parseAllternitUri(uri: string): ParsedAllternitUri | null {
   try {
-    // Handle both a2r://type and a2r:type formats
-    const normalized = uri.replace(/^a2r:\/\//, 'a2r:/');
+    // Handle both allternit://type and allternit:type formats
+    const normalized = uri.replace(/^allternit:\/\//, 'allternit:/');
     const url = new URL(normalized);
     
     if (url.protocol !== PROGRAM_URI_SCHEME) {
@@ -81,28 +81,28 @@ export function parseA2rUri(uri: string): ParsedA2rUri | null {
     });
 
     return {
-      type: type as A2rProgramType,
+      type: type as AllternitProgramType,
       params,
       action: params.action,
     };
   } catch (error) {
-    console.error('Failed to parse A2r URI:', error);
+    console.error('Failed to parse Allternit URI:', error);
     return null;
   }
 }
 
-export function buildA2rUri(
-  type: A2rProgramType, 
+export function buildAllternitUri(
+  type: AllternitProgramType, 
   params: Record<string, string> = {}
 ): string {
   const queryString = Object.entries(params)
     .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
     .join('&');
-  return `a2r://${type}${queryString ? `?${queryString}` : ''}`;
+  return `allternit://${type}${queryString ? `?${queryString}` : ''}`;
 }
 
 function isValidProgramType(type: string): boolean {
-  const validTypes: A2rProgramType[] = [
+  const validTypes: AllternitProgramType[] = [
     'research-doc',
     'data-grid',
     'presentation',
@@ -116,7 +116,7 @@ function isValidProgramType(type: string): boolean {
     'workflow-builder',
     'custom',
   ];
-  return validTypes.includes(type as A2rProgramType);
+  return validTypes.includes(type as AllternitProgramType);
 }
 
 // ============================================================================
@@ -141,7 +141,7 @@ class ProgramLauncher {
    */
   async launch(
     request: ProgramLaunchRequest
-  ): Promise<A2rProgram> {
+  ): Promise<AllternitProgram> {
     const queueItem: LaunchQueueItem = {
       ...request,
       id: `launch-${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -189,8 +189,8 @@ class ProgramLauncher {
    */
   async launchBatch(
     requests: ProgramLaunchRequest[]
-  ): Promise<A2rProgram[]> {
-    const results: A2rProgram[] = [];
+  ): Promise<AllternitProgram[]> {
+    const results: AllternitProgram[] = [];
     
     for (const request of requests) {
       try {
@@ -208,11 +208,11 @@ class ProgramLauncher {
   /**
    * Launch from URI scheme
    */
-  async launchFromUri(uri: string): Promise<A2rProgram | null> {
-    const parsed = parseA2rUri(uri);
+  async launchFromUri(uri: string): Promise<AllternitProgram | null> {
+    const parsed = parseAllternitUri(uri);
     
     if (!parsed) {
-      console.error('Invalid A2r URI:', uri);
+      console.error('Invalid Allternit URI:', uri);
       return null;
     }
 
@@ -358,7 +358,7 @@ export function useProgramLauncher() {
 export function launchResearchDoc(
   topic: string,
   options?: LaunchOptions
-): Promise<A2rProgram> {
+): Promise<AllternitProgram> {
   return programLauncher.launch({
     type: 'research-doc',
     title: `Research: ${topic}`,
@@ -371,7 +371,7 @@ export function launchDataGrid(
   title: string,
   data?: Record<string, unknown>[],
   options?: LaunchOptions
-): Promise<A2rProgram> {
+): Promise<AllternitProgram> {
   return programLauncher.launch({
     type: 'data-grid',
     title,
@@ -390,7 +390,7 @@ export function launchPresentation(
   title: string,
   slides?: { type: string; content: string }[],
   options?: LaunchOptions
-): Promise<A2rProgram> {
+): Promise<AllternitProgram> {
   return programLauncher.launch({
     type: 'presentation',
     title,
@@ -407,7 +407,7 @@ export function launchCodePreview(
   code: string,
   language: string,
   options?: LaunchOptions
-): Promise<A2rProgram> {
+): Promise<AllternitProgram> {
   return programLauncher.launch({
     type: 'code-preview',
     title: `Code: ${language}`,
@@ -422,7 +422,7 @@ export function launchCodePreview(
 export function launchAssetManager(
   initialPath?: string,
   options?: LaunchOptions
-): Promise<A2rProgram> {
+): Promise<AllternitProgram> {
   return programLauncher.launch({
     type: 'asset-manager',
     title: 'Asset Manager',
@@ -435,7 +435,7 @@ export function launchOrchestrator(
   prompt: string,
   agents?: string[],
   options?: LaunchOptions
-): Promise<A2rProgram> {
+): Promise<AllternitProgram> {
   return programLauncher.launch({
     type: 'orchestrator',
     title: 'Mixture of Agents',
@@ -451,7 +451,7 @@ export function launchOrchestrator(
 export function launchWorkflowBuilder(
   workflowId?: string,
   options?: LaunchOptions
-): Promise<A2rProgram> {
+): Promise<AllternitProgram> {
   return programLauncher.launch({
     type: 'workflow-builder',
     title: workflowId ? `Workflow: ${workflowId}` : 'Workflow Builder',

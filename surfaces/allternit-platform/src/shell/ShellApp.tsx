@@ -1,11 +1,14 @@
 import { SkillsRegistryView } from '../views/code/SkillsRegistryView';
+import { DesignRegistryView } from '../views/design/DesignRegistryView';
 import { OpenClawControlUI } from '../views/openclaw/OpenClawControlUI';
 import React, { useMemo, useReducer, useEffect, useCallback, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { usePlatformUser, isPlatformAuthDisabled } from '../lib/platform-auth-client';
 // Agent Session Views
 import { ChatModeAgentSession } from '../views/agent-sessions/ChatModeAgentSession';
 import { CoworkModeAgentTasks } from '../views/agent-sessions/CoworkModeAgentTasks';
-import { CodeModeADE } from '../views/agent-sessions/CodeModeADE';
 import { BrowserModeAgentSession } from '../views/agent-sessions/BrowserModeAgentSession';
+import { SwarmADE } from '../views/swarm';
 import { ShellFrame } from './ShellFrame';
 import { ShellRail } from './ShellRail';
 import { type AppMode } from './ShellHeader';
@@ -20,11 +23,12 @@ import { ShellOverlayLayer } from './ShellOverlayLayer';
 import { VisionGlass } from './VisionGlass';
 import { LegacyWidgetsLayer } from './LegacyWidgets';
 import { initBrowserSurfaceBridge } from '../integration/execution/browser.bridge';
+import { installDesktopStreamingGuard } from '../lib/sse/desktop-streaming-guard';
 import { useAllternitHotkeys, PLATFORM_SHORTCUTS } from '../vendor/hotkeys';
 import { createInitialNavState, navReducer } from '../nav/nav.store';
 import { selectActiveView } from '../nav/nav.selectors';
 import { createViewRegistry } from '../views/registry';
-import { A2rCanvasView } from '../views/A2rCanvasView';
+import { AllternitCanvasView } from '../views/AllternitCanvasView';
 import { ViewHost } from '../views/ViewHost';
 import type { ViewContext, ViewType } from '../nav/nav.types';
 import { ConsoleDrawer } from '../drawers/ConsoleDrawer';
@@ -44,9 +48,12 @@ import { NativeAgentView } from '../views/NativeAgentView';
 import {
   getOpenClawWorkspacePathFromAgent,
   useAgentStore,
-  useEmbeddedAgentSessionStore,
-  useNativeAgentStore,
 } from '../lib/agents';
+import { useChatSessionStore } from '../views/chat/ChatSessionStore';
+import { useCodeSessionStore } from '../views/code/CodeSessionStore';
+import { useCoworkSessionStore } from '../views/cowork/CoworkSessionStore';
+import { useDesignSessionStore } from '../views/design/DesignSessionStore';
+import { useBrowserSessionStore } from '../views/browser/BrowserSessionStore';
 import { useBrowserStore } from '../capsules/browser';
 import { BrowserCapsuleEnhanced } from '../capsules/browser/BrowserCapsuleEnhanced';
 import { useBrowserAgentStore } from '../capsules/browser/browserAgent.store';
@@ -75,6 +82,9 @@ import { ControlCenter } from './ControlCenter';
 import { Agentation } from 'agentation';
 // Cloud Deploy View
 import { CloudDeployView } from '../views/cloud-deploy/CloudDeployView';
+import { usePermissionGuide } from '../lib/usePermissionGuide';
+// Design Mode surface
+import DesignModeView from '../views/design/DesignModeView';
 // Node Management View
 import { NodesView } from '../views/nodes';
 // Capsule Management View (P3.9 MCP Apps)
@@ -82,7 +92,7 @@ import { CapsuleManagerView } from '../views/CapsuleManagerView';
 // Operator Browser Control View (P3.10/P3.12)
 import { OperatorBrowserView } from '../views/OperatorBrowserView';
 // P3 UI Views (JSON Render, Form Surfaces, Canvas, Hooks)
-import { AllternitIXRendererView } from '../views/A2RIXRendererView';
+import { BlueprintCanvas } from '../views/BlueprintCanvas';
 import { FormSurfacesView } from '../views/FormSurfacesView';
 import { CanvasProtocolView } from '../views/CanvasProtocolView';
 import { HooksSystemView } from '../views/HooksSystemView';
@@ -112,7 +122,7 @@ import {
   SwarmDashboard,
   IVKGEPanel,
   MultimodalInput,
-  TamboStudio,
+  UIForge,
 } from "../views/dag";
 // Runtime Management Views
 import { BudgetDashboardView } from '../views/runtime/BudgetDashboardView';
@@ -134,6 +144,7 @@ import { GoalsView } from '../views/cowork/GoalsView';
 import { MarketplaceView } from '../views/MarketplaceView';
 import { SettingsView } from '../views/settings/SettingsView';
 import { useResolvedTheme, useThemeStore } from '../design/ThemeStore';
+import { usePanelLayout } from '../hooks/usePanelLayout';
 import { ModelManagementView } from '../views/settings/ModelManagementView';
 import { MonitorView } from '../views/MonitorView';
 // Sprint 4 - Cowork content views
@@ -147,13 +158,18 @@ import { TablesView } from '../views/cowork/TablesView';
 import { FilesView } from '../views/cowork/FilesView';
 import { ExportsView } from '../views/cowork/ExportsView';
 import ProductsDiscoveryView from '../views/products/ProductsDiscoveryView';
+// A://Labs - Course Management
+import { LabsView } from '../views/LabsView';
+import { CatalogView } from '../views/CatalogView';
 // Sprint 5 - Code sub-views
 import { ExplorerView } from '../views/code/ExplorerView';
 import { GitView } from '../views/code/GitView';
 import { ThreadsView } from '../views/code/ThreadsView';
 import { SkillsView } from '../views/code/SkillsView';
 import { CodeProjectView } from '../views/code/CodeProjectView';
-import { A2rOSView } from '../views/A2rOSView';
+import { AllternitOSView } from '../views/AllternitOSView';
+// Cowork Team views (Multica absorption)
+import { CoworkTeamDashboard, CoworkBoardView, CoworkTeamAgentsView, CoworkWorkspacesView } from '../views/cowork-team';
 import { ErrorBoundary } from '../components/error-boundary';
 import { TooltipProvider } from '../components/ui/tooltip';
 import { VerificationView } from '../views/VerificationView';
@@ -173,17 +189,32 @@ import { VoiceProvider } from '../providers/voice-provider';
 import { VoicePresence } from '../components/ai-elements/voice-presence';
 import { ConversationMonitorOverlay } from './ConversationMonitorOverlay';
 import { useAgentSurfaceModeStore } from '../stores/agent-surface-mode.store';
+import { FloatingAvatar } from '../components/agents/FloatingAvatar';
 
 // Stable Chat view that handles project/no-project logic internally
-const ChatViewWrapper = React.memo(function ChatViewWrapper({ 
-  onOpenAgentSession 
-}: { 
+const ChatViewWrapper = React.memo(function ChatViewWrapper({
+  onOpenAgentSession
+}: {
   onOpenAgentSession?: (text: string, surface: 'chat' | 'cowork' | 'code' | 'browser') => void;
-}) {
+}): JSX.Element {
   const { activeProjectId, activeThreadId } = useChatStore();
-  const embeddedChatSessionId = useEmbeddedAgentSessionStore(
-    (state) => state.sessionIdBySurface.chat,
+  const embeddedChatSessionId = useChatSessionStore(
+    (state) => state.activeSessionId,
   );
+
+  // Derive initial model selection from onboarding preferences
+  // Format stored: "providerID::modelID" (e.g. "claude-cli::claude-sonnet-4-6")
+  const onboardingProvider = useOnboardingStore((s) => s.preferences.defaultProvider);
+  const defaultModelSelection = useMemo(() => {
+    if (!onboardingProvider) return null;
+    const sep = onboardingProvider.indexOf('::');
+    if (sep > 0) {
+      const providerId = onboardingProvider.slice(0, sep);
+      const modelId = onboardingProvider.slice(sep + 2);
+      return { providerId, profileId: providerId, modelId, modelName: modelId };
+    }
+    return { providerId: onboardingProvider, profileId: onboardingProvider, modelId: '', modelName: '' };
+  }, [onboardingProvider]);
   
   // Generate a stable temporary chat ID - only regenerate when activeThreadId changes
   const effectiveChatId = useMemo(() => 
@@ -209,7 +240,7 @@ const ChatViewWrapper = React.memo(function ChatViewWrapper({
             <PromptInputProvider>
               <ChatInputProvider>
                 <ChatModelsProvider>
-                  <ModelSelectionProvider>
+                  <ModelSelectionProvider defaultSelection={defaultModelSelection}>
                     <ChatView key={effectiveChatId} onOpenAgentSession={onOpenAgentSession} />
                   </ModelSelectionProvider>
                 </ChatModelsProvider>
@@ -223,7 +254,7 @@ const ChatViewWrapper = React.memo(function ChatViewWrapper({
 });
 
 // Error fallback for chat
-function ChatErrorFallback({ error }: { error?: Error }) {
+function ChatErrorFallback({ error }: { error?: Error }): JSX.Element {
   return (
     <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
       <div style={{ textAlign: 'center' }}>
@@ -251,7 +282,7 @@ function ChatErrorFallback({ error }: { error?: Error }) {
   );
 }
 
-function OpenClawErrorFallback({ error }: { error?: Error }) {
+function OpenClawErrorFallback({ error }: { error?: Error }): JSX.Element {
   return (
     <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', padding: 32 }}>
       <div style={{ textAlign: 'center', maxWidth: 740 }}>
@@ -291,7 +322,7 @@ function ViewErrorFallback({
   viewName: string;
   error?: Error;
   reset?: () => void;
-}) {
+}): JSX.Element {
   return (
     <div
       style={{
@@ -367,7 +398,7 @@ function ViewErrorFallback({
 }
 
 // Elements view placeholder
-function ElementsView() {
+function ElementsView(): JSX.Element {
   return (
     <div style={{ 
       display: 'flex', 
@@ -398,7 +429,7 @@ function ErrorFallbackWrapper({
   viewName: string; 
   error?: Error; 
   reset?: () => void; 
-}) {
+}): JSX.Element {
   return (
     <div
       style={{
@@ -522,7 +553,7 @@ function pickRandom<T>(arr: T[]): T {
  * When tabs are open the draggable card appears on top.
  * When no tabs → card is hidden, only the branded landing is visible.
  */
-function BrowserPaneWrapper({ children }: { children: React.ReactNode }) {
+function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.Element {
   const { tabs, addTab, recentVisits } = useBrowserStore();
   const { shortcuts, addShortcut, removeShortcut, reorderShortcuts } = useBrowserShortcutsStore();
   const { mode: agentMode, setMode: setAgentMode, status: agentStatus } = useBrowserAgentStore();
@@ -617,19 +648,19 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }) {
     };
   }, [topOffset, hasTabs]);
 
-  const handleDragStart = useCallback((e: React.MouseEvent) => {
+  const handleDragStart = useCallback((e: React.MouseEvent<HTMLDivElement>): void => {
     e.preventDefault();
     isDragging.current = true;
     dragStartY.current = e.clientY;
     dragStartOffset.current = topOffset;
 
-    const handleMove = (ev: MouseEvent) => {
+    const handleMove = (ev: MouseEvent): void => {
       if (!isDragging.current) return;
       const delta = ev.clientY - dragStartY.current;
       const next = Math.max(0, Math.min(600, dragStartOffset.current + delta));
       setTopOffset(next);
     };
-    const handleUp = () => {
+    const handleUp = (): void => {
       isDragging.current = false;
       document.body.style.userSelect = '';
       document.body.style.cursor = '';
@@ -642,7 +673,7 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }) {
     window.addEventListener('mouseup', handleUp);
   }, [topOffset]);
 
-  const handleAddShortcut = () => {
+  const handleAddShortcut = (): void => {
     if (!newLabel.trim() || !newUrl.trim()) return;
     let url = newUrl.trim();
     if (!url.match(/^https?:\/\//)) url = `https://${url}`;
@@ -1032,14 +1063,15 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }) {
 }
 
 // Inner app component that uses mode context
-function ShellAppInner() {
+function ShellAppInner(): JSX.Element {
   const [nav, dispatch] = useReducer(navReducer, undefined, createInitialNavState);
   const active = selectActiveView(nav)!;
-  const { mode: activeMode, setMode: setActiveMode } = useMode();
+  const { mode: activeMode, setMode: setActiveMode, isLoaded: modeLoaded } = useMode();
   const themePreference = useThemeStore((state) => state.theme);
   const setThemePreference = useThemeStore((state) => state.setTheme);
   const theme = useResolvedTheme(themePreference);
   const [isRailCollapsed, setIsRailCollapsed] = useState(false);
+  const { railWidth, setRailWidth } = usePanelLayout();
 
   const { isOpen: sidecarOpen, toggle: toggleSidecar, setOpen: setSidecarOpen } = useSidecarStore();
 
@@ -1057,7 +1089,7 @@ function ShellAppInner() {
         await useAgentStore.getState().fetchAgents()
       } catch (error) {
         // Silent fail - agents will be loaded on demand when needed
-        if (!cancelled && import.meta.env.DEV) {
+        if (!cancelled && process.env.NODE_ENV === 'development') {
           console.debug("[ShellApp] Agents fetch skipped (backend not running)")
         }
       }
@@ -1068,10 +1100,28 @@ function ShellAppInner() {
     }
   }, [])
 
-  // Connect global session sync SSE and do initial fetch — both live here at app root
+  // Load sessions from mode-specific stores and connect to live sync
   useEffect(() => {
-    void useNativeAgentStore.getState().fetchSessions().catch(() => {});
-    return useNativeAgentStore.getState().connectSessionSync();
+    void useChatSessionStore.getState().loadSessions().catch(() => {});
+    void useCoworkSessionStore.getState().loadSessions().catch(() => {});
+    void useCodeSessionStore.getState().loadSessions().catch(() => {});
+    void useDesignSessionStore.getState().loadSessions().catch(() => {});
+    void useBrowserSessionStore.getState().loadSessions().catch(() => {});
+
+    // Connect to SSE for live session updates
+    const disconnectChat = useChatSessionStore.getState().connectSessionSync();
+    const disconnectCowork = useCoworkSessionStore.getState().connectSessionSync();
+    const disconnectCode = useCodeSessionStore.getState().connectSessionSync();
+    const disconnectDesign = useDesignSessionStore.getState().connectSessionSync();
+    const disconnectBrowser = useBrowserSessionStore.getState().connectSessionSync();
+
+    return () => {
+      disconnectChat();
+      disconnectCowork();
+      disconnectCode();
+      disconnectDesign();
+      disconnectBrowser();
+    };
   }, []);
 
   // Close the sidecar when leaving browser view so it doesn't leak into other modes
@@ -1082,16 +1132,19 @@ function ShellAppInner() {
     }
   }, [isBrowserView]);
 
-  // Sync view to persisted mode on mount
+  // Sync view to persisted mode once mode is loaded from localStorage
   useEffect(() => {
+    if (!modeLoaded) return;
     // On initial load, open the view that matches the persisted mode
     if (activeMode === 'chat') open('chat');
     else if (activeMode === 'cowork') open('workspace');
     else if (activeMode === 'code') open('code');
-  }, []);
+    else if (activeMode === 'design') open('design');
+    else open('chat'); // fallback
+  }, [modeLoaded, activeMode]);
 
   useEffect(() => {
-    const handleKeydown = (event: KeyboardEvent) => {
+    const handleKeydown = (event: KeyboardEvent): void => {
       const target = event.target as HTMLElement | null;
       if (target && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) {
         return;
@@ -1111,30 +1164,35 @@ function ShellAppInner() {
     runner.openCompact();
   });
 
-  const open = useCallback((viewType: ViewType) => {
+  const open = useCallback((viewType: ViewType): void => {
     dispatch({ type: 'OPEN_VIEW', viewType });
   }, []);
   const openNew = useCallback((viewType: ViewType) => dispatch({ type: 'OPEN_VIEW', viewType, allowNew: true }), []);
 
   // Handle opening agent session views from chat composer.
-  // Creates a real gizzi session and routes the initial message via sendMessageStream
-  // so the ChatView embedded session path handles streaming — no stub views involved.
-  const handleOpenAgentSession = useCallback(async (text: string, surface: 'chat' | 'cowork' | 'code' | 'browser') => {
+  // Creates a session and routes the initial message via sendMessageStream
+  const handleOpenAgentSession = useCallback(async (text: string, surface: 'chat' | 'cowork' | 'code' | 'browser' | 'design') => {
     const selectedAgentId = useAgentSurfaceModeStore.getState().selectedAgentIdBySurface[surface];
 
     try {
-      const session = await useNativeAgentStore.getState().createSession(
-        text.slice(0, 50) || 'New Session',
-        undefined,
-        {
-          sessionMode: selectedAgentId ? 'agent' : 'regular',
-          agentId: selectedAgentId ?? undefined,
-          originSurface: surface,
-        },
-      );
+      // Create session in the appropriate store based on surface
+      const store = surface === 'code'
+        ? useCodeSessionStore
+        : surface === 'cowork'
+          ? useCoworkSessionStore
+          : surface === 'design'
+            ? useDesignSessionStore
+            : surface === 'browser'
+              ? useBrowserSessionStore
+              : useChatSessionStore;
+      const sessionId = await store.getState().createSession({
+        name: text.slice(0, 50) || 'New Session',
+        sessionMode: selectedAgentId ? 'agent' : 'regular',
+        agentId: selectedAgentId ?? undefined,
+      });
 
-      // Wire session to this surface so ChatView renders it as embedded
-      useNativeAgentStore.getState().setSurfaceSession(surface, session.id);
+      // Set as active session in the mode-specific store
+      store.getState().setActiveSession(sessionId);
 
       // Navigate to the matching surface view (ChatView, CoworkRoot, etc.)
       const viewTypeMap: Record<typeof surface, ViewType> = {
@@ -1142,11 +1200,12 @@ function ShellAppInner() {
         cowork: 'workspace',
         code: 'code',
         browser: 'browser',
+        design: 'design',
       };
       dispatch({ type: 'OPEN_VIEW', viewType: viewTypeMap[surface] });
 
-      // Send the initial message through the real gizzi streaming pipeline
-      void useNativeAgentStore.getState().sendMessageStream(session.id, text);
+      // Send the initial message through the streaming pipeline
+      void store.getState().sendMessageStream(sessionId, { text });
     } catch (err) {
       console.error('[handleOpenAgentSession] Failed to create session:', err);
     }
@@ -1164,9 +1223,10 @@ function ShellAppInner() {
   const registry = useMemo(() => createViewRegistry({
     home: () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} />,
     chat: () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} />,
+    // design: DesignModeView,  // merged with design below
     "chat-legacy": () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} />,
     workspace: CoworkRoot,
-    browser: ({ context }: { context: ViewContext }) => (
+    browser: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Browser" />}
         onError={(error, errorInfo) => {
@@ -1177,7 +1237,7 @@ function ShellAppInner() {
         <BrowserPaneWrapper><BrowserCapsuleEnhanced /></BrowserPaneWrapper>
       </ErrorBoundary>
     ),
-    browserview: ({ context }: { context: ViewContext }) => (
+    browserview: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Browser" />}
         onError={(error, errorInfo) => {
@@ -1188,7 +1248,7 @@ function ShellAppInner() {
         <BrowserPaneWrapper><BrowserCapsuleEnhanced /></BrowserPaneWrapper>
       </ErrorBoundary>
     ),
-    studio: ({ context }: { context: ViewContext }) => (
+    studio: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Studio" />}
         onError={(error, errorInfo) => {
@@ -1199,7 +1259,7 @@ function ShellAppInner() {
         <AgentView />
       </ErrorBoundary>
     ),
-    marketplace: ({ context }: { context: ViewContext }) => (
+    marketplace: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Marketplace" />}
         onError={(error, errorInfo) => {
@@ -1210,7 +1270,7 @@ function ShellAppInner() {
         <MarketplaceView />
       </ErrorBoundary>
     ),
-    plugins: ({ context }: { context: ViewContext }) => (
+    plugins: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Plugin Registry" />}
         onError={(error, errorInfo) => {
@@ -1221,7 +1281,7 @@ function ShellAppInner() {
         <PluginRegistryView />
       </ErrorBoundary>
     ),
-    registry: ({ context }: { context: ViewContext }) => (
+    registry: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Tools Registry" />}
         onError={(error, errorInfo) => {
@@ -1232,7 +1292,7 @@ function ShellAppInner() {
         <ToolsView />
       </ErrorBoundary>
     ),
-    memory: ({ context }: { context: ViewContext }) => (
+    memory: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Skills Registry" />}
         onError={(error, errorInfo) => {
@@ -1243,7 +1303,7 @@ function ShellAppInner() {
         <SkillsRegistryView />
       </ErrorBoundary>
     ),
-    settings: ({ context }: { context: ViewContext }) => (
+    settings: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Settings" />}
         onError={(error, errorInfo) => {
@@ -1254,7 +1314,7 @@ function ShellAppInner() {
         <SettingsView />
       </ErrorBoundary>
     ),
-    terminal: ({ context }: { context: ViewContext }) => (
+    terminal: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Terminal" />}
         onError={(error, errorInfo) => {
@@ -1265,7 +1325,7 @@ function ShellAppInner() {
         <TerminalView />
       </ErrorBoundary>
     ),
-    monitor: ({ context }: { context: ViewContext }) => (
+    monitor: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Monitor" />}
         onError={(error, errorInfo) => {
@@ -1276,7 +1336,7 @@ function ShellAppInner() {
         <MonitorView />
       </ErrorBoundary>
     ),
-    runner: ({ context }: { context: ViewContext }) => (
+    runner: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Agent Runner" />}
         onError={(error, errorInfo) => {
@@ -1287,7 +1347,7 @@ function ShellAppInner() {
         <AgentSystemView />
       </ErrorBoundary>
     ),
-    rails: ({ context }: { context: ViewContext }) => (
+    rails: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Rails" />}
         onError={(error, errorInfo) => {
@@ -1298,7 +1358,7 @@ function ShellAppInner() {
         <AgentSystemView />
       </ErrorBoundary>
     ),
-    "run-replay": ({ context }: { context: ViewContext }) => (
+    "run-replay": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Run Replay" />}
         onError={(error, errorInfo) => {
@@ -1309,7 +1369,7 @@ function ShellAppInner() {
         <RunReplayView />
       </ErrorBoundary>
     ),
-    promotion: ({ context }: { context: ViewContext }) => (
+    promotion: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Promotion Dashboard" />}
         onError={(error, errorInfo) => {
@@ -1320,7 +1380,7 @@ function ShellAppInner() {
         <PromotionDashboardView />
       </ErrorBoundary>
     ),
-    "models-manage": ({ context }: { context: ViewContext }) => (
+    "models-manage": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Model Management" />}
         onError={(error, errorInfo) => {
@@ -1331,7 +1391,7 @@ function ShellAppInner() {
         <ModelManagementView />
       </ErrorBoundary>
     ),
-    code: ({ context }: { context: ViewContext }) => (
+    code: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Code Editor" />}
         onError={(error, errorInfo) => {
@@ -1342,7 +1402,7 @@ function ShellAppInner() {
         <CodeRoot />
       </ErrorBoundary>
     ),
-    playground: ({ context }: { context: ViewContext }) => (
+    playground: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Playground" />}
         onError={(error, errorInfo) => {
@@ -1353,7 +1413,7 @@ function ShellAppInner() {
         <PlaygroundView />
       </ErrorBoundary>
     ),
-    elements: ({ context }: { context: ViewContext }) => (
+    elements: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Elements" />}
         onError={(error, errorInfo) => {
@@ -1364,7 +1424,7 @@ function ShellAppInner() {
         <ElementsView />
       </ErrorBoundary>
     ),
-    agent: ({ context }: { context: ViewContext }) => (
+    agent: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Agent Hub" />}
         onError={(error, errorInfo) => {
@@ -1375,7 +1435,7 @@ function ShellAppInner() {
         <AgentHub />
       </ErrorBoundary>
     ),
-    'agent-hub': ({ context }: { context: ViewContext }) => (
+    'agent-hub': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Agent Hub" />}
         onError={(error, errorInfo) => {
@@ -1386,7 +1446,7 @@ function ShellAppInner() {
         <AgentHub />
       </ErrorBoundary>
     ),
-    "native-agent": ({ context }: { context: ViewContext }) => (
+    "native-agent": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Native Agent" />}
         onError={(error, errorInfo) => {
@@ -1397,119 +1457,130 @@ function ShellAppInner() {
         <NativeAgentView onOpenRuntimeOps={() => open("runtime-ops")} />
       </ErrorBoundary>
     ),
-    openclaw: ({ context }: { context: ViewContext }) => (
+    openclaw: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<OpenClawErrorFallback />}>
         <OpenClawControlUI />
       </ErrorBoundary>
     ),
-    "openclaw-chat": ({ context }: { context: ViewContext }) => (
+    "openclaw-chat": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<OpenClawErrorFallback />}>
         <OpenClawControlUI />
       </ErrorBoundary>
     ),
-    "openclaw-sessions": ({ context }: { context: ViewContext }) => (
+    "openclaw-sessions": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<OpenClawErrorFallback />}>
         <OpenClawControlUI />
       </ErrorBoundary>
     ),
-    dag: ({ context }: { context: ViewContext }) => (
+    dag: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load DAG Integration</div>}>
         <DagIntegrationPage />
       </ErrorBoundary>
     ),
     // Cloud Deploy View
-    deploy: ({ context }: { context: ViewContext }) => (
+    deploy: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Cloud Deploy</div>}>
         <CloudDeployView />
       </ErrorBoundary>
     ),
     // Node Management View
-    nodes: ({ context }: { context: ViewContext }) => (
+    nodes: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Nodes</div>}>
         <NodesView />
       </ErrorBoundary>
     ),
     // Capsule Management View (P3.9 MCP Apps)
-    capsules: ({ context }: { context: ViewContext }) => (
+    capsules: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Capsule Manager</div>}>
         <CapsuleManagerView />
       </ErrorBoundary>
     ),
     // Operator Browser Control View (P3.10/P3.12)
-    operator: ({ context }: { context: ViewContext }) => (
+    operator: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Operator Browser</div>}>
         <OperatorBrowserView />
       </ErrorBoundary>
     ),
     // P3 UI Views
-    "allternit-ix": ({ context }: { context: ViewContext }) => (
-      <ErrorBoundary fallback={<div>Failed to load Allternit-IX Renderer</div>}>
-        <AllternitIXRendererView />
+    "allternit-ix": ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<div>Failed to load Design Workspace</div>}>
+        <DesignModeView />
       </ErrorBoundary>
     ),
-    "form-surfaces": ({ context }: { context: ViewContext }) => (
+    design: ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<div>Failed to load Design Workspace</div>}>
+        <DesignModeView />
+      </ErrorBoundary>
+    ),
+
+    "design-marketplace": ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<div>Failed to load Hyperdesign Marketplace</div>}>
+        <DesignRegistryView />
+      </ErrorBoundary>
+    ),
+    "form-surfaces": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Form Surfaces</div>}>
         <FormSurfacesView />
       </ErrorBoundary>
     ),
-    canvas: ({ context }: { context: ViewContext }) => (
+    canvas: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Canvas Protocol</div>}>
         <CanvasProtocolView />
       </ErrorBoundary>
     ),
-    "allternit-canvas": ({ context }: { context: ViewContext }) => (
-      <ErrorBoundary fallback={<div>Failed to load A2r-Canvas</div>}>
-        <A2rCanvasView
-          sourceView={(context.viewType as any) || 'chat'}
-          sessionId={context.viewId}
+    "allternit-canvas": ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<div>Failed to load Allternit-Canvas</div>}>
+        <AllternitCanvasView
+          sourceView={((context!.viewType as string) as 'chat' | 'cowork' | 'code' | 'browser' | 'design') || 'chat'}
+          sessionId={context!.viewId}
         />
       </ErrorBoundary>
     ),
-    // A2rOS - Super-Agent OS View
-    "allternit-os": ({ context }: { context: ViewContext }) => (
-      <ErrorBoundary fallback={<div>Failed to load A2rOS</div>}>
-        <A2rOSView context={context} />
+    // AllternitOS - Super-Agent OS View
+    "allternit-os": ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<div>Failed to load AllternitOS</div>}>
+        <AllternitOSView context={context!} />
       </ErrorBoundary>
     ),
-    hooks: ({ context }: { context: ViewContext }) => (
+    hooks: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Hooks System</div>}>
         <HooksSystemView />
       </ErrorBoundary>
     ),
     // P4 UI Views
-    evolution: ({ context }: { context: ViewContext }) => (
+    evolution: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Evolution Layer</div>}>
         <EvolutionLayerView />
       </ErrorBoundary>
     ),
-    "context-control": ({ context }: { context: ViewContext }) => (
+    "context-control": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Context Control</div>}>
         <ContextControlPlaneView />
       </ErrorBoundary>
     ),
-    "memory-kernel": ({ context }: { context: ViewContext }) => (
+    "memory-kernel": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Memory Kernel</div>}>
         <MemoryKernelView />
       </ErrorBoundary>
     ),
-    acf: ({ context }: { context: ViewContext }) => (
+    acf: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Autonomous Code Factory</div>}>
         <AutonomousCodeFactoryView />
       </ErrorBoundary>
     ),
     // Infrastructure views (P4 DAG tasks)
-    swarm: ({ context }: { context: ViewContext }) => (
+    swarm: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
-        fallback={<ErrorFallbackWrapper viewName="Swarm Monitor" />}
+        fallback={<ErrorFallbackWrapper viewName="Swarm ADE" />}
         onError={(error, errorInfo) => {
-          console.error('[SwarmMonitor] Error:', error);
-          console.error('[SwarmMonitor] Component Stack:', errorInfo.componentStack);
+          console.error('[SwarmADE] Error:', error);
+          console.error('[SwarmADE] Component Stack:', errorInfo.componentStack);
         }}
       >
-        <SwarmMonitor />
+        <SwarmADE />
       </ErrorBoundary>
     ),
-    policy: ({ context }: { context: ViewContext }) => (
+    policy: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Policy Manager" />}
         onError={(error, errorInfo) => {
@@ -1520,7 +1591,7 @@ function ShellAppInner() {
         <PolicyManager />
       </ErrorBoundary>
     ),
-    "task-executor": ({ context }: { context: ViewContext }) => (
+    "task-executor": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Task Executor" />}
         onError={(error, errorInfo) => {
@@ -1531,7 +1602,7 @@ function ShellAppInner() {
         <TaskExecutor />
       </ErrorBoundary>
     ),
-    ontology: ({ context }: { context: ViewContext }) => (
+    ontology: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Ontology Viewer" />}
         onError={(error, errorInfo) => {
@@ -1543,7 +1614,7 @@ function ShellAppInner() {
       </ErrorBoundary>
     ),
     // AI & Vision views (P4/P5 DAG tasks)
-    ivkge: ({ context }: { context: ViewContext }) => (
+    ivkge: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="IVKGE Panel" />}
         onError={(error, errorInfo) => {
@@ -1554,7 +1625,7 @@ function ShellAppInner() {
         <IVKGEPanel />
       </ErrorBoundary>
     ),
-    multimodal: ({ context }: { context: ViewContext }) => (
+    multimodal: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Multimodal Input" />}
         onError={(error, errorInfo) => {
@@ -1565,19 +1636,19 @@ function ShellAppInner() {
         <MultimodalInput />
       </ErrorBoundary>
     ),
-    tambo: ({ context }: { context: ViewContext }) => (
+    tambo: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
-        fallback={<ErrorFallbackWrapper viewName="Tambo Studio" />}
+        fallback={<ErrorFallbackWrapper viewName="UI Forge" />}
         onError={(error, errorInfo) => {
-          console.error('[TamboStudio] Error:', error);
-          console.error('[TamboStudio] Component Stack:', errorInfo.componentStack);
+          console.error('[UIForge] Error:', error);
+          console.error('[UIForge] Component Stack:', errorInfo.componentStack);
         }}
       >
-        <TamboStudio />
+        <UIForge />
       </ErrorBoundary>
     ),
     // Security & Governance views (P5 DAG tasks)
-    receipts: ({ context }: { context: ViewContext }) => (
+    receipts: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Receipts Viewer" />}
         onError={(error, errorInfo) => {
@@ -1588,7 +1659,7 @@ function ShellAppInner() {
         <ReceiptsViewer />
       </ErrorBoundary>
     ),
-    "policy-gating": ({ context }: { context: ViewContext }) => (
+    "policy-gating": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Policy Gating" />}
         onError={(error, errorInfo) => {
@@ -1599,7 +1670,7 @@ function ShellAppInner() {
         <PolicyGating />
       </ErrorBoundary>
     ),
-    security: ({ context }: { context: ViewContext }) => (
+    security: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Security Dashboard" />}
         onError={(error, errorInfo) => {
@@ -1610,7 +1681,7 @@ function ShellAppInner() {
         <SecurityDashboard />
       </ErrorBoundary>
     ),
-    purpose: ({ context }: { context: ViewContext }) => (
+    purpose: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Purpose Binding" />}
         onError={(error, errorInfo) => {
@@ -1622,7 +1693,7 @@ function ShellAppInner() {
       </ErrorBoundary>
     ),
     // Browser & Execution views (P5 DAG tasks)
-    "dag-wih": ({ context }: { context: ViewContext }) => (
+    "dag-wih": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="DAG WIH" />}
         onError={(error, errorInfo) => {
@@ -1633,7 +1704,7 @@ function ShellAppInner() {
         <DAGWIH />
       </ErrorBoundary>
     ),
-    checkpointing: ({ context }: { context: ViewContext }) => (
+    checkpointing: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Checkpointing" />}
         onError={(error, errorInfo) => {
@@ -1645,7 +1716,7 @@ function ShellAppInner() {
       </ErrorBoundary>
     ),
     // Observability views (P4 DAG tasks)
-    observability: ({ context }: { context: ViewContext }) => (
+    observability: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Observability Dashboard" />}
         onError={(error, errorInfo) => {
@@ -1657,7 +1728,7 @@ function ShellAppInner() {
       </ErrorBoundary>
     ),
     // Services views
-    directive: ({ context }: { context: ViewContext }) => (
+    directive: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Directive Compiler" />}
         onError={(error, errorInfo) => {
@@ -1668,7 +1739,7 @@ function ShellAppInner() {
         <DirectiveCompiler />
       </ErrorBoundary>
     ),
-    evaluation: ({ context }: { context: ViewContext }) => (
+    evaluation: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Evaluation Harness" />}
         onError={(error, errorInfo) => {
@@ -1679,7 +1750,7 @@ function ShellAppInner() {
         <EvaluationHarness />
       </ErrorBoundary>
     ),
-    "gc-agents": ({ context }: { context: ViewContext }) => (
+    "gc-agents": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="GC Agents" />}
         onError={(error, errorInfo) => {
@@ -1691,7 +1762,7 @@ function ShellAppInner() {
       </ErrorBoundary>
     ),
     // Runtime Management Views (N11, N12, N16)
-    "runtime-ops": ({ context }: { context: ViewContext }) => (
+    "runtime-ops": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Runtime Operations" />}
         onError={(error, errorInfo) => {
@@ -1702,7 +1773,7 @@ function ShellAppInner() {
         <RuntimeOperationsView onOpenView={open} />
       </ErrorBoundary>
     ),
-    "budget-dashboard": ({ context }: { context: ViewContext }) => (
+    "budget-dashboard": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Budget Dashboard" />}
         onError={(error, errorInfo) => {
@@ -1713,7 +1784,7 @@ function ShellAppInner() {
         <BudgetDashboardView />
       </ErrorBoundary>
     ),
-    "replay-manager": ({ context }: { context: ViewContext }) => (
+    "replay-manager": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Replay Manager" />}
         onError={(error, errorInfo) => {
@@ -1724,7 +1795,7 @@ function ShellAppInner() {
         <ReplayManagerView />
       </ErrorBoundary>
     ),
-    "prewarm-manager": ({ context }: { context: ViewContext }) => (
+    "prewarm-manager": ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Prewarm Manager" />}
         onError={(error, errorInfo) => {
@@ -1736,7 +1807,7 @@ function ShellAppInner() {
       </ErrorBoundary>
     ),
     // Chat History views
-    history: ({ context }: { context: ViewContext }) => (
+    history: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="History" />}
         onError={(error, errorInfo) => {
@@ -1747,7 +1818,7 @@ function ShellAppInner() {
         <HistoryView />
       </ErrorBoundary>
     ),
-    archived: ({ context }: { context: ViewContext }) => (
+    archived: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Archived" />}
         onError={(error, errorInfo) => {
@@ -1759,7 +1830,7 @@ function ShellAppInner() {
       </ErrorBoundary>
     ),
     // Global Search
-    search: ({ context }: { context: ViewContext }) => (
+    search: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Search" />}
         onError={(error, errorInfo) => {
@@ -1771,7 +1842,7 @@ function ShellAppInner() {
       </ErrorBoundary>
     ),
     // Debug view
-    debug: ({ context }: { context: ViewContext }) => (
+    debug: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Debug" />}
         onError={(error, errorInfo) => {
@@ -1783,7 +1854,7 @@ function ShellAppInner() {
       </ErrorBoundary>
     ),
     // Cowork Analytics views
-    insights: ({ context }: { context: ViewContext }) => (
+    insights: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Insights" />}
         onError={(error, errorInfo) => {
@@ -1794,7 +1865,7 @@ function ShellAppInner() {
         <InsightsView />
       </ErrorBoundary>
     ),
-    activity: ({ context }: { context: ViewContext }) => (
+    activity: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Activity" />}
         onError={(error, errorInfo) => {
@@ -1805,7 +1876,7 @@ function ShellAppInner() {
         <ActivityView />
       </ErrorBoundary>
     ),
-    goals: ({ context }: { context: ViewContext }) => (
+    goals: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Goals" />}
         onError={(error, errorInfo) => {
@@ -1817,7 +1888,7 @@ function ShellAppInner() {
       </ErrorBoundary>
     ),
     // Sprint 4 - Cowork content views
-    'cowork-runs': ({ context }: { context: ViewContext }) => (
+    'cowork-runs': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Cowork Runs" />}
         onError={(error, errorInfo) => {
@@ -1828,7 +1899,7 @@ function ShellAppInner() {
         <CoworkRunsView />
       </ErrorBoundary>
     ),
-    'cowork-drafts': ({ context }: { context: ViewContext }) => (
+    'cowork-drafts': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Drafts" />}
         onError={(error, errorInfo) => {
@@ -1839,7 +1910,7 @@ function ShellAppInner() {
         <DraftsView />
       </ErrorBoundary>
     ),
-    'cowork-tasks': ({ context }: { context: ViewContext }) => (
+    'cowork-tasks': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Tasks" />}
         onError={(error, errorInfo) => {
@@ -1850,7 +1921,7 @@ function ShellAppInner() {
         <TasksView />
       </ErrorBoundary>
     ),
-    'cowork-cron': ({ context }: { context: ViewContext }) => (
+    'cowork-cron': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Cron" />}
         onError={(error, errorInfo) => {
@@ -1861,7 +1932,7 @@ function ShellAppInner() {
         <CronView />
       </ErrorBoundary>
     ),
-    'cowork-project': ({ context }: { context: ViewContext }) => (
+    'cowork-project': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Cowork Project" />}
         onError={(error, errorInfo) => {
@@ -1872,7 +1943,7 @@ function ShellAppInner() {
         <CoworkProjectView />
       </ErrorBoundary>
     ),
-    'cowork-documents': ({ context }: { context: ViewContext }) => (
+    'cowork-documents': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Documents" />}
         onError={(error, errorInfo) => {
@@ -1883,7 +1954,7 @@ function ShellAppInner() {
         <DocumentsView />
       </ErrorBoundary>
     ),
-    'cowork-tables': ({ context }: { context: ViewContext }) => (
+    'cowork-tables': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Tables" />}
         onError={(error, errorInfo) => {
@@ -1894,7 +1965,7 @@ function ShellAppInner() {
         <TablesView />
       </ErrorBoundary>
     ),
-    'cowork-files': ({ context }: { context: ViewContext }) => (
+    'cowork-files': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Files" />}
         onError={(error, errorInfo) => {
@@ -1905,7 +1976,7 @@ function ShellAppInner() {
         <FilesView />
       </ErrorBoundary>
     ),
-    'cowork-exports': ({ context }: { context: ViewContext }) => (
+    'cowork-exports': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Exports" />}
         onError={(error, errorInfo) => {
@@ -1916,7 +1987,7 @@ function ShellAppInner() {
         <ExportsView />
       </ErrorBoundary>
     ),
-    'cowork-new-task': ({ context }: { context: ViewContext }) => (
+    'cowork-new-task': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="New Task" />}
         onError={(error, errorInfo) => {
@@ -1927,7 +1998,7 @@ function ShellAppInner() {
         <CoworkRoot />
       </ErrorBoundary>
     ),
-    products: ({ context }: { context: ViewContext }) => (
+    products: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Products Discovery" />}
         onError={(error, errorInfo) => {
@@ -1938,8 +2009,31 @@ function ShellAppInner() {
         <ProductsDiscoveryView />
       </ErrorBoundary>
     ),
+    // A://Labs - Course Management
+    labs: ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="A://Labs" />}
+        onError={(error, errorInfo) => {
+          console.error('[Labs] Error:', error);
+          console.error('[Labs] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <LabsView />
+      </ErrorBoundary>
+    ),
+    catalog: ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Udemy Catalog" />}
+        onError={(error, errorInfo) => {
+          console.error('[Catalog] Error:', error);
+          console.error('[Catalog] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <CatalogView />
+      </ErrorBoundary>
+    ),
     // Sprint 5 - Code sub-views
-    'code-explorer': ({ context }: { context: ViewContext }) => (
+    'code-explorer': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Code Explorer" />}
         onError={(error, errorInfo) => {
@@ -1950,7 +2044,7 @@ function ShellAppInner() {
         <ExplorerView />
       </ErrorBoundary>
     ),
-    'code-git': ({ context }: { context: ViewContext }) => (
+    'code-git': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Git" />}
         onError={(error, errorInfo) => {
@@ -1961,7 +2055,7 @@ function ShellAppInner() {
         <GitView />
       </ErrorBoundary>
     ),
-    'code-threads': ({ context }: { context: ViewContext }) => (
+    'code-threads': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Code Threads" />}
         onError={(error, errorInfo) => {
@@ -1972,7 +2066,7 @@ function ShellAppInner() {
         <ThreadsView />
       </ErrorBoundary>
     ),
-    'code-automations': ({ context }: { context: ViewContext }) => (
+    'code-automations': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Code Cron" />}
         onError={(error, errorInfo) => {
@@ -1983,7 +2077,7 @@ function ShellAppInner() {
         <CronView />
       </ErrorBoundary>
     ),
-    'code-skills': ({ context }: { context: ViewContext }) => (
+    'code-skills': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Code Skills" />}
         onError={(error, errorInfo) => {
@@ -1994,7 +2088,7 @@ function ShellAppInner() {
         <SkillsView />
       </ErrorBoundary>
     ),
-    'code-project': ({ context }: { context: ViewContext }) => (
+    'code-project': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Code Workspace" />}
         onError={(error, errorInfo) => {
@@ -2006,47 +2100,51 @@ function ShellAppInner() {
       </ErrorBoundary>
     ),
     // Agent Session Views - Full-screen agent experiences
-    'chat-agent-session': ({ context }: { context: ViewContext }) => (
+    'chat-agent-session': ({ context }: { context?: ViewContext }) => (
       <ChatModeAgentSession 
         mode="chat"
-        sessionId={context.viewId}
+        sessionId={context!.viewId}
         context={typeof window !== 'undefined' ? window.sessionStorage.getItem('allternit-pending-agent-message') || undefined : undefined}
         onClose={() => open('chat')}
       />
     ),
-    'cowork-agent-session': ({ context }: { context: ViewContext }) => (
+    'cowork-agent-session': ({ context }: { context?: ViewContext }) => (
       <CoworkModeAgentTasks 
         mode="cowork"
         onClose={() => open('workspace')}
       />
     ),
-    'code-agent-session': ({ context }: { context: ViewContext }) => (
-      <CodeModeADE 
-        mode="code"
-        sessionId={context.viewId}
-        onClose={() => open('code')}
-      />
+    'code-agent-session': ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Swarm ADE" />}
+        onError={(error, errorInfo) => {
+          console.error('[SwarmADE] Error:', error);
+          console.error('[SwarmADE] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <SwarmADE />
+      </ErrorBoundary>
     ),
-    'browser-agent-session': ({ context }: { context: ViewContext }) => (
+    'browser-agent-session': ({ context }: { context?: ViewContext }) => (
       <BrowserModeAgentSession 
         mode="browser"
-        sessionId={context.viewId}
+        sessionId={context!.viewId}
         onClose={() => open('browser')}
       />
     ),
     // New document/file - open workspace view with create mode
-    'new-document': ({ context }: { context: ViewContext }) => (
+    'new-document': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div style={{ padding: 16, color: 'var(--text-secondary)' }}>Failed to load</div>}>
         <CoworkRoot />
       </ErrorBoundary>
     ),
-    'new-file': ({ context }: { context: ViewContext }) => (
+    'new-file': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div style={{ padding: 16, color: 'var(--text-secondary)' }}>Failed to load</div>}>
         <CodeRoot />
       </ErrorBoundary>
     ),
     // Visual Verification View
-    verification: ({ context }: { context: ViewContext }) => (
+    verification: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Visual Verification" />}
         onError={(error, errorInfo) => {
@@ -2055,6 +2153,32 @@ function ShellAppInner() {
         }}
       >
         <VerificationView />
+      </ErrorBoundary>
+    ),
+    // Cowork Team views (Multica absorption)
+    'cowork-team': () => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Cowork Team" />}>
+        <CoworkTeamDashboard />
+      </ErrorBoundary>
+    ),
+    'cowork-team-board': () => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Team Board" />}>
+        <CoworkBoardView />
+      </ErrorBoundary>
+    ),
+    'cowork-team-agents': () => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Team Agents" />}>
+        <CoworkTeamAgentsView />
+      </ErrorBoundary>
+    ),
+    'cowork-team-workspaces': () => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Team Workspaces" />}>
+        <CoworkWorkspacesView />
+      </ErrorBoundary>
+    ),
+    'cowork-team-skills': () => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Team Skills" />}>
+        <CoworkTeamDashboard />
       </ErrorBoundary>
     ),
   }), [handleOpenAgentSession, open]);
@@ -2070,31 +2194,55 @@ function ShellAppInner() {
     return () => cleanup();
   }, []);
 
+  // Install SSE streaming guard for desktop webviews
+  useEffect(() => {
+    installDesktopStreamingGuard();
+  }, []);
 
   // Listen for settings open events from drill-down menu
   useEffect(() => {
-    const handleOpenSettings = () => {
+    const handleOpenSettings = (): void => {
       open('settings');
     };
-    window.addEventListener('allternit:open-settings' as any, handleOpenSettings);
-    return () => window.removeEventListener('allternit:open-settings' as any, handleOpenSettings);
+    window.addEventListener('allternit:open-settings', handleOpenSettings);
+    return () => window.removeEventListener('allternit:open-settings', handleOpenSettings);
   }, [open]);
 
   // Listen for settings close events to return to previous view
   useEffect(() => {
-    const handleCloseSettings = () => {
+    const handleCloseSettings = (): void => {
       // Navigate back to chat view when closing settings
       open('chat');
     };
-    window.addEventListener('allternit:close-settings' as any, handleCloseSettings);
-    return () => window.removeEventListener('allternit:close-settings' as any, handleCloseSettings);
+    window.addEventListener('allternit:close-settings', handleCloseSettings);
+    return () => window.removeEventListener('allternit:close-settings', handleCloseSettings);
   }, [open]);
 
-  const handleModeChange = useCallback((mode: AppMode) => {
+  // Listen for A://Labs open events from product discovery
+  useEffect(() => {
+    const handleOpenLabs = (): void => {
+      open('labs');
+    };
+    window.addEventListener('allternit:open-labs', handleOpenLabs);
+    return () => window.removeEventListener('allternit:open-labs', handleOpenLabs);
+  }, [open]);
+
+  useEffect(() => {
+    const handleSwitchMode = (e: Event): void => {
+      const mode = (e as CustomEvent<{ mode: AppMode }>).detail?.mode;
+      if (mode) handleModeChange(mode);
+    };
+    window.addEventListener('allternit:switch-mode', handleSwitchMode);
+    return () => window.removeEventListener('allternit:switch-mode', handleSwitchMode);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleModeChange = useCallback((mode: AppMode): void => {
     setActiveMode(mode);
     if (mode === 'chat') open('chat');
     if (mode === 'cowork') open('workspace');
     if (mode === 'code') open('code');
+    if (mode === 'design') open('design');
   }, [setActiveMode, open]);
 
   // Get session from auth (will be passed from server component wrapper)
@@ -2104,6 +2252,7 @@ function ShellAppInner() {
   const [isControlCenterOpen, setIsControlCenterOpen] = useState(false);
   const [agentationEnabled, setAgentationEnabled] = useState(false);
   const [pluginPanelOpen, setPluginPanelOpen] = useState(false);
+  const permissions = usePermissionGuide();
 
   return (
     <TooltipProvider>
@@ -2113,9 +2262,51 @@ function ShellAppInner() {
         
         {/* Global Voice Presence Overlay */}
         <VoicePresence compact={false} />
+
+        {/* Desktop Permission Status Banner */}
+        {permissions.isSupported && permissions.anyDenied && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999,
+            background: '#f59e0b', color: '#1a1a1a', padding: '8px 16px',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
+            fontSize: 13, fontWeight: 500
+          }}>
+            <span>⚠️ System permissions needed for desktop automation</span>
+            <button
+              onClick={() => {
+                if (permissions.accessibility === 'denied') {
+                  permissions.presentGuide('accessibility');
+                } else if (permissions.screenRecording === 'denied') {
+                  permissions.presentGuide('screen-recording');
+                }
+              }}
+              style={{
+                padding: '4px 12px', borderRadius: 4, border: '1px solid #1a1a1a',
+                background: 'transparent', color: '#1a1a1a', fontSize: 12,
+                fontWeight: 600, cursor: 'pointer'
+              }}
+            >
+              Fix Permissions
+            </button>
+            <button
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('allternit:open-settings', { detail: { section: 'permissions' } }));
+              }}
+              style={{
+                padding: '4px 12px', borderRadius: 4, border: 'none',
+                background: 'transparent', color: '#1a1a1a', fontSize: 12,
+                textDecoration: 'underline', cursor: 'pointer'
+              }}
+            >
+              Settings
+            </button>
+          </div>
+        )}
         
         <ShellFrame
           isRailCollapsed={isRailCollapsed}
+          railWidth={railWidth}
+          onRailWidthChange={setRailWidth}
           rail={
             <ShellRail
               activeViewType={active.viewType}
@@ -2151,9 +2342,9 @@ function ShellAppInner() {
                   onModeChange={handleModeChange}
                   onToggleRail={() => setIsRailCollapsed(!isRailCollapsed)}
                   onNewChat={() => {
-                    // Clear any embedded session and active thread so ChatView renders
+                    // Clear active session and thread so ChatView renders
                     // the blank composer — the session is created when the user sends a message.
-                    useEmbeddedAgentSessionStore.getState().clearSurfaceSession('chat');
+                    useChatSessionStore.getState().setActiveSession(null);
                     useChatStore.getState().setActiveThread(null);
                     useChatStore.getState().setActiveProject(null);
                     handleModeChange('chat');
@@ -2178,22 +2369,21 @@ function ShellAppInner() {
                             .agents.find((agent) => agent.id === selectedAgentId) ?? null
                         : null;
                     try {
-                      const session = await useNativeAgentStore
-                        .getState()
-                        .createSession('Agent Session', undefined, {
-                          originSurface,
-                          sessionMode: 'agent',
-                          agentId: selectedAgent?.id,
-                          agentName: selectedAgent?.name,
-                          workspaceScope: getOpenClawWorkspacePathFromAgent(selectedAgent) ?? undefined,
-                          runtimeModel: selectedAgent?.model,
-                          agentFeatures: {
-                            workspace: true,
-                            tools: true,
-                          },
-                        });
+                      const store = originSurface === 'code'
+                        ? useCodeSessionStore
+                        : originSurface === 'cowork'
+                          ? useCoworkSessionStore
+                          : originSurface === 'browser'
+                            ? useBrowserSessionStore
+                            : useChatSessionStore;
+                      const sessionId = await store.getState().createSession({
+                        name: 'Agent Session',
+                        sessionMode: 'agent',
+                        agentId: selectedAgent?.id,
+                        agentName: selectedAgent?.name,
+                      });
 
-                      useNativeAgentStore.getState().setActiveSession(session.id);
+                      store.getState().setActiveSession(sessionId);
 
                       if (
                         originSurface === 'chat' ||
@@ -2201,9 +2391,6 @@ function ShellAppInner() {
                         originSurface === 'cowork' ||
                         originSurface === 'browser'
                       ) {
-                        useEmbeddedAgentSessionStore
-                          .getState()
-                          .setSurfaceSession(originSurface, session.id);
                         if (selectedAgent?.id) {
                           useAgentSurfaceModeStore
                             .getState()
@@ -2269,35 +2456,85 @@ function ShellAppInner() {
             }}
           />
         )}
+
+        {/* Floating Agent Companion */}
+        <FloatingAvatar />
       </SessionProvider>
       </VoiceProvider>
     </TooltipProvider>
   );
 }
 
-// Main ShellApp that provides Mode context
-function OnboardingGate() {
+function OnboardingGate(): JSX.Element | null {
   const hasCompleted = useOnboardingStore((s) => s.hasCompletedOnboarding);
+  const hasHydrated = useOnboardingStore((s) => s.hasHydrated);
+  const resetOnboarding = useOnboardingStore((s) => s.resetOnboarding);
+
+  useEffect(() => {
+    // Wait for Zustand persist rehydration to finish before syncing with desktop.
+    // Otherwise the async rehydration can race with resetOnboarding() and overwrite
+    // the reset with the stale persisted value.
+    if (!hasHydrated) return;
+
+    // When running inside Electron, sync onboarding state with the desktop config.
+    // If the desktop says onboarding is NOT complete, reset the platform store
+    // so the onboarding wizard appears (localStorage may be stale from prior runs).
+    const desktop = window.allternit?.app;
+    if (desktop?.isFirstLaunch) {
+      desktop.isFirstLaunch().then((isFirst: boolean) => {
+        if (isFirst) {
+          console.log('[OnboardingGate] Desktop says first launch — resetting platform onboarding state');
+          resetOnboarding();
+        }
+      }).catch(() => {});
+    }
+  }, [hasHydrated, resetOnboarding]);
+
+  if (!hasHydrated) return null; // Wait for rehydration before deciding
   if (hasCompleted) return null;
   return <OnboardingPortal />;
 }
 
-export function ShellApp() {
+// Auth gate: redirect unauthenticated users to /sign-in before the shell renders.
+// In Electron (auth disabled) or dev (no publishable key) this is a no-op.
+function AuthGate({ children }: { children: React.ReactNode }): JSX.Element | null {
+  const router = useRouter();
+  const { isLoaded, isSignedIn } = usePlatformUser();
+  const [allowed, setAllowed] = useState(isPlatformAuthDisabled());
+
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (isSignedIn) {
+      setAllowed(true);
+    } else {
+      const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+      router.replace(`/sign-in?redirect_url=${returnUrl}`);
+    }
+  }, [isLoaded, isSignedIn, router]);
+
+  if (!allowed) return null;
+
+  return <>{children}</>;
+}
+
+export function ShellApp(): JSX.Element {
   return (
-    <ModeProvider>
-      <GlobalDropzoneProvider>
-        <OnboardingGate />
-        <ShellAppInner />
-      </GlobalDropzoneProvider>
-    </ModeProvider>
+    <AuthGate>
+      <ModeProvider>
+        <GlobalDropzoneProvider>
+          <OnboardingGate />
+          <ShellAppInner />
+        </GlobalDropzoneProvider>
+      </ModeProvider>
+    </AuthGate>
   );
 }
 
-function Placeholder({ context }: { context: ViewContext }) {
+function Placeholder({ context }: { context?: ViewContext }): JSX.Element {
   return (
     <div style={{ padding: 16 }}>
-      <div style={{ fontWeight: 700, marginBottom: 8 }}>{context.viewType}</div>
-      <div style={{ opacity: 0.8 }}>View ID: {context.viewId}</div>
+      <div style={{ fontWeight: 700, marginBottom: 8 }}>{context?.viewType}</div>
+      <div style={{ opacity: 0.8 }}>View ID: {context?.viewId}</div>
       <div style={{ opacity: 0.6, fontSize: '12px', marginTop: 8 }}>
         Replace this view via ViewRegistry or integration/allternit/legacy.bridge.
       </div>

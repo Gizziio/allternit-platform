@@ -75,7 +75,7 @@ export const ObservabilityDashboard = lazy(() => import('./dag/ObservabilityDash
 export const SwarmDashboard = lazy(() => import('./SwarmDashboard/SwarmDashboard').then(m => ({ default: m.SwarmDashboard })));
 export const IVKGEPanel = lazy(() => import('./IVKGEPanel/IVKGEPanel').then(m => ({ default: m.IVKGEPanel })));
 export const MultimodalInput = lazy(() => import('./MultimodalInput/MultimodalInput').then(m => ({ default: m.MultimodalInput })));
-export const TamboStudio = lazy(() => import('./TamboStudio/TamboStudio').then(m => ({ default: m.TamboStudio })));
+export const UIForge = lazy(() => import('./UIForge/UIForge').then(m => ({ default: m.UIForge })));
 
 // Cloud & Infrastructure
 export const CloudDeployView = lazy(() => import('./cloud-deploy/CloudDeployView').then(m => ({ default: m.CloudDeployView })));
@@ -84,7 +84,8 @@ export const CapsuleManagerView = lazy(() => import('./CapsuleManagerView').then
 export const OperatorBrowserView = lazy(() => import('./OperatorBrowserView').then(m => ({ default: m.OperatorBrowserView })));
 
 // P3 UI Views
-export const AllternitIXRendererView = lazy(() => import('./A2RIXRendererView').then(m => ({ default: m.AllternitIXRendererView })));
+export const BlueprintCanvas = lazy(() => import('./BlueprintCanvas').then(m => ({ default: m.BlueprintCanvas })));
+export const DesignRegistryView = lazy(() => import('./design/DesignRegistryView').then(m => ({ default: m.DesignRegistryView })));
 export const FormSurfacesView = lazy(() => import('./FormSurfacesView').then(m => ({ default: m.FormSurfacesView })));
 export const CanvasProtocolView = lazy(() => import('./CanvasProtocolView').then(m => ({ default: m.CanvasProtocolView })));
 export const HooksSystemView = lazy(() => import('./HooksSystemView').then(m => ({ default: m.HooksSystemView })));

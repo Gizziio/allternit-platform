@@ -1,4 +1,4 @@
-# Agentation for A2R
+# Agentation for Allternit
 
 **Status:** ✅ IMPLEMENTED (DEV-ONLY)  
 **License:** PolyForm Shield 1.0.0 (forked from benjitaylor/agentation)  
@@ -13,7 +13,7 @@ Agentation is a **visual annotation overlay** for UI development that lets you:
 1. **Click any UI element** to select it
 2. **Add notes** describing desired changes
 3. **Get structured output** with selectors + context
-4. **Copy/paste** instructions for A2R coding agents
+4. **Copy/paste** instructions for Allternit coding agents
 
 **DEV-ONLY:** This tool is never included in production builds.
 
@@ -26,7 +26,7 @@ Agentation is a **visual annotation overlay** for UI development that lets you:
 Agentation is automatically enabled in development mode.
 
 ```bash
-# In a2r-platform directory
+# In allternit-platform directory
 npm run dev
 ```
 
@@ -42,9 +42,9 @@ npm run dev
 3. Add your notes in the panel
 4. Click **💾 Save & Copy**
 
-### 4. Send to A2R Agent
+### 4. Send to Allternit Agent
 
-The formatted output is automatically copied to clipboard. Paste into your A2R coding agent (e.g., UI_IMPLEMENTER).
+The formatted output is automatically copied to clipboard. Paste into your Allternit coding agent (e.g., UI_IMPLEMENTER).
 
 ---
 
@@ -73,8 +73,8 @@ The formatted output is automatically copied to clipboard. Paste into your A2R c
 - Copy all annotations at once
 - Delete annotations
 
-### A2R Integration
-- Formatted output for A2R agents
+### Allternit Integration
+- Formatted output for Allternit agents
 - Execution context header
 - Verification commands included
 
@@ -92,10 +92,10 @@ The formatted output is automatically copied to clipboard. Paste into your A2R c
 
 ## Output Format
 
-Agentation produces A2R-formatted output:
+Agentation produces Allternit-formatted output:
 
 ```markdown
-# A2R UI Annotation → Agent Instructions
+# Allternit UI Annotation → Agent Instructions
 
 ## Execution Context
 | Field | Value |
@@ -174,19 +174,19 @@ export default {
 
 Annotations are stored in **localStorage** (dev-only):
 
-- Key: `a2r-agentation-annotations`
+- Key: `allternit-agentation-annotations`
 - Format: JSON array
 - Persistence: Until manually cleared
 
 ### Clear All Annotations
 
 ```javascript
-localStorage.removeItem('a2r-agentation-annotations');
+localStorage.removeItem('allternit-agentation-annotations');
 ```
 
 ---
 
-## Integration with A2R Workflow
+## Integration with Allternit Workflow
 
 ### 1. Designer/Developer Workflow
 
@@ -196,10 +196,10 @@ localStorage.removeItem('a2r-agentation-annotations');
 3. Click element to annotate
 4. Add notes describing changes
 5. Copy formatted output
-6. Paste into A2R agent
+6. Paste into Allternit agent
 ```
 
-### 2. A2R Agent Workflow
+### 2. Allternit Agent Workflow
 
 ```
 1. Receive annotated instructions
@@ -277,10 +277,10 @@ const {
 } = useAgentation();
 ```
 
-### formatForA2R Function
+### formatForAllternit Function
 
 ```typescript
-import { formatForA2R, createDefaultHeader } from './dev/agentation';
+import { formatForAllternit, createDefaultHeader } from './dev/agentation';
 
 const output = {
   notes: 'Change button color',
@@ -294,7 +294,7 @@ const header = createDefaultHeader({
   renderer: 'AGENT',
 });
 
-const formatted = formatForA2R(output, header);
+const formatted = formatForAllternit(output, header);
 console.log(formatted.formattedForAgent);
 ```
 
@@ -305,7 +305,7 @@ console.log(formatted.formattedForAgent);
 **PolyForm Shield 1.0.0**
 
 Original: https://github.com/benjitaylor/agentation  
-Forked and modified for A2R integration.
+Forked and modified for Allternit integration.
 
 ---
 
@@ -313,4 +313,4 @@ Forked and modified for A2R integration.
 
 - [Original Agentation Repo](https://github.com/benjitaylor/agentation)
 - [Storybook Docs](https://storybook.js.org/docs)
-- [A2R UI Contracts](./UI_CONTRACTS.md)
+- [Allternit UI Contracts](./UI_CONTRACTS.md)

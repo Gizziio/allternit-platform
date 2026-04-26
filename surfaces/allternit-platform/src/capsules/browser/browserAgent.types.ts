@@ -430,7 +430,8 @@ export const MODE_TO_RISK_LIMIT: Record<BrowserAgentMode, RiskTier> = {
 
 export type BrowserEndpoint =
   | { type: 'shell_browser'; sessionId: string }
-  | { type: 'extension'; endpointId: string; tabId: number };
+  | { type: 'extension'; endpointId: string; tabId: number }
+  | { type: 'platform_webview'; tabId?: number; label?: string };
 
 // ============================================================================
 // Receipt (from Receipts.json - full schema)

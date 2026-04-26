@@ -8,7 +8,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -50,8 +50,8 @@ model SshConnection {
   os                  String?
   architecture        String?
   dockerInstalled     Boolean?  @map("docker_installed")
-  a2rInstalled        Boolean?  @map("a2r_installed")
-  a2rVersion          String?   @map("a2r_version")
+  allternitInstalled  Boolean?  @map("a2r_installed")
+  allternitVersion    String?   @map("a2r_version")
   lastConnectedAt     DateTime? @map("last_connected_at")
   createdAt           DateTime  @default(now()) @map("created_at")
   updatedAt           DateTime  @updatedAt @map("updated_at")
@@ -110,4 +110,403 @@ model UserBackendPreference {
 
   @@index([activeRemoteBackendTargetId])
   @@map("user_backend_preferences")
+}
+
+// ============================================================================
+// Workflow Models
+// ============================================================================
+
+model Workflow {
+  id          String              @id @default(cuid())
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  title       String
+  description String?
+  userId      String?
+  nodes       String // JSON: WorkflowNode[]
+  edges       String // JSON: WorkflowEdge[]
+  executions  WorkflowExecution[]
+
+  @@map("workflows")
+}
+
+model WorkflowExecution {
+  id          String    @id @default(cuid())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workflowId  String
+  workflow    Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  status      String // "pending" | "running" | "completed" | "failed" | "cancelled"
+  startedAt   DateTime?
+  completedAt DateTime?
+  result      String? // JSON
+  error       String?
+
+  @@index([workflowId])
+  @@map("workflow_executions")
+}
+
+// ============================================================================
+// Conversation Branching Models
+// ============================================================================
+
+model Conversation {
+  id                   String                @id @default(cuid())
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  title                String?
+  userId               String?
+  parentConversationId String?
+  gizziSessionId       String?               @map("gizzi_session_id")
+  parentConversation   Conversation?         @relation("ConversationBranches", fields: [parentConversationId], references: [id])
+  branches             Conversation[]        @relation("ConversationBranches")
+  messages             ConversationMessage[]
+
+  @@index([userId])
+  @@index([parentConversationId])
+  @@index([gizziSessionId])
+  @@map("conversations")
+}
+
+model ConversationMessage {
+  id              String       @id @default(cuid())
+  createdAt       DateTime     @default(now())
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role            String // "user" | "assistant" | "system"
+  content         String
+  parentMessageId String?
+  metadata        String? // JSON
+
+  @@index([conversationId])
+  @@index([parentMessageId])
+  @@map("conversation_messages")
+}
+
+// ============================================================================
+// Workspace Models (Team isolation — from Multica)
+// ============================================================================
+
+model Workspace {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  ownerId     String   @map("owner_id")
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  members     WorkspaceMember[]
+  invitations WorkspaceInvitation[]
+  boardItems  BoardItem[]
+  skills      TeamSkill[]
+  runtimes    AgentRuntime[]
+
+  @@map("workspaces")
+}
+
+model WorkspaceMember {
+  id          String   @id @default(cuid())
+  workspaceId String   @map("workspace_id")
+  userId      String?  @map("user_id")
+  agentId     String?  @map("agent_id")
+  role        String // 'owner' | 'admin' | 'member' | 'agent'
+  joinedAt    DateTime @default(now()) @map("joined_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@unique([workspaceId, agentId])
+  @@map("workspace_members")
+}
+
+model WorkspaceInvitation {
+  id          String   @id @default(cuid())
+  workspaceId String   @map("workspace_id")
+  email       String
+  role        String // 'admin' | 'member' | 'agent'
+  token       String   @unique
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("workspace_invitations")
+}
+
+// ============================================================================
+// Board Models (Kanban — from Multica)
+// ============================================================================
+
+model BoardItem {
+  id               String    @id @default(cuid())
+  workspaceId      String    @map("workspace_id")
+  title            String
+  description      String?
+  status           String // 'backlog' | 'todo' | 'in_progress' | 'in_review' | 'done' | 'blocked'
+  assigneeType     String?   @map("assignee_type") // 'human' | 'agent'
+  assigneeId       String?   @map("assignee_id")
+  reporterId       String    @map("reporter_id")
+  priority         Int       @default(0)
+  labels           String? // JSON string[]
+  estimatedMinutes Int?      @map("estimated_minutes")
+  deadline         DateTime?
+  dependencies     String? // JSON string[]
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  comments  BoardComment[]
+
+  @@index([workspaceId])
+  @@index([status])
+  @@map("board_items")
+}
+
+model BoardComment {
+  id         String   @id @default(cuid())
+  itemId     String   @map("item_id")
+  authorType String   @map("author_type") // 'human' | 'agent'
+  authorId   String   @map("author_id")
+  body       String
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  item BoardItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+  @@map("board_comments")
+}
+
+// ============================================================================
+// Team Skill Model (Skills Marketplace — from Multica)
+// ============================================================================
+
+model TeamSkill {
+  id          String   @id @default(cuid())
+  workspaceId String   @map("workspace_id")
+  name        String
+  description String?
+  manifest    String? // JSON: Plugin SDK manifest
+  sourceRepo  String?  @map("source_repo")
+  version     String
+  installedBy String   @map("installed_by")
+  installedAt DateTime @default(now()) @map("installed_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@map("team_skills")
+}
+
+// ============================================================================
+// Task Audit Log Model (from Taskdog)
+// ============================================================================
+
+model TaskAuditLog {
+  id        String   @id @default(cuid())
+  taskId    String   @map("task_id")
+  action    String // 'created' | 'updated' | 'deleted' | 'status_changed' | 'assigned' | 'commented' | 'time_tracked'
+  actorType String   @map("actor_type") // 'human' | 'agent' | 'system'
+  actorId   String   @map("actor_id")
+  payload   String? // JSON: before/after diff
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([taskId])
+  @@index([createdAt])
+  @@map("task_audit_logs")
+}
+
+// ============================================================================
+// Agent Runtime Model (Runtime Discovery — from Multica)
+// ============================================================================
+
+model AgentRuntime {
+  id            String    @id @default(cuid())
+  name          String
+  host          String
+  agentClis     String?   @map("agent_clis") // JSON string[]
+  status        String // 'online' | 'offline' | 'busy'
+  lastHeartbeat DateTime? @map("last_heartbeat")
+  workspaceId   String?   @map("workspace_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+  @@index([status])
+  @@map("agent_runtimes")
+}
+
+// ============================================================================
+// Agent Platform Models (Memory, Testing, Metrics, Identity)
+// ============================================================================
+
+model Agent {
+  id            String    @id @default(cuid())
+  userId        String    @map("user_id")
+  name          String
+  description   String?
+  type          String    @default("worker") // orchestrator | sub-agent | worker | specialist | reviewer
+  parentAgentId String?   @map("parent_agent_id")
+  model         String
+  provider      String // openai | anthropic | local | custom
+  capabilities  String? // JSON string[]
+  systemPrompt  String?   @map("system_prompt")
+  tools         String? // JSON string[]
+  maxIterations Int       @default(10) @map("max_iterations")
+  temperature   Float     @default(0.7)
+  config        String? // JSON Record<string, unknown>
+  status        String    @default("idle") // idle | running | paused | error
+  workspaceId   String?   @map("workspace_id")
+  avatar        String? // JSON AvatarConfig
+  identityKey   String?   @map("identity_key") // Ed25519 public key for agent signing
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  lastRunAt     DateTime? @map("last_run_at")
+
+  // Relations
+  memoryEvents   MemoryEvent[]
+  memoryEntities MemoryEntity[]
+  testSuites     TestSuite[]
+  metrics        AgentMetric[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("agents")
+}
+
+model MemoryEvent {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  agentId   String?  @map("agent_id")
+  type      String // message_sent | tool_called | file_read | session_start | knowledge_added
+  payload   String // JSON or text payload
+  source    String   @default("user") // user | agent | system
+  timestamp DateTime @default(now())
+
+  agent Agent? @relation(fields: [agentId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([agentId])
+  @@index([type])
+  @@index([timestamp])
+  @@map("memory_events")
+}
+
+model MemoryEntity {
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  agentId       String?  @map("agent_id")
+  entityId      String   @map("entity_id") // Stable external ID
+  name          String
+  type          String   @default("General") // Person | Company | Project | File | Session | Tool | Concept
+  content       String? // Full content or summary
+  properties    String? // JSON Record<string, unknown>
+  propertyCount Int      @default(0) @map("property_count")
+  vectorId      String?  @map("vector_id") // External vector DB reference
+  lastUpdated   DateTime @updatedAt @map("last_updated")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  agent Agent? @relation(fields: [agentId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([agentId])
+  @@index([entityId])
+  @@index([type])
+  @@map("memory_entities")
+}
+
+model MemoryEdge {
+  id           String   @id @default(cuid())
+  userId       String   @map("user_id")
+  source       String
+  relationship String
+  target       String
+  confidence   Float    @default(1.0)
+  metadata     String? // JSON
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([source])
+  @@index([target])
+  @@map("memory_edges")
+}
+
+model MemoryDocument {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  agentId    String?  @map("agent_id")
+  title      String
+  content    String
+  sourceType String   @map("source_type") // upload | url | paste | generated
+  sourceUrl  String?  @map("source_url")
+  chunkCount Int      @default(0) @map("chunk_count")
+  vectorIds  String?  @map("vector_ids") // JSON string[] of vector DB IDs
+  isIndexed  Boolean  @default(false) @map("is_indexed")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([agentId])
+  @@index([isIndexed])
+  @@map("memory_documents")
+}
+
+model TestSuite {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  agentId     String   @map("agent_id")
+  name        String
+  description String?
+  cases       String // JSON TestCase[]
+  runs        String? // JSON TestRun[]
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([agentId])
+  @@map("test_suites")
+}
+
+model AgentMetric {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  agentId    String   @map("agent_id")
+  runId      String?  @map("run_id")
+  metricType String   @map("metric_type") // latency | tokens | cost | success | tool_calls
+  value      Float
+  unit       String // ms | tokens | usd | percent | count
+  metadata   String? // JSON
+  timestamp  DateTime @default(now())
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([agentId])
+  @@index([metricType])
+  @@index([timestamp])
+  @@map("agent_metrics")
+}
+
+model InboxItem {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  agentId   String?  @map("agent_id")
+  type      String // mail | gate_review | run_complete | system_alert | ban_triggered
+  title     String
+  body      String
+  severity  String   @default("info") // info | warning | critical
+  status    String   @default("unread") // unread | read | acknowledged | dismissed
+  actionUrl String?  @map("action_url")
+  metadata  String? // JSON
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([agentId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("inbox_items")
 }

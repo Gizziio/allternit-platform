@@ -146,7 +146,6 @@ export function PairingDialog({ isOpen, onClose, sessionId }: PairingDialogProps
                     value={qrValue}
                     size={220}
                     level="H"
-                    includeMargin={true}
                     className="mx-auto"
                   />
                 </div>

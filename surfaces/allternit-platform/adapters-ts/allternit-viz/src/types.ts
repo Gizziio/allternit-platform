@@ -1,5 +1,5 @@
 /**
- * A2R Data Visualization Types
+ * Allternit Data Visualization Types
  */
 
 /**

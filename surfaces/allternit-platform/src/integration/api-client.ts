@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * Allternit API Client - Canonical Enterprise Implementation
  * 
@@ -375,7 +377,7 @@ class AllternitApiClient {
         if (candidateResponse.ok) {
           response = candidateResponse;
           if (base !== this.baseUrl) {
-            if (import.meta.env.DEV) {
+            if (process.env.NODE_ENV === 'development') {
               console.debug(`[AllternitApiClient] Falling back to API base: ${base}`);
             }
             this.baseUrl = base;
@@ -390,7 +392,7 @@ class AllternitApiClient {
         lastNetworkError = networkError;
         // Continue to next candidate base if this one fails entirely (offline or network error)
         // Silent fail - expected when backend isn't running
-        if (import.meta.env.DEV) {
+        if (process.env.NODE_ENV === 'development') {
           console.debug(`[AllternitApiClient] Base ${base} unreachable, trying next candidate...`);
         }
       }
@@ -398,7 +400,7 @@ class AllternitApiClient {
 
     if (!response) {
       // Only log error if not in development (in dev, this is expected)
-      if (import.meta.env.PROD) {
+      if (process.env.NODE_ENV === 'production') {
         console.error('[AllternitApiClient] All API bases failed:', lastNetworkError);
       }
       throw new AllternitApiError(

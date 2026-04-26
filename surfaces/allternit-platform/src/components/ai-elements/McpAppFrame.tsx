@@ -249,7 +249,7 @@ export function McpAppFrame({ part }: { part: McpAppUIPart }) {
     const bridge = new AppBridge(
       null,
       {
-        name: "A2rchitect",
+        name: "allternit",
         version: "1.0.0",
       },
       hostCapabilities,
@@ -454,7 +454,7 @@ export function McpAppFrame({ part }: { part: McpAppUIPart }) {
         const bridge = new AppBridge(
           null,
           {
-            name: "A2rchitect",
+            name: "allternit",
             version: "1.0.0",
           },
           hostCapabilities,

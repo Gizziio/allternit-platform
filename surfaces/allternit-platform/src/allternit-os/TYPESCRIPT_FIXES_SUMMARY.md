@@ -16,10 +16,10 @@
 **Fix**: Changed to `import * as React from 'react'`
 
 Files Fixed:
-- A2rOS.tsx
-- A2rCanvas.tsx
-- A2rChatIntegration.tsx
-- A2rConsole.tsx
+- AllternitOS.tsx
+- AllternitCanvas.tsx
+- AllternitChatIntegration.tsx
+- AllternitConsole.tsx
 - AssetManagerProgram.tsx
 - BrowserScreenshotCitations.tsx
 - CodePreviewProgram.tsx
@@ -51,17 +51,17 @@ Files Fixed:
 - AssetManagerProgram.tsx (1 occurrence)
 - WorkflowBuilderProgram.tsx (1 occurrence)
 
-### 4. A2rOS/A2rCanvas Prop Mismatch
-**Issue**: A2rOS passing props A2rCanvas doesn't accept
-**Fix**: Removed extraneous props from A2rCanvas call
+### 4. AllternitOS/AllternitCanvas Prop Mismatch
+**Issue**: AllternitOS passing props AllternitCanvas doesn't accept
+**Fix**: Removed extraneous props from AllternitCanvas call
 
 ### 5. store.programs Access Pattern
 **Issue**: `store.programs` is a Record, not an array
 **Fix**: Changed `store.programs.find()` to `Object.values(store.programs).find()`
 
 Files Fixed:
-- A2rOS.tsx
-- A2rChatIntegration.tsx
+- AllternitOS.tsx
+- AllternitChatIntegration.tsx
 
 ## 🟡 Remaining Issues (55 errors)
 
@@ -74,13 +74,13 @@ These require updating the type definitions in `types/programs.ts`:
 4. **VisualNode.dag_id/terminal_context** - Used in WorkflowBuilderProgram but not in type
 
 ### API Mismatches
-1. **A2RRailsWebSocketBridge.ts(218)** - timestamp in Omit<RailsMessage, "timestamp">
+1. **AllternitRailsWebSocketBridge.ts(218)** - timestamp in Omit<RailsMessage, "timestamp">
 2. **BusMessagePayload.type** - Missing in type but used in OrchestratorProgram
 3. **WorkflowBuilderProgram.tsx(371)** - BusMessage missing correlation_id
 
 ### Function Signature Issues
 1. **DataGridProgram.tsx(145)** - Wrong argument type passed to function
-2. **KernelBridge.ts** - state type mismatches (unknown vs A2rProgramState)
+2. **KernelBridge.ts** - state type mismatches (unknown vs AllternitProgramState)
 3. **KernelProtocol.ts(154)** - Similar state type issue
 
 ## 📋 Next Steps

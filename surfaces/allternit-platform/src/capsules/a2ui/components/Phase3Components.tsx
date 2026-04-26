@@ -36,7 +36,8 @@ import {
   Warning,
 } from '@phosphor-icons/react';
 import ReactMarkdown from "react-markdown";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const SyntaxHighlighter = require("react-syntax-highlighter").Prism as any;
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 import type {
@@ -341,7 +342,6 @@ export function ToolCallRenderer({
               <Button
                 variant="ghost"
                 size="icon"
-                size={24}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleRerun();
@@ -352,7 +352,7 @@ export function ToolCallRenderer({
             )}
 
             {props.expandable !== false && (
-              <Button variant="ghost" size="icon" size={24}>
+              <Button variant="ghost" size="icon">
                 {isExpanded ? (
                   <CaretUp size={16} />
                 ) : (
@@ -581,7 +581,6 @@ export function ArtifactPreviewRenderer({
           <Button
             variant="ghost"
             size="icon"
-            size={32}
             onClick={handleCopy}
             title="Copy"
           >
@@ -590,7 +589,6 @@ export function ArtifactPreviewRenderer({
           <Button
             variant="ghost"
             size="icon"
-            size={32}
             onClick={handleDownload}
             title="Download"
           >
@@ -599,7 +597,6 @@ export function ArtifactPreviewRenderer({
           <Button
             variant="ghost"
             size="icon"
-            size={32}
             onClick={handleFullscreen}
             title="Fullscreen"
           >

@@ -1,12 +1,12 @@
-# A2R Desktop Architecture
+# Allternit Desktop Architecture
 
 ## Overview
 
-A2R Desktop is a **cloud-connected client** for self-hosted A2R backends.
+Allternit Desktop is a **cloud-connected client** for self-hosted Allternit backends.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                      A2R Desktop                                │
+│                      Allternit Desktop                                │
 │                    (Electron App)                               │
 │                                                                  │
 │  ┌─────────────────────────────────────────────────────────┐   │
@@ -29,7 +29,7 @@ A2R Desktop is a **cloud-connected client** for self-hosted A2R backends.
                               │ HTTPS/WebSocket
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│              User's A2R Backend (Self-Hosted)                   │
+│              User's Allternit Backend (Self-Hosted)                   │
 │                                                                  │
 │  Runs on:                                                       │
 │  • User's VPS (cloud)                                          │
@@ -47,7 +47,7 @@ A2R Desktop is a **cloud-connected client** for self-hosted A2R backends.
 ## Key Design Decisions
 
 ### 1. No Bundled Services
-Unlike the initial design, A2R Desktop does NOT bundle the backend services. Instead:
+Unlike the initial design, Allternit Desktop does NOT bundle the backend services. Instead:
 - Desktop is a **dumb client** that connects to user's backend
 - User installs backend separately on VPS or locally
 - Desktop only stores connection configuration
@@ -55,10 +55,10 @@ Unlike the initial design, A2R Desktop does NOT bundle the backend services. Ins
 ### 2. Connection Flexibility
 Users can connect to:
 - **Local**: `http://localhost:4096` (backend on same machine)
-- **VPS**: `https://a2r.theirdomain.com` (backend on their cloud)
+- **VPS**: `https://allternit.theirdomain.com` (backend on their cloud)
 
 ### 3. Auto-Discovery
-Desktop automatically scans common ports to find local A2R instances.
+Desktop automatically scans common ports to find local Allternit instances.
 
 ### 4. Separate Update Cycles
 - **Desktop UI**: Auto-updates via electron-updater
@@ -67,7 +67,7 @@ Desktop automatically scans common ports to find local A2R instances.
 ## File Structure
 
 ```
-a2r-desktop/
+allternit-desktop/
 ├── src/
 │   ├── main/
 │   │   └── index.ts          # Main process with connection mgmt
@@ -98,7 +98,7 @@ a2r-desktop/
 3. **Connection Established**
    - Load platform UI from user's backend
    - Show system tray with connection status
-   - Begin normal A2R usage
+   - Begin normal Allternit usage
 
 4. **Connection Lost**
    - Show error in tray

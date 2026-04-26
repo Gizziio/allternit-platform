@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import {
   CaretDown,
   Code as CodeIcon,
@@ -39,10 +40,10 @@ import {
 } from '@/lib/agents/surface-agent-context';
 import {
   mapNativeMessagesToStreamMessages,
-  useEmbeddedAgentSession,
-  useEmbeddedAgentSessionStore,
-  useNativeAgentStore,
+  getAgentSessionDescriptor,
 } from '@/lib/agents';
+import { useCodeSessionStore, type CodeSession } from './CodeSessionStore';
+import type { CreateModeSessionOptions } from '@/lib/agents/mode-session-store';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ACIComputerUseBar } from '@/capsules/browser/ACIComputerUseSidecar';
 
@@ -55,10 +56,8 @@ const CODE_MODEL_NAMES: Record<string, string> = {
 };
 
 const CODE_CHAT_MODEL_FALLBACKS: Record<string, string> = {
-  codex: 'kimi/kimi-for-coding',
-  'claude-code': 'kimi/kimi-for-coding',
-  'gemini-cli': 'kimi/kimi-for-coding',
-  'kimi-cli': 'kimi/kimi-for-coding',
+  'claude-code': 'claude-cli::claude-sonnet-4-6',
+  'kimi-cli': 'kimi/kimi-k2',
 };
 
 function resolveCodeChatModel(modelId: string): string {
@@ -71,8 +70,17 @@ interface ActionGroup {
   id: ActionGroupId;
   label: string;
   accent: string;
-  icon: React.ComponentType<any>;
+  icon: PhosphorIcon;
   templates: Array<{ label: string; prompt: string }>;
+}
+
+interface CodeCanvasProps {
+  isPreviewCollapsed: boolean;
+}
+
+interface CodeModelSelection {
+  modelId: string;
+  modelName?: string;
 }
 
 const CODE_ACTION_GROUPS: ActionGroup[] = [
@@ -243,31 +251,42 @@ const codeOverlayLabelStyle: React.CSSProperties = {
   letterSpacing: '0.05em',
 };
 
-export function CodeCanvas({ isPreviewCollapsed: _isPreviewCollapsed }: any) {
+export function CodeCanvas({ isPreviewCollapsed: _isPreviewCollapsed }: CodeCanvasProps) {
   const openDrawer = useDrawerStore((state) => state.openDrawer);
   const setConsoleTab = useDrawerStore((state) => state.setConsoleTab);
-  const embeddedAgentSession = useEmbeddedAgentSession('code');
-  const codeAgentModeEnabled = embeddedAgentSession.isEmbedded && embeddedAgentSession.descriptor.sessionMode === 'agent';
-  const clearEmbeddedAgentSession = useEmbeddedAgentSessionStore(
-    (state) => state.clearSurfaceSession,
+  const embeddedSessionId = useCodeSessionStore((s) => s.activeSessionId);
+  const embeddedSession = useCodeSessionStore((s) =>
+    s.activeSessionId ? s.sessions.find((sess) => sess.id === s.activeSessionId) ?? null : null,
   );
-  const setActiveNativeSession = useNativeAgentStore(
+  const embeddedDescriptor = useMemo(
+    () => getAgentSessionDescriptor(embeddedSession?.metadata),
+    [embeddedSession?.metadata],
+  );
+  const isEmbeddedAgentSession = Boolean(embeddedSessionId && embeddedSession);
+  const embeddedAgentSession = useMemo(
+    () => ({
+      sessionId: embeddedSessionId,
+      session: embeddedSession,
+      descriptor: embeddedDescriptor,
+      isEmbedded: isEmbeddedAgentSession,
+    }),
+    [embeddedSessionId, embeddedSession, embeddedDescriptor, isEmbeddedAgentSession],
+  );
+  const codeAgentModeEnabled = isEmbeddedAgentSession && embeddedDescriptor.sessionMode === 'agent';
+  const setActiveCodeSession = useCodeSessionStore(
     (state) => state.setActiveSession,
   );
-  const fetchNativeMessages = useNativeAgentStore((state) => state.fetchMessages);
-  const fetchNativeCanvases = useNativeAgentStore(
+  const fetchCodeMessages = useCodeSessionStore((state) => state.fetchMessages);
+  const fetchCodeCanvases = useCodeSessionStore(
     (state) => state.fetchSessionCanvases,
   );
-  const nativeMessages = useNativeAgentStore((state) =>
-    embeddedAgentSession.sessionId
-      ? state.messages[embeddedAgentSession.sessionId] || []
+  const codeMessages = useCodeSessionStore((state) =>
+    embeddedAgentSession?.sessionId
+      ? state.sessions.find(s => s.id === embeddedAgentSession.sessionId)?.messages || []
       : [],
   );
-  const embeddedCanvasIds = useNativeAgentStore((state) =>
-    embeddedAgentSession.sessionId
-      ? state.sessionCanvases[embeddedAgentSession.sessionId] || []
-      : [],
-  );
+  // Canvases not yet implemented in CodeSessionStore
+  const embeddedCanvasIds: string[] = [];
 
   const workspaces = useCodeModeStore((state) => state.workspaces);
   const sessions = useCodeModeStore((state) => state.sessions);
@@ -287,8 +306,8 @@ export function CodeCanvas({ isPreviewCollapsed: _isPreviewCollapsed }: any) {
     [activeWorkspaceId, stateShape],
   );
 
-  const [selectedModel, setSelectedModel] = useState('codex');
-  const [selectedModelDisplayName, setSelectedModelDisplayName] = useState(CODE_MODEL_NAMES.codex);
+  const [selectedModel, setSelectedModel] = useState('claude-code');
+  const [selectedModelDisplayName, setSelectedModelDisplayName] = useState(CODE_MODEL_NAMES['claude-code']);
   const [showSessionPicker, setShowSessionPicker] = useState(false);
   const [showWorkspacePicker, setShowWorkspacePicker] = useState(false);
   const [workspaceReady, setWorkspaceReady] = useState(false);
@@ -301,29 +320,31 @@ export function CodeCanvas({ isPreviewCollapsed: _isPreviewCollapsed }: any) {
 
   const activeAction = CODE_ACTION_GROUPS.find((group) => group.id === activeActionId) ?? null;
   const embeddedStreamMessages = useMemo(
-    () => mapNativeMessagesToStreamMessages(nativeMessages),
-    [nativeMessages],
+    () => mapNativeMessagesToStreamMessages(codeMessages),
+    [codeMessages],
   );
-  const isEmbeddedAgentSession = embeddedAgentSession.isEmbedded;
+  /* isEmbeddedAgentSession already computed above */
   const cachedMessages = isEmbeddedAgentSession
     ? embeddedStreamMessages
     : sessionTranscripts[activeSessionId] ?? [];
-  const effectiveCanvasKey = embeddedAgentSession.sessionId ?? activeSessionId;
+  const effectiveCanvasKey = embeddedAgentSession?.sessionId ?? activeSessionId;
 
   useEffect(() => {
-    if (!embeddedAgentSession.sessionId || !isEmbeddedAgentSession) {
+    if (!embeddedAgentSession?.sessionId || !isEmbeddedAgentSession) {
       return;
     }
 
-    setActiveNativeSession(embeddedAgentSession.sessionId);
-    void fetchNativeMessages(embeddedAgentSession.sessionId);
-    void fetchNativeCanvases(embeddedAgentSession.sessionId);
+    setActiveCodeSession(embeddedAgentSession?.sessionId);
+    if (embeddedAgentSession?.sessionId) {
+      void fetchCodeMessages(embeddedAgentSession.sessionId);
+      void fetchCodeCanvases(embeddedAgentSession.sessionId);
+    }
   }, [
-    embeddedAgentSession.sessionId,
-    fetchNativeCanvases,
-    fetchNativeMessages,
+    embeddedAgentSession?.sessionId,
+    fetchCodeCanvases,
+    fetchCodeMessages,
     isEmbeddedAgentSession,
-    setActiveNativeSession,
+    setActiveCodeSession,
   ]);
 
   useEffect(() => {
@@ -338,7 +359,7 @@ export function CodeCanvas({ isPreviewCollapsed: _isPreviewCollapsed }: any) {
     }
   }, [activeSessionId, activeWorkspaceId, cachedMessages.length, isEmbeddedAgentSession]);
 
-  const applyComposerSeed = (prompt: string, options?: { closeAction?: boolean }) => {
+  const applyComposerSeed = (prompt: string, options?: { closeAction?: boolean }): void => {
     setComposerSeed(prompt);
     setComposerVersion((current) => current + 1);
     if (options?.closeAction) {
@@ -346,7 +367,7 @@ export function CodeCanvas({ isPreviewCollapsed: _isPreviewCollapsed }: any) {
     }
   };
 
-  const confirmWorkspace = (workspaceId?: string) => {
+  const confirmWorkspace = (workspaceId?: string): void => {
     if (workspaceId) {
       setActiveWorkspace(workspaceId);
     }
@@ -355,12 +376,12 @@ export function CodeCanvas({ isPreviewCollapsed: _isPreviewCollapsed }: any) {
     setShowWorkspacePicker(false);
   };
 
-  const handleSessionSelect = (sessionId: string) => {
+  const handleSessionSelect = (sessionId: string): void => {
     setActiveSession(sessionId);
     setShowSessionPicker(false);
   };
 
-  const handleOpenConsole = () => {
+  const handleOpenConsole = (): void => {
     setConsoleTab('terminal');
     openDrawer('console', { tab: 'terminal', minHeight: 320 });
   };
@@ -391,9 +412,9 @@ export function CodeCanvas({ isPreviewCollapsed: _isPreviewCollapsed }: any) {
       isEmbeddedAgentSession={isEmbeddedAgentSession}
       initialMessages={cachedMessages}
       onMessagesChange={handleMessagesChange}
-      onDismissEmbeddedAgentSession={() => clearEmbeddedAgentSession('code')}
+      onDismissEmbeddedAgentSession={() => setActiveCodeSession(null)}
       onOpenConsole={handleOpenConsole}
-      onSelectModel={(selection: any) => {
+      onSelectModel={(selection: { modelId: string; modelName?: string }) => {
         setSelectedModel(selection.modelId);
         setSelectedModelDisplayName(
           selection.modelName || CODE_MODEL_NAMES[selection.modelId] || selection.modelId,
@@ -433,14 +454,14 @@ interface CodeSessionSurfaceProps {
   activeWorkspace: ReturnType<typeof getActiveWorkspace>;
   composerSeed: string;
   composerVersion: number;
-  embeddedAgentSession: ReturnType<typeof useEmbeddedAgentSession>;
+  embeddedAgentSession: { sessionId: string | null; session: CodeSession | null; descriptor: import('@/lib/agents/session-metadata').AgentSessionDescriptor; isEmbedded: boolean };
   embeddedCanvasCount: number;
   isEmbeddedAgentSession: boolean;
   initialMessages: StreamChatMessage[];
   onMessagesChange: (messages: StreamChatMessage[]) => void;
   onDismissEmbeddedAgentSession: () => void;
   onOpenConsole: () => void;
-  onSelectModel: (selection: any) => void;
+  onSelectModel: (selection: CodeModelSelection) => void;
   onPreviewTemplate: (prompt: string) => void;
   onSelectTemplate: (prompt: string) => void;
   onSetActiveSession: (sessionId: string) => void;
@@ -492,29 +513,33 @@ function CodeSessionSurface({
 }: CodeSessionSurfaceProps) {
   const { agentModeEnabled, selectedAgentId, selectedAgent } =
     useSurfaceAgentSelection('code');
+  // Tracks the gizzi ses_* ID for regular (non-agent) chat within this surface instance
+  const [regularChatSessionId, setRegularChatSessionId] = useState<string | null>(null);
+  const regularChatSessionCreating = useRef(false);
   const [agentModePulse, setAgentModePulse] = useState(0);
   const prevAgentModeEnabledRef = useRef(agentModeEnabled);
   if (prevAgentModeEnabledRef.current !== agentModeEnabled) {
     prevAgentModeEnabledRef.current = agentModeEnabled;
     if (agentModeEnabled) setAgentModePulse((p) => p + 1);
   }
-  const setActiveNativeSession = useNativeAgentStore(
+  const setActiveCodeSession = useCodeSessionStore(
     (state) => state.setActiveSession,
   );
-  const createNativeSession = useNativeAgentStore((state) => state.createSession);
-  const setSurfaceSession = useNativeAgentStore((state) => state.setSurfaceSession);
-  const sendNativeMessageStream = useNativeAgentStore(
+  const createCodeSession = useCodeSessionStore((state) => state.createSession);
+  const sendCodeMessageStream = useCodeSessionStore(
     (state) => state.sendMessageStream,
   );
-  const abortNativeGeneration = useNativeAgentStore(
+  const abortCodeGeneration = useCodeSessionStore(
     (state) => state.abortGeneration,
   );
-  const nativeStreaming = useNativeAgentStore((state) => ({
-    isStreaming: state.streamingBySession[embeddedAgentSession.sessionId ?? '']?.isStreaming ?? false,
+  const codeStreaming = useCodeSessionStore((state) => ({
+    isStreaming: embeddedAgentSession?.sessionId 
+      ? (state.streamingBySession[embeddedAgentSession.sessionId]?.isStreaming ?? false)
+      : false,
   }));
-  const embeddedNativeMessages = useNativeAgentStore((state) =>
-    embeddedAgentSession.sessionId
-      ? state.messages[embeddedAgentSession.sessionId] || []
+  const embeddedCodeMessages = useCodeSessionStore((state) =>
+    embeddedAgentSession?.sessionId
+      ? state.sessions.find(s => s.id === embeddedAgentSession.sessionId)?.messages || []
       : [],
   );
   const {
@@ -531,49 +556,43 @@ function CodeSessionSurface({
 
   const effectiveModelId = resolveCodeChatModel(selectedModel);
   const embeddedMessages = useMemo(
-    () => mapNativeMessagesToStreamMessages(embeddedNativeMessages),
-    [embeddedNativeMessages],
+    () => mapNativeMessagesToStreamMessages(embeddedCodeMessages),
+    [embeddedCodeMessages],
   );
   const displayMessages = isEmbeddedAgentSession ? embeddedMessages : messages;
   const isProcessing = isEmbeddedAgentSession
-    ? nativeStreaming.isStreaming
+    ? codeStreaming.isStreaming
     : isLoading;
   const effectiveWorkspaceReady = isEmbeddedAgentSession || workspaceReady;
   const hasMessages = displayMessages.length > 0;
+  const codeSession = embeddedAgentSession?.session as CodeSession | null | undefined;
   const embeddedAgentStrip = isEmbeddedAgentSession ? (
     <AgentContextStrip
       surface="code"
-      sessionName={embeddedAgentSession.session?.name || 'Agent Session'}
-      sessionDescription={embeddedAgentSession.session?.description}
-      agentName={embeddedAgentSession.descriptor.agentName || selectedAgent?.name || undefined}
+      sessionName={codeSession?.name || 'Agent Session'}
+      sessionDescription={codeSession?.description}
+      agentName={embeddedAgentSession?.descriptor?.agentName || selectedAgent?.name || undefined}
       statusLabel={
-        embeddedAgentSession.session?.metadata?.allternit_local_draft === true
+        codeSession?.metadata?.allternit_local_draft === true
           ? 'Local Draft'
-          : embeddedAgentSession.session?.isActive
+          : codeSession?.isActive
             ? 'Live'
             : 'Paused'
       }
-      messageCount={embeddedAgentSession.session?.messageCount ?? displayMessages.length}
-      workspaceScope={embeddedAgentSession.descriptor.workspaceScope}
+      messageCount={codeSession?.messageCount ?? displayMessages.length}
+      workspaceScope={embeddedAgentSession?.descriptor?.workspaceScope}
       canvasCount={embeddedCanvasCount}
-      tags={embeddedAgentSession.session?.tags}
-      localDraft={embeddedAgentSession.session?.metadata?.allternit_local_draft === true}
-      toolsEnabled={embeddedAgentSession.descriptor.agentFeatures?.tools === true}
-      automationEnabled={embeddedAgentSession.descriptor.agentFeatures?.automation === true}
+      tags={codeSession?.tags}
+      localDraft={codeSession?.metadata?.allternit_local_draft === true}
+      toolsEnabled={embeddedAgentSession?.descriptor?.agentFeatures?.tools === true}
+      automationEnabled={embeddedAgentSession?.descriptor?.agentFeatures?.automation === true}
       onDismiss={onDismissEmbeddedAgentSession}
     />
   ) : null;
 
-  const handleSend = useCallback(async (text: string) => {
+  const handleSend = useCallback(async (text: string): Promise<void> => {
     const draft = text.trim();
     if (!draft) {
-      return;
-    }
-
-    if (!effectiveWorkspaceReady && !isEmbeddedAgentSession) {
-      if (!showWorkspacePicker) {
-        onToggleWorkspacePicker();
-      }
       return;
     }
 
@@ -582,31 +601,28 @@ function CodeSessionSurface({
       return;
     }
 
-    // If a session is already embedded, route through it
-    if (isEmbeddedAgentSession && embeddedAgentSession.sessionId) {
-      setActiveNativeSession(embeddedAgentSession.sessionId);
-      await sendNativeMessageStream(embeddedAgentSession.sessionId, draft);
+    // Embedded session — route directly through CodeSessionStore
+    if (isEmbeddedAgentSession && embeddedAgentSession?.sessionId) {
+      setActiveCodeSession(embeddedAgentSession.sessionId);
+      await sendCodeMessageStream(embeddedAgentSession.sessionId, { text: draft });
       return;
     }
 
     // Agent mode ON, agent selected, no session yet — create a real gizzi session
     if (agentModeEnabled && selectedAgentId) {
       try {
-        const session = await createNativeSession(
-          draft.slice(0, 64) || 'Code Agent Session',
-          undefined,
-          {
-            originSurface: 'code',
-            sessionMode: 'agent',
-            agentId: selectedAgent?.id,
-            agentName: selectedAgent?.name,
+        const sessionId = await createCodeSession({
+          name: draft.slice(0, 64) || 'Code Agent Session',
+          sessionMode: 'agent',
+          agentId: selectedAgent?.id,
+          agentName: selectedAgent?.name,
+          metadata: {
             runtimeModel: selectedAgent?.model,
             agentFeatures: { workspace: true, tools: true, automation: true },
           },
-        );
-        setSurfaceSession('code', session.id);
-        setActiveNativeSession(session.id);
-        await sendNativeMessageStream(session.id, draft);
+        });
+        setActiveCodeSession(sessionId);
+        await sendCodeMessageStream(sessionId, { text: draft });
         return;
       } catch (err) {
         console.error('[CodeCanvas] Failed to create code agent session:', err);
@@ -614,47 +630,43 @@ function CodeSessionSurface({
       }
     }
 
-    try {
-      useRunnerStore.setState({ draft });
-      useRunnerStore.getState().submit();
-    } catch (error) {
-      console.warn('[CodeCanvas] runner submit failed', error);
+    // Regular chat — unified through CodeSessionStore (same path as agent mode)
+    let sessionId = regularChatSessionId;
+    if (!sessionId && !regularChatSessionCreating.current) {
+      regularChatSessionCreating.current = true;
+      try {
+        sessionId = await createCodeSession({ name: 'Code Session' });
+        setRegularChatSessionId(sessionId);
+      } catch (err) {
+        console.warn('[CodeCanvas] Session creation failed:', err);
+      } finally {
+        regularChatSessionCreating.current = false;
+      }
     }
 
-    const chatId = activeSession?.session_id ?? activeSessionId;
-    const agentContext = buildAgentConversationContext({
-      agentModeEnabled,
-      agentId: selectedAgentId,
-      agent: selectedAgent,
-      chatId,
-    });
+    if (!sessionId) {
+      return;
+    }
 
-    await submitMessage({
-      chatId,
-      message: draft,
+    setActiveCodeSession(sessionId);
+    await sendCodeMessageStream(sessionId, {
+      text: draft,
       modelId: effectiveModelId,
-      ...agentContext,
     });
   }, [
-    activeSession?.session_id,
-    activeSessionId,
     agentModeEnabled,
-    createNativeSession,
-    embeddedAgentSession.sessionId,
+    createCodeSession,
+    embeddedAgentSession?.sessionId,
     effectiveModelId,
     isEmbeddedAgentSession,
-    showWorkspacePicker,
-    onToggleWorkspacePicker,
-    sendNativeMessageStream,
+    regularChatSessionId,
+    sendCodeMessageStream,
     selectedAgent,
     selectedAgentId,
-    setActiveNativeSession,
-    setSurfaceSession,
-    submitMessage,
-    effectiveWorkspaceReady,
+    setActiveCodeSession,
   ]);
 
-  const handleRegenerate = useCallback(() => {
+  const handleRegenerate = useCallback((): void => {
     const lastUserMessage = [...displayMessages]
       .reverse()
       .find((message) => message.role === 'user' && typeof message.content === 'string');
@@ -663,16 +675,18 @@ function CodeSessionSurface({
       return;
     }
 
-    if (isEmbeddedAgentSession && embeddedAgentSession.sessionId) {
-      setActiveNativeSession(embeddedAgentSession.sessionId);
-      void sendNativeMessageStream(
-        embeddedAgentSession.sessionId,
-        lastUserMessage.content,
-      );
-      return;
+    if (isEmbeddedAgentSession && embeddedAgentSession?.sessionId) {
+      setActiveCodeSession(embeddedAgentSession?.sessionId);
+      if (embeddedAgentSession?.sessionId) {
+        void sendCodeMessageStream(
+          embeddedAgentSession?.sessionId,
+          { text: lastUserMessage.content },
+        );
+        return;
+      }
     }
 
-    const chatId = activeSession?.session_id ?? activeSessionId;
+    const chatId = regularChatSessionId ?? `code-temp-${Date.now()}`;
     const agentContext = buildAgentConversationContext({
       agentModeEnabled,
       agentId: selectedAgentId,
@@ -686,30 +700,29 @@ function CodeSessionSurface({
       ...agentContext,
     });
   }, [
-    activeSession?.session_id,
-    activeSessionId,
     agentModeEnabled,
     displayMessages,
-    embeddedAgentSession.sessionId,
+    embeddedAgentSession?.sessionId,
     effectiveModelId,
     isEmbeddedAgentSession,
     regenerate,
-    sendNativeMessageStream,
+    regularChatSessionId,
+    sendCodeMessageStream,
     selectedAgent,
     selectedAgentId,
-    setActiveNativeSession,
+    setActiveCodeSession,
   ]);
 
-  const handleStop = useCallback(() => {
-    if (isEmbeddedAgentSession && embeddedAgentSession.sessionId) {
-      void abortNativeGeneration(embeddedAgentSession.sessionId);
+  const handleStop = useCallback((): void => {
+    if (isEmbeddedAgentSession && embeddedAgentSession?.sessionId) {
+      void abortCodeGeneration(embeddedAgentSession?.sessionId);
       return;
     }
 
     stop();
   }, [
-    abortNativeGeneration,
-    embeddedAgentSession.sessionId,
+    abortCodeGeneration,
+    embeddedAgentSession?.sessionId,
     isEmbeddedAgentSession,
     stop,
   ]);
@@ -825,7 +838,7 @@ function LaunchpadStage({
   isEmbeddedAgentSession: boolean;
   isProcessing: boolean;
   onOpenConsole: () => void;
-  onSelectModel: (selection: any) => void;
+  onSelectModel: (selection: CodeModelSelection) => void;
   onPreviewTemplate: (prompt: string) => void;
   onSelectTemplate: (prompt: string) => void;
   onSend: (text: string) => void;
@@ -850,7 +863,7 @@ function LaunchpadStage({
   const [brandingAttention, setBrandingAttention] = useState<GizziAttention | null>(null);
 
   return (
-    <div style={{ padding: '120px 24px 60px', minHeight: '100%', boxSizing: 'border-box' }}>
+    <div data-testid="code-canvas-shell" style={{ padding: '120px 24px 60px', minHeight: '100%', boxSizing: 'border-box' }}>
       {agentContextStrip ? (
         <div style={{ width: '100%', textAlign: 'left', marginBottom: 18 }}>
           {agentContextStrip}
@@ -945,7 +958,7 @@ function ConversationStage({
   messages: StreamChatMessage[];
   onOpenConsole: () => void;
   onRegenerate: () => void;
-  onSelectModel: (selection: any) => void;
+  onSelectModel: (selection: CodeModelSelection) => void;
   onPreviewTemplate: (prompt: string) => void;
   onSelectTemplate: (prompt: string) => void;
   onSend: (text: string) => void;
@@ -968,7 +981,7 @@ function ConversationStage({
   const workspaceBranch = activeWorkspace?.repo_status?.branch ?? 'workspace';
 
   return (
-    <div style={{
+    <div data-testid="code-canvas-shell" style={{
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
@@ -1247,6 +1260,8 @@ function CompactUtilityBar({
   workspaces: ReturnType<typeof useCodeModeStore.getState>['workspaces'];
 }) {
   const [open, setOpen] = useState(false);
+  const layoutMode = activeWorkspace?.layoutMode ?? 'thread';
+  const setWorkspaceLayoutMode = useCodeModeStore((s) => s.setWorkspaceLayoutMode);
   
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1365,6 +1380,49 @@ function CompactUtilityBar({
         <TerminalWindow size={14} />
         Terminal
       </button>
+
+      {/* Layout mode toggle */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginLeft: 4 }}>
+        <button
+          type="button"
+          onClick={() => activeWorkspaceId && setWorkspaceLayoutMode(activeWorkspaceId, 'thread')}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4,
+            padding: '6px 10px',
+            borderRadius: '8px 0 0 8px',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            borderRight: 'none',
+            background: layoutMode === 'thread' ? 'rgba(255,255,255,0.08)' : 'transparent',
+            color: layoutMode === 'thread' ? 'var(--text-primary)' : 'var(--text-secondary)',
+            fontSize: 11,
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          Thread
+        </button>
+        <button
+          type="button"
+          onClick={() => activeWorkspaceId && setWorkspaceLayoutMode(activeWorkspaceId, 'canvas')}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 4,
+            padding: '6px 10px',
+            borderRadius: '0 8px 8px 0',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            background: layoutMode === 'canvas' ? 'rgba(255,255,255,0.08)' : 'transparent',
+            color: layoutMode === 'canvas' ? 'var(--text-primary)' : 'var(--text-secondary)',
+            fontSize: 11,
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+        >
+          Canvas
+        </button>
+      </div>
     </div>
   );
 }
@@ -1419,7 +1477,7 @@ function CodeActionPills({
                 cursor: 'pointer',
               }}
             >
-              <Icon size={14} style={{ color: group.accent }} />
+              <Icon size={14} color={group.accent} />
               {group.label}
             </button>
           );

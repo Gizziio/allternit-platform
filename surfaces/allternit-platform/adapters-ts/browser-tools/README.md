@@ -1,6 +1,6 @@
-# @a2r/browser-tools
+# @allternit/browser-tools
 
-Browser automation toolkit for A2R agent task execution. Built on Playwright with integrated safety controls.
+Browser automation toolkit for Allternit agent task execution. Built on Playwright with integrated safety controls.
 
 ## Features
 
@@ -15,9 +15,9 @@ Browser automation toolkit for A2R agent task execution. Built on Playwright wit
 ## Installation
 
 ```bash
-npm install @a2r/browser-tools
+npm install @allternit/browser-tools
 # or
-pnpm add @a2r/browser-tools
+pnpm add @allternit/browser-tools
 ```
 
 ## Quick Start
@@ -31,7 +31,7 @@ import {
   takeScreenshot,
   extractContent,
   eventStreamManager,
-} from '@a2r/browser-tools';
+} from '@allternit/browser-tools';
 
 // Create browser session
 const session = await createSession({
@@ -176,7 +176,7 @@ await wait(session.id, {
 ### Event Streaming
 
 ```typescript
-import { eventStreamManager } from '@a2r/browser-tools';
+import { eventStreamManager } from '@allternit/browser-tools';
 
 // Subscribe to events
 const streamId = eventStreamManager.subscribe(
@@ -211,7 +211,7 @@ import {
   STRICT_SAFETY_POLICY,
   checkNavigationSafety,
   quarantineManager,
-} from '@a2r/browser-tools';
+} from '@allternit/browser-tools';
 
 // Check navigation safety
 const result = checkNavigationSafety(url, DEFAULT_SAFETY_POLICY);

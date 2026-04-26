@@ -1,0 +1,109 @@
+{
+  "name": "Allternit Docs",
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#FA7921",
+    "light": "#FA7921",
+    "dark": "#E56A17",
+    "anchors": {
+      "from": "#FA7921",
+      "to": "#E56A17"
+    }
+  },
+  "topbarLinks": [
+    {
+      "name": "Support",
+      "url": "mailto:support@allternit.com"
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Dashboard",
+    "url": "https://platform.allternit.com"
+  },
+  "tabs": [
+    {
+      "name": "Documentation",
+      "url": ""
+    },
+    {
+      "name": "API Reference",
+      "url": "api"
+    },
+    {
+      "name": "SDK",
+      "url": "sdk"
+    }
+  ],
+  "anchors": [
+    {
+      "name": "GitHub",
+      "icon": "github",
+      "url": "https://github.com/allternit"
+    },
+    {
+      "name": "Community",
+      "icon": "discord",
+      "url": "https://discord.gg/allternit"
+    }
+  ],
+  "navigation": [
+    {
+      "group": "Get Started",
+      "pages": [
+        "introduction",
+        "quickstart",
+        "architecture"
+      ]
+    },
+    {
+      "group": "Core Concepts",
+      "pages": [
+        "core/gizzi-runtime",
+        "core/communication",
+        "core/git-dag",
+        "core/skills"
+      ]
+    },
+    {
+      "group": "BYOC Runtime",
+      "pages": [
+        "byoc/overview",
+        "byoc/installation",
+        "byoc/configuration",
+        "byoc/deployment"
+      ]
+    },
+    {
+      "group": "Surfaces",
+      "pages": [
+        "surfaces/desktop",
+        "surfaces/platform",
+        "surfaces/extensions"
+      ]
+    },
+    {
+      "group": "API Reference",
+      "pages": [
+        "api/authentication",
+        "api/endpoints",
+        "api/event-stream"
+      ]
+    },
+    {
+      "group": "SDK",
+      "pages": [
+        "sdk/typescript",
+        "sdk/python"
+      ]
+    }
+  ],
+  "footerSocials": {
+    "twitter": "https://twitter.com/allternit",
+    "github": "https://github.com/allternit",
+    "discord": "https://discord.gg/allternit"
+  }
+}

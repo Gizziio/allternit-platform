@@ -124,6 +124,10 @@ function coerceAgent(value: unknown): Agent | null {
       typeof value.updatedAt === "string" ? value.updatedAt : now,
     lastRunAt:
       typeof value.lastRunAt === "string" ? value.lastRunAt : undefined,
+    source:
+      value.source === "vendor" || value.source === "organization"
+        ? value.source
+        : "personal",
   };
 }
 
@@ -193,6 +197,7 @@ function toAgent(input: CreateAgentInput): Agent {
     maxIterations: input.maxIterations ?? 10,
     temperature: input.temperature ?? 0.7,
     voice: input.voice,
+    source: input.source || "personal",
     config: {
       ...(isRecord(input.config) ? input.config : {}),
       localRegistry: {

@@ -31,18 +31,23 @@ export type ToolCallState = 'queued' | 'running' | 'done' | 'error';
 
 export interface ToolCallReplyItem {
   kind: 'tool_call';
+  id?: string;
   toolName: string;
+  title?: string;
   input: unknown;
   output?: string;
   state: ToolCallState;
   duration?: number;
   timestamp: number;
+  progressLines?: string[];
 }
 
 export interface ArtifactReplyItem {
   kind: 'artifact';
+  id?: string;
   artifactId: string;
   title: string;
+  artifactType?: string;
   type: string;
   url?: string;
   timestamp: number;
@@ -57,6 +62,7 @@ export interface CitationRef {
 export interface CitationReplyItem {
   kind: 'citation';
   citations: CitationRef[];
+  items?: CitationRef[];
   timestamp: number;
 }
 
@@ -135,8 +141,8 @@ export interface Reply {
 export interface ReplyEvent {
   type: string;
   replyId: string;
-  data: unknown;
-  timestamp: number;
+  data?: unknown;
+  timestamp?: number;
   [key: string]: unknown;
 }
 

@@ -1,0 +1,119 @@
+---
+title: Gizzi Runtime
+description: The core agent execution engine
+---
+
+## Overview
+
+Gizzi is the core runtime engine that executes agent code. It provides a secure sandboxed environment for running agent logic while managing state, memory, and communication with external services.
+
+## Execution Model
+
+Gizzi uses a message-passing execution model where agents communicate through channels. Each agent runs in its own isolated context with access to:
+
+- **Memory store** - State persistence across executions
+- **Skill registry** - Capability discovery and invocation
+- **Message bus** - Inter-agent communication
+- **Model gateway** - LLM interactions
+
+```typescript
+import { Agent } from '@allternit/core';
+
+const agent = new Agent({
+  id: 'my-agent',
+  runtime: 'gizzi-pro',
+  skills: ['code', 'web', 'file'],
+});
+
+await agent.initialize();
+const result = await agent.run('Analyze this codebase');
+```
+
+## Runtime Versions
+
+<CardGroup cols={3}>
+  <Card title="Gizzi Pro" icon="cpu">
+    Full-featured runtime with all capabilities. Best for production agents.
+  </Card>
+  <Card title="Gizzi Fast" icon="zap">
+    Optimized for speed. Reduced sandboxing, faster execution.
+  </Card>
+  <Card title="Gizzi Local" icon="home">
+    Runs entirely locally. No external API calls. Privacy-focused.
+  </Card>
+</CardGroup>
+
+## Agent Lifecycle
+
+```
+┌─────────┐    ┌───────────┐    ┌─────────┐    ┌────────┐
+│  init   │───►│ connecting│───►│  ready  │◄──►│  busy  │
+└─────────┘    └───────────┘    └────┬────┘    └───┬────┘
+                                     │             │
+                                ┌────┴────┐   ┌────┴────┐
+                                │  error  │◄──┤suspended│
+                                └────┬────┘   └─────────┘
+                                     │
+                                ┌────┴────┐
+                                │ disposed│
+                                └─────────┘
+```
+
+## Sandboxing
+
+Gizzi provides multiple sandboxing levels:
+
+| Level | Description | Use Case |
+|-------|-------------|----------|
+| `none` | No restrictions | Trusted environments only |
+| `soft` | File system restrictions | Development |
+| `strict` | Full sandbox with network isolation | Production |
+| `container` | Docker container isolation | Maximum security |
+
+```typescript
+const agent = new Agent({
+  id: 'secure-agent',
+  sandbox: 'strict',
+  allowedPaths: ['/workspace'],
+  network: false,
+});
+```
+
+## Memory Management
+
+Agents can persist memory across executions:
+
+```typescript
+// Store in agent memory
+await agent.memory.set('user_preference', 'dark_mode');
+
+// Retrieve later
+const preference = await agent.memory.get('user_preference');
+
+// Clear memory
+await agent.memory.clear();
+```
+
+Memory types:
+- **Session** - Lost when agent stops
+- **Persistent** - Stored in database
+- **Shared** - Accessible across agents
+
+## Model Integration
+
+Gizzi supports multiple LLM providers:
+
+```typescript
+const agent = new Agent({
+  model: {
+    provider: 'openai',
+    model: 'gpt-4',
+    temperature: 0.7,
+  },
+});
+```
+
+Supported providers:
+- OpenAI (GPT-4, GPT-3.5)
+- Anthropic (Claude)
+- Local (Ollama, LocalAI)

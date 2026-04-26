@@ -1,7 +1,7 @@
 /**
  * Clawd Avatar Adapter
  * 
- * Official A2R mascot avatar with full mood support.
+ * Official Allternit mascot avatar with full mood support.
  */
 
 import type { AvatarAdapter } from '../types';
@@ -95,7 +95,7 @@ export function createClawdAdapter(): AvatarAdapter {
   return {
     name: 'clawd',
     displayName: 'Clawd (Official)',
-    description: 'Official A2R mascot avatar with full mood support',
+    description: 'Official Allternit mascot avatar with full mood support',
     
     render: (state: VisualState, size: AvatarSize) => {
       const color = getMoodColor(state.mood);

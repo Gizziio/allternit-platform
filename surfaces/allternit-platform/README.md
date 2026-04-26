@@ -3,7 +3,7 @@
 > **Status**: Updated February 2026 - Post-Consolidation  
 > **Migration Guide**: See [MIGRATION.md](../MIGRATION.md) for details on the new structure
 
-The `6-ui` layer serves as the user interface layer for the A2R platform. This layer owns the user-facing UI platforms: shell, shared UI kits, and UI components that render DAGs, receipts, and memory workflows. It provides the primary interaction surface for users with the A2R platform.
+The `6-ui` layer serves as the user interface layer for the Allternit platform. This layer owns the user-facing UI platforms: shell, shared UI kits, and UI components that render DAGs, receipts, and memory workflows. It provides the primary interaction surface for users with the Allternit platform.
 
 ---
 
@@ -11,7 +11,7 @@ The `6-ui` layer serves as the user interface layer for the A2R platform. This l
 
 The 6-ui layer is designed to provide:
 
-- **User Interface**: Primary interaction surfaces for users with the A2R platform
+- **User Interface**: Primary interaction surfaces for users with the Allternit platform
 - **Design System**: Consistent UI components and design patterns
 - **Shell Applications**: Desktop and web-based shell environments
 - **UI Components**: Reusable UI elements and widgets
@@ -25,9 +25,9 @@ The 6-ui layer is designed to provide:
 
 ### Platform UI Components
 
-#### `a2r-platform/` (Main Component Library)
+#### `allternit-platform/` (Main Component Library)
 - **Purpose**: UI platform primitives, vendor wrappers, and business logic services
-- **Location**: `6-ui/a2r-platform/`
+- **Location**: `6-ui/allternit-platform/`
 - **Key Features**:
   - Cross-platform UI primitives
   - Vendor-specific UI wrappers
@@ -66,7 +66,7 @@ The 6-ui layer is designed to provide:
 - **Location**: `6-ui/_reference/shell-native-rust/`
 - **Contents**: Original `6-ui/shell-ui/` Rust implementation (~3,883 lines)
 - **Status**: Not used in build, preserved for historical reference
-- **Note**: All capabilities have been ported to TypeScript in `a2r-platform/`
+- **Note**: All capabilities have been ported to TypeScript in `allternit-platform/`
 
 ### Support Systems
 
@@ -161,7 +161,7 @@ function BudgetView() {
 
 ```
 6-ui/
-├── a2r-platform/              # Main UI component library
+├── allternit-platform/              # Main UI component library
 │   ├── src/
 │   │   ├── types/             # TypeScript types (ported from Rust)
 │   │   │   ├── browser.ts     # BrowserView types
@@ -221,7 +221,7 @@ function BudgetView() {
 
 ### With Layer 7-Apps
 - Provides UI components to applications
-- `7-apps/shell/web/` uses `a2r-platform` components
+- `7-apps/shell/web/` uses `allternit-platform` components
 - `7-apps/shell/desktop/` wraps web components
 
 ---

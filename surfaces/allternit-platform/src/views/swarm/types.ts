@@ -72,7 +72,7 @@ export interface TimelineTask {
   start: number;
   end: number | null;
   progress: number;
-  status: 'active' | 'completed' | 'failed';
+  status: 'pending' | 'active' | 'completed' | 'failed';
 }
 
 export interface TimelineMetrics {

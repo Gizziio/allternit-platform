@@ -37,6 +37,10 @@ import {
   Plus,
   Trash,
   Stack,
+  GlobeHemisphereWest,
+  Copy,
+  LinkBreak,
+  UsersThree,
 } from '@phosphor-icons/react';
 import { GlassSurface } from '@/design/GlassSurface';
 import {
@@ -110,7 +114,7 @@ export function ControlCenter({
   agentationEnabled = false,
   onToggleAgentation,
   onOpenView,
-}: ControlCenterProps) {
+}: ControlCenterProps): JSX.Element | null {
   const [activeSection, setActiveSection] = useState<string>('browser-pairing');
   
   // Internal state for services
@@ -139,7 +143,7 @@ export function ControlCenter({
 
   // Close on Escape
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
+    const handleEscape = (e: KeyboardEvent): void => {
       if (e.key === 'Escape' && isOpen) {
         onClose();
       }
@@ -262,6 +266,16 @@ export function ControlCenter({
   const endpoints = pairedEndpoints.length > 0 ? pairedEndpoints : internalEndpoints;
   const hosts = allowedHosts.length > 0 ? allowedHosts : internalHosts;
 
+  // Default section: general in Electron, browser-pairing on web
+  useEffect(() => {
+    if (isOpen && activeSection === 'browser-pairing') {
+      const isElectron = typeof window !== 'undefined' && !!window.allternit?.tunnel;
+      if (isElectron) setActiveSection('general');
+    }
+  // Only run on open
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
+
   if (!isOpen) {
     return null;
   }
@@ -321,6 +335,17 @@ export function ControlCenter({
 
             {/* Main Content Area */}
             <div className="flex-1 overflow-y-auto">
+              {activeSection === 'general' && (
+                <GeneralSection />
+              )}
+              {activeSection === 'models' && (
+                <div className="p-6">
+                  <LocalModelManager />
+                </div>
+              )}
+              {activeSection === 'web-access' && (
+                <WebAccessSection />
+              )}
               {activeSection === 'browser-pairing' && (
                 <BrowserPairingSection
                   pairedEndpoints={endpoints}
@@ -379,6 +404,321 @@ export function ControlCenter({
   );
 }
 
+import { LocalModelManager } from '@/components/models/LocalModelManager';
+import { usePlatformHardSignOut, usePlatformUser } from '@/lib/platform-auth-client';
+
+// ============================================================================
+// General Section
+// ============================================================================
+
+function GeneralSection(): JSX.Element {
+  const { user, isSignedIn } = usePlatformUser();
+  const hardSignOut = usePlatformHardSignOut();
+  const [isRestarting, setIsRestarting] = useState(false);
+  const [startingSignIn, setStartingSignIn] = useState(false);
+  const isElectron = typeof window !== 'undefined' && !!window.allternit?.backend;
+
+  const handleRestartBackend = async (): Promise<void> => {
+    if (!isElectron) return;
+    setIsRestarting(true);
+    try {
+      await window.allternit?.backend?.restart();
+    } catch (err) {
+      console.error('Failed to restart backend:', err);
+    } finally {
+      setIsRestarting(false);
+    }
+  };
+
+  const handleSignIn = async (): Promise<void> => {
+    setStartingSignIn(true);
+    try {
+      if (isElectron) {
+        await window.allternit?.auth?.startLogin?.();
+      } else {
+        window.location.href = '/sign-in';
+      }
+    } catch (err) {
+      console.error('Sign in failed', err);
+    } finally {
+      setStartingSignIn(false);
+    }
+  };
+
+  return (
+    <div className="p-6 space-y-8">
+      {/* Account Section */}
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-lg font-semibold mb-1">Account</h3>
+          <p className="text-sm text-muted-foreground">
+            Current user session and authentication state.
+          </p>
+        </div>
+
+        <div className="p-4 rounded-xl bg-secondary/30 border border-border flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center text-accent">
+              <UsersThree size={24} />
+            </div>
+            <div>
+              {isSignedIn && user ? (
+                <>
+                  <p className="text-sm font-medium">{user.userEmail || user.primaryEmailAddress?.emailAddress || 'Local User'}</p>
+                  <p className="text-xs text-muted-foreground">ID: {user.id || 'anonymous'}</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-medium">Not Signed In</p>
+                  <p className="text-xs text-muted-foreground">Sign in to sync your data</p>
+                </>
+              )}
+            </div>
+          </div>
+          {isSignedIn && user ? (
+            <button
+              onClick={() => void hardSignOut()}
+              className="px-4 py-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors text-sm font-semibold"
+            >
+              Sign Out
+            </button>
+          ) : (
+            <button
+              onClick={() => void handleSignIn()}
+              disabled={startingSignIn}
+              className="px-4 py-2 rounded-lg bg-accent/20 text-accent hover:bg-accent/30 transition-colors text-sm font-semibold disabled:opacity-50"
+            >
+              {startingSignIn ? 'Opening Browser…' : 'Sign In'}
+            </button>
+          )}
+        </div>
+        {isSignedIn && user && (
+          <p className="text-[10px] text-muted-foreground px-1">
+            Sign Out will clear all local session data, stop backend services, and relaunch the application.
+          </p>
+        )}
+      </div>
+
+      {/* Backend Section */}
+      {isElectron && (
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold mb-1">Backend Services</h3>
+            <p className="text-sm text-muted-foreground">
+              Manage local AI runtime and platform server.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-xl bg-secondary/30 border border-border flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500">
+                <Cpu size={24} />
+              </div>
+              <div>
+                <p className="text-sm font-medium">Service Management</p>
+                <p className="text-xs text-muted-foreground">Restart local services without signing out.</p>
+              </div>
+            </div>
+            <button
+              onClick={handleRestartBackend}
+              disabled={isRestarting}
+              className="px-4 py-2 rounded-lg bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 transition-colors text-sm font-semibold disabled:opacity-50"
+            >
+              {isRestarting ? 'Restarting…' : 'Restart Backend'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// Web Access Section
+// ============================================================================
+
+type TunnelStatus = 'stopped' | 'starting' | 'running' | 'error';
+type TunnelState = { status: TunnelStatus; url?: string; error?: string };
+
+function WebAccessSection(): JSX.Element {
+  const [state, setState] = useState<TunnelState>({ status: 'stopped' });
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const isElectron = typeof window !== 'undefined' && !!window.allternit?.tunnel;
+
+  // Load initial state and subscribe to changes
+  useEffect(() => {
+    if (!isElectron) return;
+    const api = window.allternit?.tunnel;
+    if (!api) return;
+    api.getState().then(setState).catch(() => {});
+    const unsub = api.onStateChange(setState);
+    return unsub;
+  }, [isElectron]);
+
+  const handleEnable = useCallback(async () => {
+    if (!isElectron) return;
+    setBusy(true);
+    try {
+      const result = await window.allternit?.tunnel?.enable();
+      if (result && !result.success) {
+        setState(prev => ({ ...prev, status: 'error', error: result.error }));
+      }
+    } finally {
+      setBusy(false);
+    }
+  }, [isElectron]);
+
+  const handleDisable = useCallback(async () => {
+    if (!isElectron) return;
+    setBusy(true);
+    try {
+      await window.allternit?.tunnel?.disable();
+    } finally {
+      setBusy(false);
+    }
+  }, [isElectron]);
+
+  const handleCopy = useCallback(() => {
+    if (!state.url) return;
+    navigator.clipboard.writeText(`https://${state.url}`).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [state.url]);
+
+  // Web view — not in Electron
+  if (!isElectron) {
+    return (
+      <div className="p-6 space-y-6">
+        <div>
+          <h3 className="text-lg font-semibold mb-1">Web Access</h3>
+          <p className="text-sm text-muted-foreground">
+            Connect your desktop to this web session via Cloudflare Tunnel.
+          </p>
+        </div>
+
+        <div className="p-4 rounded-lg bg-secondary/30 border border-border space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-yellow-500" />
+            <span className="text-sm font-medium text-yellow-500">Desktop Not Connected</span>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            To connect your desktop, open the Allternit desktop app and click
+            <strong className="text-foreground"> Enable Web Access</strong> in Control Center.
+            Your desktop will open this browser automatically.
+          </p>
+        </div>
+
+        <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
+          <div className="flex items-start gap-3">
+            <GlobeHemisphereWest className="w-5 h-5 text-blue-500 mt-0.5" />
+            <div className="text-sm">
+              <p className="font-medium text-blue-500 mb-1">How Web Access Works</p>
+              <p className="text-muted-foreground">
+                Your desktop creates a secure Cloudflare Tunnel, giving you a public URL
+                that routes to your local AI runtime. Your data never leaves your machine.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const statusConfig: Record<TunnelStatus, { dot: string; label: string; labelClass: string }> = {
+    stopped:  { dot: 'bg-slate-500',  label: 'Off',      labelClass: 'text-muted-foreground' },
+    starting: { dot: 'bg-yellow-500 animate-pulse', label: 'Starting…', labelClass: 'text-yellow-500' },
+    running:  { dot: 'bg-green-500',  label: 'Running',  labelClass: 'text-green-500' },
+    error:    { dot: 'bg-red-500',    label: 'Error',    labelClass: 'text-red-500' },
+  };
+
+  const cfg = statusConfig[state.status];
+
+  return (
+    <div className="p-6 space-y-6">
+      <div>
+        <h3 className="text-lg font-semibold mb-1">Web Access</h3>
+        <p className="text-sm text-muted-foreground">
+          Share your local AI runtime securely via Cloudflare Tunnel.
+        </p>
+      </div>
+
+      {/* Status card */}
+      <div className="p-4 rounded-lg bg-secondary/30 border border-border space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${cfg.dot}`} />
+            <span className={`text-sm font-medium ${cfg.labelClass}`}>{cfg.label}</span>
+          </div>
+
+          {state.status === 'stopped' || state.status === 'error' ? (
+            <button
+              onClick={handleEnable}
+              disabled={busy}
+              className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 disabled:opacity-50 transition-colors text-sm font-medium"
+            >
+              <GlobeHemisphereWest size={15} />
+              {busy ? 'Starting…' : 'Enable Web Access'}
+            </button>
+          ) : (
+            <button
+              onClick={handleDisable}
+              disabled={busy || state.status === 'starting'}
+              className="flex items-center gap-2 px-4 py-1.5 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 disabled:opacity-50 transition-colors text-sm font-medium"
+            >
+              <LinkBreak size={15} />
+              {busy ? 'Stopping…' : 'Disable'}
+            </button>
+          )}
+        </div>
+
+        {state.status === 'running' && state.url && (
+          <div className="pt-2 border-t border-border space-y-2">
+            <p className="text-xs text-muted-foreground">Public tunnel URL</p>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 text-xs bg-primary px-3 py-2 rounded-lg text-green-400 truncate">
+                https://{state.url}
+              </code>
+              <button
+                onClick={handleCopy}
+                className="p-2 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+                title="Copy URL"
+              >
+                {copied ? <CheckCircle size={16} className="text-green-500" /> : <Copy size={16} />}
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              This URL was automatically opened in your browser to complete the connection.
+            </p>
+          </div>
+        )}
+
+        {state.status === 'error' && state.error && (
+          <div className="pt-2 border-t border-border">
+            <p className="text-xs text-red-400">{state.error}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
+        <div className="flex items-start gap-3">
+          <Warning className="w-5 h-5 text-blue-500 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-medium text-blue-500 mb-1">How it works</p>
+            <p className="text-muted-foreground">
+              Enabling Web Access spawns a Cloudflare Tunnel pointing at your local
+              AI runtime (port 8013). The tunnel URL is valid only while it's enabled —
+              disabling it immediately invalidates the link.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ============================================================================
 // Section Navigation
 // ============================================================================
@@ -389,8 +729,11 @@ interface SectionNavProps {
   isDevMode: boolean;
 }
 
-function SectionNav({ activeSection, onSectionChange, isDevMode }: SectionNavProps) {
+function SectionNav({ activeSection, onSectionChange, isDevMode }: SectionNavProps): JSX.Element {
   const sections = [
+    { id: 'general', label: 'General', icon: GearSix },
+    { id: 'models', label: 'Models', icon: Cpu },
+    { id: 'web-access', label: 'Web Access', icon: GlobeHemisphereWest },
     { id: 'browser-pairing', label: 'Browser Pairing', icon: WifiHigh },
     { id: 'policies', label: 'Policies', icon: Shield },
     { id: 'runtime', label: 'Runtime Environment', icon: Stack },
@@ -453,7 +796,7 @@ function BrowserPairingSection({
   setIsPairing,
   pairingCode,
   setPairingCode,
-}: BrowserPairingSectionProps) {
+}: BrowserPairingSectionProps): JSX.Element {
   const handlePair = useCallback(() => {
     if (onPairEndpoint && pairingCode.trim()) {
       onPairEndpoint({
@@ -601,7 +944,7 @@ function PolicySection({
   onRemoveAllowedHost,
   newHost,
   setNewHost,
-}: PolicySectionProps) {
+}: PolicySectionProps): JSX.Element {
   const handleAdd = useCallback(() => {
     if (onAddAllowedHost && newHost.trim()) {
       onAddAllowedHost(newHost.trim());
@@ -609,7 +952,7 @@ function PolicySection({
     }
   }, [onAddAllowedHost, newHost, setNewHost]);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === 'Enter') {
       handleAdd();
     }
@@ -722,7 +1065,7 @@ interface DevToolsSectionProps {
 function DevToolsSection({
   agentationEnabled,
   onToggleAgentation,
-}: DevToolsSectionProps) {
+}: DevToolsSectionProps): JSX.Element {
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -787,7 +1130,7 @@ interface RuntimeEnvironmentSectionProps {
   onOpenView?: (viewType: string) => void;
 }
 
-function RuntimeEnvironmentSection({ onOpenView }: RuntimeEnvironmentSectionProps) {
+function RuntimeEnvironmentSection({ onOpenView }: RuntimeEnvironmentSectionProps): JSX.Element {
   return (
     <div className="p-6 space-y-6">
       <div>
@@ -840,7 +1183,7 @@ function PlaceholderSection({
   description,
   icon: Icon,
   linkTo,
-}: PlaceholderSectionProps) {
+}: PlaceholderSectionProps): JSX.Element {
   return (
     <div className="p-6 flex items-center justify-center h-full">
       <div className="text-center max-w-md">

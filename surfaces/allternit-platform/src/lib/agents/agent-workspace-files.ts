@@ -239,7 +239,7 @@ export class AgentWorkspaceFileSystem {
     const fullPath = this.fs.join(workspacePath, filePath);
     
     try {
-      await this.fs.writeFile(fullPath, content);
+      await (this.fs as any).writeFile(fullPath, content);
       // Invalidate cache
       this.workspaceCache.delete(agentId);
       return true;

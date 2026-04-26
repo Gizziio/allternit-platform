@@ -33,6 +33,7 @@ interface OnboardingState {
   hasCompletedOnboarding: boolean;
   currentScreen: number; // 0 = welcome, 1 = features, 2 = wizard/complete
   showWizard: boolean;
+  hasHydrated: boolean;
   
   // User Preferences
   preferences: OnboardingPreferences;
@@ -57,13 +58,18 @@ const defaultPreferences: OnboardingPreferences = {
   preferredModes: ['chat', 'cowork', 'code'],
 };
 
+let _setStoreState: ((state: Partial<OnboardingState>) => void) | null = null;
+
 export const useOnboardingStore = create<OnboardingState>()(
   persist(
-    (set, get) => ({
+    (set, get) => {
+      _setStoreState = set;
+      return ({
       // Initial State
       hasCompletedOnboarding: false,
       currentScreen: 0,
       showWizard: false,
+      hasHydrated: false,
       preferences: { ...defaultPreferences },
       
       // Actions
@@ -126,13 +132,20 @@ export const useOnboardingStore = create<OnboardingState>()(
           preferences: { ...defaultPreferences },
         });
       },
-    }),
+      });
+    },
     {
       name: 'allternit-onboarding-storage',
       partialize: (state) => ({
         hasCompletedOnboarding: state.hasCompletedOnboarding,
         preferences: state.preferences,
       }),
+      onRehydrateStorage: () => (state, error) => {
+        // Always mark as hydrated, even if localStorage was empty (state is undefined).
+        // Use the captured set function instead of useOnboardingStore because
+        // onRehydrateStorage can fire before the const assignment completes (TDZ).
+        _setStoreState?.({ hasHydrated: true });
+      },
     }
   )
 );

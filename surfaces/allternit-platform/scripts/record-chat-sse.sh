@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Record SSE stream from /api/chat for adapter testing
-# Writes raw SSE to .a2r/fixtures/chat.sse
+# Writes raw SSE to .allternit/fixtures/chat.sse
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -9,7 +9,7 @@ API_URL="${API_URL:-http://localhost:3000}"
 CHAT_ID="${CHAT_ID:-test-$(date +%s)}"
 MESSAGE="${MESSAGE:-Hello, what can you do?}"
 MODEL_ID="${MODEL_ID:-gpt-4o}"
-OUTPUT_FILE=".a2r/fixtures/chat.sse"
+OUTPUT_FILE=".allternit/fixtures/chat.sse"
 
 echo "Recording SSE from $API_URL/api/chat"
 echo "Chat ID: $CHAT_ID"

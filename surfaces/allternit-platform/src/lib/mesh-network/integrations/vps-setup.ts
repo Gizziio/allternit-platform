@@ -45,6 +45,7 @@ export interface VPSSetupResult {
   connected: boolean;
   meshConnected: boolean;
   meshIp?: string;
+  meshServerUrl?: string;
   installScriptUrl: string;
   agentInstallCommand: string;
   headscaleInstallCommand?: string;

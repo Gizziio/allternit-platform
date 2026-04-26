@@ -37,7 +37,7 @@ function SeededRuntimeConfigurationPanel() {
     },
     versioning: {
       auto_commit: false,
-      commit_message_template: "[a2r] {description}",
+      commit_message_template: "[allternit] {description}",
       branch_prefix: "allternit-session-",
     },
   });

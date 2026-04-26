@@ -1,5 +1,5 @@
 /**
- * PermissionModal — gate for gizzi-code permission requests
+ * PermissionModal — gate for agent permission requests
  *
  * Shown when the agent wants to perform an action that requires user approval.
  * The user can allow once, allow for the session, or deny.
@@ -7,8 +7,8 @@
 
 import React, { memo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CheckCircle, LockSimple, Prohibit, X } from '@phosphor-icons/react';
-import { useNativeAgentStore, type PendingPermissionRequest } from '@/lib/agents/native-agent.store';
+import { CheckCircle, LockSimple, Prohibit } from '@phosphor-icons/react';
+import { usePermissionStore, usePendingPermissions, type PendingPermissionRequest } from '@/lib/agents/permission-store';
 
 // ============================================================================
 // Single permission request card
@@ -19,14 +19,14 @@ interface PermissionCardProps {
 }
 
 const PermissionCard = memo(function PermissionCard({ request }: PermissionCardProps) {
-  const replyPermission = useNativeAgentStore((s) => s.replyPermission);
+  const replyPermission = usePermissionStore((s) => s.replyPermission);
   const [busy, setBusy] = useState(false);
 
   async function handle(reply: 'once' | 'always' | 'reject') {
     if (busy) return;
     setBusy(true);
     try {
-      await replyPermission(request.requestId, reply);
+      replyPermission(request.requestId, reply);
     } finally {
       setBusy(false);
     }
@@ -103,11 +103,9 @@ interface PermissionModalProps {
 }
 
 export const PermissionModal = memo(function PermissionModal({ sessionId }: PermissionModalProps) {
-  const pendingPermissions = useNativeAgentStore((s) => s.pendingPermissions);
+  const requests = usePendingPermissions(sessionId);
 
-  const requests = Object.values(pendingPermissions).filter(
-    (r) => r.sessionId === sessionId,
-  );
+  if (requests.length === 0) return null;
 
   return (
     <>

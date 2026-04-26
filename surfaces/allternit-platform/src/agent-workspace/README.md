@@ -1,6 +1,6 @@
-# A2R Agent Workspace - Shell UI Integration
+# Allternit Agent Workspace - Shell UI Integration
 
-This module provides the integration layer between the A2R Shell UI and the Agent Workspace.
+This module provides the integration layer between the Allternit Shell UI and the Agent Workspace.
 
 ## Architecture
 
@@ -16,7 +16,7 @@ This module provides the integration layer between the A2R Shell UI and the Agen
 └─────────────────────────────────────────────────────────────────────┘
                               ↑↓ USES
 ┌─────────────────────────────────────────────────────────────────────┐
-│  AGENT WORKSPACE (0-substrate/a2r-agent-workspace)                  │
+│  AGENT WORKSPACE (0-substrate/allternit-agent-workspace)                  │
 ├─────────────────────────────────────────────────────────────────────┤
 │  ├── WASM Build (pkg/)     - For browser use                        │
 │  └── HTTP API              - For server use                         │
@@ -119,7 +119,7 @@ const api = await createWorkspaceAuto('/path/to/workspace');
 ## Building WASM
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/0-substrate/a2r-agent-workspace
+cd /Users/macbook/Desktop/allternit-workspace/allternit/0-substrate/allternit-agent-workspace
 
 # Install wasm-pack
 cargo install wasm-pack
@@ -261,6 +261,6 @@ async function visualizePolicy(path: string) {
 
 ## See Also
 
-- `0-substrate/a2r-agent-workspace/` - Rust implementation
+- `0-substrate/allternit-agent-workspace/` - Rust implementation
 - `5-agents/AGENT_WORKSPACE_ARCHITECTURE.md` - Full architecture docs
 - `7-apps/cli/` - CLI that also uses the workspace

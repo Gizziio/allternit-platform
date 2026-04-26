@@ -64,10 +64,10 @@ BLUE='\\033[0;34m'
 NC='\\033[0m'
 
 # Logging
-log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
-log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
-log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
-log_step() { echo -e "${BLUE}[STEP]${NC} $1"; }
+log_info() { echo -e "\${GREEN}[INFO]\${NC} $1"; }
+log_warn() { echo -e "\${YELLOW}[WARN]\${NC} $1"; }
+log_error() { echo -e "\${RED}[ERROR]\${NC} $1"; }
+log_step() { echo -e "\${BLUE}[STEP]\${NC} $1"; }
 
 # Check root
 if [ "$EUID" -ne 0 ]; then 
@@ -287,7 +287,7 @@ RED='\\033[0;31m'
 GREEN='\\033[0;32m'
 NC='\\033[0m'
 
-echo -e "${RED}Uninstalling Allternit Agent...${NC}"
+echo -e "\${RED}Uninstalling Allternit Agent...\${NC}"
 
 # Stop services
 systemctl stop allternit-agent 2>/dev/null || true
@@ -307,7 +307,7 @@ rm -f /etc/wireguard/allternit.conf
 # Reload systemd
 systemctl daemon-reload
 
-echo -e "${GREEN}Allternit Agent uninstalled.${NC}"
+echo -e "\${GREEN}Allternit Agent uninstalled.\${NC}"
 echo ""
 echo "Note: Your VPS is unchanged. SSH access still works normally."
 UNINSTALLEOF
@@ -354,7 +354,7 @@ verify_connectivity() {
 print_completion() {
   echo ""
   echo "=============================================="
-  echo -e "${GREEN}Installation Complete!${NC}"
+  echo -e "\${GREEN}Installation Complete!\${NC}"
   echo "=============================================="
   echo ""
   echo "Agent ID: ${agentId}"

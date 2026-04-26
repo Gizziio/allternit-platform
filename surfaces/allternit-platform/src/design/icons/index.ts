@@ -1,5 +1,5 @@
 /**
- * A2rchitect Icon System
+ * allternit Icon System
  * 
  * Unified, type-safe icon system for the entire platform.
  * 

@@ -376,7 +376,7 @@ export function getReceiptStore(): ReceiptStore {
     const redis = getRedisClient();
     if (redis) {
       const { RedisReceiptStore } = require('./redisStores') as typeof import('./redisStores');
-      _receiptStore = new RedisReceiptStore(redis);
+      _receiptStore = new RedisReceiptStore(redis as any);
     } else {
       _receiptStore = new InMemoryReceiptStore();
     }

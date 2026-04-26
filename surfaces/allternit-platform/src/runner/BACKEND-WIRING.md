@@ -200,11 +200,11 @@ To verify everything is wired correctly:
 
 ```bash
 # 1. Start Rails backend
-cd 2-governance/a2r-governor
+cd 2-governance/allternit-governor
 rails server -p 3011
 
 # 2. Start Gateway
-cd 4-gateway/a2r-gateway
+cd 4-gateway/allternit-gateway
 python -m uvicorn main:app --port 8013
 
 # 3. Start UI

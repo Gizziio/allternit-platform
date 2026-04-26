@@ -1,17 +1,16 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import {
-  buildAgentSessionMetadata,
-  getAgentSessionDescriptor,
-} from '@/lib/agents/session-metadata';
-import { useNativeAgentStore } from '@/lib/agents/native-agent.store';
 
-export type AgentModeSurface = 'chat' | 'cowork' | 'code' | 'browser';
+export type AgentModeSurface = 'chat' | 'cowork' | 'code' | 'browser' | 'design';
 export type AgentModeId =
   // Core content modes (universal)
   | 'research' | 'data' | 'slides' | 'code' | 'assets' | 'agents' | 'flow' | 'web' | 'computer-use'
   // Cowork-specific modes
-  | 'plan' | 'execute' | 'review' | 'report' | 'automate' | 'sync';
+  | 'plan' | 'execute' | 'review' | 'report' | 'automate' | 'sync'
+  // Collaborative modes
+  | 'team'
+  // Additional modes
+  | 'swarms' | 'website' | 'image' | 'video';
 
 type SurfaceAgentMap = Record<AgentModeSurface, string | null>;
 type SurfaceModeMap = Record<AgentModeSurface, AgentModeId | null>;
@@ -31,6 +30,7 @@ const DEFAULT_SELECTED_AGENT: SurfaceAgentMap = {
   cowork: null,
   code: null,
   browser: null,
+  design: null,
 };
 
 const DEFAULT_SELECTED_MODE: SurfaceModeMap = {
@@ -38,6 +38,7 @@ const DEFAULT_SELECTED_MODE: SurfaceModeMap = {
   cowork: null,
   code: null,
   browser: null,
+  design: null,
 };
 
 export const useAgentSurfaceModeStore = create<AgentSurfaceModeState>()(
@@ -50,59 +51,15 @@ export const useAgentSurfaceModeStore = create<AgentSurfaceModeState>()(
       
       // Set current active surface
       setCurrentSurface: (surface) => {
-        const nativeStore = useNativeAgentStore.getState();
-        if (nativeStore.activeSessionId) {
-          nativeStore.appendOptimisticEvent(nativeStore.activeSessionId, {
-            id: `evt_surface_changed_${Date.now()}`,
-            sessionId: nativeStore.activeSessionId,
-            actor: 'ui',
-            surface,
-            type: 'ui.surface.changed',
-            payload: { surface },
-            createdAt: new Date().toISOString(),
-            seq: 0,
-          });
-          const session = nativeStore.sessions.find((item) => item.id === nativeStore.activeSessionId);
-          void nativeStore.updateSession(nativeStore.activeSessionId, {
-            metadata: buildAgentSessionMetadata({
-              metadata: session?.metadata ?? {},
-              currentSurface: surface,
-              selectedAgentIdBySurface: get().selectedAgentIdBySurface,
-              selectedModeBySurface: get().selectedModeBySurface,
-            }),
-          });
-        }
         set({ currentSurface: surface, lastActiveSurface: surface });
       },
       
       // Set agent for a surface
       setSelectedAgent: (surface, agentId) => {
-        const nativeStore = useNativeAgentStore.getState();
         const nextSelectedAgentIdBySurface = {
           ...get().selectedAgentIdBySurface,
           [surface]: agentId,
         };
-        if (nativeStore.activeSessionId) {
-          nativeStore.appendOptimisticEvent(nativeStore.activeSessionId, {
-            id: `evt_agent_profile_${surface}_${Date.now()}`,
-            sessionId: nativeStore.activeSessionId,
-            actor: 'ui',
-            surface,
-            type: 'agent.profile.selected',
-            payload: { agentId, scope: 'surface' },
-            createdAt: new Date().toISOString(),
-            seq: 0,
-          });
-          const session = nativeStore.sessions.find((item) => item.id === nativeStore.activeSessionId);
-          void nativeStore.updateSession(nativeStore.activeSessionId, {
-            metadata: buildAgentSessionMetadata({
-              metadata: session?.metadata ?? {},
-              currentSurface: get().currentSurface,
-              selectedAgentIdBySurface: nextSelectedAgentIdBySurface,
-              selectedModeBySurface: get().selectedModeBySurface,
-            }),
-          });
-        }
         set(() => ({
           selectedAgentIdBySurface: nextSelectedAgentIdBySurface,
           lastActiveSurface: surface,
@@ -111,32 +68,10 @@ export const useAgentSurfaceModeStore = create<AgentSurfaceModeState>()(
       
       // Set mode for a surface
       setSelectedMode: (surface, modeId) => {
-        const nativeStore = useNativeAgentStore.getState();
         const nextSelectedModeBySurface = {
           ...get().selectedModeBySurface,
           [surface]: modeId,
         };
-        if (nativeStore.activeSessionId) {
-          nativeStore.appendOptimisticEvent(nativeStore.activeSessionId, {
-            id: `evt_agent_mode_profile_${surface}_${Date.now()}`,
-            sessionId: nativeStore.activeSessionId,
-            actor: 'ui',
-            surface,
-            type: 'ui.view.changed',
-            payload: { modeId, scope: 'surface' },
-            createdAt: new Date().toISOString(),
-            seq: 0,
-          });
-          const session = nativeStore.sessions.find((item) => item.id === nativeStore.activeSessionId);
-          void nativeStore.updateSession(nativeStore.activeSessionId, {
-            metadata: buildAgentSessionMetadata({
-              metadata: session?.metadata ?? {},
-              currentSurface: get().currentSurface,
-              selectedAgentIdBySurface: get().selectedAgentIdBySurface,
-              selectedModeBySurface: nextSelectedModeBySurface,
-            }),
-          });
-        }
         set(() => ({
           selectedModeBySurface: nextSelectedModeBySurface,
         }));
@@ -146,47 +81,9 @@ export const useAgentSurfaceModeStore = create<AgentSurfaceModeState>()(
       name: 'allternit-surface-mode-v1',
       partialize: (state) => ({
         currentSurface: state.currentSurface,
+        selectedAgentIdBySurface: state.selectedAgentIdBySurface,
+        selectedModeBySurface: state.selectedModeBySurface,
       }),
     },
   ),
 );
-
-useNativeAgentStore.subscribe((state) => {
-  const activeSession = state.activeSessionId
-    ? state.sessions.find((session) => session.id === state.activeSessionId)
-    : null;
-  const uiDescriptor = getAgentSessionDescriptor(activeSession?.metadata);
-
-  useAgentSurfaceModeStore.setState((current) => {
-    const nextCurrentSurface = uiDescriptor.currentSurface ?? current.currentSurface;
-    const nextSelectedAgentIdBySurface = activeSession
-      ? {
-          ...DEFAULT_SELECTED_AGENT,
-          ...(uiDescriptor.selectedAgentIdBySurface ?? {}),
-        }
-      : current.selectedAgentIdBySurface;
-    const nextSelectedModeBySurface = activeSession
-      ? {
-          ...DEFAULT_SELECTED_MODE,
-          ...(uiDescriptor.selectedModeBySurface ?? {}),
-        }
-      : current.selectedModeBySurface;
-
-    const isUnchanged =
-      current.currentSurface === nextCurrentSurface &&
-      JSON.stringify(current.selectedAgentIdBySurface) ===
-        JSON.stringify(nextSelectedAgentIdBySurface) &&
-      JSON.stringify(current.selectedModeBySurface) ===
-        JSON.stringify(nextSelectedModeBySurface);
-
-    if (isUnchanged) {
-      return current;
-    }
-
-    return {
-      currentSurface: nextCurrentSurface,
-      selectedAgentIdBySurface: nextSelectedAgentIdBySurface,
-      selectedModeBySurface: nextSelectedModeBySurface,
-    };
-  });
-});

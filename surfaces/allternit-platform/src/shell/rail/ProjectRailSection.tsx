@@ -1,4 +1,5 @@
 import React, { useState, memo, useCallback } from 'react';
+import type { Icon } from '@phosphor-icons/react';
 import {
   FolderOpen,
   FolderPlus,
@@ -18,7 +19,7 @@ export interface UnifiedProject {
 export interface UnifiedItem {
   id: string;
   title: string;
-  icon: React.ComponentType<any>;
+  icon: Icon;
   projectId?: string;
   isActive: boolean;
   metaLabel?: string;
@@ -39,7 +40,7 @@ interface ProjectRailSectionProps {
   onDeleteItem: (id: string) => void;
   onMoveItemToProject?: (itemId: string, projectId: string | null) => void;
   emptyNotice: {
-    icon: React.ComponentType<any>;
+    icon: React.ComponentType<{ size?: number; weight?: string; color?: string }>;
     title: string;
     description: string;
     actionLabel: string;
@@ -60,10 +61,10 @@ export const ProjectRailSection = memo(function ProjectRailSection({
   onDeleteItem,
   onMoveItemToProject,
   emptyNotice,
-}: ProjectRailSectionProps) {
+}: ProjectRailSectionProps): JSX.Element {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
-  const toggleProject = (projectId: string) => {
+  const toggleProject = (projectId: string): void => {
     setExpandedProjects((prev) => {
       const next = new Set(prev);
       if (next.has(projectId)) next.delete(projectId);
@@ -126,7 +127,7 @@ export const ProjectRailSection = memo(function ProjectRailSection({
       </div>
 
       {/* Projects List */}
-      {projects.map((project) => {
+      {projects.filter((p): p is typeof p & { id: string } => typeof p.id === 'string' && p.id.length > 0).map((project) => {
         const isExpanded = expandedProjects.has(project.id);
         const pItems = projectItems(project.id);
         const isActive = activeProjectId === project.id;
@@ -159,7 +160,7 @@ export const ProjectRailSection = memo(function ProjectRailSection({
                   marginBottom: 4,
                 }}
               >
-                {pItems.map((item) => (
+                {pItems.filter((i): i is typeof i & { id: string } => typeof i.id === 'string' && i.id.length > 0).map((item) => (
                   <ItemRailRow
                     key={item.id}
                     item={item}
@@ -190,7 +191,7 @@ export const ProjectRailSection = memo(function ProjectRailSection({
             }}>
               Recent Sessions
             </div>
-            {rootItems.map((item) => (
+            {rootItems.filter((i): i is typeof i & { id: string } => typeof i.id === 'string' && i.id.length > 0).map((item) => (
               <ItemRailRow
                 key={item.id}
                 item={item}
@@ -224,7 +225,7 @@ function WorkstreamSectionLabel({
   title: string;
   count?: number;
   caption?: string;
-}) {
+}): JSX.Element {
   return (
     <div
       style={{
@@ -279,6 +280,19 @@ function WorkstreamSectionLabel({
   );
 }
 
+interface ProjectRailItemProps {
+  id: string;
+  icon: React.ComponentType<{ size?: number; weight?: string; color?: string }>;
+  label: string;
+  isActive: boolean;
+  isExpanded?: boolean;
+  onToggle?: () => void;
+  onClick?: () => void;
+  onRename?: (title: string) => void;
+  onDelete?: () => void;
+  badge?: number;
+}
+
 function ProjectRailItem({
   id,
   icon: Icon,
@@ -290,25 +304,25 @@ function ProjectRailItem({
   onRename,
   onDelete,
   badge,
-}: any) {
+}: ProjectRailItemProps): JSX.Element {
   const [showMenu, setShowMenu] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editTitle, setEditTitle] = useState(label);
 
-  const handleRename = () => {
+  const handleRename = (): void => {
     setIsEditing(true);
     setShowMenu(false);
   };
 
-  const handleSaveRename = () => {
+  const handleSaveRename = (): void => {
     if (editTitle.trim() && editTitle !== label) {
       onRename?.(editTitle.trim());
     }
     setIsEditing(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === 'Enter') {
       handleSaveRename();
     } else if (e.key === 'Escape') {
@@ -531,14 +545,14 @@ function ItemRailRow({
   onRename: (title: string) => void;
   onDelete: () => void;
   onMoveToProject?: (projectId: string) => void;
-}) {
+}): JSX.Element {
   const [showMenu, setShowMenu] = useState(false);
   const [showProjects, setShowProjects] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(item.title);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const handleSaveRename = () => {
+  const handleSaveRename = (): void => {
     if (editTitle.trim() && editTitle !== item.title) {
       onRename(editTitle.trim());
     }
@@ -664,7 +678,7 @@ function ItemRailRow({
                       >
                         (No Project)
                       </button>
-                      {projects.map(p => (
+                      {projects.filter((p): p is typeof p & { id: string } => typeof p.id === 'string' && p.id.length > 0).map(p => (
                         <button
                           key={p.id}
                           onClick={() => { onMoveToProject?.(p.id); setShowMenu(false); }}
@@ -695,6 +709,7 @@ function ItemRailRow({
         <DeleteConfirmModal
           title="Delete Item?"
           itemName={item.title}
+          itemType="task"
           onConfirm={() => { onDelete(); setShowDeleteConfirm(false); }}
           onCancel={() => setShowDeleteConfirm(false)}
         />
@@ -703,7 +718,13 @@ function ItemRailRow({
   );
 }
 
-function GhostRailNotice({ icon: Icon, title, description, actionLabel, onClick }: any) {
+function GhostRailNotice({ icon: Icon, title, description, actionLabel, onClick }: {
+  icon: React.ComponentType<{ size?: number; weight?: string; color?: string }>;
+  title: string;
+  description: string;
+  actionLabel: string;
+  onClick?: () => void;
+}): JSX.Element {
   return (
     <button
       onClick={onClick}

@@ -48,7 +48,9 @@ interface Edge {
   createdAt: string;
 }
 
-type MemoryTab = 'Events' | 'Entities' | 'Edges';
+import { MemoryVaultStats } from '@/components/memory/MemoryVaultStats';
+
+type MemoryTab = 'Events' | 'Entities' | 'Edges' | 'Health';
 
 
 function EventTypeIcon({ type }: { type: string }) {
@@ -247,7 +249,7 @@ export function MemoryKernelView() {
 
       {/* Tabs */}
       <div className="px-6 pt-4 border-b border-[var(--border-subtle)] flex gap-8">
-        {(['Events', 'Entities', 'Edges'] as MemoryTab[]).map((tab) => (
+        {(['Events', 'Entities', 'Edges', 'Health'] as MemoryTab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -264,6 +266,12 @@ export function MemoryKernelView() {
 
       {/* Content */}
       <div className="flex-1 overflow-auto">
+        {activeTab === 'Health' && (
+          <div className="p-6">
+            <MemoryVaultStats />
+          </div>
+        )}
+
         {activeTab === 'Events' && (
           <div className="p-6">
             <div className="mb-4 flex gap-3">

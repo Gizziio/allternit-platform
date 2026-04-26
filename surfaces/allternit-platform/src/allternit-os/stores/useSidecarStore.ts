@@ -1,5 +1,5 @@
 /**
- * A2rchitect Super-Agent OS - Sidecar Store
+ * allternit Super-Agent OS - Sidecar Store
  * 
  * Central state management for the Utility Pane with streaming support.
  */
@@ -8,9 +8,9 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
 import type {
-  A2rProgram,
-  A2rProgramType,
-  A2rProgramState,
+  AllternitProgram,
+  AllternitProgramType,
+  AllternitProgramState,
   LaunchProgramRequest,
   ProgramEvent,
   StreamingChunk,
@@ -23,7 +23,7 @@ import type {
 
 export interface SidecarState {
   // Program registry
-  programs: Record<string, A2rProgram>;
+  programs: Record<string, AllternitProgram>;
   
   // Currently active program ID
   activeProgramId: string | null;
@@ -57,16 +57,16 @@ export interface SidecarState {
 
 export interface SidecarActions {
   // Program lifecycle
-  launchProgram: <T extends A2rProgramState>(request: LaunchProgramRequest<T>) => string;
+  launchProgram: <T extends AllternitProgramState>(request: LaunchProgramRequest<T>) => string;
   terminateProgram: (id: string) => boolean;
   activateProgram: (id: string) => boolean;
   suspendProgram: (id: string) => boolean;
   resumeProgram: (id: string) => boolean;
   
   // Program state management
-  updateProgramState: <T extends A2rProgramState>(id: string, updater: (state: T) => T) => boolean;
-  setProgramState: <T extends A2rProgramState>(id: string, state: T) => boolean;
-  getProgramState: <T extends A2rProgramState>(id: string) => T | null;
+  updateProgramState: <T extends AllternitProgramState>(id: string, updater: (state: T) => T) => boolean;
+  setProgramState: <T extends AllternitProgramState>(id: string, state: T) => boolean;
+  getProgramState: <T extends AllternitProgramState>(id: string) => T | null;
   
   // Streaming support
   startStream: (programId: string) => void;
@@ -76,7 +76,7 @@ export interface SidecarActions {
   
   // Batch operations
   terminateAllPrograms: () => void;
-  terminateProgramsByType: (type: A2rProgramType) => void;
+  terminateProgramsByType: (type: AllternitProgramType) => void;
   terminateProgramsByThread: (threadId: string) => void;
   
   // Tab management
@@ -94,9 +94,9 @@ export interface SidecarActions {
   clearEvents: () => void;
   
   // Utilities
-  getActiveProgram: () => A2rProgram | null;
-  getProgramsByType: (type: A2rProgramType) => A2rProgram[];
-  getProgramsByThread: (threadId: string) => A2rProgram[];
+  getActiveProgram: () => AllternitProgram | null;
+  getProgramsByType: (type: AllternitProgramType) => AllternitProgram[];
+  getProgramsByThread: (threadId: string) => AllternitProgram[];
   hasProgram: (id: string) => boolean;
   
   // Live agent text (pre-launch streaming preview)
@@ -113,15 +113,15 @@ export interface SidecarActions {
 // Utility Functions
 // ============================================================================
 
-function generateProgramId(type: A2rProgramType): string {
+function generateProgramId(type: AllternitProgramType): string {
   const timestamp = Date.now();
   const random = Math.random().toString(36).substring(2, 9);
   return `${type}-${timestamp}-${random}`;
 }
 
-function createDefaultProgram<T extends A2rProgramState>(
+function createDefaultProgram<T extends AllternitProgramState>(
   request: LaunchProgramRequest<T>
-): A2rProgram {
+): AllternitProgram {
   const now = Date.now();
   return {
     id: generateProgramId(request.type),
@@ -138,8 +138,8 @@ function createDefaultProgram<T extends A2rProgramState>(
   };
 }
 
-function getDefaultIcon(type: A2rProgramType): string {
-  const icons: Record<A2rProgramType, string> = {
+function getDefaultIcon(type: AllternitProgramType): string {
+  const icons: Record<AllternitProgramType, string> = {
     'research-doc': '📄',
     'data-grid': '📊',
     'presentation': '🎬',
@@ -186,7 +186,7 @@ export const useSidecarStore = create<SidecarState & SidecarActions>()(
         // Program Lifecycle
         // -------------------------------------------------------------------
 
-        launchProgram: <T extends A2rProgramState>(request: LaunchProgramRequest<T>): string => {
+        launchProgram: <T extends AllternitProgramState>(request: LaunchProgramRequest<T>): string => {
           const program = createDefaultProgram(request);
           
           set(state => {
@@ -296,7 +296,7 @@ export const useSidecarStore = create<SidecarState & SidecarActions>()(
         // Program State Management
         // -------------------------------------------------------------------
 
-        updateProgramState: <T extends A2rProgramState>(
+        updateProgramState: <T extends AllternitProgramState>(
           id: string,
           updater: (state: T) => T
         ): boolean => {
@@ -316,7 +316,7 @@ export const useSidecarStore = create<SidecarState & SidecarActions>()(
           return true;
         },
 
-        setProgramState: <T extends A2rProgramState>(id: string, newState: T): boolean => {
+        setProgramState: <T extends AllternitProgramState>(id: string, newState: T): boolean => {
           if (!get().programs[id]) return false;
 
           set(state => {
@@ -332,7 +332,7 @@ export const useSidecarStore = create<SidecarState & SidecarActions>()(
           return true;
         },
 
-        getProgramState: <T extends A2rProgramState>(id: string): T | null => {
+        getProgramState: <T extends AllternitProgramState>(id: string): T | null => {
           return (get().programs[id]?.state as T) ?? null;
         },
 
@@ -425,7 +425,7 @@ export const useSidecarStore = create<SidecarState & SidecarActions>()(
           });
         },
 
-        terminateProgramsByType: (type: A2rProgramType) => {
+        terminateProgramsByType: (type: AllternitProgramType) => {
           const toTerminate = Object.values(get().programs)
             .filter(p => p.type === type)
             .map(p => p.id);
@@ -511,16 +511,16 @@ export const useSidecarStore = create<SidecarState & SidecarActions>()(
         // Utilities
         // -------------------------------------------------------------------
 
-        getActiveProgram: (): A2rProgram | null => {
+        getActiveProgram: (): AllternitProgram | null => {
           const { activeProgramId, programs } = get();
           return activeProgramId ? programs[activeProgramId] ?? null : null;
         },
 
-        getProgramsByType: (type: A2rProgramType): A2rProgram[] => {
+        getProgramsByType: (type: AllternitProgramType): AllternitProgram[] => {
           return Object.values(get().programs).filter(p => p.type === type);
         },
 
-        getProgramsByThread: (threadId: string): A2rProgram[] => {
+        getProgramsByThread: (threadId: string): AllternitProgram[] => {
           return Object.values(get().programs).filter(p => p.sourceThreadId === threadId);
         },
 
@@ -585,7 +585,7 @@ export const useSidecarStore = create<SidecarState & SidecarActions>()(
         },
       }),
       {
-        name: 'a2r-sidecar-store',
+        name: 'allternit-sidecar-store',
         storage: createJSONStorage(() => localStorage),
         partialize: (state) => ({
           programs: state.programs,
@@ -602,7 +602,7 @@ export const useSidecarStore = create<SidecarState & SidecarActions>()(
 // Selectors (for performance)
 // ============================================================================
 
-export const selectActiveProgram = (state: SidecarState & SidecarActions): A2rProgram | null => {
+export const selectActiveProgram = (state: SidecarState & SidecarActions): AllternitProgram | null => {
   return state.activeProgramId ? state.programs[state.activeProgramId] ?? null : null;
 };
 
@@ -617,7 +617,7 @@ export const selectHasPrograms = (state: SidecarState & SidecarActions): boolean
 export const selectProgramsByThread = (
   state: SidecarState & SidecarActions,
   threadId: string
-): A2rProgram[] => {
+): AllternitProgram[] => {
   return Object.values(state.programs).filter(p => p.sourceThreadId === threadId);
 };
 
@@ -625,19 +625,19 @@ export const selectProgramsByThread = (
 // React Hooks
 // ============================================================================
 
-export function useActiveProgram(): A2rProgram | null {
+export function useActiveProgram(): AllternitProgram | null {
   return useSidecarStore(selectActiveProgram);
 }
 
-export function useProgram(programId: string): A2rProgram | null {
+export function useProgram(programId: string): AllternitProgram | null {
   return useSidecarStore(state => state.programs[programId] ?? null);
 }
 
-export function useProgramState<T extends A2rProgramState>(programId: string): T | null {
+export function useProgramState<T extends AllternitProgramState>(programId: string): T | null {
   return useSidecarStore(state => (state.programs[programId]?.state as T) ?? null);
 }
 
-export function useAllPrograms(): A2rProgram[] {
+export function useAllPrograms(): AllternitProgram[] {
   return useSidecarStore(state => 
     state.programOrder.map(id => state.programs[id]).filter(Boolean)
   );

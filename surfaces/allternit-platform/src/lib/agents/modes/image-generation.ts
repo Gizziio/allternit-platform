@@ -240,7 +240,7 @@ export async function generateImages(
       if (!userSettings?.apiKeys?.openai) {
         throw new Error('OpenAI API key not configured. Please add your API key in settings or use Pollinations (free).');
       }
-      return generateImagesOpenAI(prompt, userSettings.apiKeys.openai, config);
+      return generateImagesOpenAI(prompt, userSettings.apiKeys.openai, config as any);
 
     case 'stability':
       throw new Error('Stability AI not yet implemented');

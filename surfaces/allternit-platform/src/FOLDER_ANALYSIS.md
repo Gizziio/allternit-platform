@@ -35,7 +35,7 @@
 ---
 
 ### `capsules/` - BROWSER/TAB SYSTEM
-**What it is:** The tabbed browser system - like browser tabs but for A2R
+**What it is:** The tabbed browser system - like browser tabs but for Allternit
 **Key components:**
 - `BrowserCapsuleEnhanced` - Main browser component with tabs
 - `a2ui/` - A2UI rendering system (renders AI-generated UI)
@@ -172,7 +172,7 @@
 - `a2ui-client.ts` - A2UI backend client
 - `browser-client.ts` - Browser integration client
 - `session-bridge.ts` - Session bridging
-- `a2r/` - A2R-specific integration
+- `allternit/` - Allternit-specific integration
 - `execution/` - Execution environment integration
 - `kernel/` - Kernel integration
 
@@ -272,7 +272,7 @@
 
 ---
 
-### `a2r-usage/` - USAGE TRACKING
+### `allternit-usage/` - USAGE TRACKING
 **What it is:** Usage telemetry and tracking
 **Key files:**
 - `electron-preload.ts` - Electron preload for usage tracking
@@ -343,7 +343,7 @@
 |---------|---------|-----------|
 | `lib/` | Too generic | `utils/` or `utilities/` |
 | `app/` | Ambiguous (Next.js vs general) | `next-app/` or move to web-specific |
-| `a2r-usage/` | Unclear | `telemetry/` or `analytics/` |
+| `allternit-usage/` | Unclear | `telemetry/` or `analytics/` |
 
 ---
 
@@ -396,7 +396,7 @@ State Management:
 - `state/` vs `store/` - Both mean "state", need differentiation
 - `lib/` - Too vague
 - `app/` - Ambiguous purpose
-- `a2r-usage/` - Unclear meaning
+- `allternit-usage/` - Unclear meaning
 
 **Questionable folders:**
 - `agent-workspace/` - NEW, needs integration

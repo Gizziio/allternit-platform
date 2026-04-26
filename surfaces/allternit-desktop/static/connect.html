@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Connect to A2R - A2R Desktop</title>
+  <title>Connect to Allternit - Allternit Desktop</title>
   <style>
     * {
       margin: 0;
@@ -218,8 +218,8 @@
 <body>
   <div class="container">
     <div class="logo">
-      <h1>A2R Desktop</h1>
-      <p>Connect to your A2R instance</p>
+      <h1>Allternit Desktop</h1>
+      <p>Connect to your Allternit instance</p>
     </div>
 
     <div class="mode-selector">
@@ -243,7 +243,7 @@
     <div id="vps-inputs" style="display: none;">
       <div class="input-group">
         <label>VPS URL</label>
-        <input type="url" id="vps-url" placeholder="https://a2r.yourdomain.com">
+        <input type="url" id="vps-url" placeholder="https://allternit.yourdomain.com">
       </div>
     </div>
 
@@ -255,10 +255,10 @@
     </div>
 
     <div class="help">
-      <h3>Don't have A2R running?</h3>
+      <h3>Don't have Allternit running?</h3>
       <p>
-        Install the A2R backend on your VPS or locally:<br>
-        <code>curl -fsSL https://a2r.io/install.sh | bash</code><br><br>
+        Install the Allternit backend on your VPS or locally:<br>
+        <code>curl -fsSL https://allternit.com/install.sh | bash</code><br><br>
         <a href="#" id="docs-link">View Documentation →</a>
       </p>
     </div>
@@ -306,7 +306,7 @@
       testBtn.disabled = true;
 
       try {
-        const result = await window.a2rDesktop.connection.test();
+        const result = await window.allternitDesktop.connection.test();
         
         if (result.status === 'connected') {
           showStatus(`✓ Connected to ${result.url}`, 'success');
@@ -339,10 +339,10 @@
               vpsUrl: document.getElementById('vps-url').value
             };
 
-        const result = await window.a2rDesktop.connection.setBackend(config);
+        const result = await window.allternitDesktop.connection.setBackend(config);
         
         if (result.status === 'connected') {
-          showStatus('Connected! Loading A2R...', 'success');
+          showStatus('Connected! Loading Allternit...', 'success');
           // Main process will reload the window to the platform UI
         } else {
           showStatus(`Failed to connect: ${result.lastError || 'Unknown error'}`, 'error');
@@ -359,14 +359,14 @@
     // Auto-discover on load
     async function autoDiscover() {
       try {
-        const discovered = await window.a2rDesktop.connection.discover();
+        const discovered = await window.allternitDesktop.connection.discover();
         if (discovered) {
           const port = new URL(discovered).port;
           document.getElementById('local-port').value = port;
-          showStatus(`Found A2R running on port ${port}`, 'success');
+          showStatus(`Found Allternit running on port ${port}`, 'success');
         }
       } catch (err) {
-        console.log('No local A2R found');
+        console.log('No local Allternit found');
       }
     }
 
@@ -374,13 +374,13 @@
     connectBtn.addEventListener('click', connect);
     document.getElementById('docs-link').addEventListener('click', (e) => {
       e.preventDefault();
-      window.a2rDesktop.shell.openExternal('https://docs.a2r.io/setup');
+      window.allternitDesktop.shell.openExternal('https://docs.allternit.com/setup');
     });
 
     // Load saved config
     async function loadConfig() {
       try {
-        const backend = await window.a2rDesktop.connection.getBackend();
+        const backend = await window.allternitDesktop.connection.getBackend();
         if (backend.mode === 'vps' && backend.vpsUrl) {
           modeBtns[1].click();
           document.getElementById('vps-url').value = backend.vpsUrl;

@@ -1,4 +1,4 @@
-# A2R Plugin Ecosystem - Infrastructure Requirements
+# Allternit Plugin Ecosystem - Infrastructure Requirements
 
 > **Document Version:** 1.0  
 > **Last Updated:** March 7, 2026  
@@ -9,13 +9,13 @@
 
 ## Overview
 
-This document outlines the infrastructure requirements for the A2R plugin ecosystem URLs that are currently used as placeholders in the Plugin Manager UI. These URLs represent future services that need to be built to support a complete plugin publishing and discovery experience.
+This document outlines the infrastructure requirements for the Allternit plugin ecosystem URLs that are currently used as placeholders in the Plugin Manager UI. These URLs represent future services that need to be built to support a complete plugin publishing and discovery experience.
 
 ---
 
 ## Infrastructure Components
 
-### 1. Developer Portal (`https://dev.a2r.dev`)
+### 1. Developer Portal (`https://dev.allternit.dev`)
 
 **Purpose:** Main developer documentation and resources hub for plugin creators.
 
@@ -47,7 +47,7 @@ This document outlines the infrastructure requirements for the A2R plugin ecosys
 
 #### Setup Requirements
 ```
-Domain: dev.a2r.dev
+Domain: dev.allternit.dev
 Hosting: Vercel/Netlify (static) or AWS/GCP (dynamic)
 CDN: CloudFlare (recommended)
 SSL: Let's Encrypt or CloudFlare
@@ -58,7 +58,7 @@ Tech Stack Options:
 ```
 
 #### Dependencies
-- docs.a2r.dev (for overlapping content)
+- docs.allternit.dev (for overlapping content)
 - GitHub OAuth (for developer dashboard)
 
 #### Current Workaround
@@ -70,7 +70,7 @@ Link to GitHub README and inline documentation in PluginManager forms.
 
 ---
 
-### 2. Plugin Marketplace Web (`https://marketplace.a2r.dev`)
+### 2. Plugin Marketplace Web (`https://marketplace.allternit.dev`)
 
 **Purpose:** Web-facing plugin discovery and browsing for end users.
 
@@ -89,7 +89,7 @@ Link to GitHub README and inline documentation in PluginManager forms.
 **MVP:**
 - Plugin catalog with search and category filters
 - Plugin detail pages (description, version, author, install button)
-- "Open in A2R" deep-link buttons
+- "Open in Allternit" deep-link buttons
 - Basic rating/review display
 
 **Nice-to-Have:**
@@ -102,7 +102,7 @@ Link to GitHub README and inline documentation in PluginManager forms.
 
 #### Setup Requirements
 ```
-Domain: marketplace.a2r.dev
+Domain: marketplace.allternit.dev
 Hosting: Vercel/Netlify (frontend) + API backend
 Database: PostgreSQL (plugins metadata) + Redis (caching)
 CDN: CloudFlare
@@ -116,8 +116,8 @@ Tech Stack:
 ```
 
 #### Dependencies
-- dev.a2r.dev (documentation links)
-- docs.a2r.dev (API reference)
+- dev.allternit.dev (documentation links)
+- docs.allternit.dev (API reference)
 - GitHub API (for plugin source validation)
 
 #### Current Workaround
@@ -129,7 +129,7 @@ PluginManager's "Browse" overlay with curated GitHub sources and personal market
 
 ---
 
-### 3. Documentation Site (`https://docs.a2r.dev`)
+### 3. Documentation Site (`https://docs.allternit.dev`)
 
 **Purpose:** Technical documentation for plugin development, API reference, and validation tools.
 
@@ -160,7 +160,7 @@ PluginManager's "Browse" overlay with curated GitHub sources and personal market
 
 #### Setup Requirements
 ```
-Domain: docs.a2r.dev
+Domain: docs.allternit.dev
 Hosting: GitHub Pages (free, automatic deployments)
        or Vercel/Netlify
 
@@ -182,7 +182,7 @@ GitHub README files and inline help text in PluginManager UI.
 
 ---
 
-### 4. GitHub Template Repository (`github.com/a2rchitect/plugin-template`)
+### 4. GitHub Template Repository (`github.com/allternitchitect/plugin-template`)
 
 **Purpose:** Template repository for scaffolding new plugins with proper structure.
 
@@ -219,7 +219,7 @@ plugin-template/
 #### Setup Requirements
 ```
 Platform: GitHub
-Repository: a2rchitect/plugin-template
+Repository: allternitchitect/plugin-template
 Visibility: Public
 Settings: Enable "Template repository" checkbox
 ```
@@ -236,7 +236,7 @@ PluginManager's "Create" flow generates basic plugin structure, but users manual
 
 ---
 
-### 5. Discord Community Server (`discord.gg/a2rchitect`)
+### 5. Discord Community Server (`discord.gg/allternitchitect`)
 
 **Purpose:** Community support channel for plugin developers and users.
 
@@ -250,7 +250,7 @@ PluginManager's "Create" flow generates basic plugin structure, but users manual
 | `#showcase` | Plugin announcements | Medium |
 | `#bug-reports` | Issue triage | Medium |
 | `#feature-requests` | Product feedback | Low |
-| `#dev-updates` | A2R team announcements | Medium |
+| `#dev-updates` | Allternit team announcements | Medium |
 
 #### Features Needed
 
@@ -268,7 +268,7 @@ PluginManager's "Create" flow generates basic plugin structure, but users manual
 #### Setup Requirements
 ```
 Platform: Discord
-Invite: discord.gg/a2rchitect (custom invite)
+Invite: discord.gg/allternitchitect (custom invite)
 Server Boost: Level 1 (for custom invite URL)
 
 Roles to Create:
@@ -293,17 +293,17 @@ GitHub Issues for support, no real-time community.
 ## Implementation Roadmap
 
 ### Phase 1: MVP (Immediate)
-1. **docs.a2r.dev** - Deploy Docusaurus to GitHub Pages
-2. **GitHub Template** - Create `a2rchitect/plugin-template` repo
+1. **docs.allternit.dev** - Deploy Docusaurus to GitHub Pages
+2. **GitHub Template** - Create `allternitchitect/plugin-template` repo
 3. **Update PluginManager** - Point to actual docs URL
 
 ### Phase 2: Community (Month 1-2)
 4. **Discord Server** - Set up and announce
-5. **dev.a2r.dev** - Deploy static developer portal
+5. **dev.allternit.dev** - Deploy static developer portal
 6. **Validator Tool** - Add to docs site (client-side JSON validation)
 
 ### Phase 3: Marketplace (Month 2-4)
-7. **marketplace.a2r.dev** - Read-only catalog
+7. **marketplace.allternit.dev** - Read-only catalog
 8. **API Backend** - Plugin metadata service
 9. **Submission Form** - Web-based plugin publishing
 
@@ -313,11 +313,11 @@ GitHub Issues for support, no real-time community.
 
 | URL | Service | Priority | Status | Effort |
 |-----|---------|----------|--------|--------|
-| `https://dev.a2r.dev` | Developer Portal | High | Planned | Medium |
-| `https://marketplace.a2r.dev` | Marketplace Web | High | Planned | Medium |
-| `https://docs.a2r.dev` | Documentation | Medium | Ready to Deploy | Low |
-| `github.com/a2rchitect/plugin-template` | Template Repo | Medium | Ready to Create | Low |
-| `discord.gg/a2rchitect` | Discord Server | Low | Planned | Low |
+| `https://dev.allternit.dev` | Developer Portal | High | Planned | Medium |
+| `https://marketplace.allternit.dev` | Marketplace Web | High | Planned | Medium |
+| `https://docs.allternit.dev` | Documentation | Medium | Ready to Deploy | Low |
+| `github.com/allternitchitect/plugin-template` | Template Repo | Medium | Ready to Create | Low |
+| `discord.gg/allternitchitect` | Discord Server | Low | Planned | Low |
 
 ---
 
@@ -327,19 +327,19 @@ The following locations in `PluginManager.tsx` reference these URLs:
 
 ```typescript
 // Line ~3553 - Connector documentation
-window.open('https://docs.a2r.dev/connectors', '_blank')
+window.open('https://docs.allternit.dev/connectors', '_blank')
 
 // Line ~4649 - Publish guide
-window.open('https://docs.a2r.dev/plugins/publish', '_blank')
+window.open('https://docs.allternit.dev/plugins/publish', '_blank')
 
 // Line ~5204 - Publish tab info box
-<li><strong>Documentation site</strong> at docs.a2r.dev/plugins/publish</li>
+<li><strong>Documentation site</strong> at docs.allternit.dev/plugins/publish</li>
 
 // Line ~5384 - Quick Start Template card
-🚧 Needs: GitHub repo a2rchitect/plugin-template
+🚧 Needs: GitHub repo allternitchitect/plugin-template
 
 // Line ~5411 - Plugin Manifest Validator card  
-🚧 Needs: Validator service at docs.a2r.dev
+🚧 Needs: Validator service at docs.allternit.dev
 
 // Line ~5438 - Developer Community card
 🚧 Needs: Discord server setup

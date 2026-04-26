@@ -1,7 +1,7 @@
 /**
  * CanvasToolbar.tsx
  * 
- * Top toolbar for A2r-Canvas with layout controls and actions.
+ * Top toolbar for Allternit-Canvas with layout controls and actions.
  */
 
 import React from 'react';

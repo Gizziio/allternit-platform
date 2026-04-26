@@ -267,9 +267,9 @@ export function BrowserAttachStrip() {
             <span>{currentRunId ? `Run ${currentRunId.slice(-8)}` : 'No active run'}</span>
             <span>{currentAdapterId ?? 'adapter pending'}</span>
             <span>
-              {engineRuntimeSource === 'managed'
+              {(engineRuntimeSource as any) === 'managed'
                 ? 'managed engine'
-                : engineRuntimeSource === 'external'
+                : (engineRuntimeSource as any) === 'external'
                   ? 'external engine'
                   : 'engine source pending'}
             </span>
@@ -383,7 +383,7 @@ export function BrowserAttachStrip() {
               }}
             >
               <GearSix size={13} />
-              {engineRuntimeSource === 'managed' ? 'Managed' : engineRuntimeSource === 'external' ? 'External' : 'Engine'} {enginePort}
+              {(engineRuntimeSource as any) === 'managed' ? 'Managed' : (engineRuntimeSource as any) === 'external' ? 'External' : 'Engine'} {enginePort}
             </button>
           )}
 

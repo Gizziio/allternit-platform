@@ -8,7 +8,7 @@
  * - Tasks (like Conversations - has Tasks & Agent Tasks tabs)
  */
 
-import { 
+import {
   Plus,
   Robot,
   CalendarCheck,
@@ -16,6 +16,9 @@ import {
   List,
   Lightning,
   CheckSquare,
+  Users,
+  SquaresFour,
+  Briefcase,
 } from '@phosphor-icons/react';
 import { RailConfigSection } from './rail.config';
 
@@ -83,6 +86,41 @@ export const COWORK_RAIL_CONFIG: RailConfigSection[] = [
     defaultExpanded: true,
     collapsible: true,
     items: [],
+  },
+
+  // Cowork Team section (Multica absorption)
+  {
+    id: 'cowork-team',
+    title: 'Team',
+    icon: Users,
+    collapsible: true,
+    defaultExpanded: false,
+    items: [
+      {
+        id: 'cw-team-dashboard',
+        label: 'Team Dashboard',
+        icon: Users,
+        payload: 'cowork-team',
+      },
+      {
+        id: 'cw-team-board',
+        label: 'Board',
+        icon: SquaresFour,
+        payload: 'cowork-team-board',
+      },
+      {
+        id: 'cw-team-agents',
+        label: 'Agents',
+        icon: Robot,
+        payload: 'cowork-team-agents',
+      },
+      {
+        id: 'cw-team-workspaces',
+        label: 'Workspaces',
+        icon: Briefcase,
+        payload: 'cowork-team-workspaces',
+      },
+    ],
   },
 ];
 

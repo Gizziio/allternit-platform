@@ -344,7 +344,7 @@ export function SessionAnalyticsDashboard({
                   border: `1px solid ${modeColors.border}`,
                   borderRadius: RADIUS.md,
                 }}
-                formatter={(value: number | undefined) => value !== undefined ? [`${value} calls`, 'Usage'] : ['', 'Usage']}
+                formatter={((value: any) => value !== undefined ? [`${value} calls`, 'Usage'] : ['', 'Usage']) as any}
               />
               <Bar dataKey="count" fill={modeColors.accent} radius={[0, 4, 4, 0]} />
             </BarChart>
@@ -386,7 +386,7 @@ export function SessionAnalyticsDashboard({
                   border: `1px solid ${modeColors.border}`,
                   borderRadius: RADIUS.md,
                 }}
-                formatter={(value: number | undefined) => value !== undefined ? [`${value} messages`, 'Count'] : ['', 'Count']}
+                formatter={(value: any) => value !== undefined ? [`${value} messages`, 'Count'] : ['', 'Count']}
                 labelFormatter={(hour) => `${hour}:00 - ${hour}:59`}
               />
               <Area
@@ -404,7 +404,7 @@ export function SessionAnalyticsDashboard({
         <ChartCard
           title="Model Usage"
           subtitle="Token consumption by model"
-          icon={PieChartIcon}
+          icon={ChartPie}
           modeColors={modeColors as typeof MODE_COLORS.chat}
         >
           <div className="flex items-center">
@@ -437,7 +437,7 @@ export function SessionAnalyticsDashboard({
                     border: `1px solid ${modeColors.border}`,
                     borderRadius: RADIUS.md,
                   }}
-                  formatter={(value: number | undefined) => value !== undefined ? [`${value} tokens`, 'Usage'] : ['', 'Usage']}
+                  formatter={((value: any) => value !== undefined ? [`${value} tokens`, 'Usage'] : ['', 'Usage']) as any}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -498,7 +498,7 @@ export function SessionAnalyticsDashboard({
                   border: `1px solid ${modeColors.border}`,
                   borderRadius: RADIUS.md,
                 }}
-                formatter={(value: number | undefined) => value !== undefined ? [`${value}ms`, ''] : ['', '']}
+                formatter={((value: any) => value !== undefined ? [`${value}ms`, ''] : ['', '']) as any}
               />
               <Line
                 type="monotone"
@@ -583,7 +583,7 @@ function DashboardHeader({
   const views = [
     { id: 'overview', label: 'Overview', icon: ChartBar },
     { id: 'tools', label: 'Tools', icon: Wrench },
-    { id: 'models', label: 'Models', icon: PieChartIcon },
+    { id: 'models', label: 'Models', icon: ChartPie },
     { id: 'topics', label: 'Topics', icon: Target },
   ];
 

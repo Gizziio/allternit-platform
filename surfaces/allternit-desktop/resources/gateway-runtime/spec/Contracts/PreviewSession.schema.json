@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/PreviewSession.schema.json",
+  "title": "Preview Session — Dev Server / App Preview Contract",
+  "description": "Manages a running dev server or preview process within a Code Mode session. Tracks ports, logs, and lifecycle.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "preview_id",
+    "session_id",
+    "command",
+    "status"
+  ],
+  "properties": {
+    "preview_id": {
+      "type": "string",
+      "pattern": "^prev_"
+    },
+    "session_id": {
+      "type": "string",
+      "pattern": "^sess_"
+    },
+    "command": {
+      "type": "string",
+      "description": "Command that starts the preview (e.g. 'pnpm dev', 'cargo run')"
+    },
+    "cwd": {
+      "type": "string",
+      "default": ".",
+      "description": "Working directory relative to session worktree/sandbox"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["starting", "running", "stopped", "failed", "crashed"]
+    },
+    "pid": {
+      "type": ["integer", "null"],
+      "description": "Process ID of the running preview"
+    },
+    "ports": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["port", "protocol"],
+        "properties": {
+          "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+          "protocol": { "type": "string", "enum": ["http", "https", "ws", "wss", "tcp"] },
+          "label": { "type": "string" }
+        }
+      },
+      "description": "Ports the preview server listens on"
+    },
+    "urls": {
+      "type": "array",
+      "items": { "type": "string", "format": "uri" },
+      "description": "Accessible URLs for the preview"
+    },
+    "logs_stream_ref": {
+      "type": ["string", "null"],
+      "description": "Reference to stdout/stderr log stream"
+    },
+    "started_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "stopped_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "kill_policy": {
+      "type": "string",
+      "enum": ["on_session_terminate", "manual", "on_changeset_apply"],
+      "default": "on_session_terminate",
+      "description": "When to automatically stop the preview"
+    },
+    "restart_on_apply": {
+      "type": "boolean",
+      "default": false,
+      "description": "Auto-restart preview after ChangeSet apply"
+    }
+  }
+}

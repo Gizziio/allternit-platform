@@ -1,0 +1,68 @@
+---
+title: Desktop
+description: The packaged Electron app — the primary distribution surface for Allternit
+---
+
+## Overview
+
+`allternit-desktop` is the Electron shell that wraps `allternit-platform` into a native macOS (and eventually Windows/Linux) desktop application. It is the **only packaged app** — all other surfaces either run in the browser or serve as libraries.
+
+## What it does
+
+- Launches and manages the `allternit-platform` Next.js server in the background
+- Provides a native window loading `http://localhost:3013`
+- Manages local VM provisioning via Apple Virtualization.framework (macOS)
+- Handles system tray, global shortcuts, and native menus
+- Distributes as a `.dmg` installer via electron-builder
+
+## Quick Chat (Global Hotkey)
+
+A floating mini-window can be toggled from anywhere on the system:
+
+| Action | Shortcut |
+|---|---|
+| Toggle Quick Chat window | `Cmd+Shift+A` |
+| Hide mini-window | `Esc` or click outside |
+
+The mini-window loads the platform at `http://localhost:3013/?mini=1` — frameless, always-on-top, centered on screen.
+
+## Local Development
+
+```bash
+cd surfaces/allternit-desktop
+
+# First: start the platform server
+cd ../allternit-platform && pnpm dev
+
+# Then: launch Electron (in a separate terminal)
+cd ../allternit-desktop && pnpm dev
+```
+
+## Build & Package
+
+```bash
+pnpm build:electron      # builds and packages as .app/.dmg
+pnpm build:electron:dmg  # DMG only
+```
+
+## Architecture
+
+```
+allternit-desktop/
+├── src/
+│   ├── main/
+│   │   └── unified-main.ts   # Entry point — window, tray, hotkeys, VM manager
+│   └── preload/
+│       └── index.ts          # Context bridge for renderer → main IPC
+├── native/
+│   └── vm-manager/           # Swift CLI for Apple Virtualization.framework
+└── resources/
+    └── bin/                  # Compiled Swift binaries
+```
+
+## IPC Channels
+
+| Channel | Direction | Purpose |
+|---|---|---|
+| `mini-window:hide` | Renderer → Main | Hide the Quick Chat window |
+| `mini-window:toggle` | Renderer → Main | Show/hide Quick Chat window |

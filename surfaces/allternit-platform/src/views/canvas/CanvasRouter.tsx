@@ -2,7 +2,7 @@
  * CanvasRouter.tsx
  * 
  * Routes artifacts to their appropriate renderers based on type.
- * This is the "program loader" for the A2r-Canvas computer.
+ * This is the "program loader" for the Allternit-Canvas computer.
  */
 
 import React, { useMemo } from 'react';
@@ -15,6 +15,7 @@ import { VideoRenderer } from './renderers/VideoRenderer';
 import { AudioRenderer } from './renderers/AudioRenderer';
 import { MermaidRenderer } from './renderers/MermaidRenderer';
 import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
+import type { MoATask } from '@/lib/api/moa-client';
 import { cn } from '@/lib/utils';
 
 export type RendererType = 
@@ -34,7 +35,7 @@ interface CanvasRouterProps {
   artifact: ArtifactUIPart | null;
   rendererType: RendererType;
   sessionId?: string;
-  onMoATaskUpdate?: (tasks: any[]) => void;
+  onMoATaskUpdate?: (tasks: MoATask[]) => void;
 }
 
 export function CanvasRouter({

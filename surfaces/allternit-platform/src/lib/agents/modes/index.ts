@@ -152,7 +152,7 @@ export const MODE_CAPABILITIES: Record<string, ModeCapability> = {
       'content-extraction',
       'form-filling',
     ],
-    providers: ['playwright', 'puppeteer', 'ui-tars'],
+    providers: ['playwright', 'puppeteer'],
     deterministicOutput: 'Web page content with screenshots and extracted data',
     implementationStatus: 'complete',
   },
@@ -190,6 +190,23 @@ export const MODE_CAPABILITIES: Record<string, ModeCapability> = {
     deterministicOutput: 'Generated video files with playback',
     implementationStatus: 'stub',
   },
+  'computer-use': {
+    id: 'computer-use',
+    name: 'Computer Use',
+    description: 'Automate browser and desktop with AI',
+    icon: 'Monitor',
+    color: '#a855f7',
+    features: [
+      'browser-automation',
+      'desktop-control',
+      'screenshot-capture',
+      'vision-planning',
+      'multi-adapter-waterfall',
+    ],
+    providers: ['browser.extension', 'browser.cdp', 'browser.playwright', 'desktop.pyautogui'],
+    deterministicOutput: 'Automated task execution with event stream and screenshots',
+    implementationStatus: 'complete',
+  },
 };
 
 // Helper to get mode by ID
@@ -212,9 +229,9 @@ export const MODE_IMPLEMENTATION_ROADMAP = {
   phase1: ['image', 'video'], // New modes needing full implementation
   phase2: ['research', 'data', 'slides'], // Enhancement needed
   phase3: ['assets', 'agents', 'flow'], // Integration with open source tools
-  complete: ['code', 'web'], // Already functional
+  complete: ['code', 'web', 'computer-use'], // Already functional
 };
 
 // Export individual mode services
-export * from './image-generation';
-export * from './video-generation';
+export { type GeneratedImage, type ImageGenerationConfig, type ImageGenerationResult, generateImages, generateImagesOpenAI, generateImagesPollinations, generateVariations, generateVariationsPollinations, getImageProviders } from './image-generation';
+export { type GeneratedVideo, VIDEO_PROVIDERS, VIDEO_TOOLS, type VideoEditOperation, type VideoGenerationConfig, type VideoGenerationResult, editVideo, extendVideo, generateVideo, generateVideoFromImage } from './video-generation';

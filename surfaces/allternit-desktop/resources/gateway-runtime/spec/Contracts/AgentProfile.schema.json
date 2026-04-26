@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/AgentProfile.schema.json",
+  "title": "Agent Profile Registry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "profiles"],
+  "properties": {
+    "version": { "type": "string" },
+    "profiles": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/AgentProfile" }
+    }
+  },
+  "$defs": {
+    "AgentProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "description",
+        "worker_allowlist",
+        "tool_allowlist",
+        "write_scope_policy",
+        "network_policy",
+        "receipts_required"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "description": { "type": "string" },
+        "worker_allowlist": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": []
+        },
+        "tool_allowlist": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": []
+        },
+        "write_scope_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "allowed_globs"],
+          "properties": {
+            "mode": { "type": "string", "enum": ["run_scoped"] },
+            "allowed_globs": {
+              "type": "array",
+              "items": { "type": "string" },
+              "minItems": 1
+            }
+          }
+        },
+        "network_policy": {
+          "type": "string",
+          "enum": ["none", "allowlist", "unrestricted"]
+        },
+        "receipts_required": { "type": "boolean" }
+      }
+    }
+  }
+}

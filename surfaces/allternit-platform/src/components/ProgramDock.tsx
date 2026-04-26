@@ -1,7 +1,7 @@
 /**
  * ProgramDock - Functional Program Launcher
  * 
- * Launches real A2r programs via the sidecar store.
+ * Launches real Allternit programs via the sidecar store.
  * Integrated into ChatView below the chat input.
  */
 

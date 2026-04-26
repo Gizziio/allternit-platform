@@ -260,7 +260,7 @@ const createCronSchedulerStore = () => create<CronSchedulerState>()(
         {
           name: 'agent-cron-scheduler',
           // Custom serialization for Map
-          storage: typeof localStorage !== 'undefined' ? localStorage : undefined,
+          storage: typeof localStorage !== 'undefined' ? localStorage as any : undefined,
           serialize: (state) => {
             return JSON.stringify({
               state: {

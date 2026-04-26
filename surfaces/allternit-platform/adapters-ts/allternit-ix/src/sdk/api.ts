@@ -1,7 +1,7 @@
 /**
- * A2R-IX API SDK
+ * Allternit-IX API SDK
  * 
- * Client for interacting with the A2R-IX API.
+ * Client for interacting with the Allternit-IX API.
  */
 
 import type { UIRoot } from '../types';
@@ -59,7 +59,7 @@ export interface ActionRequest {
 }
 
 /**
- * A2R-IX Capsule Client
+ * Allternit-IX Capsule Client
  */
 export class IXCapsuleClient {
   private config: IXCapsuleClientConfig;

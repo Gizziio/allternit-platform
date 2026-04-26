@@ -1356,7 +1356,7 @@ const SwarmOrchestratorInner: React.FC<SwarmOrchestratorProps> = ({
                   tooltip="Toggle Grid"
                 />
                 <ToolbarButton
-                  icon={showMinimap ? Minimize2 : ArrowsOut}
+                  icon={showMinimap ? ArrowsIn : ArrowsOut}
                   active={showMinimap}
                   onClick={() => setShowMinimap(!showMinimap)}
                   tooltip="Toggle Minimap"
@@ -1742,7 +1742,7 @@ function AgentPalette({
         
         {/* Search */}
         <div className="relative">
-          <Search
+          <MagnifyingGlass
             size={14}
             className="absolute left-3 top-1/2 -translate-y-1/2"
             style={{ color: TEXT.tertiary }}

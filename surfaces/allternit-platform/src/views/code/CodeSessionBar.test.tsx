@@ -1,18 +1,19 @@
+import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { CodeSessionBar } from './CodeSessionBar';
-import { createInitialCodeModeState, useCodeModeStore } from './CodeModeStore';
+import { createCodeModeFixtureState, useCodeModeStore } from './CodeModeStore';
 
 describe('CodeSessionBar', () => {
   beforeEach(() => {
-    useCodeModeStore.setState(createInitialCodeModeState());
+    useCodeModeStore.setState(createCodeModeFixtureState());
   });
 
   it('renders compact workspace and session controls for the active code session', () => {
     render(<CodeSessionBar />);
 
     expect(screen.getByTestId('code-sessionbar-workspace-selector')).toHaveValue(
-      'ws_a2rchitech',
+      'ws_allternit',
     );
     expect(screen.getByTestId('code-sessionbar-session-selector')).toHaveValue(
       'sess_code_ui',

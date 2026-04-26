@@ -2,7 +2,7 @@
   "name": "@allternit/extension",
   "private": true,
   "version": "1.0.0",
-  "description": "A2R unified Chrome extension \u2014 browser automation + page agent",
+  "description": "Allternit unified Chrome extension \u2014 browser automation + page agent",
   "type": "module",
   "scripts": {
     "dev": "wxt",

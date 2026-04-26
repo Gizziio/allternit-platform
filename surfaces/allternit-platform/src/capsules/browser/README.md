@@ -28,7 +28,7 @@ The Capsule Browser is a multi-modal content rendering system that supports:
 ### Basic Web Browsing
 
 ```tsx
-import { useBrowserStore } from '@a2r/platform';
+import { useBrowserStore } from '@allternit/platform';
 
 function MyComponent() {
   const { addTab } = useBrowserStore();
@@ -43,7 +43,7 @@ function MyComponent() {
 ### Opening A2UI Tabs
 
 ```tsx
-import { useBrowserStore, A2UIPayload } from '@a2r/platform';
+import { useBrowserStore, A2UIPayload } from '@allternit/platform';
 
 const payload: A2UIPayload = {
   version: '1.0.0',
@@ -323,7 +323,7 @@ interface BrowserStore {
 Open a sample A2UI tab for testing:
 
 ```tsx
-import { openSampleA2UITab } from '@a2r/platform';
+import { openSampleA2UITab } from '@allternit/platform';
 
 // Opens a demo A2UI tab
 openSampleA2UITab();

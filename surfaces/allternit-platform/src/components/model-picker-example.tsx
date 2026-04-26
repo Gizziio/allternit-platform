@@ -151,7 +151,7 @@ export function ChatInputWithModel({ onSend, disabled }: ChatInputWithModelProps
             <ModelPicker
               onSelect={(sel) => console.log("Selected:", sel)}
               trigger={
-                <Button variant="outline" size="icon" size={40}>
+                <Button variant="outline" size="icon">
                   <Sparkle size={16} />
                 </Button>
               }

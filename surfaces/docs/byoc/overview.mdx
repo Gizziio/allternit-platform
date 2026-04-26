@@ -1,0 +1,123 @@
+---
+title: BYOC Overview
+description: Bring Your Own Cloud - Deploy Allternit to your infrastructure
+---
+
+## What is BYOC?
+
+BYOC (Bring Your Own Cloud) lets you deploy the Allternit runtime agent to your own infrastructure. This gives you:
+
+- **Data privacy** - Your data never leaves your servers
+- **Compliance** - Meet SOC2, HIPAA, GDPR requirements
+- **Cost control** - No per-request pricing
+- **Customization** - Full control over the runtime environment
+
+## Architecture
+
+<Frame>
+  ```
+  ┌─────────────────┐         ┌─────────────────────┐
+  │  Control Plane  │         │     Data Plane      │
+  │  (Vercel)       │◄───────►│  (Your VPS/Server)  │
+  │                 │  HTTPS  │                     │
+  │  • Platform UI  │         │  • Runtime Agent    │
+  │  • API Gateway  │         │  • SQLite DB        │
+  │  • Agent Reg.   │         │  • Worker Engine    │
+  └─────────────────┘         └─────────────────────┘
+         ▲                               ▲
+         │                               │
+         │    WebSocket (Direct)         │
+         └───────────────────────────────┘
+              Browser → Runtime Agent
+  ```
+</Frame>
+
+## One-Line Installer
+
+Install the runtime agent on any Linux/macOS server:
+
+```bash
+curl -fsSL https://install.allternit.com | bash
+```
+
+This will:
+1. Download the latest runtime binary
+2. Install to `/usr/local/bin/allternit-runtime`
+3. Create systemd service (Linux)
+4. Generate default configuration
+
+## System Requirements
+
+| Resource | Minimum | Recommended |
+|----------|---------|-------------|
+| CPU | 2 cores | 4+ cores |
+| RAM | 2 GB | 4+ GB |
+| Disk | 10 GB | 50+ GB SSD |
+| OS | Ubuntu 20.04 | Ubuntu 22.04 LTS |
+
+## Supported Platforms
+
+- **Linux**: Ubuntu 20.04+, Debian 11+, CentOS 8+, RHEL 8+
+- **macOS**: 12+ (Monterey and later)
+- **Architecture**: x86_64, ARM64
+
+## Configuration
+
+The runtime is configured via `runtime.yaml`:
+
+```yaml
+server:
+  host: 0.0.0.0
+  port: 8080
+  
+auth:
+  api_key: ${ALLTERNIT_API_KEY}
+  
+control_plane:
+  endpoint: https://api.allternit.com
+  
+storage:
+  path: /var/lib/allternit/data.sqlite
+  
+logging:
+  level: info
+  format: json
+```
+
+## Deployment Options
+
+<CardGroup cols={2}>
+  <Card title="VPS/Dedicated Server" icon="server">
+    Run on DigitalOcean, Linode, Hetzner, or any VPS provider
+  </Card>
+  <Card title="On-Premises" icon="building">
+    Deploy to your own data center or private cloud
+  </Card>
+  <Card title="Edge Devices" icon="cpu">
+    Run on edge hardware with limited resources
+  </Card>
+  <Card title="Homelab" icon="home">
+    Perfect for personal projects and experimentation
+  </Card>
+</CardGroup>
+
+## Security
+
+- API key authentication required
+- TLS encryption for all connections
+- Local SQLite database (no external DB needed)
+- Optional mTLS for enhanced security
+
+## Next Steps
+
+<CardGroup cols={3}>
+  <Card title="Installation" icon="download" href="/byoc/installation">
+    Detailed installation guide
+  </Card>
+  <Card title="Configuration" icon="settings" href="/byoc/configuration">
+    Configure the runtime
+  </Card>
+  <Card title="Deployment" icon="rocket" href="/byoc/deployment">
+    Production deployment tips
+  </Card>
+</CardGroup>

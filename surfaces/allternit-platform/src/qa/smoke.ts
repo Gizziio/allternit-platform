@@ -360,7 +360,7 @@ export async function smokeExecutionBridge(): Promise<boolean> {
 
 export function smokeBridge(): boolean {
   try {
-    const { initLegacyBridge, legacyBridge } = require('../integration/a2r/legacy.bridge');
+    const { initLegacyBridge, legacyBridge } = require('../integration/allternit/legacy.bridge');
     
     // 1. Initial state
     if (legacyBridge.gateway !== null) throw new Error('Gateway should be null initially');

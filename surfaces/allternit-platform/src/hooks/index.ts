@@ -1,4 +1,6 @@
 export { useBudget } from './useBudget';
+export { usePanelLayout, type PanelLayout, type UsePanelLayoutReturn } from './usePanelLayout';
+export { useViewMode, type ViewMode } from './useViewMode';
 export { useReplay } from './useReplay';
 export { usePrewarm } from './usePrewarm';
 export { useRuntimeExecutionMode } from './useRuntimeExecutionMode';

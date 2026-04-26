@@ -17,7 +17,7 @@ const meta: Meta<typeof FloatingOrb> = {
   tags: ['autodocs'],
   parameters: {
     layout: 'fullscreen',
-    a2r: {
+    allternit: {
       componentId: 'shell-floating-orb',
       evidence: {
         types: ['INTERACTION_TEST', 'VISUAL_SNAPSHOT'],

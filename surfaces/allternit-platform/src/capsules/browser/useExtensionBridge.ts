@@ -54,7 +54,7 @@ export function useExtensionBridge() {
             case 'activity':
               // Extension sends activity updates
               useBrowserAgentStore.setState({ 
-                pageAgentActivity: message.payload as { type: string; [key: string]: unknown } | null 
+                pageAgentActivity: message.payload as any 
               });
               break;
 
@@ -62,7 +62,7 @@ export function useExtensionBridge() {
               // Extension sends history updates
               if (message.payload && typeof message.payload === 'object' && 'events' in message.payload) {
                 useBrowserAgentStore.setState({ 
-                  pageAgentHistory: message.payload.events as unknown[] 
+                  pageAgentHistory: (message.payload as any).events as any[] 
                 });
               }
               break;

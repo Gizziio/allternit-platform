@@ -43,7 +43,7 @@ test.describe('Browser View Visual Verification', () => {
     expect(tabText?.trim()).toBeTruthy();
 
     // Verify iframe exists (web content container)
-    const iframe = page.locator('[data-testid="a2r-iframe-content"]');
+    const iframe = page.locator('[data-testid="allternit-iframe-content"]');
     const iframeCount = await iframe.count();
     console.log(`✅ Iframe count: ${iframeCount}`);
     

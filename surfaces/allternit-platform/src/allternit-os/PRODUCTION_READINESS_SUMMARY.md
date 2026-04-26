@@ -1,11 +1,11 @@
-# A2rchitect Super-Agent OS - Production Readiness Summary
+# allternit Super-Agent OS - Production Readiness Summary
 
 ## ✅ Completed Production-Ready Components
 
 ### 1. FileSystem Service (`services/FileSystemService.ts`)
 **Status: Production Ready**
 
-Real filesystem integration for `.a2r/drive`:
+Real filesystem integration for `.allternit/drive`:
 - **Three backends**: Electron IPC, HTTP API, Memory (fallback)
 - **Features**: Folder navigation, upload, download, search, stats
 - **Events**: Real-time file system event subscription
@@ -71,10 +71,10 @@ Slide deck with export:
 - **Fullscreen**: Keyboard shortcut (F) support
 - **Keyboard Navigation**: Arrow keys, space, home/end
 
-### 7. WebSocket Rails Bridge (`kernel/A2RRailsWebSocketBridge.ts`)
+### 7. WebSocket Rails Bridge (`kernel/AllternitRailsWebSocketBridge.ts`)
 **Status: Production Ready**
 
-Real-time connection to A2R Rails:
+Real-time connection to Allternit Rails:
 - **WebSocket**: Direct WS connection to Rails service
 - **Auto-reconnect**: Exponential backoff retry
 - **Message Types**: dag.update, bus.message, ledger.event, etc.
@@ -121,14 +121,14 @@ Real data grid with Python integration:
 - **CSV Import/Export**: Parse and generate CSV files
 - **Python Visualization**: Execute matplotlib/plotly/seaborn charts
 - **Real Charts**: Display rendered chart output
-- **Save to Drive**: Export grid data to A2R Drive
+- **Save to Drive**: Export grid data to Allternit Drive
 - **Cell Editing**: Inline editing with type support
 
 ## Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        A2rchitect UI                             │
+│                        allternit UI                             │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
 │  │  Programs   │  │   Services  │  │   Kernel    │             │
 │  │             │  │             │  │   Bridge    │             │
@@ -141,14 +141,14 @@ Real data grid with Python integration:
 │         └─────────────────┴─────────────────┘                   │
 │                           │                                     │
 │              ┌────────────┴────────────┐                       │
-│              │    A2rCanvas (Router)    │                       │
+│              │    AllternitCanvas (Router)    │                       │
 │              └──────────────────────────┘                       │
 └─────────────────────────────────────────────────────────────────┘
                                     │
                     ┌───────────────┼───────────────┐
                     ▼               ▼               ▼
             ┌──────────┐    ┌──────────┐    ┌──────────┐
-            │ 1-Kernel │    │A2R Rails │    │ Workspace│
+            │ 1-Kernel │    │Allternit Rails │    │ Workspace│
             │  Daemon  │    │   WS     │    │ Service  │
             └──────────┘    └──────────┘    └──────────┘
 ```
@@ -168,7 +168,7 @@ import {
   launchResearchDoc, 
   launchDataGrid,
   launchWorkflowBuilder 
-} from './a2r-os';
+} from './allternit-os';
 
 // Launch with real filesystem integration
 const programId = launchWorkflowBuilder(
@@ -181,7 +181,7 @@ const programId = launchWorkflowBuilder(
 
 ### Use Services Directly
 ```typescript
-import { fileSystemService, pythonExecutionService } from './a2r-os';
+import { fileSystemService, pythonExecutionService } from './allternit-os';
 
 // Upload file to real drive
 await fileSystemService.uploadFile(file, 'Documents');
@@ -196,7 +196,7 @@ await pythonExecutionService.executeVisualization(
 
 ### WebSocket Connection
 ```typescript
-import { useRailsWebSocket } from './a2r-os';
+import { useRailsWebSocket } from './allternit-os';
 
 function WorkflowMonitor() {
   const { dagState, messages, isConnected } = useRailsWebSocket({
@@ -233,7 +233,7 @@ ALLTERNIT_ENABLE_FS_WATCH=true
 - `services/FileSystemService.ts` - Real filesystem service
 - `services/PythonExecutionService.ts` - Real Python execution
 - `services/index.ts` - Services module exports
-- `kernel/A2RRailsWebSocketBridge.ts` - Real-time Rails connection
+- `kernel/AllternitRailsWebSocketBridge.ts` - Real-time Rails connection
 - `programs/WorkflowBuilderProgram.tsx` - Phase 6 implementation
 
 ### Updated Files (8)
@@ -250,7 +250,7 @@ ALLTERNIT_ENABLE_FS_WATCH=true
 
 1. **OrchestratorProgram**: Enhance with real kernel agent status polling
 2. **BrowserScreenshotCitations**: Integrate with browser-use for real screenshots
-3. **A2r Console**: Agent Terminal, Kanban, Automation tabs
+3. **Allternit Console**: Agent Terminal, Kanban, Automation tabs
 
 ## Production Checklist
 

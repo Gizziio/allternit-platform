@@ -191,7 +191,7 @@ class DeterministicExecutor {
 
 You are executing this command in a DETERMINISTIC environment. Follow these rules:
 
-1. **Only use defined actions**: ${loaded.plugin.capabilities?.join(', ') || 'analyze, generate'}
+1. **Only use defined actions**: ${(loaded.plugin as any).capabilities?.join(', ') || 'analyze, generate'}
 2. **Track all actions**: Every file read, API call, or data access must be logged
 3. **No external state**: Do not rely on information outside the provided context
 4. **Reproducible**: The same inputs must produce the same outputs
@@ -364,7 +364,7 @@ export async function exportToPortableFormat(pluginId: string): Promise<Portable
     description: plugin.description,
     author: { name: plugin.author, verified: plugin.author === 'Anthropic' },
     category: plugin.category,
-    capabilities: plugin.capabilities || [],
+    capabilities: (plugin as any).capabilities || [],
     commands,
     skills,
   };

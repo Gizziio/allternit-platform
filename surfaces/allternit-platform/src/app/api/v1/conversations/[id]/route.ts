@@ -2,7 +2,7 @@
  * GET /v1/conversations/:id
  *
  * Retrieve a Conversation by ID.
- * Proxies to the Gizzi session endpoint for live session state.
+ * Checks local DB first, then falls back to Gizzi session endpoint.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -11,6 +11,7 @@ import {
   resolveRuntimeBackendForAuthUserId,
   toGatewayAuthorizationHeader,
 } from "@/lib/runtime-backend";
+import { prisma } from "@/lib/db";
 
 export const runtime = "nodejs";
 
@@ -31,6 +32,27 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ): Promise<Response> {
   const { id } = await params;
+
+  // Check local DB first
+  const dbConversation = await prisma.conversation.findUnique({
+    where: { id },
+    include: {
+      _count: { select: { messages: true, branches: true } },
+    },
+  });
+
+  if (dbConversation) {
+    return NextResponse.json({
+      id: dbConversation.id,
+      object: "conversation",
+      created_at: dbConversation.createdAt.toISOString(),
+      updated_at: dbConversation.updatedAt.toISOString(),
+      title: dbConversation.title,
+      parent_conversation_id: dbConversation.parentConversationId,
+      message_count: dbConversation._count.messages,
+      branch_count: dbConversation._count.branches,
+    });
+  }
 
   try {
     const gizziAuth = getGizziAuthHeader();

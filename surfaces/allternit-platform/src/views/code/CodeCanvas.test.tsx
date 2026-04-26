@@ -10,16 +10,7 @@ const embeddedSessionState = vi.hoisted(() => ({
   descriptor: { sessionMode: 'regular' as 'agent' | 'regular', agentId: null as string | null },
 }));
 
-vi.mock('@/lib/agents/embedded-agent-session.store', () => ({
-  useEmbeddedAgentSession: () => embeddedSessionState,
-  useEmbeddedAgentSessionStore: Object.assign(
-    (selector?: (state: any) => unknown) => {
-      const state = { sessionIdBySurface: { chat: null, cowork: null, code: null, browser: null }, clearSurfaceSession: vi.fn() };
-      return selector ? selector(state) : state;
-    },
-    { getState: () => ({ clearSurfaceSession: vi.fn() }) },
-  ),
-}));
+
 
 vi.mock('@/lib/agents/surface-agent-context', () => ({
   useSurfaceAgentSelection: () => ({
@@ -27,6 +18,7 @@ vi.mock('@/lib/agents/surface-agent-context', () => ({
     selectedAgentId: null,
     selectedAgent: null,
   }),
+  useSurfaceAgentModeEnabled: () => embeddedSessionState.isEmbedded && embeddedSessionState.descriptor.sessionMode === 'agent',
   buildAgentConversationContext: () => ({ conversationMode: 'llm' }),
 }));
 
@@ -57,8 +49,14 @@ vi.mock('../../runner/runner.store', () => ({
   }),
 }));
 
+interface MockDrawerStore {
+  openDrawer: ReturnType<typeof vi.fn>;
+  setConsoleTab: ReturnType<typeof vi.fn>;
+  drawers: { console: { open: boolean; height: number; activeTab: string } };
+}
+
 vi.mock('../../drawers/drawer.store', () => ({
-  useDrawerStore: (selector: (state: any) => unknown) =>
+  useDrawerStore: (selector: (state: MockDrawerStore) => unknown) =>
     selector({
       openDrawer,
       setConsoleTab,
@@ -104,12 +102,12 @@ vi.mock('@/components/ai-elements/shimmer', () => ({
   Shimmer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-import { createInitialCodeModeState, useCodeModeStore } from './CodeModeStore';
+import { createCodeModeFixtureState, useCodeModeStore, type CodeWorkspaceRecord } from './CodeModeStore';
 import { CodeCanvas } from './CodeCanvas';
 
 describe('CodeCanvas', () => {
   beforeEach(() => {
-    useCodeModeStore.setState(createInitialCodeModeState());
+    useCodeModeStore.setState(createCodeModeFixtureState());
     embeddedSessionState.isEmbedded = false;
     embeddedSessionState.sessionId = null;
     embeddedSessionState.session = null;
@@ -189,11 +187,11 @@ describe('CodeCanvas', () => {
   });
 
   it('keeps rendering when persisted workspace data is missing repo status', () => {
-    const initialState = createInitialCodeModeState();
+    const fixtureState = createCodeModeFixtureState();
     useCodeModeStore.setState({
-      ...initialState,
-      workspaces: initialState.workspaces.map((workspace, index) =>
-        index === 0 ? ({ ...workspace, repo_status: undefined } as any) : workspace,
+      ...fixtureState,
+      workspaces: fixtureState.workspaces.map((workspace, index) =>
+        index === 0 ? ({ ...workspace, repo_status: undefined } as unknown as CodeWorkspaceRecord) : workspace,
       ),
     });
     chatState.threads = [{ id: 'thread-code' }];

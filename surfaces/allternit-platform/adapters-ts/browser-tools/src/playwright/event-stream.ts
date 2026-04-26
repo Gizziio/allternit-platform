@@ -192,10 +192,10 @@ class EventStreamManager {
     // Inject mutation observer script
     const script = `
       (() => {
-        if (window.__a2rMutationObserver) return;
+        if (window.__allternitMutationObserver) return;
         
-        window.__a2rMutations = [];
-        window.__a2rMutationObserver = new MutationObserver((mutations) => {
+        window.__allternitMutations = [];
+        window.__allternitMutationObserver = new MutationObserver((mutations) => {
           mutations.forEach((mutation) => {
             const record = {
               type: mutation.type,
@@ -205,11 +205,11 @@ class EventStreamManager {
               removedNodes: mutation.removedNodes.length,
               timestamp: Date.now(),
             };
-            window.__a2rMutations.push(record);
+            window.__allternitMutations.push(record);
           });
         });
         
-        window.__a2rMutationObserver.observe(document.body, {
+        window.__allternitMutationObserver.observe(document.body, {
           childList: true,
           subtree: true,
           attributes: true,
@@ -230,8 +230,8 @@ class EventStreamManager {
     const pollInterval = setInterval(async () => {
       try {
         const mutations = await page.evaluate(() => {
-          const m = (window as any).__a2rMutations || [];
-          (window as any).__a2rMutations = [];
+          const m = (window as any).__allternitMutations || [];
+          (window as any).__allternitMutations = [];
           return m;
         });
 
@@ -260,8 +260,8 @@ class EventStreamManager {
   ): void {
     const script = `
       document.addEventListener('click', (e) => {
-        if (window.__a2rClickHandler) {
-          window.__a2rClickHandler({
+        if (window.__allternitClickHandler) {
+          window.__allternitClickHandler({
             tag: e.target.tagName,
             id: e.target.id,
             class: e.target.className,
@@ -287,7 +287,7 @@ class EventStreamManager {
       this.emit(subscription, event);
     };
 
-    page.exposeFunction('__a2rClickHandler', handler);
+    page.exposeFunction('__allternitClickHandler', handler);
   }
 
   private setupInputListener(
@@ -296,8 +296,8 @@ class EventStreamManager {
   ): void {
     const script = `
       document.addEventListener('input', (e) => {
-        if (window.__a2rInputHandler && e.target.tagName === 'INPUT') {
-          window.__a2rInputHandler({
+        if (window.__allternitInputHandler && e.target.tagName === 'INPUT') {
+          window.__allternitInputHandler({
             tag: e.target.tagName,
             type: e.target.type,
             name: e.target.name,
@@ -327,7 +327,7 @@ class EventStreamManager {
       this.emit(subscription, event);
     };
 
-    page.exposeFunction('__a2rInputHandler', handler);
+    page.exposeFunction('__allternitInputHandler', handler);
   }
 
   private setupScrollListener(
@@ -339,8 +339,8 @@ class EventStreamManager {
       window.addEventListener('scroll', () => {
         clearTimeout(scrollTimeout);
         scrollTimeout = setTimeout(() => {
-          if (window.__a2rScrollHandler) {
-            window.__a2rScrollHandler({
+          if (window.__allternitScrollHandler) {
+            window.__allternitScrollHandler({
               x: window.scrollX,
               y: window.scrollY,
             });
@@ -362,7 +362,7 @@ class EventStreamManager {
       this.emit(subscription, event);
     };
 
-    page.exposeFunction('__a2rScrollHandler', handler);
+    page.exposeFunction('__allternitScrollHandler', handler);
   }
 
   private setupScreenshotInterval(

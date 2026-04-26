@@ -172,6 +172,32 @@ export function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => voi
                     Lv{agentCharacterStats.level}
                   </span>
                 )}
+                {/* Teammate profile status */}
+                {agent.teammateProfile && (
+                  <span style={{
+                    padding: '2px 8px',
+                    borderRadius: '999px',
+                    background: agent.teammateProfile.status === 'busy' ? 'rgba(245, 158, 11, 0.15)' : agent.teammateProfile.status === 'offline' ? 'rgba(107, 114, 128, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                    color: agent.teammateProfile.status === 'busy' ? '#f59e0b' : agent.teammateProfile.status === 'offline' ? '#9ca3af' : '#10b981',
+                    fontSize: '11px',
+                    fontWeight: 500
+                  }}>
+                    {agent.teammateProfile.status === 'idle' ? 'Available' : agent.teammateProfile.status === 'busy' ? 'Busy' : 'Offline'}
+                  </span>
+                )}
+                {/* Assignment count */}
+                {(agent.assignedBoardItemIds?.length ?? 0) > 0 && (
+                  <span style={{
+                    padding: '2px 8px',
+                    borderRadius: '999px',
+                    background: 'rgba(139, 92, 246, 0.15)',
+                    color: '#a78bfa',
+                    fontSize: '11px',
+                    fontWeight: 500
+                  }}>
+                    {agent.assignedBoardItemIds?.length ?? 0} board
+                  </span>
+                )}
               </div>
             </div>
           </div>

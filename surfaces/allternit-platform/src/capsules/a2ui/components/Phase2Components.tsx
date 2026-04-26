@@ -198,7 +198,6 @@ export function RichTextRenderer({
                 key={item}
                 variant="ghost"
                 size="icon"
-                size={32}
                 onClick={button.action}
                 disabled={isDisabled}
                 title={button.label}

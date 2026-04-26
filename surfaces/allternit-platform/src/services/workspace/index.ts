@@ -2,5 +2,5 @@
  * Workspace Service
  */
 
-export * from './client';
-export { default as workspaceClient } from './client';
+export type { CreatePaneRequest, CreateSessionRequest, Pane, PaneMetadata, Session, SessionMetadata } from './client';
+export { workspaceClient } from './client';

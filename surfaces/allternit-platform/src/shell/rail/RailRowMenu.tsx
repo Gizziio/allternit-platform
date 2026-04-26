@@ -1,5 +1,6 @@
 import React from 'react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import type { Icon } from '@phosphor-icons/react';
 import {
   DotsThreeOutline,
   PencilSimple,
@@ -7,7 +8,13 @@ import {
   Trash,
 } from '@phosphor-icons/react';
 
-export function RailRowMenu({ onRename, onCopy, onDelete }: any) {
+interface RailRowMenuProps {
+  onRename?: () => void;
+  onCopy?: () => void;
+  onDelete?: () => void;
+}
+
+export function RailRowMenu({ onRename, onCopy, onDelete }: RailRowMenuProps): JSX.Element {
   return (
     <DropdownMenu.Root>
       <DropdownMenu.Trigger asChild>
@@ -42,7 +49,14 @@ export function RailRowMenu({ onRename, onCopy, onDelete }: any) {
   );
 }
 
-function DropdownMenuItem({ icon: Icon, label, onClick, color }: any) {
+interface DropdownMenuItemProps {
+  icon: Icon;
+  label: string;
+  onClick?: () => void;
+  color?: string;
+}
+
+function DropdownMenuItem({ icon: Icon, label, onClick, color }: DropdownMenuItemProps): JSX.Element {
   return (
     <DropdownMenu.Item
       onClick={onClick}

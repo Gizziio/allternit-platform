@@ -1,4 +1,4 @@
-# A2rchitect Super-Agent OS - Hand-off Documentation
+# allternit Super-Agent OS - Hand-off Documentation
 
 **Status:** Phase 1 Complete (Infrastructure)  
 **Date:** 2026-03-09  
@@ -8,7 +8,7 @@
 
 ## 📋 Executive Summary
 
-The A2rchitect Super-Agent OS infrastructure has been implemented. This transforms the sidecar from static panels into a dynamic, multi-program "Utility Pane" that can render complex agent outputs (research documents, spreadsheets, slides) independently of the chat view.
+The allternit Super-Agent OS infrastructure has been implemented. This transforms the sidecar from static panels into a dynamic, multi-program "Utility Pane" that can render complex agent outputs (research documents, spreadsheets, slides) independently of the chat view.
 
 ### What's Been Built
 
@@ -16,7 +16,7 @@ The A2rchitect Super-Agent OS infrastructure has been implemented. This transfor
 |-----------|--------|-------------|
 | Program Types | ✅ | Type-safe state definitions for all 11 program types |
 | useSidecarStore | ✅ | Zustand store with persistence, multi-program support |
-| A2rCanvas | ✅ | Main container with tab bar, resizing, program router |
+| AllternitCanvas | ✅ | Main container with tab bar, resizing, program router |
 | SparkPage | ✅ | Full Genspark-style research document renderer |
 | AI-Sheets | ✅ | Interactive grid with Python viz support |
 | AI-Slides | ✅ | Presentation builder with themes & presenter mode |
@@ -30,7 +30,7 @@ The A2rchitect Super-Agent OS infrastructure has been implemented. This transfor
 ## 🗂️ File Structure
 
 ```
-src/a2r-os/
+src/allternit-os/
 ├── index.ts                    # Main exports
 ├── HANDOFF_DOCUMENTATION.md    # This file
 ├── types/
@@ -38,7 +38,7 @@ src/a2r-os/
 ├── stores/
 │   └── useSidecarStore.ts      # State management
 ├── components/
-│   └── A2rCanvas.tsx           # Main UI container
+│   └── AllternitCanvas.tsx           # Main UI container
 ├── programs/
 │   ├── SparkPageProgram.tsx    # Research documents ⭐
 │   ├── AISheetsProgram.tsx     # Data grid + viz ⭐
@@ -54,10 +54,10 @@ src/a2r-os/
 
 ## 🚀 Quick Start
 
-### 1. Add A2rCanvas to Your Layout
+### 1. Add AllternitCanvas to Your Layout
 
 ```tsx
-import { A2rCanvas } from './a2r-os';
+import { AllternitCanvas } from './allternit-os';
 
 function App() {
   return (
@@ -68,7 +68,7 @@ function App() {
       </main>
       
       {/* Utility Pane - persists across view switches */}
-      <A2rCanvas className="flex-shrink-0" />
+      <AllternitCanvas className="flex-shrink-0" />
     </div>
   );
 }
@@ -77,7 +77,7 @@ function App() {
 ### 2. Launch Programs from Agents
 
 ```tsx
-import { useLaunchProtocol, processAgentMessage } from './a2r-os';
+import { useLaunchProtocol, processAgentMessage } from './allternit-os';
 
 function ChatAgent({ threadId }) {
   const launcher = useLaunchProtocol(threadId);
@@ -122,7 +122,7 @@ Agents can embed launch commands in their responses:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    A2rchitect Shell                         │
+│                    allternit Shell                         │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
 │  │   Chat      │  │    Code     │  │   Browser   │  Views  │
 │  │   View      │  │    View     │  │    View     │         │
@@ -133,7 +133,7 @@ Agents can embed launch commands in their responses:
 │  ═══════════════════════════════════════════════════════   │
 │                                                             │
 │  ┌─────────────────────────────────────────────────────┐   │
-│  │              Utility Pane (A2rCanvas)               │   │
+│  │              Utility Pane (AllternitCanvas)               │   │
 │  │  ┌─────┬─────┬─────┬─────────────────────────────┐  │   │
 │  │  │ 📝  │ 📊  │ 🎬  │      Program Tabs           │  │   │
 │  │  └─────┴─────┴─────┴─────────────────────────────┘  │   │
@@ -164,7 +164,7 @@ Agent Response
       │
       ▼
 ┌─────────────┐
-│  A2rCanvas  │──► Renders based on activeProgram.type
+│  AllternitCanvas  │──► Renders based on activeProgram.type
 └─────────────┘
       │
       ▼
@@ -196,9 +196,9 @@ setExpanded(expanded: boolean): void
 setWidth(width: number): void
 
 // Selectors
-getActiveProgram(): A2rProgram | null
-getProgramsByType(type: A2rProgramType): A2rProgram[]
-getProgramsByThread(threadId: string): A2rProgram[]
+getActiveProgram(): AllternitProgram | null
+getProgramsByType(type: AllternitProgramType): AllternitProgram[]
+getProgramsByThread(threadId: string): AllternitProgram[]
 ```
 
 ### Launch Protocol
@@ -368,7 +368,7 @@ Before passing to the next phase, verify:
 ### Priority 3: Missing Programs
 
 1. **Live Dev** - Harden iframe sandbox, add hot-reload
-2. **Media Drive** - Integrate with `.a2r/drive` filesystem
+2. **Media Drive** - Integrate with `.allternit/drive` filesystem
 3. **MoA Cockpit** - Real-time agent status from kernel
 4. **Telephony** - Vapi.ai WebRTC integration
 5. **Draw Studio** - Canvas masking + inpainting API
@@ -381,7 +381,7 @@ Before passing to the next phase, verify:
 1. **SparkPage**: Citation popovers can overflow viewport on small screens
 2. **AI-Sheets**: No formula evaluation (needs kernel integration)
 3. **AI-Slides**: Theme changes don't animate smoothly
-4. **A2rCanvas**: Resize handle doesn't show cursor on some browsers
+4. **AllternitCanvas**: Resize handle doesn't show cursor on some browsers
 
 ---
 
@@ -428,7 +428,7 @@ interface KernelCommands {
 // Agents should be able to use these tools
 interface AgentTools {
   launch_program: {
-    type: A2rProgramType;
+    type: AllternitProgramType;
     title: string;
     initialState: unknown;
   };

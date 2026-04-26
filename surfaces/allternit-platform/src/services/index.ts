@@ -5,16 +5,16 @@
  */
 
 // Browser automation
-export * from './browserEngine';
+export { BrowserEngine, type BrowserEngineOptions, createBrowserEngine, useBrowserEngine } from './browserEngine';
 
 // Budget calculations
-export * from './budgetCalculator';
+export { BudgetCalculator, type BudgetPercentages, calculateBudgetPercentages, createBudgetCalculator, defaultQuotaForm, formatBytes, formatHours } from './budgetCalculator';
 
 // Pool management
-export * from './poolManager';
+export { PoolManager, type PoolManagerOptions, createDefaultPoolForm, createPoolManager } from './poolManager';
 
 // Workflow engine
-export * from './workflowEngine';
+export { type LayoutOptions, type ValidationResult, WorkflowDesignerEngine, autoLayoutNodes, createWorkflowEngine, validateWorkflow } from './workflowEngine';
 
 // Visual verification
-export * from './visualVerificationApi';
+export { type Artifact, type ArtifactType, type BatchVerificationRequest, type BatchVerificationResponse, type TrendDataPoint, type VerificationPolicy, type VerificationResult, type VerificationStatus, VerificationWebSocketClient, useVerificationWebSocket, visualVerificationApi } from './visualVerificationApi';

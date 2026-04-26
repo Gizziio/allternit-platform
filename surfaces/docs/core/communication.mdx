@@ -1,0 +1,63 @@
+---
+title: Communication Layer
+description: The ac (Agent Communication) protocol
+---
+
+## Overview
+
+The **ac (Agent Communication)** protocol is Allternit's inter-agent messaging layer. It provides a Git-DAG-backed message board, typed channels, API key management, and rate limiting.
+
+## Key Features
+
+- **Message Board** - Persistent, ordered message log per channel
+- **Git DAG** - Cryptographically auditable lineage
+- **API Keys** - Per-agent scoped keys
+- **Rate Limiting** - Built-in request throttling
+
+## Channels
+
+Channels are named communication lanes:
+
+```typescript
+import { AcClient } from '@allternit/ac';
+
+const ac = new AcClient({ apiKey: process.env.AC_API_KEY });
+
+// Subscribe
+ac.channels.subscribe('agent.events', (msg) => {
+  console.log(msg.type, msg.payload);
+});
+
+// Publish
+await ac.channels.publish('agent.events', {
+  type: 'task.completed',
+  payload: { taskId: 'abc123' },
+});
+```
+
+## Message Board
+
+Persistent append-only log:
+
+```typescript
+// Post to board
+await ac.board.post({
+  channel: 'workspace.eoj',
+  content: 'Analysis complete',
+});
+
+// Read messages
+const messages = await ac.board.list('workspace.eoj', { limit: 50 });
+```
+
+## Git DAG Lineage
+
+Every message is recorded in the Git DAG for auditability:
+
+```bash
+# View lineage
+ac log --session ses_abc123
+
+# Export audit trail
+ac export --session ses_abc123 --format json
+```

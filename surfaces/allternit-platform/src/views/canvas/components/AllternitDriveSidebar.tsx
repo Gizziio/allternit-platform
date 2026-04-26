@@ -1,7 +1,7 @@
 /**
- * A2rDriveSidebar.tsx
+ * AllternitDriveSidebar.tsx
  * 
- * Asset manager sidebar for A2r-Drive.
+ * Asset manager sidebar for Allternit-Drive.
  * Shows generated/downloaded assets (images, documents, code, audio, video).
  */
 
@@ -43,18 +43,18 @@ interface Asset {
   metadata?: Record<string, unknown>;
 }
 
-interface A2rDriveSidebarProps {
+interface AllternitDriveSidebarProps {
   sessionId?: string;
   onSelectArtifact: (artifactId: string) => void;
   onClose?: () => void;
 }
 
 
-export function A2rDriveSidebar({
+export function AllternitDriveSidebar({
   sessionId,
   onSelectArtifact,
   onClose,
-}: A2rDriveSidebarProps) {
+}: AllternitDriveSidebarProps) {
   // State
   const [activeFilter, setActiveFilter] = useState<AssetType>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -89,7 +89,7 @@ export function A2rDriveSidebar({
       case 'image': return Image;
       case 'document': return FileText;
       case 'code': return FileCode;
-      case 'audio': return Music;
+      case 'audio': return MusicNote;
       case 'video': return Video;
       default: return File;
     }
@@ -119,7 +119,7 @@ export function A2rDriveSidebar({
         <div className="flex items-center gap-2">
           <FolderOpen className="w-4 h-4 text-[var(--accent-primary)]" />
           <span className="text-sm font-medium text-[var(--text-primary)]">
-            A2r-Drive
+            Allternit-Drive
           </span>
           <span className="text-xs text-[var(--text-tertiary)]">
             {filteredAssets.length} items
@@ -338,7 +338,7 @@ export function A2rDriveSidebar({
 
       {/* Footer */}
       <div className="h-10 border-t border-[var(--border-subtle)] flex items-center justify-between px-4 text-xs text-[var(--text-tertiary)]">
-        <span>A2r-Drive</span>
+        <span>Allternit-Drive</span>
         <span>{formatSize(assets.reduce((sum, a) => sum + a.size, 0))} used</span>
       </div>
     </div>

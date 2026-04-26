@@ -38,11 +38,11 @@ export async function startRun(session: RunSession): Promise<void> {
       if (signal.aborted) break;
 
       // 1. Fetch screenshot
-      const screenshotB64 = await fetchScreenshot(signal);
+      const screenshotB64 = await fetchScreenshot(session.sessionId, signal);
       if (!screenshotB64) {
         emitState(session, {
           status: 'Error',
-          error: 'Could not reach computer-use service — is it running on port 3010?',
+          error: 'Could not reach ACU gateway — is it running on port 8760?',
         });
         return;
       }
@@ -142,7 +142,7 @@ export async function startRun(session: RunSession): Promise<void> {
 
         // 4. Execute
         if (enriched.type !== 'done') {
-          const result = await executeAction(enriched, signal).catch((err) => {
+          const result = await executeAction(enriched, session.sessionId, signal).catch((err) => {
             if ((err as Error).name === 'AbortError') return null;
             return { status: 'failed' as const, error: (err as Error).message };
           });

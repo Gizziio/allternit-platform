@@ -86,7 +86,7 @@ export async function POST(request: NextRequest): Promise<Response> {
         }
 
         const definitions = await mcpClient.listTools();
-        const tool = definitions.tools.find((entry) => entry.name === name);
+        const tool = definitions.tools.find((entry: any) => entry.name === name);
 
         if (!tool) {
           return NextResponse.json(

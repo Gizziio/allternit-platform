@@ -1,5 +1,5 @@
 /**
- * A2rchitect Super-Agent OS - Agent Runtime Hook
+ * allternit Super-Agent OS - Agent Runtime Hook
  * 
  * Main integration hook for the Chat interface to interact with:
  * - Kernel protocol (message processing)
@@ -13,7 +13,7 @@ import { useSidecarStore } from '../stores/useSidecarStore';
 import { useKernelProtocol } from '../kernel/KernelProtocol';
 import { useKernelBridge } from '../kernel/KernelBridge';
 import { useLaunchProtocol } from '../utils/launchProtocol';
-import type { A2rProgramType } from '../types/programs';
+import type { AllternitProgramType } from '../types/programs';
 
 // ============================================================================
 // Types
@@ -23,7 +23,7 @@ export interface AgentRuntimeOptions {
   threadId: string;
   kernelEndpoint?: string;
   autoLaunch?: boolean;
-  onProgramLaunch?: (programId: string, type: A2rProgramType) => void;
+  onProgramLaunch?: (programId: string, type: AllternitProgramType) => void;
   onError?: (error: Error) => void;
 }
 
@@ -32,7 +32,7 @@ export interface AgentRuntime {
   reconnect: () => void;
   sendToKernel: (message: Record<string, unknown>) => void;
   processResponse: (content: string) => void;
-  launchProgram: (type: A2rProgramType, title: string, params?: Record<string, unknown>) => string;
+  launchProgram: (type: AllternitProgramType, title: string, params?: Record<string, unknown>) => string;
   getActiveProgram: () => string | null;
   isStreaming: boolean;
   setAutoLaunch: (enabled: boolean) => void;
@@ -83,7 +83,7 @@ export function useAgentRuntime(options: AgentRuntimeOptions): AgentRuntime {
   }, [protocol, bridge, threadId]);
 
   const launchProgram = useCallback((
-    type: A2rProgramType,
+    type: AllternitProgramType,
     title: string,
     params?: Record<string, unknown>
   ): string => {

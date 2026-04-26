@@ -383,6 +383,15 @@ export interface SnippetUIPart {
   language?: string;
 }
 
+/**
+ * OpenUI part - Generative UI block
+ */
+export interface OpenUIPart {
+  type: "openui";
+  stream: string;
+  title?: string;
+}
+
 // ============================================================================
 // Extended Union Type
 // ============================================================================
@@ -424,7 +433,8 @@ export type ExtendedUIPart =
   | PackageInfoUIPart
   | SchemaUIPart
   | StackTraceUIPart
-  | SnippetUIPart;
+  | SnippetUIPart
+  | OpenUIPart;
 
 // ============================================================================
 // Extended Rust Event Types
@@ -612,6 +622,24 @@ export function parseStructuredContent(text: string): ExtendedUIPart[] {
   // Use a more sophisticated parsing strategy that handles open tags
   // Priority order for elements
   const patterns = [
+    {
+      type: "openui",
+      // OpenUI Lang blocks: [v:tag ...]
+      // We look for a block starting with [v: and attempt to find the full stream.
+      // Since it's streaming, we'll take everything from [v: to the end or last ]
+      regex: /\[v:([\s\S]*?)(?:\]\s*$|\](?=\n|$)|$)/g,
+      parse: (match: RegExpExecArray): OpenUIPart => {
+        const stream = match[0];
+        // Try to extract a title from the first tag: [v:card title="My Dashboard"
+        const titleMatch = stream.match(/title="([^"]*)"/);
+        const title = titleMatch ? titleMatch[1] : "Interactive UI";
+        return {
+          type: "openui",
+          stream,
+          title,
+        };
+      },
+    },
     {
       type: "document",
       // <document title="...">content</document> — long-form AI-created documents

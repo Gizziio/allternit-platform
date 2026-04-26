@@ -1,5 +1,5 @@
 /**
- * A2rchitect Super-Agent OS - Presentation Remote Control
+ * allternit Super-Agent OS - Presentation Remote Control
  * 
  * Remote control interface for presentations with:
  * - QR code for mobile remote
@@ -161,7 +161,7 @@ export const PresentationRemote: React.FC<PresentationRemoteProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [nextSlide, prevSlide, goToSlide, totalSlides, onClose]);
 
-  const remoteUrl = `https://a2r.remote/s/${programId}`;
+  const remoteUrl = `https://allternit.remote/s/${programId}`;
 
   return (
     <div className="fixed inset-0 z-50 bg-gray-900 text-white">

@@ -1,17 +1,18 @@
+import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { CodeRail } from './CodeRail';
-import { createInitialCodeModeState, useCodeModeStore } from './CodeModeStore';
+import { createCodeModeFixtureState, useCodeModeStore } from './CodeModeStore';
 
 describe('CodeRail', () => {
   beforeEach(() => {
-    useCodeModeStore.setState(createInitialCodeModeState());
+    useCodeModeStore.setState(createCodeModeFixtureState());
   });
 
   it('renders workspace status and session chips for the active workspace', () => {
     render(<CodeRail />);
 
-    expect(screen.getByTestId('code-workspace-selector')).toHaveValue('ws_a2rchitech');
+    expect(screen.getByTestId('code-workspace-selector')).toHaveValue('ws_allternit');
     expect(screen.getByText('main')).toBeInTheDocument();
     expect(screen.getByText('DIRTY')).toBeInTheDocument();
     expect(screen.getByTestId('code-session-sess_code_ui')).toBeInTheDocument();

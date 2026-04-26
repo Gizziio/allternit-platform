@@ -10,7 +10,7 @@ test('check if web content loads', async ({ page }) => {
   await page.screenshot({ path: 'test-results/web-content-check.png', fullPage: true });
   
   // Find iframe
-  const iframe = page.locator('iframe[data-testid="a2r-iframe-content"]');
+  const iframe = page.locator('iframe[data-testid="allternit-iframe-content"]');
   const isVisible = await iframe.isVisible();
   console.log('Iframe visible:', isVisible);
   

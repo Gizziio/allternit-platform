@@ -1,6 +1,7 @@
 import React from 'react';
 import { useSidecarStore } from '../stores/sidecar-store';
 import { ChangeSetReview } from '../components/changeset-review/ChangeSetReview';
+import type { Icon } from '@phosphor-icons/react';
 import {
   FileCode,
   Eye,
@@ -10,7 +11,7 @@ import {
   X,
 } from '@phosphor-icons/react';
 
-export function ArtifactSidecar() {
+export function ArtifactSidecar(): JSX.Element | null {
   const { isOpen, activePanel, width, setOpen, setActivePanel } = useSidecarStore();
 
   if (!isOpen) return null;
@@ -48,7 +49,14 @@ export function ArtifactSidecar() {
   );
 }
 
-function TabButton({ active, onClick, icon: Icon, title }: any) {
+interface TabButtonProps {
+  active: boolean;
+  onClick: () => void;
+  icon: Icon;
+  title: string;
+}
+
+function TabButton({ active, onClick, icon: Icon, title }: TabButtonProps): JSX.Element {
   return (
     <button
       onClick={onClick}
@@ -71,7 +79,7 @@ function TabButton({ active, onClick, icon: Icon, title }: any) {
   );
 }
 
-function SidecarPanel({ panel }: { panel: string }) {
+function SidecarPanel({ panel }: { panel: string }): JSX.Element | null {
   const { panels } = useSidecarStore();
 
   switch (panel) {

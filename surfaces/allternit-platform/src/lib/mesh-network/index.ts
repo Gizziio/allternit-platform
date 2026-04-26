@@ -6,7 +6,7 @@
  */
 
 // Types
-export * from './types';
+export { type AgentUpdateInfo, type AgentUpdateProgress, type HeadscaleNode, type HeadscalePreAuthKey, type HeadscaleServerConfig, type MeshAgentConfig, type MeshAgentStatus, type MeshHealthStatus, type MeshInvitation, type MeshJoinRequest, type MeshProvider, type MeshProviderConfig, type PlatformPeerConfig, type TailscaleDevice, type TailscaleServerConfig, type VPSRegistrationRequest, type VPSRegistrationResponse } from './types';
 
 // Agent
 export { MeshAgent } from './agent/agent';
@@ -22,7 +22,7 @@ export {
 export { PlatformMeshService, HeadscaleSetupHelper } from './platform-integration';
 
 // VPS Setup Integration
-export * from './integrations/vps-setup';
+export { MESH_ONBOARDING_STEPS, MESH_SETUP_OPTIONS, type MeshOnboardingStep, type MeshSettingsState, type MeshSetupOption, type VPSSetupResult, VPSSetupService, type VPSWithMeshSetup, generateOnboardingData, getDefaultMeshSettings } from './integrations/vps-setup';
 
 // WireGuard
 export { WireGuard } from './wireguard-platform';

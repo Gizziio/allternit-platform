@@ -100,7 +100,7 @@ export function EmptyState() {
 				<Logo className="relative size-20 opacity-80" />
 			</div>
 			<div>
-				<h2 className="text-base font-medium text-foreground mb-1">A2R Extension</h2>
+				<h2 className="text-base font-medium text-foreground mb-1">Allternit Extension</h2>
 				<TypingAnimation
 					className="text-sm text-muted-foreground"
 					words={[

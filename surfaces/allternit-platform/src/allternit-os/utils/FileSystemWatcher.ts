@@ -1,7 +1,7 @@
 /**
- * A2rchitect Super-Agent OS - File System Watcher
+ * allternit Super-Agent OS - File System Watcher
  * 
- * Watches the .a2r/drive folder for generated media and syncs to AssetManager.
+ * Watches the .allternit/drive folder for generated media and syncs to AssetManager.
  */
 
 import { useSidecarStore } from '../stores/useSidecarStore';
@@ -234,7 +234,7 @@ export class AssetManagerSync {
   private watcher: FileSystemWatcher;
   private programId: string | null = null;
 
-  constructor(folderPath: string = '.a2r/drive') {
+  constructor(folderPath: string = '.allternit/drive') {
     this.watcher = new FileSystemWatcher({
       folderPath,
       onChange: this.handleFileChange.bind(this),
@@ -371,7 +371,7 @@ export function useFileSystemWatcher(options: WatcherOptions) {
   };
 }
 
-export function useAssetManagerSync(programId: string, folderPath: string = '.a2r/drive') {
+export function useAssetManagerSync(programId: string, folderPath: string = '.allternit/drive') {
   const syncRef = useRef<AssetManagerSync | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
 

@@ -297,7 +297,7 @@ export function buildGlassStyles(
   }
 
   // Build styles
-  const styles: React.CSSProperties = {
+  const styles: any = {
     background,
     borderRadius: roundedValues[rounded] || roundedValues.md,
     padding: paddingValues[padding] || paddingValues.md,

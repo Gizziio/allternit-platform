@@ -135,7 +135,7 @@ interface AnalyticsConfig {
  */
 const DEFAULT_CONFIG: AnalyticsConfig = {
   enabled: true,
-  debug: !!import.meta.env.DEV,
+  debug: process.env.NODE_ENV === 'development',
   sampleRate: 1.0,
   batchEvents: true,
   batchSize: 10,

@@ -8,10 +8,9 @@
  *   browserAgentConnection.initialize()
  *   browserAgentConnection.handleContentMessage(message, sender, sendResponse)
  *
- * Modes (stored in chrome.storage.local key 'a2rConnection'):
- *   local   — WS ws://localhost:3000/ws/extension (A2R Desktop thin-client)
- *   cowork  — Native messaging com.allternit.native_host (Desktop controls extension)
- *   cloud   — WS wss://api.allternit.com/v1/extension (not used in current thin-client mode)
+ * Modes (stored in chrome.storage.local key 'allternitConnection'):
+ *   cowork  — Native messaging com.allternit.desktop (Desktop app controls extension via TCP 3011)
+ *   cloud   — WS wss://api.allternit.com/v1/extension (cloud-hosted agent path)
  */
 
 import { WebSocketClient, WebSocketMessage } from './websocket-client';
@@ -26,19 +25,17 @@ import { HostAllowlist } from './safety/host-allowlist';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type ConnectionMode = 'local' | 'cowork' | 'cloud';
+type ConnectionMode = 'cowork' | 'cloud';
 type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
 
 interface StoredConfig {
   mode: ConnectionMode;
-  localUrl: string;
   cloudUrl: string;
   authToken?: string;
 }
 
 const DEFAULT_CONFIG: StoredConfig = {
-  mode: 'local',
-  localUrl: 'ws://localhost:3000/ws/extension',
+  mode: 'cowork',
   cloudUrl: 'wss://api.allternit.com/v1/extension',
 };
 
@@ -59,9 +56,9 @@ class BrowserAgentConnection {
 
     await this.allowlist.load();
 
-    const stored = await chrome.storage.local.get(['a2rConnection']);
-    if (stored.a2rConnection) {
-      this.config = { ...DEFAULT_CONFIG, ...stored.a2rConnection };
+    const stored = await chrome.storage.local.get(['allternitConnection']);
+    if (stored.allternitConnection) {
+      this.config = { ...DEFAULT_CONFIG, ...stored.allternitConnection };
     }
 
     // Wire result sender so executor can relay results back over the connection
@@ -127,8 +124,8 @@ class BrowserAgentConnection {
 
     console.log(`[BrowserAgentConnection] Connecting — mode=${mode}`);
 
-    if (mode === 'local' || mode === 'cloud') {
-      const url = mode === 'local' ? this.config.localUrl : this.config.cloudUrl;
+    if (mode === 'cloud') {
+      const url = this.config.cloudUrl;
       this.wsClient = new WebSocketClient({ url });
 
       this.wsClient.onStateChange((s) => {
@@ -225,7 +222,7 @@ class BrowserAgentConnection {
   }
 
   private _sendToBackend(msg: object): void {
-    if (this.mode === 'local' || this.mode === 'cloud') {
+    if (this.mode === 'cloud') {
       this.wsClient?.send(msg as Omit<WebSocketMessage, 'timestamp'>);
     }
     // In cowork mode the Desktop receives results via native messaging response channel

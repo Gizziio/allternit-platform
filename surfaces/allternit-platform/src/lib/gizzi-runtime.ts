@@ -3,10 +3,20 @@ import {
   resolveRuntimeBackendForAuthUserId,
   toGatewayAuthorizationHeader,
 } from "@/lib/runtime-backend";
+import fs from "fs";
+import path from "path";
+import os from "os";
 
 const LOCAL_GIZZI_BASE = (
   process.env.TERMINAL_SERVER_URL ?? "http://127.0.0.1:4096"
 ).replace(/\/+$/, "");
+
+function shouldPreferLocalDesktopRuntime(): boolean {
+  return (
+    process.env.ALLTERNIT_DESKTOP_AUTH_ENABLED === "1" ||
+    process.env.NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH === "1"
+  );
+}
 
 export class GizziRuntimeError extends Error {
   constructor(
@@ -25,13 +35,37 @@ type GizziCandidate = {
   authorization?: string;
 };
 
+type GizziDevSession = {
+  gizziUrl?: string;
+  gizziPassword?: string;
+  writtenAt?: number;
+};
+
+// Read gizzi credentials from the dev session file written by Electron when running in dev mode.
+// The file is at ~/.allternit/gizzi-dev-session.json and is created by the Electron main process
+// so it can pass the per-session gizzi password to the external Next.js dev server.
+function readDevSessionCredentials(): GizziDevSession | null {
+  try {
+    const filePath = path.join(os.homedir(), ".allternit", "gizzi-dev-session.json");
+    const raw = fs.readFileSync(filePath, "utf8");
+    const parsed = JSON.parse(raw) as GizziDevSession;
+    // Reject stale credentials older than 24 hours
+    if (parsed.writtenAt && Date.now() - parsed.writtenAt > 86_400_000) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 function getGizziBasicAuthHeader(): string | undefined {
   const username =
     process.env.GIZZI_USERNAME ??
     process.env.NEXT_PUBLIC_GIZZI_USERNAME ??
     "gizzi";
   const password =
-    process.env.GIZZI_PASSWORD ?? process.env.NEXT_PUBLIC_GIZZI_PASSWORD;
+    process.env.GIZZI_PASSWORD ??
+    process.env.NEXT_PUBLIC_GIZZI_PASSWORD ??
+    readDevSessionCredentials()?.gizziPassword;
 
   if (!password) {
     return undefined;
@@ -41,6 +75,13 @@ function getGizziBasicAuthHeader(): string | undefined {
 }
 
 async function getRuntimeCandidate(): Promise<GizziCandidate> {
+  if (shouldPreferLocalDesktopRuntime()) {
+    return {
+      base: LOCAL_GIZZI_BASE,
+      authorization: getGizziBasicAuthHeader(),
+    };
+  }
+
   const authState = await getAuth();
   const authUserId = authState.userId ?? "local-user";
   const resolvedRuntime = await resolveRuntimeBackendForAuthUserId(authUserId)

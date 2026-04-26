@@ -1,35 +1,35 @@
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { getAuth } from "@/lib/server-auth";
 import {
   getRuntimeExecutionModeForAuthUserId,
   isRuntimeExecutionMode,
   setRuntimeExecutionModeForAuthUserId,
 } from "@/lib/runtime-execution-mode";
-import { getAuth } from "@/lib/server-auth";
 
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-
-export async function GET(): Promise<Response> {
-  const authState = await getAuth();
-  return NextResponse.json(
-    await getRuntimeExecutionModeForAuthUserId(authState.userId ?? "local-user"),
-  );
-}
-
-export async function PUT(request: NextRequest): Promise<Response> {
-  const authState = await getAuth();
-  const body = await request.json().catch(() => ({}));
-  const mode = String(body.mode || "");
-
-  if (!isRuntimeExecutionMode(mode)) {
-    return NextResponse.json({ error: "Invalid execution mode" }, { status: 400 });
+export async function GET() {
+  const { userId: authUserId } = await getAuth();
+  if (!authUserId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  return NextResponse.json(
-    await setRuntimeExecutionModeForAuthUserId(
-      authState.userId ?? "local-user",
-      mode,
-    ),
-  );
+  const mode = await getRuntimeExecutionModeForAuthUserId(authUserId);
+  return NextResponse.json(mode);
+}
+
+export async function PUT(request: NextRequest) {
+  const { userId: authUserId } = await getAuth();
+  if (!authUserId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body = await request.json().catch(() => ({}));
+  if (!isRuntimeExecutionMode(body?.mode)) {
+    return NextResponse.json(
+      { error: "mode must be one of: plan, safe, auto" },
+      { status: 400 },
+    );
+  }
+
+  const mode = await setRuntimeExecutionModeForAuthUserId(authUserId, body.mode);
+  return NextResponse.json(mode);
 }

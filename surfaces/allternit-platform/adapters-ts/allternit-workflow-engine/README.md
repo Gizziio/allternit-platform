@@ -1,6 +1,6 @@
-# @a2r/workflow-engine
+# @allternit/workflow-engine
 
-A2R Workflow Engine - Visual workflow orchestration with DAG support.
+Allternit Workflow Engine - Visual workflow orchestration with DAG support.
 
 ## Overview
 
@@ -19,13 +19,13 @@ The Workflow Engine enables visual definition and execution of complex multi-ste
 ## Installation
 
 ```bash
-pnpm add @a2r/workflow-engine
+pnpm add @allternit/workflow-engine
 ```
 
 ## Quick Start
 
 ```typescript
-import { createWorkflowEngine } from '@a2r/workflow-engine';
+import { createWorkflowEngine } from '@allternit/workflow-engine';
 
 const engine = createWorkflowEngine();
 
@@ -111,7 +111,7 @@ console.log(execution.outputs); // { response: [...] }
 ## Visualization
 
 ```typescript
-import { createVisualizer } from '@a2r/workflow-engine';
+import { createVisualizer } from '@allternit/workflow-engine';
 
 const visualizer = createVisualizer();
 
@@ -156,7 +156,7 @@ engine.registerNodeType({
 ## Scheduler
 
 ```typescript
-import { createScheduler } from '@a2r/workflow-engine';
+import { createScheduler } from '@allternit/workflow-engine';
 
 const scheduler = createScheduler({
   maxConcurrency: 5,

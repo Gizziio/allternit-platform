@@ -13,7 +13,7 @@ test('test new browser UI', async ({ page }) => {
   await page.screenshot({ path: 'test-results/new-browser-ui.png', fullPage: true });
   
   // Check for empty state (no tabs)
-  const emptyStateText = page.locator('text="A2R Browser"');
+  const emptyStateText = page.locator('text="Allternit Browser"');
   const emptyStateExists = await emptyStateText.count() > 0;
   console.log('Empty state exists:', emptyStateExists);
   

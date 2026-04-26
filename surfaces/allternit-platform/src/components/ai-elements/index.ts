@@ -5,70 +5,70 @@
  */
 
 // Core chat
-export * from "./conversation";
-export * from "./message";
-export * from "./prompt-input";
-export * from "./UnifiedMessageRenderer";
+export { Conversation, ConversationContent, type ConversationContentProps, ConversationDownload, type ConversationDownloadProps, ConversationEmptyState, type ConversationEmptyStateProps, type ConversationMessage, type ConversationProps, ConversationScrollButton, type ConversationScrollButtonProps, messagesToMarkdown } from './conversation';
+export { Message, MessageAction, type MessageActionProps, MessageActions, type MessageActionsProps, MessageBranch, MessageBranchContent, type MessageBranchContentProps, MessageBranchNext, type MessageBranchNextProps, MessageBranchPage, type MessageBranchPageProps, MessageBranchPrevious, type MessageBranchPreviousProps, type MessageBranchProps, MessageBranchSelector, type MessageBranchSelectorProps, MessageContent, type MessageContentProps, type MessageProps, MessageResponse, type MessageResponseProps, MessageToolbar, type MessageToolbarProps } from './message';
+export { type AttachmentsContext, LocalReferencedSourcesContext, PromptInput, PromptInputActionAddAttachments, type PromptInputActionAddAttachmentsProps, PromptInputActionMenu, PromptInputActionMenuContent, type PromptInputActionMenuContentProps, PromptInputActionMenuItem, type PromptInputActionMenuItemProps, type PromptInputActionMenuProps, PromptInputActionMenuTrigger, type PromptInputActionMenuTriggerProps, PromptInputBody, type PromptInputBodyProps, PromptInputButton, type PromptInputButtonProps, type PromptInputButtonTooltip, PromptInputCommand, PromptInputCommandEmpty, type PromptInputCommandEmptyProps, PromptInputCommandGroup, type PromptInputCommandGroupProps, PromptInputCommandInput, type PromptInputCommandInputProps, PromptInputCommandItem, type PromptInputCommandItemProps, PromptInputCommandList, type PromptInputCommandListProps, type PromptInputCommandProps, PromptInputCommandSeparator, type PromptInputCommandSeparatorProps, type PromptInputControllerProps, PromptInputFooter, type PromptInputFooterProps, PromptInputHeader, type PromptInputHeaderProps, PromptInputHoverCard, PromptInputHoverCardContent, type PromptInputHoverCardContentProps, type PromptInputHoverCardProps, PromptInputHoverCardTrigger, type PromptInputHoverCardTriggerProps, type PromptInputMessage, type PromptInputProps, PromptInputProvider, type PromptInputProviderProps, PromptInputSelect, PromptInputSelectContent, type PromptInputSelectContentProps, PromptInputSelectItem, type PromptInputSelectItemProps, type PromptInputSelectProps, PromptInputSelectTrigger, type PromptInputSelectTriggerProps, PromptInputSelectValue, type PromptInputSelectValueProps, PromptInputSubmit, type PromptInputSubmitProps, PromptInputTab, PromptInputTabBody, type PromptInputTabBodyProps, PromptInputTabItem, type PromptInputTabItemProps, PromptInputTabLabel, type PromptInputTabLabelProps, type PromptInputTabProps, PromptInputTabsList, type PromptInputTabsListProps, PromptInputTextarea, type PromptInputTextareaProps, PromptInputTools, type PromptInputToolsProps, type ReferencedSourcesContext, type TextInputContext, usePromptInputAttachments, usePromptInputController, usePromptInputReferencedSources, useProviderAttachments } from './prompt-input';
+export { UnifiedMessageRenderer } from './UnifiedMessageRenderer';
 
 // AI display
-export * from "./reasoning";
-export * from "./tool";
-export * from "./sources";
-export * from "./chain-of-thought";
-export * from "./suggestion";
-export * from "./shimmer";
+export { Reasoning, ReasoningContent, type ReasoningContentProps, type ReasoningProps, ReasoningTrigger, type ReasoningTriggerProps, useReasoning } from './reasoning';
+export { Tool, ToolContent, type ToolContentProps, ToolHeader, type ToolHeaderProps, ToolInput, type ToolInputProps, ToolOutput, type ToolOutputProps, type ToolPart, type ToolProps, getStatusBadge } from './tool';
+export { Source, type SourceProps, Sources, SourcesContent, type SourcesContentProps, type SourcesProps, SourcesTrigger, type SourcesTriggerProps } from './sources';
+export { ChainOfThought, ChainOfThoughtContent, type ChainOfThoughtContentProps, ChainOfThoughtHeader, type ChainOfThoughtHeaderProps, ChainOfThoughtImage, type ChainOfThoughtImageProps, type ChainOfThoughtProps, ChainOfThoughtSearchResult, type ChainOfThoughtSearchResultProps, ChainOfThoughtSearchResults, type ChainOfThoughtSearchResultsProps, ChainOfThoughtStep, type ChainOfThoughtStepProps } from './chain-of-thought';
+export { Suggestion, type SuggestionProps, Suggestions, type SuggestionsProps } from './suggestion';
+export { Shimmer, type TextShimmerProps } from './shimmer';
 
 // Media
-export * from "./attachments";
-export * from "./image";
-export * from "./audio-player";
-export * from "./speech-input";
+export { Attachment, type AttachmentData, AttachmentEmpty, type AttachmentEmptyProps, AttachmentHoverCard, AttachmentHoverCardContent, type AttachmentHoverCardContentProps, type AttachmentHoverCardProps, AttachmentHoverCardTrigger, type AttachmentHoverCardTriggerProps, AttachmentInfo, type AttachmentInfoProps, type AttachmentMediaCategory, AttachmentPreview, type AttachmentPreviewProps, type AttachmentProps, AttachmentRemove, type AttachmentRemoveProps, type AttachmentVariant, Attachments, type AttachmentsProps, getAttachmentLabel, getMediaCategory, useAttachmentContext, useAttachmentsContext } from './attachments';
+export { Image, type ImageProps } from './image';
+export { AudioPlayer, AudioPlayerControlBar, type AudioPlayerControlBarProps, AudioPlayerDurationDisplay, type AudioPlayerDurationDisplayProps, AudioPlayerElement, type AudioPlayerElementProps, AudioPlayerMuteButton, type AudioPlayerMuteButtonProps, AudioPlayerPlayButton, type AudioPlayerPlayButtonProps, type AudioPlayerProps, AudioPlayerSeekBackwardButton, type AudioPlayerSeekBackwardButtonProps, AudioPlayerSeekForwardButton, type AudioPlayerSeekForwardButtonProps, AudioPlayerTimeDisplay, type AudioPlayerTimeDisplayProps, AudioPlayerTimeRange, type AudioPlayerTimeRangeProps, AudioPlayerVolumeRange, type AudioPlayerVolumeRangeProps } from './audio-player';
+export { SpeechInput, type SpeechInputProps } from './speech-input';
 
 // Voice
-export * from "./voice-toolbar";
-export * from "./voice-overlay";
-export * from "./voice-presence";
+export { VoiceToolbar, type VoiceToolbarProps } from './voice-toolbar';
+export { VoiceOverlay, type VoiceOverlayProps } from './voice-overlay';
+export { VoicePresence, type VoicePresenceProps } from './voice-presence';
 
 // Code & artifacts
-export * from "./code-block";
-export * from "./artifact";
-export * from "./artifact-panel";
-export * from "./markdown";
+export { CodeBlock, CodeBlockActions, CodeBlockContainer, CodeBlockContent, CodeBlockCopyButton, type CodeBlockCopyButtonProps, CodeBlockFilename, CodeBlockHeader, CodeBlockLanguageSelector, CodeBlockLanguageSelectorContent, type CodeBlockLanguageSelectorContentProps, CodeBlockLanguageSelectorItem, type CodeBlockLanguageSelectorItemProps, type CodeBlockLanguageSelectorProps, CodeBlockLanguageSelectorTrigger, type CodeBlockLanguageSelectorTriggerProps, CodeBlockLanguageSelectorValue, type CodeBlockLanguageSelectorValueProps, CodeBlockTitle, highlightCode } from './code-block';
+export { Artifact, ArtifactAction, type ArtifactActionProps, ArtifactActions, type ArtifactActionsProps, ArtifactClose, type ArtifactCloseProps, ArtifactContent, type ArtifactContentProps, ArtifactDescription, type ArtifactDescriptionProps, ArtifactHeader, type ArtifactHeaderProps, type ArtifactProps, ArtifactTitle, type ArtifactTitleProps } from './artifact';
+export { ArtifactCard, type ArtifactKind, ArtifactSidePanel, type SelectedArtifact } from './artifact-panel';
+export { Markdown } from './markdown';
 
 // UI
-export * from "./toolbar";
-export * from "./controls";
-export * from "./context";
-export * from "./panel";
+export { Toolbar } from './toolbar';
+export { Controls, type ControlsProps } from './controls';
+export { Context, ContextCacheUsage, type ContextCacheUsageProps, ContextContent, ContextContentBody, type ContextContentBodyProps, ContextContentFooter, type ContextContentFooterProps, ContextContentHeader, type ContextContentHeaderProps, type ContextContentProps, ContextInputUsage, type ContextInputUsageProps, ContextOutputUsage, type ContextOutputUsageProps, type ContextProps, ContextReasoningUsage, type ContextReasoningUsageProps, ContextTrigger, type ContextTriggerProps } from './context';
+export { Panel } from './panel';
 
 // Dev tools
-export * from "./agent";
-export * from "./canvas";
-export * from "./checkpoint";
-export * from "./commit";
-export * from "./confirmation";
-export * from "./connection";
-export * from "./edge";
-export * from "./environment-variables";
-export * from "./file-tree";
-export * from "./inline-citation";
-export * from "./jsx-preview";
-export * from "./mic-selector";
-export * from "./model-selector";
+export { AgentCard, type AgentCardProps, AgentContent, type AgentContentProps, AgentHeader, type AgentHeaderProps, AgentInstructions, type AgentInstructionsProps, AgentOutput, type AgentOutputProps, AgentTool, type AgentToolProps, AgentTools, type AgentToolsProps } from './agent';
+export { Canvas } from './canvas';
+export { Checkpoint, CheckpointDescription, type CheckpointDescriptionProps, CheckpointIcon, type CheckpointIconProps, type CheckpointProps, CheckpointTrigger, type CheckpointTriggerProps } from './checkpoint';
+export { Commit, CommitActions, type CommitActionsProps, CommitAuthor, CommitAuthorAvatar, type CommitAuthorAvatarProps, type CommitAuthorProps, CommitContent, type CommitContentProps, CommitCopyButton, type CommitCopyButtonProps, CommitFile, CommitFileAdditions, type CommitFileAdditionsProps, CommitFileChanges, type CommitFileChangesProps, CommitFileDeletions, type CommitFileDeletionsProps, CommitFileIcon, type CommitFileIconProps, CommitFileInfo, type CommitFileInfoProps, CommitFilePath, type CommitFilePathProps, type CommitFileProps, CommitFileStatus, type CommitFileStatusProps, CommitFiles, type CommitFilesProps, CommitHash, type CommitHashProps, CommitHeader, type CommitHeaderProps, CommitInfo, type CommitInfoProps, CommitMessage, type CommitMessageProps, CommitMetadata, type CommitMetadataProps, type CommitProps, CommitSeparator, type CommitSeparatorProps, CommitTimestamp, type CommitTimestampProps } from './commit';
+export { Confirmation, ConfirmationAccepted, type ConfirmationAcceptedProps, ConfirmationAction, type ConfirmationActionProps, ConfirmationActions, type ConfirmationActionsProps, type ConfirmationProps, ConfirmationRejected, type ConfirmationRejectedProps, ConfirmationRequest, type ConfirmationRequestProps, ConfirmationTitle, type ConfirmationTitleProps } from './confirmation';
+export { Connection } from './connection';
+export { Edge } from './edge';
+export { EnvironmentVariable, EnvironmentVariableCopyButton, type EnvironmentVariableCopyButtonProps, EnvironmentVariableGroup, type EnvironmentVariableGroupProps, EnvironmentVariableName, type EnvironmentVariableNameProps, type EnvironmentVariableProps, EnvironmentVariableRequired, type EnvironmentVariableRequiredProps, EnvironmentVariableValue, type EnvironmentVariableValueProps, EnvironmentVariables, EnvironmentVariablesContent, type EnvironmentVariablesContentProps, EnvironmentVariablesHeader, type EnvironmentVariablesHeaderProps, type EnvironmentVariablesProps, EnvironmentVariablesTitle, type EnvironmentVariablesTitleProps, EnvironmentVariablesToggle, type EnvironmentVariablesToggleProps } from './environment-variables';
+export { FileTree, FileTreeActions, type FileTreeActionsProps, FileTreeFile, type FileTreeFileProps, FileTreeFolder, type FileTreeFolderProps, FileTreeIcon, type FileTreeIconProps, FileTreeName, type FileTreeNameProps, type FileTreeProps } from './file-tree';
+export { InlineCitation, InlineCitationCard, InlineCitationCardBody, type InlineCitationCardBodyProps, type InlineCitationCardProps, InlineCitationCardTrigger, type InlineCitationCardTriggerProps, InlineCitationCarousel, InlineCitationCarouselContent, type InlineCitationCarouselContentProps, InlineCitationCarouselHeader, type InlineCitationCarouselHeaderProps, InlineCitationCarouselIndex, type InlineCitationCarouselIndexProps, InlineCitationCarouselItem, type InlineCitationCarouselItemProps, InlineCitationCarouselNext, type InlineCitationCarouselNextProps, InlineCitationCarouselPrev, type InlineCitationCarouselPrevProps, type InlineCitationCarouselProps, type InlineCitationProps, InlineCitationQuote, type InlineCitationQuoteProps, InlineCitationSource, type InlineCitationSourceProps, InlineCitationText, type InlineCitationTextProps } from './inline-citation';
+export { JSXPreview, JSXPreviewContent, type JSXPreviewContentProps, JSXPreviewError, type JSXPreviewErrorProps, type JSXPreviewProps, useJSXPreview } from './jsx-preview';
+export { MicSelector, MicSelectorContent, type MicSelectorContentProps, MicSelectorEmpty, type MicSelectorEmptyProps, MicSelectorInput, type MicSelectorInputProps, MicSelectorItem, type MicSelectorItemProps, MicSelectorLabel, type MicSelectorLabelProps, MicSelectorList, type MicSelectorListProps, type MicSelectorProps, MicSelectorTrigger, type MicSelectorTriggerProps, MicSelectorValue, type MicSelectorValueProps, useAudioDevices } from './mic-selector';
+export { ModelSelector, ModelSelectorContent, type ModelSelectorContentProps, ModelSelectorDialog, type ModelSelectorDialogProps, ModelSelectorEmpty, type ModelSelectorEmptyProps, ModelSelectorGroup, type ModelSelectorGroupProps, ModelSelectorInput, type ModelSelectorInputProps, ModelSelectorItem, type ModelSelectorItemProps, ModelSelectorList, type ModelSelectorListProps, ModelSelectorLogo, ModelSelectorLogoGroup, type ModelSelectorLogoGroupProps, type ModelSelectorLogoProps, ModelSelectorName, type ModelSelectorNameProps, type ModelSelectorProps, ModelSelectorSeparator, type ModelSelectorSeparatorProps, ModelSelectorShortcut, type ModelSelectorShortcutProps, ModelSelectorTrigger, type ModelSelectorTriggerProps } from './model-selector';
 export * from "../model-picker";
-export * from "./node";
-export * from "./open-in-chat";
-export * from "./package-info";
-export * from "./persona";
-export * from "./plan";
-export * from "./queue";
-export * from "./sandbox";
-export * from "./schema-display";
-export * from "./snippet";
-export * from "./stack-trace";
-export * from "./task";
-export * from "./terminal";
-export * from "./test-results";
-export * from "./transcription";
-export * from "./voice-selector";
-export * from "./web-preview";
+export { Node, NodeAction, type NodeActionProps, NodeContent, type NodeContentProps, NodeDescription, type NodeDescriptionProps, NodeFooter, type NodeFooterProps, NodeHeader, type NodeHeaderProps, type NodeProps, NodeTitle, type NodeTitleProps } from './node';
+export { OpenIn, OpenInChatGPT, type OpenInChatGPTProps, OpenInClaude, type OpenInClaudeProps, OpenInContent, type OpenInContentProps, OpenInCursor, type OpenInCursorProps, OpenInItem, type OpenInItemProps, OpenInLabel, type OpenInLabelProps, type OpenInProps, OpenInScira, type OpenInSciraProps, OpenInSeparator, type OpenInSeparatorProps, OpenInT3, type OpenInT3Props, OpenInTrigger, type OpenInTriggerProps, OpenInv0, type OpenInv0Props } from './open-in-chat';
+export { PackageInfo, PackageInfoChangeType, type PackageInfoChangeTypeProps, PackageInfoContent, type PackageInfoContentProps, PackageInfoDependencies, type PackageInfoDependenciesProps, PackageInfoDependency, type PackageInfoDependencyProps, PackageInfoDescription, type PackageInfoDescriptionProps, PackageInfoHeader, type PackageInfoHeaderProps, PackageInfoName, type PackageInfoNameProps, type PackageInfoProps, PackageInfoVersion, type PackageInfoVersionProps } from './package-info';
+export { Persona, type PersonaState } from './persona';
+export { Plan, PlanAction, type PlanActionProps, PlanContent, type PlanContentProps, PlanDescription, type PlanDescriptionProps, PlanFooter, type PlanFooterProps, PlanHeader, type PlanHeaderProps, type PlanProps, PlanTitle, type PlanTitleProps, PlanTrigger, type PlanTriggerProps } from './plan';
+export { Queue, QueueItem, QueueItemAction, type QueueItemActionProps, QueueItemActions, type QueueItemActionsProps, QueueItemAttachment, type QueueItemAttachmentProps, QueueItemContent, type QueueItemContentProps, QueueItemDescription, type QueueItemDescriptionProps, QueueItemFile, type QueueItemFileProps, QueueItemImage, type QueueItemImageProps, QueueItemIndicator, type QueueItemIndicatorProps, type QueueItemProps, QueueList, type QueueListProps, type QueueMessage, type QueueMessagePart, type QueueProps, QueueSection, QueueSectionContent, type QueueSectionContentProps, QueueSectionLabel, type QueueSectionLabelProps, type QueueSectionProps, QueueSectionTrigger, type QueueSectionTriggerProps, type QueueTodo } from './queue';
+export { Sandbox, SandboxContent, type SandboxContentProps, SandboxHeader, type SandboxHeaderProps, type SandboxRootProps, SandboxTabContent, type SandboxTabContentProps, SandboxTabs, SandboxTabsBar, type SandboxTabsBarProps, SandboxTabsList, type SandboxTabsListProps, type SandboxTabsProps, SandboxTabsTrigger, type SandboxTabsTriggerProps } from './sandbox';
+export { SchemaDisplay, SchemaDisplayBody, type SchemaDisplayBodyProps, SchemaDisplayContent, type SchemaDisplayContentProps, SchemaDisplayDescription, type SchemaDisplayDescriptionProps, SchemaDisplayExample, type SchemaDisplayExampleProps, SchemaDisplayHeader, type SchemaDisplayHeaderProps, SchemaDisplayMethod, type SchemaDisplayMethodProps, SchemaDisplayParameter, type SchemaDisplayParameterProps, SchemaDisplayParameters, type SchemaDisplayParametersProps, SchemaDisplayPath, type SchemaDisplayPathProps, SchemaDisplayProperty, type SchemaDisplayPropertyProps, type SchemaDisplayProps, SchemaDisplayRequest, type SchemaDisplayRequestProps, SchemaDisplayResponse, type SchemaDisplayResponseProps } from './schema-display';
+export { Snippet, SnippetAddon, type SnippetAddonProps, SnippetCopyButton, type SnippetCopyButtonProps, SnippetInput, type SnippetInputProps, type SnippetProps, SnippetText, type SnippetTextProps } from './snippet';
+export { StackTrace, StackTraceActions, type StackTraceActionsProps, StackTraceContent, type StackTraceContentProps, StackTraceCopyButton, type StackTraceCopyButtonProps, StackTraceError, StackTraceErrorMessage, type StackTraceErrorMessageProps, type StackTraceErrorProps, StackTraceErrorType, type StackTraceErrorTypeProps, StackTraceExpandButton, type StackTraceExpandButtonProps, StackTraceFrames, type StackTraceFramesProps, StackTraceHeader, type StackTraceHeaderProps, type StackTraceProps } from './stack-trace';
+export { Task, TaskContent, type TaskContentProps, TaskItem, TaskItemFile, type TaskItemFileProps, type TaskItemProps, type TaskProps, TaskTrigger, type TaskTriggerProps } from './task';
+export { Terminal, TerminalActions, type TerminalActionsProps, TerminalClearButton, type TerminalClearButtonProps, TerminalContent, type TerminalContentProps, TerminalCopyButton, type TerminalCopyButtonProps, TerminalHeader, type TerminalHeaderProps, type TerminalProps, TerminalStatus, type TerminalStatusProps, TerminalTitle, type TerminalTitleProps } from './terminal';
+export { Test, TestDuration, type TestDurationProps, TestError, TestErrorMessage, type TestErrorMessageProps, type TestErrorProps, TestErrorStack, type TestErrorStackProps, TestName, type TestNameProps, type TestProps, TestResults, TestResultsContent, type TestResultsContentProps, TestResultsDuration, type TestResultsDurationProps, TestResultsHeader, type TestResultsHeaderProps, TestResultsProgress, type TestResultsProgressProps, type TestResultsProps, TestResultsSummary, type TestResultsSummaryProps, TestStatus, type TestStatusProps, TestSuite, TestSuiteContent, type TestSuiteContentProps, TestSuiteName, type TestSuiteNameProps, type TestSuiteProps, TestSuiteStats, type TestSuiteStatsProps } from './test-results';
+export { Transcription, type TranscriptionProps, TranscriptionSegment, type TranscriptionSegmentProps } from './transcription';
+export { VoiceSelector, VoiceSelectorAccent, type VoiceSelectorAccentProps, VoiceSelectorAge, type VoiceSelectorAgeProps, VoiceSelectorAttributes, type VoiceSelectorAttributesProps, VoiceSelectorBullet, type VoiceSelectorBulletProps, VoiceSelectorContent, type VoiceSelectorContentProps, VoiceSelectorDescription, type VoiceSelectorDescriptionProps, VoiceSelectorDialog, type VoiceSelectorDialogProps, VoiceSelectorEmpty, type VoiceSelectorEmptyProps, VoiceSelectorGender, type VoiceSelectorGenderProps, VoiceSelectorGroup, type VoiceSelectorGroupProps, VoiceSelectorInput, type VoiceSelectorInputProps, VoiceSelectorItem, type VoiceSelectorItemProps, VoiceSelectorList, type VoiceSelectorListProps, VoiceSelectorName, type VoiceSelectorNameProps, VoiceSelectorPreview, type VoiceSelectorPreviewProps, type VoiceSelectorProps, VoiceSelectorSeparator, type VoiceSelectorSeparatorProps, VoiceSelectorShortcut, type VoiceSelectorShortcutProps, VoiceSelectorTrigger, type VoiceSelectorTriggerProps, useVoiceSelector } from './voice-selector';
+export { WebPreview, WebPreviewBody, type WebPreviewBodyProps, WebPreviewConsole, type WebPreviewConsoleProps, type WebPreviewContextValue, WebPreviewNavigation, WebPreviewNavigationButton, type WebPreviewNavigationButtonProps, type WebPreviewNavigationProps, type WebPreviewProps, WebPreviewUrl, type WebPreviewUrlProps } from './web-preview';

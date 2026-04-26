@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/MemoryRollbackReceipt.schema.json",
+  "title": "Memory Rollback Receipt",
+  "description": "Schema for memory rollback receipts in the Allternit system",
+  "type": "object",
+  "properties": {
+    "receipt_version": {
+      "type": "string",
+      "description": "Version of the receipt schema"
+    },
+    "receipt_type": {
+      "type": "string",
+      "const": "memory_rollback_receipt",
+      "description": "Type of receipt"
+    },
+    "run_id": {
+      "type": "string",
+      "description": "ID of the run that generated this receipt"
+    },
+    "task_id": {
+      "type": "string",
+      "description": "ID of the task that initiated the rollback"
+    },
+    "wih_id": {
+      "type": "string",
+      "description": "ID of the WIH associated with this rollback"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of the rollback"
+    },
+    "candidate_id": {
+      "type": "string",
+      "description": "ID of the memory candidate being rolled back"
+    },
+    "memory_layer": {
+      "type": "string",
+      "description": "Target memory layer for the rollback"
+    },
+    "initiator_id": {
+      "type": "string",
+      "description": "ID of the entity initiating the rollback"
+    },
+    "rollback_reason": {
+      "type": "string",
+      "description": "Reason for the rollback"
+    },
+    "rollback_authorization": {
+      "type": "object",
+      "properties": {
+        "authorized_by": {
+          "type": "string"
+        },
+        "authorization_timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "authorization_evidence": {
+          "type": "string"
+        }
+      },
+      "required": ["authorized_by", "authorization_timestamp"]
+    },
+    "rollback_result": {
+      "type": "string",
+      "enum": ["SUCCESS", "FAILURE", "PARTIAL"],
+      "description": "Result of the rollback operation"
+    },
+    "failure_reason": {
+      "type": "string",
+      "description": "Reason for failure if rollback_result is FAILURE"
+    },
+    "original_content_hash": {
+      "type": "string",
+      "description": "Hash of the content before the promoted change"
+    },
+    "restored_content_hash": {
+      "type": "string",
+      "description": "Hash of the content after rollback"
+    },
+    "affected_proposals": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of other proposals affected by this rollback"
+    }
+  },
+  "required": [
+    "receipt_version",
+    "receipt_type",
+    "run_id",
+    "task_id",
+    "wih_id",
+    "timestamp",
+    "candidate_id",
+    "memory_layer",
+    "initiator_id",
+    "rollback_reason",
+    "rollback_authorization",
+    "rollback_result",
+    "original_content_hash",
+    "restored_content_hash"
+  ]
+}

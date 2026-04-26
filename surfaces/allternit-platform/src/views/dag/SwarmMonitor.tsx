@@ -48,7 +48,13 @@ import {
   Sparkle,
   Stack,
 } from '@phosphor-icons/react';
-import { useNativeAgentStore, type NativeSession, type NativeMessage } from "@/lib/agents";
+import { useChatSessionStore, type ChatSession } from "@/views/chat/ChatSessionStore";
+import { useCodeSessionStore, type CodeSession } from "@/views/code/CodeSessionStore";
+import type { ModeSession, ModeSessionMessage } from "@/lib/agents/mode-session-store";
+
+// Type aliases for backward compatibility within this file
+type NativeSession = ModeSession;
+type NativeMessage = ModeSessionMessage;
 import { swarmApi, type SwarmHealth, type CircuitBreakerStatus, type QuarantinedAgentStatus } from "@/lib/swarm/swarm.api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -133,10 +139,21 @@ export function SwarmMonitor() {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   // ─── Store Access ───
-  const createNativeSession = useNativeAgentStore((s) => s.createSession);
-  const nativeSessions = useNativeAgentStore((s) => s.sessions);
-  const setActiveNativeSession = useNativeAgentStore((s) => s.setActiveSession);
-  const getSession = useNativeAgentStore((s) => s.getSession);
+  // Use CodeSessionStore for swarm threads (they're code-mode sessions)
+  const createNativeSession = useCallback(async (name: string, _description?: string, metadata?: any) => {
+    const sessionId = await useCodeSessionStore.getState().createSession({
+      name,
+      sessionMode: metadata?.sessionMode || 'agent',
+      ...metadata,
+    });
+    return { id: sessionId };
+  }, []);
+  
+  const nativeSessions = useCodeSessionStore((s) => s.sessions);
+  const setActiveNativeSession = useCodeSessionStore((s) => s.setActiveSession);
+  const getSession = useCallback((sessionId: string) => {
+    return useCodeSessionStore.getState().sessions.find(s => s.id === sessionId);
+  }, []);
 
   // ─── Load threads from backend ───
   useEffect(() => {
@@ -389,10 +406,9 @@ export function SwarmMonitor() {
         <div className="h-16 border-b border-slate-800 flex items-center gap-2 px-3">
           {/* Left: Title + Toggle */}
           <div className="flex items-center gap-2 shrink-0">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              size={32}
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={() => setSidebarExpanded(!sidebarExpanded)}
             >
               <GitBranch className="h-4 w-4 text-amber-500" />
@@ -521,7 +537,6 @@ export function SwarmMonitor() {
               <Button
                 variant={viewMode === 'compact' ? 'secondary' : 'ghost'}
                 size="icon"
-                size={28}
                 onClick={() => setViewMode('compact')}
               >
                 <ListDashes className="h-3.5 w-3.5" />
@@ -529,7 +544,6 @@ export function SwarmMonitor() {
               <Button
                 variant={viewMode === 'expanded' ? 'secondary' : 'ghost'}
                 size="icon"
-                size={28}
                 onClick={() => setViewMode('expanded')}
               >
                 <SquaresFour className="h-3.5 w-3.5" />
@@ -556,10 +570,9 @@ export function SwarmMonitor() {
               <div className="p-3 border-b border-slate-800 flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-500 uppercase">Thread Tree</span>
                 <div className="flex items-center gap-1">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    size={24}
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => setStatusFilter(statusFilter ? null : 'running')}
                   >
                     <Funnel className={`h-3 w-3 ${statusFilter ? 'text-amber-500' : 'text-slate-600'}`} />
@@ -1008,7 +1021,7 @@ function HealthPanel({
           <Activity className="h-4 w-4 text-emerald-500" />
           Swarm Health
         </h3>
-        <Button variant="ghost" size="icon" size={24} onClick={onClose}>
+        <Button variant="ghost" size="icon" onClick={onClose}>
           <X size={16} />
         </Button>
       </div>

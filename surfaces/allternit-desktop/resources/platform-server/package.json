@@ -1,0 +1,86 @@
+{
+  "name": "allternitchitect",
+  "version": "1.0.0",
+  "description": "allternit - AI Governance and Workflow System",
+  "type": "module",
+  "private": true,
+  "pnpm": {
+    "overrides": {
+      "@types/react": "^18.3.28",
+      "@types/react-dom": "^18.3.1",
+      "@reduxjs/toolkit": "^2.2.7",
+      "react-redux": "^9.1.2",
+      "redux": "^5.0.1"
+    }
+  },
+  "workspaces": [
+    "extension/*",
+    "extensions/*",
+    "packages/@allternit/*",
+    "packages/@allternit/*/*",
+    "packages/@allternit/*/*/*",
+    "sdk/*",
+    "plugins/*",
+    "cmd/*",
+    "cmd/*/*/*",
+    "domains/*/*",
+    "platform/*/*",
+    "services/*",
+    "services/*/*",
+    "services/*/*/*",
+    "surfaces/*",
+    "surfaces/*/*",
+    "surfaces/*/*/*",
+    "surfaces/allternit-extensions/allternit-extension/packages/*"
+  ],
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev": "concurrently \"cd cmd/allternit-api && cargo run\" \"pnpm --filter @allternit/runtime serve\" \"pnpm --filter @allternit/desktop dev\"",
+    "dev:api": "cd cmd/allternit-api && cargo run",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "vitest run --config tests/vitest.config.ts",
+    "test:unit": "vitest run",
+    "test:e2e": "echo 'No e2e tests configured'",
+    "test:e2e:headed": "echo 'No e2e tests configured'",
+    "test:e2e:debug": "echo 'No e2e tests configured'",
+    "test:e2e:ci": "echo 'No e2e tests configured'",
+    "test:benchmark": "vitest run tests/benchmarks",
+    "test:coverage": "vitest run --coverage",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "clean": "pnpm -r clean && rm -rf dist",
+    "shell": "pnpm --filter @allternit/desktop dev",
+    "shell:web": "pnpm --filter @allternit/desktop dev",
+    "shell:desktop": "pnpm --filter @allternit/desktop dev",
+    "tui": "bun run --cwd cmd/gizzi-code dev",
+    "tui:build": "bun run --cwd cmd/gizzi-code build",
+    "tui:test": "bun run --cwd cmd/gizzi-code test",
+    "start:all": "concurrently \"pnpm --filter @allternit/runtime serve\" \"pnpm --filter @allternit/desktop dev\""
+  },
+  "keywords": [
+    "allternit",
+    "ai",
+    "governance",
+    "workflow"
+  ],
+  "author": "allternit Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^20.0.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "concurrently": "^8.2.2",
+    "framer-motion": "^12.29.2",
+    "playwright": "^1.58.2",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "jszip": "^3.10.1",
+    "sqlite-vec": "^0.1.9"
+  }
+}

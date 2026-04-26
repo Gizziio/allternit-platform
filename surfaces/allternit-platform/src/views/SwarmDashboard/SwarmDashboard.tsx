@@ -30,7 +30,7 @@ import {
 } from '@phosphor-icons/react';
 
 // API base URL from environment or default
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1/swarm';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '/api/v1/swarm';
 
 interface CircuitBreakerStatus {
   agent_id: string;

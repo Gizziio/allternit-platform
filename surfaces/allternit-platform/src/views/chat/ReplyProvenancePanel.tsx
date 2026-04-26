@@ -61,14 +61,13 @@ const PANEL_CARD_SELECTED_STYLE: CSSProperties = {
 function dedupeSources(items: CitationReplyItem[]): SourceRef[] {
   const seen = new Map<string, SourceRef>();
   for (const item of items) {
-    for (const ref of item.items) {
-      const key = ref.url ?? `${ref.id}:${ref.title}`;
+    for (const ref of (item.items ?? item.citations)) {
+      const key = ref.url ?? `${ref.sourceId}:${ref.title}`;
       if (!seen.has(key)) {
         seen.set(key, {
-          id: ref.id,
+          id: ref.sourceId,
           title: ref.title,
           url: ref.url,
-          snippet: ref.snippet,
         });
       }
     }
@@ -244,7 +243,7 @@ function deriveFoundSources(
 
     collectUrlCandidates(item.input, found, seen, item.title || item.toolName);
     collectUrlCandidates(item.output, found, seen, item.title || item.toolName);
-    item.progressLines.forEach((line) =>
+    item.progressLines?.forEach((line) =>
       collectUrlCandidates(line, found, seen, item.title || item.toolName),
     );
   }
@@ -322,16 +321,16 @@ export const ReplyProvenancePanel = memo(function ReplyProvenancePanel({
 }: ReplyProvenancePanelProps) {
   const addBrowserTab = useBrowserStore((state) => state.addTab);
   const dispatch = useNav((state) => state.dispatch);
-  const citationItems = reply.items.filter(
+  const citationItems = (reply.items || []).filter(
     (item): item is CitationReplyItem => item.kind === "citation",
   );
-  const toolItems = reply.items.filter(
+  const toolItems = (reply.items || []).filter(
     (item): item is ToolCallReplyItem => item.kind === "tool_call",
   );
-  const artifactItems = reply.items.filter(
+  const artifactItems = (reply.items || []).filter(
     (item): item is ArtifactReplyItem => item.kind === "artifact",
   );
-  const fileOpItems = reply.items.filter(
+  const fileOpItems = (reply.items || []).filter(
     (item): item is FileOpReplyItem => item.kind === "file_op",
   );
 
@@ -631,9 +630,9 @@ export const ReplyProvenancePanel = memo(function ReplyProvenancePanel({
             <div style={{ fontSize: 11, color: "var(--ui-text-muted)", marginTop: 4 }}>
               {item.state === "queued" ? "Queued" : item.state === "running" ? "Running" : item.state === "error" ? "Failed" : "Done"}
             </div>
-            {item.progressLines.length > 0 ? (
+            {(item.progressLines?.length ?? 0) > 0 ? (
               <div style={{ fontSize: 12, lineHeight: 1.45, color: "var(--ui-text-secondary)", marginTop: 6 }}>
-                {item.progressLines[item.progressLines.length - 1]}
+                {item.progressLines![item.progressLines!.length - 1]}
               </div>
             ) : null}
             {typeof item.output === "string" && item.output.trim() ? (
@@ -669,7 +668,7 @@ export const ReplyProvenancePanel = memo(function ReplyProvenancePanel({
         ))}
         {fileOpItems.map((item) => (
           <div
-            key={item.id}
+            key={`${item.path}-${item.timestamp}`}
             style={{
               ...PANEL_CARD_STYLE,
               padding: "10px 12px",

@@ -40,10 +40,10 @@ export async function mountAgentWorkspace(
   agentId: string,
   sessionId: string
 ): Promise<AgentWorkspaceMount> {
-  const workspacePath = await agentWorkspaceService.getWorkspacePath(agentId);
-  
+  const workspacePath = await (agentWorkspaceService as any).getWorkspacePath(agentId);
+
   // Ensure workspace exists
-  await agentWorkspaceService.ensureWorkspace(agentId);
+  await (agentWorkspaceService as any).ensureWorkspace(agentId);
   
   // Get all files in workspace
   const files = await loadWorkspaceFiles(workspacePath);

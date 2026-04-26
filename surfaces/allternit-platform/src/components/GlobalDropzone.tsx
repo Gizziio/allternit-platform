@@ -231,16 +231,16 @@ export function GlobalDropzoneProvider({ children }: GlobalDropzoneProviderProps
 
   // Set up global drag event listeners
   useEffect(() => {
-    document.addEventListener('dragenter', handleDragEnter);
-    document.addEventListener('dragleave', handleDragLeave);
-    document.addEventListener('dragover', handleDragOver);
-    document.addEventListener('drop', handleDrop);
+    document.addEventListener('dragenter', handleDragEnter as unknown as EventListener);
+    document.addEventListener('dragleave', handleDragLeave as unknown as EventListener);
+    document.addEventListener('dragover', handleDragOver as unknown as EventListener);
+    document.addEventListener('drop', handleDrop as unknown as EventListener);
 
     return () => {
-      document.removeEventListener('dragenter', handleDragEnter);
-      document.removeEventListener('dragleave', handleDragLeave);
-      document.removeEventListener('dragover', handleDragOver);
-      document.removeEventListener('drop', handleDrop);
+      document.removeEventListener('dragenter', handleDragEnter as unknown as EventListener);
+      document.removeEventListener('dragleave', handleDragLeave as unknown as EventListener);
+      document.removeEventListener('dragover', handleDragOver as unknown as EventListener);
+      document.removeEventListener('drop', handleDrop as unknown as EventListener);
     };
   }, [handleDragEnter, handleDragLeave, handleDragOver, handleDrop]);
 

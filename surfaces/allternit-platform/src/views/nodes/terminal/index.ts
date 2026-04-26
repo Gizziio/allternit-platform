@@ -1,5 +1,6 @@
 // Terminal exports
 export { NodeTerminal } from './NodeTerminal';
+export { TerminalCanvas } from './TerminalCanvas';
 export { TerminalTabs } from './TerminalTabs';
 export { TerminalFileBrowser } from './TerminalFileBrowser';
 export { nodeTerminalService } from './terminal.service';

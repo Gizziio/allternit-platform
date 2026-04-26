@@ -1,0 +1,511 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://allternit.dev/schemas/ExecutionDriver.schema.json",
+  "title": "Allternit Execution Driver Interface",
+  "description": "Core contract for all execution drivers in the Allternit platform",
+  "version": "0.1.0",
+  
+  "definitions": {
+    "ExecutionId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier for an execution"
+    },
+    
+    "TenantId": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,62}$",
+      "description": "Tenant identifier (lowercase alphanumeric with hyphens)"
+    },
+    
+    "ResourceSpec": {
+      "type": "object",
+      "required": ["cpu_millis", "memory_mib"],
+      "properties": {
+        "cpu_millis": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 32000,
+          "description": "CPU allocation in millicores (1000 = 1 core)"
+        },
+        "memory_mib": {
+          "type": "integer",
+          "minimum": 64,
+          "maximum": 262144,
+          "description": "Memory allocation in MiB"
+        },
+        "disk_mib": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 1000000,
+          "description": "Ephemeral disk allocation in MiB"
+        },
+        "network_egress_kib": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Network egress limit in KiB"
+        },
+        "gpu_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8,
+          "description": "Number of GPU devices"
+        }
+      }
+    },
+    
+    "EnvironmentSpec": {
+      "type": "object",
+      "required": ["type", "image"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["oci", "nix", "devcontainer", "wasm"],
+          "description": "Environment specification type"
+        },
+        "image": {
+          "type": "string",
+          "description": "Container image or environment reference"
+        },
+        "version": {
+          "type": "string",
+          "description": "Environment version (semver)"
+        },
+        "packages": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Additional packages to install"
+        },
+        "env_vars": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Environment variables"
+        },
+        "working_dir": {
+          "type": "string",
+          "description": "Working directory inside environment"
+        },
+        "mounts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/MountSpec"
+          }
+        }
+      }
+    },
+    
+    "MountSpec": {
+      "type": "object",
+      "required": ["source", "target"],
+      "properties": {
+        "source": {
+          "type": "string",
+          "description": "Source path (host or volume)"
+        },
+        "target": {
+          "type": "string",
+          "description": "Target path in container"
+        },
+        "read_only": {
+          "type": "boolean",
+          "default": false
+        },
+        "type": {
+          "type": "string",
+          "enum": ["bind", "volume", "tmpfs", "secret"],
+          "default": "bind"
+        }
+      }
+    },
+    
+    "PolicySpec": {
+      "type": "object",
+      "required": ["version"],
+      "properties": {
+        "version": {
+          "type": "string",
+          "description": "Policy schema version"
+        },
+        "allowed_tools": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Whitelist of allowed tool IDs"
+        },
+        "denied_tools": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Blacklist of denied tool IDs"
+        },
+        "network_policy": {
+          "$ref": "#/definitions/NetworkPolicy"
+        },
+        "file_policy": {
+          "$ref": "#/definitions/FilePolicy"
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400,
+          "description": "Maximum execution time"
+        }
+      }
+    },
+    
+    "NetworkPolicy": {
+      "type": "object",
+      "properties": {
+        "egress_allowed": {
+          "type": "boolean",
+          "default": false
+        },
+        "allowed_hosts": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Allowed destination hosts"
+        },
+        "allowed_ports": {
+          "type": "array",
+          "items": { "type": "integer" },
+          "description": "Allowed destination ports"
+        },
+        "dns_allowed": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    
+    "FilePolicy": {
+      "type": "object",
+      "properties": {
+        "read_paths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Allowed read paths"
+        },
+        "write_paths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Allowed write paths"
+        },
+        "deny_dot_files": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    
+    "DeterminismEnvelope": {
+      "type": "object",
+      "description": "Defines boundaries for deterministic replay",
+      "properties": {
+        "env_spec_hash": {
+          "type": "string",
+          "description": "Hash of environment specification"
+        },
+        "tool_versions": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "policy_hash": {
+          "type": "string",
+          "description": "Hash of policy specification"
+        },
+        "inputs_hash": {
+          "type": "string",
+          "description": "Hash of input bundle"
+        },
+        "time_frozen": {
+          "type": "boolean",
+          "description": "Whether time is frozen for replay"
+        },
+        "seed": {
+          "type": "integer",
+          "description": "Random seed for reproducibility"
+        }
+      }
+    },
+    
+    "SpawnSpec": {
+      "type": "object",
+      "required": ["tenant", "env", "policy", "resources"],
+      "properties": {
+        "tenant": {
+          "$ref": "#/definitions/TenantId"
+        },
+        "project": {
+          "type": "string",
+          "description": "Project identifier"
+        },
+        "workspace": {
+          "type": "string",
+          "description": "Workspace identifier"
+        },
+        "run_id": {
+          "$ref": "#/definitions/ExecutionId"
+        },
+        "env": {
+          "$ref": "#/definitions/EnvironmentSpec"
+        },
+        "policy": {
+          "$ref": "#/definitions/PolicySpec"
+        },
+        "resources": {
+          "$ref": "#/definitions/ResourceSpec"
+        },
+        "envelope": {
+          "$ref": "#/definitions/DeterminismEnvelope"
+        },
+        "prewarm_pool": {
+          "type": "string",
+          "description": "Optional prewarm pool to source from"
+        }
+      }
+    },
+    
+    "CommandSpec": {
+      "type": "object",
+      "required": ["command"],
+      "properties": {
+        "command": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "Command and arguments"
+        },
+        "env_vars": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "working_dir": {
+          "type": "string"
+        },
+        "stdin_data": {
+          "type": "string",
+          "description": "Base64-encoded stdin data"
+        },
+        "capture_stdout": {
+          "type": "boolean",
+          "default": true
+        },
+        "capture_stderr": {
+          "type": "boolean",
+          "default": true
+        }
+      }
+    },
+    
+    "ExecResult": {
+      "type": "object",
+      "required": ["exit_code", "duration_ms"],
+      "properties": {
+        "exit_code": {
+          "type": "integer",
+          "description": "Process exit code"
+        },
+        "stdout": {
+          "type": "string",
+          "description": "Base64-encoded stdout"
+        },
+        "stderr": {
+          "type": "string",
+          "description": "Base64-encoded stderr"
+        },
+        "duration_ms": {
+          "type": "integer",
+          "description": "Execution duration in milliseconds"
+        },
+        "resource_usage": {
+          "$ref": "#/definitions/ResourceConsumption"
+        }
+      }
+    },
+    
+    "ResourceConsumption": {
+      "type": "object",
+      "properties": {
+        "cpu_millis_used": {
+          "type": "integer",
+          "description": "CPU time used in millicore-seconds"
+        },
+        "memory_mib_peak": {
+          "type": "integer",
+          "description": "Peak memory usage in MiB"
+        },
+        "disk_mib_used": {
+          "type": "integer",
+          "description": "Disk usage in MiB"
+        },
+        "network_egress_kib": {
+          "type": "integer",
+          "description": "Network egress in KiB"
+        }
+      }
+    },
+    
+    "Artifact": {
+      "type": "object",
+      "required": ["path", "hash", "size"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Artifact path"
+        },
+        "hash": {
+          "type": "string",
+          "description": "Blake3 hash of content"
+        },
+        "size": {
+          "type": "integer",
+          "description": "Size in bytes"
+        },
+        "content_type": {
+          "type": "string",
+          "description": "MIME type"
+        }
+      }
+    },
+    
+    "Receipt": {
+      "type": "object",
+      "required": ["run_id", "tenant", "started_at", "completed_at", "exit_code"],
+      "properties": {
+        "run_id": {
+          "$ref": "#/definitions/ExecutionId"
+        },
+        "tenant": {
+          "$ref": "#/definitions/TenantId"
+        },
+        "started_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "completed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "exit_code": {
+          "type": "integer"
+        },
+        "env_spec_hash": {
+          "type": "string"
+        },
+        "policy_hash": {
+          "type": "string"
+        },
+        "inputs_hash": {
+          "type": "string"
+        },
+        "outputs_hash": {
+          "type": "string"
+        },
+        "resource_consumption": {
+          "$ref": "#/definitions/ResourceConsumption"
+        },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Artifact"
+          }
+        },
+        "signatures": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Signature"
+          }
+        }
+      }
+    },
+    
+    "Signature": {
+      "type": "object",
+      "required": ["key_id", "algorithm", "value"],
+      "properties": {
+        "key_id": {
+          "type": "string"
+        },
+        "algorithm": {
+          "type": "string",
+          "enum": ["ed25519", "rsa-pss-sha256"]
+        },
+        "value": {
+          "type": "string",
+          "description": "Base64-encoded signature"
+        }
+      }
+    },
+    
+    "DriverCapabilities": {
+      "type": "object",
+      "required": ["driver_type", "isolation", "max_resources"],
+      "properties": {
+        "driver_type": {
+          "type": "string",
+          "enum": ["microvm", "container", "process", "wasm"]
+        },
+        "isolation": {
+          "type": "string",
+          "enum": ["maximum", "hardened", "standard", "limited"]
+        },
+        "max_resources": {
+          "$ref": "#/definitions/ResourceSpec"
+        },
+        "supported_env_specs": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "features": {
+          "type": "object",
+          "properties": {
+            "snapshot": {
+              "type": "boolean"
+            },
+            "live_restore": {
+              "type": "boolean"
+            },
+            "gpu": {
+              "type": "boolean"
+            },
+            "prewarm": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    
+    "DriverError": {
+      "type": "object",
+      "required": ["code", "message"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "INSUFFICIENT_RESOURCES",
+            "SPAWN_FAILED",
+            "EXEC_TIMEOUT",
+            "POLICY_VIOLATION",
+            "ISOLATION_BREACH",
+            "NOT_FOUND",
+            "NOT_SUPPORTED",
+            "INTERNAL_ERROR"
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "object"
+        }
+      }
+    }
+  },
+  
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "0.1.0"
+    }
+  }
+}

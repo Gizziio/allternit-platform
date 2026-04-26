@@ -63,7 +63,7 @@ async function discoverFromElectron(): Promise<DiscoveredServer | null> {
 
   try {
     // Check if sidecar is running
-    const status = await sidecar.getStatus();
+    const status = await sidecar.getStatus!();
     if (status !== 'running') {
       console.log('[Discovery] Electron sidecar not running');
       return null;
@@ -71,8 +71,8 @@ async function discoverFromElectron(): Promise<DiscoveredServer | null> {
 
     // Get API URL and credentials
     const [apiUrl, basicAuth] = await Promise.all([
-      sidecar.getApiUrl(),
-      sidecar.getBasicAuth(),
+      sidecar.getApiUrl!(),
+      sidecar.getBasicAuth!(),
     ]);
 
     if (!apiUrl) {
@@ -115,7 +115,7 @@ async function discoverFromPersisted(): Promise<DiscoveredServer | null> {
   }
 
   try {
-    const config = await sidecar.getPersistedConfig();
+    const config = await sidecar.getPersistedConfig!();
     if (!config) {
       return null;
     }

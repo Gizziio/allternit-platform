@@ -5,23 +5,28 @@
  */
 
 // Plugin Capability Types
-export type PluginCapability = 
+export type PluginCapability =
   // Research
   | 'web-search' | 'citation' | 'synthesis' | 'source-verification' | 'deep-research'
   // Data
   | 'csv-import' | 'excel-analysis' | 'chart-generation' | 'sql-query' | 'insights' | 'data-export'
   // Slides
   | 'ppt-generation' | 'template-selection' | 'speaker-notes' | 'export-pdf' | 'presentation-analytics'
+  | 'presentation-generation' | 'slide-design' | 'pptx-export' | 'html-slides' | 'markdown-slides'
   // Code
   | 'code-generation' | 'live-preview' | 'multi-language' | 'package-install' | 'debugging' | 'testing'
   // Assets
   | 'file-upload' | 'ai-tagging' | 'semantic-search' | 'preview' | 'version-control'
+  | 'icon-search' | 'icon-generation' | '3d-models' | 'vector-graphics' | 'asset-library'
   // Agents
   | 'parallel-agents' | 'agent-swarm' | 'task-delegation' | 'result-aggregation' | 'agent-creation'
+  | 'multi-agent' | 'agent-coordination' | 'consensus-building' | 'parallel-processing' | 'specialized-agents'
   // Flow
   | 'visual-builder' | 'node-editor' | 'trigger-setup' | 'automation' | 'workflow-scheduling'
+  | 'workflow-design' | 'workflow-execution' | 'conditional-logic' | 'tool-integration'
   // Website
-  | 'dom-capture' | 'site-clone' | 'live-preview' | 'deploy' | 'responsive-preview'
+  | 'dom-capture' | 'site-clone' | 'deploy' | 'responsive-preview'
+  | 'website-generation' | 'landing-page' | 'responsive-design' | 'component-library' | 'deployment-prep' | 'seo-optimization'
   // Image
   | 'text-to-image' | 'image-variations' | 'style-transfer' | 'upscale' | 'inpainting' | 'outpainting'
   // Video

@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/Workspace.schema.json",
+  "title": "Workspace — Code Mode Workspace Binding",
+  "description": "A directory/repo the user selects for Code Mode. Context is scoped per session within a workspace.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "workspace_id",
+    "root_path",
+    "display_name"
+  ],
+  "properties": {
+    "workspace_id": {
+      "type": "string",
+      "pattern": "^ws_",
+      "description": "Unique workspace identifier"
+    },
+    "root_path": {
+      "type": "string",
+      "description": "Absolute path to workspace root directory"
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Human-readable workspace name (defaults to directory name)"
+    },
+    "git": {
+      "type": ["object", "null"],
+      "description": "Git metadata. Null if not a git repo.",
+      "properties": {
+        "is_git": { "type": "boolean" },
+        "default_branch": { "type": "string" },
+        "remote_url": { "type": ["string", "null"] }
+      },
+      "required": ["is_git"]
+    },
+    "repo_status": {
+      "$ref": "#/$defs/RepoStatus",
+      "description": "Live repo status snapshot. Updated on session create/resume."
+    },
+    "safe_boundaries": {
+      "type": "object",
+      "description": "Path boundaries enforced by policy",
+      "properties": {
+        "root": { "type": "string" },
+        "deny_globs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Paths that must never be written (e.g. .env, credentials)"
+        }
+      }
+    },
+    "last_opened_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "sessions": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Active session IDs in this workspace"
+    },
+    "context_anchor": {
+      "type": ["string", "null"],
+      "description": "Path to CODEBASE.md or equivalent retrieval anchor"
+    }
+  },
+  "$defs": {
+    "RepoStatus": {
+      "type": "object",
+      "properties": {
+        "branch": { "type": "string" },
+        "dirty": { "type": "boolean" },
+        "ahead": { "type": "integer", "minimum": 0 },
+        "behind": { "type": "integer", "minimum": 0 },
+        "staged_count": { "type": "integer", "minimum": 0 },
+        "unstaged_count": { "type": "integer", "minimum": 0 },
+        "untracked_count": { "type": "integer", "minimum": 0 },
+        "last_commit": { "type": "string" },
+        "last_commit_message": { "type": "string" },
+        "snapshot_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["branch", "dirty", "snapshot_at"]
+    }
+  }
+}

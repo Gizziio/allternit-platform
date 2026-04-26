@@ -194,7 +194,7 @@ class VideoPlugin implements ModePlugin {
 
     // TODO: Call actual MiniMax/Kling API
     const result = await generateVideo(prompt, {
-      provider: this.config.provider!,
+      provider: this.config.provider! as any,
       model: this.config.model!,
       duration: this.config.duration!,
       resolution: this.config.resolution!,
@@ -224,7 +224,7 @@ class VideoPlugin implements ModePlugin {
     });
 
     const result = await generateVideoFromImage(imageUrl, prompt, {
-      provider: this.config.provider!,
+      provider: this.config.provider! as any,
       model: this.config.model!,
       duration: this.config.duration!,
       resolution: this.config.resolution!,

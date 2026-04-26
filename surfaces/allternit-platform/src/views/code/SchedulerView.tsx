@@ -11,6 +11,24 @@ import {
 } from '@phosphor-icons/react';
 import { useUnifiedStore } from '@/lib/agents/unified.store';
 
+interface ScheduledDagMetadata {
+  title?: string;
+  description?: string;
+  schedule?: string;
+  scheduleStatus?: 'active' | 'paused';
+}
+
+interface ScheduledJob {
+  id: string;
+  title: string;
+  dagId: string;
+  schedule: string;
+  status: 'active' | 'paused';
+  lastRun?: number | null;
+  nextRun?: number | null;
+  isDemo?: boolean;
+}
+
 export function SchedulerView() {
   const { 
     dags,
@@ -20,7 +38,7 @@ export function SchedulerView() {
     isLoading 
   } = useUnifiedStore();
 
-  const [jobs, setJobs] = useState<any[]>([]);
+  const [jobs, setJobs] = useState<ScheduledJob[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [newJobDagId, setNewJobDagId] = useState('');
   const [newJobSchedule, setNewJobSchedule] = useState('0 * * * *');
@@ -33,29 +51,29 @@ export function SchedulerView() {
   // Derive scheduled jobs from DAGs with schedule metadata
   useEffect(() => {
     const scheduledJobs = dags
-      .filter(dag => (dag.metadata as any)?.schedule) // Only DAGs with schedule metadata
+      .filter(dag => (dag.metadata as ScheduledDagMetadata | undefined)?.schedule) // Only DAGs with schedule metadata
       .map((dag, index) => ({
         id: `job-${dag.dagId}`,
         title: dag.metadata?.title || dag.dagId,
         dagId: dag.dagId,
-        schedule: (dag.metadata as any)?.schedule || '0 * * * *',
-        status: (dag.metadata as any)?.scheduleStatus || (index === 2 ? 'paused' : 'active'),
+        schedule: (dag.metadata as ScheduledDagMetadata | undefined)?.schedule || '0 * * * *',
+        status: (dag.metadata as ScheduledDagMetadata | undefined)?.scheduleStatus || (index === 2 ? 'paused' : 'active'),
         lastRun: executions
           .filter(e => e.dagId === dag.dagId && e.status === 'completed')
           .sort((a, b) => b.startedAt - a.startedAt)[0]?.startedAt,
-        nextRun: calculateNextRun((dag.metadata as any)?.schedule || '0 * * * *'),
+        nextRun: calculateNextRun((dag.metadata as ScheduledDagMetadata | undefined)?.schedule || '0 * * * *'),
       }));
     
     // Also add some jobs from DAGs without schedules for demo
     const demoJobs = dags
       .slice(0, 3)
-      .filter(dag => !(dag.metadata as any)?.schedule)
+      .filter(dag => !(dag.metadata as ScheduledDagMetadata | undefined)?.schedule)
       .map((dag, index) => ({
         id: `job-demo-${dag.dagId}`,
         title: `${dag.metadata?.title || dag.dagId} (Auto)`,
         dagId: dag.dagId,
         schedule: index === 0 ? '0 * * * *' : index === 1 ? '0 0 * * *' : '0 12 * * 0',
-        status: index === 2 ? 'paused' : 'active',
+        status: (index === 2 ? 'paused' : 'active') as 'active' | 'paused',
         lastRun: executions
           .filter(e => e.dagId === dag.dagId && e.status === 'completed')
           .sort((a, b) => b.startedAt - a.startedAt)[0]?.startedAt,
@@ -91,7 +109,7 @@ export function SchedulerView() {
     return now + 3600000; // Default 1 hour
   };
 
-  const toggleJobStatus = (jobId: string) => {
+  const toggleJobStatus = (jobId: string): void => {
     setJobs(prev => prev.map(job => 
       job.id === jobId 
         ? { ...job, status: job.status === 'active' ? 'paused' : 'active' }
@@ -99,7 +117,7 @@ export function SchedulerView() {
     ));
   };
 
-  const runJobNow = async (dagId: string) => {
+  const runJobNow = async (dagId: string): Promise<void> => {
     try {
       await executeDag(dagId);
     } catch (err) {
@@ -107,10 +125,10 @@ export function SchedulerView() {
     }
   };
 
-  const handleCreateJob = () => {
+  const handleCreateJob = (): void => {
     if (!newJobDagId) return;
     
-    const newJob = {
+    const newJob: ScheduledJob = {
       id: `job-${Date.now()}`,
       title: `${dags.find(d => d.dagId === newJobDagId)?.metadata?.title || newJobDagId} (Custom)`,
       dagId: newJobDagId,

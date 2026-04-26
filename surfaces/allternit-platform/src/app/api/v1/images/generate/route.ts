@@ -62,7 +62,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     // Extract the first image from result.files
     const imageFile = result.files?.[0];
     if (imageFile?.base64) {
-      const mimeType = imageFile.mimeType ?? "image/png";
+      const mimeType = imageFile.mediaType ?? "image/png";
       return NextResponse.json({
         url: `data:${mimeType};base64,${imageFile.base64}`,
         source: "gemini",

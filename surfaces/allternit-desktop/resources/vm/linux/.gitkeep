@@ -1,0 +1,5 @@
+# Linux VM Images
+
+Place Firecracker microVM files here:
+- rootfs.ext4 - Root filesystem
+- kernel - Linux kernel (vmlinux)

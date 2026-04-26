@@ -1,5 +1,5 @@
 /**
- * A2R Extension — Content Script
+ * Allternit Extension — Content Script
  *
  * Unified content script combining:
  *   - page-agent DOM observation (RemotePageController injection + mask overlay)
@@ -9,7 +9,7 @@
 
 import { initPageController } from '@/agent/RemotePageController.content'
 
-const DEBUG_PREFIX = '[A2R Content]'
+const DEBUG_PREFIX = '[Allternit Content]'
 
 export default defineContentScript({
   matches: ['<all_urls>'],
@@ -26,11 +26,11 @@ export default defineContentScript({
     // ── Page-API bridge (opt-in) ──────────────────────────────────────────────
     // If auth tokens match, expose MultiPageAgent to the host page via
     // window.postMessage so apps can drive the agent programmatically.
-    chrome.storage.local.get('A2RExtUserAuthToken').then((result) => {
-      const extToken = result.A2RExtUserAuthToken
+    chrome.storage.local.get('AllternitExtUserAuthToken').then((result) => {
+      const extToken = result.AllternitExtUserAuthToken
       if (!extToken) return
 
-      const pageToken = localStorage.getItem('A2RExtUserAuthToken')
+      const pageToken = localStorage.getItem('AllternitExtUserAuthToken')
       if (!pageToken || pageToken !== extToken) return
 
       console.log(`${DEBUG_PREFIX} Auth tokens match — exposing agent to page`)
@@ -129,7 +129,7 @@ async function exposeAgentToPage() {
 
 // ── Browser-agent action executor ─────────────────────────────────────────────
 // Handles BROWSER.ACT and BROWSER.WAIT messages sent from background.ts
-// (via chrome.tabs.sendMessage) when the thin-client requests DOM actions.
+// (via chrome.tabs.sendMessage) when the Desktop app requests DOM actions.
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse): true | undefined => {
   if (message.type === 'BROWSER.ACT') {

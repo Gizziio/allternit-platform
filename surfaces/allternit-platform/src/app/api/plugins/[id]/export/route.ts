@@ -10,9 +10,9 @@ import { exportToPortableFormat } from '@/lib/plugins/deterministic-executor';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
-  const pluginId = params.id;
+  const { id: pluginId } = await params;
   
   try {
     const portable = await exportToPortableFormat(pluginId);

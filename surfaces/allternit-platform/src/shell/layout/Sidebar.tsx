@@ -258,7 +258,7 @@ export function Sidebar({
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
                 <span className="text-white text-sm font-bold">A2</span>
               </div>
-              <span className="text-foreground">A2rchitect</span>
+              <span className="text-foreground">allternit</span>
             </div>
           ))}
           {isOpen && header}
@@ -565,7 +565,7 @@ function MobileSidebar({
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
                 <span className="text-white text-sm font-bold">A2</span>
               </div>
-              <span>A2rchitect</span>
+              <span>allternit</span>
             </div>
           ))}
           <button

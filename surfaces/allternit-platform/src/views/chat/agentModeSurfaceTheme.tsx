@@ -54,6 +54,16 @@ const SURFACE_THEMES: Record<AgentModeSurface, AgentModeSurfaceTheme> = {
     panelTint: 'rgba(105,168,200,0.08)',
     shadow: 'rgba(29,62,80,0.14)',
   },
+  design: {
+    accent: '#E879A0',
+    glow: 'rgba(232,121,160,0.26)',
+    soft: 'rgba(232,121,160,0.14)',
+    wash: 'rgba(232,121,160,0.18)',
+    fog: 'rgba(160,60,100,0.2)',
+    edge: 'rgba(232,121,160,0.16)',
+    panelTint: 'rgba(232,121,160,0.08)',
+    shadow: 'rgba(100,30,60,0.14)',
+  },
 };
 
 const backdropAnimationStyles = `

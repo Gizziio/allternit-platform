@@ -11,7 +11,7 @@ interface ArchitectLogoProps {
 }
 
 /**
- * ArchitectLogo - A technical, geometric persona for A2Rchitech.
+ * ArchitectLogo - A technical, geometric persona for Allternit.
  * Moves away from hand-drawn aesthetics toward precision and structure.
  * Uses rectilinear blocks and technical crosshairs.
  */

@@ -39,10 +39,10 @@ YELLOW='\\033[1;33m'
 BLUE='\\033[0;34m'
 NC='\\033[0m'
 
-log_info() { echo -e "${GREEN}[INFO]${NC} $1"; }
-log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
-log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
-log_step() { echo -e "${BLUE}[STEP]${NC} $1"; }
+log_info() { echo -e "\${GREEN}[INFO]\${NC} $1"; }
+log_warn() { echo -e "\${YELLOW}[WARN]\${NC} $1"; }
+log_error() { echo -e "\${RED}[ERROR]\${NC} $1"; }
+log_step() { echo -e "\${BLUE}[STEP]\${NC} $1"; }
 
 # Configuration
 DOMAIN="${domain}"
@@ -131,7 +131,7 @@ create_dirs() {
 download_headscale() {
   log_step "Downloading Headscale..."
   
-  DOWNLOAD_URL="https://github.com/juanfont/headscale/releases/download/v${VERSION}/headscale_${VERSION}_linux_${ARCH}"
+  DOWNLOAD_URL="https://github.com/juanfont/headscale/releases/download/v\${VERSION}/headscale_\${VERSION}_linux_\${ARCH}"
   
   log_info "Downloading from GitHub..."
   
@@ -167,8 +167,8 @@ create_config() {
   log_step "Creating configuration..."
   
   cat > /etc/headscale/config.yaml << CONFIGEOF
-server_url: https://${DOMAIN}
-listen_addr: 127.0.0.1:${PORT}
+server_url: https://\${DOMAIN}
+listen_addr: 127.0.0.1:\${PORT}
 metrics_listen_addr: 127.0.0.1:9090
 grpc_listen_addr: 127.0.0.1:50443
 
@@ -177,9 +177,9 @@ tls_cert_path: ""
 tls_key_path: ""
 
 # Private key paths
-private_key_path: ${DATA_DIR}/private.key
+private_key_path: \${DATA_DIR}/private.key
 noise:
-  private_key_path: ${DATA_DIR}/noise_private.key
+  private_key_path: \${DATA_DIR}/noise_private.key
 
 # IP prefixes for mesh network
 ip_prefixes:
@@ -195,7 +195,7 @@ derp:
     region_name: "Headscale DERP"
     stun_listen_addr: "0.0.0.0:3478"
     automatically_add_embedded_derp_region: true
-    private_key_path: ${DATA_DIR}/derp_server_private.key
+    private_key_path: \${DATA_DIR}/derp_server_private.key
     http_port: -1
     stun_port: 3478
   
@@ -218,7 +218,7 @@ dns_config:
 database:
   type: sqlite
   sqlite:
-    path: ${DATA_DIR}/db.sqlite
+    path: \${DATA_DIR}/db.sqlite
 
 # Logging
 log:
@@ -288,10 +288,10 @@ setup_nginx() {
   cat > /etc/nginx/sites-available/headscale << NGINXEOF
 server {
     listen 80;
-    server_name ${DOMAIN};
+    server_name \${DOMAIN};
     
     location / {
-        proxy_pass http://127.0.0.1:${PORT};
+        proxy_pass http://127.0.0.1:\${PORT};
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -323,13 +323,13 @@ setup_ssl() {
   log_step "Setting up SSL with Let's Encrypt..."
   
   if command -v certbot &> /dev/null; then
-    certbot --nginx -d ${DOMAIN} --non-interactive --agree-tos --email admin@${DOMAIN} || {
+    certbot --nginx -d \${DOMAIN} --non-interactive --agree-tos --email admin@\${DOMAIN} || {
       log_warn "SSL setup failed. You can run 'certbot --nginx' manually later."
     }
   else
     log_warn "certbot not available. SSL not configured."
     log_info "To enable SSL later, install certbot and run:"
-    log_info "  certbot --nginx -d ${DOMAIN}"
+    log_info "  certbot --nginx -d \${DOMAIN}"
   fi
 }
 
@@ -416,15 +416,15 @@ UNINSTALLEOF
 print_completion() {
   echo ""
   echo "=============================================="
-  echo -e "${GREEN}Headscale Server Installed!${NC}"
+  echo -e "\${GREEN}Headscale Server Installed!\${NC}"
   echo "=============================================="
   echo ""
-  echo "Server URL: https://${DOMAIN}"
+  echo "Server URL: https://\${DOMAIN}"
   echo "Status: sudo systemctl status headscale"
   echo "Logs: sudo journalctl -u headscale -f"
   echo ""
   echo "Next Steps:"
-  echo "1. Ensure DNS ${DOMAIN} points to this server"
+  echo "1. Ensure DNS \${DOMAIN} points to this server"
   echo "2. Get API key: sudo headscale apikeys list"
   echo "3. In Allternit: Settings → Infrastructure → Mesh Network"
   echo "4. Enter your server URL and API key"
@@ -489,9 +489,9 @@ cp /usr/local/bin/headscale /usr/local/bin/headscale.backup
 
 # Download new version
 if [ "$VERSION" = "latest" ]; then
-  DOWNLOAD_URL=$(curl -s https://api.github.com/repos/juanfont/headscale/releases/latest | grep "browser_download_url.*linux_${ARCH}" | cut -d '"' -f 4)
+  DOWNLOAD_URL=$(curl -s https://api.github.com/repos/juanfont/headscale/releases/latest | grep "browser_download_url.*linux_\${ARCH}" | cut -d '"' -f 4)
 else
-  DOWNLOAD_URL="https://github.com/juanfont/headscale/releases/download/v${VERSION}/headscale_${VERSION}_linux_${ARCH}"
+  DOWNLOAD_URL="https://github.com/juanfont/headscale/releases/download/v\${VERSION}/headscale_\${VERSION}_linux_\${ARCH}"
 fi
 
 curl -fsSL -o /usr/local/bin/headscale "$DOWNLOAD_URL"

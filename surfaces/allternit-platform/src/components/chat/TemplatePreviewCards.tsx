@@ -1071,7 +1071,6 @@ export function TemplatePreviewCards({ modeId, onSelectTemplate }: TemplatePrevi
 
 // Export for use in other components
 export { MODE_TEMPLATES, DEFAULT_TEMPLATES };
-export type { TemplatePreview };
 
 // Helper to get templates for a mode
 export function getTemplatesForMode(modeId: string): TemplatePreview[] {

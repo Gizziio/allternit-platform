@@ -38,6 +38,17 @@ const OAUTH_APPS: OAuthAppConfig[] = [
       'Access saved bookmarks and history',
     ],
   },
+  {
+    clientId: 'allternit-desktop',
+    name: 'Allternit Desktop',
+    allowedRedirectUris: ['allternit://auth/callback'],
+    scopes: [
+      'Access your Allternit profile information',
+      'Use your hosted account to unlock the desktop app',
+      'Keep the desktop shell linked to your Allternit workspace',
+      'Authorize the local platform backend on your behalf',
+    ],
+  },
 ];
 
 const APP_MAP = new Map(OAUTH_APPS.map((a) => [a.clientId, a]));

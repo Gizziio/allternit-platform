@@ -1,8 +1,8 @@
-import type { NativeMessage } from "./native-agent.store";
+import type { ModeSessionMessage } from "./mode-session-store";
 import type { ChatMessage as StreamChatMessage, UIPart } from "@/lib/ai/rust-stream-adapter";
 
 function normalizeRole(
-  role: NativeMessage["role"],
+  role: ModeSessionMessage["role"],
 ): StreamChatMessage["role"] {
   if (role === "tool") {
     return "assistant";
@@ -11,7 +11,7 @@ function normalizeRole(
   return role;
 }
 
-function normalizeContent(message: NativeMessage): StreamChatMessage["content"] {
+function normalizeContent(message: ModeSessionMessage): StreamChatMessage["content"] {
   if (message.role === "tool") {
     return `Tool result\n${message.content}`;
   }
@@ -34,7 +34,7 @@ function normalizeContent(message: NativeMessage): StreamChatMessage["content"] 
 }
 
 export function mapNativeMessagesToStreamMessages(
-  messages: NativeMessage[],
+  messages: ModeSessionMessage[],
 ): StreamChatMessage[] {
   return messages.map((message) => ({
     id: message.id,

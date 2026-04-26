@@ -12,17 +12,17 @@
  */
 
 // Core utilities
-export * from './glass-utils';
+export { type GlassBlur, type GlassBorder, type GlassElevation, type GlassHover, type GlassOpacity, type GlassOptions, type GlassPadding, type GlassRounded, type GlassTransition, type GlassVariant, blurValues, borderStyles, buildGlassClasses, buildGlassStyles, elevationShadows, fallbackBackgrounds, focusRingStyles, getActiveStyles, getHoverStyles, glassEffects, gpuAcceleratedStyles, hoverTransforms, opacityValues, paddingValues, roundedValues, supportsBackdropFilter, transitionValues, useBackdropFilterSupport, variantColors } from './glass-utils';
 
 // Hook
-export * from './useGlass';
+export { type UseGlassOptions, type UseGlassReturn, useGlass, useGlassButton, useGlassCard, useGlassDialog, useGlassInput, useGlassPanel, useGlassTooltip } from './useGlass';
 
 // Components
-export * from './GlassSurface';
-export * from './GlassCard';
-export * from './GlassPanel';
-export * from './GlassDialog';
-export * from './GlassTooltip';
-export * from './GlassPopover';
-export * from './GlassInput';
-export * from './GlassButton';
+export { type GlassIntensity, GlassSurface, GlassSurfaceBase, GlassSurfaceElevated, type GlassSurfaceProps, GlassSurfaceThick, GlassSurfaceThin } from './GlassSurface';
+export { GlassCard, GlassCardDanger, GlassCardFlat, GlassCardFloating, GlassCardInteractive, GlassCardPrimary, type GlassCardProps, GlassCardSuccess, GlassCardWarning } from './GlassCard';
+export { GlassBottomPanel, GlassDrawer, GlassPanel, type GlassPanelProps, GlassSidebar, GlassTopPanel } from './GlassPanel';
+export { GlassAlertDialog, GlassConfirmDialog, GlassDialog, GlassDialogFull, GlassDialogLarge, type GlassDialogProps, GlassDialogSmall } from './GlassDialog';
+export { GlassTooltip, type GlassTooltipProps, GlassTooltipSimple } from './GlassTooltip';
+export { GlassContextMenu, GlassDropdown, GlassHoverCard, GlassPopover, type GlassPopoverProps } from './GlassPopover';
+export { GlassInput, GlassInputLarge, type GlassInputProps, GlassInputSmall, GlassSearchInput } from './GlassInput';
+export { GlassButton, GlassButtonDanger, GlassButtonGhost, GlassButtonLarge, GlassButtonPrimary, type GlassButtonProps, GlassButtonSmall, GlassButtonSuccess, GlassIconButton } from './GlassButton';

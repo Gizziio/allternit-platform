@@ -62,7 +62,7 @@ Description of this feature and how it helps users.
 
 ### From Marketplace (Recommended)
 
-1. Open the A2R Platform
+1. Open the Allternit Platform
 2. Go to **Settings > Plugins > Marketplace**
 3. Search for "{{PLUGIN_NAME}}"
 4. Click **Install**
@@ -70,7 +70,7 @@ Description of this feature and how it helps users.
 ### From GitHub Releases
 
 1. Download the latest release from the [Releases](https://github.com/{{GITHUB_USERNAME}}/{{REPO_NAME}}/releases) page
-2. Open the A2R Platform
+2. Open the Allternit Platform
 3. Go to **Settings > Plugins > Install from File**
 4. Select the downloaded `.zip` file
 
@@ -182,7 +182,7 @@ plugin.operation2('input', {
 
 ### Classes
 
-#### `MyA2RPlugin`
+#### `MyAllternitPlugin`
 
 The main plugin class.
 
@@ -300,7 +300,7 @@ interface IMyPluginEvents {
 
 ### Events
 
-You can listen to plugin events using the A2R events API:
+You can listen to plugin events using the Allternit events API:
 
 ```javascript
 import { events } from '@allternit/platform';
@@ -428,7 +428,7 @@ If you encounter issues not covered here:
 
 1. **Check the FAQ**: [FAQ.md](./FAQ.md)
 2. **Search Issues**: [GitHub Issues](https://github.com/{{GITHUB_USERNAME}}/{{REPO_NAME}}/issues)
-3. **Ask the Community**: [Discord](https://discord.gg/a2r)
+3. **Ask the Community**: [Discord](https://discord.gg/allternit)
 4. **Report a Bug**: [New Issue](https://github.com/{{GITHUB_USERNAME}}/{{REPO_NAME}}/issues/new)
 
 ### Debug Mode
@@ -495,12 +495,12 @@ This plugin is licensed under the [MIT License](../LICENSE).
 
 ## Acknowledgments
 
-- Thanks to the A2R Platform team
+- Thanks to the Allternit Platform team
 - Inspired by [mention any inspirations]
 - Built with [mention key dependencies]
 
 ---
 
 <p align="center">
-  <sub>Built with ❤️ for the A2R Community</sub>
+  <sub>Built with ❤️ for the Allternit Community</sub>
 </p>

@@ -50,7 +50,7 @@ export default defineConfig({
     },
   }),
   zip: {
-    artifactTemplate: 'a2r-ext-{{version}}-{{browser}}.zip',
+    artifactTemplate: 'allternit-ext-{{version}}-{{browser}}.zip',
   },
   manifest: {
     name: 'Allternit Extension',
@@ -85,7 +85,7 @@ export default defineConfig({
         matches: ['*://*/*'],
       },
     ],
-    // Allow local desktop thin-client to communicate via externally_connectable
+    // Allow Allternit Desktop app and cloud to communicate via externally_connectable
     externally_connectable: {
       matches: ['http://localhost:*/*', 'https://*.allternit.com/*'],
     },

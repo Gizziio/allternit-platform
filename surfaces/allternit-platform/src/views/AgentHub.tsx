@@ -12,28 +12,35 @@ import {
   Globe,
   ChatText,
   Brain,
-  MagnifyingGlass,
   CaretDown,
   Check,
   Robot,
   Stack,
+  ChartLineUp,
+  Sun,
+  Moon,
 } from '@phosphor-icons/react';
+import { MemoryKernelView } from './MemoryKernelView';
+import { PerformanceAnalyticsView } from '@/components/agents/PerformanceAnalyticsView';
 import { AgentView } from './AgentView';
 import { SkillsRegistryView } from './code/SkillsRegistryView';
-import { useNativeAgentStore, useAgentStore, agentWorkspaceService } from '../lib/agents';
-import { Input } from '@/components/ui/input';
+import { useAgentStore, agentWorkspaceService } from '../lib/agents';
+import { useChatSessions } from './chat/ChatSessionStore';
 import { WorkspaceTab } from './WorkspaceTab';
+import { useStudioTheme } from './agent-view/useStudioTheme';
+import { useThemeStore, resolveTheme } from '@/design/ThemeStore';
 
 // CreateAgentForm component imported for studio tab
 import { CreateAgentForm } from './AgentView';
 
-type AgentTab = 'studio' | 'registry' | 'sessions' | 'memory' | 'workspace';
+type AgentTab = 'studio' | 'registry' | 'sessions' | 'memory' | 'analytics' | 'workspace';
 
 const TABS = [
   { id: 'studio' as AgentTab, label: 'Agent Studio', icon: PaintBrush },
   { id: 'registry' as AgentTab, label: 'Agent Registry', icon: Globe },
   { id: 'sessions' as AgentTab, label: 'Sessions', icon: ChatText },
   { id: 'memory' as AgentTab, label: 'Memory', icon: Brain },
+  { id: 'analytics' as AgentTab, label: 'Analytics', icon: ChartLineUp },
   { id: 'workspace' as AgentTab, label: 'Workspace', icon: Stack },
 ] as const;
 
@@ -45,49 +52,35 @@ export function AgentHub() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [hoveredTab, setHoveredTab] = useState<AgentTab | null>(null);
   const [isClient, setIsClient] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const sessions = useNativeAgentStore((state) => state.sessions);
+  const sessions = useChatSessions();
   const { agents, createAgent, fetchAgents, setViewMode } = useAgentStore();
+  const STUDIO_THEME = useStudioTheme();
   const gizziCreatingRef = useRef(false);
   const tabMenuRef = useRef<HTMLDivElement | null>(null);
   
-  // Ensure default agent "Gizzi" exists on mount (only once)
+  // Ensure default agents exist on mount (only once)
   useEffect(() => {
-    const ensureGizzi = async () => {
-      // Prevent duplicate creation attempts
+    const seedAgents = async () => {
       if (gizziCreatingRef.current) return;
       
       await fetchAgents();
-      
-      // Check store directly to avoid stale closure
       const currentAgents = useAgentStore.getState().agents;
-      const gizziAgents = currentAgents.filter((a: any) => a.name === 'Gizzi');
       
-      // Remove duplicates if more than one Gizzi exists
+      // Deduplicate Gizzi
+      const gizziAgents = currentAgents.filter((a: any) => a.name === 'Gizzi');
       if (gizziAgents.length > 1) {
-        console.log(`[AgentHub] Found ${gizziAgents.length} Gizzi agents, removing duplicates...`);
         const { deleteAgent } = useAgentStore.getState();
-        // Keep the first one, delete the rest
         for (let i = 1; i < gizziAgents.length; i++) {
-          try {
-            await deleteAgent(gizziAgents[i].id);
-            console.log(`[AgentHub] Deleted duplicate Gizzi: ${gizziAgents[i].id}`);
-          } catch (e) {
-            console.error(`[AgentHub] Failed to delete duplicate Gizzi: ${gizziAgents[i].id}`, e);
-          }
+          try { await deleteAgent(gizziAgents[i].id); } catch (e) {}
         }
-        // Refresh agents after deletion
         await fetchAgents();
-        return;
       }
       
+      // Seed personal agent: Gizzi
       if (gizziAgents.length === 0) {
         gizziCreatingRef.current = true;
         try {
-          console.log('[AgentHub] Creating Gizzi agent with workspace...');
-          
-          // Create agent record
-          const agent = await createAgent({
+          await createAgent({
             name: 'Gizzi',
             description: 'Your personal Allternit platform assistant. Always here to help.',
             type: 'worker',
@@ -98,9 +91,8 @@ export function AgentHub() {
             tools: [],
             maxIterations: 10,
             temperature: 0.7,
+            source: 'personal',
           });
-          
-          // Create workspace with Gizzi template
           await agentWorkspaceService.create({
             name: 'Gizzi',
             description: 'Your personal Allternit platform assistant. Always here to help.',
@@ -112,19 +104,93 @@ export function AgentHub() {
             tools: [],
             maxIterations: 10,
             temperature: 0.7,
-          }, 'gizzi-platform');
-          
-          console.log('[AgentHub] Gizzi agent and workspace created successfully');
+          }, 'allternit-standard');
         } catch (e) {
           console.error('[AgentHub] Gizzi creation failed:', e);
-        } finally {
-          gizziCreatingRef.current = false;
         }
-      } else {
-        console.log('[AgentHub] Gizzi already exists, skipping creation');
       }
+      
+      // Seed vendor agents (pre-built)
+      const vendorSeeds = [
+        {
+          name: 'Deep Research',
+          description: 'Get in-depth answers grounded in web research. Gathers and analyzes information from multiple sources to create a single, coherent summary.',
+          capabilities: ['research', 'web-search', 'citations'],
+        },
+        {
+          name: 'Code Assistant',
+          description: 'Generate, review, and refactor code across any language. Understands context and suggests improvements.',
+          capabilities: ['code', 'review', 'refactor'],
+        },
+        {
+          name: 'Data Analyst',
+          description: 'Upload CSV or Excel files and get automatic charts, insights, and SQL queries.',
+          capabilities: ['data', 'charts', 'sql'],
+        },
+      ];
+      
+      for (const seed of vendorSeeds) {
+        const exists = currentAgents.some((a: any) => a.name === seed.name && a.source === 'vendor');
+        if (!exists) {
+          try {
+            await createAgent({
+              name: seed.name,
+              description: seed.description,
+              type: 'specialist',
+              model: 'gpt-4o',
+              provider: 'openai',
+              capabilities: seed.capabilities,
+              tools: [],
+              maxIterations: 10,
+              temperature: 0.3,
+              source: 'vendor',
+            });
+          } catch (e) {
+            console.error(`[AgentHub] Failed to seed vendor agent ${seed.name}:`, e);
+          }
+        }
+      }
+      
+      // Seed organization agents
+      const orgSeeds = [
+        {
+          name: 'Data Catalyst',
+          description: 'Analyze complex datasets to surface actionable business insights.',
+          capabilities: ['analytics', 'reporting', 'forecasting'],
+        },
+        {
+          name: 'Architect',
+          description: 'Design and build complex system architectures with best practices.',
+          capabilities: ['architecture', 'design', 'documentation'],
+        },
+      ];
+      
+      for (const seed of orgSeeds) {
+        const exists = currentAgents.some((a: any) => a.name === seed.name && a.source === 'organization');
+        if (!exists) {
+          try {
+            await createAgent({
+              name: seed.name,
+              description: seed.description,
+              type: 'specialist',
+              model: 'gpt-4o',
+              provider: 'openai',
+              capabilities: seed.capabilities,
+              tools: [],
+              maxIterations: 10,
+              temperature: 0.4,
+              source: 'organization',
+            });
+          } catch (e) {
+            console.error(`[AgentHub] Failed to seed org agent ${seed.name}:`, e);
+          }
+        }
+      }
+      
+      await fetchAgents();
+      gizziCreatingRef.current = false;
     };
-    ensureGizzi();
+    seedAgents();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -156,10 +222,10 @@ export function AgentHub() {
     height: '36px',
     padding: '0 12px',
     borderRadius: '8px',
-    background: '#1f1f1f',
-    border: '1px solid rgba(255,255,255,0.08)',
-    boxShadow: '0 8px 24px rgba(0,0,0,0.38)',
-    color: '#e5e5e5',
+    background: STUDIO_THEME.bgCard,
+    border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+    boxShadow: `0 8px 24px ${STUDIO_THEME.bg}80`,
+    color: STUDIO_THEME.textPrimary,
     fontSize: '14px',
     fontWeight: 400,
     cursor: 'pointer',
@@ -170,17 +236,17 @@ export function AgentHub() {
     top: 'calc(100% + 8px)',
     right: 0,
     minWidth: '228px',
-    background: '#1f1f1f',
+    background: STUDIO_THEME.bgCard,
     borderRadius: '10px',
-    border: '1px solid rgba(255,255,255,0.08)',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+    border: `1px solid ${STUDIO_THEME.borderSubtle}`,
+    boxShadow: `0 8px 32px ${STUDIO_THEME.bg}80`,
     padding: '8px 0',
     zIndex: 70,
   };
 
   const dividerStyle: React.CSSProperties = {
     height: '1px',
-    background: 'rgba(255,255,255,0.06)',
+    background: STUDIO_THEME.borderSubtle,
     margin: '6px 10px',
   };
 
@@ -190,9 +256,9 @@ export function AgentHub() {
     alignItems: 'center',
     gap: '12px',
     padding: '8px 12px',
-    background: isActive ? 'rgba(212,149,106,0.16)' : isHovered ? '#2a2a2a' : 'transparent',
+    background: isActive ? `${STUDIO_THEME.accent}25` : isHovered ? `${STUDIO_THEME.textPrimary}10` : 'transparent',
     border: 'none',
-    color: isActive ? '#f0c7a3' : '#e5e5e5',
+    color: isActive ? STUDIO_THEME.accent : STUDIO_THEME.textPrimary,
     fontSize: '14px',
     fontWeight: 400,
     textAlign: 'left',
@@ -272,25 +338,20 @@ export function AgentHub() {
       case 'memory':
         return (
           <div
+            className="h-full overflow-hidden"
+            style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}
+          >
+            <MemoryKernelView />
+          </div>
+        );
+      
+      case 'analytics':
+        return (
+          <div
             className="h-full overflow-auto px-6 pb-6"
             style={{ height: '100%', minHeight: 0, overflowY: 'auto', overflowX: 'hidden' }}
           >
-            <div className="max-w-3xl mx-auto">
-              <div className="flex items-center gap-2 mb-6">
-                <MagnifyingGlass className="h-4 w-4 text-white/40" />
-                <Input 
-                  placeholder="Search agent memories..." 
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-white/[0.03] border-white/[0.06] text-white placeholder:text-white/30"
-                />
-              </div>
-              <div className="text-center py-12">
-                <Brain className="mx-auto h-12 w-12 text-white/20 mb-4" />
-                <h3 className="text-lg font-medium text-white/60 mb-2">Agent Memory</h3>
-                <p className="text-sm text-white/40">Long-term memory and knowledge storage for agents.</p>
-              </div>
-            </div>
+            <PerformanceAnalyticsView />
           </div>
         );
       
@@ -354,8 +415,13 @@ export function AgentHub() {
                   style={{
                     position: 'relative',
                     pointerEvents: 'auto',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
                   }}
                 >
+                  {/* Theme Toggle */}
+                  <AgentHubThemeToggle />
                   <button
                     onClick={() => setShowDropdown(!showDropdown)}
                     style={triggerStyle}
@@ -396,9 +462,9 @@ export function AgentHub() {
                               onMouseLeave={() => setHoveredTab(null)}
                               style={menuItemStyle(isActive, isHovered)}
                             >
-                              <Icon size={16} color={isActive ? '#d4956a' : '#a0a0a0'} />
+                              <Icon size={16} color={isActive ? STUDIO_THEME.accent : STUDIO_THEME.textMuted} />
                               <span style={{ flex: 1 }}>{tab.label}</span>
-                              {isActive ? <Check size={14} color="#d4956a" /> : null}
+                              {isActive ? <Check size={14} color={STUDIO_THEME.accent} /> : null}
                             </button>
                           </React.Fragment>
                         );
@@ -439,6 +505,46 @@ export function AgentHub() {
         </AnimatePresence>
       </div>
     </div>
+  );
+}
+
+function AgentHubThemeToggle() {
+  const theme = useThemeStore((state) => state.theme);
+  const setTheme = useThemeStore((state) => state.setTheme);
+  const resolved = resolveTheme(theme);
+
+  return (
+    <button
+      type="button"
+      onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')}
+      title={`Theme: ${resolved}. Click to toggle.`}
+      aria-label={`Switch to ${resolved === 'dark' ? 'light' : 'dark'} mode`}
+      style={{
+        width: 36,
+        height: 36,
+        borderRadius: '8px',
+        border: '1px solid rgba(255,255,255,0.08)',
+        background: '#1f1f1f',
+        color: '#a0a0a0',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease',
+      }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.color = '#d4956a';
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.color = '#a0a0a0';
+      }}
+    >
+      {resolved === 'dark' ? (
+        <Moon size={18} />
+      ) : (
+        <Sun size={18} />
+      )}
+    </button>
   );
 }
 

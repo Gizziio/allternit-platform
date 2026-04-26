@@ -60,7 +60,7 @@ Changes:
 
 ## Design Tokens Used
 
-All components use A2R design tokens:
+All components use Allternit design tokens:
 - `TEXT.primary`, `TEXT.secondary`, `TEXT.tertiary`
 - `MODE_COLORS.code.accent` (#d97757)
 - Custom colors matching demo-v5.html:
@@ -119,7 +119,7 @@ SwarmMonitorLayout
 
 Run the following to verify:
 ```bash
-cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech/surfaces/platform
+cd /Users/macbook/Desktop/allternit-workspace/allternit/surfaces/platform
 pnpm run typecheck
 pnpm run dev
 ```

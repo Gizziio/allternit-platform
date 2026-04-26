@@ -1,0 +1,77 @@
+---
+title: API Endpoints
+description: REST API reference
+---
+
+## Base URL
+
+```
+https://api.allternit.com/v1
+```
+
+## Agents
+
+### List Agents
+
+```bash
+GET /agents
+```
+
+Response:
+```json
+{
+  "agents": [
+    {
+      "id": "agent_abc123",
+      "name": "Code Analyzer",
+      "status": "active",
+      "created_at": "2024-01-15T10:30:00Z"
+    }
+  ]
+}
+```
+
+### Create Agent
+
+```bash
+POST /agents
+{
+  "name": "My Agent",
+  "runtime": "gizzi-pro",
+  "skills": ["code", "web"]
+}
+```
+
+### Run Agent
+
+```bash
+POST /agents/{id}/run
+{
+  "input": "Analyze this codebase",
+  "context": { "repo": "my-repo" }
+}
+```
+
+## Sessions
+
+### Get Session
+
+```bash
+GET /sessions/{id}
+```
+
+### List Messages
+
+```bash
+GET /sessions/{id}/messages
+```
+
+## Status Codes
+
+| Code | Meaning |
+|------|---------|
+| 200 | Success |
+| 400 | Bad Request |
+| 401 | Unauthorized |
+| 429 | Rate Limited |
+| 500 | Server Error |

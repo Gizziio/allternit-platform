@@ -1,5 +1,5 @@
 /**
- * A2rchitect Super-Agent OS - Export Utilities
+ * allternit Super-Agent OS - Export Utilities
  * 
  * Export programs to various formats:
  * - ResearchDoc: PDF, Markdown, HTML

@@ -1,7 +1,7 @@
 /**
  * CoworkStreamBlock — Renders gizzi-code native Part types as streaming work blocks.
  *
- * Works off NativeAgentStore.parts[sessionId][messageId] which are populated
+ * Works off CoworkStore.parts[sessionId][messageId] which are populated
  * via the part_updated / part_delta / part_removed SSE events.
  *
  * Part types supported:
@@ -17,21 +17,13 @@
  *   compaction  — context compaction notice (CompactionNotice)
  */
 
-import React, { memo, useState } from 'react';
-import { cn } from '@/lib/utils';
+import React, { memo } from 'react';
+import { Markdown } from '@/components/agent-elements/markdown';
+import { ToolRenderer as AgentElementToolRenderer } from '@/components/agent-elements/tools/tool-renderer';
 import {
-  Brain,
-  CaretDown,
-  CaretRight,
-  CheckCircle,
-  CircleNotch,
-  Code,
   FileText,
   GitDiff,
   ListBullets,
-  Terminal,
-  Warning,
-  X,
   ArrowClockwise,
   Funnel,
 } from '@phosphor-icons/react';
@@ -131,8 +123,8 @@ type AnyPart =
 const TextBlock = memo(function TextBlock({ part }: { part: TextPart }) {
   if (!part.text) return null;
   return (
-    <div className="text-sm text-white/80 leading-relaxed whitespace-pre-wrap">
-      {part.text}
+    <div className="text-sm text-white/80 leading-relaxed">
+      <Markdown content={part.text} className="[&_p]:text-[15px] [&_p]:leading-7 [&_p]:text-[var(--ui-text-primary)] [&_ul]:text-[var(--ui-text-primary)] [&_ol]:text-[var(--ui-text-primary)]" />
     </div>
   );
 });
@@ -142,29 +134,18 @@ const TextBlock = memo(function TextBlock({ part }: { part: TextPart }) {
 // ============================================================================
 
 const ReasoningBlock = memo(function ReasoningBlock({ part }: { part: ReasoningPart }) {
-  const [open, setOpen] = useState(false);
-  const preview = part.summary || part.text?.slice(0, 80) || 'Thinking…';
-
   return (
-    <div className="border border-white/5 rounded-lg bg-black/20 overflow-hidden">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-white/40 hover:text-white/60 transition-colors"
-      >
-        <Brain className="w-3.5 h-3.5 text-purple-400/60 shrink-0" />
-        <span className="flex-1 text-left truncate">{preview}</span>
-        {open ? (
-          <CaretDown className="w-3 h-3 shrink-0" />
-        ) : (
-          <CaretRight className="w-3 h-3 shrink-0" />
-        )}
-      </button>
-      {open && part.text && (
-        <div className="px-3 pb-3 text-xs text-white/40 leading-relaxed border-t border-white/5 pt-2 whitespace-pre-wrap">
-          {part.text}
-        </div>
-      )}
-    </div>
+    <AgentElementToolRenderer
+      part={{
+        type: 'tool-Thinking',
+        toolCallId: part.id,
+        input: {
+          thought: part.summary || part.text || 'Thinking…',
+        },
+        output: part.text || part.summary || '',
+        state: 'output-available',
+      }}
+    />
   );
 });
 
@@ -172,86 +153,8 @@ const ReasoningBlock = memo(function ReasoningBlock({ part }: { part: ReasoningP
 // ToolBlock — 4-state: pending / running / completed / error
 // ============================================================================
 
-const TOOL_ICONS: Record<string, React.FC<{ className?: string }>> = {
-  bash: Terminal,
-  glob: ListBullets,
-  grep: ListBullets,
-  read: FileText,
-  write: FileText,
-  edit: FileText,
-  default: Code,
-};
-
-function statusColor(status: PartStatus) {
-  switch (status) {
-    case 'pending': return 'text-white/30 bg-white/5';
-    case 'running': return 'text-blue-400 bg-blue-500/10';
-    case 'completed': return 'text-green-400 bg-green-500/10';
-    case 'error': return 'text-red-400 bg-red-500/10';
-  }
-}
-
-function StatusIcon({ status }: { status: PartStatus }) {
-  switch (status) {
-    case 'pending': return <CircleNotch className="w-3.5 h-3.5 text-white/20" />;
-    case 'running': return <CircleNotch className="w-3.5 h-3.5 text-blue-400 animate-spin" />;
-    case 'completed': return <CheckCircle className="w-3.5 h-3.5 text-green-400" />;
-    case 'error': return <X className="w-3.5 h-3.5 text-red-400" />;
-  }
-}
-
 const ToolBlock = memo(function ToolBlock({ part }: { part: ToolPart }) {
-  const [open, setOpen] = useState(false);
-  const { state, tool } = part;
-  const IconComp = TOOL_ICONS[tool] ?? TOOL_ICONS.default;
-  const title = state.title || tool;
-  const colorClass = statusColor(state.status);
-
-  return (
-    <div className="border border-white/5 rounded-lg bg-[#1a1a1a] overflow-hidden">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-white/[0.02] transition-colors"
-      >
-        <div className={cn('w-7 h-7 rounded-md flex items-center justify-center shrink-0', colorClass)}>
-          <IconComp className="w-3.5 h-3.5" />
-        </div>
-        <div className="flex-1 min-w-0 text-left">
-          <span className="text-sm text-white/70 font-medium">{title}</span>
-          {state.status === 'running' && (
-            <span className="ml-2 text-xs text-blue-400/60">Running…</span>
-          )}
-        </div>
-        <StatusIcon status={state.status} />
-        {open ? (
-          <CaretDown className="w-3.5 h-3.5 text-white/20 ml-1" />
-        ) : (
-          <CaretRight className="w-3.5 h-3.5 text-white/20 ml-1" />
-        )}
-      </button>
-
-      {open && (
-        <div className="border-t border-white/5 px-3 py-2 space-y-2">
-          {state.input && (
-            <div>
-              <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1">Input</p>
-              <pre className="text-xs text-white/50 bg-black/30 rounded p-2 overflow-x-auto">
-                {JSON.stringify(state.input, null, 2)}
-              </pre>
-            </div>
-          )}
-          {state.output && (
-            <div>
-              <p className="text-[10px] text-white/30 uppercase tracking-wider mb-1">Output</p>
-              <pre className="text-xs text-white/50 bg-black/30 rounded p-2 overflow-x-auto max-h-48">
-                {state.output}
-              </pre>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
+  return <AgentElementToolRenderer part={toAgentElementToolPart(part)} />;
 });
 
 // ============================================================================
@@ -353,7 +256,7 @@ export const CoworkStreamBlock = memo(function CoworkStreamBlock({
 }: {
   part: Record<string, unknown>;
 }) {
-  const p = part as AnyPart;
+  const p = part as unknown as AnyPart;
 
   switch (p.type) {
     case 'text':
@@ -400,3 +303,74 @@ export const MessagePartList = memo(function MessagePartList({
     </div>
   );
 });
+
+function toAgentElementToolPart(part: ToolPart) {
+  return {
+    type: mapToolType(part.tool),
+    toolCallId: part.id,
+    input: part.state.input ?? {},
+    output: normalizeToolOutput(part.state.output),
+    state: mapToolState(part.state.status),
+  };
+}
+
+function mapToolType(tool: string): string {
+  switch (tool.toLowerCase()) {
+    case 'bash':
+    case 'shell':
+    case 'command':
+      return 'tool-Bash';
+    case 'grep':
+      return 'tool-Grep';
+    case 'glob':
+      return 'tool-Glob';
+    case 'search':
+    case 'websearch':
+    case 'web-search':
+      return 'tool-WebSearch';
+    case 'edit':
+      return 'tool-Edit';
+    case 'write':
+      return 'tool-Write';
+    case 'read':
+      return 'tool-Read';
+    case 'plan':
+    case 'planwrite':
+      return 'tool-PlanWrite';
+    case 'todo':
+    case 'todowrite':
+      return 'tool-TodoWrite';
+    case 'question':
+      return 'tool-Question';
+    case 'agent':
+    case 'task':
+    case 'subagent':
+      return 'tool-Agent';
+    case 'thinking':
+      return 'tool-Thinking';
+    default:
+      return `tool-${tool}`;
+  }
+}
+
+function mapToolState(status: PartStatus): string {
+  switch (status) {
+    case 'completed':
+      return 'output-available';
+    case 'error':
+      return 'output-error';
+    case 'pending':
+    case 'running':
+    default:
+      return 'input-streaming';
+  }
+}
+
+function normalizeToolOutput(output?: string) {
+  if (!output) return undefined;
+  try {
+    return JSON.parse(output);
+  } catch {
+    return output;
+  }
+}

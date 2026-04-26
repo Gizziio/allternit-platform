@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import type { Icon } from '@phosphor-icons/react';
 import {
   SidebarSimple,
   NotePencil,
@@ -12,8 +13,8 @@ import {
 } from '@phosphor-icons/react';
 
 interface RailControlsProps {
-  mode: 'chat' | 'cowork' | 'code';
-  onModeChange: (mode: 'chat' | 'cowork' | 'code') => void;
+  mode: 'chat' | 'cowork' | 'code' | 'design';
+  onModeChange: (mode: 'chat' | 'cowork' | 'code' | 'design') => void;
   onToggleRail: () => void;
   onNewChat: () => void | Promise<void>;
   onNewAgentSession: () => void | Promise<void>;
@@ -33,7 +34,7 @@ export function RailControls({
   activeViewType,
   onOpenView,
   onOpenPlugins,
-}: RailControlsProps) {
+}: RailControlsProps): JSX.Element {
   const horizontalPadding = 96;
   const railContentInset = 8;
   const railControlWidth = 228;
@@ -46,7 +47,7 @@ export function RailControls({
       return;
     }
 
-    const handlePointerDown = (event: MouseEvent) => {
+    const handlePointerDown = (event: MouseEvent): void => {
       if (!createMenuRef.current?.contains(event.target as Node)) {
         setShowCreateMenu(false);
       }
@@ -125,7 +126,7 @@ export function RailControls({
                 }}
               >
                 <CreateMenuButton
-                  icon={ChatText as any}
+                  icon={ChatText}
                   label="New Chat"
                   description="Start a regular chat thread"
                   onClick={async () => {
@@ -134,7 +135,7 @@ export function RailControls({
                   }}
                 />
                 <CreateMenuButton
-                  icon={Cpu as any}
+                  icon={Cpu}
                   label="New Agent Session"
                   description="Start a durable operator session"
                   onClick={() => {
@@ -235,11 +236,11 @@ function CreateMenuButton({
   description,
   onClick,
 }: {
-  icon: React.ComponentType<{ size?: number | string; weight?: string; color?: string }>;
+  icon: Icon;
   label: string;
   description: string;
   onClick: () => void;
-}) {
+}): JSX.Element {
   return (
     <button
       onClick={onClick}
@@ -289,7 +290,11 @@ function CreateMenuButton({
   );
 }
 
-function ControlButton({ children, onClick, title }: any) {
+function ControlButton({ children, onClick, title }: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  title?: string;
+}): JSX.Element {
   return (
     <button
       onClick={onClick}
@@ -327,7 +332,13 @@ function ConnectedViewButton({
   title,
   icon: Icon,
   label,
-}: any) {
+}: {
+  active: boolean;
+  onClick?: () => void;
+  title?: string;
+  icon: Icon;
+  label: string;
+}): JSX.Element {
   return (
     <button
       onClick={onClick}
@@ -368,7 +379,13 @@ function ConnectedViewButton({
   );
 }
 
-function ProminentModePill({ active, onClick, icon: Icon, label, color }: any) {
+function ProminentModePill({ active, onClick, icon: Icon, label, color }: {
+  active: boolean;
+  onClick?: () => void;
+  icon: Icon;
+  label: string;
+  color: string;
+}): JSX.Element {
   return (
     <button
       onClick={onClick}

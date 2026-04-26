@@ -302,7 +302,7 @@ export function IconExplorer({
               )}
               aria-label="Grid view"
             >
-              <SquaresFour className="w-4 h-4" />
+              <Grid className="w-4 h-4" />
             </button>
             <button
               onClick={() => setViewMode('list')}

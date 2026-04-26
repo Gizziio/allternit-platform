@@ -1,0 +1,99 @@
+---
+title: Authentication
+description: API authentication and API keys
+---
+
+## API Keys
+
+All API requests require authentication using an API key. Include your key in the `Authorization` header:
+
+```bash
+curl -H "Authorization: Bearer allternit_live_xxxxxxxxxxxxxxxx" \
+  https://api.allternit.com/v1/agents
+```
+
+## Getting an API Key
+
+1. Go to [platform.gizziio.com/settings/api-keys](https://platform.gizziio.com/settings/api-keys)
+2. Click "Create New Key"
+3. Copy the key (shown only once)
+
+## Key Types
+
+| Type | Prefix | Description |
+|------|--------|-------------|
+| Live | `allternit_live_` | Production use |
+| Test | `allternit_test_` | Development/testing |
+| Runtime | `allternit_rt_` | BYOC runtime agents |
+
+## Scopes
+
+API keys can be scoped to specific operations:
+
+```bash
+# Create a scoped key
+POST /v1/keys
+{
+  "name": "analysis-agent",
+  "scopes": ["agents:read", "agents:write"],
+  "channels": ["workspace.*"],
+  "rate_limit": "100/min"
+}
+```
+
+Available scopes:
+- `agents:read` - List and get agents
+- `agents:write` - Create and modify agents
+- `agents:run` - Execute agents
+- `sessions:read` - Access session data
+- `sessions:write` - Create sessions
+- `admin:*` - Full access (owner only)
+
+## Rate Limiting
+
+API requests are rate limited per key:
+
+| Plan | Rate Limit |
+|------|------------|
+| Free | 60/min |
+| Pro | 600/min |
+| Enterprise | Custom |
+
+Rate limit headers:
+```
+X-RateLimit-Limit: 600
+X-RateLimit-Remaining: 599
+X-RateLimit-Reset: 1640995200
+```
+
+## WebSocket Authentication
+
+For WebSocket connections, pass the key as a query parameter:
+
+```javascript
+const ws = new WebSocket(
+  'wss://runtime.your-domain.com/events?token=allternit_live_xxx'
+);
+```
+
+## Revoking Keys
+
+Revoke a compromised key immediately:
+
+```bash
+DELETE /v1/keys/key_abc123
+```
+
+Or via the dashboard at [platform.gizziio.com/settings/api-keys](https://platform.gizziio.com/settings/api-keys).
+
+## Security Best Practices
+
+<Warning>
+Never commit API keys to version control!
+</Warning>
+
+- Store keys in environment variables
+- Rotate keys regularly
+- Use separate keys for different environments
+- Monitor key usage for anomalies
+- Revoke unused keys

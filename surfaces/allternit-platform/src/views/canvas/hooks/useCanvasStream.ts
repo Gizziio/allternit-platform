@@ -1,7 +1,7 @@
 /**
  * useCanvasStream.ts
  * 
- * Hook for managing artifact streaming and state in A2r-Canvas.
+ * Hook for managing artifact streaming and state in Allternit-Canvas.
  * Listens to Rust stream events and updates canvas content.
  */
 

@@ -11,6 +11,7 @@
 
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
+import { getPlatformComputerUseBaseUrl } from '@/integration/computer-use-engine';
 import {
   BrowserAgentStatus,
   BrowserAgentMode,
@@ -31,6 +32,73 @@ import {
 } from '@/lib/page-agent/runtime-client';
 
 export type PageAgentStatus = 'idle' | 'running' | 'completed' | 'error';
+
+// ── Computer-Use types ────────────────────────────────────────
+
+export type CursorEffect = 'ripple' | 'glow' | 'spark' | 'none';
+
+export interface RefEntry {
+  ref_id: string;
+  role: string;
+  name: string;
+  value: string;
+  bounds: { x: number; y: number; width: number; height: number };
+  surface: string;
+  app_name: string;
+}
+
+export interface WindowEntry {
+  window_id: number;
+  title: string;
+  app_name: string;
+  bundle_id: string;
+  frame: { x: number; y: number; width: number; height: number };
+  is_focused: boolean;
+  is_minimized: boolean;
+}
+
+export interface AppEntry {
+  pid: number;
+  name: string;
+  bundle_id: string;
+  is_active: boolean;
+}
+
+export interface NotificationEntry {
+  notification_id: string;
+  title: string;
+  body: string;
+  app_name: string;
+  timestamp: string;
+  actions: string[];
+}
+
+export interface CoordinateContract {
+  scale_factor: number;
+  offset_x: number;
+  offset_y: number;
+  raw_width: number;
+  raw_height: number;
+  model_width: number;
+  model_height: number;
+}
+
+export interface AXTreeNode {
+  ref_id?: string;
+  role: string;
+  name?: string;
+  value?: string;
+  bounds?: { x: number; y: number; width: number; height: number };
+  is_interactive?: boolean;
+  children?: AXTreeNode[];
+}
+
+export interface VerificationEvidence {
+  verified_success: boolean;
+  confidence: number;
+  changed: boolean;
+  notes: string[];
+}
 
 export type PageAgentActivity =
   | { type: 'thinking' }
@@ -173,6 +241,18 @@ export interface BrowserAgentState {
   // Connected endpoints
   connectedEndpoints: BrowserEndpoint[];
 
+  // Run summary / completion
+  runSummary: string | null;
+
+  // Engine health / connection
+  engineBaseUrl: string;
+  engineHealthy: boolean;
+  engineStatusMessage: string | null;
+  engineRuntimeSource: 'sidecar' | 'remote' | 'local' | null;
+  engineRuntimeStatus: 'connecting' | 'connected' | 'disconnected' | 'error' | null;
+  setEngineBaseUrl: (url: string) => void;
+  refreshEngineHealth: () => Promise<void>;
+
   // Active ACI engine session (set when runGoal posts to /api/aci/run)
   aciSessionId: string | null;
 
@@ -206,6 +286,10 @@ export interface BrowserAgentState {
   setGoal: (goal: string) => void;
   runGoal: (goal: string) => void;
   runPageAgentGoal: (goal: string, config?: PageAgentBridgeConfig) => void;
+  runAcuTask: (task: string, options?: { targetScope?: string; maxSteps?: number }) => void;
+  stopAcuTask: () => void;
+  approveAcuAction: () => void;
+  denyAcuAction: () => void;
   stopExecution: () => void;
   stopPageAgent: () => void;
   deletePageAgentSession: (id: string) => void;
@@ -230,6 +314,46 @@ export interface BrowserAgentState {
   // Receipts
   addReceipt: (receiptId: string) => void;
   queryReceipts: (params: ReceiptQueryParams) => Promise<ReceiptQueryResult>;
+
+  // Cursor
+  cursorPosition: { x: number; y: number; agentId: string; effect: CursorEffect } | null;
+  setCursorPosition: (pos: { x: number; y: number; agentId: string; effect: CursorEffect } | null) => void;
+
+  // Accessibility
+  elementRefs: Record<string, RefEntry> | null;
+  axTree: AXTreeNode | null;
+  axSurface: string | null;
+  setElementRefs: (refs: Record<string, RefEntry>) => void;
+  setAxTree: (tree: AXTreeNode | null, surface: string) => void;
+
+  // Coordinate system
+  coordinateContract: CoordinateContract | null;
+  setCoordinateContract: (contract: CoordinateContract | null) => void;
+
+  // Verification
+  lastVerification: VerificationEvidence | null;
+  setLastVerification: (evidence: VerificationEvidence | null) => void;
+
+  // Step targeting
+  targetedElement: RefEntry | null;
+  setTargetedElement: (el: RefEntry | null) => void;
+
+  // Desktop discovery
+  windows: WindowEntry[];
+  apps: AppEntry[];
+  notifications: NotificationEntry[];
+  windowsLoading: boolean;
+  notificationsLoading: boolean;
+  fetchWindows: () => Promise<void>;
+  fetchApps: () => Promise<void>;
+  launchApp: (name: string, bundleId?: string) => Promise<void>;
+  closeApp: (name: string) => Promise<void>;
+  focusWindow: (windowId?: number, title?: string, appName?: string) => Promise<void>;
+  resizeWindow: (windowId: number, frame: Partial<{ x: number; y: number; width: number; height: number }>) => Promise<void>;
+  dragWindow: (windowId: number, deltaX: number, deltaY: number) => Promise<void>;
+  fetchNotifications: () => Promise<void>;
+  dismissNotification: (notificationId: string) => Promise<void>;
+  performNotificationAction: (notificationId: string, action: string) => Promise<void>;
 
   // Execution simulation (for demo)
   _simulateExecution: () => void;
@@ -257,6 +381,26 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
     approvalRiskTier: undefined,
     receipts: [],
     connectedEndpoints: [],
+    runSummary: null,
+    engineBaseUrl: '',
+    engineHealthy: false,
+    engineStatusMessage: null,
+    engineRuntimeSource: null,
+    engineRuntimeStatus: null,
+    setEngineBaseUrl: (url) => set({ engineBaseUrl: url }),
+    refreshEngineHealth: async () => {
+      const { engineBaseUrl } = get();
+      if (!engineBaseUrl) {
+        set({ engineHealthy: false, engineStatusMessage: 'No engine URL configured' });
+        return;
+      }
+      try {
+        const res = await fetch(`${engineBaseUrl}/health`);
+        set({ engineHealthy: res.ok, engineStatusMessage: res.ok ? null : `HTTP ${res.status}`, engineRuntimeStatus: res.ok ? 'connected' : 'error' });
+      } catch (err) {
+        set({ engineHealthy: false, engineStatusMessage: String(err), engineRuntimeStatus: 'error' });
+      }
+    },
     aciSessionId: null,
     screenshot: null,
     pageAgentSessionId: null,
@@ -271,7 +415,21 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
     aciSidecarExpanded: true,
     setAciSidecarExpanded: (expanded) => set({ aciSidecarExpanded: expanded }),
     toggleAciSidecar: () => set((s) => ({ aciSidecarExpanded: !s.aciSidecarExpanded })),
-    
+
+    // New field initial state
+    cursorPosition: null,
+    elementRefs: null,
+    axTree: null,
+    axSurface: null,
+    coordinateContract: null,
+    lastVerification: null,
+    targetedElement: null,
+    windows: [],
+    apps: [],
+    notifications: [],
+    windowsLoading: false,
+    notificationsLoading: false,
+
     // Goal
     setGoal: (goal) => set({ goal }),
     
@@ -337,7 +495,7 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
                     update.currentAction = {
                       action: { type: a.type } as BrowserAction,
                       stepIndex: s.stepIndex ?? 0,
-                      totalSteps: s.totalSteps ?? undefined,
+                      totalSteps: s.totalSteps ?? 0,
                       label: a.label,
                       selector: a.selector,
                       type: a.type,
@@ -506,6 +664,188 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
         });
     },
 
+    // ── ACU planning-loop path ────────────────────────────────────────────
+    // Routes directly to /v1/computer-use/execute on the ACU gateway.
+    // Events streamed via SSE feed screenshot + action state into the sidecar.
+    runAcuTask: (task, options = {}) => {
+      const runId = `cu-${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}`;
+      const sessionId = `sess-${crypto.randomUUID().replace(/-/g, '').slice(0, 8)}`;
+      set({
+        goal: task,
+        status: 'Running',
+        currentRunId: runId,
+        currentAction: null,
+        screenshot: null,
+        lastEventMessage: null,
+        requiresApproval: false,
+        aciSessionId: sessionId,
+      });
+
+      const baseUrl = getPlatformComputerUseBaseUrl();
+      const body = JSON.stringify({
+        task,
+        run_id: runId,
+        session_id: sessionId,
+        target_scope: options.targetScope ?? 'browser',
+        mode: 'intent',
+        options: { max_steps: options.maxSteps ?? 20 },
+      });
+
+      // Use streaming path so we get live events without polling
+      fetch(`${baseUrl}/v1/computer-use/execute?stream=true`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      })
+        .then(async (res) => {
+          if (!res.body) throw new Error('No SSE body');
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() ?? '';
+
+            for (const line of lines) {
+              if (!line.startsWith('data: ')) continue;
+              try {
+                const ev = JSON.parse(line.slice(6)) as {
+                  event_type: string;
+                  run_id: string;
+                  message: string;
+                  data: Record<string, unknown>;
+                };
+                const d = ev.data ?? {};
+
+                if (ev.event_type === 'screenshot.captured') {
+                  const b64 = (d.screenshot_b64 as string) || null;
+                  if (b64) set({ screenshot: b64 });
+                } else if (ev.event_type === 'plan.created') {
+                  const actionType = (d.action_type as string) ?? '';
+                  if (actionType && actionType !== 'screenshot') {
+                    set({
+                      currentAction: {
+                        action: { type: actionType } as BrowserAction,
+                        stepIndex: (d.step as number) ?? 0,
+                        totalSteps: 0,
+                        type: actionType,
+                        label: (d.reasoning as string)?.slice(0, 80) ?? actionType,
+                      },
+                      lastEventMessage: (d.reasoning as string)?.slice(0, 120) ?? null,
+                    });
+                  }
+                } else if (ev.event_type === 'approval.required') {
+                  set({
+                    requiresApproval: true,
+                    approvalActionSummary: (d.reason as string) ?? 'Action requires approval',
+                    approvalRiskTier: 3 as RiskTier,
+                  });
+                } else if (ev.event_type === 'run.ended' || ev.event_type === 'run.completed') {
+                  const runData = ev.data as { status?: string; result?: { summary?: string } };
+                  const failed = runData?.status === 'failed';
+                  set({
+                    status: failed ? 'Done' : 'Done',
+                    currentAction: null,
+                    requiresApproval: false,
+                    lastEventMessage: runData?.result?.summary ?? (failed ? 'Run failed' : 'Done'),
+                  });
+                } else if (ev.event_type === 'run.failed') {
+                  set({ status: 'Done', currentAction: null, requiresApproval: false,
+                        lastEventMessage: ev.message ?? 'Run failed' });
+                } else if (ev.event_type === 'ax_tree.captured') {
+                  set({ axTree: (d.tree as AXTreeNode) ?? null, axSurface: (d.surface as string) ?? null });
+                  if (d.ref_map) set({ elementRefs: d.ref_map as Record<string, RefEntry> });
+                } else if (ev.event_type === 'coordinate.contract') {
+                  set({ coordinateContract: {
+                    scale_factor: (d.scale_factor as number) ?? 1,
+                    offset_x: (d.offset_x as number) ?? 0,
+                    offset_y: (d.offset_y as number) ?? 0,
+                    raw_width: (d.raw_width as number) ?? 1280,
+                    raw_height: (d.raw_height as number) ?? 800,
+                    model_width: (d.model_width as number) ?? 1280,
+                    model_height: (d.model_height as number) ?? 800,
+                  }});
+                } else if (ev.event_type === 'cursor.moved') {
+                  set({ cursorPosition: {
+                    x: (d.x as number) ?? 0,
+                    y: (d.y as number) ?? 0,
+                    agentId: (d.agent_id as string) ?? 'primary',
+                    effect: ((d.effect as CursorEffect) ?? 'none'),
+                  }});
+                } else if (ev.event_type === 'action.verified') {
+                  set({ lastVerification: {
+                    verified_success: (d.verified_success as boolean) ?? false,
+                    confidence: (d.confidence as number) ?? 0,
+                    changed: (d.changed as boolean) ?? false,
+                    notes: (d.notes as string[]) ?? [],
+                  }});
+                } else if (ev.event_type === 'element.targeted') {
+                  if (d.ref_id && d.bounds) {
+                    set({ targetedElement: {
+                      ref_id: d.ref_id as string,
+                      role: (d.role as string) ?? '',
+                      name: (d.label as string) ?? '',
+                      value: '',
+                      bounds: d.bounds as { x: number; y: number; width: number; height: number },
+                      surface: 'window',
+                      app_name: '',
+                    }});
+                  }
+                } else if (ev.message) {
+                  set({ lastEventMessage: ev.message });
+                }
+              } catch {
+                // ignore malformed SSE lines
+              }
+            }
+          }
+
+          if (get().status === 'Running') set({ status: 'Done', currentAction: null });
+        })
+        .catch(() => {
+          set({ status: 'Done', currentAction: null, lastEventMessage: 'Connection to ACU failed' });
+        });
+    },
+
+    stopAcuTask: () => {
+      const { currentRunId } = get();
+      set({ status: 'Done', currentAction: null, requiresApproval: false });
+      if (currentRunId) {
+        const baseUrl = getPlatformComputerUseBaseUrl();
+        fetch(`${baseUrl}/v1/computer-use/runs/${currentRunId}/cancel`, { method: 'POST' }).catch(() => {});
+      }
+    },
+
+    approveAcuAction: () => {
+      const { currentRunId } = get();
+      set({ requiresApproval: false });
+      if (currentRunId) {
+        const baseUrl = getPlatformComputerUseBaseUrl();
+        fetch(`${baseUrl}/v1/computer-use/runs/${currentRunId}/approve`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ decision: 'approve' }),
+        }).catch(() => {});
+      }
+    },
+
+    denyAcuAction: () => {
+      const { currentRunId } = get();
+      set({ requiresApproval: false, status: 'Blocked' });
+      if (currentRunId) {
+        const baseUrl = getPlatformComputerUseBaseUrl();
+        fetch(`${baseUrl}/v1/computer-use/runs/${currentRunId}/approve`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ decision: 'deny' }),
+        }).catch(() => {});
+      }
+    },
+
     // Stop page-agent task
     stopPageAgent: () => {
       const { pageAgentSessionId } = get();
@@ -604,7 +944,7 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
         if (e.type === 'shell_browser') {
           return e.sessionId !== endpointId;
         }
-        return e.endpointId !== endpointId;
+        return (e as any).endpointId !== endpointId;
       });
       set({ connectedEndpoints: endpoints });
     },
@@ -621,6 +961,78 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
       return generator.queryReceipts(params);
     },
     
+    // Cursor
+    setCursorPosition: (pos) => set({ cursorPosition: pos }),
+
+    // Accessibility
+    setElementRefs: (refs) => set({ elementRefs: refs }),
+    setAxTree: (tree, surface) => set({ axTree: tree, axSurface: surface }),
+    setCoordinateContract: (contract) => set({ coordinateContract: contract }),
+    setLastVerification: (evidence) => set({ lastVerification: evidence }),
+    setTargetedElement: (el) => set({ targetedElement: el }),
+
+    // Window/App management
+    fetchWindows: async () => {
+      set({ windowsLoading: true });
+      try {
+        const res = await fetch(`${getPlatformComputerUseBaseUrl()}/v1/windows`);
+        if (res.ok) { const data = await res.json(); set({ windows: data.windows ?? [] }); }
+      } catch { /* silently ignore */ } finally { set({ windowsLoading: false }); }
+    },
+    fetchApps: async () => {
+      try {
+        const res = await fetch(`${getPlatformComputerUseBaseUrl()}/v1/apps`);
+        if (res.ok) { const data = await res.json(); set({ apps: data.apps ?? [] }); }
+      } catch { }
+    },
+    launchApp: async (name, bundleId) => {
+      await fetch(`${getPlatformComputerUseBaseUrl()}/v1/apps/launch`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, bundle_id: bundleId }),
+      }).catch(() => {});
+    },
+    closeApp: async (name) => {
+      await fetch(`${getPlatformComputerUseBaseUrl()}/v1/apps/close`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      }).catch(() => {});
+    },
+    focusWindow: async (windowId, title, appName) => {
+      await fetch(`${getPlatformComputerUseBaseUrl()}/v1/windows/focus`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ window_id: windowId, title, app_name: appName }),
+      }).catch(() => {});
+    },
+    resizeWindow: async (windowId, frame) => {
+      await fetch(`${getPlatformComputerUseBaseUrl()}/v1/windows/resize`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ window_id: windowId, ...frame }),
+      }).catch(() => {});
+    },
+    dragWindow: async (windowId, deltaX, deltaY) => {
+      await fetch(`${getPlatformComputerUseBaseUrl()}/v1/windows/drag`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ window_id: windowId, delta_x: deltaX, delta_y: deltaY }),
+      }).catch(() => {});
+    },
+    fetchNotifications: async () => {
+      set({ notificationsLoading: true });
+      try {
+        const res = await fetch(`${getPlatformComputerUseBaseUrl()}/v1/notifications`);
+        if (res.ok) { const data = await res.json(); set({ notifications: data.notifications ?? [] }); }
+      } catch { } finally { set({ notificationsLoading: false }); }
+    },
+    dismissNotification: async (id) => {
+      await fetch(`${getPlatformComputerUseBaseUrl()}/v1/notifications/${id}/dismiss`, { method: 'POST' }).catch(() => {});
+      set(s => ({ notifications: s.notifications.filter((n: NotificationEntry) => n.notification_id !== id) }));
+    },
+    performNotificationAction: async (id, action) => {
+      await fetch(`${getPlatformComputerUseBaseUrl()}/v1/notifications/${id}/action`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      }).catch(() => {});
+    },
+
     // No-op — kept for interface compatibility; real execution runs via runGoal → SSE
     _simulateExecution: () => {},
   }))

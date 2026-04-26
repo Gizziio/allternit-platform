@@ -1,6 +1,6 @@
 /**
  * HTML to Figma Module
- * A2R Extension Integration
+ * Allternit Extension Integration
  */
 
 export { captureService } from './capture'

@@ -184,6 +184,9 @@ export interface ChatMessageMetadata {
   sourceCount?: number;
   artifactCount?: number;
   status?: ChatMessageStatus;
+  /** Phase 2: Which agent sent this message (for mixed LLM/agent threads) */
+  agentId?: string;
+  agentName?: string;
 }
 
 export type ReasoningTraceStepType =
@@ -898,7 +901,7 @@ const RUST_EVENT_MAP: Record<RustEventType, RustEventHandler> = {
       metadata: {
         status: "complete",
         source: "mcp-app",
-      },
+      } as any,
     };
 
     ctx.setMessages(prev => [...prev, newMessage], true);

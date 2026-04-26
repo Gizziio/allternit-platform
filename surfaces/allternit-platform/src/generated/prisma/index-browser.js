@@ -115,9 +115,6 @@ Prisma.NullTypes = {
  */
 
 exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
-  ReadUncommitted: 'ReadUncommitted',
-  ReadCommitted: 'ReadCommitted',
-  RepeatableRead: 'RepeatableRead',
   Serializable: 'Serializable'
 });
 
@@ -144,8 +141,8 @@ exports.Prisma.SshConnectionScalarFieldEnum = {
   os: 'os',
   architecture: 'architecture',
   dockerInstalled: 'dockerInstalled',
-  a2rInstalled: 'a2rInstalled',
-  a2rVersion: 'a2rVersion',
+  allternitInstalled: 'allternitInstalled',
+  allternitVersion: 'allternitVersion',
   lastConnectedAt: 'lastConnectedAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
@@ -184,14 +181,255 @@ exports.Prisma.UserBackendPreferenceScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.WorkflowScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  title: 'title',
+  description: 'description',
+  userId: 'userId',
+  nodes: 'nodes',
+  edges: 'edges'
+};
+
+exports.Prisma.WorkflowExecutionScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  workflowId: 'workflowId',
+  status: 'status',
+  startedAt: 'startedAt',
+  completedAt: 'completedAt',
+  result: 'result',
+  error: 'error'
+};
+
+exports.Prisma.ConversationScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  title: 'title',
+  userId: 'userId',
+  parentConversationId: 'parentConversationId',
+  gizziSessionId: 'gizziSessionId'
+};
+
+exports.Prisma.ConversationMessageScalarFieldEnum = {
+  id: 'id',
+  createdAt: 'createdAt',
+  conversationId: 'conversationId',
+  role: 'role',
+  content: 'content',
+  parentMessageId: 'parentMessageId',
+  metadata: 'metadata'
+};
+
+exports.Prisma.WorkspaceScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  slug: 'slug',
+  ownerId: 'ownerId',
+  description: 'description',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.WorkspaceMemberScalarFieldEnum = {
+  id: 'id',
+  workspaceId: 'workspaceId',
+  userId: 'userId',
+  agentId: 'agentId',
+  role: 'role',
+  joinedAt: 'joinedAt'
+};
+
+exports.Prisma.WorkspaceInvitationScalarFieldEnum = {
+  id: 'id',
+  workspaceId: 'workspaceId',
+  email: 'email',
+  role: 'role',
+  token: 'token',
+  expiresAt: 'expiresAt',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.BoardItemScalarFieldEnum = {
+  id: 'id',
+  workspaceId: 'workspaceId',
+  title: 'title',
+  description: 'description',
+  status: 'status',
+  assigneeType: 'assigneeType',
+  assigneeId: 'assigneeId',
+  reporterId: 'reporterId',
+  priority: 'priority',
+  labels: 'labels',
+  estimatedMinutes: 'estimatedMinutes',
+  deadline: 'deadline',
+  dependencies: 'dependencies',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.BoardCommentScalarFieldEnum = {
+  id: 'id',
+  itemId: 'itemId',
+  authorType: 'authorType',
+  authorId: 'authorId',
+  body: 'body',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.TeamSkillScalarFieldEnum = {
+  id: 'id',
+  workspaceId: 'workspaceId',
+  name: 'name',
+  description: 'description',
+  manifest: 'manifest',
+  sourceRepo: 'sourceRepo',
+  version: 'version',
+  installedBy: 'installedBy',
+  installedAt: 'installedAt'
+};
+
+exports.Prisma.TaskAuditLogScalarFieldEnum = {
+  id: 'id',
+  taskId: 'taskId',
+  action: 'action',
+  actorType: 'actorType',
+  actorId: 'actorId',
+  payload: 'payload',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.AgentRuntimeScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  host: 'host',
+  agentClis: 'agentClis',
+  status: 'status',
+  lastHeartbeat: 'lastHeartbeat',
+  workspaceId: 'workspaceId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.AgentScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  name: 'name',
+  description: 'description',
+  type: 'type',
+  parentAgentId: 'parentAgentId',
+  model: 'model',
+  provider: 'provider',
+  capabilities: 'capabilities',
+  systemPrompt: 'systemPrompt',
+  tools: 'tools',
+  maxIterations: 'maxIterations',
+  temperature: 'temperature',
+  config: 'config',
+  status: 'status',
+  workspaceId: 'workspaceId',
+  avatar: 'avatar',
+  identityKey: 'identityKey',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  lastRunAt: 'lastRunAt'
+};
+
+exports.Prisma.MemoryEventScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  agentId: 'agentId',
+  type: 'type',
+  payload: 'payload',
+  source: 'source',
+  timestamp: 'timestamp'
+};
+
+exports.Prisma.MemoryEntityScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  agentId: 'agentId',
+  entityId: 'entityId',
+  name: 'name',
+  type: 'type',
+  content: 'content',
+  properties: 'properties',
+  propertyCount: 'propertyCount',
+  vectorId: 'vectorId',
+  lastUpdated: 'lastUpdated',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.MemoryEdgeScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  source: 'source',
+  relationship: 'relationship',
+  target: 'target',
+  confidence: 'confidence',
+  metadata: 'metadata',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.MemoryDocumentScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  agentId: 'agentId',
+  title: 'title',
+  content: 'content',
+  sourceType: 'sourceType',
+  sourceUrl: 'sourceUrl',
+  chunkCount: 'chunkCount',
+  vectorIds: 'vectorIds',
+  isIndexed: 'isIndexed',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.TestSuiteScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  agentId: 'agentId',
+  name: 'name',
+  description: 'description',
+  cases: 'cases',
+  runs: 'runs',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.AgentMetricScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  agentId: 'agentId',
+  runId: 'runId',
+  metricType: 'metricType',
+  value: 'value',
+  unit: 'unit',
+  metadata: 'metadata',
+  timestamp: 'timestamp'
+};
+
+exports.Prisma.InboxItemScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  agentId: 'agentId',
+  type: 'type',
+  title: 'title',
+  body: 'body',
+  severity: 'severity',
+  status: 'status',
+  actionUrl: 'actionUrl',
+  metadata: 'metadata',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
-};
-
-exports.Prisma.QueryMode = {
-  default: 'default',
-  insensitive: 'insensitive'
 };
 
 exports.Prisma.NullsOrder = {
@@ -204,7 +442,27 @@ exports.Prisma.ModelName = {
   User: 'User',
   SshConnection: 'SshConnection',
   RemoteBackendTarget: 'RemoteBackendTarget',
-  UserBackendPreference: 'UserBackendPreference'
+  UserBackendPreference: 'UserBackendPreference',
+  Workflow: 'Workflow',
+  WorkflowExecution: 'WorkflowExecution',
+  Conversation: 'Conversation',
+  ConversationMessage: 'ConversationMessage',
+  Workspace: 'Workspace',
+  WorkspaceMember: 'WorkspaceMember',
+  WorkspaceInvitation: 'WorkspaceInvitation',
+  BoardItem: 'BoardItem',
+  BoardComment: 'BoardComment',
+  TeamSkill: 'TeamSkill',
+  TaskAuditLog: 'TaskAuditLog',
+  AgentRuntime: 'AgentRuntime',
+  Agent: 'Agent',
+  MemoryEvent: 'MemoryEvent',
+  MemoryEntity: 'MemoryEntity',
+  MemoryEdge: 'MemoryEdge',
+  MemoryDocument: 'MemoryDocument',
+  TestSuite: 'TestSuite',
+  AgentMetric: 'AgentMetric',
+  InboxItem: 'InboxItem'
 };
 
 /**

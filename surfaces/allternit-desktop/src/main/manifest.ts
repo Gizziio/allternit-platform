@@ -33,7 +33,7 @@ export const PLATFORM_MANIFEST = {
       'x86_64-linux':   '',
       'aarch64-linux':  '',
       'x86_64-macos':   '',
-      'aarch64-macos':  '',
+      'aarch64-macos':   '426d91ad17db7dec27185816e4bfc7fb538a79ee3a1ff526bb85ac6f50ece272',
       'x86_64-windows': '',
     } as Record<string, string>,
   },

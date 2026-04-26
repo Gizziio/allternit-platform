@@ -2,7 +2,7 @@
 
 ## Overview
 
-This module provides a **simplified SSH connection flow** for A2R's BYOC (Bring Your Own Cloud) feature, inspired by Claude Code's SSH connection modal. It's designed to complement (not replace) the existing VPS wizard for users who already have a VPS provisioned.
+This module provides a **simplified SSH connection flow** for Allternit's BYOC (Bring Your Own Cloud) feature, inspired by Claude Code's SSH connection modal. It's designed to complement (not replace) the existing VPS wizard for users who already have a VPS provisioned.
 
 ## Philosophy
 
@@ -24,7 +24,7 @@ The main modal form for adding SSH connections. Features:
 - **Dual auth support**: SSH key (paste or file upload) or password
 - **Connection testing**: Validate before saving
 - **Setup guide**: Built-in help tab with SSH key generation instructions
-- **Auto-installation**: Automatically installs A2R Node agent upon connection
+- **Auto-installation**: Automatically installs Allternit Node agent upon connection
 
 ```tsx
 import { AddSSHConnectionForm } from '@/components/ssh';
@@ -43,7 +43,7 @@ Management interface for existing SSH connections:
 
 - **Status indicators**: Connected, disconnected, connecting, error states
 - **Quick actions**: Connect/disconnect, test, edit, delete
-- **System info**: Shows OS, architecture, Docker/A2R installation status
+- **System info**: Shows OS, architecture, Docker/Allternit installation status
 - **Expandable details**: Click to see full connection details
 
 ```tsx
@@ -101,7 +101,7 @@ The SSH Connections section in Control Center now uses the new components:
 2. Select "Get a New VPS" → Opens VPSMarketplace
 3. Choose provider (Hetzner, DigitalOcean, etc.)
 4. Complete wizard with provider signup + provisioning
-5. A2R auto-installs on the new VPS
+5. Allternit auto-installs on the new VPS
 
 ### Flow 2: Existing VPS Owner
 
@@ -109,7 +109,7 @@ The SSH Connections section in Control Center now uses the new components:
 2. Select "Connect Existing VPS" → Opens AddSSHConnectionForm
 3. Fill in SSH details (host, user, key)
 4. Test connection
-5. Save → A2R auto-installs agent
+5. Save → Allternit auto-installs agent
 
 ### Flow 3: Control Center Management
 
@@ -195,7 +195,7 @@ The existing VPS wizard is excellent for:
 - Users who don't have a VPS yet
 - Comparing providers and pricing
 - Automated provisioning via cloud-init
-- First-time A2R setup
+- First-time Allternit setup
 
 ### Why add the SSH form?
 
@@ -234,5 +234,5 @@ Claude Code's SSH modal is:
 ## References
 
 - [Claude Code SSH Blog Post](https://medium.com/@joe.njenga/how-i-use-claude-code-ssh-to-connect-to-any-remote-server-like-a-pro-f08ed35e5569)
-- [A2R BYOD Architecture](../../docs/architecture/cloud/BYOD_ARCHITECTURE.md)
+- [Allternit BYOD Architecture](../../docs/architecture/cloud/BYOD_ARCHITECTURE.md)
 - [Existing VPS Marketplace](./VPSMarketplace.tsx)

@@ -1,8 +1,8 @@
-# Agentation Integration for A2R
+# Agentation Integration for Allternit
 
 ## Overview
 
-Local-first agent assistance for UI development, integrated with the A2R platform.
+Local-first agent assistance for UI development, integrated with the Allternit platform.
 
 **⚠️ DEV-ONLY**: This module is gated by `NODE_ENV === 'development'` and is never included in production builds.
 
@@ -17,7 +17,7 @@ Local-first agent assistance for UI development, integrated with the A2R platfor
 │  │  (ReactCtx) │  │  (useRole)  │  │   (Floating Panel)  │ │
 │  └─────────────┘  └─────────────┘  └─────────────────────┘ │
 ├─────────────────────────────────────────────────────────────┤
-│                    A2R Adapter Layer                        │
+│                    Allternit Adapter Layer                        │
 │         (Converts Agentation output to DAG-ready)          │
 ├─────────────────────────────────────────────────────────────┤
 │                      Storybook Bridge                       │

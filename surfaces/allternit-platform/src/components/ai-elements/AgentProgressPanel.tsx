@@ -208,7 +208,6 @@ const TaskRow = memo(function TaskRow({
       {/* Label */}
       <span style={{
         flex: 1,
-        fontSize: "11.5px",
         fontWeight: task.state === "running" ? 500 : 400,
         color: task.state === "running"
           ? "rgba(212,176,140,0.88)"

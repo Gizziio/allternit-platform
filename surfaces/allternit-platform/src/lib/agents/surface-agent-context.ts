@@ -1,10 +1,14 @@
 import { useMemo } from "react";
 
 import { useAgentSurfaceModeStore, type AgentModeSurface } from "@/stores/agent-surface-mode.store";
+import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
+import { useCodeSessionStore } from "@/views/code/CodeSessionStore";
+import { useCoworkSessionStore } from "@/views/cowork/CoworkSessionStore";
+import { useBrowserSessionStore } from "@/views/browser/BrowserSessionStore";
 
 import { useAgentStore } from "./agent.store";
 import type { Agent } from "./agent.types";
-import { useEmbeddedAgentSession } from "./embedded-agent-session.store";
+import { getAgentSessionDescriptor } from "./session-metadata";
 
 type AgentLike = Pick<Agent, "id" | "name" | "provider" | "model" | "config"> | null;
 
@@ -19,12 +23,27 @@ export interface AgentConversationContext {
 }
 
 /**
- * Derives whether agent mode is active for a surface from the embedded session.
- * Agent mode is on when there is an active embedded session whose session_mode is 'agent'.
+ * Derives whether agent mode is active for a surface from the mode-specific store.
+ * Agent mode is on when there is an active session whose session_mode is 'agent'.
  */
 export function useSurfaceAgentModeEnabled(surface: AgentModeSurface): boolean {
-  const { isEmbedded, descriptor } = useEmbeddedAgentSession(surface);
-  return isEmbedded && descriptor.sessionMode === "agent";
+  const chatSessionId = useChatSessionStore((s) => s.activeSessionId);
+  const codeSessionId = useCodeSessionStore((s) => s.activeSessionId);
+  const coworkSessionId = useCoworkSessionStore((s) => s.activeSessionId);
+  const browserSessionId = useBrowserSessionStore((s) => s.activeSessionId);
+
+  const chatSessions = useChatSessionStore((s) => s.sessions);
+  const codeSessions = useCodeSessionStore((s) => s.sessions);
+  const coworkSessions = useCoworkSessionStore((s) => s.sessions);
+  const browserSessions = useBrowserSessionStore((s) => s.sessions);
+
+  const activeId = surface === "code" ? codeSessionId : surface === "cowork" ? coworkSessionId : surface === "browser" ? browserSessionId : chatSessionId;
+  const sessions = surface === "code" ? codeSessions : surface === "cowork" ? coworkSessions : surface === "browser" ? browserSessions : chatSessions;
+
+  const session = activeId ? (sessions.find((s) => s.id === activeId) ?? null) : null;
+  const descriptor = getAgentSessionDescriptor(session?.metadata);
+
+  return Boolean(activeId && session) && descriptor.sessionMode === "agent";
 }
 
 export function useSurfaceAgentSelection(surface: AgentModeSurface) {

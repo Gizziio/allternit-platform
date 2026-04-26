@@ -279,7 +279,7 @@ export function OperatorBrowserView() {
                     key={task.id}
                     onClick={() => {
                       setSelectedTask(task);
-                      handleRefreshTask(task.id);
+                      refreshTask(task.id);
                     }}
                     className={cn(
                       'w-full p-3 rounded-lg text-left transition-colors border',

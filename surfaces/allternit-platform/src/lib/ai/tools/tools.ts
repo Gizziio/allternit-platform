@@ -30,6 +30,11 @@ import { createModuleLogger } from "@/lib/logger";
 import { isMultimodalImageModel } from "@/lib/models/image-model-id";
 import type { StreamWriter } from "../types";
 import { deepResearch } from "./deep-research/deep-research";
+import {
+  notebookIngestTool,
+  notebookQueryTool,
+  notebookSummarizeTool,
+} from "./notebook";
 import type { ToolSession } from "./types";
 
 const log = createModuleLogger("tools:mcp");
@@ -201,6 +206,9 @@ export function getTools({
       : {}),
     generateA2UI: generateA2UITool({ costAccumulator }),
     generateWebArtifact: generateWebArtifactTool({ costAccumulator }),
+    notebookIngest: notebookIngestTool({ dataStream, costAccumulator }),
+    notebookQuery: notebookQueryTool({ dataStream, costAccumulator }),
+    notebookSummarize: notebookSummarizeTool({ dataStream, costAccumulator }),
   };
 }
 
@@ -282,7 +290,7 @@ export async function getMcpTools({
         mcpClient.listTools(),
       ]);
       const rawToolsByName = new Map(
-        rawToolsResult.tools.map((tool) => [tool.name, tool] as const)
+        rawToolsResult.tools.map((tool: any) => [tool.name, tool] as const)
       );
       let modelVisibleToolCount = 0;
       let hiddenAppToolCount = 0;
@@ -294,7 +302,7 @@ export async function getMcpTools({
         const rawTool = rawToolsByName.get(toolName);
         const toolDefinition = rawTool ?? tool;
 
-        if (!canModelAccessTool(toolDefinition)) {
+        if (!canModelAccessTool(toolDefinition as any)) {
           hiddenAppToolCount += 1;
           continue;
         }
@@ -321,7 +329,7 @@ export async function getMcpTools({
           toolCount: Object.keys(tools).length,
           modelVisibleToolCount,
           hiddenAppToolCount,
-          mcpAppToolCount: Object.values(tools).filter(isMcpAppTool).length,
+          mcpAppToolCount: (Object.values(tools) as any[]).filter(isMcpAppTool).length,
         },
         "MCP client connected"
       );

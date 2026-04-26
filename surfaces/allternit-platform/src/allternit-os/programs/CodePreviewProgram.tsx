@@ -1,5 +1,5 @@
 /**
- * A2rchitect Super-Agent OS - Code Preview Program
+ * allternit Super-Agent OS - Code Preview Program
  * 
  * Production-ready code preview with:
  * - Hardened CSP sandbox (no popups, no navigation, no plugins)
@@ -12,10 +12,10 @@
 import * as React from 'react';
 const { useState, useEffect, useRef, useCallback, useMemo } = React;
 import { useSidecarStore } from '../stores/useSidecarStore';
-import type { A2rProgram, CodePreviewState, CodePreviewFile } from '../types/programs';
+import type { AllternitProgram, CodePreviewState, CodePreviewFile } from '../types/programs';
 
 interface CodePreviewProgramProps {
-  program: A2rProgram;
+  program: AllternitProgram;
 }
 
 // ============================================================================
@@ -143,7 +143,7 @@ function generateSafeHTML(files: CodePreviewFile[], entryFile: string): string {
       }).join(' ');
       
       window.parent.postMessage({
-        source: 'a2r-preview',
+        source: 'allternit-preview',
         type: 'console',
         level: type,
         message: message,
@@ -277,7 +277,7 @@ export const CodePreviewProgram: React.FC<CodePreviewProgramProps> = ({ program 
   // Listen for console messages from iframe
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.data?.source === 'a2r-preview') {
+      if (event.data?.source === 'allternit-preview') {
         const { level, message, timestamp } = event.data;
         setConsoleMessages(prev => [...prev, {
           id: `${timestamp}-${Math.random()}`,

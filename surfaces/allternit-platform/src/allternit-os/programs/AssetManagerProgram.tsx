@@ -1,7 +1,7 @@
 /**
- * A2rchitect Super-Agent OS - Asset Manager Program
+ * allternit Super-Agent OS - Asset Manager Program
  * 
- * Production-ready file manager for .a2r/drive with:
+ * Production-ready file manager for .allternit/drive with:
  * - Real filesystem integration via FileSystemService
  * - Folder navigation, upload, download
  * - Grid/list/gallery views
@@ -12,10 +12,10 @@ import * as React from 'react';
 const { useState, useRef, useCallback } = React;
 import { useSidecarStore } from '../stores/useSidecarStore';
 import { useFileSystem, DriveEntry } from '../services/FileSystemService';
-import type { A2rProgram } from '../types/programs';
+import type { AllternitProgram } from '../types/programs';
 
 interface AssetManagerProgramProps {
-  program: A2rProgram;
+  program: AllternitProgram;
 }
 
 type ViewMode = 'grid' | 'list' | 'gallery';
@@ -429,7 +429,7 @@ export const AssetManagerProgram: React.FC<AssetManagerProgramProps> = ({ progra
         <div className="flex items-center gap-3">
           <span className="text-xl">📁</span>
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            A2r Drive
+            Allternit Drive
           </h2>
         </div>
         

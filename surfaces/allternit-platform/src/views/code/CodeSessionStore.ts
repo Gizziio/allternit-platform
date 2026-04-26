@@ -1,19 +1,14 @@
 /**
  * Code Session Store (Production Implementation)
  * 
- * Owns all code-mode sessions completely independently from Chat and Cowork.
- * Optimized for development workflows with:
- * - Code editing and generation
- * - Terminal integration
- * - File workspace context
+ * **ARCHITECTURE**: Mode-specific isolated store. Code sessions are completely
+ * separate from Chat and Cowork sessions. They do not sync, share, or appear
+ * in other modes. This is intentional (like Claude Desktop).
  * 
- * PRODUCTION FEATURES:
- * - Automatic agent workspace loading
- * - SOUL.md trust tier enforcement (especially for code safety)
- * - HEARTBEAT.md task execution
- * - Context sent with every message
+ * **BACKEND**: Uses native-agent-api with origin_surface='code' tag.
  * 
  * @module CodeSessionStore
+ * @see docs/SESSION_ARCHITECTURE.md for full documentation
  */
 
 import { 
@@ -84,6 +79,37 @@ export function useCodeSessionsByWorkspace(workspaceId: string | null) {
 }
 
 // ---------------------------------------------------------------------------
+// Sync state
+// ---------------------------------------------------------------------------
+
+export function useCodeSessionSyncState() {
+  return useCodeSessionStore((state) => ({
+    isConnected: state.isSyncConnected,
+    error: state.syncError,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Unread counts
+// ---------------------------------------------------------------------------
+
+export function useCodeSessionUnreadCount(sessionId: string | null) {
+  return useCodeSessionStore((state) => 
+    sessionId ? (state.unreadCounts[sessionId] || 0) : 0
+  );
+}
+
+export function useCodeTotalUnreadCount() {
+  return useCodeSessionStore((state) => 
+    Object.values(state.unreadCounts).reduce((sum, count) => sum + count, 0)
+  );
+}
+
+export function useCodeUnreadCounts() {
+  return useCodeSessionStore((state) => state.unreadCounts);
+}
+
+// ---------------------------------------------------------------------------
 // Actions
 // ---------------------------------------------------------------------------
 
@@ -98,5 +124,8 @@ export function useCodeSessionActions() {
     loadSessions: state.loadSessions,
     refreshContext: state.refreshContext,
     setSessionMode: state.setSessionMode,
+    connectSessionSync: state.connectSessionSync,
+    disconnectSessionSync: state.disconnectSessionSync,
+    markSessionRead: state.markSessionRead,
   }));
 }

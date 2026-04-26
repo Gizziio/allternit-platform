@@ -68,6 +68,21 @@ export const toolsDefinitions: Record<NonNullable<UiToolName>, ToolDefinition> =
     description: "Research a topic",
     cost: 0, // LLM calls tracked via usage, Tavily calls counted separately
   },
+  notebookIngest: {
+    name: "notebookIngest",
+    description: "Ingest content into a research notebook",
+    cost: 0,
+  },
+  notebookQuery: {
+    name: "notebookQuery",
+    description: "Query a research notebook with semantic search",
+    cost: 0,
+  },
+  notebookSummarize: {
+    name: "notebookSummarize",
+    description: "Summarize or transform notebook sources",
+    cost: 0,
+  },
 };
 
 export const allTools = Object.keys(toolsDefinitions);

@@ -1,5 +1,5 @@
 /**
- * A2rchitect Super-Agent OS - A2rCanvas (Program Router)
+ * allternit Super-Agent OS - AllternitCanvas (Program Router)
  * 
  * The main container for the Utility Pane. Acts as a "Program Router"
  * that dynamically renders different program types based on the active program.
@@ -8,7 +8,7 @@
 import * as React from 'react';
 const { useCallback, useEffect, useRef, useState } = React;
 import { useSidecarStore, useActiveProgram } from '../stores/useSidecarStore';
-import type { A2rProgram, A2rProgramType } from '../types/programs';
+import type { AllternitProgram, AllternitProgramType } from '../types/programs';
 
 // Program renderers
 import { ResearchDocProgram } from '../programs/ResearchDocProgram';
@@ -24,9 +24,9 @@ import { ImageStudioProgram, AudioStudioProgram, TelephonyProgram, BrowserProgra
 // Program Registry
 // ============================================================================
 
-type ProgramComponent = React.ComponentType<{ program: A2rProgram }>;
+type ProgramComponent = React.ComponentType<{ program: AllternitProgram }>;
 
-const PROGRAM_REGISTRY: Record<A2rProgramType, ProgramComponent> = {
+const PROGRAM_REGISTRY: Record<AllternitProgramType, ProgramComponent> = {
   'research-doc': ResearchDocProgram,
   'data-grid': DataGridProgram,
   'presentation': PresentationProgram,
@@ -42,10 +42,10 @@ const PROGRAM_REGISTRY: Record<A2rProgramType, ProgramComponent> = {
 };
 
 // ============================================================================
-// A2rCanvas Props
+// AllternitCanvas Props
 // ============================================================================
 
-export interface A2rCanvasProps {
+export interface AllternitCanvasProps {
   className?: string;
   onResize?: (width: number) => void;
   showTabs?: boolean;
@@ -57,7 +57,7 @@ export interface A2rCanvasProps {
 // ============================================================================
 
 interface ProgramTabProps {
-  program: A2rProgram;
+  program: AllternitProgram;
   isActive: boolean;
   onClick: () => void;
   onClose: (e: React.MouseEvent) => void;
@@ -126,10 +126,10 @@ const EmptyState: React.FC = () => {
 };
 
 // ============================================================================
-// Main A2rCanvas Component
+// Main AllternitCanvas Component
 // ============================================================================
 
-export const A2rCanvas: React.FC<A2rCanvasProps> = ({
+export const AllternitCanvas: React.FC<AllternitCanvasProps> = ({
   className = '',
   onResize,
   showTabs = true,
@@ -295,4 +295,4 @@ export const A2rCanvas: React.FC<A2rCanvasProps> = ({
   );
 };
 
-export default A2rCanvas;
+export default AllternitCanvas;

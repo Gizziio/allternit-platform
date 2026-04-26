@@ -15,7 +15,7 @@ test('quick browser check', async ({ page }) => {
     await page.waitForTimeout(2000);
     
     // Check for empty state
-    const emptyStateText = page.locator('text="A2R Browser"');
+    const emptyStateText = page.locator('text="Allternit Browser"');
     const exists = await emptyStateText.count() > 0;
     console.log('Empty state visible:', exists);
     

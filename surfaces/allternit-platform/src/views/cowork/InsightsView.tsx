@@ -66,7 +66,7 @@ const InsightsView: React.FC = () => {
           className="p-2 rounded-lg"
           style={{ backgroundColor: 'var(--bg-secondary)' }}
         >
-          <BarChart2
+          <ChartBar
             size={24}
             style={{ color: 'var(--accent-primary)' }}
           />

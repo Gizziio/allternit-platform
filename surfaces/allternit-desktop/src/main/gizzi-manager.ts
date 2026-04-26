@@ -17,7 +17,11 @@ import { spawn, ChildProcess } from 'child_process';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
 import log from 'electron-log';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const GIZZI_PORT = 4096;
 const HEALTH_TIMEOUT_MS = 30_000;
@@ -26,6 +30,7 @@ export class GizziManager {
   private static instance: GizziManager;
   private proc: ChildProcess | null = null;
   private password: string | null = null;
+  private lastConfig: any = null;
 
   static getInstance(): GizziManager {
     if (!GizziManager.instance) {
@@ -35,7 +40,8 @@ export class GizziManager {
   }
 
   /** Start gizzi-code terminal server. Returns its base URL. */
-  async start(): Promise<string> {
+  async start(config: any = {}): Promise<string> {
+    this.lastConfig = config;
     if (this.proc) {
       return this.getUrl();
     }
@@ -58,6 +64,8 @@ export class GizziManager {
       // Gizzi terminal server config
       GIZZI_PORT: String(GIZZI_PORT),
       GIZZI_HOST: '127.0.0.1',
+      GIZZI_SERVER_USERNAME: 'gizzi',
+      GIZZI_SERVER_PASSWORD: this.password,
       GIZZI_PASSWORD: this.password,
       GIZZI_USERNAME: 'gizzi',
       // Point at allternit-api for operator-level routes (vm-session, rails, etc.)
@@ -67,7 +75,7 @@ export class GizziManager {
 
     log.info(`[GizziManager] Starting gizzi-code on port ${GIZZI_PORT} from ${binaryPath}`);
 
-    this.proc = spawn(binaryPath, ['serve'], {
+    this.proc = spawn(binaryPath, ['serve', '--port', String(GIZZI_PORT), '--hostname', '127.0.0.1', '--print-logs'], {
       env,
       stdio: ['ignore', 'pipe', 'pipe'],
       windowsHide: true,
@@ -83,6 +91,18 @@ export class GizziManager {
       log.warn(`[GizziManager] exited (code ${code})`);
       this.proc = null;
       this.password = null;
+
+      // Auto-restart logic
+      if (app.isPackaged || process.env.NODE_ENV === 'production') {
+        log.info('[GizziManager] AI runtime crashed unexpectedly, respawning in 1s...');
+        setTimeout(() => {
+          if (this.lastConfig) {
+            this.start(this.lastConfig).catch(e => 
+              log.error('[GizziManager] Failed to auto-restart AI runtime:', e)
+            );
+          }
+        }, 1000);
+      }
     });
 
     await this.waitUntilReady();
@@ -116,15 +136,20 @@ export class GizziManager {
     return this.password;
   }
 
+  /** True if the gizzi-code process is currently managed by this instance */
+  isRunning(): boolean {
+    return this.proc !== null;
+  }
+
   // ─── Private ──────────────────────────────────────────────────────────────
 
   private async waitUntilReady(): Promise<void> {
     const deadline = Date.now() + HEALTH_TIMEOUT_MS;
-    const url = `http://127.0.0.1:${GIZZI_PORT}/api/app/health`;
+    const url = `http://127.0.0.1:${GIZZI_PORT}/v1/global/health`;
 
     while (Date.now() < deadline) {
       try {
-        const res = await fetch(url, { signal: AbortSignal.timeout(500) });
+        const res = await fetch(url, { signal: AbortSignal.timeout(2000) });
         if (res.ok || res.status === 401 || res.status === 404) {
           // 401 = server up but auth required (good)
           // 404 = server up, no health route (fine)
@@ -141,14 +166,15 @@ export class GizziManager {
   private resolveBinaryPath(): string | null {
     const binaryName = process.platform === 'win32' ? 'gizzi-code.exe' : 'gizzi-code';
 
-    const candidates = [
-      // Packaged app — electron-builder copies resources/bin/ → app/resources/bin/
-      path.join(process.resourcesPath ?? '', 'bin', binaryName),
-      // Dev monorepo — built by bun build-production.ts
-      path.join(app.getAppPath(), '..', '..', '..', '..', 'cmd', 'gizzi-code', 'dist', binaryName),
-      // Fallback: resources/bin relative to desktop dir
-      path.join(__dirname, '..', '..', 'resources', 'bin', binaryName),
-    ];
+    const candidates = app.isPackaged
+      ? [
+          path.join(process.resourcesPath ?? '', 'bin', binaryName),
+        ]
+      : [
+          path.join(process.resourcesPath ?? '', 'bin', binaryName),
+          path.join(app.getAppPath(), '..', '..', 'cmd', 'gizzi-code', 'dist', binaryName),
+          path.join(__dirname, '..', '..', 'resources', 'bin', binaryName),
+        ];
 
     for (const p of candidates) {
       if (fs.existsSync(p)) {

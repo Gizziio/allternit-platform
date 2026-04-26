@@ -2,7 +2,7 @@
 
 ## Overview
 
-A comprehensive agent management system for the A2rchitect platform, supporting single agents, subagents, multi-agent swarms, and workflow orchestration.
+A comprehensive agent management system for the allternit platform, supporting single agents, subagents, multi-agent swarms, and workflow orchestration.
 
 ## Features
 

@@ -124,9 +124,9 @@ export const FileTree: React.FC<FileTreeProps> = ({
     }
 
     if (isCreating?.type === 'file') {
-      onFileCreate(newItemName, isCreating.parentId);
+      onFileCreate(newItemName, isCreating!.parentId);
     } else {
-      onFolderCreate(newItemName, isCreating.parentId);
+      onFolderCreate(newItemName, isCreating!.parentId);
     }
     
     setNewItemName('');

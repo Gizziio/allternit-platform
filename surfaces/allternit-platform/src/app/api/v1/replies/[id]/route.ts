@@ -5,7 +5,6 @@
  * Returns the current state of a reply if it has been persisted.
  *
  * NOTE: Full reply persistence (Phase 8) is not yet implemented.
- * Replies are currently held in-memory in native-agent.store.
  * This endpoint returns 404 for all IDs until the persistence layer ships.
  */
 

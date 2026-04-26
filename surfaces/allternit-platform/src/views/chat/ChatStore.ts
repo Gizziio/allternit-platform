@@ -1,27 +1,30 @@
 /**
- * ChatStore — compatibility adapter over NativeAgentStore.
- *
- * Thread state (threads, activeThreadId) is no longer owned here.
- * It is kept in sync from NativeAgentStore via a subscription so that all
- * existing callers of useChatStore() continue to work without modification.
- *
- * Project state (projects, sandboxMode, activeProjectId) remains owned here
- * and is persisted to localStorage.
+ * ChatStore - UI state and project management for Chat mode
+ * 
+ * **ARCHITECTURE**: 
+ * - Thread state is DERIVED from ChatSessionStore (via subscription)
+ * - Project state is OWNED here and persisted to localStorage
+ * - Completely independent from Code and Cowork modes
+ * 
+ * **SESSION MANAGEMENT**: Delegates to ChatSessionStore for all
+ * session CRUD operations (create, delete, update, send message).
+ * 
+ * @module ChatStore
+ * @see ChatSessionStore for session management
+ * @see SESSION_ARCHITECTURE.md for full documentation
  */
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import {
-  buildAgentSessionMetadata,
-  createCanonicalSession,
-  getChatSessions,
-  getAgentSessionDescriptor,
-} from '@/lib/agents';
-import { useNativeAgentStore, type NativeSession } from '@/lib/agents/native-agent.store';
+  useChatSessionStore,
+  type ChatSession,
+  type CreateChatSessionOptions,
+} from './ChatSessionStore';
 import * as kernelProjects from '../../integration/kernel/projects';
 
 // ---------------------------------------------------------------------------
-// Types (preserved for callers)
+// Types
 // ---------------------------------------------------------------------------
 
 export interface ChatThread {
@@ -56,14 +59,13 @@ export interface ChatProject {
 // Session → ChatThread mapper
 // ---------------------------------------------------------------------------
 
-function mapSession(s: NativeSession): ChatThread {
-  const descriptor = getAgentSessionDescriptor(s.metadata);
+function mapSession(s: ChatSession): ChatThread {
   return {
     id: s.id,
     title: s.name ?? 'Untitled',
-    // AgentSessionMode uses "regular" where ChatThreadMode uses "llm"
-    mode: descriptor.sessionMode === 'agent' ? 'agent' : 'llm',
-    agentId: descriptor.agentId,
+    mode: s.metadata.sessionMode === 'agent' ? 'agent' : 'llm',
+    agentId: s.metadata.agentId,
+    projectId: s.metadata.projectId,
     updatedAt: new Date(s.updatedAt).getTime(),
   };
 }
@@ -73,7 +75,7 @@ function mapSession(s: NativeSession): ChatThread {
 // ---------------------------------------------------------------------------
 
 interface ChatState {
-  // Derived from NativeAgentStore — updated by subscription below
+  // Threads derived from ChatSessionStore
   threads: ChatThread[];
   activeThreadId: string | null;
 
@@ -83,7 +85,7 @@ interface ChatState {
   activeProjectId: string | null;
   activeProjectLocalKey: string | null;
 
-  // Thread ops — delegate to NativeAgentStore
+  // Thread ops
   createThread: (
     title: string,
     projectId?: string,
@@ -105,8 +107,8 @@ interface ChatState {
   addFileToProject: (projectId: string, file: Omit<ProjectFile, 'id' | 'addedAt'>) => void;
   removeFileFromProject: (projectId: string, fileId: string) => void;
 
-  // Internal — called by the NativeAgentStore subscription
-  _syncFromNative: (sessions: NativeSession[], activeSessionId: string | null) => void;
+  // Sync from ChatSessionStore
+  _syncFromSessionStore: (sessions: ChatSession[], activeSessionId: string | null) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -116,7 +118,7 @@ interface ChatState {
 export const useChatStore = create<ChatState>()(
   persist(
     (set) => ({
-      // Derived — initialized empty; subscription fills these in immediately.
+      // Thread state - synced from ChatSessionStore
       threads: [],
       activeThreadId: null,
 
@@ -126,45 +128,36 @@ export const useChatStore = create<ChatState>()(
       activeProjectId: null,
       activeProjectLocalKey: null,
 
-      // Thread ops
+      // Thread ops - delegate to ChatSessionStore
       createThread: async (title, projectId, mode = 'llm', agentId = null) => {
-        const session = await createCanonicalSession(
-          title,
-          undefined,
-          {
-            // ChatThreadMode "llm" maps to AgentSessionMode "regular"
-            sessionMode: mode === 'agent' ? 'agent' : 'regular',
-            agentId: agentId ?? undefined,
-            projectId,
-          },
-        );
+        const sessionId = await useChatSessionStore.getState().createSession({
+          name: title,
+          projectId,
+          sessionMode: mode === 'agent' ? 'agent' : 'regular',
+          agentId: agentId ?? undefined,
+        });
         set({ activeProjectId: null, activeProjectLocalKey: null });
-        return session.id;
+        return sessionId;
       },
 
       deleteThread: (id) => {
-        void useNativeAgentStore.getState().deleteSession(id);
+        void useChatSessionStore.getState().deleteSession(id);
       },
 
       renameThread: (id, title) => {
-        void useNativeAgentStore.getState().updateSession(id, { name: title });
+        void useChatSessionStore.getState().updateSession(id, { name: title });
       },
 
       setThreadMode: (id, mode, agentId = null) => {
-        const session = useNativeAgentStore
-          .getState()
-          .sessions.find((s) => s.id === id);
-        void useNativeAgentStore.getState().updateSession(id, {
-          metadata: buildAgentSessionMetadata({
-            metadata: session?.metadata ?? {},
-            sessionMode: mode === 'agent' ? 'agent' : 'regular',
-            agentId: agentId ?? undefined,
-          }),
-        });
+        void useChatSessionStore.getState().setSessionMode(
+          id,
+          mode === 'agent' ? 'agent' : 'regular',
+          agentId ?? undefined
+        );
       },
 
       setActiveThread: (id) => {
-        useNativeAgentStore.getState().setActiveSession(id);
+        useChatSessionStore.getState().setActiveSession(id);
         set({ activeProjectId: null, activeProjectLocalKey: null });
       },
 
@@ -232,14 +225,9 @@ export const useChatStore = create<ChatState>()(
             }
             return { ...p, threadIds: withoutThread };
           });
-          const session = useNativeAgentStore
-            .getState()
-            .sessions.find((s) => s.id === threadId);
-          void useNativeAgentStore.getState().updateSession(threadId, {
-            metadata: buildAgentSessionMetadata({
-              metadata: session?.metadata ?? {},
-              projectId: projectId ?? undefined,
-            }),
+          // Update session metadata
+          void useChatSessionStore.getState().updateSession(threadId, {
+            metadata: { projectId: projectId ?? undefined, originSurface: 'chat' as const },
           });
           return { projects };
         }),
@@ -272,18 +260,15 @@ export const useChatStore = create<ChatState>()(
           ),
         })),
 
-      _syncFromNative: (sessions, activeSessionId) => {
-        const chatSessions = getChatSessions(sessions);
-        set({ threads: chatSessions.map(mapSession), activeThreadId: activeSessionId });
+      _syncFromSessionStore: (sessions, activeSessionId) => {
+        set({ threads: sessions.map(mapSession), activeThreadId: activeSessionId });
       },
     }),
     {
       name: 'allternit-chat-storage-v6',
       partialize: (state) => ({
         projects: state.projects,
-        // activeProjectId is intentionally NOT persisted — it's navigation state.
-        // Restoring it across sessions caused the chat view to always open to
-        // ProjectView on startup.
+        // activeProjectId is intentionally NOT persisted - it's navigation state.
         sandboxMode: state.sandboxMode,
       }),
     },
@@ -291,9 +276,9 @@ export const useChatStore = create<ChatState>()(
 );
 
 // ---------------------------------------------------------------------------
-// Sync threads and activeThreadId from NativeAgentStore
+// Sync threads and activeThreadId from ChatSessionStore
 // ---------------------------------------------------------------------------
 
-useNativeAgentStore.subscribe((state) => {
-  useChatStore.getState()._syncFromNative(state.sessions, state.activeSessionId);
+useChatSessionStore.subscribe((state) => {
+  useChatStore.getState()._syncFromSessionStore(state.sessions, state.activeSessionId);
 });

@@ -14,7 +14,7 @@ export function OnboardingPortal() {
   if (typeof document === 'undefined') return null;
   
   return createPortal(
-    <div 
+    <div
       style={{
         position: 'fixed',
         top: 0,
@@ -26,8 +26,9 @@ export function OnboardingPortal() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.4)',
-        backdropFilter: 'blur(8px)',
+        // Solid background — no see-through. The platform UI should not
+        // be visible during onboarding; that looks unpolished.
+        backgroundColor: '#0d0d10',
       }}
       data-onboarding-portal
     >

@@ -3,6 +3,7 @@ import { useChatId } from "@/providers/chat-id-provider";
 import { useChatStore } from "@/views/chat/ChatStore";
 import { useModelSelection } from "@/providers/model-selection-provider";
 import { ModelPicker } from "@/components/model-picker";
+import { Suggestions, type SuggestionItem } from "@/components/agent-elements/input/suggestions";
 import { AgentContextStrip } from "@/components/agents/AgentContextStrip";
 import {
   Sparkles,
@@ -38,11 +39,12 @@ import { ArtifactSidePanel, type SelectedArtifact } from "@/components/ai-elemen
 import { getSession } from "@/lib/auth-browser";
 import {
   useAgentStore,
-  useNativeAgentStore,
-  useConversationReplies,
-  useUserMessages,
+  usePendingPermissions,
+  usePendingQuestions,
 } from "@/lib/agents";
+import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
 import { useSurfaceAgentSelection } from "@/lib/agents/surface-agent-context";
+import { useThreadAgentSessionsStore } from "@/stores/thread-agent-sessions.store";
 import { getAgentSessionDescriptor } from "@/lib/agents/session-metadata";
 import { motion, AnimatePresence } from "framer-motion";
 import type { AgentModeSurface } from "@/stores/agent-surface-mode.store";
@@ -50,11 +52,14 @@ import { AgentModeBackdrop } from "./chat/agentModeSurfaceTheme";
 import { useUnifiedStore } from "@/lib/agents/unified.store";
 import { useRuntimeExecutionMode } from "@/hooks/useRuntimeExecutionMode";
 import { useModeCanvasBridge } from "@/hooks/useModeCanvasBridge";
+import {
+  ComposerPermissionInfoBar,
+  ComposerQuestionBar,
+  ComposerStatusInfoBar,
+} from "./chat/ChatComposerEnhancements";
 
 // Cowork mode components
 import { CoworkTranscript } from "./cowork/CoworkTranscript";
-import { PermissionModal } from "./cowork/PermissionModal";
-import { QuestionModal } from "./cowork/QuestionModal";
 
 // ============================================================================
 // Shared semantic theme bridge
@@ -119,6 +124,16 @@ const MODELS = [
   { id: "deepseek-r1", name: "DeepSeek R1", provider: "deepseek" },
 ] as const;
 
+const EMPTY_STATE_SUGGESTIONS: SuggestionItem[] = [
+  { id: "week-plan", label: "Plan my week", value: "Help me plan my week with priorities and a realistic schedule." },
+  { id: "meeting-summary", label: "Summarize a meeting", value: "Summarize my last meeting into actions, risks, and follow-ups." },
+  { id: "todo-list", label: "Create a todo list", value: "Create a prioritized todo list from my current goals." },
+  { id: "code-review", label: "Explain this code", value: "Explain this code, identify risks, and suggest improvements." },
+];
+function useUserMessages(_chatId?: string) {
+  return [] as Array<{ role: "user" | "assistant"; content: string }>;
+}
+
 export function ChatView({ 
   hideEmptyState = false, 
   mode = 'chat',
@@ -134,26 +149,26 @@ export function ChatView({
   onOpenAgentSession?: (text: string, surface: 'chat' | 'cowork' | 'code' | 'browser') => void;
 }) {
   const { id: chatId, isPersisted } = useChatId();
-  const { createThread, threads, activeThreadId } = useChatStore();
+  const { createThread, renameThread, threads, activeThreadId } = useChatStore();
   const agentSurface: AgentModeSurface = mode === 'cowork' ? 'cowork' : mode === 'code' ? 'code' : 'chat';
   const { agentModeEnabled, selectedAgentId, selectedAgent } =
     useSurfaceAgentSelection(agentSurface);
-  const activeNativeSessionId = useNativeAgentStore((state) => state.activeSessionId);
-  const nativeSessions = useNativeAgentStore((state) => state.sessions);
-  const setActiveNativeSession = useNativeAgentStore(
+  const activeNativeSessionId = useChatSessionStore((state) => state.activeSessionId);
+  const nativeSessions = useChatSessionStore((state) => state.sessions);
+  const setActiveNativeSession = useChatSessionStore(
     (state) => state.setActiveSession,
   );
-  const appendOptimisticEvent = useNativeAgentStore(
+  const appendOptimisticEvent = useChatSessionStore(
     (state) => state.appendOptimisticEvent,
   );
-  const fetchNativeMessages = useNativeAgentStore((state) => state.fetchMessages);
-  const fetchNativeCanvases = useNativeAgentStore(
+  const fetchNativeMessages = useChatSessionStore((state) => state.fetchMessages);
+  const fetchNativeCanvases = useChatSessionStore(
     (state) => state.fetchSessionCanvases,
   );
-  const sendNativeMessageStream = useNativeAgentStore(
+  const sendNativeMessageStream = useChatSessionStore(
     (state) => state.sendMessageStream,
   );
-  const abortNativeGeneration = useNativeAgentStore(
+  const abortNativeGeneration = useChatSessionStore(
     (state) => state.abortGeneration,
   );
   const activeNativeSession = useMemo(
@@ -161,7 +176,7 @@ export function ChatView({
     [activeNativeSessionId, nativeSessions],
   );
   const activeNativeDescriptor = useMemo(
-    () => getAgentSessionDescriptor(activeNativeSession?.metadata),
+    () => getAgentSessionDescriptor(activeNativeSession?.metadata as Record<string, unknown> | undefined),
     [activeNativeSession?.metadata],
   );
   const embeddedAgentSession = useMemo(
@@ -173,15 +188,21 @@ export function ChatView({
     }),
     [activeNativeDescriptor, activeNativeSession, activeNativeSessionId],
   );
-  const nativeStreaming = useNativeAgentStore((state) => ({
+  const activeComposerSessionId = embeddedAgentSession.sessionId ?? chatId ?? undefined;
+  // Phase 2: Linked agent sub-sessions for this thread
+  const linkedAgentSessionIds = useThreadAgentSessionsStore(
+    (state) => (chatId ? state.getAgentSessionsForThread(chatId) : []),
+  );
+  const nativeStreaming = useChatSessionStore((state) => ({
     isStreaming: state.streamingBySession[embeddedAgentSession.sessionId ?? '']?.isStreaming ?? false,
   }));
-  const nativeMessages = useNativeAgentStore((state) =>
-    embeddedAgentSession.sessionId
-      ? state.messages[embeddedAgentSession.sessionId] || []
-      : [],
-  );
-  const embeddedCanvasIds = useNativeAgentStore((state) =>
+  const nativeMessages = useChatSessionStore((state) => {
+    const session = embeddedAgentSession.sessionId
+      ? state.sessions.find((s) => s.id === embeddedAgentSession.sessionId)
+      : null;
+    return session?.messages ?? [];
+  });
+  const embeddedCanvasIds = useChatSessionStore((state) =>
     embeddedAgentSession.sessionId
       ? state.sessionCanvases[embeddedAgentSession.sessionId] || []
       : [],
@@ -193,16 +214,28 @@ export function ChatView({
   const agents = useAgentStore((state) => state.agents);
   const { selection: modelSelection, selectModel, startSelection, isSelecting, cancelSelection } = useModelSelection();
 
-  const selectedModel = modelSelection?.profileId ?? MODELS[0].id;
+  const selectedModel = modelSelection?.modelId ?? modelSelection?.profileId ?? MODELS[0].id;
   const runtimeModelId = modelSelection?.modelId;
 
-  const { executionMode } = useRuntimeExecutionMode();
+  const { executionMode, setMode } = useRuntimeExecutionMode();
   const brainMode = executionMode?.mode === 'plan' ? 'plan' : 'build';
-
-  const chatReplyState = useConversationReplies(chatId ?? undefined);
   const chatUserMessages = useUserMessages(chatId ?? undefined);
-  const chatStreaming = useNativeAgentStore((state) =>
+  const chatStreaming = useChatSessionStore((state) =>
     chatId ? (state.streamingBySession[chatId]?.isStreaming ?? false) : false,
+  );
+  const pendingPermissions = usePendingPermissions(activeComposerSessionId || "__inactive__");
+  const pendingQuestions = usePendingQuestions(activeComposerSessionId || "__inactive__");
+  const composerTopInfoBar = pendingPermissions[0]
+    ? <ComposerPermissionInfoBar request={pendingPermissions[0]} />
+    : null;
+  const composerQuestionBar = pendingQuestions[0]
+    ? <ComposerQuestionBar request={pendingQuestions[0]} />
+    : null;
+  const composerBottomInfoBar = (
+    <ComposerStatusInfoBar
+      modelLabel={modelSelection?.modelName || modelSelection?.modelId || null}
+      modeLabel={brainMode === 'plan' ? 'Plan' : 'Build'}
+    />
   );
 
   useEffect(() => {
@@ -242,6 +275,49 @@ export function ChatView({
   const activeIsLoading = isAgentSessionEmbedded
     ? nativeStreaming.isStreaming
     : chatStreaming;
+
+  // Feature 4: Auto-generate thread title from first message when streaming completes
+  const hasAutoTitledRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!chatId || chatStreaming) return;
+    if (hasAutoTitledRef.current.has(chatId)) return;
+
+    const session = useChatSessionStore.getState().sessions.find((s) => s.id === chatId);
+    if (!session || session.messages.length < 2) return;
+
+    const currentTitle = session.name || '';
+    const isGenericTitle =
+      currentTitle === 'New Session' ||
+      currentTitle === 'Untitled' ||
+      currentTitle.startsWith('temp-') ||
+      currentTitle.trim().length === 0;
+
+    if (!isGenericTitle) {
+      hasAutoTitledRef.current.add(chatId);
+      return;
+    }
+
+    // Generate title from first user message
+    const firstUserMsg = session.messages.find((m) => m.role === 'user');
+    if (!firstUserMsg) return;
+
+    const text = typeof firstUserMsg.content === 'string' ? firstUserMsg.content : '';
+    // Remove common prefixes and create a concise title
+    const cleaned = text
+      .replace(/^(hi|hello|hey|please|can you|could you)\s+/i, '')
+      .replace(/[?.,!]$/, '')
+      .trim();
+    const title = cleaned.length > 40 ? cleaned.slice(0, 40) + '…' : cleaned;
+
+    if (title && title !== currentTitle) {
+      renameThread(chatId, title);
+      // Update document title for browser tab
+      if (typeof document !== 'undefined') {
+        document.title = `${title} — Allternit`;
+      }
+    }
+    hasAutoTitledRef.current.add(chatId);
+  }, [chatId, chatStreaming, renameThread]);
   const dismissEmbeddedAgentSession = useCallback(() => {
     if (embeddedAgentSession.sessionId) {
       appendOptimisticEvent(embeddedAgentSession.sessionId, {
@@ -288,7 +364,7 @@ export function ChatView({
     if (shouldAutoScroll) {
       scrollToBottom('auto');
     }
-  }, [activeIsLoading, nativeMessages, activeMessages, shouldAutoScroll, scrollToBottom]);
+  }, [activeIsLoading, nativeMessages, shouldAutoScroll, scrollToBottom]);
 
   const [greeting, setGreeting] = useState({
     title: "Allternit & Coffee",
@@ -296,6 +372,8 @@ export function ChatView({
     effectType: "reveal" as "typing" | "reveal"
   });
   const [launchMascotEmotion, setLaunchMascotEmotion] = useState<GizziEmotion>('steady');
+  // Phase 2: Track @mention agent for per-message routing
+  const [mentionAgentId, setMentionAgentId] = useState<string | null>(null);
   const [launchMascotAttention, setLaunchMascotAttention] = useState<GizziAttention | null>(null);
   const mascotResetTimeoutRef = useRef<number | null>(null);
   
@@ -318,13 +396,13 @@ export function ChatView({
     if (initialMessage && !hasSentInitialMessage.current && chatId) {
       hasSentInitialMessage.current = true;
       if (isAgentSessionEmbedded && embeddedAgentSession.sessionId) {
-        sendNativeMessageStream(embeddedAgentSession.sessionId, initialMessage).then(() => {
+        sendNativeMessageStream(embeddedAgentSession.sessionId, { text: initialMessage }).then(() => {
           onInitialMessageSent?.();
         });
         return;
       }
-      useNativeAgentStore.getState().setActiveSession(chatId);
-      sendNativeMessageStream(chatId, initialMessage).then(() => {
+      useChatSessionStore.getState().setActiveSession(chatId);
+      sendNativeMessageStream(chatId, { text: initialMessage }).then(() => {
         onInitialMessageSent?.();
       });
     }
@@ -404,9 +482,39 @@ export function ChatView({
       console.log('[ChatView] Received context:', context);
     }
 
+    // ── Phase 2: Per-message agent routing via @mention ─────────────────────
+    if (mentionAgentId && chatId) {
+      const threadStore = useThreadAgentSessionsStore.getState();
+      let agentSessionId = threadStore.getAgentSessionId(chatId, mentionAgentId);
+
+      if (!agentSessionId) {
+        // Create a new agent sub-session for this thread+agent combo
+        const agent = agents.find((a) => a.id === mentionAgentId);
+        try {
+          agentSessionId = await useChatSessionStore.getState().createSession({
+            name: text.slice(0, 40),
+            sessionMode: 'agent',
+            agentId: mentionAgentId,
+            agentName: agent?.name,
+          });
+          threadStore.registerAgentSession(chatId, mentionAgentId, agentSessionId);
+        } catch (err) {
+          console.error('[ChatView] Failed to create agent sub-session:', err);
+          return;
+        }
+      }
+
+      if (agentSessionId) {
+        await sendNativeMessageStream(agentSessionId, { text: text.trim() });
+      }
+      // Clear mention agent after send (transient)
+      setMentionAgentId(null);
+      return;
+    }
+
     if (isAgentSessionEmbedded && embeddedAgentSession.sessionId) {
       setActiveNativeSession(embeddedAgentSession.sessionId);
-      await sendNativeMessageStream(embeddedAgentSession.sessionId, text.trim());
+      await sendNativeMessageStream(embeddedAgentSession.sessionId, { text: text.trim() });
       return;
     }
 
@@ -416,7 +524,7 @@ export function ChatView({
     const activeThread = threads.find((thread) => thread.id === activeThreadId);
     const isEphemeralThread =
       !isPersisted || chatId.startsWith("temp-") || chatId === "welcome";
-    const wantsAgentConversation = agentModeEnabled;
+    const wantsAgentConversation = agentModeEnabled || !!selectedAgentId;
 
     if (wantsAgentConversation && !selectedAgentId) {
       console.warn("[ChatView] Agent mode is enabled but no agent is selected");
@@ -448,8 +556,8 @@ export function ChatView({
       try {
         const newId = await createThread(text.slice(0, 40), undefined, "llm");
         if (newId) {
-          useNativeAgentStore.getState().setActiveSession(newId);
-          await sendNativeMessageStream(newId, text.trim());
+          useChatSessionStore.getState().setActiveSession(newId);
+          await sendNativeMessageStream(newId, { text: text.trim() });
           return;
         }
       } catch (err) {
@@ -458,21 +566,37 @@ export function ChatView({
       return;
     }
 
-    useNativeAgentStore.getState().setActiveSession(effectiveChatId);
-    await sendNativeMessageStream(effectiveChatId, text.trim());
+    useChatSessionStore.getState().setActiveSession(effectiveChatId);
+    await sendNativeMessageStream(effectiveChatId, { text: text.trim() });
   }, [
     activeThreadId,
     agentModeEnabled,
+    agents,
     chatId,
     createThread,
     embeddedAgentSession.sessionId,
     isAgentSessionEmbedded,
     isPersisted,
+    mentionAgentId,
     sendNativeMessageStream,
     selectedAgentId,
     setActiveNativeSession,
     threads,
   ]);
+
+  // Generative UI Feedback Loop
+  useEffect(() => {
+    const handleUIAction = (e: Event) => {
+      const { action, data } = (e as CustomEvent).detail;
+      const message = `[UI Action] User performed: ${action}${data ? ` with data: ${JSON.stringify(data)}` : ''}`;
+
+      // Send as a hidden or system-style message if possible, otherwise regular message
+      handleSend(message);
+    };
+
+    window.addEventListener('allternit:ui-action' as any, handleUIAction);
+    return () => window.removeEventListener('allternit:ui-action' as any, handleUIAction);
+  }, [handleSend]);
 
   // Helper: Get icon based on WIH title/content
   const getWihIcon = useCallback((wih: typeof wihs[0]): React.ReactNode => {
@@ -521,15 +645,15 @@ export function ChatView({
       const lastUserMsg = [...nativeMessages].reverse().find((m) => m.role === "user");
       if (lastUserMsg) {
         setActiveNativeSession(embeddedAgentSession.sessionId);
-        void sendNativeMessageStream(embeddedAgentSession.sessionId, lastUserMsg.content);
+        void sendNativeMessageStream(embeddedAgentSession.sessionId, { text: lastUserMsg.content });
       }
       return;
     }
 
     const lastUserMsg = [...chatUserMessages].reverse().find((m) => m.role === "user");
     if (lastUserMsg && typeof lastUserMsg.content === "string" && chatId) {
-      useNativeAgentStore.getState().setActiveSession(chatId);
-      void sendNativeMessageStream(chatId, lastUserMsg.content);
+      useChatSessionStore.getState().setActiveSession(chatId);
+      void sendNativeMessageStream(chatId, { text: lastUserMsg.content });
     }
   }, [
     chatUserMessages,
@@ -729,6 +853,7 @@ export function ChatView({
               <ChatComposer
                 onSend={handleSend}
                 onAgentSend={onOpenAgentSession ? (text) => onOpenAgentSession(text, agentSurface) : undefined}
+                onMentionAgentChange={setMentionAgentId}
                 isLoading={activeIsLoading}
                 placeholder="What's brewing today?"
                 variant="large"
@@ -740,66 +865,35 @@ export function ChatView({
                 onInteractionSignal={useMonolithLogo ? undefined : pulseMascot}
                 onAttentionChange={useMonolithLogo ? undefined : setLaunchMascotAttention}
                 agentModeSurface={agentSurface}
+                topInfoBarContent={composerTopInfoBar}
+                questionBarContent={composerQuestionBar}
+                bottomInfoBarContent={composerBottomInfoBar}
               />
             </div>
 
-            {/* Suggested Prompts - Inline with input */}
-            <div style={{ 
-              width: '87.3%',
-              maxWidth: '248px',
+            <div style={{
+              width: '100%',
+              maxWidth: '520px',
               margin: '32px auto 0',
               display: 'flex',
               flexDirection: 'column',
-              gap: '8px'
+              gap: '10px',
+              alignItems: 'center',
             }}>
-              <span style={{ 
-                fontSize: '11px', 
-                fontWeight: 500, 
+              <span style={{
+                fontSize: '11px',
+                fontWeight: 500,
                 color: THEME.textMuted,
-                textAlign: 'center'
+                textAlign: 'center',
               }}>
                 Try asking
               </span>
-              <div style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                justifyContent: 'center',
-                gap: '8px'
-              }}>
-                {[
-                  "Help me plan my week",
-                  "Summarize my last meeting",
-                  "Create a todo list",
-                  "Explain this code",
-                ].map((prompt) => (
-                  <button
-                    key={prompt}
-                    onClick={() => handleSend(prompt)}
-                    style={{
-                      padding: '8px 16px',
-                      background: 'var(--chat-composer-soft)',
-                      border: `1px solid ${THEME.borderSubtle}`,
-                      borderRadius: '20px',
-                      color: THEME.textSecondary,
-                      fontSize: '13px',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'var(--chat-composer-hover)';
-                      e.currentTarget.style.color = THEME.textPrimary;
-                      e.currentTarget.style.borderColor = 'var(--ui-border-default)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'var(--chat-composer-soft)';
-                      e.currentTarget.style.color = THEME.textSecondary;
-                      e.currentTarget.style.borderColor = THEME.borderSubtle;
-                    }}
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
+              <Suggestions
+                items={EMPTY_STATE_SUGGESTIONS}
+                onSelect={(item) => handleSend(item.value || item.label)}
+                className="justify-center"
+                itemClassName="h-8 rounded-full border-[var(--ui-border-muted)] bg-[var(--chat-composer-soft)] px-3 text-[13px] text-[var(--ui-text-secondary)] hover:bg-[var(--chat-composer-hover)] hover:text-[var(--ui-text-primary)]"
+              />
             </div>
           </div>
         ) : (
@@ -816,12 +910,14 @@ export function ChatView({
               // Embedded agent session: read from canonical ConversationReplyState
               <CoworkTranscript
                 conversationId={embeddedAgentSession.sessionId ?? ""}
+                linkedSessionIds={linkedAgentSessionIds}
                 onRegenerate={handleRegenerate}
               />
             ) : (
               // Non-embedded: canonical ConversationReplyState
               <CoworkTranscript
                 conversationId={chatId ?? ""}
+                linkedSessionIds={linkedAgentSessionIds}
                 onRegenerate={handleRegenerate}
               />
             )}
@@ -878,22 +974,6 @@ export function ChatView({
 
       </div>{/* end content row */}
 
-      {/* Gate overlay: permission + question modals above composer */}
-      {embeddedAgentSession.sessionId && (
-        <div style={{
-          position: 'absolute',
-          bottom: '100px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: 'min(480px, calc(100% - 32px))',
-          zIndex: 50,
-          pointerEvents: 'auto',
-        }}>
-          <PermissionModal sessionId={embeddedAgentSession.sessionId} />
-          <QuestionModal sessionId={embeddedAgentSession.sessionId} />
-        </div>
-      )}
-
       {/* 2. Floating Bottom Input + Disclaimer */}
       {/* Always show input in cowork mode, otherwise depend on chat state */}
       {(mode === 'cowork' || !isChatEmpty || hideEmptyState) && (
@@ -916,6 +996,7 @@ export function ChatView({
             <ChatComposer
               onSend={handleSend}
               onAgentSend={onOpenAgentSession ? (text) => onOpenAgentSession(text, agentSurface) : undefined}
+              onMentionAgentChange={setMentionAgentId}
               isLoading={activeIsLoading}
               onStop={handleStop}
               selectedModel={selectedModel}
@@ -925,6 +1006,9 @@ export function ChatView({
               placeholder="Reply..."
               showTopActions={false}
               agentModeSurface={agentSurface}
+              topInfoBarContent={composerTopInfoBar}
+              questionBarContent={composerQuestionBar}
+              bottomInfoBarContent={composerBottomInfoBar}
             />
           </div>
           {/* Disclaimer */}

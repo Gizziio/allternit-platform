@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   Play,
   CaretDown,
+  Robot,
+  User,
 } from '@phosphor-icons/react';
 import GlassSurface from '@/design/GlassSurface';
 
@@ -13,6 +15,13 @@ interface Run {
   duration: string;
   triggerType: 'Manual' | 'Scheduled' | 'Webhook';
   logExcerpt: string[];
+  workspaceId?: string;
+  assignedTo?: {
+    type: 'human' | 'agent';
+    name: string;
+    avatar?: string;
+  };
+  runtime?: 'Local' | 'Cloud';
 }
 
 type FilterType = 'All' | 'Running' | 'Completed' | 'Failed';
@@ -21,6 +30,7 @@ export const RunsView: React.FC = () => {
   const [activeFilter, setActiveFilter] = useState<FilterType>('All');
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
   const [runs, setRuns] = useState<Run[]>([]);
+  const [selectedWorkspace, setSelectedWorkspace] = useState<string>('all');
 
   useEffect(() => {
     fetch('/api/v1/workspace/runs').then(r => r.json()).then(setRuns).catch(() => {});
@@ -51,6 +61,9 @@ export const RunsView: React.FC = () => {
     if (activeFilter === 'Completed') return run.status === 'completed';
     if (activeFilter === 'Failed') return run.status === 'failed';
     return true;
+  }).filter((run) => {
+    if (selectedWorkspace === 'all') return true;
+    return run.workspaceId === selectedWorkspace;
   });
 
   const counts = {
@@ -59,6 +72,8 @@ export const RunsView: React.FC = () => {
     Completed: runs.filter((r) => r.status === 'completed').length,
     Failed: runs.filter((r) => r.status === 'failed').length,
   };
+
+  const workspaces = Array.from(new Set(runs.map((r) => r.workspaceId).filter(Boolean)));
 
   return (
     <div style={{ padding: 'var(--spacing-lg)' }}>
@@ -71,28 +86,55 @@ export const RunsView: React.FC = () => {
         <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '14px' }}>Execution history and status</p>
       </div>
 
-      {/* Filter Bar */}
-      <div style={{ display: 'flex', gap: 'var(--spacing-sm)', marginBottom: 'var(--spacing-lg)', flexWrap: 'wrap' }}>
-        {(['All', 'Running', 'Completed', 'Failed'] as FilterType[]).map((filter) => (
-          <button
-            key={filter}
-            onClick={() => setActiveFilter(filter)}
+      {/* Controls Bar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--spacing-lg)', flexWrap: 'wrap', gap: 'var(--spacing-md)' }}>
+        {/* Filter Bar */}
+        <div style={{ display: 'flex', gap: 'var(--spacing-sm)', flexWrap: 'wrap' }}>
+          {(['All', 'Running', 'Completed', 'Failed'] as FilterType[]).map((filter) => (
+            <button
+              key={filter}
+              onClick={() => setActiveFilter(filter)}
+              style={{
+                padding: 'var(--spacing-xs) var(--spacing-md)',
+                borderRadius: '9999px',
+                border: 'none',
+                fontSize: '13px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                backgroundColor:
+                  activeFilter === filter ? '#af52de' : 'var(--bg-secondary)',
+                color: activeFilter === filter ? '#fff' : 'var(--text-secondary)',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              {filter} ({counts[filter]})
+            </button>
+          ))}
+        </div>
+
+        {/* Workspace Filter */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)' }}>
+          <label style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>Workspace:</label>
+          <select
+            value={selectedWorkspace}
+            onChange={(e) => setSelectedWorkspace(e.target.value)}
             style={{
-              padding: 'var(--spacing-xs) var(--spacing-md)',
-              borderRadius: '9999px',
-              border: 'none',
+              padding: '6px 12px',
+              borderRadius: '8px',
+              border: '1px solid var(--border-subtle)',
+              backgroundColor: 'var(--bg-secondary)',
+              color: 'var(--text-primary)',
               fontSize: '13px',
-              fontWeight: 500,
               cursor: 'pointer',
-              backgroundColor:
-                activeFilter === filter ? '#af52de' : 'var(--bg-secondary)',
-              color: activeFilter === filter ? '#fff' : 'var(--text-secondary)',
-              transition: 'all 0.2s ease',
+              outline: 'none',
             }}
           >
-            {filter} ({counts[filter]})
-          </button>
-        ))}
+            <option value="all">All workspaces</option>
+            {workspaces.map((ws) => (
+              <option key={ws} value={ws}>{ws}</option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Runs List */}
@@ -133,13 +175,53 @@ export const RunsView: React.FC = () => {
                     >
                       {run.triggerType}
                     </span>
+                    {run.runtime && (
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          backgroundColor: run.runtime === 'Cloud' ? '#dbeafe' : '#fce7f3',
+                          color: run.runtime === 'Cloud' ? '#0369a1' : '#be185d',
+                          fontWeight: 500,
+                        }}
+                      >
+                        {run.runtime}
+                      </span>
+                    )}
                   </div>
-                  <div style={{ display: 'flex', gap: 'var(--spacing-lg)', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                    <span>Started: {run.startTime}</span>
-                    <span>Duration: {run.duration}</span>
+                  <div style={{ display: 'flex', gap: 'var(--spacing-lg)', fontSize: '13px', color: 'var(--text-secondary)', alignItems: 'center', flexWrap: 'wrap' }}>
                     <span style={{ color: getStatusColor(run.status), fontWeight: 500 }}>
                       {getStatusLabel(run.status)}
                     </span>
+                    {run.assignedTo && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--spacing-xs)' }}>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '50%',
+                            backgroundColor: run.assignedTo.type === 'agent' ? '#3b82f6' : '#af52de',
+                            color: '#fff',
+                            fontSize: '10px',
+                          }}
+                        >
+                          {run.assignedTo.avatar ? (
+                            <img src={run.assignedTo.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+                          ) : run.assignedTo.type === 'agent' ? (
+                            <Robot size={10} weight="fill" />
+                          ) : (
+                            <User size={10} weight="fill" />
+                          )}
+                        </span>
+                        {run.assignedTo.name}
+                      </span>
+                    )}
+                    <span>Started: {run.startTime}</span>
+                    <span>Duration: {run.duration}</span>
                   </div>
                 </div>
 

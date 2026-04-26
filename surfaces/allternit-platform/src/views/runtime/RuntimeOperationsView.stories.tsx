@@ -10,7 +10,7 @@ const meta: Meta<typeof RuntimeOperationsPanel> = {
   component: RuntimeOperationsPanel,
   parameters: {
     layout: "fullscreen",
-    a2r: {
+    allternit: {
       componentId: "runtime-operations-view",
       evidence: {
         types: ["VISUAL_SNAPSHOT"],
@@ -58,7 +58,7 @@ function SeededRuntimeOperationsPanel() {
               },
               versioning: {
                 auto_commit: executionMode === "auto",
-                commit_message_template: "[a2r] {description}",
+                commit_message_template: "[allternit] {description}",
                 branch_prefix: "allternit-session-",
               },
             }}

@@ -122,7 +122,7 @@ export function SessionReplayViewer({
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        background: BACKGROUND.base,
+        background: BACKGROUND.primary,
         color: TEXT.primary,
         fontFamily: 'system-ui, sans-serif',
         fontSize: 13,
@@ -280,7 +280,7 @@ export function SessionReplayViewer({
                           ? SAND[500]
                           : 'rgba(0,0,0,0.4)',
                       color: (label === 'before') === showBefore
-                        ? BACKGROUND.base
+                        ? BACKGROUND.primary
                         : `${SAND[500]}90`,
                     }}
                   >
@@ -393,7 +393,7 @@ export function SessionReplayViewer({
                 height: 8,
                 borderRadius: '50%',
                 background: r.result_success ? STATUS.success : STATUS.error,
-                border: `1px solid ${BACKGROUND.base}`,
+                border: `1px solid ${BACKGROUND.primary}`,
               }}
             />
           ))}
@@ -426,7 +426,7 @@ export function SessionReplayViewer({
                 borderRadius: primary ? 8 : 6,
                 background: primary ? SAND[500] : 'rgba(255,255,255,0.07)',
                 border: 'none',
-                color: primary ? BACKGROUND.base : `${SAND[500]}90`,
+                color: primary ? BACKGROUND.primary : `${SAND[500]}90`,
                 cursor: 'pointer',
               }}
             >

@@ -1,0 +1,160 @@
+---
+title: Installation
+description: Install the Allternit runtime on your infrastructure
+---
+
+## Quick Install
+
+The fastest way to install the Allternit runtime:
+
+```bash
+curl -fsSL https://install.allternit.com | bash
+```
+
+## Manual Installation
+
+### 1. Download the Binary
+
+```bash
+# Linux AMD64
+wget https://dl.allternit.com/stable/latest/allternit-runtime-linux-amd64 -O allternit-runtime
+
+# Linux ARM64
+wget https://dl.allternit.com/stable/latest/allternit-runtime-linux-arm64 -O allternit-runtime
+
+# macOS AMD64
+wget https://dl.allternit.com/stable/latest/allternit-runtime-darwin-amd64 -O allternit-runtime
+
+# macOS ARM64 (Apple Silicon)
+wget https://dl.allternit.com/stable/latest/allternit-runtime-darwin-arm64 -O allternit-runtime
+```
+
+### 2. Make Executable
+
+```bash
+chmod +x allternit-runtime
+sudo mv allternit-runtime /usr/local/bin/
+```
+
+### 3. Verify Installation
+
+```bash
+allternit-runtime --version
+```
+
+## Docker (Optional)
+
+If you prefer Docker:
+
+```bash
+docker run -d \
+  --name allternit-runtime \
+  -p 8080:8080 \
+  -v /path/to/data:/data \
+  -e ALLTERNIT_API_KEY=your_key \
+  allternit/runtime:latest
+```
+
+## Systemd Service (Linux)
+
+Create a systemd service for automatic startup:
+
+```bash
+sudo tee /etc/systemd/system/allternit-runtime.service > /dev/null <<EOF
+[Unit]
+Description=Allternit Runtime Agent
+After=network.target
+
+[Service]
+Type=simple
+User=allternit
+Group=allternit
+ExecStart=/usr/local/bin/allternit-runtime --config /etc/allternit/runtime.yaml
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable allternit-runtime
+sudo systemctl start allternit-runtime
+```
+
+## macOS LaunchDaemon
+
+For macOS, create a LaunchDaemon:
+
+```bash
+sudo tee /Library/LaunchDaemons/com.allternit.runtime.plist > /dev/null <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.allternit.runtime</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/local/bin/allternit-runtime</string>
+        <string>--config</string>
+        <string>/etc/allternit/runtime.yaml</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+</dict>
+</plist>
+EOF
+
+sudo launchctl load /Library/LaunchDaemons/com.allternit.runtime.plist
+```
+
+## Verification
+
+Check that the runtime is running:
+
+```bash
+# Check service status
+sudo systemctl status allternit-runtime
+
+# Or test the health endpoint
+curl http://localhost:8080/health
+```
+
+Expected response:
+```json
+{
+  "status": "healthy",
+  "version": "1.0.0",
+  "uptime": 3600
+}
+```
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Port already in use">
+    Change the port in `runtime.yaml`:
+    ```yaml
+    server:
+      port: 8081
+    ```
+  </Accordion>
+  
+  <Accordion title="Permission denied">
+    Ensure the binary is executable:
+    ```bash
+    chmod +x /usr/local/bin/allternit-runtime
+    ```
+  </Accordion>
+  
+  <Accordion title="Cannot bind to port < 1024">
+    Use a higher port or run with sudo (not recommended for production).
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+Now that the runtime is installed, [configure it](/byoc/configuration) for your environment.

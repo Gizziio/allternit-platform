@@ -170,8 +170,9 @@ export const ExplorerView: React.FC = () => {
 
   useEffect(() => {
     filesApi.listDirectory({ path: '.' })
-      .then((entries) => {
-        const toNode = (entry: (typeof entries)[number]): FileNode => ({
+      .then((res) => {
+        const items = res.entries ?? [];
+        const toNode = (entry: (typeof items)[number]): FileNode => ({
           name: entry.name,
           path: entry.path,
           type: entry.type === 'directory' ? 'folder' : 'file',
@@ -182,7 +183,7 @@ export const ExplorerView: React.FC = () => {
             : entry.name.match(/\.md$/) ? 'md'
             : undefined,
         });
-        setFileTree(entries.map(toNode));
+        setFileTree(items.map(toNode));
       })
       .catch(() => {});
   }, []);

@@ -297,7 +297,7 @@ export function getEnvironmentStore(): EnvironmentStore {
     if (redis) {
       // Lazy import to avoid circular deps at module load time
       const { RedisEnvironmentStore } = require('./redisStores') as typeof import('./redisStores');
-      _environmentStore = new RedisEnvironmentStore(redis);
+      _environmentStore = new RedisEnvironmentStore(redis as any);
     } else {
       _environmentStore = new InMemoryEnvironmentStore();
     }

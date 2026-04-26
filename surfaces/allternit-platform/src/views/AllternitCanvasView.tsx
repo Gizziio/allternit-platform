@@ -1,7 +1,7 @@
 /**
- * A2rCanvasView.tsx
+ * AllternitCanvasView.tsx
  * 
- * Main Canvas view for A2rchitech - "The Computer"
+ * Main Canvas view for Allternit - "The Computer"
  * A split-pane surface that renders rich artifacts (documents, slides, sheets, code, media)
  * alongside the chat/conversation that generated them.
  * 
@@ -29,30 +29,30 @@ import { Button } from '@/components/ui/button';
 import { CanvasRouter } from './canvas/CanvasRouter';
 import { CanvasToolbar } from './canvas/CanvasToolbar';
 import { CreativeCockpit } from './canvas/components/CreativeCockpit';
-import { A2rDriveSidebar } from './canvas/components/A2rDriveSidebar';
+import { AllternitDriveSidebar } from './canvas/components/AllternitDriveSidebar';
 import { useCanvasStream } from './canvas/hooks/useCanvasStream';
 import { useCanvasLayout } from './canvas/hooks/useCanvasLayout';
 import type { ArtifactKind } from '@/lib/ai/ui-parts.types';
 import type { RendererType } from './canvas/CanvasRouter';
 import { cn } from '@/lib/utils';
 
-interface A2rCanvasViewProps {
+interface AllternitCanvasViewProps {
   /** Initial artifact to display */
   initialArtifactId?: string;
-  /** Parent view context (chat, cowork, code, browser) */
-  sourceView: 'chat' | 'cowork' | 'code' | 'browser';
+  /** Parent view context (chat, cowork, code, browser, design) */
+  sourceView: 'chat' | 'cowork' | 'code' | 'browser' | 'design';
   /** Session/chat ID for context */
   sessionId?: string;
   /** Enable MoA (Mixture of Agents) mode */
   moaEnabled?: boolean;
 }
 
-export function A2rCanvasView({
+export function AllternitCanvasView({
   initialArtifactId,
   sourceView,
   sessionId,
   moaEnabled = false,
-}: A2rCanvasViewProps) {
+}: AllternitCanvasViewProps) {
   // Layout state
   const [layoutMode, setLayoutMode] = useState<'horizontal' | 'vertical'>('horizontal');
   const [showChat, setShowChat] = useState(true);
@@ -242,7 +242,7 @@ export function A2rCanvasView({
                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
                 className="w-80 border-l border-[var(--border-subtle)] bg-[var(--bg-secondary)]"
               >
-                <A2rDriveSidebar
+                <AllternitDriveSidebar
                   sessionId={sessionId}
                   onSelectArtifact={handleArtifactSelect}
                 />
@@ -353,7 +353,7 @@ export function A2rCanvasView({
                   maxSize={25}
                   className="bg-[var(--bg-secondary)] border-l border-[var(--border-subtle)]"
                 >
-                  <A2rDriveSidebar
+                  <AllternitDriveSidebar
                     sessionId={sessionId}
                     onSelectArtifact={handleArtifactSelect}
                     onClose={handleToggleDrive}
@@ -395,4 +395,4 @@ function EmptyCanvasState({ sourceView }: { sourceView: string }) {
   );
 }
 
-export default A2rCanvasView;
+export default AllternitCanvasView;

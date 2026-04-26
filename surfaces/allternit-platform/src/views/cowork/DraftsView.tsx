@@ -30,6 +30,7 @@ const getIcon = (type: Draft['type']) => {
 
 export const DraftsView: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [drafts] = useState<Draft[]>([]);
 
   return (
     <div style={{ padding: 'var(--spacing-lg)' }}>

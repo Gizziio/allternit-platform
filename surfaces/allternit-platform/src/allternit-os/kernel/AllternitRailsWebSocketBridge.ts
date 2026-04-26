@@ -1,5 +1,5 @@
 /**
- * A2rchitect Super-Agent OS - Allternit Rails WebSocket Bridge
+ * allternit Super-Agent OS - Allternit Rails WebSocket Bridge
  * 
  * Real-time WebSocket connection to the Allternit Agent System Rails.
  * Replaces HTTP polling with live updates for:

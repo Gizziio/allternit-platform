@@ -25,9 +25,6 @@ import {
 } from '@phosphor-icons/react';
 import { RailConfigSection } from './rail.config';
 
-// Type cast for icon compatibility with RailConfigSection
-type RailIcon = React.ComponentType<{ size?: number | string; weight?: any; color?: string }>;
-
 export const CODE_RAIL_CONFIG: RailConfigSection[] = [
   // New Thread - Top action (like New Chat/New Task)
   {
@@ -39,7 +36,7 @@ export const CODE_RAIL_CONFIG: RailConfigSection[] = [
       {
         id: 'cd-new-thread',
         label: 'New Thread',
-        icon: Plus as RailIcon,
+        icon: Plus,
         payload: 'code',
         isAction: true,
         shortcut: '⌘N'
@@ -51,14 +48,14 @@ export const CODE_RAIL_CONFIG: RailConfigSection[] = [
   {
     id: 'agent-hub',
     title: 'Agent',
-    icon: Robot as RailIcon,
+    icon: Robot,
     collapsible: false,
     defaultExpanded: true,
     items: [
       {
         id: 'cd-agent-hub',
         label: 'Agent Hub',
-        icon: Robot as RailIcon,
+        icon: Robot,
         payload: 'agent-hub',
         shortcut: '⌘⇧A'
       },
@@ -69,14 +66,14 @@ export const CODE_RAIL_CONFIG: RailConfigSection[] = [
   {
     id: 'cron',
     title: 'Cron',
-    icon: CalendarCheck as RailIcon,
+    icon: CalendarCheck,
     collapsible: false,
     defaultExpanded: true,
     items: [
       {
         id: 'cd-cron',
         label: 'Cron',
-        icon: CalendarCheck as RailIcon,
+        icon: CalendarCheck,
         payload: 'code-automations',
       },
     ]
@@ -86,14 +83,14 @@ export const CODE_RAIL_CONFIG: RailConfigSection[] = [
   {
     id: 'swarm-ade',
     title: 'Swarm ADE',
-    icon: Cpu as RailIcon,
+    icon: Cpu,
     collapsible: false,
     defaultExpanded: true,
     items: [
       {
         id: 'cd-swarm-ade',
         label: 'Swarm ADE',
-        icon: Cpu as RailIcon,
+        icon: Cpu,
         payload: 'swarm',  // Opens SwarmMonitor with Slate-style tabs
       },
     ]
@@ -103,7 +100,7 @@ export const CODE_RAIL_CONFIG: RailConfigSection[] = [
   {
     id: 'threads',
     title: 'Threads',
-    icon: ChatTeardropText as RailIcon,
+    icon: ChatTeardropText,
     collapsible: false,
     defaultExpanded: true,
     items: [],
@@ -113,14 +110,14 @@ export const CODE_RAIL_CONFIG: RailConfigSection[] = [
   {
     id: 'system',
     title: 'System',
-    icon: Gear as RailIcon,
+    icon: Gear,
     collapsible: true,
     defaultExpanded: false,
     items: [
       {
         id: 'cd-openclaw-control',
         label: 'OpenClaw Control',
-        icon: Gear as RailIcon,
+        icon: Gear,
         payload: 'openclaw'
       },
     ]

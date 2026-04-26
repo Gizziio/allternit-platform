@@ -11,15 +11,7 @@
 !define MUI_BGCOLOR          "1A140A"   ; deep dark (matches sidebar gradient end)
 !define MUI_TEXTCOLOR        "8CB0D4"   ; muted gold (D4B08C → reversed)
 
-; Header area
-!define MUI_HEADERIMAGE
-!define MUI_HEADERIMAGE_BITMAP          "$%NSIS_INCLUDE_PATH%\installer-header.bmp"
-!define MUI_HEADERIMAGE_UNBITMAP        "$%NSIS_INCLUDE_PATH%\installer-header.bmp"
-!define MUI_HEADERIMAGE_RIGHT
-
-; Sidebar (welcome / finish pages)
-!define MUI_WELCOMEFINISHPAGE_BITMAP    "$%NSIS_INCLUDE_PATH%\installer-sidebar.bmp"
-!define MUI_UNWELCOMEFINISHPAGE_BITMAP  "$%NSIS_INCLUDE_PATH%\installer-sidebar.bmp"
+; Header and sidebar images are defined by electron-builder via package.json installerHeader, installerSidebar properties
 
 ; ── Abort confirmation ────────────────────────────────────────────────────────
 !define MUI_ABORTWARNING
@@ -37,12 +29,12 @@
 ; ── Finish page ───────────────────────────────────────────────────────────────
 !define MUI_FINISHPAGE_TITLE           "Allternit Installed  |  A://"
 !define MUI_FINISHPAGE_TEXT            "Allternit Desktop has been installed on your computer.$\r$\n$\r$\nType A:// in any supported browser or launcher to open your platform.$\r$\n$\r$\nClick Finish to close this wizard."
-!define MUI_FINISHPAGE_RUN             "$INSTDIR\${APP_EXECUTABLE_FILENAME}"
+; MUI_FINISHPAGE_RUN defined by electron-builder
 !define MUI_FINISHPAGE_RUN_TEXT        "Launch Allternit"
 !define MUI_FINISHPAGE_LINK            "Visit allternit.com"
 !define MUI_FINISHPAGE_LINK_LOCATION   "https://allternit.com"
-!define MUI_FINISHPAGE_SHOWREADME      ""
-!define MUI_FINISHPAGE_NOREBOOTSUPPORT
+; MUI_FINISHPAGE_SHOWREADME defined by electron-builder
+; MUI_FINISHPAGE_NOREBOOTSUPPORT defined by electron-builder
 
 ; ── Uninstaller finish page ───────────────────────────────────────────────────
 !define MUI_UNFINISHPAGE_NOAUTOCLOSE

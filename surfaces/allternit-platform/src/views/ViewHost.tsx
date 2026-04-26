@@ -14,7 +14,7 @@ class ViewRenderBoundary extends Component<
   }
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     // Only log actual errors, not development double-invocation
-    if (import.meta.env.PROD) {
+    if (process.env.NODE_ENV === 'production') {
       console.error(`[ViewHost] Render error in view "${this.props.viewType}":`, error);
     }
   }

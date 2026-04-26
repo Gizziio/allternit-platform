@@ -1,5 +1,5 @@
 /**
- * A2rchitect Super-Agent OS - Research Doc Program
+ * allternit Super-Agent OS - Research Doc Program
  * 
  * Renders deep research documents with:
  * - Multi-column wiki-style layout
@@ -18,7 +18,7 @@ import {
   exportToPDF 
 } from '../utils/ExportUtilities';
 import type { 
-  A2rProgram, 
+  AllternitProgram, 
   ResearchDocState, 
   ResearchDocSection, 
   ResearchDocCitation,
@@ -26,7 +26,7 @@ import type {
 } from '../types/programs';
 
 interface ResearchDocProgramProps {
-  program: A2rProgram;
+  program: AllternitProgram;
 }
 
 // ============================================================================

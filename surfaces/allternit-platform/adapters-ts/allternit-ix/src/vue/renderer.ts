@@ -1,7 +1,7 @@
 /**
- * Vue Renderer for A2R-IX
+ * Vue Renderer for Allternit-IX
  * 
- * Renders A2R-IX UI IR to Vue 3 components.
+ * Renders Allternit-IX UI IR to Vue 3 components.
  */
 
 import type { UIRoot, UIComponent } from '../types';
@@ -67,7 +67,7 @@ export function createVueRenderer(config: VueRendererConfig): VueRenderer {
 
     // Generate setup function
     const setupLines: string[] = [
-      '// A2R-IX Generated Component',
+      '// Allternit-IX Generated Component',
       "import { ref, computed, watch } from 'vue';",
       '',
       '// State',
@@ -364,7 +364,7 @@ export function createVueRenderer(config: VueRendererConfig): VueRenderer {
 }
 
 /**
- * Compile A2R-IX UI to Vue component definition
+ * Compile Allternit-IX UI to Vue component definition
  */
 export function compileToVue(root: UIRoot, config: VueRendererConfig = {}): VueComponentDefinition {
   const renderer = createVueRenderer(config);

@@ -1,0 +1,339 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../src/generated/prisma"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// User Model (assuming Clerk integration)
+// ============================================================================
+
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  sshConnections      SshConnection[]
+  remoteBackendTargets RemoteBackendTarget[]
+  backendPreference   UserBackendPreference?
+
+  @@map("users")
+}
+
+// ============================================================================
+// SSH Connection Model
+// ============================================================================
+
+model SshConnection {
+  id                  String    @id @default(cuid())
+  userId              String
+  name                String
+  host                String
+  port                Int       @default(22)
+  username            String
+  authType            String    @map("auth_type") // 'key' or 'password'
+  encryptedPrivateKey String?   @map("encrypted_private_key")
+  encryptedPassword   String?   @map("encrypted_password")
+  status              String    @default("disconnected") // 'connected', 'disconnected', 'connecting', 'error'
+  os                  String?
+  architecture        String?
+  dockerInstalled     Boolean?  @map("docker_installed")
+  allternitInstalled  Boolean?  @map("a2r_installed")
+  allternitVersion    String?   @map("a2r_version")
+  lastConnectedAt     DateTime? @map("last_connected_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user          User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  backendTarget RemoteBackendTarget?
+
+  @@index([userId])
+  @@index([status])
+  @@map("ssh_connections")
+}
+
+model RemoteBackendTarget {
+  id                  String   @id @default(cuid())
+  userId              String
+  sshConnectionId     String   @unique @map("ssh_connection_id")
+  name                String
+  status              String   @default("disconnected")
+  installState        String   @default("unknown") @map("install_state")
+  backendUrl          String?  @map("backend_url")
+  gatewayUrl          String?  @map("gateway_url")
+  gatewayWsUrl        String?  @map("gateway_ws_url")
+  encryptedGatewayToken String? @map("encrypted_gateway_token")
+  installedVersion    String?  @map("installed_version")
+  supportedClientRange String? @map("supported_client_range")
+  lastVerifiedAt      DateTime? @map("last_verified_at")
+  lastHeartbeatAt     DateTime? @map("last_heartbeat_at")
+  lastError           String?  @map("last_error")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  user           User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sshConnection  SshConnection           @relation(fields: [sshConnectionId], references: [id], onDelete: Cascade)
+  activeForUsers UserBackendPreference[] @relation("ActiveRemoteBackendTarget")
+
+  @@index([userId])
+  @@index([status])
+  @@map("remote_backend_targets")
+}
+
+model UserBackendPreference {
+  id                        String   @id @default(cuid())
+  userId                    String   @unique
+  orgId                     String?  @map("org_id")
+  mode                      String   @default("local")
+  fallbackMode              String   @default("local") @map("fallback_mode")
+  executionMode             String   @default("auto") @map("execution_mode")
+  executionModeUpdatedAt    DateTime @default(now()) @map("execution_mode_updated_at")
+  activeRemoteBackendTargetId String? @map("active_remote_backend_target_id")
+  createdAt                 DateTime @default(now()) @map("created_at")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeRemoteBackendTarget RemoteBackendTarget? @relation("ActiveRemoteBackendTarget", fields: [activeRemoteBackendTargetId], references: [id], onDelete: SetNull)
+
+  @@index([activeRemoteBackendTargetId])
+  @@map("user_backend_preferences")
+}
+
+// ============================================================================
+// Workflow Models
+// ============================================================================
+
+model Workflow {
+  id          String              @id @default(cuid())
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  title       String
+  description String?
+  userId      String?
+  nodes       String              // JSON: WorkflowNode[]
+  edges       String              // JSON: WorkflowEdge[]
+  executions  WorkflowExecution[]
+
+  @@map("workflows")
+}
+
+model WorkflowExecution {
+  id          String    @id @default(cuid())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  workflowId  String
+  workflow    Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  status      String    // "pending" | "running" | "completed" | "failed" | "cancelled"
+  startedAt   DateTime?
+  completedAt DateTime?
+  result      String?   // JSON
+  error       String?
+
+  @@index([workflowId])
+  @@map("workflow_executions")
+}
+
+// ============================================================================
+// Conversation Branching Models
+// ============================================================================
+
+model Conversation {
+  id                   String                @id @default(cuid())
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  title                String?
+  userId               String?
+  parentConversationId String?
+  gizziSessionId       String?               @map("gizzi_session_id")
+  parentConversation   Conversation?         @relation("ConversationBranches", fields: [parentConversationId], references: [id])
+  branches             Conversation[]        @relation("ConversationBranches")
+  messages             ConversationMessage[]
+
+  @@index([userId])
+  @@index([parentConversationId])
+  @@index([gizziSessionId])
+  @@map("conversations")
+}
+
+model ConversationMessage {
+  id              String       @id @default(cuid())
+  createdAt       DateTime     @default(now())
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role            String       // "user" | "assistant" | "system"
+  content         String
+  parentMessageId String?
+  metadata        String?      // JSON
+
+  @@index([conversationId])
+  @@index([parentMessageId])
+  @@map("conversation_messages")
+}
+
+// ============================================================================
+// Workspace Models (Team isolation — from Multica)
+// ============================================================================
+
+model Workspace {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  ownerId     String   @map("owner_id")
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  members     WorkspaceMember[]
+  invitations WorkspaceInvitation[]
+  boardItems  BoardItem[]
+  skills      TeamSkill[]
+  runtimes    AgentRuntime[]
+
+  @@map("workspaces")
+}
+
+model WorkspaceMember {
+  id          String   @id @default(cuid())
+  workspaceId String   @map("workspace_id")
+  userId      String?  @map("user_id")
+  agentId     String?  @map("agent_id")
+  role        String   // 'owner' | 'admin' | 'member' | 'agent'
+  joinedAt    DateTime @default(now()) @map("joined_at")
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@unique([workspaceId, agentId])
+  @@map("workspace_members")
+}
+
+model WorkspaceInvitation {
+  id          String   @id @default(cuid())
+  workspaceId String   @map("workspace_id")
+  email       String
+  role        String   // 'admin' | 'member' | 'agent'
+  token       String   @unique
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("workspace_invitations")
+}
+
+// ============================================================================
+// Board Models (Kanban — from Multica)
+// ============================================================================
+
+model BoardItem {
+  id               String   @id @default(cuid())
+  workspaceId      String   @map("workspace_id")
+  title            String
+  description      String?
+  status           String   // 'backlog' | 'todo' | 'in_progress' | 'in_review' | 'done' | 'blocked'
+  assigneeType     String?  @map("assignee_type") // 'human' | 'agent'
+  assigneeId       String?  @map("assignee_id")
+  reporterId       String   @map("reporter_id")
+  priority         Int      @default(0)
+  labels           String?  // JSON string[]
+  estimatedMinutes Int?     @map("estimated_minutes")
+  deadline         DateTime?
+  dependencies     String?  // JSON string[]
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  workspace        Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  comments         BoardComment[]
+
+  @@index([workspaceId])
+  @@index([status])
+  @@map("board_items")
+}
+
+model BoardComment {
+  id          String   @id @default(cuid())
+  itemId      String   @map("item_id")
+  authorType  String   @map("author_type") // 'human' | 'agent'
+  authorId    String   @map("author_id")
+  body        String
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  item        BoardItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+  @@map("board_comments")
+}
+
+// ============================================================================
+// Team Skill Model (Skills Marketplace — from Multica)
+// ============================================================================
+
+model TeamSkill {
+  id            String   @id @default(cuid())
+  workspaceId   String   @map("workspace_id")
+  name          String
+  description   String?
+  manifest      String?  // JSON: Plugin SDK manifest
+  sourceRepo    String?  @map("source_repo")
+  version       String
+  installedBy   String   @map("installed_by")
+  installedAt   DateTime @default(now()) @map("installed_at")
+
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@map("team_skills")
+}
+
+// ============================================================================
+// Task Audit Log Model (from Taskdog)
+// ============================================================================
+
+model TaskAuditLog {
+  id          String   @id @default(cuid())
+  taskId      String   @map("task_id")
+  action      String   // 'created' | 'updated' | 'deleted' | 'status_changed' | 'assigned' | 'commented' | 'time_tracked'
+  actorType   String   @map("actor_type") // 'human' | 'agent' | 'system'
+  actorId     String   @map("actor_id")
+  payload     String?  // JSON: before/after diff
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([taskId])
+  @@index([createdAt])
+  @@map("task_audit_logs")
+}
+
+// ============================================================================
+// Agent Runtime Model (Runtime Discovery — from Multica)
+// ============================================================================
+
+model AgentRuntime {
+  id            String    @id @default(cuid())
+  name          String
+  host          String
+  agentClis     String?   @map("agent_clis") // JSON string[]
+  status        String    // 'online' | 'offline' | 'busy'
+  lastHeartbeat DateTime? @map("last_heartbeat")
+  workspaceId   String?   @map("workspace_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  workspace     Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+  @@index([status])
+  @@map("agent_runtimes")
+}

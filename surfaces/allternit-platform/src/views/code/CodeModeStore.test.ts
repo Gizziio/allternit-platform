@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
-  createInitialCodeModeState,
+  createCodeModeFixtureState,
   useCodeModeStore,
 } from './CodeModeStore';
 
@@ -22,7 +22,7 @@ const ISOLATION_TYPES = ['worktree', 'sandbox'];
 
 describe('CodeModeStore', () => {
   beforeEach(() => {
-    useCodeModeStore.setState(createInitialCodeModeState());
+    useCodeModeStore.setState(createCodeModeFixtureState());
   });
 
   it('switches workspace and selects the first session in that workspace', () => {
@@ -38,11 +38,11 @@ describe('CodeModeStore', () => {
 
     const state = useCodeModeStore.getState();
     expect(state.activeSessionId).toBe('sess_diff_review');
-    expect(state.activeWorkspaceId).toBe('ws_a2rchitech');
+    expect(state.activeWorkspaceId).toBe('ws_allternit');
   });
 
   it('ships session fixtures that satisfy CodeSession contract invariants', () => {
-    const state = createInitialCodeModeState();
+    const state = createCodeModeFixtureState();
 
     for (const session of state.sessions) {
       expect(session.session_id.startsWith('sess_')).toBe(true);
@@ -61,9 +61,9 @@ describe('CodeModeStore', () => {
   });
 
   it('keeps parallel workspace sessions isolated by unique worktree paths', () => {
-    const state = createInitialCodeModeState();
+    const state = createCodeModeFixtureState();
     const workspaceSessions = state.sessions.filter(
-      (session) => session.workspace_id === 'ws_a2rchitech',
+      (session) => session.workspace_id === 'ws_allternit',
     );
 
     expect(workspaceSessions).toHaveLength(3);

@@ -5,6 +5,6 @@ export default defineConfig({
   out: "./src/lib/db/migrations-sqlite",
   dialect: "sqlite",
   dbCredentials: {
-    url: "./data/a2rchitech.db",
+    url: "./data/allternit.db",
   },
 });

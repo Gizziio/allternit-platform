@@ -1,0 +1,231 @@
+{
+  "courseCode": "ALABS-CORE-COPILOT",
+  "courseTitle": "Build AI-Assisted Software with Copilot & Cursor",
+  "tier": "CORE",
+  "sources": [
+    {
+      "id": 6969829,
+      "title": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+      "slug": "6969829-master-github-copilot-from-basics-to-advanced-ai-coding",
+      "totalLectures": 30
+    }
+  ],
+  "modules": [
+    {
+      "name": "The Problem: Manual Coding is the Bottleneck",
+      "sourceLectures": [],
+      "bridgeContent": "Why compilers are fast but humans are slow. AI assistants as infrastructure.",
+      "isBridge": true
+    },
+    {
+      "name": "Copilot as Infrastructure",
+      "sourceLectures": [
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "Getting Started with Git and GitHub",
+          "lecture": "Creating Python Project",
+          "hasFile": false
+        },
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "GitHub Integration — Local Project to Remote Repository",
+          "lecture": "Cloning a Git Repo",
+          "hasFile": false
+        },
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "GitHub Integration — Local Project to Remote Repository",
+          "lecture": "Working With Feature Branches",
+          "hasFile": false
+        },
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "Working with Git Branches & Collaboration",
+          "lecture": "Providing Context in Copilot Chat",
+          "hasFile": false
+        },
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "Introduction to GitHub Copilot",
+          "lecture": "Commit and Push using Copilot",
+          "hasFile": false
+        },
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "Advanced Copilot Agent Mode",
+          "lecture": "What are Various Slash Commands in Copilot Chat?",
+          "hasFile": false
+        },
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "Copilot Chat Commands & Extensions",
+          "lecture": "Working with Copilot Web Interface",
+          "hasFile": false
+        },
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "Copilot Chat Commands & Extensions",
+          "lecture": "Next Step",
+          "hasFile": true
+        }
+      ],
+      "isBridge": false
+    },
+    {
+      "name": "Cursor Workflows",
+      "sourceLectures": [
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "Getting Started with Git and GitHub",
+          "lecture": "Create Git Repository",
+          "hasFile": false
+        },
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "GitHub Integration — Local Project to Remote Repository",
+          "lecture": "Resolving Default Branch Conflict",
+          "hasFile": false
+        },
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "Working with Git Branches & Collaboration",
+          "lecture": "Installing Copilot In Code Editor",
+          "hasFile": false
+        },
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "Introduction to GitHub Copilot",
+          "lecture": "Writing Functions with Agent Mode",
+          "hasFile": false
+        },
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "Introduction to GitHub Copilot",
+          "lecture": "Special Context Tags in Copilot",
+          "hasFile": false
+        },
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "Advanced Copilot Agent Mode",
+          "lecture": "Slash Commands Usage with Examples",
+          "hasFile": false
+        },
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "Copilot Chat Commands & Extensions",
+          "lecture": "Code Generation with Copilot Web",
+          "hasFile": false
+        }
+      ],
+      "isBridge": false
+    },
+    {
+      "name": "Prompting for Clean Code",
+      "sourceLectures": [
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "Getting Started with Git and GitHub",
+          "lecture": "SSH Key Setup",
+          "hasFile": false
+        },
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "GitHub Integration — Local Project to Remote Repository",
+          "lecture": "Working With Local Branches",
+          "hasFile": false
+        },
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "Working with Git Branches & Collaboration",
+          "lecture": "Understanding Copilot Chat Modes",
+          "hasFile": false
+        },
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "Introduction to GitHub Copilot",
+          "lecture": "Creating and Running Unit Tests using Agent",
+          "hasFile": false
+        },
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "Introduction to GitHub Copilot",
+          "lecture": "Context Commands Examples",
+          "hasFile": true
+        },
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "Advanced Copilot Agent Mode",
+          "lecture": "Copilot Internal Commands",
+          "hasFile": true
+        },
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "Copilot Chat Commands & Extensions",
+          "lecture": "Working with PR using Copilot Web",
+          "hasFile": false
+        }
+      ],
+      "isBridge": false
+    },
+    {
+      "name": "Extending Assistants with Tools",
+      "sourceLectures": [
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "Getting Started with Git and GitHub",
+          "lecture": "Connecting Local Repo To Github",
+          "hasFile": false
+        },
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "GitHub Integration — Local Project to Remote Repository",
+          "lecture": "Creating Feature Branches",
+          "hasFile": false
+        },
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "Working with Git Branches & Collaboration",
+          "lecture": "Copilot Chat Features In GitHub",
+          "hasFile": false
+        },
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "Introduction to GitHub Copilot",
+          "lecture": "Debugging Code Errors with Agent",
+          "hasFile": false
+        },
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "Introduction to GitHub Copilot",
+          "lecture": "Building Multilayer Solutions using Copilot",
+          "hasFile": false
+        },
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "Advanced Copilot Agent Mode",
+          "lecture": "Understanding Extensions in Copilot Chat",
+          "hasFile": false
+        },
+        {
+          "course": "Master GitHub Copilot – From Basics to Advanced AI Coding",
+          "chapter": "Copilot Chat Commands & Extensions",
+          "lecture": "Working with Branches in Copilot Web",
+          "hasFile": false
+        }
+      ],
+      "isBridge": false
+    },
+    {
+      "name": "Bridge: Allternit's Cursor + Copilot Stack",
+      "sourceLectures": [],
+      "bridgeContent": "How mcp-apps-adapter and agui-gateway are maintained using Cursor and Copilot.",
+      "isBridge": true
+    },
+    {
+      "name": "Capstone: Build an MCP Server with Cursor",
+      "sourceLectures": [],
+      "bridgeContent": "Project brief: TypeScript MCP server built entirely via natural-language prompts in Cursor.",
+      "isBridge": true
+    }
+  ]
+}

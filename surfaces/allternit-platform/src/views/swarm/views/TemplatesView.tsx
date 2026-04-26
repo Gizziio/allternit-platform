@@ -25,7 +25,7 @@ function RoleIcon({ icon, color, size = 14 }: { icon: string; color: string; siz
 }
 import type { AgentTemplate, AgentRole } from '../types';
 import { templateStorage } from '../lib/template-storage';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 interface TemplatesViewProps {
   modeColors: { accent: string };
@@ -48,6 +48,9 @@ const ROLE_ICONS: Record<AgentRole, string> = {
 
 
 export function TemplatesView({ modeColors, onApplyTemplate }: TemplatesViewProps) {
+  const { addToast } = useToast();
+  const toast = ({ title, description, variant }: { title: string; description?: string; variant?: string }) =>
+    addToast({ title, description, type: variant === 'destructive' ? 'error' : 'success' });
   const [templates, setTemplates] = useState<AgentTemplate[]>(() => templateStorage.getAll());
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRole, setSelectedRole] = useState<AgentRole | 'all'>('all');

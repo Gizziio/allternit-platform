@@ -1,0 +1,1827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Module 3: Publishing, Manifests & Distribution</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0b0b0c;
+      --bg-secondary: #131316;
+      --bg-tertiary: #1a1a1f;
+      --bg-card: #18181c;
+      --bg-hover: #222228;
+      --border: rgba(255,255,255,0.08);
+      --border-strong: rgba(245,158,11,0.25);
+      --text-primary: #f5f5f7;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent: #f59e0b;
+      --accent-dim: rgba(245,158,11,0.15);
+      --accent-glow: rgba(245,158,11,0.4);
+      --green: #22c55e;
+      --green-dim: rgba(34,197,94,0.15);
+      --red: #ef4444;
+      --red-dim: rgba(239,68,68,0.15);
+      --blue: #3b82f6;
+      --blue-dim: rgba(59,130,246,0.15);
+      --purple: #a855f7;
+      --purple-dim: rgba(168,85,247,0.15);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Progress Bar */
+    .progress-container {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--bg-tertiary);
+      z-index: 1000;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), #fbbf24);
+      transition: width 0.15s ease;
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    /* Navigation dots */
+    .nav-dots {
+      position: fixed;
+      right: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      z-index: 999;
+    }
+    .nav-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--border-strong);
+      border: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+    .nav-dot:hover, .nav-dot.active {
+      background: var(--accent);
+      box-shadow: 0 0 12px var(--accent-glow);
+      transform: scale(1.3);
+    }
+    .nav-dot::after {
+      content: attr(data-label);
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+      white-space: nowrap;
+      font-size: 11px;
+      color: var(--text-muted);
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .nav-dot:hover::after { opacity: 1; }
+
+    @media (max-width: 768px) {
+      .nav-dots { display: none; }
+    }
+
+    /* Sections */
+    .section {
+      min-height: 100vh;
+      padding: 80px 24px;
+      max-width: 960px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+    }
+    .section.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 24px;
+      letter-spacing: -0.02em;
+    }
+    h1 .accent { color: var(--accent); }
+
+    h2 {
+      font-size: clamp(1.4rem, 3vw, 2rem);
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+    h2 .accent { color: var(--accent); }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin: 32px 0 12px;
+      color: var(--text-primary);
+    }
+
+    p {
+      color: var(--text-secondary);
+      font-size: 1.05rem;
+      margin-bottom: 16px;
+      max-width: 720px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent-dim);
+      color: var(--accent);
+      padding: 6px 14px;
+      border-radius: 100px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+      border: 1px solid var(--border-strong);
+    }
+    .badge-green {
+      background: var(--green-dim);
+      color: var(--green);
+      border-color: rgba(34,197,94,0.25);
+    }
+    .badge-red {
+      background: var(--red-dim);
+      color: var(--red);
+      border-color: rgba(239,68,68,0.25);
+    }
+    .badge-blue {
+      background: var(--blue-dim);
+      color: var(--blue);
+      border-color: rgba(59,130,246,0.25);
+    }
+    .badge-purple {
+      background: var(--purple-dim);
+      color: var(--purple);
+      border-color: rgba(168,85,247,0.25);
+    }
+
+    /* Code blocks */
+    .code-block {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 20px 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+    }
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .code-lang { color: var(--accent); }
+    .code-body {
+      padding: 16px;
+      overflow-x: auto;
+      line-height: 1.7;
+    }
+    .code-body pre { margin: 0; }
+    .code-body code {
+      font-family: inherit;
+      color: var(--text-primary);
+    }
+    .code-keyword { color: #c678dd; }
+    .code-type { color: #e5c07b; }
+    .code-string { color: #98c379; }
+    .code-comment { color: #5c6370; font-style: italic; }
+    .code-func { color: #61afef; }
+    .code-num { color: #d19a66; }
+    .code-prop { color: #e06c75; }
+
+    /* Highlight boxes */
+    .highlight-box {
+      background: var(--accent-dim);
+      border: 1px solid var(--border-strong);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 24px 0;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+    .highlight-box strong { color: var(--accent); }
+
+    .warn-box {
+      background: rgba(239,68,68,0.08);
+      border: 1px solid rgba(239,68,68,0.25);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 24px 0;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+    .warn-box strong { color: var(--red); }
+
+    .info-box {
+      background: var(--blue-dim);
+      border: 1px solid rgba(59,130,246,0.25);
+      border-radius: 12px;
+      padding: 20px;
+      margin: 24px 0;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+    .info-box strong { color: var(--blue); }
+
+    /* Lists */
+    ul, ol {
+      margin: 12px 0 12px 20px;
+      color: var(--text-secondary);
+      font-size: 1.02rem;
+      max-width: 720px;
+    }
+    li { margin-bottom: 10px; line-height: 1.6; }
+    li strong { color: var(--text-primary); }
+
+    /* Quiz */
+    .quiz-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      margin: 32px 0;
+    }
+    .quiz-question {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: var(--text-primary);
+    }
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .quiz-option {
+      padding: 14px 18px;
+      background: var(--bg-secondary);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      text-align: left;
+      font-family: inherit;
+    }
+    .quiz-option:hover {
+      border-color: var(--border-strong);
+      background: var(--bg-hover);
+    }
+    .quiz-option.correct {
+      border-color: var(--green);
+      background: var(--green-dim);
+      color: var(--green);
+    }
+    .quiz-option.wrong {
+      border-color: var(--red);
+      background: var(--red-dim);
+      color: var(--red);
+    }
+    .quiz-option.disabled { pointer-events: none; }
+    .quiz-feedback {
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      display: none;
+    }
+    .quiz-feedback.show { display: block; }
+    .quiz-feedback.correct {
+      background: var(--green-dim);
+      color: var(--green);
+      border: 1px solid rgba(34,197,94,0.3);
+    }
+    .quiz-feedback.wrong {
+      background: var(--red-dim);
+      color: var(--red);
+      border: 1px solid rgba(239,68,68,0.3);
+    }
+
+    /* Capstone */
+    .capstone {
+      background: var(--bg-card);
+      border: 1px solid var(--border-strong);
+      border-radius: 16px;
+      padding: 28px;
+      margin: 32px 0;
+    }
+    .capstone h3 {
+      margin-top: 0;
+      font-size: 1.2rem;
+      color: var(--accent);
+    }
+    .capstone ul {
+      margin: 12px 0 12px 20px;
+      color: var(--text-secondary);
+    }
+    .capstone li { margin-bottom: 10px; }
+
+    /* Matrix table */
+    .matrix-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      margin: 20px 0;
+    }
+    .matrix-table th {
+      text-align: left;
+      padding: 12px 10px;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 0.7rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .matrix-table td {
+      padding: 12px 10px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+    .matrix-table tr:hover td { background: var(--bg-hover); }
+    .cap-yes { color: var(--green); font-weight: 700; }
+    .cap-no { color: var(--red); }
+    .cap-partial { color: var(--accent); }
+
+    /* Viz container */
+    .viz-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      margin: 28px 0;
+      overflow: hidden;
+    }
+    .viz-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    /* Pipeline flow */
+    .pipeline-flow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 20px 0;
+    }
+    .pipeline-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 16px 14px;
+      background: var(--bg-secondary);
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      min-width: 110px;
+      transition: all 0.4s ease;
+      position: relative;
+    }
+    .pipeline-step.active {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+      box-shadow: 0 0 20px rgba(245,158,11,0.15);
+    }
+    .pipeline-step.success {
+      border-color: var(--green);
+      background: var(--green-dim);
+    }
+    .pipeline-step.error {
+      border-color: var(--red);
+      background: var(--red-dim);
+    }
+    .pipeline-step-icon {
+      font-size: 1.5rem;
+      transition: transform 0.3s ease;
+    }
+    .pipeline-step.active .pipeline-step-icon {
+      transform: scale(1.2);
+    }
+    .pipeline-step-name {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      text-align: center;
+    }
+    .pipeline-step.active .pipeline-step-name {
+      color: var(--accent);
+    }
+    .pipeline-arrow {
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      transition: color 0.3s;
+    }
+    .pipeline-arrow.active {
+      color: var(--accent);
+    }
+    .pipeline-log {
+      margin-top: 16px;
+      padding: 14px 16px;
+      background: var(--bg-secondary);
+      border-radius: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      min-height: 48px;
+      line-height: 1.6;
+      border: 1px solid var(--border);
+    }
+    .pipeline-log .log-line {
+      opacity: 0;
+      animation: logAppear 0.3s ease forwards;
+    }
+    @keyframes logAppear {
+      to { opacity: 1; }
+    }
+
+    /* Error branch paths */
+    .pipeline-branches {
+      display: flex;
+      justify-content: center;
+      gap: 40px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .branch-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      text-align: center;
+    }
+    .branch-path {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 14px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+    .branch-path.success { border-color: var(--green); color: var(--green); }
+    .branch-path.error { border-color: var(--red); color: var(--red); }
+    .branch-path.warn { border-color: var(--accent); color: var(--accent); }
+
+    .reveal-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      background: var(--accent);
+      color: #0b0b0c;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .reveal-btn:hover {
+      background: #fbbf24;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(245,158,11,0.3);
+    }
+    .reveal-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Lifecycle mini */
+    .lifecycle-mini {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin: 24px 0;
+    }
+    .lifecycle-step-mini {
+      text-align: center;
+      padding: 14px 18px;
+      background: var(--bg-secondary);
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      min-width: 120px;
+      transition: all 0.3s ease;
+    }
+    .lifecycle-step-mini.active {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .lifecycle-step-mini .step-label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+    .lifecycle-step-mini.active .step-label {
+      color: var(--accent);
+    }
+    .lifecycle-arrow-mini {
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    /* Footer */
+    .module-footer {
+      text-align: center;
+      padding: 60px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    .module-footer .logo {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 12px;
+      letter-spacing: 0.05em;
+    }
+
+    /* Tags */
+    .tag {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      margin-right: 6px;
+    }
+    .tag-required { background: var(--red-dim); color: var(--red); }
+    .tag-optional { background: var(--blue-dim); color: var(--blue); }
+    .tag-adv { background: var(--accent-dim); color: var(--accent); }
+
+    /* Inline code */
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9em;
+      background: var(--bg-tertiary);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--text-primary);
+    }
+
+    /* Diagram */
+    .diagram-box {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin: 8px 0;
+      font-size: 0.9rem;
+    }
+    .diagram-box strong {
+      color: var(--text-primary);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .arrow-down {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 1.2rem;
+      margin: 4px 0;
+    }
+
+    @media (max-width: 640px) {
+      .section { padding: 60px 16px; }
+      .pipeline-flow { gap: 4px; }
+      .pipeline-step { min-width: 80px; padding: 12px 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Progress Bar -->
+<div class="progress-container">
+  <div class="progress-bar" id="progressBar"></div>
+</div>
+
+<!-- Nav Dots -->
+<div class="nav-dots">
+  <div class="nav-dot active" data-label="Hero" onclick="scrollToSection(0)"></div>
+  <div class="nav-dot" data-label="Manifest" onclick="scrollToSection(1)"></div>
+  <div class="nav-dot" data-label="Versioning" onclick="scrollToSection(2)"></div>
+  <div class="nav-dot" data-label="Registry" onclick="scrollToSection(3)"></div>
+  <div class="nav-dot" data-label="Pipeline" onclick="scrollToSection(4)"></div>
+  <div class="nav-dot" data-label="Security" onclick="scrollToSection(5)"></div>
+  <div class="nav-dot" data-label="Lifecycle" onclick="scrollToSection(6)"></div>
+  <div class="nav-dot" data-label="Quiz 1" onclick="scrollToSection(7)"></div>
+  <div class="nav-dot" data-label="Quiz 2" onclick="scrollToSection(8)"></div>
+  <div class="nav-dot" data-label="Quiz 3" onclick="scrollToSection(9)"></div>
+  <div class="nav-dot" data-label="Capstone" onclick="scrollToSection(10)"></div>
+</div>
+
+<!-- ==================== SECTION 1: HERO ==================== -->
+<section class="section visible" id="sec0">
+  <div class="badge">ALABS-ADV-PLUGINSDK &mdash; Module 3</div>
+  <h1>From <span class="accent">Code</span> to <span class="accent">Production</span></h1>
+  <p style="font-size: 1.2rem; max-width: 640px;">
+    You've built plugins. You've wired adapters. Now it's time to <strong>ship</strong>.
+    This module covers manifests, versioning, registries, security, and the full publishing pipeline
+    that takes a plugin from <code>npm run build</code> to <code>allternit://plugins/yours</code>.
+  </p>
+  <div style="margin-top:32px; display:flex; gap:16px; flex-wrap:wrap;">
+    <div class="diagram-box" style="flex:1; min-width:180px;">
+      <strong>Manifest</strong><br>
+      <span style="color:var(--text-muted);font-size:0.85rem;">The plugin's identity card</span>
+    </div>
+    <div class="diagram-box" style="flex:1; min-width:180px;">
+      <strong>Registry</strong><br>
+      <span style="color:var(--text-muted);font-size:0.85rem;">Discovery & distribution</span>
+    </div>
+    <div class="diagram-box" style="flex:1; min-width:180px;">
+      <strong>Security</strong><br>
+      <span style="color:var(--text-muted);font-size:0.85rem;">Trust & sandboxing</span>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SECTION 2: PLUGIN MANIFEST ==================== -->
+<section class="section" id="sec1">
+  <div class="badge">The Contract</div>
+  <h2>The Plugin <span class="accent">Manifest</span></h2>
+  <p>
+    Every Allternit plugin carries a <strong>manifest</strong> — a JSON contract that tells the host
+    what the plugin is, what it needs, and what it provides. Without a valid manifest, a plugin
+    cannot be registered, discovered, or executed.
+  </p>
+
+  <h3>Required Fields</h3>
+  <p>
+    The manifest is defined by the <code>PluginManifest</code> interface in <code>types.ts</code>.
+    These fields are non-negotiable:
+  </p>
+  <table class="matrix-table">
+    <tr>
+      <th>Field</th>
+      <th>Type</th>
+      <th>Purpose</th>
+    </tr>
+    <tr>
+      <td><code>id</code> <span class="tag tag-required">required</span></td>
+      <td><code>string</code></td>
+      <td>Unique kebab-case identifier (e.g. <code>data-connector-v2</code>)</td>
+    </tr>
+    <tr>
+      <td><code>name</code> <span class="tag tag-required">required</span></td>
+      <td><code>string</code></td>
+      <td>Human-readable display name</td>
+    </tr>
+    <tr>
+      <td><code>version</code> <span class="tag tag-required">required</span></td>
+      <td><code>string</code></td>
+      <td>Semantic version (<code>major.minor.patch</code>)</td>
+    </tr>
+    <tr>
+      <td><code>runtime</code> <span class="tag tag-required">required</span></td>
+      <td><code>'allternit-plugin-v1'</code></td>
+      <td>Runtime spec version for compatibility</td>
+    </tr>
+    <tr>
+      <td><code>description</code> <span class="tag tag-required">required</span></td>
+      <td><code>string</code></td>
+      <td>Brief explanation for users and search</td>
+    </tr>
+    <tr>
+      <td><code>category</code> <span class="tag tag-required">required</span></td>
+      <td><code>enum</code></td>
+      <td><code>create | analyze | build | automate | research | custom</code></td>
+    </tr>
+    <tr>
+      <td><code>requires</code> <span class="tag tag-required">required</span></td>
+      <td><code>HostRequirements</code></td>
+      <td>LLM, tools, UI, and storage needs</td>
+    </tr>
+    <tr>
+      <td><code>provides</code> <span class="tag tag-required">required</span></td>
+      <td><code>PluginFunctions</code></td>
+      <td>Functions, parameters, and return schemas</td>
+    </tr>
+    <tr>
+      <td><code>adapters</code> <span class="tag tag-required">required</span></td>
+      <td><code>AdapterConfig</code></td>
+      <td>Entry points for each platform adapter</td>
+    </tr>
+    <tr>
+      <td><code>keywords</code> <span class="tag tag-optional">optional</span></td>
+      <td><code>string[]</code></td>
+      <td>Search tags for registry discovery</td>
+    </tr>
+    <tr>
+      <td><code>config</code> <span class="tag tag-optional">optional</span></td>
+      <td><code>ConfigSchema</code></td>
+      <td>User-configurable settings schema</td>
+    </tr>
+  </table>
+
+  <h3>Schema Validation</h3>
+  <p>
+    The SDK exports <code>utils.validateManifest()</code> — a runtime guard that checks structural
+    correctness before a plugin is accepted into the registry:
+  </p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">TypeScript</span>
+      <span>src/index.ts</span>
+    </div>
+    <div class="code-body">
+<pre><code><span class="code-keyword">export</span> <span class="code-keyword">const</span> utils = {
+  <span class="code-func">validateManifest</span>(manifest: <span class="code-keyword">any</span>): manifest <span class="code-keyword">is</span> PluginManifest {
+    <span class="code-keyword">return</span> (
+      <span class="code-keyword">typeof</span> manifest === <span class="code-string">'object'</span> &&
+      <span class="code-keyword">typeof</span> manifest.id === <span class="code-string">'string'</span> &&
+      <span class="code-keyword">typeof</span> manifest.name === <span class="code-string">'string'</span> &&
+      <span class="code-keyword">typeof</span> manifest.version === <span class="code-string">'string'</span> &&
+      <span class="code-keyword">typeof</span> manifest.runtime === <span class="code-string">'string'</span> &&
+      <span class="code-keyword">typeof</span> manifest.provides === <span class="code-string">'object'</span>
+    );
+  },
+
+  <span class="code-keyword">async</span> <span class="code-func">loadManifest</span>(path: <span class="code-type">string</span>): Promise&lt;PluginManifest&gt; {
+    <span class="code-keyword">const</span> fs = <span class="code-keyword">await</span> <span class="code-func">import</span>(<span class="code-string">'fs/promises'</span>);
+    <span class="code-keyword">const</span> content = <span class="code-keyword">await</span> fs.<span class="code-func">readFile</span>(path, <span class="code-string">'utf-8'</span>);
+    <span class="code-keyword">return</span> JSON.<span class="code-func">parse</span>(content);
+  },
+
+  <span class="code-keyword">async</span> <span class="code-func">packagePlugin</span>(sourceDir: <span class="code-type">string</span>, outputPath: <span class="code-type">string</span>): Promise&lt;<span class="code-keyword">void</span>&gt; {
+    <span class="code-comment">// Would create .allp file</span>
+    console.<span class="code-func">error</span>(<span class="code-string">`Packaging ${sourceDir} -&gt; ${outputPath}`</span>);
+  },
+};</code></pre>
+    </div>
+  </div>
+
+  <div class="highlight-box">
+    <strong>Pro tip:</strong> Always validate manifests at <em>build time</em> (with a JSON Schema linter)
+    <em>and</em> at <em>runtime</em> (with <code>utils.validateManifest()</code>). Build-time catches authoring
+    errors; runtime catches tampered or corrupted packages.
+  </div>
+</section>
+
+<!-- ==================== SECTION 3: VERSIONING STRATEGY ==================== -->
+<section class="section" id="sec2">
+  <div class="badge badge-blue">SemVer</div>
+  <h2>Versioning <span class="accent">Strategy</span></h2>
+  <p>
+    Plugins are distributed as independent packages. Their versions communicate compatibility promises
+    to hosts, users, and other plugins. Allternit mandates <strong>Semantic Versioning 2.0</strong>
+    for every plugin in the registry.
+  </p>
+
+  <h3>SemVer for Plugins</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">Schema</span>
+      <span>version field format</span>
+    </div>
+    <div class="code-body">
+<pre><code>MAJOR.MINOR.PATCH
+
+<span class="code-num">1</span>.<span class="code-num">4</span>.<span class="code-num">2</span>
+│   │   └── Bug fixes, security patches, docs updates
+│   └── New functions, new adapters, new config options (backward-compatible)
+└── Breaking changes: removed functions, changed parameters, new required permissions</code></pre>
+    </div>
+  </div>
+
+  <h3>Breaking vs Non-Breaking Changes</h3>
+  <table class="matrix-table">
+    <tr>
+      <th>Change Type</th>
+      <th>Version Bump</th>
+      <th>Examples</th>
+    </tr>
+    <tr>
+      <td>Breaking</td>
+      <td><span class="cap-no">MAJOR</span></td>
+      <td>Remove a function, rename a parameter, add a <em>required</em> permission, change return schema shape</td>
+    </tr>
+    <tr>
+      <td>Feature</td>
+      <td><span class="cap-partial">MINOR</span></td>
+      <td>Add a new function, add an optional adapter, add optional config field, expand <code>keywords</code></td>
+    </tr>
+    <tr>
+      <td>Fix</td>
+      <td><span class="cap-yes">PATCH</span></td>
+      <td>Fix runtime error, tighten validation, update docs, patch dependency vulnerability</td>
+    </tr>
+  </table>
+
+  <h3>Dependency Resolution</h3>
+  <p>
+    Plugins can declare dependencies on <em>host capabilities</em> (via <code>requires</code>) and on
+    <em>other plugins</em> (via a future <code>dependsOn</code> field). The registry resolves these
+    using a <strong>satisfies</strong> check:
+  </p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">TypeScript</span>
+      <span>Dependency resolution logic</span>
+    </div>
+    <div class="code-body">
+<pre><code><span class="code-keyword">function</span> <span class="code-func">satisfies</span>(
+  requiredVersion: <span class="code-type">string</span>,
+  installedVersion: <span class="code-type">string</span>
+): <span class="code-type">boolean</span> {
+  <span class="code-comment">// '^1.2.3' matches &gt;=1.2.3 &lt;2.0.0</span>
+  <span class="code-comment">// '~1.2.3' matches &gt;=1.2.3 &lt;1.3.0</span>
+  <span class="code-keyword">const</span> req = <span class="code-func">parseRange</span>(requiredVersion);
+  <span class="code-keyword">return</span> req.<span class="code-func">test</span>(installedVersion);
+}
+
+<span class="code-keyword">function</span> <span class="code-func">resolvePluginDeps</span>(
+  manifest: PluginManifest,
+  registry: PluginRegistry
+): <span class="code-type">ResolutionResult</span> {
+  <span class="code-keyword">const</span> missing: <span class="code-type">string</span>[] = [];
+  <span class="code-keyword">const</span> incompatible: <span class="code-type">string</span>[] = [];
+
+  <span class="code-keyword">for</span> (<span class="code-keyword">const</span> dep <span class="code-keyword">of</span> manifest.dependsOn || []) {
+    <span class="code-keyword">const</span> installed = registry.<span class="code-func">get</span>(dep.id);
+    <span class="code-keyword">if</span> (!installed) {
+      missing.<span class="code-func">push</span>(dep.id);
+    } <span class="code-keyword">else</span> <span class="code-keyword">if</span> (!<span class="code-func">satisfies</span>(dep.version, installed.manifest.version)) {
+      incompatible.<span class="code-func">push</span>(<span class="code-string">`${dep.id}@${installed.manifest.version}`</span>);
+    }
+  }
+
+  <span class="code-keyword">return</span> { ok: missing.<span class="code-prop">length</span> === <span class="code-num">0</span> && incompatible.<span class="code-prop">length</span> === <span class="code-num">0</span>, missing, incompatible };
+}</code></pre>
+    </div>
+  </div>
+
+  <div class="warn-box">
+    <strong>Warning:</strong> A plugin that bumps its <code>requires</code> field (e.g. adding a new mandatory
+    tool like <code>vector_search</code>) is a <strong>breaking change</strong> for hosts that lack that tool.
+    Always bump MAJOR when you increase host requirements.
+  </div>
+</section>
+
+<!-- ==================== SECTION 4: PLUGIN REGISTRY ==================== -->
+<section class="section" id="sec3">
+  <div class="badge badge-purple">Discovery</div>
+  <h2>The Plugin <span class="accent">Registry</span></h2>
+  <p>
+    The <code>PluginRegistry</code> class in the SDK is the <strong>local</strong> in-memory registry.
+    But production systems need a <strong>remote</strong> registry — a central authority where hosts
+    discover, search, and filter plugins by capability, trust level, and compatibility.
+  </p>
+
+  <h3>How Allternit Discovers Plugins</h3>
+  <ol>
+    <li><strong>Local scan:</strong> The host calls <code>registry.loadFromDirectory('./plugins')</code> to load built-in plugins.</li>
+    <li><strong>Remote fetch:</strong> The host queries <code>GET /v1/registry/search?q=...</code> for community plugins.</li>
+    <li><strong>Capability matching:</strong> The host filters results where <code>plugin.requires</code> is a subset of <code>host.capabilities</code>.</li>
+    <li><strong>Trust verification:</strong> Signed plugins are preferred; unsigned plugins trigger a warning.</li>
+    <li><strong>Install & activate:</strong> The host downloads the <code>.allp</code> package, validates it, and calls <code>plugin.initialize(host)</code>.</li>
+  </ol>
+
+  <h3>Registry API Design</h3>
+  <p>A production registry exposes these REST endpoints:</p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">OpenAPI-style</span>
+      <span>Registry API Specification</span>
+    </div>
+    <div class="code-body">
+<pre><code><span class="code-comment">// Search and filter plugins</span>
+GET /v1/registry/search?q={query}&category={cat}&adapter={adapter}&signed={true|false}
+→ <span class="code-num">200</span> OK
+  { results: PluginSummary[], total: <span class="code-type">number</span>, page: <span class="code-type">number</span> }
+
+<span class="code-comment">// Get full manifest + metadata</span>
+GET /v1/registry/plugins/{pluginId}
+→ <span class="code-num">200</span> OK
+  { manifest: PluginManifest, downloadUrl: <span class="code-type">string</span>, checksum: <span class="code-type">string</span>, signature: <span class="code-type">string</span> }
+
+<span class="code-comment">// Download the .allp package</span>
+GET /v1/registry/plugins/{pluginId}/download?version={semver}
+→ <span class="code-num">200</span> OK (binary stream)
+
+<span class="code-comment">// Submit a new plugin (publisher auth required)</span>
+POST /v1/registry/plugins
+  Body: { manifest: PluginManifest, package: base64, signature: <span class="code-type">string</span> }
+→ <span class="code-num">201</span> Created | <span class="code-num">409</span> Conflict (id+version exists)
+
+<span class="code-comment">// Get compatibility report for a host</span>
+POST /v1/registry/compat
+  Body: { hostCapabilities: HostRequirements, pluginId: <span class="code-type">string</span> }
+→ <span class="code-num">200</span> OK
+  { compatible: <span class="code-type">boolean</span>, missingTools: <span class="code-type">string</span>[], missingUi: <span class="code-type">string</span>[] }</code></pre>
+    </div>
+  </div>
+
+  <h3>Search & Filtering</h3>
+  <p>Registry queries support multi-dimensional filtering:</p>
+  <ul>
+    <li><strong>Text search:</strong> Matches <code>id</code>, <code>name</code>, <code>description</code>, and <code>keywords</code>.</li>
+    <li><strong>Category filter:</strong> Narrow to <code>analyze</code>, <code>build</code>, etc.</li>
+    <li><strong>Adapter filter:</strong> Only show plugins that support <code>mcp</code>, <code>http</code>, <code>native</code>, etc.</li>
+    <li><strong>Capability filter:</strong> Exclude plugins that require tools the host doesn't have.</li>
+    <li><strong>Trust tier:</strong> <code>verified</code> (signed by Allternit), <code>community</code> (signed by author), <code>unverified</code> (no signature).</li>
+  </ul>
+
+  <div class="info-box">
+    <strong>Architecture note:</strong> The registry is <em>just another service</em>. You can run a private
+    registry behind your firewall, or mirror the public registry for offline deployments. The API spec
+    remains the same.
+  </div>
+</section>
+
+<!-- ==================== SECTION 5: PUBLISHING PIPELINE ==================== -->
+<section class="section" id="sec4">
+  <div class="badge badge-green">Pipeline</div>
+  <h2>Publishing <span class="accent">Pipeline</span></h2>
+  <p>
+    Shipping a plugin is not a single action — it's a <strong>pipeline</strong> with gates at every stage.
+    Each gate can fail, and each failure has a defined remediation path.
+  </p>
+
+  <div class="viz-container">
+    <div class="viz-title">Click "Run Pipeline" to simulate a publish cycle</div>
+
+    <div class="pipeline-flow" id="pipeline-flow">
+      <div class="pipeline-step" data-step="0">
+        <div class="pipeline-step-icon">📦</div>
+        <div class="pipeline-step-name">Build</div>
+      </div>
+      <div class="pipeline-arrow" data-arrow="0">→</div>
+      <div class="pipeline-step" data-step="1">
+        <div class="pipeline-step-icon">🔍</div>
+        <div class="pipeline-step-name">Validate</div>
+      </div>
+      <div class="pipeline-arrow" data-arrow="1">→</div>
+      <div class="pipeline-step" data-step="2">
+        <div class="pipeline-step-icon">🔏</div>
+        <div class="pipeline-step-name">Sign</div>
+      </div>
+      <div class="pipeline-arrow" data-arrow="2">→</div>
+      <div class="pipeline-step" data-step="3">
+        <div class="pipeline-step-icon">🚀</div>
+        <div class="pipeline-step-name">Publish</div>
+      </div>
+      <div class="pipeline-arrow" data-arrow="3">→</div>
+      <div class="pipeline-step" data-step="4">
+        <div class="pipeline-step-icon">🔔</div>
+        <div class="pipeline-step-name">Notify</div>
+      </div>
+    </div>
+
+    <div class="pipeline-branches" id="pipeline-branches">
+      <div>
+        <div class="branch-label">Success Path</div>
+        <div class="branch-path success">✓ Registry updated → CDN propagated</div>
+      </div>
+      <div>
+        <div class="branch-label">Validation Failure</div>
+        <div class="branch-path error">✗ Reject → Log → Notify author</div>
+      </div>
+      <div>
+        <div class="branch-label">Sign Failure</div>
+        <div class="branch-path warn">⚠ Quarantine → Manual review</div>
+      </div>
+    </div>
+
+    <div class="pipeline-log" id="pipeline-log">
+      <em>Waiting to start pipeline simulation...</em>
+    </div>
+
+    <div style="text-align:center; margin-top:16px;">
+      <button class="reveal-btn" id="pipeline-btn" onclick="runPipeline()">▶ Run Pipeline</button>
+      <button class="reveal-btn" style="background:var(--bg-hover);color:var(--text-secondary);margin-left:8px;" onclick="runPipeline(true)">▶ Run with Error</button>
+    </div>
+  </div>
+
+  <h3>Stage Breakdown</h3>
+
+  <h3>1. Build</h3>
+  <p>
+    The build step compiles TypeScript, bundles assets, and generates the <code>.allp</code> package.
+    A valid build produces three artifacts:
+  </p>
+  <ul>
+    <li><code>dist/index.js</code> — compiled plugin entry point</li>
+    <li><code>manifest.json</code> — validated manifest (extracted from source)</li>
+    <li><code>package.allp</code> — signed tarball of the above + README + LICENSE</li>
+  </ul>
+
+  <h3>2. Validate</h3>
+  <p>Validation gates enforce structural and policy rules:</p>
+  <ul>
+    <li><strong>Schema validation:</strong> Manifest conforms to <code>PluginManifest</code> JSON Schema.</li>
+    <li><strong>Runtime check:</strong> <code>manifest.runtime === 'allternit-plugin-v1'</code>.</li>
+    <li><strong>Permission audit:</strong> Requested tools exist in the global tool registry.</li>
+    <li><strong>Code scan:</strong> Static analysis flags <code>eval()</code>, <code>new Function()</code>, unauthorized network calls.</li>
+    <li><strong>Size limit:</strong> Package must be &lt; 50MB (configurable).</li>
+  </ul>
+
+  <h3>3. Sign</h3>
+  <p>
+    Code signing proves authorship and guarantees package integrity. The publisher signs the
+    package digest with their private key; the registry verifies it against the author's public key.
+  </p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">TypeScript</span>
+      <span>Signing flow</span>
+    </div>
+    <div class="code-body">
+<pre><code><span class="code-keyword">import</span> { createSign, createVerify } <span class="code-keyword">from</span> <span class="code-string">'crypto'</span>;
+
+<span class="code-keyword">async function</span> <span class="code-func">signPackage</span>(
+  packageBuffer: Buffer,
+  privateKey: <span class="code-type">string</span>
+): Promise&lt;<span class="code-type">string</span>&gt; {
+  <span class="code-keyword">const</span> signer = <span class="code-func">createSign</span>(<span class="code-string">'RSA-SHA256'</span>);
+  signer.<span class="code-func">update</span>(packageBuffer);
+  <span class="code-keyword">return</span> signer.<span class="code-func">sign</span>(privateKey, <span class="code-string">'base64'</span>);
+}
+
+<span class="code-keyword">function</span> <span class="code-func">verifyPackage</span>(
+  packageBuffer: Buffer,
+  signature: <span class="code-type">string</span>,
+  publicKey: <span class="code-type">string</span>
+): <span class="code-type">boolean</span> {
+  <span class="code-keyword">const</span> verifier = <span class="code-func">createVerify</span>(<span class="code-string">'RSA-SHA256'</span>);
+  verifier.<span class="code-func">update</span>(packageBuffer);
+  <span class="code-keyword">return</span> verifier.<span class="code-func">verify</span>(publicKey, signature, <span class="code-string">'base64'</span>);
+}</code></pre>
+    </div>
+  </div>
+
+  <h3>4. Publish</h3>
+  <p>
+    The signed package is uploaded to the registry. The registry:
+  </p>
+  <ol>
+    <li>Checks that <code>id + version</code> is unique (or matches a deprecation policy).</li>
+    <li>Re-verifies the signature against the publisher's registered public key.</li>
+    <li>Stores the package in blob storage and updates the search index.</li>
+    <li>Generates a CDN URL for global distribution.</li>
+  </ol>
+
+  <h3>5. Notify</h3>
+  <p>
+    Subscribed hosts receive a webhook or SSE event: <code>plugin.updated</code> or <code>plugin.published</code>.
+    Hosts can then prompt users to install or auto-update based on their trust settings.
+  </p>
+
+  <h3>CI/CD Integration</h3>
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">YAML</span>
+      <span>.github/workflows/publish-plugin.yml</span>
+    </div>
+    <div class="code-body">
+<pre><code><span class="code-prop">name</span>: Publish Plugin
+<span class="code-keyword">on</span>:
+  <span class="code-prop">push</span>:
+    <span class="code-prop">tags</span>: [<span class="code-string">'v*'</span>]
+
+<span class="code-prop">jobs</span>:
+  publish:
+    <span class="code-prop">runs-on</span>: ubuntu-latest
+    <span class="code-prop">steps</span>:
+      - <span class="code-prop">uses</span>: actions/checkout@v4
+      - <span class="code-prop">uses</span>: actions/setup-node@v4
+        <span class="code-prop">with</span>: { <span class="code-prop">node-version</span>: <span class="code-string">'20'</span> }
+      - <span class="code-prop">run</span>: npm ci
+      - <span class="code-prop">run</span>: npm run build
+      - <span class="code-prop">run</span>: npm run test
+      - <span class="code-prop">run</span>: npm run validate-manifest
+      - <span class="code-prop">run</span>: npm run sign -- --key ${{ secrets.SIGNING_KEY }}
+      - <span class="code-prop">run</span>: npm run publish -- --registry https://registry.allternit.com</code></pre>
+    </div>
+  </div>
+</section>
+
+
+<!-- ==================== SECTION 6: SECURITY MODEL ==================== -->
+<section class="section" id="sec5">
+  <div class="badge badge-red">Security</div>
+  <h2>Security <span class="accent">Model</span></h2>
+  <p>
+    Plugins run arbitrary code inside host environments. Without a strong security model,
+    a malicious plugin could exfiltrate data, abuse tools, or crash the host. Allternit's
+    security architecture has four layers.
+  </p>
+
+  <h3>1. Permission System</h3>
+  <p>
+    The manifest's <code>requires</code> field is the <strong>declaration of intent</strong>.
+    Every tool, UI renderer, and storage capability must be explicitly requested:
+  </p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">TypeScript</span>
+      <span>Host capability check</span>
+    </div>
+    <div class="code-body">
+<pre><code><span class="code-keyword">function</span> <span class="code-func">checkPermissions</span>(
+  manifest: PluginManifest,
+  host: PluginHost
+): <span class="code-type">PermissionResult</span> {
+  <span class="code-keyword">const</span> granted: <span class="code-type">string</span>[] = [];
+  <span class="code-keyword">const</span> denied: <span class="code-type">string</span>[] = [];
+
+  <span class="code-keyword">for</span> (<span class="code-keyword">const</span> tool <span class="code-keyword">of</span> manifest.requires.tools || []) {
+    <span class="code-keyword">const</span> toolId = <span class="code-keyword">typeof</span> tool === <span class="code-string">'string'</span> ? tool : tool.tool;
+    <span class="code-keyword">const</span> required = <span class="code-keyword">typeof</span> tool === <span class="code-string">'string'</span> ? <span class="code-keyword">true</span> : tool.required;
+
+    <span class="code-keyword">if</span> (host.tools.<span class="code-func">has</span>(toolId)) {
+      granted.<span class="code-func">push</span>(toolId);
+    } <span class="code-keyword">else</span> <span class="code-keyword">if</span> (required) {
+      denied.<span class="code-func">push</span>(toolId);
+    }
+  }
+
+  <span class="code-keyword">return</span> {
+    ok: denied.<span class="code-prop">length</span> === <span class="code-num">0</span>,
+    granted,
+    denied,
+    <span class="code-comment">// If denied has items, the plugin cannot initialize</span>
+  };
+}</code></pre>
+    </div>
+  </div>
+
+  <h3>2. Sandboxing</h3>
+  <p>
+    Adapters act as <strong>sandbox boundaries</strong>. Each adapter decides how strictly
+    to isolate the plugin:
+  </p>
+  <ul>
+    <li><strong>Native:</strong> Runs inside the Allternit runtime process; isolation depends on the host OS (VMs, seccomp, or process boundaries).</li>
+    <li><strong>HTTP:</strong> Plugin runs as a separate Node.js process; network access is controlled by firewall rules.</li>
+    <li><strong>MCP:</strong> Plugin runs as a child process communicating over stdio; the MCP client (Claude Desktop, etc.) controls process lifetime.</li>
+    <li><strong>CLI:</strong> Plugin shares the terminal process; minimal isolation — trust is derived from the package signature.</li>
+  </ul>
+
+  <div class="warn-box">
+    <strong>Never run unsigned plugins in the CLI adapter.</strong> Because CLI shares the terminal
+    process, a malicious plugin has direct access to <code>process.env</code>, file system APIs,
+    and shell execution. Always verify signatures before CLI execution.
+  </div>
+
+  <h3>3. Code Signing</h3>
+  <p>
+    Signing guarantees two properties:
+    <strong>Authenticity</strong> (who wrote this?) and <strong>Integrity</strong> (was it tampered?).
+    The registry stores each publisher's public key. When a host downloads a plugin, it:
+  </p>
+  <ol>
+    <li>Downloads the package and its detached signature.</li>
+    <li>Fetches the publisher's public key from the registry's <code>/keys</code> endpoint.</li>
+    <li>Recomputes the package hash and verifies the signature.</li>
+    <li>Rejects the plugin if verification fails — no exceptions.</li>
+  </ol>
+
+  <h3>4. Audit Trails</h3>
+  <p>
+    Every plugin action is logged for forensic analysis:
+  </p>
+  <ul>
+    <li><strong>Install log:</strong> When, where, and by which user a plugin was installed.</li>
+    <li><strong>Execution log:</strong> Which functions were called, with what parameters (sanitized), and how long they took.</li>
+    <li><strong>Tool log:</strong> Every <code>host.tools.execute()</code> call, including success/failure and token usage.</li>
+    <li><strong>Update log:</strong> Version transitions, rollback events, and signature verification results.</li>
+  </ul>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">TypeScript</span>
+      <span>Audit event structure</span>
+    </div>
+    <div class="code-body">
+<pre><code><span class="code-keyword">interface</span> <span class="code-type">AuditEvent</span> {
+  eventId: <span class="code-type">string</span>;
+  timestamp: Date;
+  pluginId: <span class="code-type">string</span>;
+  pluginVersion: <span class="code-type">string</span>;
+  action: <span class="code-string">'install'</span> | <span class="code-string">'activate'</span> | <span class="code-string">'execute'</span> | <span class="code-string">'update'</span> | <span class="code-string">'uninstall'</span>;
+  actor: <span class="code-type">string</span>;        <span class="code-comment">// userId or system</span>
+  details: <span class="code-type">Record</span>&lt;<span class="code-type">string</span>, <span class="code-keyword">any</span>&gt;;
+  signatureValid: <span class="code-type">boolean</span>;
+}</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== SECTION 7: LIFECYCLE MANAGEMENT ==================== -->
+<section class="section" id="sec6">
+  <div class="badge badge-blue">Lifecycle</div>
+  <h2>Lifecycle <span class="accent">Management</span></h2>
+  <p>
+    A plugin is not just code — it's a <strong>stateful entity</strong> that transitions through
+    multiple stages. Understanding these stages is critical for building reliable production systems.
+  </p>
+
+  <h3>The Six States</h3>
+  <div class="lifecycle-mini" id="lifecycle-mini">
+    <div class="lifecycle-step-mini">
+      <div class="step-label">Installed</div>
+    </div>
+    <div class="lifecycle-arrow-mini">→</div>
+    <div class="lifecycle-step-mini">
+      <div class="step-label">Activated</div>
+    </div>
+    <div class="lifecycle-arrow-mini">→</div>
+    <div class="lifecycle-step-mini">
+      <div class="step-label">Running</div>
+    </div>
+    <div class="lifecycle-arrow-mini">→</div>
+    <div class="lifecycle-step-mini">
+      <div class="step-label">Deactivated</div>
+    </div>
+    <div class="lifecycle-arrow-mini">→</div>
+    <div class="lifecycle-step-mini">
+      <div class="step-label">Updated</div>
+    </div>
+    <div class="lifecycle-arrow-mini">→</div>
+    <div class="lifecycle-step-mini">
+      <div class="step-label">Uninstalled</div>
+    </div>
+  </div>
+
+  <h3>State Transitions</h3>
+  <table class="matrix-table">
+    <tr>
+      <th>Transition</th>
+      <th>Trigger</th>
+      <th>What Happens</th>
+    </tr>
+    <tr>
+      <td><strong>Install</strong></td>
+      <td>User clicks "Add Plugin"</td>
+      <td>Download .allp → verify signature → extract → validate manifest → write to <code>~/.allternit/plugins/</code></td>
+    </tr>
+    <tr>
+      <td><strong>Activate</strong></td>
+      <td>Host starts or user enables</td>
+      <td>Load JS → instantiate class → call <code>plugin.initialize(host)</code> → register functions</td>
+    </tr>
+    <tr>
+      <td><strong>Deactivate</strong></td>
+      <td>User disables or host shuts down</td>
+      <td>Stop accepting calls → call <code>plugin.destroy()</code> → unload from memory</td>
+    </tr>
+    <tr>
+      <td><strong>Update</strong></td>
+      <td>New version published</td>
+      <td>Deactivate old → download new → verify → activate new → migrate state if compatible</td>
+    </tr>
+    <tr>
+      <td><strong>Uninstall</strong></td>
+      <td>User removes</td>
+      <td>Deactivate → delete files → clear storage → remove from registry → log audit event</td>
+    </tr>
+  </table>
+
+  <h3>State Persistence</h3>
+  <p>
+    Plugins that rely on <code>host.storage</code> need guarantees about data survival across lifecycle
+    transitions. The <code>StorageBackend</code> interface provides this contract:
+  </p>
+
+  <div class="code-block">
+    <div class="code-header">
+      <span class="code-lang">TypeScript</span>
+      <span>Storage contract</span>
+    </div>
+    <div class="code-body">
+<pre><code><span class="code-keyword">interface</span> <span class="code-type">StorageBackend</span> {
+  get&lt;T = <span class="code-keyword">any</span>&gt;(key: <span class="code-type">string</span>): Promise&lt;T | <span class="code-keyword">undefined</span>&gt;;
+  set&lt;T = <span class="code-keyword">any</span>&gt;(key: <span class="code-type">string</span>, value: T): Promise&lt;<span class="code-keyword">void</span>&gt;;
+  delete(key: <span class="code-type">string</span>): Promise&lt;<span class="code-keyword">void</span>&gt;;
+  keys(): Promise&lt;<span class="code-type">string</span>[]&gt;;
+  clear(): Promise&lt;<span class="code-keyword">void</span>&gt;;
+  <span class="code-keyword">readonly</span> isPersistent: <span class="code-type">boolean</span>;
+}
+
+<span class="code-comment">// Persistence guarantees by adapter</span>
+NativeAdapter   → isPersistent = <span class="code-keyword">true</span>   <span class="code-comment">// Disk-backed, survives restarts</span>
+HttpAdapter     → isPersistent = <span class="code-keyword">true</span>   <span class="code-comment">// In-memory Map (production: Redis/DB)</span>
+McpAdapter      → isPersistent = <span class="code-keyword">false</span>  <span class="code-comment">// Memory only, lost on restart</span>
+CliAdapter      → isPersistent = <span class="code-keyword">false</span>  <span class="code-comment">// Memory only, lost on exit</span></code></pre>
+    </div>
+  </div>
+
+  <div class="highlight-box">
+    <strong>Migration rule:</strong> When updating a plugin, the host should copy storage keys that
+    match <code>${oldPluginId}:*</code> to <code>${newPluginId}:*</code> if the MAJOR version hasn't changed.
+    On MAJOR bumps, storage is isolated to prevent schema mismatches.
+  </div>
+
+  <h3>Graceful Degradation on Update</h3>
+  <p>
+    If an update fails mid-flight (network drop, signature invalid, incompatible requirements),
+    the host must <strong>roll back</strong> to the previous version:
+  </p>
+  <ol>
+    <li>Keep the old plugin instance alive until the new one passes <code>initialize()</code>.</li>
+    <li>If initialization fails, discard the new package and restore the old.</li>
+    <li>Never leave the host in a state with zero working versions of a critical plugin.</li>
+  </ol>
+</section>
+
+<!-- ==================== SECTION 8: QUIZ 1 ==================== -->
+<section class="section" id="sec7">
+  <div class="badge" style="background:var(--accent-dim);color:var(--accent);border-color:var(--border-strong)">Quiz 1 / 3</div>
+  <h2>Test Your <span class="accent">Knowledge</span></h2>
+
+  <div class="quiz-container">
+    <div class="quiz-question">What happens if a plugin's required permissions exceed the host's grant?</div>
+    <div class="quiz-options">
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q1')">The plugin runs in a degraded mode with reduced functionality</button>
+      <button class="quiz-option" onclick="checkAnswer(this, true, 'q1')">The plugin fails to initialize and the host rejects activation</button>
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q1')">The host auto-grants the missing permissions after a warning</button>
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q1')">The plugin silently ignores the missing capabilities</button>
+    </div>
+    <div class="quiz-feedback" id="q1-feedback"></div>
+  </div>
+
+  <div class="highlight-box" style="margin-top:24px;">
+    <strong>Remember:</strong> The <code>checkPermissions()</code> function returns <code>ok: false</code> when
+    any <em>required</em> tool is missing. Optional tools (<code>required: false</code>) with a fallback
+    strategy can allow graceful degradation — but required tools are hard gates.
+  </div>
+</section>
+
+<!-- ==================== SECTION 9: QUIZ 2 ==================== -->
+<section class="section" id="sec8">
+  <div class="badge" style="background:var(--accent-dim);color:var(--accent);border-color:var(--border-strong)">Quiz 2 / 3</div>
+  <h2>Test Your <span class="accent">Knowledge</span></h2>
+
+  <div class="quiz-container">
+    <div class="quiz-question">When is a plugin update considered "breaking"?</div>
+    <div class="quiz-options">
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q2')">When the patch version increments (e.g. 1.2.3 → 1.2.4)</button>
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q2')">When the download size increases by more than 10%</button>
+      <button class="quiz-option" onclick="checkAnswer(this, true, 'q2')">When a required permission is added or a function signature changes</button>
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q2')">When the README is rewritten with new branding</button>
+    </div>
+    <div class="quiz-feedback" id="q2-feedback"></div>
+  </div>
+
+  <div class="info-box" style="margin-top:24px;">
+    <strong>Rule of thumb:</strong> If a host that worked with v1.x.y will <em>stop working</em> or
+    <em>error out</em> after updating to v2.0.0, it's a breaking change. Always bump MAJOR when
+    removing functions, renaming parameters, or adding new required host capabilities.
+  </div>
+</section>
+
+<!-- ==================== SECTION 10: QUIZ 3 ==================== -->
+<section class="section" id="sec9">
+  <div class="badge" style="background:var(--accent-dim);color:var(--accent);border-color:var(--border-strong)">Quiz 3 / 3</div>
+  <h2>Test Your <span class="accent">Knowledge</span></h2>
+
+  <div class="quiz-container">
+    <div class="quiz-question">Why code-sign plugins instead of just hashing?</div>
+    <div class="quiz-options">
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q3')">Hashing is too slow for large packages</button>
+      <button class="quiz-option" onclick="checkAnswer(this, true, 'q3')">Signing proves authorship <em>and</em> integrity; hashing only proves integrity</button>
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q3')">Hashing doesn't work with binary files</button>
+      <button class="quiz-option" onclick="checkAnswer(this, false, 'q3')">Signatures are smaller than hashes</button>
+    </div>
+    <div class="quiz-feedback" id="q3-feedback"></div>
+  </div>
+
+  <div class="highlight-box" style="margin-top:24px;">
+    <strong>Deep dive:</strong> A SHA-256 hash tells you "this file hasn't changed." A signature tells
+    you "this file hasn't changed <em>and</em> it was created by the owner of private key X." In a
+    plugin ecosystem, knowing <em>who</em> shipped the code is as important as knowing <em>what</em> was shipped.
+  </div>
+</section>
+
+<!-- ==================== SECTION 11: CAPSTONE ==================== -->
+<section class="section" id="sec10">
+  <div class="badge badge-green">Capstone</div>
+  <h2>Design a Plugin <span class="accent">Marketplace</span></h2>
+  <p>
+    You now understand manifests, versioning, registries, security, and lifecycle management.
+    Your capstone project is to design a complete marketplace for a hypothetical
+    <strong>DataConnector</strong> plugin category.
+  </p>
+
+  <div class="capstone">
+    <h3>🎯 Deliverable 1: DataConnector Manifest Schema</h3>
+    <p>Define the <code>PluginManifest</code> for a DataConnector plugin that reads from SQL databases, APIs, and CSV files. Specify:</p>
+    <ul>
+      <li><strong>Required fields:</strong> <code>id</code>, <code>name</code>, <code>version</code>, <code>runtime</code>, <code>category</code> (set to <code>'automate'</code>), <code>requires</code>, <code>provides</code>, <code>adapters</code>.</li>
+      <li><strong>DataConnector-specific:</strong> Add a <code>dataSources</code> field listing supported protocols: <code>['postgres', 'mysql', 'rest', 's3', 'csv']</code>.</li>
+      <li><strong>Config schema:</strong> Define <code>connectionString</code> (secret), <code>timeout</code> (number), and <code>retryPolicy</code> (select: 'none' | 'linear' | 'exponential').</li>
+    </ul>
+  </div>
+
+  <div class="capstone">
+    <h3>🎯 Deliverable 2: Registry API Spec</h3>
+    <p>Write OpenAPI-style endpoint definitions for:</p>
+    <ul>
+      <li><code>GET /v1/marketplace/dataconnectors</code> — list all DataConnector plugins with filter by <code>dataSources</code> and <code>adapter</code>.</li>
+      <li><code>POST /v1/marketplace/dataconnectors/{id}/test</code> — dry-run a connection using user-provided credentials (do not store).</li>
+      <li><code>GET /v1/marketplace/dataconnectors/{id}/versions</code> — list all published versions with deprecation status.</li>
+    </ul>
+  </div>
+
+  <div class="capstone">
+    <h3>🎯 Deliverable 3: Permission Matrix</h3>
+    <p>Design a matrix showing what a DataConnector plugin <strong>can</strong> do at each trust tier:</p>
+    <table class="matrix-table">
+      <tr>
+        <th>Capability</th>
+        <th>Unverified</th>
+        <th>Community</th>
+        <th>Verified</th>
+      </tr>
+      <tr>
+        <td>Read from <code>file_read</code></td>
+        <td class="cap-yes">Yes</td>
+        <td class="cap-yes">Yes</td>
+        <td class="cap-yes">Yes</td>
+      </tr>
+      <tr>
+        <td>Write via <code>file_write</code></td>
+        <td class="cap-no">No</td>
+        <td class="cap-partial">Prompt user</td>
+        <td class="cap-yes">Yes</td>
+      </tr>
+      <tr>
+        <td>Execute <code>terminal_run</code></td>
+        <td class="cap-no">No</td>
+        <td class="cap-no">No</td>
+        <td class="cap-partial">Sandboxed</td>
+      </tr>
+      <tr>
+        <td>Access network (<code>api_call</code>)</td>
+        <td class="cap-no">No</td>
+        <td class="cap-partial">Allowlist</td>
+        <td class="cap-yes">Yes</td>
+      </tr>
+      <tr>
+        <td>Persistent storage</td>
+        <td class="cap-no">No</td>
+        <td class="cap-yes">Yes</td>
+        <td class="cap-yes">Yes</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="capstone">
+    <h3>🎯 Deliverable 4: Publish Flow Diagram</h3>
+    <p>Sketch the <strong>publish → review → approve → distribute</strong> flow for verified plugins:</p>
+    <div style="margin-top:12px;">
+      <div class="diagram-box"><strong>1. Publisher submits</strong> manifest + .allp + signature</div>
+      <div class="arrow-down">↓</div>
+      <div class="diagram-box"><strong>2. Automated validation</strong> (schema, scan, size, sign check)</div>
+      <div class="arrow-down">↓</div>
+      <div class="diagram-box"><strong>3. Automated tests</strong> (spin up adapter, run all functions against mock host)</div>
+      <div class="arrow-down">↓</div>
+      <div class="diagram-box"><strong>4. Human review</strong> (security audit for new publishers, spot-check for existing)</div>
+      <div class="arrow-down">↓</div>
+      <div class="diagram-box"><strong>5. Approval & signing</strong> (registry countersigns with Allternit key for verified tier)</div>
+      <div class="arrow-down">↓</div>
+      <div class="diagram-box"><strong>6. Distribution</strong> (CDN push, search index update, webhook notify)</div>
+    </div>
+  </div>
+
+  <div class="capstone">
+    <h3>🎯 Deliverable 5: Validation Function</h3>
+    <p>Write a TypeScript function that validates a DataConnector manifest:</p>
+
+    <div class="code-block">
+      <div class="code-header">
+        <span class="code-lang">TypeScript</span>
+        <span>validateDataConnectorManifest.ts</span>
+      </div>
+      <div class="code-body">
+<pre><code><span class="code-keyword">import</span> { PluginManifest, utils } <span class="code-keyword">from</span> <span class="code-string">'@allternit/plugin-sdk'</span>;
+
+<span class="code-keyword">type</span> <span class="code-type">DataSource</span> = <span class="code-string">'postgres'</span> | <span class="code-string">'mysql'</span> | <span class="code-string">'rest'</span> | <span class="code-string">'s3'</span> | <span class="code-string">'csv'</span>;
+
+<span class="code-keyword">interface</span> <span class="code-type">DataConnectorManifest</span> <span class="code-keyword">extends</span> PluginManifest {
+  dataSources: DataSource[];
+}
+
+<span class="code-keyword">export function</span> <span class="code-func">validateDataConnectorManifest</span>(
+  manifest: <span class="code-keyword">any</span>
+): { valid: <span class="code-type">boolean</span>; errors: <span class="code-type">string</span>[] } {
+  <span class="code-keyword">const</span> errors: <span class="code-type">string</span>[] = [];
+
+  <span class="code-comment">// Base SDK validation</span>
+  <span class="code-keyword">if</span> (!utils.<span class="code-func">validateManifest</span>(manifest)) {
+    errors.<span class="code-func">push</span>(<span class="code-string">'Invalid base PluginManifest structure'</span>);
+    <span class="code-keyword">return</span> { valid: <span class="code-keyword">false</span>, errors };
+  }
+
+  <span class="code-comment">// Category must be 'automate' or 'custom'</span>
+  <span class="code-keyword">if</span> (manifest.category !== <span class="code-string">'automate'</span> && manifest.category !== <span class="code-string">'custom'</span>) {
+    errors.<span class="code-func">push</span>(<span class="code-string">`Category must be 'automate' or 'custom', got '${manifest.category}'`</span>);
+  }
+
+  <span class="code-comment">// Must declare at least one data source</span>
+  <span class="code-keyword">const</span> validSources: DataSource[] = [<span class="code-string">'postgres'</span>, <span class="code-string">'mysql'</span>, <span class="code-string">'rest'</span>, <span class="code-string">'s3'</span>, <span class="code-string">'csv'</span>];
+  <span class="code-keyword">if</span> (!Array.<span class="code-func">isArray</span>(manifest.dataSources) || manifest.dataSources.<span class="code-prop">length</span> === <span class="code-num">0</span>) {
+    errors.<span class="code-func">push</span>(<span class="code-string">'dataSources must be a non-empty array'</span>);
+  } <span class="code-keyword">else</span> {
+    <span class="code-keyword">for</span> (<span class="code-keyword">const</span> ds <span class="code-keyword">of</span> manifest.dataSources) {
+      <span class="code-keyword">if</span> (!validSources.<span class="code-func">includes</span>(ds)) {
+        errors.<span class="code-func">push</span>(<span class="code-string">`Invalid data source: '${ds}'`</span>);
+      }
+    }
+  }
+
+  <span class="code-comment">// Must provide at least one function</span>
+  <span class="code-keyword">const</span> fns = manifest.provides?.functions;
+  <span class="code-keyword">if</span> (!Array.<span class="code-func">isArray</span>(fns) || fns.<span class="code-prop">length</span> === <span class="code-num">0</span>) {
+    errors.<span class="code-func">push</span>(<span class="code-string">'Must provide at least one function'</span>);
+  }
+
+  <span class="code-comment">// Connection config schema check</span>
+  <span class="code-keyword">const</span> cfg = manifest.config?.properties;
+  <span class="code-keyword">if</span> (!cfg?.connectionString || cfg.connectionString.type !== <span class="code-string">'string'</span>) {
+    errors.<span class="code-func">push</span>(<span class="code-string">"config must include 'connectionString' of type string"</span>);
+  }
+  <span class="code-keyword">if</span> (cfg?.connectionString && !cfg.connectionString.secret) {
+    errors.<span class="code-func">push</span>(<span class="code-string">"connectionString must be marked as secret"</span>);
+  }
+
+  <span class="code-keyword">return</span> { valid: errors.<span class="code-prop">length</span> === <span class="code-num">0</span>, errors };
+}</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="highlight-box" style="margin-top:24px;">
+    <strong>Stretch goal:</strong> Implement a simple registry server in Express that accepts
+    <code>POST /v1/registry/plugins</code>, runs <code>validateDataConnectorManifest</code>,
+    verifies the signature, and stores the package on disk. Add a <code>GET /search</code> endpoint
+    that filters by <code>dataSources</code> using query parameters.
+  </div>
+</section>
+
+<!-- Footer -->
+<div class="module-footer">
+  <div class="logo">A://LABS</div>
+  <p>ALABS-ADV-PLUGINSDK — Module 3: Publishing, Manifests & Distribution</p>
+  <p style="margin-top:4px;">Built from source at <code>packages/@allternit/plugin-sdk</code></p>
+</div>
+
+<script>
+// ===================== PROGRESS & NAVIGATION =====================
+const sections = document.querySelectorAll('.section');
+const navDots = document.querySelectorAll('.nav-dot');
+const progressBar = document.getElementById('progressBar');
+
+function updateProgress() {
+  const scrollTop = window.scrollY;
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+  progressBar.style.width = progress + '%';
+
+  let activeIdx = 0;
+  sections.forEach((sec, i) => {
+    const rect = sec.getBoundingClientRect();
+    if (rect.top <= window.innerHeight * 0.5) activeIdx = i;
+  });
+
+  navDots.forEach((dot, i) => {
+    dot.classList.toggle('active', i === activeIdx);
+  });
+}
+
+window.addEventListener('scroll', updateProgress, { passive: true });
+
+function scrollToSection(index) {
+  sections[index]?.scrollIntoView({ behavior: 'smooth' });
+}
+
+// ===================== INTERSECTION OBSERVER =====================
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) entry.target.classList.add('visible');
+  });
+}, { threshold: 0.15 });
+
+sections.forEach(sec => observer.observe(sec));
+
+// ===================== PIPELINE ANIMATION =====================
+let pipelineRunning = false;
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function runPipeline(withError = false) {
+  if (pipelineRunning) return;
+  pipelineRunning = true;
+
+  const btn = document.getElementById('pipeline-btn');
+  const log = document.getElementById('pipeline-log');
+  const steps = document.querySelectorAll('.pipeline-step');
+  const arrows = document.querySelectorAll('.pipeline-arrow');
+
+  // Reset
+  steps.forEach(s => s.classList.remove('active', 'success', 'error'));
+  arrows.forEach(a => a.classList.remove('active'));
+  btn.disabled = true;
+  log.innerHTML = '';
+
+  const addLog = (text, delay = 0) => {
+    const line = document.createElement('div');
+    line.className = 'log-line';
+    line.textContent = text;
+    line.style.animationDelay = delay + 'ms';
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+  };
+
+  // Step 0: Build
+  steps[0].classList.add('active');
+  addLog('[BUILD] Compiling TypeScript...');
+  await sleep(700);
+  addLog('[BUILD] Bundling assets and manifest...');
+  await sleep(600);
+  addLog('[BUILD] Output: package.allp (12.4 MB)');
+  steps[0].classList.remove('active');
+  steps[0].classList.add('success');
+
+  // Arrow 0
+  arrows[0].classList.add('active');
+  await sleep(400);
+
+  // Step 1: Validate
+  steps[1].classList.add('active');
+  addLog('[VALIDATE] Checking manifest schema... ✓');
+  await sleep(600);
+  addLog('[VALIDATE] Runtime version matches: allternit-plugin-v1');
+  await sleep(500);
+  addLog('[VALIDATE] Permission audit: 4 tools requested, 4 available');
+  await sleep(500);
+
+  if (withError) {
+    addLog('[VALIDATE] Static scan FAILED: eval() detected in dist/index.js');
+    steps[1].classList.remove('active');
+    steps[1].classList.add('error');
+    await sleep(400);
+    addLog('[ABORT] Package rejected. Remediation: remove eval() and rebuild.');
+    btn.disabled = false;
+    pipelineRunning = false;
+    return;
+  }
+
+  addLog('[VALIDATE] Static scan: no dangerous patterns found');
+  addLog('[VALIDATE] Size check: 12.4 MB < 50 MB limit');
+  steps[1].classList.remove('active');
+  steps[1].classList.add('success');
+
+  // Arrow 1
+  arrows[1].classList.add('active');
+  await sleep(400);
+
+  // Step 2: Sign
+  steps[2].classList.add('active');
+  addLog('[SIGN] Computing SHA-256 digest...');
+  await sleep(500);
+  addLog('[SIGN] Signing with RSA-SHA256...');
+  await sleep(600);
+  addLog('[SIGN] Signature verified against publisher public key');
+  steps[2].classList.remove('active');
+  steps[2].classList.add('success');
+
+  // Arrow 2
+  arrows[2].classList.add('active');
+  await sleep(400);
+
+  // Step 3: Publish
+  steps[3].classList.add('active');
+  addLog('[PUBLISH] Checking id+version uniqueness... ✓');
+  await sleep(500);
+  addLog('[PUBLISH] Uploading to blob storage...');
+  await sleep(600);
+  addLog('[PUBLISH] Updating search index and CDN cache');
+  steps[3].classList.remove('active');
+  steps[3].classList.add('success');
+
+  // Arrow 3
+  arrows[3].classList.add('active');
+  await sleep(400);
+
+  // Step 4: Notify
+  steps[4].classList.add('active');
+  addLog('[NOTIFY] Sending webhooks to 14 subscribed hosts...');
+  await sleep(500);
+  addLog('[NOTIFY] SSE broadcast: plugin.published (data-connector-v2@2.1.0)');
+  await sleep(400);
+  addLog('[DONE] Pipeline complete. Plugin is live.');
+  steps[4].classList.remove('active');
+  steps[4].classList.add('success');
+
+  btn.disabled = false;
+  pipelineRunning = false;
+}
+
+// ===================== QUIZZES =====================
+const quizAnswers = {
+  q1: "Correct! The host's <code>checkPermissions()</code> function returns <code>ok: false</code> when any required tool is missing. The plugin fails to initialize and the host shows an error to the user. Optional tools with fallback modes can degrade gracefully, but required permissions are hard gates.",
+  q2: "Correct! A breaking change is anything that breaks existing consumers. Adding a required permission (e.g. a new mandatory tool) or changing a function's parameter schema forces hosts to update — this demands a MAJOR version bump under SemVer.",
+  q3: "Correct! A hash (e.g. SHA-256) only proves that the bits haven't changed since hashing. A digital signature proves both integrity <em>and</em> authenticity — it cryptographically binds the package to the publisher's identity, which is essential for trust in a distributed plugin ecosystem."
+};
+
+function checkAnswer(btn, isCorrect, qid) {
+  const container = btn.closest('.quiz-container');
+  const options = container.querySelectorAll('.quiz-option');
+  const feedback = document.getElementById(qid + '-feedback');
+
+  options.forEach(opt => opt.classList.add('disabled'));
+  btn.classList.add(isCorrect ? 'correct' : 'wrong');
+
+  if (!isCorrect) {
+    options.forEach(opt => {
+      if (opt.onclick.toString().includes('true')) opt.classList.add('correct');
+    });
+  }
+
+  feedback.innerHTML = quizAnswers[qid];
+  feedback.className = 'quiz-feedback show ' + (isCorrect ? 'correct' : 'wrong');
+}
+
+// Initialize
+updateProgress();
+</script>
+</body>
+</html>

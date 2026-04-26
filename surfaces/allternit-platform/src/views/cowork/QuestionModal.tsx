@@ -1,5 +1,5 @@
 /**
- * QuestionModal — renders question requests from gizzi-code
+ * QuestionModal — renders question requests from agents
  *
  * The agent may ask the user structured questions with predefined options
  * (single or multi-select) or a free-text custom answer.
@@ -8,14 +8,14 @@
 import React, { memo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from '@phosphor-icons/react';
-import { useNativeAgentStore, type PendingQuestionRequest } from '@/lib/agents/native-agent.store';
+import { useQuestionStore, usePendingQuestions, type Question, type PendingQuestionRequest } from '@/lib/agents/permission-store';
 
 // ============================================================================
 // Single question block
 // ============================================================================
 
 interface QuestionBlockProps {
-  question: PendingQuestionRequest['questions'][number];
+  question: Question;
   index: number;
   value: string | string[];
   onChange: (index: number, value: string | string[]) => void;
@@ -94,8 +94,8 @@ interface QuestionCardProps {
 }
 
 const QuestionCard = memo(function QuestionCard({ request }: QuestionCardProps) {
-  const replyQuestion = useNativeAgentStore((s) => s.replyQuestion);
-  const rejectQuestion = useNativeAgentStore((s) => s.rejectQuestion);
+  const replyQuestion = useQuestionStore((s) => s.replyQuestion);
+  const rejectQuestion = useQuestionStore((s) => s.rejectQuestion);
 
   const [answers, setAnswers] = useState<Array<string | string[]>>(
     request.questions.map(() => ''),
@@ -114,7 +114,7 @@ const QuestionCard = memo(function QuestionCard({ request }: QuestionCardProps) 
     if (busy) return;
     setBusy(true);
     try {
-      await replyQuestion(
+      replyQuestion(
         request.requestId,
         answers.map((answer, questionIndex) => ({ questionIndex, answer })),
       );
@@ -127,7 +127,7 @@ const QuestionCard = memo(function QuestionCard({ request }: QuestionCardProps) 
     if (busy) return;
     setBusy(true);
     try {
-      await rejectQuestion(request.requestId);
+      rejectQuestion(request.requestId);
     } finally {
       setBusy(false);
     }
@@ -195,11 +195,9 @@ interface QuestionModalProps {
 }
 
 export const QuestionModal = memo(function QuestionModal({ sessionId }: QuestionModalProps) {
-  const pendingQuestions = useNativeAgentStore((s) => s.pendingQuestions);
+  const requests = usePendingQuestions(sessionId);
 
-  const requests = Object.values(pendingQuestions).filter(
-    (r) => r.sessionId === sessionId,
-  );
+  if (requests.length === 0) return null;
 
   return (
     <>

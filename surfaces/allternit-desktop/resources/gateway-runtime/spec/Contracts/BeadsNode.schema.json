@@ -1,0 +1,238 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/BeadsNode.schema.json",
+  "title": "Beads Node",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "wih_version",
+    "task_id",
+    "graph_id",
+    "title",
+    "blocked_by",
+    "outputs",
+    "write_scope",
+    "tools",
+    "memory",
+    "acceptance"
+  ],
+  "properties": {
+    "wih_version": {
+      "type": "string",
+      "pattern": "^v\\d+\\.\\d+$"
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 3
+    },
+    "graph_id": {
+      "type": "string",
+      "minLength": 3
+    },
+    "title": {
+      "type": "string",
+      "minLength": 3
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "PLANNED",
+        "READY",
+        "RUNNING",
+        "BLOCKED",
+        "NEEDS_INPUT",
+        "FAILED",
+        "COMPLETE"
+      ]
+    },
+    "blocked_by": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "external_refs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "claude_task_id": {
+          "type": "string"
+        },
+        "issue_id": {
+          "type": "string"
+        },
+        "pr_id": {
+          "type": "string"
+        }
+      }
+    },
+    "preset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "preset_id",
+        "preset_hash"
+      ],
+      "properties": {
+        "preset_id": {
+          "type": "string"
+        },
+        "preset_hash": {
+          "type": "string"
+        }
+      }
+    },
+    "resume_cursor": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "last_run_id": {
+          "type": "string"
+        },
+        "next_step": {
+          "type": "string"
+        },
+        "pending_checks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "outputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required_artifacts",
+        "artifact_paths"
+      ],
+      "properties": {
+        "required_artifacts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "artifact_paths": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^/\\.allternit/"
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "write_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "root",
+        "allowed_globs"
+      ],
+      "properties": {
+        "root": {
+          "type": "string",
+          "const": "/.allternit/"
+        },
+        "allowed_globs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "tools": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowlist"
+      ],
+      "properties": {
+        "allowlist": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "pretooluse_hooks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        }
+      }
+    },
+    "memory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "packs"
+      ],
+      "properties": {
+        "packs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "pack_id",
+              "layers",
+              "access"
+            ],
+            "properties": {
+              "pack_id": {
+                "type": "string"
+              },
+              "layers": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "law",
+                    "graph",
+                    "execution",
+                    "semantic",
+                    "proposal"
+                  ]
+                },
+                "minItems": 1
+              },
+              "access": {
+                "type": "string",
+                "enum": [
+                  "read",
+                  "write",
+                  "readwrite"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "acceptance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "checks"
+      ],
+      "properties": {
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      }
+    }
+  }
+}

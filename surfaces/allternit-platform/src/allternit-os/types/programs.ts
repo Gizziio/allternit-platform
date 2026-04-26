@@ -1,14 +1,14 @@
 /**
- * A2rchitect Super-Agent OS - Program Types
+ * allternit Super-Agent OS - Program Types
  * 
- * Core type system for the Utility Pane (A2rCanvas).
+ * Core type system for the Utility Pane (AllternitCanvas).
  */
 
 // ============================================================================
 // Program Type Definitions
 // ============================================================================
 
-export type A2rProgramType = 
+export type AllternitProgramType = 
   | 'research-doc'     // Deep research documents with citations
   | 'data-grid'        // Interactive data grids with visualization
   | 'presentation'     // Slide deck presentations
@@ -19,10 +19,10 @@ export type A2rProgramType =
   | 'telephony'        // Phone call interface
   | 'browser'          // Embedded browser view
   | 'orchestrator'     // Mixture-of-Agents monitor
-  | 'workflow-builder' // Visual workflow builder with A2R Rails integration
+  | 'workflow-builder' // Visual workflow builder with Allternit Rails integration
   | 'custom';          // Custom/external programs
 
-export type A2rProgramStatus = 
+export type AllternitProgramStatus = 
   | 'loading'     // Initializing
   | 'active'      // Currently visible and running
   | 'background'  // Running but not visible
@@ -34,18 +34,18 @@ export type A2rProgramStatus =
 // Base Program Interface
 // ============================================================================
 
-export interface A2rProgram {
+export interface AllternitProgram {
   /** Unique identifier for this program instance */
   id: string;
   
   /** Program type determines the renderer */
-  type: A2rProgramType;
+  type: AllternitProgramType;
   
   /** Human-readable title */
   title: string;
   
   /** Current program state */
-  status: A2rProgramStatus;
+  status: AllternitProgramStatus;
   
   /** Serialized state for persistence */
   state: unknown;
@@ -417,7 +417,7 @@ export interface TaskNode {
 // Program State Union Type
 // ============================================================================
 
-export type A2rProgramState =
+export type AllternitProgramState =
   | ResearchDocState
   | DataGridState
   | PresentationState
@@ -434,7 +434,7 @@ export type A2rProgramState =
 // ============================================================================
 
 export interface LaunchProgramRequest<T = unknown> {
-  type: A2rProgramType;
+  type: AllternitProgramType;
   title: string;
   initialState?: T;
   sourceThreadId: string;
@@ -468,7 +468,7 @@ export interface ProgramEvent {
 export interface KernelProgramCommand {
   command: 'launch' | 'update' | 'terminate' | 'execute' | 'query';
   programId?: string;
-  programType?: A2rProgramType;
+  programType?: AllternitProgramType;
   payload?: unknown;
 }
 
@@ -489,19 +489,19 @@ export interface StreamingChunk {
 // URI Scheme for Programs
 // ============================================================================
 
-export interface A2rProgramUri {
-  scheme: 'a2r';
-  program: A2rProgramType;
+export interface AllternitProgramUri {
+  scheme: 'allternit';
+  program: AllternitProgramType;
   id?: string;
   params: Record<string, string>;
 }
 
-export function parseA2rUri(uri: string): A2rProgramUri | null {
+export function parseAllternitUri(uri: string): AllternitProgramUri | null {
   try {
     const url = new URL(uri);
-    if (url.protocol !== 'a2r:') return null;
+    if (url.protocol !== 'allternit:') return null;
     
-    const program = url.hostname as A2rProgramType;
+    const program = url.hostname as AllternitProgramType;
     const params: Record<string, string> = {};
     
     url.searchParams.forEach((value, key) => {
@@ -509,7 +509,7 @@ export function parseA2rUri(uri: string): A2rProgramUri | null {
     });
     
     return {
-      scheme: 'a2r',
+      scheme: 'allternit',
       program,
       id: params.id,
       params,
@@ -519,9 +519,9 @@ export function parseA2rUri(uri: string): A2rProgramUri | null {
   }
 }
 
-export function buildA2rUri(program: A2rProgramType, params: Record<string, string> = {}): string {
+export function buildAllternitUri(program: AllternitProgramType, params: Record<string, string> = {}): string {
   const queryString = Object.entries(params)
     .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
     .join('&');
-  return `a2r://${program}${queryString ? `?${queryString}` : ''}`;
+  return `allternit://${program}${queryString ? `?${queryString}` : ''}`;
 }

@@ -19,7 +19,7 @@ This script runs desktop-level smoke coverage for critical Plugin Manager flows 
 1. Electron app running with remote debugging enabled (default port `9222`):
 
 ```bash
-open -a "A2R" --args --remote-debugging-port=9222
+open -a "Allternit" --args --remote-debugging-port=9222
 ```
 
 2. `agent-browser` installed and available in PATH.
@@ -27,7 +27,7 @@ open -a "A2R" --args --remote-debugging-port=9222
 ## Run
 
 ```bash
-cd 6-ui/a2r-platform
+cd 6-ui/allternit-platform
 ./scripts/plugin-manager-electron-e2e.sh
 ```
 

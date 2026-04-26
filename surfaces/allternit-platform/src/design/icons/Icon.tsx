@@ -1,7 +1,7 @@
 /**
  * Icon Component
  * 
- * The main Icon component for the A2rchitect platform.
+ * The main Icon component for the allternit platform.
  * Provides a unified, type-safe interface to all icons.
  * 
  * @module @allternit/platform/icons/Icon

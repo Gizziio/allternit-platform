@@ -122,7 +122,7 @@ describe('My Feature', () => {
 
 Include:
 - Plugin version
-- A2R Platform version
+- Allternit Platform version
 - Steps to reproduce
 - Expected vs actual behavior
 - Screenshots (if applicable)
@@ -137,7 +137,7 @@ Include:
 ## Questions?
 
 - Check the [documentation](./docs/README.md)
-- Join our [Discord community](https://discord.gg/a2r)
+- Join our [Discord community](https://discord.gg/allternit)
 - Open a [GitHub Discussion](https://github.com/{{GITHUB_USERNAME}}/{{REPO_NAME}}/discussions)
 
 ## License

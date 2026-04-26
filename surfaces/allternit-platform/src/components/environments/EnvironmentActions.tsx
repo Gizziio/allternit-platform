@@ -202,7 +202,7 @@ volumes:
   const getImageForTemplate = (templateId: string): string => {
     const images: Record<string, string> = {
       'allternit-platform-dev': 'mcr.microsoft.com/devcontainers/typescript-node:20',
-      'a2r-agent-workspace': 'mcr.microsoft.com/devcontainers/python:3.11',
+      'allternit-agent-workspace': 'mcr.microsoft.com/devcontainers/python:3.11',
       'nodejs-typescript': 'mcr.microsoft.com/devcontainers/typescript-node:20',
       'python-ml': 'mcr.microsoft.com/devcontainers/python:3.11',
       'rust-systems': 'mcr.microsoft.com/devcontainers/rust:latest',

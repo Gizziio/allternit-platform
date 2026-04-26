@@ -1,5 +1,5 @@
 /**
- * A2R Platform UI Audit - Comprehensive Visual Testing
+ * Allternit Platform UI Audit - Comprehensive Visual Testing
  * 
  * This script systematically tests all UI views and components
  * to identify rendering issues, layout problems, and functional bugs.
@@ -11,7 +11,7 @@ import { test, expect } from '@playwright/test';
 const BASE_URL = process.env.TEST_BASE_URL || 'http://127.0.0.1:5177';
 const SCREENSHOT_DIR = './test-results/screenshots';
 
-test.describe('A2R Platform UI Audit', () => {
+test.describe('Allternit Platform UI Audit', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(BASE_URL);
     await page.waitForLoadState('networkidle');

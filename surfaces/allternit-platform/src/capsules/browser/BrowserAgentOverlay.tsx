@@ -106,18 +106,18 @@ export function BrowserAgentOverlay({
       case 'Click':
         return Hand;
       case 'Type':
-        return Type;
+        return TextT;
       case 'Scroll':
         return Scroll;
       case 'Navigate':
-        return MousePointer2;
+        return CursorClick;
       case 'Assert':
       case 'Extract':
         return Eye;
       case 'Screenshot':
         return Camera;
       case 'Download':
-        return Download;
+        return DownloadSimple;
       case 'ConfirmGate':
         return Warning;
       case 'Select':
@@ -271,7 +271,7 @@ export function BrowserAgentOverlay({
             top: y + height * 0.3,
           }}
         >
-          <MousePointer2
+          <CursorClick
             className="w-6 h-6 text-blue-500 opacity-60"
             style={{
               filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',

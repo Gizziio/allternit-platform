@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useCallback, useMemo, ReactNode, useRef, useState, useEffect } from "react";
+import React, { createContext, useContext, useCallback, useMemo, ReactNode, useRef, useState, useEffect } from "react";
 import type { ChatMessage } from "@/lib/ai/types";
 import { useChatId } from "./chat-id-provider";
 import { useDataStream } from "./data-stream-provider";

@@ -58,7 +58,7 @@ select_app_tab() {
 
   if [[ -z "${app_index}" ]]; then
     app_index="$(printf '%s\n' "${tabs}" \
-      | sed -n 's/.*\[\([0-9][0-9]*\)\].*A2rchitect Platform.*/\1/p' \
+      | sed -n 's/.*\[\([0-9][0-9]*\)\].*allternit Platform.*/\1/p' \
       | head -n 1)"
   fi
 

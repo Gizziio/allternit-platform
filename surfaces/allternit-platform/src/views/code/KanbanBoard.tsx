@@ -50,29 +50,29 @@ export function KanbanBoard() {
     return () => clearInterval(interval);
   }, [fetchWihs]);
 
-  const handleWihClick = (wihId: string) => {
+  const handleWihClick = (wihId: string): void => {
     selectWih(wihId);
     setActiveMainTab('work');
   };
 
   // Drag and drop handlers
-  const handleDragStart = (e: React.DragEvent, wihId: string) => {
+  const handleDragStart = (e: React.DragEvent, wihId: string): void => {
     setDraggedWih(wihId);
     e.dataTransfer.effectAllowed = 'move';
     // Set drag image if needed
   };
 
-  const handleDragOver = (e: React.DragEvent, columnId: string) => {
+  const handleDragOver = (e: React.DragEvent, columnId: string): void => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     setDropTarget(columnId);
   };
 
-  const handleDragLeave = () => {
+  const handleDragLeave = (): void => {
     setDropTarget(null);
   };
 
-  const handleDrop = async (e: React.DragEvent, targetStatus: string) => {
+  const handleDrop = async (e: React.DragEvent, targetStatus: string): Promise<void> => {
     e.preventDefault();
     setDropTarget(null);
     

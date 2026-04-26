@@ -8,7 +8,7 @@ import * as React from 'react';
 import type { CustomIconProps } from './Logo';
 
 /**
- * A2rchitect logo mark (icon only, no text)
+ * allternit logo mark (icon only, no text)
  */
 export const AllternitMark = React.forwardRef<SVGSVGElement, CustomIconProps>(
   ({ size = 32, className, ...props }, ref) => {
@@ -21,7 +21,7 @@ export const AllternitMark = React.forwardRef<SVGSVGElement, CustomIconProps>(
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         className={className}
-        aria-label={props['aria-label'] || 'A2rchitect'}
+        aria-label={props['aria-label'] || 'allternit'}
         aria-hidden={props['aria-hidden']}
         role="img"
       >

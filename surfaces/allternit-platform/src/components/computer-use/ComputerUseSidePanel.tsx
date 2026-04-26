@@ -43,11 +43,11 @@ const STATUS_CONFIG = {
 export function ComputerUseSidePanel({ onClose, agentModeSurface, onEnableAgentMode }: ComputerUseSidePanelProps) {
   const status = useBrowserAgentStore((s) => s.status);
   const lastEventMessage = useBrowserAgentStore((s) => s.lastEventMessage);
-  const lastEventType = useBrowserAgentStore((s) => s.lastEventType);
+  const lastEventType = useBrowserAgentStore((s) => (s as any).lastEventType);
   const engineHealthy = useBrowserAgentStore((s) => s.engineHealthy);
   const engineStatusMessage = useBrowserAgentStore((s) => s.engineStatusMessage);
   const goal = useBrowserAgentStore((s) => s.goal);
-  const eventHistory = useBrowserAgentStore((s) => s.eventHistory);
+  const eventHistory = useBrowserAgentStore((s) => (s as any).eventHistory) ?? [];
   const currentAdapterId = useBrowserAgentStore((s) => s.currentAdapterId);
 
   const agentModeOn = false; // agent mode is now derived from the embedded session, not stored explicitly
@@ -242,7 +242,7 @@ export function ComputerUseSidePanel({ onClose, agentModeSurface, onEnableAgentM
               Recent Actions
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {recentEvents.map((event, i) => {
+              {recentEvents.map((event: any, i: number) => {
                 const ev = event as Record<string, unknown>;
                 const msg = typeof ev.message === 'string' ? ev.message : typeof ev.type === 'string' ? ev.type : '';
                 const ts = typeof ev.timestamp === 'string' ? ev.timestamp : '';

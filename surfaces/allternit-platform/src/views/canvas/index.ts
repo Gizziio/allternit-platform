@@ -1,12 +1,12 @@
 /**
  * Canvas Module Exports
  * 
- * Central export point for all A2r-Canvas components.
+ * Central export point for all Allternit-Canvas components.
  */
 
 // Main view
-// Note: A2rCanvasView should be imported from its actual location
-// export { A2rCanvasView } from './A2rCanvasView';
+// Note: AllternitCanvasView should be imported from its actual location
+// export { AllternitCanvasView } from './AllternitCanvasView';
 
 // Core components
 export { CanvasRouter } from './CanvasRouter';
@@ -24,7 +24,7 @@ export { MermaidRenderer } from './renderers/MermaidRenderer';
 
 // Feature components
 export { CreativeCockpit } from './components/CreativeCockpit';
-export { A2rDriveSidebar } from './components/A2rDriveSidebar';
+export { AllternitDriveSidebar } from './components/AllternitDriveSidebar';
 
 // Hooks
 export { useCanvasStream } from './hooks/useCanvasStream';
@@ -32,4 +32,4 @@ export { useCanvasLayout } from './hooks/useCanvasLayout';
 
 // Types
 export type { RendererType } from './CanvasRouter';
-export type { AssetType } from './components/A2rDriveSidebar';
+export type { AssetType } from './components/AllternitDriveSidebar';

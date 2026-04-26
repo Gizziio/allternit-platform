@@ -1,11 +1,12 @@
 import React, { useCallback, useRef, useState, useMemo } from 'react';
 import { useChatStore } from './ChatStore';
-import {
-  getAgentSessionDescriptor,
+import { getAgentSessionDescriptor } from '@/lib/agents';
+import { 
+  useChatSessionStore, 
+  type ChatSession,
   getChatSessionsForProject,
   getRootChatSessions,
-} from '@/lib/agents';
-import { useNativeAgentStore, type NativeSession } from '@/lib/agents/native-agent.store';
+} from './ChatSessionStore';
 import { RailRowMenu } from '../../shell/rail/RailRowMenu';
 import { InlineRename, type InlineRenameHandle } from '@/components/InlineRename';
 import { groupSessionsByTime } from '@/lib/groupSessionsByTime';
@@ -45,11 +46,11 @@ export function ChatRail() {
     createThread,
   } = useChatStore();
 
-  const sessions = useNativeAgentStore((s) => s.sessions);
-  const activeSessionId = useNativeAgentStore((s) => s.activeSessionId);
-  const setActiveSession = useNativeAgentStore((s) => s.setActiveSession);
-  const updateSession = useNativeAgentStore((s) => s.updateSession);
-  const deleteSession = useNativeAgentStore((s) => s.deleteSession);
+  const sessions = useChatSessionStore((s) => s.sessions);
+  const activeSessionId = useChatSessionStore((s) => s.activeSessionId);
+  const setActiveSession = useChatSessionStore((s) => s.setActiveSession);
+  const updateSession = useChatSessionStore((s) => s.updateSession);
+  const deleteSession = useChatSessionStore((s) => s.deleteSession);
 
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(() =>
     new Set(projects.map((p) => p.id)),
@@ -103,7 +104,7 @@ export function ChatRail() {
 
   // Sessions that belong to a specific project
   const sessionsByProject = useCallback(
-    (projectId: string): NativeSession[] => {
+    (projectId: string): ChatSession[] => {
       return getChatSessionsForProject(sessions, projectId).sort(
         (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
       );
@@ -541,7 +542,7 @@ function SectionHeader({ title, count, onAdd }: SectionHeaderProps) {
 // ---------------------------------------------------------------------------
 
 interface NewItemButtonProps {
-  icon: React.ComponentType<{ size?: number; weight?: string }>;
+  icon: React.ElementType;
   label: string;
   onClick: () => void;
 }
@@ -586,7 +587,7 @@ function NewItemButton({ icon: Icon, label, onClick }: NewItemButtonProps) {
 // ---------------------------------------------------------------------------
 
 interface ChatRailItemProps {
-  icon: React.ComponentType<{ size?: number; weight?: string; color?: string; style?: React.CSSProperties }>;
+  icon: React.ElementType;
   label: string;
   isActive: boolean;
   isNested?: boolean;

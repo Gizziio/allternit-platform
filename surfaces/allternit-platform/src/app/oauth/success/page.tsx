@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useRef, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { MatrixLogo } from '@/components/ai-elements/MatrixLogo';
@@ -10,10 +10,30 @@ function SuccessContent() {
   const router = useRouter();
   const [visible, setVisible] = useState(false);
   const [countdown, setCountdown] = useState(5);
+  const [launchAttempted, setLaunchAttempted] = useState(false);
+  const protocolLinkRef = useRef<HTMLAnchorElement | null>(null);
 
   const appName = searchParams.get('app') ?? 'The application';
   const redirectUri = searchParams.get('redirect_uri');
-  const isLocalRedirect = redirectUri?.startsWith('/') || redirectUri?.startsWith('http://localhost');
+  const isLocalRedirect = 
+    redirectUri?.startsWith('/') || 
+    redirectUri?.startsWith('http://localhost') ||
+    redirectUri?.startsWith('allternit://') ||
+    redirectUri?.startsWith('gizzi://');
+  const isProtocolRedirect =
+    redirectUri?.startsWith('allternit://') ||
+    redirectUri?.startsWith('gizzi://');
+
+  function launchRedirect(target: string) {
+    if (target.startsWith('allternit://') || target.startsWith('gizzi://')) {
+      setLaunchAttempted(true);
+      protocolLinkRef.current?.click();
+      window.location.assign(target);
+      return;
+    }
+
+    router.push(target);
+  }
 
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 60);
@@ -24,7 +44,7 @@ function SuccessContent() {
   useEffect(() => {
     if (!isLocalRedirect || !redirectUri) return;
     if (countdown <= 0) {
-      router.push(redirectUri);
+      launchRedirect(redirectUri);
       return;
     }
     const interval = setInterval(() => setCountdown(c => c - 1), 1000);
@@ -158,7 +178,9 @@ function SuccessContent() {
                   marginTop: 20,
                 }}
               >
-                Redirecting in {countdown}s…
+                {isProtocolRedirect && launchAttempted
+                  ? 'If Allternit did not open automatically, use the button below.'
+                  : `Redirecting in ${countdown}s…`}
               </motion.p>
             )}
 
@@ -196,19 +218,46 @@ function SuccessContent() {
                 </a>
               )}
 
-              {/* For CLI/desktop — they handle the redirect automatically */}
+              {/* For CLI/desktop — provide a direct deep-link action in case the browser blocks auto-launch */}
               {isLocalRedirect && (
-                <div style={{
-                  padding: '13px 20px',
-                  borderRadius: 12,
-                  background: 'rgba(16,185,129,0.08)',
-                  border: '1px solid rgba(16,185,129,0.15)',
-                  fontSize: 13,
-                  color: 'rgba(16,185,129,0.8)',
-                  lineHeight: 1.5,
-                }}>
-                  You can close this window and return to {appName}
-                </div>
+                <>
+                  {redirectUri && (
+                    <a
+                      ref={protocolLinkRef}
+                      href={redirectUri}
+                      style={{
+                        display: 'block',
+                        padding: '13px 20px',
+                        borderRadius: 12,
+                        background: 'linear-gradient(135deg, #E8886A 0%, #D97757 100%)',
+                        color: '#fff',
+                        fontSize: 14,
+                        fontWeight: 700,
+                        textDecoration: 'none',
+                        letterSpacing: '-0.01em',
+                        boxShadow: '0 4px 20px rgba(217,119,87,0.3)',
+                        transition: 'transform 0.2s',
+                      }}
+                      onClick={() => setLaunchAttempted(true)}
+                      onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(-1px)'; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.transform = 'translateY(0)'; }}
+                    >
+                      Open {appName}
+                    </a>
+                  )}
+
+                  <div style={{
+                    padding: '13px 20px',
+                    borderRadius: 12,
+                    background: 'rgba(16,185,129,0.08)',
+                    border: '1px solid rgba(16,185,129,0.15)',
+                    fontSize: 13,
+                    color: 'rgba(16,185,129,0.8)',
+                    lineHeight: 1.5,
+                  }}>
+                    Return to {appName} after the desktop app opens and completes sign-in.
+                  </div>
+                </>
               )}
 
               <a

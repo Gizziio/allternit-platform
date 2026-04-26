@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Receipt,
+  Receipt as ReceiptIcon,
   MagnifyingGlass,
   Funnel,
   Calendar,

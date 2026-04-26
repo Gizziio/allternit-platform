@@ -147,7 +147,7 @@ export function OrchestrationView() {
   );
 }
 
-function getStatusColor(status: string) {
+function getStatusColor(status: string): string {
   switch (status) {
     case 'working': return '#10b981';
     case 'waiting': return '#f59e0b';

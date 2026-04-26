@@ -1,5 +1,5 @@
 /**
- * AI Types for A2rchitech
+ * AI Types for Allternit
  * Extended for full AI SDK Elements support
  */
 
@@ -29,6 +29,9 @@ export type ChatTools = {
   editTextDocument: unknown;
   editCodeDocument: unknown;
   editSheetDocument: unknown;
+  notebookIngest: unknown;
+  notebookQuery: unknown;
+  notebookSummarize: unknown;
 };
 
 // Tool name schema for validation
@@ -43,6 +46,9 @@ export const toolNameSchema = z.enum([
   "editTextDocument",
   "editCodeDocument",
   "editSheetDocument",
+  "notebookIngest",
+  "notebookQuery",
+  "notebookSummarize",
 ]);
 
 // Attachment type for file uploads
@@ -69,6 +75,9 @@ export type UiToolName =
   | "readDocument"
   | "retrieveUrl"
   | "getWeather"
+  | "notebookIngest"
+  | "notebookQuery"
+  | "notebookSummarize"
   | null;
 
 // Message parts for structured content - ALL PARTS WIRED

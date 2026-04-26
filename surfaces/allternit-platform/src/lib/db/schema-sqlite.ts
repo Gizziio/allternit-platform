@@ -1,5 +1,5 @@
 /**
- * A2rchitech Database Schema - SQLite Version (Dev Mode)
+ * Allternit Database Schema - SQLite Version (Dev Mode)
  * Simplified schema for local development without PostgreSQL
  */
 
@@ -197,6 +197,22 @@ export const kernelSession = sqliteTable("KernelSession", {
   updatedAt: integer("updatedAt", { mode: "timestamp" }).default(sql`(unixepoch())`).notNull(),
 });
 
+export const certification = sqliteTable("Certification", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("userId")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  courseCode: text("courseCode").notNull(), // e.g. ALABS-CORE-COPILOT
+  courseTitle: text("courseTitle").notNull(),
+  tier: text("tier").notNull(), // CORE, OPS, AGENTS, ADV
+  completedAt: integer("completedAt", { mode: "timestamp" }).default(sql`(unixepoch())`).notNull(),
+  capstoneUrl: text("capstoneUrl"),
+  score: integer("score"),
+  verified: integer("verified", { mode: "boolean" }).notNull().default(false),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.userId, table.courseCode] }),
+}));
+
 export const schema = { 
   user, 
   session, 
@@ -211,6 +227,7 @@ export const schema = {
   document,
   mcpConnector,
   kernelSession,
+  certification,
 };
 
 // ============================================================================

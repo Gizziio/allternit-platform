@@ -1,7 +1,7 @@
 /**
  * TypeScript types for Allternit Agent Workspace
  * 
- * These types mirror the Rust types from a2r-agent-workspace crate
+ * These types mirror the Rust types from allternit-agent-workspace crate
  */
 
 /** Session runtime status - matches terminal app states */
@@ -238,6 +238,12 @@ export interface Skill {
   installed: boolean;
   enabled: boolean;
   metadata?: Record<string, unknown>;
+  category?: string;
+  tags?: string[];
+  author?: string;
+  entryPoint?: string;
+  dependencies?: string[];
+  documentation?: string;
 }
 
 /** Checkpoint for unified API */
@@ -264,13 +270,14 @@ export interface Checkpoint {
 }
 
 /** Memory entry type */
-export type MemoryEntryType = 'observation' | 'decision' | 'lesson' | 'preference' | 'fact';
+export type MemoryEntryType = 'note' | 'event' | 'observation' | 'decision' | 'lesson' | 'preference' | 'fact' | 'session' | 'checkpoint';
 
 /** Memory entry */
 export interface MemoryEntry {
   id: string;
   type: MemoryEntryType;
   content: string;
+  title?: string;
   timestamp: string;
   tags: string[];
   source?: string;

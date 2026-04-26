@@ -508,7 +508,7 @@ export function NodeTerminal({
               className={cn(showFileBrowser && "bg-accent")}
             >
               {showFileBrowser ? (
-                <SidebarSimple size={16} />
+                <PanelLeftClose size={16} />
               ) : (
                 <Sidebar size={16} />
               )}

@@ -129,7 +129,7 @@ async function parseErrorResponse(response: Response, fallbackMessage: string): 
   }
 }
 
-class SSHConnectionsAPI {
+export class SSHConnectionsAPI {
   private baseUrl: string;
 
   constructor() {

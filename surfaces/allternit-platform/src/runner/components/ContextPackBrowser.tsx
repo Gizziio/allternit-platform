@@ -178,7 +178,7 @@ function PackDetails({ pack }: { pack: ContextPack }) {
         <label className="text-sm font-medium">Context Pack ID</label>
         <div className="flex items-center gap-2 mt-1">
           <p className="text-sm font-mono text-muted-foreground break-all flex-1">{pack.contextPackId}</p>
-          <Button size="icon" variant="ghost" size={32} title="Copy ID">
+          <Button size="icon" variant="ghost" title="Copy ID">
             <FileText size={16} />
           </Button>
         </div>

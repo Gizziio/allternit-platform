@@ -19,7 +19,9 @@ import { injectWebPreviewParts } from './browser-preview-utils';
 import { GlassPill, FilePill, TerminalPill } from './glass-pill';
 import { ArtifactCard } from './artifact-panel';
 import { McpAppFrame } from './McpAppFrame';
+import { AllternitOpenUIRenderer } from '@/lib/openui/AllternitOpenUIRenderer';
 import type { SelectedArtifact, ArtifactKind } from './artifact-panel';
+import type { ViewMode } from '@/hooks/useViewMode';
 
 // Core AI Elements
 import { Markdown } from './markdown';
@@ -47,6 +49,8 @@ interface UnifiedMessageRendererProps {
   className?: string;
   onSelectArtifact?: (artifact: SelectedArtifact) => void;
   selectedArtifactTitle?: string;
+  /** Controls how much detail is shown. Default: 'normal' */
+  viewMode?: ViewMode;
 }
 
 /**
@@ -59,11 +63,12 @@ export function UnifiedMessageRenderer({
   className,
   onSelectArtifact,
   selectedArtifactTitle,
+  viewMode = 'normal',
 }: UnifiedMessageRendererProps) {
   // Parse text parts for embedded structure
   const parsedParts = React.useMemo(() => {
     const result: ExtendedUIPart[] = [];
-    
+
     for (const part of parts) {
       if (part.type === 'text') {
         const subParts = parseStructuredContent(part.text);
@@ -72,7 +77,7 @@ export function UnifiedMessageRenderer({
         result.push(part);
       }
     }
-    
+
     return injectWebPreviewParts(result);
   }, [parts]);
 
@@ -80,23 +85,32 @@ export function UnifiedMessageRenderer({
     return isStreaming ? <Shimmer className="h-4 w-3/4" /> : null;
   }
 
+  // Summary mode: only show text parts, skip reasoning and tool calls
+  const visibleParts = React.useMemo(() => {
+    if (viewMode === 'summary') {
+      return parsedParts.filter(p => p.type === 'text' || p.type === 'error');
+    }
+    return parsedParts;
+  }, [parsedParts, viewMode]);
+
   // Collect source-document parts for the footer strip (P4)
   const sourceParts = parsedParts.filter(p => p.type === 'source-document') as Array<Extract<ExtendedUIPart, { type: 'source-document' }>>;
 
   return (
     <div className={cn("space-y-4", className)}>
-      {parsedParts.map((part, idx) => (
+      {visibleParts.map((part, idx) => (
         <PartRenderer
           key={`${part.type}-${idx}`}
           part={part}
-          isLast={idx === parsedParts.length - 1}
+          isLast={idx === visibleParts.length - 1}
           isStreaming={isStreaming}
           onSelectArtifact={onSelectArtifact}
           selectedArtifactTitle={selectedArtifactTitle}
+          viewMode={viewMode}
         />
       ))}
       {/* Sources footer — compact citation strip when web results are present */}
-      {!isStreaming && sourceParts.length > 0 && (
+      {!isStreaming && sourceParts.length > 0 && viewMode !== 'summary' && (
         <SourcesFooter sources={sourceParts} />
       )}
     </div>
@@ -650,10 +664,34 @@ interface PartRendererProps {
   isStreaming?: boolean;
   onSelectArtifact?: (artifact: SelectedArtifact) => void;
   selectedArtifactTitle?: string;
+  viewMode?: ViewMode;
 }
 
-function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArtifactTitle }: PartRendererProps) {
+function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArtifactTitle, viewMode = 'normal' }: PartRendererProps) {
   switch (part.type) {
+    // ==================== OPENUI (Generative UI) ====================
+    case 'openui': {
+      if (onSelectArtifact) {
+        const uiArtifact: SelectedArtifact = {
+          title: part.title || "Interactive UI",
+          kind: "openui",
+          content: part.stream,
+        };
+        return (
+          <ArtifactCard
+            artifact={uiArtifact}
+            isSelected={selectedArtifactTitle === uiArtifact.title}
+            onClick={() => onSelectArtifact(uiArtifact)}
+          />
+        );
+      }
+      return (
+        <div className="my-4 w-full">
+          <AllternitOpenUIRenderer stream={part.stream} />
+        </div>
+      );
+    }
+
     // ==================== TEXT (Main Response - Largest) ====================
     case 'text':
       return (
@@ -666,25 +704,37 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
     // ==================== REASONING (Thought Trace - Smaller, Structured) ====================
     case 'reasoning':
       {
+      // summary mode: skip entirely (already filtered out by visibleParts)
+      // normal mode: always collapsed (ThoughtProcessHeader handles this)
+      // verbose mode: full ThoughtTrace, starts open
       const isReasoningStreaming = isStreaming && isLast;
       const structuredSteps = coerceThoughtSteps(
         (part as typeof part & { trace?: { steps?: unknown } }).trace?.steps,
       );
       const steps = structuredSteps.length > 0 ? structuredSteps : parseThoughtSteps(part.text);
 
-      if (steps.length > 0) {
+      if (viewMode === 'verbose') {
+        // Full expanded ThoughtTrace or raw block
+        if (steps.length > 0) {
+          return (
+            <div className="my-2">
+              <ThoughtTrace
+                steps={steps}
+                isStreaming={isReasoningStreaming}
+                isComplete={!isStreaming}
+              />
+            </div>
+          );
+        }
         return (
-          <div className="my-2">
-            <ThoughtTrace
-              steps={steps}
-              isStreaming={isReasoningStreaming}
-              isComplete={!isStreaming}
-            />
-          </div>
+          <ThoughtProcessHeader
+            text={part.text || ''}
+            isStreaming={isReasoningStreaming}
+          />
         );
       }
 
-      // Raw reasoning — collapsible "Thought process >" header
+      // normal mode: compact collapsible header only (no full ThoughtTrace)
       return (
         <ThoughtProcessHeader
           text={part.text || ''}
@@ -742,6 +792,21 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
         'result' in part ? (part as any).result : undefined,
       );
 
+      // normal mode: compact non-expandable chip — no input/result details
+      if (viewMode === 'normal') {
+        return (
+          <GlassPill
+            type="tool"
+            state={toolState}
+            title={humanTitle}
+            description={meta ?? undefined}
+            collapsible={false}
+            defaultCollapsed={true}
+          />
+        );
+      }
+
+      // verbose mode: full expandable card with input + result
       // Whether to show expandable content
       const hasOutput = (part.state === "output-available" && "result" in part) ||
                         (part.state === "output-error" && "error" in part);

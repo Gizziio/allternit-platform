@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# A2R Platform UI Audit Script
+# Allternit Platform UI Audit Script
 # This script runs a comprehensive UI audit using Playwright
 
 set -e
 
 echo "========================================"
-echo "A2R Platform UI Audit"
+echo "Allternit Platform UI Audit"
 echo "========================================"
 echo ""
 

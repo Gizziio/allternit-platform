@@ -1,6 +1,6 @@
 /**
  * HTML to Figma - Background Script Handler
- * Integrates with A2R Extension background script
+ * Integrates with Allternit Extension background script
  */
 
 import { captureService } from './capture'
@@ -87,30 +87,30 @@ async function handleExport(layers: any): Promise<void> {
 export function setupHTMLToFigmaContextMenus(): void {
   // Parent menu
   chrome.contextMenus.create({
-    id: 'a2r-html-to-figma',
+    id: 'allternit-html-to-figma',
     title: '🎨 Capture to Figma',
     contexts: ['page']
   })
 
   // Quick capture
   chrome.contextMenus.create({
-    id: 'a2r-capture-quick',
-    parentId: 'a2r-html-to-figma',
+    id: 'allternit-capture-quick',
+    parentId: 'allternit-html-to-figma',
     title: '⚡ Quick Capture',
     contexts: ['page']
   })
 
   // Deep capture
   chrome.contextMenus.create({
-    id: 'a2r-capture-deep',
-    parentId: 'a2r-html-to-figma',
+    id: 'allternit-capture-deep',
+    parentId: 'allternit-html-to-figma',
     title: '🔍 Deep Capture (with cleanup)',
     contexts: ['page']
   })
 
   // Selection capture
   chrome.contextMenus.create({
-    id: 'a2r-capture-selection',
+    id: 'allternit-capture-selection',
     title: '🎯 Capture Selection to Figma',
     contexts: ['selection']
   })
@@ -124,19 +124,19 @@ export async function handleContextMenuClick(
   tab?: chrome.tabs.Tab
 ): Promise<void> {
   switch (info.menuItemId) {
-    case 'a2r-capture-quick':
+    case 'allternit-capture-quick':
       await captureService.captureCurrentTab({ agents: { structure: false } })
       showNotification('Quick capture complete! Check sidepanel.')
       break
       
-    case 'a2r-capture-deep':
+    case 'allternit-capture-deep':
       await captureService.captureCurrentTab({ 
         agents: { structure: true, style: true, layout: true }
       })
       showNotification('Deep capture complete! Check sidepanel.')
       break
       
-    case 'a2r-capture-selection':
+    case 'allternit-capture-selection':
       if (tab?.id) {
         // Execute selection capture in tab
         await chrome.scripting.executeScript({
@@ -158,7 +158,7 @@ function showNotification(message: string): void {
   chrome.notifications.create({
     type: 'basic',
     iconUrl: '/icon/48.png',
-    title: 'A2R HTML→Figma',
+    title: 'Allternit HTML→Figma',
     message
   })
 }

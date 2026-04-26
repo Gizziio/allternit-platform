@@ -87,9 +87,10 @@ export function DebugView() {
   const [consoleInput, setConsoleInput] = useState('');
   const consoleOutputRef = useRef<HTMLDivElement>(null);
   const [breakpoints, setBreakpoints] = useState<Breakpoint[]>([]);
+  const [logs, setLogs] = useState<ConsoleLogEntry[]>([]);
 
   const handleClearConsole = () => {
-    // In a real implementation, this would clear the logs
+    setLogs([]);
   };
 
   const handleToggleBreakpoint = (id: string) => {
@@ -130,8 +131,8 @@ export function DebugView() {
 
   const filteredLogs =
     filterLevel === 'All Levels'
-      ? []
-  : ([] as ConsoleLogEntry[]).filter((log) => {
+      ? logs
+      : logs.filter((log) => {
           switch (filterLevel) {
             case 'Error':
               return log.level === 'ERROR';

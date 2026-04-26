@@ -12,9 +12,9 @@ import { HTMLToFigmaPanel } from '@/html-to-figma/ui/HTMLToFigmaPanel'
 import { CaptureComposer } from '@/html-to-figma/ui/CaptureComposer'
 
 const EXTENSION_SIDEPANEL_COPY = {
-	title: 'A2R Extension',
+	title: 'Allternit Extension',
 	subtitle: 'Chrome Sidepanel',
-	emptyStateTitle: 'A2R Extension',
+	emptyStateTitle: 'Allternit Extension',
 	emptyStateDescription: 'Execute multi-page tasks',
 	readyLabel: 'Ready',
 	contextLabel: 'Current Browser Tab',

@@ -1,0 +1,62 @@
+---
+title: TypeScript SDK
+description: Build agents with the TypeScript SDK
+---
+
+## Installation
+
+```bash
+npm install @allternit/sdk
+```
+
+## Quick Start
+
+```typescript
+import { AllternitClient } from '@allternit/sdk';
+
+const client = new AllternitClient({
+  apiKey: process.env.ALLTERNIT_API_KEY,
+  endpoint: 'https://api.allternit.com',
+});
+
+// Create an agent
+const agent = await client.agents.create({
+  name: 'my-agent',
+  runtime: 'gizzi-pro',
+});
+
+// Run the agent
+const result = await client.agents.run(agent.id, {
+  input: 'Analyze this data',
+});
+
+console.log(result.output);
+```
+
+## Event Streaming
+
+```typescript
+const stream = client.events.stream();
+
+stream.on('agent.message', (event) => {
+  console.log('Message:', event.data);
+});
+
+stream.on('agent.complete', (event) => {
+  console.log('Complete:', event.data);
+});
+
+await stream.connect();
+```
+
+## Error Handling
+
+```typescript
+try {
+  await client.agents.run(agentId, { input });
+} catch (error) {
+  if (error.code === 'RATE_LIMITED') {
+    console.log('Rate limit exceeded, retrying...');
+  }
+}
+```

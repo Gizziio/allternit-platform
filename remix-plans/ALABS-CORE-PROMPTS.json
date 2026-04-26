@@ -1,0 +1,159 @@
+{
+  "courseCode": "ALABS-CORE-PROMPTS",
+  "courseTitle": "Engineer Prompts for Agent Systems",
+  "tier": "CORE",
+  "sources": [
+    {
+      "id": 5439104,
+      "title": "ChatGPT Prompt Engineering ( Free Course )",
+      "slug": "5439104-chatgpt-prompt-engineering-free-course",
+      "totalLectures": 16
+    },
+    {
+      "id": 5495748,
+      "title": "FREE Prompt Engineering Masterclass + 5 Practical Examples",
+      "slug": "5495748-free-prompt-engineering-masterclass-5-practical-examples",
+      "totalLectures": 0
+    },
+    {
+      "id": 6073467,
+      "title": "Prompt Engineering with Python and ChatGPT API (Free Course)",
+      "slug": "6073467-prompt-engineering-with-python-and-chatgpt-api-free-course",
+      "totalLectures": 0
+    }
+  ],
+  "modules": [
+    {
+      "name": "The Problem: Guesswork vs. Systematic Prompt Engineering",
+      "sourceLectures": [],
+      "bridgeContent": "Why most prompt engineering is guesswork and how to make it systematic.",
+      "isBridge": true
+    },
+    {
+      "name": "The Prompt Engineering Stack",
+      "sourceLectures": [
+        {
+          "course": "ChatGPT Prompt Engineering ( Free Course )",
+          "chapter": "Introduction",
+          "lecture": "What is AI?",
+          "hasFile": false
+        },
+        {
+          "course": "ChatGPT Prompt Engineering ( Free Course )",
+          "chapter": "Prompt Engineering Terms",
+          "lecture": "What is Prompt(s) ?",
+          "hasFile": false
+        },
+        {
+          "course": "ChatGPT Prompt Engineering ( Free Course )",
+          "chapter": "Prompt Engineering Concepts",
+          "lecture": "Practical Examples 2",
+          "hasFile": false
+        },
+        {
+          "course": "ChatGPT Prompt Engineering ( Free Course )",
+          "chapter": "Practical Examples Cases",
+          "lecture": "Important Terms Part 1",
+          "hasFile": false
+        }
+      ],
+      "isBridge": false
+    },
+    {
+      "name": "Python + OpenAI API Patterns",
+      "sourceLectures": [
+        {
+          "course": "ChatGPT Prompt Engineering ( Free Course )",
+          "chapter": "Introduction",
+          "lecture": "What is NLP?",
+          "hasFile": false
+        },
+        {
+          "course": "ChatGPT Prompt Engineering ( Free Course )",
+          "chapter": "Prompt Engineering Terms",
+          "lecture": "Prompt Engineering Why?",
+          "hasFile": false
+        },
+        {
+          "course": "ChatGPT Prompt Engineering ( Free Course )",
+          "chapter": "Prompt Engineering Concepts",
+          "lecture": "Practical Examples 3",
+          "hasFile": false
+        },
+        {
+          "course": "ChatGPT Prompt Engineering ( Free Course )",
+          "chapter": "Practical Examples Cases",
+          "lecture": "Important Terms Part 2",
+          "hasFile": false
+        }
+      ],
+      "isBridge": false
+    },
+    {
+      "name": "System Prompt Design",
+      "sourceLectures": [
+        {
+          "course": "ChatGPT Prompt Engineering ( Free Course )",
+          "chapter": "Introduction",
+          "lecture": "What is GPT?",
+          "hasFile": false
+        },
+        {
+          "course": "ChatGPT Prompt Engineering ( Free Course )",
+          "chapter": "Prompt Engineering Terms",
+          "lecture": "Types of Prompts",
+          "hasFile": false
+        },
+        {
+          "course": "ChatGPT Prompt Engineering ( Free Course )",
+          "chapter": "Prompt Engineering Concepts",
+          "lecture": "Practical Examples 4",
+          "hasFile": false
+        },
+        {
+          "course": "ChatGPT Prompt Engineering ( Free Course )",
+          "chapter": "Practical Examples Cases",
+          "lecture": "3 Important Things to Do",
+          "hasFile": false
+        }
+      ],
+      "isBridge": false
+    },
+    {
+      "name": "Developer Prompt Patterns",
+      "sourceLectures": [
+        {
+          "course": "ChatGPT Prompt Engineering ( Free Course )",
+          "chapter": "Introduction",
+          "lecture": "What is LLM?",
+          "hasFile": false
+        },
+        {
+          "course": "ChatGPT Prompt Engineering ( Free Course )",
+          "chapter": "Prompt Engineering Concepts",
+          "lecture": "Practical Examples 1",
+          "hasFile": false
+        },
+        {
+          "course": "ChatGPT Prompt Engineering ( Free Course )",
+          "chapter": "Prompt Engineering Concepts",
+          "lecture": "Practical Examples 5",
+          "hasFile": false
+        }
+      ],
+      "isBridge": false
+    },
+    {
+      "name": "Bridge: Allternit's agui-gateway Prompt Tiers",
+      "sourceLectures": [],
+      "bridgeContent": "How agui-gateway uses tiered system prompts to stay coherent across long sessions.",
+      "isBridge": true
+    },
+    {
+      "name": "Capstone: Design a 3-Prompt Suite + Red-Team Report",
+      "sourceLectures": [],
+      "bridgeContent": "Design a 3-prompt suite for a support agent and red-team it.",
+      "isBridge": true
+    }
+  ]
+}

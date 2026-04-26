@@ -1,7 +1,7 @@
 /**
  * Shell Icon Component
  * 
- * Represents the A2rchitect Shell - the main container/workspace.
+ * Represents the allternit Shell - the main container/workspace.
  */
 
 import * as React from 'react';

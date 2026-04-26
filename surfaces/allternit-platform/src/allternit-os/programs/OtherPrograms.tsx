@@ -1,5 +1,5 @@
 /**
- * A2rchitect Super-Agent OS - Other Programs
+ * allternit Super-Agent OS - Other Programs
  * 
  * Placeholder implementations for:
  * - ImageStudio (image editing)
@@ -9,7 +9,7 @@
  */
 
 import * as React from 'react';
-import type { A2rProgram } from '../types/programs';
+import type { AllternitProgram } from '../types/programs';
 
 // Placeholder component generator
 const createPlaceholderProgram = (
@@ -18,7 +18,7 @@ const createPlaceholderProgram = (
   description: string,
   features: string[]
 ) => {
-  const ProgramComponent: React.FC<{ program: A2rProgram }> = ({ program }) => {
+  const ProgramComponent: React.FC<{ program: AllternitProgram }> = ({ program }) => {
     return (
       <div className="h-full flex flex-col bg-white dark:bg-gray-900">
         {/* Header */}

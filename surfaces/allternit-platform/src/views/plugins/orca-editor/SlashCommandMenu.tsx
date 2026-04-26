@@ -140,7 +140,7 @@ export const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({
           return (
             <button
               key={command.id}
-              ref={el => itemRefs.current[index] = el}
+              ref={el => { itemRefs.current[index] = el; }}
               onClick={() => onSelect(command)}
               className={cn(
                 'w-full px-3 py-2 flex items-center gap-3 text-left transition-colors',

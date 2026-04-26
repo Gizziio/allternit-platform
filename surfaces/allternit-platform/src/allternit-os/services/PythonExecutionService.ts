@@ -1,5 +1,5 @@
 /**
- * A2rchitect Super-Agent OS - Python Execution Bridge
+ * allternit Super-Agent OS - Python Execution Bridge
  * 
  * Connects DataGrid visualizations to Python kernel execution.
  * Supports matplotlib, plotly, seaborn, and pandas operations.
@@ -59,7 +59,7 @@ function generateDataFrameCode(data: Record<string, unknown>[]): string {
 import pandas as pd
 import json
 
-# Data from A2rchitect DataGrid
+# Data from allternit DataGrid
 data = json.loads('${JSON.stringify(data).replace(/'/g, "\\'")}')
 df = pd.DataFrame(data)
 print(f"DataFrame shape: {df.shape}")

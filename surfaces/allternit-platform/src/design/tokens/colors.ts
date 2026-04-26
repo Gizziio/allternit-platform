@@ -1,7 +1,7 @@
 /**
  * @fileoverview Semantic Color Token System
  * 
- * Comprehensive color tokens for the A2rchitect platform.
+ * Comprehensive color tokens for the allternit platform.
  * Supports light and dark modes through CSS variable mapping.
  * 
  * @module design/tokens/colors

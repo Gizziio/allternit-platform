@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/CLIModule.schema.json",
+  "title": "CLI Module Contract",
+  "description": "Schema for CLI module definitions in the Allternit system",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Schema version"
+    },
+    "module_id": {
+      "type": "string",
+      "description": "Unique identifier for the CLI module"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of the module"
+    },
+    "command": {
+      "type": "string",
+      "description": "The executable command for this module"
+    },
+    "args_template": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Template arguments for the command"
+    },
+    "worker_id": {
+      "type": "string",
+      "description": "Reference to the worker in the WorkerRegistry that executes this module"
+    },
+    "cwd_policy": {
+      "type": "string",
+      "enum": ["repo_root", "current_dir", "fixed_path"],
+      "description": "Policy for current working directory when executing"
+    },
+    "env_allowlist": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Environment variables allowed to be passed to the command"
+    },
+    "fs_policy": {
+      "type": "object",
+      "properties": {
+        "must_be_run_scoped": {
+          "type": "boolean",
+          "description": "Whether the execution must be scoped to a run"
+        },
+        "allowed_output_roots": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Root paths where output is allowed"
+        }
+      },
+      "required": ["must_be_run_scoped", "allowed_output_roots"]
+    },
+    "timeouts": {
+      "type": "object",
+      "properties": {
+        "wall_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum wall clock time in milliseconds"
+        }
+      },
+      "required": ["wall_ms"]
+    },
+    "output_limits": {
+      "type": "object",
+      "properties": {
+        "max_stdout_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum stdout bytes allowed"
+        },
+        "max_stderr_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum stderr bytes allowed"
+        }
+      },
+      "required": ["max_stdout_bytes", "max_stderr_bytes"]
+    }
+  },
+  "required": [
+    "version",
+    "module_id",
+    "description",
+    "command",
+    "worker_id",
+    "cwd_policy",
+    "env_allowlist",
+    "fs_policy",
+    "timeouts",
+    "output_limits"
+  ]
+}

@@ -1,6 +1,6 @@
 {
-  "_comment": "A2R Plugin Manifest - This file defines your plugin for the A2R Platform",
-  "$schema": "https://schemas.a2r.dev/plugin.json",
+  "_comment": "Allternit Plugin Manifest - This file defines your plugin for the Allternit Platform",
+  "$schema": "https://schemas.allternit.dev/plugin.json",
   
   "// ============ REQUIRED FIELDS ============": "",
   
@@ -42,11 +42,11 @@
   "// Max 10 tags, lowercase, no spaces": "",
   "tags": ["example", "template"],
   
-  "// Minimum A2R Platform version required": "",
+  "// Minimum Allternit Platform version required": "",
   "// Format: SemVer string": "",
   "minPlatformVersion": "2.0.0",
   
-  "// Maximum A2R Platform version supported": "",
+  "// Maximum Allternit Platform version supported": "",
   "// Leave empty for no upper bound": "",
   "maxPlatformVersion": "",
   
@@ -67,7 +67,7 @@
   
   "// ============ DEPENDENCIES ============": "",
   
-  "// Other A2R plugins this plugin depends on": "",
+  "// Other Allternit plugins this plugin depends on": "",
   "// Format: { "plugin-id": "version-range" }": "",
   "dependencies": {},
   
@@ -111,7 +111,7 @@
   "bugs": "https://github.com/{{GITHUB_USERNAME}}/{{REPO_NAME}}/issues",
   
   "// Keywords for search": "",
-  "keywords": ["a2r", "plugin", "example"],
+  "keywords": ["allternit", "plugin", "example"],
   
   "// Contributing guidelines URL": "",
   "contributing": "https://github.com/{{GITHUB_USERNAME}}/{{REPO_NAME}}/blob/main/CONTRIBUTING.md",

@@ -249,7 +249,7 @@ export function ArchivedView() {
               transition: 'all 0.2s',
             }}
           >
-            <Search
+            <MagnifyingGlass
               className="w-4 h-4 text-[var(--text-tertiary)] flex-shrink-0"
               strokeWidth={2}
             />

@@ -19,6 +19,7 @@ import {
   Globe,
   Robot,
   ArrowsClockwise,
+  UsersThree,
 } from '@phosphor-icons/react';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
@@ -39,6 +40,7 @@ const TOP_PILLS: ModeTab[] = [
   { id: 'automate', label: 'Automate', icon: Lightning, description: 'Automation and scheduling' },
   { id: 'web', label: 'Web', icon: Globe, description: 'Web search and browsing' },
   { id: 'agents', label: 'Agents', icon: Robot, description: 'Agent selection and config' },
+  { id: 'team', label: 'Team', icon: UsersThree, description: 'Team collaboration and assignments' },
 ];
 
 // Bottom dock configuration (8 tabs)
@@ -51,6 +53,7 @@ const BOTTOM_TABS: ModeTab[] = [
   { id: 'web', label: 'Web', icon: Globe },
   { id: 'agents', label: 'Agents', icon: Robot },
   { id: 'sync', label: 'Sync', icon: ArrowsClockwise },
+  { id: 'team', label: 'Team', icon: UsersThree },
 ];
 
 interface CoworkModeTabsProps {
@@ -205,6 +208,7 @@ export function useCoworkMode() {
     isWeb: currentMode === 'web',
     isAgents: currentMode === 'agents',
     isSync: currentMode === 'sync',
+    isTeam: currentMode === 'team',
   };
 }
 

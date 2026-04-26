@@ -2,7 +2,7 @@
  * Agent Communication Tool - Native Implementation
  * 
  * This tool allows agents to communicate with each other directly through
- * the a2rchitech kernel, without external dependencies.
+ * the allternit kernel, without external dependencies.
  * 
  * Features:
  * - Send messages to other agents by role or name

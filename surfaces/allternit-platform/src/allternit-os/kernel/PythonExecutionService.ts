@@ -1,9 +1,9 @@
 /**
- * A2rchitect Super-Agent OS - Python Execution Service
+ * allternit Super-Agent OS - Python Execution Service
  * 
  * Production-ready Python execution with multiple backend support:
  * - Mock mode: Browser-based simulation for development
- * - Kernel mode: Connect to 1-kernel a2r-daemon via Electron IPC
+ * - Kernel mode: Connect to 1-kernel allternit-daemon via Electron IPC
  * - HTTP mode: Connect to workspace service HTTP API
  * 
  * This replaces the stub PythonExecutionBridge with real execution capabilities.
@@ -134,7 +134,7 @@ function generateDataFrameCode(data: Record<string, unknown>[]): string {
 import pandas as pd
 import json
 
-# Data from A2rchitect DataGrid
+# Data from allternit DataGrid
 data_json = '''${JSON.stringify(data)}'''
 data = json.loads(data_json)
 df = pd.DataFrame(data)
@@ -188,7 +188,7 @@ plt.ylabel('${yCol}', fontsize=12)
 plt.tight_layout()
 
 # Save to output directory
-output_dir = os.environ.get('ALLTERNIT_OUTPUT_DIR', '/tmp/a2r-output')
+output_dir = os.environ.get('ALLTERNIT_OUTPUT_DIR', '/tmp/allternit-output')
 os.makedirs(output_dir, exist_ok=True)
 output_path = os.path.join(output_dir, 'viz_${Date.now()}.png')
 plt.savefig(output_path, dpi=150, bbox_inches='tight', facecolor='white')
@@ -234,7 +234,7 @@ import os
 ${plotCode}
 
 # Save to output directory
-output_dir = os.environ.get('ALLTERNIT_OUTPUT_DIR', '/tmp/a2r-output')
+output_dir = os.environ.get('ALLTERNIT_OUTPUT_DIR', '/tmp/allternit-output')
 os.makedirs(output_dir, exist_ok=True)
 output_path = os.path.join(output_dir, 'viz_${Date.now()}.html')
 fig.write_html(output_path, include_plotlyjs='cdn')
@@ -288,7 +288,7 @@ plt.title('${type.charAt(0).toUpperCase() + type.slice(1)} Chart', fontsize=14, 
 plt.tight_layout()
 
 # Save to output directory
-output_dir = os.environ.get('ALLTERNIT_OUTPUT_DIR', '/tmp/a2r-output')
+output_dir = os.environ.get('ALLTERNIT_OUTPUT_DIR', '/tmp/allternit-output')
 os.makedirs(output_dir, exist_ok=True)
 output_path = os.path.join(output_dir, 'viz_${Date.now()}.png')
 plt.savefig(output_path, dpi=150, bbox_inches='tight', facecolor='white')
@@ -311,7 +311,7 @@ export class PythonExecutionService {
     this.config = {
       backend: config.backend ?? this.detectBackend(),
       httpEndpoint: config.httpEndpoint ?? 'http://127.0.0.1:3021/execute',
-      kernelSocketPath: config.kernelSocketPath ?? '/var/run/a2r/daemon.sock',
+      kernelSocketPath: config.kernelSocketPath ?? '/var/run/allternit/daemon.sock',
       defaultTimeout: config.defaultTimeout ?? 30000,
       debug: config.debug ?? false,
     };

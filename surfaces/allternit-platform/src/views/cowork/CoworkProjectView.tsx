@@ -63,12 +63,12 @@ export function CoworkProjectView({ projectId }: CoworkProjectViewProps) {
   
   // Filter tasks for this project
   const projectTasks = useMemo(() => 
-    tasks.filter(t => t.projectId === currentProjectId && t.mode !== 'agent'),
+    (tasks || []).filter(t => t.projectId === currentProjectId && t.mode !== 'agent'),
     [tasks, currentProjectId]
   );
   
   const projectAgentTasks = useMemo(() => 
-    tasks.filter(t => t.projectId === currentProjectId && t.mode === 'agent'),
+    (tasks || []).filter(t => t.projectId === currentProjectId && t.mode === 'agent'),
     [tasks, currentProjectId]
   );
   

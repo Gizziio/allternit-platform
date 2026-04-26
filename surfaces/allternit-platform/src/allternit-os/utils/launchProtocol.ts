@@ -1,5 +1,5 @@
 /**
- * A2rchitect Super-Agent OS - Launch Protocol
+ * allternit Super-Agent OS - Launch Protocol
  * 
  * IPC (Inter-Process Communication) utilities for agents to launch
  * and control programs in the Utility Pane.
@@ -7,8 +7,8 @@
 
 import { useSidecarStore } from '../stores/useSidecarStore';
 import type {
-  A2rProgramType,
-  A2rProgramState,
+  AllternitProgramType,
+  AllternitProgramState,
   LaunchProgramRequest,
   ResearchDocState,
   DataGridState,
@@ -292,7 +292,7 @@ export function launchWorkflowBuilder(
 // ============================================================================
 
 export interface LaunchCommand {
-  type: A2rProgramType;
+  type: AllternitProgramType;
   params: Record<string, unknown>;
 }
 
@@ -348,7 +348,7 @@ export function parseLaunchCommands(message: string): LaunchCommand[] {
 
       const typeMatch = attrType.exec(attrs);
       if (!typeMatch) continue;
-      const type = typeMatch[1] as A2rProgramType;
+      const type = typeMatch[1] as AllternitProgramType;
 
       const titleMatch = attrTitle.exec(attrs);
       const title = titleMatch ? titleMatch[1] : 'Untitled';
@@ -492,7 +492,7 @@ export function processAgentMessage(
         runId: "",
         itemId: `artifact-program-${programId}`,
         artifactId: programId,
-        artifactType: `a2r-program:${cmd.type}`,
+        artifactType: `allternit-program:${cmd.type}`,
         title: (cmd.params.title as string) ?? cmd.type,
         metadata: { programType: cmd.type },
         ts: Date.now(),
@@ -504,7 +504,7 @@ export function processAgentMessage(
 }
 
 export function wrapLaunchCommand(
-  type: A2rProgramType,
+  type: AllternitProgramType,
   title: string,
   params: Record<string, unknown>
 ): string {
@@ -569,7 +569,7 @@ export function useLaunchProtocol(sourceThreadId: string) {
       [sourceThreadId]
     ),
     launch: useCallback(
-      <T extends Record<string, unknown>>(type: A2rProgramType, title: string, initialState: T) =>
+      <T extends Record<string, unknown>>(type: AllternitProgramType, title: string, initialState: T) =>
         launchProgram<T>({ type, title, initialState, sourceThreadId }),
       [sourceThreadId, launchProgram]
     ),

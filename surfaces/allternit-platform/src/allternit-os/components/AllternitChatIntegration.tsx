@@ -1,5 +1,5 @@
 /**
- * A2rchitect Super-Agent OS - A2r Chat Integration
+ * allternit Super-Agent OS - Allternit Chat Integration
  * 
  * Bridges chat conversations to program launches:
  * - Detects launch directives in agent messages
@@ -16,7 +16,7 @@ import {
   executeLaunchCommands, 
   wrapLaunchCommand 
 } from '../utils/launchProtocol';
-import type { A2rProgram, A2rProgramType } from '../types/programs';
+import type { AllternitProgram, AllternitProgramType } from '../types/programs';
 
 // ============================================================================
 // Types
@@ -33,14 +33,14 @@ export interface ChatMessage {
 
 interface LaunchedProgramInfo {
   id: string;
-  type: A2rProgramType;
+  type: AllternitProgramType;
   title: string;
   status: 'launching' | 'active' | 'error';
 }
 
-export interface A2rChatIntegrationProps {
+export interface AllternitChatIntegrationProps {
   messages: ChatMessage[];
-  onLaunchProgram?: (program: A2rProgram) => void;
+  onLaunchProgram?: (program: AllternitProgram) => void;
   enableAutoLaunch?: boolean;
   threadId: string;
 }
@@ -53,7 +53,7 @@ interface ProgramPreviewCardProps {
 interface LaunchSegment {
   type: 'text' | 'launch';
   content: string;
-  launchType?: A2rProgramType;
+  launchType?: AllternitProgramType;
   title?: string;
 }
 
@@ -62,8 +62,8 @@ interface LaunchSegment {
 // ============================================================================
 
 const ProgramPreviewCard: React.FC<ProgramPreviewCardProps> = ({ programInfo, onClick }) => {
-  const getIcon = (type: A2rProgramType) => {
-    const icons: Record<A2rProgramType, string> = {
+  const getIcon = (type: AllternitProgramType) => {
+    const icons: Record<AllternitProgramType, string> = {
       'research-doc': '📄',
       'data-grid': '📊',
       'presentation': '🎨',
@@ -288,10 +288,10 @@ const formatInline = (text: string): React.ReactNode => {
 };
 
 // ============================================================================
-// Main A2r Chat Integration Hook
+// Main Allternit Chat Integration Hook
 // ============================================================================
 
-export const useA2rChatIntegration = (options: {
+export const useAllternitChatIntegration = (options: {
   threadId: string;
   enableAutoLaunch?: boolean;
   onProgramLaunch?: (programId: string) => void;
@@ -345,7 +345,7 @@ export const useA2rChatIntegration = (options: {
   }, [enableAutoLaunch, onProgramLaunch, threadId]);
 
   const injectLaunchCommand = useCallback((
-    programType: A2rProgramType, 
+    programType: AllternitProgramType, 
     title: string, 
     initialState?: Record<string, unknown>
   ): string => {
@@ -361,10 +361,10 @@ export const useA2rChatIntegration = (options: {
 };
 
 // ============================================================================
-// Main A2r Chat Integration Component
+// Main Allternit Chat Integration Component
 // ============================================================================
 
-export const A2rChatIntegration: React.FC<A2rChatIntegrationProps> = ({
+export const AllternitChatIntegration: React.FC<AllternitChatIntegrationProps> = ({
   messages,
   onLaunchProgram,
   enableAutoLaunch = true,
@@ -507,12 +507,12 @@ export const useStreamingMessage = () => {
 // ============================================================================
 
 interface QuickLaunchButtonsProps {
-  onLaunch: (type: A2rProgramType) => void;
+  onLaunch: (type: AllternitProgramType) => void;
   className?: string;
 }
 
 export const QuickLaunchButtons: React.FC<QuickLaunchButtonsProps> = ({ onLaunch, className }) => {
-  const buttons: { type: A2rProgramType; icon: string; label: string }[] = [
+  const buttons: { type: AllternitProgramType; icon: string; label: string }[] = [
     { type: 'research-doc', icon: '📄', label: 'Research' },
     { type: 'data-grid', icon: '📊', label: 'Data' },
     { type: 'presentation', icon: '🎨', label: 'Slides' },
@@ -536,4 +536,4 @@ export const QuickLaunchButtons: React.FC<QuickLaunchButtonsProps> = ({ onLaunch
   );
 };
 
-export default A2rChatIntegration;
+export default AllternitChatIntegration;

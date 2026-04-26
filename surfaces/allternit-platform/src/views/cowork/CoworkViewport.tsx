@@ -142,7 +142,6 @@ const ClickMarker = memo(function ClickMarker({
 
 export const CoworkViewport = memo(function CoworkViewport() {
   const { 
-    session, 
     viewportZoom, 
     setViewportZoom,
     showLabels,
@@ -151,6 +150,7 @@ export const CoworkViewport = memo(function CoworkViewport() {
     toggleOcr,
     selectedEventId,
   } = useCoworkStore();
+  const session = undefined as import('./cowork.types').CoworkSession | undefined;
   
   const [hoveredLabel, setHoveredLabel] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -159,8 +159,8 @@ export const CoworkViewport = memo(function CoworkViewport() {
   const currentObservation = session?.currentObservation;
   
   // Get selected event if it's an observation
-  const selectedObservation = session?.events.find(
-    e => e.id === selectedEventId && e.type === 'cowork.observation'
+  const selectedObservation = session?.events?.find(
+    (e: import('./cowork.types').AnyCoworkEvent) => e.id === selectedEventId && e.type === 'cowork.observation'
   ) as ObservationEvent | undefined;
   
   // Use selected observation or current
@@ -300,7 +300,7 @@ export const CoworkViewport = memo(function CoworkViewport() {
             />
             
             {/* Labels overlay */}
-            {showLabels && displayObservation.labels?.map((label) => (
+            {showLabels && displayObservation.labels?.map((label: NonNullable<ObservationEvent['labels']>[number]) => (
               <LabelOverlay
                 key={label.id}
                 label={label}
@@ -311,7 +311,7 @@ export const CoworkViewport = memo(function CoworkViewport() {
             ))}
             
             {/* OCR overlay */}
-            {showOcr && displayObservation.ocr?.regions.map((region, idx) => (
+            {showOcr && displayObservation.ocr?.regions.map((region: NonNullable<ObservationEvent['ocr']>['regions'][number], idx: number) => (
               <OcrRegion
                 key={`ocr-region-${idx}`}
                 region={region}
@@ -320,10 +320,10 @@ export const CoworkViewport = memo(function CoworkViewport() {
             ))}
             
             {/* Click markers from recent actions */}
-            {session.events
-              .filter(e => e.type === 'cowork.action')
+            {session?.events
+              ?.filter((e: import('./cowork.types').AnyCoworkEvent) => e.type === 'cowork.action')
               .slice(-3)
-              .map((action, idx) => {
+              .map((action: import('./cowork.types').AnyCoworkEvent, idx: number) => {
                 const actionEvent = action as any;
                 if (actionEvent.target?.type === 'coordinates') {
                   const [x, y] = actionEvent.target.value.split(',').map(Number);

@@ -26,12 +26,12 @@ import MenuIcon from '@mui/icons-material/Menu';
 
 ```tsx
 // Single import source
-import { Icon, HomeIcon, A2RLogoIcon } from '@a2r/platform/icons';
+import { Icon, HomeIcon, AllternitLogoIcon } from '@allternit/platform/icons';
 
 // Usage
 <Icon name="home" size="md" />
 <HomeIcon size="md" />
-<A2RLogoIcon size={32} />
+<AllternitLogoIcon size={32} />
 ```
 
 ## Migration Steps
@@ -64,7 +64,7 @@ Use the mapping table below to find the equivalent icon name.
 |-------------|-------------|
 | `<Home size={24} />` | `<Icon name="home" size="lg" />` |
 | `<Settings />` | `<Icon name="settings" size="md" />` |
-| `<Logo width={32} />` | `<Icon name="a2r-logo" size={32} />` |
+| `<Logo width={32} />` | `<Icon name="allternit-logo" size={32} />` |
 
 ## Size Mapping
 
@@ -139,7 +139,7 @@ import { Plus } from 'lucide-react';
 
 **After:**
 ```tsx
-import { Icon } from '@a2r/platform/icons';
+import { Icon } from '@allternit/platform/icons';
 
 <button>
   <Icon name="add" size="sm" />
@@ -160,7 +160,7 @@ import { Settings } from 'lucide-react';
 
 **After:**
 ```tsx
-import { IconButton } from '@a2r/platform/icons';
+import { IconButton } from '@allternit/platform/icons';
 
 <IconButton 
   name="settings" 
@@ -187,7 +187,7 @@ import { Bell } from 'lucide-react';
 
 **After:**
 ```tsx
-import { NotificationBell } from '@a2r/platform/icons';
+import { NotificationBell } from '@allternit/platform/icons';
 
 <NotificationBell count={count} size="md" />
 ```
@@ -203,7 +203,7 @@ import { Loader2 } from 'lucide-react';
 
 **After:**
 ```tsx
-import { LoadingIcon } from '@a2r/platform/icons';
+import { LoadingIcon } from '@allternit/platform/icons';
 
 {isLoading && <LoadingIcon size="md" />}
 // or
@@ -220,9 +220,9 @@ Use this helper to migrate your files:
 
 # Replace common patterns
 find src -name "*.tsx" -o -name "*.ts" | xargs sed -i '' \
-  -e "s/import { Home } from 'lucide-react';/import { HomeIcon } from '@a2r\/platform\/icons';/g" \
-  -e "s/import { Settings } from 'lucide-react';/import { SettingsIcon } from '@a2r\/platform\/icons';/g" \
-  -e "s/import { User } from 'lucide-react';/import { UserIcon } from '@a2r\/platform\/icons';/g"
+  -e "s/import { Home } from 'lucide-react';/import { HomeIcon } from '@allternit\/platform\/icons';/g" \
+  -e "s/import { Settings } from 'lucide-react';/import { SettingsIcon } from '@allternit\/platform\/icons';/g" \
+  -e "s/import { User } from 'lucide-react';/import { UserIcon } from '@allternit\/platform\/icons';/g"
   # Add more patterns as needed
 ```
 

@@ -134,7 +134,6 @@ export function PopOutButton({
           <Button
             variant="ghost"
             size="icon"
-            size={32}
             onClick={handlePopOut}
           >
             <ArrowsOut size={16} />
@@ -172,7 +171,7 @@ export function MessageA2UIActions({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" size={32}>
+        <Button variant="ghost" size="icon">
           <DotsThreeOutline size={16} />
         </Button>
       </DropdownMenuTrigger>

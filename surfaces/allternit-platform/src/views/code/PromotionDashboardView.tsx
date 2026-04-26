@@ -42,11 +42,11 @@ const getRiskColor = (risk: string): string => {
   }
 };
 
-const getCheckIcon = (status: string): any => {
+const getCheckIcon = (status: string): React.ComponentType | null => {
   switch (status) {
     case 'passed': return CheckCircle;
     case 'failed': return XCircle;
-    case 'running': return Settings;
+    case 'running': return GearSix;
     default: return null;
   }
 };

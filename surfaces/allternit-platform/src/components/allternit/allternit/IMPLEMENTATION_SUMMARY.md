@@ -1,7 +1,7 @@
-# A2R-native Editor Integration - Implementation Summary
+# Allternit-native Editor Integration - Implementation Summary
 
 ## Overview
-Integration of BlockNote, AG-Grid, and Reveal.js as A2R-native editors for the A2rchitect platform.
+Integration of BlockNote, AG-Grid, and Reveal.js as Allternit-native editors for the allternit platform.
 
 ---
 
@@ -10,33 +10,33 @@ Integration of BlockNote, AG-Grid, and Reveal.js as A2R-native editors for the A
 ### Phase 1: Install & Integrate Libraries (3 days) ✅
 
 - ✅ **Task 1.1:** BlockNote installed (`@blocknote/core`, `@blocknote/react`)
-- ✅ **Task 1.2:** A2RDocumentEditor.tsx created with A2R theming
+- ✅ **Task 1.2:** AllternitDocumentEditor.tsx created with Allternit theming
 - ✅ **Task 1.3:** AG-Grid installed (`ag-grid-react`, `ag-grid-community`)
-- ✅ **Task 1.4:** A2RDataGrid.tsx created with A2R theming
+- ✅ **Task 1.4:** AllternitDataGrid.tsx created with Allternit theming
 - ✅ **Task 1.5:** Reveal.js installed (`reveal.js`)
-- ✅ **Task 1.6:** A2RDeckPlayer.tsx created with A2R theming
+- ✅ **Task 1.6:** AllternitDeckPlayer.tsx created with Allternit theming
 
 ### Phase 2: Replace Custom Renderers (2 days) ✅
 
-- ✅ **Task 2.1:** DocumentRenderer.tsx uses A2RDocumentEditor
-- ✅ **Task 2.2:** SheetsRenderer.tsx uses A2RDataGrid
-- ✅ **Task 2.3:** SlidesRenderer.tsx uses A2RDeckPlayer
+- ✅ **Task 2.1:** DocumentRenderer.tsx uses AllternitDocumentEditor
+- ✅ **Task 2.2:** SheetsRenderer.tsx uses AllternitDataGrid
+- ✅ **Task 2.3:** SlidesRenderer.tsx uses AllternitDeckPlayer
 
-### Phase 3: A2R Branding (2 days) ✅
+### Phase 3: Allternit Branding (2 days) ✅
 
 - ✅ **Task 3.1:** Theme CSS files created
-  - `a2r-document-theme.css` - BlockNote A2R dark theme
-  - `a2r-data-theme.css` - AG-Grid A2R theme
-  - `a2r-deck-theme.css` - Reveal.js A2R theme
-- ✅ **Task 3.2:** A2R-native naming applied ("A2R Document", "A2R Data", "A2R Deck")
+  - `allternit-document-theme.css` - BlockNote Allternit dark theme
+  - `allternit-data-theme.css` - AG-Grid Allternit theme
+  - `allternit-deck-theme.css` - Reveal.js Allternit theme
+- ✅ **Task 3.2:** Allternit-native naming applied ("Allternit Document", "Allternit Data", "Allternit Deck")
 - ✅ **Task 3.3:** Icons use Lucide React icon set
-- ✅ **Task 3.4:** Color scheme matches A2R palette (#D4956A amber accent)
+- ✅ **Task 3.4:** Color scheme matches Allternit palette (#D4956A amber accent)
 
 ### Phase 4: Connect to Mode Tabs (2 days) ✅
 
-- ✅ **Task 4.1:** Research mode → A2R Document
-- ✅ **Task 4.2:** Data mode → A2R Data
-- ✅ **Task 4.3:** Deck mode → A2R Deck
+- ✅ **Task 4.1:** Research mode → Allternit Document
+- ✅ **Task 4.2:** Data mode → Allternit Data
+- ✅ **Task 4.3:** Deck mode → Allternit Deck
 
 **Implementation:**
 - Created `useModeCanvasBridge` hook that watches `selectedModeBySurface` store
@@ -51,9 +51,9 @@ Integration of BlockNote, AG-Grid, and Reveal.js as A2R-native editors for the A
 ### Bonus: Inline Cards for Chat Thread ✅
 
 Created compact preview cards for inline display in chat:
-- ✅ **DocumentCard.tsx** - A2R Document preview with citations, evidence
-- ✅ **DataCard.tsx** - A2R Data preview with table summary, mini charts
-- ✅ **DeckCard.tsx** - A2R Deck preview with slide navigation, thumbnails
+- ✅ **DocumentCard.tsx** - Allternit Document preview with citations, evidence
+- ✅ **DataCard.tsx** - Allternit Data preview with table summary, mini charts
+- ✅ **DeckCard.tsx** - Allternit Deck preview with slide navigation, thumbnails
 
 ### Bonus: Cowork Mode Tabs ✅
 
@@ -66,19 +66,19 @@ Created `CoworkModeTabs.tsx` with:
 ## Files Created
 
 ```
-/components/a2r/
-├── A2RDocumentEditor.tsx         # BlockNote wrapper
-├── A2RDataGrid.tsx               # AG-Grid wrapper
-├── A2RDeckPlayer.tsx             # Reveal.js wrapper
-├── a2r-document-theme.css        # BlockNote A2R theme
-├── a2r-data-theme.css            # AG-Grid A2R theme
-├── a2r-deck-theme.css            # Reveal.js A2R theme
+/components/allternit/
+├── AllternitDocumentEditor.tsx         # BlockNote wrapper
+├── AllternitDataGrid.tsx               # AG-Grid wrapper
+├── AllternitDeckPlayer.tsx             # Reveal.js wrapper
+├── allternit-document-theme.css        # BlockNote Allternit theme
+├── allternit-data-theme.css            # AG-Grid Allternit theme
+├── allternit-deck-theme.css            # Reveal.js Allternit theme
 ├── index.ts                      # Exports
 ├── IMPLEMENTATION_SUMMARY.md     # This file
 └── cards/                        # Inline chat cards
-    ├── DocumentCard.tsx          # A2R Document inline preview
-    ├── DataCard.tsx              # A2R Data inline preview
-    ├── DeckCard.tsx              # A2R Deck inline preview
+    ├── DocumentCard.tsx          # Allternit Document inline preview
+    ├── DataCard.tsx              # Allternit Data inline preview
+    ├── DeckCard.tsx              # Allternit Deck inline preview
     └── index.ts                  # Card exports
 
 /hooks/
@@ -92,9 +92,9 @@ Created `CoworkModeTabs.tsx` with:
 
 ```
 /views/canvas/renderers/
-├── DocumentRenderer.tsx          # Uses A2RDocumentEditor
-├── SheetsRenderer.tsx            # Uses A2RDataGrid
-└── SlidesRenderer.tsx            # Uses A2RDeckPlayer
+├── DocumentRenderer.tsx          # Uses AllternitDocumentEditor
+├── SheetsRenderer.tsx            # Uses AllternitDataGrid
+└── SlidesRenderer.tsx            # Uses AllternitDeckPlayer
 
 /views/chat/
 ├── ChatView.tsx                  # Added useModeCanvasBridge
@@ -107,7 +107,7 @@ Created `CoworkModeTabs.tsx` with:
 /stores/
 └── agent-surface-mode.store.ts   # Added Cowork modes (plan, execute, review, etc)
 
-/components/a2r/
+/components/allternit/
 └── index.ts                      # Export card components
 ```
 
@@ -156,7 +156,7 @@ Created `CoworkModeTabs.tsx` with:
 
 ✅ **All Phases Complete**
 
-The A2R-native editors are now fully integrated and connected to the mode tabs. Users can:
+The Allternit-native editors are now fully integrated and connected to the mode tabs. Users can:
 - Click any mode tab to immediately open the corresponding editor
 - Create documents, spreadsheets, and presentations
 - See inline previews in the chat thread

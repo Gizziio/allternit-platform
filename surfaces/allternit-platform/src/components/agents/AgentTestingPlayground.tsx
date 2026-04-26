@@ -149,57 +149,77 @@ export function AgentTestingPlayground({
 
     const startTime = Date.now();
 
-    // Simulate agent response with streaming
     try {
-      // In real implementation, this would call the agent API
-      await simulateAgentResponse(
-        input,
-        agent,
-        (chunk) => {
-          setMessages(prev => {
-            const lastMsg = prev[prev.length - 1];
-            if (lastMsg?.role === 'assistant' && !lastMsg.toolCalls) {
-              return [
-                ...prev.slice(0, -1),
-                { ...lastMsg, content: lastMsg.content + chunk },
-              ];
-            }
-            return [
-              ...prev,
-              {
-                id: `msg-${Date.now()}`,
-                role: 'assistant',
-                content: chunk,
-                timestamp: new Date(),
-                latency: Date.now() - startTime,
-              },
-            ];
-          });
-        },
-        (toolCall) => {
+      // Call real agent test API
+      const res = await fetch('/api/v1/agents/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agentId: agent.id,
+          messages: [...messages, userMessage].map(m => ({ role: m.role, content: m.content })),
+          variables: Object.fromEntries(variables.map(v => [v.key, v.value])),
+        }),
+      });
+
+      if (!res.ok) throw new Error('Agent test API failed');
+      const data = await res.json();
+
+      // Stream the response character by character for visual effect
+      const responseText = data.message?.content || 'No response';
+      const assistantMsgId = `msg-${Date.now()}`;
+      
+      setMessages(prev => [...prev, {
+        id: assistantMsgId,
+        role: 'assistant',
+        content: '',
+        timestamp: new Date(),
+        latency: data.message?.latency || Date.now() - startTime,
+        tokens: data.message?.tokens?.total || Math.floor(input.length / 4) + 50,
+      }]);
+
+      for (let i = 0; i < responseText.length; i += 3) {
+        await new Promise(r => setTimeout(r, 15));
+        setMessages(prev => {
+          const last = prev[prev.length - 1];
+          if (last?.id === assistantMsgId) {
+            return [...prev.slice(0, -1), { ...last, content: last.content + responseText.slice(i, i + 3) }];
+          }
+          return prev;
+        });
+      }
+
+      // Append tool calls if any
+      if (data.toolCalls?.length) {
+        for (const tc of data.toolCalls) {
           setMessages(prev => [...prev, {
-            id: `tool-${Date.now()}`,
+            id: `tool-${Date.now()}-${tc.id}`,
             role: 'tool',
-            content: `Called ${toolCall.name}`,
+            content: `Called ${tc.name}`,
             timestamp: new Date(),
-            toolCalls: [toolCall],
+            toolCalls: [tc],
           }]);
-          setMetrics(m => ({ ...m, toolCalls: m.toolCalls + 1 }));
         }
-      );
+      }
 
       setMetrics(m => ({
         ...m,
-        totalLatency: m.totalLatency + (Date.now() - startTime),
+        totalLatency: m.totalLatency + (data.message?.latency || Date.now() - startTime),
         messageCount: m.messageCount + 1,
-        totalTokens: m.totalTokens + Math.floor(input.length / 4) + 50,
+        totalTokens: m.totalTokens + (data.message?.tokens?.total || Math.floor(input.length / 4) + 50),
+        toolCalls: m.toolCalls + (data.toolCalls?.length || 0),
       }));
     } catch (error) {
       console.error('Test failed:', error);
+      setMessages(prev => [...prev, {
+        id: `err-${Date.now()}`,
+        role: 'system',
+        content: 'Error: Failed to get agent response. Please try again.',
+        timestamp: new Date(),
+      }]);
     } finally {
       setIsRunning(false);
     }
-  }, [input, isRunning, agent]);
+  }, [input, isRunning, agent, messages, variables]);
 
   const handleReset = () => {
     setMessages([]);
@@ -859,33 +879,5 @@ function MetricCard({
   );
 }
 
-// ============================================================================
-// Mock Functions (would be real API calls)
-// ============================================================================
-
-async function simulateAgentResponse(
-  input: string,
-  agent: Agent,
-  onChunk: (chunk: string) => void,
-  onToolCall: (toolCall: ToolCall) => void
-): Promise<void> {
-  // Simulate streaming response
-  const response = `I'd be happy to help you with that! As ${agent.name}, I specialize in ${agent.capabilities.join(', ')}. Let me think through this step by step...`;
-  
-  for (let i = 0; i < response.length; i += 3) {
-    await new Promise(resolve => setTimeout(resolve, 30));
-    onChunk(response.slice(i, i + 3));
-  }
-
-  // Simulate occasional tool calls
-  if (Math.random() > 0.5) {
-    await new Promise(resolve => setTimeout(resolve, 500));
-    onToolCall({
-      id: `call-${Date.now()}`,
-      name: agent.tools[0] || 'search_code',
-      arguments: { query: input.slice(0, 20) },
-      result: { found: true, matches: 3 },
-      duration: 120,
-    });
-  }
-}
+// Real agent test API is called directly in handleSend above.
+// The /api/v1/agents/test endpoint handles test execution and metrics recording.

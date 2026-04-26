@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-A2R ShellRail Debug - Iterative Fix Script
+Allternit ShellRail Debug - Iterative Fix Script
 Uses Playwright to inspect and fix the ShellRail rendering issues
 """
 
@@ -12,7 +12,7 @@ async def debug_shellrail():
     """Debug the ShellRail rendering issues"""
     
     print("=" * 60)
-    print("A2R ShellRail Debug - Starting Browser Automation")
+    print("Allternit ShellRail Debug - Starting Browser Automation")
     print("=" * 60)
     
     async with async_playwright() as p:

@@ -1,5 +1,5 @@
 /**
- * A2rchitect Super-Agent OS - Orchestrator Program (Live Dashboard)
+ * allternit Super-Agent OS - Orchestrator Program (Live Dashboard)
  * 
  * Production-ready multi-agent orchestration with:
  * - Real-time kernel integration for agent status
@@ -12,11 +12,11 @@ import * as React from 'react';
 const { useState, useEffect, useMemo, useCallback, useRef } = React;
 import { useSidecarStore } from '../stores/useSidecarStore';
 import { useKernelBridge, KernelBackend } from '../kernel/KernelBridge';
-import { useRailsWebSocket } from '../kernel/A2RRailsWebSocketBridge';
-import type { A2rProgram, OrchestratorState, OrchestratorAgent } from '../types/programs';
+import { useRailsWebSocket } from '../kernel/AllternitRailsWebSocketBridge';
+import type { AllternitProgram, OrchestratorState, OrchestratorAgent } from '../types/programs';
 
 interface OrchestratorProgramProps {
-  program: A2rProgram;
+  program: AllternitProgram;
 }
 
 // ============================================================================

@@ -8,9 +8,9 @@ test('verify empty state renders', async ({ page }) => {
   await page.waitForTimeout(1000);
   
   // Check if empty state text exists in DOM
-  const emptyStateText = page.locator('text="A2R Browser"');
+  const emptyStateText = page.locator('text="Allternit Browser"');
   const exists = await emptyStateText.count() > 0;
-  console.log('Empty state "A2R Browser" text exists:', exists);
+  console.log('Empty state "Allternit Browser" text exists:', exists);
   
   // Check for "Your intelligent web browsing" text
   const descText = page.locator('text="Your intelligent web browsing"');

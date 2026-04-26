@@ -48,7 +48,7 @@ export const BUILT_IN_PLUGINS: BuiltInPluginDefinition[] = [
     version: '1.0.0',
     category: 'create',
     shade: 0,
-    capabilities: ['text-to-image', 'image-variations', 'style-transfer', 'upscale'],
+    capabilities: ['text-to-image', 'image-variations', 'style-transfer', 'upscale'] as unknown as PluginCapability[],
     provider: 'free',
     author: { name: 'Allternit', verified: true },
     features: ['Text-to-image', 'Style variations', '4 images per prompt', 'No API key required'],
@@ -60,7 +60,7 @@ export const BUILT_IN_PLUGINS: BuiltInPluginDefinition[] = [
     version: '1.0.0',
     category: 'create',
     shade: 1,
-    capabilities: ['text-to-video', 'image-to-video', 'video-editing', 'extend'],
+    capabilities: ['text-to-video', 'image-to-video', 'video-editing', 'extend'] as unknown as PluginCapability[],
     provider: 'byok',
     author: { name: 'Allternit', verified: true },
     features: ['6-10 second videos', '720p/1080p', 'Text-to-video', 'Image animation'],
@@ -72,7 +72,7 @@ export const BUILT_IN_PLUGINS: BuiltInPluginDefinition[] = [
     version: '1.0.0',
     category: 'create',
     shade: 2,
-    capabilities: ['presentation-generation', 'slide-design', 'speaker-notes', 'pptx-export'],
+    capabilities: ['presentation-generation', 'slide-design', 'speaker-notes', 'pptx-export'] as unknown as PluginCapability[],
     provider: 'free',
     author: { name: 'Allternit', verified: true },
     features: ['HTML/Reveal.js/PPTX export', 'Speaker notes', 'Multiple themes', 'AI-generated content'],
@@ -84,7 +84,7 @@ export const BUILT_IN_PLUGINS: BuiltInPluginDefinition[] = [
     version: '1.0.0',
     category: 'create',
     shade: 3,
-    capabilities: ['website-generation', 'landing-page', 'responsive-design', 'deployment-prep'],
+    capabilities: ['website-generation', 'landing-page', 'responsive-design', 'deployment-prep'] as unknown as PluginCapability[],
     provider: 'free',
     author: { name: 'Allternit', verified: true },
     features: ['Next.js/React/Vue/HTML', 'Tailwind CSS', 'Responsive design', 'Ready for deployment'],
@@ -98,7 +98,7 @@ export const BUILT_IN_PLUGINS: BuiltInPluginDefinition[] = [
     version: '1.0.0',
     category: 'analyze',
     shade: 0,
-    capabilities: ['web-search', 'citation', 'synthesis', 'source-verification', 'deep-research'],
+    capabilities: ['web-search', 'citation', 'synthesis', 'source-verification', 'deep-research'] as unknown as PluginCapability[],
     provider: 'free',
     author: { name: 'Allternit', verified: true },
     features: ['Web search', 'Source citations', 'Credibility scoring', 'Related questions'],
@@ -110,7 +110,7 @@ export const BUILT_IN_PLUGINS: BuiltInPluginDefinition[] = [
     version: '1.0.0',
     category: 'analyze',
     shade: 2,
-    capabilities: ['csv-import', 'excel-analysis', 'chart-generation', 'sql-query', 'insights'],
+    capabilities: ['csv-import', 'excel-analysis', 'chart-generation', 'sql-query', 'insights'] as unknown as PluginCapability[],
     provider: 'free',
     author: { name: 'Allternit', verified: true },
     features: ['CSV/Excel import', 'Interactive charts', 'SQL queries', 'Data insights'],
@@ -124,7 +124,7 @@ export const BUILT_IN_PLUGINS: BuiltInPluginDefinition[] = [
     version: '1.0.0',
     category: 'build',
     shade: 0,
-    capabilities: ['code-generation', 'live-preview', 'multi-language', 'package-install'],
+    capabilities: ['code-generation', 'live-preview', 'multi-language', 'package-install'] as unknown as PluginCapability[],
     provider: 'free',
     author: { name: 'Allternit', verified: true },
     features: ['TypeScript/Python/React/Vue', 'Live preview', 'Code explanation', 'File generation'],
@@ -136,7 +136,7 @@ export const BUILT_IN_PLUGINS: BuiltInPluginDefinition[] = [
     version: '1.0.0',
     category: 'build',
     shade: 2,
-    capabilities: ['file-upload', 'ai-tagging', 'semantic-search', 'asset-library'],
+    capabilities: ['file-upload', 'ai-tagging', 'semantic-search', 'asset-library'] as unknown as PluginCapability[],
     provider: 'free',
     author: { name: 'Allternit', verified: true },
     features: ['File upload', 'AI tagging', 'Semantic search', 'Organization'],
@@ -150,7 +150,7 @@ export const BUILT_IN_PLUGINS: BuiltInPluginDefinition[] = [
     version: '1.0.0',
     category: 'automate',
     shade: 0,
-    capabilities: ['multi-agent', 'agent-coordination', 'consensus-building', 'task-delegation'],
+    capabilities: ['multi-agent', 'agent-coordination', 'consensus-building', 'task-delegation'] as unknown as PluginCapability[],
     provider: 'free',
     author: { name: 'Allternit', verified: true },
     features: ['Multi-agent teams', 'Consensus building', 'Task delegation', 'Parallel execution'],
@@ -162,7 +162,7 @@ export const BUILT_IN_PLUGINS: BuiltInPluginDefinition[] = [
     version: '1.0.0',
     category: 'automate',
     shade: 2,
-    capabilities: ['visual-builder', 'node-editor', 'trigger-setup', 'automation'],
+    capabilities: ['visual-builder', 'node-editor', 'trigger-setup', 'automation'] as unknown as PluginCapability[],
     provider: 'free',
     author: { name: 'Allternit', verified: true },
     features: ['Visual builder', 'Node-based editor', 'Trigger automation', 'Custom workflows'],
@@ -330,7 +330,7 @@ export const ANTHROPIC_OFFICIAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Export artifacts to CodeSandbox',
       'Version control for artifacts'
     ],
-    capabilities: ['artifact-generation', 'react-components', 'interactive-documents'],
+    capabilities: ['artifact-generation', 'react-components', 'interactive-documents'] as unknown as PluginCapability[],
     repository: 'anthropics/claude-plugins-official',
   },
   {
@@ -347,7 +347,7 @@ export const ANTHROPIC_OFFICIAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Create speaker notes',
       'Export to multiple formats'
     ],
-    capabilities: ['presentation-generation', 'theme-application', 'speaker-notes'],
+    capabilities: ['presentation-generation', 'theme-application', 'speaker-notes'] as unknown as PluginCapability[],
     repository: 'anthropics/claude-plugins-official',
   },
   
@@ -366,7 +366,7 @@ export const ANTHROPIC_OFFICIAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Fact verification',
       'Citation generation'
     ],
-    capabilities: ['deep-research', 'iterative-querying', 'fact-checking'],
+    capabilities: ['deep-research', 'iterative-querying', 'fact-checking'] as unknown as PluginCapability[],
     repository: 'anthropics/claude-plugins-official',
   },
   {
@@ -383,7 +383,7 @@ export const ANTHROPIC_OFFICIAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Create matplotlib/seaborn charts',
       'Export insights to reports'
     ],
-    capabilities: ['data-analysis', 'pandas', 'visualization', 'statistics'],
+    capabilities: ['data-analysis', 'pandas', 'visualization', 'statistics'] as unknown as PluginCapability[],
     repository: 'anthropics/claude-plugins-official',
   },
   {
@@ -400,7 +400,7 @@ export const ANTHROPIC_OFFICIAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Extract key information',
       'Verify facts across sources'
     ],
-    capabilities: ['web-search', 'result-summarization', 'fact-extraction'],
+    capabilities: ['web-search', 'result-summarization', 'fact-extraction'] as unknown as PluginCapability[],
     repository: 'anthropics/claude-plugins-official',
   },
 
@@ -419,7 +419,7 @@ export const ANTHROPIC_OFFICIAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Architecture recommendations',
       'Performance optimization'
     ],
-    capabilities: ['code-review', 'refactoring', 'architecture', 'optimization'],
+    capabilities: ['code-review', 'refactoring', 'architecture', 'optimization'] as unknown as PluginCapability[],
     repository: 'anthropics/claude-code',
   },
   {
@@ -436,7 +436,7 @@ export const ANTHROPIC_OFFICIAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Review git diffs',
       'Suggest branch strategies'
     ],
-    capabilities: ['git-automation', 'commit-generation', 'pr-descriptions'],
+    capabilities: ['git-automation', 'commit-generation', 'pr-descriptions'] as unknown as PluginCapability[],
     repository: 'anthropics/claude-code',
   },
   {
@@ -453,7 +453,7 @@ export const ANTHROPIC_OFFICIAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Trace code execution',
       'Identify root causes'
     ],
-    capabilities: ['debugging', 'error-analysis', 'fix-suggestions'],
+    capabilities: ['debugging', 'error-analysis', 'fix-suggestions'] as unknown as PluginCapability[],
     repository: 'anthropics/claude-code',
   },
   {
@@ -470,7 +470,7 @@ export const ANTHROPIC_OFFICIAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Write test documentation',
       'Suggest edge cases'
     ],
-    capabilities: ['test-generation', 'unit-tests', 'integration-tests'],
+    capabilities: ['test-generation', 'unit-tests', 'integration-tests'] as unknown as PluginCapability[],
     repository: 'anthropics/claude-code',
   },
 
@@ -489,7 +489,7 @@ export const ANTHROPIC_OFFICIAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Generate todo lists',
       'Track completion status'
     ],
-    capabilities: ['task-management', 'project-planning', 'complexity-estimation'],
+    capabilities: ['task-management', 'project-planning', 'complexity-estimation'] as unknown as PluginCapability[],
     repository: 'anthropics/claude-plugins-official',
   },
   {
@@ -506,7 +506,7 @@ export const ANTHROPIC_OFFICIAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Manage recurring tasks',
       'Integrate with external tools'
     ],
-    capabilities: ['workflow-design', 'automation', 'triggers', 'integrations'],
+    capabilities: ['workflow-design', 'automation', 'triggers', 'integrations'] as unknown as PluginCapability[],
     repository: 'anthropics/claude-plugins-official',
   },
   
@@ -525,7 +525,7 @@ export const ANTHROPIC_OFFICIAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Summarize clinical trials',
       'Compare study methodologies'
     ],
-    capabilities: ['bio-research', 'literature-review', 'clinical-analysis'],
+    capabilities: ['bio-research', 'literature-review', 'clinical-analysis'] as unknown as PluginCapability[],
     repository: 'anthropics/life-sciences',
   },
   {
@@ -542,7 +542,7 @@ export const ANTHROPIC_OFFICIAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Summarize pharmacology research',
       'Track clinical trial phases'
     ],
-    capabilities: ['drug-discovery', 'molecular-analysis', 'pharmacology'],
+    capabilities: ['drug-discovery', 'molecular-analysis', 'pharmacology'] as unknown as PluginCapability[],
     repository: 'anthropics/life-sciences',
   },
 ];
@@ -567,7 +567,7 @@ export const DOCKER_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Debug container issues',
       'Manage multi-container apps'
     ],
-    capabilities: ['dockerfile-generation', 'container-analysis', 'security-scanning', 'compose-management'],
+    capabilities: ['dockerfile-generation', 'container-analysis', 'security-scanning', 'compose-management'] as unknown as PluginCapability[],
     repository: 'docker/claude-plugins',
   },
   {
@@ -584,7 +584,7 @@ export const DOCKER_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Set up volume mounts',
       'Manage environment variables'
     ],
-    capabilities: ['compose-generation', 'service-configuration', 'network-setup'],
+    capabilities: ['compose-generation', 'service-configuration', 'network-setup'] as unknown as PluginCapability[],
     repository: 'docker/claude-plugins',
   },
   {
@@ -601,7 +601,7 @@ export const DOCKER_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Suggest security fixes',
       'Generate compliance reports'
     ],
-    capabilities: ['security-scanning', 'vulnerability-detection', 'compliance-checking'],
+    capabilities: ['security-scanning', 'vulnerability-detection', 'compliance-checking'] as unknown as PluginCapability[],
     repository: 'docker/claude-plugins',
   },
 ];
@@ -628,7 +628,7 @@ export const ADDITIONAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Flag ambiguous language',
       'Compare with standard templates'
     ],
-    capabilities: ['contract-analysis', 'legal-research', 'compliance-checking', 'risk-assessment'],
+    capabilities: ['contract-analysis', 'legal-research', 'compliance-checking', 'risk-assessment'] as unknown as PluginCapability[],
     repository: 'legaltech-ai/claude-legal-plugin',
   },
   {
@@ -645,7 +645,7 @@ export const ADDITIONAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Customize for jurisdictions',
       'Review for completeness'
     ],
-    capabilities: ['contract-drafting', 'template-customization', 'jurisdiction-adaptation'],
+    capabilities: ['contract-drafting', 'template-customization', 'jurisdiction-adaptation'] as unknown as PluginCapability[],
     repository: 'legaltech-ai/claude-legal-plugin',
   },
 
@@ -665,7 +665,7 @@ export const ADDITIONAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Generate database schemas',
       'Suggest indexes'
     ],
-    capabilities: ['sql-generation', 'query-optimization', 'schema-design'],
+    capabilities: ['sql-generation', 'query-optimization', 'schema-design'] as unknown as PluginCapability[],
     repository: 'datatools/sql-query-builder',
   },
   {
@@ -683,7 +683,7 @@ export const ADDITIONAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Analyze data trends',
       'Generate reports'
     ],
-    capabilities: ['excel-analysis', 'pivot-tables', 'macro-generation', 'trend-analysis'],
+    capabilities: ['excel-analysis', 'pivot-tables', 'macro-generation', 'trend-analysis'] as unknown as PluginCapability[],
     repository: 'datatools/excel-analyzer',
   },
   {
@@ -700,7 +700,7 @@ export const ADDITIONAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Design dashboards',
       'Connect to data sources'
     ],
-    capabilities: ['tableau-generation', 'dashboard-design', 'data-connection'],
+    capabilities: ['tableau-generation', 'dashboard-design', 'data-connection'] as unknown as PluginCapability[],
     repository: 'dataviz-pro/tableau-connector',
   },
 
@@ -720,7 +720,7 @@ export const ADDITIONAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Match design tokens',
       'Create responsive layouts'
     ],
-    capabilities: ['figma-import', 'design-to-code', 'tailwind-export'],
+    capabilities: ['figma-import', 'design-to-code', 'tailwind-export'] as unknown as PluginCapability[],
     repository: 'designcode/figma-to-code',
   },
   {
@@ -737,7 +737,7 @@ export const ADDITIONAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Optimize for web',
       'Manage color palettes'
     ],
-    capabilities: ['photoshop-automation', 'illustrator-scripts', 'asset-optimization'],
+    capabilities: ['photoshop-automation', 'illustrator-scripts', 'asset-optimization'] as unknown as PluginCapability[],
     repository: 'creativeai/adobe-assistant',
   },
   {
@@ -754,7 +754,7 @@ export const ADDITIONAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Automate color grading',
       'Create subtitle files'
     ],
-    capabilities: ['timeline-generation', 'transition-suggestions', 'color-grading'],
+    capabilities: ['timeline-generation', 'transition-suggestions', 'color-grading'] as unknown as PluginCapability[],
     repository: 'videoai/editing-assistant',
   },
 
@@ -774,7 +774,7 @@ export const ADDITIONAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Trigger webhooks',
       'Manage multi-step zaps'
     ],
-    capabilities: ['zapier-integration', 'workflow-automation', 'app-connector'],
+    capabilities: ['zapier-integration', 'workflow-automation', 'app-connector'] as unknown as PluginCapability[],
     repository: 'zapier/claude-connector',
   },
   {
@@ -791,7 +791,7 @@ export const ADDITIONAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Automate data flows',
       'Schedule automated runs'
     ],
-    capabilities: ['make-integration', 'scenario-design', 'data-flow-automation'],
+    capabilities: ['make-integration', 'scenario-design', 'data-flow-automation'] as unknown as PluginCapability[],
     repository: 'make/claude-connector',
   },
   {
@@ -808,7 +808,7 @@ export const ADDITIONAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Configure deployment',
       'Add security scans'
     ],
-    capabilities: ['workflow-generation', 'ci-cd-setup', 'deployment-configuration'],
+    capabilities: ['workflow-generation', 'ci-cd-setup', 'deployment-configuration'] as unknown as PluginCapability[],
     repository: 'devops-tools/gh-actions-gen',
   },
 
@@ -828,7 +828,7 @@ export const ADDITIONAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Generate project health reports',
       'Suggest refactoring'
     ],
-    capabilities: ['repo-analysis', 'code-metrics', 'contributor-insights'],
+    capabilities: ['repo-analysis', 'code-metrics', 'contributor-insights'] as unknown as PluginCapability[],
     repository: 'devmetrics/github-analyzer',
   },
   {
@@ -845,7 +845,7 @@ export const ADDITIONAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Create interactive docs',
       'Validate API contracts'
     ],
-    capabilities: ['openapi-generation', 'api-documentation', 'contract-validation'],
+    capabilities: ['openapi-generation', 'api-documentation', 'contract-validation'] as unknown as PluginCapability[],
     repository: 'apitools/docs-generator',
   },
   {
@@ -862,7 +862,7 @@ export const ADDITIONAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Optimize resources',
       'Set up ingress rules'
     ],
-    capabilities: ['k8s-manifest-generation', 'troubleshooting', 'resource-optimization'],
+    capabilities: ['k8s-manifest-generation', 'troubleshooting', 'resource-optimization'] as unknown as PluginCapability[],
     repository: 'k8stools/claude-assistant',
   },
   {
@@ -879,7 +879,7 @@ export const ADDITIONAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Estimate costs',
       'Set up modules'
     ],
-    capabilities: ['terraform-generation', 'infrastructure-planning', 'cost-estimation'],
+    capabilities: ['terraform-generation', 'infrastructure-planning', 'cost-estimation'] as unknown as PluginCapability[],
     repository: 'infraascode/terraform-gen',
   },
 
@@ -898,7 +898,7 @@ export const ADDITIONAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Create SOQL queries',
       'Manage opportunities'
     ],
-    capabilities: ['salesforce-integration', 'soql-generation', 'reporting'],
+    capabilities: ['salesforce-integration', 'soql-generation', 'reporting'] as unknown as PluginCapability[],
     repository: 'crm-integrations/salesforce-connector',
   },
   {
@@ -915,7 +915,7 @@ export const ADDITIONAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Automate transitions',
       'Track issue metrics'
     ],
-    capabilities: ['jira-integration', 'ticket-management', 'workflow-automation'],
+    capabilities: ['jira-integration', 'ticket-management', 'workflow-automation'] as unknown as PluginCapability[],
     repository: 'atlassian-tools/jira-assistant',
   },
   {
@@ -932,7 +932,7 @@ export const ADDITIONAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Create workflows',
       'Manage permissions'
     ],
-    capabilities: ['slack-bot-generation', 'slash-commands', 'workflow-creation'],
+    capabilities: ['slack-bot-generation', 'slash-commands', 'workflow-creation'] as unknown as PluginCapability[],
     repository: 'slacktools/bot-creator',
   },
   {
@@ -949,7 +949,7 @@ export const ADDITIONAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Generate templates',
       'Export to Markdown'
     ],
-    capabilities: ['notion-integration', 'database-queries', 'template-generation'],
+    capabilities: ['notion-integration', 'database-queries', 'template-generation'] as unknown as PluginCapability[],
     repository: 'notiontools/connector',
   },
   {
@@ -966,7 +966,7 @@ export const ADDITIONAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Create billing flows',
       'Analyze transactions'
     ],
-    capabilities: ['stripe-integration', 'checkout-generation', 'webhook-setup'],
+    capabilities: ['stripe-integration', 'checkout-generation', 'webhook-setup'] as unknown as PluginCapability[],
     repository: 'paymenttools/stripe-assistant',
   },
   {
@@ -983,7 +983,7 @@ export const ADDITIONAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Configure S3 buckets',
       'Optimize costs'
     ],
-    capabilities: ['cloudformation-generation', 'iam-configuration', 'cost-optimization'],
+    capabilities: ['cloudformation-generation', 'iam-configuration', 'cost-optimization'] as unknown as PluginCapability[],
     repository: 'cloudtools/aws-assistant',
   },
   {
@@ -1000,7 +1000,7 @@ export const ADDITIONAL_PLUGINS: ThirdPartyPluginDefinition[] = [
       'Manage user roles',
       'Generate SDK code'
     ],
-    capabilities: ['auth0-configuration', 'social-login-setup', 'role-management'],
+    capabilities: ['auth0-configuration', 'social-login-setup', 'role-management'] as unknown as PluginCapability[],
     repository: 'authtools/auth0-connector',
   },
 ];
@@ -1150,6 +1150,7 @@ export function formatPluginDisplayName(
     analyze: 'Analyze',
     build: 'Build',
     automate: 'Automate',
+    cowork: 'Cowork',
     productivity: 'Productivity',
     integration: 'Integration',
     custom: 'Custom',

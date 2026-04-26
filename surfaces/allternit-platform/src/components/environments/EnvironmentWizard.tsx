@@ -136,7 +136,7 @@ const defaultTemplates: EnvironmentTemplate[] = [
     },
   },
   {
-    id: 'a2r-agent-workspace',
+    id: 'allternit-agent-workspace',
     name: 'Allternit Agent Workspace',
     type: 'devcontainer',
     description: 'Lightweight environment for agent development and testing',
@@ -260,7 +260,7 @@ const templateVariables: Record<string, TemplateVariable[]> = {
       { label: 'SQLite', value: 'sqlite' },
     ]},
   ],
-  'a2r-agent-workspace': [
+  'allternit-agent-workspace': [
     { name: 'AGENT_NAME', type: 'string', label: 'Agent Name', default: 'my-agent', required: true },
     { name: 'LOG_LEVEL', type: 'select', label: 'Log Level', default: 'info', options: [
       { label: 'Debug', value: 'debug' },
@@ -310,7 +310,7 @@ const templateVariables: Record<string, TemplateVariable[]> = {
 };
 
 // Allternit official template IDs
-const allternitOfficialIds = ['allternit-platform-dev', 'a2r-agent-workspace'];
+const allternitOfficialIds = ['allternit-platform-dev', 'allternit-agent-workspace'];
 
 // Cloud providers
 const cloudProviders = [
@@ -812,7 +812,7 @@ function TemplateCard({
     globe: Globe,
   };
 
-  const Icon = (template.icon && iconMap[template.icon]) || Box;
+  const Icon = (template.icon && iconMap[template.icon]) || Cube;
   const isOfficial = allternitOfficialIds.includes(template.id);
 
   return (
@@ -1272,7 +1272,7 @@ function TargetCard({
             "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0",
             isSelected ? "bg-primary text-primary-foreground" : "bg-muted"
           )}>
-            <Icon size={24} />
+            {React.createElement(Icon as any, { size: 24 })}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">

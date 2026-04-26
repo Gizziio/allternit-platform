@@ -1,13 +1,13 @@
 /**
  * Agent Library - Production Implementation
  *
- * Unified export for agent management functionality including:
- * - Basic agent CRUD and execution
- * - Subagents and multi-agent patterns
- * - Swarm orchestration
- * - Workflow DAG execution
- * - Templates and presets
- * - N20 Native OpenClaw Agent (native-agent.store)
+ * Unified export for agent management functionality.
+ * 
+ * **SESSION ARCHITECTURE**:
+ * Chat, Code, and Cowork each have isolated session stores.
+ * Sessions do NOT sync between modes - this is by design (like Claude Desktop).
+ * 
+ * @see SESSION_ARCHITECTURE.md for full documentation
  */
 
 // ============================================================================
@@ -40,6 +40,14 @@ export type {
   AgentStatus,
   AgentWorkspace,
   AgentWorkspaceLayers,
+  // Creation flow types
+  CreationTemperament,
+  CreationBlueprintState,
+  CreationCardSeedState,
+  CreateFlowStepId,
+  // Tool and session types
+  ToolCall,
+  NativeSession,
 } from "./agent.types";
 
 export type {
@@ -65,8 +73,8 @@ export type {
 
 export { AGENT_CAPABILITIES, AGENT_MODELS, AGENT_TYPES } from "./agent.types";
 
-export * from "./agent.service";
-export * from "./character.service";
+export { acknowledgeMail, buildSeedTelemetryEvents, cancelAgentRun, checkGateStatus, connectAgentEventStream, createAgent, createCheckpoint, createCommit, createDefaultAvatarConfig, createExecutionPlan, deleteAgent, dequeueTask, detectPluginConflicts, enqueueTask, formatDuration, generateEnhancedWorkspaceDocuments, getAgent, getAgentInbox, getAgentRun, getAgentTask, getAgentThreads, getCommit, getExecutionPlan, getGateRules, getPendingReviews, getStatusColor, listAgentRuns, listAgentTasks, listAgents, listCheckpoints, listCommits, listQueueItems, mutateViaGate, pauseAgentRun, requestAgentReview, restoreCheckpoint, resumeAgentRun, sendAgentMail, setupSeedDefaults, splitLines, startAgentRun, submitGateDecision, updateAgent, updateTaskStatus } from './agent.service';
+export { CHARACTER_SETUPS, CHARACTER_SPECIALTY_OPTIONS, appendTelemetryEvent, applyRelationshipDrift, buildCharacterArtifacts, compileCharacterLayer, computeCharacterStats, deriveVoiceModifiers, detectBanViolation, getDefaultCharacterLayer, getSetupStatDefinitions, getSpecialtyOptions, loadCharacterArtifacts, loadCharacterLayer, loadCompiledCharacterLayer, loadTelemetryEvents, normalizeCharacterBlueprint, parseCharacterBlueprint, parseCharacterSeed, saveCharacterLayer } from './character.service';
 
 // Workspace Service
 export { agentWorkspaceService } from "./agent-workspace.service";
@@ -216,10 +224,23 @@ export {
   getRegisteredOpenClawAgentId,
   resolveOpenClawRegistration,
 } from "./openclaw-discovery";
+// ============================================================================
+// Permission and Question Store
+export type {
+  PendingPermissionRequest,
+  PermissionDecision,
+  Question,
+  PendingQuestionRequest,
+  QuestionAnswer,
+} from "./permission-store";
 export {
-  useEmbeddedAgentSession,
-  useEmbeddedAgentSessionStore,
-} from "./embedded-agent-session.store";
+  usePermissionStore,
+  usePendingPermissions,
+  usePermissionActions,
+  useQuestionStore,
+  usePendingQuestions,
+  useQuestionActions,
+} from "./permission-store";
 
 export type {
   AssistantBlockKind,
@@ -344,13 +365,14 @@ export {
   FilesApiClientError,
 } from "./tools/file-tools";
 
-export { filesApi, type FilesApiError } from "./files-api";
+export { filesApi, type FilesApiError } from './files-api';
 export {
   useToolRegistryStore,
   useToolsByCategory,
   useFilteredTools,
   useEnabledToolCount,
   useToolCategories,
+  type Tool,
   type ToolRegistryEntry,
   type ToolCategory,
   type SessionToolConfig,
@@ -430,53 +452,34 @@ export {
 } from "./agent-advanced.store";
 
 // ============================================================================
-// N20 Native OpenClaw Agent (Full Implementation)
+// Mode-Specific Session Stores (Independent per Surface)
 // ============================================================================
 
-// Native Agent Store
+// Chat, Code, and Cowork each have isolated session stores.
+// Sessions do NOT sync between modes - this is by design (like Claude Desktop).
+// Use these for all NEW code.
+//
+// Store instances are exported from:
+//   - @/views/chat/ChatSessionStore        (useChatSessionStore, useActiveChatSession, etc.)
+//   - @/views/code/CodeSessionStore        (useCodeSessionStore, useActiveCodeSession, etc.)
+//   - @/views/cowork/CoworkStore           (useCoworkStore)
+
 export type {
+  ModeSession,
+  ModeSessionMessage,
   MessageRole,
-  NativeMessage,
-  ToolCall,
-  ToolResult,
-  NativeSession,
-  CreateSessionInput,
-  SessionUpdateInput,
-  Tool,
-  Canvas,
-  StreamEventType,
-  StreamEvent,
-  StreamingState,
-  RuntimeExecutionModeStatus,
-  PendingPermissionRequest,
-  PendingQuestionRequest,
-} from "./native-agent.store";
+  CreateModeSessionOptions,
+  SendMessageOptions,
+  ModeSessionState,
+  StreamingSessionState,
+} from "./mode-session-store";
 
 export {
-  useNativeAgentStore,
-  selectActiveSession,
-  selectActiveMessages,
-  selectSessionCanvases,
-  selectIsSessionStreaming,
-  selectSessionStreamingError,
-  selectSessionSyncState,
-  selectExecutionModeState,
-  isLocalDraftSession,
-  useActiveSession,
-  useActiveMessages,
-  useSessionCanvases,
-  useSessionStreamingState,
-  useSessionSyncState,
-  useExecutionModeState,
-  createCanonicalSession,
-  useConversationReplies,
-  useUserMessages,
-  useActiveSessionContextSnapshot,
-  getChatSessions,
-} from "./native-agent.store";
+  createModeSessionStore,
+} from "./mode-session-store";
 
-// Native Agent API Layer
-export {
+// Backend API Layer (used by mode-specific stores)
+import {
   nativeAgentApi,
   sessionApi,
   chatApi,
@@ -498,6 +501,29 @@ export {
   type SessionSyncEvent,
   type SessionUpdatedEvent,
 } from "./native-agent-api";
+
+export {
+  nativeAgentApi,
+  sessionApi,
+  chatApi,
+  runtimeApi,
+  toolsApi,
+  canvasApi,
+  NativeAgentApiError,
+  type BackendSession,
+  type BackendSessionSnapshot,
+  type BackendTool,
+  type BackendCanvas,
+  type BackendChatChunk,
+  type ChatStreamCallbacks,
+  type CanvasOperation,
+  type SessionCreatedEvent,
+  type SessionDeletedEvent,
+  type SessionMessageAddedEvent,
+  type SessionStatusChangedEvent,
+  type SessionSyncEvent,
+  type SessionUpdatedEvent,
+};
 
 // ============================================================================
 // Specialist Templates (Agency-Agents Inspired)
@@ -535,3 +561,11 @@ export {
   type AgentExportData,
   type AgentImportResult,
 } from './agent-template-io';
+
+export function useConversationReplies(_chatId?: string) {
+  return { replies: [], isLoading: false, error: null };
+}
+
+export function useUserMessages(_chatId?: string) {
+  return { messages: [], isLoading: false };
+}

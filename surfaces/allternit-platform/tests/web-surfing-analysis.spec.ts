@@ -65,10 +65,10 @@ test.describe('Web Surfing Analysis', () => {
         await page.waitForTimeout(8000);
         
         // Check iframe content
-        const iframe = page.locator('iframe[data-testid="a2r-iframe-content"]');
+        const iframe = page.locator('iframe[data-testid="allternit-iframe-content"]');
         if (await iframe.count() > 0) {
           const iframeStatus = await page.evaluate(() => {
-            const iframeEl = document.querySelector('iframe[data-testid="a2r-iframe-content"]') as HTMLIFrameElement;
+            const iframeEl = document.querySelector('iframe[data-testid="allternit-iframe-content"]') as HTMLIFrameElement;
             if (!iframeEl) return null;
             return {
               readyState: iframeEl.contentDocument?.readyState,

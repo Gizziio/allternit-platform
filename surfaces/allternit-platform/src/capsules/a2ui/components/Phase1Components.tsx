@@ -339,7 +339,7 @@ export function DatePickerRenderer({
           onClick={() => !isDisabled && setIsOpen(!isOpen)}
           disabled={isDisabled}
         >
-          <CalendarIcon className="mr-2 h-4 w-4" />
+          <Calendar className="mr-2 h-4 w-4" />
           {selectedDate ? (
             format(
               selectedDate,
@@ -737,7 +737,6 @@ export function FileUploadRenderer({
                 <Button
                   variant="ghost"
                   size="icon"
-                  size={32}
                   onClick={() => removeFile(file.name)}
                   disabled={isDisabled}
                 >

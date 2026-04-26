@@ -372,7 +372,7 @@ function validateMarketplaceJson() {
 
 function main() {
   console.log('╔══════════════════════════════════════════════════════════╗');
-  console.log('║           🧩 A2R Plugin Validation                       ║');
+  console.log('║           🧩 Allternit Plugin Validation                       ║');
   console.log('╚══════════════════════════════════════════════════════════╝');
   
   const results = {

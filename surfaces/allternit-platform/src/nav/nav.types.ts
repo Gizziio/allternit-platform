@@ -57,14 +57,14 @@ export type ViewType =
   | "allternit-ix"
   | "form-surfaces"
   | "canvas"
-  | "allternit-canvas"  // A2r-Canvas viewer (Sparkpages equivalent)
+  | "allternit-canvas"  // Allternit-Canvas viewer (Sparkpages equivalent)
   | "hooks"
   // P4 UI Views
   | "evolution"
   | "context-control"
   | "memory-kernel"
   | "acf"
-  // A2rOS View
+  // AllternitOS View
   | "allternit-os"
   // Other views
   | "settings"
@@ -116,7 +116,19 @@ export type ViewType =
   | "code-agent-session"
   | "browser-agent-session"
   // Product Discovery
-  | "products";
+  | "products"
+  // A://Labs - Course Management
+  | "labs"
+  | "catalog"
+  // Design Mode surface
+  | "design"
+  | "design-marketplace"
+  // Cowork Team (Multica absorption)
+  | "cowork-team"
+  | "cowork-team-board"
+  | "cowork-team-agents"
+  | "cowork-team-workspaces"
+  | "cowork-team-skills";
 
 export type ViewId = string;
 
@@ -129,6 +141,7 @@ export interface ViewContext {
   viewType: ViewType;
   capsuleId?: string;
   title?: string;
+  context?: unknown;
 }
 
 export interface NavState {
@@ -139,7 +152,8 @@ export interface NavState {
 }
 
 export type NavEvent =
-  | { type: "OPEN_VIEW"; viewType: ViewType; capsuleId?: string; allowNew?: boolean }
+  | { type: "OPEN_VIEW"; viewType: ViewType; capsuleId?: string; allowNew?: boolean; context?: any }
+  | { type: "PUSH_VIEW"; viewType: ViewType; viewId: ViewId; title?: string; context?: any }
   | { type: "FOCUS_VIEW"; viewId: ViewId }
   | { type: "CLOSE_VIEW"; viewId: ViewId }
   | { type: "BACK" }

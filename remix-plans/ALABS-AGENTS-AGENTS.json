@@ -1,0 +1,59 @@
+{
+  "courseCode": "ALABS-AGENTS-AGENTS",
+  "courseTitle": "Architect Multi-Agent Systems",
+  "tier": "AGENTS",
+  "sources": [
+    {
+      "id": 5736408,
+      "title": "Build Custom GPT with ChatGPT: Step by Step Free Guide",
+      "slug": "5736408-build-custom-gpt-with-chatgpt-step-by-step-free-guide",
+      "totalLectures": 0
+    },
+    {
+      "id": 6794575,
+      "title": "How I Made My Own ChatGPT Coder That Codes ANYTHING!",
+      "slug": "6794575-how-i-made-my-own-chatgpt-coder-that-codes-anything",
+      "totalLectures": 0
+    }
+  ],
+  "modules": [
+    {
+      "name": "The Problem: One LLM Can't Do Everything",
+      "sourceLectures": [],
+      "bridgeContent": "One LLM cant do everything well. Specialization requires orchestration.",
+      "isBridge": true
+    },
+    {
+      "name": "Agent Architecture Patterns",
+      "sourceLectures": [],
+      "isBridge": false
+    },
+    {
+      "name": "Tool-Using Agents",
+      "sourceLectures": [],
+      "isBridge": false
+    },
+    {
+      "name": "Code-Generation Agents",
+      "sourceLectures": [],
+      "isBridge": false
+    },
+    {
+      "name": "Multi-Agent Orchestration",
+      "sourceLectures": [],
+      "isBridge": false
+    },
+    {
+      "name": "Bridge: Allternit's Agent Swarm Communication",
+      "sourceLectures": [],
+      "bridgeContent": "How Allternit uses communication domain services and mcp-apps-adapter for agent collaboration.",
+      "isBridge": true
+    },
+    {
+      "name": "Capstone: Design a 3-Agent Collaborative Blog-Writing System",
+      "sourceLectures": [],
+      "bridgeContent": "Design a 3-agent system that collaboratively writes a technical blog post.",
+      "isBridge": true
+    }
+  ]
+}

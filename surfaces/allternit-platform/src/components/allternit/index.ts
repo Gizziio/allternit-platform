@@ -15,6 +15,6 @@ export { DataCard } from './cards/DataCard';
 export { DeckCard } from './cards/DeckCard';
 
 // Import themes
-import './allternit-document-theme.css';
-import './allternit-data-theme.css';
-import './allternit-deck-theme.css';
+import './allternit/allternit-document-theme.css';
+import './allternit/allternit-data-theme.css';
+import './allternit/allternit-deck-theme.css';

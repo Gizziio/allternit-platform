@@ -119,7 +119,7 @@ export function AgentStatusPanel({ className }: AgentStatusPanelProps) {
                 <Tooltip key={agent.id.id}>
                   <TooltipTrigger asChild>
                     <div className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent transition-colors cursor-pointer">
-                      <Avatar size={40}>
+                      <Avatar style={{ width: 40, height: 40 }}>
                         <AvatarFallback className={status.color}>
                           {agent.role.name.charAt(0)}
                         </AvatarFallback>

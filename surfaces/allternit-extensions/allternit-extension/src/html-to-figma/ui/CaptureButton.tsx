@@ -1,6 +1,6 @@
 /**
  * HTML to Figma Capture Button Component
- * For A2R Extension Sidepanel
+ * For Allternit Extension Sidepanel
  */
 
 import { useState } from 'react'

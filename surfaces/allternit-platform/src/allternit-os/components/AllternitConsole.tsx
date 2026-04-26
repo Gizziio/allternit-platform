@@ -1,5 +1,5 @@
 /**
- * A2rchitect Super-Agent OS - A2r Console Drawer
+ * allternit Super-Agent OS - Allternit Console Drawer
  * 
  * The main agent control center featuring:
  * - Agent Terminal: REAL multi-session terminal using TerminalTabs
@@ -22,7 +22,7 @@ import { nodeTerminalService } from '@/views/nodes/terminal/terminal.service';
 // Types
 // ============================================================================
 
-export interface A2rConsoleProps {
+export interface AllternitConsoleProps {
   isOpen: boolean;
   onClose: () => void;
 }
@@ -608,10 +608,10 @@ const AutomationHub: React.FC = () => {
 };
 
 // ============================================================================
-// Main A2r Console Component
+// Main Allternit Console Component
 // ============================================================================
 
-export const A2rConsole: React.FC<A2rConsoleProps> = ({ isOpen, onClose }) => {
+export const AllternitConsole: React.FC<AllternitConsoleProps> = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState<ConsoleTab>('terminal');
 
   if (!isOpen) return null;
@@ -622,7 +622,7 @@ export const A2rConsole: React.FC<A2rConsoleProps> = ({ isOpen, onClose }) => {
       <div className="flex items-center justify-between px-4 py-3 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center gap-4">
           <span className="text-xl">🤖</span>
-          <span className="font-semibold">A2r Console</span>
+          <span className="font-semibold">Allternit Console</span>
           
           {/* Tab Navigation */}
           <div className="flex gap-1 ml-4">
@@ -666,19 +666,19 @@ export const A2rConsole: React.FC<A2rConsoleProps> = ({ isOpen, onClose }) => {
 };
 
 // ============================================================================
-// A2r Console Toggle Button
+// Allternit Console Toggle Button
 // ============================================================================
 
-export const A2rConsoleToggle: React.FC<{ onClick?: () => void }> = ({ onClick }) => {
+export const AllternitConsoleToggle: React.FC<{ onClick?: () => void }> = ({ onClick }) => {
   return (
     <button
       onClick={onClick}
       className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all"
     >
       <span className="text-xl">🤖</span>
-      <span>A2r</span>
+      <span>Allternit</span>
     </button>
   );
 };
 
-export default A2rConsole;
+export default AllternitConsole;

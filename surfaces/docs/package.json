@@ -1,0 +1,16 @@
+{
+  "name": "@allternit/docs",
+  "version": "1.0.0",
+  "description": "Allternit Documentation - Built with Mintlify",
+  "scripts": {
+    "dev": "mintlify dev",
+    "build": "mintlify build",
+    "broken-links": "mintlify broken-links"
+  },
+  "keywords": ["documentation", "allternit", "mintlify"],
+  "author": "Allternit",
+  "license": "MIT",
+  "devDependencies": {
+    "@mintlify/cli": "^4.0.0"
+  }
+}

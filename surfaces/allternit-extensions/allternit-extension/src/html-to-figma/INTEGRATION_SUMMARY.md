@@ -1,7 +1,7 @@
-# HTML→Figma Integration in A2R Extension
+# HTML→Figma Integration in Allternit Extension
 
 ## Overview
-The HTML→Figma functionality has been fully integrated into the existing A2R Extension (`@allternit/extension`). It is NOT a separate extension - it's a module within the main A2R extension.
+The HTML→Figma functionality has been fully integrated into the existing Allternit Extension (`@allternit/extension`). It is NOT a separate extension - it's a module within the main Allternit extension.
 
 ## File Structure
 
@@ -59,7 +59,7 @@ const [showHTMLToFigma, setShowHTMLToFigma] = useState(false)
 ## User Flow
 
 ### Access via Settings:
-1. Open A2R Extension sidepanel
+1. Open Allternit Extension sidepanel
 2. Click gear icon (Settings)
 3. Click "Open Capture Tool" in HTML to Figma section
 
@@ -125,7 +125,7 @@ const [showHTMLToFigma, setShowHTMLToFigma] = useState(false)
 ## Building
 
 ```bash
-cd /Users/macbook/Desktop/allternit-workspace/allternit/surfaces/a2r-extension
+cd /Users/macbook/Desktop/allternit-workspace/allternit/surfaces/allternit-extension
 
 # Install dependencies
 npm install
@@ -155,7 +155,7 @@ npm run dev
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    A2R Extension                        │
+│                    Allternit Extension                        │
 ├─────────────────────────────────────────────────────────┤
 │  Sidepanel │  Background  │  Content Script            │
 ├────────────┼──────────────┼────────────────────────────┤
@@ -182,7 +182,7 @@ npm run dev
 ## Notes
 
 - Fully integrated - not a separate extension
-- Works within existing A2R Extension sidepanel
+- Works within existing Allternit Extension sidepanel
 - Shares extension permissions (activeTab, scripting, etc.)
 - No additional manifest changes needed
 - Uses WXT build system (same as rest of extension)

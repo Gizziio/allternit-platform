@@ -194,7 +194,7 @@ export function AgentHubModal({
             {/* Search */}
             <div className="mt-6">
               <div className="relative">
-                <Search
+                <MagnifyingGlass
                   size={16}
                   className="absolute left-3 top-1/2 -translate-y-1/2"
                   style={{ color: TEXT.tertiary }}

@@ -1,10 +1,10 @@
-# @a2r/ix
+# @allternit/ix
 
-A2R Interface eXecution - Declarative UI generation with Vercel Labs json-render compatibility.
+Allternit Interface eXecution - Declarative UI generation with Vercel Labs json-render compatibility.
 
 ## Overview
 
-A2R-IX enables LLM-generated UI through a JSON Intermediate Representation (IR) with full compatibility for Vercel Labs json-render patterns. This allows AI agents to generate user interfaces declaratively, which are then rendered by the platform.
+Allternit-IX enables LLM-generated UI through a JSON Intermediate Representation (IR) with full compatibility for Vercel Labs json-render patterns. This allows AI agents to generate user interfaces declaratively, which are then rendered by the platform.
 
 ## Features
 
@@ -25,7 +25,7 @@ A2R-IX enables LLM-generated UI through a JSON Intermediate Representation (IR) 
 ## Installation
 
 ```bash
-pnpm add @a2r/ix
+pnpm add @allternit/ix
 ```
 
 ## Quick Start
@@ -33,7 +33,7 @@ pnpm add @a2r/ix
 ### Basic React Usage
 
 ```typescript
-import { createReactRenderer, createDefaultCatalog, createStateStore } from '@a2r/ix';
+import { createReactRenderer, createDefaultCatalog, createStateStore } from '@allternit/ix';
 
 const renderer = createReactRenderer({
   catalog: createDefaultCatalog(),
@@ -74,7 +74,7 @@ function App() {
 ### Vue Renderer
 
 ```typescript
-import { createVueRenderer, compileToVue } from '@a2r/ix/vue';
+import { createVueRenderer, compileToVue } from '@allternit/ix/vue';
 
 // Generate Vue component definition
 const vueComponent = compileToVue(uiDefinition);
@@ -86,7 +86,7 @@ const { template, setup } = vueComponent;
 ### Svelte Renderer
 
 ```typescript
-import { compileToSvelte } from '@a2r/ix/svelte';
+import { compileToSvelte } from '@allternit/ix/svelte';
 
 // Generate Svelte component code
 const svelteCode = compileToSvelte(uiDefinition);
@@ -96,7 +96,7 @@ const svelteCode = compileToSvelte(uiDefinition);
 ### Visual Editor
 
 ```typescript
-import { ui } from '@a2r/ix';
+import { ui } from '@allternit/ix';
 
 // Build UI programmatically
 const myUI = ui.create()
@@ -115,7 +115,7 @@ const myUI = ui.create()
 ### Real-time Collaboration
 
 ```typescript
-import { createYjsAdapter } from '@a2r/ix/collab';
+import { createYjsAdapter } from '@allternit/ix/collab';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 
@@ -137,9 +137,9 @@ store.set('shared.value', 42); // Syncs to all connected clients
 ### JSON-Render Compatibility
 
 ```typescript
-import { jsonRenderAdapter, llmToIX } from '@a2r/ix';
+import { jsonRenderAdapter, llmToIX } from '@allternit/ix';
 
-// From json-render to A2R-IX
+// From json-render to Allternit-IX
 const jsonRenderSchema = {
   version: '1.0.0',
   root: {
@@ -150,7 +150,7 @@ const jsonRenderSchema = {
   },
 };
 
-const a2rUi = jsonRenderAdapter.fromJsonRender(jsonRenderSchema);
+const allternitUi = jsonRenderAdapter.fromJsonRender(jsonRenderSchema);
 
 // Auto-detect and convert
 const result = llmToIX.convert(jsonRenderSchema);
@@ -164,12 +164,12 @@ import {
   globalCapsuleRegistry,
   createRateLimitGate,
   createPropSanitizationGate,
-} from '@a2r/ix';
+} from '@allternit/ix';
 
 // Create capsule with security policies
 const capsule = globalCapsuleRegistry.create({
   id: 'my-capsule',
-  ui: a2rUi,
+  ui: allternitUi,
   stateStore: createStateStore(),
   policyGates: [
     createRateLimitGate({ maxActionsPerMinute: 60 }),
@@ -191,7 +191,7 @@ capsule.applyPatch([
 ## Architecture
 
 ```
-A2R-IX
+Allternit-IX
 ├── types/           # TypeScript interfaces
 ├── schema/          # UI IR schema definitions
 ├── catalog/         # Component registry with semver
@@ -229,7 +229,7 @@ Built-in components:
 ### State Management
 
 ```typescript
-import { createStateStore, applyPatch } from '@a2r/ix';
+import { createStateStore, applyPatch } from '@allternit/ix';
 
 const store = createStateStore({
   initial: { count: 0 },
@@ -257,7 +257,7 @@ import {
   createActionAllowlistGate,
   createStateValidationGate,
   composePolicyGates,
-} from '@a2r/ix';
+} from '@allternit/ix';
 
 const policies = composePolicyGates(
   createRateLimitGate({ maxActionsPerMinute: 60 }),
@@ -275,7 +275,7 @@ const policies = composePolicyGates(
 ### LLM-to-IX Pipeline
 
 ```typescript
-import { llmToIX } from '@a2r/ix';
+import { llmToIX } from '@allternit/ix';
 
 // From JSX-like string
 const result = llmToIX.fromJSX(`

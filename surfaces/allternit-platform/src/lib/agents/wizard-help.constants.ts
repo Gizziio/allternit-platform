@@ -60,9 +60,9 @@ export const STEP_HELP_CONTENT: Record<string, StepHelpContent> = {
       'Consider your budget when selecting models - more capable models cost more per token',
     ],
     documentationLinks: [
-      { label: 'Agent Types Guide', url: 'https://docs.a2r-platform.com/agents/types' },
-      { label: 'Model Selection Guide', url: 'https://docs.a2r-platform.com/agents/models' },
-      { label: 'Getting Started', url: 'https://docs.a2r-platform.com/agents/getting-started' },
+      { label: 'Agent Types Guide', url: 'https://docs.allternit-platform.com/agents/types' },
+      { label: 'Model Selection Guide', url: 'https://docs.allternit-platform.com/agents/models' },
+      { label: 'Getting Started', url: 'https://docs.allternit-platform.com/agents/getting-started' },
     ],
   },
   character: {
@@ -100,9 +100,9 @@ export const STEP_HELP_CONTENT: Record<string, StepHelpContent> = {
       'Temperament affects how the agent approaches ambiguous situations',
     ],
     documentationLinks: [
-      { label: 'Character Configuration', url: 'https://docs.a2r-platform.com/agents/character' },
-      { label: 'Temperament Guide', url: 'https://docs.a2r-platform.com/agents/temperament' },
-      { label: 'Personality Traits', url: 'https://docs.a2r-platform.com/agents/personality' },
+      { label: 'Character Configuration', url: 'https://docs.allternit-platform.com/agents/character' },
+      { label: 'Temperament Guide', url: 'https://docs.allternit-platform.com/agents/temperament' },
+      { label: 'Personality Traits', url: 'https://docs.allternit-platform.com/agents/personality' },
     ],
   },
   avatar: {
@@ -139,8 +139,8 @@ export const STEP_HELP_CONTENT: Record<string, StepHelpContent> = {
       'Consider accessibility - ensure good contrast with backgrounds',
     ],
     documentationLinks: [
-      { label: 'Avatar Customization', url: 'https://docs.a2r-platform.com/agents/avatar' },
-      { label: 'Mascot Builder Guide', url: 'https://docs.a2r-platform.com/agents/mascot-builder' },
+      { label: 'Avatar Customization', url: 'https://docs.allternit-platform.com/agents/avatar' },
+      { label: 'Mascot Builder Guide', url: 'https://docs.allternit-platform.com/agents/mascot-builder' },
     ],
   },
   role: {
@@ -181,9 +181,9 @@ export const STEP_HELP_CONTENT: Record<string, StepHelpContent> = {
       'Success metrics help evaluate agent performance over time',
     ],
     documentationLinks: [
-      { label: 'Role Configuration', url: 'https://docs.a2r-platform.com/agents/role-card' },
-      { label: 'Safety & Governance', url: 'https://docs.a2r-platform.com/agents/safety' },
-      { label: 'Hard Bans Reference', url: 'https://docs.a2r-platform.com/agents/hard-bans' },
+      { label: 'Role Configuration', url: 'https://docs.allternit-platform.com/agents/role-card' },
+      { label: 'Safety & Governance', url: 'https://docs.allternit-platform.com/agents/safety' },
+      { label: 'Hard Bans Reference', url: 'https://docs.allternit-platform.com/agents/hard-bans' },
     ],
   },
   voice: {
@@ -222,9 +222,9 @@ export const STEP_HELP_CONTENT: Record<string, StepHelpContent> = {
       'Conflict biases help the agent navigate disagreements appropriately',
     ],
     documentationLinks: [
-      { label: 'Voice Configuration', url: 'https://docs.a2r-platform.com/agents/voice' },
-      { label: 'Communication Styles', url: 'https://docs.a2r-platform.com/agents/communication' },
-      { label: 'Tone Modifiers Guide', url: 'https://docs.a2r-platform.com/agents/tone' },
+      { label: 'Voice Configuration', url: 'https://docs.allternit-platform.com/agents/voice' },
+      { label: 'Communication Styles', url: 'https://docs.allternit-platform.com/agents/communication' },
+      { label: 'Tone Modifiers Guide', url: 'https://docs.allternit-platform.com/agents/tone' },
     ],
   },
   advanced: {
@@ -257,9 +257,9 @@ export const STEP_HELP_CONTENT: Record<string, StepHelpContent> = {
       'Trust curve determines how quickly relationships evolve',
     ],
     documentationLinks: [
-      { label: 'Agent Relationships', url: 'https://docs.a2r-platform.com/agents/relationships' },
-      { label: 'Capability Metrics', url: 'https://docs.a2r-platform.com/agents/capabilities' },
-      { label: 'Progression System', url: 'https://docs.a2r-platform.com/agents/progression' },
+      { label: 'Agent Relationships', url: 'https://docs.allternit-platform.com/agents/relationships' },
+      { label: 'Capability Metrics', url: 'https://docs.allternit-platform.com/agents/capabilities' },
+      { label: 'Progression System', url: 'https://docs.allternit-platform.com/agents/progression' },
     ],
   },
   tools: {
@@ -299,9 +299,9 @@ export const STEP_HELP_CONTENT: Record<string, StepHelpContent> = {
       'Max iterations prevents infinite loops in complex tasks',
     ],
     documentationLinks: [
-      { label: 'Available Tools', url: 'https://docs.a2r-platform.com/agents/tools' },
-      { label: 'Security Best Practices', url: 'https://docs.a2r-platform.com/agents/security' },
-      { label: 'Tool Configuration', url: 'https://docs.a2r-platform.com/agents/tool-config' },
+      { label: 'Available Tools', url: 'https://docs.allternit-platform.com/agents/tools' },
+      { label: 'Security Best Practices', url: 'https://docs.allternit-platform.com/agents/security' },
+      { label: 'Tool Configuration', url: 'https://docs.allternit-platform.com/agents/tool-config' },
     ],
   },
   plugins: {
@@ -338,9 +338,9 @@ export const STEP_HELP_CONTENT: Record<string, StepHelpContent> = {
       'Some plugins require API keys or credentials',
     ],
     documentationLinks: [
-      { label: 'Plugin Marketplace', url: 'https://docs.a2r-platform.com/plugins/marketplace' },
-      { label: 'Plugin Development', url: 'https://docs.a2r-platform.com/plugins/development' },
-      { label: 'Plugin Security', url: 'https://docs.a2r-platform.com/plugins/security' },
+      { label: 'Plugin Marketplace', url: 'https://docs.allternit-platform.com/plugins/marketplace' },
+      { label: 'Plugin Development', url: 'https://docs.allternit-platform.com/plugins/development' },
+      { label: 'Plugin Security', url: 'https://docs.allternit-platform.com/plugins/security' },
     ],
   },
   workspace: {
@@ -377,9 +377,9 @@ export const STEP_HELP_CONTENT: Record<string, StepHelpContent> = {
       'Syntax highlighting helps identify errors',
     ],
     documentationLinks: [
-      { label: 'Configuration Reference', url: 'https://docs.a2r-platform.com/agents/config-reference' },
-      { label: 'Workspace Structure', url: 'https://docs.a2r-platform.com/workspace/structure' },
-      { label: 'YAML Configuration', url: 'https://docs.a2r-platform.com/workspace/yaml-config' },
+      { label: 'Configuration Reference', url: 'https://docs.allternit-platform.com/agents/config-reference' },
+      { label: 'Workspace Structure', url: 'https://docs.allternit-platform.com/workspace/structure' },
+      { label: 'YAML Configuration', url: 'https://docs.allternit-platform.com/workspace/yaml-config' },
     ],
   },
   review: {
@@ -417,9 +417,9 @@ export const STEP_HELP_CONTENT: Record<string, StepHelpContent> = {
       'The preview panel shows real-time updates',
     ],
     documentationLinks: [
-      { label: 'Next Steps', url: 'https://docs.a2r-platform.com/agents/getting-started' },
-      { label: 'Testing Agents', url: 'https://docs.a2r-platform.com/agents/testing' },
-      { label: 'Agent Management', url: 'https://docs.a2r-platform.com/agents/management' },
+      { label: 'Next Steps', url: 'https://docs.allternit-platform.com/agents/getting-started' },
+      { label: 'Testing Agents', url: 'https://docs.allternit-platform.com/agents/testing' },
+      { label: 'Agent Management', url: 'https://docs.allternit-platform.com/agents/management' },
     ],
   },
 };
@@ -725,7 +725,7 @@ export function getSystemPromptSuggestions(setup: AgentSetup, agentType: AgentTy
 - Prioritize helpfulness while maintaining accuracy`,
   };
 
-  const typeAdditions: Record<AgentType, string> = {
+  const typeAdditions: Record<AgentType | '', string> = {
     orchestrator: '\n\nAs an orchestrator, you coordinate multiple agents and manage complex workflows. Delegate tasks appropriately and synthesize results.',
     specialist: '\n\nAs a specialist, you have deep expertise in your domain. Provide authoritative guidance and handle complex edge cases.',
     worker: '\n\nAs a worker, you execute tasks efficiently and reliably. Follow instructions carefully and report progress clearly.',
@@ -910,7 +910,7 @@ export const SETUP_LABELS: Record<AgentSetup, string> = {
   generalist: 'Generalist',
 };
 
-export const AGENT_TYPE_LABELS: Record<AgentType, string> = {
+export const AGENT_TYPE_LABELS: Record<AgentType | '', string> = {
   orchestrator: 'Orchestrator',
   specialist: 'Specialist',
   worker: 'Worker',

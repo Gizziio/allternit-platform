@@ -1,5 +1,5 @@
 /**
- * A2rchitect Super-Agent OS - Presentation Program
+ * allternit Super-Agent OS - Presentation Program
  * 
  * Production-ready slide deck with:
  * - Reveal.js integration for advanced transitions
@@ -12,10 +12,10 @@
 import * as React from 'react';
 const { useState, useCallback, useEffect, useRef } = React;
 import { useSidecarStore } from '../stores/useSidecarStore';
-import type { A2rProgram, PresentationState, PresentationSlide } from '../types/programs';
+import type { AllternitProgram, PresentationState, PresentationSlide } from '../types/programs';
 
 interface PresentationProgramProps {
-  program: A2rProgram;
+  program: AllternitProgram;
 }
 
 // ============================================================================

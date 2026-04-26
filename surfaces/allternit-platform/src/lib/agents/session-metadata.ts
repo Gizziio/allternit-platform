@@ -42,7 +42,8 @@ function readSurface(value: unknown): AgentSessionSurface | undefined {
     value === "chat" ||
     value === "cowork" ||
     value === "code" ||
-    value === "browser"
+    value === "browser" ||
+    value === "design"
   ) {
     return value;
   }
@@ -151,6 +152,8 @@ export function formatAgentSessionSurfaceLabel(
       return "Code";
     case "browser":
       return "Browser";
+    case "design":
+      return "Studio";
     default:
       return undefined;
   }

@@ -4,13 +4,13 @@
  * Handles real-time backend installation progress updates.
  */
 
-import { Server as SocketIOServer } from 'socket.io';
+import { Server as SocketIOServer, Socket } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import { backendInstaller, type InstallProgress } from '@/services/backend/BackendInstallerService';
 
 let io: SocketIOServer | null = null;
 
-interface InstallationSocket extends SocketIO.Socket {
+interface InstallationSocket extends Socket {
   installationId?: string;
 }
 

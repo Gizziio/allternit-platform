@@ -1,5 +1,5 @@
 /**
- * Playwright Configuration for A2R Platform UI Audit
+ * Playwright Configuration for Allternit Platform UI Audit
  */
 
 import { defineConfig, devices } from '@playwright/test';

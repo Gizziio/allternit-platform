@@ -1,5 +1,5 @@
 /**
- * A2rchitect Super-Agent OS
+ * allternit Super-Agent OS
  * 
  * Main entry point for the Super-Agent OS infrastructure.
  */
@@ -8,29 +8,29 @@
 // Core Components
 // ============================================================================
 
-export { A2rCanvas } from './components/A2rCanvas';
-export { A2rConsole, A2rConsoleToggle } from './components/A2rConsole';
+export { AllternitCanvas } from './components/AllternitCanvas';
+export { AllternitConsole, AllternitConsoleToggle } from './components/AllternitConsole';
 export { 
-  A2rChatIntegration,
+  AllternitChatIntegration,
   MessageRenderer,
   QuickLaunchButtons,
-  useA2rChatIntegration,
+  useAllternitChatIntegration,
   useStreamingMessage,
-} from './components/A2rChatIntegration';
+} from './components/AllternitChatIntegration';
 
 // ============================================================================
-// Main A2rOS System
+// Main AllternitOS System
 // ============================================================================
 
 export { 
-  A2rOS, 
-  A2rOSProvider,
-  A2rOSHeader,
-  A2rQuickActions,
-  A2rOSStatusBar,
-  useA2rCommandPalette,
-} from './A2rOS';
-export type { A2rOSConfig, A2rOSProps } from './A2rOS';
+  AllternitOS, 
+  AllternitOSProvider,
+  AllternitOSHeader,
+  AllternitQuickActions,
+  AllternitOSStatusBar,
+  useAllternitCommandPalette,
+} from './AllternitOS';
+export type { AllternitOSConfig, AllternitOSProps } from './AllternitOS';
 
 // ============================================================================
 // State Management
@@ -52,13 +52,13 @@ export {
 // ============================================================================
 
 export type {
-  A2rProgram,
-  A2rProgramType,
-  A2rProgramStatus,
-  A2rProgramState,
+  AllternitProgram,
+  AllternitProgramType,
+  AllternitProgramStatus,
+  AllternitProgramState,
   LaunchProgramRequest,
   ProgramEvent,
-  A2rProgramUri,
+  AllternitProgramUri,
   ResearchDocState,
   ResearchDocSection,
   ResearchDocCitation,
@@ -113,12 +113,12 @@ export {
 export {
   programLauncher,
   useProgramLauncher,
-  parseA2rUri as parseProgramUri,
-  buildA2rUri as buildProgramUri,
+  parseAllternitUri as parseProgramUri,
+  buildAllternitUri as buildProgramUri,
   launchWorkflowBuilder,
   type ProgramLaunchRequest,
   type LaunchOptions,
-  type ParsedA2rUri as ParsedProgramUri,
+  type ParsedAllternitUri as ParsedProgramUri,
 } from './utils/ProgramLauncher';
 
 // ============================================================================
@@ -126,8 +126,8 @@ export {
 // ============================================================================
 
 export {
-  parseA2rUri,
-  buildA2rUri,
+  parseAllternitUri,
+  buildAllternitUri,
 } from './types/programs';
 
 // ============================================================================
@@ -159,12 +159,12 @@ export {
   useKernelBridge,
   kernelBridge,
   
-  // A2R Rails
-  A2RRailsClient,
-  useA2RRails,
+  // Allternit Rails
+  AllternitRailsClient,
+  useAllternitRails,
   
-  // A2R Rails WebSocket
-  A2RRailsWebSocketBridge,
+  // Allternit Rails WebSocket
+  AllternitRailsWebSocketBridge,
   useRailsWebSocket,
   railsWebSocketBridge,
   

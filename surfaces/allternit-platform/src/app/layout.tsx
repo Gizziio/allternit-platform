@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import "@/design/theme.css"
 import "./globals.css"
 import { PlatformAuthProvider } from "@/lib/platform-auth-client"
+import { ThemeProvider } from "@/design/ThemeProvider"
 
 export const metadata: Metadata = {
   title: "Allternit Platform",
@@ -18,7 +19,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="m-0 font-sans">
-        <PlatformAuthProvider>{children}</PlatformAuthProvider>
+        <ThemeProvider>
+          <PlatformAuthProvider>{children}</PlatformAuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   )

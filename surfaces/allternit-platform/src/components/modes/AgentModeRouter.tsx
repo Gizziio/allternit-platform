@@ -4,6 +4,15 @@ import React from 'react';
 import { useAgentSurfaceModeStore, type AgentModeId } from '@/stores/agent-surface-mode.store';
 import { ImageModeView } from './ImageModeView';
 import { VideoModeView } from './VideoModeView';
+import {
+  DeepResearchModeView,
+  DataStudioModeView,
+  PitchDeckModeView,
+  FileVaultModeView,
+  SwarmsModeView,
+  AutoFlowModeView,
+  SiteBuilderModeView,
+} from './ModeViews';
 
 interface AgentModeRouterProps {
   surface: 'chat' | 'cowork' | 'code' | 'browser';
@@ -27,15 +36,15 @@ export function AgentModeRouter({ surface }: AgentModeRouterProps) {
   switch (currentMode) {
     // 1. Deep Research - Multi-source research with citations
     case 'research':
-      return <DeepResearchModePlaceholder />;
+      return <DeepResearchModeView />;
 
     // 2. Data Studio - Data analysis with charts
     case 'data':
-      return <DataStudioModePlaceholder />;
+      return <DataStudioModeView />;
 
     // 3. Pitch Deck - Presentation generation
     case 'slides':
-      return <PitchDeckModePlaceholder />;
+      return <PitchDeckModeView />;
 
     // 4. Code Forge - Code generation & execution
     case 'code':
@@ -44,19 +53,19 @@ export function AgentModeRouter({ surface }: AgentModeRouterProps) {
 
     // 5. File Vault - Smart file management
     case 'assets':
-      return <FileVaultModePlaceholder />;
+      return <FileVaultModeView />;
 
     // 6. Swarms - Multi-agent orchestration
     case 'swarms':
-      return <SwarmsModePlaceholder />;
+      return <SwarmsModeView />;
 
     // 7. Auto Flow - Workflow automation
     case 'flow':
-      return <AutoFlowModePlaceholder />;
+      return <AutoFlowModeView />;
 
     // 8. Site Builder - Website generation (NOT web browsing)
     case 'website':
-      return <SiteBuilderModePlaceholder />;
+      return <SiteBuilderModeView />;
 
     // 9. Pixel Studio - Image generation (FREE)
     case 'image':

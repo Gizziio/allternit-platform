@@ -7,10 +7,10 @@
 
 import { generateText, streamText, tool } from 'ai';
 import { z } from 'zod';
-import { 
-  createComputerUseClient, 
-  type AllternitComputerUseClient 
-} from '@/lib/computer-use-sdk';
+import {
+  createComputerUseClient,
+  type AllternitComputerUseClient,
+} from '@allternit/sdk/computer-use';
 import { getLanguageModel } from '@/lib/ai/providers';
 import type { 
   ModePlugin, 
@@ -219,23 +219,15 @@ class ResearchPlugin implements ModePlugin {
         
         // Execute browser automation to search and gather sources
         const result = await this.computerUseClient.execute({
-          engineUrl: 'browser',
-          action: {
-            type: 'browser_action',
-            action: {
-              type: 'navigate',
-              url: `https://www.google.com/search?q=${encodeURIComponent(query)}`,
-            },
-          },
-          options: {
-            timeout: 30000,
-            maxSteps: 10,
-          },
+          mode: 'intent',
+          task: `Navigate to https://www.google.com/search?q=${encodeURIComponent(query)} and extract all search result titles and URLs from the page`,
+          target_scope: 'browser',
+          options: { max_steps: 10 },
         });
 
         // If browser automation succeeded, extract sources from the result
-        if (result.success && result.output) {
-          const sources = this.extractSourcesFromBrowserResult(result.output);
+        if (result.status === 'completed' && result.result) {
+          const sources = this.extractSourcesFromBrowserResult(result.result);
           if (sources.length >= 3) {
             return sources;
           }

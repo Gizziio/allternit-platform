@@ -2,7 +2,7 @@
  * MCP Apps Fixture Server Tests
  * 
  * End-to-end parity verification against published MCP Apps demo servers.
- * These tests verify that the A2rchitect MCP Apps implementation works
+ * These tests verify that the allternit MCP Apps implementation works
  * correctly with real MCP Apps servers.
  * 
  * To run these tests:

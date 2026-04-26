@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { useClerk, useAuth } from '@clerk/nextjs';
+import { useClerk, useAuth } from '@clerk/clerk-react';
 import { MatrixLogo } from '@/components/ai-elements/MatrixLogo';
 import { Check, Plus } from 'lucide-react';
 

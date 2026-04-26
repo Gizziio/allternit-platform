@@ -98,7 +98,7 @@ export function NodeCard({ node, isConnected, onDelete, onTerminal }: NodeCardPr
             
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" size={32}>
+                <Button variant="ghost" size="icon">
                   <DotsThreeVertical size={16} />
                 </Button>
               </DropdownMenuTrigger>

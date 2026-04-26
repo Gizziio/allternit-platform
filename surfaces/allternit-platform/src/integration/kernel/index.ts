@@ -66,26 +66,27 @@ function createKernelStub(): AllternitKernel {
 
     async createWih(item: Omit<WihItem, "id" | "createdAt" | "version">): Promise<WihItem> {
       const now = new Date().toISOString();
+      const i = item as any;
       const wih: WihItem = {
         id: nextWihId(),
-        title: item.title ?? "Untitled",
-        description: item.description,
-        status: item.status ?? "draft",
-        priority: item.priority ?? 50,
-        blockedBy: item.blockedBy ?? [],
-        blocks: item.blocks ?? [],
-        assignee: item.assignee,
-        phase: item.phase,
-        tags: item.tags ?? [],
-        estimatedEffort: item.estimatedEffort,
-        actualEffort: item.actualEffort,
-        receiptRefs: item.receiptRefs ?? [],
-        artifacts: item.artifacts ?? [],
+        title: i.title ?? "Untitled",
+        description: i.description,
+        status: i.status ?? "draft",
+        priority: i.priority ?? 50,
+        blockedBy: i.blockedBy ?? [],
+        blocks: i.blocks ?? [],
+        assignee: i.assignee,
+        phase: i.phase,
+        tags: i.tags ?? [],
+        estimatedEffort: i.estimatedEffort,
+        actualEffort: i.actualEffort,
+        receiptRefs: i.receiptRefs ?? [],
+        artifacts: i.artifacts ?? [],
         createdAt: now,
-        updatedAt: item.updatedAt,
-        completedAt: item.completedAt,
+        updatedAt: i.updatedAt,
+        completedAt: i.completedAt,
         version: "1.0.0",
-        routing: item.routing,
+        routing: i.routing,
       };
       wihStore.set(wih.id, wih);
       return wih;
@@ -125,7 +126,7 @@ function createKernelStub(): AllternitKernel {
         items = items.filter((item) => item.phase === filters.phase);
       }
       if (filters.tags && filters.tags.length > 0) {
-        items = items.filter((item) => filters.tags!.every((tag) => item.tags.includes(tag)));
+        items = items.filter((item) => filters.tags!.every((tag: string) => item.tags.includes(tag)));
       }
       if (filters.blocked !== undefined) {
         items = items.filter((item) => (filters.blocked ? item.status === "blocked" : item.status !== "blocked"));
@@ -134,11 +135,11 @@ function createKernelStub(): AllternitKernel {
     },
 
     async createReceipt(receipt: Omit<Receipt, "id" | "timestamp">): Promise<Receipt> {
-      const created: Receipt = {
+      const created = {
         ...receipt,
         id: nextReceiptId(),
         timestamp: new Date().toISOString(),
-      };
+      } as Receipt;
       receiptStore.set(created.id, created);
       return created;
     },

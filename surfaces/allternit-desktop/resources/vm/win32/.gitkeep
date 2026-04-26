@@ -1,0 +1,4 @@
+# Windows VM Images
+
+Place WSL2 or Hyper-V files here:
+- rootfs.vhdx - WSL2 root filesystem

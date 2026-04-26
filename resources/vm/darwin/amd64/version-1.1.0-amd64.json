@@ -1,0 +1,12 @@
+{
+  "version": "1.1.0",
+  "build_date": "2026-04-15T17:18:10Z",
+  "architecture": "amd64",
+  "kernel_version": "6.5.0",
+  "rootfs_size_mb": 3072,
+  "checksums": {
+    "vmlinux_sha256": "a1cd32173cad397ee58f0bc76d361df8c3969056a11c7164f3518356c220776d",
+    "initrd_sha256": "c7a9cf414fc45cd56c2a4e9bbf2cf871853ffb78d9c28939cdcf1ba83ed8c768",
+    "rootfs_sha256": "92ac2e979f55bbeac8d61caa843a78d0e78cce22f332317de38d6bc429212100"
+  }
+}

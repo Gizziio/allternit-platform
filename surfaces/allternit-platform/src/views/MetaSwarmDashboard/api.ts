@@ -18,8 +18,8 @@ import type {
   SwarmMode,
 } from './types';
 
-const API_BASE = import.meta.env.VITE_META_SWARM_API_URL || 'ws://localhost:8080';
-const HTTP_BASE = import.meta.env.VITE_META_SWARM_HTTP_URL || 'http://localhost:8080';
+const API_BASE = process.env.NEXT_PUBLIC_META_SWARM_API_URL || 'ws://localhost:8080';
+const HTTP_BASE = process.env.NEXT_PUBLIC_META_SWARM_HTTP_URL || 'http://localhost:8080';
 
 export class MetaSwarmClient {
   private ws: WebSocket | null = null;

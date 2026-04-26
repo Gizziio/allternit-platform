@@ -256,7 +256,7 @@ The voice service connects to Chatterbox TTS at `localhost:8001`:
 
 ```bash
 # Start the voice service
-cd /Users/macbook/Desktop/a2rchitech-workspace/a2rchitech
+cd /Users/macbook/Desktop/allternit-workspace/allternit
 docker-compose up voice-service
 
 # Or manually
@@ -281,7 +281,7 @@ VITE_VOICE_URL=http://localhost:8001    # Direct voice service
 VITE_API_URL=http://localhost:3000      # API proxy (used in prod)
 
 # Backend (API)
-A2R_VOICE_URL=http://127.0.0.1:8001     # Voice service URL
+Allternit_VOICE_URL=http://127.0.0.1:8001     # Voice service URL
 ```
 
 ## Fallback Behavior

@@ -63,7 +63,7 @@ export function reduceReplyEvent(
         reply.items.push({
           kind: 'text',
           content,
-          timestamp: event.timestamp,
+          timestamp: event.timestamp ?? Date.now(),
         });
       }
       break;
@@ -86,7 +86,7 @@ export function reduceReplyEvent(
         reply.items.push({
           kind: 'reasoning',
           content,
-          timestamp: event.timestamp,
+          timestamp: event.timestamp ?? Date.now(),
         });
       }
       break;
@@ -103,7 +103,7 @@ export function reduceReplyEvent(
         toolName: data?.toolName ?? 'unknown',
         input: data?.input,
         state: 'queued',
-        timestamp: event.timestamp,
+        timestamp: event.timestamp ?? Date.now(),
       });
       break;
     }
@@ -146,7 +146,7 @@ export function reduceReplyEvent(
         reply.items.push({
           kind: 'text',
           content: `Error: ${data.error}`,
-          timestamp: event.timestamp,
+          timestamp: event.timestamp ?? Date.now(),
         });
       }
       break;

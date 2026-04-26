@@ -26,7 +26,7 @@ export const Default: Story = {};
 export const ToolsOnly: Story = {
   render: (args) => (
     <div style={{ maxWidth: '720px' }}>
-      <ArtifactTemplateGallery {...args} />
+      <ArtifactTemplateGallery {...(args as any)} />
     </div>
   ),
 };

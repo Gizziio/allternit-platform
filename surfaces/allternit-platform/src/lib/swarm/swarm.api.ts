@@ -54,6 +54,12 @@ export interface CreateSwarmInput {
     role: string;
     weight?: number;
     priority?: number;
+    /** Provider config — required for real execution */
+    provider_id?: string;
+    model_id?: string;
+    exec_mode?: 'api' | 'cli' | 'local' | 'oauth';
+    role_label?: string;
+    role_description?: string;
   }>;
   strategy: 'round-robin' | 'hierarchical' | 'democratic' | 'competitive' | 'collaborative' | 'specialist' | 'adaptive';
   communication: {
@@ -65,6 +71,7 @@ export interface CreateSwarmInput {
   shared_context?: boolean;
   consensus_threshold?: number;
   max_rounds?: number;
+  escalate_on_failure?: boolean;
 }
 
 export interface SwarmExecutionRequest {

@@ -1,0 +1,41 @@
+{
+  "courseCode": "ALABS-OPS-VISION",
+  "courseTitle": "Computer Vision for AI Systems",
+  "tier": "OPS",
+  "sources": [],
+  "modules": [
+    {
+      "name": "The Problem: LLMs Are Blind",
+      "sourceLectures": [],
+      "bridgeContent": "LLMs need vision to interact with real-world interfaces.",
+      "isBridge": true
+    },
+    {
+      "name": "OpenCV + Python Foundations",
+      "sourceLectures": [],
+      "isBridge": false
+    },
+    {
+      "name": "Feature Detection & Tracking",
+      "sourceLectures": [],
+      "isBridge": false
+    },
+    {
+      "name": "Face & Object Detection with Deep Learning",
+      "sourceLectures": [],
+      "isBridge": false
+    },
+    {
+      "name": "Bridge: Connecting OpenCV to Agent Systems",
+      "sourceLectures": [],
+      "bridgeContent": "How computer-use SDK captures screen regions and feeds them to LLM agents.",
+      "isBridge": true
+    },
+    {
+      "name": "Capstone: Build a Screen-State Analyzer for LLM Agents",
+      "sourceLectures": [],
+      "bridgeContent": "Build a screen-state analyzer that feeds visual context to an LLM agent.",
+      "isBridge": true
+    }
+  ]
+}

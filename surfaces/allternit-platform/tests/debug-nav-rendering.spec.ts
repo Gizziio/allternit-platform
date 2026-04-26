@@ -71,15 +71,15 @@ test.describe('Navigation Re-rendering Debug', () => {
     const browserEnhanced = page.locator('[data-testid="browser-capsule-enhanced-root"]');
     const iframe = page.locator('iframe');
     const webview = page.locator('webview');
-    const a2rWebview = page.locator('[data-testid="a2r-webview-content"]');
-    const a2rIframe = page.locator('[data-testid="a2r-iframe-content"]');
+    const allternitWebview = page.locator('[data-testid="allternit-webview-content"]');
+    const allternitIframe = page.locator('[data-testid="allternit-iframe-content"]');
 
     console.log(`Browser capsule (old) found: ${await browserCapsule.count()}`);
     console.log(`BrowserCapsuleEnhanced root found: ${await browserEnhanced.count()}`);
     console.log(`iframe found: ${await iframe.count()}`);
     console.log(`webview found: ${await webview.count()}`);
-    console.log(`a2r-webview-content found: ${await a2rWebview.count()}`);
-    console.log(`a2r-iframe-content found: ${await a2rIframe.count()}`);
+    console.log(`allternit-webview-content found: ${await allternitWebview.count()}`);
+    console.log(`allternit-iframe-content found: ${await allternitIframe.count()}`);
 
     // Get details about what's actually rendered
     if (await viewHostWrapper.count() > 0) {

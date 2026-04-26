@@ -1,5 +1,5 @@
 /**
- * A2rchitech Database Schema
+ * Allternit Database Schema
  * Ported from ChatJS with kernel integration
  */
 

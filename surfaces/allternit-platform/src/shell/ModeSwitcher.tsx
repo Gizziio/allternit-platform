@@ -4,6 +4,7 @@ import {
   ChatText,
   UsersThree,
   TerminalWindow,
+  Palette,
   type Icon
 } from '@phosphor-icons/react';
 import type { AppMode } from './ShellHeader';
@@ -46,13 +47,22 @@ const MODES: ModeConfig[] = [
     accentLight: 'var(--shell-mode-code-soft)',
     accentDark: 'var(--shell-mode-code-strong)',
     description: 'Development environment with code tools'
+  },
+  {
+    id: 'design',
+    label: 'Design',
+    icon: Palette,
+    accentColor: 'rgba(212,176,140,0.9)',
+    accentLight: 'rgba(212,176,140,0.12)',
+    accentDark: 'rgba(212,176,140,0.6)',
+    description: 'Visual design canvas with live preview'
   }
 ];
 
 // Hook for localStorage persistence
 const MODE_STORAGE_KEY = 'allternit-platform-mode';
 
-export function useModePersistence() {
+export function useModePersistence(): { mode: AppMode; setMode: (newMode: AppMode) => void; isLoaded: boolean } {
   const [mode, setMode] = useState<AppMode>('chat');
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -60,7 +70,7 @@ export function useModePersistence() {
     // Load mode from localStorage on mount
     try {
       const savedMode = localStorage.getItem(MODE_STORAGE_KEY) as AppMode | null;
-      if (savedMode && ['chat', 'cowork', 'code'].includes(savedMode)) {
+      if (savedMode && ['chat', 'cowork', 'code', 'design'].includes(savedMode)) {
         setMode(savedMode);
       }
     } catch {
@@ -99,11 +109,11 @@ export function ModeSwitcher({
   className = '',
   showLabels = true,
   showTooltips = false
-}: ModeSwitcherProps) {
+}: ModeSwitcherProps): JSX.Element {
   const [hoveredMode, setHoveredMode] = useState<AppMode | null>(null);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
-  const handleModeChange = (mode: AppMode) => {
+  const handleModeChange = (mode: AppMode): void => {
     if (mode === activeMode || isTransitioning) return;
     
     setIsTransitioning(true);
@@ -359,7 +369,7 @@ interface ModeIndicatorProps {
   pulse?: boolean;
 }
 
-export function ModeIndicator({ mode, size = 'small', pulse = false }: ModeIndicatorProps) {
+export function ModeIndicator({ mode, size = 'small', pulse = false }: ModeIndicatorProps): JSX.Element {
   const config = MODES.find(m => m.id === mode) || MODES[0];
   const dotSize = size === 'small' ? 6 : 8;
   
@@ -395,7 +405,7 @@ export function ModeIndicator({ mode, size = 'small', pulse = false }: ModeIndic
 }
 
 // Mode-aware accent color hook
-export function useModeAccent(mode: AppMode) {
+export function useModeAccent(mode: AppMode): { color: string; light: string; dark: string; icon: Icon } {
   const config = MODES.find(m => m.id === mode) || MODES[0];
   return {
     color: config.accentColor,
@@ -412,7 +422,7 @@ interface ModeTransitionProps {
   className?: string;
 }
 
-export function ModeTransition({ mode, children, className = '' }: ModeTransitionProps) {
+export function ModeTransition({ mode, children, className = '' }: ModeTransitionProps): JSX.Element {
   return (
     <AnimatePresence mode="wait">
       <motion.div

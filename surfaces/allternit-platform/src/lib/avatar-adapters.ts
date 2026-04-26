@@ -4,7 +4,7 @@
  */
 
 import type { VisualState, AvatarSize } from '@/types/visual-state';
-import type { ReactNode } from 'react';
+import { createElement, type ReactNode } from 'react';
 import { getMoodColor } from '@/types/visual-state';
 
 export interface AdapterSettings {
@@ -40,18 +40,15 @@ const defaultAdapter: AvatarAdapter = {
   render: (state: VisualState, size: AvatarSize): ReactNode => {
     const sizePx = typeof size === 'number' ? size : { xs: 24, sm: 32, md: 48, lg: 64, xl: 96 }[size] ?? 48;
     const color = getMoodColor(state.mood);
-    return {
-      type: 'div',
-      props: {
-        style: {
-          width: sizePx,
-          height: sizePx,
-          borderRadius: '50%',
-          backgroundColor: color,
-          opacity: 0.5 + state.confidence * 0.5,
-        },
+    return createElement('div', {
+      style: {
+        width: sizePx,
+        height: sizePx,
+        borderRadius: '50%',
+        backgroundColor: color,
+        opacity: 0.5 + state.confidence * 0.5,
       },
-    };
+    });
   },
 };
 

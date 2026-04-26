@@ -1,5 +1,5 @@
 /**
- * A2R Visual State Protocol (AVSP) Types
+ * Allternit Visual State Protocol (AVSP) Types
  * 
  * Defines the core types for agent mood, intensity, and confidence visualization.
  */

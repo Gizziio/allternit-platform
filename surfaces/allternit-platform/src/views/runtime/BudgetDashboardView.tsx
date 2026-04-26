@@ -7,11 +7,11 @@ import {
   Cpu,
   CurrencyDollar,
   CircleNotch,
-  HardDrive,
   ArrowsClockwise,
   Shield,
   Wallet,
-  WifiHigh,
+  WifiHigh as Wifi,
+  HardDrive as MemoryStick,
   Lightning,
 } from '@phosphor-icons/react';
 import { GlassSurface } from '@/design/GlassSurface';

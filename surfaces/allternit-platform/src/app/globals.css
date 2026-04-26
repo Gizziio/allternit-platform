@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Dark background on the document itself so no white flash before JS loads */
+html, body {
+  background-color: #0d0d10;
+  margin: 0;
+}
+
 @layer base {
   :root {
     --radius: 0.625rem;
@@ -77,5 +88,191 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .text-an-foreground { color: var(--an-foreground); }
+  .text-an-foreground\/60 { color: color-mix(in srgb, var(--an-foreground) 60%, transparent); }
+  .text-an-foreground\/70 { color: color-mix(in srgb, var(--an-foreground) 70%, transparent); }
+  .text-an-foreground\/80 { color: color-mix(in srgb, var(--an-foreground) 80%, transparent); }
+  .text-an-foreground-muted { color: var(--an-foreground-muted); }
+  .text-an-foreground-muted\/60 { color: color-mix(in srgb, var(--an-foreground-muted) 60%, transparent); }
+  .text-an-foreground-muted\/70 { color: color-mix(in srgb, var(--an-foreground-muted) 70%, transparent); }
+  .text-an-foreground-muted\/80 { color: color-mix(in srgb, var(--an-foreground-muted) 80%, transparent); }
+  .text-an-tool-color { color: var(--an-tool-color); }
+  .text-an-tool-color-muted { color: var(--an-tool-color-muted); }
+  .text-an-user-message-text { color: var(--an-user-message-text); }
+  .text-an-primary-color { color: var(--an-primary-color); }
+  .text-an-send-button-color { color: var(--an-send-button-color); }
+  .bg-an-background-secondary { background-color: var(--an-background-secondary); }
+  .bg-an-background-tertiary { background-color: var(--an-background-tertiary); }
+  .bg-an-foreground { background-color: var(--an-foreground); }
+  .bg-an-primary-color { background-color: var(--an-primary-color); }
+  .bg-an-tool-background { background-color: var(--an-tool-background); }
+  .bg-an-user-message-bg { background-color: var(--an-user-message-bg); }
+  .border-an-border-color { border-color: var(--an-border-color); }
+  .border-an-tool-border-color { border-color: var(--an-tool-border-color); }
+  .border-an-foreground-muted\/40 { border-color: color-mix(in srgb, var(--an-foreground-muted) 40%, transparent); }
+  .border-an-foreground-muted\/60 { border-color: color-mix(in srgb, var(--an-foreground-muted) 60%, transparent); }
+  .outline-an-input-focus-outline { outline-color: var(--an-input-focus-outline); }
+  .rounded-an-input-border-radius { border-radius: var(--an-input-border-radius); }
+  .rounded-an-message { border-radius: 18px; }
+  .rounded-an-message-inner { border-radius: 14px; }
+  .rounded-an-tool-border-radius { border-radius: var(--an-tool-border-radius); }
+  .px-an-context-padding { padding-left: var(--an-context-padding); padding-right: var(--an-context-padding); }
+  .pt-an-context-padding { padding-top: var(--an-context-padding); }
+  .max-w-an { max-width: 52rem; }
+  .an-message { border-radius: 18px; }
+  .an-message-inner { border-radius: 14px; }
+  .an-tool { border-radius: var(--an-tool-border-radius); }
+  .an-tool-plan,
+  .an-tool-task,
+  .an-tool-mcp,
+  .an-edit-tool-card,
+  .an-edit-diff {
+    border-radius: var(--an-tool-border-radius);
+  }
+  .an-markdown {
+    color: var(--an-foreground);
+  }
+  .an-md-h1,
+  .an-md-h2,
+  .an-md-h3,
+  .an-md-h4 {
+    text-wrap: balance;
+  }
+  .an-md-p,
+  .an-md-li {
+    text-wrap: pretty;
+  }
+  .an-text-shimmer {
+    background-image: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--an-foreground) 38%, transparent) 0%,
+      var(--an-foreground) 48%,
+      color-mix(in srgb, var(--an-foreground) 38%, transparent) 100%
+    );
+    background-size: calc(var(--an-shimmer-spread) * 2) 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .an-text-shimmer--active {
+    animation: an-text-shimmer var(--an-shimmer-duration) linear infinite;
+  }
+  .animate-an-blink {
+    animation: an-blink 1s step-end infinite;
+  }
+  .hover\:bg-an-background-secondary:hover { background-color: var(--an-background-secondary); }
+  .hover\:bg-an-primary-color\/90:hover { background-color: color-mix(in srgb, var(--an-primary-color) 90%, transparent); }
+  .hover\:text-an-foreground:hover { color: var(--an-foreground); }
+  .hover\:text-an-tool-color:hover { color: var(--an-tool-color); }
+  .disabled\:hover\:bg-an-primary-color:disabled:hover { background-color: var(--an-primary-color); }
+}
+
+/* ── Research Workspace Utilities ─────────────────────────────────────────── */
+@layer components {
+  .research-panel {
+    @apply flex flex-col overflow-hidden;
+    background-color: var(--bg-secondary, #111113);
+    border-color: var(--border-subtle, #27272a);
+  }
+  .research-panel-header {
+    @apply px-3.5 py-3 text-[13px] font-semibold text-[var(--text-primary,#e5e5e5)];
+    border-bottom: 1px solid var(--border-subtle, #27272a);
+  }
+  .research-chat-area {
+    @apply flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4;
+    background-color: var(--bg-primary, #09090b);
+  }
+  .research-composer {
+    @apply flex items-center gap-2.5 px-4 py-3 flex-shrink-0;
+    background-color: var(--bg-secondary, #111113);
+    border-top: 1px solid var(--border-subtle, #27272a);
+  }
+  .research-input {
+    @apply flex-1 px-3 py-2 text-sm rounded-lg outline-none;
+    background-color: var(--bg-tertiary, #18181b);
+    border: 1px solid var(--border-subtle, #27272a);
+    color: var(--text-primary, #e5e5e5);
+  }
+  .research-input::placeholder {
+    color: var(--text-muted, #a1a1aa);
+  }
+  .research-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold text-white cursor-pointer transition-all;
+    background: linear-gradient(135deg, #7c3aed, #a78bfa);
+  }
+  .research-btn-primary:hover {
+    opacity: 0.92;
+  }
+  .research-btn-secondary {
+    @apply inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs cursor-pointer transition-all;
+    background: transparent;
+    border: 1px solid var(--border-subtle, #27272a);
+    color: var(--text-secondary, #d4d4d8);
+  }
+  .research-btn-secondary:hover {
+    background-color: var(--bg-tertiary, #18181b);
+  }
+  .research-btn-icon {
+    @apply inline-flex items-center justify-center w-9 h-9 rounded-lg border-none text-white cursor-pointer;
+  }
+  .research-btn-icon:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+  .research-source-item {
+    @apply flex items-start gap-2 px-2.5 py-2 rounded-md transition-all;
+    background-color: var(--bg-tertiary, #18181b);
+    border: 1px solid transparent;
+  }
+  .research-source-item.highlighted {
+    background-color: rgba(167, 139, 250, 0.12);
+    border-color: rgba(167, 139, 250, 0.4);
+  }
+  .research-empty-state {
+    @apply flex-1 flex flex-col items-center justify-center text-center gap-3 p-8;
+    color: var(--text-muted, #a1a1aa);
+  }
+  .research-message-user {
+    @apply w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5;
+    background-color: var(--accent, #7c3aed);
+  }
+  .research-message-assistant {
+    @apply w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5;
+    background-color: rgba(167, 139, 250, 0.15);
+  }
+  .research-citation-popover {
+    @apply absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-[280px] p-3 rounded-lg z-50;
+    background-color: var(--bg-secondary, #111113);
+    border: 1px solid var(--border-subtle, #27272a);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .research-badge {
+    @apply text-[11px] font-semibold px-1.5 py-0.5 rounded;
+    background-color: rgba(167, 139, 250, 0.15);
+    color: #a78bfa;
+  }
+}
+
+@keyframes an-text-shimmer {
+  from { background-position: calc(var(--an-shimmer-spread) * -1) 0; }
+  to { background-position: calc(var(--an-shimmer-spread) * 1) 0; }
+}
+
+@keyframes an-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@keyframes canvasTileSpawn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }

@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useViewMode, type ViewMode } from '@/hooks/useViewMode';
 import { useDropTarget, type FileWithData } from '@/components/GlobalDropzone';
-import { AttachmentPreview, AttachmentPreviewModal, type AttachmentPreviewItem } from '@/components/chat/AttachmentPreview';
 import {
   Plus,
   Square,
@@ -15,7 +15,6 @@ import {
   Sparkle,
   X,
   FileText,
-  Image,
   GithubLogo as Github,
   Globe,
   Lightning,
@@ -25,7 +24,6 @@ import {
   Robot,
   Camera,
   Video,
-  UploadSimple,
   PlugsConnected,
   CircleNotch,
   Warning,
@@ -33,10 +31,18 @@ import {
   Hammer,
   Image as ImageIcon,
 } from '@phosphor-icons/react';
+import { AttachmentButton } from '@/components/agent-elements/input/attachment-button';
+import { FileAttachment } from '@/components/agent-elements/input/file-attachment';
+import { TextShimmer } from '@/components/agent-elements/text-shimmer';
+import { AgentMentionDropdown } from '@/components/chat/AgentMentionDropdown';
+import { AgentPill } from '@/components/chat/AgentPill';
 
 import { cn } from '@/lib/utils';
 import { formatFileSize, supportsTextExtraction, extractTextFromFile } from '@/lib/attachments/extract-text';
 import { createModuleLogger } from '@/lib/logger';
+
+const logger = createModuleLogger('ChatComposer');
+
 import type { GizziAttention, GizziEmotion } from '@/components/ai-elements/GizziMascot';
 import {
   Dialog,
@@ -55,8 +61,6 @@ import type { RuntimeExecutionMode } from '@/lib/agents/native-agent-api';
 
 import {
   buildOpenClawImportInput,
-  useActiveSessionContextSnapshot,
-  useNativeAgentStore,
   discoverOpenClawAgents,
   getOpenClawWorkspacePathFromAgent,
   getRegisteredOpenClawAgentId,
@@ -65,6 +69,7 @@ import {
   type Agent,
   type OpenClawDiscoveredAgent,
 } from '@/lib/agents';
+import { useActiveChatSessionId, useActiveChatSession } from './ChatSessionStore';
 import { AgentModeGizzi } from './AgentModeGizzi';
 import { getAgentModeSurfaceTheme } from './agentModeSurfaceTheme';
 import { useRecordingStore } from '@/stores/recording.store';
@@ -78,6 +83,7 @@ const TERMINAL_SERVER_URL = typeof __TERMINAL_SERVER_URL__ !== 'undefined'
   : (typeof window !== 'undefined' && (window as any).__TERMINAL_SERVER_URL__)
     ? (window as any).__TERMINAL_SERVER_URL__
     : 'http://127.0.0.1:4096';
+const PROVIDER_DISCOVERY_URL = '/api/v1/providers';
 
 // ============================================================================
 // Theme
@@ -108,6 +114,12 @@ export interface SlashCommand {
   icon?: React.ReactNode;
 }
 
+interface AgentCommand {
+  command: string;
+  label: string;
+  detail: string;
+}
+
 interface ChatComposerProps {
   onSend: (text: string) => void;
   isLoading?: boolean;
@@ -129,6 +141,8 @@ interface ChatComposerProps {
   onAddAttachment?: (attachment: ChatAttachment) => void;
   /** Called when sending in agent mode - if provided, opens full agent session view instead of embedded chat */
   onAgentSend?: (text: string) => void;
+  /** Called when the @mention agent selection changes (Phase 2: per-message routing) */
+  onMentionAgentChange?: (agentId: string | null) => void;
   /** Whether to show slash command suggestions in the composer */
   showSlashCommands?: boolean;
   /** Surface theme for agent mode styling */
@@ -139,6 +153,12 @@ interface ChatComposerProps {
   };
   /** Custom content to render in the bottom dock (left side) instead of "Choose Agent" */
   bottomDockContent?: React.ReactNode;
+  /** Optional inline info bar rendered at the top of the composer shell. */
+  topInfoBarContent?: React.ReactNode;
+  /** Optional inline question bar rendered between info and textarea. */
+  questionBarContent?: React.ReactNode;
+  /** Optional inline info bar rendered above the composer toolbar. */
+  bottomInfoBarContent?: React.ReactNode;
 }
 
 const CATEGORY_EMOTIONS: Record<string, { hover: GizziEmotion; select: GizziEmotion }> = {
@@ -148,6 +168,14 @@ const CATEGORY_EMOTIONS: Record<string, { hover: GizziEmotion; select: GizziEmot
   learn: { hover: 'alert', select: 'focused' },
   allternit: { hover: 'mischief', select: 'mischief' },
 };
+
+const AGENT_COMMANDS: AgentCommand[] = [
+  { command: 'A://ultrathink', label: 'Ultrathink', detail: 'Bias the request toward deeper reasoning and visible thinking.' },
+  { command: 'A://plan', label: 'Plan', detail: 'Start in planning mode before executing changes.' },
+  { command: 'A://build', label: 'Build', detail: 'Switch back to direct execution and implementation.' },
+  { command: 'A://search', label: 'Search', detail: 'Lead with retrieval, docs, and grounded research.' },
+  { command: 'A://tools', label: 'Tools', detail: 'Favor tool use and runtime actions over plain text responses.' },
+];
 
 interface ComposerMenuSubItem {
   id: string;
@@ -524,10 +552,15 @@ export function ChatComposer({
   onRemoveAttachment: externalRemoveAttachment,
   onAddAttachment: externalAddAttachment,
   onAgentSend,
+  onMentionAgentChange,
   bottomDockContent,
+  topInfoBarContent,
+  questionBarContent,
+  bottomInfoBarContent,
 }: ChatComposerProps) {
   const [input, setInput] = useState(inputValue);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [composerFocused, setComposerFocused] = useState(false);
   const lastAgentFetchPulseRef = useRef<number | null>(null);
   const openClawDiscoveryRequestRef = useRef(0);
   const showAgentRailGuide = Boolean(
@@ -545,13 +578,11 @@ export function ChatComposer({
   const [isLoadingOpenClawCandidates, setIsLoadingOpenClawCandidates] = useState(false);
   const [openClawError, setOpenClawError] = useState<string | null>(null);
   const [importingOpenClawAgentId, setImportingOpenClawAgentId] = useState<string | null>(null);
-  const activeSessionId = useNativeAgentStore((s) => s.activeSessionId);
-  const appendOptimisticEvent = useNativeAgentStore((s) => s.appendOptimisticEvent);
-  const activeSessionContext = useActiveSessionContextSnapshot();
-  const activeSession = activeSessionContext.session;
+  const activeSessionId = useActiveChatSessionId();
+  const activeSession = useActiveChatSession();
   const hasEmbeddedSession = useMemo(
-    () => Boolean(activeSession && activeSessionContext.descriptor.sessionMode === 'agent'),
-    [activeSession, activeSessionContext.descriptor.sessionMode],
+    () => Boolean(activeSession && activeSession?.metadata?.sessionMode === 'agent'),
+    [activeSession],
   );
   const [locallyEnabled, setLocallyEnabled] = useState(false);
   const agentModeEnabled = hasEmbeddedSession || locallyEnabled;
@@ -607,6 +638,14 @@ export function ChatComposer({
   // ── Slash command state ───────────────────────────────────────────────────
   const [slashMenuVisible, setSlashMenuVisible] = useState(false);
   const [slashFilter, setSlashFilter] = useState('');
+  const [agentCommandMenuVisible, setAgentCommandMenuVisible] = useState(false);
+  const [agentCommandFilter, setAgentCommandFilter] = useState('');
+
+  // ── Agent @mention state ────────────────────────────────────────────────
+  const [mentionOpen, setMentionOpen] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [mentionIndex, setMentionIndex] = useState(0);
+  const [selectedMentionAgentId, setSelectedMentionAgentId] = useState<string | null>(null);
 
   // ── Attachment state (internal when external not provided) ───────────────
   const [internalAttachments, setInternalAttachments] = useState<ChatAttachment[]>([]);
@@ -639,22 +678,6 @@ export function ChatComposer({
   const isBrowserSurface = agentModeSurface === 'browser';
 
   const toggleAgentMode = () => {
-    const nextEnabled = !agentModeEnabled;
-    if (activeSessionId && agentModeSurface) {
-      appendOptimisticEvent(activeSessionId, {
-        id: `evt_agent_mode_${Date.now()}`,
-        sessionId: activeSessionId,
-        actor: 'ui',
-        surface: agentModeSurface,
-        type: 'agent.mode.changed',
-        payload: {
-          enabled: nextEnabled,
-          scope: 'surface',
-        },
-        createdAt: new Date().toISOString(),
-        seq: 0,
-      });
-    }
     if (agentModeEnabled) {
       setLocallyEnabled(false);
     } else {
@@ -670,6 +693,78 @@ export function ChatComposer({
   );
   const setSelectedMode = useAgentSurfaceModeStore((state) => state.setSelectedMode);
   const agents = useAgentStore((state) => state.agents);
+
+  // Look up the agent selected via @mention
+  const selectedMentionAgent = useMemo(() => {
+    if (!selectedMentionAgentId) return null;
+    return agents.find((a) => a.id === selectedMentionAgentId) || null;
+  }, [selectedMentionAgentId, agents]);
+
+  // Filtered agents for @mention dropdown
+  const filteredMentionAgents = useMemo(() => {
+    if (!mentionOpen) return [];
+    const q = mentionQuery.toLowerCase();
+    return agents.filter((a) => a.name.toLowerCase().includes(q));
+  }, [mentionOpen, mentionQuery, agents]);
+
+  // Handle selecting an agent from @mention dropdown
+  const handleSelectMentionAgent = useCallback((agent: Agent) => {
+    // Remove the @query from input
+    const lastAtIndex = input.lastIndexOf('@');
+    if (lastAtIndex !== -1) {
+      const before = input.slice(0, lastAtIndex);
+      const after = input.slice(lastAtIndex + mentionQuery.length + 1);
+      setInput(before + after);
+    }
+    setSelectedMentionAgentId(agent.id);
+    onMentionAgentChange?.(agent.id);
+    // Enable local agent mode so the composer shows agent UI (glow, Gizzi, etc.)
+    setLocallyEnabled(true);
+    setMentionOpen(false);
+    setMentionQuery('');
+    setMentionIndex(0);
+    // Focus textarea after selection
+    window.requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+    });
+  }, [input, mentionQuery, agentModeSurface, setSelectedSurfaceAgent]);
+
+  // Handle removing the agent pill
+  const handleRemoveMentionAgent = useCallback(() => {
+    setSelectedMentionAgentId(null);
+    onMentionAgentChange?.(null);
+    // Disable local agent mode unless there's an embedded session
+    setLocallyEnabled(false);
+  }, [onMentionAgentChange]);
+
+  // Parse @mention from input on change
+  const parseMention = useCallback((val: string) => {
+    const lastAtIndex = val.lastIndexOf('@');
+    if (lastAtIndex === -1) {
+      setMentionOpen(false);
+      setMentionQuery('');
+      return;
+    }
+    // Make sure @ is not followed by a space and is the most recent token
+    const afterAt = val.slice(lastAtIndex + 1);
+    const beforeAt = val.slice(0, lastAtIndex);
+    // @ must be at start or after whitespace
+    const charBeforeAt = beforeAt.slice(-1);
+    if (beforeAt.length > 0 && !/\s/.test(charBeforeAt)) {
+      setMentionOpen(false);
+      setMentionQuery('');
+      return;
+    }
+    // Don't open if there's a space in the query (user moved on)
+    if (afterAt.includes(' ') || afterAt.includes('\n')) {
+      setMentionOpen(false);
+      setMentionQuery('');
+      return;
+    }
+    setMentionOpen(true);
+    setMentionQuery(afterAt);
+    setMentionIndex(0);
+  }, []);
   
   // ── WIH / TaskBar state ─────────────────────────────────────────────────
   const [taskBarExpanded, setTaskBarExpanded] = useState(false);
@@ -748,11 +843,37 @@ export function ChatComposer({
   const [terminalModels, setTerminalModels] = useState<any[]>([]);
   const [terminalModelsLoading, setTerminalModelsLoading] = useState(true);
 
-  // Fetch models from Terminal Server - DISABLED to prevent console errors
-  // Terminal Server is optional and causes ERR_CONNECTION_REFUSED when not running
+  // Fetch models through the platform route so desktop auth stays server-side.
   useEffect(() => {
-    // Skip Terminal Server fetch entirely - use fallback models only
-    setTerminalModelsLoading(false);
+    let cancelled = false;
+    async function fetchTerminalModels() {
+      try {
+        const response = await fetch(PROVIDER_DISCOVERY_URL, { signal: AbortSignal.timeout(5000) });
+        if (!response.ok || cancelled) return;
+        const data = await response.json();
+        const allModels: any[] = [];
+        if (data.all && Array.isArray(data.all)) {
+          data.all.forEach((provider: any) => {
+            if (!provider.models) return;
+            Object.entries(provider.models).forEach(([modelId, modelData]: [string, any]) => {
+              allModels.push({
+                id: `${provider.id}/${modelId}`,
+                name: modelData.name || modelId,
+                providerId: provider.id,
+                providerName: provider.name || provider.id,
+              });
+            });
+          });
+        }
+        if (!cancelled && allModels.length > 0) setTerminalModels(allModels);
+      } catch {
+        // Terminal Server not running — fall back to platform models
+      } finally {
+        if (!cancelled) setTerminalModelsLoading(false);
+      }
+    }
+    void fetchTerminalModels();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => { fetchProviders(); }, [fetchProviders]);
@@ -892,6 +1013,28 @@ export function ChatComposer({
     }
   }, [agentModeEnabled, showAgentMenu]);
 
+  // Feature 6: Listen for quick re-mention clicks from message history
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { agentId, agentName } = (e as CustomEvent).detail;
+      if (!agentId) return;
+      // Simulate @mention selection
+      setSelectedMentionAgentId(agentId);
+      onMentionAgentChange?.(agentId);
+      setLocallyEnabled(true);
+      // Focus textarea
+      window.requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+      });
+      // Dispatch floating avatar pulse (Feature 3)
+      window.dispatchEvent(new CustomEvent('allternit:agent-pulse', {
+        detail: { agentId, agentName },
+      }));
+    };
+    window.addEventListener('allternit:mention-agent' as any, handler);
+    return () => window.removeEventListener('allternit:mention-agent' as any, handler);
+  }, [onMentionAgentChange]);
+
   useEffect(() => {
     if (!showAgentRailGuide) {
       if (showAgentGuidePadding) {
@@ -977,6 +1120,17 @@ export function ChatComposer({
     }
   }, [allModels, selectedModel]);
 
+  // Auto-focus on mount (active reply bar gains focus after ChatView remounts on first message)
+  useEffect(() => {
+    if (variant !== 'large') {
+      const raf = window.requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+      });
+      return () => window.cancelAnimationFrame(raf);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
@@ -988,6 +1142,9 @@ export function ChatComposer({
 
   const requiresAgentSelection = Boolean(agentModeSurface && agentModeEnabled);
   const canSubmit = Boolean(input.trim()) && !isLoading && (!requiresAgentSelection || Boolean(selectedSurfaceAgent));
+  const hasTopInfoBar = Boolean(topInfoBarContent);
+  const hasQuestionBar = Boolean(questionBarContent);
+  const hasBottomInfoBar = Boolean(bottomInfoBarContent);
   const agentWorkspaceSummary = selectedWorkspacePreview.artifactCount > 0
     ? `${selectedWorkspacePreview.artifactCount} workspace files ready`
     : selectedWorkspacePreview.source === 'openclaw'
@@ -1089,7 +1246,13 @@ export function ChatComposer({
 
   const handleSubmit = () => {
     if (!canSubmit) return;
-    
+
+    // Computer-use mode: dispatch directly to ACU planning loop.
+    // The task appears in chat via onSend; the sidecar shows live screenshots.
+    if (selectedModeId === 'computer-use') {
+      useBrowserAgentStore.getState().runAcuTask(input);
+    }
+
     // If agent mode is enabled and onAgentSend is provided, use it to open full agent session view
     if (agentModeEnabled && onAgentSend && agentModeSurface) {
       onAgentSend(input);
@@ -1102,9 +1265,20 @@ export function ChatComposer({
     setShowAgentMenu(false);
     setSlashMenuVisible(false);
     setSlashFilter('');
+    setAgentCommandMenuVisible(false);
+    setAgentCommandFilter('');
+    setMentionOpen(false);
+    setMentionQuery('');
+    setMentionIndex(0);
+    // Phase 2: transient pill — clear mention agent after send
+    setSelectedMentionAgentId(null);
+    onMentionAgentChange?.(null);
     if (!externalAttachments) {
       setInternalAttachments([]);
     }
+    window.requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+    });
   };
 
   // ── Slash command filtering ─────────────────────────────────────────────
@@ -1117,6 +1291,17 @@ export function ChatComposer({
         cmd.label.toLowerCase().includes(slashFilter.toLowerCase()),
     );
   }, [slashCommands, slashMenuVisible, slashFilter]);
+  const filteredAgentCommands = useMemo(() => {
+    if (!agentCommandMenuVisible) return [];
+    if (!agentCommandFilter) return AGENT_COMMANDS;
+    return AGENT_COMMANDS.filter(
+      (cmd) =>
+        cmd.command.toLowerCase().includes(agentCommandFilter.toLowerCase()) ||
+        cmd.label.toLowerCase().includes(agentCommandFilter.toLowerCase()) ||
+        cmd.detail.toLowerCase().includes(agentCommandFilter.toLowerCase()),
+    );
+  }, [agentCommandFilter, agentCommandMenuVisible]);
+  const isAgentCommandMode = input.trimStart().startsWith('A://');
 
   // ── Screenshot capture ──────────────────────────────────────────────────
   const handleCaptureScreenshot = useCallback(async () => {
@@ -1211,16 +1396,13 @@ export function ChatComposer({
   }, [addAttachment]);
 
   // ── Drag & Drop file handling (Global Dropzone) ──────────────────────────
-  const [previewModalOpen, setPreviewModalOpen] = useState(false);
-  const [previewItem, setPreviewItem] = useState<AttachmentPreviewItem | null>(null);
-
   const handleDroppedFiles = useCallback(async (files: FileWithData[]) => {
     for (const { file, dataUrl, extractedText } of files) {
       const isImage = file.type.startsWith('image/');
       const ext = file.name.split('.').pop()?.toLowerCase() || '';
       
       // Determine file type for preview
-      let fileType: AttachmentPreviewItem['type'] = 'other';
+      let fileType: ChatAttachment['type'] = 'other';
       if (file.type === 'image/gif' || ext === 'gif') fileType = 'gif';
       else if (isImage) fileType = 'image';
       else if (['pdf', 'docx', 'doc', 'txt', 'md'].includes(ext)) fileType = 'document';
@@ -1239,21 +1421,6 @@ export function ChatComposer({
 
   // Register as drop target for chat
   useDropTarget('chat', handleDroppedFiles);
-
-  // Convert attachments to preview items
-  const attachmentPreviewItems: AttachmentPreviewItem[] = useMemo(() => {
-    return attachments.map(att => ({
-      id: att.id,
-      name: att.name,
-      dataUrl: att.dataUrl,
-      type: att.type as AttachmentPreviewItem['type'],
-    }));
-  }, [attachments]);
-
-  const handlePreview = useCallback((item: AttachmentPreviewItem) => {
-    setPreviewItem(item);
-    setPreviewModalOpen(true);
-  }, []);
 
   // ── Slash command execution ─────────────────────────────────────────────
   const handleSlashCommand = useCallback((cmd: SlashCommand) => {
@@ -1287,6 +1454,13 @@ export function ChatComposer({
         break;
     }
   }, [handleCaptureScreenshot, onSend]);
+
+  const handleAgentCommand = useCallback((cmd: AgentCommand) => {
+    setInput(`${cmd.command} `);
+    setAgentCommandMenuVisible(false);
+    setAgentCommandFilter('');
+    textareaRef.current?.focus();
+  }, []);
 
   const handleOptionHover = (option: string) => {
     setInput(option);
@@ -1368,7 +1542,7 @@ export function ChatComposer({
       
       {/* TaskBar - Shows active WIHs */}
       <TaskBar 
-        wihs={[...wihs, ...myWihs]}
+        wihs={[...(wihs ?? []), ...(myWihs ?? [])]}
         selectedWihId={selectedWihId}
         onSelectWih={selectWih}
         expanded={taskBarExpanded}
@@ -1567,7 +1741,9 @@ export function ChatComposer({
             borderBottom: 'none',
             boxShadow: agentModeEnabled
               ? `0 0 0 1px ${agentModeTheme.soft}, 0 12px 36px ${agentModeTheme.glow}`
-              : 'var(--shadow-lg)',
+              : composerFocused
+                ? '0 0 0 1px color-mix(in srgb, var(--accent-chat) 34%, transparent), 0 12px 36px color-mix(in srgb, var(--accent-chat) 14%, transparent)'
+                : 'var(--shadow-lg)',
             display: 'flex',
             flexDirection: 'column',
             overflow: 'visible',
@@ -1576,6 +1752,13 @@ export function ChatComposer({
             zIndex: 10
           }}
           onMouseEnter={() => setTrackingAttention(0, 0.44)}
+          onFocusCapture={() => setComposerFocused(true)}
+          onBlurCapture={(event) => {
+            const nextFocused = event.relatedTarget;
+            if (!(nextFocused instanceof Node) || !event.currentTarget.contains(nextFocused)) {
+              setComposerFocused(false);
+            }
+          }}
         >
         {agentModeSurface && agentModeEnabled ? (
           <div
@@ -1651,23 +1834,103 @@ export function ChatComposer({
           </div>
         )}
 
-        {/* Attachment Preview Cards */}
-        <AttachmentPreview
-          attachments={attachmentPreviewItems}
-          onRemove={removeAttachment}
-          onPreview={handlePreview}
-          variant="detailed"
-        />
-        
-        {/* Preview Modal */}
-        <AttachmentPreviewModal
-          item={previewItem}
-          isOpen={previewModalOpen}
-          onClose={() => setPreviewModalOpen(false)}
-        />
+        {attachments.length > 0 ? (
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 8,
+              padding: '12px 14px 0 14px',
+            }}
+          >
+            {attachments.map((attachment) => (
+              <FileAttachment
+                key={attachment.id}
+                id={attachment.id}
+                filename={attachment.name}
+                isImage={attachment.type === 'image' || attachment.type === 'screenshot' || attachment.type === 'gif'}
+                url={attachment.dataUrl}
+                onRemove={() => removeAttachment(attachment.id)}
+                className="border border-[var(--chat-composer-border)] bg-[var(--chat-composer-soft)]"
+              />
+            ))}
+          </div>
+        ) : null}
 
+        {hasTopInfoBar && (
+          <div
+            style={{
+              padding: '10px 14px 0 14px',
+            }}
+          >
+            <div
+              style={{
+                minHeight: 36,
+                borderRadius: 14,
+                border: `1px solid ${THEME.inputBorder}`,
+                background: 'var(--chat-composer-soft)',
+                overflow: 'hidden',
+              }}
+            >
+              {topInfoBarContent}
+            </div>
+          </div>
+        )}
+
+        {hasQuestionBar && (
+          <div
+            style={{
+              padding: hasTopInfoBar ? '10px 14px 0 14px' : '14px 14px 0 14px',
+            }}
+          >
+            <div
+              style={{
+                borderRadius: 16,
+                border: `1px solid ${THEME.inputBorder}`,
+                background: 'var(--chat-composer-soft)',
+                overflow: 'hidden',
+              }}
+            >
+              {questionBarContent}
+            </div>
+          </div>
+        )}
+        
         {/* Input Area */}
         <div style={{ padding: '16px 20px 8px 20px' }}>
+          {isAgentCommandMode ? (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+                marginBottom: 10,
+                padding: '8px 10px',
+                borderRadius: 12,
+                border: `1px solid ${THEME.inputBorder}`,
+                background: 'var(--chat-composer-soft)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                <TextShimmer as="span" className="text-[12px] font-medium text-[var(--accent-chat)]">
+                  A:// command mode
+                </TextShimmer>
+                <span style={{ color: THEME.textSecondary, fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  Tab autocompletes. Enter submits after the first space.
+                </span>
+              </div>
+            </div>
+          ) : null}
+          {/* Agent pill from @mention */}
+          {selectedMentionAgent && (
+            <div style={{ marginBottom: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <AgentPill
+                agent={selectedMentionAgent}
+                onRemove={handleRemoveMentionAgent}
+              />
+            </div>
+          )}
           <textarea
             ref={textareaRef}
             value={input}
@@ -1684,8 +1947,43 @@ export function ChatComposer({
                   setSlashFilter('');
                 }
               }
+              if (val.trimStart().startsWith('A://')) {
+                setAgentCommandMenuVisible(true);
+                setAgentCommandFilter(val.trimStart());
+              } else {
+                setAgentCommandMenuVisible(false);
+                setAgentCommandFilter('');
+              }
+              // @mention detection
+              parseMention(val);
             }}
             onKeyDown={(e) => {
+              // @mention keyboard navigation
+              if (mentionOpen && filteredMentionAgents.length > 0) {
+                if (e.key === 'Escape') {
+                  e.preventDefault();
+                  setMentionOpen(false);
+                  setMentionQuery('');
+                  return;
+                }
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  setMentionIndex((prev) =>
+                    Math.min(prev + 1, filteredMentionAgents.length - 1)
+                  );
+                  return;
+                }
+                if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  setMentionIndex((prev) => Math.max(prev - 1, 0));
+                  return;
+                }
+                if (e.key === 'Enter' || e.key === 'Tab') {
+                  e.preventDefault();
+                  handleSelectMentionAgent(filteredMentionAgents[mentionIndex]);
+                  return;
+                }
+              }
               if (slashMenuVisible && filteredSlashCommands.length > 0) {
                 if (e.key === 'Escape') {
                   e.preventDefault();
@@ -1699,13 +1997,25 @@ export function ChatComposer({
                   return;
                 }
               }
+              if (agentCommandMenuVisible && filteredAgentCommands.length > 0) {
+                if (e.key === 'Escape') {
+                  e.preventDefault();
+                  setAgentCommandMenuVisible(false);
+                  setAgentCommandFilter('');
+                  return;
+                }
+                if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey && !input.trim().includes(' '))) {
+                  e.preventDefault();
+                  handleAgentCommand(filteredAgentCommands[0]);
+                  return;
+                }
+              }
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 handleSubmit();
               }
             }}
             placeholder={placeholder}
-            disabled={isLoading}
             rows={1}
             onFocus={() => setTrackingAttention(0, 0.34, 'locked-on')}
             style={{
@@ -1724,6 +2034,51 @@ export function ChatComposer({
             }}
           />
         </div>
+        {agentCommandMenuVisible && filteredAgentCommands.length > 0 ? (
+          <div
+            style={{
+              padding: '0 14px 10px 14px',
+            }}
+          >
+            <div style={{ display: 'grid', gap: 6 }}>
+              {filteredAgentCommands.map((cmd) => (
+                <button
+                  key={cmd.command}
+                  type="button"
+                  onClick={() => handleAgentCommand(cmd)}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    padding: '10px 12px',
+                    borderRadius: 12,
+                    border: `1px solid ${THEME.inputBorder}`,
+                    background: 'var(--chat-composer-soft)',
+                    color: THEME.textPrimary,
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = THEME.hoverBg; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--chat-composer-soft)'; }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ color: THEME.accent, fontFamily: 'monospace', fontSize: 12, fontWeight: 700 }}>
+                      {cmd.command}
+                    </div>
+                    <div style={{ color: THEME.textSecondary, fontSize: 12 }}>
+                      {cmd.detail}
+                    </div>
+                  </div>
+                  <span style={{ color: THEME.textMuted, fontSize: 11, flexShrink: 0 }}>
+                    {cmd.label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         {requiresAgentSelection ? (
           <div
@@ -1783,6 +2138,26 @@ export function ChatComposer({
           </div>
         ) : null}
 
+        {hasBottomInfoBar ? (
+          <div
+            style={{
+              padding: '0 14px 8px 14px',
+            }}
+          >
+            <div
+              style={{
+                minHeight: 34,
+                borderRadius: 14,
+                border: `1px solid ${THEME.inputBorder}`,
+                background: 'var(--chat-composer-soft)',
+                overflow: 'hidden',
+              }}
+            >
+              {bottomInfoBarContent}
+            </div>
+          </div>
+        ) : null}
+
         {/* Bottom Toolbar */}
         <div style={{
           display: 'flex',
@@ -1792,34 +2167,31 @@ export function ChatComposer({
         }}>
           {/* Left side: Plus button */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', position: 'relative' }}>
-            <button
-              type="button"
+            <AttachmentButton
               onClick={() => { setShowPlusMenu(!showPlusMenu); setActiveSubMenu(null); }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                background: showPlusMenu ? 'var(--chat-composer-soft)' : 'transparent',
-                border: 'none',
-                color: THEME.textSecondary,
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = THEME.hoverBg;
+              className={cn(
+                'size-8 transition-colors',
+                showPlusMenu && 'bg-[var(--chat-composer-soft)]',
+              )}
+              icon={
+                <Plus
+                  size={20}
+                  strokeWidth={2.5}
+                  style={{
+                    color: 'var(--chat-composer-muted)',
+                    transform: showPlusMenu ? 'rotate(45deg)' : 'none',
+                    transition: 'transform 0.2s',
+                  }}
+                />
+              }
+              onMouseEnter={() => {
                 onInteractionSignal?.('alert');
                 setTrackingAttention(-0.44, 0.56, 'locked-on');
               }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = showPlusMenu ? 'var(--chat-composer-soft)' : 'transparent';
+              onMouseLeave={() => {
                 setTrackingAttention(0, 0.44);
               }}
-            >
-              <Plus size={20} strokeWidth={2.5} style={{ transform: showPlusMenu ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s' }} />
-            </button>
+            />
 
             {/* Plus Menu Popover */}
             {showPlusMenu && (
@@ -2238,6 +2610,21 @@ export function ChatComposer({
         />
       )}
       
+      {/* @mention Agent Dropdown */}
+      {mentionOpen && agentModeSurface && (
+        <AgentMentionDropdown
+          agents={agents}
+          query={mentionQuery}
+          selectedIndex={mentionIndex}
+          onSelect={handleSelectMentionAgent}
+          onHoverIndex={setMentionIndex}
+          onClose={() => {
+            setMentionOpen(false);
+            setMentionQuery('');
+          }}
+        />
+      )}
+      
       {/* Mode Dock - 8 Mode Tabs */}
       {agentModeSurface && agentModeEnabled && (
         <div style={{
@@ -2642,8 +3029,7 @@ function TaskBar({ wihs, selectedWihId, onSelectWih, expanded, onToggleExpand, a
         <div style={{
           background: THEME.inputBg,
           border: `1px solid ${THEME.inputBorder}`,
-          borderTop: `1px solid ${borderColor}`,
-      marginTop: -1,
+          marginTop: -1,
           borderRadius: '0 0 16px 16px',
           padding: '12px 16px 16px',
           maxHeight: '250px',
@@ -2900,6 +3286,66 @@ const MODES = [
 // Bottom Dock - Status bar below input container
 // ============================================================================
 
+// ============================================================================
+// View Mode Toggle — compact 3-segment pill: V · N · S
+// ============================================================================
+
+const VIEW_MODE_SEGMENTS: { id: ViewMode; label: string; title: string }[] = [
+  { id: 'verbose', label: 'V', title: 'Verbose — show all thinking and tool details' },
+  { id: 'normal',  label: 'N', title: 'Normal — collapsed thinking, compact tool chips' },
+  { id: 'summary', label: 'S', title: 'Summary — final text only' },
+];
+
+function ViewModeToggle() {
+  const { viewMode, setViewMode } = useViewMode();
+  return (
+    <div
+      role="group"
+      aria-label="View mode"
+      title="View mode (⌘+Shift+V to cycle)"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        borderRadius: '7px',
+        overflow: 'hidden',
+        border: '1px solid var(--chat-composer-border)',
+        background: 'var(--chat-composer-soft)',
+        height: '28px',
+        flexShrink: 0,
+      }}
+    >
+      {VIEW_MODE_SEGMENTS.map((seg, i) => {
+        const isActive = viewMode === seg.id;
+        return (
+          <button
+            key={seg.id}
+            type="button"
+            onClick={() => setViewMode(seg.id)}
+            title={seg.title}
+            aria-pressed={isActive}
+            style={{
+              padding: '0 8px',
+              height: '100%',
+              border: 'none',
+              borderLeft: i > 0 ? '1px solid var(--chat-composer-border)' : 'none',
+              background: isActive ? 'var(--chat-composer-hover)' : 'transparent',
+              color: isActive ? 'var(--ui-text-primary)' : 'var(--chat-composer-muted)',
+              fontSize: '11px',
+              fontWeight: isActive ? 700 : 500,
+              cursor: 'pointer',
+              letterSpacing: '0.04em',
+              transition: 'all 0.12s ease',
+              lineHeight: 1,
+            }}
+          >
+            {seg.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 interface BottomDockProps {
   selectedModeId: string | null;
   agentModeSurface?: AgentModeSurface;
@@ -2987,8 +3433,10 @@ function BottomDock({
         </button>
       )}
       
-      {/* Right: Build/Plan Toggle - Minimal design with text label */}
-      <button
+      {/* Right: View Mode toggle + Build/Plan Toggle */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <ViewModeToggle />
+        <button
         type="button"
         onClick={handleToggleMode}
         disabled={isLoadingExecMode || isSavingExecMode}
@@ -3024,42 +3472,53 @@ function BottomDock({
         {uiMode === 'plan' ? <Compass size={14} /> : <Hammer size={14} />}
         <span>{uiMode === 'plan' ? 'Plan' : 'Build'}</span>
       </button>
+      </div>
     </div>
   );
 }
 
 // Template data mapping from TemplatePreviewCards
 // Maps ALL 76 templates to the mode dock structure
-const getModeTemplates = (modeId: string): Array<{ title: string; description: string; prompt: string }> => {
+interface ModeTemplate {
+  title: string;
+  description: string;
+  prompt: string;
+  previewImage: string;
+}
+
+const getModeTemplates = (modeId: string): ModeTemplate[] => {
   const templates = ALL_TEMPLATES[modeId];
   if (!templates) return [];
   return templates.map(t => ({
     title: t.name,
     description: t.description,
-    prompt: t.prompt
+    prompt: t.prompt,
+    previewImage: t.previewImage
   }));
 };
 
 // Mode tabs configuration - pill style like the reference
 // All 9 modes from TemplatePreviewCards
 const MODE_TABS = [
-  { id: 'image', label: 'Image', color: '#8b5cf6' },      // Violet
-  { id: 'video', label: 'Video', color: '#ec4899' },      // Pink
-  { id: 'slides', label: 'Slides', color: '#f59e0b' },    // Amber
-  { id: 'website', label: 'Web', color: '#6366f1' },      // Indigo
-  { id: 'research', label: 'Research', color: '#3b82f6' }, // Blue
-  { id: 'data', label: 'Data', color: '#10b981' },        // Emerald
-  { id: 'code', label: 'Code', color: '#f97316' },        // Orange
-  { id: 'swarms', label: 'Swarms', color: '#14b8a6' },    // Teal
-  { id: 'flow', label: 'Flow', color: '#06b6d4' },        // Cyan
+  { id: 'image', label: 'Image', color: '#8b5cf6' },         // Violet
+  { id: 'video', label: 'Video', color: '#ec4899' },         // Pink
+  { id: 'slides', label: 'Slides', color: '#f59e0b' },       // Amber
+  { id: 'website', label: 'Web', color: '#6366f1' },         // Indigo
+  { id: 'research', label: 'Research', color: '#3b82f6' },   // Blue
+  { id: 'data', label: 'Data', color: '#10b981' },           // Emerald
+  { id: 'code', label: 'Code', color: '#f97316' },           // Orange
+  { id: 'swarms', label: 'Swarms', color: '#14b8a6' },       // Teal
+  { id: 'flow', label: 'Flow', color: '#06b6d4' },           // Cyan
+  { id: 'computer-use', label: 'Computer', color: '#a855f7' }, // Purple
 ] as const;
 
 // Surface-specific mode filtering
 const SURFACE_MODES: Record<AgentModeSurface, string[]> = {
-  chat: ['image', 'video', 'slides', 'website', 'research', 'data', 'code', 'swarms', 'flow'],
-  cowork: ['image', 'video', 'slides', 'website', 'research', 'data', 'code', 'swarms', 'flow'],
-  code: ['code', 'website', 'swarms', 'flow'],  // Code-focused modes
-  browser: ['website', 'research', 'data'],     // Browser-focused modes
+  chat: ['image', 'video', 'slides', 'website', 'research', 'data', 'code', 'swarms', 'flow', 'computer-use'],
+  cowork: ['image', 'video', 'slides', 'website', 'research', 'data', 'code', 'swarms', 'flow', 'computer-use'],
+  code: ['code', 'website', 'swarms', 'flow'],
+  browser: ['website', 'research', 'data', 'computer-use'],
+  design: ['image', 'video', 'slides', 'assets'],
 };
 
 function ModeDock({ selectedMode, onSelectMode, agentModeSurface, onSelectTemplate }: ModeDockProps) {
@@ -3155,15 +3614,12 @@ function ModeDock({ selectedMode, onSelectMode, agentModeSurface, onSelectTempla
             }}>
               Featured {modeColors?.label} Cases
             </span>
-            <button style={{
+            <span style={{
               fontSize: '11px',
-              color: modeColors?.color || THEME.accent,
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
+              color: THEME.textMuted,
             }}>
-              More cases →
-            </button>
+              {modeData.length} templates
+            </span>
           </div>
           
           {/* Cards Grid */}
@@ -3178,8 +3634,8 @@ function ModeDock({ selectedMode, onSelectMode, agentModeSurface, onSelectTempla
                 title={template.title}
                 description={template.description}
                 prompt={template.prompt}
+                previewImage={template.previewImage}
                 color={modeColors?.color || THEME.accent}
-                gradientIndex={index}
                 onClick={onSelectTemplate}
               />
             ))}
@@ -3195,23 +3651,18 @@ function TemplateCard({
   title, 
   description,
   prompt,
+  previewImage,
   color,
-  gradientIndex,
   onClick
 }: { 
   title: string; 
   description: string;
   prompt: string;
+  previewImage: string;
   color: string;
-  gradientIndex: number;
   onClick?: (prompt: string) => void;
 }) {
-  // Generate gradient based on color and index
-  const gradients = [
-    `linear-gradient(135deg, ${color}40 0%, ${color}10 100%)`,
-    `linear-gradient(135deg, ${color}30 0%, ${color}05 100%)`,
-    `linear-gradient(135deg, ${color}50 0%, ${color}20 100%)`,
-  ];
+  const [imageLoaded, setImageLoaded] = useState(false);
   
   return (
     <button
@@ -3237,26 +3688,35 @@ function TemplateCard({
         e.currentTarget.style.transform = 'translateY(0)';
       }}
     >
-      {/* Gradient Preview */}
+      {/* Real Image Preview */}
       <div style={{
-        height: '60px',
+        height: '80px',
         borderRadius: '8px',
-        background: gradients[gradientIndex % gradients.length],
         marginBottom: '10px',
         position: 'relative',
+        overflow: 'hidden',
+        background: `linear-gradient(135deg, ${color}20 0%, ${color}05 100%)`,
       }}>
-        {/* Decorative dots */}
+        <img
+          src={previewImage}
+          alt={title}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            opacity: imageLoaded ? 1 : 0,
+            transition: 'opacity 0.3s ease',
+          }}
+          onLoad={() => setImageLoaded(true)}
+          onError={() => setImageLoaded(false)}
+        />
+        {/* Vignette overlay */}
         <div style={{
           position: 'absolute',
-          top: '8px',
-          right: '8px',
-          display: 'flex',
-          gap: '4px',
-        }}>
-          <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: `${color}60` }} />
-          <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: `${color}40` }} />
-          <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: `${color}20` }} />
-        </div>
+          inset: 0,
+          background: 'linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 50%)',
+          pointerEvents: 'none',
+        }} />
       </div>
       
       {/* Content */}
@@ -4047,15 +4507,15 @@ function BrowseAllModelsOverlay({ isOpen, onClose, onSelectModel, currentModel }
   const [loading, setLoading] = useState(false);
   const [loadingProvider, setLoadingProvider] = useState(false);
 
-  // Fetch all providers and models from Terminal Server when overlay opens
+  // Fetch all providers and models through the authenticated platform API.
   useEffect(() => {
     if (!isOpen) return;
 
     async function fetchModels() {
       setLoading(true);
-      console.log('[ModelPicker] Fetching from Terminal Server:', TERMINAL_SERVER_URL);
+      console.log('[ModelPicker] Fetching from provider API:', PROVIDER_DISCOVERY_URL);
       try {
-        const response = await fetch(`${TERMINAL_SERVER_URL}/provider`, { signal: AbortSignal.timeout(5000) });
+        const response = await fetch(PROVIDER_DISCOVERY_URL, { signal: AbortSignal.timeout(5000) });
         console.log('[ModelPicker] Response status:', response.status);
         if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
         const data = await response.json();
@@ -4092,7 +4552,7 @@ function BrowseAllModelsOverlay({ isOpen, onClose, onSelectModel, currentModel }
         setProviders(allProviders);
         setModels(allModels);
       } catch (err) {
-        logger.error('Failed to fetch models from Terminal Server', err);
+        logger.error('Failed to fetch models from Terminal Server', err instanceof Error ? err.message : String(err));
       } finally {
         setLoading(false);
       }
@@ -4108,7 +4568,7 @@ function BrowseAllModelsOverlay({ isOpen, onClose, onSelectModel, currentModel }
     async function fetchProviderModels() {
       setLoadingProvider(true);
       try {
-        const response = await fetch(`${TERMINAL_SERVER_URL}/provider`, { signal: AbortSignal.timeout(5000) });
+        const response = await fetch(PROVIDER_DISCOVERY_URL, { signal: AbortSignal.timeout(5000) });
         if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
         const data = await response.json();
 
@@ -4123,7 +4583,7 @@ function BrowseAllModelsOverlay({ isOpen, onClose, onSelectModel, currentModel }
           setProviderModels([]);
         }
       } catch (err) {
-        logger.error('Failed to fetch provider models', err);
+        logger.error('Failed to fetch provider models', err instanceof Error ? err.message : String(err));
       } finally {
         setLoadingProvider(false);
       }

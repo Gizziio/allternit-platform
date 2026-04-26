@@ -199,7 +199,7 @@ function ContextMenu({ x, y, onClose, onCopy, onClear, onRename, onExport }: Con
         <Copy size={14} /> Copy Selection
       </button>
       <button onClick={onClear} className="w-full px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-2">
-        <RotateCcw size={14} /> Clear Terminal
+        <RefreshCcw size={14} /> Clear Terminal
       </button>
       <button onClick={onRename} className="w-full px-3 py-2 text-left text-sm text-zinc-300 hover:bg-zinc-800 flex items-center gap-2">
         <Type size={14} /> Rename
@@ -226,6 +226,7 @@ function TerminalCard({
   const fitAddonRef = useRef<FitAddon | null>(null);
   const searchAddonRef = useRef<SearchAddon | null>(null);
   const outputBufferRef = useRef<string>('');
+  const cardRef = useRef<HTMLDivElement>(null);
   
   const [isConnected, setIsConnected] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
@@ -393,7 +394,7 @@ function TerminalCard({
     
     const files = Array.from(e.dataTransfer.files);
     files.forEach(file => {
-      const path = file.path || file.name;
+      const path = (file as unknown as { path?: string }).path || file.name;
       if (onFileDrop) {
         onFileDrop(path);
       } else {
@@ -672,7 +673,7 @@ export function MultiPaneTerminal({ nodeId, className }: MultiPaneTerminalProps)
         // Restore first session
         const first = persisted[0];
         try {
-          const session = await nodeTerminalService.createTerminalRuntimeSession(nodeId, {
+          const session = await nodeTerminalService.createSession(nodeId, {
             shell: first.shell, cols: first.cols || 80, rows: first.rows || 24,
           });
           if (session) {
@@ -713,7 +714,7 @@ export function MultiPaneTerminal({ nodeId, className }: MultiPaneTerminalProps)
 
   const createSession = async (paneId: string, title: string, profile: TerminalProfileType = 'standard'): Promise<TerminalSession> => {
     const profileConfig = getProfileById(profile);
-    const session = await nodeTerminalService.createTerminalRuntimeSession(nodeId, {
+    const session = await nodeTerminalService.createSession(nodeId, {
       shell: profileConfig.shell,
       cols: 80, rows: 24,
     });

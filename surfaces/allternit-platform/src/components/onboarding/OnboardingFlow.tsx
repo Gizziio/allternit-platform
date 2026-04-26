@@ -17,7 +17,7 @@
  */
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import {
   Check,
   CheckCircle,
@@ -89,20 +89,20 @@ function screenIdx(s: Screen) { return SCREEN_ORDER.indexOf(s); }
 
 // ─── Animation variants ───────────────────────────────────────────────────────
 
-const CARD_ENTRANCE = {
+const CARD_ENTRANCE: Variants = {
   hidden:  { opacity: 0, scale: 0.96, y: 8 },
-  visible: { opacity: 1, scale: 1,    y: 0, transition: { duration: 0.28, ease: [0.25, 0.1, 0.25, 1] } },
+  visible: { opacity: 1, scale: 1,    y: 0, transition: { duration: 0.28, ease: [0.25, 0.1, 0.25, 1] as any } },
 };
 
-const stepVariants = {
+const stepVariants: Variants = {
   enter:  (d: number) => ({ x: d * 36, opacity: 0 }),
   center: {
     x: 0, opacity: 1,
-    transition: { duration: 0.24, ease: [0.25, 0.1, 0.25, 1] },
+    transition: { duration: 0.24, ease: [0.25, 0.1, 0.25, 1] as any },
   },
   exit: (d: number) => ({
     x: d * -36, opacity: 0,
-    transition: { duration: 0.18, ease: [0.4, 0, 1, 1] },
+    transition: { duration: 0.18, ease: [0.4, 0, 1, 1] as any },
   }),
 };
 
@@ -465,6 +465,20 @@ function HintBox({ children }: { children: React.ReactNode }) {
 
 // ─── Infrastructure step ──────────────────────────────────────────────────────
 
+// Detect running inside Allternit Electron desktop
+function isElectronDesktop() {
+  return typeof window !== 'undefined' && !!(window as any).allternit?.tunnel;
+}
+
+// Detect user OS for download links
+function getUserOS(): 'mac' | 'windows' | 'linux' {
+  if (typeof navigator === 'undefined') return 'mac';
+  const ua = navigator.userAgent.toLowerCase();
+  if (ua.includes('win')) return 'windows';
+  if (ua.includes('linux')) return 'linux';
+  return 'mac';
+}
+
 function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial<WizardData>) => void }) {
   const [showPw, setShowPw] = useState(false);
   const [connStatus, setConnStatus] = useState<'idle' | 'testing' | 'ok' | 'err'>('idle');
@@ -472,9 +486,117 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
   const [progress, setProgress] = useState<InstallProgress | null>(null);
   const [installing, setInstalling] = useState(false);
 
+  // Local backend detection state
+  const [localStatus, setLocalStatus] = useState<'checking' | 'found' | 'not-found'>('checking');
+  const [localUrl, setLocalUrl] = useState<string | null>(null);
+  const [isElectron] = useState(isElectronDesktop);
+  const [electronTunnel, setElectronTunnel] = useState<{ status: string; url?: string } | null>(null);
+  const [os] = useState(getUserOS);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Manual URL auto-test state
+  const [urlTestStatus, setUrlTestStatus] = useState<'idle' | 'checking' | 'ok' | 'fail'>('idle');
+  const [urlTestError, setUrlTestError] = useState<string | null>(null);
+  const [manualUrl, setManualUrl] = useState('');
+  const [manualName, setManualName] = useState('');
+  const [manualToken, setManualToken] = useState('');
+  const urlDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Local backend auto-detection ───────────────────────────────────────────
+  const probeLocal = useCallback(async () => {
+    if (isElectron) {
+      try {
+        const state = await (window as any).allternit.tunnel.getState();
+        setElectronTunnel(state);
+        if (state.status === 'running' && state.url) {
+          setLocalStatus('found');
+          setLocalUrl(`https://${state.url}`);
+          return;
+        }
+      } catch { /* fall through to port probe */ }
+    }
+    for (const port of [8013, 4096, 3001, 8080]) {
+      try {
+        const ctrl = new AbortController();
+        setTimeout(() => ctrl.abort(), 2000);
+        const res = await fetch(`http://localhost:${port}/v1/global/health`, { signal: ctrl.signal });
+        if (res.ok) { setLocalStatus('found'); setLocalUrl(`http://localhost:${port}`); return; }
+      } catch { /* next port */ }
+    }
+    setLocalStatus('not-found');
+  }, [isElectron]);
+
+  useEffect(() => {
+    if (data.infraType !== 'local') { if (pollRef.current) clearInterval(pollRef.current); return; }
+    probeLocal();
+    pollRef.current = setInterval(() => { if (localStatus !== 'found') probeLocal(); }, 3000);
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data.infraType]);
+
+  useEffect(() => {
+    if (!isElectron) return;
+    try {
+      return (window as any).allternit.tunnel.onStateChange((state: any) => {
+        setElectronTunnel(state);
+        if (state.status === 'running' && state.url) { setLocalStatus('found'); setLocalUrl(`https://${state.url}`); }
+      });
+    } catch { return undefined; }
+  }, [isElectron]);
+
+  const activateLocal = async () => {
+    if (!localUrl) return;
+    setConnStatus('testing'); setConnMsg('Connecting…');
+    try {
+      await runtimeBackendApi.registerManualBackend({ name: 'Local Backend', gatewayUrl: localUrl });
+      setConnStatus('ok'); setConnMsg('Connected!');
+    } catch (e: any) { setConnStatus('err'); setConnMsg(e.message || 'Failed'); }
+  };
+
+  const enableElectronTunnel = async () => {
+    try { await (window as any).allternit.tunnel.enable(); } catch { /* ignore */ }
+  };
+
+  // ── Manual URL auto-test ────────────────────────────────────────────────────
+  const testUrl = useCallback(async (url: string) => {
+    if (!url.trim()) { setUrlTestStatus('idle'); return; }
+    setUrlTestStatus('checking'); setUrlTestError(null);
+    try {
+      const normalized = url.startsWith('http') ? url : `https://${url}`;
+      const ctrl = new AbortController();
+      setTimeout(() => ctrl.abort(), 6000);
+      const res = await fetch(`${normalized.replace(/\/$/, '')}/v1/global/health`, { signal: ctrl.signal });
+      if (res.ok) {
+        setUrlTestStatus('ok');
+        if (!manualName) setManualName(new URL(normalized).hostname.split('.')[0] || 'My Backend');
+      } else { setUrlTestStatus('fail'); setUrlTestError(`Server returned ${res.status}`); }
+    } catch (e: any) {
+      setUrlTestStatus('fail');
+      setUrlTestError(e?.name === 'AbortError' ? 'Timed out — unreachable' : 'Could not connect');
+    }
+  }, [manualName]);
+
+  const handleUrlChange = (url: string) => {
+    setManualUrl(url);
+    if (urlDebounceRef.current) clearTimeout(urlDebounceRef.current);
+    setUrlTestStatus('idle');
+    if (url.length > 5) urlDebounceRef.current = setTimeout(() => testUrl(url), 700);
+  };
+
+  const connectManual = async () => {
+    if (!manualUrl) return;
+    setConnStatus('testing'); setConnMsg('Registering backend…');
+    try {
+      const normalized = manualUrl.startsWith('http') ? manualUrl : `https://${manualUrl}`;
+      await runtimeBackendApi.registerManualBackend({ name: manualName || 'My Backend', gatewayUrl: normalized, gatewayToken: manualToken || undefined });
+      setConnStatus('ok'); setConnMsg('Backend connected!');
+    } catch (e: any) { setConnStatus('err'); setConnMsg(e.message || 'Failed'); }
+  };
+
+  // ── SSH ─────────────────────────────────────────────────────────────────────
   const options: { id: WizardData['infraType']; Icon: React.ElementType; label: string; desc: string }[] = [
-    { id: 'local',    Icon: HardDrive, label: 'Use this computer',   desc: 'Easiest — runs right here, no extra cost' },
-    { id: 'manual',   Icon: Globe,     label: 'Enter backend URL',   desc: 'I have a backend running with a public URL' },
+    { id: 'local',    Icon: HardDrive, label: 'Use this computer',   desc: isElectron ? 'Desktop detected — AI engine running locally' : 'Download the app — it automatically connects your browser on install' },
+    { id: 'manual',   Icon: Globe,     label: 'Enter backend URL',   desc: 'Paste any backend URL — we\'ll test and connect automatically' },
     { id: 'connect',  Icon: WifiHigh,  label: 'I have a server',     desc: 'Connect your VPS, NAS, or cloud box via SSH' },
     { id: 'purchase', Icon: Cloud,     label: 'Get a cloud server',  desc: 'We\'ll help you rent one from $4/mo' },
     { id: 'remote',   Icon: Desktop,   label: 'Remote desktop',      desc: 'Control a remote computer via the browser' },
@@ -568,121 +690,195 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
         );
       })}
 
-      {/* Local ready banner */}
+      {/* Local — smart detection panel */}
       <AnimatePresence>
         {data.infraType === 'local' && (
           <motion.div
             initial={{ opacity: 0, y: -6, height: 0 }}
             animate={{ opacity: 1, y: 0, height: 'auto' }}
             exit={{ opacity: 0, y: -6, height: 0 }}
-            style={{
-              overflow: 'hidden',
-              borderRadius: 12,
-              background: 'var(--status-success-bg)',
-              border: '1px solid color-mix(in srgb, var(--status-success) 25%, transparent)',
-              padding: '12px 14px',
-              display: 'flex', alignItems: 'center', gap: 10,
-            }}
+            style={{ overflow: 'hidden', borderRadius: 14, background: 'var(--surface-panel)', border: '1px solid var(--ui-border-subtle)', padding: 16 }}
           >
-            <CheckCircle weight="fill" size={18} style={{ color: 'var(--status-success)', flexShrink: 0 }} />
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
-                Local backend detected
+            {/* Electron: local backend is always available at localhost */}
+            {isElectron ? (
+              localStatus === 'checking' ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--ui-text-muted)', fontSize: 13 }}>
+                  <ArrowClockwise size={16} style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+                  Starting AI engine…
+                </div>
+              ) : localStatus === 'found' ? (
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: 'var(--status-success-bg)', border: '1px solid color-mix(in srgb, var(--status-success) 25%, transparent)', marginBottom: 10 }}>
+                    <CheckCircle weight="fill" size={16} style={{ color: 'var(--status-success)', flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ui-text-primary)' }}>AI engine is running</div>
+                      <div style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>Connected to this computer's local backend</div>
+                    </div>
+                    <button
+                      onClick={activateLocal}
+                      disabled={connStatus === 'testing' || connStatus === 'ok'}
+                      style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700, border: 'none', background: connStatus === 'ok' ? 'var(--status-success)' : 'var(--accent-primary)', color: 'var(--text-inverse)', cursor: connStatus === 'ok' ? 'default' : 'pointer', flexShrink: 0 }}
+                    >
+                      {connStatus === 'testing' ? 'Connecting…' : connStatus === 'ok' ? 'Connected ✓' : 'Connect'}
+                    </button>
+                  </div>
+                  {electronTunnel?.status === 'running' && electronTunnel.url && (
+                    <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', padding: '8px 10px', borderRadius: 8, background: 'var(--surface-canvas)' }}>
+                      Web access active — your browser can also reach this at{' '}
+                      <span style={{ fontFamily: 'monospace', color: 'var(--ui-text-secondary)' }}>{electronTunnel.url}</span>
+                    </div>
+                  )}
+                  {connMsg && (
+                    <div style={{ marginTop: 8, fontSize: 12, padding: '8px 12px', borderRadius: 8, background: connStatus === 'err' ? 'var(--status-error-bg)' : 'var(--status-success-bg)', color: connStatus === 'err' ? 'var(--status-error)' : 'var(--status-success)' }}>
+                      {connMsg}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: 'var(--ui-text-secondary)', lineHeight: 1.5 }}>
+                  AI engine not detected. Make sure the backend service is running and try again.
+                </div>
+              )
+            ) : localStatus === 'checking' ? (
+              /* Checking */
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--ui-text-muted)', fontSize: 13 }}>
+                <ArrowClockwise size={16} style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+                Looking for Allternit on this computer…
               </div>
-              <div style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>
-                Allternit is running on this machine — no setup needed.
+            ) : localStatus === 'found' ? (
+              /* Found locally */
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: 'var(--status-success-bg)', border: '1px solid color-mix(in srgb, var(--status-success) 25%, transparent)' }}>
+                <CheckCircle weight="fill" size={16} style={{ color: 'var(--status-success)', flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ui-text-primary)' }}>Backend found</div>
+                  <div style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>{localUrl}</div>
+                </div>
+                <button onClick={activateLocal} disabled={connStatus === 'testing'} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700, border: 'none', background: 'var(--accent-primary)', color: 'var(--text-inverse)', cursor: 'pointer', flexShrink: 0 }}>
+                  {connStatus === 'testing' ? 'Connecting…' : connStatus === 'ok' ? 'Connected ✓' : 'Use this'}
+                </button>
               </div>
-            </div>
+            ) : (
+              /* Not found — show download */
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--accent-primary)', marginBottom: 8 }}>
+                  Get the Desktop App
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--ui-text-secondary)', marginBottom: 12, lineHeight: 1.5 }}>
+                  The Allternit desktop app runs on your {os === 'mac' ? 'Mac' : os === 'windows' ? 'Windows PC' : 'Linux machine'} and automatically connects your browser — no commands, no copy-pasting URLs.
+                </div>
+                {/* TODO: Update href to point to the real download page once hosting is set up.
+                    Suggested infrastructure: allternit.com/download with OS-specific links to
+                    Cloudflare R2 or GitHub Releases artifacts. */}
+                <a
+                  href="https://allternit.com/download"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'block', width: '100%', padding: '10px 0', borderRadius: 10,
+                    fontSize: 13, fontWeight: 700, textAlign: 'center', textDecoration: 'none',
+                    background: 'var(--accent-primary)', color: 'var(--text-inverse)',
+                    boxSizing: 'border-box',
+                  }}
+                >
+                  Download for {os === 'mac' ? 'Mac' : os === 'windows' ? 'Windows' : 'Linux'}
+                </a>
+                <div style={{ marginTop: 10, fontSize: 11, color: 'var(--ui-text-muted)' }}>
+                  After installing, open the app — it automatically connects this browser. This page updates when it's ready.
+                </div>
+                {connMsg && (
+                  <div style={{ marginTop: 8, fontSize: 12, padding: '8px 12px', borderRadius: 8, background: connStatus === 'err' ? 'var(--status-error-bg)' : 'var(--status-success-bg)', color: connStatus === 'err' ? 'var(--status-error)' : 'var(--status-success)' }}>
+                    {connMsg}
+                  </div>
+                )}
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Manual Backend URL form */}
+      {/* Manual Backend URL form — auto-test on type */}
       <AnimatePresence>
         {data.infraType === 'manual' && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            style={{
-              overflow: 'hidden',
-              borderRadius: 14,
-              background: 'var(--surface-panel)',
-              border: '1px solid var(--ui-border-subtle)',
-              padding: 16,
-            }}
+            style={{ overflow: 'hidden', borderRadius: 14, background: 'var(--surface-panel)', border: '1px solid var(--ui-border-subtle)', padding: 16 }}
           >
             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--accent-primary)', marginBottom: 12 }}>
-              Backend Connection
+              Backend URL
             </div>
 
-            <input
-              type="text"
-              value={data.sshConfig.host}
-              onChange={e => onUpdate({ sshConfig: { ...data.sshConfig, host: e.target.value } })}
-              placeholder="Backend URL (e.g., https://your-tunnel.trycloudflare.com)"
-              style={{ ...inputStyle, width: '100%', marginBottom: 8 }}
-            />
+            {/* URL input with inline status */}
+            <div style={{ position: 'relative', marginBottom: 8 }}>
+              <input
+                type="text"
+                value={manualUrl}
+                onChange={e => handleUrlChange(e.target.value)}
+                placeholder="https://your-tunnel.trycloudflare.com"
+                style={{ ...inputStyle, width: '100%', paddingRight: 36, boxSizing: 'border-box' }}
+              />
+              <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', pointerEvents: 'none' }}>
+                {urlTestStatus === 'checking' && <ArrowClockwise size={14} style={{ color: 'var(--ui-text-muted)', animation: 'spin 1s linear infinite' }} />}
+                {urlTestStatus === 'ok'       && <CheckCircle weight="fill" size={14} style={{ color: 'var(--status-success)' }} />}
+                {urlTestStatus === 'fail'     && <Warning weight="fill" size={14} style={{ color: 'var(--status-error)' }} />}
+              </div>
+            </div>
+
+            {urlTestStatus === 'fail' && urlTestError && (
+              <div style={{ fontSize: 11, color: 'var(--status-error)', marginBottom: 8, padding: '6px 10px', borderRadius: 8, background: 'var(--status-error-bg)' }}>
+                {urlTestError}
+              </div>
+            )}
 
             <input
               type="text"
-              value={data.sshConfig.username}
-              onChange={e => onUpdate({ sshConfig: { ...data.sshConfig, username: e.target.value } })}
+              value={manualName}
+              onChange={e => setManualName(e.target.value)}
               placeholder="Connection name (e.g., My MacBook)"
-              style={{ ...inputStyle, width: '100%', marginBottom: 8 }}
+              style={{ ...inputStyle, width: '100%', marginBottom: 8, boxSizing: 'border-box' }}
             />
 
-            <input
-              type="text"
-              value={data.sshConfig.password || ''}
-              onChange={e => onUpdate({ sshConfig: { ...data.sshConfig, password: e.target.value } })}
-              placeholder="Auth token (optional, e.g., Basic dXNlcjpwYXNz)"
-              style={{ ...inputStyle, width: '100%', marginBottom: 12 }}
-            />
+            {/* Auth token — collapsed by default */}
+            <details style={{ marginBottom: 12 }}>
+              <summary style={{ fontSize: 12, color: 'var(--ui-text-muted)', cursor: 'pointer', userSelect: 'none', padding: '4px 0' }}>
+                Auth token (optional)
+              </summary>
+              <input
+                type="text"
+                value={manualToken}
+                onChange={e => setManualToken(e.target.value)}
+                placeholder="Bearer token or Basic auth"
+                style={{ ...inputStyle, width: '100%', marginTop: 8, boxSizing: 'border-box' }}
+              />
+            </details>
 
             <button
-              onClick={() => {
-                if (data.sshConfig.host) {
-                  runtimeBackendApi.registerManualBackend({
-                    name: data.sshConfig.username || 'Manual Backend',
-                    gatewayUrl: data.sshConfig.host,
-                    gatewayToken: data.sshConfig.password || undefined,
-                  }).then(() => {
-                    setConnStatus('ok');
-                    setConnMsg('Backend connected successfully!');
-                  }).catch((err) => {
-                    setConnStatus('err');
-                    setConnMsg(err.message || 'Failed to connect');
-                  });
-                }
-              }}
-              disabled={!data.sshConfig.host || connStatus === 'testing'}
+              onClick={connectManual}
+              disabled={!manualUrl || urlTestStatus === 'checking' || connStatus === 'testing'}
               style={{
                 width: '100%', padding: '9px 0', borderRadius: 10, fontSize: 13, fontWeight: 700,
                 border: 'none',
-                background: data.sshConfig.host ? 'var(--accent-primary)' : 'var(--surface-panel-muted)',
-                color: data.sshConfig.host ? 'var(--text-inverse)' : 'var(--ui-text-muted)',
-                cursor: data.sshConfig.host ? 'pointer' : 'not-allowed',
+                background: (manualUrl && urlTestStatus !== 'fail') ? 'var(--accent-primary)' : 'var(--surface-panel-muted)',
+                color: (manualUrl && urlTestStatus !== 'fail') ? 'var(--text-inverse)' : 'var(--ui-text-muted)',
+                cursor: (manualUrl && urlTestStatus !== 'fail') ? 'pointer' : 'not-allowed',
                 transition: 'background 200ms, color 200ms',
               }}
             >
-              {connStatus === 'testing' ? 'Connecting…' : 'Connect to Backend'}
+              {connStatus === 'testing' ? 'Connecting…' : connStatus === 'ok' ? 'Connected ✓' : 'Connect Backend'}
             </button>
 
             {connMsg && (
-              <div style={{
-                marginTop: 8,
-                fontSize: 12, padding: '9px 12px', borderRadius: 10,
-                background: connStatus === 'err' ? 'var(--status-error-bg)' : connStatus === 'ok' ? 'var(--status-success-bg)' : 'var(--surface-hover)',
-                color: connStatus === 'err' ? 'var(--status-error)' : connStatus === 'ok' ? 'var(--status-success)' : 'var(--ui-text-secondary)',
-              }}>
+              <div style={{ marginTop: 8, fontSize: 12, padding: '8px 12px', borderRadius: 8, background: connStatus === 'err' ? 'var(--status-error-bg)' : 'var(--status-success-bg)', color: connStatus === 'err' ? 'var(--status-error)' : 'var(--status-success)' }}>
                 {connMsg}
               </div>
             )}
 
-            <div style={{ marginTop: 12, fontSize: 11, color: 'var(--ui-text-muted)', background: 'var(--surface-canvas)', padding: '10px 12px', borderRadius: 8 }}>
-              <strong>Tip:</strong> Run <code style={{ background: 'var(--surface-panel)', padding: '2px 5px', borderRadius: 4 }}>cloudflared tunnel --url http://localhost:4096</code> to expose your local backend.
-            </div>
+            {urlTestStatus !== 'ok' && !manualUrl && (
+              <div style={{ marginTop: 10, fontSize: 11, color: 'var(--ui-text-muted)', background: 'var(--surface-canvas)', padding: '10px 12px', borderRadius: 8 }}>
+                <strong>Tip:</strong> If you have the desktop app, run <code style={{ background: 'var(--surface-panel)', padding: '2px 5px', borderRadius: 4 }}>cloudflared tunnel --url http://localhost:4096</code> and paste the URL above.
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -2307,6 +2503,10 @@ export function OnboardingFlow() {
       defaultWorkspacePath: data.workspacePath,
       preferredModes: data.selectedModes,
     });
+    // Notify the desktop shell that onboarding is complete so it can update its own store.
+    if (typeof window !== 'undefined' && (window as any).allternit?.app?.completeOnboarding) {
+      (window as any).allternit.app.completeOnboarding().catch(() => {});
+    }
   };
 
   const isFullWidth = screen === 'welcome' || screen === 'done';

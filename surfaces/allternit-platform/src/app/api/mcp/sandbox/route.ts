@@ -16,7 +16,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { McpAppResourceCsp, McpAppResourcePermissions } from "@/lib/ai/mcp/apps";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 interface SandboxRequest {

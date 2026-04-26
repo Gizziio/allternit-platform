@@ -1,6 +1,6 @@
-# A2rchitect Icon System
+# allternit Icon System
 
-A unified, type-safe icon system for the entire A2rchitect platform.
+A unified, type-safe icon system for the entire allternit platform.
 
 ## Features
 
@@ -13,7 +13,7 @@ A unified, type-safe icon system for the entire A2rchitect platform.
 
 ## Installation
 
-The icon system is included in `@a2r/platform`. No additional dependencies needed.
+The icon system is included in `@allternit/platform`. No additional dependencies needed.
 
 ```bash
 # lucide-react is already a dependency
@@ -23,7 +23,7 @@ npm install lucide-react
 ## Quick Start
 
 ```tsx
-import { Icon, IconButton, NotificationBell } from '@a2r/platform/icons';
+import { Icon, IconButton, NotificationBell } from '@allternit/platform/icons';
 
 // Basic usage
 <Icon name="home" size="md" />
@@ -68,7 +68,7 @@ import { Icon, IconButton, NotificationBell } from '@a2r/platform/icons';
 `user`, `users`, `profile`, `group`, `team`, `building`, `globe`, etc.
 
 ### Brand (8 custom icons)
-`a2r-logo`, `a2r-mark`, `shell`, `capsule`, `bead`, `substrate`, `kernel`, `archon`
+`allternit-logo`, `allternit-mark`, `shell`, `capsule`, `bead`, `substrate`, `kernel`, `archon`
 
 ## API Reference
 
@@ -143,10 +143,10 @@ For optimal bundle size, use named exports:
 
 ```tsx
 // Good - tree-shakeable
-import { HomeIcon, SettingsIcon } from '@a2r/platform/icons';
+import { HomeIcon, SettingsIcon } from '@allternit/platform/icons';
 
 // Also good - only imports Icon component
-import { Icon } from '@a2r/platform/icons';
+import { Icon } from '@allternit/platform/icons';
 ```
 
 ## Development Tools
@@ -157,7 +157,7 @@ Browse and search all available icons at `/dev/icons`.
 
 ```tsx
 // app/dev/icons/page.tsx
-import { IconExplorerPage } from '@a2r/platform/dev/icon-explorer';
+import { IconExplorerPage } from '@allternit/platform/dev/icon-explorer';
 
 export default function IconsPage() {
   return <IconExplorerPage />;
@@ -175,8 +175,8 @@ Features:
 
 Custom brand icons are located in `custom/` folder:
 
-- `A2RLogo` - Full logo with wordmark
-- `A2RMark` - Icon-only logo mark
+- `AllternitLogo` - Full logo with wordmark
+- `AllternitMark` - Icon-only logo mark
 - `ShellIcon` - Shell/workspace container
 - `CapsuleIcon` - Self-contained functional unit
 - `BeadIcon` - Atomic data unit

@@ -1,12 +1,12 @@
 /**
- * A2R Extension — Background Service Worker
+ * Allternit Extension — Background Service Worker
  *
  * Unified background for browser-agent + page-agent capabilities.
  *
  * Connection channels:
- *   Local WS     ws://localhost:3000/ws/extension    — browser-agent local mode
- *   Native (BA)  com.allternit.desktop                 — browser-agent cowork mode
- *   Native (PA)  com.allternit.desktop                 — page-agent remote task mode
+ *   Native (BA)  com.allternit.desktop  — browser-agent cowork mode (TCP 3011 bridge)
+ *   Native (PA)  com.allternit.desktop  — page-agent remote task mode (TCP 3011 bridge)
+ *   Cloud WS     wss://api.allternit.com/v1/extension  — browser-agent cloud mode
  *
  * Populated by:
  *   MERGE-2  page-agent core (TabsController, RemotePageController, agent)
@@ -24,15 +24,15 @@ import {
 } from '@/html-to-figma'
 
 export default defineBackground(() => {
-  console.log('[A2R Extension] Background Service Worker started')
+  console.log('[Allternit Extension] Background Service Worker started')
 
   // ── Page-agent setup ──────────────────────────────────────────────────────
 
   setupTabChangeEvents()
 
-  chrome.storage.local.get('A2RExtUserAuthToken').then((result) => {
-    if (result.A2RExtUserAuthToken) return
-    chrome.storage.local.set({ A2RExtUserAuthToken: crypto.randomUUID() })
+  chrome.storage.local.get('AllternitExtUserAuthToken').then((result) => {
+    if (result.AllternitExtUserAuthToken) return
+    chrome.storage.local.set({ AllternitExtUserAuthToken: crypto.randomUUID() })
   })
 
   // Side panel behavior
@@ -43,8 +43,8 @@ export default defineBackground(() => {
 
   // ── Browser-agent setup ───────────────────────────────────────────────────
 
-  // Connects to thin-client on ws://localhost:3000/ws/extension (local mode)
-  // or via com.allternit.desktop (cowork mode)
+  // Connects via com.allternit.desktop native messaging (cowork mode, default)
+  // or wss://api.allternit.com/v1/extension (cloud mode)
   browserAgentConnection.initialize()
 
   // ── HTML to Figma setup ───────────────────────────────────────────────────

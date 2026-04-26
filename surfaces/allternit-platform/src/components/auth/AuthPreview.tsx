@@ -9,6 +9,15 @@ const SLIDES = [
     label: 'A:// chat',
     desc: 'Talk to any AI model. One clean interface, every conversation.',
     accent: '#6366f1',
+    promoKicker: 'Allternit Platform',
+    promoTitle: 'One operating layer for every model your team uses.',
+    promoCopy: 'Run conversations, artifacts, and agent workflows in a single branded environment instead of scattering work across disconnected tabs and vendor silos.',
+    promoNote: 'Designed for teams that want model flexibility, operational control, and a product surface that feels owned instead of rented.',
+    promoStats: [
+      { value: 'Multi-model', label: 'Claude, OpenAI, Gemini, and open runtimes in one workspace' },
+      { value: 'Persistent', label: 'Shared context that carries across sessions, tools, and deliverables' },
+      { value: 'Gizzi-led', label: 'A branded AI guide that keeps work coherent from prompt to outcome' },
+    ],
     Mockup: ChatMockup,
   },
   {
@@ -16,6 +25,15 @@ const SLIDES = [
     label: 'A:// cowork',
     desc: 'Build artifacts alongside an AI collaborator. Docs, slides, plans — live.',
     accent: '#D97757',
+    promoKicker: 'Allternit Workflows',
+    promoTitle: 'Move from prompt to polished output without breaking flow.',
+    promoCopy: 'Draft strategies, decks, research packs, and operating documents beside an AI collaborator that keeps refining the work as decisions change.',
+    promoNote: 'The platform is built to turn rough asks into production-ready artifacts, not just generate another disposable answer.',
+    promoStats: [
+      { value: 'Live docs', label: 'Artifacts stay editable, reviewable, and connected to the conversation' },
+      { value: 'Side-by-side', label: 'Work with AI in the same surface where the deliverable is taking shape' },
+      { value: 'Faster cycles', label: 'Less handoff, less copying, fewer dead-end iterations' },
+    ],
     Mockup: CoworkMockup,
   },
   {
@@ -23,6 +41,15 @@ const SLIDES = [
     label: 'A:// code',
     desc: 'Write, review, and ship code with AI at your side. No context switching.',
     accent: '#10b981',
+    promoKicker: 'Allternit Code',
+    promoTitle: 'Ship with agents that can do real implementation work.',
+    promoCopy: 'Give teams a coding surface where AI can write, review, inspect, and iterate inside the product instead of acting like a detached suggestion box.',
+    promoNote: 'Built for execution-heavy workflows where code quality, review loops, and environment context actually matter.',
+    promoStats: [
+      { value: 'Execution', label: 'Agents can move through multi-step tasks instead of stopping at advice' },
+      { value: 'Review', label: 'Code suggestions stay close to the implementation and feedback loop' },
+      { value: 'Context-aware', label: 'Work happens with infrastructure and project state in view' },
+    ],
     Mockup: CodeMockup,
   },
   {
@@ -30,6 +57,15 @@ const SLIDES = [
     label: 'A:// browser',
     desc: 'AI that navigates the web, reads pages, and acts on your behalf.',
     accent: '#ec4899',
+    promoKicker: 'Allternit Browser',
+    promoTitle: 'Give agents a live web surface, not a static summary.',
+    promoCopy: 'Research competitors, inspect live pages, and complete browser tasks from the same platform where your team plans, reviews, and acts.',
+    promoNote: 'That means better context gathering, cleaner research trails, and fewer manual jumps between tools during execution.',
+    promoStats: [
+      { value: 'Live navigation', label: 'Browse and inspect active websites without leaving the workflow' },
+      { value: 'Research trails', label: 'Keep findings connected to the project instead of buried in tabs' },
+      { value: 'Actionable', label: 'Turn web context directly into next steps, decisions, and outputs' },
+    ],
     Mockup: BrowserMockup,
   },
 ];
@@ -306,7 +342,21 @@ export function AuthPreview() {
   const slide = SLIDES[active];
 
   return (
-    <div style={{ width: '100%', maxWidth: 580, display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div className="auth-preview" style={{ width: '100%', maxWidth: 580, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <style>{`
+        @media (max-width: 900px) {
+          .auth-preview-mockup { height: 260px !important; border-radius: 16px !important; }
+          .auth-preview-promo { padding: 22px 22px 20px !important; border-radius: 16px !important; }
+          .auth-preview-title { font-size: 26px !important; }
+          .auth-preview-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 14px !important; }
+        }
+        @media (max-width: 600px) {
+          .auth-preview-mockup { height: 220px !important; border-radius: 14px !important; }
+          .auth-preview-promo { padding: 18px 18px 16px !important; border-radius: 14px !important; }
+          .auth-preview-title { font-size: 22px !important; }
+          .auth-preview-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 12px !important; }
+        }
+      `}</style>
       {/* Label + description */}
       <AnimatePresence mode="wait">
         <motion.div
@@ -333,7 +383,7 @@ export function AuthPreview() {
       </AnimatePresence>
 
       {/* Preview card */}
-      <div style={{
+      <div className="auth-preview-mockup" style={{
         background: '#F5EDE3',
         borderRadius: 20,
         border: '1px solid rgba(0,0,0,0.06)',
@@ -382,6 +432,101 @@ export function AuthPreview() {
           />
         ))}
       </div>
+
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={slide.id + '-promo'}
+          className="auth-preview-promo"
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -12 }}
+          transition={{ duration: 0.35 }}
+          style={{
+            borderRadius: 20,
+            padding: '28px 28px 24px',
+            background: `linear-gradient(180deg, color-mix(in srgb, ${slide.accent} 5%, #17120e), #100c09 72%)`,
+            border: `1px solid color-mix(in srgb, ${slide.accent} 16%, rgba(255,255,255,0.08))`,
+            boxShadow: '0 28px 80px rgba(0,0,0,0.34)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+            <div style={{ width: 44, height: 1, background: `linear-gradient(90deg, ${slide.accent}, transparent)` }} />
+            <span style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#A78672', fontWeight: 700 }}>
+              {slide.promoKicker}
+            </span>
+          </div>
+
+          <div style={{ display: 'grid', gap: 18 }}>
+            <div style={{ maxWidth: 500 }}>
+              <div className="auth-preview-title" style={{ fontFamily: 'Georgia, serif', fontSize: 34, lineHeight: 1.02, letterSpacing: '-0.04em', color: '#F4E9DE', fontWeight: 700 }}>
+                {slide.promoTitle}
+              </div>
+              <p style={{ margin: '14px 0 0', fontSize: 14, lineHeight: 1.75, color: '#A88974' }}>
+                {slide.promoCopy}
+              </p>
+            </div>
+
+            <div className="auth-preview-grid" style={{
+              display: 'grid',
+              gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 0.8fr)',
+              gap: 18,
+              alignItems: 'stretch',
+            }}>
+              <div style={{
+                borderRadius: 16,
+                padding: '18px 18px 16px',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.06)',
+              }}>
+                <div style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#7F6656', marginBottom: 14 }}>
+                  Why teams choose it
+                </div>
+                <div style={{ display: 'grid', gap: 14 }}>
+                  {slide.promoStats.map((item) => (
+                    <div key={item.value} style={{ display: 'grid', gap: 4 }}>
+                      <div style={{ color: '#F0E2D5', fontSize: 15, fontWeight: 700, letterSpacing: '-0.02em' }}>{item.value}</div>
+                      <div style={{ color: '#8E7361', fontSize: 12.5, lineHeight: 1.6 }}>{item.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{
+                borderRadius: 16,
+                padding: '18px 18px 16px',
+                background: `linear-gradient(180deg, color-mix(in srgb, ${slide.accent} 8%, rgba(255,255,255,0.02)), rgba(255,255,255,0.02))`,
+                border: `1px solid color-mix(in srgb, ${slide.accent} 16%, rgba(255,255,255,0.06))`,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                minHeight: 216,
+              }}>
+                <div>
+                  <div style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#7F6656', marginBottom: 12 }}>
+                    Branded experience
+                  </div>
+                  <p style={{ margin: 0, fontSize: 13, lineHeight: 1.72, color: '#CDB9AA' }}>
+                    {slide.promoNote}
+                  </p>
+                </div>
+
+                <div style={{
+                  marginTop: 18,
+                  paddingTop: 16,
+                  borderTop: '1px solid rgba(255,255,255,0.07)',
+                  display: 'grid',
+                  gap: 8,
+                }}>
+                  <div style={{ color: '#F2E4D6', fontSize: 12, fontWeight: 700 }}>Gizzi keeps the product feeling guided, not generic.</div>
+                  <div style={{ color: '#876D5D', fontSize: 11.5, lineHeight: 1.6 }}>
+                    A clearer voice, a stronger brand surface, and a workflow that reads like a finished product.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }

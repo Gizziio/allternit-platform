@@ -29,16 +29,16 @@ Last updated: March 6, 2026
 23. Marketplace fetch now has timeout + fallback behavior, preventing indefinite loading state when APIs are empty/unavailable.
 24. Filesystem deletion now handles directories for recursive uninstall cleanup.
 25. Plugin manager tab-type mapping now correctly translates UI tabs (`skills/plugins/...`) to writer API types (`skill/plugin/...`) for toggle/delete/update flows.
-26. Skill metadata updates now resolve against scanned candidate roots (`.a2r`, `.agents`, `.codex`) instead of writing only to `.a2r`.
-27. Marketplace search now uses real sources only (A2R API + GitHub); when both are unavailable it returns an explicit empty-state result instead of synthetic mock catalog data.
-28. Plugin create flow now persists plugin manifests/README to `.a2r/plugins` via filesystem writer instead of memory-only state.
+26. Skill metadata updates now resolve against scanned candidate roots (`.allternit`, `.agents`, `.codex`) instead of writing only to `.allternit`.
+27. Marketplace search now uses real sources only (Allternit API + GitHub); when both are unavailable it returns an explicit empty-state result instead of synthetic mock catalog data.
+28. Plugin create flow now persists plugin manifests/README to `.allternit/plugins` via filesystem writer instead of memory-only state.
 29. Connector connect flow now uses an account-aware modal (instead of prompt-only toggle) and persists connection metadata (`accountLabel`, `connectedAt`, `lastAttemptAt`).
 30. Plugin marketplace overlay now renders explicit loading/error/empty states in-surface (not only toast notifications).
 31. Skills/file rendering now includes responsive third-pane behavior with scroll-safe layout and interactive HTML preview in Human mode.
 32. Three-pane visual polish aligned to settings-style floating surface behavior while preserving left-pane offset constraints.
 33. Added focused utility tests for PluginManager parsing/normalization helpers (`PluginManager.utils.test.ts`).
 34. Added focused interaction flow tests for PluginManager UI behaviors (`PluginManager.flows.test.tsx`), including create/edit/uninstall flows, marketplace install/uninstall, connector connect/disconnect modal, pane offset assertions, HTML preview mode switching, and personal source add/remove.
-35. Plugin Manager now persists UI workflow state (`enabledOverrides`, marketplace installs, personal source definitions, connector connection metadata) to `~/.a2r/plugin-manager/ui-state.json` via filesystem API, with local-storage fallback.
+35. Plugin Manager now persists UI workflow state (`enabledOverrides`, marketplace installs, personal source definitions, connector connection metadata) to `~/.allternit/plugin-manager/ui-state.json` via filesystem API, with local-storage fallback.
 36. Runtime filesystem backend now uses only real/API-backed implementations; mock filesystem fallback has been removed from production hook flow.
 37. Plugin marketplace runtime no longer injects hardcoded mock plugin catalog entries when external sources fail.
 

@@ -31,8 +31,8 @@ export function ToolsView() {
       }));
       setTools(mapped);
       setError(null);
-    } catch (err: any) {
-      setError('Failed to load tools from registry');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to load tools from registry');
       setTools([]);
     } finally {
       setLoading(false);

@@ -1,6 +1,6 @@
 /**
  * HTML to Figma Panel
- * Sidepanel integration for A2R Extension
+ * Sidepanel integration for Allternit Extension
  */
 
 import { useState } from 'react'

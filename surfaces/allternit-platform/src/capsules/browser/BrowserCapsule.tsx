@@ -281,7 +281,7 @@ function WebContent({ tab }: { tab: WebTab }) {
       {isElectronShell() ? (
         /* @ts-ignore - webview is Electron specific */
         <webview
-          ref={webviewRef}
+          ref={webviewRef as any}
           src={url}
           style={{ width: '100%', height: '100%', border: 'none' }}
           /* @ts-ignore - webview attributes */

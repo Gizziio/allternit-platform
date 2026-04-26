@@ -13,7 +13,8 @@ import {
   Clock,
   MagnifyingGlass,
 } from '@phosphor-icons/react';
-import { useNativeAgentStore } from '@/lib/agents/native-agent.store';
+import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
+import { useCodeSessionStore } from '@/views/code/CodeSessionStore';
 
 /**
  * Session data structure
@@ -168,17 +169,30 @@ function SessionRow({ session, selected, onSelect }: SessionRowProps) {
 export function HistoryView() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
-  const nativeSessions = useNativeAgentStore((state) => state.sessions);
+  // Aggregate sessions from all mode-specific stores
+  const chatSessions = useChatSessionStore((state) => state.sessions);
+  const codeSessions = useCodeSessionStore((state) => state.sessions);
 
-  const sessions: Session[] = useMemo(() =>
-    nativeSessions.map((ns) => ({
-      id: ns.id,
-      title: ns.name || 'Unnamed Session',
-      messageCount: ns.messageCount,
-      lastActivity: new Date(ns.lastAccessedAt || ns.updatedAt),
+  const sessions: Session[] = useMemo(() => {
+    const chatMapped = chatSessions.map((s) => ({
+      id: s.id,
+      title: s.name || 'Unnamed Session',
+      messageCount: s.messageCount,
+      lastActivity: new Date(s.updatedAt),
       mode: 'chat' as const,
-    })),
-  [nativeSessions]);
+    }));
+    const codeMapped = codeSessions.map((s) => ({
+      id: s.id,
+      title: s.name || 'Unnamed Session',
+      messageCount: s.messageCount,
+      lastActivity: new Date(s.updatedAt),
+      mode: 'code' as const,
+    }));
+    // Combine and sort by date (newest first)
+    return [...chatMapped, ...codeMapped].sort(
+      (a, b) => b.lastActivity.getTime() - a.lastActivity.getTime()
+    );
+  }, [chatSessions, codeSessions]);
 
   // Filter sessions based on search query
   const filteredSessions = useMemo(() => {

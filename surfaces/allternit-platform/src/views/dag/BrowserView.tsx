@@ -1,6 +1,6 @@
 /**
  * BrowserView - P5.2.1
- * High-Fidelity "Browser Substrate" for A2Rchitech
+ * High-Fidelity "Browser Substrate" for Allternit
  * Replaces the static engine-based view with a real interactive browser interface.
  */
 
@@ -297,7 +297,7 @@ export function BrowserView() {
         </div>
         <div className="flex items-center gap-4">
           <span className="text-[#D4B08C]/40 tracking-tighter">AGENT_PROTOCOL_V4.2</span>
-          <span>A2RCHITECH // BROWSER_MODE</span>
+          <span>Allternit // BROWSER_MODE</span>
         </div>
       </div>
     </div>

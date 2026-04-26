@@ -299,6 +299,60 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
               )}
             </div>
 
+            {/* Teammate Profile (from Multica) */}
+            {agent.teammateProfile && (
+              <div style={{ marginBottom: '20px', padding: '12px', borderRadius: '10px', background: 'rgba(255,255,255,0.03)', border: `1px solid ${STUDIO_THEME.borderSubtle}` }}>
+                <label style={{
+                  fontSize: '11px',
+                  color: STUDIO_THEME.textMuted,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  display: 'block',
+                  marginBottom: '8px',
+                }}>
+                  Teammate Profile
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted }}>Status</span>
+                    <span style={{
+                      fontSize: '13px',
+                      color: agent.teammateProfile.status === 'idle' ? '#10b981' : agent.teammateProfile.status === 'busy' ? '#f59e0b' : '#9ca3af',
+                      fontWeight: 500,
+                    }}>
+                      {agent.teammateProfile.status === 'idle' ? 'Available' : agent.teammateProfile.status === 'busy' ? 'Busy' : 'Offline'}
+                    </span>
+                  </div>
+                  {agent.teammateProfile.bio && (
+                    <p style={{ fontSize: '12px', color: STUDIO_THEME.textSecondary, lineHeight: 1.5, margin: 0 }}>
+                      {agent.teammateProfile.bio}
+                    </p>
+                  )}
+                  {agent.teammateProfile.specialties && agent.teammateProfile.specialties.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                      {agent.teammateProfile.specialties.map((s) => (
+                        <span key={s} style={{
+                          padding: '2px 8px',
+                          borderRadius: '999px',
+                          background: 'rgba(139, 92, 246, 0.15)',
+                          color: '#a78bfa',
+                          fontSize: '10px',
+                        }}>{s}</span>
+                      ))}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', gap: '12px', marginTop: '4px' }}>
+                    <span style={{ fontSize: '11px', color: STUDIO_THEME.textMuted }}>
+                      Board: {agent.assignedBoardItemIds?.length || 0}
+                    </span>
+                    <span style={{ fontSize: '11px', color: STUDIO_THEME.textMuted }}>
+                      Tasks: {agent.assignedTaskIds?.length || 0}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Capabilities */}
             <div style={{ marginBottom: '20px' }}>
               <label style={{

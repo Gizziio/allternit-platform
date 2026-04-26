@@ -404,7 +404,7 @@ export const railsApi = {
         );
       } catch (error: any) {
         // Silent fail - Rails API may not be running
-        if (import.meta.env.DEV) {
+        if (process.env.NODE_ENV === 'development') {
           console.debug(`[Rails API] WIHs not available (backend not running)`);
         }
         throw error;

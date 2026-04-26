@@ -19,7 +19,24 @@ import {
 
 import { ModeSwitcher } from './ModeSwitcher';
 
-export type AppMode = 'chat' | 'cowork' | 'code';
+export type AppMode = 'chat' | 'cowork' | 'code' | 'design';
+
+interface ShellHeaderProps {
+  title?: string;
+  onBack?: () => void;
+  onForward?: () => void;
+  activeMode: 'chat' | 'cowork' | 'code' | 'design';
+  onModeChange: (mode: 'chat' | 'cowork' | 'code' | 'design') => void;
+  theme: 'light' | 'dark';
+  onThemeToggle: () => void;
+  isRailCollapsed: boolean;
+  onRailToggle: () => void;
+  onOpenControlCenter?: () => void;
+  onSidecarToggle?: () => void;
+  sidecarOpen?: boolean;
+  currentEnvironment?: EnvironmentType;
+  onEnvironmentChange?: (env: EnvironmentType) => void;
+}
 
 export function ShellHeader({
   title,
@@ -36,7 +53,7 @@ export function ShellHeader({
   sidecarOpen,
   currentEnvironment = 'local',
   onEnvironmentChange,
-}: any) {
+}: ShellHeaderProps): JSX.Element {
   const modeColors: Record<string, string> = {
     chat: 'var(--accent-chat)',
     cowork: 'var(--accent-cowork)',
@@ -144,24 +161,6 @@ export function ShellHeader({
           <FileCode size={18} weight={sidecarOpen ? "fill" : "regular"} />
         </button>
 
-        {/* Control Center (Gear Icon) */}
-        <button
-          onClick={onOpenControlCenter}
-          style={{
-            background: 'var(--shell-control-bg)',
-            border: '1px solid var(--border-subtle)',
-            borderRadius: 8,
-            padding: 8,
-            display: 'flex',
-            color: 'var(--shell-control-fg)',
-            WebkitAppRegion: 'no-drag',
-            cursor: 'pointer',
-          }}
-          title="Control Center"
-        >
-          <Gear size={18} />
-        </button>
-
         <div style={{ display: 'flex', gap: 4, WebkitAppRegion: 'no-drag' }}>
           <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: 4, WebkitAppRegion: 'no-drag' }}>
             <CaretLeft size={18} />
@@ -191,7 +190,15 @@ export function ShellHeader({
   );
 }
 
-function ModeButton({ active, onClick, icon: Icon, label, color }: any) {
+interface ModeButtonProps {
+  active: boolean;
+  onClick: () => void;
+  icon: React.ComponentType<{ size?: number; weight?: string; color?: string }>;
+  label: string;
+  color: string;
+}
+
+function ModeButton({ active, onClick, icon: Icon, label, color }: ModeButtonProps): JSX.Element {
   return (
     <button
       onClick={onClick}

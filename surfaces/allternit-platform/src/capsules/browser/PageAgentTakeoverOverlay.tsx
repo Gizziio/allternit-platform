@@ -77,7 +77,6 @@ export function PageAgentTakeoverOverlay({
       <div
         style={{
           position: "absolute",
-          inset: 0,
           inset: -10,
           borderRadius: 24,
           background:

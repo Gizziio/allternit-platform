@@ -66,7 +66,7 @@ export function createGenericAdapter(opts: GenericAdapterOptions): ModelAdapter 
         ? `\n\nActions taken so far:\n${history.map((a, i) => `${i + 1}. ${a.label ?? a.type}`).join('\n')}`
         : '';
 
-      const { toolCalls } = await generateText({
+      const { toolCalls } = await (generateText as any)({
         model: gateway(modelId),
         maxTokens,
         system: systemPrompt,
@@ -74,7 +74,7 @@ export function createGenericAdapter(opts: GenericAdapterOptions): ModelAdapter 
           browser_action: tool({
             description: 'Perform a browser action (click, type, navigate, etc.)',
             parameters: BrowserActionSchema,
-          }),
+          } as any),
         },
         messages: [
           {
@@ -84,7 +84,7 @@ export function createGenericAdapter(opts: GenericAdapterOptions): ModelAdapter 
                 type: 'image',
                 image: screenshotB64,
                 mimeType: 'image/png',
-              },
+              } as any,
               {
                 type: 'text',
                 text: `Task: ${goal}${historyText}\n\nLook at the screenshot and call browser_action with the next action.`,
@@ -100,7 +100,7 @@ export function createGenericAdapter(opts: GenericAdapterOptions): ModelAdapter 
 
       for (const call of toolCalls) {
         if (call.toolName !== 'browser_action') continue;
-        const input = call.args as z.infer<typeof BrowserActionSchema>;
+        const input = (call as any).args as z.infer<typeof BrowserActionSchema>;
 
         if (input.action === 'done') return null; // task complete
 

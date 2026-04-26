@@ -1,12 +1,12 @@
 /**
- * A2rOS View
+ * AllternitOS View
  * 
- * Main view for the A2rchitect Super-Agent OS.
+ * Main view for the allternit Super-Agent OS.
  * Integrated into the Shell UI as a first-class view.
  * 
  * Features:
  * - Program Launcher with all 8 program types
- * - A2r Console with real multi-session terminal
+ * - Allternit Console with real multi-session terminal
  * - Chat-to-Program integration
  * - Real-time agent status and task management
  */
@@ -14,8 +14,8 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import { A2rOSProvider } from '../allternit-os';
-import { A2rConsole, A2rConsoleToggle } from '../allternit-os/components/A2rConsole';
+import { AllternitOSProvider } from '../allternit-os';
+import { AllternitConsole, AllternitConsoleToggle } from '../allternit-os/components/AllternitConsole';
 import {
   Cpu,
   FileText,
@@ -32,6 +32,7 @@ import {
   Play,
   GearSix,
   Pulse as Activity,
+  GraduationCap,
 } from '@phosphor-icons/react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -47,18 +48,24 @@ const programsList = [
   { id: 'orchestrator', name: 'Orchestrator', desc: 'MoA execution dashboard', icon: Cpu, color: 'bg-red-500' },
   { id: 'workflowbuilder', name: 'WorkflowBuilder', desc: 'Visual DAG builder', icon: Graph, color: 'bg-cyan-500' },
   { id: 'browser', name: 'Browser', desc: 'Web citations with screenshots', icon: Globe, color: 'bg-indigo-500' },
+  { id: 'labs', name: 'A://Labs', desc: '7 live AI learning tracks', icon: GraduationCap, color: 'bg-violet-500' },
 ];
 
-interface A2rOSViewProps {
+interface AllternitOSViewProps {
   context: ViewContext;
 }
 
-export function A2rOSView({ context }: A2rOSViewProps) {
+export function AllternitOSView({ context }: AllternitOSViewProps) {
   const [consoleOpen, setConsoleOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'launcher' | 'active' | 'chat'>('launcher');
   const [activePrograms, setActivePrograms] = useState<Array<{ id: string; type: string; title: string }>>([]);
 
   const launchProgram = useCallback((programId: string) => {
+    if (programId === 'labs') {
+      window.dispatchEvent(new CustomEvent('allternit:open-labs'));
+      return;
+    }
+
     const programDef = programsList.find(p => p.id === programId);
     if (!programDef) return;
     
@@ -72,7 +79,7 @@ export function A2rOSView({ context }: A2rOSViewProps) {
   }, [activePrograms]);
 
   return (
-    <A2rOSProvider config={{ kernelEndpoint: 'ws://localhost:3001/cable' }}>
+    <AllternitOSProvider config={{ kernelEndpoint: 'ws://localhost:3001/cable' }}>
       <div className="h-full flex flex-col bg-background">
         {/* Header */}
         <header className="h-14 border-b bg-card flex items-center justify-between px-4 shrink-0">
@@ -81,7 +88,7 @@ export function A2rOSView({ context }: A2rOSViewProps) {
               <SquaresFour className="w-4 h-4 text-white" />
             </div>
             <div>
-              <h1 className="font-semibold text-sm">A2rOS</h1>
+              <h1 className="font-semibold text-sm">AllternitOS</h1>
               <p className="text-xs text-muted-foreground">Super-Agent OS</p>
             </div>
             <Badge variant="outline" className="text-xs ml-2">Production</Badge>
@@ -163,7 +170,7 @@ export function A2rOSView({ context }: A2rOSViewProps) {
           {/* Console Panel */}
           {consoleOpen && (
             <aside className="w-[500px] border-l bg-card flex flex-col shrink-0">
-              <A2rConsole isOpen={consoleOpen} onClose={() => setConsoleOpen(false)} />
+              <AllternitConsole isOpen={consoleOpen} onClose={() => setConsoleOpen(false)} />
             </aside>
           )}
         </div>
@@ -182,7 +189,7 @@ export function A2rOSView({ context }: A2rOSViewProps) {
           <code className="text-muted-foreground">allternit://launch/{'{program}'}</code>
         </footer>
       </div>
-    </A2rOSProvider>
+    </AllternitOSProvider>
   );
 }
 
@@ -377,4 +384,4 @@ function ProgramPreviewCard({ type, title, status }: { type: string; title: stri
   );
 }
 
-export default A2rOSView;
+export default AllternitOSView;

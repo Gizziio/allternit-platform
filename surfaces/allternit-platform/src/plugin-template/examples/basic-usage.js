@@ -13,8 +13,8 @@
 // const { getPlugin } = require('@allternit/platform');
 // const plugin = getPlugin('{{PLUGIN_ID}}');
 
-// Or in the A2R Platform environment, the plugin is available globally
-// const plugin = A2R.plugins.get('{{PLUGIN_ID}}');
+// Or in the Allternit Platform environment, the plugin is available globally
+// const plugin = Allternit.plugins.get('{{PLUGIN_ID}}');
 
 // ============================================================================
 // EXAMPLE 1: BASIC INITIALIZATION

@@ -4,6 +4,7 @@
  */
 
 export interface CaptureOptions {
+  url?: string
   selector?: string
   fullPage?: boolean
   waitFor?: number
@@ -13,6 +14,7 @@ export interface CaptureOptions {
     style?: boolean
     layout?: boolean
   }
+  onProgress?: (phase: string, progress: number) => void
 }
 
 export interface CaptureResult {
@@ -22,6 +24,10 @@ export interface CaptureResult {
   duration: number
   url: string
   timestamp: number
+  json?: unknown
+  layerCount?: number
+  optimizedCount?: number
+  images?: unknown[]
 }
 
 export interface LayerNode {

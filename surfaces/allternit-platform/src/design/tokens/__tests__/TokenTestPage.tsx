@@ -589,7 +589,7 @@ export const TokenTestPage: React.FC = () => {
       </button>
 
       <header style={styles.header}>
-        <h1 style={styles.title}>A2rchitect Design Tokens</h1>
+        <h1 style={styles.title}>allternit Design Tokens</h1>
         <p style={styles.subtitle}>
           Comprehensive visual test of all design tokens. Toggle dark mode to verify color variants.
         </p>
@@ -607,7 +607,7 @@ export const TokenTestPage: React.FC = () => {
       <ZIndexSection />
 
       <footer style={{ marginTop: tokens.spacing['16'], paddingTop: tokens.spacing['8'], borderTop: `1px solid ${neutral[300]}`, textAlign: 'center', color: neutral[500] }}>
-        <p>Design Token System v1.0.0 | A2rchitect Platform</p>
+        <p>Design Token System v1.0.0 | allternit Platform</p>
         <p style={{ fontSize: fontSize.sm, marginTop: tokens.spacing['2'] }}>
           All tokens are type-safe with full TypeScript support
         </p>

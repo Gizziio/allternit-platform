@@ -1,14 +1,14 @@
-# A2rchitect Super-Agent OS - Implementation Gaps Analysis
+# allternit Super-Agent OS - Implementation Gaps Analysis
 
 ## ✅ Completed Components
 
 ### Core Infrastructure (Production Ready)
-1. **A2rCanvas** - Program container with resizable sidebar
-2. **A2rConsole** - Agent terminal, kanban board, automation hub
-3. **A2rChatIntegration** - Chat-to-program bridge with preview cards
-4. **ProgramLauncher** - URI scheme support (`a2r://`)
+1. **AllternitCanvas** - Program container with resizable sidebar
+2. **AllternitConsole** - Agent terminal, kanban board, automation hub
+3. **AllternitChatIntegration** - Chat-to-program bridge with preview cards
+4. **ProgramLauncher** - URI scheme support (`allternit://`)
 5. **WorkspaceService** - Rails DAG/Bus/Ledger integration
-6. **A2rOS** - Main entry wrapper with provider
+6. **AllternitOS** - Main entry wrapper with provider
 
 ### Programs (7 Complete + 4 Placeholders)
 | Program | Status | Features |
@@ -51,7 +51,7 @@ Multiple files declare `window.electron` with different shapes:
 
 ### Type Mismatches
 1. `store.programs` is an array but accessed like a function in some places
-2. `useRailsWebSocket()` API mismatch in A2rConsole (expects `onMessage`, gets `messages`)
+2. `useRailsWebSocket()` API mismatch in AllternitConsole (expects `onMessage`, gets `messages`)
 3. Duplicate type exports resolved but some references remain
 
 ## 🔧 Implementation Gaps
@@ -67,7 +67,7 @@ if (window.electron?.browser) {
 ```
 
 ### 2. Workspace Service WebSocket
-**File**: `A2rConsole.tsx`
+**File**: `AllternitConsole.tsx`
 ```typescript
 // Kanban board has stub for DAG updates
 // Needs: Real-time sync with Rails WIH queue
@@ -91,16 +91,16 @@ useEffect(() => {
 - BrowserProgram: Needs embedded browser or Playwright
 
 ### 5. Program Component Integration
-**Issue**: A2rOS passes props to A2rCanvas that it doesn't accept
+**Issue**: AllternitOS passes props to AllternitCanvas that it doesn't accept
 ```typescript
-// A2rOS.tsx line 225-229
-<A2rCanvas 
+// AllternitOS.tsx line 225-229
+<AllternitCanvas 
   activeProgramId={activeProgramId}      // ❌ Not accepted
   onActivateProgram={handleActivateProgram}  // ❌ Not accepted
   onCloseProgram={handleCloseProgram}    // ❌ Not accepted
 />
 
-// A2rCanvas uses store directly, doesn't take handler props
+// AllternitCanvas uses store directly, doesn't take handler props
 ```
 
 ## 🎨 Visual/UI Status
@@ -122,11 +122,11 @@ useEffect(() => {
 
 ### Connected
 ```typescript
-// A2rOS wraps app and provides:
+// AllternitOS wraps app and provides:
 - Workspace service (config.workspaceUrl)
 - Program launcher with URI scheme
 - Sidecar store (Zustand)
-- A2rCanvas for program dock
+- AllternitCanvas for program dock
 ```
 
 ### Needs Wiring
@@ -157,7 +157,7 @@ Types:       Complete type coverage
 ### P0 - Critical
 1. Fix TypeScript configuration (`esModuleInterop`, `downlevelIteration`)
 2. Create unified `window.electron` type definitions
-3. Fix A2rCanvas prop interface or remove extraneous props
+3. Fix AllternitCanvas prop interface or remove extraneous props
 
 ### P1 - Important  
 4. Implement real browser automation integration
@@ -172,10 +172,10 @@ Types:       Complete type coverage
 ## 📦 Usage Example (Working)
 
 ```typescript
-import { A2rOS, programLauncher } from './a2r-os';
+import { AllternitOS, programLauncher } from './allternit-os';
 
 // Wrap your app
-<A2rOS 
+<AllternitOS 
   config={{
     workspaceUrl: 'http://localhost:3021',
     workspaceId: 'my-workspace',
@@ -184,7 +184,7 @@ import { A2rOS, programLauncher } from './a2r-os';
   showProgramDock={true}
 >
   <YourApp />
-</A2rOS>
+</AllternitOS>
 
 // Launch programs
 programLauncher.launch({
@@ -194,7 +194,7 @@ programLauncher.launch({
 });
 
 // Or via URI
-programLauncher.launchFromUri('a2r://data-grid?title=Sales');
+programLauncher.launchFromUri('allternit://data-grid?title=Sales');
 ```
 
 ## ✅ Summary

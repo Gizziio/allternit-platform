@@ -12,6 +12,7 @@ export type PluginCategory =
   | 'analyze'     // Research, Data (Blue gradient)
   | 'build'       // Code, Assets (Emerald gradient)
   | 'automate'    // Swarms, Flow (Amber gradient)
+  | 'cowork'      // Team skills and agent collaboration tools (Cyan gradient)
   | 'productivity'
   | 'integration'
   | 'custom';
@@ -117,6 +118,13 @@ export const COLOR_GRADES: Record<string, ColorGrade> = {
     border: ['border-amber-400/30', 'border-amber-500/30', 'border-amber-600/30', 'border-amber-700/30'],
     dot: ['bg-amber-400', 'bg-amber-500', 'bg-amber-600', 'bg-amber-700'],
   },
+  cyan: {
+    base: 'cyan',
+    bg: ['bg-cyan-400/20', 'bg-cyan-500/20', 'bg-cyan-600/20', 'bg-cyan-700/20'],
+    text: ['text-cyan-300', 'text-cyan-400', 'text-cyan-500', 'text-cyan-600'],
+    border: ['border-cyan-400/30', 'border-cyan-500/30', 'border-cyan-600/30', 'border-cyan-700/30'],
+    dot: ['bg-cyan-400', 'bg-cyan-500', 'bg-cyan-600', 'bg-cyan-700'],
+  },
 };
 
 // Category metadata matching ConsolidatedModeSelector
@@ -144,6 +152,11 @@ export const CATEGORY_METADATA: Record<PluginCategory, {
     label: 'Automate', 
     color: COLOR_GRADES.amber, 
     description: 'Multi-agent swarms and workflows' 
+  },
+  cowork: { 
+    label: 'Cowork', 
+    color: COLOR_GRADES.cyan, 
+    description: 'Team skills and agent collaboration tools' 
   },
   productivity: { 
     label: 'Productivity', 
@@ -182,6 +195,11 @@ export const BUILTIN_MODES: Record<string, {
   // Automate (Amber) - shades 0,2
   swarms: { category: 'automate', shade: 0, description: 'Multi-agent orchestration' },
   flow: { category: 'automate', shade: 2, description: 'Workflow automation' },
+  // Cowork (Cyan) - shades 0,1,2,3
+  'auto-deploy': { category: 'cowork', shade: 0, description: 'Auto-deploy with approval gates' },
+  'code-review': { category: 'cowork', shade: 1, description: 'Automated PR review' },
+  'migration': { category: 'cowork', shade: 2, description: 'Safe database migrations' },
+  'onboarding': { category: 'cowork', shade: 3, description: 'Agent onboarding workflows' },
 };
 
 // Format display name as "Agent | Group-Mode" (e.g., "Agent | Create-Image")

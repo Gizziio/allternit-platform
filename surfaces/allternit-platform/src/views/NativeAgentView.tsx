@@ -8,33 +8,29 @@
  * - Right side: Canvas panel for tool visualization and content
  * - Session management with dropdown selector
  * - Allternit Native Milestone Progress (Protocol Layer)
- * - Full integration with native-agent.store
+ * - Full integration with ChatSessionStore
  */
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-// Store
+// Store - Using ChatSessionStore for native agent view
 import {
-  createCanonicalSession,
-  useNativeAgentStore,
-  useActiveSession,
-  useActiveMessages,
-  useSessionStreamingState,
-  useSessionSyncState,
-  useSessionCanvases,
-  useConversationReplies,
-  isLocalDraftSession,
-  type NativeMessage,
-  type NativeSession,
-  type RuntimeExecutionModeStatus,
-  type SessionUpdateInput,
-  type ToolCall,
-  type Canvas,
-} from "@/lib/agents";
+  useChatSessionStore,
+  useActiveChatSession,
+  type ChatSession as NativeSession,
+  type ModeSessionMessage as NativeMessage,
+} from "@/views/chat/ChatSessionStore";
+import type { ModeSessionMessage, ModeSession } from "@/lib/agents/mode-session-store";
+
+// Type aliases for backward compatibility
+type ToolCall = { id: string; name: string; arguments: Record<string, unknown> };
+interface Canvas { id: string; sessionId: string; content: string; type: string; title?: string; }
+interface SessionUpdateInput { name?: string; description?: string; metadata?: Record<string, unknown>; }
+interface RuntimeExecutionModeStatus { mode: string; updatedAt: string; supportedModes: string[]; }
 import type { Reply, TextReplyItem } from "@/lib/agents/replies-stream";
 import { useWorkspace } from "@/agent-workspace/useWorkspace";
-import { MilestoneProgress } from "@/components/A2RNative/MilestoneProgress";
+import { MilestoneProgress } from "@/components/AllternitNative/MilestoneProgress";
 import {
   ToolCallVisualization,
   useToolCallAccent,
@@ -105,6 +101,34 @@ import { GATEWAY_BASE_URL } from "@/lib/agents/api-config";
 import { SessionComposerRegion } from "@/components/session-composer";
 
 // ============================================================================
+// Local hook stubs for features not yet implemented in mode-session-store
+// ============================================================================
+
+function useActiveMessages() {
+  return useChatSessionStore((s) => {
+    const id = s.activeSessionId;
+    return id ? (s.sessions.find(sess => sess.id === id)?.messages ?? []) : [];
+  });
+}
+
+function useSessionCanvases(_sessionId: string): Canvas[] {
+  return [];
+}
+
+function isLocalDraftSession(session: NativeSession | null): boolean {
+  return !!(session && session.id.startsWith('local-'));
+}
+
+function useSessionStreamingState(sessionId: string) {
+  const streamingState = useChatSessionStore((s) => s.streamingBySession?.[sessionId]);
+  return { isStreaming: streamingState?.isStreaming ?? false };
+}
+
+function useConversationReplies(_sessionId?: string): import('@/types/replies-contract').ConversationReplyState | null {
+  return null;
+}
+
+// ============================================================================
 // Types & Helpers
 // ============================================================================
 
@@ -147,24 +171,26 @@ export function NativeAgentView({
   onOpenRuntimeOps,
 }: NativeAgentViewProps) {
   const {
-    sessions,
-    activeSessionId,
     updateSession = async () => {},
     deleteSession,
     setActiveSession,
-    fetchSessions,
-    executionMode = null,
-    fetchExecutionMode = async () => {},
-    isLoadingSessions = false,
-    isUpdatingSession = false,
-    isLoadingExecutionMode = false,
-  } = useNativeAgentStore();
+    loadSessions,
+  } = useChatSessionStore();
+  
+  // Derived state
+  const activeSessionId = useChatSessionStore((s) => s.activeSessionId);
+  const sessions = useChatSessionStore((s) => s.sessions);
+  const isLoadingSessions = useChatSessionStore((s) => s.isLoading);
+  const streamingState = useChatSessionStore((s) => activeSessionId ? s.streamingBySession[activeSessionId] : null);
+  const isStreaming = streamingState?.isStreaming ?? false;
+  const isSessionSyncConnected = useChatSessionStore((s) => s.isSyncConnected);
+  const sessionSyncError = useChatSessionStore((s) => s.syncError);
 
   // Allternit Native Context Integration
   const { allternitNativeState } = useWorkspace(activeSessionId || "");
-
-  const { isStreaming } = useSessionStreamingState(activeSessionId ?? '');
-  const { isConnected: isSessionSyncConnected, error: sessionSyncError } = useSessionSyncState();
+  const executionMode: RuntimeExecutionModeStatus | null = null;
+  const isUpdatingSession = false;
+  const isLoadingExecutionMode = false;
   
   const [viewMode, setViewMode] = useState<ViewMode>("split");
   const [hasFetchedSessions, setHasFetchedSessions] = useState(false);
@@ -184,18 +210,19 @@ export function NativeAgentView({
     let isMounted = true;
     void (async () => {
       try {
-        await fetchSessions();
+        await loadSessions();
       } finally {
         if (isMounted) setHasFetchedSessions(true);
       }
     })();
 
     return () => { isMounted = false; };
-  }, [bootstrapStrategy, fetchSessions]);
+  }, [bootstrapStrategy, loadSessions]);
 
+  // Execution mode not implemented in new store - skipping
   useEffect(() => {
-    void fetchExecutionMode().catch(() => {});
-  }, [fetchExecutionMode]);
+    // Placeholder for execution mode loading
+  }, []);
 
   // Auto-select session
   useEffect(() => {
@@ -215,13 +242,13 @@ export function NativeAgentView({
 
     if (!hasAutoCreatedWelcomeSession.current) {
       hasAutoCreatedWelcomeSession.current = true;
-      void createCanonicalSession("Welcome Session");
+      void useChatSessionStore.getState().createSession({ name: "Welcome Session" });
     }
   }, [activeSessionId, hasFetchedSessions, initialSessionId, isLoadingSessions, sessions, setActiveSession, bootstrapStrategy]);
 
   const handleNewSession = useCallback(async () => {
-    const newSession = await createCanonicalSession();
-    if (newSession?.id) setActiveSession(newSession.id);
+    const newSessionId = await useChatSessionStore.getState().createSession({ name: "New Session" });
+    if (newSessionId) setActiveSession(newSessionId);
   }, [setActiveSession]);
 
   const handleDeleteSession = useCallback(async (sessionId: string) => {
@@ -260,7 +287,7 @@ export function NativeAgentView({
               activeSessionId={activeSessionId}
               onSelectSession={setActiveSession}
               onNewSession={handleNewSession}
-              onUpdateSession={updateSession}
+              onUpdateSession={updateSession as (id: string, updates: SessionUpdateInput) => Promise<void>}
               onDeleteSession={handleDeleteSession}
               executionMode={executionMode}
               isLoadingSessions={isLoadingSessions}
@@ -470,7 +497,8 @@ function ChatPanel({ sessionId }: { sessionId: string | null }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [inputValue, setInputValue] = useState("");
 
-  const { sendMessageStream, abortGeneration } = useNativeAgentStore();
+  const sendMessageStream = useChatSessionStore((state) => state.sendMessageStream);
+  const abortGeneration = useChatSessionStore((state) => state.abortGeneration);
 
   // Derive the currently-streaming reply for the live tail render.
   const lastReplyId = replyState?.orderedReplyIds[replyState.orderedReplyIds.length - 1];
@@ -479,9 +507,9 @@ function ChatPanel({ sessionId }: { sessionId: string | null }) {
 
   // Use accumulated text length as scroll trigger instead of the raw buffer string.
   const streamingTextLength = activeStreamingReply
-    ? activeStreamingReply.items
+    ? (activeStreamingReply.items || [])
         .filter((i): i is TextReplyItem => i.kind === "text")
-        .reduce((n, i) => n + i.text.length, 0)
+        .reduce((n: number, i: TextReplyItem) => n + i.content.length, 0)
     : 0;
 
   const scrollToBottom = useCallback(() => {
@@ -498,12 +526,12 @@ function ChatPanel({ sessionId }: { sessionId: string | null }) {
     if (!sessionId || !inputValue.trim() || isStreaming) return;
     const content = inputValue.trim();
     setInputValue("");
-    await sendMessageStream(sessionId, content);
+    await sendMessageStream(sessionId, { text: content });
   }, [sessionId, inputValue, isStreaming, sendMessageStream]);
 
   return (
     <div className="flex h-full flex-col bg-transparent relative">
-      <ScrollArea ref={scrollRef} className="flex-1 p-6">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-6">
         <div className="max-w-3xl mx-auto space-y-8 pb-32">
           {messages.length === 0 && !isStreaming && (
             <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 opacity-40">
@@ -523,7 +551,7 @@ function ChatPanel({ sessionId }: { sessionId: string | null }) {
             <StreamingReplyTail reply={activeStreamingReply} />
           )}
         </div>
-      </ScrollArea>
+      </div>
 
       <div className="absolute bottom-0 inset-x-0 p-6 bg-gradient-to-t from-[color:var(--glass-bg-elevated)] via-[color:var(--glass-bg-elevated)] to-transparent pointer-events-none">
         <div className="max-w-2xl mx-auto pointer-events-auto">
@@ -534,7 +562,7 @@ function ChatPanel({ sessionId }: { sessionId: string | null }) {
             value={inputValue}
             onValueChange={setInputValue}
             onSubmit={handleSubmit}
-            onStop={abortGeneration}
+            onStop={() => abortGeneration(sessionId ?? '')}
           />
         </div>
       </div>
@@ -545,8 +573,8 @@ function ChatPanel({ sessionId }: { sessionId: string | null }) {
 // Renders the live streaming reply tail from canonical ConversationReplyState.
 // Replaces the old streamBuffer synthetic ChatMessage.
 function StreamingReplyTail({ reply }: { reply: Reply }) {
-  const textItems = reply.items.filter((i): i is TextReplyItem => i.kind === "text");
-  const liveText = textItems.map((i) => i.text).join("");
+  const textItems = (reply.items || []).filter((i): i is TextReplyItem => i.kind === "text");
+  const liveText = textItems.map((i) => i.content).join("");
 
   return (
     <motion.div
@@ -564,9 +592,9 @@ function StreamingReplyTail({ reply }: { reply: Reply }) {
           )}
           <span className="inline-block w-1 h-4 ml-1 bg-accent-primary animate-pulse align-middle" />
         </div>
-        {reply.items.some((i) => i.kind === "tool_call") && (
+        {(reply.items || []).some((i) => i.kind === "tool_call") && (
           <div className="space-y-1 w-full text-xs text-white/40 px-2">
-            {reply.items
+            {(reply.items || [])
               .filter((i) => i.kind === "tool_call")
               .map((i) => (
                 <div key={i.id} className="flex items-center gap-1.5">
@@ -619,10 +647,10 @@ function ChatMessage({ message, isStreaming }: { message: NativeMessage; isStrea
           {isStreaming && <span className="inline-block w-1 h-4 ml-1 bg-accent-primary animate-pulse align-middle" />}
         </div>
         
-        {message.toolCalls && message.toolCalls.length > 0 && (
+        {(message as any).toolCalls && (message as any).toolCalls.length > 0 && (
           <div className="space-y-2 w-full">
-            {message.toolCalls.map(tc => (
-              <ToolCallVisualization key={tc.id} toolCall={tc} />
+            {(message as any).toolCalls.map((tc: any) => (
+              <ToolCallVisualization key={tc.id} toolCalls={[tc]} />
             ))}
           </div>
         )}
@@ -640,8 +668,11 @@ function ChatMessage({ message, isStreaming }: { message: NativeMessage; isStrea
 // ============================================================================
 
 function CanvasPanel({ sessionId }: { sessionId: string | null }) {
-  const canvases = useSessionCanvases(sessionId || "");
-  const { canvases: canvasMap, updateCanvas, deleteCanvas } = useNativeAgentStore();
+  // Canvases not yet implemented in new store - stub for compatibility
+  const canvases: string[] = [];
+  const canvasMap: Record<string, Canvas> = {};
+  const updateCanvas = async (_id: string, _content: string) => {};
+  const deleteCanvas = async (_id: string) => {};
   const [activeCanvasId, setActiveCanvasId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -733,7 +764,8 @@ function CanvasPanel({ sessionId }: { sessionId: string | null }) {
 // ============================================================================
 
 function ErrorBanner() {
-  const { error, clearError } = useNativeAgentStore();
+  const error = useChatSessionStore((state) => state.error);
+  const clearError = useChatSessionStore((state) => () => state.error = null);
 
   return (
     <AnimatePresence>

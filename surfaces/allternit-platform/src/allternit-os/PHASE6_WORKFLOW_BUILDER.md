@@ -1,8 +1,8 @@
-# Phase 6: Workflow Builder Program - A2R Rails Integration
+# Phase 6: Workflow Builder Program - Allternit Rails Integration
 
 ## Overview
 
-The Workflow Builder Program is a visual workflow editor that integrates with the **A2R Agent System Rails** (Rust-based agent orchestration system). It provides a canvas for viewing and editing agent workflows while leveraging the Rails infrastructure for message passing, work management, and policy enforcement.
+The Workflow Builder Program is a visual workflow editor that integrates with the **Allternit Agent System Rails** (Rust-based agent orchestration system). It provides a canvas for viewing and editing agent workflows while leveraging the Rails infrastructure for message passing, work management, and policy enforcement.
 
 ## Architecture
 
@@ -10,7 +10,7 @@ The Workflow Builder Program is a visual workflow editor that integrates with th
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                           A2rchitect UI (Electron)                          │
+│                           allternit UI (Electron)                          │
 │  ┌──────────────────────────────────────────────────────────────────────┐  │
 │  │                    WorkflowBuilderProgram                              │  │
 │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐ │  │
@@ -20,17 +20,17 @@ The Workflow Builder Program is a visual workflow editor that integrates with th
 │  │         └─────────────────┴─────────────────┴─────────────────┘      │  │
 │  │                            │                                         │  │
 │  │              ┌─────────────┴─────────────┐                          │  │
-│  │              │     useA2RRails Hook      │                          │  │
+│  │              │     useAllternitRails Hook      │                          │  │
 │  │              └─────────────┬─────────────┘                          │  │
 │  └────────────────────────────┼─────────────────────────────────────────┘  │
 └───────────────────────────────┼─────────────────────────────────────────────┘
                                 │ HTTP API
                                 ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                      A2R Agent System Rails (Rust)                          │
+│                      Allternit Agent System Rails (Rust)                          │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
 │  │  Work/DAG   │  │  Bus/Queue  │  │   Ledger    │  │ Workspace Service   │ │
-│  │  (.a2r/work)│  │(.a2r/bus)   │  │  (.a2r/     │  │   (:3021)           │ │
+│  │  (.allternit/work)│  │(.allternit/bus)   │  │  (.allternit/     │  │   (:3021)           │ │
 │  │             │  │             │  │   ledger)   │  │                     │ │
 │  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────────────┘ │
 │  ┌─────────────────────────────────────────────────────────────────────────┐│
@@ -41,19 +41,19 @@ The Workflow Builder Program is a visual workflow editor that integrates with th
 
 ## Key Components
 
-### 1. A2RRailsBridge (`kernel/A2RRailsBridge.ts`)
+### 1. AllternitRailsBridge (`kernel/AllternitRailsBridge.ts`)
 
 The bridge connects the UI to the Rails workspace service.
 
 **Features:**
 - HTTP client for Rails workspace API (port 3021)
 - Type-safe interfaces for DAG, WIH, BusMessage, LedgerEvent
-- React hook `useA2RRails()` for reactive state management
+- React hook `useAllternitRails()` for reactive state management
 - Auto-polling with configurable intervals
 
 **Usage:**
 ```typescript
-const rails = useA2RRails({
+const rails = useAllternitRails({
   workspaceId: 'my-workspace',
   autoPoll: true,
   pollInterval: 3000,
@@ -99,9 +99,9 @@ Visual workflow editor with three main tabs:
 
 ### 3. Program Integration
 
-Registered in `A2rCanvas.tsx`:
+Registered in `AllternitCanvas.tsx`:
 ```typescript
-const PROGRAM_REGISTRY: Record<A2rProgramType, ProgramComponent> = {
+const PROGRAM_REGISTRY: Record<AllternitProgramType, ProgramComponent> = {
   // ... other programs
   'workflow-builder': WorkflowBuilderProgram,
   // ...
@@ -136,7 +136,7 @@ The bridge expects the Rails workspace service to expose:
 ### Data Flow
 
 ```
-1. Rails Work Surface creates DAG (.a2r/work/dags/<dag_id>.json)
+1. Rails Work Surface creates DAG (.allternit/work/dags/<dag_id>.json)
 2. Workspace service reads DAG files
 3. UI polls workspace service via HTTP
 4. WorkflowBuilder displays DAG as visual nodes
@@ -209,7 +209,7 @@ The Workflow Builder doesn't replace the AgentCommunicationPanel - it extends it
 
 Added to `types/programs.ts`:
 ```typescript
-export type A2rProgramType = 
+export type AllternitProgramType = 
   | 'research-doc'
   | 'data-grid'
   | 'presentation'
@@ -253,15 +253,15 @@ The workspace ID connects the UI to a specific Rails workspace:
 ## Files Added/Modified
 
 ### New Files
-- `kernel/A2RRailsBridge.ts` - Rails HTTP client and React hook
+- `kernel/AllternitRailsBridge.ts` - Rails HTTP client and React hook
 - `kernel/index.ts` - Kernel module exports
 - `programs/WorkflowBuilderProgram.tsx` - Main workflow builder UI
 - `PHASE6_WORKFLOW_BUILDER.md` - This documentation
 
 ### Modified Files
-- `types/programs.ts` - Added 'workflow-builder' to A2rProgramType
+- `types/programs.ts` - Added 'workflow-builder' to AllternitProgramType
 - `stores/useSidecarStore.ts` - Added icon for workflow-builder
-- `components/A2rCanvas.tsx` - Registered WorkflowBuilderProgram
+- `components/AllternitCanvas.tsx` - Registered WorkflowBuilderProgram
 - `utils/launchProtocol.ts` - Added launchWorkflowBuilder function
 
 ## Testing
@@ -269,7 +269,7 @@ The workspace ID connects the UI to a specific Rails workspace:
 ### Manual Test
 
 1. Start Rails workspace service on port 3021
-2. Create a DAG in `.a2r/work/dags/`
+2. Create a DAG in `.allternit/work/dags/`
 3. Launch Workflow Builder from the UI
 4. Verify DAG nodes appear on canvas
 5. Send test Bus messages
@@ -277,7 +277,7 @@ The workspace ID connects the UI to a specific Rails workspace:
 
 ### Expected Behavior
 
-- ✅ Connection status shows "Connected to A2R Rails"
+- ✅ Connection status shows "Connected to Allternit Rails"
 - ✅ DAG nodes render with correct status colors
 - ✅ Edges show dependency relationships
 - ✅ Messages appear in real-time
@@ -286,8 +286,8 @@ The workspace ID connects the UI to a specific Rails workspace:
 
 ## References
 
-- A2R Rails System: `/Users/macbook/Desktop/allternit-workspace/allternit/0-substrate/a2r-agent-system-rails`
+- Allternit Rails System: `/Users/macbook/Desktop/allternit-workspace/allternit/0-substrate/allternit-agent-system-rails`
 - Workspace Service: Port 3021
-- Bus Queue: `.a2r/bus/queue.db` (SQLite)
-- Work DAGs: `.a2r/work/dags/*.json`
-- Ledger: `.a2r/ledger/events/*.jsonl`
+- Bus Queue: `.allternit/bus/queue.db` (SQLite)
+- Work DAGs: `.allternit/work/dags/*.json`
+- Ledger: `.allternit/ledger/events/*.jsonl`

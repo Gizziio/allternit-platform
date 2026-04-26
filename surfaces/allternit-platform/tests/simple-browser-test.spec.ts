@@ -38,7 +38,7 @@ test.describe('Browser Content Load', () => {
     console.log('Viewport bounding box:', viewportBox);
     
     // Find the iframe
-    const iframe = page.locator('iframe[data-testid="a2r-iframe-content"]');
+    const iframe = page.locator('iframe[data-testid="allternit-iframe-content"]');
     const iframeCount = await iframe.count();
     console.log('Iframe count:', iframeCount);
     

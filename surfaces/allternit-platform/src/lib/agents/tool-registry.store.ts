@@ -8,7 +8,18 @@
 
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import type { Tool } from "./native-agent.store";
+// Tool type definition
+export interface Tool {
+  id: string;
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+  isEnabled: boolean;
+  category?: string;
+}
+
+// Re-export for backward compatibility
+export type { Tool as NativeAgentTool };
 import { GATEWAY_BASE_URL } from "@/integration/api-client";
 
 // ============================================================================

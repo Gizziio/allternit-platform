@@ -1,7 +1,7 @@
 /**
  * Kernel Adapter for ChatJS Integration
  * 
- * Bridges ChatJS's expected AI SDK patterns with a2rchitech kernel.
+ * Bridges ChatJS's expected AI SDK patterns with allternit kernel.
  */
 
 import { env } from "../env";

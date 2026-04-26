@@ -125,10 +125,18 @@ export async function issueTokenPair(payload: TokenPayload): Promise<TokenPair> 
 
   const redis = getRedisClient();
   if (redis) {
-    await Promise.all([
-      redis.set(`${KEY_AT}${jti}`, JSON.stringify(payload), 'EX', ACCESS_TTL),
-      redis.set(`${KEY_RT}${refresh_token}`, JSON.stringify(payload), 'EX', REFRESH_TTL),
-    ]);
+    try {
+      await Promise.all([
+        redis.set(`${KEY_AT}${jti}`, JSON.stringify(payload), 'EX', ACCESS_TTL),
+        redis.set(`${KEY_RT}${refresh_token}`, JSON.stringify(payload), 'EX', REFRESH_TTL),
+      ]);
+    } catch (error) {
+      console.warn('[oauth-tokens] Redis write failed, falling back to in-memory store:', error);
+      const atExpiry = Date.now() + ACCESS_TTL * 1000;
+      const rtExpiry = Date.now() + REFRESH_TTL * 1000;
+      atStore.set(jti, { ...payload, expiresAt: atExpiry });
+      rtStore.set(refresh_token, { ...payload, expiresAt: rtExpiry });
+    }
   } else {
     const atExpiry = Date.now() + ACCESS_TTL * 1000;
     const rtExpiry = Date.now() + REFRESH_TTL * 1000;
@@ -156,14 +164,17 @@ export async function validateAccessToken(token: string): Promise<TokenPayload |
 
   const redis = getRedisClient();
   if (redis) {
-    // Check user-level not-before (bulk revocation)
-    if (sub) {
-      const nbfRaw = await redis.get(`${KEY_NBF}${sub}`);
-      if (nbfRaw && iat < Number(nbfRaw)) return null;
+    try {
+      if (sub) {
+        const nbfRaw = await redis.get(`${KEY_NBF}${sub}`);
+        if (nbfRaw && iat < Number(nbfRaw)) return null;
+      }
+      const raw = await redis.get(`${KEY_AT}${jti}`);
+      if (!raw) return null;
+      try { return JSON.parse(raw) as TokenPayload; } catch { return null; }
+    } catch (error) {
+      console.warn('[oauth-tokens] Redis validation failed, falling back to in-memory store:', error);
     }
-    const raw = await redis.get(`${KEY_AT}${jti}`);
-    if (!raw) return null;
-    try { return JSON.parse(raw) as TokenPayload; } catch { return null; }
   }
 
   // In-memory path
@@ -189,12 +200,18 @@ export async function rotateRefreshToken(refreshToken: string): Promise<TokenPai
   let payload: TokenPayload | null = null;
 
   if (redis) {
-    const key = `${KEY_RT}${refreshToken}`;
-    const raw = await redis.get(key);
-    if (!raw) return null;
-    await redis.del(key);
-    try { payload = JSON.parse(raw) as TokenPayload; } catch { return null; }
-  } else {
+    try {
+      const key = `${KEY_RT}${refreshToken}`;
+      const raw = await redis.get(key);
+      if (!raw) return null;
+      await redis.del(key);
+      try { payload = JSON.parse(raw) as TokenPayload; } catch { return null; }
+    } catch (error) {
+      console.warn('[oauth-tokens] Redis refresh rotation failed, falling back to in-memory store:', error);
+    }
+  }
+
+  if (!payload) {
     const entry = rtStore.get(refreshToken);
     if (!entry || entry.expiresAt < Date.now()) {
       rtStore.delete(refreshToken);
@@ -252,8 +269,16 @@ export async function revokeAllTokensForUser(userId: string): Promise<void> {
   const nowSeconds = Math.floor(Date.now() / 1000);
   const redis = getRedisClient();
   if (redis) {
-    await redis.set(`${KEY_NBF}${userId}`, String(nowSeconds), 'EX', REFRESH_TTL).catch(() => {});
+    try {
+      await redis.set(`${KEY_NBF}${userId}`, String(nowSeconds), 'EX', REFRESH_TTL);
+      return;
+    } catch (error) {
+      console.warn('[oauth-tokens] Redis revoke-all failed, falling back to in-memory store:', error);
+    }
   } else {
     nbfStore.set(userId, nowSeconds);
+    return;
   }
+
+  nbfStore.set(userId, nowSeconds);
 }

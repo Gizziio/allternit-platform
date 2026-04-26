@@ -22,51 +22,42 @@ interface StatusResponse {
 interface ServiceDef {
   name: string
   slug: string
-  /** health endpoint URL — reads env var with local fallback */
   url: string
-  /** ms before marking as outage (default 3000) */
   timeout?: number
-  /** ms above which status is degraded rather than operational (default 800) */
   degradedThreshold?: number
+  auth?: "gizzi"
 }
 
 const SERVICES: ServiceDef[] = [
   {
-    name: "Rails API",
-    slug: "rails-api",
-    url: `${process.env.RAILS_API_URL ?? "http://localhost:3002"}/health`,
+    name: "Allternit API",
+    slug: "allternit-api",
+    url: `${process.env.KERNEL_URL ?? "http://127.0.0.1:3004"}/health`,
   },
   {
-    name: "API Gateway",
-    slug: "http-gateway",
-    url: `${process.env.HTTP_GATEWAY_URL ?? "http://localhost:3210"}/health`,
+    name: "Gateway",
+    slug: "gateway",
+    url: `${process.env.HTTP_GATEWAY_URL ?? "http://127.0.0.1:8013"}/health`,
   },
   {
-    name: "A2A Gateway",
-    slug: "a2a-gateway",
-    url: `${process.env.A2A_GATEWAY_URL ?? "http://localhost:8012"}/health`,
-  },
-  {
-    name: "WebSocket / AGUI",
-    slug: "agui-gateway",
-    url: `${process.env.AGUI_GATEWAY_URL ?? "http://localhost:8010"}/health`,
-  },
-  {
-    name: "Memory Agent",
-    slug: "memory",
-    url: `${process.env.MEMORY_API_URL ?? "http://localhost:3201"}/health`,
-  },
-  {
-    name: "Chat Rooms",
-    slug: "chat-rooms",
-    url: `${process.env.CHAT_ROOMS_URL ?? "http://localhost:8080"}/health`,
+    name: "Gateway Auth",
+    slug: "gateway-auth",
+    url: `${process.env.HTTP_GATEWAY_URL ?? "http://127.0.0.1:8013"}/api/v1/providers/auth/status`,
   },
   {
     name: "Gizzi Runtime",
     slug: "gizzi-runtime",
-    url: `${process.env.KERNEL_URL ?? "http://127.0.0.1:3004"}/health`,
+    url: `${process.env.TERMINAL_SERVER_URL ?? "http://127.0.0.1:4096"}/v1/global/health`,
+    auth: "gizzi",
   },
 ]
+
+function getGizziAuthHeader(): string | undefined {
+  const username = process.env.GIZZI_USERNAME ?? process.env.NEXT_PUBLIC_GIZZI_USERNAME ?? "gizzi"
+  const password = process.env.GIZZI_PASSWORD ?? process.env.NEXT_PUBLIC_GIZZI_PASSWORD
+  if (!password) return undefined
+  return `Basic ${Buffer.from(`${username}:${password}`).toString("base64")}`
+}
 
 async function checkService(svc: ServiceDef): Promise<ServiceResult> {
   const timeout = svc.timeout ?? 3000
@@ -80,7 +71,12 @@ async function checkService(svc: ServiceDef): Promise<ServiceResult> {
   try {
     const res = await fetch(svc.url, {
       signal: controller.signal,
-      headers: { Accept: "application/json" },
+      headers: {
+        Accept: "application/json",
+        ...(svc.auth === "gizzi" && getGizziAuthHeader()
+          ? { Authorization: getGizziAuthHeader()! }
+          : {}),
+      },
       // Don't follow redirects — a redirect on /health is suspicious
       redirect: "error",
     })

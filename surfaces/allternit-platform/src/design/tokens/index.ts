@@ -1,7 +1,7 @@
 /**
  * @fileoverview Design Token System - Main Export
  * 
- * Comprehensive design token system for the A2rchitect platform.
+ * Comprehensive design token system for the allternit platform.
  * Provides type-safe, semantic tokens for colors, typography, spacing,
  * shadows, animations, breakpoints, and z-index.
  * 

@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/UIWorkspaceLayout.schema.json",
+  "title": "UI Workspace Layout",
+  "type": "object",
+  "properties": {
+    "layout_id": { "type": "string" }
+  },
+  "required": ["layout_id"]
+}

@@ -28,6 +28,20 @@ const APP_API_BASE = "";
 // Types - Backend API Response Shapes
 // ============================================================================
 
+/** Agent context passed through to the backend with each message */
+export interface AgentContext {
+  agentId?: string;
+  systemPrompt?: string;
+  identityContext?: {
+    trustTiers?: string[];
+    agentName?: string;
+  };
+  governanceContext?: {
+    workspaceFiles?: string[];
+  };
+  [key: string]: unknown;
+}
+
 /** Backend Session Response */
 export interface BackendSession {
   id: string;
@@ -500,6 +514,22 @@ export const runtimeApi = {
 
 export interface ChatStreamCallbacks {
   onChunk?: (chunk: BackendChatChunk) => void;
+  onThinkingChunk?: (text: string) => void;
+  onToolCall?: (tool: {
+    toolCallId: string;
+    toolName: string;
+    input?: Record<string, unknown>;
+  }) => void;
+  onToolResult?: (tool: {
+    toolCallId: string;
+    toolName: string;
+    result?: unknown;
+  }) => void;
+  onToolError?: (tool: {
+    toolCallId: string;
+    toolName?: string;
+    error: string;
+  }) => void;
   onError?: (error: Error) => void;
   onDone?: () => void;
 }
@@ -512,13 +542,15 @@ export const chatApi = {
   async streamChat(
     sessionId: string,
     message: string,
+    modelId: string | undefined,
     callbacks: ChatStreamCallbacks,
     signal?: AbortSignal,
+    agentContext?: AgentContext,
   ): Promise<void> {
     const response = await fetch(`${APP_API_BASE}/api/agent-chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chatId: sessionId, message }),
+      body: JSON.stringify({ chatId: sessionId, message, runtimeModelId: modelId, ...(agentContext ?? {}) }),
       signal,
     });
 
@@ -556,11 +588,106 @@ export const chatApi = {
           }
 
           try {
-            const chunk: BackendChatChunk = JSON.parse(data);
-            callbacks.onChunk?.(chunk);
+            const parsed = JSON.parse(data) as Record<string, unknown>;
 
-            if (chunk.chunk_type === "done") {
+            const tryParseChunkPayload = (value: unknown): unknown => {
+              if (typeof value !== "string") return value;
+              const trimmed = value.trim();
+              if (!trimmed) return value;
+              try {
+                return JSON.parse(trimmed);
+              } catch {
+                return value;
+              }
+            };
+
+            // BackendChatChunk format: { chunk, chunk_type, session_id }
+            if (typeof parsed.chunk_type === "string") {
+              const chunk = parsed as unknown as BackendChatChunk;
+              callbacks.onChunk?.(chunk);
+              if (chunk.chunk_type === "tool_call") {
+                const payload = tryParseChunkPayload(chunk.chunk) as
+                  | {
+                      toolCallId?: string;
+                      toolName?: string;
+                      input?: Record<string, unknown>;
+                      args?: Record<string, unknown>;
+                    }
+                  | string;
+                if (typeof payload === "object" && payload) {
+                  callbacks.onToolCall?.({
+                    toolCallId:
+                      payload.toolCallId ??
+                      `${payload.toolName ?? "tool"}-${Date.now()}`,
+                    toolName: payload.toolName ?? "Tool",
+                    input: payload.input ?? payload.args,
+                  });
+                }
+              } else if (chunk.chunk_type === "tool_result") {
+                const payload = tryParseChunkPayload(chunk.chunk) as
+                  | {
+                      toolCallId?: string;
+                      toolName?: string;
+                      result?: unknown;
+                      output?: unknown;
+                    }
+                  | string;
+                if (typeof payload === "object" && payload) {
+                  callbacks.onToolResult?.({
+                    toolCallId:
+                      payload.toolCallId ??
+                      `${payload.toolName ?? "tool"}-${Date.now()}`,
+                    toolName: payload.toolName ?? "Tool",
+                    result: payload.result ?? payload.output,
+                  });
+                }
+              }
+              if (chunk.chunk_type === "done") callbacks.onDone?.();
+              continue;
+            }
+
+            // Gizzi/Anthropic SSE format: { type, delta: { type, text } }
+            if (parsed.type === "content_block_delta") {
+              const delta = parsed.delta as Record<string, unknown> | undefined;
+              const deltaType = delta?.type as string | undefined;
+              if (deltaType === "thinking_delta" && delta?.thinking) {
+                callbacks.onThinkingChunk?.(delta.thinking as string);
+              } else if (delta?.text) {
+                callbacks.onChunk?.({ chunk: delta.text as string, chunk_type: "text", session_id: "" });
+              }
+            } else if (parsed.type === "content_block_start") {
+              const contentBlock = parsed.content_block as
+                | {
+                    type?: string;
+                    id?: string;
+                    name?: string;
+                    input?: Record<string, unknown>;
+                  }
+                | undefined;
+              if (contentBlock?.type === "tool_use" && contentBlock.id) {
+                callbacks.onToolCall?.({
+                  toolCallId: contentBlock.id,
+                  toolName: contentBlock.name ?? "Tool",
+                  input: contentBlock.input,
+                });
+              }
+            } else if (parsed.type === "tool_result") {
+              callbacks.onToolResult?.({
+                toolCallId: String(parsed.toolCallId ?? ""),
+                toolName: String(parsed.toolName ?? "Tool"),
+                result: parsed.result,
+              });
+            } else if (parsed.type === "tool_error") {
+              callbacks.onToolError?.({
+                toolCallId: String(parsed.toolCallId ?? ""),
+                toolName:
+                  typeof parsed.toolName === "string" ? parsed.toolName : undefined,
+                error: String(parsed.error ?? "Tool execution failed"),
+              });
+            } else if (parsed.type === "finish" || parsed.type === "message_stop") {
               callbacks.onDone?.();
+            } else if (parsed.type === "error") {
+              callbacks.onError?.(new Error((parsed.error as string) ?? "Stream error"));
             }
           } catch (parseError) {
             console.error("Failed to parse SSE chunk:", data);
@@ -755,6 +882,48 @@ export const canvasApi = {
       "Canvas operations are local-only in the current GUI; no backend canvas endpoint is exposed.",
       501,
     );
+  },
+};
+
+// ============================================================================
+// Session Lifecycle API (Revert / Compact / Undo / Redo)
+// ============================================================================
+
+export const sessionLifecycleApi = {
+  async revertSession(sessionId: string, messageId: string): Promise<BackendSession> {
+    const response = await fetch(`/api/v1/sessions/${encodeURIComponent(sessionId)}/revert`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messageId }),
+    });
+    if (!response.ok) await handleResponse(response);
+    return response.json();
+  },
+
+  async unrevertSession(sessionId: string): Promise<BackendSession> {
+    const response = await fetch(`/api/v1/sessions/${encodeURIComponent(sessionId)}/unrevert`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) await handleResponse(response);
+    return response.json();
+  },
+
+  async compactSession(sessionId: string, modelId?: string): Promise<void> {
+    const response = await fetch(`/api/v1/sessions/${encodeURIComponent(sessionId)}/compact`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ modelId }),
+    });
+    if (!response.ok) await handleResponse(response);
+  },
+
+  async abortSession(sessionId: string): Promise<void> {
+    const response = await fetch(`/api/v1/sessions/${encodeURIComponent(sessionId)}/abort`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+    if (!response.ok) await handleResponse(response);
   },
 };
 

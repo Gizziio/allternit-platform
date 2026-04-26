@@ -55,7 +55,7 @@ function buildClient() {
         const opts = exOrOpts === 'EX' ? { ex: ttl } : { px: ttl };
         await upstash.set(key, value, opts);
       } else if (exOrOpts && typeof exOrOpts === 'object') {
-        await upstash.set(key, value, exOrOpts);
+        await upstash.set(key, value, exOrOpts as any);
       } else {
         await upstash.set(key, value);
       }
@@ -63,12 +63,12 @@ function buildClient() {
 
     async del(...keys: string[]): Promise<number> {
       if (!keys.length) return 0;
-      return upstash.del(...keys as [string, ...string[]]);
+      return (upstash.del as any)(...keys);
     },
 
     async exists(...keys: string[]): Promise<number> {
       if (!keys.length) return 0;
-      return upstash.exists(...keys as [string, ...string[]]);
+      return (upstash.exists as any)(...keys);
     },
 
     async expire(key: string, seconds: number): Promise<number> {
@@ -77,7 +77,7 @@ function buildClient() {
 
     // ── Set ops ─────────────────────────────────────────────────────────────
     async sadd(key: string, ...members: string[]): Promise<number> {
-      return upstash.sadd(key, ...members);
+      return (upstash as any).sadd(key, ...members);
     },
 
     async smembers(key: string): Promise<string[]> {
@@ -86,6 +86,37 @@ function buildClient() {
 
     async srem(key: string, ...members: string[]): Promise<number> {
       return upstash.srem(key, ...members);
+    },
+
+    // ── Sorted set ops ──────────────────────────────────────────────────────
+    async zadd(key: string, score: number, member: string): Promise<number> {
+      return upstash.zadd(key, { score, member }) as Promise<number>;
+    },
+
+    async zrange(key: string, start: number | string, stop: number | string): Promise<string[]> {
+      return upstash.zrange(key, start as number, stop as number) as Promise<string[]>;
+    },
+
+    // ── Hash ops ────────────────────────────────────────────────────────────
+    async hset(key: string, ...args: string[]): Promise<number> {
+      const obj: Record<string, string> = {};
+      for (let i = 0; i < args.length - 1; i += 2) obj[args[i]] = args[i + 1];
+      return upstash.hset(key, obj);
+    },
+
+    async hgetall(key: string): Promise<Record<string, string> | null> {
+      return upstash.hgetall(key) as Promise<Record<string, string> | null>;
+    },
+
+    // ── String with TTL ─────────────────────────────────────────────────────
+    async setex(key: string, seconds: number, value: string): Promise<void> {
+      await upstash.set(key, value, { ex: seconds });
+    },
+
+    // ── Key scan ────────────────────────────────────────────────────────────
+    async keys(pattern: string): Promise<string[]> {
+      const result = await upstash.keys(pattern);
+      return result as string[];
     },
   };
 }

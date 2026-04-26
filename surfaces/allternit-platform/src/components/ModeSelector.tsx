@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { useAgentModeStore, AgentModeSurface } from '@/stores/agent-surface-mode.store';
+import { useAgentSurfaceModeStore, AgentModeSurface } from '@/stores/agent-surface-mode.store';
 
 // ============================================================================
 // Types

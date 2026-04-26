@@ -96,7 +96,7 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   // Verification view
   verification: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
-  // A2rOS view
+  // AllternitOS view
   'allternit-os': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 
   // Runtime Management Views (N11, N12, N16)
@@ -139,6 +139,21 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   
   // Product Discovery
   products: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+
+  // A://Labs - Course Management
+  labs: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  catalog: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+
+  // Design surface
+  design: { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  "design-marketplace": { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+
+  // Cowork Team (Multica absorption)
+  'cowork-team': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  'cowork-team-board': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  'cowork-team-agents': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  'cowork-team-workspaces': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
+  'cowork-team-skills': { singleton: true, maxInstances: 1, allowNew: false, surface: 'view', ownsTabs: false },
 };
 
 export function makeStableViewId(viewType: ViewType, capsuleId?: string) {

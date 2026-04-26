@@ -1,7 +1,7 @@
-# A2R Developer Community - Discord Server Setup Guide
+# Allternit Developer Community - Discord Server Setup Guide
 
 > **Status:** Planning Document  
-> **Purpose:** Comprehensive guide for setting up the A2R Developer Community Discord server  
+> **Purpose:** Comprehensive guide for setting up the Allternit Developer Community Discord server  
 > **Audience:** Community managers and server administrators
 
 ---
@@ -23,7 +23,7 @@
 
 ## Overview
 
-The A2R Developer Community Discord server serves as the central hub for plugin developers, contributors, and users of the A2R platform. This guide provides a complete blueprint for setting up and maintaining a professional, organized, and welcoming community space.
+The Allternit Developer Community Discord server serves as the central hub for plugin developers, contributors, and users of the Allternit platform. This guide provides a complete blueprint for setting up and maintaining a professional, organized, and welcoming community space.
 
 ### Server Goals
 
@@ -142,7 +142,7 @@ The A2R Developer Community Discord server serves as the central hub for plugin 
 - **Permissions:** Mention @here and @everyone in specific channels
 - **Mentionable:** Yes
 - **Display separately:** Yes
-- **Description:** A2R platform core team members
+- **Description:** Allternit platform core team members
 
 #### @Plugin Dev
 - **Color:** #9B59B6 (Purple)
@@ -280,7 +280,7 @@ The A2R Developer Community Discord server serves as the central hub for plugin 
 ### Server Rules
 
 ```
-📜 **A2R Developer Community Rules**
+📜 **Allternit Developer Community Rules**
 
 1. **Be Respectful**
    Treat everyone with respect. Harassment, discrimination, or toxic behavior will not be tolerated.
@@ -328,7 +328,7 @@ DM @ModMail or ping @Moderator for urgent issues.
 Upon joining, members receive a DM from a bot (MEE6 or custom):
 
 ```
-🎉 Welcome to the A2R Developer Community!
+🎉 Welcome to the Allternit Developer Community!
 
 We're excited to have you here. Here's how to get started:
 
@@ -349,9 +349,9 @@ We're excited to have you here. Here's how to get started:
    Need assistance? Check #plugin-help or use ModMail.
 
 🔗 **Quick Links**
-• Documentation: https://docs.a2r.dev
-• Developer Portal: https://dev.a2r.dev
-• GitHub: https://github.com/a2r-platform
+• Documentation: https://docs.allternit.dev
+• Developer Portal: https://dev.allternit.dev
+• GitHub: https://github.com/allternit-platform
 
 Enjoy your stay! 🚀
 ```
@@ -374,7 +374,7 @@ Enjoy your stay! 🚀
 Pinned message in #general-chat:
 
 ```
-🌟 **New to A2R? Start Here!**
+🌟 **New to Allternit? Start Here!**
 
 **For Plugin Users:**
 → Browse #showcase for cool plugins
@@ -382,7 +382,7 @@ Pinned message in #general-chat:
 → Ask questions in #plugin-help
 
 **For Developers:**
-→ Read the docs: https://docs.a2r.dev
+→ Read the docs: https://docs.allternit.dev
 → Share templates in #templates-share
 → Discuss APIs in #api-discussion
 → Request features in #feature-requests
@@ -482,7 +482,7 @@ Create #mod-log (Admin/Moderator only):
 
 **#announcements**
 ```
-📢 Official A2R announcements, updates, and important news.
+📢 Official Allternit announcements, updates, and important news.
 🔕 @everyone mentions are rare and important!
 ```
 
@@ -494,7 +494,7 @@ React with ✅ to agree and unlock the server!
 
 **#introductions**
 ```
-👋 Welcome! Tell us about yourself, your experience, and what you're building with A2R.
+👋 Welcome! Tell us about yourself, your experience, and what you're building with Allternit.
 Check pinned message for template!
 ```
 
@@ -527,13 +527,13 @@ Include: Name, Description, Link, Screenshots
 
 **#api-discussion**
 ```
-🔌 Discuss A2R APIs, architecture, and best practices.
+🔌 Discuss Allternit APIs, architecture, and best practices.
 Perfect for deep technical conversations.
 ```
 
 **#feature-requests**
 ```
-💭 Suggest new features and improvements for the A2R platform.
+💭 Suggest new features and improvements for the Allternit platform.
 Vote with 👍 and 👎 reactions!
 ```
 
@@ -570,10 +570,10 @@ Subscribe to @Announcements role for pings!
 
 ```
 ═══════════════════════════════════════
-   🎉 Welcome to A2R Developer Community!
+   🎉 Welcome to Allternit Developer Community!
 ═══════════════════════════════════════
 
-Hey {user.mention}! We're thrilled to have you join our community of developers building amazing plugins with A2R.
+Hey {user.mention}! We're thrilled to have you join our community of developers building amazing plugins with Allternit.
 
 ┌─────────────────────────────────────┐
 │  📋 QUICK START CHECKLIST           │
@@ -585,9 +585,9 @@ Hey {user.mention}! We're thrilled to have you join our community of developers 
 └─────────────────────────────────────┘
 
 🔗 IMPORTANT LINKS
-   • Docs: https://docs.a2r.dev
-   • Dev Portal: https://dev.a2r.dev
-   • GitHub: https://github.com/a2r-platform
+   • Docs: https://docs.allternit.dev
+   • Dev Portal: https://dev.allternit.dev
+   • GitHub: https://github.com/allternit-platform
 
 💬 NEED HELP?
    • General questions: #general-chat
@@ -595,7 +595,7 @@ Hey {user.mention}! We're thrilled to have you join our community of developers 
    • Private help: DM @ModMail
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Enjoy building with A2R! 🚀
+Enjoy building with Allternit! 🚀
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
@@ -604,9 +604,9 @@ Enjoy building with A2R! 🚀
 Pin this in #general-chat or use a dedicated #welcome channel:
 
 ```
-🌟 **Welcome to A2R Developer Community!** 🌟
+🌟 **Welcome to Allternit Developer Community!** 🌟
 
-This is the official Discord server for developers building on the A2R platform. Whether you're creating plugins, exploring the API, or just getting started, you're in the right place!
+This is the official Discord server for developers building on the Allternit platform. Whether you're creating plugins, exploring the API, or just getting started, you're in the right place!
 
 📚 **Getting Started**
 1. Read the rules in #rules

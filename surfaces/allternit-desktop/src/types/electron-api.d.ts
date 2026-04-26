@@ -7,7 +7,7 @@ export interface VmSetupAPI {
   checkConnectivity(): Promise<{
     internet: boolean;
     github: boolean;
-    a2rServices: boolean;
+    allternitServices: boolean;
   }>;
 
   /** Download VM images */
@@ -114,9 +114,9 @@ export interface WindowAPI {
 
 declare global {
   interface Window {
-    a2rVmSetup: VmSetupAPI;
-    a2rSidecar: SidecarAPI;
-    a2rWindow: WindowAPI;
+    allternitVmSetup: VmSetupAPI;
+    allternitSidecar: SidecarAPI;
+    allternitWindow: WindowAPI;
   }
 }
 

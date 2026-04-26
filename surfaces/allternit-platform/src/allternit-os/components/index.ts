@@ -1,20 +1,20 @@
 /**
- * A2rchitect Super-Agent OS - Components Index
+ * allternit Super-Agent OS - Components Index
  * 
- * Re-exports all UI components for the A2rOS system.
+ * Re-exports all UI components for the AllternitOS system.
  */
 
-export { A2rCanvas } from './A2rCanvas';
-export type { A2rCanvasProps } from './A2rCanvas';
+export { AllternitCanvas } from './AllternitCanvas';
+export type { AllternitCanvasProps } from './AllternitCanvas';
 
-export { A2rConsole, A2rConsoleToggle } from './A2rConsole';
-export type { A2rConsoleProps } from './A2rConsole';
+export { AllternitConsole, AllternitConsoleToggle } from './AllternitConsole';
+export type { AllternitConsoleProps } from './AllternitConsole';
 
 export { 
-  A2rChatIntegration, 
+  AllternitChatIntegration, 
   MessageRenderer, 
   QuickLaunchButtons,
-  useA2rChatIntegration,
+  useAllternitChatIntegration,
   useStreamingMessage,
-} from './A2rChatIntegration';
-export type { ChatMessage, A2rChatIntegrationProps } from './A2rChatIntegration';
+} from './AllternitChatIntegration';
+export type { ChatMessage, AllternitChatIntegrationProps } from './AllternitChatIntegration';

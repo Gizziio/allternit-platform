@@ -1,9 +1,18 @@
 import React from 'react';
 import { GlassSurface } from '../design/GlassSurface';
 import { tokens } from '../design/tokens';
-import { ChatText, UsersThree, TerminalWindow, CaretLeft, CaretRight, SidebarSimple, Sun, Moon } from '@phosphor-icons/react';
+import type { Icon } from '@phosphor-icons/react';
+import { ChatText, UsersThree, TerminalWindow, Palette, CaretLeft, CaretRight, SidebarSimple, Sun, Moon } from '@phosphor-icons/react';
 
-export function FloatingModeSwitcher({ activeMode, onModeChange, onRailToggle, theme, onThemeToggle }: any) {
+interface FloatingModeSwitcherProps {
+  activeMode: 'chat' | 'cowork' | 'code' | 'design';
+  onModeChange: (mode: 'chat' | 'cowork' | 'code' | 'design') => void;
+  onRailToggle: () => void;
+  theme: 'light' | 'dark';
+  onThemeToggle: () => void;
+}
+
+export function FloatingModeSwitcher({ activeMode, onModeChange, onRailToggle, theme, onThemeToggle }: FloatingModeSwitcherProps): JSX.Element {
   return (
     <div style={{
       position: 'fixed',
@@ -37,6 +46,7 @@ export function FloatingModeSwitcher({ activeMode, onModeChange, onRailToggle, t
         <ModePill active={activeMode === 'chat'} onClick={() => onModeChange('chat')} icon={ChatText} label="Chat" color={tokens.colors.chat.primary} />
         <ModePill active={activeMode === 'cowork'} onClick={() => onModeChange('cowork')} icon={UsersThree} label="Cowork" color="var(--accent-cowork)" />
         <ModePill active={activeMode === 'code'} onClick={() => onModeChange('code')} icon={TerminalWindow} label="Code" color="var(--accent-code)" />
+        <ModePill active={activeMode === 'design'} onClick={() => onModeChange('design')} icon={Palette} label="Design" color="rgba(212,176,140,0.9)" />
 
         <div style={{ width: 1, height: 20, background: 'var(--border-subtle)' }} />
 
@@ -48,7 +58,15 @@ export function FloatingModeSwitcher({ activeMode, onModeChange, onRailToggle, t
   );
 }
 
-function ModePill({ active, onClick, icon: Icon, label, color }: any) {
+interface ModePillProps {
+  active: boolean;
+  onClick: () => void;
+  icon: Icon;
+  label: string;
+  color: string;
+}
+
+function ModePill({ active, onClick, icon: Icon, label, color }: ModePillProps): JSX.Element {
   return (
     <button
       onClick={onClick}

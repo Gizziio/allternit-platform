@@ -1,7 +1,7 @@
 # Discord Bot Technical Setup Guide
 
 > **Status:** Technical Configuration Document  
-> **Purpose:** Step-by-step bot configuration for A2R Discord server  
+> **Purpose:** Step-by-step bot configuration for Allternit Discord server  
 > **Audience:** Server administrators and technical staff
 
 ---
@@ -52,12 +52,12 @@ All bots require these base permissions:
 2. Click **New Webhook**
 3. Name: `GitHub Releases`
 4. Channel: `#releases`
-5. Upload A2R logo as avatar (optional)
+5. Upload Allternit logo as avatar (optional)
 6. Copy the **Webhook URL**
 
 ### Step 2: Configure GitHub Repository
 
-1. Go to your GitHub repository (e.g., `a2r-platform/a2r`)
+1. Go to your GitHub repository (e.g., `allternit-platform/allternit`)
 2. Navigate to **Settings** → **Webhooks** → **Add webhook**
 3. **Payload URL:** Paste Discord webhook URL
 4. **Content type:** `application/json`
@@ -98,8 +98,8 @@ app.post('/github-webhook', (req, res) => {
   const payload = req.body;
   
   let discordPayload = {
-    username: 'A2R GitHub',
-    avatar_url: 'https://github.com/a2r-platform.png',
+    username: 'Allternit GitHub',
+    avatar_url: 'https://github.com/allternit-platform.png',
     embeds: []
   };
   
@@ -130,7 +130,7 @@ app.post('/github-webhook', (req, res) => {
 
 1. Go to https://modmail.xyz
 2. Click **Add to Discord**
-3. Select your A2R server
+3. Select your Allternit server
 4. Authorize with required permissions
 
 ### Step 2: Initial Setup
@@ -165,12 +165,12 @@ log_channel_id: "CHANNEL_ID_HERE"
 
 # Messages
 greeting_message: |
-  👋 Hi {user}! Welcome to A2R Support.
+  👋 Hi {user}! Welcome to Allternit Support.
   
   Please describe your issue and we'll help you shortly.
   
   While you wait:
-  • Check docs: https://docs.a2r.dev
+  • Check docs: https://docs.allternit.dev
   • Browse #plugin-help for common issues
 
 closing_message: |
@@ -213,8 +213,8 @@ mention_role_id: "MODERATOR_ROLE_ID"
 Create templates for common responses:
 
 ```
-?snippets add docs Check out our documentation: https://docs.a2r.dev
-?snippets add github Report bugs on GitHub: https://github.com/a2r-platform/issues
+?snippets add docs Check out our documentation: https://docs.allternit.dev
+?snippets add github Report bugs on GitHub: https://github.com/allternit-platform/issues
 ?snippets add showcase Share your plugin in #showcase channel!
 ```
 
@@ -427,13 +427,13 @@ async def on_ready():
 async def on_member_join(member):
     # Send welcome DM
     try:
-        welcome_msg = """🎉 Welcome to A2R Developer Community!
+        welcome_msg = """🎉 Welcome to Allternit Developer Community!
         
 Please read the rules in #rules and grab your roles!
 
 Quick links:
-• Docs: https://docs.a2r.dev
-• Dev Portal: https://dev.a2r.dev
+• Docs: https://docs.allternit.dev
+• Dev Portal: https://dev.allternit.dev
 """
         await member.send(welcome_msg)
     except:
@@ -442,12 +442,12 @@ Quick links:
 @bot.command()
 async def docs(ctx):
     """Link to documentation"""
-    await ctx.send("📚 Documentation: https://docs.a2r.dev")
+    await ctx.send("📚 Documentation: https://docs.allternit.dev")
 
 @bot.command()
 async def portal(ctx):
     """Link to developer portal"""
-    await ctx.send("🚀 Developer Portal: https://dev.a2r.dev")
+    await ctx.send("🚀 Developer Portal: https://dev.allternit.dev")
 
 bot.run(os.getenv('DISCORD_TOKEN'))
 ```

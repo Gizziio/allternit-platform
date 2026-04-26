@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useRef, useState } from 'react';
-import { toast } from './use-toast';
+import { useToast } from './use-toast';
 
 export interface RetryConfig {
   maxAttempts?: number;
@@ -41,6 +41,7 @@ export function useRetry<T>(
   config: RetryConfig = {}
 ) {
   const finalConfig = { ...DEFAULT_CONFIG, ...config };
+  const { addToast } = useToast();
   const [state, setState] = useState<RetryState>({
     attempt: 0,
     isRetrying: false,
@@ -77,7 +78,7 @@ export function useRetry<T>(
         // Don't retry if this was the last attempt
         if (attempt >= finalConfig.maxAttempts) {
           if (finalConfig.showToast) {
-            toast({
+            addToast({
               title: finalConfig.toastTitle,
               description: finalConfig.toastFailureMessage
                 .replace('{max}', String(finalConfig.maxAttempts))
@@ -95,7 +96,7 @@ export function useRetry<T>(
         );
 
         if (finalConfig.showToast) {
-          toast({
+          addToast({
             title: finalConfig.toastTitle,
             description: finalConfig.toastRetryMessage
               .replace('{delay}', String(Math.round(delay / 1000)))
@@ -156,15 +157,6 @@ export async function withRetry<T>(
       const err = error instanceof Error ? error : new Error(String(error));
 
       if (attempt >= finalConfig.maxAttempts) {
-        if (finalConfig.showToast) {
-          toast({
-            title: finalConfig.toastTitle,
-            description: finalConfig.toastFailureMessage
-              .replace('{max}', String(finalConfig.maxAttempts))
-              .replace('{error}', err.message),
-            type: 'error',
-          });
-        }
         throw err;
       }
 
@@ -172,17 +164,6 @@ export async function withRetry<T>(
         finalConfig.initialDelay * Math.pow(finalConfig.backoffMultiplier, attempt - 1),
         finalConfig.maxDelay
       );
-
-      if (finalConfig.showToast) {
-        toast({
-          title: finalConfig.toastTitle,
-          description: finalConfig.toastRetryMessage
-            .replace('{delay}', String(Math.round(delay / 1000)))
-            .replace('{attempt}', String(attempt))
-            .replace('{max}', String(finalConfig.maxAttempts)),
-          type: 'warning',
-        });
-      }
 
       await new Promise(resolve => setTimeout(resolve, delay));
     }

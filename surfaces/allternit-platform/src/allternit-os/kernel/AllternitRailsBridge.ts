@@ -1,5 +1,5 @@
 /**
- * A2rchitect Super-Agent OS - Allternit Rails Bridge
+ * allternit Super-Agent OS - Allternit Rails Bridge
  * 
  * Bridge between the UI and the Allternit Agent System Rails (Rust backend).
  * Connects to the workspace service at port 3021.
@@ -350,6 +350,7 @@ export interface UseAllternitRailsReturn {
   refresh: () => Promise<void>;
   sendMessage: (message: Omit<BusMessage, 'id' | 'status' | 'created_at'>) => Promise<number>;
   createSession: (name: string) => Promise<{ id: string; name: string }>;
+  createTerminalSession: (name: string) => Promise<{ id: string; name: string }>;
   createPane: (sessionId: string, name: string, command?: string) => Promise<{ id: string }>;
 }
 
@@ -442,6 +443,7 @@ export function useAllternitRails(options: UseAllternitRailsOptions): UseAlltern
     refresh,
     sendMessage,
     createSession,
+    createTerminalSession: createSession,
     createPane,
   };
 }

@@ -12,6 +12,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getAuth } from "@/lib/server-auth";
+import { prisma } from "@/lib/db";
+import fs from "fs";
+import path from "path";
+import os from "os";
 
 // Serverless Function timeout - max 300s for hobby plan
 export const maxDuration = 300;
@@ -23,9 +27,57 @@ import {
 const TERMINAL_SERVER_URL =
   process.env.TERMINAL_SERVER_URL ?? "http://127.0.0.1:4096";
 
+// In-process warm cache: avoids a DB round-trip when the same session fires
+// multiple messages in the same server lifetime.
+const gizziSessionCache = new Map<string, string>();
+
+async function getGizziSessionId(chatId: string): Promise<string | null> {
+  const cached = gizziSessionCache.get(chatId);
+  if (cached) return cached;
+  try {
+    const row = await prisma.conversation.findUnique({
+      where: { id: chatId },
+      select: { gizziSessionId: true },
+    });
+    if (row?.gizziSessionId) {
+      gizziSessionCache.set(chatId, row.gizziSessionId);
+      return row.gizziSessionId;
+    }
+  } catch { /* DB unavailable — fall through */ }
+  return null;
+}
+
+async function saveGizziSessionId(chatId: string, gizziSessionId: string): Promise<void> {
+  gizziSessionCache.set(chatId, gizziSessionId);
+  try {
+    await prisma.conversation.upsert({
+      where: { id: chatId },
+      update: { gizziSessionId },
+      create: { id: chatId, gizziSessionId },
+    });
+  } catch { /* DB unavailable — mapping survives in warm cache only */ }
+}
+
+function readDevSessionPassword(): string | undefined {
+  try {
+    const raw = fs.readFileSync(
+      path.join(os.homedir(), ".allternit", "gizzi-dev-session.json"),
+      "utf8",
+    );
+    const parsed = JSON.parse(raw) as { gizziPassword?: string; writtenAt?: number };
+    if (parsed.writtenAt && Date.now() - parsed.writtenAt > 86_400_000) return undefined;
+    return parsed.gizziPassword || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function getGizziAuthHeader(): string | undefined {
   const user = process.env.GIZZI_USERNAME ?? process.env.NEXT_PUBLIC_GIZZI_USERNAME ?? "gizzi";
-  const pass = process.env.GIZZI_PASSWORD ?? process.env.NEXT_PUBLIC_GIZZI_PASSWORD;
+  const pass =
+    process.env.GIZZI_PASSWORD ??
+    process.env.NEXT_PUBLIC_GIZZI_PASSWORD ??
+    readDevSessionPassword();
   if (!pass) return undefined;
   return "Basic " + Buffer.from(`${user}:${pass}`).toString("base64");
 }
@@ -38,14 +90,22 @@ const GATEWAY_BASE_URL =
     ? process.env.VITE_ALLTERNIT_GATEWAY_URL.replace(/\/api\/v1\/?$/, "").replace(/\/+$/, "")
     : null;
 
+function shouldPreferLocalDesktopRuntime(): boolean {
+  return (
+    process.env.ALLTERNIT_DESKTOP_AUTH_ENABLED === "1" ||
+    process.env.NEXT_PUBLIC_ALLTERNIT_DESKTOP_AUTH === "1"
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 // Maps frontend model slugs to gizzi internal { providerID, modelID }
 const FULL_MODEL_MAP: Record<string, { providerID: string; modelID: string }> = {
-  "kimi/kimi-for-coding":   { providerID: "kimi-for-coding", modelID: "k2p5" },
-  "kimi/kimi-k2.5":         { providerID: "kimi-for-coding", modelID: "k2p5" },
+  "kimi/kimi-for-coding":   { providerID: "kimi-for-coding", modelID: "kimi-k2" },
+  "kimi/kimi-k2":           { providerID: "kimi-for-coding", modelID: "kimi-k2" },
+  "kimi/kimi-k2.5":         { providerID: "kimi-for-coding", modelID: "kimi-k2" },
   "kimi/kimi-k2-thinking":  { providerID: "kimi-for-coding", modelID: "kimi-k2-thinking" },
 };
 
@@ -53,28 +113,50 @@ function parseModelId(modelId: string | undefined): {
   providerID: string;
   modelID: string;
 } {
-  if (!modelId) return { providerID: "kimi-for-coding", modelID: "k2p5" };
+  // Default: use claude-cli (local Claude Code CLI — no API key needed)
+  if (!modelId) return { providerID: "claude-cli", modelID: "claude-sonnet-4-6" };
 
   // Exact match in known map
   if (FULL_MODEL_MAP[modelId]) return FULL_MODEL_MAP[modelId];
 
-  // format: "providerID/modelID"
+  // Onboarding format: "providerID::modelID"
+  const colons = modelId.indexOf("::");
+  if (colons > 0) {
+    const providerID = modelId.slice(0, colons);
+    const rawModel = modelId.slice(colons + 2);
+    // claude-cli only has claude-sonnet-4-6
+    const modelID = providerID === "claude-cli" ? "claude-sonnet-4-6" : rawModel;
+    return { providerID, modelID };
+  }
+
+  // Standard format: "providerID/modelID"
   const slash = modelId.indexOf("/");
   if (slash > 0) {
-    return {
-      providerID: modelId.slice(0, slash),
-      modelID: modelId.slice(slash + 1),
-    };
+    const rawProvider = modelId.slice(0, slash).toLowerCase();
+    const modelPart = modelId.slice(slash + 1);
+    // Normalize provider aliases to gizzi internal IDs
+    // claude-cli only has claude-sonnet-4-6; always normalize to that model
+    const providerID =
+      rawProvider === "claude" || rawProvider === "anthropic" ? "claude-cli" :
+      rawProvider === "openai" || rawProvider === "gpt" ? "openai" :
+      rawProvider === "google" || rawProvider === "gemini" ? "google" :
+      rawProvider === "kimi" || rawProvider === "moonshot" ? "kimi-for-coding" :
+      rawProvider === "qwen" ? "qwen-cli" :
+      modelId.slice(0, slash);
+    const modelID = providerID === "claude-cli" ? "claude-sonnet-4-6" : modelPart;
+    return { providerID, modelID };
   }
 
   // Heuristic provider detection
   const raw = modelId.toLowerCase();
-  if (raw.startsWith("claude")) return { providerID: "claude-cli", modelID: modelId };
+  // claude-cli only has claude-sonnet-4-6
+  if (raw.startsWith("claude")) return { providerID: "claude-cli", modelID: "claude-sonnet-4-6" };
   if (raw.startsWith("gpt") || raw.startsWith("o1") || raw.startsWith("o3"))
     return { providerID: "openai", modelID: modelId };
   if (raw.startsWith("gemini")) return { providerID: "google", modelID: modelId };
   if (raw.startsWith("deepseek")) return { providerID: "deepseek", modelID: modelId };
   if (raw.startsWith("qwen")) return { providerID: "qwen-cli", modelID: modelId };
+  if (raw.startsWith("kimi") || raw.startsWith("moonshot")) return { providerID: "kimi-for-coding", modelID: modelId };
 
   return { providerID: "claude-cli", modelID: modelId };
 }
@@ -125,9 +207,30 @@ async function routeViaGizzi(
 
   const gizziAuth = getGizziAuthHeader();
 
-  // Use the provided chatId as the gizzi session ID directly — the session
-  // was already created by NativeAgentStore.createSession() before this request.
-  const gizziSessionId = chatId;
+  // Resolve gizzi session ID:
+  // - Real gizzi session IDs start with 'ses_' — use directly.
+  // - Any other ID → look up persisted mapping, or create a new gizzi session and persist it.
+  let gizziSessionId = chatId;
+  if (!chatId.startsWith('ses_')) {
+    const persisted = await getGizziSessionId(chatId);
+    if (persisted) {
+      gizziSessionId = persisted;
+    } else {
+      const createRes = await fetch(`${TERMINAL_SERVER_URL}/v1/session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(gizziAuth ? { Authorization: gizziAuth } : {}) },
+        body: JSON.stringify({ name: 'Platform Chat' }),
+        signal: AbortSignal.timeout(5000),
+      }).catch(() => null);
+      if (createRes?.ok) {
+        const created = await createRes.json().catch(() => null);
+        if (created?.id) {
+          gizziSessionId = created.id;
+          await saveGizziSessionId(chatId, created.id);
+        }
+      }
+    }
+  }
   const messageUrl = `${TERMINAL_SERVER_URL}/v1/session/${encodeURIComponent(gizziSessionId)}/message`;
   const eventUrl = `${TERMINAL_SERVER_URL}/v1/event`;
 
@@ -402,15 +505,16 @@ async function routeViaGizzi(
       }
 
       await postDonePromise;
+      const resolvedResponse = postResponse as Response | null;
 
       if (postErr) {
         enqueue({ type: "error", error: postErr });
-      } else if (postResponse) {
-        if (!postResponse.ok) {
-          enqueue({ type: "error", error: `Gizzi session error: ${postResponse.status} ${postResponse.statusText}` });
-        } else if (postResponse.body) {
+      } else if (resolvedResponse) {
+        if (!resolvedResponse.ok) {
+          enqueue({ type: "error", error: `Gizzi session error: ${resolvedResponse.status} ${resolvedResponse.statusText}` });
+        } else if (resolvedResponse.body) {
           // Read the full JSON body from gizzi and forward as the final sync object.
-          const bodyReader = postResponse.body.getReader();
+          const bodyReader = resolvedResponse.body.getReader();
           const bodyDecoder = new TextDecoder();
           let bodyBuf = "";
           try {
@@ -473,21 +577,28 @@ export async function POST(req: NextRequest): Promise<Response> {
   const modelId = typeof body.modelId === "string" ? body.modelId : undefined;
   const runtimeModelId =
     typeof body.runtimeModelId === "string" ? body.runtimeModelId : undefined;
+  const preferLocalDesktopRuntime = shouldPreferLocalDesktopRuntime();
   const gatewayUrl =
-    typeof body.gatewayUrl === "string" ? body.gatewayUrl.replace(/\/+$/, "") : null;
+    !preferLocalDesktopRuntime && typeof body.gatewayUrl === "string"
+      ? body.gatewayUrl.replace(/\/+$/, "")
+      : null;
   const gatewayToken =
-    typeof body.gatewayToken === "string" ? body.gatewayToken : null;
-  const authState = await getAuth();
+    !preferLocalDesktopRuntime && typeof body.gatewayToken === "string"
+      ? body.gatewayToken
+      : null;
+  const authState = preferLocalDesktopRuntime ? { userId: null } : await getAuth();
   const resolvedRuntime =
-    authState.userId
+    !preferLocalDesktopRuntime && authState.userId
       ? await resolveRuntimeBackendForAuthUserId(authState.userId)
       : null;
-  const resolvedGatewayUrl =
-    gatewayUrl ??
-    (resolvedRuntime?.mode === "byoc-vps" ? resolvedRuntime.gatewayUrl : null);
-  const resolvedGatewayToken =
-    gatewayToken ??
-    (resolvedRuntime?.mode === "byoc-vps" ? resolvedRuntime.gatewayToken : null);
+  const resolvedGatewayUrl = preferLocalDesktopRuntime
+    ? null
+    : gatewayUrl ??
+      (resolvedRuntime?.mode === "byoc-vps" ? resolvedRuntime.gatewayUrl : null);
+  const resolvedGatewayToken = preferLocalDesktopRuntime
+    ? null
+    : gatewayToken ??
+      (resolvedRuntime?.mode === "byoc-vps" ? resolvedRuntime.gatewayToken : null);
 
   if (!chatId || !message) {
     return NextResponse.json(
@@ -536,6 +647,17 @@ export async function POST(req: NextRequest): Promise<Response> {
     }
   }
 
-  // 3. Fall back to gizzi terminal server
-  return routeViaGizzi(chatId, message, modelId, runtimeModelId, req.signal);
+  // 3. Try gizzi terminal server first.
+  const gizziHealth = await fetch(`${TERMINAL_SERVER_URL}/v1/global/health`, {
+    method: 'GET',
+    headers: getGizziAuthHeader() ? { Authorization: getGizziAuthHeader()! } : {},
+    signal: AbortSignal.timeout(1500),
+  }).catch(() => null);
+
+  if (gizziHealth?.ok) {
+    return routeViaGizzi(chatId, message, modelId, runtimeModelId, req.signal);
+  }
+
+  // 4. No backend available
+  return NextResponse.json({ error: 'No backend available' }, { status: 503 });
 }

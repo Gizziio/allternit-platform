@@ -11,7 +11,7 @@
  * - HISTORY: Metrics over time with charts
  * 
  * Features:
- * - Real-time SSE updates from NativeAgentStore
+ * - Real-time SSE updates from session stores
  * - Search & filter by name, role, status
  * - Agent actions (restart, stop, view logs)
  * - Batch operations on multiple agents
@@ -28,7 +28,7 @@ export { SwarmADE } from './SwarmADE';
 // Components
 export { SwarmMonitorLayout } from './components/SwarmMonitorLayout';
 export { AgentCard } from './components/AgentCard';
-export { SwarmMetrics } from './components/SwarmMetrics';
+export { SwarmMetrics as SwarmMetricsComponent } from './components/SwarmMetrics';
 export { ViewToggle } from './components/ViewToggle';
 export { FilterBar } from './components/FilterBar';
 export { BatchToolbar } from './components/BatchToolbar';

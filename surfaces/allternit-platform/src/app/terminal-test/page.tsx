@@ -2,10 +2,13 @@
 
 import dynamic from 'next/dynamic';
 
+import type { ComponentType } from 'react';
+
+interface TerminalCanvasProps { nodeId: string; rows?: number; cols?: number; className?: string; }
 const TerminalCanvas = dynamic(
-  () => import('@/views/nodes/terminal').then(mod => mod.TerminalCanvas),
+  () => import('@/views/nodes/terminal').then(mod => mod.TerminalCanvas as ComponentType<TerminalCanvasProps>),
   { ssr: false }
-);
+) as ComponentType<TerminalCanvasProps>;
 
 export default function TerminalTestPage() {
   return (

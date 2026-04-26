@@ -1,7 +1,7 @@
 /**
  * Native Messaging Protocol
  * 
- * Handles communication between Chrome Extension and A2R native host.
+ * Handles communication between Chrome Extension and Allternit native host.
  * Uses Chrome's nativeMessaging API for bi-directional communication.
  */
 

@@ -122,7 +122,7 @@ function ConstraintBuilder({
         <div className="space-y-2">
           {constraints.map((constraint) => {
             const typeConfig = constraintTypes.find((t) => t.value === constraint.type);
-            const TypeIcon = typeConfig?.icon || Settings;
+            const TypeIcon = typeConfig?.icon || GearSix;
 
             return (
               <motion.div

@@ -8,5 +8,5 @@
  * - Audio energy analysis for Persona animation
  */
 
-export * from './VoiceService';
-export * from './SpeechToText';
+export { type TTSRequest, type TTSResponse, type VoiceModel, type VoicePreset, VoiceService, type VoiceState, voiceService } from './VoiceService';
+export { type STTCallback, type STTEvent, type STTEventType, type STTOptions, type STTResult, type SpeechRecognition, type SpeechRecognitionAlternative, type SpeechRecognitionErrorEvent, type SpeechRecognitionEvent, type SpeechRecognitionResult, type SpeechRecognitionResultList, SpeechToTextService, speechToText } from './SpeechToText';

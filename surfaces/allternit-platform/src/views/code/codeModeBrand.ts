@@ -21,7 +21,7 @@ export const CODE_MODE_GREETINGS: CodeModeGreeting[] = [
   {
     title: 'Build On Rails',
     tagline:
-      'Gizzi keeps A2rchitech code sessions anchored to SYSTEM_LAW, contracts, and the smallest safe diff.',
+      'Gizzi keeps Allternit code sessions anchored to SYSTEM_LAW, contracts, and the smallest safe diff.',
     helper_locked:
       'Point Gizzi at the repo root and the first plan will stay on-rails from branch to preview.',
     helper_ready:
@@ -41,7 +41,7 @@ export const CODE_MODE_GREETINGS: CodeModeGreeting[] = [
   {
     title: 'Spec Before Patch',
     tagline:
-      'In A2rchitech, prompts start the motion, but specs, WIHs, and acceptance gates shape the actual code path.',
+      'In Allternit, prompts start the motion, but specs, WIHs, and acceptance gates shape the actual code path.',
     helper_locked:
       'Give Gizzi the workspace first and it can cross-check the specs before a single edit lands.',
     helper_ready:
@@ -81,7 +81,7 @@ export const CODE_MODE_GREETINGS: CodeModeGreeting[] = [
   {
     title: 'Plan. Diff. Approve.',
     tagline:
-      'A2rchitech Code Mode is built for deliberate execution: inspect the change set, then move with confidence.',
+      'Allternit Code Mode is built for deliberate execution: inspect the change set, then move with confidence.',
     helper_locked:
       'Choose the workspace and Gizzi will line up the plan, diff, and approval path in the right order.',
     helper_ready:
@@ -91,7 +91,7 @@ export const CODE_MODE_GREETINGS: CodeModeGreeting[] = [
   {
     title: 'Architect The Delta',
     tagline:
-      'Gizzi turns an A2rchitech request into a scoped delta, not a pile of unexplained edits.',
+      'Gizzi turns an Allternit request into a scoped delta, not a pile of unexplained edits.',
     helper_locked:
       'Point Gizzi at the right folder and it can turn your ask into a scoped delta instead of a blind patch.',
     helper_ready:

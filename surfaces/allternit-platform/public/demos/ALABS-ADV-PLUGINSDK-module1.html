@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>A://Labs — Universal Plugin SDK: Module 1</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #0b0b0c;
+      --bg-secondary: #111113;
+      --bg-tertiary: #1a1a1d;
+      --border: #27272a;
+      --text-primary: #fafafa;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent-purple: #8b5cf6;
+      --accent-purple-glow: rgba(139, 92, 246, 0.35);
+      --accent-cyan: #22d3ee;
+      --accent-pink: #f472b6;
+      --accent-green: #34d399;
+      --accent-yellow: #fbbf24;
+      --font-sans: 'Inter', system-ui, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: var(--font-sans);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* Progress bar */
+    #progress-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 3px;
+      background: rgba(139, 92, 246, 0.15);
+      z-index: 9999;
+    }
+    #progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent-purple), var(--accent-cyan));
+      box-shadow: 0 0 12px var(--accent-purple-glow);
+      transition: width 0.1s linear;
+    }
+
+    /* Navigation dots */
+    #nav-dots {
+      position: fixed;
+      right: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      z-index: 9998;
+    }
+    .nav-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--border);
+      cursor: pointer;
+      transition: all 0.25s ease;
+      position: relative;
+    }
+    .nav-dot:hover,
+    .nav-dot.active {
+      background: var(--accent-purple);
+      transform: scale(1.3);
+      box-shadow: 0 0 10px var(--accent-purple-glow);
+    }
+    .nav-dot::after {
+      content: attr(data-label);
+      position: absolute;
+      right: 18px;
+      top: 50%;
+      transform: translateY(-50%) scale(0.95);
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.2s ease;
+      border: 1px solid var(--border);
+    }
+    .nav-dot:hover::after {
+      opacity: 1;
+      transform: translateY(-50%) scale(1);
+    }
+
+    /* Sections */
+    section {
+      min-height: 100vh;
+      padding: 100px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .container {
+      max-width: 1100px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* Typography */
+    h1, h2, h3, h4 { margin: 0 0 16px; line-height: 1.2; }
+    h1 { font-size: clamp(2.4rem, 6vw, 4.2rem); font-weight: 800; letter-spacing: -0.03em; }
+    h2 { font-size: clamp(1.6rem, 4vw, 2.6rem); font-weight: 700; letter-spacing: -0.02em; }
+    h3 { font-size: clamp(1.1rem, 2.4vw, 1.5rem); font-weight: 600; }
+    p { margin: 0 0 18px; color: var(--text-secondary); font-size: 1.05rem; }
+    .gradient-text {
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-purple) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .gradient-cyan {
+      background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-purple) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Badges / Labels */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--accent-purple);
+      margin-bottom: 20px;
+    }
+    .badge::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-purple);
+      box-shadow: 0 0 8px var(--accent-purple);
+    }
+
+    /* Cards */
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(139, 92, 246, 0.4);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.35), 0 0 30px rgba(139, 92, 246, 0.08);
+    }
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+      margin-top: 28px;
+    }
+
+    /* Code blocks */
+    pre, code {
+      font-family: var(--font-mono);
+    }
+    .code-block {
+      background: #050507;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 20px 0;
+    }
+    .code-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .code-header .dots { display: flex; gap: 6px; }
+    .code-header .dots span {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--border);
+    }
+    .code-header .dots span:nth-child(1) { background: #ef4444; }
+    .code-header .dots span:nth-child(2) { background: #f59e0b; }
+    .code-header .dots span:nth-child(3) { background: #22c55e; }
+    .code-content {
+      padding: 18px 20px;
+      overflow-x: auto;
+      font-size: 13.5px;
+      line-height: 1.7;
+      color: #e4e4e7;
+    }
+    .code-content .keyword { color: #c084fc; }
+    .code-content .type { color: #22d3ee; }
+    .code-content .string { color: #34d399; }
+    .code-content .comment { color: #71717a; font-style: italic; }
+    .code-content .func { color: #f472b6; }
+
+    /* Translation tabs */
+    .translate-block {
+      margin: 28px 0;
+    }
+    .translate-tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .translate-tab {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .translate-tab.active {
+      background: var(--accent-purple);
+      color: #fff;
+      border-color: var(--accent-purple);
+      box-shadow: 0 0 16px var(--accent-purple-glow);
+    }
+    .translate-pane {
+      display: none;
+      animation: fadeIn 0.3s ease;
+    }
+    .translate-pane.active { display: block; }
+    .plain-english {
+      background: linear-gradient(180deg, rgba(139,92,246,0.08) 0%, transparent 100%);
+      border-left: 3px solid var(--accent-purple);
+      padding: 20px 24px;
+      border-radius: 0 12px 12px 0;
+      color: var(--text-primary);
+      font-size: 1.05rem;
+      line-height: 1.8;
+    }
+    .plain-english p { color: var(--text-secondary); margin-bottom: 10px; }
+    .plain-english p:last-child { margin-bottom: 0; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Data flow visualization */
+    .data-flow-container {
+      position: relative;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+      margin: 32px 0;
+      overflow: hidden;
+    }
+    .data-flow-container::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 50%, rgba(139,92,246,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .flow-layer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 24px 0;
+      position: relative;
+      z-index: 2;
+    }
+    .flow-node {
+      flex: 1;
+      text-align: center;
+      padding: 16px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 500;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    .flow-node.highlight {
+      border-color: var(--accent-purple);
+      box-shadow: 0 0 20px rgba(139,92,246,0.2);
+      transform: scale(1.03);
+    }
+    .flow-node .icon {
+      font-size: 22px;
+      margin-bottom: 6px;
+      display: block;
+    }
+    .flow-arrow {
+      color: var(--text-muted);
+      font-size: 20px;
+      animation: pulseArrow 1.5s infinite;
+    }
+    @keyframes pulseArrow {
+      0%, 100% { opacity: 0.4; transform: translateX(0); }
+      50% { opacity: 1; transform: translateX(4px); }
+    }
+    .flow-packet {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      box-shadow: 0 0 10px var(--accent-cyan);
+      z-index: 3;
+      opacity: 0;
+    }
+    .packet-animate-1 { animation: packetMove1 2.5s linear infinite; }
+    .packet-animate-2 { animation: packetMove2 2.5s linear infinite 0.8s; }
+    .packet-animate-3 { animation: packetMove3 2.5s linear infinite 1.6s; }
+
+    @keyframes packetMove1 {
+      0% { left: 15%; top: 20%; opacity: 0; }
+      10% { opacity: 1; }
+      40% { left: 50%; top: 50%; opacity: 1; }
+      90% { left: 85%; top: 80%; opacity: 1; }
+      100% { left: 85%; top: 80%; opacity: 0; }
+    }
+    @keyframes packetMove2 {
+      0% { left: 15%; top: 50%; opacity: 0; }
+      10% { opacity: 1; }
+      40% { left: 50%; top: 50%; opacity: 1; }
+      90% { left: 85%; top: 50%; opacity: 1; }
+      100% { left: 85%; top: 50%; opacity: 0; }
+    }
+    @keyframes packetMove3 {
+      0% { left: 15%; top: 80%; opacity: 0; }
+      10% { opacity: 1; }
+      40% { left: 50%; top: 50%; opacity: 1; }
+      90% { left: 85%; top: 20%; opacity: 1; }
+      100% { left: 85%; top: 20%; opacity: 0; }
+    }
+
+    /* Adapter grid */
+    .adapter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 14px;
+      margin-top: 20px;
+    }
+    .adapter-card {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 12px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 500;
+      transition: all 0.25s ease;
+      cursor: default;
+    }
+    .adapter-card:hover {
+      border-color: var(--accent-purple);
+      transform: translateY(-3px);
+      box-shadow: 0 8px 24px rgba(139,92,246,0.12);
+    }
+    .adapter-card .plat-icon { font-size: 26px; display: block; margin-bottom: 8px; }
+    .adapter-card .plat-name { color: var(--text-primary); }
+    .adapter-card .plat-adapter { color: var(--text-muted); font-size: 11px; margin-top: 4px; }
+
+    /* Chat animation */
+    .chat-stage {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      max-width: 720px;
+      margin: 28px auto 0;
+      min-height: 380px;
+      position: relative;
+      overflow: hidden;
+    }
+    .chat-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+    .chat-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .chat-avatar.mcp { background: rgba(34,211,238,0.12); color: var(--accent-cyan); }
+    .chat-avatar.http { background: rgba(139,92,246,0.12); color: var(--accent-purple); }
+    .chat-avatar.cli { background: rgba(251,191,36,0.12); color: var(--accent-yellow); }
+    .chat-avatar.vscode { background: rgba(52,211,153,0.12); color: var(--accent-green); }
+    .chat-avatar.plugin { background: rgba(244,114,182,0.12); color: var(--accent-pink); }
+
+    .chat-bubble {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      margin: 12px 0;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.4s ease;
+    }
+    .chat-bubble.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .chat-bubble .content {
+      max-width: 80%;
+      padding: 12px 16px;
+      border-radius: 14px;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+    .chat-bubble.left .content {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      border-bottom-left-radius: 4px;
+    }
+    .chat-bubble.right {
+      flex-direction: row-reverse;
+    }
+    .chat-bubble.right .content {
+      background: linear-gradient(135deg, rgba(139,92,246,0.9) 0%, rgba(124,58,237,0.9) 100%);
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .chat-controls {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 18px;
+    }
+    .btn {
+      padding: 10px 18px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn:hover {
+      border-color: var(--accent-purple);
+      background: rgba(139,92,246,0.1);
+    }
+    .btn-primary {
+      background: var(--accent-purple);
+      border-color: var(--accent-purple);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: #7c3aed;
+      box-shadow: 0 0 20px var(--accent-purple-glow);
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Quizzes */
+    .quiz-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      margin: 24px 0;
+    }
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .quiz-option {
+      padding: 14px 18px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+    }
+    .quiz-option:hover {
+      border-color: rgba(139,92,246,0.5);
+      color: var(--text-primary);
+    }
+    .quiz-option.correct {
+      border-color: var(--accent-green);
+      background: rgba(52,211,153,0.08);
+      color: var(--accent-green);
+    }
+    .quiz-option.wrong {
+      border-color: #ef4444;
+      background: rgba(239,68,68,0.08);
+      color: #ef4444;
+    }
+    .quiz-feedback {
+      margin-top: 14px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 14px;
+      display: none;
+    }
+    .quiz-feedback.show { display: block; animation: fadeIn 0.3s ease; }
+    .quiz-feedback.correct { background: rgba(52,211,153,0.1); color: var(--accent-green); border: 1px solid rgba(52,211,153,0.3); }
+    .quiz-feedback.wrong { background: rgba(239,68,68,0.1); color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+
+    /* Capstone */
+    .capstone-box {
+      background: linear-gradient(135deg, rgba(139,92,246,0.12) 0%, rgba(34,211,238,0.08) 100%);
+      border: 1px solid rgba(139,92,246,0.4);
+      border-radius: 20px;
+      padding: 32px;
+      margin-top: 24px;
+    }
+    .checklist {
+      list-style: none;
+      padding: 0;
+      margin: 16px 0 0;
+    }
+    .checklist li {
+      padding: 8px 0;
+      padding-left: 28px;
+      position: relative;
+      color: var(--text-secondary);
+      font-size: 15px;
+    }
+    .checklist li::before {
+      content: '✓';
+      position: absolute;
+      left: 0;
+      color: var(--accent-purple);
+      font-weight: 700;
+    }
+
+    /* Completion badge */
+    .completion-badge {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      background: conic-gradient(var(--accent-purple) var(--progress, 0%), var(--bg-tertiary) 0);
+      margin: 0 auto 24px;
+      display: grid;
+      place-items: center;
+      position: relative;
+    }
+    .completion-badge::before {
+      content: '';
+      position: absolute;
+      inset: 6px;
+      background: var(--bg-secondary);
+      border-radius: 50%;
+    }
+    .completion-badge span {
+      position: relative;
+      font-size: 32px;
+      font-weight: 800;
+      color: var(--accent-purple);
+    }
+
+    /* Hero specific */
+    .hero {
+      text-align: center;
+      position: relative;
+    }
+    .hero .subtitle {
+      font-size: 1.25rem;
+      color: var(--text-secondary);
+      max-width: 640px;
+      margin: 0 auto 32px;
+    }
+    .hero-stats {
+      display: flex;
+      justify-content: center;
+      gap: 48px;
+      margin-top: 40px;
+      flex-wrap: wrap;
+    }
+    .stat {
+      text-align: center;
+    }
+    .stat-number {
+      font-size: 2.6rem;
+      font-weight: 800;
+      color: var(--accent-purple);
+      line-height: 1;
+    }
+    .stat-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+      #nav-dots { display: none; }
+      section { padding: 80px 18px; }
+      .flow-layer { flex-direction: column; }
+      .flow-arrow { transform: rotate(90deg); }
+      .chat-bubble .content { max-width: 90%; font-size: 13px; }
+      .card { padding: 20px; }
+      .data-flow-container { padding: 20px; }
+    }
+
+    /* Utility */
+    .text-center { text-align: center; }
+    .mt-0 { margin-top: 0; }
+    .mb-0 { margin-bottom: 0; }
+    .mt-2 { margin-top: 12px; }
+    .mt-4 { margin-top: 24px; }
+    .mb-4 { margin-bottom: 24px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+  <!-- Progress Bar -->
+  <div id="progress-container"><div id="progress-bar"></div></div>
+
+  <!-- Navigation Dots -->
+  <div id="nav-dots">
+    <div class="nav-dot active" data-target="hero" data-label="Start"></div>
+    <div class="nav-dot" data-target="problem" data-label="Problem"></div>
+    <div class="nav-dot" data-target="host" data-label="PluginHost"></div>
+    <div class="nav-dot" data-target="adapters" data-label="Adapters"></div>
+    <div class="nav-dot" data-target="chat" data-label="Chat"></div>
+    <div class="nav-dot" data-target="building" data-label="Build"></div>
+    <div class="nav-dot" data-target="degradation" data-label="Fallbacks"></div>
+    <div class="nav-dot" data-target="quiz-section" data-label="Quizzes"></div>
+    <div class="nav-dot" data-target="capstone" data-label="Capstone"></div>
+  </div>
+
+  <!-- Section 1: Hero -->
+  <section id="hero" class="hero">
+    <div class="container">
+      <div class="badge">A://Labs Advanced Course</div>
+      <h1 class="gradient-text">Universal Plugin SDK</h1>
+      <p class="subtitle">Write once. Run on any LLM platform. Master the architecture that powers 76 Allternit templates across Claude, Cursor, Codex, Copilot, and beyond.</p>
+      <div class="hero-stats">
+        <div class="stat"><div class="stat-number">6</div><div class="stat-label">Adapters</div></div>
+        <div class="stat"><div class="stat-number">1</div><div class="stat-label">Codebase</div></div>
+        <div class="stat"><div class="stat-number">∞</div><div class="stat-label">Platforms</div></div>
+      </div>
+      <div class="mt-4 text-center">
+        <button class="btn btn-primary" onclick="scrollToSection('problem')">Begin Module 1</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 2: The Problem -->
+  <section id="problem">
+    <div class="container">
+      <div class="text-center">
+        <div class="badge">The Challenge</div>
+        <h2>76 Templates. Zero Reach.</h2>
+        <p>Allternit has 76 powerful templates. But Claude can't see them. Cursor ignores them. Codex doesn't know they exist. Every platform speaks a different dialect.</p>
+      </div>
+      <div class="card-grid">
+        <div class="card">
+          <h3 style="color:var(--accent-pink)">Platform Fragmentation</h3>
+          <p>Each LLM tool uses its own protocol: MCP for Claude, CLI for Codex, extensions for VS Code. Building separate integrations is unsustainable.</p>
+        </div>
+        <div class="card">
+          <h3 style="color:var(--accent-yellow)">Duplicated Effort</h3>
+          <p>Without a universal layer, every template needs 5+ custom implementations. One bug fix becomes five. One feature lags on half the platforms.</p>
+        </div>
+        <div class="card">
+          <h3 style="color:var(--accent-cyan)">The SDK Answer</h3>
+          <p>One <strong>PluginHost</strong> interface. One manifest. One execution path. The adapters handle the translation to every platform automatically.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 3: PluginHost Interface -->
+  <section id="host">
+    <div class="container">
+      <div class="badge">Core Innovation</div>
+      <h2>The <span class="gradient-cyan">PluginHost</span> Contract</h2>
+      <p>Every plugin interacts with the world through a single, predictable interface. No matter if it's running inside Claude Desktop or a Python LangChain agent, the code stays identical.</p>
+
+      <div class="translate-block">
+        <div class="translate-tabs">
+          <button class="translate-tab active" onclick="switchTab(this, 'host-code')">TypeScript</button>
+          <button class="translate-tab" onclick="switchTab(this, 'host-plain')">Plain English</button>
+        </div>
+        <div class="translate-pane active" id="host-code">
+          <div class="code-block">
+            <div class="code-header"><div class="dots"><span></span><span></span><span></span></div><span>types.ts</span></div>
+            <div class="code-content"><span class="keyword">export interface</span> <span class="type">PluginHost</span> {
+  <span class="comment">// LLM access: complete, stream, count tokens</span>
+  <span class="keyword">readonly</span> llm: <span class="type">LlmCapabilities</span>;
+
+  <span class="comment">// Tool registry: check availability and execute</span>
+  <span class="keyword">readonly</span> tools: <span class="type">ToolRegistry</span>;
+
+  <span class="comment">// UI rendering: markdown, code, images, charts</span>
+  <span class="keyword">readonly</span> ui: <span class="type">UiCapabilities</span>;
+
+  <span class="comment">// Key/value storage persistence</span>
+  <span class="keyword">readonly</span> storage: <span class="type">StorageBackend</span>;
+
+  <span class="comment">// Session context and conversation history</span>
+  <span class="keyword">readonly</span> session: <span class="type">SessionContext</span>;
+
+  <span class="comment">// Structured logging</span>
+  <span class="keyword">readonly</span> logger: <span class="type">Logger</span>;
+}</div>
+          </div>
+        </div>
+        <div class="translate-pane" id="host-plain">
+          <div class="plain-english">
+            <p><strong>Think of PluginHost as a power strip with six sockets.</strong> Your plugin plugs into it and gets electricity (LLM), tools (drill, saw), a display (monitor), memory (hard drive), session info (who's using it), and a logger (diagnostics).</p>
+            <p>No matter which house (platform) the power strip is in, your appliance works exactly the same way. The adapter is just the wall plug shape converter.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-grid">
+        <div class="card">
+          <div style="font-size:28px;margin-bottom:8px">🧠</div>
+          <h4>llm</h4>
+          <p style="font-size:13px;color:var(--text-muted)"><code>complete()</code>, <code>stream()</code>, <code>countTokens()</code> — Talk to the model.</p>
+        </div>
+        <div class="card">
+          <div style="font-size:28px;margin-bottom:8px">🛠️</div>
+          <h4>tools</h4>
+          <p style="font-size:13px;color:var(--text-muted)"><code>has()</code>, <code>execute()</code>, <code>list()</code> — Use external capabilities.</p>
+        </div>
+        <div class="card">
+          <div style="font-size:28px;margin-bottom:8px">🖥️</div>
+          <h4>ui</h4>
+          <p style="font-size:13px;color:var(--text-muted)"><code>renderMarkdown()</code>, <code>renderCode()</code>, <code>openPanel()</code> — Show output.</p>
+        </div>
+        <div class="card">
+          <div style="font-size:28px;margin-bottom:8px">💾</div>
+          <h4>storage</h4>
+          <p style="font-size:13px;color:var(--text-muted)"><code>get()</code>, <code>set()</code>, <code>delete()</code> — Remember state.</p>
+        </div>
+        <div class="card">
+          <div style="font-size:28px;margin-bottom:8px">👤</div>
+          <h4>session</h4>
+          <p style="font-size:13px;color:var(--text-muted)"><code>id</code>, <code>getHistory()</code> — Know the conversation.</p>
+        </div>
+        <div class="card">
+          <div style="font-size:28px;margin-bottom:8px">📜</div>
+          <h4>logger</h4>
+          <p style="font-size:13px;color:var(--text-muted)"><code>debug()</code>, <code>info()</code>, <code>warn()</code>, <code>error()</code> — Stay observable.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 4: Adapter Architecture -->
+  <section id="adapters">
+    <div class="container">
+      <div class="badge">Architecture</div>
+      <h2>From One Host to <span class="gradient-cyan">Every Platform</span></h2>
+      <p>Adapters are the translators. They map the universal PluginHost interface to the native protocols of each LLM environment. Your plugin never sees the difference.</p>
+
+      <div class="data-flow-container">
+        <div class="flow-packet packet-animate-1"></div>
+        <div class="flow-packet packet-animate-2"></div>
+        <div class="flow-packet packet-animate-3"></div>
+
+        <div class="flow-layer">
+          <div class="flow-node highlight"><span class="icon">📦</span>Your Plugin<br><small style="color:var(--text-muted)">Single codebase</small></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node highlight"><span class="icon">🔌</span>PluginHost<br><small style="color:var(--text-muted)">Universal interface</small></div>
+        </div>
+
+        <div style="text-align:center;color:var(--text-muted);font-size:13px;margin:8px 0">Adapters translate to native protocols ↓</div>
+
+        <div class="flow-layer" style="flex-wrap:wrap;justify-content:center;">
+          <div class="flow-node"><span class="icon">🖥️</span>MCP Adapter<br><small style="color:var(--text-muted)">Claude / Cursor</small></div>
+          <div class="flow-node"><span class="icon">🌐</span>HTTP Adapter<br><small style="color:var(--text-muted)">REST / WebSocket</small></div>
+          <div class="flow-node"><span class="icon">⌨️</span>CLI Adapter<br><small style="color:var(--text-muted)">Codex / Terminal</small></div>
+          <div class="flow-node"><span class="icon">📝</span>VS Code Adapter<br><small style="color:var(--text-muted)">Copilot / Cody</small></div>
+          <div class="flow-node"><span class="icon">🐍</span>LangChain Adapter<br><small style="color:var(--text-muted)">Python agents</small></div>
+          <div class="flow-node"><span class="icon">🏠</span>Native Adapter<br><small style="color:var(--text-muted)">Allternit platform</small></div>
+        </div>
+      </div>
+
+      <div class="adapter-grid">
+        <div class="adapter-card"><span class="plat-icon">🖥️</span><div class="plat-name">MCP</div><div class="plat-adapter">Claude Desktop</div></div>
+        <div class="adapter-card"><span class="plat-icon">🖥️</span><div class="plat-name">MCP</div><div class="plat-adapter">Cursor</div></div>
+        <div class="adapter-card"><span class="plat-icon">🌐</span><div class="plat-name">HTTP</div><div class="plat-adapter">Web / Mobile</div></div>
+        <div class="adapter-card"><span class="plat-icon">⌨️</span><div class="plat-name">CLI</div><div class="plat-adapter">OpenAI Codex</div></div>
+        <div class="adapter-card"><span class="plat-icon">📝</span><div class="plat-name">VS Code</div><div class="plat-adapter">GitHub Copilot</div></div>
+        <div class="adapter-card"><span class="plat-icon">🐍</span><div class="plat-name">LangChain</div><div class="plat-adapter">Python</div></div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- Section 5: Group Chat Animation -->
+  <section id="chat">
+    <div class="container">
+      <div class="badge">Interactive Demo</div>
+      <h2>A Day in the Life of a <span class="gradient-cyan">Plugin Request</span></h2>
+      <p style="text-align:center;max-width:700px;margin:0 auto 20px;">Watch how the MCP, HTTP, and CLI adapters negotiate with the PluginHost when a user asks for market research.</p>
+
+      <div class="chat-stage">
+        <div class="chat-header">
+          <div style="font-weight:600">Adapter Group Chat</div>
+          <div style="margin-left:auto;font-size:12px;color:var(--text-muted)">Live simulation</div>
+        </div>
+        <div id="chat-bubbles"></div>
+        <div class="chat-controls">
+          <button class="btn btn-primary" id="chat-play" onclick="playChat()">▶ Play Scene</button>
+          <button class="btn" id="chat-reset" onclick="resetChat()">↺ Reset</button>
+        </div>
+      </div>
+
+      <p style="text-align:center;color:var(--text-muted);font-size:13px;margin-top:16px;">Each message represents a real method call in the SDK source code.</p>
+    </div>
+  </section>
+
+  <!-- Section 6: Building a Plugin -->
+  <section id="building">
+    <div class="container">
+      <div class="badge">Hands-On</div>
+      <h2>Building Your First <span class="gradient-cyan">Universal Plugin</span></h2>
+      <p>Let's build a minimal market-research plugin. The same code will work on Claude, VS Code, Codex, and any HTTP client.</p>
+
+      <div class="translate-block">
+        <div class="translate-tabs">
+          <button class="translate-tab active" onclick="switchTab(this, 'build-code')">TypeScript</button>
+          <button class="translate-tab" onclick="switchTab(this, 'build-plain')">Plain English</button>
+        </div>
+        <div class="translate-pane active" id="build-code">
+          <div class="code-block">
+            <div class="code-header"><div class="dots"><span></span><span></span><span></span></div><span>src/index.ts</span></div>
+            <div class="code-content"><span class="keyword">import</span> { PluginHost } <span class="keyword">from</span> <span class="string">'@allternit/plugin-sdk'</span>;
+
+<span class="keyword">export async function</span> <span class="func">run</span>(host: <span class="type">PluginHost</span>, params: <span class="type">any</span>) {
+  <span class="comment">// 1. Ask the LLM to analyze the topic</span>
+  <span class="keyword">const</span> result = <span class="keyword">await</span> host.llm.complete(
+    <span class="string">`Analyze market trends for: ${params.topic}`</span>
+  );
+
+  <span class="comment">// 2. Render the result as markdown</span>
+  host.ui.renderMarkdown(result);
+
+  <span class="comment">// 3. If we have a browser, use it for live data</span>
+  <span class="keyword">if</span> (host.tools.has(<span class="string">'browser_navigate'</span>)) {
+    <span class="keyword">return</span> host.tools.execute(<span class="string">'browser_navigate'</span>, {
+      url: params.url
+    });
+  }
+
+  <span class="comment">// 4. Otherwise fall back to LLM knowledge</span>
+  <span class="keyword">return</span> host.llm.complete(<span class="string">`Research: ${params.url}`</span>);
+}</div>
+          </div>
+        </div>
+        <div class="translate-pane" id="build-plain">
+          <div class="plain-english">
+            <p><strong>Step 1:</strong> We receive a <code>host</code> object and user <code>params</code>. The host is our universal power strip.</p>
+            <p><strong>Step 2:</strong> We call <code>host.llm.complete()</code> to ask the AI to analyze market trends. We don't care if the underlying model is Claude, GPT-4, or Copilot.</p>
+            <p><strong>Step 3:</strong> We use <code>host.ui.renderMarkdown()</code> to display the result. On VS Code this opens a webview panel; in CLI it prints to terminal; in Claude it returns text.</p>
+            <p><strong>Step 4:</strong> We check if <code>browser_navigate</code> is available. If yes, we browse live. If not, we gracefully fall back to the LLM's training data.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="code-block">
+        <div class="code-header"><div class="dots"><span></span><span></span><span></span></div><span>manifest.json</span></div>
+        <div class="code-content">{
+  <span class="string">"id"</span>: <span class="string">"market-research"</span>,
+  <span class="string">"name"</span>: <span class="string">"Market Research"</span>,
+  <span class="string">"version"</span>: <span class="string">"1.0.0"</span>,
+  <span class="string">"runtime"</span>: <span class="string">"allternit-plugin-v1"</span>,
+  <span class="string">"category"</span>: <span class="string">"research"</span>,
+  <span class="string">"requires"</span>: {
+    <span class="string">"llm"</span>: { <span class="string">"capabilities"</span>: [<span class="string">"reasoning"</span>] },
+    <span class="string">"tools"</span>: [<span class="string">"web_search"</span>, { <span class="string">"tool"</span>: <span class="string">"browser_navigate"</span>, <span class="string">"required"</span>: <span class="keyword">false</span> }]
+  },
+  <span class="string">"provides"</span>: {
+    <span class="string">"functions"</span>: [{
+      <span class="string">"name"</span>: <span class="string">"research"</span>,
+      <span class="string">"description"</span>: <span class="string">"Research a market topic"</span>,
+      <span class="string">"parameters"</span>: { <span class="string">"type"</span>: <span class="string">"object"</span>, <span class="string">"properties"</span>: {
+        <span class="string">"topic"</span>: { <span class="string">"type"</span>: <span class="string">"string"</span>, <span class="string">"description"</span>: <span class="string">"Topic to research"</span> }
+      }},
+      <span class="string">"returns"</span>: { <span class="string">"type"</span>: <span class="string">"object"</span> }
+    }]
+  }
+}</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 7: Graceful Degradation -->
+  <section id="degradation">
+    <div class="container">
+      <div class="badge">Resilience</div>
+      <h2>Graceful <span class="gradient-cyan">Degradation</span></h2>
+      <p>Not every platform has every tool. The SDK is designed so plugins adapt instead of crashing. The same logic runs on a super-powered HTTP server or a minimal MCP client.</p>
+
+      <div class="card-grid">
+        <div class="card">
+          <h3 style="color:var(--accent-cyan)">Check First</h3>
+          <div class="code-block" style="margin:12px 0 0">
+            <div class="code-content" style="padding:14px 16px;font-size:12px">if (host.tools.has('web_search')) {
+  return await researchWithSearch(params);
+}</div>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="color:var(--accent-yellow)">Log & Fallback</h3>
+          <div class="code-block" style="margin:12px 0 0">
+            <div class="code-content" style="padding:14px 16px;font-size:12px">host.logger.warn('Search not available, using LLM');
+return await simulateResearch(params);</div>
+          </div>
+        </div>
+        <div class="card">
+          <h3 style="color:var(--accent-pink)">Capability Matrix</h3>
+          <table style="width:100%;font-size:12px;color:var(--text-secondary);margin-top:8px;border-collapse:collapse">
+            <tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>web_search</strong></td><td>❌ Claude</td><td>✅ HTTP</td></tr>
+            <tr style="border-bottom:1px solid var(--border)"><td style="padding:6px 0"><strong>file_system</strong></td><td>❌ Claude</td><td>✅ VS Code</td></tr>
+            <tr><td style="padding:6px 0"><strong>panels</strong></td><td>❌ MCP</td><td>✅ VS Code</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 8: Quizzes -->
+  <section id="quiz-section">
+    <div class="container">
+      <div class="badge">Knowledge Check</div>
+      <h2>3 Interactive <span class="gradient-cyan">Quizzes</span></h2>
+
+      <!-- Quiz 1 -->
+      <div class="quiz-card" data-quiz="1">
+        <h3>Quiz 1: PluginHost Anatomy</h3>
+        <p style="color:var(--text-secondary)">Which PluginHost property would you use to check if the current platform supports a web browser tool?</p>
+        <div class="quiz-options">
+          <button class="quiz-option" data-correct="false">A. <code>host.llm.complete()</code></button>
+          <button class="quiz-option" data-correct="true">B. <code>host.tools.has('browser_navigate')</code></button>
+          <button class="quiz-option" data-correct="false">C. <code>host.ui.renderMarkdown()</code></button>
+          <button class="quiz-option" data-correct="false">D. <code>host.storage.get('browser')</code></button>
+        </div>
+        <div class="quiz-feedback" data-feedback="1"></div>
+      </div>
+
+      <!-- Quiz 2 -->
+      <div class="quiz-card" data-quiz="2">
+        <h3>Quiz 2: Adapter Matching</h3>
+        <p style="color:var(--text-secondary)">A developer wants to run an Allternit plugin inside GitHub Copilot. Which adapter should they use?</p>
+        <div class="quiz-options">
+          <button class="quiz-option" data-correct="false">A. MCP Adapter</button>
+          <button class="quiz-option" data-correct="true">B. VS Code Adapter</button>
+          <button class="quiz-option" data-correct="false">C. CLI Adapter</button>
+          <button class="quiz-option" data-correct="false">D. Native Adapter</button>
+        </div>
+        <div class="quiz-feedback" data-feedback="2"></div>
+      </div>
+
+      <!-- Quiz 3 -->
+      <div class="quiz-card" data-quiz="3">
+        <h3>Quiz 3: Graceful Degradation</h3>
+        <p style="color:var(--text-secondary)">The plugin requests <code>host.tools.execute('image_generate', {...})</code> on the CLI adapter. What happens?</p>
+        <div class="quiz-options">
+          <button class="quiz-option" data-correct="false">A. The CLI silently skips the call.</button>
+          <button class="quiz-option" data-correct="false">B. The process crashes with a fatal error.</button>
+          <button class="quiz-option" data-correct="true">C. The tool registry returns <code>{ success: false, error: { code: 'NOT_IMPLEMENTED' } }</code>.</button>
+          <button class="quiz-option" data-correct="false">D. The CLI opens a browser to generate the image.</button>
+        </div>
+        <div class="quiz-feedback" data-feedback="3"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 9: Capstone -->
+  <section id="capstone">
+    <div class="container">
+      <div class="badge">Capstone Project</div>
+      <h2>Build a <span class="gradient-cyan">Cross-Platform</span> Code Review Plugin</h2>
+      <p>Put everything together. Your mission is to create a plugin that reads a pull request diff, analyzes it with an LLM, and posts suggestions — no matter which platform is hosting it.</p>
+
+      <div class="capstone-box">
+        <h3 style="margin-top:0">Project Requirements</h3>
+        <ul class="checklist">
+          <li>Define a <code>PluginManifest</code> with <code>requires</code> for <code>file_read</code> and <code>llm.reasoning</code>.</li>
+          <li>Implement the plugin using <code>PluginHost</code> (<code>llm.complete</code>, <code>tools.has</code>, <code>ui.renderMarkdown</code>).</li>
+          <li>Add graceful degradation: if <code>file_read</code> is unavailable, accept the diff as a string parameter.</li>
+          <li>Test locally with the <strong>CLI adapter</strong> by passing a sample diff via command-line arguments.</li>
+          <li>Run it with the <strong>HTTP adapter</strong> and call it via <code>curl</code>.</li>
+          <li>Bonus: package it as an <code>.allp</code> file and document the MCP configuration for Claude Desktop.</li>
+        </ul>
+        <div class="mt-4">
+          <button class="btn btn-primary" onclick="alert('Ready to build? Open your editor and scaffold: allternit-plugin create code-review')">Start Capstone</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 10: Completion -->
+  <section id="completion">
+    <div class="container" style="text-align:center">
+      <div class="completion-badge" id="completion-badge" style="--progress:0%"><span>0%</span></div>
+      <h2 class="gradient-text">Module 1 Complete</h2>
+      <p style="max-width:520px;margin:0 auto 24px">You now understand the Universal Plugin SDK architecture: the PluginHost contract, the six adapters, and how to write resilient, platform-agnostic plugins.</p>
+      <div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap">
+        <button class="btn" onclick="scrollToSection('hero')">Restart Module</button>
+        <button class="btn btn-primary" onclick="alert('Module 2 coming soon: Packaging, Publishing & MCP Registry')">Continue to Module 2</button>
+      </div>
+      <p style="margin-top:32px;font-size:12px;color:var(--text-muted)">Generated for A://Labs · OPS Tier · allternit/plugin-sdk</p>
+    </div>
+  </section>
+
+  <script>
+    // ==========================================
+    // Scroll Progress & Navigation
+    // ==========================================
+    const sections = ['hero','problem','host','adapters','chat','building','degradation','quiz-section','capstone','completion'];
+    const dots = document.querySelectorAll('.nav-dot');
+    const progressBar = document.getElementById('progress-bar');
+    const completionBadge = document.getElementById('completion-badge');
+
+    function updateProgress() {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = Math.min(100, Math.max(0, (scrollTop / docHeight) * 100));
+      progressBar.style.width = pct + '%';
+
+      // Update completion badge
+      if (completionBadge) {
+        completionBadge.style.setProperty('--progress', pct + '%');
+        completionBadge.querySelector('span').textContent = Math.round(pct) + '%';
+      }
+
+      // Highlight active nav dot
+      let activeIndex = 0;
+      sections.forEach((id, i) => {
+        const el = document.getElementById(id);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          if (rect.top <= window.innerHeight * 0.5) activeIndex = i;
+        }
+      });
+      dots.forEach((d, i) => d.classList.toggle('active', i === activeIndex));
+    }
+
+    window.addEventListener('scroll', updateProgress, { passive: true });
+    window.addEventListener('resize', updateProgress);
+    updateProgress();
+
+    function scrollToSection(id) {
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    dots.forEach(dot => {
+      dot.addEventListener('click', () => scrollToSection(dot.dataset.target));
+    });
+
+    // ==========================================
+    // Tab Switching
+    // ==========================================
+    function switchTab(btn, paneId) {
+      const block = btn.closest('.translate-block');
+      block.querySelectorAll('.translate-tab').forEach(t => t.classList.remove('active'));
+      block.querySelectorAll('.translate-pane').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(paneId).classList.add('active');
+    }
+
+    // ==========================================
+    // Chat Animation
+    // ==========================================
+    const chatMessages = [
+      { side: 'left', avatar: 'plugin', color: 'plugin', name: 'MarketResearchPlugin', text: 'User wants research on "AI assistants". I need to check my capabilities.' },
+      { side: 'right', avatar: 'mcp', color: 'mcp', name: 'McpAdapter', text: 'I\'m running inside Claude Desktop. I can offer web_search and file_read via the host.' },
+      { side: 'right', avatar: 'http', color: 'http', name: 'HttpAdapter', text: 'On my end I also have browser_navigate and image_generate. Full tool registry available.' },
+      { side: 'right', avatar: 'cli', color: 'cli', name: 'CliAdapter', text: 'I\'m in a terminal — no tools here. But llm.complete() still works via OpenAI API.' },
+      { side: 'left', avatar: 'plugin', color: 'plugin', name: 'MarketResearchPlugin', text: 'host.tools.has("web_search")? ✅ MCP says yes. I\'ll call host.llm.complete() then render with host.ui.renderMarkdown().' },
+      { side: 'right', avatar: 'mcp', color: 'mcp', name: 'McpAdapter', text: 'Returning text result to Claude. All methods mapped to MCP tools/resources.' },
+      { side: 'left', avatar: 'plugin', color: 'plugin', name: 'MarketResearchPlugin', text: 'Same code, different adapter. Every platform served. 🚀' },
+    ];
+
+    let chatIndex = 0;
+    let chatTimer = null;
+
+    function renderChatBubble(msg) {
+      const container = document.getElementById('chat-bubbles');
+      const row = document.createElement('div');
+      row.className = 'chat-bubble ' + msg.side;
+      row.innerHTML = `
+        <div class="chat-avatar ${msg.color}">${msg.name.slice(0,2)}</div>
+        <div class="content"><strong>${msg.name}</strong><br>${msg.text}</div>
+      `;
+      container.appendChild(row);
+      // Trigger reflow
+      void row.offsetWidth;
+      row.classList.add('visible');
+      row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function playChat() {
+      const playBtn = document.getElementById('chat-play');
+      if (chatIndex >= chatMessages.length) return;
+      playBtn.disabled = true;
+      const step = () => {
+        if (chatIndex < chatMessages.length) {
+          renderChatBubble(chatMessages[chatIndex]);
+          chatIndex++;
+          chatTimer = setTimeout(step, 1800);
+        } else {
+          playBtn.disabled = false;
+          playBtn.textContent = '▶ Replay';
+        }
+      };
+      step();
+    }
+
+    function resetChat() {
+      clearTimeout(chatTimer);
+      chatIndex = 0;
+      document.getElementById('chat-bubbles').innerHTML = '';
+      const playBtn = document.getElementById('chat-play');
+      playBtn.disabled = false;
+      playBtn.textContent = '▶ Play Scene';
+    }
+
+    // Auto-start chat when section scrolls into view (once)
+    let chatStarted = false;
+    const chatObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && !chatStarted) {
+          chatStarted = true;
+          setTimeout(playChat, 600);
+        }
+      });
+    }, { threshold: 0.5 });
+    chatObserver.observe(document.getElementById('chat'));
+
+    // ==========================================
+    // Quizzes
+    // ==========================================
+    const quizFeedback = {
+      1: {
+        correct: "Correct! <code>host.tools.has()</code> is the universal way to probe capability availability before executing.",
+        wrong: "Not quite. Only <code>host.tools.has()</code> is designed to query the tool registry for a specific capability."
+      },
+      2: {
+        correct: "Correct! GitHub Copilot runs inside VS Code, so the VS Code Adapter registers commands and webview panels there.",
+        wrong: "Think about where Copilot lives. It\'s a VS Code extension, so it needs the VS Code Adapter."
+      },
+      3: {
+        correct: "Exactly right. The CLI adapter\'s tool registry returns a structured failure rather than crashing.",
+        wrong: "The CLI ToolRegistry explicitly returns <code>success: false</code> with error code <code>NOT_IMPLEMENTED</code>."
+      }
+    };
+
+    document.querySelectorAll('.quiz-card').forEach(card => {
+      const qid = card.dataset.quiz;
+      const feedbackEl = card.querySelector('[data-feedback="' + qid + '"]');
+      card.querySelectorAll('.quiz-option').forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (card.classList.contains('answered')) return;
+          card.classList.add('answered');
+          const isCorrect = btn.dataset.correct === 'true';
+          btn.classList.add(isCorrect ? 'correct' : 'wrong');
+          if (!isCorrect) {
+            const correctBtn = card.querySelector('[data-correct="true"]');
+            if (correctBtn) correctBtn.classList.add('correct');
+          }
+          feedbackEl.className = 'quiz-feedback show ' + (isCorrect ? 'correct' : 'wrong');
+          feedbackEl.innerHTML = isCorrect ? quizFeedback[qid].correct : quizFeedback[qid].wrong;
+        });
+      });
+    });
+  </script>
+</body>
+</html>

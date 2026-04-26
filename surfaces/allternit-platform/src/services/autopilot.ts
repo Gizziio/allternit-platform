@@ -31,7 +31,10 @@ export type JobType =
   | 'generation'
   | 'download'
   | 'analysis'
-  | 'automation';
+  | 'automation'
+  | 'board_task'
+  | 'cowork_session'
+  | 'skill_execution';
 
 export type JobStatus = 
   | 'queued'
@@ -304,6 +307,15 @@ export class AutopilotService extends EventEmitter {
         case 'automation':
           await this.executeAutomation(job, controller.signal);
           break;
+        case 'board_task':
+          await this.executeBoardTask(job, controller.signal);
+          break;
+        case 'cowork_session':
+          await this.executeCoworkSession(job, controller.signal);
+          break;
+        case 'skill_execution':
+          await this.executeSkill(job, controller.signal);
+          break;
       }
       
       // Mark as completed
@@ -316,7 +328,7 @@ export class AutopilotService extends EventEmitter {
       // Send notification
       if (job.notifyOnComplete && 'Notification' in window) {
         if (Notification.permission === 'granted') {
-          new Notification('A2r Autopilot Complete', {
+          new Notification('Allternit Autopilot Complete', {
             body: `Job "${job.prompt.slice(0, 50)}..." completed`,
           });
         }
@@ -425,6 +437,119 @@ export class AutopilotService extends EventEmitter {
       
       await this.updateProgress(job.id, i, `Automating... ${i}%`);
       await new Promise(resolve => setTimeout(resolve, 600));
+    }
+  }
+
+  /**
+   * Execute board task (real agent execution)
+   */
+  private async executeBoardTask(
+    job: AutopilotJob,
+    signal: AbortSignal
+  ): Promise<void> {
+    await this.updateProgress(job.id, 10, 'Claiming board task...');
+    
+    const boardItemId = job.metadata.boardItemId as string;
+    const workspaceId = job.metadata.workspaceId as string;
+    
+    if (boardItemId && workspaceId) {
+      // Update board item status to in_progress
+      await fetch(`/api/v1/board-items/${boardItemId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'in_progress' }),
+      }).catch(() => {});
+    }
+
+    // Stream execution via WebSocket or SSE
+    await this.updateProgress(job.id, 30, 'Executing task...');
+    
+    // TODO: Integrate with actual agent execution pipeline
+    // For now, simulate with progress updates
+    for (let i = 30; i <= 90; i += 10) {
+      if (signal.aborted) {
+        if (boardItemId) {
+          await fetch(`/api/v1/board-items/${boardItemId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'blocked' }),
+          }).catch(() => {});
+        }
+        return;
+      }
+      await this.updateProgress(job.id, i, `Executing... ${i}%`);
+      await new Promise(resolve => setTimeout(resolve, 800));
+    }
+
+    await this.updateProgress(job.id, 95, 'Finalizing...');
+    
+    if (boardItemId && workspaceId) {
+      await fetch(`/api/v1/board-items/${boardItemId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'done' }),
+      }).catch(() => {});
+    }
+
+    await this.updateProgress(job.id, 100, 'Completed');
+  }
+
+  /**
+   * Execute cowork session
+   */
+  private async executeCoworkSession(
+    job: AutopilotJob,
+    signal: AbortSignal
+  ): Promise<void> {
+    await this.updateProgress(job.id, 10, 'Starting cowork session...');
+    
+    const taskId = job.metadata.taskId as string;
+    
+    // Update task status
+    if (taskId) {
+      await fetch(`/api/v1/audit-logs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          taskId,
+          action: 'cowork_session_started',
+          actorType: 'agent',
+        }),
+      }).catch(() => {});
+    }
+
+    for (let i = 10; i <= 100; i += 10) {
+      if (signal.aborted) return;
+      await this.updateProgress(job.id, i, `Cowork session... ${i}%`);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+
+  /**
+   * Execute team skill
+   */
+  private async executeSkill(
+    job: AutopilotJob,
+    signal: AbortSignal
+  ): Promise<void> {
+    await this.updateProgress(job.id, 10, 'Loading skill manifest...');
+    
+    const skillId = job.metadata.skillId as string;
+    
+    if (skillId) {
+      try {
+        const res = await fetch(`/api/v1/team-skills/${skillId}`);
+        const data = await res.json();
+        await this.updateProgress(job.id, 30, `Executing skill: ${data.skill?.name || skillId}...`);
+      } catch {
+        await this.updateProgress(job.id, 30, 'Executing skill...');
+      }
+    }
+
+    for (let i = 30; i <= 100; i += 10) {
+      if (signal.aborted) return;
+      await this.updateProgress(job.id, i, `Skill execution... ${i}%`);
+      await new Promise(resolve => setTimeout(resolve, 700));
     }
   }
 

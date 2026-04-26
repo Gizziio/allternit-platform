@@ -163,7 +163,7 @@ programs/
   DataGridProgram.tsx      # Updated with exports
 
 components/
-  A2rCanvas.tsx            # Updated imports
+  AllternitCanvas.tsx            # Updated imports
 ```
 
 ## Next Steps

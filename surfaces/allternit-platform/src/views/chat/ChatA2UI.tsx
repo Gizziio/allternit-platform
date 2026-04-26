@@ -138,7 +138,6 @@ export function MessageA2UI({ part, messageId, onAction }: MessageA2UIProps) {
             <Button
               variant="ghost"
               size="icon"
-              size={32}
               onClick={handleOpenInBrowser}
               title="Open in Browser"
             >
@@ -147,7 +146,6 @@ export function MessageA2UI({ part, messageId, onAction }: MessageA2UIProps) {
             <Button
               variant="ghost"
               size="icon"
-              size={32}
               onClick={() => setIsExpanded(false)}
               title="Collapse"
             >

@@ -5,7 +5,7 @@ A unified agent orchestration interface with 6 view modes for managing AI agent 
 ## Features
 
 - **6 View Modes**: GRID, TOPOLOGY, KANBAN, CONSOLE, DETAIL, HISTORY
-- **Real-time Data**: Connected to NativeAgentStore with SSE updates
+- **Real-time Data**: Connected to mode-specific session stores with SSE updates
 - **Search & Filter**: By name, role, and status
 - **Agent Actions**: Restart, stop, and view logs
 - **Batch Operations**: Multi-select agents for bulk actions
@@ -220,7 +220,7 @@ src/views/swarm/
 
 ## Design Tokens
 
-Uses A2R design tokens:
+Uses Allternit design tokens:
 - `MODE_COLORS.code.accent` - Primary accent (#d97757)
 - `TEXT.primary` - Primary text
 - `TEXT.secondary` - Secondary text

@@ -69,7 +69,7 @@ async function emitEvidence(): Promise<void> {
 
     // 5. Emit to WIH
     console.log('\n4️⃣ Emitting evidence to WIH...');
-    const wihDir = path.join(process.cwd(), '..', '..', '.a2r', 'wih');
+    const wihDir = path.join(process.cwd(), '..', '..', '.allternit', 'wih');
     await fs.mkdir(wihDir, { recursive: true });
     
     const evidenceFile = path.join(

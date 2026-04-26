@@ -57,9 +57,9 @@ if (typeof window !== 'undefined') {
     (window as any).__TAURI_IPC__ = vi.fn();
   }
 
-  // Mock a2rUsageHost for Electron/Tauri shim
-  if (!(window as any).a2rUsageHost) {
-    (window as any).a2rUsageHost = {
+  // Mock allternitUsageHost for Electron/Tauri shim
+  if (!(window as any).allternitUsageHost) {
+    (window as any).allternitUsageHost = {
       invoke: vi.fn(() => Promise.resolve(null)),
       listen: vi.fn(() => Promise.resolve(() => {})),
       setWindowSize: vi.fn(() => Promise.resolve()),

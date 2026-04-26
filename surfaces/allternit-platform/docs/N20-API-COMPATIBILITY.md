@@ -1,8 +1,8 @@
 # N20 API Compatibility Report
 
 **Date:** 2026-02-22  
-**Frontend:** `/6-ui/a2r-platform/src/lib/agents/`  
-**Backend:** `/1-kernel/infrastructure/a2r-openclaw-host/src/api/`
+**Frontend:** `/6-ui/allternit-platform/src/lib/agents/`  
+**Backend:** `/1-kernel/infrastructure/allternit-openclaw-host/src/api/`
 
 ---
 
@@ -258,7 +258,7 @@ Create `/v1/agent/documents` endpoint for document-based canvases.
 
 ## API Client Layer
 
-Created `/6-ui/a2r-platform/src/lib/agents/native-agent-api.ts`:
+Created `/6-ui/allternit-platform/src/lib/agents/native-agent-api.ts`:
 
 - ✅ Handles all field name transformations
 - ✅ Provides typed request/response interfaces

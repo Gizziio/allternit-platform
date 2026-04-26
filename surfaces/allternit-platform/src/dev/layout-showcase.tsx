@@ -490,23 +490,23 @@ function CustomDemo() {
             <h4 className="font-medium mb-2">Interactive Features</h4>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-green-500" />
+                <CheckCircle2 className="w-4 h-4 text-green-500" />
                 Click connection status in bottom bar to cycle states
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-green-500" />
+                <CheckCircle2 className="w-4 h-4 text-green-500" />
                 Click sync status in bottom bar to cycle states
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-green-500" />
+                <CheckCircle2 className="w-4 h-4 text-green-500" />
                 Try keyboard navigation (Arrow keys, Enter, Escape)
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-green-500" />
+                <CheckCircle2 className="w-4 h-4 text-green-500" />
                 Use Cmd+K to open global search
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle className="w-4 h-4 text-green-500" />
+                <CheckCircle2 className="w-4 h-4 text-green-500" />
                 Resize sidebar by dragging its right edge
               </li>
             </ul>

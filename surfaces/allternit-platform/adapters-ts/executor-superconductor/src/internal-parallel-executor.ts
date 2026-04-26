@@ -1,6 +1,6 @@
 // packages/executor-superconductor/src/internal-parallel-executor.ts
 
-import { Executor, ParallelRun, ExecutionResult, ExecutionStatus, ExecutionUpdate, VariantResult } from '@a2rchitech/executor-core';
+import { Executor, ParallelRun, ExecutionResult, ExecutionStatus, ExecutionUpdate, VariantResult } from '@allternit/executor-core';
 
 interface InternalParallelExecutorConfig {
   maxConcurrency?: number;

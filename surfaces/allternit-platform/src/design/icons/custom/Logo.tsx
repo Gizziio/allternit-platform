@@ -1,7 +1,7 @@
 /**
  * Allternit Logo Component
  * 
- * Full A2rchitect logo with wordmark.
+ * Full allternit logo with wordmark.
  */
 
 import * as React from 'react';
@@ -18,7 +18,7 @@ export interface CustomIconProps {
 }
 
 /**
- * A2rchitect full logo with mark and wordmark
+ * allternit full logo with mark and wordmark
  */
 export const AllternitLogo = React.forwardRef<SVGSVGElement, CustomIconProps>(
   ({ size = 32, className, ...props }, ref) => {
@@ -31,7 +31,7 @@ export const AllternitLogo = React.forwardRef<SVGSVGElement, CustomIconProps>(
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         className={className}
-        aria-label={props['aria-label'] || 'A2rchitect'}
+        aria-label={props['aria-label'] || 'allternit'}
         aria-hidden={props['aria-hidden']}
         role="img"
       >

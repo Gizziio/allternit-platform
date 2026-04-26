@@ -67,7 +67,7 @@ If the CLI deployment keeps having issues, you can use Vercel's native Git integ
 
 ## What We've Fixed Already
 
-1. ✅ Import fixes (`@a2r` → `@allternit`)
+1. ✅ Import fixes (`@allternit` → `@allternit`)
 2. ✅ SDK dist committed to git for CI builds
 3. ✅ Added missing exports for agent hooks and components
 4. ✅ Created `.vercelignore` to exclude conflicting Rust files

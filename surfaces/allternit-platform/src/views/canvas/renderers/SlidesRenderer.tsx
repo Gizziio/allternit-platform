@@ -7,13 +7,14 @@
 
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { AllternitDeckPlayer } from '@/components/a2r';
+import { AllternitDeckPlayer } from '@/components/allternit';
 import type { ArtifactUIPart } from '@/lib/ai/ui-parts.types';
+import type { MoATask } from '@/lib/api/moa-client';
 
 interface SlidesRendererProps {
   artifact: ArtifactUIPart;
   sessionId?: string;
-  onMoATaskUpdate?: (tasks: any[]) => void;
+  onMoATaskUpdate?: (tasks: MoATask[]) => void;
 }
 
 /**

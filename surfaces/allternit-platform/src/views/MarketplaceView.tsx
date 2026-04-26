@@ -324,7 +324,7 @@ export const MarketplaceView: React.FC = () => {
               alignItems: 'center',
             }}
           >
-            <Search
+            <MagnifyingGlass
               size={18}
               style={{
                 position: 'absolute',

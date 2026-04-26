@@ -462,7 +462,7 @@ function NotificationBell({ isOpen, onOpenChange }: NotificationBellProps) {
             />
             <NotificationItem
               title="System update"
-              description="A2rchitect updated to v2.1.0"
+              description="allternit updated to v2.1.0"
               time="2 hours ago"
             />
           </div>

@@ -18,7 +18,7 @@ const meta: Meta<typeof ShellHeader> = {
   tags: ['autodocs'],
   parameters: {
     layout: 'fullscreen',
-    a2r: {
+    allternit: {
       componentId: 'shell-header',
       evidence: {
         types: ['INTERACTION_TEST', 'VISUAL_SNAPSHOT', 'A11Y_SCAN'],
@@ -67,7 +67,7 @@ export const Default: Story = {
  */
 export const Interactive: Story = {
   render: () => {
-    const [mode, setMode] = useState<'chat' | 'cowork' | 'code'>('chat');
+    const [mode, setMode] = useState<'chat' | 'cowork' | 'code' | 'design'>('chat');
     const [theme, setTheme] = useState<'light' | 'dark'>('dark');
     const [railCollapsed, setRailCollapsed] = useState(false);
     
@@ -101,9 +101,9 @@ export const Interactive: Story = {
 export const AllModes: Story = {
   render: () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <ShellHeader activeMode="chat" theme="dark" isRailCollapsed={false} />
-      <ShellHeader activeMode="cowork" theme="dark" isRailCollapsed={false} />
-      <ShellHeader activeMode="code" theme="dark" isRailCollapsed={false} />
+      <ShellHeader activeMode="chat" theme="dark" isRailCollapsed={false} onModeChange={() => {}} onThemeToggle={() => {}} onRailToggle={() => {}} />
+      <ShellHeader activeMode="cowork" theme="dark" isRailCollapsed={false} onModeChange={() => {}} onThemeToggle={() => {}} onRailToggle={() => {}} />
+      <ShellHeader activeMode="code" theme="dark" isRailCollapsed={false} onModeChange={() => {}} onThemeToggle={() => {}} onRailToggle={() => {}} />
     </div>
   ),
   parameters: {
@@ -119,8 +119,8 @@ export const AllModes: Story = {
 export const ThemeVariants: Story = {
   render: () => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <ShellHeader activeMode="chat" theme="dark" isRailCollapsed={false} />
-      <ShellHeader activeMode="chat" theme="light" isRailCollapsed={false} />
+      <ShellHeader activeMode="chat" theme="dark" isRailCollapsed={false} onModeChange={() => {}} onThemeToggle={() => {}} onRailToggle={() => {}} />
+      <ShellHeader activeMode="chat" theme="light" isRailCollapsed={false} onModeChange={() => {}} onThemeToggle={() => {}} onRailToggle={() => {}} />
     </div>
   ),
 };
@@ -152,7 +152,7 @@ export const RailExpanded: Story = {
  */
 export const WithEnvironment: Story = {
   render: () => {
-    const [env, setEnv] = useState('cloud');
+    const [env, setEnv] = useState<'local' | 'byoc-vps' | 'cloud' | 'hybrid'>('cloud');
     return (
       <ShellHeader
         activeMode="chat"
@@ -160,6 +160,9 @@ export const WithEnvironment: Story = {
         isRailCollapsed={false}
         currentEnvironment={env}
         onEnvironmentChange={setEnv}
+        onModeChange={() => {}}
+        onThemeToggle={() => {}}
+        onRailToggle={() => {}}
       />
     );
   },
@@ -178,6 +181,9 @@ export const Navigation: Story = {
         activeMode="chat"
         theme="dark"
         isRailCollapsed={false}
+        onModeChange={() => {}}
+        onThemeToggle={() => {}}
+        onRailToggle={() => {}}
         onBack={canGoBack ? () => {
           setCanGoBack(false);
           setCanGoForward(true);
@@ -204,10 +210,10 @@ export const Navigation: Story = {
  */
 export const FullDemo: Story = {
   render: () => {
-    const [mode, setMode] = useState<'chat' | 'cowork' | 'code'>('chat');
+    const [mode, setMode] = useState<'chat' | 'cowork' | 'code' | 'design'>('chat');
     const [theme, setTheme] = useState<'light' | 'dark'>('dark');
     const [railCollapsed, setRailCollapsed] = useState(false);
-    const [env, setEnv] = useState('cloud');
+    const [env, setEnv] = useState<'local' | 'byoc-vps' | 'cloud' | 'hybrid'>('cloud');
     const [controlCenterOpen, setControlCenterOpen] = useState(false);
     
     return (
@@ -296,7 +302,7 @@ export const Responsive: Story = {
       <div>
         <p style={{ fontSize: '12px', opacity: 0.6, marginBottom: '8px' }}>Desktop</p>
         <div style={{ maxWidth: '100%' }}>
-          <ShellHeader activeMode="chat" theme="dark" isRailCollapsed={false} />
+          <ShellHeader activeMode="chat" theme="dark" isRailCollapsed={false} onModeChange={() => {}} onThemeToggle={() => {}} onRailToggle={() => {}} />
         </div>
       </div>
     </div>

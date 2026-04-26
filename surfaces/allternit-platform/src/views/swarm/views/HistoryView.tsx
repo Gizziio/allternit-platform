@@ -297,10 +297,10 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
                   }}
                   labelStyle={{ color: TEXT.primary }}
                   itemStyle={{ fontSize: '12px' }}
-                  formatter={(value: number, name: string) => {
+                  formatter={((value: any, name: any) => {
                     const metric = METRICS.find(m => m.label === name);
                     return [metric?.formatter(value) || value, name];
-                  }}
+                  }) as any}
                 />
                 <Legend 
                   wrapperStyle={{ paddingTop: '20px' }}
@@ -344,10 +344,10 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
                   }}
                   labelStyle={{ color: TEXT.primary }}
                   itemStyle={{ fontSize: '12px' }}
-                  formatter={(value: number, name: string) => {
+                  formatter={((value: any, name: any) => {
                     const metric = METRICS.find(m => m.label === name);
                     return [metric?.formatter(value) || value, name];
-                  }}
+                  }) as any}
                 />
                 <Legend 
                   wrapperStyle={{ paddingTop: '20px' }}
@@ -390,10 +390,10 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
                   }}
                   labelStyle={{ color: TEXT.primary }}
                   itemStyle={{ fontSize: '12px' }}
-                  formatter={(value: number, name: string) => {
+                  formatter={((value: any, name: any) => {
                     const metric = METRICS.find(m => m.label === name);
                     return [metric?.formatter(value) || value, name];
-                  }}
+                  }) as any}
                 />
                 <Legend 
                   wrapperStyle={{ paddingTop: '20px' }}

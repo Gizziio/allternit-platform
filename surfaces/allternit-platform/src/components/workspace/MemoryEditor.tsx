@@ -5,7 +5,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { WorkspaceAPI, MemoryEntry } from '../../agent-workspace';
+import { WorkspaceAPI } from '../../agent-workspace';
+import type { MemoryEntry } from './types';
 
 interface MemoryEditorProps {
   api: WorkspaceAPI;
@@ -20,14 +21,14 @@ export function MemoryEditor({ api }: MemoryEditorProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    api.listMemoryEntries().then(setEntries).catch(() => {});
+    api.listMemoryEntries().then(e => setEntries(e as unknown as MemoryEntry[])).catch(() => {});
   }, [api]);
 
   useEffect(() => {
     if (searchQuery.length >= 2) {
-      api.searchMemory(searchQuery).then(setEntries).catch(() => {});
+      api.searchMemory(searchQuery).then(e => setEntries(e as unknown as MemoryEntry[])).catch(() => {});
     } else if (searchQuery === '') {
-      api.listMemoryEntries().then(setEntries).catch(() => {});
+      api.listMemoryEntries().then(e => setEntries(e as unknown as MemoryEntry[])).catch(() => {});
     }
   }, [api, searchQuery]);
 
@@ -54,6 +55,7 @@ export function MemoryEditor({ api }: MemoryEditorProps) {
       content: '# New Memory Entry\n\n',
       tags: [],
       relatedTasks: [],
+      importance: 1,
     };
     setEntries(prev => [newEntry, ...prev]);
     setSelectedEntry(newEntry);
@@ -62,17 +64,17 @@ export function MemoryEditor({ api }: MemoryEditorProps) {
   };
 
   const getTypeIcon = (type: MemoryEntry['type']) => {
-    const icons = {
+    const icons: Partial<Record<MemoryEntry['type'], string>> = {
       session: '📝',
       lesson: '💡',
       decision: '⚖️',
       checkpoint: '📍',
     };
-    return icons[type];
+    return icons[type] ?? '📄';
   };
 
   const getTypeLabel = (type: MemoryEntry['type']) => {
-    const labels = {
+    const labels: Partial<Record<MemoryEntry['type'], string>> = {
       session: 'Session Log',
       lesson: 'Lesson Learned',
       decision: 'Decision Record',

@@ -35,6 +35,7 @@ import {
   Command,
   Storefront,
   ShoppingBag,
+  GraduationCap,
 } from '@phosphor-icons/react';
 import { GizziMascot } from '@/components/ai-elements/GizziMascot';
 import { MatrixLogo } from '@/components/ai-elements/MatrixLogo';
@@ -416,21 +417,21 @@ export const ProductsDiscoveryView: React.FC = () => {
                 name: 'Dev Portal', 
                 action: 'Open', 
                 color: '#6366f1',
-                onClick: () => window.open('https://dev.a2r.dev', '_blank')
+                onClick: () => window.open('https://dev.allternit.dev', '_blank')
               },
               { 
                 icon: <FileText size={18} />, 
                 name: 'Documentation', 
                 action: 'View', 
                 color: '#8b5cf6',
-                onClick: () => window.open('https://docs.a2r.dev', '_blank')
+                onClick: () => window.open('https://docs.allternit.dev', '_blank')
               },
               { 
                 icon: <Terminal size={18} />, 
                 name: 'API Reference', 
                 action: 'Explore', 
                 color: '#a78bfa',
-                onClick: () => window.open('https://docs.a2r.dev/api', '_blank')
+                onClick: () => window.open('https://docs.allternit.dev/api', '_blank')
               },
             ]}
           />
@@ -450,21 +451,55 @@ export const ProductsDiscoveryView: React.FC = () => {
                 name: 'Browse', 
                 action: 'Open', 
                 color: '#10b981',
-                onClick: () => window.open('https://marketplace.a2r.dev', '_blank')
+                onClick: () => window.open('https://marketplace.allternit.dev', '_blank')
               },
               { 
                 icon: <Puzzle size={18} />, 
                 name: 'Plugins', 
                 action: 'Discover', 
                 color: '#06b6d4',
-                onClick: () => window.open('https://marketplace.a2r.dev/plugins', '_blank')
+                onClick: () => window.open('https://marketplace.allternit.dev/plugins', '_blank')
               },
               { 
                 icon: <Sparkle size={18} />, 
                 name: 'Publish', 
                 action: 'Submit', 
                 color: '#14b8a6',
-                onClick: () => window.open('https://marketplace.a2r.dev/publish', '_blank')
+                onClick: () => window.open('https://marketplace.allternit.dev/publish', '_blank')
+              },
+            ]}
+          />
+        </div>
+
+        {/* Row 4: A://Labs Learning Portal */}
+        <div style={{ 
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '32px',
+          marginBottom: '32px'
+        }}>
+          <ProductCard
+            type="cloud"
+            title="A://Labs"
+            subtitle="Learning Portal"
+            description="7 live Canvas courses covering AI reasoning, agent orchestration, computer vision, local RAG, and multi-agent systems."
+            gradient="linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)"
+            accentColor="#8b5cf6"
+            icon={<GraduationCap size={32} color="#fff" />}
+            platforms={[
+              { 
+                icon: <GraduationCap size={18} />, 
+                name: 'Open Portal', 
+                action: 'Launch', 
+                color: '#8b5cf6',
+                onClick: () => window.dispatchEvent(new CustomEvent('allternit:open-labs'))
+              },
+              { 
+                icon: <Globe size={18} />, 
+                name: 'Canvas LMS', 
+                action: 'Browse', 
+                color: '#a78bfa',
+                onClick: () => window.open('https://canvas.instructure.com/courses/14593493', '_blank')
               },
             ]}
           />
@@ -1039,7 +1074,7 @@ function ExtensionDetailSection({ onClose }: { onClose: () => void }) {
   ];
 
   const buildCommands = [
-    { label: 'Clone repository', command: 'git clone https://github.com/a2r/chrome-extension.git' },
+    { label: 'Clone repository', command: 'git clone https://github.com/allternit/chrome-extension.git' },
     { label: 'Install dependencies', command: 'cd chrome-extension && npm install' },
     { label: 'Build extension', command: 'npm run build:prod' },
     { label: 'Load in Chrome', command: 'Open chrome://extensions → Developer mode → Load unpacked → Select dist/' },
@@ -1215,7 +1250,7 @@ function ExtensionDetailSection({ onClose }: { onClose: () => void }) {
               </a>
 
               <a
-                href="https://github.com/a2r/chrome-extension/releases"
+                href="https://github.com/allternit/chrome-extension/releases"
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
@@ -1313,7 +1348,7 @@ function ExtensionDetailSection({ onClose }: { onClose: () => void }) {
               </a>
 
               <a
-                href="https://github.com/a2r/firefox-extension/releases"
+                href="https://github.com/allternit/firefox-extension/releases"
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{

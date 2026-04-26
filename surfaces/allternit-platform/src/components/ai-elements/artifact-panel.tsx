@@ -24,9 +24,14 @@ import {
   GitBranch,
   Warning,
   Image as ImageIcon,
+  FilmStrip,
+  SpinnerGap,
+  ArrowsOut,
 } from '@phosphor-icons/react';
+import { useNav } from '@/nav/useNav';
 import { Markdown } from "./markdown";
 import { CodeBlock } from "./code-block";
+import { AllternitOpenUIRenderer } from '@/lib/openui/AllternitOpenUIRenderer';
 import type { BundledLanguage } from "shiki";
 import DOMPurify from 'dompurify';
 
@@ -67,7 +72,8 @@ export type ArtifactKind =
   | "html"
   | "jsx"
   | "mermaid"
-  | "sheet";
+  | "sheet"
+  | "openui";
 
 export interface SelectedArtifact {
   title: string;
@@ -124,6 +130,11 @@ const KIND_META: Record<
     icon: <FileText size={15} />,
     accent: "rgba(74,222,128,0.7)",
   },
+  openui: {
+    label: "Interactive UI",
+    icon: <GitBranch size={15} />,
+    accent: "rgba(212,176,140,0.7)",
+  },
 };
 
 // ─── ArtifactCard ─────────────────────────────────────────────────────────────
@@ -136,13 +147,28 @@ interface ArtifactCardProps {
 
 export function ArtifactCard({ artifact, isSelected, onClick }: ArtifactCardProps) {
   const [hovered, setHovered] = useState(false);
+  const { dispatch } = useNav();
   const meta = KIND_META[artifact.kind] ?? KIND_META.document;
+
+  const handleExpand = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    dispatch({
+      type: 'PUSH_VIEW',
+      viewType: 'allternit-ix' as any,
+      viewId: `canvas-${artifact.title}`,
+      title: artifact.title,
+      context: {
+        stream: artifact.content,
+      } as any,
+    });
+  };
 
   return (
     <button
       onClick={onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      className="group relative"
       style={{
         display: "flex",
         alignItems: "center",
@@ -232,6 +258,32 @@ export function ArtifactCard({ artifact, isSelected, onClick }: ArtifactCardProp
         )}
       </div>
 
+      {artifact.kind === 'openui' && hovered && (
+        <div 
+          onClick={handleExpand}
+          style={{
+            position: 'absolute',
+            top: '-8px',
+            right: '-8px',
+            width: '28px',
+            height: '28px',
+            borderRadius: '50%',
+            background: 'var(--accent-primary)',
+            color: 'var(--bg-primary)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            zIndex: 10,
+            transition: 'transform 0.2s ease',
+          }}
+          className="hover:scale-110 active:scale-95"
+          title="Expand to Full Canvas"
+        >
+          <ArrowsOut size={14} weight="bold" />
+        </div>
+      )}
+
       {/* Chevron */}
       <CaretRight
         size={14}
@@ -253,13 +305,79 @@ interface ArtifactSidePanelProps {
   onClose: () => void;
 }
 
+// ─── HyperFrames render hook ──────────────────────────────────────────────────
+
+type RenderFormat = 'mp4' | 'mov' | 'webm';
+type RenderStatus = 'idle' | 'checking' | 'rendering' | 'done' | 'error' | 'unavailable';
+
+function useHyperFrames(html: string | undefined) {
+  const [status, setStatus] = useState<RenderStatus>('idle');
+  const [progress, setProgress] = useState('');
+  const [error, setError] = useState('');
+  const [savedPath, setSavedPath] = useState('');
+
+  const render = useCallback(async (format: RenderFormat = 'mp4') => {
+    if (!html) return;
+
+    // Only available in Electron
+    const hf = (window as Window & { allternit?: { hyperframes?: { check: () => Promise<{ available: boolean }>; render: (html: string, opts: { format: RenderFormat }) => Promise<{ success: boolean; savedPath?: string; error?: string }>; onProgress: (h: (m: string) => void) => () => void } } }).allternit?.hyperframes;
+    if (!hf) {
+      setStatus('unavailable');
+      return;
+    }
+
+    setStatus('checking');
+    setProgress('');
+    setError('');
+    setSavedPath('');
+
+    const check = await hf.check();
+    if (!check.available) {
+      setStatus('unavailable');
+      setError('HyperFrames not installed. Run: npx skills add heygen-com/hyperframes');
+      return;
+    }
+
+    setStatus('rendering');
+    const unsub = hf.onProgress((msg) => setProgress(msg));
+
+    try {
+      const result = await hf.render(html, { format });
+      unsub();
+      if (result.success && result.savedPath) {
+        setStatus('done');
+        setSavedPath(result.savedPath);
+      } else {
+        setStatus('error');
+        setError(result.error ?? 'Render failed');
+      }
+    } catch (err) {
+      unsub();
+      setStatus('error');
+      setError(String(err));
+    }
+  }, [html]);
+
+  const reset = useCallback(() => {
+    setStatus('idle');
+    setProgress('');
+    setError('');
+    setSavedPath('');
+  }, []);
+
+  return { status, progress, error, savedPath, render, reset };
+}
+
 export function ArtifactSidePanel({ artifact, onClose }: ArtifactSidePanelProps) {
   const [isCopied, setIsCopied] = useState(false);
   const [copyError, setCopyError] = useState(false);
+  const [showRenderModal, setShowRenderModal] = useState(false);
+  const [renderFormat, setRenderFormat] = useState<RenderFormat>('mp4');
+  const hf = useHyperFrames(artifact?.kind === 'html' ? artifact.content : undefined);
 
   const handleCopy = useCallback(async () => {
     if (!artifact?.content) return;
-    
+
     try {
       await navigator.clipboard.writeText(artifact.content);
       setIsCopied(true);
@@ -272,6 +390,10 @@ export function ArtifactSidePanel({ artifact, onClose }: ArtifactSidePanelProps)
       setTimeout(() => setCopyError(false), 3000);
     }
   }, [artifact]);
+
+  const handleRender = useCallback(async () => {
+    await hf.render(renderFormat);
+  }, [hf, renderFormat]);
 
   if (!artifact) return null;
 
@@ -380,6 +502,43 @@ export function ArtifactSidePanel({ artifact, onClose }: ArtifactSidePanelProps)
               )}
             </button>
           )}
+
+          {/* Render as Video — only for HTML artifacts, only in Electron */}
+          {artifact.kind === 'html' && hf.status !== 'unavailable' && (
+            <button
+              onClick={() => setShowRenderModal((v) => !v)}
+              title="Render as video"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                padding: "5px 10px",
+                borderRadius: "7px",
+                border: "1px solid rgba(255,255,255,0.09)",
+                background: showRenderModal
+                  ? "rgba(248,165,113,0.12)"
+                  : hf.status === 'done'
+                  ? "rgba(74,222,128,0.10)"
+                  : "rgba(255,255,255,0.04)",
+                color: hf.status === 'done'
+                  ? "rgba(74,222,128,0.9)"
+                  : "rgba(248,165,113,0.8)",
+                cursor: "pointer",
+                fontSize: "12px",
+                fontWeight: 500,
+                transition: "all 0.15s ease",
+              }}
+            >
+              {hf.status === 'rendering' ? (
+                <><SpinnerGap size={13} style={{ animation: 'spin 1s linear infinite' }} /> Rendering…</>
+              ) : hf.status === 'done' ? (
+                <><Check size={13} /> Saved</>
+              ) : (
+                <><FilmStrip size={13} /> Video</>
+              )}
+            </button>
+          )}
+
           <button
             onClick={onClose}
             title="Close"
@@ -409,6 +568,90 @@ export function ArtifactSidePanel({ artifact, onClose }: ArtifactSidePanelProps)
           </button>
         </div>
       </div>
+
+      {/* ── HyperFrames render panel ── */}
+      {showRenderModal && artifact.kind === 'html' && (
+        <div
+          style={{
+            borderBottom: "1px solid rgba(255,255,255,0.07)",
+            padding: "12px 16px",
+            background: "rgba(248,165,113,0.04)",
+            flexShrink: 0,
+          }}
+        >
+          <div style={{ fontSize: "11px", fontWeight: 600, color: "rgba(248,165,113,0.7)", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: "8px" }}>
+            Export as Video
+          </div>
+
+          {/* Format selector */}
+          {hf.status === 'idle' || hf.status === 'error' ? (
+            <>
+              <div style={{ display: "flex", gap: "6px", marginBottom: "10px" }}>
+                {(['mp4', 'webm', 'mov'] as RenderFormat[]).map((fmt) => (
+                  <button
+                    key={fmt}
+                    onClick={() => setRenderFormat(fmt)}
+                    style={{
+                      padding: "4px 10px",
+                      borderRadius: "6px",
+                      border: `1px solid ${renderFormat === fmt ? "rgba(248,165,113,0.5)" : "rgba(255,255,255,0.09)"}`,
+                      background: renderFormat === fmt ? "rgba(248,165,113,0.12)" : "rgba(255,255,255,0.03)",
+                      color: renderFormat === fmt ? "rgba(248,165,113,0.9)" : "rgba(255,255,255,0.4)",
+                      fontSize: "11px",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}
+                  >
+                    {fmt}
+                  </button>
+                ))}
+              </div>
+              {hf.status === 'error' && (
+                <div style={{ fontSize: "11px", color: "rgba(239,68,68,0.8)", marginBottom: "8px", wordBreak: "break-word" }}>
+                  {hf.error}
+                </div>
+              )}
+              <button
+                onClick={handleRender}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "6px 14px",
+                  borderRadius: "7px",
+                  border: "1px solid rgba(248,165,113,0.3)",
+                  background: "rgba(248,165,113,0.12)",
+                  color: "rgba(248,165,113,0.9)",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                <FilmStrip size={13} />
+                Render {renderFormat.toUpperCase()}
+              </button>
+            </>
+          ) : hf.status === 'checking' || hf.status === 'rendering' ? (
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", color: "rgba(248,165,113,0.7)" }}>
+              <SpinnerGap size={14} style={{ animation: 'spin 1s linear infinite' }} />
+              {hf.progress || (hf.status === 'checking' ? 'Checking dependencies…' : 'Rendering…')}
+            </div>
+          ) : hf.status === 'done' ? (
+            <div style={{ fontSize: "12px", color: "rgba(74,222,128,0.85)" }}>
+              <div style={{ fontWeight: 600, marginBottom: "3px" }}>Saved!</div>
+              <div style={{ color: "rgba(255,255,255,0.35)", wordBreak: "break-all", fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>{hf.savedPath}</div>
+              <button
+                onClick={hf.reset}
+                style={{ marginTop: "8px", padding: "4px 10px", borderRadius: "6px", border: "1px solid rgba(255,255,255,0.09)", background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.4)", fontSize: "11px", cursor: "pointer" }}
+              >
+                Render another
+              </button>
+            </div>
+          ) : null}
+        </div>
+      )}
 
       {/* ── Content ── */}
       <div
@@ -487,6 +730,15 @@ function ArtifactContent({ artifact }: { artifact: SelectedArtifact }) {
   // ── Mermaid: live rendered diagram ──
   if (kind === "mermaid") {
     return <MermaidRenderer content={content ?? ""} />;
+  }
+
+  // ── OpenUI: Generative UI ──
+  if (kind === "openui") {
+    return (
+      <div style={{ padding: "20px" }}>
+        <AllternitOpenUIRenderer stream={content ?? ""} />
+      </div>
+    );
   }
 
   // ── Sheet: simple table ──

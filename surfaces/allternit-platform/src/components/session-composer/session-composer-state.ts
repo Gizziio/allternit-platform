@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
-import { createA2RClient } from "@allternit/sdk";
+import { createAllternitClient } from "@/lib/sdk";
 
 export interface PermissionRequest {
   id: string;
@@ -214,17 +214,14 @@ export function useSessionComposerState(
     };
   }, [connect]);
 
-  const sdk = useMemo(() => createA2RClient({ baseUrl: `${serverUrl}/v1` }), [serverUrl]);
+  const sdk = useMemo(() => createAllternitClient({ baseUrl: `${serverUrl}/v1` }), [serverUrl]);
 
   const replyPermission = useCallback(
     async (reply: "once" | "always" | "reject", message?: string) => {
       if (!state.permissionRequest) return;
       const { id } = state.permissionRequest;
       dispatch({ type: "permission_replied", payload: { requestID: id } });
-      await sdk.permission.reply({
-        path: { requestID: id },
-        body: { reply, ...(message ? { message } : {}) },
-      }).catch(() => {
+      await sdk.permission.reply(id, { reply, ...(message ? { message } : {}) }).catch(() => {
         // If the reply fails the SSE will re-surface the request on reconnect
       });
     },
@@ -236,10 +233,7 @@ export function useSessionComposerState(
       if (!state.questionRequest) return;
       const { id } = state.questionRequest;
       dispatch({ type: "question_closed", payload: { requestID: id } });
-      await sdk.question.reply({
-        path: { requestID: id },
-        body: { answers },
-      }).catch(() => {});
+      await sdk.question.reply(id, answers[0]?.[0] ?? '').catch(() => {});
     },
     [sdk, state.questionRequest],
   );
@@ -248,9 +242,7 @@ export function useSessionComposerState(
     if (!state.questionRequest) return;
     const { id } = state.questionRequest;
     dispatch({ type: "question_closed", payload: { requestID: id } });
-    await sdk.question.reject({
-      path: { requestID: id },
-    }).catch(() => {});
+    await sdk.question.reject(id).catch(() => {});
   }, [sdk, state.questionRequest]);
 
   const dismissTodos = useCallback(() => {

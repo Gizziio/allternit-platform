@@ -1,0 +1,30 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": ".tsbuildinfo.typecheck"
+  },
+  "include": [
+    "src/lib/**/*",
+    "src/views/**/*",
+    "src/components/**/*",
+    "src/app/**/*",
+    "src/shell/**/*",
+    "src/hooks/**/*",
+    "src/stores/**/*",
+    "src/types/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "src/legacy/**/*",
+    "src/vendor/**/*",
+    "src/dev/**/*",
+    "src/stubs/**/*",
+    "src/dev-portal/**/*",
+    "src/allternit-usage-example/**/*",
+    "src/plugin-template/**/*",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx"
+  ]
+}

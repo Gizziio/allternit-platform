@@ -1,7 +1,7 @@
 /**
- * A2rchitect Super-Agent OS - Main Entry Component
+ * allternit Super-Agent OS - Main Entry Component
  * 
- * The root wrapper that initializes and orchestrates all A2rOS systems:
+ * The root wrapper that initializes and orchestrates all AllternitOS systems:
  * - Workspace service connection (Rails/Bus/Ledger)
  * - Kernel bridge (Electron IPC / WebSocket / Mock)
  * - Program launcher with URI scheme support
@@ -15,15 +15,15 @@ type ReactNode = React.ReactNode;
 import { useSidecarStore } from './stores/useSidecarStore';
 import { programLauncher } from './utils/ProgramLauncher';
 import { initWorkspaceService } from './services/WorkspaceService';
-import { A2rCanvas } from './components/A2rCanvas';
-import { A2rConsoleToggle } from './components/A2rConsole';
-import type { A2rProgram, LaunchProgramRequest } from './types/programs';
+import { AllternitCanvas } from './components/AllternitCanvas';
+import { AllternitConsoleToggle } from './components/AllternitConsole';
+import type { AllternitProgram, LaunchProgramRequest } from './types/programs';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export interface A2rOSConfig {
+export interface AllternitOSConfig {
   /** Workspace service URL */
   workspaceUrl?: string;
   /** Workspace ID */
@@ -41,21 +41,21 @@ export interface A2rOSConfig {
     state?: Record<string, unknown>;
   };
   /** Handler for custom program launches */
-  onLaunchProgram?: (request: LaunchProgramRequest) => Promise<A2rProgram>;
+  onLaunchProgram?: (request: LaunchProgramRequest) => Promise<AllternitProgram>;
   /** Handler for program activation */
-  onActivateProgram?: (program: A2rProgram) => void;
+  onActivateProgram?: (program: AllternitProgram) => void;
   /** Handler for program close */
   onCloseProgram?: (programId: string) => void;
   /** Handler for errors */
   onError?: (error: Error) => void;
 }
 
-export interface A2rOSProps {
-  config: A2rOSConfig;
+export interface AllternitOSProps {
+  config: AllternitOSConfig;
   children?: ReactNode;
   /** Show the console toggle button */
   showConsoleToggle?: boolean;
-  /** Show the A2rCanvas program dock */
+  /** Show the AllternitCanvas program dock */
   showProgramDock?: boolean;
   /** Custom header content */
   header?: ReactNode;
@@ -66,10 +66,10 @@ export interface A2rOSProps {
 }
 
 // ============================================================================
-// A2rOS Provider Component
+// AllternitOS Provider Component
 // ============================================================================
 
-export const A2rOSProvider: React.FC<{ config: A2rOSConfig; children: ReactNode }> = ({
+export const AllternitOSProvider: React.FC<{ config: AllternitOSConfig; children: ReactNode }> = ({
   config,
   children,
 }) => {
@@ -133,10 +133,10 @@ export const A2rOSProvider: React.FC<{ config: A2rOSConfig; children: ReactNode 
       }
     };
 
-    window.addEventListener('a2r-launch-uri', handleUriLaunch);
+    window.addEventListener('allternit-launch-uri', handleUriLaunch);
 
     return () => {
-      window.removeEventListener('a2r-launch-uri', handleUriLaunch);
+      window.removeEventListener('allternit-launch-uri', handleUriLaunch);
     };
   }, [config, store]);
 
@@ -144,7 +144,7 @@ export const A2rOSProvider: React.FC<{ config: A2rOSConfig; children: ReactNode 
     return (
       <div className="flex items-center justify-center h-screen bg-red-50 dark:bg-red-900/20">
         <div className="text-center">
-          <h2 className="text-xl font-bold text-red-600 mb-2">A2rOS Initialization Failed</h2>
+          <h2 className="text-xl font-bold text-red-600 mb-2">AllternitOS Initialization Failed</h2>
           <p className="text-red-500">{error.message}</p>
           <button 
             onClick={() => window.location.reload()}
@@ -162,7 +162,7 @@ export const A2rOSProvider: React.FC<{ config: A2rOSConfig; children: ReactNode 
       <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">Initializing A2rOS...</p>
+          <p className="text-gray-600 dark:text-gray-400">Initializing AllternitOS...</p>
         </div>
       </div>
     );
@@ -172,10 +172,10 @@ export const A2rOSProvider: React.FC<{ config: A2rOSConfig; children: ReactNode 
 };
 
 // ============================================================================
-// A2rOS Layout Component
+// AllternitOS Layout Component
 // ============================================================================
 
-export const A2rOS: React.FC<A2rOSProps> = ({
+export const AllternitOS: React.FC<AllternitOSProps> = ({
   config = {},
   children,
   showConsoleToggle = true,
@@ -187,7 +187,7 @@ export const A2rOS: React.FC<A2rOSProps> = ({
   const store = useSidecarStore();
 
   return (
-    <A2rOSProvider config={config}>
+    <AllternitOSProvider config={config}>
       <div className={`flex flex-col h-screen bg-white dark:bg-gray-900 ${className}`}>
         {/* Header */}
         {header && (
@@ -202,7 +202,7 @@ export const A2rOS: React.FC<A2rOSProps> = ({
           {showProgramDock && (
             <div className="absolute inset-0 pointer-events-none">
               <div className="pointer-events-auto h-full">
-                <A2rCanvas />
+                <AllternitCanvas />
               </div>
             </div>
           )}
@@ -215,7 +215,7 @@ export const A2rOS: React.FC<A2rOSProps> = ({
           {/* Console Toggle */}
           {showConsoleToggle && (
             <div className="absolute bottom-4 right-4 pointer-events-auto">
-              <A2rConsoleToggle />
+              <AllternitConsoleToggle />
             </div>
           )}
         </main>
@@ -227,20 +227,20 @@ export const A2rOS: React.FC<A2rOSProps> = ({
           </footer>
         )}
       </div>
-    </A2rOSProvider>
+    </AllternitOSProvider>
   );
 };
 
 // ============================================================================
-// A2rOS Header Component
+// AllternitOS Header Component
 // ============================================================================
 
-export const A2rOSHeader: React.FC<{
+export const AllternitOSHeader: React.FC<{
   title?: string;
   logo?: ReactNode;
   actions?: ReactNode;
   className?: string;
-}> = ({ title = 'A2rchitect', logo, actions, className = '' }) => {
+}> = ({ title = 'allternit', logo, actions, className = '' }) => {
   const store = useSidecarStore();
   const activeCount = Object.values(store.programs).filter(p => p.status === 'active' || p.status === 'background').length;
 
@@ -313,7 +313,7 @@ const ConnectionStatusIndicator: React.FC = () => {
 // Quick Actions Bar
 // ============================================================================
 
-export const A2rQuickActions: React.FC = () => {
+export const AllternitQuickActions: React.FC = () => {
   const actions = [
     { icon: '📄', label: 'Research', type: 'research-doc' },
     { icon: '📊', label: 'Data', type: 'data-grid' },
@@ -349,10 +349,10 @@ export const A2rQuickActions: React.FC = () => {
 };
 
 // ============================================================================
-// A2rOS Status Bar
+// AllternitOS Status Bar
 // ============================================================================
 
-export const A2rOSStatusBar: React.FC = () => {
+export const AllternitOSStatusBar: React.FC = () => {
   const store = useSidecarStore();
   const programsArray = Object.values(store.programs);
   const programCount = programsArray.length;
@@ -361,7 +361,7 @@ export const A2rOSStatusBar: React.FC = () => {
   return (
     <div className="flex items-center justify-between px-4 py-2 bg-gray-50 dark:bg-gray-800/50 text-xs text-gray-500">
       <div className="flex items-center gap-4">
-        <span>A2rOS v1.0.0</span>
+        <span>AllternitOS v1.0.0</span>
         {programCount > 0 && (
           <span>
             {activeCount}/{programCount} programs active
@@ -379,7 +379,7 @@ export const A2rOSStatusBar: React.FC = () => {
 // Command Palette Integration
 // ============================================================================
 
-export const useA2rCommandPalette = () => {
+export const useAllternitCommandPalette = () => {
   const [isOpen, setIsOpen] = useState(false);
   const store = useSidecarStore();
 
@@ -419,7 +419,7 @@ export const useA2rCommandPalette = () => {
     },
     {
       id: 'open-console',
-      title: 'Open A2r Console',
+      title: 'Open Allternit Console',
       icon: '🤖',
       action: () => {
         // This would open the console
@@ -445,4 +445,4 @@ export const useA2rCommandPalette = () => {
 // Export Main Components
 // ============================================================================
 
-export default A2rOS;
+export default AllternitOS;

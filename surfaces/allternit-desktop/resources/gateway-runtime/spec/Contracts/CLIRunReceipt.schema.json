@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://allternit.local/spec/contracts/CLIRunReceipt.schema.json",
+  "title": "CLI Run Receipt",
+  "description": "Schema for CLI execution receipts in the Allternit system",
+  "type": "object",
+  "properties": {
+    "receipt_version": {
+      "type": "string",
+      "description": "Version of the receipt schema"
+    },
+    "receipt_type": {
+      "type": "string",
+      "const": "cli_run_receipt",
+      "description": "Type of receipt"
+    },
+    "run_id": {
+      "type": "string",
+      "description": "ID of the run that generated this receipt"
+    },
+    "task_id": {
+      "type": "string",
+      "description": "ID of the task that initiated the CLI run"
+    },
+    "wih_id": {
+      "type": "string",
+      "description": "ID of the WIH associated with this run"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp of the execution"
+    },
+    "cli_module_id": {
+      "type": "string",
+      "description": "ID of the CLI module that was executed"
+    },
+    "worker_id": {
+      "type": "string",
+      "description": "ID of the worker that executed the module"
+    },
+    "argv": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Actual arguments passed to the command"
+    },
+    "cwd": {
+      "type": "string",
+      "description": "Current working directory during execution"
+    },
+    "env_vars": {
+      "type": "object",
+      "description": "Environment variables present during execution",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "exit_code": {
+      "type": "integer",
+      "description": "Exit code of the executed command"
+    },
+    "stdout_hash": {
+      "type": "string",
+      "description": "Hash of the stdout output"
+    },
+    "stderr_hash": {
+      "type": "string",
+      "description": "Hash of the stderr output"
+    },
+    "execution_time_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Execution time in milliseconds"
+    }
+  },
+  "required": [
+    "receipt_version",
+    "receipt_type",
+    "run_id",
+    "task_id",
+    "wih_id",
+    "timestamp",
+    "cli_module_id",
+    "worker_id",
+    "argv",
+    "cwd",
+    "exit_code",
+    "stdout_hash",
+    "stderr_hash",
+    "execution_time_ms"
+  ]
+}

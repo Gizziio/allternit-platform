@@ -127,9 +127,9 @@ export class CapsuleClient {
     const eventSource = new EventSource(`${this.baseUrl}/capsules/${id}/stream`);
     this.activeStreams.set(id, eventSource);
     
-    eventSource.onclose = () => {
+    eventSource.addEventListener('close', () => {
       this.activeStreams.delete(id);
-    };
+    });
     
     return eventSource;
   }

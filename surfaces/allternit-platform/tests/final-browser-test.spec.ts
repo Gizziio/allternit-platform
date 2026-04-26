@@ -20,7 +20,7 @@ test('browser loads web content', async ({ page }) => {
   await page.screenshot({ path: 'test-results/final-browser-test.png', fullPage: true });
   
   // Check iframe
-  const iframe = page.locator('iframe[data-testid="a2r-iframe-content"]');
+  const iframe = page.locator('iframe[data-testid="allternit-iframe-content"]');
   const box = await iframe.boundingBox();
   console.log('Iframe dimensions:', box?.width, 'x', box?.height);
   
@@ -33,7 +33,7 @@ test('browser loads web content', async ({ page }) => {
   
   // Check if iframe loaded
   const iframeLoaded = await page.evaluate(() => {
-    const iframeEl = document.querySelector('iframe[data-testid="a2r-iframe-content"]') as HTMLIFrameElement;
+    const iframeEl = document.querySelector('iframe[data-testid="allternit-iframe-content"]') as HTMLIFrameElement;
     if (!iframeEl) return null;
     return {
       src: iframeEl.src,

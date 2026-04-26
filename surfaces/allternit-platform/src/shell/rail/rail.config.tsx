@@ -2,16 +2,21 @@
  * Chat Mode Rail Configuration
  */
 
+import type { Icon } from '@phosphor-icons/react';
 import {
   ChatTeardropText,
   Robot,
   Plus,
+  Lightning,
+  Palette,
+  Code,
+  Globe,
 } from '@phosphor-icons/react';
 
 export interface RailConfigItem {
   id: string;
   label: string;
-  icon: React.ComponentType<{ size?: number | string; weight?: any; color?: string }>;
+  icon: Icon;
   payload: string;
   isAction?: boolean;
   shortcut?: string;
@@ -22,7 +27,7 @@ export interface RailConfigItem {
 export interface RailConfigSection {
   id: string;
   title: string;
-  icon?: React.ComponentType<{ size?: number | string; weight?: any; color?: string }>;
+  icon?: Icon;
   items: RailConfigItem[];
   isDynamic?: boolean;
   defaultExpanded?: boolean;
@@ -46,8 +51,42 @@ export function MatrixLogo({ size = 20 }: { size?: number | string }) {
 
 export const RAIL_CONFIG: RailConfigSection[] = [
   {
-    id: 'chat',
-    title: 'Chat',
+    id: 'primary',
+    title: 'Home',
+    items: [
+      { 
+        id: 'chat', 
+        label: 'Chat', 
+        icon: ChatTeardropText, 
+        payload: 'chat',
+        shortcut: '⌘⇧C'
+      },
+      { 
+        id: 'blueprint-studio', 
+        label: 'Blueprint Studio', 
+        icon: Palette, 
+        payload: 'design',
+        shortcut: '⌘⇧D'
+      },
+      { 
+        id: 'code', 
+        label: 'Code', 
+        icon: Code, 
+        payload: 'code',
+        shortcut: '⌘⇧K'
+      },
+      { 
+        id: 'browser', 
+        label: 'Browser', 
+        icon: Globe, 
+        payload: 'browser',
+        shortcut: '⌘⇧B'
+      },
+    ]
+  },
+  {
+    id: 'chat-tools',
+    title: 'Chat Controls',
     icon: MatrixLogo,
     collapsible: false,
     defaultExpanded: true,

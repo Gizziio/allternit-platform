@@ -214,7 +214,7 @@ class ImagePlugin implements ModePlugin {
       `# Image Generation`,
       '',
       `**Prompt:** ${result.prompt}`,
-      `**Provider:** ${result.provider}`,
+      `**Provider:** ${(result as any).provider ?? 'unknown'}`,
       `**Images:** ${result.images.length}`,
       '',
       'Images generated successfully!',

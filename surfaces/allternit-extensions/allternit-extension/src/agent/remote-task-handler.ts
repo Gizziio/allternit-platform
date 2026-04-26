@@ -1,17 +1,17 @@
 /**
- * RemoteTaskHandler (G4)
+ * RemoteTaskHandler
  *
- * Connects the page-agent extension to the A2R thin-client via native messaging.
+ * Connects the page-agent extension to the Allternit Desktop app via native messaging.
  * The extension initiates a `chrome.runtime.connectNative('com.allternit.desktop')`
- * connection; Chrome launches the native host registered by thin-client, which
- * bridges the messages to the thin-client TCP server (port 3016).
+ * connection; Chrome launches the native host which bridges messages to the Desktop
+ * app's TCP 3011 bridge (com.allternit.desktop native host).
  *
- * ── Inbound commands (thin-client → extension) ───────────────────────────────
+ * ── Inbound commands (Desktop → extension) ────────────────────────────────────
  *   { id, type: 'execute_task', payload: { task: string }, timestamp }
  *   { id, type: 'stop_task', payload: {}, timestamp }
  *   { id, type: 'get_status', payload: {}, timestamp }
  *
- * ── Outbound events (extension → thin-client) ────────────────────────────────
+ * ── Outbound events (extension → Desktop) ────────────────────────────────────
  *   { id, type: 'status',   payload: { status: AgentStatus }, timestamp }
  *   { id, type: 'activity', payload: AgentActivity, timestamp }
  *   { id, type: 'history',  payload: { events: HistoricalEvent[] }, timestamp }
@@ -20,7 +20,6 @@
  *   { id, type: 'pong',     payload: {}, timestamp }
  *
  * Native host name: com.allternit.desktop
- * Registered by: thin-client NativeHostServer (task #57)
  */
 
 import type { AgentActivity, AgentStatus, HistoricalEvent } from '@page-agent/core'

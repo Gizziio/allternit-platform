@@ -13,7 +13,7 @@
 import { MyAllternitPlugin, IMyPluginAPI, IMyPluginEvents } from '../src/index';
 
 // Import Allternit Platform types (when available)
-// import { A2RPlugin, PluginContext, EventEmitter } from '@allternit/platform';
+// import { AllternitPlugin, PluginContext, EventEmitter } from '@allternit/platform';
 
 // ============================================================================
 // TYPE DEFINITIONS

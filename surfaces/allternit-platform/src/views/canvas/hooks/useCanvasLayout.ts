@@ -1,7 +1,7 @@
 /**
  * useCanvasLayout.ts
  * 
- * Hook for managing A2r-Canvas layout state and persistence.
+ * Hook for managing Allternit-Canvas layout state and persistence.
  * Handles panel sizes, layout mode, and localStorage persistence.
  */
 

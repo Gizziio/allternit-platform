@@ -40,7 +40,7 @@ constraints:
   - Approval required for all UI changes
 
 acceptance_criteria:
-  - Code follows A2R standards
+  - Code follows Allternit standards
   - Tests are comprehensive
   - Documentation is complete
   - Accessibility requirements met

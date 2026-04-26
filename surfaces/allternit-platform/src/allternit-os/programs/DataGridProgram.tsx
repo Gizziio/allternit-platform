@@ -1,5 +1,5 @@
 /**
- * A2rchitect Super-Agent OS - Data Grid Program
+ * allternit Super-Agent OS - Data Grid Program
  * 
  * Production-ready data grid with:
  * - Real Python-powered visualization (Matplotlib/Plotly/Seaborn)
@@ -13,10 +13,10 @@ const { useState, useCallback, useRef, useEffect } = React;
 import { useSidecarStore } from '../stores/useSidecarStore';
 import { usePythonExecution, VisualizationLibrary } from '../services/PythonExecutionService';
 import { useFileSystem } from '../services/FileSystemService';
-import type { A2rProgram, DataGridState, DataGridColumn, DataGridRow, DataGridVisualization } from '../types/programs';
+import type { AllternitProgram, DataGridState, DataGridColumn, DataGridRow, DataGridVisualization } from '../types/programs';
 
 interface DataGridProgramProps {
-  program: A2rProgram;
+  program: AllternitProgram;
 }
 
 // ============================================================================
@@ -679,7 +679,7 @@ export const DataGridProgram: React.FC<DataGridProgramProps> = ({ program }) => 
   const handleSaveToDrive = useCallback(async () => {
     const json = JSON.stringify({ columns, rows, title }, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
-    const file = new File([blob], `${title}.a2rgrid.json`, { type: 'application/json' });
+    const file = new File([blob], `${title}.allternitgrid.json`, { type: 'application/json' });
     await uploadFile(file);
   }, [columns, rows, title, uploadFile]);
 

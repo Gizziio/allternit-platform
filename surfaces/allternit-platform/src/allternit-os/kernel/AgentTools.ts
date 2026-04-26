@@ -1,5 +1,5 @@
 /**
- * A2rchitect Super-Agent OS - Agent Tools
+ * allternit Super-Agent OS - Agent Tools
  * 
  * Tool definitions for agents to interact with the Utility Pane.
  * These are the functions that should be exposed to the LLM/Agent Runtime.
@@ -8,7 +8,7 @@
 import { useSidecarStore } from '../stores/useSidecarStore';
 import { decomposeTask, OrchestratorEngine } from './OrchestratorEngine';
 import type {
-  A2rProgramType,
+  AllternitProgramType,
   ResearchDocState,
   DataGridState,
   DataGridVisualization,
@@ -225,7 +225,7 @@ function handleLaunchProgram(
   context: ToolContext
 ): { success: boolean; result?: unknown } {
   const store = useSidecarStore.getState();
-  const type = args.type as A2rProgramType;
+  const type = args.type as AllternitProgramType;
   const title = args.title as string;
 
   let programId: string;
@@ -490,7 +490,7 @@ export function useAgentTools(threadId: string) {
   }, [threadId]);
 
   const launchProgram = useCallback((
-    type: A2rProgramType,
+    type: AllternitProgramType,
     title: string,
     initialState?: Record<string, unknown>
   ) => {

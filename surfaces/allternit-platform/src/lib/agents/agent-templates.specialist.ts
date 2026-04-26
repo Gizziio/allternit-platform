@@ -3847,6 +3847,78 @@ PLACEHOLDERS TO CUSTOMIZE:
     version: '1.0.0',
     isBuiltIn: true,
   },
+  
+  {
+    id: 'cloud-monitor',
+    name: 'Cloud Monitor',
+    slug: 'cloud-monitor',
+    category: 'engineering',
+    role: 'Cloud Infrastructure Specialist',
+    description: 'Real-time infrastructure monitoring and visual reporting',
+    longDescription: 'Specialist in AWS/GCP/Azure infrastructure monitoring. Uses the Architect Protocol to draw real-time status dashboards and automated video walkthroughs of system health.',
+    
+    agentConfig: {
+      type: 'orchestrator' as AgentType,
+      model: 'claude-3-5-sonnet',
+      provider: 'anthropic',
+      capabilities: ['code-generation', 'file-operations', 'web-search', 'cloud-api'],
+      tools: ['file_write', 'file_read', 'search', 'terminal', 'cloud_cli'],
+      maxIterations: 20,
+      temperature: 0.3,
+      config: {
+        specialty: 'infrastructure',
+        focusAreas: ['Monitoring', 'Kubernetes', 'AWS', 'Visual Reporting'],
+      },
+    },
+    
+    characterSetup: 'operations',
+    avatar: createDefaultAvatarConfig('operations'),
+    
+    systemPrompt: `You are the Cloud Infrastructure Specialist for the Allternit platform.
+Your mission is to provide high-fidelity, deterministic monitoring reports.
+
+# THE ARCHITECT'S PROTOCOL (MANDATORY)
+1. ALWAYS start every monitoring session with a DESIGN.md block using the 'Infrastructure-Pro' theme:
+   - Primary: #0ea5e9
+   - Background: #020617
+   - Radii: 4px
+2. ALWAYS use [v:orchestrator] to show your real-time progress through monitoring steps.
+3. Generate high-density dashboards using [v:grid] and [v:metric].
+4. For every final report, you MUST include a [v:video-use] walkthrough explaining the health trends.
+
+You prioritize:
+- Uptime over features
+- Visual clarity over text descriptions
+- Real-time observability`,
+    
+    workflows: [
+      {
+        id: 'infra-audit',
+        name: 'Cluster Health Audit',
+        description: 'Comprehensive audit of cloud resources with visual reporting',
+        steps: [
+          { id: 'check', type: 'analyze', name: 'Scan Resources', description: 'Query Cloud APIs for current status', deliverables: ['Resource list'] },
+          { id: 'metric', type: 'execute', name: 'Extract Metrics', description: 'Parse CPU, Memory, and Latency data', deliverables: ['Metric specification'] },
+          { id: 'draw', type: 'deliver', name: 'Generate Dashboard', description: 'Draw the Blueprint Canvas dashboard', deliverables: ['OpenUI dashboard'] },
+        ],
+        estimatedDuration: '5-10 minutes',
+      },
+    ],
+    
+    deliverables: [
+      { id: 'status-dashboard', name: 'Infrastructure Dashboard', description: 'Interactive OpenUI dashboard on the Blueprint Canvas', format: 'config' },
+      { id: 'walkthrough', name: 'Health Walkthrough', description: 'Automated video explanation of system state', format: 'report' },
+    ],
+    
+    successMetrics: [
+      { id: 'observability', name: 'Observability Depth', description: 'Percentage of resources covered by visual reporting', target: '100%', measurement: 'API coverage' },
+    ],
+    
+    exampleInvocation: 'Run a health audit on our production Kubernetes cluster and draw the monitoring board.',
+    tags: ['cloud', 'aws', 'monitoring', 'infrastructure', 'devops'],
+    version: '1.0.0',
+    isBuiltIn: true,
+  },
 ];
 
 // ============================================================================

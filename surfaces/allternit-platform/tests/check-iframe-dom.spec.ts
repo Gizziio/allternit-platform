@@ -7,14 +7,14 @@ test('check iframe in DOM', async ({ page }) => {
   await page.waitForTimeout(2000);
   
   // Find iframe directly
-  const iframe = page.locator('iframe[data-testid="a2r-iframe-content"]');
+  const iframe = page.locator('iframe[data-testid="allternit-iframe-content"]');
   const count = await iframe.count();
   console.log('Iframe count:', count);
   
   if (count > 0) {
     // Get iframe's parent chain
     const parentInfo = await page.evaluate(() => {
-      const iframeEl = document.querySelector('iframe[data-testid="a2r-iframe-content"]');
+      const iframeEl = document.querySelector('iframe[data-testid="allternit-iframe-content"]');
       if (!iframeEl) return null;
       
       const chain = [];

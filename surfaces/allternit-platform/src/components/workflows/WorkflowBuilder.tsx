@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import { Workflow, WorkflowNode, WorkflowEdge } from '@/lib/workflows/store';
 import { PLUGINS, PluginId } from '@/lib/plugins';
+import { useWorkflow } from '@/hooks/useWorkflow';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -185,7 +186,7 @@ function WorkflowCanvas({ nodes, edges, selectedNode, onSelectNode, onMoveNode }
               }
             </span>
           </div>
-          {node.config?.description && (
+          {!!node.config?.description && (
             <p className="text-xs text-zinc-500 mt-1 truncate">{String(node.config.description)}</p>
           )}
         </div>
@@ -205,6 +206,7 @@ function WorkflowCanvas({ nodes, edges, selectedNode, onSelectNode, onMoveNode }
 }
 
 export function WorkflowBuilder() {
+  const { executeWorkflow } = useWorkflow();
   const [workflow, setWorkflow] = useState<Workflow>({
     id: 'new-workflow',
     name: 'New Workflow',
@@ -217,6 +219,18 @@ export function WorkflowBuilder() {
 
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [nextNodeId, setNextNodeId] = useState(1);
+  const [isRunning, setIsRunning] = useState(false);
+
+  const handleRun = useCallback(async () => {
+    setIsRunning(true);
+    try {
+      await executeWorkflow(workflow.id);
+    } catch {
+      // execution errors are surfaced via executions state in useWorkflow
+    } finally {
+      setIsRunning(false);
+    }
+  }, [executeWorkflow, workflow.id]);
 
   const addNode = (type: WorkflowNode['type']) => {
     const nodeCount = workflow.nodes.length;
@@ -258,7 +272,7 @@ export function WorkflowBuilder() {
   const connectNodes = (sourceId: string, targetId: string) => {
     setWorkflow(prev => ({
       ...prev,
-      edges: [...prev.edges, { source: sourceId, target: targetId }],
+      edges: [...prev.edges, { id: `${sourceId}-${targetId}`, source: sourceId, target: targetId }],
       updatedAt: Date.now(),
     }));
   };
@@ -343,8 +357,13 @@ export function WorkflowBuilder() {
               <Button variant="outline" size="sm" className="border-zinc-800">
                 <Save className="w-4 h-4 mr-2" /> Save
               </Button>
-              <Button size="sm" className="bg-violet-600 hover:bg-violet-700">
-                <Play className="w-4 h-4 mr-2" /> Run
+              <Button
+                size="sm"
+                className="bg-violet-600 hover:bg-violet-700"
+                onClick={handleRun}
+                disabled={isRunning}
+              >
+                <Play className="w-4 h-4 mr-2" /> {isRunning ? 'Running…' : 'Run'}
               </Button>
             </div>
           </div>

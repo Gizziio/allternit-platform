@@ -1,7 +1,7 @@
 /**
  * Substrate Icon Component
  * 
- * Represents the foundational layer of the A2rchitect system.
+ * Represents the foundational layer of the allternit system.
  */
 
 import * as React from 'react';

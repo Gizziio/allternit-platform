@@ -1,5 +1,5 @@
 /**
- * A2rchitect Super-Agent OS - Browser Screenshot Citations
+ * allternit Super-Agent OS - Browser Screenshot Citations
  * 
  * Production-ready citation system with browser automation:
  * - Real webpage screenshots via browser-use agent
@@ -122,7 +122,7 @@ class BrowserScreenshotService {
       selector: options.selector,
       metadata: {
         viewport: { width: options.width || 1280, height: options.height || 800 },
-        userAgent: 'A2rBrowser/1.0',
+        userAgent: 'AllternitBrowser/1.0',
         captureTime: 1000,
       },
     };
@@ -193,7 +193,7 @@ function generateRealisticPlaceholder(url: URL): string {
     <!-- Screenshot Badge -->
     <rect x="1080" y="60" width="160" height="30" rx="4" fill="#0066cc"/>
     <text x="1160" y="80" font-family="system-ui, sans-serif" font-size="12" fill="white" text-anchor="middle">
-      📸 A2r Screenshot
+      📸 Allternit Screenshot
     </text>
     
     <!-- URL Watermark -->

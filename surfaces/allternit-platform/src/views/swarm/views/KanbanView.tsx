@@ -14,7 +14,7 @@ import { Plus, Brain, Robot, Cpu, ClipboardText, UserPlus, DotsThree, Tray, X } 
 import { TEXT, MODE_COLORS, STATUS, BACKGROUND } from '@/design/allternit.tokens';
 import { useSwarmMonitorStore, useAgents } from '../SwarmMonitor.store';
 import { SwarmAgent, Task } from '../types';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 const AGENT_ICON_MAP: Record<string, React.ElementType> = {
   brain: Brain, robot: Robot, microchip: Cpu, 'clipboard-check': ClipboardText,
@@ -115,6 +115,9 @@ interface KanbanViewProps {
 
 export function KanbanView({ modeColors }: KanbanViewProps) {
   const agents = useAgents();
+  const { addToast } = useToast();
+  const toast = ({ title, description, variant }: { title: string; description?: string; variant?: string }) =>
+    addToast({ title, description, type: variant === 'destructive' ? 'error' : 'success' });
   const [tasks, setTasks] = useState<KanbanTask[]>(() => generateTasksFromAgents(agents));
   const [draggingTask, setDraggingTask] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);

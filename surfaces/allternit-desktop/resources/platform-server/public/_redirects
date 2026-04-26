@@ -1,0 +1,16 @@
+# Static assets must pass through before the SPA catch-all
+/_next/static/* /_next/static/:splat 200
+/assets/* /assets/:splat 200
+/images/* /images/:splat 200
+/.well-known/* /.well-known/:splat 200
+/favicon.svg /favicon.svg 200
+
+# Clerk auth sub-path routing (clean URLs — no .html to avoid CF 308 bug)
+/sign-in/* /sign-in 200
+/sign-up/* /sign-up 200
+
+# Shell sub-routes
+/shell/* /shell 200
+
+# SPA fallback (rewrite to root path, not /index.html, to avoid CF loop detection)
+/* / 200

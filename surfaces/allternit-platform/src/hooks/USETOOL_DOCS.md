@@ -1,6 +1,6 @@
 # GUI Tool Hook Documentation
 
-**Location:** `6-ui/a2r-platform/src/hooks/useTool.ts`
+**Location:** `6-ui/allternit-platform/src/hooks/useTool.ts`
 
 ---
 

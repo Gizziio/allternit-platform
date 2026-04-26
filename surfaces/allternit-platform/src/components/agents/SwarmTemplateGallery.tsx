@@ -275,7 +275,7 @@ export function SwarmTemplateGallery({
 
         {/* Search */}
         <div className="relative mb-3">
-          <Search
+          <MagnifyingGlass
             size={14}
             className="absolute left-3 top-1/2 -translate-y-1/2"
             style={{ color: 'rgba(255,255,255,0.3)' }}

@@ -169,7 +169,7 @@ export function TopologyView({
                   textAnchor="middle"
                   fill={node.color}
                   fontSize="10"
-                  textTransform="uppercase"
+                  style={{ textTransform: 'uppercase' }}
                 >
                   {node.role}
                 </text>

@@ -50,12 +50,32 @@ export function navReducer(state: NavState, ev: NavEvent): NavState {
       const capsuleId = ev.capsuleId ?? (policy.singleton ? undefined : crypto.randomUUID());
       const viewId: ViewId = makeStableViewId(ev.viewType, capsuleId);
 
-      const ctx: ViewContext = { viewId, viewType: ev.viewType, capsuleId, title: ev.viewType };
+      const ctx: ViewContext = { 
+        viewId, 
+        viewType: ev.viewType, 
+        capsuleId, 
+        title: ev.viewType,
+        context: ev.context 
+      };
       const openViews = { ...state.openViews, [viewId]: ctx };
 
       const next: NavState = { ...state, openViews, activeViewId: viewId };
       newState = pushHistory(next, viewId);
 
+      return newState;
+    }
+
+    case 'PUSH_VIEW': {
+      const viewId = ev.viewId;
+      const ctx: ViewContext = { 
+        viewId, 
+        viewType: ev.viewType, 
+        title: ev.title || ev.viewType,
+        context: ev.context 
+      };
+      const openViews = { ...state.openViews, [viewId]: ctx };
+      const next: NavState = { ...state, openViews, activeViewId: viewId };
+      newState = pushHistory(next, viewId);
       return newState;
     }
 

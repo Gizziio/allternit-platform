@@ -17,6 +17,9 @@ import { createSession } from '@/lib/aci/session-store';
 import { startRun } from '@/lib/aci/runner';
 import { createGenericAdapter } from '@/lib/aci/adapters/generic';
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 const DEFAULT_MODEL =
   process.env.ACI_DEFAULT_MODEL ?? 'anthropic/claude-sonnet-4.6';
 

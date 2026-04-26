@@ -1,0 +1,54 @@
+{
+  "courseCode": "ALABS-OPS-RAG",
+  "courseTitle": "Build Private RAG & Document Intelligence",
+  "tier": "OPS",
+  "sources": [
+    {
+      "id": 5828314,
+      "title": "Learn RAG with LLMWare (2024)",
+      "slug": "5828314-learn-rag-with-llmware-2024",
+      "totalLectures": 0
+    }
+  ],
+  "modules": [
+    {
+      "name": "The Problem: Cloud RAG Leaks Data",
+      "sourceLectures": [],
+      "bridgeContent": "Privacy risks of cloud RAG. Why local-first matters for enterprise documents.",
+      "isBridge": true
+    },
+    {
+      "name": "RAG Architecture",
+      "sourceLectures": [],
+      "isBridge": false
+    },
+    {
+      "name": "Local LLM Inference",
+      "sourceLectures": [],
+      "isBridge": false
+    },
+    {
+      "name": "Semantic Search Implementation",
+      "sourceLectures": [],
+      "isBridge": false
+    },
+    {
+      "name": "Agentic RAG",
+      "sourceLectures": [],
+      "bridgeContent": "Retrieval as a tool call. Multi-step RAG vs naive single-pass RAG.",
+      "isBridge": true
+    },
+    {
+      "name": "Bridge: Allternit's mcp-apps-adapter RAG",
+      "sourceLectures": [],
+      "bridgeContent": "How Allternit uses local RAG to answer internal docs without third-party APIs.",
+      "isBridge": true
+    },
+    {
+      "name": "Capstone: Offline Document-QA Agent",
+      "sourceLectures": [],
+      "bridgeContent": "Project brief: Ingest PDFs, answer with citations, run offline on laptop.",
+      "isBridge": true
+    }
+  ]
+}

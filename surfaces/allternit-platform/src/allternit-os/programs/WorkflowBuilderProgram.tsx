@@ -1,15 +1,15 @@
 /**
- * A2rchitect Super-Agent OS - Workflow Builder Program
+ * allternit Super-Agent OS - Workflow Builder Program
  * 
- * Visual workflow builder that integrates with the A2R Agent System Rails:
- * - Visualizes DAGs from .a2r/work/dags/
+ * Visual workflow builder that integrates with the Allternit Agent System Rails:
+ * - Visualizes DAGs from .allternit/work/dags/
  * - Shows WIH (Work In Hand) state
  * - Sends/receives Bus messages
  * - Integrates with existing AgentCommunicationPanel
  * - Uses existing OrchestratorEngine patterns
  * 
  * Built on top of existing infrastructure:
- * - A2RRailsBridge (connects to Rust Rails service)
+ * - AllternitRailsBridge (connects to Rust Rails service)
  * - useSidecarStore (program state management)
  * - AgentCommunicationPanel (agent chat)
  * - OrchestratorEngine (task orchestration)
@@ -18,11 +18,11 @@
 import * as React from 'react';
 const { useState, useCallback, useEffect, useRef } = React;
 import { useSidecarStore } from '../stores/useSidecarStore';
-import { useA2RRails, A2RRailsClient, DagState, DagNode, BusMessage } from '../kernel/A2RRailsBridge';
-import type { A2rProgram } from '../types/programs';
+import { useAllternitRails, AllternitRailsClient, DagState, DagNode, BusMessage } from '../kernel/AllternitRailsBridge';
+import type { AllternitProgram } from '../types/programs';
 
 interface WorkflowBuilderProgramProps {
-  program: A2rProgram;
+  program: AllternitProgram;
 }
 
 // ============================================================================
@@ -274,8 +274,8 @@ export const WorkflowBuilderProgram: React.FC<WorkflowBuilderProgramProps> = ({ 
   // Get workspace ID from program state or use default
   const workspaceId = (program.state as Record<string, unknown>)?.workspaceId as string || 'default';
   
-  // Connect to A2R Rails
-  const rails = useA2RRails({
+  // Connect to Allternit Rails
+  const rails = useAllternitRails({
     workspaceId,
     autoPoll: true,
     pollInterval: 3000,
@@ -448,7 +448,7 @@ export const WorkflowBuilderProgram: React.FC<WorkflowBuilderProgramProps> = ({ 
                 w-2 h-2 rounded-full
                 ${rails.isConnected ? 'bg-green-500' : 'bg-red-500'}
               `} />
-              {rails.isConnected ? 'Connected to A2R Rails' : 'Disconnected'}
+              {rails.isConnected ? 'Connected to Allternit Rails' : 'Disconnected'}
             </div>
           </div>
         </div>

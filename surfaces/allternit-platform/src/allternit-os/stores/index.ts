@@ -1,5 +1,5 @@
 /**
- * A2rchitect Super-Agent OS - Stores Index
+ * allternit Super-Agent OS - Stores Index
  * 
  * Zustand stores for state management.
  */
@@ -12,6 +12,6 @@ export {
 
 // Re-export types from types module
 export type {
-  A2rProgram as Program,
-  A2rProgramState as ProgramState,
+  AllternitProgram as Program,
+  AllternitProgramState as ProgramState,
 } from '../types/programs';

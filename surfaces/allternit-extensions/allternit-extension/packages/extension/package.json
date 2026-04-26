@@ -1,7 +1,7 @@
 {
     "name": "@page-agent/ext",
     "private": true,
-    "deprecated": "Superseded by surfaces/a2r-extension (MERGE-2). Agent core migrated to src/agent/.",
+    "deprecated": "Superseded by surfaces/allternit-extension (MERGE-2). Agent core migrated to src/agent/.",
     "version": "1.5.8",
     "type": "module",
     "scripts": {

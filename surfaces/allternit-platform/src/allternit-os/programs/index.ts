@@ -1,7 +1,7 @@
 /**
- * A2rchitect Super-Agent OS - Programs Index
+ * allternit Super-Agent OS - Programs Index
  * 
- * Re-exports all program implementations for the A2rOS system.
+ * Re-exports all program implementations for the AllternitOS system.
  */
 
 export { ResearchDocProgram } from './ResearchDocProgram';

@@ -20,7 +20,7 @@ This directory contains usage examples for the {{PLUGIN_NAME}} plugin.
 
 ### Prerequisites
 
-1. Make sure the plugin is installed and enabled in the A2R Platform
+1. Make sure the plugin is installed and enabled in the Allternit Platform
 2. Node.js 18+ should be installed
 
 ### Running JavaScript Examples
@@ -95,7 +95,7 @@ await plugin.openPanel();
 Shows how to listen to plugin events.
 
 ```javascript
-const disposable = A2R.events.on('{{PLUGIN_ID}}:action-completed', handler);
+const disposable = Allternit.events.on('{{PLUGIN_ID}}:action-completed', handler);
 // Later
 disposable.dispose();
 ```
@@ -171,7 +171,7 @@ Example template:
  * My Custom Example
  */
 async function myExample() {
-  const plugin = A2R.plugins.get('{{PLUGIN_ID}}');
+  const plugin = Allternit.plugins.get('{{PLUGIN_ID}}');
   
   // Your example code here
   
@@ -201,4 +201,4 @@ If you have questions about these examples:
 
 - Check the [main documentation](../docs/README.md)
 - Open an issue on [GitHub](https://github.com/{{GITHUB_USERNAME}}/{{REPO_NAME}}/issues)
-- Join our [Discord community](https://discord.gg/a2r)
+- Join our [Discord community](https://discord.gg/allternit)
