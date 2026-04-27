@@ -17,9 +17,11 @@ export async function register() {
 
 async function runDrizzleMigrations() {
   try {
-    const { migrate } = await import('drizzle-orm/better-sqlite3/migrator');
-    const path = await import('path');
-    const { mkdirSync, existsSync } = await import('fs');
+    // webpackIgnore: true prevents webpack from bundling these Node.js-only
+    // modules into the static export client bundle (they run at server startup).
+    const { migrate } = await import(/* webpackIgnore: true */ 'drizzle-orm/better-sqlite3/migrator');
+    const path = await import(/* webpackIgnore: true */ 'path');
+    const { mkdirSync, existsSync } = await import(/* webpackIgnore: true */ 'fs');
 
     const dataDir = path.join(process.cwd(), 'data');
     try { mkdirSync(dataDir, { recursive: true }); } catch { /* exists */ }
@@ -39,8 +41,8 @@ async function runDrizzleMigrations() {
     const sourcePath = path.join(process.cwd(), 'src', 'lib', 'db', 'migrations-sqlite');
     const migrationsFolder = existsSync(standalonePath) ? standalonePath : sourcePath;
 
-    const Database = (await import('better-sqlite3')).default;
-    const { drizzle } = await import('drizzle-orm/better-sqlite3');
+    const Database = (await import(/* webpackIgnore: true */ 'better-sqlite3')).default;
+    const { drizzle } = await import(/* webpackIgnore: true */ 'drizzle-orm/better-sqlite3');
 
     const sqlite = new Database(dbPath);
     sqlite.pragma('journal_mode = WAL');
@@ -56,7 +58,7 @@ async function runDrizzleMigrations() {
 
 async function runPrismaSchema() {
   try {
-    const { execSync } = await import('child_process');
+    const { execSync } = await import(/* webpackIgnore: true */ 'child_process');
     // Push Prisma schema to SQLite — creates tables that don't exist yet.
     // Safe to run on every startup; Prisma is idempotent for existing tables.
     execSync('node_modules/.bin/prisma db push --skip-generate --accept-data-loss', {
