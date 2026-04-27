@@ -1,11 +1,10 @@
 import { CoworkWorkspaceDetailView } from '@/views/cowork-team/CoworkWorkspaceDetailView';
 
-// Static export: workspaces are loaded client-side via API, no build-time params needed.
+// Static export: generate a single shell page; workspace data loads client-side.
+// dynamicParams must not be set to true with output:export.
 export function generateStaticParams() {
-  return [];
+  return [{ id: '_' }];
 }
-
-export const dynamicParams = true;
 
 export const metadata = { title: 'Workspace - Allternit' };
 
