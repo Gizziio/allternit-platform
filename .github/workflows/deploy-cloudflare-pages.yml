@@ -1,11 +1,14 @@
-name: Deploy to Cloudflare Pages
+name: Deploy Platform to Cloudflare Pages
 
 on:
   push:
     branches: [main]
     paths:
       - 'surfaces/allternit-platform/**'
+      - 'packages/@allternit/**'
+      - 'services/runtime/**'
       - '.github/workflows/deploy-cloudflare-pages.yml'
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -13,48 +16,44 @@ jobs:
     permissions:
       contents: read
       deployments: write
+
     steps:
       - uses: actions/checkout@v4
-      
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: 8
-          
+          cache: 'pnpm'
+
+      # Install from monorepo root so all workspace:* packages resolve correctly.
+      # build-cloudflare.sh must run from surfaces/allternit-platform but pnpm
+      # needs the workspace root context.
       - name: Install dependencies
-        working-directory: surfaces/allternit-platform
-        run: pnpm install --ignore-scripts
-        
-      - name: Generate Prisma Client
+        run: pnpm install --frozen-lockfile --ignore-scripts
+
+      - name: Generate Prisma client
         working-directory: surfaces/allternit-platform
         run: pnpm prisma generate
-        
-      # Build static export for Cloudflare Pages
-      # API routes run on user's backend (BYOC), not on Cloudflare
+
       - name: Build static export
         working-directory: surfaces/allternit-platform
-        run: |
-          # Clean any cached build files
-          rm -rf .next dist node_modules/.cache
-          # Remove API routes for static export - they run on user's VPS
-          rm -rf src/app/api
-          # Build static export
-          pnpm next build
+        # build-cloudflare.sh temporarily hides src/app/api, runs next build
+        # with CLOUDFLARE_PAGES=1, then restores it — API routes are never
+        # permanently deleted from the working tree.
+        run: bash scripts/build-cloudflare.sh
         env:
-          CLOUDFLARE_PAGES: '1'
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
-          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy surfaces/allternit-platform/dist --project-name=allternit-platform --branch=main
+          command: pages deploy surfaces/allternit-platform/out --project-name=allternit-platform --branch=main

@@ -16,7 +16,7 @@ const useClerkFallback =
 
 // Absolute paths for webpack (which requires them)
 const resolveAliases = {
-  '@allternit/runtime': path.resolve(__dirname, '../../3-adapters/runtime-adapters/allternit-runtime/dist'),
+  '@allternit/runtime': path.resolve(__dirname, '../../services/runtime/adapter/allternit-runtime/src/index.ts'),
   '@allternit/visual-state': path.resolve(__dirname, '../../packages/@allternit/visual-state/src/index.ts'),
   '@allternit/visual-state/types': path.resolve(__dirname, '../../packages/@allternit/visual-state/src/types/index.ts'),
   '@allternit/visual-state/inference': path.resolve(__dirname, '../../packages/@allternit/visual-state/src/inference/index.ts'),
@@ -30,19 +30,26 @@ const turboResolveAliases = {
 };
 
 const clerkAliases = useClerkFallback ? {
+  // Local Electron shell: Clerk is not installed — use full stubs so the app
+  // boots without authentication (local-user passthrough).
   '@clerk/nextjs': path.resolve(__dirname, 'src/stubs/clerk/nextjs.tsx'),
   '@clerk/nextjs/server': path.resolve(__dirname, 'src/stubs/clerk/nextjs-server.ts'),
+  '@clerk/clerk-react': path.resolve(__dirname, 'src/stubs/clerk/nextjs.tsx'),
 } : process.env.CLOUDFLARE_PAGES === '1' ? {
+  // Cloudflare Pages static export: API routes are excluded from the build so
+  // @clerk/nextjs/server is never called at runtime, but webpack must still be
+  // able to resolve the import at build time — stub only the server package.
+  // The client packages (@clerk/nextjs, @clerk/clerk-react) use the real
+  // implementation so users go through the actual Clerk auth flow.
   '@clerk/nextjs/server': path.resolve(__dirname, 'src/stubs/clerk/nextjs-server.ts'),
-  '@clerk/nextjs': path.resolve(__dirname, 'src/stubs/clerk/nextjs.tsx'),
 } : {};
 
 const turboClerkAliases = useClerkFallback ? {
   '@clerk/nextjs': './src/stubs/clerk/nextjs.tsx',
   '@clerk/nextjs/server': './src/stubs/clerk/nextjs-server.ts',
+  '@clerk/clerk-react': './src/stubs/clerk/nextjs.tsx',
 } : process.env.CLOUDFLARE_PAGES === '1' ? {
   '@clerk/nextjs/server': './src/stubs/clerk/nextjs-server.ts',
-  '@clerk/nextjs': './src/stubs/clerk/nextjs.tsx',
 } : {};
 
 function normalizeAppRoute(routePath: string): string | null {
@@ -201,9 +208,11 @@ const nextConfig: NextConfig = {
       ...(useClerkFallback ? {
         '@clerk/nextjs$': clerkAliases['@clerk/nextjs'],
         '@clerk/nextjs/server$': clerkAliases['@clerk/nextjs/server'],
+        '@clerk/clerk-react$': clerkAliases['@clerk/clerk-react'],
       } : process.env.CLOUDFLARE_PAGES === '1' ? {
         '@clerk/nextjs/server$': clerkAliases['@clerk/nextjs/server'],
         '@clerk/nextjs$': clerkAliases['@clerk/nextjs'],
+        '@clerk/clerk-react$': clerkAliases['@clerk/clerk-react'],
       } : {}),
     };
 
@@ -240,18 +249,13 @@ const nextConfig: NextConfig = {
     return config;
   },
 
-  webpack: (config, { isServer }) => {
-    if (isServer) {
-      // Mock better-sqlite3 during build to prevent binary binding errors
-      config.externals = [...(config.externals || []), 'better-sqlite3'];
-    }
-    return config;
-  },
   serverExternalPackages: [
     'ssh2',
     'cpu-features',
     'node-ssh',
     'better-sqlite3',
+    // node-pty: native binary used by terminal API routes
+    'node-pty',
   ],
 
   // Exclude large binaries from output file tracing to reduce .next size
@@ -280,8 +284,8 @@ const nextConfig: NextConfig = {
     ] : [])
   ],
 
-  output: process.env.ALLTERNIT_BUILD_MODE === 'desktop' ? 'standalone' : undefined,
-  distDir: '.next',
+  output: process.env.ALLTERNIT_BUILD_MODE === 'desktop' ? 'standalone' : process.env.CLOUDFLARE_PAGES === '1' ? 'export' : undefined,
+  distDir: process.env.CLOUDFLARE_PAGES === '1' ? 'out' : '.next',
 
   outputFileTracingRoot: path.join(__dirname, '../../'),
 

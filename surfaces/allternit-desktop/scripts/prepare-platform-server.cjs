@@ -155,6 +155,16 @@ if (fs.existsSync(prismaDataDir)) {
   copyIntoResources(prismaDataDir, path.join(resourcesDir, 'prisma', 'data'));
 }
 
+// Copy Drizzle SQLite migrations so instrumentation.ts can apply them at startup.
+// instrumentation.ts checks {cwd}/migrations-sqlite before the source tree path.
+const drizzleMigrationsDir = path.join(platformDir, 'src', 'lib', 'db', 'migrations-sqlite');
+if (fs.existsSync(drizzleMigrationsDir)) {
+  log(`Copying Drizzle migrations from ${drizzleMigrationsDir}`);
+  copyIntoResources(drizzleMigrationsDir, path.join(resourcesDir, 'migrations-sqlite'));
+} else {
+  log('Warning: Drizzle migrations folder not found — skipping');
+}
+
 materializePnpmPackages(path.join(resourcesDir, 'node_modules'));
 
 log('Platform server resources are ready for packaging');
