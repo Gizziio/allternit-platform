@@ -210,9 +210,10 @@ const nextConfig: NextConfig = {
         '@clerk/nextjs/server$': clerkAliases['@clerk/nextjs/server'],
         '@clerk/clerk-react$': clerkAliases['@clerk/clerk-react'],
       } : process.env.CLOUDFLARE_PAGES === '1' ? {
+        // Only stub the server package — real client packages handle auth in the browser.
+        // Do NOT include @clerk/nextjs$ or @clerk/clerk-react$ here; those use the real
+        // packages and must not be set to undefined (webpack rejects undefined alias values).
         '@clerk/nextjs/server$': clerkAliases['@clerk/nextjs/server'],
-        '@clerk/nextjs$': clerkAliases['@clerk/nextjs'],
-        '@clerk/clerk-react$': clerkAliases['@clerk/clerk-react'],
       } : {}),
     };
 
