@@ -45,7 +45,13 @@ jobs:
         # Makes discovery-pipeline.json available as a static file at /discovery-feed.json
         # so the desktop app can fetch fresh briefings from platform.allternit.com without
         # a full app rebuild. The _headers file already adds CORS for this path.
-        run: cp surfaces/allternit-platform/src/data/discovery-pipeline.json surfaces/allternit-platform/public/discovery-feed.json
+        run: |
+          if [ -f surfaces/allternit-platform/src/data/discovery-pipeline.json ]; then
+            cp surfaces/allternit-platform/src/data/discovery-pipeline.json surfaces/allternit-platform/public/discovery-feed.json
+            echo "Copied discovery-pipeline.json to public/discovery-feed.json"
+          else
+            echo "No discovery-pipeline.json found, skipping"
+          fi
 
       - name: Build static export
         working-directory: surfaces/allternit-platform
