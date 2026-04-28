@@ -3,40 +3,59 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 
+function AppLoader() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+      aria-label="Loading Allternit Platform"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        background: '#1A1612',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '28px',
+      }}
+    >
+      {/* Wordmark */}
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', userSelect: 'none' }}>
+        <span style={{ color: '#D97757', fontFamily: 'monospace', fontSize: 22, fontWeight: 400, letterSpacing: '0.04em' }}>A://</span>
+        <span style={{ color: '#C8BDB4', fontFamily: 'Georgia, serif', fontSize: 22, fontWeight: 400, letterSpacing: '0.18em' }}>LLTERNIT</span>
+      </div>
+
+      {/* Progress shimmer */}
+      <div style={{ width: '120px', height: '1px', background: 'rgba(200,168,140,0.12)', position: 'relative', overflow: 'hidden', borderRadius: '1px' }}>
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            left: 0,
+            width: '40%',
+            background: 'linear-gradient(90deg, transparent 0%, #D97757 50%, transparent 100%)',
+            animation: 'an-shimmer 1.6s cubic-bezier(0.4,0,0.6,1) infinite',
+          }}
+        />
+      </div>
+
+      <style>{`
+        @keyframes an-shimmer {
+          0%   { transform: translateX(-200%) }
+          100% { transform: translateX(350%) }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 // Dynamically import ShellApp to avoid SSR issues with browser APIs
 const ShellApp = dynamic(
   () => import('../shell/ShellApp').then((mod) => mod.ShellApp),
-  { 
-    ssr: false,
-    loading: () => (
-      <div
-        role="status"
-        aria-live="polite"
-        aria-busy="true"
-        aria-label="Loading Allternit Platform"
-        className="w-screen h-dvh flex flex-col items-center justify-center gap-6"
-        style={{ background: 'var(--surface-panel)' }}
-      >
-        <div className="flex items-center gap-2 select-none">
-          <span style={{ color: '#D97757', fontFamily: 'monospace', fontSize: 24, fontWeight: 400 }}>A://</span>
-          <span style={{ color: '#ECECEC', fontFamily: 'Georgia, serif', fontSize: 24, fontWeight: 400 }}>LLTERNIT</span>
-        </div>
-        <div
-          className="w-40 h-px relative overflow-hidden"
-          style={{ background: 'rgba(212,176,140,0.15)' }}
-        >
-          <div
-            className="absolute inset-y-0 left-0 w-1/3"
-            style={{
-              background: 'linear-gradient(90deg, transparent, #D97757, transparent)',
-              animation: 'shimmer 1.4s ease-in-out infinite',
-            }}
-          />
-        </div>
-        <style>{`@keyframes shimmer { 0% { transform: translateX(-200%) } 100% { transform: translateX(400%) } }`}</style>
-      </div>
-    ),
-  }
+  { ssr: false, loading: () => <AppLoader /> }
 );
 
 export default function Home() {
