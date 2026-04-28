@@ -110,8 +110,8 @@ export function CodeCanvasTileDiff({ diffText, filePath }: CodeCanvasTileDiffPro
           <div
             style={{
               padding: '6px 12px',
-              background: 'rgba(255,255,255,0.03)',
-              borderBottom: '1px solid rgba(255,255,255,0.06)',
+              background: 'var(--surface-hover)',
+              borderBottom: '1px solid var(--ui-border-muted)',
               fontSize: 11,
               fontWeight: 600,
               color: 'var(--text-secondary)',
@@ -169,9 +169,9 @@ export function CodeCanvasTileDiff({ diffText, filePath }: CodeCanvasTileDiffPro
                   style={{
                     color:
                       line.type === 'addition'
-                        ? '#34c759'
+                        ? 'var(--status-success)'
                         : line.type === 'deletion'
-                          ? '#ff3b30'
+                          ? 'var(--status-error)'
                           : 'inherit',
                     paddingLeft: 4,
                     whiteSpace: 'pre',

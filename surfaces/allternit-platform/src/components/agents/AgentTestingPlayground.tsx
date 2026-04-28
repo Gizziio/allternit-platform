@@ -16,9 +16,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play,
-  Pause,
   ArrowCounterClockwise,
-  GearSix,
   Chat,
   Wrench,
   Clock,
@@ -27,28 +25,18 @@ import {
   CaretUp,
   Terminal,
   Pulse as Activity,
-  FloppyDisk,
-  ShareNetwork,
   Bug,
   CheckCircle,
-  XCircle,
-  Warning,
   CircleNotch,
 } from '@phosphor-icons/react';
 
 import {
-  SAND,
   MODE_COLORS,
-  createGlassStyle,
-  RADIUS,
-  SPACE,
   TEXT,
-  SHADOW,
-  ANIMATION,
   type AgentMode,
 } from '@/design/allternit.tokens';
 
-import type { Agent, AgentRun, AgentTask } from '@/lib/agents/agent.types';
+import type { Agent } from '@/lib/agents/agent.types';
 
 // ============================================================================
 // Types
@@ -126,7 +114,6 @@ export function AgentTestingPlayground({
   });
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -327,7 +314,7 @@ function PlaygroundHeader({
       className="flex items-center justify-between px-6 py-4 border-b"
       style={{ 
         borderColor: modeColors.border,
-        background: 'rgba(0,0,0,0.3)',
+        background: 'var(--surface-panel)',
       }}
     >
       <div className="flex items-center gap-4">
@@ -360,7 +347,7 @@ function PlaygroundHeader({
           onClick={onReset}
           className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all"
           style={{
-            background: 'rgba(255,255,255,0.05)',
+            background: 'var(--surface-hover)',
             color: TEXT.secondary,
           }}
         >
@@ -373,7 +360,7 @@ function PlaygroundHeader({
             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
             style={{
               background: modeColors.accent,
-              color: '#1A1612',
+              color: 'var(--ui-text-inverse)',
             }}
           >
             <CheckCircle size={14} />
@@ -422,7 +409,7 @@ function EmptyState({
             key={i}
             className="text-left px-4 py-3 rounded-lg text-sm transition-all"
             style={{
-              background: 'rgba(255,255,255,0.03)',
+              background: 'var(--surface-hover)',
               border: `1px solid ${modeColors.border}`,
               color: TEXT.secondary,
             }}
@@ -474,9 +461,9 @@ function MessageBubble({
             background: isUser 
               ? modeColors.accent 
               : isTool 
-                ? 'rgba(0,0,0,0.3)'
-                : 'rgba(255,255,255,0.05)',
-            color: isUser ? '#1A1612' : TEXT.primary,
+                ? 'var(--surface-panel)'
+                : 'var(--surface-hover)',
+            color: isUser ? 'var(--ui-text-inverse)' : TEXT.primary,
             border: isTool ? `1px solid ${modeColors.border}` : 'none',
             borderRadius: isUser ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
           }}
@@ -548,7 +535,7 @@ function ToolCallDisplay({
             <pre 
               className="mt-1 p-2 rounded"
               style={{ 
-                background: 'rgba(0,0,0,0.3)',
+                background: 'var(--surface-panel)',
                 color: TEXT.secondary,
               }}
             >
@@ -562,7 +549,7 @@ function ToolCallDisplay({
                 className="mt-1 p-2 rounded"
                 style={{ 
                   background: 'rgba(74,222,128,0.1)',
-                  color: '#4ade80',
+                  color: 'var(--status-success)',
                 }}
               >
                 {`${JSON.stringify(toolCall.result, null, 2)}`}
@@ -574,7 +561,7 @@ function ToolCallDisplay({
               className="p-2 rounded"
               style={{ 
                 background: 'rgba(248,113,113,0.1)',
-                color: '#f87171',
+                color: 'var(--status-error)',
               }}
             >
               Error: {toolCall.error}
@@ -601,7 +588,7 @@ function TypingIndicator({
       <div 
         className="px-4 py-3 rounded-2xl flex items-center gap-1"
         style={{
-          background: 'rgba(255,255,255,0.05)',
+          background: 'var(--surface-hover)',
           borderRadius: '18px 18px 18px 4px',
         }}
       >
@@ -649,7 +636,7 @@ function InputArea({
       <div 
         className="flex items-end gap-2 p-3 rounded-xl"
         style={{
-          background: 'rgba(0,0,0,0.3)',
+          background: 'var(--surface-panel)',
           border: `1px solid ${modeColors.border}`,
         }}
       >
@@ -667,8 +654,8 @@ function InputArea({
           disabled={!input.trim() || isRunning}
           className="w-9 h-9 rounded-lg flex items-center justify-center transition-all disabled:opacity-40"
           style={{
-            background: input.trim() && !isRunning ? modeColors.accent : 'rgba(255,255,255,0.1)',
-            color: input.trim() && !isRunning ? '#1A1612' : TEXT.tertiary,
+            background: input.trim() && !isRunning ? modeColors.accent : 'var(--ui-border-default)',
+            color: input.trim() && !isRunning ? 'var(--ui-text-inverse)' : TEXT.tertiary,
           }}
         >
           {isRunning ? (
@@ -719,7 +706,7 @@ function PlaygroundSidebar({
       className="w-64 border-l flex flex-col overflow-y-auto"
       style={{ 
         borderColor: modeColors.border,
-        background: 'rgba(0,0,0,0.2)',
+        background: 'var(--surface-hover)',
       }}
     >
       {/* Metrics Section */}
@@ -800,7 +787,7 @@ function PlaygroundSidebar({
                   key={index}
                   className="p-2 rounded-lg"
                   style={{
-                    background: 'rgba(255,255,255,0.03)',
+                    background: 'var(--surface-hover)',
                     border: `1px solid ${modeColors.border}`,
                   }}
                 >
@@ -832,7 +819,7 @@ function PlaygroundSidebar({
                 onClick={() => setVariables([...variables, { key: '', value: '' }])}
                 className="w-full py-2 rounded-lg text-xs font-medium transition-colors"
                 style={{
-                  background: 'rgba(255,255,255,0.05)',
+                  background: 'var(--surface-hover)',
                   color: TEXT.secondary,
                   border: `1px dashed ${modeColors.border}`,
                 }}
@@ -862,7 +849,7 @@ function MetricCard({
     <div 
       className="flex items-center justify-between p-3 rounded-lg"
       style={{
-        background: 'rgba(255,255,255,0.03)',
+        background: 'var(--surface-hover)',
         border: `1px solid ${modeColors.border}`,
       }}
     >

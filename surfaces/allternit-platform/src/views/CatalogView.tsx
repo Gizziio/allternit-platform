@@ -12,7 +12,6 @@ import {
   BookOpen,
   Star,
   Users,
-  Clock,
   ExternalLink,
   Plus,
   Check,
@@ -28,7 +27,6 @@ import {
   X,
   Info,
   PlayCircle,
-  FileText,
   Award,
 } from 'lucide-react';
 
@@ -164,7 +162,7 @@ export function CatalogView() {
   const [levelFilter, setLevelFilter] = useState<LevelFilter>('all');
   const [curatedCourses, setCuratedCourses] = useState<Set<number>>(new Set());
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(['CORE', 'OPS', 'AGENTS']));
-  const [currentSearch, setCurrentSearch] = useState('');
+  const [, setCurrentSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
   const [view, setView] = useState<'search' | 'browse' | 'curated'>('browse');
@@ -325,26 +323,26 @@ export function CatalogView() {
     switch (level) {
       case 'Beginner':
       case 'All Levels':
-        return '#22c55e';
+        return 'var(--status-success)';
       case 'Intermediate':
-        return '#f59e0b';
+        return 'var(--status-warning)';
       case 'Expert':
-        return '#ef4444';
+        return 'var(--status-error)';
       default:
-        return '#6b7280';
+        return 'var(--ui-text-muted)';
     }
   };
 
   const getTierColor = (tier: string) => {
     switch (tier) {
       case 'CORE':
-        return '#3b82f6';
+        return 'var(--status-info)';
       case 'OPS':
         return '#8b5cf6';
       case 'AGENTS':
         return '#ec4899';
       default:
-        return '#6b7280';
+        return 'var(--ui-text-muted)';
     }
   };
 
@@ -378,12 +376,12 @@ export function CatalogView() {
           background: curatedCourses.has(Number(notification.match(/\d+/)?.[0])) 
             ? 'var(--success-bg, #065f46)' 
             : 'var(--bg-secondary, #111113)',
-          border: `1px solid ${curatedCourses.has(Number(notification.match(/\d+/)?.[0])) ? '#059669' : 'var(--border-subtle, #27272a)'}`,
+          border: `1px solid ${curatedCourses.has(Number(notification.match(/\d+/)?.[0])) ? 'var(--status-success)' : 'var(--border-subtle, #27272a)'}`,
           borderRadius: 8,
           padding: '12px 20px',
           zIndex: 9999,
           animation: 'slideIn 0.3s ease-out',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+          boxShadow: 'var(--shadow-md)',
         }}>
           <span>{notification}</span>
         </div>
@@ -396,7 +394,7 @@ export function CatalogView() {
         background: 'var(--bg-secondary, #111113)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-          <Globe size={32} color="#3b82f6" />
+          <Globe size={32} color="var(--status-info)" />
           <div>
             <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>
               Udemy Course Catalog
@@ -590,7 +588,7 @@ export function CatalogView() {
                               color: 'var(--text-primary, #e5e5e5)',
                               cursor: 'pointer',
                               textAlign: 'left',
-                              transition: 'all 0.2s',
+                              transition: 'var(--transition-fast)',
                             }}
                             onMouseEnter={(e) => {
                               (e.currentTarget as HTMLButtonElement).style.borderColor = getTierColor(tier);
@@ -681,7 +679,7 @@ export function CatalogView() {
                   background: 'var(--accent, #7c3aed)',
                   border: 'none',
                   borderRadius: 6,
-                  color: '#fff',
+                  color: 'var(--ui-text-primary)',
                   fontWeight: 600,
                   cursor: loading || !searchQuery.trim() ? 'not-allowed' : 'pointer',
                   fontSize: 14,
@@ -713,7 +711,7 @@ export function CatalogView() {
                       key={course.id}
                       style={{
                         background: 'var(--bg-secondary, #111113)',
-                        border: `1px solid ${isCurated ? '#059669' : 'var(--border-subtle, #27272a)'}`,
+                        border: `1px solid ${isCurated ? 'var(--status-success)' : 'var(--border-subtle, #27272a)'}`,
                         borderRadius: 10,
                         overflow: 'hidden',
                       }}
@@ -736,7 +734,7 @@ export function CatalogView() {
 
                         <div style={{ display: 'flex', gap: 12, fontSize: 12, marginBottom: 12 }}>
                           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <Star size={12} color="#fbbf24" />
+                            <Star size={12} color="var(--status-warning)" />
                             {formatRating(course.rating, course.num_reviews)}
                           </span>
                           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -764,10 +762,10 @@ export function CatalogView() {
                               justifyContent: 'center',
                               gap: 6,
                               padding: '8px 12px',
-                              background: isCurated ? '#059669' : 'var(--accent, #7c3aed)',
+                              background: isCurated ? 'var(--status-success)' : 'var(--accent, #7c3aed)',
                               border: 'none',
                               borderRadius: 6,
-                              color: '#fff',
+                              color: 'var(--ui-text-primary)',
                               fontWeight: 600,
                               fontSize: 13,
                               cursor: 'pointer',
@@ -840,7 +838,7 @@ export function CatalogView() {
                       background: 'var(--accent, #7c3aed)',
                       border: 'none',
                       borderRadius: 6,
-                      color: '#fff',
+                      color: 'var(--ui-text-primary)',
                       fontWeight: 600,
                       fontSize: 13,
                       cursor: 'pointer',
@@ -908,7 +906,7 @@ export function CatalogView() {
               width: '90%',
               maxHeight: '80vh',
               overflow: 'auto',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+              boxShadow: 'var(--shadow-xl)',
             }}
           >
             {/* Modal Header */}
@@ -927,9 +925,9 @@ export function CatalogView() {
                   width: 32,
                   height: 32,
                   borderRadius: 16,
-                  background: 'rgba(0,0,0,0.6)',
+                  background: 'var(--shell-overlay-backdrop)',
                   border: 'none',
-                  color: '#fff',
+                  color: 'var(--ui-text-primary)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -958,7 +956,7 @@ export function CatalogView() {
                   border: '1px solid var(--border-subtle, #27272a)',
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <Star size={16} color="#fbbf24" />
+                    <Star size={16} color="var(--status-warning)" />
                     <span style={{ fontSize: 18, fontWeight: 700 }}>
                       {selectedCourse.rating.toFixed(1)}
                     </span>
@@ -1081,10 +1079,10 @@ export function CatalogView() {
                     justifyContent: 'center',
                     gap: 8,
                     padding: '12px 16px',
-                    background: curatedCourses.has(selectedCourse.id) ? '#059669' : 'var(--accent, #7c3aed)',
+                    background: curatedCourses.has(selectedCourse.id) ? 'var(--status-success)' : 'var(--accent, #7c3aed)',
                     border: 'none',
                     borderRadius: 8,
-                    color: '#fff',
+                    color: 'var(--ui-text-primary)',
                     fontWeight: 600,
                     fontSize: 14,
                     cursor: 'pointer',

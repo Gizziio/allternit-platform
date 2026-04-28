@@ -12,7 +12,6 @@ import {
   IconFilePlus as FilePlus,
   IconChecklist as ListTodo,
   IconLogout as LogOut,
-  IconNotebook as NotebookIcon,
   IconDatabase as Database,
   IconFileText as FileText,
 } from "@tabler/icons-react";

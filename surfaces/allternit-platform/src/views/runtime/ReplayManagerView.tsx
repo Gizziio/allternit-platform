@@ -73,7 +73,7 @@ export function ReplayManagerView() {
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.14),transparent_34%),radial-gradient(circle_at_top_right,rgba(34,197,94,0.1),transparent_30%)] p-6">
+    <div className="h-full overflow-y-auto bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.14),transparent_34%),radial-gradient(circle_at_top_right,var(--status-success-bg),transparent_30%)] p-6">
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
         <GlassSurface intensity="thick" className="rounded-3xl p-6">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">

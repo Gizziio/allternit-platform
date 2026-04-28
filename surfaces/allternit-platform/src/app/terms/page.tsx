@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <section className="mb-10">
-    <h2 style={{ fontFamily: 'Georgia, serif', fontWeight: 400, fontSize: 22, color: '#1A1612', marginBottom: 12 }}>
+    <h2 style={{ fontFamily: 'Georgia, serif', fontWeight: 400, fontSize: 22, color: 'var(--ui-text-inverse)', marginBottom: 12 }}>
       {title}
     </h2>
     <div style={{ color: '#5A5A5A', lineHeight: 1.75, fontSize: 15 }}>{children}</div>
@@ -21,9 +21,9 @@ export default function TermsPage() {
       <nav style={{ borderBottom: '1px solid #E8D9C8', padding: '0 32px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
           <span style={{ fontFamily: 'monospace', fontSize: 18, color: '#D97757' }}>A://</span>
-          <span style={{ fontFamily: 'Georgia, serif', fontSize: 18, color: '#1A1612' }}>LLTERNIT</span>
+          <span style={{ fontFamily: 'Georgia, serif', fontSize: 18, color: 'var(--ui-text-inverse)' }}>LLTERNIT</span>
         </a>
-        <a href="https://allternit.com" style={{ fontSize: 13, color: '#9B9B9B', textDecoration: 'none' }}>← allternit.com</a>
+        <a href="https://allternit.com" style={{ fontSize: 13, color: 'var(--ui-text-secondary)', textDecoration: 'none' }}>← allternit.com</a>
       </nav>
 
       <main style={{ maxWidth: 720, margin: '0 auto', padding: '64px 32px' }}>
@@ -31,10 +31,10 @@ export default function TermsPage() {
           <p style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#D97757', marginBottom: 12 }}>
             Legal
           </p>
-          <h1 style={{ fontFamily: 'Georgia, serif', fontWeight: 400, fontSize: 40, color: '#1A1612', lineHeight: 1.1, marginBottom: 16 }}>
+          <h1 style={{ fontFamily: 'Georgia, serif', fontWeight: 400, fontSize: 40, color: 'var(--ui-text-inverse)', lineHeight: 1.1, marginBottom: 16 }}>
             Terms of Service
           </h1>
-          <p style={{ color: '#9B9B9B', fontSize: 14 }}>Last updated: March 2026</p>
+          <p style={{ color: 'var(--ui-text-secondary)', fontSize: 14 }}>Last updated: March 2026</p>
         </header>
 
         <Section title="1. Acceptance of Terms">
@@ -71,7 +71,7 @@ export default function TermsPage() {
       </main>
 
       <footer style={{ borderTop: '1px solid #E8D9C8', padding: '24px 32px', textAlign: 'center' }}>
-        <p style={{ fontSize: 12, color: '#9B9B9B' }}>© 2026 Allternit PBC</p>
+        <p style={{ fontSize: 12, color: 'var(--ui-text-secondary)' }}>© 2026 Allternit PBC</p>
       </footer>
     </div>
   )

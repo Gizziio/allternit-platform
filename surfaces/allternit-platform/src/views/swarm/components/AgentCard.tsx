@@ -7,15 +7,13 @@
 import React from 'react';
 import { Brain, Robot, Cpu, ClipboardText } from '@phosphor-icons/react';
 import { SwarmAgent } from '../types';
-import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/allternit.tokens';
-
-const ACCENT = '#c17817';
-const BG_SURFACE = '#121110';
-const BG_HOVER = '#1a1917';
-const BORDER_COLOR = '#272522';
-const TEXT_MUTED = '#8b8680';
-const TEXT_SUBTLE = '#5c5854';
-const TEXT_COLOR = '#e8e6e3';
+import { STATUS } from '@/design/allternit.tokens';
+const BG_SURFACE = 'var(--surface-canvas)';
+const BG_HOVER = 'var(--surface-panel)';
+const BORDER_COLOR = 'var(--ui-border-muted)';
+const TEXT_MUTED = 'var(--ui-text-muted)';
+const TEXT_SUBTLE = 'var(--ui-text-muted)';
+const TEXT_COLOR = 'var(--ui-text-primary)';
 const GREEN = STATUS.success;
 
 const AGENT_ICON_MAP: Record<string, React.ElementType> = {

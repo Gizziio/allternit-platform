@@ -62,11 +62,9 @@ const useJobs = () => ({
   cancelJob: async (_id: string) => {},
 });
 
-const useJob = (_id: string) => ({ job: null as Job | null, loading: false });
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge, type BadgeProps } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import {
   Table,
   TableBody,
@@ -107,7 +105,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 
 export function JobsView() {
-  const { jobs, stats, loading, error, refresh, createJob, cancelJob } = useJobs();
+  const { jobs, stats, loading, error, refresh, cancelJob } = useJobs();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const { addToast } = useToast();
 

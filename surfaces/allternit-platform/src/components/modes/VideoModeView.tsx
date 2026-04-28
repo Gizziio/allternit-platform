@@ -2,17 +2,15 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Video, 
-  Key, 
-  ExternalLink, 
-  RefreshCw, 
-  Wand2, 
-  Settings,
+import {
+  Video,
+  Key,
+  ExternalLink,
+  RefreshCw,
+  Wand2,
   AlertCircle,
   CheckCircle2,
   Play,
-  Image as ImageIcon,
   Clock,
   MonitorPlay,
   Sparkles
@@ -107,7 +105,7 @@ export function VideoModeView({ initialPrompt = '' }: VideoModeViewProps) {
   const [tempKey, setTempKey] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [videos, setVideos] = useState<GeneratedVideo[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'generate' | 'library'>('generate');
 
   const hasApiKey = !!apiKeys[config.provider];

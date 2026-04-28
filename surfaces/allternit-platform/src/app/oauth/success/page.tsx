@@ -54,7 +54,7 @@ function SuccessContent() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#0A0806',
+      background: 'var(--surface-canvas)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -78,10 +78,10 @@ function SuccessContent() {
           style={{
             width: '100%',
             maxWidth: 420,
-            background: '#110E0B',
+            background: 'var(--surface-panel)',
             borderRadius: 20,
-            border: '1px solid rgba(255,255,255,0.08)',
-            boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03)',
+            border: '1px solid var(--ui-border-muted)',
+            boxShadow: '0 32px 80px var(--shell-overlay-backdrop), 0 0 0 1px var(--surface-hover)',
             overflow: 'hidden',
             textAlign: 'center',
           }}
@@ -141,7 +141,7 @@ function SuccessContent() {
               style={{
                 fontSize: 22,
                 fontWeight: 700,
-                color: '#F5EDE3',
+                color: 'var(--ui-text-primary)',
                 letterSpacing: '-0.03em',
                 marginBottom: 10,
               }}
@@ -185,7 +185,7 @@ function SuccessContent() {
             )}
 
             {/* Divider */}
-            <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '28px 0 24px' }} />
+            <div style={{ height: 1, background: 'var(--ui-border-muted)', margin: '28px 0 24px' }} />
 
             {/* Actions */}
             <motion.div
@@ -203,7 +203,7 @@ function SuccessContent() {
                     padding: '13px 20px',
                     borderRadius: 12,
                     background: 'linear-gradient(135deg, #E8886A 0%, #D97757 100%)',
-                    color: '#fff',
+                    color: 'var(--ui-text-inverse)',
                     fontSize: 14,
                     fontWeight: 700,
                     textDecoration: 'none',
@@ -230,7 +230,7 @@ function SuccessContent() {
                         padding: '13px 20px',
                         borderRadius: 12,
                         background: 'linear-gradient(135deg, #E8886A 0%, #D97757 100%)',
-                        color: '#fff',
+                        color: 'var(--ui-text-inverse)',
                         fontSize: 14,
                         fontWeight: 700,
                         textDecoration: 'none',
@@ -282,14 +282,14 @@ function SuccessContent() {
 
           {/* Footer */}
           <div style={{
-            borderTop: '1px solid rgba(255,255,255,0.05)',
-            background: '#0D0A07',
+            borderTop: '1px solid var(--surface-hover)',
+            background: 'var(--surface-canvas)',
             padding: '14px 36px',
             textAlign: 'center',
           }}>
             <p style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.2)', margin: 0, lineHeight: 1.6 }}>
               You can revoke access any time from{' '}
-              <a href="/shell/settings/connections" style={{ color: '#664E3A', textDecoration: 'underline' }}>
+              <a href="/shell/settings/connections" style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}>
                 Settings → Connections
               </a>
             </p>

@@ -30,25 +30,17 @@ import {
   DotsSixVertical as GripVertical,
   MagnifyingGlass as Search,
   Copy,
-  Trash as Trash2,
   TextT as Type,
   CaretUp as ChevronUp,
   CaretDown as ChevronDown,
   Terminal as TerminalIcon,
-  FilePy as PythonLogo,
   Globe,
   Download,
-  Bell,
-  ClockCounterClockwise as History,
-  Gear as Settings,
-  CheckCircle,
-  XCircle,
   ArrowCounterClockwise as RefreshCcw,
-  MonitorPlay,
-  FloppyDisk as Save,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import 'xterm/css/xterm.css';
+import { openInBrowser } from '@/lib/openInBrowser';
 
 // Terminal theme
 const terminalTheme = {
@@ -264,7 +256,7 @@ function TerminalCard({
     
     term.loadAddon(new WebLinksAddon((event, uri) => {
       event.preventDefault();
-      window.open(uri, '_blank', 'noopener,noreferrer');
+      openInBrowser(uri);
     }));
 
     term.open(terminalRef.current);

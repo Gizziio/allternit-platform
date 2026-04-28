@@ -95,7 +95,7 @@ export function SessionView({ workspacePath, compact = false }: SessionViewProps
           display: "flex",
           flexDirection: "column",
           height: "100%",
-          border: "1px solid rgba(255,255,255,0.1)",
+          border: "1px solid var(--ui-border-default)",
           borderRadius: "8px",
           overflow: "hidden",
           background: "rgba(15,15,15,0.8)",
@@ -138,7 +138,7 @@ export function SessionView({ workspacePath, compact = false }: SessionViewProps
                   borderRadius: msg.role === "user" ? "12px 12px 4px 12px" : "12px 12px 12px 4px",
                   background: msg.role === "user" 
                     ? "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)" 
-                    : "rgba(255,255,255,0.1)",
+                    : "var(--ui-border-default)",
                   color: msg.role === "user" ? "white" : "#e0e0e0",
                 }}
               >
@@ -152,8 +152,8 @@ export function SessionView({ workspacePath, compact = false }: SessionViewProps
         <div
           style={{
             padding: "1rem",
-            borderTop: "1px solid rgba(255,255,255,0.1)",
-            background: "rgba(0,0,0,0.3)",
+            borderTop: "1px solid var(--ui-border-default)",
+            background: "var(--surface-panel)",
           }}
         >
           <form onSubmit={handleSubmit} style={{ display: "flex", gap: "0.5rem" }}>
@@ -168,7 +168,7 @@ export function SessionView({ workspacePath, compact = false }: SessionViewProps
                 padding: "0.75rem 1rem",
                 borderRadius: "6px",
                 border: "1px solid rgba(255,255,255,0.2)",
-                background: "rgba(0,0,0,0.5)",
+                background: "var(--shell-overlay-backdrop)",
                 color: "#e0e0e0",
                 fontSize: "0.875rem",
               }}

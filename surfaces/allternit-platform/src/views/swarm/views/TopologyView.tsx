@@ -183,7 +183,7 @@ export function TopologyView({
           className="absolute bottom-6 left-6 p-4 rounded-xl border"
           style={{ 
             background: 'rgba(13, 11, 9, 0.9)',
-            borderColor: 'rgba(255,255,255,0.08)',
+            borderColor: 'var(--ui-border-muted)',
           }}
         >
           <div className="text-xs font-bold mb-2" style={{ color: TEXT.tertiary }}>LEGEND</div>
@@ -218,13 +218,13 @@ export function TopologyView({
       <div 
         className="w-64 border-l overflow-auto"
         style={{ 
-          background: 'rgba(255,255,255,0.02)',
-          borderColor: 'rgba(255,255,255,0.08)',
+          background: 'var(--surface-hover)',
+          borderColor: 'var(--ui-border-muted)',
         }}
       >
         <div 
           className="px-4 py-3 text-xs font-bold tracking-wider"
-          style={{ color: TEXT.tertiary, borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+          style={{ color: TEXT.tertiary, borderBottom: '1px solid var(--surface-hover)' }}
         >
           AGENTS
         </div>
@@ -261,7 +261,7 @@ export function TopologyView({
                 className="w-full p-3 rounded-xl text-left transition-all hover:bg-white/5"
                 style={{ 
                   background: isWorking ? `${worker.color}10` : 'transparent',
-                  border: `1px solid ${isWorking ? `${worker.color}30` : 'rgba(255,255,255,0.05)'}`,
+                  border: `1px solid ${isWorking ? `${worker.color}30` : 'var(--surface-hover)'}`,
                 }}
               >
                 <div className="flex items-center gap-2">
@@ -282,7 +282,7 @@ export function TopologyView({
         {/* Metrics */}
         <div 
           className="mt-4 px-4 py-3 border-t"
-          style={{ borderColor: 'rgba(255,255,255,0.05)' }}
+          style={{ borderColor: 'var(--surface-hover)' }}
         >
           <div className="text-xs font-bold mb-3" style={{ color: TEXT.tertiary }}>
             NETWORK

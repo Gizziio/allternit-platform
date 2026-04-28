@@ -75,7 +75,7 @@ export function CanvasMinimap({ tiles, viewport, onViewportChange }: CanvasMinim
         position: 'absolute',
         bottom: 16,
         right: 16,
-        zIndex: 1000,
+        zIndex: 100,
         width: MINIMAP_SIZE + 8,
         height: MINIMAP_SIZE + 8,
         padding: 4,

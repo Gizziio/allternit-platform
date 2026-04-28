@@ -25,7 +25,7 @@ export function GuidedTourPortal({ onComplete, onSkip }: Props) {
         bottom: 0,
         width: '100vw',
         height: '100vh',
-        zIndex: 2147483646, // Just below onboarding
+        zIndex: 210, // Just above onboarding portal
         isolation: 'isolate',
       }}
     >

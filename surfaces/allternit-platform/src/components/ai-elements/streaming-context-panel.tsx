@@ -214,8 +214,8 @@ export function StreamingContextPanel({ parts, isStreaming, onClose }: Streaming
         style={{
           width: 32,
           flexShrink: 0,
-          borderLeft: "1px solid rgba(255,255,255,0.06)",
-          background: "rgba(255,255,255,0.02)",
+          borderLeft: "1px solid var(--ui-border-muted)",
+          background: "var(--surface-hover)",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -250,7 +250,7 @@ export function StreamingContextPanel({ parts, isStreaming, onClose }: Streaming
       style={{
         width: 260,
         flexShrink: 0,
-        borderLeft: "1px solid rgba(255,255,255,0.06)",
+        borderLeft: "1px solid var(--ui-border-muted)",
         background: "rgba(255,255,255,0.015)",
         display: "flex",
         flexDirection: "column",
@@ -265,7 +265,7 @@ export function StreamingContextPanel({ parts, isStreaming, onClose }: Streaming
           alignItems: "center",
           gap: 8,
           padding: "10px 12px",
-          borderBottom: "1px solid rgba(255,255,255,0.05)",
+          borderBottom: "1px solid var(--surface-hover)",
           flexShrink: 0,
         }}
       >
@@ -344,7 +344,7 @@ export function StreamingContextPanel({ parts, isStreaming, onClose }: Streaming
                   ? "rgba(74,222,128,0.3)"
                   : step.state === "error"
                   ? "rgba(248,113,113,0.4)"
-                  : "rgba(255,255,255,0.08)"
+                  : "var(--ui-border-muted)"
               }`,
               marginLeft: 12,
               marginBottom: 2,
@@ -383,7 +383,7 @@ export function StreamingContextPanel({ parts, isStreaming, onClose }: Streaming
         {/* Files section */}
         {files.length > 0 && (
           <>
-            <div style={{ padding: "12px 12px 4px", marginBottom: 2, marginTop: 4, borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+            <div style={{ padding: "12px 12px 4px", marginBottom: 2, marginTop: 4, borderTop: "1px solid var(--surface-hover)" }}>
               <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.2)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
                 Files touched
               </span>
@@ -437,7 +437,7 @@ export function StreamingContextPanel({ parts, isStreaming, onClose }: Streaming
                           fontWeight: 600,
                           letterSpacing: "0.04em",
                           color: op === "Write" || op === "Edit" ? "rgba(212,176,140,0.65)" : "rgba(255,255,255,0.25)",
-                          background: op === "Write" || op === "Edit" ? "rgba(212,176,140,0.08)" : "rgba(255,255,255,0.04)",
+                          background: op === "Write" || op === "Edit" ? "rgba(212,176,140,0.08)" : "var(--surface-hover)",
                           padding: "1px 5px",
                           borderRadius: 3,
                         }}
@@ -456,7 +456,7 @@ export function StreamingContextPanel({ parts, isStreaming, onClose }: Streaming
       {/* Footer — pin toggle */}
       <div
         style={{
-          borderTop: "1px solid rgba(255,255,255,0.05)",
+          borderTop: "1px solid var(--surface-hover)",
           padding: "6px 12px",
           display: "flex",
           alignItems: "center",

@@ -104,8 +104,8 @@ export function SiteFooter() {
 
   return (
     <footer style={{
-      background: '#0F0C09',
-      color: '#fff',
+      background: 'var(--surface-canvas)',
+      color: 'var(--ui-text-primary)',
       paddingTop: 80,
       paddingBottom: 40,
       position: 'relative',
@@ -156,7 +156,7 @@ export function SiteFooter() {
                         transition: 'color 0.25s',
                         display: 'inline-block',
                       }}
-                      onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = '#fff'; }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = 'var(--ui-text-primary)'; }}
                       onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.45)'; }}
                     >
                       {link.label}
@@ -174,7 +174,7 @@ export function SiteFooter() {
           style={{
             opacity: 0,
             paddingTop: 28,
-            borderTop: '1px solid rgba(255,255,255,0.08)',
+            borderTop: '1px solid var(--ui-border-muted)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -198,7 +198,7 @@ export function SiteFooter() {
                   style={{ color: 'rgba(255,255,255,0.3)', transition: 'color 0.25s, transform 0.25s', display: 'flex' }}
                   onMouseEnter={e => {
                     const el = e.currentTarget as HTMLAnchorElement;
-                    el.style.color = '#fff';
+                    el.style.color = 'var(--ui-text-primary)';
                     el.style.transform = 'scale(1.15)';
                   }}
                   onMouseLeave={e => {
@@ -220,7 +220,7 @@ export function SiteFooter() {
                 key={link.label}
                 href={link.href}
                 style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', textDecoration: 'none', transition: 'color 0.25s' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = '#fff'; }}
+                onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = 'var(--ui-text-primary)'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.3)'; }}
               >
                 {link.label}

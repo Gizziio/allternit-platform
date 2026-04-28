@@ -236,7 +236,7 @@ export function ChatRail() {
         <div
           style={{
             padding: '8px',
-            background: 'rgba(212,149,106,0.1)',
+            background: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)',
             borderRadius: 8,
             border: '1px solid rgba(212,149,106,0.2)',
           }}
@@ -246,7 +246,7 @@ export function ChatRail() {
               fontSize: 10,
               fontWeight: 700,
               textTransform: 'uppercase',
-              color: '#d4956a',
+              color: 'var(--accent-primary)',
               marginBottom: 6,
               letterSpacing: '0.05em',
             }}
@@ -263,7 +263,7 @@ export function ChatRail() {
                   gap: 6,
                   padding: '4px 6px',
                   borderRadius: 4,
-                  background: 'rgba(255,255,255,0.05)',
+                  background: 'var(--surface-hover)',
                 }}
               >
                 {file.type === 'image' ? (

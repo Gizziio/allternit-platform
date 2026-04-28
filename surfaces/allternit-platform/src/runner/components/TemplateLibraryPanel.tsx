@@ -8,15 +8,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   FileCode,
   MagnifyingGlass,
-  Tag,
   Play,
   Copy,
   Check,
-  ArrowsClockwise,
   Code,
   User,
   GitBranch,
@@ -24,7 +21,6 @@ import {
   Repeat,
   Trash,
   Shield,
-  CaretRight,
   Function,
 } from '@phosphor-icons/react';
 import type { PromptTemplate, TemplateCategory } from "../dak.types";

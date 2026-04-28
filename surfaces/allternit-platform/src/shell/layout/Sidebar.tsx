@@ -3,8 +3,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { useSidebar, useResponsiveLayout } from './useLayout';
-import { tokens } from '@/design/tokens';
-import { GlassSurface } from '@/design/GlassSurface';
 import {
   CaretLeft,
   CaretRight,
@@ -67,8 +65,8 @@ export function Sidebar({
   logo,
   className,
 }: SidebarProps) {
-  const { isOpen, toggle, setWidth, collapsedWidth: ctxCollapsedWidth } = useSidebar();
-  const { isMobile, sidebarMode } = useResponsiveLayout();
+  const { isOpen, toggle, setWidth } = useSidebar();
+  const { isMobile } = useResponsiveLayout();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
   const [isResizing, setIsResizing] = useState(false);

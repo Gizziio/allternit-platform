@@ -1,10 +1,12 @@
 /**
  * Database queries for document operations
+ * Uses the SQLite client (better-sqlite3) for standalone/desktop/tunnel builds.
+ * The postgres client (client.ts) is only used when DATABASE_URL points to postgres.
  */
 
 import { eq } from "drizzle-orm";
-import { db } from "./client";
-import { document } from "./schema";
+import { db } from "./client-sqlite";
+import { document } from "./schema-sqlite";
 
 export interface DocumentData {
   id: string;

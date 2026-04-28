@@ -87,7 +87,7 @@ declare global {
     'allternit:open-settings': CustomEvent<{ section?: string }>;
     'allternit:close-settings': CustomEvent;
     'allternit:open-labs': CustomEvent;
-    'allternit:switch-mode': CustomEvent<{ mode: 'chat' | 'cowork' | 'code' | 'design' }>;
+    'allternit:switch-mode': CustomEvent<{ mode: 'chat' | 'cowork' | 'code' | 'design' | 'browser' }>;
   }
 }
 

@@ -67,7 +67,7 @@ export function KanbanDAG() {
           const nodesWithStatus = dag.nodes.map((node: ApiDagNode) => ({
             id: node.nodeId,
             title: node.title || node.nodeId,
-            status: node.status,
+            status: node.status as any,
             dependencies: node.dependencies,
             wih_id: node.wihId,
           }));
@@ -162,7 +162,7 @@ export function KanbanDAG() {
 
         <div style={{ flex: 1, overflow: 'auto', padding: 12 }}>
           {dags.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 40, color: '#666' }}>
+            <div style={{ textAlign: 'center', padding: 40, color: 'var(--ui-text-muted)' }}>
               <GitBranch size={48} style={{ marginBottom: 16, opacity: 0.3 }} />
               <p style={{ fontSize: 13 }}>No DAGs yet</p>
               <button
@@ -170,10 +170,10 @@ export function KanbanDAG() {
                 style={{
                   marginTop: 12,
                   padding: '8px 16px',
-                  background: '#0a84ff',
+                  background: 'var(--status-info)',
                   border: 'none',
                   borderRadius: 6,
-                  color: '#fff',
+                  color: 'var(--ui-text-inverse)',
                   fontSize: 12,
                   cursor: 'pointer'
                 }}
@@ -189,8 +189,8 @@ export function KanbanDAG() {
                 style={{
                   padding: 12,
                   marginBottom: 8,
-                  background: selectedDagId === dag.dagId ? '#0a84ff20' : 'var(--bg-primary)',
-                  border: `1px solid ${selectedDagId === dag.dagId ? '#0a84ff' : 'var(--border-subtle)'}`,
+                  background: selectedDagId === dag.dagId ? 'var(--status-info-bg)' : 'var(--bg-primary)',
+                  border: `1px solid ${selectedDagId === dag.dagId ? 'var(--status-info)' : 'var(--border-subtle)'}`,
                   borderRadius: 8,
                   cursor: 'pointer'
                 }}
@@ -205,7 +205,7 @@ export function KanbanDAG() {
                 }}>
                   {dag.metadata?.title || dag.dagId}
                 </div>
-                <div style={{ fontSize: 11, color: '#888' }}>
+                <div style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>
                   {dag.nodes?.length || 0} nodes • v{dag.version}
                 </div>
                 <div style={{ 
@@ -213,11 +213,11 @@ export function KanbanDAG() {
                   gap: 8, 
                   marginTop: 8,
                   fontSize: 10,
-                  color: '#666'
+                  color: 'var(--ui-text-muted)'
                 }}>
                   <span>{new Date(dag.createdAt).toLocaleDateString()}</span>
                   {executions.some(e => e.dagId === dag.dagId && e.status === 'running') && (
-                    <span style={{ color: '#f59e0b' }}>Running</span>
+                    <span style={{ color: 'var(--status-warning)' }}>Running</span>
                   )}
                 </div>
               </div>
@@ -238,10 +238,10 @@ export function KanbanDAG() {
               style={{
                 flex: 1,
                 padding: '10px',
-                background: '#0a84ff',
+                background: 'var(--status-info)',
                 border: 'none',
                 borderRadius: 6,
-                color: '#fff',
+                color: 'var(--ui-text-inverse)',
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: isLoading ? 'not-allowed' : 'pointer',
@@ -262,7 +262,7 @@ export function KanbanDAG() {
                 background: 'var(--bg-primary)',
                 border: '1px solid var(--border-subtle)',
                 borderRadius: 6,
-                color: '#888',
+                color: 'var(--ui-text-muted)',
                 fontSize: 12,
                 cursor: 'pointer'
               }}
@@ -287,7 +287,7 @@ export function KanbanDAG() {
             flexDirection: 'column',
             alignItems: 'center', 
             justifyContent: 'center',
-            color: '#666'
+            color: 'var(--ui-text-muted)'
           }}>
             <GitBranch size={64} style={{ marginBottom: 16, opacity: 0.3 }} />
             <p>Select a DAG to view its structure</p>
@@ -299,7 +299,7 @@ export function KanbanDAG() {
             flexDirection: 'column',
             alignItems: 'center', 
             justifyContent: 'center',
-            color: '#666'
+            color: 'var(--ui-text-muted)'
           }}>
             {isLoading ? (
               <>
@@ -325,7 +325,7 @@ export function KanbanDAG() {
                 <div style={{ 
                   fontSize: 11, 
                   fontWeight: 700, 
-                  color: '#888',
+                  color: 'var(--ui-text-muted)',
                   textTransform: 'uppercase',
                   letterSpacing: 0.5,
                   padding: '0 8px'
@@ -365,20 +365,20 @@ export function KanbanDAG() {
             return (
               <>
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: 11, color: '#888', display: 'block', marginBottom: 4 }}>ID</label>
+                  <label style={{ fontSize: 11, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>ID</label>
                   <div style={{ fontSize: 13, fontFamily: 'monospace' }}>{node.id}</div>
                 </div>
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: 11, color: '#888', display: 'block', marginBottom: 4 }}>Title</label>
+                  <label style={{ fontSize: 11, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>Title</label>
                   <div style={{ fontSize: 14, fontWeight: 600 }}>{node.title}</div>
                 </div>
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: 11, color: '#888', display: 'block', marginBottom: 4 }}>Status</label>
+                  <label style={{ fontSize: 11, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>Status</label>
                   <NodeStatusBadge status={node.status} />
                 </div>
                 {node.dependencies.length > 0 && (
                   <div style={{ marginBottom: 16 }}>
-                    <label style={{ fontSize: 11, color: '#888', display: 'block', marginBottom: 4 }}>Dependencies</label>
+                    <label style={{ fontSize: 11, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>Dependencies</label>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       {node.dependencies.map(depId => (
                         <div key={depId} style={{ 
@@ -395,7 +395,7 @@ export function KanbanDAG() {
                 )}
                 {node.wih_id && (
                   <div style={{ marginBottom: 16 }}>
-                    <label style={{ fontSize: 11, color: '#888', display: 'block', marginBottom: 4 }}>WIH ID</label>
+                    <label style={{ fontSize: 11, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>WIH ID</label>
                     <div style={{ fontSize: 12, fontFamily: 'monospace' }}>{node.wih_id}</div>
                   </div>
                 )}
@@ -422,8 +422,8 @@ function DagNodeCard({
     <GlassCard
       style={{
         padding: 12,
-        border: `1px solid ${isSelected ? '#0a84ff' : 'var(--border-subtle)'}`,
-        background: isSelected ? '#0a84ff10' : undefined
+        border: `1px solid ${isSelected ? 'var(--status-info)' : 'var(--border-subtle)'}`,
+        background: isSelected ? 'var(--status-info-bg)' : undefined
       }}
     >
       <div style={{ 
@@ -443,7 +443,7 @@ function DagNodeCard({
           {node.title}
         </span>
       </div>
-      <div style={{ fontSize: 10, color: '#888' }}>
+      <div style={{ fontSize: 10, color: 'var(--ui-text-muted)' }}>
         {node.dependencies.length} dependencies
       </div>
     </GlassCard>
@@ -469,12 +469,12 @@ function NodeStatusIcon({ status }: { status: string }) {
 
 function NodeStatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    pending: '#888',
-    ready: '#0a84ff',
-    running: '#f59e0b',
-    completed: '#34c759',
-    failed: '#ff3b30',
-    blocked: '#ff9500',
+    pending: 'var(--ui-text-muted)',
+    ready: 'var(--status-info)',
+    running: 'var(--status-warning)',
+    completed: 'var(--status-success)',
+    failed: 'var(--status-error)',
+    blocked: 'var(--status-warning)',
   };
 
   return (
@@ -483,11 +483,11 @@ function NodeStatusBadge({ status }: { status: string }) {
       alignItems: 'center',
       gap: 4,
       padding: '4px 10px',
-      background: `${colors[status] || '#888'}20`,
+      background: `${colors[status] || 'var(--ui-text-muted)'}20`,
       borderRadius: 4,
       fontSize: 11,
       fontWeight: 600,
-      color: colors[status] || '#888',
+      color: colors[status] || 'var(--ui-text-muted)',
       textTransform: 'uppercase'
     }}>
       <NodeStatusIcon status={status} />

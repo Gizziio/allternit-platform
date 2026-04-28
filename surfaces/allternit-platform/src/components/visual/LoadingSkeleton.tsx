@@ -27,7 +27,7 @@ const shimmerStyle: React.CSSProperties = {
 
 const CardSkeleton: React.FC = () => (
   <div style={{
-    background: '#1a1a1a',
+    background: 'var(--surface-panel)',
     border: '1px solid #333',
     borderRadius: '12px',
     padding: '16px',
@@ -52,7 +52,7 @@ const MeterSkeleton: React.FC = () => (
     alignItems: 'center',
     gap: '16px',
     padding: '24px',
-    background: '#0a0a0a',
+    background: 'var(--surface-panel)',
     borderRadius: '12px',
   }}>
     <div style={{ ...shimmerStyle, width: '100px', height: '16px' }} />
@@ -64,7 +64,7 @@ const MeterSkeleton: React.FC = () => (
 
 const ChartSkeleton: React.FC = () => (
   <div style={{
-    background: '#1a1a1a',
+    background: 'var(--surface-panel)',
     border: '1px solid #333',
     borderRadius: '12px',
     padding: '20px',
@@ -86,7 +86,7 @@ const ChartSkeleton: React.FC = () => (
 
 const PanelSkeleton: React.FC = () => (
   <div style={{
-    background: '#1a1a1a',
+    background: 'var(--surface-panel)',
     border: '1px solid #333',
     borderRadius: '16px',
     overflow: 'hidden',
@@ -98,7 +98,7 @@ const PanelSkeleton: React.FC = () => (
       justifyContent: 'space-between',
       padding: '20px 24px',
       borderBottom: '1px solid #333',
-      background: '#0a0a0a',
+      background: 'var(--surface-panel)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <div style={{ ...shimmerStyle, width: '48px', height: '48px', borderRadius: '12px' }} />

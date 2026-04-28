@@ -33,7 +33,7 @@ export function PluginRegistryView() {
           style={{
             padding: '10px 20px',
             borderRadius: 12,
-            background: '#2563eb',
+            background: 'var(--status-info)',
             color: 'white',
             border: 'none',
             fontWeight: 700,
@@ -44,7 +44,7 @@ export function PluginRegistryView() {
         </button>
       </div>
 
-      {error && <p style={{ color: '#dc2626' }}>{error}</p>}
+      {error && <p style={{ color: 'var(--status-error)' }}>{error}</p>}
 
       <div
         style={{
@@ -78,7 +78,7 @@ export function PluginRegistryView() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 1000,
+            zIndex: 180,
           }}
           onClick={() => setSelectedProvider(null)}
         >
@@ -87,7 +87,7 @@ export function PluginRegistryView() {
             onClick={(event) => event.stopPropagation()}
           >
             <h2 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>{selectedProvider.name}</h2>
-            <p style={{ marginTop: 12, lineHeight: 1.6, color: '#cbd5f5' }}>
+            <p style={{ marginTop: 12, lineHeight: 1.6, color: 'var(--ui-text-secondary)' }}>
               {selectedProvider.description || 'No provider description available.'}
             </p>
             <div style={{ marginTop: 16, fontSize: 13, opacity: 0.75 }}>
@@ -104,7 +104,7 @@ export function PluginRegistryView() {
                   borderRadius: 10,
                   border: '1px solid rgba(148,163,184,0.4)',
                   background: 'transparent',
-                  color: '#f1f5f9',
+                  color: 'var(--ui-text-primary)',
                   fontWeight: 600,
                   cursor: 'pointer',
                 }}
@@ -139,7 +139,7 @@ function ProviderCard({
             width: 52,
             height: 52,
             borderRadius: 16,
-            background: provider.brandColor ? `${provider.brandColor}20` : '#111827',
+            background: provider.brandColor ? `${provider.brandColor}20` : 'var(--surface-canvas)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -153,8 +153,8 @@ function ProviderCard({
             borderRadius: 8,
             fontSize: 10,
             fontWeight: 700,
-            background: active ? 'rgba(34,197,94,0.1)' : '#1f2937',
-            color: active ? '#22c55e' : '#9ca3af',
+            background: active ? 'var(--status-success-bg)' : 'var(--surface-panel)',
+            color: active ? 'var(--status-success)' : 'var(--ui-text-muted)',
           }}
         >
           {active ? 'ACTIVE' : 'INACTIVE'}
@@ -164,7 +164,7 @@ function ProviderCard({
       <div>
         <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{provider.name}</h3>
         {provider.description && (
-          <p style={{ fontSize: 13, lineHeight: 1.6, marginTop: 12, color: '#cbd5f5' }}>
+          <p style={{ fontSize: 13, lineHeight: 1.6, marginTop: 12, color: 'var(--ui-text-secondary)' }}>
             {provider.description}
           </p>
         )}
@@ -178,8 +178,8 @@ function ProviderCard({
             padding: '10px 0',
             borderRadius: 10,
             border: 'none',
-            background: active ? '#111827' : '#10b981',
-            color: active ? '#f3f4f6' : '#fff',
+            background: active ? 'var(--surface-canvas)' : 'var(--status-success)',
+            color: active ? 'var(--ui-text-primary)' : '#fff',
             fontWeight: 600,
             cursor: 'pointer',
             opacity: 1,
@@ -195,7 +195,7 @@ function ProviderCard({
             borderRadius: 10,
             border: '1px solid rgba(148,163,184,0.4)',
             background: 'transparent',
-            color: '#f1f5f9',
+            color: 'var(--ui-text-primary)',
             fontWeight: 600,
             cursor: 'pointer',
           }}

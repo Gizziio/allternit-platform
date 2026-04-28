@@ -25,7 +25,7 @@ function Column({ title, children, width, isCollapsed, onToggle }: ColumnProps) 
         style={{
           width: 32,
           height: '100%',
-          background: '#111827',
+          background: 'var(--surface-canvas)',
           borderRight: '1px solid #374151',
           display: 'flex',
           flexDirection: 'column',
@@ -40,7 +40,7 @@ function Column({ title, children, width, isCollapsed, onToggle }: ColumnProps) 
             textOrientation: 'mixed',
             fontSize: 11,
             fontWeight: 600,
-            color: '#9ca3af',
+            color: 'var(--ui-text-muted)',
             transform: 'rotate(180deg)',
           }}
         >
@@ -55,7 +55,7 @@ function Column({ title, children, width, isCollapsed, onToggle }: ColumnProps) 
       style={{
         width,
         height: '100%',
-        background: '#111827',
+        background: 'var(--surface-canvas)',
         borderRight: '1px solid #374151',
         display: 'flex',
         flexDirection: 'column',
@@ -70,10 +70,10 @@ function Column({ title, children, width, isCollapsed, onToggle }: ColumnProps) 
           alignItems: 'center',
           justifyContent: 'space-between',
           borderBottom: '1px solid #374151',
-          background: '#161b22',
+          background: 'var(--surface-canvas)',
         }}
       >
-        <span style={{ fontSize: 12, fontWeight: 600, color: '#f3f4f6' }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
           {title}
         </span>
         <button
@@ -81,7 +81,7 @@ function Column({ title, children, width, isCollapsed, onToggle }: ColumnProps) 
           style={{
             background: 'transparent',
             border: 'none',
-            color: '#6b7280',
+            color: 'var(--ui-text-muted)',
             cursor: 'pointer',
             fontSize: 16,
             padding: '4px 8px',
@@ -135,7 +135,7 @@ export function FiveColumnLayout({
         display: 'flex',
         height: '100vh',
         width: '100vw',
-        background: '#0b0f19',
+        background: 'var(--surface-canvas)',
         overflow: 'hidden',
       }}
     >
@@ -147,7 +147,7 @@ export function FiveColumnLayout({
         onToggle={() => toggleColumn('dag')}
       >
         {dagStatusColumn || (
-          <div style={{ padding: 12, color: '#6b7280', fontSize: 12 }}>
+          <div style={{ padding: 12, color: 'var(--ui-text-muted)', fontSize: 12 }}>
             DAG execution status will appear here
           </div>
         )}
@@ -161,7 +161,7 @@ export function FiveColumnLayout({
         onToggle={() => toggleColumn('inbox')}
       >
         {inboxColumn || (
-          <div style={{ padding: 12, color: '#6b7280', fontSize: 12 }}>
+          <div style={{ padding: 12, color: 'var(--ui-text-muted)', fontSize: 12 }}>
             Agent requests and approvals
           </div>
         )}
@@ -172,7 +172,7 @@ export function FiveColumnLayout({
         style={{
           flex: 1,
           height: '100%',
-          background: '#111827',
+          background: 'var(--surface-canvas)',
           borderRight: '1px solid #374151',
           display: 'flex',
           flexDirection: 'column',
@@ -186,10 +186,10 @@ export function FiveColumnLayout({
             display: 'flex',
             alignItems: 'center',
             borderBottom: '1px solid #374151',
-            background: '#161b22',
+            background: 'var(--surface-canvas)',
           }}
         >
-          <span style={{ fontSize: 12, fontWeight: 600, color: '#f3f4f6' }}>
+          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
             Terminals
           </span>
         </div>
@@ -206,7 +206,7 @@ export function FiveColumnLayout({
         onToggle={() => toggleColumn('skills')}
       >
         {skillsColumn || (
-          <div style={{ padding: 12, color: '#6b7280', fontSize: 12 }}>
+          <div style={{ padding: 12, color: 'var(--ui-text-muted)', fontSize: 12 }}>
             Portable skills management
           </div>
         )}
@@ -220,7 +220,7 @@ export function FiveColumnLayout({
         onToggle={() => toggleColumn('mail')}
       >
         {mailColumn || (
-          <div style={{ padding: 12, color: '#6b7280', fontSize: 12 }}>
+          <div style={{ padding: 12, color: 'var(--ui-text-muted)', fontSize: 12 }}>
             Allternit Mail integration
           </div>
         )}

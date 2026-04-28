@@ -173,7 +173,7 @@ export function LogsView() {
           <div style={{ 
             padding: 40, 
             textAlign: 'center', 
-            color: '#666' 
+            color: 'var(--ui-text-muted)' 
           }}>
             No logs match your filters
           </div>
@@ -188,7 +188,7 @@ export function LogsView() {
                 fontFamily: 'monospace',
                 fontSize: 12,
                 lineHeight: 1.6,
-                borderBottom: '1px solid rgba(255,255,255,0.03)'
+                borderBottom: '1px solid var(--surface-hover)'
               }}
             >
               <span style={{ 
@@ -232,18 +232,18 @@ export function LogsView() {
 
 function getLevelColor(level: string): string {
   switch (level) {
-    case 'debug': return '#888';
-    case 'info': return '#34c759';
-    case 'warn': return '#ff9500';
-    case 'error': return '#ff3b30';
-    default: return '#888';
+    case 'debug': return 'var(--ui-text-muted)';
+    case 'info': return 'var(--status-success)';
+    case 'warn': return 'var(--status-warning)';
+    case 'error': return 'var(--status-error)';
+    default: return 'var(--ui-text-muted)';
   }
 }
 
 function getSourceColor(source: string): string {
   switch (source) {
     case 'rails': return '#0a84ff';
-    case 'local': return '#888';
-    default: return '#888';
+    case 'local': return 'var(--ui-text-muted)';
+    default: return 'var(--ui-text-muted)';
   }
 }

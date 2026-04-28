@@ -120,7 +120,7 @@ export const TodoWidget = memo(function TodoWidget({
     <div style={{
       margin: "8px 0",
       borderRadius: "10px",
-      border: "1px solid rgba(255,255,255,0.07)",
+      border: "1px solid var(--ui-border-muted)",
       background: "rgba(255,255,255,0.025)",
       overflow: "hidden",
     }}>

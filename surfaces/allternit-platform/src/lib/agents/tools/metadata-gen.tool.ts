@@ -32,7 +32,7 @@ export const metadataGenTool = {
         twitterCard: 'summary_large_image'
       },
       branding: {
-        themeColor: brandColors[0] || '#d4b08c',
+        themeColor: brandColors[0] || 'var(--accent-primary)',
         appleTouchIcon: '/icons/apple-touch-icon.png',
         favicon: '/favicon.ico'
       },

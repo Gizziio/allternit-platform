@@ -22,7 +22,6 @@ import {
   CaretRight,
 } from '@phosphor-icons/react';
 import { memo, useState } from "react";
-import { MatrixLogo } from "@/components/ai-elements/MatrixLogo";
 
 export type PillState = "pending" | "running" | "completed" | "error";
 export type PillType = "tool" | "file" | "terminal" | "web-search";
@@ -42,7 +41,7 @@ interface GlassPillProps {
 
 // ─── Accent colour per state ──────────────────────────────────────────────────
 const stateAccent: Record<PillState, string> = {
-  pending:   "rgba(255,255,255,0.12)",
+  pending:   "var(--ui-border-default)",
   running:   "rgba(212,176,140,0.45)",   // warm amber — matches MatrixLogo thinking
   completed: "rgba(74,222,128,0.35)",    // green
   error:     "rgba(248,113,113,0.45)",   // red
@@ -81,7 +80,7 @@ function StateIndicator({ state }: { state: PillState }) {
           width: 12,
           height: 12,
           borderRadius: "50%",
-          border: "1.5px solid rgba(212,176,140,0.18)",
+          border: "1.5px solid var(--ui-border-muted)",
           borderTopColor: "rgba(212,176,140,0.85)",
           flexShrink: 0,
         }}
@@ -225,7 +224,7 @@ export const GlassPill = memo(
               marginTop: "6px",
               marginLeft: "12px",
               paddingLeft: "10px",
-              borderLeft: "1px solid rgba(255,255,255,0.07)",
+              borderLeft: "1px solid var(--ui-border-muted)",
             }}
           >
             {children}

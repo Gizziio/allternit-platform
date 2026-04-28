@@ -40,6 +40,7 @@ import {
 } from "@/lib/ai/mcp/sandbox-client";
 import type { McpAppUIPart } from "@/lib/ai/rust-stream-adapter-extended";
 import { cn } from "@/lib/utils";
+import { openInBrowser } from '@/lib/openInBrowser';
 
 const BLANK_DOCUMENT = "<!doctype html><html><head></head><body></body></html>";
 const DEFAULT_FRAME_HEIGHT = 420;
@@ -285,7 +286,7 @@ export function McpAppFrame({ part }: { part: McpAppUIPart }) {
     };
 
     bridge.onopenlink = async ({ url }: { url: string }) => {
-      window.open(url, "_blank", "noopener,noreferrer");
+      openInBrowser(url);
       return {};
     };
 
@@ -486,7 +487,7 @@ export function McpAppFrame({ part }: { part: McpAppUIPart }) {
         };
 
         bridge.onopenlink = async ({ url }: { url: string }) => {
-          window.open(url, "_blank", "noopener,noreferrer");
+          openInBrowser(url);
           return {};
         };
 

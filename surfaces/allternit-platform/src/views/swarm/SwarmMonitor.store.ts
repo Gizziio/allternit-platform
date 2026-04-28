@@ -8,10 +8,8 @@ import { useChatSessionStore, type ChatSession } from '@/views/chat/ChatSessionS
 import { useCodeSessionStore, type CodeSession } from '@/views/code/CodeSessionStore';
 import { useCoworkSessionStore } from '@/views/cowork/CoworkSessionStore';
 import { useDesignSessionStore } from '@/views/design/DesignSessionStore';
-import { useBrowserSessionStore } from '@/views/browser/BrowserSessionStore';
-import type { ModeSession, ModeSessionMessage } from '@/lib/agents/mode-session-store';
-import { nativeAgentApi } from '@/lib/agents/native-agent-api';
-import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/allternit.tokens';
+import type { ModeSessionMessage } from '@/lib/agents/mode-session-store';
+import { STATUS } from '@/design/allternit.tokens';
 import {
   SwarmAgent,
   SwarmMetrics, 
@@ -426,13 +424,11 @@ export const useSwarmMonitorStore = create<SwarmMonitorFullState>((set, get) => 
       const originSurface = (options?.originSurface as 'chat' | 'code' | 'browser' | 'cowork' | 'design') || 'code';
       const store = originSurface === 'code'
         ? useCodeSessionStore.getState()
-        : originSurface === 'browser'
-          ? useBrowserSessionStore.getState()
-          : originSurface === 'cowork'
-            ? useCoworkSessionStore.getState()
-            : originSurface === 'design'
-              ? useDesignSessionStore.getState()
-              : useChatSessionStore.getState();
+        : originSurface === 'cowork'
+          ? useCoworkSessionStore.getState()
+          : originSurface === 'design'
+            ? useDesignSessionStore.getState()
+            : useChatSessionStore.getState();
       
       const sessionId = await store.createSession({
         name: name || 'New Swarm Thread',

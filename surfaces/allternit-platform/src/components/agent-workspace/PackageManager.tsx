@@ -10,7 +10,7 @@
  * - Validate package integrity
  */
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import JSZip from 'jszip';
 import {
@@ -24,12 +24,7 @@ import {
   FolderOpen,
   FileText,
   Code,
-  Clock,
-  User,
-  Tag,
-  CaretRight,
   ArrowsClockwise,
-  FloppyDisk,
 } from '@phosphor-icons/react';
 import { agentWorkspaceService } from '@/lib/agents/agent-workspace.service';
 import type { AgentWorkspace } from '@/lib/agents/agent.types';
@@ -54,11 +49,11 @@ interface PackageManagerProps {
 const STUDIO_THEME = {
   textPrimary: '#ECECEC',
   textSecondary: '#A0A0A0',
-  textMuted: '#6B6B6B',
-  accent: '#D4956A',
+  textMuted: 'var(--ui-text-muted)',
+  accent: 'var(--accent-primary)',
   bgCard: 'rgba(42, 33, 26, 0.6)',
   bg: '#0E0D0C',
-  borderSubtle: 'rgba(255,255,255,0.08)',
+  borderSubtle: 'var(--ui-border-muted)',
 };
 
 interface PackageManifest {
@@ -88,7 +83,7 @@ interface PackageFile {
 export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEME }: PackageManagerProps) {
   const [activeTab, setActiveTab] = useState<'export' | 'import'>('export');
   const [workspace, setWorkspace] = useState<AgentWorkspace | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   
@@ -108,20 +103,6 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
   } | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Load workspace
-  const loadWorkspace = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const ws = await agentWorkspaceService.load(agentId);
-      setWorkspace(ws);
-    } catch (e) {
-      setError('Failed to load workspace');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [agentId]);
 
   // Export workspace to .allternit
   const handleExport = async () => {
@@ -234,7 +215,7 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
     <div style={{ 
       position: 'fixed', 
       inset: 0, 
-      background: 'rgba(0,0,0,0.7)', 
+      background: 'var(--shell-overlay-backdrop)', 
       display: 'flex', 
       alignItems: 'center', 
       justifyContent: 'center',
@@ -336,8 +317,8 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
               alignItems: 'center',
               gap: '8px',
             }}>
-              <Warning style={{ width: 16, height: 16, color: '#ef4444' }} />
-              <span style={{ fontSize: '13px', color: '#ef4444' }}>{error}</span>
+              <Warning style={{ width: 16, height: 16, color: 'var(--status-error)' }} />
+              <span style={{ fontSize: '13px', color: 'var(--status-error)' }}>{error}</span>
             </div>
           )}
 
@@ -352,8 +333,8 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
               alignItems: 'center',
               gap: '8px',
             }}>
-              <CheckCircle style={{ width: 16, height: 16, color: '#22c55e' }} />
-              <span style={{ fontSize: '13px', color: '#22c55e' }}>{success}</span>
+              <CheckCircle style={{ width: 16, height: 16, color: 'var(--status-success)' }} />
+              <span style={{ fontSize: '13px', color: 'var(--status-success)' }}>{success}</span>
             </div>
           )}
 

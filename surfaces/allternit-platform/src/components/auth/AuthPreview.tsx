@@ -93,7 +93,7 @@ function ChatMockup({ accent }: { accent: string }) {
           <div style={{
             width: 24, height: 24, borderRadius: '50%', background: accent,
             flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 9, fontWeight: 800, color: '#fff', fontFamily: 'monospace',
+            fontSize: 9, fontWeight: 800, color: 'var(--ui-text-primary)', fontFamily: 'monospace',
           }}>G</div>
           <div style={{
             maxWidth: '80%', padding: '9px 13px',
@@ -103,7 +103,7 @@ function ChatMockup({ accent }: { accent: string }) {
           }}>
             <div style={{ marginBottom: 4, fontWeight: 600 }}>Here&apos;s the structured summary:</div>
             <div style={{ color: accent }}>→ <span style={{ color: '#4a3628' }}>Key finding: methodology validated</span></div>
-            <div style={{ color: '#10b981' }}>→ <span style={{ color: '#4a3628' }}>Results: 94% accuracy across trials</span></div>
+            <div style={{ color: 'var(--status-success)' }}>→ <span style={{ color: '#4a3628' }}>Results: 94% accuracy across trials</span></div>
             <div style={{ color: '#6366f1' }}>→ <span style={{ color: '#4a3628' }}>Next: expand to larger dataset</span></div>
           </div>
         </div>
@@ -139,7 +139,7 @@ function ChatMockup({ accent }: { accent: string }) {
           width: 26, height: 26, borderRadius: 8, background: accent,
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
         }}>
-          <span style={{ color: '#fff', fontSize: 13, lineHeight: 1 }}>→</span>
+          <span style={{ color: 'var(--ui-text-primary)', fontSize: 13, lineHeight: 1 }}>→</span>
         </div>
       </div>
     </div>
@@ -188,7 +188,7 @@ function CoworkMockup({ accent }: { accent: string }) {
           <div style={{ fontWeight: 700, marginBottom: 6 }}>Go-to-Market Strategy</div>
           <div style={{ color: accent, fontWeight: 600, marginBottom: 3, fontSize: 10.5 }}>Phase 1 — Positioning</div>
           <div style={{ color: '#5a4030', marginBottom: 8, fontSize: 10.5 }}>Define ICP and core value prop across segments…</div>
-          <div style={{ color: '#10b981', fontWeight: 600, marginBottom: 3, fontSize: 10.5 }}>Phase 2 — Channels</div>
+          <div style={{ color: 'var(--status-success)', fontWeight: 600, marginBottom: 3, fontSize: 10.5 }}>Phase 2 — Channels</div>
           <div style={{ color: '#5a4030', fontSize: 10.5 }}>Identify top 3 acquisition loops with lowest CAC…</div>
         </div>
         <motion.div
@@ -245,7 +245,7 @@ function CodeMockup({ accent }: { accent: string }) {
           width: 18, height: 18, borderRadius: 5, background: accent,
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
         }}>
-          <span style={{ color: '#fff', fontSize: 9, fontWeight: 800 }}>AI</span>
+          <span style={{ color: 'var(--ui-text-primary)', fontSize: 9, fontWeight: 800 }}>AI</span>
         </div>
         <span style={{ fontSize: 11, color: '#1A1612' }}>Add error handling for network timeouts</span>
         <span style={{ marginLeft: 'auto', fontSize: 10, color: accent, fontWeight: 600, cursor: 'pointer' }}>Apply →</span>
@@ -310,14 +310,14 @@ function BrowserMockup({ accent }: { accent: string }) {
           <div style={{
             width: 22, height: 22, borderRadius: 6, background: accent, flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 9, fontWeight: 800, color: '#fff',
+            fontSize: 9, fontWeight: 800, color: 'var(--ui-text-primary)',
           }}>G</div>
           <span style={{ fontSize: 11, color: '#C4A78A', flex: 1 }}>
             Found the agent API docs. Want me to extract the key endpoints?
           </span>
           <div style={{
             padding: '4px 10px', borderRadius: 7, background: accent,
-            fontSize: 10, fontWeight: 700, color: '#fff', cursor: 'pointer',
+            fontSize: 10, fontWeight: 700, color: 'var(--ui-text-primary)', cursor: 'pointer',
           }}>Yes →</div>
         </motion.div>
       </div>
@@ -458,7 +458,7 @@ export function AuthPreview() {
 
           <div style={{ display: 'grid', gap: 18 }}>
             <div style={{ maxWidth: 500 }}>
-              <div className="auth-preview-title" style={{ fontFamily: 'Georgia, serif', fontSize: 34, lineHeight: 1.02, letterSpacing: '-0.04em', color: '#F4E9DE', fontWeight: 700 }}>
+              <div className="auth-preview-title" style={{ fontFamily: 'var(--font-sans)', fontSize: 34, lineHeight: 1.02, letterSpacing: '-0.04em', color: '#F4E9DE', fontWeight: 700 }}>
                 {slide.promoTitle}
               </div>
               <p style={{ margin: '14px 0 0', fontSize: 14, lineHeight: 1.75, color: '#A88974' }}>
@@ -475,8 +475,8 @@ export function AuthPreview() {
               <div style={{
                 borderRadius: 16,
                 padding: '18px 18px 16px',
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.06)',
+                background: 'var(--surface-hover)',
+                border: '1px solid var(--ui-border-muted)',
               }}>
                 <div style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#7F6656', marginBottom: 14 }}>
                   Why teams choose it
@@ -513,7 +513,7 @@ export function AuthPreview() {
                 <div style={{
                   marginTop: 18,
                   paddingTop: 16,
-                  borderTop: '1px solid rgba(255,255,255,0.07)',
+                  borderTop: '1px solid var(--ui-border-muted)',
                   display: 'grid',
                   gap: 8,
                 }}>

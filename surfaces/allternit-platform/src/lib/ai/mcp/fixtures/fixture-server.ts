@@ -40,14 +40,14 @@ const COUNTER_APP_HTML = `<!DOCTYPE html>
       padding: 20px;
     }
     .counter-card {
-      background: rgba(255,255,255,0.05);
+      background: var(--surface-hover);
       backdrop-filter: blur(10px);
-      border: 1px solid rgba(255,255,255,0.1);
+      border: 1px solid var(--ui-border-default);
       border-radius: 24px;
       padding: 40px;
       text-align: center;
       min-width: 280px;
-      box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+      box-shadow: 0 25px 50px -12px var(--shell-overlay-backdrop);
     }
     h1 {
       font-size: 14px;
@@ -129,7 +129,7 @@ const COUNTER_APP_HTML = `<!DOCTYPE html>
       border-radius: 8px;
       font-size: 11px;
       font-family: monospace;
-      background: rgba(0,0,0,0.3);
+      background: var(--surface-panel);
       color: rgba(255,255,255,0.4);
       opacity: 0;
       transition: opacity 0.3s;

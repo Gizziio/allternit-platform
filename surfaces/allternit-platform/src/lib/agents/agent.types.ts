@@ -151,6 +151,44 @@ export interface Agent {
   };
   assignedBoardItemIds?: string[];
   assignedTaskIds?: string[];
+
+  // Agent Card / Storefront fields (Phase 5: A2A + Discovery)
+  agentCard?: {
+    /** Short tagline for discovery */
+    tagline?: string;
+    /** Detailed capability description */
+    capabilityDescription?: string;
+    /** Input schema the agent accepts */
+    inputSchema?: Record<string, unknown>;
+    /** Output schema the agent produces */
+    outputSchema?: Record<string, unknown>;
+    /** Example prompts / use cases */
+    examples?: string[];
+    /** Trust tier: safe, low, medium, high, critical */
+    trustTier?: 'safe' | 'low' | 'medium' | 'high' | 'critical';
+    /** Whether this agent can delegate to sub-agents */
+    canDelegate?: boolean;
+    /** Supported A2A protocol version */
+    a2aVersion?: string;
+  };
+  /** Community rating (1-5) */
+  rating?: number;
+  /** Number of ratings submitted */
+  reviewCount?: number;
+  /** Total execution runs */
+  totalRuns?: number;
+  /** Success rate percentage (0-100) */
+  successRate?: number;
+  /** Average response time in ms */
+  avgResponseTime?: number;
+  /** Searchable tags */
+  tags?: string[];
+  /** Agent category for browsing */
+  category?: 'engineering' | 'design' | 'marketing' | 'product' | 'research' | 'operations' | 'creative' | 'general';
+  /** Whether the agent is publicly discoverable */
+  isPublic?: boolean;
+  /** If this agent represents a swarm, the swarm ID */
+  swarmId?: string;
 }
 
 // Zod Schema for Agent
@@ -185,6 +223,25 @@ export const agentSchema = z.object({
   }).optional(),
   assignedBoardItemIds: z.array(z.string()).optional(),
   assignedTaskIds: z.array(z.string()).optional(),
+  agentCard: z.object({
+    tagline: z.string().optional(),
+    capabilityDescription: z.string().optional(),
+    inputSchema: z.record(z.unknown()).optional(),
+    outputSchema: z.record(z.unknown()).optional(),
+    examples: z.array(z.string()).optional(),
+    trustTier: z.enum(['safe', 'low', 'medium', 'high', 'critical']).optional(),
+    canDelegate: z.boolean().optional(),
+    a2aVersion: z.string().optional(),
+  }).optional(),
+  rating: z.number().min(0).max(5).optional(),
+  reviewCount: z.number().int().nonnegative().optional(),
+  totalRuns: z.number().int().nonnegative().optional(),
+  successRate: z.number().min(0).max(100).optional(),
+  avgResponseTime: z.number().int().nonnegative().optional(),
+  tags: z.array(z.string()).optional(),
+  category: z.enum(['engineering', 'design', 'marketing', 'product', 'research', 'operations', 'creative', 'general']).optional(),
+  isPublic: z.boolean().optional(),
+  swarmId: z.string().optional(),
 });
 
 // Schema for validating array of agents (API response)

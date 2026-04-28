@@ -82,7 +82,7 @@ export function TimelineView({ tasks, metrics, modeColors }: TimelineViewProps) 
       {/* Header */}
       <div 
         className="px-6 py-3 border-b flex items-center justify-between"
-        style={{ borderColor: 'rgba(255,255,255,0.05)' }}
+        style={{ borderColor: 'var(--surface-hover)' }}
       >
         <div className="flex items-center gap-6 text-xs">
           <span style={{ color: TEXT.secondary }}>
@@ -99,7 +99,7 @@ export function TimelineView({ tasks, metrics, modeColors }: TimelineViewProps) 
           <button 
             className="w-7 h-7 rounded flex items-center justify-center text-xs"
             style={{ 
-              background: 'rgba(255,255,255,0.03)',
+              background: 'var(--surface-hover)',
               color: TEXT.tertiary,
             }}
           >
@@ -109,7 +109,7 @@ export function TimelineView({ tasks, metrics, modeColors }: TimelineViewProps) 
           <button 
             className="w-7 h-7 rounded flex items-center justify-center text-xs"
             style={{ 
-              background: 'rgba(255,255,255,0.03)',
+              background: 'var(--surface-hover)',
               color: TEXT.tertiary,
             }}
           >
@@ -191,7 +191,7 @@ export function TimelineView({ tasks, metrics, modeColors }: TimelineViewProps) 
                         className="absolute top-0 bottom-0 w-px"
                         style={{ 
                           left: `${line.left}%`,
-                          background: 'rgba(255,255,255,0.03)',
+                          background: 'var(--surface-hover)',
                         }}
                       />
                     ))}
@@ -253,7 +253,7 @@ export function TimelineView({ tasks, metrics, modeColors }: TimelineViewProps) 
           {/* Legend */}
           <div 
             className="mt-6 pt-4 border-t flex items-center gap-6 text-xs"
-            style={{ borderColor: 'rgba(255,255,255,0.05)' }}
+            style={{ borderColor: 'var(--surface-hover)' }}
           >
             <div className="flex items-center gap-2">
               <div 

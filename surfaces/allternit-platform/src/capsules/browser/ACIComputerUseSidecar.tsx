@@ -38,7 +38,7 @@ import React, {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { useBrowserAgentStore, type AXTreeNode, type NotificationEntry } from './browserAgent.store';
-import { useAgentSurfaceModeStore } from '../../stores/agent-surface-mode.store';
+
 import { CursorOverlay } from './CursorOverlay';
 import { executeGatewayAction } from '../../integration/computer-use-engine';
 import { ConformanceDashboard } from './ConformanceDashboard';
@@ -160,20 +160,20 @@ function ApprovalCard() {
   const approvalRiskTier      = useBrowserAgentStore((s) => s.approvalRiskTier);
 
   // approvalRiskTier is numeric (0–4)
-  const riskColor = (approvalRiskTier ?? 0) >= 4 ? '#ef4444'
-                  : (approvalRiskTier ?? 0) >= 3 ? '#f59e0b'
-                  : '#3b82f6';
+  const riskColor = (approvalRiskTier ?? 0) >= 4 ? 'var(--status-error)'
+                  : (approvalRiskTier ?? 0) >= 3 ? 'var(--status-warning)'
+                  : 'var(--status-info)';
 
   return (
     <div style={{
       margin: '0 12px 12px',
       padding: '14px 16px',
-      background: 'rgba(18,16,14,0.98)',
-      border: '1px solid rgba(212,176,140,0.18)',
+      background: 'var(--surface-floating)',
+      border: '1px solid var(--ui-border-default)',
       borderRadius: 10,
-      boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+      boxShadow: 'var(--shadow-lg)',
     }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(212,176,140,0.9)', marginBottom: 3 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent-primary)', marginBottom: 3 }}>
         Approval Required
       </div>
       {approvalRiskTier && (
@@ -186,12 +186,12 @@ function ApprovalCard() {
       )}
       {approvalActionSummary && (
         <div style={{
-          background: 'rgba(212,176,140,0.05)',
-          border: '1px solid rgba(212,176,140,0.1)',
+          background: 'var(--surface-hover)',
+          border: '1px solid var(--ui-border-muted)',
           borderRadius: 6,
           padding: '8px 10px',
           fontSize: 10,
-          color: 'rgba(212,176,140,0.65)',
+          color: 'var(--ui-text-muted)',
           lineHeight: 1.5,
           marginBottom: 12,
           fontFamily: 'monospace',
@@ -204,11 +204,11 @@ function ApprovalCard() {
           onClick={() => approveAction?.()}
           style={{
             flex: 1, height: 32,
-            background: 'rgba(212,176,140,0.12)',
-            border: '1px solid rgba(212,176,140,0.28)',
+            background: 'color-mix(in srgb, var(--accent-primary) 12%, var(--surface-panel))',
+            border: '1px solid color-mix(in srgb, var(--accent-primary) 28%, transparent)',
             borderRadius: 6,
             fontSize: 10, fontWeight: 700,
-            color: 'rgba(212,176,140,0.9)',
+            color: 'var(--accent-primary)',
             letterSpacing: '0.08em', textTransform: 'uppercase',
             cursor: 'pointer',
           }}
@@ -219,11 +219,11 @@ function ApprovalCard() {
           onClick={() => denyAction?.()}
           style={{
             height: 32, padding: '0 14px',
-            background: 'rgba(239,68,68,0.08)',
-            border: '1px solid rgba(239,68,68,0.2)',
+            background: 'var(--status-error-bg)',
+            border: '1px solid color-mix(in srgb, var(--status-error) 30%, transparent)',
             borderRadius: 6,
             fontSize: 10, fontWeight: 700,
-            color: 'rgba(239,68,68,0.7)',
+            color: 'var(--status-error)',
             letterSpacing: '0.08em', textTransform: 'uppercase',
             cursor: 'pointer',
           }}
@@ -354,20 +354,8 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
   const dragRef           = useRef<{ startX: number; startW: number } | null>(null);
   const prevAxTreeRef     = useRef<AXTreeNode | null>(null);
 
-  // Must be declared before any useEffect that reads it (React hook ordering)
-  const computerUseModeSelected = useAgentSurfaceModeStore(
-    (s) => s.selectedModeBySurface[s.currentSurface] === 'computer-use',
-  );
-
   // Portal needs document.body — only available client-side
-  useEffect(() => { setMounted(true); }, []);
-
-  // Auto-expand when computer-use mode is selected
-  useEffect(() => {
-    if (computerUseModeSelected && !expanded) {
-      toggleAciSidecar();
-    }
-  }, [computerUseModeSelected]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setMounted(true); }, [])
 
   // Build highlights
   useEffect(() => {
@@ -463,13 +451,13 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
 
   // Hide conditions
   if (!mounted) return null;
-  if (!isActive && !computerUseModeSelected) return null;
+  if (!isActive) return null;
   if (suppressInBrowserMode && isBrowserCapsuleActive) return null;
 
-  const statusColor = status === 'Running'         ? '#10b981'
-                    : status === 'WaitingApproval'  ? '#d97706'
-                    : status === 'Done'              ? '#3b82f6'
-                    : '#6b7280';
+  const statusColor = status === 'Running'         ? 'var(--status-success)'
+                    : status === 'WaitingApproval'  ? 'var(--status-warning)'
+                    : status === 'Done'              ? 'var(--status-info)'
+                    : 'var(--ui-text-muted)';
 
   const adapterLabel = currentAdapterId
     ? (currentAdapterId.split('.').slice(1).join('.') || currentAdapterId)
@@ -497,7 +485,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
             justifyContent: 'center',
           }}
         >
-          <div style={{ width: 3, height: 40, borderRadius: 2, background: 'rgba(212,176,140,0.3)' }} />
+          <div style={{ width: 3, height: 40, borderRadius: 2, background: 'var(--ui-border-default)' }} />
         </div>
       )}
 
@@ -506,10 +494,10 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
         style={viewMode === 'full' ? {
           position: 'fixed',
           inset: 0,
-          zIndex: 1000,
+          zIndex: 120,
           display: 'flex',
           flexDirection: 'column',
-          background: '#0a0908',
+          background: 'var(--surface-canvas)',
           animation: 'aci-sidecar-slide-in 0.18s cubic-bezier(0.22, 1, 0.36, 1) both',
           overflow: 'hidden',
         } : {
@@ -518,12 +506,12 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
           right: 0,
           bottom: 0,
           width: panelWidth,
-          zIndex: 1000,
+          zIndex: 120,
           display: 'flex',
           flexDirection: 'column',
-          background: '#0a0908',
-          borderLeft: '1px solid rgba(212,176,140,0.12)',
-          boxShadow: '-8px 0 40px rgba(0,0,0,0.6)',
+          background: 'var(--surface-canvas)',
+          borderLeft: '1px solid var(--ui-border-muted)',
+          boxShadow: 'var(--shadow-xl)',
           animation: 'aci-sidecar-slide-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) both',
           overflow: 'hidden',
         }}
@@ -532,7 +520,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
         <div style={{
           height: 42,
           background: 'rgba(12,11,10,0.96)',
-          borderBottom: '1px solid rgba(212,176,140,0.1)',
+          borderBottom: '1px solid color-mix(in srgb, var(--accent-primary) 10%, transparent)',
           display: 'flex',
           alignItems: 'center',
           padding: '0 12px',
@@ -560,13 +548,13 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
             </button>
           </ContextWindowCard>
 
-          <div style={{ width: 1, height: 12, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
+          <div style={{ width: 1, height: 12, background: 'var(--ui-border-muted)', flexShrink: 0 }} />
 
           {/* Message */}
           <span style={{
             flex: 1,
             fontSize: 11,
-            color: status === 'WaitingApproval' ? '#fde68a' : 'rgba(212,176,140,0.7)',
+            color: status === 'WaitingApproval' ? 'var(--status-warning)' : 'rgba(212,176,140,0.7)',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
@@ -602,8 +590,8 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
             style={{
               width: 22, height: 22,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: viewMode === 'full' ? 'rgba(212,176,140,0.12)' : 'rgba(212,176,140,0.06)',
-              border: '1px solid rgba(212,176,140,0.1)',
+              background: viewMode === 'full' ? 'color-mix(in srgb, var(--accent-primary) 12%, transparent)' : 'rgba(212,176,140,0.06)',
+              border: '1px solid color-mix(in srgb, var(--accent-primary) 10%, transparent)',
               borderRadius: 5,
               cursor: 'pointer',
               flexShrink: 0,
@@ -624,27 +612,27 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
 
           {/* AX Tree toggle */}
           <button onClick={() => setShowAxTree((v) => !v)} title="Accessibility Tree"
-            style={{ padding: '2px 5px', fontSize: 9, background: showAxTree ? 'rgba(168,85,247,0.2)' : 'rgba(255,255,255,0.04)', border: `1px solid ${showAxTree ? 'rgba(168,85,247,0.4)' : 'rgba(255,255,255,0.08)'}`, borderRadius: 4, color: showAxTree ? '#a855f7' : 'rgba(255,255,255,0.3)', cursor: 'pointer', flexShrink: 0 }}>
+            style={{ padding: '2px 5px', fontSize: 9, background: showAxTree ? 'rgba(168,85,247,0.2)' : 'var(--surface-hover)', border: `1px solid ${showAxTree ? 'rgba(168,85,247,0.4)' : 'var(--ui-border-muted)'}`, borderRadius: 4, color: showAxTree ? '#a855f7' : 'rgba(255,255,255,0.3)', cursor: 'pointer', flexShrink: 0 }}>
             AX
           </button>
 
           {/* Windows toggle */}
           <button onClick={() => { setShowWindows((v) => !v); if (!showWindows) void fetchWindows(); }} title="Open Windows"
-            style={{ padding: '2px 5px', fontSize: 9, background: showWindows ? 'rgba(59,130,246,0.2)' : 'rgba(255,255,255,0.04)', border: `1px solid ${showWindows ? 'rgba(59,130,246,0.4)' : 'rgba(255,255,255,0.08)'}`, borderRadius: 4, color: showWindows ? '#60a5fa' : 'rgba(255,255,255,0.3)', cursor: 'pointer', flexShrink: 0 }}>
+            style={{ padding: '2px 5px', fontSize: 9, background: showWindows ? 'rgba(59,130,246,0.2)' : 'var(--surface-hover)', border: `1px solid ${showWindows ? 'rgba(59,130,246,0.4)' : 'var(--ui-border-muted)'}`, borderRadius: 4, color: showWindows ? 'var(--status-info)' : 'rgba(255,255,255,0.3)', cursor: 'pointer', flexShrink: 0 }}>
             ⊞
           </button>
 
           {/* Notifications toggle */}
           <button onClick={() => { setShowNotifications((v) => !v); if (!showNotifications) void fetchNotifications(); }} title="Notifications"
-            style={{ padding: '2px 5px', fontSize: 9, background: showNotifications ? 'rgba(251,191,36,0.2)' : 'rgba(255,255,255,0.04)', border: `1px solid ${showNotifications ? 'rgba(251,191,36,0.4)' : 'rgba(255,255,255,0.08)'}`, borderRadius: 4, color: showNotifications ? '#fbbf24' : 'rgba(255,255,255,0.3)', cursor: 'pointer', flexShrink: 0 }}>
+            style={{ padding: '2px 5px', fontSize: 9, background: showNotifications ? 'rgba(251,191,36,0.2)' : 'var(--surface-hover)', border: `1px solid ${showNotifications ? 'rgba(251,191,36,0.4)' : 'var(--ui-border-muted)'}`, borderRadius: 4, color: showNotifications ? 'var(--status-warning)' : 'rgba(255,255,255,0.3)', cursor: 'pointer', flexShrink: 0 }}>
             🔔
           </button>
 
           {/* Direct control toggle */}
           <button onClick={() => setDirectControlMode((v) => !v)} title="Direct click control"
             style={{ padding: '2px 5px', fontSize: 9,
-              background: directControlMode ? 'rgba(99,252,241,0.2)' : 'rgba(255,255,255,0.04)',
-              border: `1px solid ${directControlMode ? 'rgba(99,252,241,0.4)' : 'rgba(255,255,255,0.08)'}`,
+              background: directControlMode ? 'rgba(99,252,241,0.2)' : 'var(--surface-hover)',
+              border: `1px solid ${directControlMode ? 'rgba(99,252,241,0.4)' : 'var(--ui-border-muted)'}`,
               borderRadius: 4, color: directControlMode ? '#63fcf1' : 'rgba(255,255,255,0.3)',
               cursor: 'pointer', flexShrink: 0 }}>
             ⊕ Direct
@@ -653,9 +641,9 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
           {/* Conformance dashboard toggle */}
           <button onClick={() => setShowConformance((v) => !v)} title="Conformance Dashboard"
             style={{ padding: '2px 5px', fontSize: 9,
-              background: showConformance ? 'rgba(34,197,94,0.2)' : 'rgba(255,255,255,0.04)',
-              border: `1px solid ${showConformance ? 'rgba(34,197,94,0.4)' : 'rgba(255,255,255,0.08)'}`,
-              borderRadius: 4, color: showConformance ? '#22c55e' : 'rgba(255,255,255,0.3)',
+              background: showConformance ? 'rgba(34,197,94,0.2)' : 'var(--surface-hover)',
+              border: `1px solid ${showConformance ? 'rgba(34,197,94,0.4)' : 'var(--ui-border-muted)'}`,
+              borderRadius: 4, color: showConformance ? 'var(--status-success)' : 'rgba(255,255,255,0.3)',
               cursor: 'pointer', flexShrink: 0 }}>
             ✓ Conf
           </button>
@@ -668,7 +656,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
               width: 22, height: 22,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: 'rgba(212,176,140,0.06)',
-              border: '1px solid rgba(212,176,140,0.1)',
+              border: '1px solid color-mix(in srgb, var(--accent-primary) 10%, transparent)',
               borderRadius: 5,
               cursor: 'pointer',
               flexShrink: 0,
@@ -749,7 +737,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
                     background: 'linear-gradient(135deg, #0a0908 0%, #111010 100%)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
-                    <span style={{ fontSize: 10, color: 'rgba(212,176,140,0.2)', fontFamily: 'monospace', letterSpacing: '0.1em' }}>
+                    <span style={{ fontSize: 10, color: 'var(--ui-border-default)', fontFamily: 'monospace', letterSpacing: '0.1em' }}>
                       NO SIGNAL
                     </span>
                   </div>
@@ -770,8 +758,8 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
                     position: 'absolute', bottom: 8, right: 8,
                     padding: '2px 8px', borderRadius: 4,
                     background: lastVerification.verified_success ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)',
-                    border: `1px solid ${lastVerification.verified_success ? '#22c55e' : '#ef4444'}`,
-                    fontSize: 10, color: lastVerification.verified_success ? '#22c55e' : '#ef4444',
+                    border: `1px solid ${lastVerification.verified_success ? 'var(--status-success)' : 'var(--status-error)'}`,
+                    fontSize: 10, color: lastVerification.verified_success ? 'var(--status-success)' : 'var(--status-error)',
                     fontWeight: 600, pointerEvents: 'none', zIndex: 10,
                   }}>
                     {lastVerification.verified_success ? '✓ Verified' : '✗ Unverified'} {Math.round(lastVerification.confidence * 100)}%
@@ -818,22 +806,22 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
 
             {/* AX Tree panel */}
             {showAxTree && axTree && (
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: 8, maxHeight: 200, overflowY: 'auto', flexShrink: 0 }}>
+              <div style={{ borderTop: '1px solid var(--surface-hover)', padding: 8, maxHeight: 200, overflowY: 'auto', flexShrink: 0 }}>
                 <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginBottom: 4, fontFamily: 'monospace' }}>
                   AX · {(axSurface ?? 'WINDOW').toUpperCase()}
                 </div>
                 {axDiff.size > 0 && (
                   <div style={{ display: 'flex', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 9, color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>
-                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#22c55e', display: 'inline-block', flexShrink: 0 }} />
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--status-success)', display: 'inline-block', flexShrink: 0 }} />
                       Added
                     </span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 9, color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>
-                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#ef4444', display: 'inline-block', flexShrink: 0 }} />
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--status-error)', display: 'inline-block', flexShrink: 0 }} />
                       Removed
                     </span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 9, color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>
-                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#f59e0b', display: 'inline-block', flexShrink: 0 }} />
+                      <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--status-warning)', display: 'inline-block', flexShrink: 0 }} />
                       Modified
                     </span>
                   </div>
@@ -844,7 +832,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
 
             {/* Windows panel */}
             {showWindows && (
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: 8, maxHeight: 150, overflowY: 'auto', flexShrink: 0 }}>
+              <div style={{ borderTop: '1px solid var(--surface-hover)', padding: 8, maxHeight: 150, overflowY: 'auto', flexShrink: 0 }}>
                 <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>OPEN WINDOWS</div>
                 {windows.length === 0
                   ? <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>None found</div>
@@ -865,16 +853,16 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
 
             {/* Notifications panel */}
             {showNotifications && (
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: 8, maxHeight: 150, overflowY: 'auto', flexShrink: 0 }}>
+              <div style={{ borderTop: '1px solid var(--surface-hover)', padding: 8, maxHeight: 150, overflowY: 'auto', flexShrink: 0 }}>
                 <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>NOTIFICATIONS</div>
                 {notifications.length === 0
                   ? <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>None</div>
                   : notifications.map((n: NotificationEntry) => (
-                    <div key={n.notification_id} style={{ marginBottom: 6, padding: '4px 6px', background: 'rgba(255,255,255,0.03)', borderRadius: 4 }}>
+                    <div key={n.notification_id} style={{ marginBottom: 6, padding: '4px 6px', background: 'var(--surface-hover)', borderRadius: 4 }}>
                       <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.75)' }}>{n.title}</div>
                       {n.body && <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>{n.body}</div>}
                       <button onClick={() => void dismissNotification(n.notification_id)}
-                        style={{ fontSize: 9, padding: '1px 6px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 3, color: '#ef4444', cursor: 'pointer' }}>
+                        style={{ fontSize: 9, padding: '1px 6px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 3, color: 'var(--status-error)', cursor: 'pointer' }}>
                         Dismiss
                       </button>
                     </div>
@@ -885,7 +873,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
 
             {/* Conformance dashboard panel */}
             {showConformance && (
-              <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', flexShrink: 0, maxHeight: 300, overflowY: 'auto' }}>
+              <div style={{ borderTop: '1px solid var(--surface-hover)', flexShrink: 0, maxHeight: 300, overflowY: 'auto' }}>
                 <ConformanceDashboard />
               </div>
             )}
@@ -1003,10 +991,10 @@ export function ACIComputerUseBar({ suppressInBrowserMode = true, className }: A
   if (suppressInBrowserMode && isBrowserCapsuleActive) return null;
   if (expanded) return null; // full panel is showing — bar not needed
 
-  const statusColor = status === 'Running'         ? '#10b981'
-                    : status === 'WaitingApproval'  ? '#d97706'
-                    : status === 'Done'             ? '#3b82f6'
-                    : '#6b7280';
+  const statusColor = status === 'Running'         ? 'var(--status-success)'
+                    : status === 'WaitingApproval'  ? 'var(--status-warning)'
+                    : status === 'Done'             ? 'var(--status-info)'
+                    : 'var(--ui-text-muted)';
 
   const isBusy  = status === 'Running' || status === 'WaitingApproval';
   const message = lastEventMessage
@@ -1033,7 +1021,7 @@ export function ACIComputerUseBar({ suppressInBrowserMode = true, className }: A
           gap: 8,
           padding: '6px 12px',
           background: 'rgba(12, 11, 10, 0.88)',
-          borderTop: '1px solid rgba(212,176,140,0.1)',
+          borderTop: '1px solid color-mix(in srgb, var(--accent-primary) 10%, transparent)',
           borderRadius: '8px 8px 0 0',
           backdropFilter: 'blur(14px)',
           WebkitBackdropFilter: 'blur(14px)',
@@ -1062,13 +1050,13 @@ export function ACIComputerUseBar({ suppressInBrowserMode = true, className }: A
           </button>
         </ContextWindowCard>
 
-        <div style={{ width: 1, height: 10, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
+        <div style={{ width: 1, height: 10, background: 'var(--ui-border-muted)', flexShrink: 0 }} />
 
         {/* Message */}
         <span style={{
           flex: 1,
           fontSize: 11,
-          color: status === 'WaitingApproval' ? '#fde68a' : 'rgba(212,176,140,0.65)',
+          color: status === 'WaitingApproval' ? 'var(--status-warning)' : 'rgba(212,176,140,0.65)',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
@@ -1103,7 +1091,7 @@ export function ACIComputerUseBar({ suppressInBrowserMode = true, className }: A
             onClick={() => approveAction?.()}
             style={{
               padding: '3px 9px', borderRadius: 4,
-              background: 'rgba(212,176,140,0.12)',
+              background: 'color-mix(in srgb, var(--accent-primary) 12%, transparent)',
               border: '1px solid rgba(212,176,140,0.28)',
               fontSize: 9, fontWeight: 700,
               color: 'rgba(212,176,140,0.85)',
@@ -1121,7 +1109,7 @@ export function ACIComputerUseBar({ suppressInBrowserMode = true, className }: A
             onClick={() => stopExecution?.()}
             style={{
               padding: '3px 8px', borderRadius: 4,
-              background: 'rgba(239,68,68,0.08)',
+              background: 'var(--status-error-bg)',
               border: '1px solid rgba(239,68,68,0.18)',
               fontSize: 9, fontWeight: 700,
               color: 'rgba(239,68,68,0.65)',
@@ -1141,7 +1129,7 @@ export function ACIComputerUseBar({ suppressInBrowserMode = true, className }: A
             width: 20, height: 20,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: 'rgba(212,176,140,0.06)',
-            border: '1px solid rgba(212,176,140,0.1)',
+            border: '1px solid color-mix(in srgb, var(--accent-primary) 10%, transparent)',
             borderRadius: 4,
             cursor: 'pointer', flexShrink: 0,
           }}

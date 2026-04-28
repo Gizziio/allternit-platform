@@ -20,11 +20,9 @@ import {
   FileText,
   Cursor as MousePointerClick,
   Camera,
-  CheckCircle,
   Flag,
   CaretDown,
   CaretUp,
-  CircleNotch,
   Code,
   Eye,
 } from '@phosphor-icons/react';
@@ -32,8 +30,6 @@ import {
 // ============================================================================
 // Work Block Types
 // ============================================================================
-
-type WorkBlockType = 'action' | 'observation' | 'command' | 'file' | 'tool' | 'checkpoint';
 
 interface WorkBlockProps {
   event: AnyCoworkEvent;

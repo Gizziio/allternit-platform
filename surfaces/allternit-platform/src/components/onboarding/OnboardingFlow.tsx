@@ -44,7 +44,7 @@ import {
   Code,
   Globe,
   ShieldCheck,
-  Lightning,
+  CloudArrowDown,
 } from '@phosphor-icons/react';
 import { useOnboardingStore } from '@/stores/onboarding-store';
 import { useThemeStore, getSystemTheme } from '@/design/ThemeStore';
@@ -60,6 +60,7 @@ import {
   savePurchaseIntent,
 } from './ssh-service';
 import { runtimeBackendApi } from '@/api/infrastructure/runtime-backend';
+import { openInBrowser } from '@/lib/openInBrowser';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -231,13 +232,13 @@ const DECK_CARDS = [
   {
     label: 'A:// agents',
     sub: 'Multi-step tasks done autonomously — come back to finished work.',
-    accent: '#f59e0b',
+    accent: 'var(--status-warning)',
     Icon: Robot,
   },
   {
     label: 'A:// code',
     sub: 'Write, review, and ship code with AI at your side.',
-    accent: '#10b981',
+    accent: 'var(--status-success)',
     Icon: Code,
   },
   {
@@ -249,105 +250,10 @@ const DECK_CARDS = [
   {
     label: 'A:// private',
     sub: 'Your data stays on your infrastructure. Nothing leaves without you.',
-    accent: '#06b6d4',
+    accent: 'var(--status-info)',
     Icon: ShieldCheck,
   },
 ];
-
-function RotatingDeck() {
-  const [active, setActive] = useState(0);
-  const [direction, setDirection] = useState(1);
-
-  useEffect(() => {
-    const t = setInterval(() => {
-      setDirection(1);
-      setActive(i => (i + 1) % DECK_CARDS.length);
-    }, 3200);
-    return () => clearInterval(t);
-  }, []);
-
-  const card = DECK_CARDS[active];
-
-  return (
-    <div style={{ position: 'relative', width: '100%', height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      {/* Ghost card behind */}
-      <div style={{
-        position: 'absolute',
-        width: 260,
-        height: 100,
-        borderRadius: 18,
-        background: 'var(--surface-panel)',
-        border: '1px solid var(--ui-border-subtle)',
-        transform: 'translateY(-10px) scale(0.93)',
-        opacity: 0.35,
-        zIndex: 1,
-      }} />
-
-      {/* Active card */}
-      <AnimatePresence mode="wait" custom={direction}>
-        <motion.div
-          key={active}
-          custom={direction}
-          initial={{ x: direction * 48, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: direction * -48, opacity: 0 }}
-          transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-          style={{
-            position: 'relative',
-            width: 280,
-            borderRadius: 18,
-            background: `color-mix(in srgb, ${card.accent} 8%, var(--shell-dialog-bg))`,
-            border: `1px solid color-mix(in srgb, ${card.accent} 30%, var(--ui-border-subtle))`,
-            boxShadow: `0 8px 32px color-mix(in srgb, ${card.accent} 18%, transparent)`,
-            padding: '22px 24px',
-            zIndex: 2,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 16,
-          }}
-        >
-          <div style={{
-            width: 48, height: 48, borderRadius: 14, flexShrink: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: `color-mix(in srgb, ${card.accent} 18%, transparent)`,
-          }}>
-            <card.Icon size={22} weight="bold" style={{ color: card.accent }} />
-          </div>
-          <div>
-            <div style={{
-              fontSize: 15, fontWeight: 700, color: 'var(--ui-text-primary)',
-              letterSpacing: '-0.01em', lineHeight: 1.3, marginBottom: 4,
-            }}>
-              {card.label}
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--ui-text-secondary)', lineHeight: 1.4 }}>
-              {card.sub}
-            </div>
-          </div>
-        </motion.div>
-      </AnimatePresence>
-
-      {/* Dot indicators */}
-      <div style={{
-        position: 'absolute', bottom: 0, left: '50%', transform: 'translateX(-50%)',
-        display: 'flex', gap: 5, zIndex: 3,
-      }}>
-        {DECK_CARDS.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => { setDirection(i > active ? 1 : -1); setActive(i); }}
-            style={{
-              width: i === active ? 20 : 6, height: 6,
-              borderRadius: 3, border: 'none', cursor: 'pointer', padding: 0,
-              background: i === active ? card.accent : 'var(--ui-border-default)',
-              transition: 'all 0.3s ease',
-            }}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
 
 // ─── Welcome screen ───────────────────────────────────────────────────────────
 
@@ -553,9 +459,6 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
     } catch (e: any) { setConnStatus('err'); setConnMsg(e.message || 'Failed'); }
   };
 
-  const enableElectronTunnel = async () => {
-    try { await (window as any).allternit.tunnel.enable(); } catch { /* ignore */ }
-  };
 
   // ── Manual URL auto-test ────────────────────────────────────────────────────
   const testUrl = useCallback(async (url: string) => {
@@ -1061,7 +964,7 @@ function PurchaseVPSPanel({
 
   function openProvider(url: string, providerId: string) {
     setSelectedProvider(providerId);
-    window.open(url, '_blank', 'noopener,noreferrer');
+    openInBrowser(url);
     // After opening, show the connect form after a short delay so the user
     // knows to come back and fill in their new VPS details.
     setTimeout(() => setShowConnectForm(true), 1500);
@@ -1349,9 +1252,9 @@ function PurchaseVPSPanel({
 // ─── Appearance step ──────────────────────────────────────────────────────────
 
 const THEME_OPTIONS: { id: 'dark' | 'light' | 'system'; label: string; desc: string; Icon: React.ElementType; swatches: [string, string, string] }[] = [
-  { id: 'dark',   label: 'Dark',   desc: 'Sleek & focused',  Icon: Moon,    swatches: ['#1A1612', '#2A211A', '#3C2E24'] },
+  { id: 'dark',   label: 'Dark',   desc: 'Sleek & focused',  Icon: Moon,    swatches: ['var(--ui-text-inverse)', '#2A211A', '#3C2E24'] },
   { id: 'light',  label: 'Light',  desc: 'Clean & bright',   Icon: Sun,     swatches: ['#FDF8F3', '#F5EDE3', '#E8D9C8'] },
-  { id: 'system', label: 'System', desc: 'Follows your OS',  Icon: Monitor, swatches: ['#1A1612', '#FDF8F3', '#B08D6E'] },
+  { id: 'system', label: 'System', desc: 'Follows your OS',  Icon: Monitor, swatches: ['var(--ui-text-inverse)', '#FDF8F3', '#B08D6E'] },
 ];
 
 function AppearanceStep({ theme, onChange }: { theme: WizardData['theme']; onChange: (t: WizardData['theme']) => void; }) {
@@ -1536,6 +1439,53 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
 
   const selected = data.defaultProvider;
 
+  // Local Brain download state
+  const [lbPullState, setLbPullState] = useState<'idle' | 'pulling' | 'done' | 'error'>('idle');
+  const [lbPullProgress, setLbPullProgress] = useState<{ status: string; total?: number; completed?: number } | null>(null);
+
+  const localBrainAlreadyPulled = discovery?.ollama.models.some(
+    (m) => m.modelId === 'llama3.2:3b' || m.modelId.startsWith('llama3.2:3b') || m.modelId === 'llama3.2:3b:latest'
+  ) ?? false;
+
+  const lbPullPct =
+    lbPullProgress?.total && lbPullProgress.completed
+      ? Math.round((lbPullProgress.completed / lbPullProgress.total) * 100)
+      : null;
+
+  async function startLocalBrainDownload() {
+    setLbPullState('pulling');
+    setLbPullProgress(null);
+    try {
+      const res = await fetch('/api/local-brain', { method: 'POST' });
+      if (!res.ok) { setLbPullState('error'); return; }
+      const reader = res.body!.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop() ?? '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const ev = JSON.parse(line.slice(6)) as { status: string; total?: number; completed?: number };
+            setLbPullProgress(ev);
+            if (ev.status === 'success' || ev.status === 'done') {
+              setLbPullState('done');
+              onUpdate({ defaultProvider: 'ollama', defaultModelId: 'llama3.2:3b' });
+            } else if (ev.status === 'error') {
+              setLbPullState('error');
+            }
+          } catch {}
+        }
+      }
+    } catch {
+      setLbPullState('error');
+    }
+  }
+
   // Run discovery on mount
   useEffect(() => {
     setScanning(true);
@@ -1689,7 +1639,7 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
                     <span style={{
                       fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
                       background: 'color-mix(in srgb, #10b981 15%, transparent)',
-                      color: '#10b981', letterSpacing: '0.04em',
+                      color: 'var(--status-success)', letterSpacing: '0.04em',
                     }}>
                       {m.badge}
                     </span>
@@ -1716,6 +1666,168 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
           );
         })}
       </div>
+
+      {/* ── Local Brain section ── */}
+      {!scanning && !localBrainAlreadyPulled && (
+        <div>
+          <div style={{
+            fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
+            color: 'var(--ui-text-muted)', marginBottom: 7,
+          }}>
+            Local Brain
+          </div>
+
+          {!discovery?.ollama.running ? (
+            <div style={{
+              padding: '12px 14px', borderRadius: 12, fontSize: 12,
+              color: 'var(--ui-text-muted)', background: 'var(--surface-panel)',
+              border: '1px solid var(--ui-border-subtle)',
+              display: 'flex', alignItems: 'center', gap: 10,
+            }}>
+              <HardDrive size={16} style={{ flexShrink: 0 }} />
+              <span>
+                Install{' '}
+                <strong style={{ color: 'var(--ui-text-primary)' }}>Ollama</strong>
+                {' '}to run AI offline — no API key needed.{' '}
+                <a
+                  href="https://ollama.com/download"
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}
+                >
+                  Get Ollama →
+                </a>
+              </span>
+            </div>
+          ) : lbPullState === 'pulling' ? (
+            <div style={{
+              padding: '12px 14px', borderRadius: 12,
+              background: 'color-mix(in srgb, var(--accent-primary) 5%, var(--surface-panel))',
+              border: '2px solid var(--accent-primary)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                  style={{ display: 'flex', color: 'var(--accent-primary)' }}
+                >
+                  <ArrowClockwise size={13} />
+                </motion.div>
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
+                  Downloading Local Brain
+                </span>
+                {lbPullPct !== null && (
+                  <span style={{ fontSize: 11, color: 'var(--accent-primary)', marginLeft: 'auto' }}>
+                    {lbPullPct}%
+                  </span>
+                )}
+              </div>
+              <div style={{ height: 4, borderRadius: 2, background: 'var(--ui-border-subtle)', overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%', borderRadius: 2, background: 'var(--accent-primary)',
+                  width: lbPullPct !== null ? `${lbPullPct}%` : '5%',
+                  transition: 'width 300ms ease',
+                }} />
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', marginTop: 6 }}>
+                {lbPullProgress?.status ?? 'Preparing…'} · llama3.2:3b (~2 GB)
+              </div>
+            </div>
+          ) : lbPullState === 'done' ? (
+            <motion.div
+              initial={{ scale: 0.97, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              style={{
+                padding: '11px 14px', borderRadius: 12,
+                background: 'color-mix(in srgb, #10b981 8%, var(--surface-panel))',
+                border: '2px solid #10b981',
+                display: 'flex', alignItems: 'center', gap: 10,
+              }}
+            >
+              <CheckCircle size={20} weight="fill" style={{ color: 'var(--status-success)', flexShrink: 0 }} />
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
+                  Local Brain ready
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>
+                  llama3.2:3b · offline · selected as your brain
+                </div>
+              </div>
+            </motion.div>
+          ) : lbPullState === 'error' ? (
+            <div style={{
+              padding: '11px 14px', borderRadius: 12, fontSize: 12,
+              background: 'var(--surface-panel)', border: '1px solid var(--ui-border-subtle)',
+              display: 'flex', alignItems: 'center', gap: 10,
+            }}>
+              <Warning size={15} style={{ color: 'var(--status-error)', flexShrink: 0 }} />
+              <span style={{ color: 'var(--ui-text-muted)' }}>Download failed — </span>
+              <button
+                onClick={startLocalBrainDownload}
+                style={{ background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--accent-primary)', fontSize: 12, fontWeight: 600, padding: 0 }}
+              >
+                try again
+              </button>
+            </div>
+          ) : (
+            <motion.button
+              onClick={startLocalBrainDownload}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                width: '100%', padding: '11px 14px', borderRadius: 12,
+                border: 'none', cursor: 'pointer', textAlign: 'left',
+                background: 'var(--surface-panel)',
+                outline: '2px solid var(--ui-border-subtle)',
+                outlineOffset: 0,
+                transition: 'outline-color 150ms',
+              }}
+            >
+              <div style={{
+                width: 34, height: 34, borderRadius: 9, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: 'color-mix(in srgb, var(--accent-primary) 12%, transparent)',
+                color: 'var(--accent-primary)',
+              }}>
+                <CloudArrowDown size={18} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
+                    Local Brain
+                  </span>
+                  <span style={{
+                    fontSize: 9, fontWeight: 700, padding: '2px 5px', borderRadius: 4,
+                    background: 'color-mix(in srgb, var(--accent-primary) 12%, transparent)',
+                    color: 'var(--accent-primary)',
+                  }}>
+                    ~2 GB
+                  </span>
+                  <span style={{
+                    fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
+                    background: 'color-mix(in srgb, #10b981 15%, transparent)',
+                    color: 'var(--status-success)', letterSpacing: '0.04em',
+                  }}>
+                    Offline · private
+                  </span>
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', marginTop: 1 }}>
+                  llama3.2:3b — works on any machine, no API key needed
+                </div>
+              </div>
+              <div style={{
+                fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 7,
+                background: 'var(--accent-primary)', color: 'var(--text-inverse)',
+                flexShrink: 0,
+              }}>
+                Download
+              </div>
+            </motion.button>
+          )}
+        </div>
+      )}
 
       {/* ── Cloud providers section ── */}
       <div>
@@ -1758,7 +1870,7 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
                   width: 34, height: 34, borderRadius: 9, flexShrink: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   background: p.logoBg,
-                  color: '#fff',
+                  color: 'var(--ui-text-primary)',
                 }}>
                   <p.Logo size={18} />
                 </div>
@@ -1781,7 +1893,7 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
                       <span style={{
                         fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
                         background: 'color-mix(in srgb, #10b981 15%, transparent)',
-                        color: '#10b981', letterSpacing: '0.04em',
+                        color: 'var(--status-success)', letterSpacing: '0.04em',
                       }}>
                         <Check weight="bold" size={9} style={{ marginRight: 2 }} /> Connected
                       </span>
@@ -1955,10 +2067,10 @@ const MODE_TABS: Array<{
   bg: string;
 }> = [
   { key: 'chat',    label: 'A:// Chat',    Icon: ChatCircle,  color: '#6366f1', bg: 'rgba(99,102,241,0.1)'  },
-  { key: 'code',    label: 'A:// Code',    Icon: Code,        color: '#10b981', bg: 'rgba(16,185,129,0.1)'  },
+  { key: 'code',    label: 'A:// Code',    Icon: Code,        color: 'var(--status-success)', bg: 'rgba(16,185,129,0.1)'  },
   { key: 'browser', label: 'A:// Browser', Icon: Globe,       color: '#ec4899', bg: 'rgba(236,72,153,0.1)'  },
-  { key: 'agents',  label: 'A:// Agents',  Icon: Robot,       color: '#f59e0b', bg: 'rgba(245,158,11,0.1)'  },
-  { key: 'private', label: 'Private',      Icon: ShieldCheck, color: '#06b6d4', bg: 'rgba(6,182,212,0.1)'   },
+  { key: 'agents',  label: 'A:// Agents',  Icon: Robot,       color: 'var(--status-warning)', bg: 'var(--status-warning-bg)'  },
+  { key: 'private', label: 'Private',      Icon: ShieldCheck, color: 'var(--status-info)', bg: 'rgba(6,182,212,0.1)'   },
 ];
 
 function ModePreviewChat() {
@@ -2007,9 +2119,9 @@ function ModePreviewCode() {
   const lines = [
     { text: '$ allternit code --fix auth.ts', color: 'rgba(255,255,255,0.55)' },
     { text: '',                                color: '' },
-    { text: '✓ Scanning workspace…',           color: '#10b981' },
-    { text: '✓ Found issue in auth.ts:42',     color: '#10b981' },
-    { text: '~ Applying null-check fix…',      color: '#f59e0b' },
+    { text: '✓ Scanning workspace…',           color: 'var(--status-success)' },
+    { text: '✓ Found issue in auth.ts:42',     color: 'var(--status-success)' },
+    { text: '~ Applying null-check fix…',      color: 'var(--status-warning)' },
     { text: '',                                color: '' },
     { text: '1 file patched — 0 errors remain', color: 'rgba(255,255,255,0.4)' },
   ];
@@ -2017,7 +2129,7 @@ function ModePreviewCode() {
     <div style={{
       background: 'rgba(0,0,0,0.35)', borderRadius: 10, padding: '12px 14px',
       fontFamily: 'ui-monospace, monospace', fontSize: 11.5,
-      border: '1px solid rgba(255,255,255,0.07)',
+      border: '1px solid var(--ui-border-muted)',
     }}>
       {lines.map((l, i) => (
         <motion.div
@@ -2047,7 +2159,7 @@ function ModePreviewBrowser() {
       <div style={{
         display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px',
         background: 'rgba(0,0,0,0.25)', borderRadius: 8,
-        border: '1px solid rgba(255,255,255,0.07)',
+        border: '1px solid var(--ui-border-muted)',
       }}>
         <div style={{ display: 'flex', gap: 4 }}>
           {['#ff5f57','#febc2e','#28c840'].map(c => (
@@ -2056,7 +2168,7 @@ function ModePreviewBrowser() {
         </div>
         <div style={{
           flex: 1, padding: '3px 8px', borderRadius: 5,
-          background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
+          background: 'var(--surface-hover)', border: '1px solid var(--ui-border-muted)',
           fontSize: 10, color: 'rgba(255,255,255,0.35)', fontFamily: 'ui-monospace, monospace',
         }}>
           competitor.com/pricing
@@ -2114,14 +2226,14 @@ function ModePreviewAgents() {
             <div style={{
               width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: t.done ? 'rgba(245,158,11,0.2)' : 'rgba(255,255,255,0.05)',
-              border: `1px solid ${t.done ? 'rgba(245,158,11,0.4)' : t.active ? 'rgba(245,158,11,0.3)' : 'rgba(255,255,255,0.1)'}`,
+              background: t.done ? 'rgba(245,158,11,0.2)' : 'var(--surface-hover)',
+              border: `1px solid ${t.done ? 'rgba(245,158,11,0.4)' : t.active ? 'rgba(245,158,11,0.3)' : 'var(--ui-border-default)'}`,
             }}>
               {t.done ? (
-                <Check size={9} weight="bold" style={{ color: '#f59e0b' }} />
+                <Check size={9} weight="bold" style={{ color: 'var(--status-warning)' }} />
               ) : t.active ? (
                 <motion.div
-                  style={{ width: 6, height: 6, borderRadius: '50%', background: '#f59e0b' }}
+                  style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--status-warning)' }}
                   animate={{ opacity: [1, 0.3, 1] }}
                   transition={{ duration: 1.1, repeat: Infinity }}
                 />
@@ -2150,7 +2262,7 @@ function ModePreviewPrivate() {
         borderRadius: 9, background: 'rgba(6,182,212,0.08)', border: '1px solid rgba(6,182,212,0.18)',
       }}>
         <motion.div
-          style={{ width: 7, height: 7, borderRadius: '50%', background: '#06b6d4', flexShrink: 0 }}
+          style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--status-info)', flexShrink: 0 }}
           animate={{ opacity: [1, 0.4, 1] }}
           transition={{ duration: 1.8, repeat: Infinity }}
         />
@@ -2172,7 +2284,7 @@ function ModePreviewPrivate() {
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--ui-text-muted)', marginBottom: 5 }}>
           <span>Inference load</span><span>72%</span>
         </div>
-        <div style={{ height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+        <div style={{ height: 5, borderRadius: 3, background: 'var(--surface-active)', overflow: 'hidden' }}>
           <motion.div
             style={{ height: '100%', borderRadius: 3, background: 'linear-gradient(90deg, #06b6d4, #0891b2)' }}
             initial={{ width: '0%' }}
@@ -2285,7 +2397,7 @@ function ModeShowcase() {
               style={{
                 height: 3, borderRadius: 2,
                 width: active === tab.key ? 18 : 6,
-                background: active === tab.key ? tab.color : 'rgba(255,255,255,0.1)',
+                background: active === tab.key ? tab.color : 'var(--ui-border-default)',
                 transition: 'all 0.3s ease',
               }}
             />
@@ -2343,7 +2455,7 @@ function DoneScreen({ data, onFinish }: { data: WizardData; onFinish: () => void
               boxShadow: '0 2px 8px rgba(16,185,129,0.45)',
             }}
           >
-            <Check weight="bold" size={11} style={{ color: '#fff' }} />
+            <Check weight="bold" size={11} style={{ color: 'var(--ui-text-primary)' }} />
           </motion.div>
         </motion.div>
 

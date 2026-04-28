@@ -102,21 +102,21 @@ export const OrganicOrb = memo(({
       );
 
       if (isListening) {
-        orbGradient.addColorStop(0, '#34d399');
-        orbGradient.addColorStop(0.3, '#60a5fa');
+        orbGradient.addColorStop(0, 'var(--status-success)');
+        orbGradient.addColorStop(0.3, 'var(--status-info)');
         orbGradient.addColorStop(0.6, '#a78bfa');
         orbGradient.addColorStop(1, '#f472b6');
       } else if (isSpeaking) {
         orbGradient.addColorStop(0, '#f472b6');
         orbGradient.addColorStop(0.3, '#a78bfa');
-        orbGradient.addColorStop(0.6, '#60a5fa');
-        orbGradient.addColorStop(1, '#34d399');
+        orbGradient.addColorStop(0.6, 'var(--status-info)');
+        orbGradient.addColorStop(1, 'var(--status-success)');
       } else if (isThinking) {
         orbGradient.addColorStop(0, '#a855f7');
         orbGradient.addColorStop(0.4, '#ec4899');
         orbGradient.addColorStop(1, '#8b5cf6');
       } else {
-        orbGradient.addColorStop(0, '#60a5fa');
+        orbGradient.addColorStop(0, 'var(--status-info)');
         orbGradient.addColorStop(0.4, '#a78bfa');
         orbGradient.addColorStop(1, '#f472b6');
       }

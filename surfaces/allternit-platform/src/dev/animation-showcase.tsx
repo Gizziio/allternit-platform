@@ -14,18 +14,17 @@ import { Slide } from '../design/animation/Slide';
 import { Scale } from '../design/animation/Scale';
 import { Stagger } from '../design/animation/Stagger';
 import { PageTransition } from '../design/animation/PageTransition';
-import { AnimatedList, LayoutItem } from '../design/animation/LayoutAnimations';
+import { LayoutItem } from '../design/animation/LayoutAnimations';
 import { Skeleton } from '../design/animation/Skeleton';
 import { useReducedMotion, AccessibleMotion } from '../design/animation/accessibility';
 import { presets } from '../design/animation/presets';
-import { 
-  buttonTap, 
-  hoverLift, 
-  pulseAnimation, 
-  cardInteractions,
+import {
+  buttonTap,
+  hoverLift,
+  pulseAnimation,
   hoverGlow,
 } from '../design/animation/micro-interactions';
-import { AnimatedGlassCard, HoverCard, FadeIn } from '../design/animation/integrations';
+import { AnimatedGlassCard, FadeIn } from '../design/animation/integrations';
 import { animationTiming } from '../design/animation/timing';
 
 // Demo card component

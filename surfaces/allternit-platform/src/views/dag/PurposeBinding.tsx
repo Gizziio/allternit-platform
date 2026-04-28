@@ -14,11 +14,8 @@ import {
   Link,
   LinkBreak,
   Warning,
-  CheckCircle,
   XCircle,
-  Plus,
   MagnifyingGlass,
-  Funnel,
   ArrowsClockwise,
   CaretRight,
   GearSix,
@@ -27,11 +24,7 @@ import {
   Database,
   Globe,
   FileCode,
-  Clock,
   X,
-  DotsThreeVertical,
-  PencilSimple,
-  Trash,
 } from '@phosphor-icons/react';
 import {
   listPurposes,
@@ -48,11 +41,11 @@ import type {
 
 // Purpose category configurations
 const PURPOSE_CATEGORIES = [
-  { value: 'data-analysis', label: 'Data Analysis', icon: <Database size={16} />, color: '#3b82f6' },
-  { value: 'code-generation', label: 'Code Generation', icon: <FileCode size={16} />, color: '#10b981' },
+  { value: 'data-analysis', label: 'Data Analysis', icon: <Database size={16} />, color: 'var(--status-info)' },
+  { value: 'code-generation', label: 'Code Generation', icon: <FileCode size={16} />, color: 'var(--status-success)' },
   { value: 'web-research', label: 'Web Research', icon: <Globe size={16} />, color: '#8b5cf6' },
-  { value: 'system-admin', label: 'System Administration', icon: <GearSix size={16} />, color: '#f59e0b' },
-  { value: 'security', label: 'Security Operations', icon: <Shield size={16} />, color: '#ef4444' },
+  { value: 'system-admin', label: 'System Administration', icon: <GearSix size={16} />, color: 'var(--status-warning)' },
+  { value: 'security', label: 'Security Operations', icon: <Shield size={16} />, color: 'var(--status-error)' },
 ];
 
 // ============================================================================
@@ -69,9 +62,8 @@ export function PurposeBinding() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<'purposes' | 'bindings' | 'violations'>('purposes');
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [, setShowCreateModal] = useState(false);
   const [showBindModal, setShowBindModal] = useState(false);
-  const [selectedPurpose, setSelectedPurpose] = useState<Purpose | null>(null);
 
   // Fetch data
   const fetchData = useCallback(async () => {
@@ -171,21 +163,21 @@ export function PurposeBinding() {
   };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#1a1a1a' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--surface-panel)' }}>
       {/* Header */}
       <div style={{ 
         padding: '20px 24px', 
-        borderBottom: '1px solid #333',
+        borderBottom: '1px solid var(--ui-border-muted)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        background: '#1a1a1a',
+        background: 'var(--surface-panel)',
       }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: '#fff' }}>
+          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: 'var(--ui-text-primary)' }}>
             Purpose Binding
           </h1>
-          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#888' }}>
+          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--ui-text-secondary)' }}>
             Align agents with authorized purposes and monitor compliance
           </p>
         </div>
@@ -195,8 +187,8 @@ export function PurposeBinding() {
             padding: '8px 16px',
             borderRadius: 6,
             border: 'none',
-            background: '#d4b08c',
-            color: '#1a1a1a',
+            background: 'var(--accent-primary)',
+            color: 'var(--ui-text-inverse)',
             fontSize: 13,
             fontWeight: 600,
             cursor: 'pointer',
@@ -213,34 +205,34 @@ export function PurposeBinding() {
       {/* Stats */}
       <div style={{ 
         padding: '16px 24px', 
-        borderBottom: '1px solid #333',
+        borderBottom: '1px solid var(--ui-border-muted)',
         display: 'grid',
         gridTemplateColumns: 'repeat(4, 1fr)',
         gap: 16,
-        background: '#1a1a1a',
+        background: 'var(--surface-panel)',
       }}>
         <StatCard 
           label="Purposes" 
           value={stats.totalPurposes} 
-          color="#d4b08c" 
+          color="var(--accent-primary)" 
           icon={<Target size={20} />}
         />
         <StatCard 
           label="Active Bindings" 
           value={stats.activeBindings} 
-          color="#3b82f6" 
+          color="var(--status-info)" 
           icon={<Link size={20} />}
         />
         <StatCard 
           label="Total Violations" 
           value={stats.totalViolations} 
-          color="#f59e0b" 
+          color="var(--status-warning)" 
           icon={<Warning size={20} />}
         />
         <StatCard 
           label="Open Violations" 
           value={stats.openViolations} 
-          color="#ef4444" 
+          color="var(--status-error)" 
           icon={<XCircle size={20} />}
         />
       </div>
@@ -248,10 +240,10 @@ export function PurposeBinding() {
       {/* Tabs */}
       <div style={{ 
         padding: '0 24px', 
-        borderBottom: '1px solid #333',
+        borderBottom: '1px solid var(--ui-border-muted)',
         display: 'flex',
         gap: 0,
-        background: '#1a1a1a',
+        background: 'var(--surface-panel)',
       }}>
         {[
           { id: 'purposes', label: 'Purposes', count: purposes.length },
@@ -266,7 +258,7 @@ export function PurposeBinding() {
               border: 'none',
               borderBottom: activeTab === tab.id ? '2px solid #d4b08c' : '2px solid transparent',
               background: 'transparent',
-              color: activeTab === tab.id ? '#d4b08c' : '#888',
+              color: activeTab === tab.id ? 'var(--accent-primary)' : 'var(--ui-text-muted)',
               fontSize: 14,
               fontWeight: 500,
               cursor: 'pointer',
@@ -278,7 +270,7 @@ export function PurposeBinding() {
             {tab.label}
             <span style={{
               padding: '2px 8px',
-              background: activeTab === tab.id ? '#d4b08c20' : '#333',
+              background: activeTab === tab.id ? 'color-mix(in srgb, var(--accent-primary) 12%, transparent)' : 'var(--surface-hover)',
               borderRadius: 10,
               fontSize: 11,
             }}>
@@ -291,14 +283,14 @@ export function PurposeBinding() {
       {/* Filters */}
       <div style={{ 
         padding: '12px 24px', 
-        borderBottom: '1px solid #333',
+        borderBottom: '1px solid var(--ui-border-muted)',
         display: 'flex',
         alignItems: 'center',
         gap: 12,
-        background: '#1a1a1a',
+        background: 'var(--surface-panel)',
       }}>
         <div style={{ position: 'relative', flex: 1, maxWidth: 300 }}>
-          <MagnifyingGlass size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#666' }} />
+          <MagnifyingGlass size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--ui-text-muted)' }} />
           <input
             type="text"
             placeholder={`Search ${activeTab}...`}
@@ -308,9 +300,9 @@ export function PurposeBinding() {
               width: '100%',
               padding: '8px 12px 8px 36px',
               borderRadius: 6,
-              border: '1px solid #444',
-              background: '#252525',
-              color: '#e5e5e5',
+              border: '1px solid var(--ui-border-default)',
+              background: 'var(--surface-panel)',
+              color: 'var(--ui-text-primary)',
               fontSize: 13,
               outline: 'none',
             }}
@@ -323,9 +315,9 @@ export function PurposeBinding() {
             style={{
               padding: '8px 12px',
               borderRadius: 6,
-              border: '1px solid #444',
-              background: '#252525',
-              color: '#e5e5e5',
+              border: '1px solid var(--ui-border-default)',
+              background: 'var(--surface-panel)',
+              color: 'var(--ui-text-primary)',
               fontSize: 13,
               cursor: 'pointer',
             }}
@@ -341,9 +333,9 @@ export function PurposeBinding() {
           style={{
             padding: '8px 12px',
             borderRadius: 6,
-            border: '1px solid #444',
+            border: '1px solid var(--ui-border-default)',
             background: 'transparent',
-            color: '#888',
+            color: 'var(--ui-text-secondary)',
             cursor: 'pointer',
           }}
         >
@@ -430,12 +422,12 @@ function PurposeCard({
     <div 
       onClick={onClick}
       style={{
-        background: '#252525',
+        background: 'var(--surface-panel)',
         borderRadius: 8,
-        border: '1px solid #333',
+        border: '1px solid var(--ui-border-muted)',
         padding: 20,
         cursor: 'pointer',
-        transition: 'all 0.2s',
+        transition: 'var(--transition-fast)',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
@@ -453,14 +445,14 @@ function PurposeCard({
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <span style={{ fontSize: 15, fontWeight: 600, color: '#fff' }}>
+            <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
               {purpose.name}
             </span>
             {purpose.status === 'active' ? (
               <span style={{
                 padding: '2px 8px',
-                background: '#22c55e20',
-                color: '#22c55e',
+                background: 'var(--status-success-bg)',
+                color: 'var(--status-success)',
                 borderRadius: 4,
                 fontSize: 11,
                 fontWeight: 600,
@@ -470,8 +462,8 @@ function PurposeCard({
             ) : (
               <span style={{
                 padding: '2px 8px',
-                background: '#66666620',
-                color: '#888',
+                background: 'var(--surface-active)',
+                color: 'var(--ui-text-secondary)',
                 borderRadius: 4,
                 fontSize: 11,
                 fontWeight: 600,
@@ -480,7 +472,7 @@ function PurposeCard({
               </span>
             )}
           </div>
-          <p style={{ margin: 0, fontSize: 13, color: '#888', lineHeight: 1.4 }}>
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--ui-text-secondary)', lineHeight: 1.4 }}>
             {purpose.description}
           </p>
         </div>
@@ -488,17 +480,17 @@ function PurposeCard({
 
       <div style={{ 
         padding: '12px 0', 
-        borderTop: '1px solid #333',
+        borderTop: '1px solid var(--ui-border-muted)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span style={{ fontSize: 12, color: '#666' }}>
+          <span style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>
             <Robot size={12} style={{ display: 'inline', marginRight: 4 }} />
             {bindingCount} bound agents
           </span>
-          <span style={{ fontSize: 12, color: '#666' }}>
+          <span style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>
             <Wrench size={12} style={{ display: 'inline', marginRight: 4 }} />
             {purpose.allowedTools.length} tools
           </span>
@@ -522,10 +514,10 @@ function BindingCard({
 }) {
   const getStatusColor = () => {
     switch (binding.status) {
-      case 'active': return { bg: '#22c55e20', text: '#22c55e' };
-      case 'suspended': return { bg: '#f59e0b20', text: '#f59e0b' };
-      case 'revoked': return { bg: '#ef444420', text: '#ef4444' };
-      default: return { bg: '#66666620', text: '#888' };
+      case 'active': return { bg: 'var(--status-success-bg)', text: 'var(--status-success)' };
+      case 'suspended': return { bg: 'var(--status-warning-bg)', text: 'var(--status-warning)' };
+      case 'revoked': return { bg: 'var(--status-error-bg)', text: 'var(--status-error)' };
+      default: return { bg: 'var(--surface-active)', text: 'var(--ui-text-muted)' };
     }
   };
 
@@ -533,9 +525,9 @@ function BindingCard({
 
   return (
     <div style={{
-      background: '#252525',
+      background: 'var(--surface-panel)',
       borderRadius: 8,
-      border: '1px solid #333',
+      border: '1px solid var(--ui-border-muted)',
       padding: '16px 20px',
       display: 'flex',
       alignItems: 'center',
@@ -545,18 +537,18 @@ function BindingCard({
         width: 44,
         height: 44,
         borderRadius: 10,
-        background: '#333',
+        background: 'var(--surface-hover)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        color: '#d4b08c',
+        color: 'var(--accent-primary)',
       }}>
         <Robot size={20} />
       </div>
 
       <div style={{ flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
             {binding.agentName}
           </span>
           <span style={{
@@ -571,18 +563,18 @@ function BindingCard({
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span style={{ fontSize: 12, color: '#888' }}>
+          <span style={{ fontSize: 12, color: 'var(--ui-text-secondary)' }}>
             <Target size={12} style={{ display: 'inline', marginRight: 4 }} />
             {binding.purposeName}
           </span>
-          <span style={{ fontSize: 12, color: '#666' }}>
+          <span style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>
             Confidence: {Math.round(binding.confidence * 100)}%
           </span>
           {binding.violations > 0 && (
             <span style={{
               padding: '1px 6px',
-              background: '#ef444420',
-              color: '#ef4444',
+              background: 'var(--status-error-bg)',
+              color: 'var(--status-error)',
               borderRadius: 4,
               fontSize: 11,
             }}>
@@ -593,7 +585,7 @@ function BindingCard({
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <span style={{ fontSize: 12, color: '#666' }}>
+        <span style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>
           Bound {new Date(binding.boundAt).toLocaleDateString()}
         </span>
         {binding.status === 'active' && (
@@ -602,9 +594,9 @@ function BindingCard({
             style={{
               padding: '6px 12px',
               borderRadius: 6,
-              border: '1px solid #444',
+              border: '1px solid var(--ui-border-default)',
               background: 'transparent',
-              color: '#888',
+              color: 'var(--ui-text-secondary)',
               fontSize: 12,
               cursor: 'pointer',
               display: 'flex',
@@ -628,19 +620,19 @@ function BindingCard({
 function ViolationCard({ violation }: { violation: PurposeViolation }) {
   const getSeverityColor = () => {
     switch (violation.severity) {
-      case 'critical': return '#ef4444';
-      case 'high': return '#f97316';
-      case 'medium': return '#f59e0b';
-      case 'low': return '#3b82f6';
-      default: return '#888';
+      case 'critical': return 'var(--status-error)';
+      case 'high': return 'var(--status-warning)';
+      case 'medium': return 'var(--status-warning)';
+      case 'low': return 'var(--status-info)';
+      default: return 'var(--ui-text-muted)';
     }
   };
 
   return (
     <div style={{
-      background: '#252525',
+      background: 'var(--surface-panel)',
       borderRadius: 8,
-      border: '1px solid #333',
+      border: '1px solid var(--ui-border-muted)',
       borderLeft: `3px solid ${getSeverityColor()}`,
       padding: '16px 20px',
     }}>
@@ -660,7 +652,7 @@ function ViolationCard({ violation }: { violation: PurposeViolation }) {
 
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
               {violation.violation}
             </span>
             <span style={{
@@ -676,8 +668,8 @@ function ViolationCard({ violation }: { violation: PurposeViolation }) {
             {!violation.resolvedAt && (
               <span style={{
                 padding: '2px 8px',
-                background: '#ef444420',
-                color: '#ef4444',
+                background: 'var(--status-error-bg)',
+                color: 'var(--status-error)',
                 borderRadius: 4,
                 fontSize: 11,
               }}>
@@ -686,19 +678,19 @@ function ViolationCard({ violation }: { violation: PurposeViolation }) {
             )}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 8 }}>
-            <span style={{ fontSize: 12, color: '#888' }}>
+            <span style={{ fontSize: 12, color: 'var(--ui-text-secondary)' }}>
               <Robot size={12} style={{ display: 'inline', marginRight: 4 }} />
               {violation.agentName}
             </span>
-            <span style={{ fontSize: 12, color: '#888' }}>
+            <span style={{ fontSize: 12, color: 'var(--ui-text-secondary)' }}>
               <Target size={12} style={{ display: 'inline', marginRight: 4 }} />
               {violation.purposeName}
             </span>
-            <span style={{ fontSize: 12, color: '#666' }}>
+            <span style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>
               {new Date(violation.createdAt).toLocaleString()}
             </span>
           </div>
-          <p style={{ margin: 0, fontSize: 13, color: '#aaa' }}>
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--ui-text-muted)' }}>
             {JSON.stringify(violation.details)}
           </p>
         </div>
@@ -735,7 +727,7 @@ function BindAgentModal({
     <div style={{
       position: 'fixed',
       inset: 0,
-      background: 'rgba(0,0,0,0.7)',
+      background: 'var(--shell-overlay-backdrop)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -743,29 +735,29 @@ function BindAgentModal({
     }}>
       <div style={{
         width: 500,
-        background: '#1a1a1a',
+        background: 'var(--surface-panel)',
         borderRadius: 12,
-        border: '1px solid #333',
+        border: '1px solid var(--ui-border-muted)',
         overflow: 'hidden',
       }}>
         <div style={{
           padding: '20px 24px',
-          borderBottom: '1px solid #333',
+          borderBottom: '1px solid var(--ui-border-muted)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
         }}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#fff' }}>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
             Bind Agent to Purpose
           </h2>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--ui-text-secondary)', cursor: 'pointer' }}>
             <X size={20} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} style={{ padding: 24 }}>
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#aaa', marginBottom: 6 }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
               Agent ID
             </label>
             <input
@@ -778,16 +770,16 @@ function BindAgentModal({
                 width: '100%',
                 padding: '10px 12px',
                 borderRadius: 6,
-                border: '1px solid #444',
-                background: '#252525',
-                color: '#e5e5e5',
+                border: '1px solid var(--ui-border-default)',
+                background: 'var(--surface-panel)',
+                color: 'var(--ui-text-primary)',
                 fontSize: 14,
               }}
             />
           </div>
 
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#aaa', marginBottom: 6 }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
               Purpose
             </label>
             <select
@@ -798,9 +790,9 @@ function BindAgentModal({
                 width: '100%',
                 padding: '10px 12px',
                 borderRadius: 6,
-                border: '1px solid #444',
-                background: '#252525',
-                color: '#e5e5e5',
+                border: '1px solid var(--ui-border-default)',
+                background: 'var(--surface-panel)',
+                color: 'var(--ui-text-primary)',
                 fontSize: 14,
               }}
             >
@@ -814,7 +806,7 @@ function BindAgentModal({
           </div>
 
           <div style={{ marginBottom: 24 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#aaa', marginBottom: 6 }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
               Confidence Level: {Math.round(confidence * 100)}%
             </label>
             <input
@@ -828,12 +820,12 @@ function BindAgentModal({
                 width: '100%',
                 height: 6,
                 borderRadius: 3,
-                background: '#333',
+                background: 'var(--surface-hover)',
                 outline: 'none',
-                accentColor: '#d4b08c',
+                accentColor: 'var(--accent-primary)',
               }}
             />
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 11, color: '#666' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 11, color: 'var(--ui-text-muted)' }}>
               <span>Low</span>
               <span>High</span>
             </div>
@@ -846,9 +838,9 @@ function BindAgentModal({
               style={{
                 padding: '10px 20px',
                 borderRadius: 6,
-                border: '1px solid #444',
+                border: '1px solid var(--ui-border-default)',
                 background: 'transparent',
-                color: '#aaa',
+                color: 'var(--ui-text-muted)',
                 fontSize: 14,
                 cursor: 'pointer',
               }}
@@ -861,8 +853,8 @@ function BindAgentModal({
                 padding: '10px 20px',
                 borderRadius: 6,
                 border: 'none',
-                background: '#d4b08c',
-                color: '#1a1a1a',
+                background: 'var(--accent-primary)',
+                color: 'var(--ui-text-inverse)',
                 fontSize: 14,
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -885,9 +877,9 @@ function StatCard({ label, value, color, icon }: { label: string; value: number;
   return (
     <div style={{
       padding: 16,
-      background: '#252525',
+      background: 'var(--surface-panel)',
       borderRadius: 8,
-      border: '1px solid #333',
+      border: '1px solid var(--ui-border-muted)',
       display: 'flex',
       alignItems: 'center',
       gap: 12,
@@ -906,7 +898,7 @@ function StatCard({ label, value, color, icon }: { label: string; value: number;
       </div>
       <div>
         <div style={{ fontSize: 24, fontWeight: 700, color }}>{value}</div>
-        <div style={{ fontSize: 12, color: '#888' }}>{label}</div>
+        <div style={{ fontSize: 12, color: 'var(--ui-text-secondary)' }}>{label}</div>
       </div>
     </div>
   );
@@ -914,7 +906,7 @@ function StatCard({ label, value, color, icon }: { label: string; value: number;
 
 function LoadingState() {
   return (
-    <div style={{ textAlign: 'center', padding: 60, color: '#666' }}>
+    <div style={{ textAlign: 'center', padding: 60, color: 'var(--ui-text-muted)' }}>
       <ArrowsClockwise size={32} style={{ animation: 'spin 1s linear infinite' }} />
       <p>Loading...</p>
     </div>
@@ -924,16 +916,16 @@ function LoadingState() {
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div style={{ textAlign: 'center', padding: 60 }}>
-      <Warning size={32} color="#ef4444" />
-      <p style={{ color: '#ef4444', marginBottom: 16 }}>{message}</p>
+      <Warning size={32} color="var(--status-error)" />
+      <p style={{ color: 'var(--status-error)', marginBottom: 16 }}>{message}</p>
       <button
         onClick={onRetry}
         style={{
           padding: '8px 16px',
           borderRadius: 6,
-          border: '1px solid #444',
+          border: '1px solid var(--ui-border-default)',
           background: 'transparent',
-          color: '#aaa',
+          color: 'var(--ui-text-muted)',
           cursor: 'pointer',
         }}
       >
@@ -945,9 +937,9 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div style={{ textAlign: 'center', padding: 60, color: '#666' }}>
+    <div style={{ textAlign: 'center', padding: 60, color: 'var(--ui-text-muted)' }}>
       <Target size={48} style={{ marginBottom: 16 }} />
-      <h3 style={{ margin: '0 0 8px 0', fontSize: 16, color: '#aaa' }}>{message}</h3>
+      <h3 style={{ margin: '0 0 8px 0', fontSize: 16, color: 'var(--ui-text-muted)' }}>{message}</h3>
     </div>
   );
 }

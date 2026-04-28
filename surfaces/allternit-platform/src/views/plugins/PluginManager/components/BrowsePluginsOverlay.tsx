@@ -1,15 +1,9 @@
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { 
   X, 
-  MagnifyingGlass, 
   CircleNotch, 
-  ArrowsClockwise, 
-  Folder, 
   PuzzlePiece as Puzzle, 
   Check, 
-  ArrowSquareOut, 
-  Shield, 
-  DownloadSimple,
   UsersThree,
 } from '@phosphor-icons/react';
 import { THEME, CURATED_MARKETPLACE_SOURCES } from '../constants';
@@ -21,19 +15,13 @@ import {
 import { 
   searchMarketplace, 
   fetchPluginFromGitHub, 
-  fetchExternalMarketplaceDirectories,
-  type ExternalMarketplaceDirectoryEntry 
 } from '../../../../plugins/marketplaceApi';
 import { 
   parseGitHubRepoRef, 
-  isVersionNewer, 
-  isPluginBlockedByTrustPolicy, 
   normalizeMarketplacePluginPayload,
-  extractPluginRecordsFromZip
 } from '../utils';
 import { useErrorToast } from '../../ErrorBoundary';
 import type { FileSystemAPI } from '../../../../plugins/fileSystem';
-import { StarRating } from '../../../../components/StarRating';
 import { PublishTabView } from './PublishTabView';
 import { CreatePluginModal, ValidatePluginModal, SubmitToMarketplaceModal } from './PublishModals';
 
@@ -81,14 +69,14 @@ function CoworkPluginsView({
           <h3 style={{ margin: 0, fontSize: 20, fontWeight: 600, color: THEME.textPrimary }}>Cowork Plugins</h3>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: THEME.textSecondary }}>Team skills and agent collaboration tools</p>
         </div>
-        <span style={{ marginLeft: 'auto', fontSize: 12, backgroundColor: 'rgba(8, 145, 178, 0.15)', color: '#22d3ee', padding: '4px 10px', borderRadius: 9999, fontWeight: 600 }}>{plugins.length} available</span>
+        <span style={{ marginLeft: 'auto', fontSize: 12, backgroundColor: 'var(--status-info-bg)', color: 'var(--status-info)', padding: '4px 10px', borderRadius: 9999, fontWeight: 600 }}>{plugins.length} available</span>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
         {plugins.map((plugin) => {
           const installed = installedIds.includes(plugin.id);
           return (
-            <div key={plugin.id} style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: `1px solid ${THEME.border}`, borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div key={plugin.id} style={{ backgroundColor: 'var(--surface-hover)', border: `1px solid ${THEME.border}`, borderRadius: 12, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                 <div style={{ width: 40, height: 40, borderRadius: 10, background: 'linear-gradient(135deg, #0891b2, #22d3ee)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                   <Puzzle size={20} weight="bold" color="#fff" />
@@ -104,17 +92,17 @@ function CoworkPluginsView({
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 'auto' }}>
                 {plugin.author && <span style={{ fontSize: 11, color: THEME.textTertiary }}>by {plugin.author}</span>}
-                <span style={{ marginLeft: 'auto', fontSize: 11, color: '#22d3ee', backgroundColor: 'rgba(8, 145, 178, 0.12)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>cowork</span>
+                <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--status-info)', backgroundColor: 'var(--status-info-bg)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>cowork</span>
               </div>
 
               <div style={{ display: 'flex', gap: 8 }}>
                 {installed ? (
                   <>
-                    <button onClick={() => onUpdate(plugin)} style={{ flex: 1, padding: '8px 12px', borderRadius: 6, border: 'none', backgroundColor: 'rgba(8, 145, 178, 0.2)', color: '#22d3ee', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Update</button>
+                    <button onClick={() => onUpdate(plugin)} style={{ flex: 1, padding: '8px 12px', borderRadius: 6, border: 'none', backgroundColor: 'color-mix(in srgb, var(--status-info) 20%, transparent)', color: 'var(--status-info)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Update</button>
                     <button onClick={() => onUninstall(plugin)} style={{ padding: '8px 12px', borderRadius: 6, border: `1px solid ${THEME.border}`, backgroundColor: 'transparent', color: THEME.textSecondary, fontSize: 13, cursor: 'pointer' }}>Remove</button>
                   </>
                 ) : (
-                  <button onClick={() => onInstall(plugin)} style={{ flex: 1, padding: '8px 12px', borderRadius: 6, border: 'none', backgroundColor: '#0891b2', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Install</button>
+                  <button onClick={() => onInstall(plugin)} style={{ flex: 1, padding: '8px 12px', borderRadius: 6, border: 'none', backgroundColor: 'var(--status-info)', color: 'var(--ui-text-inverse)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Install</button>
                 )}
               </div>
             </div>
@@ -157,20 +145,17 @@ export function BrowsePluginsOverlay({
   fs: FileSystemAPI;
 }) {
   const [activeTab, setActiveTab] = useState<PluginMarketplaceTab>('marketplace');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [searchQuery] = useState('');
+  const [activeCategory] = useState<string>('all');
   const [marketplacePlugins, setMarketplacePlugins] = useState<MarketplacePlugin[]>([]);
-  const [marketplaceSource, setMarketplaceSource] = useState<'api' | 'curated' | 'github' | 'none'>('none');
-  const [marketplaceError, setMarketplaceError] = useState<string | null>(null);
-  const [personalEntries, setPersonalEntries] = useState<Array<{ source: PersonalMarketplaceSource; plugin: MarketplacePlugin }>>([]);
+  const [, setMarketplaceSource] = useState<'api' | 'curated' | 'github' | 'none'>('none');
+  const [, setMarketplaceError] = useState<string | null>(null);
+  const [, setPersonalEntries] = useState<Array<{ source: PersonalMarketplaceSource; plugin: MarketplacePlugin }>>([]);
   const [isMarketplaceLoading, setIsMarketplaceLoading] = useState(true);
-  const [isPersonalLoading, setIsPersonalLoading] = useState(false);
-  const [personalSourceWarnings, setPersonalSourceWarnings] = useState<Record<string, string>>({});
-  const [refreshNonce, setRefreshNonce] = useState(0);
-  const [isUpdatingAll, setIsUpdatingAll] = useState(false);
-  const [externalDirectories, setExternalDirectories] = useState<ExternalMarketplaceDirectoryEntry[]>([]);
-  const [isExternalDirectoriesLoading, setIsExternalDirectoriesLoading] = useState(false);
-  const { showError, showInfo, showWarning } = useErrorToast();
+  const [, setIsPersonalLoading] = useState(false);
+  const [, setPersonalSourceWarnings] = useState<Record<string, string>>({});
+  const [refreshNonce] = useState(0);
+  const { showError, showInfo } = useErrorToast();
 
   const enabledCuratedSourceIds = useMemo(() => {
     return CURATED_MARKETPLACE_SOURCES
@@ -235,22 +220,6 @@ export function BrowsePluginsOverlay({
 
   useEffect(() => { void loadPersonalSources(); }, [loadPersonalSources]);
 
-  const filteredMarketplace = marketplacePlugins.filter((plugin) => activeCategory === 'all' || plugin.category === activeCategory);
-
-  const handleUpdateAll = useCallback(async () => {
-    const updatable = filteredMarketplace.filter(p => marketplaceInstalledIds.includes(p.id) && isVersionNewer(p.version, installedVersions[p.id]));
-    if (updatable.length === 0) return;
-    setIsUpdatingAll(true);
-    try {
-      for (const plugin of updatable) await onUpdate(plugin);
-      showInfo(`Updated ${updatable.length} plugins.`);
-    } finally { setIsUpdatingAll(false); setRefreshNonce(n => n + 1); }
-  }, [filteredMarketplace, marketplaceInstalledIds, installedVersions, onUpdate, showInfo]);
-
-  const [showAddSourceModal, setShowAddSourceModal] = useState(false);
-  const [addSourceType, setAddSourceType] = useState<'github' | 'url' | 'upload' | 'local' | null>(null);
-  const [sourceInputValue, setSourceInputValue] = useState('');
-  const [sourceAccepted, setSourceAccepted] = useState(false);
   const [showCreatePluginModal, setShowCreatePluginModal] = useState(false);
   const [showValidateModal, setShowValidateModal] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -264,11 +233,11 @@ export function BrowsePluginsOverlay({
 
       <div style={{ display: 'flex', gap: 8, padding: '16px 40px', borderBottom: `1px solid ${THEME.border}` }}>
         {(['marketplace', 'personal', 'directories', 'publish', 'cowork'] as PluginMarketplaceTab[]).map((t) => (
-          <button key={t} onClick={() => setActiveTab(t)} style={{ padding: '8px 16px', borderRadius: 6, border: 'none', backgroundColor: activeTab === t ? 'rgba(255,255,255,0.1)' : 'transparent', color: activeTab === t ? THEME.textPrimary : THEME.textSecondary, cursor: 'pointer', textTransform: 'capitalize', display: 'flex', alignItems: 'center', gap: 6 }}>
-            {t === 'cowork' && <UsersThree size={16} weight="bold" color={activeTab === t ? '#22d3ee' : THEME.textSecondary} />}
+          <button key={t} onClick={() => setActiveTab(t)} style={{ padding: '8px 16px', borderRadius: 6, border: 'none', backgroundColor: activeTab === t ? 'var(--ui-border-default)' : 'transparent', color: activeTab === t ? THEME.textPrimary : THEME.textSecondary, cursor: 'pointer', textTransform: 'capitalize', display: 'flex', alignItems: 'center', gap: 6 }}>
+            {t === 'cowork' && <UsersThree size={16} weight="bold" color={activeTab === t ? 'var(--status-info)' : THEME.textSecondary} />}
             {t}
             {t === 'cowork' && (
-              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 16, borderRadius: 9999, backgroundColor: '#0891b2', color: '#fff', fontSize: 10, fontWeight: 600, padding: '0 6px' }}>NEW</span>
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 16, borderRadius: 9999, backgroundColor: 'var(--status-info)', color: 'var(--ui-text-inverse)', fontSize: 10, fontWeight: 600, padding: '0 6px' }}>NEW</span>
             )}
           </button>
         ))}

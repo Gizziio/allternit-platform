@@ -17,7 +17,6 @@ import { conversationsApi } from "@/api/conversations";
 
 import { ForkButton } from "./ForkButton";
 import { BranchIndicator } from "./BranchIndicator";
-import { MatrixLogo } from "@/components/ai-elements/MatrixLogo";
 import { TextShimmer } from "@/components/agent-elements/text-shimmer";
 import { SpiralLoader } from "@/components/agent-elements/spiral-loader";
 import { AgentAvatar } from "@/components/Avatar";
@@ -385,8 +384,7 @@ export const StreamingChatComposer = memo(function StreamingChatComposer({
   // Feature 1: Granular agent execution status while streaming
   const agentStatus = useAgentStreamingStatus(
     !!(isLoading && isLast && isAssistant),
-    agentName,
-    1800
+    1500
   );
 
   return (

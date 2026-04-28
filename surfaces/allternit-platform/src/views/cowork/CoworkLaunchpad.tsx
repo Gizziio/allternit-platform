@@ -1,42 +1,20 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { GlassCard } from '../../design/GlassCard';
+import React, { useState, useEffect } from 'react';
 import {
-  Plus,
   Clock,
   Chat,
-  ArrowRight,
-  Globe,
-  Terminal,
   FileText,
   Folder,
   SquaresFour,
-  Sparkle,
-  Image,
   X,
   Code,
-  Users,
-  Robot,
-  RocketLaunch,
-  Lightning,
-  Target,
-  Lightbulb,
-  Compass,
-  Hammer,
-  Wrench,
   MagnifyingGlass,
-  ArrowUpRight,
-  DownloadSimple,
   CaretRight,
-  UsersThree,
   Image as ImageIcon,
 } from '@phosphor-icons/react';
-
-import { getSession } from '@/lib/auth-browser';
 
 import { ChatComposer } from '../chat/ChatComposer';
 import { useModelSelection } from '@/providers/model-selection-provider';
 import { ModelPicker } from '@/components/model-picker';
-import { useCoworkStore } from './CoworkStore';
 import { useSurfaceAgentModeEnabled } from '@/lib/agents/surface-agent-context';
 import { AgentModeBackdrop } from '../chat/agentModeSurfaceTheme';
 import { AgentCapabilitiesPanel } from './AgentCapabilitiesPanel';
@@ -258,9 +236,9 @@ const COWORK_TAGLINES = [
 export function CoworkLaunchpad({ onStartChat, onResumeThread }: CoworkLaunchpadProps) {
   const agentModeEnabled = useSurfaceAgentModeEnabled('cowork');
   const { selection: modelSelection, selectModel, startSelection, isSelecting, cancelSelection } = useModelSelection();
-  const [composerInput, setComposerInput] = useState('');
+  const [composerInput] = useState('');
   const [showPluginsOverlay, setShowPluginsOverlay] = useState(false);
-  const [pluginInput, setShowPluginInput] = useState('');
+  const [, setShowPluginInput] = useState('');
   const [greeting, setGreeting] = useState({ title: COWORK_TITLES[0], tagline: COWORK_TAGLINES[0] });
   const [titleAnimation, setTitleAnimation] = useState(0);
   const [taglineAnimation, setTaglineAnimation] = useState(0);
@@ -282,12 +260,12 @@ export function CoworkLaunchpad({ onStartChat, onResumeThread }: CoworkLaunchpad
   };
 
   return (
-    <div style={{ 
-      padding: '80px 40px', 
-      height: '100%', 
-      overflowY: 'auto', 
+    <div style={{
+      padding: '80px 40px',
+      height: '100%',
+      overflowY: 'auto',
       background: 'transparent',
-      color: '#ececec',
+      color: 'var(--ui-text-primary)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -307,13 +285,13 @@ export function CoworkLaunchpad({ onStartChat, onResumeThread }: CoworkLaunchpad
             animationIndex={titleAnimation} 
             delay={100}
             as="h1"
-            style={{ 
-              fontSize: '32px', 
-              fontWeight: 500, 
-              margin: '0 0 12px 0', 
-              letterSpacing: '-0.01em', 
-              fontFamily: 'Georgia, serif',
-              color: '#ececec'
+            style={{
+              fontSize: '32px',
+              fontWeight: 500,
+              margin: '0 0 12px 0',
+              letterSpacing: '-0.01em',
+              fontFamily: 'var(--font-sans)',
+              color: 'var(--ui-text-primary)',
             }}
           >
             {greeting.title}
@@ -323,11 +301,11 @@ export function CoworkLaunchpad({ onStartChat, onResumeThread }: CoworkLaunchpad
               animationIndex={taglineAnimation} 
               delay={350}
               as="p"
-              style={{ 
-                fontSize: '14px', 
-                color: '#666', 
+              style={{
+                fontSize: '14px',
+                color: 'var(--ui-text-muted)',
                 margin: 0,
-                display: 'block'
+                display: 'block',
               }}
             >
               {greeting.tagline}
@@ -354,8 +332,8 @@ export function CoworkLaunchpad({ onStartChat, onResumeThread }: CoworkLaunchpad
         {/* Pick a task section - Restored with tailored prompts */}
         <section>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '16px' }}>
-            <SquaresFour size={14} color="#444" />
-            <h2 style={{ fontSize: '12px', fontWeight: 700, color: '#444', textTransform: 'uppercase' }}>Pick a task, any task</h2>
+            <SquaresFour size={14} color="var(--ui-text-muted)" />
+            <h2 style={{ fontSize: '12px', fontWeight: 700, color: 'var(--ui-text-muted)', textTransform: 'uppercase' }}>Pick a task, any task</h2>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {[
@@ -384,7 +362,7 @@ export function CoworkLaunchpad({ onStartChat, onResumeThread }: CoworkLaunchpad
                   padding: 0, 
                   textAlign: 'left', 
                   cursor: 'pointer',
-                  borderTop: '1px solid #222'
+                  borderTop: '1px solid var(--ui-border-muted)'
                 }}
               >
                 <div style={{ 
@@ -397,8 +375,8 @@ export function CoworkLaunchpad({ onStartChat, onResumeThread }: CoworkLaunchpad
                 onMouseEnter={(e) => e.currentTarget.style.opacity = '0.7'}
                 onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
                 >
-                  <div style={{ color: '#444' }}>{task.icon}</div>
-                  <span style={{ fontSize: '14px', fontWeight: 500, color: '#888' }}>{task.label}</span>
+                  <div style={{ color: 'var(--ui-text-muted)' }}>{task.icon}</div>
+                  <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--ui-text-secondary)' }}>{task.label}</span>
                 </div>
               </button>
             ))}
@@ -409,12 +387,12 @@ export function CoworkLaunchpad({ onStartChat, onResumeThread }: CoworkLaunchpad
               marginTop: '24px', 
               background: 'none', 
               border: 'none', 
-              fontSize: '11px', 
-              color: '#333', 
-              fontWeight: 700, 
-              textTransform: 'uppercase', 
+              fontSize: '11px',
+              color: 'var(--ui-text-secondary)',
+              fontWeight: 700,
+              textTransform: 'uppercase',
               cursor: 'pointer',
-              padding: 0
+              padding: 0,
             }}
           >
             Customize with plugins
@@ -531,75 +509,75 @@ function PluginsOverlay({ onClose, onStartChat }: PluginsOverlayProps) {
     <div style={{
       position: 'fixed',
       inset: 0,
-      background: 'rgba(0,0,0,0.9)',
+      background: 'var(--shell-overlay-backdrop)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      zIndex: 1000,
-      backdropFilter: 'blur(10px)'
+      zIndex: 180,
+      backdropFilter: 'blur(10px)',
     }}>
       <div style={{
         width: '100%',
         maxWidth: '700px',
         maxHeight: '80vh',
-        background: '#1a1a1a',
+        background: 'var(--surface-floating)',
         borderRadius: '24px',
-        border: '1px solid rgba(255,255,255,0.1)',
-        boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
+        border: '1px solid var(--ui-border-default)',
+        boxShadow: 'var(--shadow-xl)',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden'
+        overflow: 'hidden',
       }}>
         {/* Header */}
-        <div style={{ 
-          padding: '24px 32px', 
-          borderBottom: '1px solid #222',
+        <div style={{
+          padding: '24px 32px',
+          borderBottom: '1px solid var(--ui-border-muted)',
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'flex-start'
+          alignItems: 'flex-start',
         }}>
           <div>
-            <h2 style={{ fontSize: '24px', fontWeight: 600, margin: '0 0 8px 0', fontFamily: 'Georgia, serif', color: '#ececec' }}>
+            <h2 style={{ fontSize: '24px', fontWeight: 600, margin: '0 0 8px 0', color: 'var(--ui-text-primary)' }}>
               Plugins & Skills
             </h2>
-            <p style={{ fontSize: '14px', color: '#666', margin: 0 }}>
+            <p style={{ fontSize: '14px', color: 'var(--ui-text-muted)', margin: 0 }}>
               Ready-to-use workflows and capabilities for your Cowork sessions
             </p>
           </div>
-          <button 
+          <button
             onClick={onClose}
-            style={{ 
-              background: 'rgba(255,255,255,0.05)', 
-              border: 'none', 
-              borderRadius: '50%', 
-              width: '36px', 
-              height: '36px', 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              cursor: 'pointer', 
-              color: '#999',
-              transition: 'all 0.2s'
+            style={{
+              background: 'var(--surface-hover)',
+              border: 'none',
+              borderRadius: '50%',
+              width: '36px',
+              height: '36px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: 'var(--ui-text-muted)',
+              transition: 'all var(--transition-fast)',
             }}
-            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-active)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface-hover)'; }}
           >
             <X size={20} />
           </button>
         </div>
-        
+
         {/* Search & Filters */}
-        <div style={{ padding: '20px 32px', borderBottom: '1px solid #222' }}>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 12, 
-            background: '#222', 
-            borderRadius: '12px', 
+        <div style={{ padding: '20px 32px', borderBottom: '1px solid var(--ui-border-muted)' }}>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 12,
+            background: 'var(--bg-tertiary)',
+            borderRadius: '12px',
             padding: '12px 16px',
-            marginBottom: 16
+            marginBottom: 16,
           }}>
-            <MagnifyingGlass size={18} color="#666" />
+            <MagnifyingGlass size={18} color="var(--ui-text-muted)" />
             <input
               type="text"
               placeholder="Search plugins..."
@@ -610,96 +588,86 @@ function PluginsOverlay({ onClose, onStartChat }: PluginsOverlayProps) {
                 background: 'transparent',
                 border: 'none',
                 outline: 'none',
-                color: '#ececec',
-                fontSize: '15px'
+                color: 'var(--ui-text-primary)',
+                fontSize: '15px',
               }}
             />
           </div>
-          
+
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {categories.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat === 'All' ? null : cat)}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: '20px',
-                  border: '1px solid #333',
-                  background: (selectedCategory === cat || (cat === 'All' && !selectedCategory)) ? '#D4B08C' : 'transparent',
-                  color: (selectedCategory === cat || (cat === 'All' && !selectedCategory)) ? '#1a1a1a' : '#999',
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-              >
-                {cat}
-              </button>
-            ))}
+            {categories.map(cat => {
+              const isActive = selectedCategory === cat || (cat === 'All' && !selectedCategory);
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat === 'All' ? null : cat)}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '20px',
+                    border: '1px solid var(--ui-border-default)',
+                    background: isActive ? 'var(--accent-primary)' : 'transparent',
+                    color: isActive ? 'var(--ui-text-inverse)' : 'var(--ui-text-secondary)',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    transition: 'all var(--transition-fast)',
+                  }}
+                >
+                  {cat}
+                </button>
+              );
+            })}
           </div>
         </div>
-        
+
         {/* Plugins List */}
-        <div style={{ 
-          flex: 1, 
-          overflow: 'auto', 
-          padding: '20px 32px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12
-        }}>
+        <div style={{ flex: 1, overflow: 'auto', padding: '20px 32px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {filteredPlugins.map(plugin => (
             <div
               key={plugin.id}
               style={{
-                background: '#222',
+                background: 'var(--surface-hover)',
                 borderRadius: '16px',
                 padding: '20px',
-                border: '1px solid #333',
+                border: '1px solid var(--ui-border-muted)',
                 display: 'flex',
                 gap: 16,
-                transition: 'all 0.2s',
-                cursor: 'pointer'
+                transition: 'all var(--transition-fast)',
+                cursor: 'pointer',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.borderColor = '#444';
-                e.currentTarget.style.background = '#2a2a2a';
+                e.currentTarget.style.borderColor = 'var(--ui-border-default)';
+                e.currentTarget.style.background = 'var(--surface-active)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.borderColor = '#333';
-                e.currentTarget.style.background = '#222';
+                e.currentTarget.style.borderColor = 'var(--ui-border-muted)';
+                e.currentTarget.style.background = 'var(--surface-hover)';
               }}
             >
               <div style={{
                 width: 48,
                 height: 48,
                 borderRadius: 12,
-                background: 'rgba(212,176,140,0.1)',
+                background: 'color-mix(in srgb, var(--accent-primary) 12%, var(--surface-panel))',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#D4B08C',
-                flexShrink: 0
+                color: 'var(--accent-primary)',
+                flexShrink: 0,
               }}>
                 {plugin.icon}
               </div>
-              
+
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
-                  <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#ececec', margin: 0 }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ui-text-primary)', margin: 0 }}>
                     {plugin.name}
                   </h3>
-                  <span style={{ 
-                    fontSize: '11px', 
-                    color: '#666', 
-                    textTransform: 'uppercase',
-                    fontWeight: 600,
-                    letterSpacing: '0.05em'
-                  }}>
+                  <span style={{ fontSize: '11px', color: 'var(--ui-text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>
                     {plugin.category}
                   </span>
                 </div>
-                <p style={{ fontSize: '14px', color: '#888', margin: '0 0 12px 0', lineHeight: 1.5 }}>
+                <p style={{ fontSize: '14px', color: 'var(--ui-text-secondary)', margin: '0 0 12px 0', lineHeight: 1.5 }}>
                   {plugin.description}
                 </p>
                 <button
@@ -711,15 +679,15 @@ function PluginsOverlay({ onClose, onStartChat }: PluginsOverlayProps) {
                     padding: '8px 16px',
                     borderRadius: '8px',
                     border: 'none',
-                    background: '#D4B08C',
-                    color: '#1a1a1a',
+                    background: 'var(--accent-primary)',
+                    color: 'var(--ui-text-inverse)',
                     fontSize: '13px',
                     fontWeight: 600,
                     cursor: 'pointer',
-                    transition: 'all 0.2s'
+                    transition: 'opacity var(--transition-fast)',
                   }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = '#E5C19D'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = '#D4B08C'}
+                  onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.88'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
                 >
                   Use Plugin
                   <CaretRight size={14} />
@@ -727,23 +695,23 @@ function PluginsOverlay({ onClose, onStartChat }: PluginsOverlayProps) {
               </div>
             </div>
           ))}
-          
+
           {filteredPlugins.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '40px', color: '#666' }}>
+            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--ui-text-muted)' }}>
               <p>No plugins found matching your search</p>
             </div>
           )}
         </div>
-        
+
         {/* Footer */}
-        <div style={{ 
-          padding: '16px 32px', 
-          borderTop: '1px solid #222',
+        <div style={{
+          padding: '16px 32px',
+          borderTop: '1px solid var(--ui-border-muted)',
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: 'center',
         }}>
-          <span style={{ fontSize: '13px', color: '#666' }}>
+          <span style={{ fontSize: '13px', color: 'var(--ui-text-muted)' }}>
             {filteredPlugins.length} plugins available
           </span>
           <button
@@ -751,20 +719,20 @@ function PluginsOverlay({ onClose, onStartChat }: PluginsOverlayProps) {
             style={{
               padding: '10px 20px',
               borderRadius: '10px',
-              border: '1px solid #333',
+              border: '1px solid var(--ui-border-default)',
               background: 'transparent',
-              color: '#999',
+              color: 'var(--ui-text-secondary)',
               fontSize: '14px',
               cursor: 'pointer',
-              transition: 'all 0.2s'
+              transition: 'all var(--transition-fast)',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = '#444';
-              e.currentTarget.style.color = '#ececec';
+              e.currentTarget.style.borderColor = 'var(--ui-border-strong)';
+              e.currentTarget.style.color = 'var(--ui-text-primary)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = '#333';
-              e.currentTarget.style.color = '#999';
+              e.currentTarget.style.borderColor = 'var(--ui-border-default)';
+              e.currentTarget.style.color = 'var(--ui-text-secondary)';
             }}
           >
             Close

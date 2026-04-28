@@ -23,10 +23,7 @@ import {
   Database,
   Pulse as Activity,
   ArrowsClockwise,
-  GearSix,
-  Terminal,
   Robot,
-  CheckCircle,
   Warning,
 } from '@phosphor-icons/react';
 

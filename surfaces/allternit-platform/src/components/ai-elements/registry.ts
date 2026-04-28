@@ -60,23 +60,23 @@ import { ChainOfThought } from "./chain-of-thought";
 import { Checkpoint } from "./checkpoint";
 import { Confirmation } from "./confirmation";
 import { Context } from "./context";
-import { Conversation, ConversationContent, ConversationEmptyState } from "./conversation";
+import { Conversation } from "./conversation";
 import { InlineCitation } from "./inline-citation";
-import { Message, MessageContent, MessageActions } from "./message";
+import { Message } from "./message";
 import { ModelSelector } from "./model-selector";
 import { Plan } from "./plan";
-import { PromptInput, PromptInputTextarea } from "./prompt-input";
+import { PromptInput } from "./prompt-input";
 import { Queue } from "./queue";
-import { Reasoning, ReasoningContent, ReasoningTrigger } from "./reasoning";
+import { Reasoning } from "./reasoning";
 import { Shimmer } from "./shimmer";
 import { Sources } from "./sources";
-import { Suggestion, Suggestions } from "./suggestion";
+import { Suggestion } from "./suggestion";
 import { Task } from "./task";
-import { Tool, ToolHeader, ToolContent, ToolInput } from "./tool";
+import { Tool } from "./tool";
 
 // Code (15)
-import { AgentCard, AgentHeader, AgentContent, AgentInstructions, AgentTools, AgentTool, AgentOutput } from "./agent";
-import { Artifact, ArtifactHeader, ArtifactContent, ArtifactActions } from "./artifact";
+import { AgentCard } from "./agent";
+import { Artifact } from "./artifact";
 import { CodeBlock } from "./code-block";
 import { Commit } from "./commit";
 import { EnvironmentVariables } from "./environment-variables";
@@ -111,7 +111,7 @@ import { Toolbar } from "./toolbar";
 
 // Utilities (2)
 import { Image } from "./image";
-import { OpenIn, OpenInTrigger } from "./open-in-chat";
+import { OpenIn } from "./open-in-chat";
 
 // ============================================================================
 // FULL Official Catalog Registry (48 Components)

@@ -136,7 +136,7 @@ export function SessionReplayViewer({
           alignItems: 'center',
           gap: 8,
           padding: '10px 16px',
-          borderBottom: '1px solid rgba(255,255,255,0.07)',
+          borderBottom: '1px solid var(--ui-border-muted)',
           flexShrink: 0,
         }}
       >
@@ -153,7 +153,7 @@ export function SessionReplayViewer({
           <button
             onClick={onClose}
             style={{
-              background: 'rgba(255,255,255,0.06)',
+              background: 'var(--ui-border-muted)',
               border: 'none',
               borderRadius: 4,
               color: `${SAND[500]}80`,
@@ -174,7 +174,7 @@ export function SessionReplayViewer({
         <div
           style={{
             width: 180,
-            borderRight: '1px solid rgba(255,255,255,0.06)',
+            borderRight: '1px solid var(--ui-border-muted)',
             overflowY: 'auto',
             flexShrink: 0,
           }}
@@ -191,7 +191,7 @@ export function SessionReplayViewer({
                   alignItems: 'center',
                   gap: 7,
                   padding: '7px 12px',
-                  background: active ? 'rgba(255,255,255,0.07)' : 'none',
+                  background: active ? 'var(--ui-border-muted)' : 'none',
                   border: 'none',
                   borderLeft: active ? `2px solid ${SAND[500]}` : '2px solid transparent',
                   cursor: 'pointer',
@@ -231,7 +231,7 @@ export function SessionReplayViewer({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: 'rgba(0,0,0,0.3)',
+              background: 'var(--surface-panel)',
               overflow: 'hidden',
               position: 'relative',
             }}
@@ -245,7 +245,7 @@ export function SessionReplayViewer({
                   maxHeight: '100%',
                   objectFit: 'contain',
                   borderRadius: 4,
-                  boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
+                  boxShadow: '0 4px 24px var(--shell-overlay-backdrop)',
                 }}
               />
             ) : (
@@ -296,7 +296,7 @@ export function SessionReplayViewer({
             <div
               style={{
                 padding: '8px 16px',
-                borderTop: '1px solid rgba(255,255,255,0.07)',
+                borderTop: '1px solid var(--ui-border-muted)',
                 display: 'flex',
                 gap: 16,
                 alignItems: 'center',
@@ -347,7 +347,7 @@ export function SessionReplayViewer({
       {/* Scrubber + controls */}
       <div
         style={{
-          borderTop: '1px solid rgba(255,255,255,0.07)',
+          borderTop: '1px solid var(--ui-border-muted)',
           padding: '10px 16px',
           flexShrink: 0,
         }}
@@ -357,7 +357,7 @@ export function SessionReplayViewer({
           style={{
             position: 'relative',
             height: 4,
-            background: 'rgba(255,255,255,0.08)',
+            background: 'var(--ui-border-muted)',
             borderRadius: 2,
             marginBottom: 12,
             cursor: 'pointer',
@@ -424,7 +424,7 @@ export function SessionReplayViewer({
                 width: primary ? 36 : 30,
                 height: primary ? 36 : 30,
                 borderRadius: primary ? 8 : 6,
-                background: primary ? SAND[500] : 'rgba(255,255,255,0.07)',
+                background: primary ? SAND[500] : 'var(--ui-border-muted)',
                 border: 'none',
                 color: primary ? BACKGROUND.primary : `${SAND[500]}90`,
                 cursor: 'pointer',

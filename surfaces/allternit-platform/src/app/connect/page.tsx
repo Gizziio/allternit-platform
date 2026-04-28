@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { applyRuntimeBackendSnapshot } from '@/lib/runtime-backend-client';
 
 /**
  * /connect — Desktop-to-web tunnel handshake page.
@@ -11,11 +12,16 @@ import { useRouter } from 'next/navigation';
  *
  *   platform.allternit.com/connect?tunnelUrl=abc123.trycloudflare.com&token=xxx
  *
+ * This page runs entirely client-side (Cloudflare Pages static build has no
+ * server-side API routes). It stores the tunnel URL + token in localStorage
+ * via applyRuntimeBackendSnapshot() so all subsequent API calls from the
+ * frontend automatically route through the tunnel.
+ *
  * Flow:
  *  1. Validate query params
- *  2. Register tunnel as active backend via POST /api/v1/runtime/backend/manual
- *     (persists to DB + Clerk, used by server-side gateway proxy)
- *  3. Redirect to /shell
+ *  2. Optional reachability check against the tunnel URL
+ *  3. Persist { gatewayUrl, gatewayWsUrl, gateway_token } to localStorage
+ *  4. Redirect to /shell
  */
 
 type Phase = 'validating' | 'connecting' | 'ready' | 'error';
@@ -30,10 +36,10 @@ export default function ConnectPage() {
   useEffect(() => {
     async function run() {
       const params = new URLSearchParams(window.location.search);
-      const tunnelUrl = params.get('tunnelUrl');
+      const tunnelParam = params.get('tunnelUrl');
       const token = params.get('token');
 
-      if (!tunnelUrl || !token) {
+      if (!tunnelParam || !token) {
         setError(
           'Invalid link — missing tunnelUrl or token. ' +
           'Open Allternit desktop and click Enable Web Access again.'
@@ -43,63 +49,70 @@ export default function ConnectPage() {
       }
 
       // tunnelUrl arrives without scheme (desktop strips https://)
-      const host = tunnelUrl.replace(/^https?:\/\//, '');
+      const host = tunnelParam.replace(/^https?:\/\//, '');
       const gatewayUrl = `https://${host}`;
+      const gatewayWsUrl = `wss://${host}`;
       setTunnelHost(host);
       setPhase('connecting');
 
-      // Register the tunnel as the active backend server-side.
-      // This persists to DB + Clerk so the gateway proxy routes through the tunnel.
+      // Verify the tunnel is reachable before committing it to storage.
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10000);
+        const timeout = setTimeout(() => controller.abort(), 10_000);
 
-        const res = await fetch('/api/v1/runtime/backend/manual', {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: 'Desktop Tunnel',
-            gatewayUrl,
-            gatewayWsUrl: `wss://${host}`,
-            gatewayToken: token,
-          }),
+        const res = await fetch(`${gatewayUrl}/health`, {
           signal: controller.signal,
+          mode: 'cors',
         });
         clearTimeout(timeout);
 
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          const msg = (body as Record<string, unknown>).error as string | undefined;
-          if (res.status === 401) {
-            throw new Error('Please sign in to platform.allternit.com first, then re-open the desktop link.');
-          }
-          if (msg?.includes('not reachable')) {
-            throw new Error(
-              'Your desktop tunnel is not reachable yet. ' +
-              'Wait a few seconds and try enabling Web Access again.'
-            );
-          }
-          throw new Error(msg || `Registration failed (HTTP ${res.status})`);
+        if (!res.ok && res.status !== 401) {
+          throw new Error(`Gateway responded with status ${res.status}`);
         }
       } catch (err) {
         const message = (err as Error).message;
-        if (message === 'The operation was aborted.' || message.includes('abort')) {
-          setError('Connection timed out. Your desktop tunnel may not be reachable yet. Try again in a few seconds.');
-          setPhase('error');
-          return;
+        if (message.includes('abort') || message.includes('AbortError')) {
+          setError(
+            'Connection timed out — your desktop tunnel is not reachable yet. ' +
+            'Wait a few seconds and try enabling Web Access again.'
+          );
+        } else if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
+          setError(
+            'Cannot reach your desktop tunnel. Make sure the Allternit desktop app ' +
+            'is running and the cloudflared tunnel is active.'
+          );
+        } else {
+          setError(`Tunnel not reachable: ${message}`);
         }
-        if (message.startsWith('Please sign in') || message.includes('not reachable')) {
-          setError(message);
-          setPhase('error');
-          return;
-        }
-        // Network/fetch errors — show error instead of silently proceeding
-        console.warn('[connect] Server-side registration failed:', err);
-        setError(message || 'Failed to register tunnel. Please check your connection and try again.');
         setPhase('error');
         return;
       }
+
+      // Persist tunnel URL + token client-side — no server round-trip needed.
+      applyRuntimeBackendSnapshot({
+        mode: 'byoc-vps',
+        fallback_mode: 'local',
+        source: 'user-preference',
+        gateway_url: gatewayUrl,
+        gateway_ws_url: gatewayWsUrl,
+        active_backend: {
+          id: `tunnel-${host}`,
+          ssh_connection_id: `tunnel-${host}`,
+          name: 'Desktop Tunnel',
+          status: 'ready',
+          install_state: 'installed',
+          backend_url: gatewayUrl,
+          gateway_url: gatewayUrl,
+          gateway_ws_url: gatewayWsUrl,
+          installed_version: null,
+          supported_client_range: null,
+          last_verified_at: new Date().toISOString(),
+          last_heartbeat_at: null,
+          last_error: null,
+        },
+        available_backends: [],
+        gateway_token: token,
+      });
 
       setPhase('ready');
 
@@ -136,7 +149,7 @@ export default function ConnectPage() {
               <Spinner />
               <h2 className="mt-4 text-xl font-semibold text-white">Connecting to Desktop</h2>
               <p className="mt-2 text-slate-400 text-sm break-all">{tunnelHost}</p>
-              <p className="mt-4 text-slate-500 text-xs">Registering your desktop as the active backend…</p>
+              <p className="mt-4 text-slate-500 text-xs">Verifying tunnel is reachable…</p>
             </>
           )}
 
@@ -160,7 +173,7 @@ export default function ConnectPage() {
               <div className="mt-6 space-y-2 text-xs text-slate-500">
                 <p>1. Open the Allternit desktop app</p>
                 <p>2. Go to Settings → Web Access</p>
-                <p>3. Click "Enable Web Access" to get a new link</p>
+                <p>3. Click &ldquo;Enable Web Access&rdquo; to get a new link</p>
               </div>
             </>
           )}

@@ -276,7 +276,7 @@ function NavigateCard({ state, input, error }: BrowserToolCardProps) {
         padding: "5px 10px",
         borderRadius: 8,
         background: isBlocked ? "rgba(248,113,113,0.07)" : "rgba(255,255,255,0.035)",
-        border: `1px solid ${isBlocked ? "rgba(248,113,113,0.2)" : "rgba(255,255,255,0.06)"}`,
+        border: `1px solid ${isBlocked ? "rgba(248,113,113,0.2)" : "var(--ui-border-muted)"}`,
       }}>
         {/* Traffic lights */}
         <span style={{ width: 7, height: 7, borderRadius: "50%", background: "rgba(251,113,113,0.5)", flexShrink: 0 }} />
@@ -338,7 +338,7 @@ function ClickCard({ state, input }: BrowserToolCardProps) {
           Click{" "}
           <code style={{
             fontSize: 11,
-            background: "rgba(255,255,255,0.07)",
+            background: "var(--ui-border-muted)",
             borderRadius: 4,
             padding: "1px 5px",
             color: "rgba(236,236,236,0.8)",
@@ -368,7 +368,7 @@ function TypeCard({ state, input }: BrowserToolCardProps) {
           Type{text && (
             <>{" "}<code style={{
               fontSize: 11,
-              background: "rgba(255,255,255,0.07)",
+              background: "var(--ui-border-muted)",
               borderRadius: 4,
               padding: "1px 5px",
               color: "rgba(236,236,236,0.8)",
@@ -429,7 +429,7 @@ function ScreenshotCard({ state, result }: BrowserToolCardProps) {
           marginLeft: 19,
           borderRadius: 8,
           overflow: "hidden",
-          border: "1px solid rgba(255,255,255,0.08)",
+          border: "1px solid var(--ui-border-muted)",
           maxWidth: 360,
         }}>
           <img

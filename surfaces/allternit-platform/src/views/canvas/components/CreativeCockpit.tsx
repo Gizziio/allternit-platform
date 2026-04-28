@@ -25,7 +25,7 @@ import { MoAClient, type MoAProgressEvent } from '@/lib/api/moa-client';
 interface MoATask {
   id: string;
   type: string;
-  status: 'pending' | 'running' | 'complete' | 'error';
+  status: 'pending' | 'running' | 'complete' | 'error' | 'skipped';
   progress?: number;
   title: string;
 }

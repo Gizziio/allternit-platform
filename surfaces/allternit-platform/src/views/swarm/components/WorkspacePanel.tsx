@@ -143,7 +143,7 @@ export function WorkspacePanel({ agents, modeColors }: WorkspacePanelProps) {
           minWidth: isCollapsed ? 0 : MIN_WIDTH,
           maxWidth: MAX_WIDTH,
           background: '#121110',
-          borderColor: 'rgba(255,255,255,0.08)',
+          borderColor: 'var(--ui-border-muted)',
           overflow: 'hidden',
         }}
       >
@@ -162,7 +162,7 @@ export function WorkspacePanel({ agents, modeColors }: WorkspacePanelProps) {
           <div
             className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-0.5 h-10 rounded transition-all"
             style={{
-              background: isResizing ? modeColors.accent : '#5c5854',
+              background: isResizing ? modeColors.accent : 'var(--ui-text-muted)',
               opacity: isResizing ? 1 : 0,
             }}
           />
@@ -174,7 +174,7 @@ export function WorkspacePanel({ agents, modeColors }: WorkspacePanelProps) {
             {/* Header */}
             <div
               className="flex items-center justify-between px-3 py-2 border-b shrink-0"
-              style={{ borderColor: 'rgba(255,255,255,0.08)' }}
+              style={{ borderColor: 'var(--ui-border-muted)' }}
             >
               <span className="text-xs font-medium" style={{ color: TEXT.primary }}>
                 Workspace
@@ -206,7 +206,7 @@ export function WorkspacePanel({ agents, modeColors }: WorkspacePanelProps) {
               <div
                 className="p-3 border-t shrink-0"
                 style={{
-                  borderColor: 'rgba(255,255,255,0.08)',
+                  borderColor: 'var(--ui-border-muted)',
                   background: `${modeColors.accent}10`,
                 }}
               >
@@ -260,7 +260,7 @@ export function WorkspacePanel({ agents, modeColors }: WorkspacePanelProps) {
           title="Click to expand"
           style={{
             background: '#121110',
-            borderLeft: '1px solid rgba(255,255,255,0.08)',
+            borderLeft: '1px solid var(--ui-border-muted)',
           }}
         >
           <span

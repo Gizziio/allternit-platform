@@ -67,7 +67,7 @@ function renderDescription(description: string) {
     index < parts.length - 1 ? (
       <kbd
         key={`shortcut-${index}`}
-        className="px-1.5 py-0.5 bg-[rgba(255,255,255,0.05)] border border-[rgba(212,176,140,0.2)] rounded text-xs text-[#D4B08C] font-mono"
+        className="px-1.5 py-0.5 bg-[var(--surface-hover)] border border-[var(--ui-border-default)] rounded text-xs text-[#D4B08C] font-mono"
       >
         {shortcut}
       </kbd>
@@ -188,7 +188,7 @@ export function GuidedTour({ onComplete, onSkip }: GuidedTourProps) {
             left: highlightRect.left - 8,
             width: highlightRect.width + 16,
             height: highlightRect.height + 16,
-            boxShadow: '0 0 0 4px #D4B08C, 0 0 40px rgba(212,176,140,0.3), inset 0 0 20px rgba(212,176,140,0.1)',
+            boxShadow: '0 0 0 4px #D4B08C, 0 0 40px rgba(212,176,140,0.3), inset 0 0 20px color-mix(in srgb, var(--accent-primary) 10%, transparent)',
           }}
         />
       )}
@@ -260,7 +260,7 @@ export function GuidedTour({ onComplete, onSkip }: GuidedTourProps) {
       </div>
 
       {/* Floating progress indicator */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 px-4 py-2 bg-[#141414]/90 backdrop-blur-sm border border-[rgba(212,176,140,0.1)] rounded-full z-[10001]">
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 px-4 py-2 bg-[#141414]/90 backdrop-blur-sm border border-[color-mix(in srgb, var(--accent-primary) 10%, transparent)] rounded-full z-[10001]">
         <Sparkle className="w-4 h-4 text-[#D4B08C]" />
         <span className="text-sm text-white/60">Guided Tour</span>
         <div className="flex gap-1">

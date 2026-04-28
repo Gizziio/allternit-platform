@@ -256,7 +256,7 @@ export function AskUserQuestion({
           style={{
             padding: "8px 12px",
             borderRadius: 8,
-            background: "rgba(239,68,68,0.1)",
+            background: "var(--status-error-bg)",
             color: "#ef4444",
             fontSize: 12,
             marginBottom: 12,
@@ -275,7 +275,7 @@ export function AskUserQuestion({
             style={{
               padding: "8px 14px",
               borderRadius: 8,
-              border: "1px solid rgba(255,255,255,0.1)",
+              border: "1px solid var(--ui-border-default)",
               background: "transparent",
               color: "#a8998c",
               fontSize: 12,
@@ -350,7 +350,7 @@ function TextInput({
         padding: "10px 12px",
         borderRadius: 10,
         border: `1px solid ${accentColor}40`,
-        background: "rgba(0,0,0,0.3)",
+        background: "var(--surface-panel)",
         color: "#f6eee7",
         fontSize: 14,
         outline: "none",
@@ -391,7 +391,7 @@ function NumberInput({
         padding: "10px 12px",
         borderRadius: 10,
         border: `1px solid ${accentColor}40`,
-        background: "rgba(0,0,0,0.3)",
+        background: "var(--surface-panel)",
         color: "#f6eee7",
         fontSize: 14,
         outline: "none",
@@ -423,8 +423,8 @@ function SelectInput({
             gap: 10,
             padding: "10px 12px",
             borderRadius: 10,
-            border: `1px solid ${value === option.value ? accentColor : "rgba(255,255,255,0.08)"}`,
-            background: value === option.value ? `${accentColor}15` : "rgba(0,0,0,0.2)",
+            border: `1px solid ${value === option.value ? accentColor : "var(--ui-border-muted)"}`,
+            background: value === option.value ? `${accentColor}15` : "var(--surface-hover)",
             cursor: "pointer",
             textAlign: "left",
           }}
@@ -490,8 +490,8 @@ function MultiSelectInput({
               gap: 10,
               padding: "10px 12px",
               borderRadius: 10,
-              border: `1px solid ${isSelected ? accentColor : "rgba(255,255,255,0.08)"}`,
-              background: isSelected ? `${accentColor}15` : "rgba(0,0,0,0.2)",
+              border: `1px solid ${isSelected ? accentColor : "var(--ui-border-muted)"}`,
+              background: isSelected ? `${accentColor}15` : "var(--surface-hover)",
               cursor: "pointer",
               textAlign: "left",
             }}
@@ -557,8 +557,8 @@ function ConfirmInput({
           gap: 8,
           padding: "12px 16px",
           borderRadius: 10,
-          border: `1px solid ${value === true ? "#79C47C" : "rgba(255,255,255,0.08)"}`,
-          background: value === true ? "rgba(121,196,124,0.15)" : "rgba(0,0,0,0.2)",
+          border: `1px solid ${value === true ? "#79C47C" : "var(--ui-border-muted)"}`,
+          background: value === true ? "rgba(121,196,124,0.15)" : "var(--surface-hover)",
           color: value === true ? "#79C47C" : "#a8998c",
           fontSize: 14,
           fontWeight: 600,
@@ -578,8 +578,8 @@ function ConfirmInput({
           gap: 8,
           padding: "12px 16px",
           borderRadius: 10,
-          border: `1px solid ${value === false ? "#ef4444" : "rgba(255,255,255,0.08)"}`,
-          background: value === false ? "rgba(239,68,68,0.15)" : "rgba(0,0,0,0.2)",
+          border: `1px solid ${value === false ? "#ef4444" : "var(--ui-border-muted)"}`,
+          background: value === false ? "rgba(239,68,68,0.15)" : "var(--surface-hover)",
           color: value === false ? "#ef4444" : "#a8998c",
           fontSize: 14,
           fontWeight: 600,
@@ -667,7 +667,7 @@ export function QuestionWizard({
       style={{
         borderRadius: 16,
         border: `1px solid ${accentColor}20`,
-        background: "rgba(0,0,0,0.2)",
+        background: "var(--surface-hover)",
         overflow: "hidden",
       }}
     >
@@ -686,7 +686,7 @@ export function QuestionWizard({
             Step {currentIndex + 1} of {questions.length}
           </span>
         </div>
-        <div style={{ height: 3, background: "rgba(255,255,255,0.1)", borderRadius: 2 }}>
+        <div style={{ height: 3, background: "var(--ui-border-default)", borderRadius: 2 }}>
           <div
             style={{
               height: "100%",

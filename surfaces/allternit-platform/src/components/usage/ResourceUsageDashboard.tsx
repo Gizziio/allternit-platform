@@ -8,15 +8,8 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  Cell,
 } from 'recharts';
-import { 
-  Pulse as Activity, 
-  Lightning, 
-  Wrench, 
-  ArrowsClockwise,
-  Clock,
-  ShieldCheck,
+import {
   TerminalWindow,
   DownloadSimple,
 } from '@phosphor-icons/react';
@@ -33,12 +26,10 @@ interface UsageData {
   last_updated: number;
 }
 
-const COLORS = ['var(--accent-primary)', '#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6'];
-
 export function ResourceUsageDashboard() {
   const [data, setData] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [, setRefreshing] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const [timeRange, setTimeRange] = useState<'all' | '30d' | '7d'>('30d');
@@ -141,7 +132,7 @@ export function ResourceUsageDashboard() {
             {exporting ? 'Exporting...' : 'Audit Export'}
           </button>
           <div className="flex bg-[var(--bg-primary)] p-1 rounded-lg border border-[var(--border-subtle)]">
-            {(['All', '30d', '7d'] as const).map(range => (
+            {(['all', '30d', '7d'] as const).map(range => (
               <button
                 key={range}
                 onClick={() => setTimeRange(range)}
@@ -201,7 +192,7 @@ export function ResourceUsageDashboard() {
               <BarChart data={toolChartData} layout="vertical" margin={{ left: -20, right: 0, top: 0, bottom: 0 }}>
                 <XAxis type="number" hide />
                 <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fill: 'var(--text-tertiary)', fontSize: 11}} width={100} />
-                <Tooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }} />
+                <Tooltip cursor={{fill: 'var(--surface-hover)'}} contentStyle={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }} />
                 <Bar dataKey="success" stackId="a" fill="var(--accent-primary)" radius={[0, 4, 4, 0]} barSize={12} />
               </BarChart>
             </ResponsiveContainer>

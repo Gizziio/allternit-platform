@@ -34,10 +34,7 @@ export {
 } from '@/design/allternit.tokens';
 
 // Agent Management
-export { AgentCreationWizard } from './AgentCreationWizard';
 export { AllternitSystemPromptEditor } from './AllternitSystemPromptEditor';
-export { AgentCreationWizardWithTemplates } from './AgentCreationWizardWithTemplates';
-export { AgentHubModal } from './AgentHubModal';
 export { AgentSelectorWizard } from './AgentSelectorWizard';
 export { AgentTestingPlayground } from './AgentTestingPlayground';
 export { SessionAnalyticsDashboard } from './SessionAnalyticsDashboard';
@@ -46,6 +43,9 @@ export { LiveExecutionMonitor } from './LiveExecutionMonitor';
 
 // Context & Tool Components
 export { AgentContextStrip } from './AgentContextStrip';
+export { AgentStorefrontCard } from './AgentStorefrontCard';
+export { AgentLeaderboard } from './AgentLeaderboard';
+export { McpMarketplace } from './McpMarketplace';
 export { ToolCallVisualization, useToolCallAccent } from './ToolCallVisualization';
 export { ToolConfirmation } from './ToolConfirmation';
 export { AskUserQuestion, ToolQuestionDisplay } from './AskUserQuestion';
@@ -53,17 +53,7 @@ export { AskUserQuestionWizard } from './AskUserQuestionWizard';
 export { CronJobWizard } from './CronJobWizard';
 
 // Re-export types from individual components
-export type {
-  AgentCreationWizardProps,
-} from './AgentCreationWizard';
 
-export type {
-  AgentCreationWizardWithTemplatesProps,
-} from './AgentCreationWizardWithTemplates';
-
-export type {
-  AgentHubModalProps,
-} from './AgentHubModal';
 
 export type {
   AgentSelectorWizardProps,

@@ -17,7 +17,7 @@ export const socialCardTool = {
     },
     required: ['projectName', 'tagline', 'primaryColor']
   },
-  execute: async ({ projectName, tagline, primaryColor, backgroundColor = '#0a0a0a' }: any) => {
+  execute: async ({ projectName, tagline, primaryColor, backgroundColor = 'var(--ui-text-inverse)' }: any) => {
     console.log(`[SocialCard] Rendering OG Image for: ${projectName}...`);
 
     // Simulate high-end canvas rendering

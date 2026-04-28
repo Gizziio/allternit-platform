@@ -13,40 +13,25 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Terminal,
   Pulse as Activity,
   Clock,
-  Warning,
   CheckCircle,
   XCircle,
-  Play,
-  Pause,
   Square,
-  Funnel,
   DownloadSimple,
   MagnifyingGlass,
-  CaretRight,
-  CaretDown,
-  Lightning,
   GitBranch,
   Stack,
   Cube,
-  DotsThreeOutline,
   ArrowCounterClockwise,
-  ArrowsOut,
-  ArrowsIn,
 } from '@phosphor-icons/react';
 
 import {
-  SAND,
   MODE_COLORS,
-  createGlassStyle,
-  RADIUS,
-  SPACE,
   TEXT,
-  STATUS,
   type AgentMode,
 } from '@/design/allternit.tokens';
 
@@ -114,9 +99,9 @@ export function LiveExecutionMonitor({
 }: LiveExecutionMonitorProps) {
   const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.code;
   const [activeTab, setActiveTab] = useState<'logs' | 'dag' | 'wihs'>('logs');
-  const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [dag, setDag] = useState<DagExecution | null>(null);
-  const [wihs, setWihs] = useState<WihInfo[]>([]);
+  const [logs] = useState<LogEntry[]>([]);
+  const [dag] = useState<DagExecution | null>(null);
+  const [wihs] = useState<WihInfo[]>([]);
   const [isLive, setIsLive] = useState(true);
   const [filterLevel, setFilterLevel] = useState<LogEntry['level'] | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -236,7 +221,7 @@ function MonitorHeader({
       className="flex items-center justify-between px-4 py-3 border-b"
       style={{ 
         borderColor: modeColors.border,
-        background: 'rgba(0,0,0,0.3)',
+        background: 'var(--surface-panel)',
       }}
     >
       <div className="flex items-center gap-4">
@@ -264,14 +249,14 @@ function MonitorHeader({
           onClick={() => setIsLive(!isLive)}
           className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all"
           style={{
-            background: isLive ? 'rgba(74,222,128,0.1)' : 'rgba(255,255,255,0.05)',
-            color: isLive ? '#4ade80' : TEXT.tertiary,
+            background: isLive ? 'rgba(74,222,128,0.1)' : 'var(--surface-hover)',
+            color: isLive ? 'var(--status-success)' : TEXT.tertiary,
             border: `1px solid ${isLive ? 'rgba(74,222,128,0.3)' : 'transparent'}`,
           }}
         >
           <span 
             className={`w-2 h-2 rounded-full ${isLive ? 'animate-pulse' : ''}`}
-            style={{ background: isLive ? '#4ade80' : TEXT.tertiary }}
+            style={{ background: isLive ? 'var(--status-success)' : TEXT.tertiary }}
           />
           {isLive ? 'LIVE' : 'PAUSED'}
         </button>
@@ -280,7 +265,7 @@ function MonitorHeader({
       {/* Tabs */}
       <div 
         className="flex items-center rounded-lg p-1"
-        style={{ background: 'rgba(0,0,0,0.3)' }}
+        style={{ background: 'var(--surface-panel)' }}
       >
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -308,7 +293,7 @@ function MonitorHeader({
             onClick={onRestart}
             className="p-2 rounded-lg transition-colors"
             style={{
-              background: 'rgba(255,255,255,0.05)',
+              background: 'var(--surface-hover)',
               color: TEXT.secondary,
             }}
           >
@@ -320,7 +305,7 @@ function MonitorHeader({
             onClick={onStop}
             className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all"
             style={{
-              background: '#f87171',
+              background: 'var(--status-error)',
               color: '#fff',
             }}
           >
@@ -359,10 +344,10 @@ function LogsPanel({
   modeColors: typeof MODE_COLORS.code;
 }) {
   const levelColors = {
-    debug: { bg: 'rgba(255,255,255,0.05)', color: TEXT.tertiary },
+    debug: { bg: 'var(--surface-hover)', color: TEXT.tertiary },
     info: { bg: 'transparent', color: TEXT.secondary },
-    warn: { bg: 'rgba(251,191,36,0.05)', color: '#fbbf24' },
-    error: { bg: 'rgba(248,113,113,0.05)', color: '#f87171' },
+    warn: { bg: 'rgba(251,191,36,0.05)', color: 'var(--status-warning)' },
+    error: { bg: 'rgba(248,113,113,0.05)', color: 'var(--status-error)' },
   };
 
   return (
@@ -401,7 +386,7 @@ function LogsPanel({
             placeholder="Search logs..."
             className="pl-9 pr-3 py-1.5 rounded-lg text-sm outline-none w-48"
             style={{
-              background: 'rgba(0,0,0,0.3)',
+              background: 'var(--surface-panel)',
               border: `1px solid ${modeColors.border}`,
               color: TEXT.primary,
             }}
@@ -424,7 +409,7 @@ function LogsPanel({
         <button
           className="p-1.5 rounded-lg transition-colors"
           style={{
-            background: 'rgba(255,255,255,0.05)',
+            background: 'var(--surface-hover)',
             color: TEXT.secondary,
           }}
         >
@@ -481,11 +466,11 @@ function DagPanel({
   modeColors: typeof MODE_COLORS.code;
 }) {
   const statusColors = {
-    pending: { bg: 'rgba(255,255,255,0.05)', border: 'rgba(255,255,255,0.1)', icon: Clock },
+    pending: { bg: 'var(--surface-hover)', border: 'var(--ui-border-default)', icon: Clock },
     running: { bg: modeColors.soft, border: modeColors.accent, icon: Activity },
-    completed: { bg: 'rgba(74,222,128,0.1)', border: '#4ade80', icon: CheckCircle },
-    failed: { bg: 'rgba(248,113,113,0.1)', border: '#f87171', icon: XCircle },
-    skipped: { bg: 'rgba(255,255,255,0.02)', border: 'rgba(255,255,255,0.05)', icon: Cube },
+    completed: { bg: 'rgba(74,222,128,0.1)', border: 'var(--status-success)', icon: CheckCircle },
+    failed: { bg: 'rgba(248,113,113,0.1)', border: 'var(--status-error)', icon: XCircle },
+    skipped: { bg: 'var(--surface-hover)', border: 'var(--surface-hover)', icon: Cube },
   };
 
   return (
@@ -505,7 +490,7 @@ function DagPanel({
             className="px-3 py-1 rounded-full text-sm font-medium"
             style={{
               background: dag.status === 'running' ? 'rgba(74,222,128,0.1)' : 'rgba(251,191,36,0.1)',
-              color: dag.status === 'running' ? '#4ade80' : '#fbbf24',
+              color: dag.status === 'running' ? 'var(--status-success)' : 'var(--status-warning)',
             }}
           >
             {dag.status.toUpperCase()}
@@ -521,7 +506,7 @@ function DagPanel({
         </div>
         <div 
           className="h-2 rounded-full overflow-hidden"
-          style={{ background: 'rgba(255,255,255,0.05)' }}
+          style={{ background: 'var(--surface-hover)' }}
         >
           <motion.div
             className="h-full rounded-full"
@@ -589,7 +574,7 @@ function DagPanel({
                 {node.status === 'running' && (
                   <div 
                     className="w-24 h-1.5 rounded-full overflow-hidden"
-                    style={{ background: 'rgba(255,255,255,0.1)' }}
+                    style={{ background: 'var(--ui-border-default)' }}
                   >
                     <motion.div
                       className="h-full rounded-full"
@@ -616,14 +601,12 @@ function WihsPanel({
   modeColors: typeof MODE_COLORS.code;
 }) {
   const statusColors = {
-    ready: { bg: 'rgba(255,255,255,0.05)', color: TEXT.tertiary },
-    claimed: { bg: 'rgba(251,191,36,0.1)', color: '#fbbf24' },
+    ready: { bg: 'var(--surface-hover)', color: TEXT.tertiary },
+    claimed: { bg: 'rgba(251,191,36,0.1)', color: 'var(--status-warning)' },
     in_progress: { bg: modeColors.soft, color: modeColors.accent },
-    completed: { bg: 'rgba(74,222,128,0.1)', color: '#4ade80' },
-    failed: { bg: 'rgba(248,113,113,0.1)', color: '#f87171' },
+    completed: { bg: 'rgba(74,222,128,0.1)', color: 'var(--status-success)' },
+    failed: { bg: 'rgba(248,113,113,0.1)', color: 'var(--status-error)' },
   };
-
-  const priorityLabels = ['Low', 'Medium', 'High', 'Critical'];
 
   return (
     <div className="flex flex-col h-full p-6 overflow-y-auto">
@@ -682,8 +665,8 @@ function WihsPanel({
                   <span 
                     className="px-2 py-1 rounded text-xs font-medium"
                     style={{
-                      background: 'rgba(0,0,0,0.3)',
-                      color: wih.priority <= 1 ? '#f87171' : wih.priority === 2 ? '#fbbf24' : TEXT.tertiary,
+                      background: 'var(--surface-panel)',
+                      color: wih.priority <= 1 ? 'var(--status-error)' : wih.priority === 2 ? 'var(--status-warning)' : TEXT.tertiary,
                     }}
                   >
                     P{wih.priority}

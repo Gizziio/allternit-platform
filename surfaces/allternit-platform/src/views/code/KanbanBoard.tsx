@@ -1,23 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { useUnifiedStore } from '@/lib/agents/unified.store';
-import { GlassCard } from '../../design/GlassCard';
 import {
-  CaretRight,
-  CheckCircle,
   Warning,
   User,
-  Clock,
   ArrowsClockwise,
 } from '@phosphor-icons/react';
 
 import { KanbanDAG } from './KanbanDAG';
 
 const COLUMNS: { id: string; label: string; color: string }[] = [
-  { id: 'open', label: 'Backlog', color: '#6b7280' },
-  { id: 'ready', label: 'Ready', color: '#0a84ff' },
-  { id: 'signed', label: 'In Progress', color: '#f59e0b' },
-  { id: 'blocked', label: 'Blocked', color: '#ff3b30' },
-  { id: 'closed', label: 'Done', color: '#10b981' }
+  { id: 'open', label: 'Backlog', color: 'var(--ui-text-muted)' },
+  { id: 'ready', label: 'Ready', color: 'var(--status-info)' },
+  { id: 'signed', label: 'In Progress', color: 'var(--status-warning)' },
+  { id: 'blocked', label: 'Blocked', color: 'var(--status-error)' },
+  { id: 'closed', label: 'Done', color: 'var(--status-success)' }
 ];
 
 export function KanbanBoard() {
@@ -185,7 +181,7 @@ export function KanbanBoard() {
           Refresh
         </button>
         {isUpdating && (
-          <span style={{ fontSize: 11, color: '#888' }}>Updating...</span>
+          <span style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>Updating...</span>
         )}
       </div>
       
@@ -291,7 +287,7 @@ export function KanbanBoard() {
                     <div style={{
                       padding: 20,
                       textAlign: 'center',
-                      color: '#666',
+                      color: 'var(--ui-text-muted)',
                       fontSize: 12,
                       border: '1px dashed var(--border-subtle)',
                       borderRadius: 8
@@ -359,14 +355,14 @@ export function KanbanBoard() {
           {selectedWih.blocked_by && selectedWih.blocked_by.length > 0 && (
             <div style={{
               padding: 12,
-              background: '#ff3b3010',
+              background: 'var(--status-error-bg)',
               border: '1px solid #ff3b3030',
               borderRadius: 6
             }}>
               <div style={{ 
                 fontSize: 11, 
                 fontWeight: 700, 
-                color: '#ff3b30',
+                color: 'var(--status-error)',
                 marginBottom: 8,
                 display: 'flex',
                 alignItems: 'center',
@@ -399,10 +395,10 @@ export function KanbanBoard() {
                   style={{
                     flex: 1,
                     padding: '8px',
-                    background: '#0a84ff',
+                    background: 'var(--status-info)',
                     border: 'none',
                     borderRadius: 6,
-                    color: '#fff',
+                    color: 'var(--ui-text-inverse)',
                     fontSize: 12,
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -418,10 +414,10 @@ export function KanbanBoard() {
                     style={{
                       flex: 1,
                       padding: '8px',
-                      background: '#10b981',
+                      background: 'var(--status-success)',
                       border: 'none',
                       borderRadius: 6,
-                      color: '#fff',
+                      color: 'var(--ui-text-inverse)',
                       fontSize: 12,
                       fontWeight: 600,
                       cursor: 'pointer',
@@ -434,10 +430,10 @@ export function KanbanBoard() {
                     style={{
                       flex: 1,
                       padding: '8px',
-                      background: '#ff3b30',
+                      background: 'var(--status-error)',
                       border: 'none',
                       borderRadius: 6,
-                      color: '#fff',
+                      color: 'var(--ui-text-inverse)',
                       fontSize: 12,
                       fontWeight: 600,
                       cursor: 'pointer',
@@ -475,7 +471,7 @@ function TaskCard({ wih, isActive }: { wih: WihInfo; isActive: boolean }) {
         cursor: 'grab', 
         border: isActive ? '1px solid var(--accent-chat)' : '1px solid var(--border-subtle)',
         background: isActive ? 'rgba(10, 132, 255, 0.05)' : 'var(--glass-bg-thick)',
-        borderLeft: `3px solid ${column?.color || '#888'}`,
+        borderLeft: `3px solid ${column?.color || 'var(--ui-text-muted)'}`,
         borderRadius: 8
       }}
     >
@@ -489,7 +485,7 @@ function TaskCard({ wih, isActive }: { wih: WihInfo; isActive: boolean }) {
           <div style={{ 
             fontSize: 10, 
             background: 'rgba(255,59,48,0.1)', 
-            color: '#ff3b30', 
+            color: 'var(--status-error)', 
             padding: '2px 6px', 
             borderRadius: 4, 
             fontWeight: 700 
@@ -501,7 +497,7 @@ function TaskCard({ wih, isActive }: { wih: WihInfo; isActive: boolean }) {
           <div style={{ 
             fontSize: 10, 
             background: 'rgba(16,185,129,0.1)', 
-            color: '#10b981', 
+            color: 'var(--status-success)', 
             padding: '2px 6px', 
             borderRadius: 4, 
             fontWeight: 700 

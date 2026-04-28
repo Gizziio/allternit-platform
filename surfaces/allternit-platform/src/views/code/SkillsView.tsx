@@ -32,9 +32,9 @@ export function SkillsView() {
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
               <div style={{ 
                 width: 48, height: 48, borderRadius: 12, 
-                background: 'rgba(255,255,255,0.05)', 
+                background: 'var(--surface-hover)', 
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                color: skill.type === 'Skill' ? '#a855f7' : '#f97316'
+                color: skill.type === 'Skill' ? '#a855f7' : 'var(--status-warning)'
               }}>
                 {skill.type === 'Skill' ? <Robot size={24} weight="duotone" /> : <PlugsConnected size={24} weight="duotone" />}
               </div>

@@ -5,17 +5,15 @@
  * Inspired by OpenCode's "Connect Providers" UI.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useModelDiscovery, api } from '@/integration/api-client';
-import { PROVIDER_REGISTRY, getProviderMeta } from '@/lib/providers/provider-registry';
+import { getProviderMeta } from '@/lib/providers/provider-registry';
 import {
   Check,
-  ArrowSquareOut,
   Shield,
   Key,
   Warning,
   CaretRight,
-  Info,
   CircleNotch,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
@@ -47,14 +45,6 @@ interface ProviderCardProps {
 // Constants
 // ============================================================================
 
-const THEME = {
-  cardBg: 'rgba(255, 255, 255, 0.03)',
-  cardHover: 'rgba(255, 255, 255, 0.06)',
-  border: 'rgba(255, 255, 255, 0.08)',
-  textPrimary: '#ECECEC',
-  textSecondary: '#9B9B9B',
-  textMuted: '#6B6B6B',
-};
 
 // ============================================================================
 // Sub-components

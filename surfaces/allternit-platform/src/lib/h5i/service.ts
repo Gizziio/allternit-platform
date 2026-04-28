@@ -298,7 +298,7 @@ export function runH5iVibe(
         shell: true,
         timeout: 10000,
         stdio: ['ignore', 'pipe', 'ignore'],
-      });
+      } as any);
       result.fileCount = parseInt(output.trim(), 10) || 0;
     } catch { /* not a git repo */ }
 
@@ -349,7 +349,7 @@ export function runH5iVibe(
         shell: true,
         timeout: 10000,
         stdio: ['ignore', 'pipe', 'ignore'],
-      });
+      } as any);
       const lines = diffStat.split('\n').filter((l) => l.includes('|'));
       result.riskiestFiles = lines.slice(0, 8).map((l) => l.split('|')[0].trim());
     } catch { /* ignore */ }

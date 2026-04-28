@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { GlassCard } from "../../design/GlassCard";
-import { OpenAIIcon, AnthropicIcon, OllamaIcon, MetaIcon } from "../../components/icons/ModelIcons";
-import { CheckCircle, Warning, Gear, TerminalWindow, Cloud, DownloadSimple, ChartBar } from "@phosphor-icons/react";
+import { OpenAIIcon, AnthropicIcon, OllamaIcon } from "../../components/icons/ModelIcons";
+import { CheckCircle, Warning, Gear, TerminalWindow, DownloadSimple, ChartBar } from "@phosphor-icons/react";
 
 export function ModelManagementView() {
-  const [engines, setEngines] = useState([
+  const [engines] = useState([
     { id: 'codex', name: 'OpenAI Codex', type: 'CLI', status: 'installed', version: 'v0.93.0', provider: 'OpenAI' },
     { id: 'claude-code', name: 'Claude Code', type: 'CLI', status: 'missing', version: '-', provider: 'Anthropic' },
     { id: 'aider', name: 'Aider AI', type: 'CLI', status: 'installed', version: 'v0.68.0', provider: 'Aider' },
@@ -45,7 +45,7 @@ export function ModelManagementView() {
               <div style={{ 
                 padding: '4px 8px', borderRadius: 6, fontSize: 10, fontWeight: 800,
                 background: engine.status === 'installed' || engine.status === 'ready' ? 'rgba(52,199,89,0.1)' : 'rgba(255,59,48,0.1)',
-                color: engine.status === 'installed' || engine.status === 'ready' ? '#34c759' : '#ff3b30',
+                color: engine.status === 'installed' || engine.status === 'ready' ? 'var(--status-success)' : 'var(--status-error)',
                 display: 'flex', alignItems: 'center', gap: 4
               }}>
                 {engine.status === 'installed' || engine.status === 'ready' ? <CheckCircle size={12} weight="fill" /> : <Warning size={12} weight="fill" />}

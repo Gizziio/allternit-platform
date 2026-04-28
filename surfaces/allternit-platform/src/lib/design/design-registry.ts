@@ -11,7 +11,11 @@ export interface DesignSystem {
   description: string;
   vibe: string;
   author: string;
+  creatorHandle?: string;
   installs: number;
+  likes?: number;
+  views?: number;
+  forks?: number;
   tags: string[];
   designMd: string;
   previewColors: string[]; // 3-4 hex codes for preview
@@ -25,8 +29,11 @@ export const DESIGN_MARKETPLACE: DesignSystem[] = [
     vibe: 'Engineering Excellence',
     author: 'Vercel community',
     installs: 4500,
+    likes: 4500,
+    views: 4500,
+    forks: 4500,
     tags: ['minimalist', 'dark', 'monochrome'],
-    previewColors: ['#000000', '#ffffff', '#111111'],
+    previewColors: ['#000000', '#ffffff', 'var(--ui-text-inverse)'],
     designMd: `
 # Brand: Vercel
 ## Intent
@@ -49,6 +56,9 @@ High-contrast minimalism focusing on speed and developer precision.
     vibe: 'Streamlined Productivity',
     author: 'Linear Fans',
     installs: 3200,
+    likes: 3200,
+    views: 3200,
+    forks: 3200,
     tags: ['productivity', 'saas', 'purple'],
     previewColors: ['#0c0c0e', '#5e6ad2', '#151518'],
     designMd: `
@@ -73,6 +83,9 @@ Professional efficiency with deep focus states and refined transitions.
     vibe: 'Financial Authority',
     author: 'Design Spec Standard',
     installs: 5600,
+    likes: 5600,
+    views: 5600,
+    forks: 5600,
     tags: ['fintech', 'clean', 'white'],
     previewColors: ['#ffffff', '#635bff', '#f6f9fc'],
     designMd: `
@@ -97,8 +110,11 @@ Clean, authoritative financial engineering with complex mesh backgrounds.
     vibe: 'AI-Native IDE',
     author: 'Cursor community',
     installs: 1800,
+    likes: 1800,
+    views: 1800,
+    forks: 1800,
     tags: ['ai', 'dark', 'glow'],
-    previewColors: ['#0b0b0b', '#3b82f6', '#8b5cf6'],
+    previewColors: ['#0b0b0b', 'var(--status-info)', '#8b5cf6'],
     designMd: `
 # Brand: Cursor
 ## Intent
@@ -121,6 +137,9 @@ AI-native development environment with high focus and vibrant activity states.
     vibe: 'Spotlight Search',
     author: 'Raycast Fans',
     installs: 2100,
+    likes: 2100,
+    views: 2100,
+    forks: 2100,
     tags: ['density', 'dark', 'utility'],
     previewColors: ['#1c1c1e', '#ff6363', '#2c2c2e'],
     designMd: `
@@ -145,6 +164,9 @@ Compact, efficient launcher-style UI with vibrant status indicators.
     vibe: 'Backend Authority',
     author: 'Supabase community',
     installs: 1500,
+    likes: 1500,
+    views: 1500,
+    forks: 1500,
     tags: ['dev-tools', 'emerald', 'dark'],
     previewColors: ['#1c1c1c', '#3ecf8e', '#2a2a2a'],
     designMd: `
@@ -169,6 +191,9 @@ Industrial-grade backend management with high accessibility and clear hierarchy.
     vibe: 'Modern Classic',
     author: 'Cupertino Design',
     installs: 8900,
+    likes: 8900,
+    views: 8900,
+    forks: 8900,
     tags: ['premium', 'classic', 'clean'],
     previewColors: ['#fbfbfd', '#000000', '#ffffff'],
     designMd: `
@@ -193,8 +218,11 @@ Premium, focused, and emotional design with extreme attention to detail.
     vibe: 'Local AI',
     author: 'Ollama Fans',
     installs: 1200,
+    likes: 1200,
+    views: 1200,
+    forks: 1200,
     tags: ['monochrome', 'terminal', 'minimalist'],
-    previewColors: ['#000000', '#ffffff', '#0a0a0a'],
+    previewColors: ['#000000', '#ffffff', 'var(--ui-text-inverse)'],
     designMd: `
 # Brand: Ollama
 ## Intent
@@ -217,8 +245,11 @@ Simple, brutalist, and functional local model orchestration.
     vibe: 'Sophisticated AI',
     author: 'Mistral community',
     installs: 950,
+    likes: 950,
+    views: 950,
+    forks: 950,
     tags: ['minimalist', 'purple', 'elegant'],
-    previewColors: ['#0a0a0a', '#7c3aed', '#111111'],
+    previewColors: ['var(--ui-text-inverse)', '#7c3aed', 'var(--ui-text-inverse)'],
     designMd: `
 # Brand: Mistral AI
 ## Intent
@@ -241,8 +272,11 @@ Sophisticated, academic yet powerful AI orchestration with refined serif touches
     vibe: 'Creative Motion',
     author: 'Runway Fans',
     installs: 1100,
+    likes: 1100,
+    views: 1100,
+    forks: 1100,
     tags: ['creative', 'dark', 'blurs'],
-    previewColors: ['#050505', '#ffffff', 'rgba(255,255,255,0.1)'],
+    previewColors: ['#050505', '#ffffff', 'var(--ui-border-default)'],
     designMd: `
 # Brand: Runway
 ## Intent
@@ -265,8 +299,11 @@ A playground for creative generation focusing on media immersion and overlays.
     vibe: 'Curious Discovery',
     author: 'Perplexity Fans',
     installs: 2500,
+    likes: 2500,
+    views: 2500,
+    forks: 2500,
     tags: ['search', 'clean', 'readable'],
-    previewColors: ['#ffffff', '#22c55e', '#f9fafb'],
+    previewColors: ['#ffffff', 'var(--status-success)', '#f9fafb'],
     designMd: `
 # Brand: Perplexity
 ## Intent
@@ -289,8 +326,11 @@ High-clarity information discovery with a focus on sources and speed.
     vibe: 'Developer Tooling',
     author: 'Resend community',
     installs: 1300,
+    likes: 1300,
+    views: 1300,
+    forks: 1300,
     tags: ['minimalist', 'dark', 'developer'],
-    previewColors: ['#000000', '#ffffff', '#0a0a0a'],
+    previewColors: ['#000000', '#ffffff', 'var(--ui-text-inverse)'],
     designMd: `
 # Brand: Resend
 ## Intent
@@ -313,8 +353,11 @@ Stark, functional developer utility focusing on documentation and delivery.
     vibe: 'Hyper-Agentic',
     author: 'VoltAgent Core',
     installs: 450,
+    likes: 450,
+    views: 450,
+    forks: 450,
     tags: ['agentic', 'dark', 'emerald'],
-    previewColors: ['#000000', '#10b981', '#050505'],
+    previewColors: ['#000000', 'var(--status-success)', '#050505'],
     designMd: `
 # Brand: VoltAgent
 ## Intent
@@ -337,6 +380,9 @@ Cutting-edge AI orchestration with a "stealth-op" industrial look.
     vibe: 'Friendly Living',
     author: 'Travel Design',
     installs: 1400,
+    likes: 1400,
+    views: 1400,
+    forks: 1400,
     tags: ['friendly', 'rounded', 'white'],
     previewColors: ['#ffffff', '#ff385c', '#ffffff'],
     designMd: `
@@ -361,6 +407,9 @@ Approachable, human-centric design with high-quality spacing and rounded corners
     vibe: 'Deep Productivity',
     author: 'Linear Fans',
     installs: 1600,
+    likes: 1600,
+    views: 1600,
+    forks: 1600,
     tags: ['cosmic', 'purple', 'dark'],
     previewColors: ['#020204', '#bb86fc', '#08080a'],
     designMd: `
@@ -385,6 +434,9 @@ Deep, immersive productivity with atmospheric lighting.
     vibe: 'High Energy',
     author: 'Happy Hues',
     installs: 3400,
+    likes: 3400,
+    views: 3400,
+    forks: 3400,
     tags: ['curated', 'colors', 'vibrant'],
     previewColors: ['#fffffe', '#ff8906', '#f25f4c'],
     designMd: `
@@ -409,6 +461,9 @@ High-energy vibrant user experience.
     vibe: 'Productivity',
     author: 'Happy Hues',
     installs: 2800,
+    likes: 2800,
+    views: 2800,
+    forks: 2800,
     tags: ['curated', 'colors', 'calm'],
     previewColors: ['#0f0e17', '#ff8906', '#f25f4c'],
     designMd: `
@@ -433,6 +488,9 @@ Calm professional productivity.
     vibe: 'Editorial Authority',
     author: 'tw93 / Kami',
     installs: 150,
+    likes: 150,
+    views: 150,
+    forks: 150,
     tags: ['docs', 'editorial', 'clean', 'serif'],
     previewColors: ['#f5f4ed', '#1B365D', '#f5f4ed'],
     designMd: `

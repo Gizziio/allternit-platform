@@ -526,10 +526,10 @@ canvas{width:100%!important;display:block}
 <div class="grid" id="grid"></div>
 <script>
 const metrics=[
-  {label:'Monthly Revenue',value:84320,prev:76100,format:'$',unit:'',color:'#60a5fa',data:[62000,67000,71000,68000,73000,78000,80000,76000,82000,79000,83000,84320]},
-  {label:'Active Users',value:12847,prev:11200,format:'',unit:'',color:'#34d399',data:[9200,9800,10100,10600,11000,10700,11400,11800,12100,12400,12600,12847]},
-  {label:'Avg Session (min)',value:4.7,prev:4.2,format:'',unit:'min',color:'#f59e0b',data:[3.1,3.4,3.8,3.6,4.0,3.9,4.1,4.4,4.3,4.5,4.6,4.7]},
-  {label:'Churn Rate',value:2.1,prev:2.8,format:'',unit:'%',color:'#f87171',data:[4.2,3.9,3.5,3.8,3.2,3.0,2.8,2.7,2.5,2.3,2.2,2.1]},
+  {label:'Monthly Revenue',value:84320,prev:76100,format:'$',unit:'',color:'var(--status-info)',data:[62000,67000,71000,68000,73000,78000,80000,76000,82000,79000,83000,84320]},
+  {label:'Active Users',value:12847,prev:11200,format:'',unit:'',color:'var(--status-success)',data:[9200,9800,10100,10600,11000,10700,11400,11800,12100,12400,12600,12847]},
+  {label:'Avg Session (min)',value:4.7,prev:4.2,format:'',unit:'min',color:'var(--status-warning)',data:[3.1,3.4,3.8,3.6,4.0,3.9,4.1,4.4,4.3,4.5,4.6,4.7]},
+  {label:'Churn Rate',value:2.1,prev:2.8,format:'',unit:'%',color:'var(--status-error)',data:[4.2,3.9,3.5,3.8,3.2,3.0,2.8,2.7,2.5,2.3,2.2,2.1]},
 ];
 
 function fmt(m){return m.format==='$'?'$'+m.value.toLocaleString():m.value+(m.unit||'');}
@@ -919,7 +919,7 @@ input:focus,select:focus{border-color:#3b4fd8}
 <div class="bars-panel"><h3>Spending by Category</h3><div id="bars"></div></div>
 <script>
 const EMOJI={Food:'🍔',Housing:'🏠',Transport:'🚗',Health:'💊',Entertainment:'🎬',Shopping:'🛍️',Utilities:'⚡',Salary:'💰',Other:'📦'};
-const COLOR={Food:'#f59e0b',Housing:'#60a5fa',Transport:'#a78bfa',Health:'#34d399',Entertainment:'#f87171',Shopping:'#fb923c',Utilities:'#38bdf8',Salary:'#4ade80',Other:'#94a3b8'};
+const COLOR={Food:'var(--status-warning)',Housing:'var(--status-info)',Transport:'#a78bfa',Health:'var(--status-success)',Entertainment:'var(--status-error)',Shopping:'#fb923c',Utilities:'#38bdf8',Salary:'var(--status-success)',Other:'#94a3b8'};
 let txs=JSON.parse(localStorage.getItem('budget')||'null')||[
   {id:1,name:'Monthly Salary',amount:5000,type:'income',cat:'Salary',date:'2024-03-01'},
   {id:2,name:'Rent',amount:1500,type:'expense',cat:'Housing',date:'2024-03-02'},

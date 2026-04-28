@@ -150,7 +150,7 @@ export const TaskEstimateModal: React.FC<Props> = ({ task, onClose }) => {
         <div style={{ marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
             <div style={labelStyle}><ArrowsDownUp size={12} /> Priority</div>
-            <span style={{ fontSize: '13px', fontWeight: 600, color: priority >= 70 ? '#ef4444' : priority >= 40 ? '#f59e0b' : '#3b82f6' }}>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: priority >= 70 ? 'var(--status-error)' : priority >= 40 ? 'var(--status-warning)' : 'var(--status-info)' }}>
               {priority >= 70 ? 'High' : priority >= 40 ? 'Medium' : 'Low'} ({priority})
             </span>
           </div>
@@ -160,7 +160,7 @@ export const TaskEstimateModal: React.FC<Props> = ({ task, onClose }) => {
             max={100}
             value={priority}
             onChange={(e) => setPriority(parseInt(e.target.value))}
-            style={{ width: '100%', accentColor: priority >= 70 ? '#ef4444' : priority >= 40 ? '#f59e0b' : '#3b82f6' }}
+            style={{ width: '100%', accentColor: priority >= 70 ? 'var(--status-error)' : priority >= 40 ? 'var(--status-warning)' : 'var(--status-info)' }}
           />
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>
             <span>Low</span>
@@ -215,7 +215,7 @@ export const TaskEstimateModal: React.FC<Props> = ({ task, onClose }) => {
                     type="checkbox"
                     checked={selectedDeps.includes(t.id)}
                     onChange={() => toggleDep(t.id)}
-                    style={{ accentColor: '#06b6d4', flexShrink: 0 }}
+                    style={{ accentColor: 'var(--status-info)', flexShrink: 0 }}
                   />
                   {t.title}
                 </label>
@@ -257,7 +257,7 @@ export const TaskEstimateModal: React.FC<Props> = ({ task, onClose }) => {
               padding: '8px 18px',
               borderRadius: '8px',
               border: 'none',
-              backgroundColor: '#06b6d4',
+              backgroundColor: 'var(--status-info)',
               color: '#fff',
               fontSize: '13px',
               fontWeight: 600,

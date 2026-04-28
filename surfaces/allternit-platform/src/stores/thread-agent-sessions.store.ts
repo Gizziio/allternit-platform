@@ -17,6 +17,8 @@ interface ThreadAgentSessionsState {
   threadAgentSessions: Record<string, string[]>;
   /** threadId:agentId -> sessionId (for quick lookup) */
   threadAgentSessionMap: Record<string, string>;
+  /** threadId -> last @mentioned agentId (for persistent composer pill) */
+  lastMentionAgentIdByThread: Record<string, string>;
 
   registerAgentSession: (
     threadId: string,
@@ -28,6 +30,8 @@ interface ThreadAgentSessionsState {
     agentId: string
   ) => string | undefined;
   getAgentSessionsForThread: (threadId: string) => string[];
+  getLastMentionAgentId: (threadId: string) => string | undefined;
+  setLastMentionAgentId: (threadId: string, agentId: string) => void;
   unlinkAgentSession: (threadId: string, agentId: string) => void;
   clearThreadSessions: (threadId: string) => void;
 }
@@ -41,6 +45,7 @@ export const useThreadAgentSessionsStore = create<ThreadAgentSessionsState>()(
     (set, get) => ({
       threadAgentSessions: {},
       threadAgentSessionMap: {},
+      lastMentionAgentIdByThread: {},
 
       registerAgentSession: (threadId, agentId, sessionId) => {
         const key = makeKey(threadId, agentId);
@@ -68,6 +73,19 @@ export const useThreadAgentSessionsStore = create<ThreadAgentSessionsState>()(
 
       getAgentSessionsForThread: (threadId) => {
         return get().threadAgentSessions[threadId] || [];
+      },
+
+      getLastMentionAgentId: (threadId) => {
+        return get().lastMentionAgentIdByThread[threadId];
+      },
+
+      setLastMentionAgentId: (threadId, agentId) => {
+        set((state) => ({
+          lastMentionAgentIdByThread: {
+            ...state.lastMentionAgentIdByThread,
+            [threadId]: agentId,
+          },
+        }));
       },
 
       unlinkAgentSession: (threadId, agentId) => {
@@ -104,9 +122,12 @@ export const useThreadAgentSessionsStore = create<ThreadAgentSessionsState>()(
           });
           const nextAgentSessions = { ...state.threadAgentSessions };
           delete nextAgentSessions[threadId];
+          const nextLastMention = { ...state.lastMentionAgentIdByThread };
+          delete nextLastMention[threadId];
           return {
             threadAgentSessions: nextAgentSessions,
             threadAgentSessionMap: nextMap,
+            lastMentionAgentIdByThread: nextLastMention,
           };
         });
       },

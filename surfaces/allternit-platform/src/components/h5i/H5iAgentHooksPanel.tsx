@@ -49,16 +49,16 @@ export function H5iAgentHooksPanel({ workspacePath, onClose }: H5iAgentHooksPane
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
-        zIndex: 10001,
+        zIndex: 180,
         width: 420,
         display: 'flex',
         flexDirection: 'column',
         borderRadius: 16,
-        border: '1px solid rgba(255,255,255,0.08)',
+        border: '1px solid var(--ui-border-muted)',
         background: 'rgba(11,14,16,0.96)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+        boxShadow: '0 20px 50px var(--shell-overlay-backdrop)',
         overflow: 'hidden',
       }}
     >
@@ -69,7 +69,7 @@ export function H5iAgentHooksPanel({ workspacePath, onClose }: H5iAgentHooksPane
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '14px 16px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          borderBottom: '1px solid var(--ui-border-muted)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -100,8 +100,8 @@ export function H5iAgentHooksPanel({ workspacePath, onClose }: H5iAgentHooksPane
                 gap: 10,
                 padding: '10px 12px',
                 borderRadius: 10,
-                border: '1px solid rgba(255,255,255,0.08)',
-                background: selected.includes(agent.id) ? 'rgba(59,130,246,0.1)' : 'rgba(255,255,255,0.02)',
+                border: '1px solid var(--ui-border-muted)',
+                background: selected.includes(agent.id) ? 'var(--status-info-bg)' : 'var(--surface-hover)',
                 cursor: 'pointer',
                 textAlign: 'left',
               }}
@@ -125,7 +125,7 @@ export function H5iAgentHooksPanel({ workspacePath, onClose }: H5iAgentHooksPane
             padding: '10px 14px',
             borderRadius: 10,
             border: 'none',
-            background: loading ? 'rgba(255,255,255,0.06)' : '#3b82f6',
+            background: loading ? 'var(--ui-border-muted)' : 'var(--status-info)',
             color: '#fff',
             fontSize: 13,
             fontWeight: 600,
@@ -161,11 +161,11 @@ export function H5iAgentHooksPanel({ workspacePath, onClose }: H5iAgentHooksPane
                   border: '1px solid rgba(16,185,129,0.2)',
                 }}
               >
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#10b981', marginBottom: 4 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--status-success)', marginBottom: 4 }}>
                   Installed
                 </div>
                 {result.installed.map((a) => (
-                  <div key={a} style={{ fontSize: 12, color: '#10b981', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div key={a} style={{ fontSize: 12, color: 'var(--status-success)', display: 'flex', alignItems: 'center', gap: 4 }}>
                     <CheckCircle size={12} /> {a}
                   </div>
                 ))}
@@ -176,15 +176,15 @@ export function H5iAgentHooksPanel({ workspacePath, onClose }: H5iAgentHooksPane
                 style={{
                   padding: 10,
                   borderRadius: 8,
-                  background: 'rgba(239,68,68,0.08)',
+                  background: 'var(--status-error-bg)',
                   border: '1px solid rgba(239,68,68,0.2)',
                 }}
               >
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#ef4444', marginBottom: 4 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--status-error)', marginBottom: 4 }}>
                   Errors
                 </div>
                 {result.errors.map((e, i) => (
-                  <div key={i} style={{ fontSize: 12, color: '#ef4444', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div key={i} style={{ fontSize: 12, color: 'var(--status-error)', display: 'flex', alignItems: 'center', gap: 4 }}>
                     <Warning size={12} /> {e}
                   </div>
                 ))}

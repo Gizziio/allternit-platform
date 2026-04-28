@@ -13,17 +13,11 @@ import React, { useState, useEffect } from "react";
 import {
   ClockCounterClockwise,
   MagnifyingGlass,
-  Funnel,
   DownloadSimple,
-  Calendar,
   CaretDown,
   CaretUp,
   FileText,
-  Hash,
-  User,
-  Clock,
   ArrowsClockwise,
-  ArrowUpRight,
 } from '@phosphor-icons/react';
 import { useUnifiedStore } from "@/lib/agents/unified.store";
 import type { LedgerEvent, ContextPack, Receipt } from "@/lib/agents";
@@ -33,10 +27,7 @@ export function AuditTab() {
     ledgerEvents,
     contextPacks,
     receipts,
-    dags,
-    isLoading,
     fetchLedgerEvents,
-    traceEvents,
     fetchContextPacks,
     fetchReceipts,
   } = useUnifiedStore();

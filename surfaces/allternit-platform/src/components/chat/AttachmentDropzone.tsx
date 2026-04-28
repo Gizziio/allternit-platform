@@ -17,14 +17,14 @@ interface AttachmentDropzoneProps {
 const THEME = {
   bg: '#2B2520',
   inputBg: '#352F29',
-  inputBorder: 'rgba(255,255,255,0.08)',
+  inputBorder: 'var(--ui-border-muted)',
   textPrimary: '#ECECEC',
-  textSecondary: '#9B9B9B',
-  textMuted: '#6B6B6B',
-  accent: '#D4956A',
-  hoverBg: 'rgba(255,255,255,0.05)',
-  error: '#ef4444',
-  success: '#22c55e',
+  textSecondary: 'var(--ui-text-secondary)',
+  textMuted: 'var(--ui-text-muted)',
+  accent: 'var(--accent-primary)',
+  hoverBg: 'var(--surface-hover)',
+  error: 'var(--status-error)',
+  success: 'var(--status-success)',
 };
 
 export function AttachmentDropzone({
@@ -78,9 +78,9 @@ export function AttachmentDropzone({
       case 'image':
         return <ImageIcon size={16} style={{ color: THEME.accent }} aria-hidden="true" />;
       case 'pdf':
-        return <FileText size={16} style={{ color: '#ef4444' }} aria-hidden="true" />;
+        return <FileText size={16} style={{ color: 'var(--status-error)' }} aria-hidden="true" />;
       case 'word':
-        return <FileText size={16} style={{ color: '#3b82f6' }} aria-hidden="true" />;
+        return <FileText size={16} style={{ color: 'var(--status-info)' }} aria-hidden="true" />;
       case 'text':
         return <FileText size={16} style={{ color: THEME.textSecondary }} aria-hidden="true" />;
       default:
@@ -126,7 +126,7 @@ export function AttachmentDropzone({
                 width: 48,
                 height: 48,
                 borderRadius: 12,
-                background: 'rgba(255,255,255,0.05)',
+                background: 'var(--surface-hover)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -154,7 +154,7 @@ export function AttachmentDropzone({
                   gap: 10,
                   padding: '8px 12px',
                   borderRadius: 8,
-                  background: 'rgba(255,255,255,0.03)',
+                  background: 'var(--surface-hover)',
                   border: `1px solid ${att.status === 'error' ? 'rgba(239,68,68,0.2)' : 'transparent'}`,
                 }}
               >
@@ -176,7 +176,7 @@ export function AttachmentDropzone({
                       width: 32,
                       height: 32,
                       borderRadius: 6,
-                      background: 'rgba(255,255,255,0.05)',
+                      background: 'var(--surface-hover)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -211,7 +211,7 @@ export function AttachmentDropzone({
                     <div
                       style={{
                         height: 2,
-                        background: 'rgba(255,255,255,0.1)',
+                        background: 'var(--ui-border-default)',
                         borderRadius: 1,
                         marginTop: 4,
                         overflow: 'hidden',
@@ -283,7 +283,7 @@ export function AttachmentDropzone({
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.color = THEME.error;
-                      e.currentTarget.style.background = 'rgba(239,68,68,0.1)';
+                      e.currentTarget.style.background = 'var(--status-error-bg)';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.color = THEME.textMuted;
@@ -317,7 +317,7 @@ export function AttachmentDropzone({
           style={{
             padding: '8px 12px',
             borderRadius: 8,
-            background: 'rgba(239,68,68,0.1)',
+            background: 'var(--status-error-bg)',
             border: '1px solid rgba(239,68,68,0.2)',
           }}
         >

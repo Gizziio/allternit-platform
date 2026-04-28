@@ -63,7 +63,7 @@ export function AgentSystemView() {
   };
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_26%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.12),transparent_28%),linear-gradient(180deg,rgba(10,10,10,0.96),rgba(10,10,10,0.9))] text-foreground">
+    <div className="flex h-full flex-col overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.12),transparent_26%),radial-gradient(circle_at_top_right,var(--status-info-bg),transparent_28%),linear-gradient(180deg,rgba(10,10,10,0.96),rgba(10,10,10,0.9))] text-foreground">
       {/* Context Banner */}
       <ContextBanner 
         mode={contextMode} 

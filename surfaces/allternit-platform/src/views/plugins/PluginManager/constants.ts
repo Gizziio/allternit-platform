@@ -1,23 +1,23 @@
 export { CURATED_MARKETPLACE_SOURCES } from '../../../plugins/marketplaceApi';
 
 export const THEME = {
-  bg: '#0c0a09',
+  bg: 'var(--surface-canvas)',
   bgDeep: '#080706',
-  bgElevated: '#1c1917',
+  bgElevated: 'var(--surface-panel)',
   bgGlass: 'rgba(28, 25, 23, 0.85)',
   paneSurface: 'rgba(21, 18, 16, 0.82)',
   paneSurfaceStrong: 'rgba(16, 14, 12, 0.84)',
-  accent: '#d4b08c',
+  accent: 'var(--accent-primary)',
   accentMuted: 'rgba(212, 176, 140, 0.15)',
   accentGlow: 'rgba(212, 176, 140, 0.3)',
-  textPrimary: '#e7e5e4',
-  textSecondary: '#a8a29e',
-  textTertiary: '#78716c',
+  textPrimary: 'var(--ui-text-primary)',
+  textSecondary: 'var(--ui-text-secondary)',
+  textTertiary: 'var(--ui-text-muted)',
   border: 'rgba(212, 176, 140, 0.1)',
   borderStrong: 'rgba(212, 176, 140, 0.2)',
-  success: '#22c55e',
-  danger: '#ef4444',
-  warning: '#f59e0b',
+  success: 'var(--status-success)',
+  danger: 'var(--status-error)',
+  warning: 'var(--status-warning)',
 };
 
 export const ENABLED_OVERRIDES_STORAGE_KEY = 'allternit:plugin-manager:enabled-overrides:v1';

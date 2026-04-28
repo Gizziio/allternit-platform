@@ -14,13 +14,13 @@ import {
 // ============================================================================
 
 const THEME = {
-  accent: '#d4b08c',
+  accent: 'var(--accent-primary)',
   accentMuted: 'rgba(212, 176, 140, 0.15)',
   accentGlow: 'rgba(212, 176, 140, 0.4)',
-  textPrimary: '#e7e5e4',
-  danger: '#ef4444',
+  textPrimary: 'var(--ui-text-primary)',
+  danger: 'var(--status-error)',
   dangerMuted: 'rgba(239, 68, 68, 0.15)',
-  success: '#22c55e',
+  success: 'var(--status-success)',
 };
 
 // ============================================================================
@@ -328,7 +328,7 @@ export function InlineUpdateBadge({ count }: InlineUpdateBadgeProps) {
         borderRadius: 9,
         fontSize: 11,
         fontWeight: 700,
-        color: '#0c0a09',
+        color: 'var(--surface-canvas)',
         marginLeft: 6,
       }}
     >

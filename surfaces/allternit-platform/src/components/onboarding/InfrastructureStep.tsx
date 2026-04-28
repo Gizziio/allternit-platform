@@ -14,8 +14,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   HardDrives,
   Cloud,
-  WifiHigh,
-  HardDrive,
   Terminal,
   Key,
   Lock,
@@ -27,12 +25,7 @@ import {
   CheckCircle,
   ArrowSquareOut,
   CaretRight,
-  Circle,
-  Play,
   DownloadSimple,
-  GearSix,
-  RocketLaunch,
-  Shield,
   Globe,
   Desktop,
   AppleLogo,
@@ -42,13 +35,11 @@ import {
   ArrowClockwise,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
-import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/allternit.tokens';
+import { SAND, STATUS } from '@/design/allternit.tokens';
 import {
   testSSHConnection,
   installBackend,
   VPS_PROVIDERS,
-  STEP_DESCRIPTIONS,
-  STEP_DETAILS,
   type SSHConnectionConfig,
   type InstallProgress,
   type InstallStep,
@@ -56,6 +47,7 @@ import {
   savePurchaseIntent
 } from './ssh-service';
 import { runtimeBackendApi } from '@/api/infrastructure/runtime-backend';
+import { openInBrowser } from '@/lib/openInBrowser';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -101,7 +93,7 @@ export function InfrastructureStep({ data, onUpdate, onStatusChange }: Props) {
   const [statusMessage, setStatusMessage] = useState('');
   const [installProgress, setInstallProgress] = useState<InstallProgress | null>(null);
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null);
-  const [abortFn, setAbortFn] = useState<(() => void) | null>(null);
+  const [, setAbortFn] = useState<(() => void) | null>(null);
   const [installLog, setInstallLog] = useState<string[]>([]);
   const [currentStep, setCurrentStep] = useState<InstallStep>('connecting');
 
@@ -454,7 +446,7 @@ export function InfrastructureStep({ data, onUpdate, onStatusChange }: Props) {
             {VPS_PROVIDERS.map((provider) => (
               <button
                 key={provider.id}
-                onClick={() => { savePurchaseIntent(provider.id, {}); window.open(provider.url, '_blank'); }}
+                onClick={() => { savePurchaseIntent(provider.id, {}); openInBrowser(provider.url); }}
                 className="group p-4 rounded-2xl bg-white/[0.02] border border-white/10 hover:border-[#D4B08C] transition-all text-center"
               >
                 <div className="w-14 h-14 mx-auto mb-3 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden">
@@ -873,7 +865,7 @@ function SSHPanel({
             <button key={id}
               onClick={() => onUpdate({ sshConfig: { ...sshConfig, authType: id } })}
               className={cn('flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all',
-                sshConfig.authType === id ? 'border-[#D4B08C] bg-[rgba(212,176,140,0.1)] text-[#D4B08C]' : 'border-white/10 text-white/50')}>
+                sshConfig.authType === id ? 'border-[#D4B08C] bg-[color-mix(in srgb, var(--accent-primary) 10%, transparent)] text-[#D4B08C]' : 'border-white/10 text-white/50')}>
               <Icon size={16} /> {label}
             </button>
           ))}
@@ -900,7 +892,7 @@ function SSHPanel({
 
       <div className="flex gap-2 pt-1">
         <button onClick={onTestConnection} disabled={isBusy}
-          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-white/20 rounded-xl text-sm text-[#D4B08C] hover:bg-[rgba(212,176,140,0.1)] disabled:opacity-50">
+          className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-white/20 rounded-xl text-sm text-[#D4B08C] hover:bg-[color-mix(in srgb, var(--accent-primary) 10%, transparent)] disabled:opacity-50">
           {status === 'testing' ? <CircleNotch className="w-4 h-4 animate-spin" /> : <Lightning size={16} />}
           Test Connection
         </button>
@@ -915,7 +907,7 @@ function SSHPanel({
         <div className={cn('flex items-center gap-2 px-3 py-2 rounded-lg text-sm',
           status === 'error' ? 'bg-red-500/10 text-red-400' :
           status === 'ready' ? 'bg-green-500/10 text-green-400' :
-          'bg-[rgba(212,176,140,0.1)] text-[#D4B08C]')}>
+          'bg-[color-mix(in srgb, var(--accent-primary) 10%, transparent)] text-[#D4B08C]')}>
           {status === 'error' ? <Warning size={16} /> : status === 'ready' ? <CheckCircle size={16} /> : <CircleNotch className="w-4 h-4 animate-spin" />}
           {statusMessage}
         </div>

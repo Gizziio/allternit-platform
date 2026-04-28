@@ -7,13 +7,11 @@ import { usePlatformUser, isPlatformAuthDisabled } from '../lib/platform-auth-cl
 // Agent Session Views
 import { ChatModeAgentSession } from '../views/agent-sessions/ChatModeAgentSession';
 import { CoworkModeAgentTasks } from '../views/agent-sessions/CoworkModeAgentTasks';
-import { BrowserModeAgentSession } from '../views/agent-sessions/BrowserModeAgentSession';
 import { SwarmADE } from '../views/swarm';
 import { ShellFrame } from './ShellFrame';
 import { ShellRail } from './ShellRail';
 import { type AppMode } from './ShellHeader';
 
-import { ModeSwitcher } from './ModeSwitcher';
 import { ModeProvider, useMode } from '../providers/mode-provider';
 import { GlobalDropzoneProvider } from '../components/GlobalDropzone';
 import { OnboardingPortal } from '../components/onboarding';
@@ -39,25 +37,28 @@ import { CoworkRoot } from '../views/cowork/CoworkRoot';
 import { PluginRegistryView } from '../views/cowork/PluginRegistryView';
 import { TerminalView } from '../views/TerminalView';
 import { CodeRoot } from '../views/code/CodeRoot';
-import { RunnerView } from '../views/RunnerView';
-import { RailsView } from '../views/RailsView';
 import { AgentSystemView } from '../views/AgentSystemView';
 import { AgentView } from '../views/AgentView';
 import { AgentHub } from '../views/AgentHub';
 import { NativeAgentView } from '../views/NativeAgentView';
-import {
-  getOpenClawWorkspacePathFromAgent,
-  useAgentStore,
-} from '../lib/agents';
+import { useAgentStore } from '../lib/agents';
 import { useChatSessionStore } from '../views/chat/ChatSessionStore';
 import { useCodeSessionStore } from '../views/code/CodeSessionStore';
 import { useCoworkSessionStore } from '../views/cowork/CoworkSessionStore';
 import { useDesignSessionStore } from '../views/design/DesignSessionStore';
-import { useBrowserSessionStore } from '../views/browser/BrowserSessionStore';
 import { useBrowserStore } from '../capsules/browser';
 import { BrowserCapsuleEnhanced } from '../capsules/browser/BrowserCapsuleEnhanced';
 import { useBrowserAgentStore } from '../capsules/browser/browserAgent.store';
 import { useBrowserShortcutsStore, getFaviconUrl } from '../capsules/browser/browserShortcuts.store';
+import {
+  MODE_COLORS,
+  BACKGROUND,
+  TEXT,
+  BORDER,
+  RADIUS,
+  TYPOGRAPHY,
+  STATUS,
+} from '@/design/allternit.tokens';
 import { GizziMascot } from '../components/ai-elements/GizziMascot';
 import type { GizziEmotion } from '../components/ai-elements/GizziMascot';
 import {
@@ -66,16 +67,16 @@ import {
   X,
   Plus,
   Clock,
+  PuzzlePiece,
 } from '@phosphor-icons/react';
 
 import { useChatStore } from '../views/chat/ChatStore';
 import { ProjectView } from '../views/ProjectView';
-import { useArtifactStore } from '../views/cowork/ArtifactStore';
 import { ToolsView } from "../views/code/ToolsView";
 import { RunReplayView } from "../views/code/RunReplayView";
 import { PromotionDashboardView } from "../views/code/PromotionDashboardView";
 import { PlaygroundView } from "../views/PlaygroundView";
-import { PluginManagerPanel } from "./PluginManagerPanel";
+import { IntegrationsPanel } from "./IntegrationsPanel";
 import { DagIntegrationPage } from "../views/DagIntegrationPage";
 import { ControlCenter } from './ControlCenter';
 // Agentation - UI iteration tool
@@ -92,7 +93,6 @@ import { CapsuleManagerView } from '../views/CapsuleManagerView';
 // Operator Browser Control View (P3.10/P3.12)
 import { OperatorBrowserView } from '../views/OperatorBrowserView';
 // P3 UI Views (JSON Render, Form Surfaces, Canvas, Hooks)
-import { BlueprintCanvas } from '../views/BlueprintCanvas';
 import { FormSurfacesView } from '../views/FormSurfacesView';
 import { CanvasProtocolView } from '../views/CanvasProtocolView';
 import { HooksSystemView } from '../views/HooksSystemView';
@@ -114,12 +114,10 @@ import {
   PolicyGating,
   SecurityDashboard,
   PurposeBinding,
-  BrowserView,
   DAGWIH,
   Checkpointing,
   ObservabilityDashboard,
   // Standalone views from DagIntegrationPage
-  SwarmDashboard,
   IVKGEPanel,
   MultimodalInput,
   UIForge,
@@ -130,7 +128,6 @@ import { ReplayManagerView } from '../views/runtime/ReplayManagerView';
 import { PrewarmManagerView } from '../views/runtime/PrewarmManagerView';
 import { RuntimeOperationsView } from '../views/runtime/RuntimeOperationsView';
 // Meta-Swarm Views
-import { MetaSwarmDashboard } from '../views/MetaSwarmDashboard';
 // Sprint 1 - History & Search views
 import { HistoryView } from '../views/HistoryView';
 import { ArchivedView } from '../views/ArchivedView';
@@ -173,7 +170,6 @@ import { CoworkTeamDashboard, CoworkBoardView, CoworkTeamAgentsView, CoworkWorks
 import { ErrorBoundary } from '../components/error-boundary';
 import { TooltipProvider } from '../components/ui/tooltip';
 import { VerificationView } from '../views/VerificationView';
-import { ShellHeader } from './ShellHeader';
 import { RailControls } from './FloatingWidgets';
 
 // Stable Chat view that handles project/no-project logic internally
@@ -195,7 +191,7 @@ import { FloatingAvatar } from '../components/agents/FloatingAvatar';
 const ChatViewWrapper = React.memo(function ChatViewWrapper({
   onOpenAgentSession
 }: {
-  onOpenAgentSession?: (text: string, surface: 'chat' | 'cowork' | 'code' | 'browser') => void;
+  onOpenAgentSession?: (text: string, surface: AppMode) => void;
 }): JSX.Element {
   const { activeProjectId, activeThreadId } = useChatStore();
   const embeddedChatSessionId = useChatSessionStore(
@@ -265,7 +261,7 @@ function ChatErrorFallback({ error }: { error?: Error }): JSX.Element {
           There was a problem loading the chat interface.
         </p>
         {error && (
-          <pre style={{ fontSize: 12, textAlign: 'left', background: 'var(--status-error-bg)', color: 'var(--ui-text-primary)', padding: 12, borderRadius: 4, maxWidth: 500, maxHeight: 200, overflow: 'auto', marginBottom: 16 }}>
+          <pre style={{ fontSize: 12, textAlign: 'left', background: 'rgba(248,113,113,0.1)', color: TEXT.primary, padding: 12, borderRadius: 4, maxWidth: 500, maxHeight: 200, overflow: 'auto', marginBottom: 16 }}>
             {error.message}
             {'\n'}
             {error.stack}
@@ -293,7 +289,7 @@ function OpenClawErrorFallback({ error }: { error?: Error }): JSX.Element {
           The OpenClaw control surface crashed during render.
         </p>
         {error && (
-          <pre style={{ fontSize: 12, textAlign: 'left', background: 'var(--status-error-bg)', color: 'var(--ui-text-primary)', padding: 12, borderRadius: 4, maxHeight: 260, overflow: 'auto', marginBottom: 16 }}>
+          <pre style={{ fontSize: 12, textAlign: 'left', background: 'rgba(248,113,113,0.1)', color: TEXT.primary, padding: 12, borderRadius: 4, maxHeight: 260, overflow: 'auto', marginBottom: 16 }}>
             {error.message}
             {'\n'}
             {error.stack}
@@ -314,88 +310,6 @@ function OpenClawErrorFallback({ error }: { error?: Error }): JSX.Element {
  * Error fallback for critical views
  * Shows user-friendly error message with retry option
  */
-function ViewErrorFallback({
-  viewName,
-  error,
-  reset
-}: {
-  viewName: string;
-  error?: Error;
-  reset?: () => void;
-}): JSX.Element {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100%',
-        padding: '40px',
-        textAlign: 'center',
-        background: 'var(--shell-frame-bg)',
-      }}
-    >
-      <div
-        style={{
-          width: '64px',
-          height: '64px',
-          borderRadius: '50%',
-          background: 'var(--status-error-bg)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginBottom: '24px',
-        }}
-      >
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--status-error)" strokeWidth="2">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="12" y1="8" x2="12" y2="12"/>
-          <line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
-      </div>
-      <h2 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--ui-text-primary)', marginBottom: '8px' }}>
-        {viewName} Error
-      </h2>
-      <p style={{ fontSize: '14px', color: 'var(--ui-text-secondary)', marginBottom: '24px', maxWidth: '400px' }}>
-        Something went wrong loading this view. {error?.message && `(${error.message})`}
-      </p>
-      <div style={{ display: 'flex', gap: '12px' }}>
-        {reset && (
-          <button
-            onClick={reset}
-            style={{
-              padding: '10px 20px',
-              borderRadius: '8px',
-              border: 'none',
-              background: 'var(--accent-primary)',
-              color: 'var(--shell-frame-bg)',
-              fontSize: '14px',
-              fontWeight: 500,
-              cursor: 'pointer',
-            }}
-          >
-            Try Again
-          </button>
-        )}
-        <button
-          onClick={() => window.location.reload()}
-          style={{
-            padding: '10px 20px',
-            borderRadius: '8px',
-            border: '1px solid var(--ui-border-default)',
-            background: 'transparent',
-            color: 'var(--ui-text-primary)',
-            fontSize: '14px',
-            cursor: 'pointer',
-          }}
-        >
-          Reload Page
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // Elements view placeholder
 function ElementsView(): JSX.Element {
@@ -448,7 +362,7 @@ function ErrorFallbackWrapper({
           width: '64px',
           height: '64px',
           borderRadius: '50%',
-          background: 'var(--status-error-bg)',
+          background: 'rgba(248,113,113,0.1)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -461,10 +375,10 @@ function ErrorFallbackWrapper({
           <line x1="12" y1="16" x2="12.01" y2="16"/>
         </svg>
       </div>
-      <h2 style={{ fontSize: '20px', fontWeight: 600, color: 'var(--ui-text-primary)', marginBottom: '8px' }}>
+      <h2 style={{ fontSize: '20px', fontWeight: 600, color: TEXT.primary, marginBottom: '8px' }}>
         {viewName} Error
       </h2>
-      <p style={{ fontSize: '14px', color: 'var(--ui-text-secondary)', marginBottom: '24px', maxWidth: '400px' }}>
+      <p style={{ fontSize: '14px', color: TEXT.secondary, marginBottom: '24px', maxWidth: '400px' }}>
         Something went wrong loading this view. {error?.message && `(${error.message})`}
       </p>
       <div style={{ display: 'flex', gap: '12px' }}>
@@ -492,7 +406,7 @@ function ErrorFallbackWrapper({
             borderRadius: '8px',
             border: '1px solid var(--ui-border-default)',
             background: 'transparent',
-            color: 'var(--ui-text-primary)',
+            color: TEXT.primary,
             fontSize: '14px',
             cursor: 'pointer',
           }}
@@ -553,10 +467,12 @@ function pickRandom<T>(arr: T[]): T {
  * When tabs are open the draggable card appears on top.
  * When no tabs → card is hidden, only the branded landing is visible.
  */
+const browserTokens = MODE_COLORS.browser;
+
 function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.Element {
   const { tabs, addTab, recentVisits } = useBrowserStore();
   const { shortcuts, addShortcut, removeShortcut, reorderShortcuts } = useBrowserShortcutsStore();
-  const { mode: agentMode, setMode: setAgentMode, status: agentStatus } = useBrowserAgentStore();
+  const { mode: agentMode, setMode: setAgentMode } = useBrowserAgentStore();
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [topOffset, setTopOffset] = useState(108);
   const isDragging = useRef(false);
@@ -608,7 +524,7 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
   const [addingShortcut, setAddingShortcut] = useState(false);
   const [newLabel, setNewLabel] = useState('');
   const [newUrl, setNewUrl] = useState('');
-  const [newIcon, setNewIcon] = useState('🌐');
+  const [newIcon, setNewIcon] = useState('');
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 
@@ -677,10 +593,10 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
     if (!newLabel.trim() || !newUrl.trim()) return;
     let url = newUrl.trim();
     if (!url.match(/^https?:\/\//)) url = `https://${url}`;
-    addShortcut({ label: newLabel.trim(), url, icon: newIcon || '🌐' });
+    addShortcut({ label: newLabel.trim(), url, icon: newIcon || '' });
     setNewLabel('');
     setNewUrl('');
-    setNewIcon('🌐');
+    setNewIcon('');
     setAddingShortcut(false);
   };
 
@@ -698,9 +614,9 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'radial-gradient(ellipse at 50% 30%, color-mix(in srgb, var(--shell-panel-bg) 84%, var(--accent-primary) 16%) 0%, var(--shell-frame-bg) 70%)',
-          color: 'var(--ui-text-primary)',
-          fontFamily: 'system-ui, -apple-system, sans-serif',
+          background: `radial-gradient(ellipse at 50% 30%, color-mix(in srgb, ${BACKGROUND.primary} 92%, ${browserTokens.accent} 8%) 0%, ${BACKGROUND.primary} 70%)`,
+          color: TEXT.primary,
+          fontFamily: TYPOGRAPHY.fontFamily.sans,
           position: 'relative',
           overflow: 'hidden',
           animation: landingAnim === 'out'
@@ -712,7 +628,7 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
           {/* Subtle dot grid (32px, opacity 0.03) */}
           <div style={{
             position: 'absolute', inset: 0, opacity: 0.03,
-            backgroundImage: 'radial-gradient(circle, color-mix(in srgb, var(--accent-primary) 60%, transparent) 1px, transparent 1px)',
+            backgroundImage: `radial-gradient(circle, color-mix(in srgb, ${browserTokens.accent} 50%, transparent) 1px, transparent 1px)`,
             backgroundSize: '32px 32px',
             pointerEvents: 'none',
           }} />
@@ -729,7 +645,7 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
                 position: 'absolute',
                 inset: -24,
                 borderRadius: '50%',
-                background: 'color-mix(in srgb, var(--accent-primary) 12%, transparent)',
+                background: browserTokens.soft,
                 filter: 'blur(48px)',
                 transform: isHovering ? 'scale(1.1)' : 'scale(0.8)',
                 opacity: isHovering ? 1 : 0,
@@ -748,7 +664,7 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
             <h1 style={{
               fontSize: 32,
               fontWeight: 500,
-              color: 'var(--ui-text-primary)',
+              color: TEXT.primary,
               marginBottom: 8,
               fontFamily: 'Georgia, "Times New Roman", serif',
               animation: `${greeting.titleAnim} 0.6s ease-out 100ms both`,
@@ -764,9 +680,9 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
               marginBottom: 32,
               animation: `${greeting.taglineAnim} 0.6s ease-out 350ms both`,
             }}>
-              <div style={{ width: 32, height: 1, background: 'color-mix(in srgb, var(--accent-primary) 38%, transparent)' }} />
+              <div style={{ width: 32, height: 1, background: browserTokens.border }} />
               <p style={{
-                color: 'var(--ui-text-muted)',
+                color: TEXT.secondary,
                 fontSize: 14,
                 textTransform: 'uppercase',
                 letterSpacing: '0.08em',
@@ -774,7 +690,7 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
               }}>
                 {greeting.tagline}
               </p>
-              <div style={{ width: 32, height: 1, background: 'color-mix(in srgb, var(--accent-primary) 38%, transparent)' }} />
+              <div style={{ width: 32, height: 1, background: browserTokens.border }} />
             </div>
 
             {/* ── Search bar ── */}
@@ -795,18 +711,18 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
                 <input type="text" placeholder="Search the web or enter a URL..."
                   style={{
                     width: '100%', height: 56, paddingLeft: 24, paddingRight: 56,
-                    background: 'var(--surface-floating-muted)', border: '1px solid var(--shell-dialog-border)',
-                    borderRadius: 16, color: 'var(--ui-text-primary)', fontSize: 18, outline: 'none', boxSizing: 'border-box',
-                    transition: 'border-color 0.2s',
+                    background: BACKGROUND.secondary, border: `1px solid ${BORDER.subtle}`,
+                    borderRadius: RADIUS.lg, color: TEXT.primary, fontSize: 18, outline: 'none', boxSizing: 'border-box',
+                    transition: 'border-color 0.2s, box-shadow 0.2s',
                   }}
-                  onFocus={(e) => { e.currentTarget.style.borderColor = 'var(--accent-primary)'; }}
-                  onBlur={(e) => { e.currentTarget.style.borderColor = 'var(--shell-dialog-border)'; }}
+                  onFocus={(e) => { e.currentTarget.style.borderColor = browserTokens.accent; e.currentTarget.style.boxShadow = `0 0 0 3px ${browserTokens.soft}`; }}
+                  onBlur={(e) => { e.currentTarget.style.borderColor = BORDER.subtle; e.currentTarget.style.boxShadow = 'none'; }}
                 />
                 <button type="submit" style={{
                   position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                  padding: 8, background: 'var(--accent-primary)', border: 'none', borderRadius: 8, cursor: 'pointer',
+                  padding: 8, background: browserTokens.accent, border: 'none', borderRadius: RADIUS.md, cursor: 'pointer',
                 }}>
-                  <MagnifyingGlass style={{ width: 20, height: 20, color: 'var(--shell-frame-bg)' }} />
+                  <MagnifyingGlass style={{ width: 20, height: 20, color: BACKGROUND.primary }} />
                 </button>
               </form>
             </div>
@@ -817,14 +733,14 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 6,
                 padding: '6px 14px', borderRadius: 20,
-                background: agentActive ? 'var(--shell-item-active-bg)' : 'var(--surface-floating-muted)',
-                border: `1px solid ${agentActive ? 'var(--shell-dialog-border)' : 'var(--shell-divider)'}`,
-                color: agentActive ? 'var(--accent-primary)' : 'var(--ui-text-muted)',
+                background: agentActive ? browserTokens.panelTint : BACKGROUND.secondary,
+                border: `1px solid ${agentActive ? browserTokens.border : BORDER.subtle}`,
+                color: agentActive ? browserTokens.accent : TEXT.secondary,
                 fontSize: 12, cursor: 'pointer', marginBottom: 32,
                 transition: 'all 0.2s',
               }}
             >
-              <span>🧩</span>
+              <PuzzlePiece style={{ width: 14, height: 14 }} weight="fill" />
               <span>Allternit Agent: {agentActive ? 'Active' : 'Off'}</span>
             </button>
 
@@ -834,7 +750,7 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
                 <button
                   onClick={() => setEditMode(!editMode)}
                   style={{
-                    background: 'none', border: 'none', color: editMode ? 'var(--accent-primary)' : 'var(--ui-text-muted)',
+                    background: 'none', border: 'none', color: editMode ? browserTokens.accent : TEXT.secondary,
                     fontSize: 11, cursor: 'pointer', textDecoration: 'underline', padding: '2px 4px',
                   }}
                 >
@@ -866,9 +782,9 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
                   style={{
                       display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
                       padding: '16px 12px', borderRadius: 12, position: 'relative',
-                      background: dragOverIdx === idx ? 'var(--shell-item-hover)' : 'var(--surface-panel-muted)',
-                      border: `1px solid ${dragOverIdx === idx ? 'var(--accent-primary)' : 'var(--shell-divider)'}`,
-                      cursor: editMode ? 'grab' : 'pointer', color: 'var(--ui-text-muted)', fontSize: 12,
+                      background: dragOverIdx === idx ? browserTokens.panelTint : BACKGROUND.secondary,
+                      border: `1px solid ${dragOverIdx === idx ? browserTokens.accent : BORDER.subtle}`,
+                      cursor: editMode ? 'grab' : 'pointer', color: TEXT.secondary, fontSize: 12,
                       transition: 'border-color 0.2s, color 0.2s, box-shadow 0.2s, background 0.15s',
                       opacity: dragIdx === idx ? 0.4 : 1,
                     }}
@@ -881,9 +797,9 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
                     }}
                     onMouseLeave={(e) => {
                       if (dragOverIdx !== idx) {
-                        e.currentTarget.style.borderColor = 'var(--shell-divider)';
+                        e.currentTarget.style.borderColor = BORDER.subtle;
                       }
-                      e.currentTarget.style.color = 'var(--ui-text-muted)';
+                      e.currentTarget.style.color = TEXT.secondary;
                       e.currentTarget.style.boxShadow = 'none';
                     }}
                   >
@@ -893,7 +809,7 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
                         style={{
                           position: 'absolute', top: -6, right: -6,
                           width: 20, height: 20, borderRadius: '50%',
-                          background: 'var(--status-error)', color: 'var(--shell-danger-fg)',
+                          background: STATUS.error, color: BACKGROUND.primary,
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           cursor: 'pointer', fontSize: 12, lineHeight: 1, zIndex: 2,
                         }}
@@ -901,7 +817,7 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
                         <X style={{ width: 12, height: 12 }} />
                       </div>
                     )}
-                    <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--shell-item-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, overflow: 'hidden' }}>
+                    <div style={{ width: 48, height: 48, borderRadius: '50%', background: browserTokens.panelTint, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, overflow: 'hidden' }}>
                       {useFavicon ? (
                         <img
                           src={faviconSrc}
@@ -910,7 +826,7 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
                           onError={() => setFaviconErrors((prev) => new Set(prev).add(item.id))}
                         />
                       ) : (
-                        item.icon || '🌐'
+                        <Globe style={{ width: 22, height: 22, opacity: 0.5 }} />
                       )}
                     </div>
                     <span>{item.label}</span>
@@ -924,12 +840,12 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
                     style={{
                       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8,
                       padding: '16px 12px', borderRadius: 12,
-                      background: 'transparent', border: '1px dashed var(--shell-divider)',
-                      cursor: 'pointer', color: 'var(--ui-text-muted)', fontSize: 12,
+                      background: 'transparent', border: `1px dashed ${BORDER.subtle}`,
+                      cursor: 'pointer', color: TEXT.tertiary, fontSize: 12,
                       transition: 'border-color 0.2s, color 0.2s',
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'var(--accent-primary)'; e.currentTarget.style.color = 'var(--accent-primary)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'var(--shell-divider)'; e.currentTarget.style.color = 'var(--ui-text-muted)'; }}
+                    onMouseEnter={(e) => { e.currentTarget.style.borderColor = browserTokens.accent; e.currentTarget.style.color = browserTokens.accent; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.borderColor = BORDER.subtle; e.currentTarget.style.color = TEXT.secondary; }}
                   >
                     <Plus style={{ width: 20, height: 20 }} />
                     <span>Add</span>
@@ -938,36 +854,36 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
                   <div style={{
                     display: 'flex', flexDirection: 'column', gap: 6,
                     padding: 12, borderRadius: 12,
-                    background: 'var(--surface-floating-muted)', border: '1px solid var(--shell-dialog-border)',
+                    background: BACKGROUND.secondary, border: `1px solid ${BORDER.subtle}`,
                     gridColumn: 'span 2',
                   }}>
                     <input value={newLabel} onChange={(e) => setNewLabel(e.target.value)}
                       placeholder="Label" style={{
-                        background: 'var(--surface-panel-muted)', border: '1px solid var(--shell-divider)',
-                        borderRadius: 6, padding: '4px 8px', color: 'var(--ui-text-primary)', fontSize: 12, outline: 'none',
+                        background: BACKGROUND.primary, border: `1px solid ${BORDER.subtle}`,
+                        borderRadius: 6, padding: '4px 8px', color: TEXT.primary, fontSize: 12, outline: 'none',
                       }}
                     />
                     <input value={newUrl} onChange={(e) => setNewUrl(e.target.value)}
                       placeholder="URL" style={{
-                        background: 'var(--surface-panel-muted)', border: '1px solid var(--shell-divider)',
-                        borderRadius: 6, padding: '4px 8px', color: 'var(--ui-text-primary)', fontSize: 12, outline: 'none',
+                        background: BACKGROUND.primary, border: `1px solid ${BORDER.subtle}`,
+                        borderRadius: 6, padding: '4px 8px', color: TEXT.primary, fontSize: 12, outline: 'none',
                       }}
                     />
                     <div style={{ display: 'flex', gap: 6 }}>
                       <input value={newIcon} onChange={(e) => setNewIcon(e.target.value)}
                         placeholder="Emoji" style={{
-                          width: 40, background: 'var(--surface-panel-muted)', border: '1px solid var(--shell-divider)',
-                          borderRadius: 6, padding: '4px 6px', color: 'var(--ui-text-primary)', fontSize: 12, outline: 'none', textAlign: 'center',
+                          width: 40, background: BACKGROUND.primary, border: `1px solid ${BORDER.subtle}`,
+                          borderRadius: 6, padding: '4px 6px', color: TEXT.primary, fontSize: 12, outline: 'none', textAlign: 'center',
                         }}
                       />
                       <button onClick={handleAddShortcut} style={{
-                        flex: 1, padding: '4px 8px', borderRadius: 6,
-                        background: 'var(--accent-primary)', border: 'none', color: 'var(--shell-frame-bg)',
+                        flex: 1, padding: '4px 8px', borderRadius: RADIUS.md,
+                        background: browserTokens.accent, border: 'none', color: BACKGROUND.primary,
                         fontSize: 11, fontWeight: 600, cursor: 'pointer',
                       }}>Save</button>
                       <button onClick={() => setAddingShortcut(false)} style={{
-                        padding: '4px 8px', borderRadius: 6,
-                        background: 'var(--surface-panel-muted)', border: 'none', color: 'var(--ui-text-muted)',
+                        padding: '4px 8px', borderRadius: RADIUS.md,
+                        background: BACKGROUND.primary, border: 'none', color: TEXT.secondary,
                         fontSize: 11, cursor: 'pointer',
                       }}>Cancel</button>
                     </div>
@@ -979,7 +895,7 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
             {/* ── Recently Visited ── */}
             {recentVisits.length > 0 && (
               <div style={{ width: '100%', maxWidth: 560, marginTop: 32 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, color: 'var(--ui-text-muted)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, color: TEXT.tertiary, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                   <Clock style={{ width: 12, height: 12 }} />
                   <span>Recently Visited</span>
                 </div>
@@ -992,15 +908,15 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
                         onClick={() => addTab(visit.url)}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 10,
-                          padding: '8px 12px', borderRadius: 8,
+                          padding: '8px 12px', borderRadius: RADIUS.md,
                           background: 'transparent', border: 'none',
-                          cursor: 'pointer', color: 'var(--ui-text-muted)', fontSize: 12, textAlign: 'left', width: '100%',
+                          cursor: 'pointer', color: TEXT.secondary, fontSize: 12, textAlign: 'left', width: '100%',
                           transition: 'background 0.15s, color 0.15s',
                         }}
-                        onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-hover)'; e.currentTarget.style.color = 'var(--ui-text-primary)'; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--ui-text-muted)'; }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = browserTokens.panelTint; e.currentTarget.style.color = TEXT.primary; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = TEXT.secondary; }}
                       >
-                        <div style={{ width: 24, height: 24, borderRadius: 4, background: 'var(--shell-item-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
+                        <div style={{ width: 24, height: 24, borderRadius: RADIUS.sm, background: browserTokens.panelTint, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden' }}>
                           {visitFavicon ? (
                             <img src={visitFavicon} alt="" style={{ width: 16, height: 16, objectFit: 'contain' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                           ) : (
@@ -1010,7 +926,7 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
                         <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {visit.title}
                         </span>
-                        <span style={{ fontSize: 10, color: 'var(--ui-text-muted)', flexShrink: 0 }}>
+                        <span style={{ fontSize: 10, color: TEXT.tertiary, flexShrink: 0 }}>
                           {new URL(visit.url).hostname}
                         </span>
                       </button>
@@ -1046,11 +962,11 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
               width: 40,
               height: 4,
               borderRadius: 2,
-              background: 'var(--surface-panel-muted)',
+              background: BORDER.subtle,
               transition: 'background 0.15s',
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--accent-primary)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface-panel-muted)'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = browserTokens.accent; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = BORDER.subtle; }}
           />
         </div>
         {/* Browser content */}
@@ -1106,21 +1022,18 @@ function ShellAppInner(): JSX.Element {
     void useCoworkSessionStore.getState().loadSessions().catch(() => {});
     void useCodeSessionStore.getState().loadSessions().catch(() => {});
     void useDesignSessionStore.getState().loadSessions().catch(() => {});
-    void useBrowserSessionStore.getState().loadSessions().catch(() => {});
 
     // Connect to SSE for live session updates
     const disconnectChat = useChatSessionStore.getState().connectSessionSync();
     const disconnectCowork = useCoworkSessionStore.getState().connectSessionSync();
     const disconnectCode = useCodeSessionStore.getState().connectSessionSync();
     const disconnectDesign = useDesignSessionStore.getState().connectSessionSync();
-    const disconnectBrowser = useBrowserSessionStore.getState().connectSessionSync();
 
     return () => {
       disconnectChat();
       disconnectCowork();
       disconnectCode();
       disconnectDesign();
-      disconnectBrowser();
     };
   }, []);
 
@@ -1140,6 +1053,7 @@ function ShellAppInner(): JSX.Element {
     else if (activeMode === 'cowork') open('workspace');
     else if (activeMode === 'code') open('code');
     else if (activeMode === 'design') open('design');
+    else if (activeMode === 'browser') open('browser');
     else open('chat'); // fallback
   }, [modeLoaded, activeMode]);
 
@@ -1171,7 +1085,7 @@ function ShellAppInner(): JSX.Element {
 
   // Handle opening agent session views from chat composer.
   // Creates a session and routes the initial message via sendMessageStream
-  const handleOpenAgentSession = useCallback(async (text: string, surface: 'chat' | 'cowork' | 'code' | 'browser' | 'design') => {
+  const handleOpenAgentSession = useCallback(async (text: string, surface: AppMode) => {
     const selectedAgentId = useAgentSurfaceModeStore.getState().selectedAgentIdBySurface[surface];
 
     try {
@@ -1183,7 +1097,7 @@ function ShellAppInner(): JSX.Element {
           : surface === 'design'
             ? useDesignSessionStore
             : surface === 'browser'
-              ? useBrowserSessionStore
+              ? useChatSessionStore
               : useChatSessionStore;
       const sessionId = await store.getState().createSession({
         name: text.slice(0, 50) || 'New Session',
@@ -1195,12 +1109,12 @@ function ShellAppInner(): JSX.Element {
       store.getState().setActiveSession(sessionId);
 
       // Navigate to the matching surface view (ChatView, CoworkRoot, etc.)
-      const viewTypeMap: Record<typeof surface, ViewType> = {
+      const viewTypeMap: Record<AppMode, ViewType> = {
         chat: 'chat',
         cowork: 'workspace',
         code: 'code',
-        browser: 'browser',
         design: 'design',
+        browser: 'browser',
       };
       dispatch({ type: 'OPEN_VIEW', viewType: viewTypeMap[surface] });
 
@@ -1211,21 +1125,22 @@ function ShellAppInner(): JSX.Element {
     }
   }, []);
 
-  // Helper to get pending agent message safely
-  const getPendingAgentMessage = useCallback((): string | undefined => {
-    if (typeof window === 'undefined') return undefined;
-    const msg = window.sessionStorage.getItem('allternit-pending-agent-message');
-    // Clear after reading to prevent reuse
-    window.sessionStorage.removeItem('allternit-pending-agent-message');
-    return msg || undefined;
-  }, []);
-
   const registry = useMemo(() => createViewRegistry({
     home: () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} />,
     chat: () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} />,
     // design: DesignModeView,  // merged with design below
     "chat-legacy": () => <ChatViewWrapper onOpenAgentSession={handleOpenAgentSession} />,
-    workspace: CoworkRoot,
+    workspace: ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary
+        fallback={<ErrorFallbackWrapper viewName="Cowork" />}
+        onError={(error, errorInfo) => {
+          console.error('[Cowork] Error:', error);
+          console.error('[Cowork] Component Stack:', errorInfo.componentStack);
+        }}
+      >
+        <CoworkRoot />
+      </ErrorBoundary>
+    ),
     browser: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
         fallback={<ErrorFallbackWrapper viewName="Browser" />}
@@ -2125,13 +2040,6 @@ function ShellAppInner(): JSX.Element {
         <SwarmADE />
       </ErrorBoundary>
     ),
-    'browser-agent-session': ({ context }: { context?: ViewContext }) => (
-      <BrowserModeAgentSession 
-        mode="browser"
-        sessionId={context!.viewId}
-        onClose={() => open('browser')}
-      />
-    ),
     // New document/file - open workspace view with create mode
     'new-document': ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div style={{ padding: 16, color: 'var(--text-secondary)' }}>Failed to load</div>}>
@@ -2243,7 +2151,17 @@ function ShellAppInner(): JSX.Element {
     if (mode === 'cowork') open('workspace');
     if (mode === 'code') open('code');
     if (mode === 'design') open('design');
+    if (mode === 'browser') open('browser');
   }, [setActiveMode, open]);
+
+  // Bidirectional sync: browser viewType ↔ browser mode
+  useEffect(() => {
+    if (active.viewType === 'browser' || active.viewType === 'browserview') {
+      if (activeMode !== 'browser') setActiveMode('browser');
+    } else if (activeMode === 'browser') {
+      setActiveMode('chat');
+    }
+  }, [active.viewType, activeMode, setActiveMode]);
 
   // Get session from auth (will be passed from server component wrapper)
   const session = null; // TODO: Get from auth context
@@ -2266,8 +2184,8 @@ function ShellAppInner(): JSX.Element {
         {/* Desktop Permission Status Banner */}
         {permissions.isSupported && permissions.anyDenied && (
           <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999,
-            background: '#f59e0b', color: '#1a1a1a', padding: '8px 16px',
+            position: 'fixed', top: 0, left: 0, right: 0, zIndex: 220,
+            background: 'var(--status-warning)', color: 'var(--ui-text-inverse)', padding: '8px 16px',
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12,
             fontSize: 13, fontWeight: 500
           }}>
@@ -2282,7 +2200,7 @@ function ShellAppInner(): JSX.Element {
               }}
               style={{
                 padding: '4px 12px', borderRadius: 4, border: '1px solid #1a1a1a',
-                background: 'transparent', color: '#1a1a1a', fontSize: 12,
+                background: 'transparent', color: 'var(--ui-text-inverse)', fontSize: 12,
                 fontWeight: 600, cursor: 'pointer'
               }}
             >
@@ -2294,7 +2212,7 @@ function ShellAppInner(): JSX.Element {
               }}
               style={{
                 padding: '4px 12px', borderRadius: 4, border: 'none',
-                background: 'transparent', color: '#1a1a1a', fontSize: 12,
+                background: 'transparent', color: 'var(--ui-text-inverse)', fontSize: 12,
                 textDecoration: 'underline', cursor: 'pointer'
               }}
             >
@@ -2369,13 +2287,17 @@ function ShellAppInner(): JSX.Element {
                             .agents.find((agent) => agent.id === selectedAgentId) ?? null
                         : null;
                     try {
+                      if (originSurface === 'browser') {
+                        setSidecarOpen(true);
+                        open('browser');
+                        return;
+                      }
+
                       const store = originSurface === 'code'
                         ? useCodeSessionStore
                         : originSurface === 'cowork'
                           ? useCoworkSessionStore
-                          : originSurface === 'browser'
-                            ? useBrowserSessionStore
-                            : useChatSessionStore;
+                          : useChatSessionStore;
                       const sessionId = await store.getState().createSession({
                         name: 'Agent Session',
                         sessionMode: 'agent',
@@ -2385,34 +2307,18 @@ function ShellAppInner(): JSX.Element {
 
                       store.getState().setActiveSession(sessionId);
 
-                      if (
-                        originSurface === 'chat' ||
-                        originSurface === 'code' ||
-                        originSurface === 'cowork' ||
-                        originSurface === 'browser'
-                      ) {
-                        if (selectedAgent?.id) {
-                          useAgentSurfaceModeStore
-                            .getState()
-                            .setSelectedAgent(originSurface, selectedAgent.id);
-                        }
+                      if (selectedAgent?.id) {
+                        useAgentSurfaceModeStore
+                          .getState()
+                          .setSelectedAgent(originSurface, selectedAgent.id);
+                      }
 
-                        if (originSurface === 'browser') {
-                          setSidecarOpen(true);
-                          open('browser');
-                          return;
-                        }
-
-                        if (originSurface === 'cowork') {
-                          handleModeChange('cowork');
-                          return;
-                        }
-
-                        handleModeChange(originSurface === 'code' ? 'code' : 'chat');
+                      if (originSurface === 'cowork') {
+                        handleModeChange('cowork');
                         return;
                       }
 
-                      open('native-agent');
+                      handleModeChange(originSurface === 'code' ? 'code' : 'chat');
                     } catch (error) {
                       console.error('[ShellApp] Failed to create agent session from rail controls', error);
                       open('native-agent');
@@ -2421,7 +2327,7 @@ function ShellAppInner(): JSX.Element {
                   isRailCollapsed={isRailCollapsed}
                   activeViewType={active.viewType}
                   onOpenView={open as (viewType: string) => void}
-                  onOpenPlugins={() => setPluginPanelOpen(true)}
+                  onOpenIntegrations={() => setPluginPanelOpen(true)}
                 />
         <ConsoleDrawer />
         <ConversationMonitorOverlay
@@ -2436,7 +2342,7 @@ function ShellAppInner(): JSX.Element {
           onToggleAgentation={setAgentationEnabled}
           onOpenView={open as (viewType: string) => void}
         />
-        <PluginManagerPanel
+        <IntegrationsPanel
           isOpen={pluginPanelOpen}
           onClose={() => setPluginPanelOpen(false)}
           onOpenSettings={() => {
@@ -2452,7 +2358,7 @@ function ShellAppInner(): JSX.Element {
           <Agentation 
             endpoint="http://localhost:4747"
             onSessionCreated={(sessionId) => {
-              console.log('[Agentation] Session started:', sessionId);
+              // Agentation session started
             }}
           />
         )}
@@ -2483,7 +2389,7 @@ function OnboardingGate(): JSX.Element | null {
     if (desktop?.isFirstLaunch) {
       desktop.isFirstLaunch().then((isFirst: boolean) => {
         if (isFirst) {
-          console.log('[OnboardingGate] Desktop says first launch — resetting platform onboarding state');
+          // OnboardingGate: reset platform onboarding on first launch
           resetOnboarding();
         }
       }).catch(() => {});
@@ -2527,17 +2433,5 @@ export function ShellApp(): JSX.Element {
         </GlobalDropzoneProvider>
       </ModeProvider>
     </AuthGate>
-  );
-}
-
-function Placeholder({ context }: { context?: ViewContext }): JSX.Element {
-  return (
-    <div style={{ padding: 16 }}>
-      <div style={{ fontWeight: 700, marginBottom: 8 }}>{context?.viewType}</div>
-      <div style={{ opacity: 0.8 }}>View ID: {context?.viewId}</div>
-      <div style={{ opacity: 0.6, fontSize: '12px', marginTop: 8 }}>
-        Replace this view via ViewRegistry or integration/allternit/legacy.bridge.
-      </div>
-    </div>
   );
 }

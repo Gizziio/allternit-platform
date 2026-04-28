@@ -13,9 +13,9 @@ import React, { useState, useCallback } from 'react';
 // ============================================================================
 
 const THEME = {
-  accent: '#d4b08c',
-  textTertiary: '#78716c',
-  textSecondary: '#a8a29e',
+  accent: 'var(--accent-primary)',
+  textTertiary: 'var(--ui-text-muted)',
+  textSecondary: 'var(--ui-text-secondary)',
   accentMuted: 'rgba(212, 176, 140, 0.15)',
 };
 
@@ -303,7 +303,7 @@ export function RatingBar({ starCount, count, total, size = 'md' }: RatingBarPro
         style={{
           flex: 1,
           height,
-          backgroundColor: 'rgba(255,255,255,0.1)',
+          backgroundColor: 'var(--ui-border-default)',
           borderRadius: height / 2,
           overflow: 'hidden',
         }}

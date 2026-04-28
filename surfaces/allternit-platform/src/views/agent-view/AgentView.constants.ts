@@ -51,7 +51,7 @@ export const MASCOT_TEMPLATES: Record<MascotTemplate, {
   cyber: {
     name: 'Cyber',
     description: 'Futuristic neon and circuitry aesthetic',
-    defaultColors: ['#06b6d4', '#0ea5e9', '#3b82f6'],
+    defaultColors: ['var(--status-info)', '#0ea5e9', '#3b82f6'],
     features: ['Neon glow', 'Circuit patterns', 'Holographic elements'],
   },
   magic: {
@@ -105,13 +105,13 @@ export const MASCOT_TEMPLATES: Record<MascotTemplate, {
   science: {
     name: 'Science',
     description: 'Atoms, flasks, and chemical reactions',
-    defaultColors: ['#06b6d4', '#14b8a6', '#3b82f6'],
+    defaultColors: ['var(--status-info)', '#14b8a6', '#3b82f6'],
     features: ['Atom orbit', 'Bubbling effects', 'Laboratory aesthetic'],
   },
   gaming: {
     name: 'Gaming',
     description: 'Controllers, pixels, and arcade themes',
-    defaultColors: ['#ec4899', '#8b5cf6', '#06b6d4'],
+    defaultColors: ['#ec4899', '#8b5cf6', 'var(--status-info)'],
     features: ['Pixel explosion', 'Button presses', 'Retro styling'],
   },
   music: {

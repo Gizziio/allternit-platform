@@ -124,7 +124,7 @@ const clerkAppearance = {
     },
     socialButtonsBlockButton: {
       background: "#110D0A",
-      border: "1px solid rgba(255,255,255,0.08)",
+      border: "1px solid var(--ui-border-muted)",
       color: "#F5EDE3",
       boxShadow: "none",
     },
@@ -132,7 +132,7 @@ const clerkAppearance = {
       color: "#F5EDE3",
     },
     dividerLine: {
-      background: "rgba(255,255,255,0.08)",
+      background: "var(--ui-border-muted)",
     },
     dividerText: {
       color: "#7E6556",
@@ -142,7 +142,7 @@ const clerkAppearance = {
     },
     formFieldInput: {
       background: "#110D0A",
-      border: "1px solid rgba(255,255,255,0.09)",
+      border: "1px solid var(--ui-border-muted)",
       color: "#F5EDE3",
       boxShadow: "none",
     },
@@ -180,7 +180,7 @@ const clerkAppearance = {
     },
     otpCodeFieldInput: {
       background: "#110D0A",
-      border: "1px solid rgba(255,255,255,0.09)",
+      border: "1px solid var(--ui-border-muted)",
       color: "#F5EDE3",
     },
     alertText: {

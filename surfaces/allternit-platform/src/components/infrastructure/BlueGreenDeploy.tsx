@@ -9,7 +9,6 @@
  */
 
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   GitBranch,
   ArrowsLeftRight as ArrowRightLeft,
@@ -18,10 +17,8 @@ import {
   CircleNotch,
   Play,
   ArrowCounterClockwise,
-  Warning,
   ArrowRight,
   Shield,
-  Clock,
   Pulse as Activity,
   HardDrives,
 } from '@phosphor-icons/react';

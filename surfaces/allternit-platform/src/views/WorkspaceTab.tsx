@@ -142,10 +142,10 @@ function AgentCard({
       style={{
         background: isActive
           ? 'rgba(212,149,106,0.07)'
-          : 'rgba(255,255,255,0.02)',
+          : 'var(--surface-hover)',
         border: isActive
           ? '1px solid rgba(212,149,106,0.25)'
-          : '1px solid rgba(255,255,255,0.06)',
+          : '1px solid var(--ui-border-muted)',
         borderRadius: 12,
         padding: '14px 16px',
         position: 'relative',
@@ -166,7 +166,7 @@ function AgentCard({
             borderRadius: 20,
             padding: '3px 9px',
             fontSize: 11,
-            color: '#f0c7a3',
+            color: 'var(--accent-primary)',
             fontWeight: 500,
           }}
         >
@@ -182,7 +182,7 @@ function AgentCard({
             width: 40,
             height: 40,
             borderRadius: 10,
-            background: isActive ? 'rgba(212,149,106,0.18)' : 'rgba(255,255,255,0.06)',
+            background: isActive ? 'rgba(212,149,106,0.18)' : 'var(--ui-border-muted)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -194,12 +194,12 @@ function AgentCard({
         </div>
         <div className="flex-1 min-w-0 pr-16">
           <div
-            style={{ fontSize: 14, fontWeight: 500, color: isActive ? '#f0c7a3' : '#e0e0e0' }}
+            style={{ fontSize: 14, fontWeight: 500, color: isActive ? 'var(--accent-primary)' : 'var(--ui-text-primary)' }}
             className="truncate"
           >
             {agent.name}
           </div>
-          <div style={{ fontSize: 12, color: '#666' }} className="truncate">
+          <div style={{ fontSize: 12, color: 'var(--ui-text-muted)' }} className="truncate">
             {agent.type} · {agent.model}
           </div>
         </div>
@@ -207,7 +207,7 @@ function AgentCard({
 
       {/* Description */}
       {agent.description && (
-        <p style={{ fontSize: 12, color: '#666', marginBottom: 12, lineHeight: 1.5 }} className="line-clamp-2">
+        <p style={{ fontSize: 12, color: 'var(--ui-text-muted)', marginBottom: 12, lineHeight: 1.5 }} className="line-clamp-2">
           {agent.description}
         </p>
       )}
@@ -219,12 +219,12 @@ function AgentCard({
             onClick={onActivate}
             disabled={activating}
             style={{
-              background: 'rgba(212,149,106,0.12)',
+              background: 'color-mix(in srgb, var(--accent-primary) 12%, transparent)',
               border: '1px solid rgba(212,149,106,0.25)',
               borderRadius: 7,
               padding: '5px 12px',
               fontSize: 12,
-              color: '#f0c7a3',
+              color: 'var(--accent-primary)',
               cursor: activating ? 'not-allowed' : 'pointer',
               opacity: activating ? 0.5 : 1,
               display: 'flex',
@@ -244,11 +244,11 @@ function AgentCard({
           onClick={onOpen}
           style={{
             background: 'transparent',
-            border: '1px solid rgba(255,255,255,0.07)',
+            border: '1px solid var(--ui-border-muted)',
             borderRadius: 7,
             padding: '5px 12px',
             fontSize: 12,
-            color: '#888',
+            color: 'var(--ui-text-muted)',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -274,7 +274,7 @@ function ActiveCard({ workspace }: { workspace: ActiveWorkspace }) {
         marginBottom: 24,
       }}
     >
-      <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+      <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
         Active in gizzi-code sessions
       </div>
       <div className="flex items-center gap-3">
@@ -296,39 +296,39 @@ function ActiveCard({ workspace }: { workspace: ActiveWorkspace }) {
           </div>
         )}
         <div>
-          <div style={{ fontSize: 15, fontWeight: 500, color: '#f0c7a3' }}>
+          <div style={{ fontSize: 15, fontWeight: 500, color: 'var(--accent-primary)' }}>
             {workspace.name ?? 'Unnamed Agent'}
           </div>
           {workspace.vibe && (
-            <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>{workspace.vibe}</div>
+            <div style={{ fontSize: 13, color: 'var(--ui-text-muted)', marginTop: 2 }}>{workspace.vibe}</div>
           )}
           <div className="flex items-center gap-3 mt-2">
             <span
               style={{
                 fontSize: 11,
-                background: 'rgba(212,149,106,0.12)',
+                background: 'color-mix(in srgb, var(--accent-primary) 12%, transparent)',
                 border: '1px solid rgba(212,149,106,0.2)',
                 borderRadius: 20,
                 padding: '2px 8px',
-                color: '#d4956a',
+                color: 'var(--accent-primary)',
               }}
             >
               {workspace.format === 'layered' ? '5-layer' : 'flat'}
             </span>
             {workspace.hasSoul && (
-              <span style={{ fontSize: 11, color: '#86efac' }}>
+              <span style={{ fontSize: 11, color: 'var(--status-success)' }}>
                 <CheckCircle size={11} className="inline mr-1" />soul
               </span>
             )}
             {workspace.hasMemory && (
-              <span style={{ fontSize: 11, color: '#86efac' }}>
+              <span style={{ fontSize: 11, color: 'var(--status-success)' }}>
                 <CheckCircle size={11} className="inline mr-1" />memory
               </span>
             )}
           </div>
         </div>
       </div>
-      <div style={{ fontSize: 11, color: '#555', marginTop: 10, fontFamily: 'monospace' }}>
+      <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', marginTop: 10, fontFamily: 'monospace' }}>
         {workspace.path}
       </div>
     </div>
@@ -413,7 +413,7 @@ export function WorkspaceTab({ onSwitchToRegistry }: WorkspaceTabProps = {}) {
     return (
       <div
         className="flex items-center justify-center"
-        style={{ height: 240, color: '#555', fontSize: 13 }}
+        style={{ height: 240, color: 'var(--ui-text-muted)', fontSize: 13 }}
       >
         <ArrowsClockwise size={15} className="animate-spin mr-2" />
         Connecting…
@@ -427,8 +427,8 @@ export function WorkspaceTab({ onSwitchToRegistry }: WorkspaceTabProps = {}) {
       <div className="max-w-lg mx-auto py-10">
         <div
           style={{
-            background: 'rgba(255,255,255,0.02)',
-            border: '1px solid rgba(255,255,255,0.06)',
+            background: 'var(--surface-hover)',
+            border: '1px solid var(--ui-border-muted)',
             borderRadius: 12,
             padding: '20px 24px',
           }}
@@ -436,14 +436,14 @@ export function WorkspaceTab({ onSwitchToRegistry }: WorkspaceTabProps = {}) {
           <div className="flex items-start gap-3">
             <Warning size={16} color="#888" className="flex-shrink-0 mt-0.5" />
             <div>
-              <div style={{ fontSize: 14, color: '#ccc', marginBottom: 6 }}>
+              <div style={{ fontSize: 14, color: 'var(--ui-text-secondary)', marginBottom: 6 }}>
                 gizzi-code not running
               </div>
-              <div style={{ fontSize: 13, color: '#666', lineHeight: 1.6 }}>
+              <div style={{ fontSize: 13, color: 'var(--ui-text-muted)', lineHeight: 1.6 }}>
                 The Workspace tab syncs agents to your gizzi-code sessions. Start gizzi-code
                 to enable agent switching.
               </div>
-              <div style={{ fontSize: 12, color: '#555', marginTop: 12, fontFamily: 'monospace' }}>
+              <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', marginTop: 12, fontFamily: 'monospace' }}>
                 Expected on port 4096
               </div>
             </div>
@@ -473,13 +473,13 @@ export function WorkspaceTab({ onSwitchToRegistry }: WorkspaceTabProps = {}) {
       ) : (
         <div
           style={{
-            background: 'rgba(255,255,255,0.02)',
-            border: '1px solid rgba(255,255,255,0.06)',
+            background: 'var(--surface-hover)',
+            border: '1px solid var(--ui-border-muted)',
             borderRadius: 12,
             padding: '16px 20px',
             marginBottom: 24,
             fontSize: 13,
-            color: '#666',
+            color: 'var(--ui-text-muted)',
           }}
         >
           No workspace initialized. Pick an agent below to activate, or create a new one.
@@ -495,7 +495,7 @@ export function WorkspaceTab({ onSwitchToRegistry }: WorkspaceTabProps = {}) {
             exit={{ opacity: 0 }}
             style={{
               fontSize: 13,
-              color: message.ok ? '#86efac' : '#f87171',
+              color: message.ok ? 'var(--status-success)' : 'var(--status-error)',
               marginBottom: 16,
               textAlign: 'center',
             }}
@@ -506,7 +506,7 @@ export function WorkspaceTab({ onSwitchToRegistry }: WorkspaceTabProps = {}) {
       </AnimatePresence>
 
       {/* Agent list */}
-      <div style={{ fontSize: 11, color: '#666', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
+      <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
         Your Agents
       </div>
 
@@ -543,9 +543,9 @@ function AgentList({
         style={{
           textAlign: 'center',
           padding: '40px 20px',
-          color: '#555',
+          color: 'var(--ui-text-muted)',
           fontSize: 13,
-          border: '1px dashed rgba(255,255,255,0.08)',
+          border: '1px dashed var(--ui-border-muted)',
           borderRadius: 12,
         }}
       >

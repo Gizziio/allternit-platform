@@ -6,9 +6,6 @@ import { tokens } from '../design/tokens';
 import {
   CheckCircle,
   CircleDashed,
-  Play,
-  X,
-  Bug,
   Lightning,
   ArrowUpRight,
   DotsThreeVertical,
@@ -33,10 +30,10 @@ export function TaskDock({
   const shouldShowActions = showActions ?? !isPanel;
   const textColor = tokens.colors.textPrimary;
   const mutedText = tokens.colors.textTertiary;
-  const cardBorder = isPanel ? '1px solid var(--border-subtle)' : '1px solid rgba(255,255,255,0.05)';
-  const cardBackground = isPanel ? 'rgba(0,0,0,0.02)' : 'rgba(255,255,255,0.03)';
-  const actionBackground = isPanel ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.05)';
-  const actionBorder = isPanel ? '1px solid var(--border-subtle)' : '1px solid rgba(255,255,255,0.08)';
+  const cardBorder = isPanel ? '1px solid var(--border-subtle)' : '1px solid var(--surface-hover)';
+  const cardBackground = isPanel ? 'rgba(0,0,0,0.02)' : 'var(--surface-hover)';
+  const actionBackground = isPanel ? 'rgba(0,0,0,0.04)' : 'var(--surface-hover)';
+  const actionBorder = isPanel ? '1px solid var(--border-subtle)' : '1px solid var(--ui-border-muted)';
   const handleViewActivity = () => {
     if (onViewActivity) {
       onViewActivity();

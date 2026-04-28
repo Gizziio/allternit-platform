@@ -9,7 +9,7 @@
  * Pattern ported from agent-shell integration guide.
  */
 
-import { discoverServer, DiscoveredServer } from './discovery';
+import { discoverServer } from './discovery';
 import { createHttpWorkspace, HttpWorkspaceAPI } from './http-client';
 import { createWasmWorkspace, WasmWorkspaceAPI } from './wasm-wrapper';
 import type { AllternitNativeState } from './types';

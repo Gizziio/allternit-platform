@@ -13,13 +13,11 @@
  * @module CoworkModeAgentTasks
  */
 
-import React, { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import {
   Play,
-  GearSix,
   Shield,
-  FileText,
   Pulse as Activity,
   CheckCircle,
   Clock,
@@ -101,7 +99,7 @@ export function CoworkModeAgentTasks({
           {/* Tenant Pack Context */}
           <div 
             className="p-4 rounded-xl border"
-            style={{ background: 'rgba(255,255,255,0.03)', borderColor: modeColors.border }}
+            style={{ background: 'var(--surface-hover)', borderColor: modeColors.border }}
           >
             <div className="flex items-center gap-2 mb-4">
               <Shield size={16} style={{ color: modeColors.accent }} />
@@ -143,7 +141,6 @@ function WorkspaceComputer({
   activeTab: string; 
   onTabChange: (tab: any) => void;
 }) {
-  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.cowork;
   
   return (
     <div className="flex flex-col h-full bg-black/40">
@@ -197,7 +194,6 @@ function PolicyItem({ icon: Icon, label, status, color }: { icon: any, label: st
 }
 
 function PlanView({ mode }: { mode: 'cowork' }) {
-  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.cowork;
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-2">

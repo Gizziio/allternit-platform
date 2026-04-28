@@ -97,18 +97,6 @@ export function InfiniteCanvas({ viewport, onViewportChange, children }: Infinit
     [onViewportChange, viewport],
   );
 
-  const zoomIn = useCallback(() => {
-    updateViewport((v) => ({ ...v, zoom: clampZoom(v.zoom + ZOOM_STEP) }));
-  }, [updateViewport]);
-
-  const zoomOut = useCallback(() => {
-    updateViewport((v) => ({ ...v, zoom: clampZoom(v.zoom - ZOOM_STEP) }));
-  }, [updateViewport]);
-
-  const resetZoom = useCallback(() => {
-    updateViewport((v) => ({ ...v, zoom: 1 }));
-  }, [updateViewport]);
-
   // Touch pinch-to-zoom
   const handleTouchStart = useCallback(
     (e: React.TouchEvent) => {

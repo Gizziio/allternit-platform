@@ -247,7 +247,7 @@ export const GlassButton = forwardRef<HTMLButtonElement, GlassButtonProps>(
       const spinnerStyles: React.CSSProperties = {
         width: size === 'xs' || size === 'sm' ? 14 : 18,
         height: size === 'xs' || size === 'sm' ? 14 : 18,
-        border: `2px solid ${darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'}`,
+        border: `2px solid ${darkMode ? 'rgba(255,255,255,0.2)' : 'var(--surface-hover)'}`,
         borderTopColor: darkMode ? 'var(--text-primary)' : 'currentColor',
         borderRadius: '50%',
         animation: 'glass-spin 0.8s linear infinite',

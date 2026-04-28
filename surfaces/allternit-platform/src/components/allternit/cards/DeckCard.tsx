@@ -166,7 +166,7 @@ export function DeckCard({
           {/* Slide Container */}
           <div 
             className="aspect-video rounded-lg overflow-hidden border border-[#333] bg-[#0a0a0a] relative"
-            style={{ background: slide?.background || '#0a0a0a' }}
+            style={{ background: slide?.background || 'var(--surface-panel)' }}
           >
             {/* Slide Content */}
             <div className="absolute inset-0 p-6 flex flex-col justify-center">
@@ -270,7 +270,7 @@ export function DeckCard({
             >
               <div 
                 className="w-full h-full bg-[#0a0a0a] p-1"
-                style={{ background: s.background || '#0a0a0a' }}
+                style={{ background: s.background || 'var(--surface-panel)' }}
               >
                 <div className="text-[6px] text-[#666] line-clamp-2 text-center">
                   {s.title || `Slide ${idx + 1}`}

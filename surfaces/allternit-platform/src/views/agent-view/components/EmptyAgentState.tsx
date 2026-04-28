@@ -17,7 +17,7 @@ export function EmptyAgentState({ onCreate, onCreateFromTemplate }: EmptyAgentSt
       description: 'Expert in multiple programming languages and architectures.',
       setup: 'coding',
       capabilities: ['code-generation', 'file-operations', 'terminal'],
-      color: '#3B82F6',
+      color: 'var(--status-info)',
       mascotTemplate: 'bot',
       systemPrompt: 'You are an expert senior software engineer...'
     },
@@ -27,7 +27,7 @@ export function EmptyAgentState({ onCreate, onCreateFromTemplate }: EmptyAgentSt
       description: 'Synthesizes information and provides data-driven insights.',
       setup: 'research',
       capabilities: ['web-search', 'api-integration', 'reasoning'],
-      color: '#10B981',
+      color: 'var(--status-success)',
       mascotTemplate: 'orb',
       systemPrompt: 'You are a meticulous research analyst...'
     }
@@ -49,7 +49,7 @@ export function EmptyAgentState({ onCreate, onCreateFromTemplate }: EmptyAgentSt
           className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all"
           style={{ 
             background: `linear-gradient(to right, ${STUDIO_THEME.accent}, #B08D6E)`,
-            color: '#1A1612'
+            color: 'var(--ui-text-inverse)'
           }}
         >
           <Plus size={18} />

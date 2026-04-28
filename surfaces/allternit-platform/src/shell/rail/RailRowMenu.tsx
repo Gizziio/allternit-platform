@@ -35,7 +35,7 @@ export function RailRowMenu({ onRename, onCopy, onDelete }: RailRowMenuProps): J
             padding: 4,
             border: '1px solid var(--border-default)',
             boxShadow: 'var(--shadow-lg)',
-            zIndex: 10000,
+            zIndex: 165,
           }}
           sideOffset={5}
         >

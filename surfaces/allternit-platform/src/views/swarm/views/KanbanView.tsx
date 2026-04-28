@@ -11,9 +11,9 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { Plus, Brain, Robot, Cpu, ClipboardText, UserPlus, DotsThree, Tray, X } from '@phosphor-icons/react';
-import { TEXT, MODE_COLORS, STATUS, BACKGROUND } from '@/design/allternit.tokens';
-import { useSwarmMonitorStore, useAgents } from '../SwarmMonitor.store';
-import { SwarmAgent, Task } from '../types';
+import { TEXT, STATUS, BACKGROUND } from '@/design/allternit.tokens';
+import { useAgents } from '../SwarmMonitor.store';
+import { SwarmAgent } from '../types';
 import { useToast } from '@/hooks/use-toast';
 
 const AGENT_ICON_MAP: Record<string, React.ElementType> = {
@@ -53,7 +53,7 @@ const COLUMNS: KanbanColumn[] = [
 ];
 
 const PRIORITY_COLORS = {
-  low: '#6b7280',
+  low: 'var(--ui-text-muted)',
   medium: '#c17817',
   high: STATUS.error,
 };
@@ -217,7 +217,7 @@ export function KanbanView({ modeColors }: KanbanViewProps) {
   return (
     <div className="h-full flex flex-col" style={{ background: BACKGROUND.primary }}>
       {/* Header */}
-      <div className="px-4 py-3 border-b flex items-center justify-between" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+      <div className="px-4 py-3 border-b flex items-center justify-between" style={{ borderColor: 'var(--surface-hover)' }}>
         <div className="flex items-center gap-4">
           <div className="text-xs" style={{ color: TEXT.tertiary }}>
             <span className="mono" style={{ color: modeColors.accent }}>{tasks.length}</span> tasks
@@ -260,8 +260,8 @@ export function KanbanView({ modeColors }: KanbanViewProps) {
                 <div 
                   className="flex items-center justify-between px-3 py-2 rounded-t-lg border-t border-x"
                   style={{ 
-                    background: isDragOver ? `${column.color}20` : 'rgba(255,255,255,0.02)',
-                    borderColor: isDragOver ? column.color : 'rgba(255,255,255,0.05)',
+                    background: isDragOver ? `${column.color}20` : 'var(--surface-hover)',
+                    borderColor: isDragOver ? column.color : 'var(--surface-hover)',
                   }}
                 >
                   <div className="flex items-center gap-2">
@@ -270,7 +270,7 @@ export function KanbanView({ modeColors }: KanbanViewProps) {
                   </div>
                   <span 
                     className="text-xs px-1.5 py-0.5 rounded"
-                    style={{ background: 'rgba(255,255,255,0.05)', color: TEXT.tertiary }}
+                    style={{ background: 'var(--surface-hover)', color: TEXT.tertiary }}
                   >
                     {columnTasks.length}
                   </span>
@@ -280,8 +280,8 @@ export function KanbanView({ modeColors }: KanbanViewProps) {
                 <div 
                   className="flex-1 p-2 rounded-b-lg border-b border-x overflow-y-auto"
                   style={{ 
-                    background: isDragOver ? `${column.color}10` : 'rgba(255,255,255,0.02)',
-                    borderColor: isDragOver ? column.color : 'rgba(255,255,255,0.05)',
+                    background: isDragOver ? `${column.color}10` : 'var(--surface-hover)',
+                    borderColor: isDragOver ? column.color : 'var(--surface-hover)',
                   }}
                 >
                   <div className="space-y-2">
@@ -297,8 +297,8 @@ export function KanbanView({ modeColors }: KanbanViewProps) {
                           onClick={() => setSelectedTask(task)}
                           className="p-3 rounded-lg border cursor-pointer transition-all hover:border-white/20"
                           style={{
-                            background: 'rgba(255,255,255,0.03)',
-                            borderColor: isDragging ? column.color : 'rgba(255,255,255,0.08)',
+                            background: 'var(--surface-hover)',
+                            borderColor: isDragging ? column.color : 'var(--ui-border-muted)',
                             opacity: isDragging ? 0.5 : 1,
                           }}
                         >
@@ -309,7 +309,7 @@ export function KanbanView({ modeColors }: KanbanViewProps) {
                                 <span 
                                   key={tag}
                                   className="text-[10px] px-1.5 py-0.5 rounded"
-                                  style={{ background: 'rgba(255,255,255,0.05)', color: TEXT.tertiary }}
+                                  style={{ background: 'var(--surface-hover)', color: TEXT.tertiary }}
                                 >
                                   {tag}
                                 </span>
@@ -332,7 +332,7 @@ export function KanbanView({ modeColors }: KanbanViewProps) {
                           )}
 
                           {/* Assigned Agent */}
-                          <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                          <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: 'var(--surface-hover)' }}>
                             {assignedAgent ? (
                               <div className="flex items-center gap-1.5">
                                 <div 
@@ -376,7 +376,7 @@ export function KanbanView({ modeColors }: KanbanViewProps) {
                     {columnTasks.length === 0 && (
                       <div 
                         className="p-4 rounded-lg border border-dashed text-center"
-                        style={{ borderColor: 'rgba(255,255,255,0.05)', color: TEXT.tertiary }}
+                        style={{ borderColor: 'var(--surface-hover)', color: TEXT.tertiary }}
                       >
                         <Tray size={20} weight="duotone" style={{ margin: '0 auto 4px' }} />
                         <span className="text-xs">No tasks</span>
@@ -437,12 +437,12 @@ function CreateTaskModal({ onCreate, onClose, modeColors }: CreateTaskModalProps
   return (
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+      style={{ background: 'var(--shell-overlay-backdrop)', backdropFilter: 'blur(4px)' }}
       onClick={onClose}
     >
       <div 
         className="w-full max-w-sm p-5 rounded-xl border"
-        style={{ background: BACKGROUND.primary, borderColor: 'rgba(255,255,255,0.1)' }}
+        style={{ background: BACKGROUND.primary, borderColor: 'var(--ui-border-default)' }}
         onClick={e => e.stopPropagation()}
       >
         <h3 className="text-base font-semibold mb-4">New Task</h3>
@@ -457,8 +457,8 @@ function CreateTaskModal({ onCreate, onClose, modeColors }: CreateTaskModalProps
               autoFocus
               className="w-full px-3 py-2 rounded-lg text-sm outline-none"
               style={{ 
-                background: 'rgba(255,255,255,0.03)', 
-                border: '1px solid rgba(255,255,255,0.08)',
+                background: 'var(--surface-hover)', 
+                border: '1px solid var(--ui-border-muted)',
                 color: TEXT.primary 
               }}
               placeholder="What needs to be done?"
@@ -475,8 +475,8 @@ function CreateTaskModal({ onCreate, onClose, modeColors }: CreateTaskModalProps
                   onClick={() => setPriority(p)}
                   className="flex-1 py-2 rounded-lg text-xs font-medium capitalize transition-all"
                   style={{
-                    background: priority === p ? `${PRIORITY_COLORS[p]}20` : 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${priority === p ? PRIORITY_COLORS[p] : 'rgba(255,255,255,0.08)'}`,
+                    background: priority === p ? `${PRIORITY_COLORS[p]}20` : 'var(--surface-hover)',
+                    border: `1px solid ${priority === p ? PRIORITY_COLORS[p] : 'var(--ui-border-muted)'}`,
                     color: priority === p ? PRIORITY_COLORS[p] : TEXT.tertiary,
                   }}
                 >
@@ -491,7 +491,7 @@ function CreateTaskModal({ onCreate, onClose, modeColors }: CreateTaskModalProps
               type="button"
               onClick={onClose}
               className="flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-white/5"
-              style={{ background: 'rgba(255,255,255,0.05)', color: TEXT.secondary }}
+              style={{ background: 'var(--surface-hover)', color: TEXT.secondary }}
             >
               Cancel
             </button>
@@ -529,12 +529,12 @@ function TaskDetailModal({ task, agents, onAssign, onClose, modeColors }: TaskDe
   return (
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+      style={{ background: 'var(--shell-overlay-backdrop)', backdropFilter: 'blur(4px)' }}
       onClick={onClose}
     >
       <div 
         className="w-full max-w-md p-5 rounded-xl border"
-        style={{ background: BACKGROUND.primary, borderColor: 'rgba(255,255,255,0.1)' }}
+        style={{ background: BACKGROUND.primary, borderColor: 'var(--ui-border-default)' }}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
@@ -576,7 +576,7 @@ function TaskDetailModal({ task, agents, onAssign, onClose, modeColors }: TaskDe
           <label className="block text-xs mb-2" style={{ color: TEXT.tertiary }}>Assigned Agent</label>
           
           {assignedAgent ? (
-            <div className="flex items-center justify-between p-3 rounded-lg border" style={{ background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.05)' }}>
+            <div className="flex items-center justify-between p-3 rounded-lg border" style={{ background: 'var(--surface-hover)', borderColor: 'var(--surface-hover)' }}>
               <div className="flex items-center gap-3">
                 <div 
                   className="w-10 h-10 rounded-lg flex items-center justify-center"
@@ -606,7 +606,7 @@ function TaskDetailModal({ task, agents, onAssign, onClose, modeColors }: TaskDe
                     key={agent.id}
                     onClick={() => onAssign(task.id, agent.id)}
                     className="w-full flex items-center gap-3 p-2 rounded-lg text-left transition-colors hover:bg-white/5"
-                    style={{ background: 'rgba(255,255,255,0.02)' }}
+                    style={{ background: 'var(--surface-hover)' }}
                   >
                     <div 
                       className="w-8 h-8 rounded flex items-center justify-center"
@@ -633,7 +633,7 @@ function TaskDetailModal({ task, agents, onAssign, onClose, modeColors }: TaskDe
               <span 
                 key={tag}
                 className="text-xs px-2 py-1 rounded"
-                style={{ background: 'rgba(255,255,255,0.05)', color: TEXT.secondary }}
+                style={{ background: 'var(--surface-hover)', color: TEXT.secondary }}
               >
                 {tag}
               </span>
@@ -642,7 +642,7 @@ function TaskDetailModal({ task, agents, onAssign, onClose, modeColors }: TaskDe
         </div>
 
         {/* Dates */}
-        <div className="pt-4 border-t space-y-1 text-xs" style={{ borderColor: 'rgba(255,255,255,0.05)', color: TEXT.tertiary }}>
+        <div className="pt-4 border-t space-y-1 text-xs" style={{ borderColor: 'var(--surface-hover)', color: TEXT.tertiary }}>
           <div className="flex justify-between">
             <span>Created</span>
             <span className="mono">{new Date(task.createdAt).toLocaleDateString()}</span>

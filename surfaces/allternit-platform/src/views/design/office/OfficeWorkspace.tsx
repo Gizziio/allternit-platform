@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FilePpt, FileXls, FileDoc, DownloadSimple, ShareNetwork, Eye, MagicWand, Table, ChartPieSlice, TextT, Calculator, Broom, Pencil, Pen, List, ChartBar, Layout, Palette } from '@phosphor-icons/react';
+import { FilePpt, FileXls, FileDoc, DownloadSimple, ShareNetwork, MagicWand, Table, TextT, Calculator, Broom, Pencil, Pen, List, ChartBar, Layout, Palette } from '@phosphor-icons/react';
 import { GlassCard } from '../../../design/GlassCard';
 import { OFFICE_HOSTS } from '../../../lib/design/office-bridge';
 
@@ -17,7 +17,6 @@ export function OfficeWorkspace({
   projectName?: string 
 }) {
   const [activeDoc, setActiveDoc] = useState<OfficeDocType>('slides');
-  const [isGenerating, setIsGenerating] = useState(false);
 
   // Map active selection to Bridge data
   const hostKey = activeDoc === 'slides' ? 'POWERPOINT' : activeDoc === 'spreadsheet' ? 'EXCEL' : 'WORD';
@@ -26,7 +25,7 @@ export function OfficeWorkspace({
   return (
     <div style={{ display: "flex", width: "100%", height: "100%", background: "#0a0a0c" }}>
       {/* Left: Document Type Rail */}
-      <div style={{ width: "64px", borderRight: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", alignItems: "center", py: "20px", gap: "20px" }}>
+      <div style={{ width: "64px", borderRight: "1px solid var(--ui-border-muted)", display: "flex", flexDirection: "column", alignItems: "center", py: "20px", gap: "20px" }}>
          <DocTypeBtn icon={<FilePpt size={24} />} active={activeDoc === 'slides'} onClick={() => setActiveDoc('slides')} label="Slides" color="#ff5c5c" />
          <DocTypeBtn icon={<FileXls size={24} />} active={activeDoc === 'spreadsheet'} onClick={() => setActiveDoc('spreadsheet')} label="Excel" color="#21a366" />
          <DocTypeBtn icon={<FileDoc size={24} />} active={activeDoc === 'document'} onClick={() => setActiveDoc('document')} label="Word" color="#2b579a" />
@@ -35,13 +34,13 @@ export function OfficeWorkspace({
       {/* Center: Live Document Canvas */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
         {/* Document Header */}
-        <div style={{ padding: "16px 24px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(255,255,255,0.01)" }}>
+        <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--ui-border-muted)", display: "flex", justifyContent: "space-between", alignItems: "center", background: "rgba(255,255,255,0.01)" }}>
            <div>
              <h3 style={{ fontSize: "14px", fontWeight: 800, color: "#fff" }}>{projectName} - {activeDoc.toUpperCase()}</h3>
              <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", fontWeight: 800 }}>Office Add-in Protocol v2.4</p>
            </div>
            <div style={{ display: "flex", gap: "8px" }}>
-              <button style={{ padding: "6px 12px", borderRadius: "6px", border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.03)", color: "#fff", fontSize: "11px", fontWeight: 700, cursor: "pointer" }}>
+              <button style={{ padding: "6px 12px", borderRadius: "6px", border: "1px solid var(--ui-border-default)", background: "var(--surface-hover)", color: "#fff", fontSize: "11px", fontWeight: 700, cursor: "pointer" }}>
                  <ShareNetwork size={14} style={{ display: "inline", marginRight: "6px" }} /> Open in Web
               </button>
               <button style={{ padding: "6px 16px", borderRadius: "6px", background: "var(--accent-primary)", border: "none", color: "#000", fontSize: "11px", fontWeight: 800, cursor: "pointer" }}>
@@ -51,8 +50,8 @@ export function OfficeWorkspace({
         </div>
 
         {/* The Viewport */}
-        <div style={{ flex: 1, p: "40px", overflowY: "auto", display: "flex", justifyContent: "center", background: "rgba(0,0,0,0.2)" }}>
-           <div style={{ width: "100%", maxWidth: "800px", aspectRatio: activeDoc === 'slides' ? "16/9" : "1/1.4", background: "#fff", borderRadius: "4px", boxShadow: "0 24px 64px rgba(0,0,0,0.5)", overflow: "hidden", position: "relative" }}>
+        <div style={{ flex: 1, p: "40px", overflowY: "auto", display: "flex", justifyContent: "center", background: "var(--surface-hover)" }}>
+           <div style={{ width: "100%", maxWidth: "800px", aspectRatio: activeDoc === 'slides' ? "16/9" : "1/1.4", background: "#fff", borderRadius: "4px", boxShadow: "0 24px 64px var(--shell-overlay-backdrop)", overflow: "hidden", position: "relative" }}>
               {activeDoc === 'slides' && <SlidePreview />}
               {activeDoc === 'spreadsheet' && <ExcelPreview />}
               {activeDoc === 'document' && <WordPreview />}
@@ -61,8 +60,8 @@ export function OfficeWorkspace({
       </div>
 
       {/* Right: Add-in Controls */}
-      <div style={{ width: "300px", borderLeft: "1px solid rgba(255,255,255,0.06)", display: "flex", flexDirection: "column", background: "rgba(15, 13, 12, 0.5)" }}>
-         <div style={{ padding: "20px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+      <div style={{ width: "300px", borderLeft: "1px solid var(--ui-border-muted)", display: "flex", flexDirection: "column", background: "rgba(15, 13, 12, 0.5)" }}>
+         <div style={{ padding: "20px", borderBottom: "1px solid var(--ui-border-muted)" }}>
             <h4 style={{ fontSize: "11px", fontWeight: 900, color: "rgba(255,255,255,0.4)", textTransform: "uppercase", letterSpacing: "0.1em" }}>Add-in Intelligence</h4>
          </div>
          <div style={{ flex: 1, padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
@@ -75,7 +74,7 @@ export function OfficeWorkspace({
                </div>
             </GlassCard>
             
-            <button style={{ marginTop: "auto", width: "100%", padding: "14px", borderRadius: "10px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "#fff", fontWeight: 800, fontSize: "12px", cursor: "pointer" }}>
+            <button style={{ marginTop: "auto", width: "100%", padding: "14px", borderRadius: "10px", background: "var(--surface-hover)", border: "1px solid var(--ui-border-muted)", color: "#fff", fontWeight: 800, fontSize: "12px", cursor: "pointer" }}>
                <MagicWand size={16} style={{ display: "inline", marginRight: "8px" }} /> Execute Add-in Plugin
             </button>
          </div>
@@ -121,7 +120,7 @@ function DocTypeBtn({ icon, active, onClick, label, color }: any) {
 
 function MacroItem({ icon, label }: any) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px", borderRadius: "6px", background: "rgba(255,255,255,0.02)", cursor: "pointer" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "8px", borderRadius: "6px", background: "var(--surface-hover)", cursor: "pointer" }}>
        <div style={{ color: "rgba(255,255,255,0.4)" }}>{icon}</div>
        <span style={{ fontSize: "11px", fontWeight: 600, color: "rgba(255,255,255,0.7)" }}>{label}</span>
     </div>

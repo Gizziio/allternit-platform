@@ -60,12 +60,12 @@ class PlatformTelemetry {
     const span = this.langfuse.span({
       traceId,
       name: `tool:${toolName}`,
-      startTime: Date.now() - (duration || 0),
+      startTime: new Date(Date.now() - (duration || 0)),
       metadata: { status, error }
     });
 
     span.update({
-      endTime: Date.now(),
+      endTime: new Date(),
       output: { status, error }
     });
   }

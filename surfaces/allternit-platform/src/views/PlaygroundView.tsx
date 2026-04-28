@@ -94,14 +94,14 @@ const TEMPLATES: TemplateDefinition[] = [
          background: #0f0f0f; color: #e5e5e5; min-height: 100vh; padding: 24px; }
   h1 { font-size: 22px; font-weight: 700; margin-bottom: 20px; color: #d4b08c; }
   .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
-  .card { background: #1c1917; border: 1px solid rgba(212,176,140,0.15); border-radius: 12px; padding: 20px; transition: border-color 0.2s; }
+  .card { background: #1c1917; border: 1px solid color-mix(in srgb, var(--accent-primary) 15%, transparent); border-radius: 12px; padding: 20px; transition: border-color 0.2s; }
   .card:hover { border-color: rgba(212,176,140,0.4); }
   .card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #78716c; margin-bottom: 8px; }
   .card .value { font-size: 32px; font-weight: 800; color: #d4b08c; }
   .card .sub { font-size: 12px; color: #57534e; margin-top: 4px; }
-  .chart-area { background: #1c1917; border: 1px solid rgba(212,176,140,0.15); border-radius: 12px; padding: 20px; }
+  .chart-area { background: #1c1917; border: 1px solid color-mix(in srgb, var(--accent-primary) 15%, transparent); border-radius: 12px; padding: 20px; }
   .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 120px; margin-top: 16px; }
-  .bar { flex: 1; background: rgba(212,176,140,0.15); border-radius: 4px 4px 0 0; position: relative; transition: background 0.2s; cursor: pointer; }
+  .bar { flex: 1; background: color-mix(in srgb, var(--accent-primary) 15%, transparent); border-radius: 4px 4px 0 0; position: relative; transition: background 0.2s; cursor: pointer; }
   .bar:hover { background: rgba(212,176,140,0.5); }
   .bar .tip { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #d4b08c; color: #0f0f0f; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; white-space: nowrap; display: none; }
   .bar:hover .tip { display: block; }
@@ -157,7 +157,7 @@ const TEMPLATES: TemplateDefinition[] = [
   body { font-family:-apple-system,sans-serif; background:#0f0f0f; color:#e5e5e5; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:32px; }
   .row { display:flex; gap:20px; flex-wrap:wrap; justify-content:center; }
   .card { width:210px; border-radius:16px; padding:24px; }
-  .v1 { background:#1c1917; border:1px solid rgba(212,176,140,0.2); }
+  .v1 { background:#1c1917; border:1px solid color-mix(in srgb, var(--accent-primary) 20%, transparent); }
   .v2 { background:linear-gradient(135deg,#d4b08c22,#d4b08c08); border:1px solid #d4b08c; }
   .v3 { background:#d4b08c; color:#0f0f0f; }
   .tier { font-size:11px; text-transform:uppercase; letter-spacing:0.1em; opacity:0.6; }
@@ -168,7 +168,7 @@ const TEMPLATES: TemplateDefinition[] = [
   .feature::before { content:'✓'; font-weight:700; color:#d4b08c; }
   .v3 .feature::before { color:#0f0f0f; }
   .btn { width:100%; padding:10px; border-radius:8px; border:none; cursor:pointer; font-size:13px; font-weight:600; margin-top:20px; }
-  .v1 .btn { background:rgba(212,176,140,0.15); color:#d4b08c; }
+  .v1 .btn { background:color-mix(in srgb, var(--accent-primary) 15%, transparent); color:#d4b08c; }
   .v2 .btn { background:#d4b08c; color:#0f0f0f; }
   .v3 .btn { background:#0f0f0f; color:#d4b08c; }
   .lbl { text-align:center; font-size:10px; color:#57534e; margin-top:10px; }
@@ -200,11 +200,11 @@ const W=c.width,H=c.height,pad={top:20,right:20,bottom:40,left:50};
 const cw=W-pad.left-pad.right,ch=H-pad.top-pad.bottom,max=Math.max(...data)*1.2;
 const x=i=>pad.left+(i/(data.length-1))*cw,y=v=>pad.top+ch-(v/max)*ch;
 ctx.strokeStyle='rgba(212,176,140,.08)';ctx.lineWidth=1;
-[.25,.5,.75,1].forEach(t=>{ctx.beginPath();ctx.moveTo(pad.left,pad.top+ch*(1-t));ctx.lineTo(W-pad.right,pad.top+ch*(1-t));ctx.stroke();ctx.fillStyle='#57534e';ctx.font='10px sans-serif';ctx.textAlign='right';ctx.fillText('$'+Math.round(max*t)+'k',pad.left-6,pad.top+ch*(1-t)+4);});
+[.25,.5,.75,1].forEach(t=>{ctx.beginPath();ctx.moveTo(pad.left,pad.top+ch*(1-t));ctx.lineTo(W-pad.right,pad.top+ch*(1-t));ctx.stroke();ctx.fillStyle='var(--ui-text-muted)';ctx.font='10px sans-serif';ctx.textAlign='right';ctx.fillText('$'+Math.round(max*t)+'k',pad.left-6,pad.top+ch*(1-t)+4);});
 const grad=ctx.createLinearGradient(0,pad.top,0,pad.top+ch);grad.addColorStop(0,'rgba(212,176,140,.3)');grad.addColorStop(1,'rgba(212,176,140,0)');
 ctx.beginPath();ctx.moveTo(x(0),y(data[0]));data.forEach((v,i)=>{if(i>0)ctx.lineTo(x(i),y(v));});ctx.lineTo(x(data.length-1),pad.top+ch);ctx.lineTo(x(0),pad.top+ch);ctx.closePath();ctx.fillStyle=grad;ctx.fill();
-ctx.beginPath();ctx.strokeStyle='#d4b08c';ctx.lineWidth=2.5;ctx.lineJoin='round';data.forEach((v,i)=>{i===0?ctx.moveTo(x(i),y(v)):ctx.lineTo(x(i),y(v));});ctx.stroke();
-data.forEach((v,i)=>{ctx.beginPath();ctx.arc(x(i),y(v),5,0,Math.PI*2);ctx.fillStyle='#d4b08c';ctx.fill();ctx.fillStyle='#d4b08c';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillText('$'+v+'k',x(i),y(v)-12);ctx.fillStyle='#57534e';ctx.font='10px sans-serif';ctx.fillText(labels[i],x(i),H-12);});
+ctx.beginPath();ctx.strokeStyle='var(--accent-primary)';ctx.lineWidth=2.5;ctx.lineJoin='round';data.forEach((v,i)=>{i===0?ctx.moveTo(x(i),y(v)):ctx.lineTo(x(i),y(v));});ctx.stroke();
+data.forEach((v,i)=>{ctx.beginPath();ctx.arc(x(i),y(v),5,0,Math.PI*2);ctx.fillStyle='var(--accent-primary)';ctx.fill();ctx.fillStyle='var(--accent-primary)';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillText('$'+v+'k',x(i),y(v)-12);ctx.fillStyle='var(--ui-text-muted)';ctx.font='10px sans-serif';ctx.fillText(labels[i],x(i),H-12);});
 </script></body></html>`,
     },
   },
@@ -243,13 +243,13 @@ function ToggleSwitch({ on, onChange }: { on: boolean; onChange: () => void }) {
       style={{
         width: 36, height: 20, borderRadius: 10, border: 'none', cursor: 'pointer',
         padding: 0, flexShrink: 0, position: 'relative',
-        background: on ? 'rgba(212,176,140,0.9)' : 'rgba(255,255,255,0.1)',
-        transition: 'background 0.2s',
+        background: on ? 'rgba(212,176,140,0.9)' : 'var(--ui-border-default)',
+        transition: 'var(--transition-fast)',
       }}
     >
       <span style={{
         position: 'absolute', top: 3, left: on ? 18 : 3, width: 14, height: 14,
-        borderRadius: '50%', background: on ? '#1c1917' : '#78716c', transition: 'left 0.2s',
+        borderRadius: '50%', background: on ? 'var(--surface-canvas)' : 'var(--ui-text-muted)', transition: 'left 0.2s',
       }} />
     </button>
   );
@@ -272,14 +272,14 @@ function ArtifactPreview({ artifact }: { artifact: Artifact | null }) {
     return (
       <div style={{
         flex: 1, display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', color: '#44403c', gap: 12,
+        alignItems: 'center', justifyContent: 'center', color: 'var(--ui-text-muted)', gap: 12,
       }}>
         <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
           <rect x="8" y="8" width="32" height="32" rx="8" stroke="currentColor" strokeWidth="2" />
           <path d="M16 24h16M24 16v16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
         <p style={{ fontSize: 13, textAlign: 'center', maxWidth: 220, lineHeight: 1.5 }}>
-          Hit <strong style={{ color: '#78716c' }}>Run</strong> to generate and preview an artifact here
+          Hit <strong style={{ color: 'var(--ui-text-muted)' }}>Run</strong> to generate and preview an artifact here
         </p>
       </div>
     );
@@ -289,7 +289,7 @@ function ArtifactPreview({ artifact }: { artifact: Artifact | null }) {
     return (
       <div style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
         <pre style={{
-          background: '#1c1917', padding: 20, borderRadius: 10, color: '#d4b08c',
+          background: 'var(--surface-canvas)', padding: 20, borderRadius: 10, color: 'var(--accent-primary)',
           fontSize: 12, fontFamily: 'monospace', overflowX: 'auto',
         }}>{artifact.content}</pre>
       </div>
@@ -300,7 +300,7 @@ function ArtifactPreview({ artifact }: { artifact: Artifact | null }) {
     <iframe
       ref={iframeRef}
       sandbox="allow-scripts allow-modals"
-      style={{ flex: 1, border: 'none', background: '#0f0f0f', width: '100%', display: 'block' }}
+      style={{ flex: 1, border: 'none', background: 'var(--surface-canvas)', width: '100%', display: 'block' }}
       title="Artifact Preview"
     />
   );
@@ -423,30 +423,30 @@ export function PlaygroundView() {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', height: '100%',
-      background: '#0c0a09', color: '#e7e5e4',
+      background: 'var(--surface-canvas)', color: 'var(--ui-text-primary)',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       overflow: 'hidden',
     }}>
       {/* ── Top bar ─────────────────────────────────────────────────────── */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px',
-        borderBottom: '1px solid rgba(212,176,140,0.1)', background: '#0f0e0d', flexShrink: 0,
+        borderBottom: '1px solid color-mix(in srgb, var(--accent-primary) 10%, transparent)', background: 'var(--surface-canvas)', flexShrink: 0,
       }}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
           stroke="rgba(212,176,140,0.6)" strokeWidth="2" strokeLinecap="round">
           <path d="M9 3h6M10 3v5l-4 10a1 1 0 0 0 .9 1.4h10.2a1 1 0 0 0 .9-1.4L14 8V3"/>
         </svg>
-        <span style={{ fontSize: 13, fontWeight: 700, color: '#c9a87a', letterSpacing: '-0.01em' }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-primary)', letterSpacing: '-0.01em' }}>
           Playground
         </span>
 
         {/* Template tabs */}
-        <div style={{ display: 'flex', gap: 2, marginLeft: 10, padding: '2px', background: '#1a1917', borderRadius: 8 }}>
+        <div style={{ display: 'flex', gap: 2, marginLeft: 10, padding: '2px', background: 'var(--surface-canvas)', borderRadius: 8 }}>
           {TEMPLATES.map((t) => (
             <button key={t.id} onClick={() => applyTemplate(t.id)} style={{
               padding: '3px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600,
-              background: activeTemplate === t.id ? 'rgba(212,176,140,0.15)' : 'transparent',
-              color: activeTemplate === t.id ? '#d4b08c' : '#57534e', transition: 'all 0.15s',
+              background: activeTemplate === t.id ? 'color-mix(in srgb, var(--accent-primary) 15%, transparent)' : 'transparent',
+              color: activeTemplate === t.id ? 'var(--accent-primary)' : 'var(--ui-text-muted)', transition: 'var(--transition-fast)',
             }}>
               {t.label}
             </button>
@@ -455,11 +455,11 @@ export function PlaygroundView() {
 
         <div style={{ flex: 1 }} />
 
-        <span style={{ fontSize: 11, color: '#3a3733' }}>~{tokenCount.toLocaleString()} tokens</span>
+        <span style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>~{tokenCount.toLocaleString()} tokens</span>
 
         <select value={model} onChange={(e) => setModel(e.target.value)} style={{
-          background: '#1c1917', border: '1px solid rgba(212,176,140,0.12)',
-          borderRadius: 6, color: '#78716c', fontSize: 11, padding: '4px 8px', cursor: 'pointer',
+          background: 'var(--surface-canvas)', border: '1px solid color-mix(in srgb, var(--accent-primary) 12%, transparent)',
+          borderRadius: 6, color: 'var(--ui-text-muted)', fontSize: 11, padding: '4px 8px', cursor: 'pointer',
         }}>
           <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
           <option value="claude-opus-4-5">claude-opus-4-5</option>
@@ -469,11 +469,11 @@ export function PlaygroundView() {
         <button onClick={handleRun} style={{
           display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px',
           borderRadius: 8, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700,
-          background: isStreaming ? 'rgba(239,68,68,0.12)' : 'rgba(212,176,140,0.85)',
-          color: isStreaming ? '#f87171' : '#1c1917', transition: 'all 0.15s',
+          background: isStreaming ? 'var(--status-error-bg)' : 'rgba(212,176,140,0.85)',
+          color: isStreaming ? 'var(--status-error)' : 'var(--surface-canvas)', transition: 'var(--transition-fast)',
         }}>
           {isStreaming ? (
-            <><span style={{ width: 8, height: 8, borderRadius: 2, background: '#ef4444', display: 'inline-block' }} /> Stop</>
+            <><span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--status-error)', display: 'inline-block' }} /> Stop</>
           ) : (
             <><svg width="9" height="9" viewBox="0 0 9 9" fill="currentColor"><polygon points="1,0.5 8.5,4.5 1,8.5"/></svg> Run</>
           )}
@@ -486,18 +486,18 @@ export function PlaygroundView() {
         {/* LEFT PANE */}
         <div style={{
           width: `${splitPos}%`, display: 'flex', flexDirection: 'column',
-          borderRight: '1px solid rgba(212,176,140,0.07)', flexShrink: 0, overflow: 'hidden',
+          borderRight: '1px solid color-mix(in srgb, var(--accent-primary) 7%, transparent)', flexShrink: 0, overflow: 'hidden',
         }}>
           {/* Left tabs */}
           <div style={{
-            display: 'flex', borderBottom: '1px solid rgba(212,176,140,0.07)',
-            background: '#0f0e0d', flexShrink: 0,
+            display: 'flex', borderBottom: '1px solid color-mix(in srgb, var(--accent-primary) 7%, transparent)',
+            background: 'var(--surface-canvas)', flexShrink: 0,
           }}>
             {(['prompt', 'config', 'templates'] as LeftTab[]).map((tab) => (
               <button key={tab} onClick={() => setLeftTab(tab)} style={{
                 padding: '7px 13px', border: 'none', background: 'transparent',
                 fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                color: leftTab === tab ? '#d4b08c' : '#4a4542',
+                color: leftTab === tab ? 'var(--accent-primary)' : 'var(--ui-text-muted)',
                 borderBottom: leftTab === tab ? '2px solid #d4b08c' : '2px solid transparent',
                 textTransform: 'capitalize',
               }}>{tab}</button>
@@ -509,11 +509,11 @@ export function PlaygroundView() {
             {leftTab === 'prompt' && (
               <div style={{ padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {/* System prompt block */}
-                <div style={{ border: '1px solid rgba(212,176,140,0.1)', borderRadius: 8, overflow: 'hidden' }}>
+                <div style={{ border: '1px solid color-mix(in srgb, var(--accent-primary) 10%, transparent)', borderRadius: 8, overflow: 'hidden' }}>
                   <button onClick={() => setSystemExpanded(v => !v)} style={{
                     width: '100%', display: 'flex', alignItems: 'center', gap: 6,
-                    padding: '7px 10px', background: '#1a1917', border: 'none', cursor: 'pointer',
-                    color: '#78716c', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em',
+                    padding: '7px 10px', background: 'var(--surface-canvas)', border: 'none', cursor: 'pointer',
+                    color: 'var(--ui-text-muted)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em',
                   }}>
                     <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"
                       style={{ transform: systemExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>
@@ -524,8 +524,8 @@ export function PlaygroundView() {
                   {systemExpanded && (
                     <textarea value={systemPrompt} onChange={(e) => setSystemPrompt(e.target.value)} rows={5}
                       style={{
-                        width: '100%', background: '#161412', border: 'none', resize: 'vertical',
-                        color: '#c9a87a', fontSize: 11, fontFamily: '"SF Mono","Fira Code",monospace',
+                        width: '100%', background: 'var(--surface-canvas)', border: 'none', resize: 'vertical',
+                        color: 'var(--accent-primary)', fontSize: 11, fontFamily: '"SF Mono","Fira Code",monospace',
                         lineHeight: 1.65, padding: '9px 11px', outline: 'none',
                       }}
                       placeholder="You are a helpful assistant..."
@@ -536,19 +536,19 @@ export function PlaygroundView() {
                 {/* Messages */}
                 {messages.map((msg) => (
                   <div key={msg.id} style={{
-                    border: '1px solid rgba(212,176,140,0.08)', borderRadius: 8,
-                    overflow: 'hidden', background: '#1a1917',
+                    border: '1px solid color-mix(in srgb, var(--accent-primary) 8%, transparent)', borderRadius: 8,
+                    overflow: 'hidden', background: 'var(--surface-canvas)',
                   }}>
                     <div style={{
                       display: 'flex', alignItems: 'center', gap: 6, padding: '5px 9px',
-                      background: '#141312', borderBottom: '1px solid rgba(212,176,140,0.06)',
+                      background: 'var(--surface-canvas)', borderBottom: '1px solid rgba(212,176,140,0.06)',
                     }}>
                       <select value={msg.role}
                         onChange={(e) => setMessages(prev => prev.map(m =>
                           m.id === msg.id ? { ...m, role: e.target.value as 'user' | 'assistant' } : m
                         ))} style={{
                           background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 10,
-                          fontWeight: 700, color: msg.role === 'user' ? '#d4b08c' : '#86efac',
+                          fontWeight: 700, color: msg.role === 'user' ? 'var(--accent-primary)' : '#86efac',
                         }}>
                         <option value="user">user</option>
                         <option value="assistant">assistant</option>
@@ -556,13 +556,13 @@ export function PlaygroundView() {
                       <div style={{ flex: 1 }} />
                       <button onClick={() => removeMessage(msg.id)} style={{
                         background: 'none', border: 'none', cursor: 'pointer',
-                        color: '#3a3733', fontSize: 14, lineHeight: 1, padding: '0 2px',
+                        color: 'var(--ui-text-muted)', fontSize: 14, lineHeight: 1, padding: '0 2px',
                       }}>×</button>
                     </div>
                     <textarea value={msg.content} onChange={(e) => updateMessage(msg.id, e.target.value)} rows={3}
                       style={{
                         width: '100%', background: 'transparent', border: 'none', resize: 'vertical',
-                        color: '#e7e5e4', fontSize: 12, fontFamily: 'inherit', lineHeight: 1.6,
+                        color: 'var(--ui-text-primary)', fontSize: 12, fontFamily: 'inherit', lineHeight: 1.6,
                         padding: '9px 11px', outline: 'none',
                       }}
                       placeholder={msg.role === 'user' ? 'User message...' : 'Assistant prefill...'}
@@ -571,7 +571,7 @@ export function PlaygroundView() {
                 ))}
 
                 <div style={{ display: 'flex', gap: 6 }}>
-                  <button onClick={() => addMessage('user')} style={addMsgBtnStyle('#d4b08c')}>+ User</button>
+                  <button onClick={() => addMessage('user')} style={addMsgBtnStyle('var(--accent-primary)')}>+ User</button>
                   <button onClick={() => addMessage('assistant')} style={addMsgBtnStyle('#86efac')}>+ Assistant</button>
                 </div>
               </div>
@@ -595,7 +595,7 @@ export function PlaygroundView() {
             {/* TEMPLATES TAB */}
             {leftTab === 'templates' && (
               <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 7 }}>
-                <p style={{ fontSize: 11, color: '#44403c', paddingBottom: 6, lineHeight: 1.5 }}>
+                <p style={{ fontSize: 11, color: 'var(--ui-text-muted)', paddingBottom: 6, lineHeight: 1.5 }}>
                   Templates pre-configure the system prompt and messages for common use cases.
                 </p>
                 {TEMPLATES.map((t) => (
@@ -603,15 +603,15 @@ export function PlaygroundView() {
                     style={{
                       display: 'flex', flexDirection: 'column', gap: 3, textAlign: 'left',
                       padding: '10px 12px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                      background: activeTemplate === t.id ? 'rgba(212,176,140,0.08)' : '#1a1917',
+                      background: activeTemplate === t.id ? 'color-mix(in srgb, var(--accent-primary) 8%, transparent)' : 'var(--surface-canvas)',
                       outline: activeTemplate === t.id
-                        ? '1px solid rgba(212,176,140,0.3)' : '1px solid rgba(255,255,255,0.03)',
-                      transition: 'all 0.15s',
+                        ? '1px solid color-mix(in srgb, var(--accent-primary) 30%, transparent)' : '1px solid var(--surface-hover)',
+                      transition: 'var(--transition-fast)',
                     }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: activeTemplate === t.id ? '#d4b08c' : '#c9c5c2' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: activeTemplate === t.id ? 'var(--accent-primary)' : 'var(--ui-text-secondary)' }}>
                       {t.label}
                     </span>
-                    <span style={{ fontSize: 11, color: '#57534e', lineHeight: 1.4 }}>{t.description}</span>
+                    <span style={{ fontSize: 11, color: 'var(--ui-text-muted)', lineHeight: 1.4 }}>{t.description}</span>
                   </button>
                 ))}
               </div>
@@ -621,8 +621,8 @@ export function PlaygroundView() {
 
         {/* DRAG DIVIDER */}
         <div onMouseDown={handleDividerMouseDown}
-          style={{ width: 4, cursor: 'col-resize', flexShrink: 0, background: 'transparent', transition: 'background 0.15s' }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(212,176,140,0.15)')}
+          style={{ width: 4, cursor: 'col-resize', flexShrink: 0, background: 'transparent', transition: 'var(--transition-fast)' }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = 'color-mix(in srgb, var(--accent-primary) 15%, transparent)')}
           onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
         />
 
@@ -631,13 +631,13 @@ export function PlaygroundView() {
           {/* Right tabs */}
           <div style={{
             display: 'flex', alignItems: 'center', padding: '0 8px',
-            borderBottom: '1px solid rgba(212,176,140,0.07)', background: '#0f0e0d', flexShrink: 0,
+            borderBottom: '1px solid color-mix(in srgb, var(--accent-primary) 7%, transparent)', background: 'var(--surface-canvas)', flexShrink: 0,
           }}>
             {(['preview', 'source', 'console'] as RightTab[]).map((tab) => (
               <button key={tab} onClick={() => setRightTab(tab)} style={{
                 padding: '7px 11px', border: 'none', background: 'transparent', fontSize: 11,
                 fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize',
-                color: rightTab === tab ? '#d4b08c' : '#4a4542',
+                color: rightTab === tab ? 'var(--accent-primary)' : 'var(--ui-text-muted)',
                 borderBottom: rightTab === tab ? '2px solid #d4b08c' : '2px solid transparent',
               }}>{tab}</button>
             ))}
@@ -648,21 +648,21 @@ export function PlaygroundView() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingRight: 4 }}>
                 <span style={{
                   fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
-                  background: 'rgba(212,176,140,0.1)', color: '#d4b08c', textTransform: 'uppercase', letterSpacing: '0.08em',
+                  background: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.08em',
                 }}>{artifact.type}</span>
-                <span style={{ fontSize: 11, color: '#57534e' }}>{artifact.title}</span>
+                <span style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>{artifact.title}</span>
               </div>
             )}
 
             {isStreaming && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, paddingRight: 8 }}>
                 <span style={{
-                  width: 6, height: 6, borderRadius: '50%', background: '#22c55e',
+                  width: 6, height: 6, borderRadius: '50%', background: 'var(--status-success)',
                   boxShadow: '0 0 6px #22c55e55',
                   animation: 'pgPulse 1s ease-in-out infinite',
                   display: 'inline-block',
                 }} />
-                <span style={{ fontSize: 10, color: '#4ade80' }}>Streaming</span>
+                <span style={{ fontSize: 10, color: 'var(--status-success)' }}>Streaming</span>
               </div>
             )}
           </div>
@@ -675,12 +675,12 @@ export function PlaygroundView() {
               <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
                 {artifact ? (
                   <pre style={{
-                    fontFamily: '"SF Mono","Fira Code",monospace', fontSize: 11, color: '#d4b08c',
+                    fontFamily: '"SF Mono","Fira Code",monospace', fontSize: 11, color: 'var(--accent-primary)',
                     lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-                    background: '#1a1917', padding: 16, borderRadius: 8, margin: 0,
+                    background: 'var(--surface-canvas)', padding: 16, borderRadius: 8, margin: 0,
                   }}>{artifact.content}</pre>
                 ) : (
-                  <p style={{ color: '#3a3733', fontSize: 13 }}>No artifact yet — hit Run.</p>
+                  <p style={{ color: 'var(--ui-text-muted)', fontSize: 13 }}>No artifact yet — hit Run.</p>
                 )}
               </div>
             )}
@@ -688,15 +688,15 @@ export function PlaygroundView() {
             {rightTab === 'console' && (
               <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
                 <pre style={{
-                  fontFamily: '"SF Mono","Fira Code",monospace', fontSize: 11, color: '#a8a29e',
+                  fontFamily: '"SF Mono","Fira Code",monospace', fontSize: 11, color: 'var(--ui-text-muted)',
                   lineHeight: 1.8, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0,
                 }}>
                   {streamText
                     ? streamText
-                    : <span style={{ color: '#3a3733' }}>Output will stream here when you Run...</span>
+                    : <span style={{ color: 'var(--ui-text-muted)' }}>Output will stream here when you Run...</span>
                   }
                   {isStreaming && (
-                    <span style={{ color: '#d4b08c', animation: 'pgBlink 0.6s step-end infinite' }}>▌</span>
+                    <span style={{ color: 'var(--accent-primary)', animation: 'pgBlink 0.6s step-end infinite' }}>▌</span>
                   )}
                 </pre>
               </div>
@@ -731,16 +731,16 @@ function ConfigSlider({
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: '#a8a29e' }}>{label}</span>
-        <span style={{ fontSize: 12, fontWeight: 700, color: '#d4b08c', fontFamily: 'monospace' }}>{display}</span>
+        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ui-text-muted)' }}>{label}</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent-primary)', fontFamily: 'monospace' }}>{display}</span>
       </div>
       <input type="range" min={min} max={max} step={step} value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}
-        style={{ width: '100%', accentColor: '#d4b08c' }} />
+        style={{ width: '100%', accentColor: 'var(--accent-primary)' }} />
       {hint && (
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
-          <span style={{ fontSize: 9, color: '#3a3733' }}>{hint[0]}</span>
-          <span style={{ fontSize: 9, color: '#3a3733' }}>{hint[1]}</span>
+          <span style={{ fontSize: 9, color: 'var(--ui-text-muted)' }}>{hint[0]}</span>
+          <span style={{ fontSize: 9, color: 'var(--ui-text-muted)' }}>{hint[1]}</span>
         </div>
       )}
     </div>
@@ -752,8 +752,8 @@ function ConfigToggleRow({ label, desc, on }: { label: string; desc: string; on:
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: '#a8a29e' }}>{label}</div>
-        <div style={{ fontSize: 11, color: '#44403c', marginTop: 2 }}>{desc}</div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ui-text-muted)' }}>{label}</div>
+        <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', marginTop: 2 }}>{desc}</div>
       </div>
       <ToggleSwitch on={enabled} onChange={() => setEnabled(v => !v)} />
     </div>

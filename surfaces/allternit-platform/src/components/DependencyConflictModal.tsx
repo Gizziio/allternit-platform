@@ -22,20 +22,20 @@ import type { DependencyConflict } from '../plugins/dependencies';
 // ============================================================================
 
 const THEME = {
-  bg: '#0c0a09',
-  bgElevated: '#1c1917',
+  bg: 'var(--surface-canvas)',
+  bgElevated: 'var(--surface-panel)',
   bgGlass: 'rgba(28, 25, 23, 0.95)',
-  accent: '#d4b08c',
+  accent: 'var(--accent-primary)',
   accentMuted: 'rgba(212, 176, 140, 0.15)',
-  textPrimary: '#e7e5e4',
-  textSecondary: '#a8a29e',
-  textTertiary: '#78716c',
+  textPrimary: 'var(--ui-text-primary)',
+  textSecondary: 'var(--ui-text-secondary)',
+  textTertiary: 'var(--ui-text-muted)',
   border: 'rgba(212, 176, 140, 0.1)',
   borderStrong: 'rgba(212, 176, 140, 0.2)',
-  success: '#22c55e',
-  danger: '#ef4444',
-  warning: '#f59e0b',
-  info: '#3b82f6',
+  success: 'var(--status-success)',
+  danger: 'var(--status-error)',
+  warning: 'var(--status-warning)',
+  info: 'var(--status-info)',
 };
 
 // ============================================================================
@@ -148,7 +148,7 @@ function ResolutionCard({
             width: 40,
             height: 40,
             borderRadius: 8,
-            backgroundColor: isSelected ? THEME.accentMuted : 'rgba(255,255,255,0.05)',
+            backgroundColor: isSelected ? THEME.accentMuted : 'var(--surface-hover)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -206,7 +206,7 @@ function ResolutionCard({
             <div
               style={{
                 padding: 10,
-                backgroundColor: 'rgba(0,0,0,0.2)',
+                backgroundColor: 'var(--surface-hover)',
                 borderRadius: 6,
                 marginTop: 8,
               }}
@@ -280,7 +280,7 @@ export function DependencyConflictModal({
         inset: 0,
         backgroundColor: 'rgba(0, 0, 0, 0.7)',
         backdropFilter: 'blur(8px)',
-        zIndex: 1000,
+        zIndex: 180,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -377,7 +377,7 @@ export function DependencyConflictModal({
           <div
             style={{
               padding: 12,
-              backgroundColor: 'rgba(0,0,0,0.2)',
+              backgroundColor: 'var(--surface-hover)',
               borderRadius: 8,
               border: `1px solid ${THEME.border}`,
             }}
@@ -403,7 +403,7 @@ export function DependencyConflictModal({
                   fontWeight: 600,
                   color: THEME.textPrimary,
                   padding: '2px 8px',
-                  backgroundColor: 'rgba(255,255,255,0.05)',
+                  backgroundColor: 'var(--surface-hover)',
                   borderRadius: 4,
                 }}
               >
@@ -637,7 +637,7 @@ export function DependencyConflictModal({
               borderRadius: 6,
               border: 'none',
               backgroundColor: selectedOption === 'force' ? THEME.danger : selectedOption === 'upgrade' ? THEME.success : THEME.accent,
-              color: selectedOption === 'force' || selectedOption === 'upgrade' ? '#fff' : '#0c0a09',
+              color: selectedOption === 'force' || selectedOption === 'upgrade' ? '#fff' : 'var(--surface-canvas)',
               fontSize: 13,
               fontWeight: 600,
               cursor: 'pointer',

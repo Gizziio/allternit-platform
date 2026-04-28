@@ -11,16 +11,15 @@ import React from 'react';
 import { MagnifyingGlass, Plus } from '@phosphor-icons/react';
 import { SwarmViewMode, SwarmAgent } from '../types';
 import { ViewToggle } from './ViewToggle';
-import { useSwarmMonitorStore } from '../SwarmMonitor.store';
-import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/allternit.tokens';
+import { STATUS } from '@/design/allternit.tokens';
 
 // Amber/orange accent from demo-v3/v4/v5
-const ACCENT = '#c17817';
+const ACCENT = 'var(--accent-primary)';
 const ACCENT_DIM = 'rgba(193, 120, 23, 0.2)';
-const BG_SURFACE = '#121110';
-const BORDER_COLOR = '#272522';
-const TEXT_MUTED = '#8b8680';
-const TEXT_SUBTLE = '#5c5854';
+const BG_SURFACE = 'var(--surface-canvas)';
+const BORDER_COLOR = 'var(--ui-border-muted)';
+const TEXT_MUTED = 'var(--ui-text-muted)';
+const TEXT_SUBTLE = 'var(--ui-text-muted)';
 const GREEN = STATUS.success;
 
 interface SwarmMonitorLayoutProps {
@@ -46,7 +45,7 @@ export function SwarmMonitorLayout({
   return (
     <div
       className={`h-full flex flex-col ${className || ''}`}
-      style={{ background: '#0a0908' }}
+      style={{ background: 'var(--surface-canvas)' }}
     >
       {/* Header - matching demo-v3/v4/v5 */}
       <header
@@ -72,7 +71,7 @@ export function SwarmMonitorLayout({
               style={{
                 background: BG_SURFACE,
                 border: `1px solid ${BORDER_COLOR}`,
-                color: '#e8e6e3',
+                color: 'var(--ui-text-primary)',
                 width: 200,
               }}
             />

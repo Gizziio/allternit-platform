@@ -34,9 +34,6 @@ import type {
   PlanStep,
 } from './agent.types';
 import {
-  validateAgent,
-  validateAgentArray,
-  validateAgentListResponse,
   validateCreateAgentInput,
   safeValidate,
   agentListResponseSchema,
@@ -57,7 +54,7 @@ import { API_BASE_URL, apiRequest, apiRequestWithError, type ApiResponse } from 
 export { API_BASE_URL, apiRequest, apiRequestWithError, type ApiResponse };
 
 // Import Rails API for advanced features
-import { railsApi, type WihInfo, type LedgerEvent } from './rails.service';
+import { railsApi, type WihInfo } from './rails.service';
 
 // ============================================================================
 // Agent CRUD Operations (Registry via API)
@@ -808,7 +805,7 @@ export async function createExecutionPlan(
 }
 
 export async function getExecutionPlan(agentId: string, planId: string): Promise<ExecutionPlan> {
-  const dag = await railsApi.plan.show(planId);
+  await railsApi.plan.show(planId);
   const { wihs } = await railsApi.wihs.list({ dag_id: planId });
 
   return {

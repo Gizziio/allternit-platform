@@ -57,8 +57,8 @@ export const SelectTrigger: React.FC<SelectTriggerProps> = ({
       width: '100%',
       padding: '10px 14px',
       borderRadius: '8px',
-      border: '1px solid rgba(255,255,255,0.1)',
-      background: 'rgba(255,255,255,0.05)',
+      border: '1px solid var(--ui-border-default)',
+      background: 'var(--surface-hover)',
       color: '#fff',
       fontSize: '14px',
       cursor: 'pointer',
@@ -73,7 +73,7 @@ export const SelectTrigger: React.FC<SelectTriggerProps> = ({
 );
 
 export const SelectValue: React.FC<{ placeholder?: string }> = ({ placeholder }) => (
-  <span style={{ color: '#888' }}>{placeholder}</span>
+  <span style={{ color: 'var(--ui-text-muted)' }}>{placeholder}</span>
 );
 
 export const SelectContent: React.FC<{ children: React.ReactNode; onSelect?: (val: string) => void; className?: string; align?: 'start' | 'end' | 'center'; style?: React.CSSProperties }> = ({
@@ -90,8 +90,8 @@ export const SelectContent: React.FC<{ children: React.ReactNode; onSelect?: (va
       left: 0,
       right: 0,
       marginTop: '4px',
-      background: '#1a1a1a',
-      border: '1px solid rgba(255,255,255,0.1)',
+      background: 'var(--surface-panel)',
+      border: '1px solid var(--ui-border-default)',
       borderRadius: '8px',
       zIndex: 50,
       ...style,
@@ -120,7 +120,7 @@ export const SelectItem: React.FC<{ value: string; children: React.ReactNode; on
     style={{
       padding: '10px 14px',
       cursor: disabled ? 'not-allowed' : 'pointer',
-      color: disabled ? '#666' : '#fff',
+      color: disabled ? 'var(--ui-text-muted)' : '#fff',
       fontSize: '14px',
       opacity: disabled ? 0.5 : 1,
     }}

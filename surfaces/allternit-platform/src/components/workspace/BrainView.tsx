@@ -110,10 +110,10 @@ export function BrainView({ api }: BrainViewProps) {
       {/* Stats Bar */}
       <div className="brain-view__stats">
         <StatCard label="Total" value={stats.total} />
-        <StatCard label="Completed" value={stats.completed} color="#10b981" />
-        <StatCard label="Active" value={stats.active} color="#3b82f6" />
-        <StatCard label="Pending" value={stats.pending} color="#f59e0b" />
-        <StatCard label="Failed" value={stats.failed} color="#ef4444" />
+        <StatCard label="Completed" value={stats.completed} color="var(--status-success)" />
+        <StatCard label="Active" value={stats.active} color="var(--status-info)" />
+        <StatCard label="Pending" value={stats.pending} color="var(--status-warning)" />
+        <StatCard label="Failed" value={stats.failed} color="var(--status-error)" />
       </div>
 
       {/* Controls */}
@@ -253,8 +253,8 @@ function CreateTaskForm({
 // Sub-components
 function StatCard({ label, value, color }: { label: string; value: number; color?: string }) {
   return (
-    <div className="stat-card" style={{ borderLeftColor: color || '#666' }}>
-      <span className="stat-card__value" style={{ color: color || '#e0e0e0' }}>
+    <div className="stat-card" style={{ borderLeftColor: color || 'var(--ui-text-muted)' }}>
+      <span className="stat-card__value" style={{ color: color || 'var(--ui-text-primary)' }}>
         {value}
       </span>
       <span className="stat-card__label">{label}</span>
@@ -293,10 +293,10 @@ function TaskCard({
   onStatusChange: (status: Task['status']) => void;
 }) {
   const statusColors = {
-    pending: '#f59e0b',
-    in_progress: '#3b82f6',
-    completed: '#10b981',
-    failed: '#ef4444',
+    pending: 'var(--status-warning)',
+    in_progress: 'var(--status-info)',
+    completed: 'var(--status-success)',
+    failed: 'var(--status-error)',
   };
 
   const priorityLabels = {
@@ -435,10 +435,10 @@ function TaskGraphVisualization({ tasks }: { tasks: Task[] }) {
           const x = 100 + (index % 4) * 180;
           const y = 80 + Math.floor(index / 4) * 100;
           const colors = {
-            pending: '#f59e0b',
-            in_progress: '#3b82f6',
-            completed: '#10b981',
-            failed: '#ef4444',
+            pending: 'var(--status-warning)',
+            in_progress: 'var(--status-info)',
+            completed: 'var(--status-success)',
+            failed: 'var(--status-error)',
           };
           
           return (

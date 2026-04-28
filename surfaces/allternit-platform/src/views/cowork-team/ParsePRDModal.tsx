@@ -15,9 +15,9 @@ interface Props {
 type Phase = 'input' | 'loading' | 'preview' | 'creating' | 'done';
 
 const PRIORITY_LABEL: Record<number, { label: string; color: string }> = {
-  75: { label: 'High', color: '#ef4444' },
-  50: { label: 'Medium', color: '#f59e0b' },
-  25: { label: 'Low', color: '#22c55e' },
+  75: { label: 'High', color: 'var(--status-error)' },
+  50: { label: 'Medium', color: 'var(--status-warning)' },
+  25: { label: 'Low', color: 'var(--status-success)' },
 };
 
 export function ParsePRDModal({ workspaceId, onClose, onCreated }: Props): JSX.Element {
@@ -61,8 +61,8 @@ export function ParsePRDModal({ workspaceId, onClose, onCreated }: Props): JSX.E
   return (
     <div
       style={{
-        position: 'fixed', inset: 0, zIndex: 1000,
-        background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+        position: 'fixed', inset: 0, zIndex: 180,
+        background: 'var(--shell-overlay-backdrop)', backdropFilter: 'blur(4px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '24px',
       }}
@@ -117,7 +117,7 @@ export function ParsePRDModal({ workspaceId, onClose, onCreated }: Props): JSX.E
             </div>
 
             {error && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', borderRadius: '8px', background: '#ef444418', border: '1px solid #ef444433', color: '#ef4444', fontSize: 13 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', borderRadius: '8px', background: 'var(--status-error-bg)', border: '1px solid #ef444433', color: 'var(--status-error)', fontSize: 13 }}>
                 <Warning size={15} />
                 {error}
               </div>
@@ -128,7 +128,7 @@ export function ParsePRDModal({ workspaceId, onClose, onCreated }: Props): JSX.E
               disabled={description.trim().length < 10 || phase === 'loading'}
               style={{
                 padding: '10px 20px', borderRadius: '8px',
-                background: description.trim().length >= 10 ? '#af52de' : 'var(--bg-secondary)',
+                background: description.trim().length >= 10 ? 'var(--accent-cowork)' : 'var(--bg-secondary)',
                 color: description.trim().length >= 10 ? '#fff' : 'var(--text-secondary)',
                 border: 'none', fontWeight: 600, fontSize: 14, cursor: description.trim().length >= 10 ? 'pointer' : 'default',
                 display: 'flex', alignItems: 'center', gap: '8px', alignSelf: 'flex-end',
@@ -159,7 +159,7 @@ export function ParsePRDModal({ workspaceId, onClose, onCreated }: Props): JSX.E
 
             <div style={{ overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
               {result.items.map((item, idx) => {
-                const pc = PRIORITY_LABEL[item.priority ?? 50] ?? { label: 'Medium', color: '#f59e0b' };
+                const pc = PRIORITY_LABEL[item.priority ?? 50] ?? { label: 'Medium', color: 'var(--status-warning)' };
                 return (
                   <div
                     key={item.tempId}
@@ -187,7 +187,7 @@ export function ParsePRDModal({ workspaceId, onClose, onCreated }: Props): JSX.E
                           </span>
                         )}
                         {item.dependencyTempIds.length > 0 && (
-                          <span style={{ fontSize: 11, color: '#06b6d4', background: '#06b6d418', border: '1px solid #06b6d433', padding: '1px 7px', borderRadius: 4 }}>
+                          <span style={{ fontSize: 11, color: 'var(--status-info)', background: '#06b6d418', border: '1px solid #06b6d433', padding: '1px 7px', borderRadius: 4 }}>
                             {item.dependencyTempIds.length} dep{item.dependencyTempIds.length !== 1 ? 's' : ''}
                           </span>
                         )}
@@ -204,7 +204,7 @@ export function ParsePRDModal({ workspaceId, onClose, onCreated }: Props): JSX.E
             </div>
 
             {error && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', borderRadius: '8px', background: '#ef444418', border: '1px solid #ef444433', color: '#ef4444', fontSize: 13 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', borderRadius: '8px', background: 'var(--status-error-bg)', border: '1px solid #ef444433', color: 'var(--status-error)', fontSize: 13 }}>
                 <Warning size={15} />
                 {error}
               </div>
@@ -219,7 +219,7 @@ export function ParsePRDModal({ workspaceId, onClose, onCreated }: Props): JSX.E
               </button>
               <button
                 onClick={handleConfirm}
-                style={{ padding: '10px 22px', borderRadius: '8px', background: '#af52de', color: '#fff', border: 'none', fontWeight: 600, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                style={{ padding: '10px 22px', borderRadius: '8px', background: 'var(--accent-cowork)', color: 'var(--ui-text-inverse)', border: 'none', fontWeight: 600, fontSize: 14, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
               >
                 Create {result.items.length} Tasks
                 <ArrowRight size={15} />
@@ -248,7 +248,7 @@ export function ParsePRDModal({ workspaceId, onClose, onCreated }: Props): JSX.E
             </span>
             <button
               onClick={onClose}
-              style={{ padding: '10px 24px', borderRadius: '8px', background: '#af52de', color: '#fff', border: 'none', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}
+              style={{ padding: '10px 24px', borderRadius: '8px', background: 'var(--accent-cowork)', color: 'var(--ui-text-inverse)', border: 'none', fontWeight: 600, fontSize: 14, cursor: 'pointer' }}
             >
               View Board
             </button>

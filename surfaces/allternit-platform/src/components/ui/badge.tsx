@@ -1,6 +1,6 @@
 import React from 'react';
 
-interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
+export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: 'default' | 'secondary' | 'outline' | 'destructive';
 }
 
@@ -11,10 +11,10 @@ export const Badge: React.FC<BadgeProps> = ({
   ...props 
 }) => {
   const variantStyles = {
-    default: { background: '#d4b08c', color: '#0a0a0a' },
-    secondary: { background: 'rgba(255,255,255,0.1)', color: '#888' },
-    outline: { background: 'transparent', color: '#d4b08c', border: '1px solid #d4b08c' },
-    destructive: { background: 'rgba(239,68,68,0.2)', color: '#ef4444' },
+    default: { background: 'var(--accent-primary)', color: 'var(--ui-text-inverse)' },
+    secondary: { background: 'var(--ui-border-default)', color: 'var(--ui-text-muted)' },
+    outline: { background: 'transparent', color: 'var(--accent-primary)', border: '1px solid #d4b08c' },
+    destructive: { background: 'rgba(239,68,68,0.2)', color: 'var(--status-error)' },
   };
 
   return (

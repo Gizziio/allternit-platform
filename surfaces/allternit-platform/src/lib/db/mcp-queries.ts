@@ -1,10 +1,11 @@
 /**
  * MCP-related database queries
+ * Uses the SQLite client (better-sqlite3) for standalone/desktop/tunnel builds.
  */
 
 import { eq, and, isNotNull } from "drizzle-orm";
-import { db } from "./client";
-import { mcpConnector, mcpOAuthSession, type McpConnector, type McpOAuthSession } from "./schema";
+import { db } from "./client-sqlite";
+import { mcpConnector, mcpOAuthSession, type McpConnector, type McpOAuthSession } from "./schema-sqlite";
 
 /**
  * Get all MCP connectors for a user

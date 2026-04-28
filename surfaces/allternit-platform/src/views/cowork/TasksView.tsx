@@ -43,11 +43,11 @@ interface TaskViewItem {
 const getPriorityColor = (priority: TaskViewItem['priority']) => {
   switch (priority) {
     case 'high':
-      return '#ef4444';
+      return 'var(--status-error)';
     case 'medium':
-      return '#f59e0b';
+      return 'var(--status-warning)';
     case 'low':
-      return '#3b82f6';
+      return 'var(--status-info)';
     default:
       return 'var(--text-secondary)';
   }
@@ -56,11 +56,11 @@ const getPriorityColor = (priority: TaskViewItem['priority']) => {
 const getTagBg = (tag: string) => {
   switch (tag) {
     case 'Agent':
-      return '#dbeafe';
+      return 'var(--status-info-bg)';
     case 'Code':
-      return '#ddd6fe';
+      return 'var(--surface-active)';
     case 'Docs':
-      return '#fce7f3';
+      return 'var(--surface-active)';
     default:
       return 'var(--bg-secondary)';
   }
@@ -69,11 +69,11 @@ const getTagBg = (tag: string) => {
 const getTagColor = (tag: string) => {
   switch (tag) {
     case 'Agent':
-      return '#0369a1';
+      return 'var(--status-info)';
     case 'Code':
-      return '#5b21b6';
+      return 'var(--ui-text-muted)';
     case 'Docs':
-      return '#be185d';
+      return 'var(--status-error)';
     default:
       return 'var(--text-secondary)';
   }
@@ -82,15 +82,15 @@ const getTagColor = (tag: string) => {
 const getColumnAccent = (column: TaskViewItem['column']) => {
   switch (column) {
     case 'backlog':
-      return '#6b7280';
+      return 'var(--ui-text-muted)';
     case 'todo':
-      return '#af52de';
+      return 'var(--ui-text-muted)';
     case 'in-progress':
-      return '#f59e0b';
+      return 'var(--status-warning)';
     case 'in-review':
-      return '#3b82f6';
+      return 'var(--status-info)';
     case 'done':
-      return '#22c55e';
+      return 'var(--status-success)';
     default:
       return 'var(--text-secondary)';
   }
@@ -99,11 +99,11 @@ const getColumnAccent = (column: TaskViewItem['column']) => {
 const getRiskColor = (risk?: TaskViewItem['risk']) => {
   switch (risk) {
     case 'high':
-      return '#ef4444';
+      return 'var(--status-error)';
     case 'medium':
-      return '#f59e0b';
+      return 'var(--status-warning)';
     case 'low':
-      return '#22c55e';
+      return 'var(--status-success)';
     default:
       return 'transparent';
   }
@@ -267,18 +267,18 @@ export const TasksView: React.FC = () => {
             padding: '8px 16px',
             borderRadius: '8px',
             border: 'none',
-            backgroundColor: '#06b6d4',
-            color: '#fff',
+            backgroundColor: 'var(--accent-cowork)',
+            color: 'var(--ui-text-primary)',
             fontSize: '13px',
             fontWeight: 600,
             cursor: 'pointer',
             transition: 'all 0.2s ease',
           }}
           onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#0891b2';
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--accent-cowork)';
           }}
           onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#06b6d4';
+            (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'var(--accent-cowork)';
           }}
         >
           <Lightning size={16} weight="fill" />
@@ -306,7 +306,7 @@ export const TasksView: React.FC = () => {
               width: '24px',
               height: '24px',
               border: '2px solid var(--border-subtle)',
-              borderTopColor: '#af52de',
+              borderTopColor: 'var(--ui-text-muted)',
               borderRadius: '50%',
               animation: 'spin 1s linear infinite',
               marginRight: 'var(--spacing-md)',
@@ -440,8 +440,8 @@ export const TasksView: React.FC = () => {
                               width: '20px',
                               height: '20px',
                               borderRadius: '50%',
-                              backgroundColor: '#06b6d4',
-                              color: '#fff',
+                              backgroundColor: 'var(--accent-cowork)',
+                              color: 'var(--ui-text-primary)',
                               fontSize: '10px',
                               fontWeight: 700,
                             }}
@@ -510,7 +510,7 @@ export const TasksView: React.FC = () => {
                             padding: '1px 6px',
                             borderRadius: '999px',
                             background: 'rgba(139, 92, 246, 0.15)',
-                            color: '#a78bfa',
+                            color: 'var(--ui-text-muted)',
                             fontWeight: 500,
                           }}>
                             #{tag}
@@ -523,7 +523,7 @@ export const TasksView: React.FC = () => {
                             padding: '1px 6px',
                             borderRadius: '4px',
                             background: 'rgba(16, 185, 129, 0.15)',
-                            color: '#10b981',
+                            color: 'var(--status-success)',
                             fontWeight: 500,
                           }}>
                             ⏱ {(task as any).actualMinutes}m actual
@@ -536,7 +536,7 @@ export const TasksView: React.FC = () => {
                             padding: '1px 6px',
                             borderRadius: '4px',
                             background: 'rgba(245, 158, 11, 0.15)',
-                            color: '#f59e0b',
+                            color: 'var(--status-warning)',
                             fontWeight: 500,
                           }}>
                             📝 notes
@@ -643,7 +643,7 @@ export const TasksView: React.FC = () => {
                               borderRadius: '6px',
                               border: 'none',
                               backgroundColor: 'rgba(239, 68, 68, 0.12)',
-                              color: '#ef4444',
+                              color: 'var(--status-error)',
                               fontSize: '11px',
                               fontWeight: 600,
                               cursor: 'pointer',
@@ -675,7 +675,7 @@ export const TasksView: React.FC = () => {
                               borderRadius: '6px',
                               border: 'none',
                               backgroundColor: 'rgba(34, 197, 94, 0.12)',
-                              color: '#22c55e',
+                              color: 'var(--status-success)',
                               fontSize: '11px',
                               fontWeight: 600,
                               cursor: 'pointer',
@@ -708,7 +708,7 @@ export const TasksView: React.FC = () => {
                             borderRadius: '6px',
                             border: 'none',
                             backgroundColor: 'rgba(139, 92, 246, 0.1)',
-                            color: '#a78bfa',
+                            color: 'var(--ui-text-muted)',
                             cursor: 'pointer',
                             transition: 'all 0.15s ease',
                           }}
@@ -737,7 +737,7 @@ export const TasksView: React.FC = () => {
                             borderRadius: '6px',
                             border: 'none',
                             backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                            color: '#f59e0b',
+                            color: 'var(--status-warning)',
                             cursor: 'pointer',
                             transition: 'all 0.15s ease',
                           }}
@@ -762,7 +762,7 @@ export const TasksView: React.FC = () => {
                             borderRadius: '6px',
                             border: 'none',
                             backgroundColor: 'rgba(6, 182, 212, 0.1)',
-                            color: '#06b6d4',
+                            color: 'var(--accent-cowork)',
                             cursor: 'pointer',
                             transition: 'all 0.15s ease',
                           }}
@@ -787,7 +787,7 @@ export const TasksView: React.FC = () => {
                             borderRadius: '6px',
                             border: 'none',
                             backgroundColor: 'rgba(107, 114, 128, 0.1)',
-                            color: '#9ca3af',
+                            color: 'var(--ui-text-muted)',
                             cursor: 'pointer',
                             transition: 'all 0.15s ease',
                           }}
@@ -814,8 +814,8 @@ export const TasksView: React.FC = () => {
                               width: '28px',
                               height: '28px',
                               borderRadius: '50%',
-                              backgroundColor: task.assigneeType === 'agent' ? '#3b82f6' : '#af52de',
-                              color: '#fff',
+                              backgroundColor: task.assigneeType === 'agent' ? 'var(--status-info)' : 'var(--ui-text-muted)',
+                              color: 'var(--ui-text-primary)',
                               fontSize: '12px',
                               fontWeight: 600,
                               overflow: 'hidden',

@@ -8,19 +8,15 @@
  * - Network costs
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  CurrencyDollar,
   Calculator,
   HardDrives,
-  Cloud,
   HardDrive,
   Network,
   Info,
   TrendUp,
-  Clock,
-  Calendar,
   CaretDown,
   CaretUp,
 } from '@phosphor-icons/react';

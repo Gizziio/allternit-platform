@@ -79,7 +79,7 @@ export function VPSConnectionModal({
       {currentView === 'menu' && (
         <div
           className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
-          style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+          style={{ background: 'var(--shell-overlay-backdrop)', backdropFilter: 'blur(4px)' }}
           onClick={handleClose}
         >
           <div
@@ -87,7 +87,7 @@ export function VPSConnectionModal({
             style={{
               background: 'rgba(20,20,20,0.95)',
               border: '1px solid #333',
-              boxShadow: '0 24px 80px rgba(0,0,0,0.5)',
+              boxShadow: '0 24px 80px var(--shell-overlay-backdrop)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -118,12 +118,12 @@ export function VPSConnectionModal({
                 className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
                 style={{ background: 'transparent', color: TEXT.secondary }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#252525';
+                  e.currentTarget.style.background = 'var(--surface-panel)';
                   e.currentTarget.style.color = '#fff';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = '#888';
+                  e.currentTarget.style.color = 'var(--ui-text-muted)';
                 }}
               >
                 <X size={20} />
@@ -147,7 +147,7 @@ export function VPSConnectionModal({
                     e.currentTarget.style.background = 'rgba(37,37,37,0.4)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#333';
+                    e.currentTarget.style.borderColor = 'var(--surface-hover)';
                     e.currentTarget.style.background = 'rgba(37,37,37,0.2)';
                   }}
                 >
@@ -199,7 +199,7 @@ export function VPSConnectionModal({
                     e.currentTarget.style.background = 'rgba(37,37,37,0.4)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#333';
+                    e.currentTarget.style.borderColor = 'var(--surface-hover)';
                     e.currentTarget.style.background = 'rgba(37,37,37,0.2)';
                   }}
                 >

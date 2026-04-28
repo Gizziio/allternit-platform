@@ -72,7 +72,7 @@ function SelectAccountContent() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#0A0806',
+      background: 'var(--surface-canvas)',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
@@ -96,10 +96,10 @@ function SelectAccountContent() {
           style={{
             width: '100%',
             maxWidth: 440,
-            background: '#110E0B',
+            background: 'var(--surface-panel)',
             borderRadius: 20,
-            border: '1px solid rgba(255,255,255,0.08)',
-            boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03)',
+            border: '1px solid var(--ui-border-muted)',
+            boxShadow: '0 32px 80px var(--shell-overlay-backdrop), 0 0 0 1px var(--surface-hover)',
             overflow: 'hidden',
           }}
         >
@@ -119,7 +119,7 @@ function SelectAccountContent() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.35 }}
               style={{
-                fontSize: 18, fontWeight: 700, color: '#F5EDE3',
+                fontSize: 18, fontWeight: 700, color: 'var(--ui-text-primary)',
                 letterSpacing: '-0.02em', marginBottom: 8,
               }}
             >
@@ -137,7 +137,7 @@ function SelectAccountContent() {
           </div>
 
           {/* Divider */}
-          <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '0 0 8px' }} />
+          <div style={{ height: 1, background: 'var(--ui-border-muted)', margin: '0 0 8px' }} />
 
           {/* Account list */}
           <div style={{ padding: '8px 16px 4px' }}>
@@ -151,7 +151,7 @@ function SelectAccountContent() {
                   transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.2 }}
                   style={{
                     height: 62, borderRadius: 12, marginBottom: 4,
-                    background: 'rgba(255,255,255,0.04)',
+                    background: 'var(--surface-hover)',
                   }}
                 />
               ))
@@ -181,7 +181,7 @@ function SelectAccountContent() {
                       transition: 'all 0.18s', marginBottom: 4,
                     }}
                     onMouseEnter={e => {
-                      if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.04)';
+                      if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-hover)';
                     }}
                     onMouseLeave={e => {
                       if (!isSelected) (e.currentTarget as HTMLButtonElement).style.background = 'transparent';
@@ -198,10 +198,10 @@ function SelectAccountContent() {
                     ) : (
                       <div style={{
                         width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
-                        background: isSelected ? 'linear-gradient(135deg, #E8886A, #D97757)' : 'rgba(255,255,255,0.08)',
+                        background: isSelected ? 'linear-gradient(135deg, #E8886A, #D97757)' : 'var(--ui-border-muted)',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: 13, fontWeight: 700,
-                        color: isSelected ? '#fff' : 'rgba(255,255,255,0.5)',
+                        color: isSelected ? 'var(--ui-text-inverse)' : 'var(--ui-text-muted)',
                         transition: 'all 0.18s',
                       }}>
                         {ini}
@@ -212,7 +212,7 @@ function SelectAccountContent() {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{
                         fontSize: 13.5, fontWeight: 600,
-                        color: isSelected ? '#F5EDE3' : 'rgba(255,255,255,0.7)',
+                        color: isSelected ? 'var(--ui-text-primary)' : 'var(--ui-text-secondary)',
                         margin: 0, lineHeight: 1.3,
                         whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                       }}>
@@ -243,7 +243,7 @@ function SelectAccountContent() {
                       <span style={{
                         fontSize: 10, fontWeight: 600,
                         color: 'rgba(255,255,255,0.25)',
-                        background: 'rgba(255,255,255,0.06)',
+                        background: 'var(--ui-border-muted)',
                         padding: '2px 7px', borderRadius: 20,
                         letterSpacing: '0.04em', textTransform: 'uppercase',
                       }}>
@@ -268,13 +268,13 @@ function SelectAccountContent() {
                 border: '1px solid transparent', background: 'transparent',
                 cursor: 'pointer', marginBottom: 4, transition: 'background 0.18s',
               }}
-              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.04)'; }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'var(--surface-hover)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}
             >
               <div style={{
                 width: 38, height: 38, borderRadius: '50%',
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px dashed rgba(255,255,255,0.12)',
+                background: 'var(--surface-hover)',
+                border: '1px dashed var(--ui-border-default)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0,
               }}>
@@ -300,8 +300,8 @@ function SelectAccountContent() {
                 width: '100%', padding: '13px 20px', borderRadius: 12, border: 'none',
                 background: selected && !switching
                   ? 'linear-gradient(135deg, #E8886A 0%, #D97757 100%)'
-                  : 'rgba(255,255,255,0.06)',
-                color: selected && !switching ? '#fff' : 'rgba(255,255,255,0.2)',
+                  : 'var(--ui-border-muted)',
+                color: selected && !switching ? 'var(--ui-text-inverse)' : 'var(--ui-text-muted)',
                 fontSize: 14, fontWeight: 700,
                 cursor: selected && !switching ? 'pointer' : 'not-allowed',
                 letterSpacing: '-0.01em',
@@ -319,14 +319,14 @@ function SelectAccountContent() {
 
           {/* Footer */}
           <div style={{
-            borderTop: '1px solid rgba(255,255,255,0.05)',
-            background: '#0D0A07', padding: '14px 36px', textAlign: 'center',
+            borderTop: '1px solid var(--surface-hover)',
+            background: 'var(--surface-canvas)', padding: '14px 36px', textAlign: 'center',
           }}>
             <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', margin: 0, lineHeight: 1.6 }}>
               By continuing you agree to the{' '}
-              <a href="/terms" style={{ color: '#664E3A', textDecoration: 'underline' }}>Terms</a>
+              <a href="/terms" style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}>Terms</a>
               {' '}and{' '}
-              <a href="/privacy" style={{ color: '#664E3A', textDecoration: 'underline' }}>Privacy Policy</a>
+              <a href="/privacy" style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}>Privacy Policy</a>
             </p>
           </div>
         </motion.div>

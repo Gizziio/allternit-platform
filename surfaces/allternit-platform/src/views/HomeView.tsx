@@ -17,7 +17,7 @@ export function HomeView({ onAction, context }: any) {
   const quickActions = [
     { id: 'chat', label: 'New Chat', icon: ChatText, color: tokens.colors.chat.primary, desc: 'Start a fresh conversation' },
     { id: 'workspace', label: 'Cowork', icon: UsersThree, color: tokens.colors.cowork.primary, desc: 'Launch collaborative workspace' },
-    { id: 'browser', label: 'Browser', icon: Browser, color: '#60a5fa', desc: 'Secure agent-controlled browsing' },
+    { id: 'browser', label: 'Browser', icon: Browser, color: 'var(--status-info)', desc: 'Secure agent-controlled browsing' },
     { id: 'code', label: 'Terminal', icon: Robot, color: tokens.colors.code.primary, desc: 'Open external dev environment' },
   ];
 
@@ -37,7 +37,7 @@ export function HomeView({ onAction, context }: any) {
           </div>
           <h1 style={{ fontSize: 40, fontWeight: 900, letterSpacing: '-0.03em', margin: 0 }}>Good morning, User</h1>
         </div>
-        <div style={{ padding: '12px 24px', borderRadius: 14, background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(255,255,255,0.05)', fontSize: 13, fontWeight: 500 }}>
+        <div style={{ padding: '12px 24px', borderRadius: 14, background: 'rgba(0,0,0,0.03)', border: '1px solid var(--surface-hover)', fontSize: 13, fontWeight: 500 }}>
           <span style={{ opacity: 0.5 }}>Active WIH:</span> <span style={{ color: tokens.colors.chat.primary }}>P5-T0500</span>
         </div>
       </div>
@@ -91,11 +91,11 @@ export function HomeView({ onAction, context }: any) {
             <GlassCard key={session.id} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '12px 20px' }}>
               <div style={{ 
                 width: 8, height: 8, borderRadius: '50%', 
-                background: ((tokens.colors as any)[session.type]?.primary) || '#60a5fa' 
+                background: ((tokens.colors as any)[session.type]?.primary) || 'var(--status-info)' 
               }} />
               <div style={{ flex: 1, fontWeight: 600, fontSize: 14 }}>{session.title}</div>
               <div style={{ fontSize: 12, opacity: 0.4 }}>{session.time}</div>
-              <div style={{ padding: '4px 8px', borderRadius: 6, background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(255,255,255,0.05)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', opacity: 0.6 }}>
+              <div style={{ padding: '4px 8px', borderRadius: 6, background: 'rgba(0,0,0,0.03)', border: '1px solid var(--surface-hover)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', opacity: 0.6 }}>
                 {session.type}
               </div>
             </GlassCard>

@@ -20,15 +20,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
 import {
   Cpu,
   GitBranch,
   CurrencyDollar,
-  FileLock,
   BookOpen,
   Play,
-  Plus,
   ArrowsClockwise,
   Pulse as Activity,
 } from '@phosphor-icons/react';
@@ -39,7 +36,7 @@ import { CostTracker } from './components/CostTracker';
 import { FileConflictPanel } from './components/FileConflictPanel';
 import { KnowledgePanel } from './components/KnowledgePanel';
 
-import type { Task, Session, RoutingDecision } from './types';
+import type { Task, Session } from './types';
 import { metaSwarmClient } from './api';
 
 export function MetaSwarmDashboard() {

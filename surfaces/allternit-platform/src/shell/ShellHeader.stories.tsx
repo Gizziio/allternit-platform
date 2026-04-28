@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
 import { userEvent, within } from '@storybook/testing-library';
 import { expect } from '@storybook/jest';
-import { ShellHeader } from './ShellHeader';
+import { ShellHeader, type AppMode } from './ShellHeader';
 
 /**
  * ShellHeader Component
@@ -67,7 +67,7 @@ export const Default: Story = {
  */
 export const Interactive: Story = {
   render: () => {
-    const [mode, setMode] = useState<'chat' | 'cowork' | 'code' | 'design'>('chat');
+    const [mode, setMode] = useState<AppMode>('chat');
     const [theme, setTheme] = useState<'light' | 'dark'>('dark');
     const [railCollapsed, setRailCollapsed] = useState(false);
     
@@ -210,7 +210,7 @@ export const Navigation: Story = {
  */
 export const FullDemo: Story = {
   render: () => {
-    const [mode, setMode] = useState<'chat' | 'cowork' | 'code' | 'design'>('chat');
+    const [mode, setMode] = useState<AppMode>('chat');
     const [theme, setTheme] = useState<'light' | 'dark'>('dark');
     const [railCollapsed, setRailCollapsed] = useState(false);
     const [env, setEnv] = useState<'local' | 'byoc-vps' | 'cloud' | 'hybrid'>('cloud');

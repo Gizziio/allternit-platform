@@ -18,6 +18,8 @@ import { ErrorBoundary, ChatViewErrorBoundary } from "@/components/error-boundar
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useLocalBrainStatus } from "@/hooks/useLocalBrainStatus";
+import { useNav } from "@/nav/useNav";
 import {
   Chat,
   Warning,
@@ -262,6 +264,17 @@ export function ChatViewPolished({ mode = 'chat', className }: ChatViewPolishedP
   const [isOnline, setIsOnline] = React.useState(true);
   const [hasError, setHasError] = React.useState(false);
   const [error, setError] = React.useState<Error | null>(null);
+  const [nudgeVisible, setNudgeVisible] = React.useState(false);
+  const { justDetected, modelReady, clearJustDetected } = useLocalBrainStatus();
+
+  // Gap 4: post-install nudge — Ollama appeared after app was already open
+  React.useEffect(() => {
+    if (justDetected && !modelReady) {
+      setNudgeVisible(true);
+      const t = setTimeout(() => { setNudgeVisible(false); clearJustDetected(); }, 6000);
+      return () => clearTimeout(t);
+    }
+  }, [justDetected, modelReady, clearJustDetected]);
 
   // Monitor online status
   React.useEffect(() => {
@@ -295,12 +308,49 @@ export function ChatViewPolished({ mode = 'chat', className }: ChatViewPolishedP
   }
 
   return (
-    <div 
-      className={cn(
-        "flex flex-col h-full w-full",
-        className
-      )}
+    <div
+      className={cn("flex flex-col h-full w-full relative", className)}
     >
+      {/* Gap 4: Post-install nudge — Ollama detected after onboarding skipped */}
+      {nudgeVisible && (
+        <div
+          className="absolute bottom-24 right-4 z-50 max-w-xs w-full animate-in slide-in-from-bottom-4 fade-in duration-300"
+          role="status"
+          aria-live="polite"
+        >
+          <div className={cn(
+            "flex items-start gap-3 p-4 rounded-xl shadow-xl",
+            "bg-[var(--glass-bg-thick,var(--bg-secondary))] border border-[var(--border-strong)]",
+            "backdrop-blur-xl"
+          )}>
+            <span className="text-xl shrink-0">🧠</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-[var(--text-primary)] mb-0.5">Ollama detected</p>
+              <p className="text-xs text-[var(--text-tertiary)] mb-2">
+                Download Local Brain to chat offline — no API key needed.
+              </p>
+              <button
+                onClick={() => {
+                  useNav.getState().dispatch({ type: 'OPEN_VIEW', viewType: 'models-manage' });
+                  setNudgeVisible(false);
+                  clearJustDetected();
+                }}
+                className="text-xs font-bold text-[var(--accent-chat)] hover:underline"
+              >
+                Open Local Brain →
+              </button>
+            </div>
+            <button
+              onClick={() => { setNudgeVisible(false); clearJustDetected(); }}
+              className="shrink-0 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] text-xs leading-none"
+              aria-label="Dismiss"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       <ChatViewErrorBoundary>
         <ErrorBoundary
           componentName="ChatView"

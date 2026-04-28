@@ -18,7 +18,6 @@ import {
   CaretRight,
   PuzzlePiece as Puzzle,
   ArrowCounterClockwise,
-  User as UserIcon,
 } from '@phosphor-icons/react';
 
 interface MenuItem {
@@ -95,7 +94,7 @@ function SubmenuFlyout({
         border: '1px solid var(--shell-menu-border)',
         boxShadow: 'var(--shadow-lg)',
         padding: '8px 0',
-        zIndex: 100000,
+        zIndex: 165,
         animation: 'submenuSlideIn 0.1s ease-out',
       }}
     >
@@ -310,20 +309,6 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }):
     }
   };
 
-  const handleSubmenuEnter = (): void => {
-    if (submenuTimeoutRef.current) {
-      clearTimeout(submenuTimeoutRef.current);
-      submenuTimeoutRef.current = null;
-    }
-  };
-
-  const handleSubmenuLeave = (): void => {
-    submenuTimeoutRef.current = setTimeout(() => {
-      setActiveSubmenuId(null);
-      setSubmenuAnchor(null);
-    }, 150);
-  };
-
   const SectionDivider = (): JSX.Element => (
     <div style={{ 
       height: '1px', 
@@ -366,7 +351,7 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }):
               border: '1px solid var(--shell-menu-border)',
               boxShadow: 'var(--shadow-lg)',
               padding: '8px 0',
-              zIndex: 9999,
+              zIndex: 160,
             }}
           >
             <div ref={menuRef}>
@@ -392,7 +377,7 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }):
                     {user.imageUrl ? (
                       <img src={user.imageUrl} style={{ width: 32, height: 32, borderRadius: '50%' }} alt="Avatar" />
                     ) : (
-                      <div style={{ width: 32, height: 32, borderRadius: '50%', backgroundColor: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '12px', fontWeight: 600 }}>
+                      <div style={{ width: 32, height: 32, borderRadius: '50%', backgroundColor: 'var(--status-info)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '12px', fontWeight: 600 }}>
                         {(user.firstName?.[0] || user.userEmail?.[0] || 'U').toUpperCase()}
                       </div>
                     )}

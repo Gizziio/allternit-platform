@@ -286,7 +286,7 @@ export const DraftSavedIndicator: React.FC<DraftSavedIndicatorProps> = ({
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2">
             <polyline points="20 6 9 17 4 12" />
           </svg>
-          <span style={{ color: '#10B981' }}>
+          <span style={{ color: 'var(--status-success)' }}>
             Draft saved
             <span style={{ color: 'rgba(255, 255, 255, 0.4)', marginLeft: '4px' }}>
               {saveStatus.lastSaved.toLocaleTimeString()}
@@ -302,7 +302,7 @@ export const DraftSavedIndicator: React.FC<DraftSavedIndicatorProps> = ({
             <line x1="12" y1="8" x2="12" y2="12" />
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
-          <span style={{ color: '#EF4444' }} title={saveStatus.error}>
+          <span style={{ color: 'var(--status-error)' }} title={saveStatus.error}>
             Save failed
           </span>
         </>
@@ -330,15 +330,15 @@ export const BrowserCompatibilityWarning: React.FC<BrowserCompatibilityWarningPr
     return null;
   }
 
-  const severityColor = compatibility.compatibilityScore >= 80 ? '#10B981' :
-                        compatibility.compatibilityScore >= 60 ? '#F59E0B' : '#EF4444';
+  const severityColor = compatibility.compatibilityScore >= 80 ? 'var(--status-success)' :
+                        compatibility.compatibilityScore >= 60 ? 'var(--status-warning)' : 'var(--status-error)';
 
   return (
     <div
       className="p-4 rounded-xl border flex items-start gap-3"
       style={{
-        background: 'rgba(251, 191, 36, 0.1)',
-        borderColor: 'rgba(251, 191, 36, 0.3)',
+        background: 'var(--status-warning-bg)',
+        borderColor: 'color-mix(in srgb, var(--status-warning) 30%, transparent)',
       }}
       role="alert"
       aria-label="Browser compatibility warning"
@@ -358,7 +358,7 @@ export const BrowserCompatibilityWarning: React.FC<BrowserCompatibilityWarningPr
         <line x1="12" y1="17" x2="12.01" y2="17" />
       </svg>
       <div className="flex-1">
-        <h4 className="text-sm font-semibold mb-1" style={{ color: '#FFFFFF' }}>
+        <h4 className="text-sm font-semibold mb-1" style={{ color: 'var(--ui-text-primary)' }}>
           Limited Browser Support
         </h4>
         <p className="text-sm mb-2" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
@@ -441,13 +441,13 @@ export const FileSizeWarning: React.FC<FileSizeWarningProps> = ({
   }
 
   const isOverLimit = isFileSizeExceeded(fileSize);
-  const severityColor = isOverLimit ? '#EF4444' : '#F59E0B';
+  const severityColor = isOverLimit ? 'var(--status-error)' : 'var(--status-warning)';
 
   return (
     <div
       className="p-4 rounded-xl border flex items-start gap-3"
       style={{
-        background: isOverLimit ? 'rgba(239, 68, 68, 0.1)' : 'rgba(251, 191, 36, 0.1)',
+        background: isOverLimit ? 'var(--status-error-bg)' : 'var(--status-warning-bg)',
         borderColor: `${severityColor}30`,
       }}
       role="alert"
@@ -480,7 +480,7 @@ export const FileSizeWarning: React.FC<FileSizeWarningProps> = ({
       <div className="flex-1">
         <h4 
           className="text-sm font-semibold mb-1"
-          style={{ color: isOverLimit ? '#EF4444' : '#FFFFFF' }}
+          style={{ color: isOverLimit ? 'var(--status-error)' : 'var(--ui-text-primary)' }}
         >
           {isOverLimit ? 'File Too Large' : 'Large File Warning'}
         </h4>
@@ -491,7 +491,7 @@ export const FileSizeWarning: React.FC<FileSizeWarningProps> = ({
             : `File size (${formatFileSize(fileSize)}) is approaching the 1 MB limit.`}
         </p>
         {isOverLimit && (
-          <p className="text-xs mt-1" style={{ color: '#EF4444' }}>
+          <p className="text-xs mt-1" style={{ color: 'var(--status-error)' }}>
             Please reduce the file size or remove this file to continue.
           </p>
         )}
@@ -540,9 +540,9 @@ export const PluginConflictWarning: React.FC<PluginConflictWarningProps> = ({
   }
 
   const severityColors = {
-    error: { bg: 'rgba(239, 68, 68, 0.1)', border: 'rgba(239, 68, 68, 0.3)', text: '#EF4444' },
-    warning: { bg: 'rgba(251, 191, 36, 0.1)', border: 'rgba(251, 191, 36, 0.3)', text: '#F59E0B' },
-    info: { bg: 'rgba(59, 130, 246, 0.1)', border: 'rgba(59, 130, 246, 0.3)', text: '#3B82F6' },
+    error: { bg: 'var(--status-error-bg)', border: 'color-mix(in srgb, var(--status-error) 30%, transparent)', text: 'var(--status-error)' },
+    warning: { bg: 'var(--status-warning-bg)', border: 'color-mix(in srgb, var(--status-warning) 30%, transparent)', text: 'var(--status-warning)' },
+    info: { bg: 'var(--status-info-bg)', border: 'color-mix(in srgb, var(--status-info) 30%, transparent)', text: 'var(--status-info)' },
   };
 
   const colors = severityColors[conflictResult.severity];
@@ -572,7 +572,7 @@ export const PluginConflictWarning: React.FC<PluginConflictWarningProps> = ({
         <line x1="12" y1="16" x2="12.01" y2="16" />
       </svg>
       <div className="flex-1">
-        <h4 className="text-sm font-semibold mb-1" style={{ color: '#FFFFFF' }}>
+        <h4 className="text-sm font-semibold mb-1" style={{ color: 'var(--ui-text-primary)' }}>
           {conflictResult.message}
         </h4>
         <ul className="text-sm space-y-1 mb-2" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
@@ -644,8 +644,8 @@ export const DuplicateNameWarning: React.FC<DuplicateNameWarningProps> = ({
     <div
       className="p-4 rounded-xl border flex items-start gap-3"
       style={{
-        background: 'rgba(239, 68, 68, 0.1)',
-        borderColor: 'rgba(239, 68, 68, 0.3)',
+        background: 'var(--status-error-bg)',
+        borderColor: 'color-mix(in srgb, var(--status-error) 30%, transparent)',
       }}
       role="alert"
       aria-label="Duplicate agent name warning"
@@ -665,7 +665,7 @@ export const DuplicateNameWarning: React.FC<DuplicateNameWarningProps> = ({
         <line x1="12" y1="16" x2="12.01" y2="16" />
       </svg>
       <div className="flex-1">
-        <h4 className="text-sm font-semibold mb-1" style={{ color: '#EF4444' }}>
+        <h4 className="text-sm font-semibold mb-1" style={{ color: 'var(--status-error)' }}>
           Duplicate Agent Name
         </h4>
         <p className="text-sm" style={{ color: 'rgba(255, 255, 255, 0.7)' }}>

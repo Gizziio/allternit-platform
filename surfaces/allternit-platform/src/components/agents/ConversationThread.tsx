@@ -17,14 +17,10 @@ import {
   Warning,
   Clock,
   DotsThreeVertical,
-  Copy,
   ThumbsUp,
   ThumbsDown,
   Flag,
-  Archive,
   ArrowBendUpLeft as Reply,
-  CaretDown,
-  CaretUp,
 } from '@phosphor-icons/react';
 
 // ============================================================================
@@ -95,16 +91,15 @@ function MessageBubble({
   const [replyContent, setReplyContent] = useState('');
 
   const typeConfig: Record<AgentMessageType, { color: string; icon: any; label: string }> = {
-    request: { color: '#60a5fa', icon: Chat, label: 'Request' },
-    response: { color: '#4ade80', icon: CheckCircle, label: 'Response' },
+    request: { color: 'var(--status-info)', icon: Chat, label: 'Request' },
+    response: { color: 'var(--status-success)', icon: CheckCircle, label: 'Response' },
     tool_result: { color: '#fb923c', icon: Warning, label: 'Tool Result' },
-    approval: { color: '#22c55e', icon: CheckCircle, label: 'Approved' },
-    info: { color: '#9ca3af', icon: Chat, label: 'Info' },
+    approval: { color: 'var(--status-success)', icon: CheckCircle, label: 'Approved' },
+    info: { color: 'var(--ui-text-muted)', icon: Chat, label: 'Info' },
     human_review: { color: '#a78bfa', icon: User, label: 'Human Review' },
   };
 
   const config = typeConfig[message.type];
-  const TypeIcon = config.icon;
 
   const handleReply = () => {
     if (replyContent.trim() && onReply) {

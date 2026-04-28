@@ -6,6 +6,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { getProvider } from '../../data/providers';
+import { openInBrowser } from '@/lib/openInBrowser';
 
 interface Step4CredentialsProps {
   providerId: string;
@@ -58,7 +59,7 @@ export const Step4Credentials: React.FC<Step4CredentialsProps> = ({ providerId, 
 
   const openApiConsole = () => {
     if (provider.apiConsoleUrl) {
-      window.open(provider.apiConsoleUrl, '_blank');
+      openInBrowser(provider.apiConsoleUrl);
     }
   };
 

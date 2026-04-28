@@ -191,10 +191,10 @@ export function SchedulerView() {
             onClick={() => setIsCreating(true)}
             style={{
               padding: '8px 16px',
-              background: '#0a84ff',
+              background: 'var(--status-info)',
               border: 'none',
               borderRadius: 6,
-              color: '#fff',
+              color: 'var(--ui-text-inverse)',
               fontSize: 12,
               fontWeight: 600,
               cursor: 'pointer',
@@ -234,7 +234,7 @@ export function SchedulerView() {
           <h4 style={{ margin: '0 0 12px 0', fontSize: 14 }}>Create New Scheduled Job</h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
-              <label style={{ display: 'block', fontSize: 11, color: '#888', marginBottom: 4 }}>
+              <label style={{ display: 'block', fontSize: 11, color: 'var(--ui-text-muted)', marginBottom: 4 }}>
                 Select DAG
               </label>
               <select
@@ -259,7 +259,7 @@ export function SchedulerView() {
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 11, color: '#888', marginBottom: 4 }}>
+              <label style={{ display: 'block', fontSize: 11, color: 'var(--ui-text-muted)', marginBottom: 4 }}>
                 Schedule (Cron Expression)
               </label>
               <input
@@ -278,7 +278,7 @@ export function SchedulerView() {
                   fontFamily: 'monospace'
                 }}
               />
-              <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+              <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', marginTop: 4 }}>
                 Examples: 0 * * * * (hourly), 0 0 * * * (daily), 0 12 * * 0 (weekly)
               </div>
             </div>
@@ -291,7 +291,7 @@ export function SchedulerView() {
                   background: 'var(--bg-primary)',
                   border: '1px solid var(--border-subtle)',
                   borderRadius: 6,
-                  color: '#888',
+                  color: 'var(--ui-text-muted)',
                   fontSize: 12,
                   cursor: 'pointer'
                 }}
@@ -304,10 +304,10 @@ export function SchedulerView() {
                 style={{
                   flex: 1,
                   padding: '10px',
-                  background: '#0a84ff',
+                  background: 'var(--status-info)',
                   border: 'none',
                   borderRadius: 6,
-                  color: '#fff',
+                  color: 'var(--ui-text-inverse)',
                   fontSize: 12,
                   fontWeight: 600,
                   cursor: !newJobDagId ? 'not-allowed' : 'pointer',
@@ -328,7 +328,7 @@ export function SchedulerView() {
           flexDirection: 'column', 
           alignItems: 'center', 
           justifyContent: 'center',
-          color: '#666'
+          color: 'var(--ui-text-muted)'
         }}>
           <Calendar size={64} style={{ marginBottom: 16, opacity: 0.3 }} />
           <p>No scheduled jobs</p>
@@ -337,10 +337,10 @@ export function SchedulerView() {
             style={{
               marginTop: 12,
               padding: '10px 20px',
-              background: '#0a84ff',
+              background: 'var(--status-info)',
               border: 'none',
               borderRadius: 6,
-              color: '#fff',
+              color: 'var(--ui-text-inverse)',
               fontSize: 13,
               cursor: 'pointer'
             }}
@@ -359,7 +359,7 @@ export function SchedulerView() {
               key={job.id} 
               style={{ 
                 padding: 16, 
-                borderLeft: `4px solid ${job.status === 'active' ? '#34c759' : '#8e8e93'}`,
+                borderLeft: `4px solid ${job.status === 'active' ? 'var(--status-success)' : '#8e8e93'}`,
                 opacity: job.isDemo ? 0.8 : 1
               }}
             >
@@ -382,7 +382,7 @@ export function SchedulerView() {
                   {job.isDemo && (
                     <div style={{
                       fontSize: 10,
-                      color: '#f59e0b',
+                      color: 'var(--status-warning)',
                       marginTop: 4
                     }}>
                       Auto-generated schedule
@@ -397,7 +397,7 @@ export function SchedulerView() {
                     borderRadius: 6, 
                     padding: '4px 8px', 
                     cursor: 'pointer',
-                    color: job.status === 'active' ? '#ff3b30' : '#34c759',
+                    color: job.status === 'active' ? 'var(--status-error)' : 'var(--status-success)',
                     fontSize: 10, 
                     fontWeight: 800
                   }}
@@ -418,7 +418,7 @@ export function SchedulerView() {
                     display: 'flex', 
                     alignItems: 'center', 
                     gap: 4,
-                    color: '#888'
+                    color: 'var(--ui-text-muted)'
                   }}>
                     <CheckCircle size={14} color="#34c759" />
                     <span>Last: {formatTimeAgo(job.lastRun)}</span>
@@ -429,7 +429,7 @@ export function SchedulerView() {
                     display: 'flex', 
                     alignItems: 'center', 
                     gap: 4,
-                    color: '#0a84ff'
+                    color: 'var(--status-info)'
                   }}>
                     <Clock size={14} />
                     <span>Next: {formatTimeAgo(job.nextRun)}</span>
@@ -443,7 +443,7 @@ export function SchedulerView() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: 4,
-                    color: '#0a84ff',
+                    color: 'var(--status-info)',
                     cursor: 'pointer',
                     background: 'none',
                     border: 'none',
@@ -473,7 +473,7 @@ function StatBox({ label, value, color }: { label: string; value: number; color:
       borderLeft: `3px solid ${color}`
     }}>
       <div style={{ fontSize: 20, fontWeight: 700, color }}>{value}</div>
-      <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{label}</div>
+      <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', marginTop: 2 }}>{label}</div>
     </div>
   );
 }

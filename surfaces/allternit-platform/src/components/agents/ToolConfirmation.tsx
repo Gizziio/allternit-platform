@@ -62,10 +62,10 @@ export function ToolConfirmation({
         width: 400,
         maxWidth: "calc(100vw - 48px)",
         borderRadius: 16,
-        border: "1px solid rgba(255,255,255,0.1)",
+        border: "1px solid var(--ui-border-default)",
         background: "linear-gradient(180deg, #2B2520 0%, #1a1714 100%)",
-        boxShadow: "0 20px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05)",
-        zIndex: 1000,
+        boxShadow: "0 20px 60px var(--shell-overlay-backdrop), 0 0 0 1px var(--surface-hover)",
+        zIndex: 180,
         overflow: "hidden",
       }}
     >
@@ -76,7 +76,7 @@ export function ToolConfirmation({
           alignItems: "center",
           gap: 12,
           padding: "16px 20px",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          borderBottom: "1px solid var(--ui-border-muted)",
           background: `linear-gradient(90deg, ${accentColor}15, transparent)`,
         }}
       >
@@ -115,8 +115,8 @@ export function ToolConfirmation({
             gap: 10,
             padding: 12,
             borderRadius: 10,
-            background: "rgba(0,0,0,0.3)",
-            border: "1px solid rgba(255,255,255,0.06)",
+            background: "var(--surface-panel)",
+            border: "1px solid var(--ui-border-muted)",
           }}
         >
           <div style={{ color: accentColor }}>{icon}</div>
@@ -151,8 +151,8 @@ export function ToolConfirmation({
               margin: 0,
               padding: 12,
               borderRadius: 8,
-              background: "rgba(0,0,0,0.3)",
-              border: "1px solid rgba(255,255,255,0.06)",
+              background: "var(--surface-panel)",
+              border: "1px solid var(--ui-border-muted)",
               fontSize: 11,
               color: "#a8998c",
               fontFamily: "monospace",
@@ -188,7 +188,7 @@ export function ToolConfirmation({
           display: "flex",
           gap: 10,
           padding: "12px 20px 20px",
-          borderTop: "1px solid rgba(255,255,255,0.06)",
+          borderTop: "1px solid var(--ui-border-muted)",
         }}
       >
         <button
@@ -201,7 +201,7 @@ export function ToolConfirmation({
             gap: 6,
             padding: "10px 16px",
             borderRadius: 10,
-            border: "1px solid rgba(255,255,255,0.1)",
+            border: "1px solid var(--ui-border-default)",
             background: "transparent",
             color: "#a8998c",
             fontSize: 13,
@@ -302,7 +302,7 @@ export function InlineToolConfirmation({
         style={{
           padding: 10,
           borderRadius: 8,
-          background: "rgba(0,0,0,0.2)",
+          background: "var(--surface-hover)",
           fontSize: 11,
           color: "#a8998c",
           fontFamily: "monospace",
@@ -321,7 +321,7 @@ export function InlineToolConfirmation({
             flex: 1,
             padding: "8px 12px",
             borderRadius: 8,
-            border: "1px solid rgba(255,255,255,0.1)",
+            border: "1px solid var(--ui-border-default)",
             background: "transparent",
             color: "#a8998c",
             fontSize: 12,

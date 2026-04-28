@@ -196,8 +196,8 @@ function buildChartJsHtml(
         legend: { labels: { color: '#94a3b8', font: { size: 11 } } },
       },
       scales: ${chartType === 'pie' ? '{}' : `{
-        x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
-        y: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'rgba(255,255,255,0.07)' } },
+        x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'var(--surface-hover)' } },
+        y: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: 'var(--ui-border-muted)' } },
       }`},
     },
   });

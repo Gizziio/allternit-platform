@@ -89,10 +89,10 @@ function TopStrip({
   const isApproval = status === 'WaitingApproval';
   const isDone = status === 'Done';
 
-  const dotColor = isRunning  ? '#10b981'
-                : isApproval  ? '#d97706'
-                : isDone      ? '#3b82f6'
-                : '#6b7280';
+  const dotColor = isRunning  ? 'var(--status-success)'
+                : isApproval  ? 'var(--status-warning)'
+                : isDone      ? 'var(--status-info)'
+                : 'var(--ui-text-muted)';
 
   const adapterLabel = adapterId
     ? adapterId.split('.').slice(1).join('.') || adapterId
@@ -142,13 +142,13 @@ function TopStrip({
         COMPUTER USE
       </span>
 
-      <div style={{ width: 1, height: 12, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
+      <div style={{ width: 1, height: 12, background: 'var(--ui-border-muted)', flexShrink: 0 }} />
 
       {/* Active message */}
       <span
         style={{
           fontSize: 11,
-          color: isApproval ? '#fde68a' : '#aaa',
+          color: isApproval ? '#fde68a' : 'var(--ui-text-muted)',
           flex: 1,
           overflow: 'hidden',
           textOverflow: 'ellipsis',
@@ -162,7 +162,7 @@ function TopStrip({
       {/* Step counter */}
       {stepIndex != null && totalSteps != null && totalSteps > 1 && (
         <>
-          <div style={{ width: 1, height: 12, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
+          <div style={{ width: 1, height: 12, background: 'var(--ui-border-muted)', flexShrink: 0 }} />
           <span
             style={{
               fontSize: 10,
@@ -180,7 +180,7 @@ function TopStrip({
       {/* Adapter / layer chip */}
       {adapterLabel && (
         <>
-          <div style={{ width: 1, height: 12, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
+          <div style={{ width: 1, height: 12, background: 'var(--ui-border-muted)', flexShrink: 0 }} />
           <span
             style={{
               fontSize: 9,
@@ -409,7 +409,7 @@ export function ACIComputerUseView({
               <div
                 style={{
                   width: 28, height: 28,
-                  border: '2px solid rgba(212,176,140,0.2)',
+                  border: '2px solid var(--ui-border-default)',
                   borderTop: '2px solid #D4B08C',
                   borderRadius: '50%',
                   animation: 'aci-cv-spin 1s linear infinite',
@@ -441,7 +441,7 @@ export function ACIComputerUseView({
               <div
                 style={{
                   fontSize: 11, fontFamily: 'monospace',
-                  color: '#ef4444', letterSpacing: '0.08em',
+                  color: 'var(--status-error)', letterSpacing: '0.08em',
                 }}
               >
                 {serviceError}
@@ -467,7 +467,7 @@ export function ACIComputerUseView({
                   objectFit: 'contain',
                   border: '1px solid rgba(212,176,140,0.08)',
                   borderRadius: 3,
-                  boxShadow: '0 0 48px rgba(0,0,0,0.7)',
+                  boxShadow: '0 0 48px var(--shell-overlay-backdrop)',
                   userSelect: 'none',
                   display: 'block',
                 }}

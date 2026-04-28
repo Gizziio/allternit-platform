@@ -9,10 +9,10 @@ interface Props {
 }
 
 const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
-  idle:    { color: '#22c55e', label: 'Idle' },
-  running: { color: '#06b6d4', label: 'Running' },
-  paused:  { color: '#f59e0b', label: 'Paused' },
-  error:   { color: '#ef4444', label: 'Error' },
+  idle:    { color: 'var(--status-success)', label: 'Idle' },
+  running: { color: 'var(--status-info)', label: 'Running' },
+  paused:  { color: 'var(--status-warning)', label: 'Paused' },
+  error:   { color: 'var(--status-error)', label: 'Error' },
 };
 
 function getInitials(name: string): string {
@@ -52,7 +52,7 @@ export function CoworkAgentProfileCard({ agent }: Props): JSX.Element {
           }}
         >
           {initials ? (
-            <span style={{ color: '#fff', fontWeight: 700, fontSize: 16, letterSpacing: 0.5 }}>
+            <span style={{ color: 'var(--ui-text-inverse)', fontWeight: 700, fontSize: 16, letterSpacing: 0.5 }}>
               {initials}
             </span>
           ) : (
@@ -108,9 +108,9 @@ export function CoworkAgentProfileCard({ agent }: Props): JSX.Element {
               style={{
                 padding: '2px 10px',
                 borderRadius: 20,
-                background: '#af52de22',
+                background: 'color-mix(in srgb, var(--accent-cowork) 13%, transparent)',
                 border: '1px solid #af52de55',
-                color: '#af52de',
+                color: 'var(--accent-cowork)',
                 fontSize: 11,
                 fontWeight: 500,
               }}
@@ -127,14 +127,14 @@ export function CoworkAgentProfileCard({ agent }: Props): JSX.Element {
           style={{
             padding: '8px 12px',
             borderRadius: 8,
-            background: '#06b6d411',
+            background: 'var(--status-info-bg)',
             border: '1px solid #06b6d433',
             color: 'var(--text-secondary)',
             fontSize: 12,
             lineHeight: 1.5,
           }}
         >
-          <span style={{ color: '#06b6d4', fontWeight: 600, marginRight: 6 }}>Status:</span>
+          <span style={{ color: 'var(--status-info)', fontWeight: 600, marginRight: 6 }}>Status:</span>
           {agent.teammateProfile.status}
           {agent.teammateProfile.bio && (
             <div style={{ marginTop: 4 }}>{agent.teammateProfile.bio}</div>

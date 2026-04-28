@@ -197,7 +197,7 @@ export const ThreadsView: React.FC = () => {
                             fontWeight: '600',
                             padding: '2px 6px',
                             backgroundColor: 'rgba(52, 199, 89, 0.15)',
-                            color: '#34c759',
+                            color: 'var(--status-success)',
                             borderRadius: '3px',
                             fontFamily: "'JetBrains Mono', ui-monospace, monospace",
                           }}

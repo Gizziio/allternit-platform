@@ -46,6 +46,10 @@ interface ProjectRailSectionProps {
     actionLabel: string;
     onAction: () => void;
   };
+  sectionTitle?: string;
+  sectionCaption?: string;
+  newButtonLabel?: string;
+  recentItemsLabel?: string;
 }
 
 export const ProjectRailSection = memo(function ProjectRailSection({
@@ -61,6 +65,10 @@ export const ProjectRailSection = memo(function ProjectRailSection({
   onDeleteItem,
   onMoveItemToProject,
   emptyNotice,
+  sectionTitle = 'Projects',
+  sectionCaption = 'Shared organizer',
+  newButtonLabel = 'New Project',
+  recentItemsLabel = 'Recent Sessions',
 }: ProjectRailSectionProps): JSX.Element {
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
 
@@ -87,9 +95,9 @@ export const ProjectRailSection = memo(function ProjectRailSection({
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingBottom: 6 }}>
       {/* Section Header */}
       <WorkstreamSectionLabel
-        title="Projects"
+        title={sectionTitle}
         count={projects.length}
-        caption="Shared organizer"
+        caption={sectionCaption}
       />
 
       {/* New Project Button */}
@@ -122,7 +130,7 @@ export const ProjectRailSection = memo(function ProjectRailSection({
           }}
         >
           <FolderPlus size={18} weight="bold" color="var(--accent-primary)" />
-          <div style={{ minWidth: 0, fontSize: 13, fontWeight: 700 }}>New Project</div>
+          <div style={{ minWidth: 0, fontSize: 13, fontWeight: 700 }}>{newButtonLabel}</div>
         </button>
       </div>
 
@@ -136,7 +144,7 @@ export const ProjectRailSection = memo(function ProjectRailSection({
           <div key={project.id}>
             <ProjectRailItem
               id={project.id}
-              icon={FolderOpen}
+              icon={FolderOpen as any}
               label={project.title}
               isActive={isActive}
               isExpanded={isExpanded}
@@ -189,7 +197,7 @@ export const ProjectRailSection = memo(function ProjectRailSection({
               letterSpacing: '0.06em',
               padding: '8px 4px 4px',
             }}>
-              Recent Sessions
+              {recentItemsLabel}
             </div>
             {rootItems.filter((i): i is typeof i & { id: string } => typeof i.id === 'string' && i.id.length > 0).map((item) => (
               <ItemRailRow
@@ -243,7 +251,7 @@ function WorkstreamSectionLabel({
               width: 14,
               height: 1,
               borderRadius: 999,
-              background: 'linear-gradient(90deg, var(--accent-chat), transparent)',
+              background: 'linear-gradient(90deg, var(--accent-primary), transparent)',
             }}
           />
           <span
@@ -344,7 +352,7 @@ function ProjectRailItem({
           background: isActive ? 'var(--shell-item-active-bg)' : 'transparent',
         }}
       >
-        {Icon && <Icon size={18} weight={isActive ? 'fill' : 'bold'} color={isActive ? 'var(--accent-chat)' : 'var(--text-tertiary)'} />}
+        {Icon && <Icon size={18} weight={isActive ? 'fill' : 'bold'} color={isActive ? 'var(--accent-primary)' : 'var(--text-tertiary)'} />}
         <input
           type="text"
           value={editTitle}
@@ -358,7 +366,7 @@ function ProjectRailItem({
             background: 'transparent',
             border: 'none',
             outline: 'none',
-            color: isActive ? 'var(--accent-chat)' : 'var(--text-tertiary)',
+            color: isActive ? 'var(--accent-primary)' : 'var(--text-tertiary)',
             fontWeight: isActive ? 700 : 500,
           }}
         />
@@ -477,14 +485,14 @@ function ProjectRailItem({
 
         {showMenu && (
           <>
-            <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} onClick={() => setShowMenu(false)} />
+            <div style={{ position: 'fixed', inset: 0, zIndex: 169 }} onClick={() => setShowMenu(false)} />
             <div 
               style={{
                 position: 'absolute', top: '100%', right: 0, marginTop: 2,
                 minWidth: 160,
                 background: 'var(--glass-bg-thick)',
                 borderRadius: 14, border: '1px solid var(--border-default)',
-                boxShadow: 'var(--shadow-lg)', zIndex: 9999, overflow: 'hidden',
+                boxShadow: 'var(--shadow-lg)', zIndex: 160, overflow: 'hidden',
               }}
               onMouseEnter={(e) => { e.stopPropagation(); }}
             >
@@ -647,12 +655,12 @@ function ItemRailRow({
 
         {showMenu && (
           <>
-            <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} onClick={() => setShowMenu(false)} />
+            <div style={{ position: 'fixed', inset: 0, zIndex: 169 }} onClick={() => setShowMenu(false)} />
             <div 
               style={{
                 position: 'absolute', top: '100%', right: 4, marginTop: 0,
                 minWidth: 160, background: 'var(--shell-menu-bg)', borderRadius: 12,
-                border: '1px solid var(--shell-menu-border)', zIndex: 9999, overflow: 'hidden',
+                border: '1px solid var(--shell-menu-border)', zIndex: 160, overflow: 'hidden',
               }}
             >
               <button
@@ -734,7 +742,7 @@ function GhostRailNotice({ icon: Icon, title, description, actionLabel, onClick 
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <Icon size={20} color="var(--accent-chat)" />
+        <Icon size={20} color="var(--accent-primary)" />
         <div>
           <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{title}</div>
           <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 2 }}>{description}</div>

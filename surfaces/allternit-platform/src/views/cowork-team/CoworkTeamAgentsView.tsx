@@ -17,11 +17,11 @@ const TABS: { key: FilterTab; label: string }[] = [
 ];
 
 const TAB_ACCENTS: Record<FilterTab, string> = {
-  all: '#af52de',
-  idle: '#22c55e',
-  running: '#06b6d4',
-  paused: '#f59e0b',
-  error: '#ef4444',
+  all: 'var(--accent-cowork)',
+  idle: 'var(--status-success)',
+  running: 'var(--status-info)',
+  paused: 'var(--status-warning)',
+  error: 'var(--status-error)',
 };
 
 export const CoworkTeamAgentsView: React.FC = () => {
@@ -51,7 +51,7 @@ export const CoworkTeamAgentsView: React.FC = () => {
           style={{
             padding: '8px 18px',
             borderRadius: '8px',
-            background: '#af52de',
+            background: 'var(--accent-cowork)',
             color: '#fff',
             border: 'none',
             fontSize: '14px',

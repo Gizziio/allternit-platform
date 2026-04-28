@@ -61,8 +61,8 @@ export function ConsoleView({
       <div 
         className="flex items-center justify-between px-4 py-2 border-b"
         style={{ 
-          background: 'rgba(255,255,255,0.02)',
-          borderColor: 'rgba(255,255,255,0.05)',
+          background: 'var(--surface-hover)',
+          borderColor: 'var(--surface-hover)',
         }}
       >
         <div className="flex items-center gap-4">
@@ -93,14 +93,14 @@ export function ConsoleView({
         {/* Left: Agent Status */}
         <div 
           className="w-64 border-r overflow-auto"
-          style={{ borderColor: 'rgba(255,255,255,0.05)' }}
+          style={{ borderColor: 'var(--surface-hover)' }}
         >
           <div 
             className="px-3 py-2 text-xs font-bold tracking-wider sticky top-0"
             style={{ 
               background: 'rgba(13, 11, 9, 0.98)',
               color: TEXT.tertiary,
-              borderBottom: '1px solid rgba(255,255,255,0.05)',
+              borderBottom: '1px solid var(--surface-hover)',
             }}
           >
             AGENT STATUS
@@ -113,7 +113,7 @@ export function ConsoleView({
                 onClick={() => onAgentSelect(orchestrator.id)}
                 className="w-full p-2 rounded border text-left transition-colors hover:bg-white/5"
                 style={{ 
-                  background: 'rgba(255,255,255,0.02)',
+                  background: 'var(--surface-hover)',
                   borderColor: modeColors.accent,
                 }}
               >
@@ -136,8 +136,8 @@ export function ConsoleView({
                 onClick={() => onAgentSelect(agent.id)}
                 className="w-full p-2 rounded border text-left transition-colors hover:bg-white/5"
                 style={{ 
-                  background: 'rgba(255,255,255,0.02)',
-                  borderColor: agent.status === 'working' ? agent.color : 'rgba(255,255,255,0.08)',
+                  background: 'var(--surface-hover)',
+                  borderColor: agent.status === 'working' ? agent.color : 'var(--ui-border-muted)',
                 }}
               >
                 <div className="flex items-center justify-between mb-1">
@@ -167,7 +167,7 @@ export function ConsoleView({
             style={{ 
               background: 'rgba(13, 11, 9, 0.98)',
               color: TEXT.tertiary,
-              borderBottom: '1px solid rgba(255,255,255,0.05)',
+              borderBottom: '1px solid var(--surface-hover)',
             }}
           >
             ACTIVITY FEED
@@ -178,7 +178,7 @@ export function ConsoleView({
               <div 
                 key={event.id}
                 className="flex items-center gap-3 p-2 rounded mono text-xs hover:bg-white/5 transition-colors"
-                style={{ background: 'rgba(255,255,255,0.02)' }}
+                style={{ background: 'var(--surface-hover)' }}
               >
                 <span style={{ color: TEXT.tertiary }}>{event.timestamp}</span>
                 <span 
@@ -205,14 +205,14 @@ export function ConsoleView({
         {/* Right: Metrics */}
         <div 
           className="w-48 border-l overflow-auto"
-          style={{ borderColor: 'rgba(255,255,255,0.05)' }}
+          style={{ borderColor: 'var(--surface-hover)' }}
         >
           <div 
             className="px-4 py-2 text-xs font-bold tracking-wider sticky top-0"
             style={{ 
               background: 'rgba(13, 11, 9, 0.98)',
               color: TEXT.tertiary,
-              borderBottom: '1px solid rgba(255,255,255,0.05)',
+              borderBottom: '1px solid var(--surface-hover)',
             }}
           >
             METRICS
@@ -247,7 +247,7 @@ export function ConsoleView({
               </div>
             </div>
 
-            <div className="pt-4 border-t" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+            <div className="pt-4 border-t" style={{ borderColor: 'var(--surface-hover)' }}>
               <div className="text-xs" style={{ color: TEXT.tertiary }}>FAILURE RATE</div>
               <div className="text-xl mono font-bold" style={{ color: TEXT.primary }}>
                 0.02%

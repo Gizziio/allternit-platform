@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Image,
   FileText,
@@ -22,7 +22,6 @@ import {
   PencilSimple,
   DotsThreeVertical,
   MagnifyingGlass,
-  Funnel,
   Clock,
   FolderOpen,
 } from '@phosphor-icons/react';

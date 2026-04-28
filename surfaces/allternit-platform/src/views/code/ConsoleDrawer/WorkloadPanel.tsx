@@ -61,16 +61,16 @@ export function WorkloadPanel() {
   }, [schedule]);
 
   if (!activeWorkspaceId) {
-    return <div style={{ padding: 24, color: '#9ca3af' }}>Select a workspace to view workload.</div>;
+    return <div style={{ padding: 24, color: 'var(--ui-text-muted)' }}>Select a workspace to view workload.</div>;
   }
 
   if (workspaceItems.length === 0) {
-    return <div style={{ padding: 24, color: '#9ca3af' }}>No scheduled items in this workspace.</div>;
+    return <div style={{ padding: 24, color: 'var(--ui-text-muted)' }}>No scheduled items in this workspace.</div>;
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: 16, gap: 12, overflow: 'auto' }}>
-      <div style={{ fontSize: 13, fontWeight: 600, color: '#f3f4f6' }}>
+      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
         Workload Analysis - {HOURS_PER_DAY}h/day capacity
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -79,25 +79,25 @@ export function WorkloadPanel() {
           const over = day.hours > HOURS_PER_DAY;
           return (
             <div key={day.date} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 90, fontSize: 11, color: '#9ca3af' }}>
+              <div style={{ width: 90, fontSize: 11, color: 'var(--ui-text-muted)' }}>
                 {new Date(day.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
               </div>
-              <div style={{ flex: 1, height: 20, background: '#1f2937', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
+              <div style={{ flex: 1, height: 20, background: 'var(--surface-panel)', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
                 <div
                   style={{
                     width: `${pct}%`,
                     height: '100%',
-                    background: over ? '#ff3b30' : pct > 80 ? '#f59e0b' : '#10b981',
+                    background: over ? 'var(--status-error)' : pct > 80 ? 'var(--status-warning)' : 'var(--status-success)',
                     borderRadius: 4,
                     transition: 'width 0.3s',
                   }}
                 />
-                <span style={{ position: 'absolute', right: 6, top: 2, fontSize: 10, color: '#d1d5db' }}>
+                <span style={{ position: 'absolute', right: 6, top: 2, fontSize: 10, color: 'var(--ui-text-primary)' }}>
                   {day.hours.toFixed(1)}h
                 </span>
               </div>
               {over && (
-                <span style={{ fontSize: 10, color: '#ff3b30' }}>Over</span>
+                <span style={{ fontSize: 10, color: 'var(--status-error)' }}>Over</span>
               )}
             </div>
           );

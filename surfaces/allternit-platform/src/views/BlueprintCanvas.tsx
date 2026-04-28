@@ -13,23 +13,14 @@ import { AllternitOpenUIRenderer } from '@/lib/openui/AllternitOpenUIRenderer';
 import { getFullArchitectInstructions } from '@/lib/openui/prompts';
 import { ViewContext } from '@/nav/nav.types';
 import {
-  Lightning,
   Code,
-  CheckCircle,
-  Warning,
   Play,
-  List,
-  X,
-  CaretDown,
-  Plus,
   Copy,
-  ArrowCounterClockwise,
   Layout,
   Terminal,
   Robot,
   ClockCounterClockwise,
   ArrowSquareOut,
-  Files,
   Cpu
 } from '@phosphor-icons/react';
 
@@ -64,8 +55,7 @@ export function BlueprintCanvas({ context }: { context?: ViewContext }) {
   const ctx = (context?.context ?? {}) as BlueprintContext;
   const [mode, setMode] = useState<'openui' | 'json'>('openui');
   const [inputText, setInputText] = useState(ctx.stream || DEFAULT_OPENUI);
-  const [renderTime, setRenderTime] = useState(0);
-  const [catalogOpen, setCatalogOpen] = useState(true);
+  const [, setRenderTime] = useState(0);
   const [activeStream, setActiveStream] = useState(ctx.stream || DEFAULT_OPENUI);
   const [showPrompt, setShowPrompt] = useState(false);
   
@@ -128,7 +118,7 @@ export function BlueprintCanvas({ context }: { context?: ViewContext }) {
           </div>
           <div>
             <h2 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
-              Blueprint Canvas
+              Allternit Design
               <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full uppercase tracking-widest font-black">Pro</span>
             </h2>
             <div className="flex items-center gap-3 text-[10px] text-[var(--text-tertiary)] uppercase font-bold tracking-widest">

@@ -50,6 +50,7 @@ import {
   WifiHigh,
   WifiSlash,
 } from "@phosphor-icons/react";
+import { openInBrowser } from '@/lib/openInBrowser';
 
 // ============================================================================
 // Types
@@ -412,7 +413,7 @@ export function RemoteSessionView() {
                   <Copy size={16} />
                 </Button>
                 
-                <Button variant="ghost" size="sm" onClick={() => window.open(selectedSession.http_url, '_blank')}>
+                <Button variant="ghost" size="sm" onClick={() => openInBrowser(selectedSession.http_url)}>
                   <ArrowSquareOut className="w-4 h-4" />
                 </Button>
               </div>

@@ -23,9 +23,6 @@ import {
   CheckCircle,
   X,
   CaretLeft,
-  CaretRight,
-  ArrowsOut,
-  ArrowsIn,
   Terminal,
   Robot,
   DotsThreeOutline,
@@ -38,9 +35,6 @@ import {
   ShieldWarning,
   Lightning,
   Clock,
-  Cpu,
-  HardDrive,
-  DownloadSimple,
   Trash,
   Copy,
   PushPin as Pin,
@@ -48,14 +42,8 @@ import {
   Sparkle,
   Stack,
 } from '@phosphor-icons/react';
-import { useChatSessionStore, type ChatSession } from "@/views/chat/ChatSessionStore";
-import { useCodeSessionStore, type CodeSession } from "@/views/code/CodeSessionStore";
-import type { ModeSession, ModeSessionMessage } from "@/lib/agents/mode-session-store";
-
-// Type aliases for backward compatibility within this file
-type NativeSession = ModeSession;
-type NativeMessage = ModeSessionMessage;
-import { swarmApi, type SwarmHealth, type CircuitBreakerStatus, type QuarantinedAgentStatus } from "@/lib/swarm/swarm.api";
+import { useCodeSessionStore } from "@/views/code/CodeSessionStore";
+import type { SwarmHealth, CircuitBreakerStatus, QuarantinedAgentStatus } from "@/lib/swarm/swarm.api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -67,15 +55,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { 
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { 
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -119,8 +99,6 @@ interface SwarmState {
 
 // Constants
 const HEALTH_POLL_INTERVAL = 5000;
-const PROGRESS_SIMULATION_INTERVAL = 1000;
-
 export function SwarmMonitor() {
   // ─── State ───
   const [threads, setThreads] = useState<Map<string, SwarmThread>>(new Map());
@@ -149,12 +127,6 @@ export function SwarmMonitor() {
     return { id: sessionId };
   }, []);
   
-  const nativeSessions = useCodeSessionStore((s) => s.sessions);
-  const setActiveNativeSession = useCodeSessionStore((s) => s.setActiveSession);
-  const getSession = useCallback((sessionId: string) => {
-    return useCodeSessionStore.getState().sessions.find(s => s.id === sessionId);
-  }, []);
-
   // ─── Load threads from backend ───
   useEffect(() => {
     fetch('/api/v1/swarm/threads')

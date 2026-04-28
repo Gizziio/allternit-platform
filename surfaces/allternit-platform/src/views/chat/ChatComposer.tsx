@@ -34,11 +34,11 @@ import {
 import { AttachmentButton } from '@/components/agent-elements/input/attachment-button';
 import { FileAttachment } from '@/components/agent-elements/input/file-attachment';
 import { TextShimmer } from '@/components/agent-elements/text-shimmer';
+import { useAgentStreamingStatus } from '@/hooks/useAgentStreamingStatus';
 import { AgentMentionDropdown } from '@/components/chat/AgentMentionDropdown';
 import { AgentPill } from '@/components/chat/AgentPill';
 
 import { cn } from '@/lib/utils';
-import { formatFileSize, supportsTextExtraction, extractTextFromFile } from '@/lib/attachments/extract-text';
 import { createModuleLogger } from '@/lib/logger';
 
 const logger = createModuleLogger('ChatComposer');
@@ -66,6 +66,7 @@ import {
   getRegisteredOpenClawAgentId,
   resolveOpenClawRegistration,
   useAgentStore,
+  useAgentsWithSwarms,
   type Agent,
   type OpenClawDiscoveredAgent,
 } from '@/lib/agents';
@@ -78,11 +79,6 @@ import { useUnifiedStore } from '@/lib/agents/unified.store';
 
 // Terminal Server URL for fetching real models
 declare const __TERMINAL_SERVER_URL__: string | undefined;
-const TERMINAL_SERVER_URL = typeof __TERMINAL_SERVER_URL__ !== 'undefined'
-  ? __TERMINAL_SERVER_URL__
-  : (typeof window !== 'undefined' && (window as any).__TERMINAL_SERVER_URL__)
-    ? (window as any).__TERMINAL_SERVER_URL__
-    : 'http://127.0.0.1:4096';
 const PROVIDER_DISCOVERY_URL = '/api/v1/providers';
 
 // ============================================================================
@@ -143,6 +139,8 @@ interface ChatComposerProps {
   onAgentSend?: (text: string) => void;
   /** Called when the @mention agent selection changes (Phase 2: per-message routing) */
   onMentionAgentChange?: (agentId: string | null) => void;
+  /** External @mention agent ID to sync with parent (for persistent pill restoration) */
+  mentionAgentId?: string | null;
   /** Whether to show slash command suggestions in the composer */
   showSlashCommands?: boolean;
   /** Surface theme for agent mode styling */
@@ -508,6 +506,51 @@ function getProviderLogo(providerId: string): React.FC<{ size?: number }> {
 }
 
 // ============================================================================
+// Caret position helper for @mention dropdown positioning
+// ============================================================================
+
+function getTextareaCaretPosition(
+  textarea: HTMLTextAreaElement,
+  text: string,
+  index: number
+): { x: number; y: number } {
+  // Create a hidden mirror element with the same text layout
+  const div = document.createElement('div');
+  const style = getComputedStyle(textarea);
+
+  div.style.position = 'absolute';
+  div.style.visibility = 'hidden';
+  div.style.whiteSpace = 'pre-wrap';
+  div.style.wordWrap = 'break-word';
+  div.style.overflowWrap = 'break-word';
+  div.style.font = style.font;
+  div.style.lineHeight = style.lineHeight;
+  div.style.padding = style.padding;
+  div.style.width = style.width;
+  div.style.boxSizing = 'border-box';
+  div.style.letterSpacing = style.letterSpacing;
+  div.style.textIndent = style.textIndent;
+  div.style.textTransform = style.textTransform;
+
+  // Text before the caret, then a marker span
+  const textBefore = text.slice(0, index);
+  div.textContent = textBefore;
+  const marker = document.createElement('span');
+  marker.textContent = '\u200b'; // zero-width space
+  div.appendChild(marker);
+
+  document.body.appendChild(div);
+  const markerRect = marker.getBoundingClientRect();
+  const textareaRect = textarea.getBoundingClientRect();
+  document.body.removeChild(div);
+
+  return {
+    x: markerRect.left - textareaRect.left,
+    y: markerRect.top - textareaRect.top,
+  };
+}
+
+// ============================================================================
 // Available Providers Configuration
 // ============================================================================
 
@@ -520,16 +563,16 @@ const AVAILABLE_PROVIDERS = [
   { id: 'aws', name: 'AWS Bedrock', color: '#ff9900', description: 'Amazon Bedrock models', requiresKey: true },
   { id: 'github', name: 'GitHub Copilot', color: '#6e40c9', description: 'GitHub AI models', requiresKey: false },
   { id: 'mistral', name: 'Mistral AI', color: '#ff7000', description: 'Mistral Large, Medium, Small', requiresKey: true },
-  { id: 'openrouter', name: 'OpenRouter', color: '#ef4444', description: '100+ models unified API', requiresKey: true },
+  { id: 'openrouter', name: 'OpenRouter', color: 'var(--status-error)', description: '100+ models unified API', requiresKey: true },
   { id: 'perplexity', name: 'Perplexity', color: '#20b8cd', description: 'Sonar search + LLM', requiresKey: true },
   { id: 'deepseek', name: 'DeepSeek', color: '#4f46e5', description: 'V3, R1, Coder', requiresKey: true },
   { id: 'cohere', name: 'Cohere', color: '#d4a574', description: 'Command R+, Embed', requiresKey: true },
   { id: 'qwen', name: 'Alibaba Qwen', color: '#ff6a00', description: 'Qwen 3.5 (397B MoE)', requiresKey: true },
   { id: 'kimi', name: 'Moonshot Kimi', color: '#6b4c9a', description: 'Kimi 2.5 Agent Swarm', requiresKey: true },
-  { id: 'glm', name: 'Zhipu GLM', color: '#1a1a1a', description: 'GLM-5 (745B MoE)', requiresKey: true },
+  { id: 'glm', name: 'Zhipu GLM', color: 'var(--ui-text-inverse)', description: 'GLM-5 (745B MoE)', requiresKey: true },
   { id: 'opencode', name: 'OpenCode', color: '#6366f1', description: 'Zen models via ACP', requiresKey: false },
-  { id: 'gizzi', name: 'Gizzi Runtime', color: '#d4966a', description: 'Managed model runtime', requiresKey: false },
-  { id: 'local', name: 'Local Models', color: '#10b981', description: 'Ollama, LM Studio, llama.cpp', requiresKey: false },
+  { id: 'gizzi', name: 'Gizzi Runtime', color: 'var(--accent-primary)', description: 'Managed model runtime', requiresKey: false },
+  { id: 'local', name: 'Local Models', color: 'var(--status-success)', description: 'Ollama, LM Studio, llama.cpp', requiresKey: false },
 ];
 
 export function ChatComposer({
@@ -553,6 +596,7 @@ export function ChatComposer({
   onAddAttachment: externalAddAttachment,
   onAgentSend,
   onMentionAgentChange,
+  mentionAgentId: externalMentionAgentId,
   bottomDockContent,
   topInfoBarContent,
   questionBarContent,
@@ -578,7 +622,6 @@ export function ChatComposer({
   const [isLoadingOpenClawCandidates, setIsLoadingOpenClawCandidates] = useState(false);
   const [openClawError, setOpenClawError] = useState<string | null>(null);
   const [importingOpenClawAgentId, setImportingOpenClawAgentId] = useState<string | null>(null);
-  const activeSessionId = useActiveChatSessionId();
   const activeSession = useActiveChatSession();
   const hasEmbeddedSession = useMemo(
     () => Boolean(activeSession && activeSession?.metadata?.sessionMode === 'agent'),
@@ -645,7 +688,17 @@ export function ChatComposer({
   const [mentionOpen, setMentionOpen] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionIndex, setMentionIndex] = useState(0);
-  const [selectedMentionAgentId, setSelectedMentionAgentId] = useState<string | null>(null);
+  const [selectedMentionAgentId, setSelectedMentionAgentId] = useState<string | null>(externalMentionAgentId ?? null);
+
+  // Sync local mention agent with external prop (for persistent pill restoration)
+  useEffect(() => {
+    if (externalMentionAgentId !== undefined) {
+      setSelectedMentionAgentId(externalMentionAgentId);
+      if (externalMentionAgentId) {
+        setLocallyEnabled(true);
+      }
+    }
+  }, [externalMentionAgentId]);
 
   // ── Attachment state (internal when external not provided) ───────────────
   const [internalAttachments, setInternalAttachments] = useState<ChatAttachment[]>([]);
@@ -692,7 +745,7 @@ export function ChatComposer({
     agentModeSurface ? state.selectedModeBySurface[agentModeSurface] : null,
   );
   const setSelectedMode = useAgentSurfaceModeStore((state) => state.setSelectedMode);
-  const agents = useAgentStore((state) => state.agents);
+  const agents = useAgentsWithSwarms();
 
   // Look up the agent selected via @mention
   const selectedMentionAgent = useMemo(() => {
@@ -804,7 +857,7 @@ export function ChatComposer({
   const compileCharacterLayer = useAgentStore((state) => state.compileCharacterLayer);
   const loadCharacterLayer = useAgentStore((state) => state.loadCharacterLayer);
 
-  const { authenticatedProviders, discoverModels, discoveryResult, fetchProviders, realModels } = useModelDiscovery();
+  const { discoveryResult, fetchProviders, realModels } = useModelDiscovery();
 
   const selectedSurfaceAgent = useMemo(
     () =>
@@ -1270,9 +1323,7 @@ export function ChatComposer({
     setMentionOpen(false);
     setMentionQuery('');
     setMentionIndex(0);
-    // Phase 2: transient pill — clear mention agent after send
-    setSelectedMentionAgentId(null);
-    onMentionAgentChange?.(null);
+    // Persistent pill — keep mention agent for follow-up turns
     if (!externalAttachments) {
       setInternalAttachments([]);
     }
@@ -1397,7 +1448,7 @@ export function ChatComposer({
 
   // ── Drag & Drop file handling (Global Dropzone) ──────────────────────────
   const handleDroppedFiles = useCallback(async (files: FileWithData[]) => {
-    for (const { file, dataUrl, extractedText } of files) {
+    for (const { file, dataUrl } of files) {
       const isImage = file.type.startsWith('image/');
       const ext = file.name.split('.').pop()?.toLowerCase() || '';
       
@@ -2204,7 +2255,7 @@ export function ChatComposer({
                   background: THEME.menuBg,
                   borderRadius: '12px',
                   border: `1px solid ${THEME.menuBorder}`,
-                  boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+                  boxShadow: 'var(--shadow-xl)',
                   padding: '6px',
                   zIndex: 200,
                 }}
@@ -2250,17 +2301,17 @@ export function ChatComposer({
                         gap: '10px',
                         padding: '8px 12px',
                         borderRadius: '8px',
-                        background: isGifRecording ? 'rgba(239,68,68,0.08)' : 'transparent',
+                        background: isGifRecording ? 'var(--status-error-bg)' : 'transparent',
                         border: 'none',
-                        color: isGifRecording ? '#f87171' : THEME.textPrimary,
+                        color: isGifRecording ? 'var(--status-error)' : THEME.textPrimary,
                         fontSize: '14px',
                         cursor: 'pointer',
                         transition: 'background 0.2s',
                       }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = isGifRecording ? 'rgba(239,68,68,0.12)' : THEME.hoverBg; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = isGifRecording ? 'rgba(239,68,68,0.08)' : 'transparent'; }}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = isGifRecording ? 'color-mix(in srgb, var(--status-error) 18%, transparent)' : THEME.hoverBg; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = isGifRecording ? 'var(--status-error-bg)' : 'transparent'; }}
                     >
-                      <span style={{ color: isGifRecording ? '#f87171' : THEME.textSecondary }}>
+                      <span style={{ color: isGifRecording ? 'var(--status-error)' : THEME.textSecondary }}>
                         {isGifRecording ? <Square size={16} fill="currentColor" /> : <Video size={16} />}
                       </span>
                       <span>{isGifRecording ? `Stop recording (${gifDuration}s)` : 'Record screen (GIF)'}</span>
@@ -2328,7 +2379,7 @@ export function ChatComposer({
                         background: THEME.menuBg,
                         borderRadius: '12px',
                         border: `1px solid ${THEME.menuBorder}`,
-                        boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+                        boxShadow: 'var(--shadow-xl)',
                         padding: '6px',
                         zIndex: 210
                       }}
@@ -2541,7 +2592,7 @@ export function ChatComposer({
                   justifyContent: 'center',
                   cursor: canSubmit ? 'pointer' : 'default',
                   transition: 'all 0.2s',
-                  boxShadow: canSubmit ? '0 2px 8px rgba(212,149,106,0.3)' : 'none',
+                  boxShadow: canSubmit ? 'var(--shadow-glow)' : 'none',
                 }}
                 onMouseEnter={() => {
                   if (canSubmit) {
@@ -2584,6 +2635,7 @@ export function ChatComposer({
           isLoadingExecMode={isLoadingExecMode}
           isSavingExecMode={isSavingExecMode}
           selectedSurfaceAgent={selectedSurfaceAgent}
+          isLoading={isLoading}
           customLeftContent={bottomDockContent}
         />
       </div>
@@ -2622,6 +2674,13 @@ export function ChatComposer({
             setMentionOpen(false);
             setMentionQuery('');
           }}
+          position={(() => {
+            const ta = textareaRef.current;
+            if (!ta) return undefined;
+            const atIndex = input.lastIndexOf('@');
+            if (atIndex === -1) return undefined;
+            return getTextareaCaretPosition(ta, input, atIndex);
+          })()}
         />
       )}
       
@@ -2642,6 +2701,8 @@ export function ChatComposer({
               }
             }}
             agentModeSurface={agentModeSurface}
+            isLoading={isLoading}
+            selectedSurfaceAgent={selectedSurfaceAgent}
             onSelectTemplate={(prompt) => {
               // Set input value with the template prompt
               setInput(prompt);
@@ -2966,8 +3027,8 @@ function TaskBar({ wihs, selectedWihId, onSelectWih, expanded, onToggleExpand, a
                 fontSize: '10px',
                 padding: '2px 6px',
                 borderRadius: '10px',
-                background: 'rgba(59,130,246,0.2)',
-                color: '#3b82f6',
+                background: 'var(--status-info-bg)',
+                color: 'var(--status-info)',
               }}>
                 {inProgressCount} running
               </span>
@@ -2977,8 +3038,8 @@ function TaskBar({ wihs, selectedWihId, onSelectWih, expanded, onToggleExpand, a
                 fontSize: '10px',
                 padding: '2px 6px',
                 borderRadius: '10px',
-                background: 'rgba(239,68,68,0.2)',
-                color: '#ef4444',
+                background: 'var(--status-error-bg)',
+                color: 'var(--status-error)',
               }}>
                 {blockedCount} blocked
               </span>
@@ -2988,8 +3049,8 @@ function TaskBar({ wihs, selectedWihId, onSelectWih, expanded, onToggleExpand, a
                 fontSize: '10px',
                 padding: '2px 6px',
                 borderRadius: '10px',
-                background: 'rgba(16,185,129,0.2)',
-                color: '#10b981',
+                background: 'var(--status-success-bg)',
+                color: 'var(--status-success)',
               }}>
                 {readyCount} ready
               </span>
@@ -3000,7 +3061,7 @@ function TaskBar({ wihs, selectedWihId, onSelectWih, expanded, onToggleExpand, a
           <div style={{
             width: '60px',
             height: '4px',
-            background: 'rgba(255,255,255,0.1)',
+            background: 'var(--ui-border-muted)',
             borderRadius: '2px',
             overflow: 'hidden',
           }}>
@@ -3070,13 +3131,13 @@ function WihItem({
 }) {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return '#10b981';
-      case 'in_progress': return '#3b82f6';
-      case 'blocked': return '#ef4444';
-      case 'ready': return '#f59e0b';
-      case 'open': return '#6b7280';
-      case 'signed': return '#8b5cf6';
-      default: return '#6b7280';
+      case 'completed': return 'var(--status-success)';
+      case 'in_progress': return 'var(--status-info)';
+      case 'blocked': return 'var(--status-error)';
+      case 'ready': return 'var(--status-warning)';
+      case 'open': return 'var(--ui-text-muted)';
+      case 'signed': return 'var(--accent-cowork)';
+      default: return 'var(--ui-text-muted)';
     }
   };
   
@@ -3102,8 +3163,8 @@ function WihItem({
         alignItems: 'center',
         gap: '10px',
         padding: '10px 12px',
-        background: isSelected ? `${THEME.accent}15` : 'rgba(255,255,255,0.03)',
-        border: `1px solid ${isSelected ? `${THEME.accent}40` : 'rgba(255,255,255,0.05)'}`,
+        background: isSelected ? `${THEME.accent}15` : 'var(--surface-hover)',
+        border: `1px solid ${isSelected ? `${THEME.accent}40` : 'var(--surface-hover)'}`,
         borderRadius: '10px',
         cursor: 'pointer',
         textAlign: 'left',
@@ -3112,12 +3173,12 @@ function WihItem({
       }}
       onMouseEnter={(e) => {
         if (!isSelected) {
-          e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+          e.currentTarget.style.background = 'var(--surface-active)';
         }
       }}
       onMouseLeave={(e) => {
         if (!isSelected) {
-          e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+          e.currentTarget.style.background = 'var(--surface-hover)';
         }
       }}
     >
@@ -3193,10 +3254,10 @@ interface AgentModeButtonProps {
 }
 
 const MODE_COLORS: Record<string, { accent: string; soft: string; glow: string; label: string }> = {
-  research: { accent: '#3b82f6', soft: 'rgba(59,130,246,0.15)', glow: 'rgba(59,130,246,0.4)', label: 'Research' },
-  data: { accent: '#10b981', soft: 'rgba(16,185,129,0.15)', glow: 'rgba(16,185,129,0.4)', label: 'Data' },
-  slides: { accent: '#f59e0b', soft: 'rgba(245,158,11,0.15)', glow: 'rgba(245,158,11,0.4)', label: 'Slides' },
-  flow: { accent: '#06b6d4', soft: 'rgba(6,182,212,0.15)', glow: 'rgba(6,182,212,0.4)', label: 'Flow' },
+  research: { accent: 'var(--status-info)', soft: 'rgba(59,130,246,0.15)', glow: 'rgba(59,130,246,0.4)', label: 'Research' },
+  data: { accent: 'var(--status-success)', soft: 'rgba(16,185,129,0.15)', glow: 'rgba(16,185,129,0.4)', label: 'Data' },
+  slides: { accent: 'var(--status-warning)', soft: 'rgba(245,158,11,0.15)', glow: 'rgba(245,158,11,0.4)', label: 'Slides' },
+  flow: { accent: 'var(--status-info)', soft: 'rgba(6,182,212,0.15)', glow: 'rgba(6,182,212,0.4)', label: 'Flow' },
   web: { accent: '#6366f1', soft: 'rgba(99,102,241,0.15)', glow: 'rgba(99,102,241,0.4)', label: 'Websites' },
   'computer-use': { accent: '#a855f7', soft: 'rgba(168,85,247,0.15)', glow: 'rgba(168,85,247,0.4)', label: 'Computer Use' },
 };
@@ -3271,16 +3332,9 @@ interface ModeDockProps {
   onSelectMode: (modeId: string) => void;
   agentModeSurface: AgentModeSurface;
   onSelectTemplate?: (prompt: string) => void;
+  isLoading?: boolean;
+  selectedSurfaceAgent?: { name: string } | null;
 }
-
-const MODES = [
-  { id: 'research', label: 'Research', color: '#3b82f6', icon: '🔬' },
-  { id: 'data', label: 'Data', color: '#10b981', icon: '📊' },
-  { id: 'slides', label: 'Slides', color: '#f59e0b', icon: '📑' },
-  { id: 'flow', label: 'Flow', color: '#06b6d4', icon: '🌊' },
-  { id: 'web', label: 'Websites', color: '#6366f1', icon: '🌐' },
-  { id: 'computer-use', label: 'Computer Use', color: '#a855f7', icon: '🖥️' },
-] as const;
 
 // ============================================================================
 // Bottom Dock - Status bar below input container
@@ -3358,6 +3412,7 @@ interface BottomDockProps {
   isLoadingExecMode: boolean;
   isSavingExecMode: boolean;
   selectedSurfaceAgent: { name: string } | null;
+  isLoading?: boolean;
   customLeftContent?: React.ReactNode;
 }
 
@@ -3372,6 +3427,7 @@ function BottomDock({
   isLoadingExecMode,
   isSavingExecMode,
   selectedSurfaceAgent,
+  isLoading,
   customLeftContent,
 }: BottomDockProps & { customLeftContent?: React.ReactNode }) {
   // Get mode color if mode is selected
@@ -3448,7 +3504,7 @@ function BottomDock({
           padding: '6px 10px',
           borderRadius: '8px',
           background: 'var(--chat-composer-soft)',
-          border: `1px solid ${uiMode === 'plan' ? 'rgba(212,149,106,0.4)' : THEME.inputBorder}`,
+          border: `1px solid ${uiMode === 'plan' ? 'color-mix(in srgb, var(--accent-primary) 40%, transparent)' : THEME.inputBorder}`,
           color: uiMode === 'plan' ? THEME.accent : THEME.textSecondary,
           fontSize: '12px',
           fontWeight: 500,
@@ -3459,13 +3515,13 @@ function BottomDock({
         onMouseEnter={(e) => {
           if (!isLoadingExecMode && !isSavingExecMode) {
             e.currentTarget.style.background = THEME.hoverBg;
-            e.currentTarget.style.borderColor = 'rgba(212,149,106,0.5)';
+            e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--accent-primary) 55%, transparent)';
           }
         }}
         onMouseLeave={(e) => {
           if (!isLoadingExecMode && !isSavingExecMode) {
             e.currentTarget.style.background = 'var(--chat-composer-soft)';
-            e.currentTarget.style.borderColor = uiMode === 'plan' ? 'rgba(212,149,106,0.4)' : THEME.inputBorder;
+            e.currentTarget.style.borderColor = uiMode === 'plan' ? 'color-mix(in srgb, var(--accent-primary) 40%, transparent)' : THEME.inputBorder;
           }
         }}
       >
@@ -3502,13 +3558,13 @@ const getModeTemplates = (modeId: string): ModeTemplate[] => {
 const MODE_TABS = [
   { id: 'image', label: 'Image', color: '#8b5cf6' },         // Violet
   { id: 'video', label: 'Video', color: '#ec4899' },         // Pink
-  { id: 'slides', label: 'Slides', color: '#f59e0b' },       // Amber
+  { id: 'slides', label: 'Slides', color: 'var(--status-warning)' },       // Amber
   { id: 'website', label: 'Web', color: '#6366f1' },         // Indigo
-  { id: 'research', label: 'Research', color: '#3b82f6' },   // Blue
-  { id: 'data', label: 'Data', color: '#10b981' },           // Emerald
-  { id: 'code', label: 'Code', color: '#f97316' },           // Orange
+  { id: 'research', label: 'Research', color: 'var(--status-info)' },   // Blue
+  { id: 'data', label: 'Data', color: 'var(--status-success)' },           // Emerald
+  { id: 'code', label: 'Code', color: 'var(--status-warning)' },           // Orange
   { id: 'swarms', label: 'Swarms', color: '#14b8a6' },       // Teal
-  { id: 'flow', label: 'Flow', color: '#06b6d4' },           // Cyan
+  { id: 'flow', label: 'Flow', color: 'var(--status-info)' },           // Cyan
   { id: 'computer-use', label: 'Computer', color: '#a855f7' }, // Purple
 ] as const;
 
@@ -3521,13 +3577,19 @@ const SURFACE_MODES: Record<AgentModeSurface, string[]> = {
   design: ['image', 'video', 'slides', 'assets'],
 };
 
-function ModeDock({ selectedMode, onSelectMode, agentModeSurface, onSelectTemplate }: ModeDockProps) {
+function ModeDock({ selectedMode, onSelectMode, agentModeSurface, onSelectTemplate, isLoading, selectedSurfaceAgent }: ModeDockProps) {
   // Get surface-specific modes
   const allowedModes = agentModeSurface ? SURFACE_MODES[agentModeSurface] : MODE_TABS.map(m => m.id);
   const visibleTabs = MODE_TABS.filter(tab => allowedModes.includes(tab.id));
   
   const modeData = selectedMode ? getModeTemplates(selectedMode) : null;
   const modeColors = selectedMode ? MODE_TABS.find(m => m.id === selectedMode) : null;
+  
+  // Agent streaming status cycles in mode dock
+  const agentStatus = useAgentStreamingStatus(
+    !!(isLoading && selectedSurfaceAgent),
+    1500
+  );
   
   return (
     <div style={{
@@ -3539,6 +3601,25 @@ function ModeDock({ selectedMode, onSelectMode, agentModeSurface, onSelectTempla
       gap: '8px',
       zIndex: 9,
     }}>
+      {/* Agent streaming status — appears above mode tabs when active */}
+      {agentStatus && (
+        <div
+          className="flex items-center gap-2 py-1"
+          aria-label="Agent status"
+        >
+          <div
+            className="w-1.5 h-1.5 rounded-full animate-pulse"
+            style={{ background: 'var(--accent-chat, #D4B08C)' }}
+          />
+          <TextShimmer
+            as="span"
+            className="text-[12px] font-medium"
+          >
+            {agentStatus}
+          </TextShimmer>
+        </div>
+      )}
+      
       {/* Mode Tabs - Individual pill tabs (not connected) */}
       <div style={{
         display: 'flex',
@@ -3550,36 +3631,42 @@ function ModeDock({ selectedMode, onSelectMode, agentModeSurface, onSelectTempla
       }}>
         {visibleTabs.map((mode) => {
           const isSelected = selectedMode === mode.id;
+          const isActiveTab = isSelected && isLoading;
           return (
             <button
               key={mode.id}
               onClick={() => onSelectMode(mode.id)}
+              className={isActiveTab ? 'animate-pulse' : ''}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 padding: '8px 16px',
                 borderRadius: '20px',
-                background: isSelected ? `${mode.color}20` : 'rgba(255,255,255,0.05)',
-                border: `1px solid ${isSelected ? mode.color : 'rgba(255,255,255,0.1)'}`,
+                background: isSelected ? `${mode.color}20` : 'var(--surface-hover)',
+                border: `1px solid ${isSelected ? mode.color : 'var(--ui-border-muted)'}`,
                 color: isSelected ? mode.color : THEME.textSecondary,
                 fontSize: '12px',
                 fontWeight: isSelected ? 600 : 500,
                 cursor: 'pointer',
                 transition: 'all 0.15s ease',
                 whiteSpace: 'nowrap',
-                boxShadow: isSelected ? `0 0 0 1px ${mode.color}40` : 'none',
+                boxShadow: isActiveTab
+                  ? `0 0 12px ${mode.color}60, 0 0 0 1px ${mode.color}40`
+                  : isSelected
+                    ? `0 0 0 1px ${mode.color}40`
+                    : 'none',
               }}
               onMouseEnter={(e) => {
                 if (!isSelected) {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)';
+                  e.currentTarget.style.background = 'var(--surface-active)';
+                  e.currentTarget.style.borderColor = 'var(--ui-border-default)';
                 }
               }}
               onMouseLeave={(e) => {
                 if (!isSelected) {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+                  e.currentTarget.style.background = 'var(--surface-hover)';
+                  e.currentTarget.style.borderColor = 'var(--ui-border-muted)';
                 }
               }}
             >
@@ -3767,7 +3854,7 @@ function AgentSelectorDropdown({
           background: THEME.menuBg,
           borderRadius: '12px',
           border: `1px solid ${THEME.menuBorder}`,
-          boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+          boxShadow: '0 10px 30px var(--shell-overlay-backdrop)',
           zIndex: 200,
           display: 'flex',
           flexDirection: 'column',
@@ -3860,7 +3947,7 @@ function AgentSelectorDropdown({
                     padding: '10px 12px',
                     borderRadius: 10,
                     border: 'none',
-                    background: isSelected ? 'rgba(212,149,106,0.12)' : 'transparent',
+                    background: isSelected ? 'color-mix(in srgb, var(--accent-primary) 12%, transparent)' : 'transparent',
                     color: THEME.textPrimary,
                     cursor: 'pointer',
                     textAlign: 'left',
@@ -3872,7 +3959,7 @@ function AgentSelectorDropdown({
                     }
                   }}
                   onMouseLeave={(event) => {
-                    event.currentTarget.style.background = isSelected ? 'rgba(212,149,106,0.12)' : 'transparent';
+                    event.currentTarget.style.background = isSelected ? 'color-mix(in srgb, var(--accent-primary) 12%, transparent)' : 'transparent';
                   }}
                 >
                   <div
@@ -3880,7 +3967,7 @@ function AgentSelectorDropdown({
                       width: 28,
                       height: 28,
                       borderRadius: 10,
-                      background: isSelected ? 'rgba(212,149,106,0.18)' : 'rgba(255,255,255,0.06)',
+                      background: isSelected ? 'rgba(212,149,106,0.18)' : 'var(--surface-active)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -4003,7 +4090,7 @@ function ModelSelectorDropdown({
         background: THEME.menuBg,
         borderRadius: '12px',
         border: `1px solid ${THEME.menuBorder}`,
-        boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+        boxShadow: '0 10px 30px var(--shell-overlay-backdrop)',
         zIndex: 200,
         display: 'flex',
         flexDirection: 'column',
@@ -4044,7 +4131,7 @@ function ModelSelectorDropdown({
             alignItems: 'center',
             gap: '8px',
             padding: '8px 12px',
-            background: 'rgba(0,0,0,0.2)',
+            background: 'var(--surface-hover)',
             borderRadius: '8px',
             border: `1px solid ${THEME.inputBorder}`,
           }}>
@@ -4117,7 +4204,7 @@ function ModelSelectorDropdown({
                       justifyContent: 'space-between',
                       padding: '8px 12px',
                       borderRadius: '6px',
-                      background: selectedModel === model.id ? 'rgba(212,149,106,0.12)' : 'transparent',
+                      background: selectedModel === model.id ? 'color-mix(in srgb, var(--accent-primary) 12%, transparent)' : 'transparent',
                       border: 'none',
                       color: selectedModel === model.id ? THEME.accent : THEME.textPrimary,
                       fontSize: '13px',
@@ -4247,7 +4334,7 @@ function ConnectProviderOverlay({ isOpen, onClose }: ConnectProviderOverlayProps
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0,0,0,0.7)',
+        background: 'var(--shell-overlay-backdrop)',
         backdropFilter: 'blur(4px)',
         zIndex: 300,
         display: 'flex',
@@ -4265,7 +4352,7 @@ function ConnectProviderOverlay({ isOpen, onClose }: ConnectProviderOverlayProps
           background: THEME.inputBg,
           borderRadius: '16px',
           border: `1px solid ${THEME.inputBorder}`,
-          boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+          boxShadow: '0 20px 60px var(--shell-overlay-backdrop)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
@@ -4318,13 +4405,13 @@ function ConnectProviderOverlay({ isOpen, onClose }: ConnectProviderOverlayProps
 
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '16px',
-                padding: '20px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px',
+                padding: '20px', background: 'var(--surface-hover)', borderRadius: '12px',
                 border: `1px solid ${THEME.inputBorder}`,
               }}>
                 <div style={{ 
                   width: '56px', height: '56px', display: 'flex', 
                   alignItems: 'center', justifyContent: 'center',
-                  background: 'rgba(255,255,255,0.05)', borderRadius: '12px',
+                  background: 'var(--surface-hover)', borderRadius: '12px',
                 }}>
                   {selectedProviderData && React.createElement(getProviderLogo(selectedProviderData.id), { size: 36 })}
                 </div>
@@ -4347,7 +4434,7 @@ function ConnectProviderOverlay({ isOpen, onClose }: ConnectProviderOverlayProps
                     onChange={(e) => setApiKey(e.target.value)}
                     placeholder={`Enter your ${selectedProviderData.name} API key`}
                     style={{
-                      padding: '12px 16px', background: 'rgba(0,0,0,0.3)',
+                      padding: '12px 16px', background: 'var(--surface-panel)',
                       borderRadius: '10px', border: `1px solid ${THEME.inputBorder}`,
                       color: THEME.textPrimary, fontSize: '14px', outline: 'none',
                     }}
@@ -4358,7 +4445,7 @@ function ConnectProviderOverlay({ isOpen, onClose }: ConnectProviderOverlayProps
                   padding: '16px', background: 'rgba(16,185,129,0.1)',
                   borderRadius: '10px', border: '1px solid rgba(16,185,129,0.3)',
                 }}>
-                  <p style={{ fontSize: '13px', color: '#10b981', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <p style={{ fontSize: '13px', color: 'var(--status-success)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Check size={16} />
                     This provider connects automatically. Click connect to enable.
                   </p>
@@ -4393,8 +4480,8 @@ function ConnectProviderOverlay({ isOpen, onClose }: ConnectProviderOverlayProps
                             <ProviderLogo size={24} />
                           </div>
                           <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: '14px', fontWeight: 600, color: '#10b981' }}>{provider.name}</div>
-                            <div style={{ fontSize: '12px', color: '#10b981' }}>Connected</div>
+                            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--status-success)' }}>{provider.name}</div>
+                            <div style={{ fontSize: '12px', color: 'var(--status-success)' }}>Connected</div>
                           </div>
                           <button onClick={() => handleDisconnect(providerId)} style={{
                             padding: '6px 12px', borderRadius: '6px', background: 'transparent',
@@ -4422,7 +4509,7 @@ function ConnectProviderOverlay({ isOpen, onClose }: ConnectProviderOverlayProps
                       onClick={() => setSelectedProvider(provider.id)}
                       style={{
                         display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
-                        gap: '10px', padding: '16px', background: 'rgba(0,0,0,0.2)',
+                        gap: '10px', padding: '16px', background: 'var(--surface-hover)',
                         borderRadius: '12px', border: `1px solid ${THEME.inputBorder}`,
                         cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s',
                       }}
@@ -4431,14 +4518,14 @@ function ConnectProviderOverlay({ isOpen, onClose }: ConnectProviderOverlayProps
                         e.currentTarget.style.borderColor = provider.color || THEME.accent;
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'rgba(0,0,0,0.2)';
+                        e.currentTarget.style.background = 'var(--surface-hover)';
                         e.currentTarget.style.borderColor = THEME.inputBorder;
                       }}
                     >
                       <div style={{ 
                         width: '40px', height: '40px', display: 'flex', 
                         alignItems: 'center', justifyContent: 'center',
-                        background: 'rgba(255,255,255,0.05)', borderRadius: '10px',
+                        background: 'var(--surface-hover)', borderRadius: '10px',
                       }}>
                         <ProviderLogo size={28} />
                       </div>
@@ -4513,13 +4600,10 @@ function BrowseAllModelsOverlay({ isOpen, onClose, onSelectModel, currentModel }
 
     async function fetchModels() {
       setLoading(true);
-      console.log('[ModelPicker] Fetching from provider API:', PROVIDER_DISCOVERY_URL);
       try {
         const response = await fetch(PROVIDER_DISCOVERY_URL, { signal: AbortSignal.timeout(5000) });
-        console.log('[ModelPicker] Response status:', response.status);
         if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
         const data = await response.json();
-        console.log('[ModelPicker] Received data:', { providers: data.all?.length, defaults: Object.keys(data.default||{}).length });
 
         const allModels: Array<{id: string; name: string; providerId: string; providerName: string}> = [];
         const allProviders: Array<{id: string; name: string; modelCount: number}> = [];
@@ -4612,16 +4696,12 @@ function BrowseAllModelsOverlay({ isOpen, onClose, onSelectModel, currentModel }
 
   const selectedProviderData = AVAILABLE_PROVIDERS.find(p => p.id === selectedProvider);
   
-  const getModelsForProvider = (providerId: string) => {
-    return models.filter(m => m.providerId === providerId);
-  };
-
   return (
     <div
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0,0,0,0.7)',
+        background: 'var(--shell-overlay-backdrop)',
         backdropFilter: 'blur(4px)',
         zIndex: 300,
         display: 'flex',
@@ -4639,7 +4719,7 @@ function BrowseAllModelsOverlay({ isOpen, onClose, onSelectModel, currentModel }
           background: THEME.inputBg,
           borderRadius: '16px',
           border: `1px solid ${THEME.inputBorder}`,
-          boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+          boxShadow: '0 20px 60px var(--shell-overlay-backdrop)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
@@ -4695,13 +4775,13 @@ function BrowseAllModelsOverlay({ isOpen, onClose, onSelectModel, currentModel }
 
               <div style={{
                 display: 'flex', alignItems: 'center', gap: '16px',
-                padding: '20px', background: 'rgba(0,0,0,0.2)', borderRadius: '12px',
+                padding: '20px', background: 'var(--surface-hover)', borderRadius: '12px',
                 border: `1px solid ${THEME.inputBorder}`,
               }}>
                 <div style={{ 
                   width: '56px', height: '56px', display: 'flex', 
                   alignItems: 'center', justifyContent: 'center',
-                  background: 'rgba(255,255,255,0.05)', borderRadius: '12px',
+                  background: 'var(--surface-hover)', borderRadius: '12px',
                 }}>
                   {selectedProviderData && React.createElement(getProviderLogo(selectedProviderData.id), { size: 36 })}
                 </div>
@@ -4737,7 +4817,7 @@ function BrowseAllModelsOverlay({ isOpen, onClose, onSelectModel, currentModel }
                         style={{
                           display: 'flex', alignItems: 'center', gap: '12px',
                           padding: '14px 16px',
-                          background: isCurrent ? 'rgba(212,150,106,0.08)' : 'rgba(0,0,0,0.2)',
+                          background: isCurrent ? 'rgba(212,150,106,0.08)' : 'var(--surface-hover)',
                           borderRadius: '10px',
                           border: `1px solid ${isCurrent ? 'rgba(212,150,106,0.3)' : THEME.inputBorder}`,
                           cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s',
@@ -4747,27 +4827,27 @@ function BrowseAllModelsOverlay({ isOpen, onClose, onSelectModel, currentModel }
                           e.currentTarget.style.borderColor = THEME.accent;
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.background = isCurrent ? 'rgba(212,150,106,0.08)' : 'rgba(0,0,0,0.2)';
+                          e.currentTarget.style.background = isCurrent ? 'rgba(212,150,106,0.08)' : 'var(--surface-hover)';
                           e.currentTarget.style.borderColor = isCurrent ? 'rgba(212,150,106,0.3)' : THEME.inputBorder;
                         }}
                       >
                         <div style={{ 
                           width: '40px', height: '40px', display: 'flex', 
                           alignItems: 'center', justifyContent: 'center',
-                          background: 'rgba(255,255,255,0.05)', borderRadius: '10px', flexShrink: 0,
+                          background: 'var(--surface-hover)', borderRadius: '10px', flexShrink: 0,
                         }}>
-                          <Sparkle size={20} style={{ color: isCurrent ? '#d4966a' : THEME.textMuted }} />
+                          <Sparkle size={20} style={{ color: isCurrent ? 'var(--accent-primary)' : THEME.textMuted }} />
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{
                             fontSize: '15px', fontWeight: 600,
-                            color: isCurrent ? '#d4966a' : THEME.textPrimary,
+                            color: isCurrent ? 'var(--accent-primary)' : THEME.textPrimary,
                             marginBottom: '2px',
                           }}>
                             {model.name}
                             {isCurrent && (
                               <span style={{
-                                fontSize: '10px', fontWeight: 700, color: '#d4966a',
+                                fontSize: '10px', fontWeight: 700, color: 'var(--accent-primary)',
                                 background: 'rgba(212,150,106,0.2)', padding: '2px 6px',
                                 borderRadius: '4px', textTransform: 'uppercase', marginLeft: '8px',
                               }}>Active</span>
@@ -4777,7 +4857,7 @@ function BrowseAllModelsOverlay({ isOpen, onClose, onSelectModel, currentModel }
                             {model.id}
                           </div>
                         </div>
-                        {isCurrent && <Check size={18} style={{ color: '#d4966a', flexShrink: 0 }} />}
+                        {isCurrent && <Check size={18} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />}
                       </button>
                     );
                   })}
@@ -4804,10 +4884,10 @@ function BrowseAllModelsOverlay({ isOpen, onClose, onSelectModel, currentModel }
                       alignItems: 'center', justifyContent: 'center',
                       background: 'rgba(212,150,106,0.15)', borderRadius: '10px',
                     }}>
-                      <Check size={20} style={{ color: '#d4966a' }} />
+                      <Check size={20} style={{ color: 'var(--accent-primary)' }} />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '14px', fontWeight: 600, color: '#d4966a' }}>
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--accent-primary)' }}>
                         {currentModel}
                       </div>
                       <div style={{ fontSize: '12px', color: THEME.textMuted }}>
@@ -4844,7 +4924,7 @@ function BrowseAllModelsOverlay({ isOpen, onClose, onSelectModel, currentModel }
                         style={{
                           display: 'flex', alignItems: 'center', gap: '12px',
                           padding: '14px 16px',
-                          background: isCurrent ? 'rgba(212,150,106,0.08)' : 'rgba(0,0,0,0.2)',
+                          background: isCurrent ? 'rgba(212,150,106,0.08)' : 'var(--surface-hover)',
                           borderRadius: '10px',
                           border: `1px solid ${isCurrent ? 'rgba(212,150,106,0.3)' : THEME.inputBorder}`,
                           cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s',
@@ -4854,14 +4934,14 @@ function BrowseAllModelsOverlay({ isOpen, onClose, onSelectModel, currentModel }
                           e.currentTarget.style.borderColor = THEME.accent;
                         }}
                         onMouseLeave={(e) => {
-                          e.currentTarget.style.background = isCurrent ? 'rgba(212,150,106,0.08)' : 'rgba(0,0,0,0.2)';
+                          e.currentTarget.style.background = isCurrent ? 'rgba(212,150,106,0.08)' : 'var(--surface-hover)';
                           e.currentTarget.style.borderColor = isCurrent ? 'rgba(212,150,106,0.3)' : THEME.inputBorder;
                         }}
                       >
                         <div style={{ 
                           width: '44px', height: '44px', display: 'flex', 
                           alignItems: 'center', justifyContent: 'center',
-                          background: 'rgba(255,255,255,0.05)', borderRadius: '10px', flexShrink: 0,
+                          background: 'var(--surface-hover)', borderRadius: '10px', flexShrink: 0,
                         }}>
                           <ProviderLogo size={28} />
                         </div>
@@ -4874,14 +4954,14 @@ function BrowseAllModelsOverlay({ isOpen, onClose, onSelectModel, currentModel }
                             {provider.modelCount > 0 && (
                               <span style={{
                                 fontSize: '11px', fontWeight: 500, color: THEME.textMuted,
-                                background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '10px',
+                                background: 'var(--ui-border-muted)', padding: '2px 8px', borderRadius: '10px',
                               }}>
                                 {provider.modelCount} models
                               </span>
                             )}
                             {isCurrent && (
                               <span style={{
-                                fontSize: '10px', fontWeight: 700, color: '#d4966a',
+                                fontSize: '10px', fontWeight: 700, color: 'var(--accent-primary)',
                                 background: 'rgba(212,150,106,0.2)', padding: '2px 6px',
                                 borderRadius: '4px', textTransform: 'uppercase',
                               }}>Active</span>

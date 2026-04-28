@@ -48,9 +48,9 @@ export function PolicyDashboard({ api: _api }: PolicyDashboardProps) {
 
   const getActionColor = (action: PolicyRule['action']) => {
     const colors = {
-      allow: '#10b981',
-      deny: '#ef4444',
-      require_approval: '#f59e0b',
+      allow: 'var(--status-success)',
+      deny: 'var(--status-error)',
+      require_approval: 'var(--status-warning)',
     };
     return colors[action];
   };
@@ -113,7 +113,7 @@ export function PolicyDashboard({ api: _api }: PolicyDashboardProps) {
               >
                 <span 
                   className="policy-filter__indicator"
-                  style={{ backgroundColor: action === 'all' ? '#666' : getActionColor(action) }}
+                  style={{ backgroundColor: action === 'all' ? 'var(--ui-text-muted)' : getActionColor(action) }}
                 />
                 {action === 'all' ? 'All Rules' : getActionLabel(action)}
                 <span className="policy-filter__count">

@@ -12,10 +12,10 @@ interface BranchIndicatorProps {
 }
 
 const THEME = {
-  textMuted: '#6B6B6B',
-  textSecondary: '#9B9B9B',
-  accent: '#D4956A',
-  hoverBg: 'rgba(255,255,255,0.05)',
+  textMuted: 'var(--ui-text-muted)',
+  textSecondary: 'var(--ui-text-secondary)',
+  accent: 'var(--accent-primary)',
+  hoverBg: 'var(--surface-hover)',
 };
 
 /**
@@ -36,8 +36,8 @@ export function BranchIndicator({
       style={{
         padding: '2px 8px',
         borderRadius: 6,
-        background: 'rgba(255,255,255,0.03)',
-        border: '1px solid rgba(255,255,255,0.06)',
+        background: 'var(--surface-hover)',
+        border: '1px solid var(--ui-border-muted)',
       }}
     >
       <GitBranch size={12} style={{ color: THEME.accent }} aria-hidden="true" />

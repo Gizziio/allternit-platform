@@ -35,10 +35,10 @@ const BADGE_MAP: Record<ContentType, string> = {
 };
 
 const COLOR_MAP: Record<ContentType, string> = {
-  signal: '#10b981',
-  feature: '#3b82f6',
-  index: '#f59e0b',
-  annual: '#f59e0b',
+  signal: 'var(--status-success)',
+  feature: 'var(--status-info)',
+  index: 'var(--status-warning)',
+  annual: 'var(--status-warning)',
   course: '#8b5cf6',
   lesson: '#ec4899',
 };
@@ -61,7 +61,7 @@ export function mapPublicationToDiscoveryItem(pub: Publication): DiscoveryItem {
     subtitle: pub.subtitle ?? pub.series ?? 'Allternit Research',
     excerpt: pub.abstract,
     badge: BADGE_MAP[ct] ?? 'Publication',
-    badgeColor: COLOR_MAP[ct] ?? '#6b7280',
+    badgeColor: COLOR_MAP[ct] ?? 'var(--ui-text-muted)',
     ctaLabel: CTA_MAP[ct] ?? 'Read',
     ctaAction: ct === 'course' ? 'external' : 'read',
     ctaTarget: pub.slug,

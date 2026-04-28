@@ -20,7 +20,7 @@ export function useH5iContext(
 
     async function init() {
       try {
-        await startH5iContext(workspacePath, sessionId, goal);
+        await startH5iContext(workspacePath!, sessionId!, goal);
         startedRef.current = true;
       } catch {
         // h5i may not be installed — silently fail

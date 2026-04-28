@@ -36,7 +36,7 @@ export function FloatingOrb() {
         bottom: 40,
         left: '50%',
         marginLeft: -40,
-        zIndex: 1000,
+        zIndex: 100,
       }}
     >
       <div style={{

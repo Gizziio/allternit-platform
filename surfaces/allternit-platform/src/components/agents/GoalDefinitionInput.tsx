@@ -72,9 +72,9 @@ function ConstraintBuilder({
   });
 
   const constraintTypes: Array<{ value: GoalConstraint['type']; label: string; icon: any; color: string }> = [
-    { value: 'budget', label: 'Budget', icon: CurrencyDollar, color: '#22c55e' },
-    { value: 'time', label: 'Time Limit', icon: Clock, color: '#3b82f6' },
-    { value: 'tools', label: 'Tools', icon: GearSix, color: '#f97316' },
+    { value: 'budget', label: 'Budget', icon: CurrencyDollar, color: 'var(--status-success)' },
+    { value: 'time', label: 'Time Limit', icon: Clock, color: 'var(--status-info)' },
+    { value: 'tools', label: 'Tools', icon: GearSix, color: 'var(--status-warning)' },
     { value: 'scope', label: 'Scope', icon: Shield, color: '#a855f7' },
   ];
 
@@ -215,7 +215,7 @@ function ConstraintBuilder({
                   >
                     <TypeIcon
                       size={14}
-                      style={{ color: newConstraint.type === type.value ? type.color : '#6b7280' }}
+                      style={{ color: newConstraint.type === type.value ? type.color : 'var(--ui-text-muted)' }}
                     />
                     <span
                       className={`text-[10px] ${

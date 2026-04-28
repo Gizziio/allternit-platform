@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { openInBrowser } from '@/lib/openInBrowser';
 
 const OPENCLAW_URL = 'http://localhost:18789';
 const HEALTH_CHECK_INTERVAL = 5000;
@@ -83,7 +84,7 @@ export function OpenClawControlUI() {
 
   // Open in new tab
   const handleOpenExternal = () => {
-    window.open(OPENCLAW_URL, '_blank');
+    openInBrowser(OPENCLAW_URL);
   };
 
   if (error && !isHealthy) {

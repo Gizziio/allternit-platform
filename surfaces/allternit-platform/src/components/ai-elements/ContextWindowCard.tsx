@@ -60,10 +60,10 @@ export function ContextWindowCard({ children, threadId: propThreadId }: ContextW
           width: "300px",
           backgroundColor: "#161616",
           borderRadius: "14px",
-          border: "1px solid rgba(255,255,255,0.08)",
-          boxShadow: "0 20px 50px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.05)",
+          border: "1px solid var(--ui-border-muted)",
+          boxShadow: "0 20px 50px var(--shell-overlay-backdrop), 0 0 0 1px var(--surface-hover)",
           padding: "20px",
-          zIndex: 10000,
+          zIndex: 165,
           color: "#fff",
           fontFamily: "system-ui, -apple-system, sans-serif",
           animation: "fade-in 0.2s ease-out",
@@ -78,7 +78,7 @@ export function ContextWindowCard({ children, threadId: propThreadId }: ContextW
         </div>
 
         {/* Dynamic Progress Bar */}
-        <div style={{ height: "6px", backgroundColor: "rgba(255,255,255,0.05)", borderRadius: "3px", display: "flex", overflow: "hidden", marginBottom: "20px" }}>
+        <div style={{ height: "6px", backgroundColor: "var(--surface-hover)", borderRadius: "3px", display: "flex", overflow: "hidden", marginBottom: "20px" }}>
           <div style={{ width: `${Math.max(2, usedPercent)}%`, backgroundColor: "#D4956A", boxShadow: "0 0 10px rgba(212,149,106,0.3)" }} />
         </div>
 
@@ -90,7 +90,7 @@ export function ContextWindowCard({ children, threadId: propThreadId }: ContextW
           <ContextRow icon={<Cpu size={14}/>} label="Inference" value={analytics?.participants[0] || "Private Brain"} />
         </div>
 
-        <div style={{ height: "1px", backgroundColor: "rgba(255,255,255,0.06)", margin: "16px -20px" }} />
+        <div style={{ height: "1px", backgroundColor: "var(--ui-border-muted)", margin: "16px -20px" }} />
 
         {/* Sovereignty Metrics */}
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -104,7 +104,7 @@ export function ContextWindowCard({ children, threadId: propThreadId }: ContextW
                 <span>{plan.label}</span>
                 <span style={{ color: "#fff", fontWeight: 600 }}>{plan.percent}</span>
               </div>
-              <div style={{ height: "2px", backgroundColor: "rgba(255,255,255,0.05)", width: "100%", borderRadius: "1px" }}>
+              <div style={{ height: "2px", backgroundColor: "var(--surface-hover)", width: "100%", borderRadius: "1px" }}>
                 <div style={{ height: "100%", width: plan.percent, backgroundColor: plan.color, borderRadius: "1px" }} />
               </div>
             </div>

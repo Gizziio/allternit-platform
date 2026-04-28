@@ -16,7 +16,7 @@ import { useBrowserStore } from '@/capsules/browser/browser.store';
 import { useNav } from '@/nav/useNav';
 import { ThoughtTrace, coerceThoughtSteps, parseThoughtSteps } from './thought-trace';
 import { injectWebPreviewParts } from './browser-preview-utils';
-import { GlassPill, FilePill, TerminalPill } from './glass-pill';
+import { GlassPill, TerminalPill } from './glass-pill';
 import { ArtifactCard } from './artifact-panel';
 import { McpAppFrame } from './McpAppFrame';
 import { AllternitOpenUIRenderer } from '@/lib/openui/AllternitOpenUIRenderer';
@@ -26,10 +26,7 @@ import type { ViewMode } from '@/hooks/useViewMode';
 // Core AI Elements
 import { Markdown } from './markdown';
 import { Shimmer } from './shimmer';
-import { Tool, ToolContent, ToolHeader, ToolInput } from './tool';
-import { Sources, Source } from './sources';
 import { CodeBlock } from './code-block';
-import { Persona } from './persona';
 import {
   Warning,
   CheckCircle,
@@ -234,7 +231,7 @@ function SourcesFooter({ sources }: { sources: Array<Extract<ExtendedUIPart, { t
     <div style={{
       marginTop: '12px',
       paddingTop: '10px',
-      borderTop: '1px solid rgba(255,255,255,0.06)',
+      borderTop: '1px solid var(--ui-border-muted)',
     }}>
       <div style={{
         fontSize: '10px',
@@ -572,7 +569,7 @@ function ThoughtProcessHeader({ text, isStreaming }: { text: string; isStreaming
         <div style={{
           marginTop: '6px',
           paddingLeft: '14px',
-          borderLeft: '1px solid rgba(212,176,140,0.14)',
+          borderLeft: '1px solid color-mix(in srgb, var(--accent-primary) 14%, transparent)',
           color: 'rgba(236,236,236,0.22)',
           fontSize: '12px',
           lineHeight: '1.6',
@@ -876,7 +873,7 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
             <pre style={{
               fontSize: '11px',
               color: 'rgba(255,255,255,0.3)',
-              background: 'rgba(0,0,0,0.3)',
+              background: 'var(--surface-panel)',
               padding: '8px 10px',
               borderRadius: '6px',
               overflowX: 'auto',
@@ -1285,8 +1282,8 @@ function FileChangeCard({
         borderRadius: "9px",
         border: isSelected
           ? `1.5px solid ${opColor.replace("0.75", "0.5")}`
-          : `1.5px solid ${hovered ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.08)"}`,
-        background: isSelected ? opBg : hovered ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.02)",
+          : `1.5px solid ${hovered ? "rgba(255,255,255,0.14)" : "var(--ui-border-muted)"}`,
+        background: isSelected ? opBg : hovered ? "var(--surface-hover)" : "var(--surface-hover)",
         cursor: "pointer",
         textAlign: "left",
         transition: "all 0.13s ease",

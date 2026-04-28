@@ -58,7 +58,7 @@ export function ToolsView() {
   if (error) {
     return (
       <div style={{ padding: 20, textAlign: 'center', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: '#ff3b30' }}>
+        <div style={{ color: 'var(--status-error)' }}>
           Error: {error}
         </div>
       </div>
@@ -130,7 +130,7 @@ export function ToolsView() {
                       tool.status === 'enabled' ? 'rgba(52, 199, 89, 0.1)' :
                       tool.status === 'disabled' ? 'rgba(88, 86, 91, 0.1)' : 'rgba(255, 149, 0, 0.1)',
                     color:
-                      tool.status === 'enabled' ? '#34C759' :
+                      tool.status === 'enabled' ? 'var(--status-success)' :
                       tool.status === 'disabled' ? '#58565B' : '#FF9500'
                   }}>
                     {tool.status.toUpperCase()}
@@ -144,7 +144,7 @@ export function ToolsView() {
                       tool.riskLevel === 'low' ? 'rgba(52, 199, 89, 0.1)' :
                       tool.riskLevel === 'medium' ? 'rgba(255, 149, 0, 0.1)' : 'rgba(255, 59, 48, 0.1)',
                     color:
-                      tool.riskLevel === 'low' ? '#34C759' :
+                      tool.riskLevel === 'low' ? 'var(--status-success)' :
                       tool.riskLevel === 'medium' ? '#FF9500' : '#FF3B30'
                   }}>
                     {tool.riskLevel.toUpperCase()} RISK

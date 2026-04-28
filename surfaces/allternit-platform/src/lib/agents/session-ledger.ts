@@ -1,4 +1,4 @@
-export type SessionSurface = "chat" | "cowork" | "code" | "browser";
+export type SessionSurface = "chat" | "cowork" | "code" | "browser" | "design";
 
 export type SessionEventActor = "user" | "assistant" | "tool" | "system" | "ui";
 

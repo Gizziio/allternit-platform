@@ -5,12 +5,9 @@ import { useDakStore } from "../dak.store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Receipt as ReceiptIcon,
-  MagnifyingGlass,
-  Funnel,
   Calendar,
   GitBranch,
   Hash,
@@ -19,9 +16,6 @@ import {
   CaretDown,
   CaretUp,
   DownloadSimple,
-  CheckCircle,
-  XCircle,
-  Warning,
 } from '@phosphor-icons/react';
 import type { Receipt, ReceiptKind } from "../dak.types";
 
@@ -37,10 +31,9 @@ const RECEIPT_KINDS: { value: ReceiptKind; label: string; color: string }[] = [
 ];
 
 export function ReceiptQueryPanel() {
-  const { 
-    receipts, 
-    isLoading,
-    fetchReceipts 
+  const {
+    receipts,
+    fetchReceipts
   } = useDakStore();
   
   const [filterDagId, setFilterDagId] = useState("");

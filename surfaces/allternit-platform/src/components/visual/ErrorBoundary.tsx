@@ -46,7 +46,7 @@ export class VisualVerificationErrorBoundary extends Component<ErrorBoundaryProp
       return (
         <div style={{
           padding: '24px',
-          background: '#1a1a1a',
+          background: 'var(--surface-panel)',
           border: '1px solid #333',
           borderRadius: '12px',
           color: '#fff',
@@ -73,7 +73,7 @@ export class VisualVerificationErrorBoundary extends Component<ErrorBoundaryProp
               <h3 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: 600 }}>
                 Visual Verification Error
               </h3>
-              <p style={{ margin: 0, fontSize: '13px', color: '#888' }}>
+              <p style={{ margin: 0, fontSize: '13px', color: 'var(--ui-text-muted)' }}>
                 Something went wrong displaying verification data
               </p>
             </div>
@@ -82,12 +82,12 @@ export class VisualVerificationErrorBoundary extends Component<ErrorBoundaryProp
           {this.state.error && (
             <div style={{
               padding: '12px 16px',
-              background: '#0a0a0a',
+              background: 'var(--surface-panel)',
               borderRadius: '8px',
               marginBottom: '16px',
               fontFamily: 'monospace',
               fontSize: '12px',
-              color: '#ef4444',
+              color: 'var(--status-error)',
             }}>
               {this.state.error.message}
             </div>
@@ -99,7 +99,7 @@ export class VisualVerificationErrorBoundary extends Component<ErrorBoundaryProp
               padding: '8px 16px',
               borderRadius: '8px',
               border: 'none',
-              background: '#3b82f6',
+              background: 'var(--status-info)',
               color: '#fff',
               fontSize: '13px',
               fontWeight: 500,

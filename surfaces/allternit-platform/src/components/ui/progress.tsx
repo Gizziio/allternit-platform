@@ -15,7 +15,7 @@ export const Progress: React.FC<ProgressProps> = ({ value, max = 100, className 
       style={{
         width: '100%',
         height: '8px',
-        background: 'rgba(255,255,255,0.1)',
+        background: 'var(--ui-border-default)',
         borderRadius: '4px',
         overflow: 'hidden',
       }}
@@ -24,7 +24,7 @@ export const Progress: React.FC<ProgressProps> = ({ value, max = 100, className 
         style={{
           width: `${percentage}%`,
           height: '100%',
-          background: '#d4b08c',
+          background: 'var(--accent-primary)',
           borderRadius: '4px',
           transition: 'width 0.3s ease',
         }}

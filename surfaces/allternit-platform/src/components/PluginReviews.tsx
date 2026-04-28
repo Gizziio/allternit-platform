@@ -33,19 +33,19 @@ import { StarRating, RatingBar } from './StarRating';
 // ============================================================================
 
 const THEME = {
-  bg: '#0c0a09',
-  bgElevated: '#1c1917',
-  accent: '#d4b08c',
+  bg: 'var(--surface-canvas)',
+  bgElevated: 'var(--surface-panel)',
+  accent: 'var(--accent-primary)',
   accentMuted: 'rgba(212, 176, 140, 0.15)',
   accentGlow: 'rgba(212, 176, 140, 0.3)',
-  textPrimary: '#e7e5e4',
-  textSecondary: '#a8a29e',
-  textTertiary: '#78716c',
+  textPrimary: 'var(--ui-text-primary)',
+  textSecondary: 'var(--ui-text-secondary)',
+  textTertiary: 'var(--ui-text-muted)',
   border: 'rgba(212, 176, 140, 0.1)',
   borderStrong: 'rgba(212, 176, 140, 0.2)',
-  success: '#22c55e',
-  danger: '#ef4444',
-  warning: '#f59e0b',
+  success: 'var(--status-success)',
+  danger: 'var(--status-error)',
+  warning: 'var(--status-warning)',
 };
 
 // ============================================================================
@@ -99,7 +99,7 @@ function Button({
       color: THEME.bg,
     },
     secondary: {
-      backgroundColor: 'rgba(255,255,255,0.08)',
+      backgroundColor: 'var(--ui-border-muted)',
       color: THEME.textPrimary,
       border: `1px solid ${THEME.borderStrong}`,
     },
@@ -109,7 +109,7 @@ function Button({
     },
     danger: {
       backgroundColor: 'rgba(239, 68, 68, 0.12)',
-      color: '#fca5a5',
+      color: 'var(--status-error)',
       border: `1px solid rgba(239, 68, 68, 0.35)`,
     },
   };
@@ -238,7 +238,7 @@ function ReviewCard({
         padding: 16,
         borderRadius: 10,
         border: `1px solid ${THEME.border}`,
-        backgroundColor: isUserReview ? 'rgba(212, 176, 140, 0.05)' : 'rgba(255,255,255,0.02)',
+        backgroundColor: isUserReview ? 'rgba(212, 176, 140, 0.05)' : 'var(--surface-hover)',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -446,7 +446,7 @@ function WriteReviewModal({
             padding: 12,
             borderRadius: 8,
             border: `1px solid ${THEME.border}`,
-            backgroundColor: 'rgba(255,255,255,0.03)',
+            backgroundColor: 'var(--surface-hover)',
             color: THEME.textPrimary,
             fontSize: 13,
             lineHeight: 1.5,
@@ -474,7 +474,7 @@ function WriteReviewModal({
             borderRadius: 6,
             backgroundColor: 'rgba(239, 68, 68, 0.12)',
             border: `1px solid rgba(239, 68, 68, 0.35)`,
-            color: '#fca5a5',
+            color: 'var(--status-error)',
             fontSize: 12,
           }}
         >
@@ -563,7 +563,7 @@ export function PluginReviews({ pluginId, pluginName }: PluginReviewsProps) {
             style={{
               padding: '2px 8px',
               borderRadius: 999,
-              backgroundColor: 'rgba(255,255,255,0.08)',
+              backgroundColor: 'var(--ui-border-muted)',
               color: THEME.textSecondary,
               fontSize: 12,
             }}
@@ -590,7 +590,7 @@ export function PluginReviews({ pluginId, pluginName }: PluginReviewsProps) {
               gridTemplateColumns: 'auto 1fr',
               gap: 24,
               padding: 16,
-              backgroundColor: 'rgba(0,0,0,0.2)',
+              backgroundColor: 'var(--surface-hover)',
               borderRadius: 10,
               marginBottom: 20,
             }}
@@ -658,7 +658,7 @@ export function PluginReviews({ pluginId, pluginName }: PluginReviewsProps) {
                     padding: '6px 28px 6px 12px',
                     borderRadius: 6,
                     border: `1px solid ${THEME.border}`,
-                    backgroundColor: 'rgba(255,255,255,0.03)',
+                    backgroundColor: 'var(--surface-hover)',
                     color: THEME.textPrimary,
                     fontSize: 12,
                     cursor: 'pointer',

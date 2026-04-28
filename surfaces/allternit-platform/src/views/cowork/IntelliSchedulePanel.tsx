@@ -47,7 +47,7 @@ export const IntelliSchedulePanel: React.FC = () => {
               padding: '2px 8px',
               borderRadius: '20px',
               backgroundColor: '#06b6d420',
-              color: '#06b6d4',
+              color: 'var(--status-info)',
               fontWeight: 600,
             }}>
               {scheduled.length} task{scheduled.length !== 1 ? 's' : ''} ordered
@@ -64,7 +64,7 @@ export const IntelliSchedulePanel: React.FC = () => {
             borderRadius: '6px',
             border: '1px solid #06b6d440',
             backgroundColor: 'transparent',
-            color: '#06b6d4',
+            color: 'var(--status-info)',
             fontSize: '12px',
             fontWeight: 600,
             cursor: 'pointer',
@@ -96,7 +96,7 @@ export const IntelliSchedulePanel: React.FC = () => {
                 minWidth: '24px',
                 height: '24px',
                 borderRadius: '50%',
-                backgroundColor: '#06b6d4',
+                backgroundColor: 'var(--status-info)',
                 color: '#fff',
                 fontSize: '11px',
                 fontWeight: 700,

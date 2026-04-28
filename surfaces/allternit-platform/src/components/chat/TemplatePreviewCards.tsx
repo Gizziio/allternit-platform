@@ -17,18 +17,18 @@
  */
 
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { 
-  Image, Video, FileText, Code, Globe, 
-  Presentation, Database, Cpu, Network, 
-  Sparkles, ArrowUpRight, Search, Bot, 
+  Image, Video, FileText, Code, Globe,
+  Presentation, Database,
+  Sparkles, ArrowUpRight, Search, Bot,
   LineChart, FileSpreadsheet, Palette, Terminal,
   Layout, FileCode, TestTube, Settings, Mail,
-  Calendar, Bell, RefreshCw, Shield, Zap,
+  Bell, RefreshCw, Shield, Zap,
   Package, PenTool, BookOpen, BarChart3, PieChart,
   GitBranch, Webhook, Clock, Filter, MessageSquare,
-  Layers, Fingerprint, Scan, FileSearch, Users,
+  Fingerprint, Scan, FileSearch, Users,
   ShoppingBag, CheckCircle, Box,
   Loader2
 } from 'lucide-react';

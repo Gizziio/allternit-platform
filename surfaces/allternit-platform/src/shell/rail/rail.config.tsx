@@ -27,7 +27,7 @@ export interface RailConfigItem {
 export interface RailConfigSection {
   id: string;
   title: string;
-  icon?: Icon;
+  icon?: Icon | React.FC<{ size?: number | string }>;
   items: RailConfigItem[];
   isDynamic?: boolean;
   defaultExpanded?: boolean;
@@ -62,8 +62,8 @@ export const RAIL_CONFIG: RailConfigSection[] = [
         shortcut: '⌘⇧C'
       },
       { 
-        id: 'blueprint-studio', 
-        label: 'Blueprint Studio', 
+        id: 'allternit-design',
+        label: 'Allternit Design',
         icon: Palette, 
         payload: 'design',
         shortcut: '⌘⇧D'

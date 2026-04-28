@@ -89,12 +89,12 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
         tabIndex={-1}
         className="relative z-10 w-full max-w-md mx-4 rounded-xl border shadow-2xl focus:outline-none"
         style={{
-          background: '#1e1e1e',
-          borderColor: '#333333',
+          background: 'var(--surface-panel)',
+          borderColor: 'var(--ui-border-default)',
         }}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: '#333333' }}>
+        <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'var(--ui-border-default)' }}>
           <h2 id="modal-title" className="text-lg font-semibold" style={{ color: TEXT.primary }}>
             {title}
           </h2>
@@ -113,7 +113,7 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, 
 
         {/* Footer */}
         {footer && (
-          <div className="flex items-center justify-end gap-2 p-4 border-t" style={{ borderColor: '#333333' }}>
+          <div className="flex items-center justify-end gap-2 p-4 border-t" style={{ borderColor: 'var(--ui-border-default)' }}>
             {footer}
           </div>
         )}
@@ -200,7 +200,7 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
             onClick={handleSubmit}
             className="px-4 py-2 rounded-lg text-sm font-medium transition-all"
             style={{
-              background: '#3b82f6',
+              background: 'var(--status-info)',
               color: 'white',
             }}
           >
@@ -227,12 +227,12 @@ export const TextInputModal: React.FC<TextInputModalProps> = ({
           className="w-full px-3 py-2 rounded-lg border focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
           style={{
             background: 'rgba(0, 0, 0, 0.3)',
-            borderColor: error ? '#ef4444' : '#333333',
+            borderColor: error ? 'var(--status-error)' : 'var(--ui-border-default)',
             color: TEXT.primary,
           }}
         />
         {error && (
-          <p className="text-xs" style={{ color: '#ef4444' }}>
+          <p className="text-xs" style={{ color: 'var(--status-error)' }}>
             {error}
           </p>
         )}
@@ -300,7 +300,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
           role="alert"
           aria-live="assertive"
         >
-          <Warning size={48} className="mb-4" style={{ color: '#ef4444' }} />
+          <Warning size={48} className="mb-4" style={{ color: 'var(--status-error)' }} />
           <h3 className="text-lg font-semibold mb-2" style={{ color: TEXT.primary }}>
             Something went wrong
           </h3>
@@ -322,7 +322,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
             onClick={this.handleRetry}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all"
             style={{
-              background: '#3b82f6',
+              background: 'var(--status-info)',
               color: 'white',
             }}
           >
@@ -425,7 +425,7 @@ export const BrowserCompatibilityWarning: React.FC<BrowserCompatibilityWarningPr
       }}
       role="alert"
     >
-      <Warning size={20} className="flex-shrink-0 mt-0.5" style={{ color: '#fbbf24' }} />
+      <Warning size={20} className="flex-shrink-0 mt-0.5" style={{ color: 'var(--status-warning)' }} />
       <div className="flex-1">
         <h4 className="text-sm font-semibold mb-1" style={{ color: TEXT.primary }}>
           Limited Browser Support
@@ -436,7 +436,7 @@ export const BrowserCompatibilityWarning: React.FC<BrowserCompatibilityWarningPr
         <ul className="text-xs space-y-1 mb-3" style={{ color: TEXT.tertiary }}>
           {compatibility.unsupportedFeatures.map((feature) => (
             <li key={feature} className="flex items-center gap-2">
-              <span className="w-1 h-1 rounded-full" style={{ background: '#fbbf24' }} />
+              <span className="w-1 h-1 rounded-full" style={{ background: 'var(--status-warning)' }} />
               {feature} - Some features may be unavailable
             </li>
           ))}
@@ -524,12 +524,12 @@ export const FileSizeWarning: React.FC<FileSizeWarningProps> = ({ fileSize, onDi
       <Warning
         size={20}
         className="flex-shrink-0 mt-0.5"
-        style={{ color: isOverLimit ? '#ef4444' : '#fbbf24' }}
+        style={{ color: isOverLimit ? 'var(--status-error)' : 'var(--status-warning)' }}
       />
       <div className="flex-1">
         <h4
           className="text-sm font-semibold mb-1"
-          style={{ color: isOverLimit ? '#ef4444' : TEXT.primary }}
+          style={{ color: isOverLimit ? 'var(--status-error)' : TEXT.primary }}
         >
           {isOverLimit ? 'File Too Large' : 'Large File Warning'}
         </h4>

@@ -21,6 +21,7 @@ import {
   Power,
 } from '@phosphor-icons/react';
 import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/allternit.tokens';
+import { useNav } from '@/nav/useNav';
 
 export interface SSHConnection {
   id: string;
@@ -97,7 +98,7 @@ export function SSHConnectionsList({
       case 'connected':
         return STATUS.success;
       case 'disconnected':
-        return '#888';
+        return 'var(--ui-text-muted)';
       case 'connecting':
         return STATUS.info;
       case 'error':
@@ -126,25 +127,25 @@ export function SSHConnectionsList({
     return (
       <div className="space-y-3">
         {/* Skeleton Header */}
-        <div className="flex items-center gap-4 p-4 rounded-xl" style={{ background: 'rgba(37,37,37,0.3)' }}>
-          <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: 'rgba(196,154,122,0.3)' }} />
-          <div className="w-10 h-10 rounded-lg animate-pulse" style={{ background: 'rgba(255,255,255,0.05)' }} />
+        <div className="flex items-center gap-4 p-4 rounded-xl" style={{ background: 'var(--surface-hover)' }}>
+          <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: 'color-mix(in srgb, var(--accent-primary) 30%, transparent)' }} />
+          <div className="w-10 h-10 rounded-lg animate-pulse" style={{ background: 'var(--surface-hover)' }} />
           <div className="flex-1 space-y-2">
-            <div className="h-4 w-32 rounded animate-pulse" style={{ background: 'rgba(255,255,255,0.08)' }} />
-            <div className="h-3 w-48 rounded animate-pulse" style={{ background: 'rgba(255,255,255,0.05)' }} />
+            <div className="h-4 w-32 rounded animate-pulse" style={{ background: 'var(--surface-active)' }} />
+            <div className="h-3 w-48 rounded animate-pulse" style={{ background: 'var(--surface-hover)' }} />
           </div>
-          <div className="h-6 w-20 rounded-full animate-pulse" style={{ background: 'rgba(255,255,255,0.05)' }} />
+          <div className="h-6 w-20 rounded-full animate-pulse" style={{ background: 'var(--surface-hover)' }} />
         </div>
         {/* Skeleton Items */}
         {[1, 2].map((i) => (
-          <div key={i} className="flex items-center gap-4 p-4 rounded-xl" style={{ background: 'rgba(37,37,37,0.2)' }}>
-            <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: 'rgba(136,136,136,0.2)' }} />
-            <div className="w-10 h-10 rounded-lg animate-pulse" style={{ background: 'rgba(255,255,255,0.05)' }} />
+          <div key={i} className="flex items-center gap-4 p-4 rounded-xl" style={{ background: 'var(--surface-hover)' }}>
+            <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: 'var(--surface-hover)' }} />
+            <div className="w-10 h-10 rounded-lg animate-pulse" style={{ background: 'var(--surface-hover)' }} />
             <div className="flex-1 space-y-2">
-              <div className="h-4 w-40 rounded animate-pulse" style={{ background: 'rgba(255,255,255,0.06)' }} />
-              <div className="h-3 w-56 rounded animate-pulse" style={{ background: 'rgba(255,255,255,0.04)' }} />
+              <div className="h-4 w-40 rounded animate-pulse" style={{ background: 'var(--surface-active)' }} />
+              <div className="h-3 w-56 rounded animate-pulse" style={{ background: 'var(--surface-hover)' }} />
             </div>
-            <div className="h-6 w-24 rounded-full animate-pulse" style={{ background: 'rgba(255,255,255,0.05)' }} />
+            <div className="h-6 w-24 rounded-full animate-pulse" style={{ background: 'var(--surface-hover)' }} />
           </div>
         ))}
       </div>
@@ -162,8 +163,8 @@ export function SSHConnectionsList({
           key={connection.id}
           className="rounded-xl border transition-all duration-200"
           style={{
-            background: expandedId === connection.id ? 'rgba(37,37,37,0.5)' : 'rgba(37,37,37,0.2)',
-            borderColor: expandedId === connection.id ? `${SAND[500]}4c` : '#333',
+            background: expandedId === connection.id ? 'var(--surface-panel)' : 'var(--surface-hover)',
+            borderColor: expandedId === connection.id ? `${SAND[500]}4c` : 'var(--ui-border-muted)',
           }}
         >
           {/* Main Row */}
@@ -182,7 +183,7 @@ export function SSHConnectionsList({
             {/* Icon */}
             <div 
               className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
-              style={{ background: 'rgba(37,37,37,0.5)' }}
+              style={{ background: 'var(--surface-panel)' }}
             >
               <HardDrives size={20} style={{ color: TEXT.secondary }} />
             </div>
@@ -204,9 +205,9 @@ export function SSHConnectionsList({
                 className="px-2 py-1 rounded-full text-xs font-medium"
                 style={{
                   backgroundColor: connection.status === 'connected' ? `${STATUS.success}33` : 
-                                  connection.status === 'disconnected' ? 'rgba(136,136,136,0.2)' :
+                                  connection.status === 'disconnected' ? 'var(--surface-hover)' :
                                   connection.status === 'connecting' ? `${STATUS.info}33` :
-                                  '#ef444433',
+                                  'var(--status-error-bg)',
                   color: getStatusColor(connection.status),
                 }}
               >
@@ -224,7 +225,7 @@ export function SSHConnectionsList({
                   }}
                   className="p-2 rounded-lg transition-colors"
                   style={{ color: STATUS.error }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = '#ef444433'}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--status-error-bg)'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                   title="Disconnect"
                 >
@@ -255,7 +256,7 @@ export function SSHConnectionsList({
                   }}
                   className="p-2 rounded-lg transition-colors"
                   style={{ color: TEXT.secondary }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(37,37,37,0.5)'}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-panel)'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
                   <DotsThreeVertical size={16} />
@@ -270,8 +271,8 @@ export function SSHConnectionsList({
                     <div
                       className="absolute right-0 top-full mt-1 w-48 rounded-lg border shadow-lg z-20 overflow-hidden"
                       style={{
-                        background: 'rgba(30,30,30,0.95)',
-                        borderColor: '#333',
+                        background: 'var(--surface-floating)',
+                        borderColor: 'var(--ui-border-muted)',
                         backdropFilter: 'blur(10px)',
                       }}
                     >
@@ -284,7 +285,7 @@ export function SSHConnectionsList({
                         disabled={testingId === connection.id}
                         className="w-full px-4 py-2 text-sm text-left transition-colors flex items-center gap-2"
                         style={{ color: TEXT.primary }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(37,37,37,0.5)'}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-panel)'}
                         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                       >
                         {testingId === connection.id ? (
@@ -302,13 +303,13 @@ export function SSHConnectionsList({
                         }}
                         className="w-full px-4 py-2 text-sm text-left transition-colors flex items-center gap-2"
                         style={{ color: TEXT.primary }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(37,37,37,0.5)'}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-panel)'}
                         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                       >
                         <PencilSimple size={16} style={{ color: TEXT.secondary }} />
                         Edit
                       </button>
-                      <div style={{ borderTop: '1px solid #333' }} />
+                      <div style={{ borderTop: '1px solid var(--ui-border-muted)' }} />
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -317,7 +318,7 @@ export function SSHConnectionsList({
                         }}
                         className="w-full px-4 py-2 text-sm text-left transition-colors flex items-center gap-2"
                         style={{ color: STATUS.error }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = '#ef444433'}
+                        onMouseEnter={(e) => e.currentTarget.style.background = 'var(--status-error-bg)'}
                         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                       >
                         <Trash size={16} />
@@ -341,7 +342,7 @@ export function SSHConnectionsList({
           {/* Expanded Details */}
           {expandedId === connection.id && (
             <div className="px-4 pb-4 pt-0">
-              <div className="border-l pl-4 space-y-3" style={{ borderColor: '#333', marginLeft: '28px' }}>
+              <div className="border-l pl-4 space-y-3" style={{ borderColor: 'var(--ui-border-muted)', marginLeft: '28px' }}>
                 {/* Connection Details */}
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
@@ -368,7 +369,7 @@ export function SSHConnectionsList({
 
                 {/* System Info */}
                 {(connection.os || connection.architecture) && (
-                  <div className="pt-3 border-t" style={{ borderColor: '#333' }}>
+                  <div className="pt-3 border-t" style={{ borderColor: 'var(--ui-border-muted)' }}>
                     <h5 className="text-xs font-medium uppercase tracking-wide mb-2" style={{ color: TEXT.secondary }}>
                       System Information
                     </h5>
@@ -415,7 +416,7 @@ export function SSHConnectionsList({
                 {connection.errorMessage && (
                   <div 
                     className="p-3 rounded-lg border"
-                    style={{ background: '#ef44441a', borderColor: '#ef44444c' }}
+                    style={{ background: 'var(--status-error-bg)', borderColor: 'color-mix(in srgb, var(--status-error) 30%, transparent)' }}
                   >
                     <div className="flex items-start gap-2">
                       <Warning className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: STATUS.error }} />
@@ -429,7 +430,7 @@ export function SSHConnectionsList({
                   {connection.status === 'connected' && (
                     <button
                       onClick={() => {
-                        window.open(`/terminal?host=${connection.host}`, '_blank');
+                        useNav.getState().dispatch({ type: 'OPEN_VIEW', viewType: 'terminal' });
                       }}
                       className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors"
                       style={{ 
@@ -450,11 +451,11 @@ export function SSHConnectionsList({
                       disabled={testingId === connection.id}
                       className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors"
                       style={{ 
-                        background: 'rgba(37,37,37,0.5)', 
+                        background: 'var(--surface-panel)', 
                         color: TEXT.primary,
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(37,37,37,0.7)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(37,37,37,0.5)'}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-floating)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'var(--surface-panel)'}
                     >
                       {testingId === connection.id ? (
                         <ArrowsClockwise className="w-4 h-4 animate-spin" />
@@ -476,18 +477,18 @@ export function SSHConnectionsList({
         onClick={onAddConnection}
         className="w-full p-4 rounded-xl border border-dashed transition-all flex items-center justify-center gap-2"
         style={{ 
-          borderColor: '#333',
+          borderColor: 'var(--ui-border-muted)',
           color: TEXT.secondary,
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.borderColor = `${SAND[500]}80`;
-          e.currentTarget.style.background = 'rgba(37,37,37,0.2)';
-          e.currentTarget.style.color = '#fff';
+          e.currentTarget.style.background = 'var(--surface-hover)';
+          e.currentTarget.style.color = 'var(--ui-text-primary)';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.borderColor = '#333';
+          e.currentTarget.style.borderColor = 'var(--ui-border-muted)';
           e.currentTarget.style.background = 'transparent';
-          e.currentTarget.style.color = '#888';
+          e.currentTarget.style.color = 'var(--ui-text-muted)';
         }}
       >
         <Plus size={20} />
@@ -506,21 +507,21 @@ function EmptyState({ onAddConnection }: { onAddConnection: () => void }) {
     <div 
       className="text-center py-16 px-6 rounded-2xl"
       style={{ 
-        background: 'linear-gradient(180deg, rgba(37,37,37,0.4) 0%, rgba(37,37,37,0.2) 100%)',
-        border: '1px dashed rgba(255,255,255,0.1)',
+        background: 'linear-gradient(180deg, rgba(37,37,37,0.4) 0%, var(--surface-hover) 100%)',
+        border: '1px dashed var(--ui-border-default)',
       }}
     >
       {/* Icon with glow */}
       <div 
         className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 relative"
         style={{ 
-          background: 'rgba(196,154,122,0.1)',
-          border: '1px solid rgba(196,154,122,0.2)',
+          background: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)',
+          border: '1px solid color-mix(in srgb, var(--accent-primary) 20%, transparent)',
         }}
       >
         <div 
           className="absolute inset-0 rounded-2xl blur-xl opacity-30"
-          style={{ background: 'rgba(196,154,122,0.4)' }}
+          style={{ background: 'color-mix(in srgb, var(--accent-primary) 40%, transparent)' }}
         />
         <Terminal size={36} style={{ color: SAND[500], position: 'relative' }} weight="duotone" />
       </div>
@@ -536,18 +537,18 @@ function EmptyState({ onAddConnection }: { onAddConnection: () => void }) {
         className="inline-flex items-center gap-2 px-5 py-3 rounded-xl font-semibold transition-all"
         style={{ 
           background: SAND[500], 
-          color: '#1a1a1a',
-          boxShadow: '0 4px 14px rgba(196,154,122,0.3)',
+          color: 'var(--ui-text-inverse)',
+          boxShadow: '0 4px 14px color-mix(in srgb, var(--accent-primary) 30%, transparent)',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.background = '#c49a7a';
+          e.currentTarget.style.background = 'var(--accent-primary)';
           e.currentTarget.style.transform = 'translateY(-2px)';
-          e.currentTarget.style.boxShadow = '0 6px 20px rgba(196,154,122,0.4)';
+          e.currentTarget.style.boxShadow = '0 6px 20px color-mix(in srgb, var(--accent-primary) 40%, transparent)';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.background = SAND[500];
           e.currentTarget.style.transform = 'translateY(0)';
-          e.currentTarget.style.boxShadow = '0 4px 14px rgba(196,154,122,0.3)';
+          e.currentTarget.style.boxShadow = '0 4px 14px color-mix(in srgb, var(--accent-primary) 30%, transparent)';
         }}
       >
         <Plus size={20} weight="bold" />
@@ -558,16 +559,16 @@ function EmptyState({ onAddConnection }: { onAddConnection: () => void }) {
       <div 
         className="mt-10 p-5 rounded-xl text-left max-w-md mx-auto"
         style={{ 
-          background: 'rgba(37,37,37,0.5)', 
-          border: '1px solid rgba(255,255,255,0.06)',
+          background: 'var(--surface-panel)', 
+          border: '1px solid var(--ui-border-muted)',
         }}
       >
         <h4 className="text-sm font-semibold mb-4 flex items-center gap-2 text-white">
           <div 
             className="w-6 h-6 rounded-lg flex items-center justify-center"
-            style={{ background: 'rgba(59,130,246,0.15)' }}
+            style={{ background: 'var(--status-info-bg)' }}
           >
-            <Warning size={14} style={{ color: '#60a5fa' }} weight="fill" />
+            <Warning size={14} style={{ color: 'var(--status-info)' }} weight="fill" />
           </div>
           Quick Start Guide
         </h4>
@@ -582,7 +583,7 @@ function EmptyState({ onAddConnection }: { onAddConnection: () => void }) {
               <span 
                 className="w-5 h-5 rounded-md flex items-center justify-center text-xs font-medium flex-shrink-0 mt-0.5"
                 style={{ 
-                  background: 'rgba(196,154,122,0.15)',
+                  background: 'color-mix(in srgb, var(--accent-primary) 15%, transparent)',
                   color: SAND[500],
                 }}
               >

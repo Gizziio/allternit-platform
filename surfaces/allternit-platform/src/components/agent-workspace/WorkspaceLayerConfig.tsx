@@ -105,11 +105,11 @@ export function WorkspaceLayerConfigurator({
   theme = {
     textPrimary: '#ECECEC',
     textSecondary: '#A0A0A0',
-    textMuted: '#6B6B6B',
-    accent: '#D4956A',
+    textMuted: 'var(--ui-text-muted)',
+    accent: 'var(--accent-primary)',
     bgCard: 'rgba(42, 33, 26, 0.6)',
     bg: '#0E0D0C',
-    borderSubtle: 'rgba(255,255,255,0.08)',
+    borderSubtle: 'var(--ui-border-muted)',
   },
 }: WorkspaceLayerConfigProps) {
   const toggleLayer = (layerId: keyof WorkspaceLayerConfig) => {

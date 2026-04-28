@@ -17,7 +17,6 @@ import {
   MagicWand,
 } from '@phosphor-icons/react';
 import { useAvatarCreatorStore, AVATAR_TEMPLATES, type CreatorTab } from '../../stores/avatar-creator.store';
-import { AgentAvatar } from '../../components/Avatar';
 import { AvatarPreview } from '../../components/Avatar/AvatarPreview';
 import { STUDIO_THEME } from '../AgentView';
 import type { AgentSetup } from '../../lib/agents/character.types';
@@ -46,8 +45,6 @@ export const AvatarCreatorStep: React.FC<AvatarCreatorStepProps> = ({
     currentConfig,
     activeTab,
     selectedTemplateId,
-    historyIndex,
-    history,
     agentSetup: storedSetup,
     setAgentContext,
     applySmartDefaults,

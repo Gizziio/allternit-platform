@@ -1,48 +1,30 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { 
-  HardDrives, 
-  Cloud, 
-  Globe, 
-  Key, 
-  Plus, 
-  Trash, 
-  Check, 
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  HardDrives,
+  Cloud,
+  Globe,
+  Key,
+  Plus,
+  Trash,
+  Check,
   X,
-  ArrowUpRight,
   Cpu,
   TreeStructure,
   Pulse,
   Terminal,
   ArrowSquareOut,
-  CaretRight,
   Package,
   Stack,
   RocketLaunch,
   Shield,
   ArrowsClockwise,
-  Play,
-  Square,
-  DotsThree,
   Wallet,
-  MapPin,
-  CheckCircle,
-  Warning,
-  NotePencil,
-  House,
-  PlugsConnected,
   Files,
-  TerminalWindow,
-  Copy,
   Gear,
-  Flask,
-  Database,
   Cube,
   Code,
-  GitBranch,
   AppWindow,
-  Robot,
   Sparkle,
-  Brain,
   Spinner,
   WarningCircle,
 } from "@phosphor-icons/react";
@@ -56,8 +38,8 @@ import {
   InfrastructureWebSocket,
 } from '@/api/infrastructure/index';
 import type { VPSConnection } from '@/api/infrastructure/vps';
-import type { CloudProvider, Deployment, Provider, Region, InstanceType, Instance } from '@/api/infrastructure/cloud';
-import type { EnvironmentTemplate, Environment, EnvironmentLogEntry, EnvironmentType } from '@/api/infrastructure/environments';
+import type { CloudProvider, Deployment, Instance } from '@/api/infrastructure/cloud';
+import type { EnvironmentTemplate, Environment, EnvironmentType } from '@/api/infrastructure/environments';
 import type { SSHKey } from '@/api/infrastructure/ssh-keys';
 import type { InfrastructureEvent } from '@/api/infrastructure/websocket';
 
@@ -426,16 +408,6 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
     }
   };
 
-  /**
-   * Combined load for environments tab
-   */
-  const loadEnvironmentTab = async () => {
-    await Promise.all([
-      loadTemplates(),
-      loadEnvironments(),
-    ]);
-  };
-
   const loadSSHKeys = async () => {
     setIsLoadingSSHKeys(true);
     setErrors(prev => ({ ...prev, sshKeys: undefined }));
@@ -686,7 +658,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
           title="Connected VPS"
           value={connections.length}
           icon={<HardDrives size={20} />}
-          color="#22c55e"
+          color="var(--status-success)"
           action="Manage"
           onAction={() => setActiveTab('connections')}
           isLoading={isLoadingVPS}
@@ -695,7 +667,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
           title="Active Nodes"
           value={nodes.filter(n => n.status === 'online').length}
           icon={<Cpu size={20} />}
-          color="#3b82f6"
+          color="var(--status-info)"
           action="View"
           onAction={() => setActiveTab('nodes')}
           isLoading={isLoadingDeployments}
@@ -704,7 +676,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
           title="Environments"
           value={environments.filter(e => e.status === 'running').length}
           icon={<Package size={20} />}
-          color="#d4b08c"
+          color="var(--accent-primary)"
           action="Browse"
           onAction={() => setActiveTab('environments')}
           isLoading={isLoadingEnvironments}
@@ -713,12 +685,12 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
 
       {/* Quick Actions */}
       <div style={{
-        background: 'rgba(255,255,255,0.02)',
+        background: 'var(--surface-hover)',
         borderRadius: '12px',
         padding: '24px',
-        border: '1px solid rgba(255,255,255,0.06)',
+        border: '1px solid var(--ui-border-muted)',
       }}>
-        <h3 style={{ fontSize: '16px', fontWeight: '600', margin: '0 0 16px 0', color: '#fff' }}>
+        <h3 style={{ fontSize: '16px', fontWeight: '600', margin: '0 0 16px 0', color: 'var(--ui-text-primary)' }}>
           Quick Actions
         </h3>
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
@@ -748,12 +720,12 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
 
       {/* Recent Activity */}
       <div style={{
-        background: 'rgba(255,255,255,0.02)',
+        background: 'var(--surface-hover)',
         borderRadius: '12px',
         padding: '24px',
-        border: '1px solid rgba(255,255,255,0.06)',
+        border: '1px solid var(--ui-border-muted)',
       }}>
-        <h3 style={{ fontSize: '16px', fontWeight: '600', margin: '0 0 16px 0', color: '#fff' }}>
+        <h3 style={{ fontSize: '16px', fontWeight: '600', margin: '0 0 16px 0', color: 'var(--ui-text-primary)' }}>
           Recent Activity
         </h3>
         {deployments.length === 0 && environments.length === 0 ? (
@@ -775,20 +747,20 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
                   alignItems: 'center', 
                   gap: '12px',
                   padding: '12px',
-                  background: 'rgba(255,255,255,0.03)',
+                  background: 'var(--surface-hover)',
                   borderRadius: '8px',
                 }}>
                   <div style={{ 
                     width: '8px', 
                     height: '8px', 
                     borderRadius: '50%',
-                    background: 'instance_name' in item ? '#3b82f6' : '#22c55e',
+                    background: 'instance_name' in item ? 'var(--status-info)' : 'var(--status-success)',
                   }} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '14px', color: '#fff' }}>
+                    <div style={{ fontSize: '14px', color: 'var(--ui-text-primary)' }}>
                       {'instance_name' in item ? `Deployed ${item.instance_name}` : `Created ${(item as Environment).name}`}
                     </div>
-                    <div style={{ fontSize: '12px', color: '#666' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--ui-text-muted)' }}>
                       {new Date(item.created_at).toLocaleString()}
                     </div>
                   </div>
@@ -804,10 +776,10 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <h2 style={{ fontSize: '24px', fontWeight: '600', margin: '0 0 8px 0', color: '#fff' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: '600', margin: '0 0 8px 0', color: 'var(--ui-text-primary)' }}>
             Cloud Providers
           </h2>
-          <p style={{ fontSize: '14px', color: '#888', margin: 0 }}>
+          <p style={{ fontSize: '14px', color: 'var(--ui-text-secondary)', margin: 0 }}>
             Deploy Allternit nodes to your preferred cloud provider
           </p>
         </div>
@@ -818,9 +790,9 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
             style={{
               padding: '8px 16px',
               borderRadius: '8px',
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: '1px solid var(--ui-border-default)',
               background: 'transparent',
-              color: '#888',
+              color: 'var(--ui-text-secondary)',
               fontSize: '13px',
               cursor: 'pointer',
               display: 'flex',
@@ -856,7 +828,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
           {/* Deployments Section */}
           {deployments.length > 0 && (
             <div style={{ marginTop: '32px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 16px 0', color: '#fff' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 16px 0', color: 'var(--ui-text-primary)' }}>
                 Active Deployments
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -879,25 +851,25 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
         padding: '24px',
         background: 'linear-gradient(135deg, rgba(212,176,140,0.05) 0%, transparent 100%)',
         borderRadius: '12px',
-        border: '1px solid rgba(212,176,140,0.2)',
+        border: '1px solid color-mix(in srgb, var(--accent-primary) 20%, transparent)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px' }}>
           <div style={{
             width: '48px',
             height: '48px',
             borderRadius: '12px',
-            background: 'rgba(212,176,140,0.1)',
+            background: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
           }}>
-            <HardDrives size={24} color="#d4b08c" />
+            <HardDrives size={24} color="var(--accent-primary)" />
           </div>
           <div>
-            <h3 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 4px 0', color: '#fff' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 4px 0', color: 'var(--ui-text-primary)' }}>
               Bring Your Own Server
             </h3>
-            <p style={{ fontSize: '14px', color: '#888', margin: 0 }}>
+            <p style={{ fontSize: '14px', color: 'var(--ui-text-secondary)', margin: 0 }}>
               Already have a VPS? Connect it to Allternit in minutes.
             </p>
           </div>
@@ -908,8 +880,8 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
             padding: '10px 20px',
             borderRadius: '8px',
             border: '1px solid #d4b08c',
-            background: 'rgba(212,176,140,0.1)',
-            color: '#d4b08c',
+            background: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)',
+            color: 'var(--accent-primary)',
             fontSize: '14px',
             fontWeight: '500',
             cursor: 'pointer',
@@ -929,10 +901,10 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <h2 style={{ fontSize: '24px', fontWeight: '600', margin: '0 0 8px 0', color: '#fff' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: '600', margin: '0 0 8px 0', color: 'var(--ui-text-primary)' }}>
             VPS Connections
           </h2>
-          <p style={{ fontSize: '14px', color: '#888', margin: 0 }}>
+          <p style={{ fontSize: '14px', color: 'var(--ui-text-secondary)', margin: 0 }}>
             Manage your connected servers and their status
           </p>
         </div>
@@ -943,9 +915,9 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
             style={{
               padding: '8px 16px',
               borderRadius: '8px',
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: '1px solid var(--ui-border-default)',
               background: 'transparent',
-              color: '#888',
+              color: 'var(--ui-text-secondary)',
               fontSize: '13px',
               cursor: 'pointer',
               display: 'flex',
@@ -964,8 +936,8 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
               padding: '10px 20px',
               borderRadius: '8px',
               border: 'none',
-              background: '#d4b08c',
-              color: '#0a0a0a',
+              background: 'var(--accent-primary)',
+              color: 'var(--ui-text-inverse)',
               fontSize: '14px',
               fontWeight: '600',
               cursor: 'pointer',
@@ -1000,10 +972,10 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
             <div
               key={conn.id}
               style={{
-                background: 'rgba(255,255,255,0.02)',
+                background: 'var(--surface-hover)',
                 borderRadius: '12px',
                 padding: '16px 20px',
-                border: '1px solid rgba(255,255,255,0.06)',
+                border: '1px solid var(--ui-border-muted)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '16px',
@@ -1013,26 +985,26 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
                 width: '44px',
                 height: '44px',
                 borderRadius: '10px',
-                background: conn.status === 'connected' ? 'rgba(34,197,94,0.1)' : 
-                           conn.status === 'error' ? 'rgba(239,68,68,0.1)' : 
-                           'rgba(212,176,140,0.1)',
+                background: conn.status === 'connected' ? 'var(--status-success-bg)' : 
+                           conn.status === 'error' ? 'var(--status-error-bg)' : 
+                           'color-mix(in srgb, var(--accent-primary) 10%, transparent)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}>
                 <HardDrives size={22} color={
-                  conn.status === 'connected' ? '#22c55e' : 
-                  conn.status === 'error' ? '#ef4444' : 
-                  '#d4b08c'
+                  conn.status === 'connected' ? 'var(--status-success)' : 
+                  conn.status === 'error' ? 'var(--status-error)' : 
+                  'var(--accent-primary)'
                 } />
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '15px', fontWeight: '600', color: '#fff', marginBottom: '2px' }}>
+                <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--ui-text-primary)', marginBottom: '2px' }}>
                   {conn.name}
                 </div>
-                <div style={{ fontSize: '13px', color: '#666' }}>{conn.host}</div>
+                <div style={{ fontSize: '13px', color: 'var(--ui-text-muted)' }}>{conn.host}</div>
                 {conn.os && (
-                  <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--ui-text-secondary)', marginTop: '4px' }}>
                     {conn.cpu} • {conn.memory} RAM • {conn.os}
                   </div>
                 )}
@@ -1041,12 +1013,12 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
                 <span style={{
                   padding: '4px 10px',
                   borderRadius: '6px',
-                  background: conn.status === 'connected' ? 'rgba(34,197,94,0.1)' :
-                             conn.status === 'error' ? 'rgba(239,68,68,0.1)' :
-                             'rgba(255,255,255,0.05)',
-                  color: conn.status === 'connected' ? '#22c55e' :
-                         conn.status === 'error' ? '#ef4444' :
-                         '#888',
+                  background: conn.status === 'connected' ? 'var(--status-success-bg)' :
+                             conn.status === 'error' ? 'var(--status-error-bg)' :
+                             'var(--surface-hover)',
+                  color: conn.status === 'connected' ? 'var(--status-success)' :
+                         conn.status === 'error' ? 'var(--status-error)' :
+                         'var(--ui-text-muted)',
                   fontSize: '12px',
                   fontWeight: '500',
                   textTransform: 'capitalize',
@@ -1060,8 +1032,8 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
                     padding: '8px',
                     borderRadius: '6px',
                     border: 'none',
-                    background: 'rgba(255,255,255,0.05)',
-                    color: '#888',
+                    background: 'var(--surface-hover)',
+                    color: 'var(--ui-text-secondary)',
                     cursor: 'pointer',
                   }}
                   title="Test Connection"
@@ -1079,7 +1051,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
                     borderRadius: '6px',
                     border: 'none',
                     background: 'transparent',
-                    color: '#666',
+                    color: 'var(--ui-text-muted)',
                     cursor: 'pointer',
                   }}
                   title="Delete Connection"
@@ -1095,7 +1067,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
       {/* SSH Keys Section */}
       <div style={{ marginTop: '32px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#fff' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: 'var(--ui-text-primary)' }}>
             SSH Keys
           </h3>
           <button
@@ -1104,9 +1076,9 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
             style={{
               padding: '6px 12px',
               borderRadius: '6px',
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: '1px solid var(--ui-border-default)',
               background: 'transparent',
-              color: '#888',
+              color: 'var(--ui-text-secondary)',
               fontSize: '12px',
               cursor: 'pointer',
               display: 'flex',
@@ -1129,19 +1101,19 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
           <div style={{
             padding: '32px',
             textAlign: 'center',
-            color: '#666',
-            background: 'rgba(255,255,255,0.02)',
+            color: 'var(--ui-text-muted)',
+            background: 'var(--surface-hover)',
             borderRadius: '12px',
-            border: '1px dashed rgba(255,255,255,0.1)',
+            border: '1px dashed var(--ui-border-default)',
           }}>
             <Key size={32} style={{ marginBottom: '8px', opacity: 0.5 }} />
             <div style={{ fontSize: '14px' }}>No SSH keys configured</div>
           </div>
         ) : (
           <div style={{
-            background: 'rgba(255,255,255,0.02)',
+            background: 'var(--surface-hover)',
             borderRadius: '12px',
-            border: '1px solid rgba(255,255,255,0.06)',
+            border: '1px solid var(--ui-border-muted)',
             overflow: 'hidden',
           }}>
             {sshKeys.map((key, index) => (
@@ -1152,16 +1124,16 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  borderBottom: index < sshKeys.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+                  borderBottom: index < sshKeys.length - 1 ? '1px solid var(--ui-border-muted)' : 'none',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <Key size={18} color="#666" />
                   <div>
-                    <div style={{ fontSize: '14px', fontWeight: '500', color: '#fff' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--ui-text-primary)' }}>
                       {key.name}
                     </div>
-                    <div style={{ fontSize: '12px', color: '#666' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--ui-text-muted)' }}>
                       {key.fingerprint} • Added {new Date(key.added_at).toLocaleDateString()}
                     </div>
                   </div>
@@ -1173,7 +1145,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
                     borderRadius: '6px',
                     border: 'none',
                     background: 'transparent',
-                    color: '#666',
+                    color: 'var(--ui-text-muted)',
                     cursor: 'pointer',
                   }}
                 >
@@ -1191,10 +1163,10 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <h2 style={{ fontSize: '24px', fontWeight: '600', margin: '0 0 8px 0', color: '#fff' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: '600', margin: '0 0 8px 0', color: 'var(--ui-text-primary)' }}>
             Environment Templates
           </h2>
-          <p style={{ fontSize: '14px', color: '#888', margin: 0 }}>
+          <p style={{ fontSize: '14px', color: 'var(--ui-text-secondary)', margin: 0 }}>
             Railway-style one-click environments. Devcontainers, Nix flakes, or sandbox VMs.
           </p>
         </div>
@@ -1208,8 +1180,8 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
               padding: '10px 20px',
               borderRadius: '8px',
               border: 'none',
-              background: '#d4b08c',
-              color: '#0a0a0a',
+              background: 'var(--accent-primary)',
+              color: 'var(--ui-text-inverse)',
               fontSize: '14px',
               fontWeight: '600',
               cursor: 'pointer',
@@ -1227,9 +1199,9 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
             style={{
               padding: '8px 16px',
               borderRadius: '8px',
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: '1px solid var(--ui-border-default)',
               background: 'transparent',
-              color: '#888',
+              color: 'var(--ui-text-secondary)',
               fontSize: '13px',
               cursor: 'pointer',
               display: 'flex',
@@ -1261,9 +1233,9 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
               padding: '8px 16px',
               borderRadius: '20px',
               border: '1px solid',
-              borderColor: envFilter === filter.id ? '#d4b08c' : 'rgba(255,255,255,0.1)',
-              background: envFilter === filter.id ? 'rgba(212,176,140,0.1)' : 'transparent',
-              color: envFilter === filter.id ? '#d4b08c' : '#888',
+              borderColor: envFilter === filter.id ? 'var(--accent-primary)' : 'var(--ui-border-default)',
+              background: envFilter === filter.id ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'transparent',
+              color: envFilter === filter.id ? 'var(--accent-primary)' : 'var(--ui-text-muted)',
               fontSize: '13px',
               fontWeight: '500',
               cursor: 'pointer',
@@ -1297,7 +1269,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
       {/* Provisioned Environments */}
       {environments.length > 0 && (
         <div style={{ marginTop: '32px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 16px 0', color: '#fff' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 16px 0', color: 'var(--ui-text-primary)' }}>
             Provisioned Environments
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1317,16 +1289,16 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
       <div style={{
         marginTop: '32px',
         padding: '24px',
-        background: 'rgba(255,255,255,0.02)',
+        background: 'var(--surface-hover)',
         borderRadius: '12px',
-        border: '1px dashed rgba(255,255,255,0.1)',
+        border: '1px dashed var(--ui-border-default)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{
             width: '48px',
             height: '48px',
             borderRadius: '12px',
-            background: 'rgba(255,255,255,0.05)',
+            background: 'var(--surface-hover)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1334,10 +1306,10 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
             <Files size={24} color="#666" />
           </div>
           <div style={{ flex: 1 }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '600', margin: '0 0 4px 0', color: '#fff' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '600', margin: '0 0 4px 0', color: 'var(--ui-text-primary)' }}>
               Custom Configuration
             </h3>
-            <p style={{ fontSize: '14px', color: '#888', margin: 0 }}>
+            <p style={{ fontSize: '14px', color: 'var(--ui-text-secondary)', margin: 0 }}>
               Import devcontainer.json, flake.nix, or Dockerfile
             </p>
           </div>
@@ -1345,9 +1317,9 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
             style={{
               padding: '10px 20px',
               borderRadius: '8px',
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: '1px solid var(--ui-border-default)',
               background: 'transparent',
-              color: '#fff',
+              color: 'var(--ui-text-primary)',
               fontSize: '14px',
               cursor: 'pointer',
               display: 'flex',
@@ -1364,7 +1336,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
       {/* Info Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginTop: '16px' }}>
         <InfoCard
-          icon={<Code size={24} color="#d4b08c" />}
+          icon={<Code size={24} color="var(--accent-primary)" />}
           title="Dev Containers"
           description="VS Code remote containers spec. Works with any IDE supporting the spec."
         />
@@ -1374,7 +1346,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
           description="Reproducible, declarative environments. Pin exact dependency versions."
         />
         <InfoCard
-          icon={<Shield size={24} color="#22c55e" />}
+          icon={<Shield size={24} color="var(--status-success)" />}
           title="Sandbox VMs"
           description="Isolated execution environments for agents. Docker, Kata, or Firecracker."
         />
@@ -1386,10 +1358,10 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <h2 style={{ fontSize: '24px', fontWeight: '600', margin: '0 0 8px 0', color: '#fff' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: '600', margin: '0 0 8px 0', color: 'var(--ui-text-primary)' }}>
             Allternit Nodes
           </h2>
-          <p style={{ fontSize: '14px', color: '#888', margin: 0 }}>
+          <p style={{ fontSize: '14px', color: 'var(--ui-text-secondary)', margin: 0 }}>
             Compute nodes running the Allternit agent runtime ({instances.length} from cloud, {connections.length} from VPS)
           </p>
         </div>
@@ -1400,9 +1372,9 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
             style={{
               padding: '8px 16px',
               borderRadius: '8px',
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: '1px solid var(--ui-border-default)',
               background: 'transparent',
-              color: '#888',
+              color: 'var(--ui-text-secondary)',
               fontSize: '13px',
               cursor: 'pointer',
               display: 'flex',
@@ -1419,8 +1391,8 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
               padding: '10px 20px',
               borderRadius: '8px',
               border: 'none',
-              background: '#d4b08c',
-              color: '#0a0a0a',
+              background: 'var(--accent-primary)',
+              color: 'var(--ui-text-inverse)',
               fontSize: '14px',
               fontWeight: '600',
               cursor: 'pointer',
@@ -1455,10 +1427,10 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
             <div
               key={instance.id}
               style={{
-                background: 'rgba(255,255,255,0.02)',
+                background: 'var(--surface-hover)',
                 borderRadius: '12px',
                 padding: '16px 20px',
-                border: '1px solid rgba(255,255,255,0.06)',
+                border: '1px solid var(--ui-border-muted)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '12px' }}>
@@ -1466,16 +1438,16 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
                   width: '40px',
                   height: '40px',
                   borderRadius: '10px',
-                  background: instance.status === 'running' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+                  background: instance.status === 'running' ? 'var(--status-success-bg)' : 'var(--status-error-bg)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}>
-                  <Cpu size={20} color={instance.status === 'running' ? '#22c55e' : '#ef4444'} />
+                  <Cpu size={20} color={instance.status === 'running' ? 'var(--status-success)' : 'var(--status-error)'} />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '15px', fontWeight: '600', color: '#fff' }}>{instance.name}</div>
-                  <div style={{ fontSize: '13px', color: '#666' }}>
+                  <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--ui-text-primary)' }}>{instance.name}</div>
+                  <div style={{ fontSize: '13px', color: 'var(--ui-text-muted)' }}>
                     {instance.provider} • {instance.region} • Last seen {new Date(instance.last_seen).toLocaleString()}
                   </div>
                 </div>
@@ -1483,8 +1455,8 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
                   <span style={{
                     padding: '4px 10px',
                     borderRadius: '6px',
-                    background: instance.status === 'running' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-                    color: instance.status === 'running' ? '#22c55e' : '#ef4444',
+                    background: instance.status === 'running' ? 'var(--status-success-bg)' : 'var(--status-error-bg)',
+                    color: instance.status === 'running' ? 'var(--status-success)' : 'var(--status-error)',
                     fontSize: '12px',
                     fontWeight: '500',
                     textTransform: 'capitalize',
@@ -1498,7 +1470,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
                       borderRadius: '6px',
                       border: 'none',
                       background: 'transparent',
-                      color: '#666',
+                      color: 'var(--ui-text-muted)',
                       cursor: 'pointer',
                     }}
                     title="Destroy Instance"
@@ -1508,22 +1480,22 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '16px', marginLeft: '54px', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#888' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--ui-text-secondary)' }}>
                   <Cpu size={14} />
                   {instance.cpu} cores
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#888' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--ui-text-secondary)' }}>
                   <TreeStructure size={14} />
                   {Math.round(instance.ram / 1024)} GB
                 </div>
                 {instance.public_ip && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#888' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--ui-text-secondary)' }}>
                     <Globe size={14} />
                     {instance.public_ip}
                   </div>
                 )}
                 {instance.docker_available && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#22c55e' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--status-success)' }}>
                     <AppWindow size={14} />
                     Docker Ready
                   </div>
@@ -1534,7 +1506,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
                     GPU
                   </div>
                 )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#d4b08c' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--accent-primary)' }}>
                   <Wallet size={14} />
                   ${instance.cost_hr.toFixed(3)}/hr
                 </div>
@@ -1547,10 +1519,10 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
             <div
               key={`vps-${conn.id}`}
               style={{
-                background: 'rgba(255,255,255,0.02)',
+                background: 'var(--surface-hover)',
                 borderRadius: '12px',
                 padding: '16px 20px',
-                border: '1px solid rgba(255,255,255,0.06)',
+                border: '1px solid var(--ui-border-muted)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '12px' }}>
@@ -1558,24 +1530,24 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
                   width: '40px',
                   height: '40px',
                   borderRadius: '10px',
-                  background: 'rgba(34,197,94,0.1)',
+                  background: 'var(--status-success-bg)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}>
-                  <HardDrives size={20} color="#22c55e" />
+                  <HardDrives size={20} color="var(--status-success)" />
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '15px', fontWeight: '600', color: '#fff' }}>{conn.name}</div>
-                  <div style={{ fontSize: '13px', color: '#666' }}>
+                  <div style={{ fontSize: '15px', fontWeight: '600', color: 'var(--ui-text-primary)' }}>{conn.name}</div>
+                  <div style={{ fontSize: '13px', color: 'var(--ui-text-muted)' }}>
                     VPS Connection • {conn.host}
                   </div>
                 </div>
                 <span style={{
                   padding: '4px 10px',
                   borderRadius: '6px',
-                  background: 'rgba(34,197,94,0.1)',
-                  color: '#22c55e',
+                  background: 'var(--status-success-bg)',
+                  color: 'var(--status-success)',
                   fontSize: '12px',
                   fontWeight: '500',
                 }}>
@@ -1584,24 +1556,24 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
               </div>
               <div style={{ display: 'flex', gap: '16px', marginLeft: '54px', flexWrap: 'wrap' }}>
                 {conn.cpu && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#888' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--ui-text-secondary)' }}>
                     <Cpu size={14} />
                     {conn.cpu}
                   </div>
                 )}
                 {conn.memory && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#888' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--ui-text-secondary)' }}>
                     <TreeStructure size={14} />
                     {conn.memory}
                   </div>
                 )}
                 {conn.os && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#888' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--ui-text-secondary)' }}>
                     <Terminal size={14} />
                     {conn.os}
                   </div>
                 )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#22c55e' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--status-success)' }}>
                   <AppWindow size={14} />
                   Docker Ready
                 </div>
@@ -1620,7 +1592,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
         display: 'flex',
         gap: '4px',
         padding: '4px',
-        background: 'rgba(255,255,255,0.02)',
+        background: 'var(--surface-hover)',
         borderRadius: '10px',
         marginBottom: '24px',
         width: 'fit-content',
@@ -1639,15 +1611,15 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
               padding: '8px 16px',
               borderRadius: '8px',
               border: 'none',
-              background: activeTab === tab.id ? 'rgba(255,255,255,0.08)' : 'transparent',
-              color: activeTab === tab.id ? '#fff' : '#888',
+              background: activeTab === tab.id ? 'var(--ui-border-muted)' : 'transparent',
+              color: activeTab === tab.id ? 'var(--ui-text-primary)' : 'var(--ui-text-muted)',
               fontSize: '13px',
               fontWeight: '500',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              transition: 'all 0.2s',
+              transition: 'var(--transition-fast)',
             }}
           >
             <tab.icon size={14} />
@@ -1682,16 +1654,16 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
 function StatusCard({ title, value, icon, color, action, onAction, isLoading }: any) {
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.02)',
+      background: 'var(--surface-hover)',
       borderRadius: '12px',
       padding: '20px',
-      border: '1px solid rgba(255,255,255,0.06)',
+      border: '1px solid var(--ui-border-muted)',
       display: 'flex',
       flexDirection: 'column',
       gap: '12px',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ color: '#666' }}>{icon}</div>
+        <div style={{ color: 'var(--ui-text-muted)' }}>{icon}</div>
         <button
           onClick={onAction}
           style={{
@@ -1706,10 +1678,10 @@ function StatusCard({ title, value, icon, color, action, onAction, isLoading }: 
         </button>
       </div>
       <div>
-        <div style={{ fontSize: '28px', fontWeight: '600', color: '#fff' }}>
+        <div style={{ fontSize: '28px', fontWeight: '600', color: 'var(--ui-text-primary)' }}>
           {isLoading ? <Spinner size={24} className="animate-spin" /> : value}
         </div>
-        <div style={{ fontSize: '13px', color: '#888' }}>{title}</div>
+        <div style={{ fontSize: '13px', color: 'var(--ui-text-secondary)' }}>{title}</div>
       </div>
     </div>
   );
@@ -1722,16 +1694,16 @@ function ActionButton({ icon, label, onClick, primary }: any) {
       style={{
         padding: '12px 20px',
         borderRadius: '10px',
-        border: primary ? 'none' : '1px solid rgba(255,255,255,0.1)',
-        background: primary ? '#d4b08c' : 'rgba(255,255,255,0.05)',
-        color: primary ? '#0a0a0a' : '#fff',
+        border: primary ? 'none' : '1px solid var(--ui-border-default)',
+        background: primary ? 'var(--accent-primary)' : 'var(--surface-hover)',
+        color: primary ? 'var(--ui-text-inverse)' : 'var(--ui-text-primary)',
         fontSize: '14px',
         fontWeight: '500',
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
         gap: '8px',
-        transition: 'all 0.2s',
+        transition: 'var(--transition-fast)',
       }}
     >
       {icon}
@@ -1745,10 +1717,10 @@ function ProviderCard({ provider, onDeploy, isDeploying }: any) {
   
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.02)',
+      background: 'var(--surface-hover)',
       borderRadius: '16px',
       padding: '24px',
-      border: '1px solid rgba(255,255,255,0.06)',
+      border: '1px solid var(--ui-border-muted)',
       opacity: isAvailable ? 1 : 0.6,
       display: 'flex',
       flexDirection: 'column',
@@ -1763,25 +1735,25 @@ function ProviderCard({ provider, onDeploy, isDeploying }: any) {
             background: provider.logo === 'hetzner' ? '#d50c2d' : 
                        provider.logo === 'digitalocean' ? '#0069ff' :
                        provider.logo === 'aws' ? '#ff9900' :
-                       'rgba(255,255,255,0.1)',
+                       'var(--ui-border-default)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: '14px',
             fontWeight: 'bold',
-            color: '#fff',
+            color: 'var(--ui-text-primary)',
           }}>
             {provider.name[0]}
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '16px', fontWeight: '600', color: '#fff' }}>{provider.name}</span>
+              <span style={{ fontSize: '16px', fontWeight: '600', color: 'var(--ui-text-primary)' }}>{provider.name}</span>
               {provider.popular && (
                 <span style={{
                   padding: '2px 8px',
                   borderRadius: '4px',
-                  background: 'rgba(212,176,140,0.2)',
-                  color: '#d4b08c',
+                  background: 'color-mix(in srgb, var(--accent-primary) 20%, transparent)',
+                  color: 'var(--accent-primary)',
                   fontSize: '10px',
                   fontWeight: '600',
                   textTransform: 'uppercase',
@@ -1790,7 +1762,7 @@ function ProviderCard({ provider, onDeploy, isDeploying }: any) {
                 </span>
               )}
             </div>
-            <div style={{ fontSize: '13px', color: '#888' }}>
+            <div style={{ fontSize: '13px', color: 'var(--ui-text-secondary)' }}>
               From {provider.currency}{provider.starting_price}/{provider.period}
             </div>
           </div>
@@ -1798,15 +1770,15 @@ function ProviderCard({ provider, onDeploy, isDeploying }: any) {
         <span style={{
           padding: '4px 8px',
           borderRadius: '4px',
-          background: 'rgba(255,255,255,0.05)',
-          color: '#666',
+          background: 'var(--surface-hover)',
+          color: 'var(--ui-text-muted)',
           fontSize: '11px',
         }}>
           {provider.deploy_time}
         </span>
       </div>
 
-      <p style={{ fontSize: '14px', color: '#aaa', margin: 0, lineHeight: '1.5' }}>
+      <p style={{ fontSize: '14px', color: 'var(--ui-text-muted)', margin: 0, lineHeight: '1.5' }}>
         {provider.description}
       </p>
 
@@ -1817,8 +1789,8 @@ function ProviderCard({ provider, onDeploy, isDeploying }: any) {
             style={{
               padding: '4px 10px',
               borderRadius: '6px',
-              background: 'rgba(255,255,255,0.05)',
-              color: '#888',
+              background: 'var(--surface-hover)',
+              color: 'var(--ui-text-secondary)',
               fontSize: '12px',
             }}
           >
@@ -1836,9 +1808,9 @@ function ProviderCard({ provider, onDeploy, isDeploying }: any) {
             flex: 1,
             padding: '10px',
             borderRadius: '8px',
-            border: '1px solid rgba(255,255,255,0.1)',
+            border: '1px solid var(--ui-border-default)',
             background: 'transparent',
-            color: '#888',
+            color: 'var(--ui-text-secondary)',
             fontSize: '13px',
             textAlign: 'center',
             textDecoration: 'none',
@@ -1859,8 +1831,8 @@ function ProviderCard({ provider, onDeploy, isDeploying }: any) {
             padding: '10px',
             borderRadius: '8px',
             border: 'none',
-            background: isAvailable ? '#d4b08c' : 'rgba(255,255,255,0.1)',
-            color: isAvailable ? '#0a0a0a' : '#666',
+            background: isAvailable ? 'var(--accent-primary)' : 'var(--ui-border-default)',
+            color: isAvailable ? 'var(--ui-text-inverse)' : 'var(--ui-text-muted)',
             fontSize: '13px',
             fontWeight: '600',
             cursor: isAvailable && !isDeploying ? 'pointer' : 'not-allowed',
@@ -1902,10 +1874,10 @@ function TemplateCard({
   isProvisioning?: boolean;
 }) {
   const typeColors: Record<EnvironmentType, string> = {
-    devcontainer: '#d4b08c',
+    devcontainer: 'var(--accent-primary)',
     nix: '#7c3aed',
-    sandbox: '#22c55e',
-    platform: '#3b82f6',
+    sandbox: 'var(--status-success)',
+    platform: 'var(--status-info)',
   };
 
   const typeLabels: Record<EnvironmentType, string> = {
@@ -1927,13 +1899,13 @@ function TemplateCard({
       onClick={onClick}
       disabled={isProvisioning}
       style={{
-        background: 'rgba(255,255,255,0.02)',
+        background: 'var(--surface-hover)',
         borderRadius: '12px',
         padding: '20px',
-        border: '1px solid rgba(255,255,255,0.06)',
+        border: '1px solid var(--ui-border-muted)',
         textAlign: 'left',
         cursor: isProvisioning ? 'not-allowed' : 'pointer',
-        transition: 'all 0.2s',
+        transition: 'var(--transition-fast)',
         display: 'flex',
         flexDirection: 'column',
         gap: '12px',
@@ -1942,12 +1914,12 @@ function TemplateCard({
       onMouseEnter={(e) => {
         if (!isProvisioning) {
           e.currentTarget.style.borderColor = `${typeColors[template.type]}40`;
-          e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+          e.currentTarget.style.background = 'var(--surface-hover)';
         }
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
-        e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+        e.currentTarget.style.borderColor = 'var(--ui-border-muted)';
+        e.currentTarget.style.background = 'var(--surface-hover)';
       }}
     >
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
@@ -1977,18 +1949,18 @@ function TemplateCard({
       </div>
 
       <div>
-        <h4 style={{ fontSize: '15px', fontWeight: '600', margin: '0 0 6px 0', color: '#fff' }}>
+        <h4 style={{ fontSize: '15px', fontWeight: '600', margin: '0 0 6px 0', color: 'var(--ui-text-primary)' }}>
           {template.name}
         </h4>
-        <p style={{ fontSize: '13px', color: '#888', margin: 0, lineHeight: '1.4' }}>
+        <p style={{ fontSize: '13px', color: 'var(--ui-text-secondary)', margin: 0, lineHeight: '1.4' }}>
           {template.description}
         </p>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
         {template.features.slice(0, 4).map((feature: string) => (
-          <div key={feature} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#666' }}>
-            <Check size={12} color="#22c55e" />
+          <div key={feature} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--ui-text-muted)' }}>
+            <Check size={12} color="var(--status-success)" />
             {feature}
           </div>
         ))}
@@ -1999,10 +1971,10 @@ function TemplateCard({
         alignItems: 'center', 
         gap: '6px', 
         fontSize: '12px', 
-        color: '#555',
+        color: 'var(--ui-text-muted)',
         marginTop: 'auto',
         paddingTop: '8px',
-        borderTop: '1px solid rgba(255,255,255,0.04)',
+        borderTop: '1px solid var(--ui-border-muted)',
       }}>
         <ArrowsClockwise size={12} />
         {isProvisioning ? 'Provisioning...' : template.setupTime}
@@ -2014,16 +1986,16 @@ function TemplateCard({
 function InfoCard({ icon, title, description }: any) {
   return (
     <div style={{
-      background: 'rgba(255,255,255,0.02)',
+      background: 'var(--surface-hover)',
       borderRadius: '12px',
       padding: '20px',
-      border: '1px solid rgba(255,255,255,0.06)',
+      border: '1px solid var(--ui-border-muted)',
     }}>
       <div style={{ marginBottom: '12px' }}>{icon}</div>
-      <h4 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 6px 0', color: '#fff' }}>
+      <h4 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 6px 0', color: 'var(--ui-text-primary)' }}>
         {title}
       </h4>
-      <p style={{ fontSize: '13px', color: '#888', margin: 0, lineHeight: '1.5' }}>
+      <p style={{ fontSize: '13px', color: 'var(--ui-text-secondary)', margin: 0, lineHeight: '1.5' }}>
         {description}
       </p>
     </div>
@@ -2041,16 +2013,16 @@ function EmptyState({ icon, title, description, action, onAction }: any) {
       textAlign: 'center',
     }}>
       <div style={{ marginBottom: '24px' }}>{icon}</div>
-      <h3 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 8px 0', color: '#fff' }}>{title}</h3>
-      <p style={{ fontSize: '14px', color: '#666', margin: '0 0 24px 0', maxWidth: '400px' }}>{description}</p>
+      <h3 style={{ fontSize: '18px', fontWeight: '600', margin: '0 0 8px 0', color: 'var(--ui-text-primary)' }}>{title}</h3>
+      <p style={{ fontSize: '14px', color: 'var(--ui-text-muted)', margin: '0 0 24px 0', maxWidth: '400px' }}>{description}</p>
       <button
         onClick={onAction}
         style={{
           padding: '10px 24px',
           borderRadius: '8px',
           border: 'none',
-          background: '#d4b08c',
-          color: '#0a0a0a',
+          background: 'var(--accent-primary)',
+          color: 'var(--ui-text-inverse)',
           fontSize: '14px',
           fontWeight: '600',
           cursor: 'pointer',
@@ -2069,12 +2041,12 @@ function ErrorAlert({ message, onRetry }: { message: string; onRetry: () => void
       alignItems: 'center',
       gap: '12px',
       padding: '16px',
-      background: 'rgba(239,68,68,0.1)',
+      background: 'var(--status-error-bg)',
       borderRadius: '12px',
-      border: '1px solid rgba(239,68,68,0.2)',
+      border: '1px solid color-mix(in srgb, var(--status-error) 20%, transparent)',
     }}>
-      <WarningCircle size={20} color="#ef4444" />
-      <div style={{ flex: 1, color: '#ef4444', fontSize: '14px' }}>
+      <WarningCircle size={20} color="var(--status-error)" />
+      <div style={{ flex: 1, color: 'var(--status-error)', fontSize: '14px' }}>
         {message}
       </div>
       <button
@@ -2082,9 +2054,9 @@ function ErrorAlert({ message, onRetry }: { message: string; onRetry: () => void
         style={{
           padding: '8px 16px',
           borderRadius: '6px',
-          border: '1px solid rgba(239,68,68,0.3)',
+          border: '1px solid color-mix(in srgb, var(--status-error) 40%, transparent)',
           background: 'transparent',
-          color: '#ef4444',
+          color: 'var(--status-error)',
           fontSize: '13px',
           cursor: 'pointer',
           display: 'flex',
@@ -2110,7 +2082,7 @@ function LoadingState({ message }: { message: string }) {
       gap: '16px',
     }}>
       <Spinner size={32} color="#666" className="animate-spin" />
-      <p style={{ fontSize: '14px', color: '#666', margin: 0 }}>{message}</p>
+      <p style={{ fontSize: '14px', color: 'var(--ui-text-muted)', margin: 0 }}>{message}</p>
     </div>
   );
 }
@@ -2122,30 +2094,30 @@ function DeploymentRow({ deployment, onCancel }: { deployment: Deployment; onCan
       alignItems: 'center',
       gap: '12px',
       padding: '16px',
-      background: 'rgba(255,255,255,0.02)',
+      background: 'var(--surface-hover)',
       borderRadius: '12px',
-      border: '1px solid rgba(255,255,255,0.06)',
+      border: '1px solid var(--ui-border-muted)',
     }}>
       <div style={{
         width: '40px',
         height: '40px',
         borderRadius: '10px',
-        background: 'rgba(59,130,246,0.1)',
+        background: 'var(--status-info-bg)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
       }}>
-        <RocketLaunch size={20} color="#3b82f6" />
+        <RocketLaunch size={20} color="var(--status-info)" />
       </div>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: '14px', fontWeight: '500', color: '#fff' }}>
+        <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--ui-text-primary)' }}>
           {deployment.instance_name}
         </div>
-        <div style={{ fontSize: '12px', color: '#666' }}>
+        <div style={{ fontSize: '12px', color: 'var(--ui-text-muted)' }}>
           {(deployment as any).provider_id || deployment.provider} • {deployment.status}
         </div>
         {deployment.message && (
-          <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
+          <div style={{ fontSize: '12px', color: 'var(--ui-text-secondary)', marginTop: '4px' }}>
             {deployment.message}
           </div>
         )}
@@ -2157,8 +2129,8 @@ function DeploymentRow({ deployment, onCancel }: { deployment: Deployment; onCan
             padding: '8px 16px',
             borderRadius: '6px',
             border: 'none',
-            background: 'rgba(239,68,68,0.1)',
-            color: '#ef4444',
+            background: 'var(--status-error-bg)',
+            color: 'var(--status-error)',
             fontSize: '13px',
             cursor: 'pointer',
           }}
@@ -2169,8 +2141,8 @@ function DeploymentRow({ deployment, onCancel }: { deployment: Deployment; onCan
         <span style={{
           padding: '4px 10px',
           borderRadius: '6px',
-          background: (deployment.status as string) === 'running' ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
-          color: (deployment.status as string) === 'running' ? '#22c55e' : '#ef4444',
+          background: (deployment.status as string) === 'running' ? 'var(--status-success-bg)' : 'var(--status-error-bg)',
+          color: (deployment.status as string) === 'running' ? 'var(--status-success)' : 'var(--status-error)',
           fontSize: '12px',
           fontWeight: '500',
           textTransform: 'capitalize',
@@ -2199,10 +2171,10 @@ function EnvironmentRow({
   const templateType = (environment.template_id?.split('-')[0] as EnvironmentTemplate['type']) || 'devcontainer';
   
   const typeColors: Record<EnvironmentType, string> & { [key: string]: string } = {
-    devcontainer: '#d4b08c',
+    devcontainer: 'var(--accent-primary)',
     nix: '#7c3aed',
-    sandbox: '#22c55e',
-    platform: '#3b82f6',
+    sandbox: 'var(--status-success)',
+    platform: 'var(--status-info)',
   };
 
   const typeIcons: Record<EnvironmentType, React.ReactNode> & { [key: string]: React.ReactNode } = {
@@ -2212,7 +2184,7 @@ function EnvironmentRow({
     platform: <RocketLaunch size={20} />,
   };
 
-  const typeColor = typeColors[templateType] || '#888';
+  const typeColor = typeColors[templateType] || 'var(--ui-text-muted)';
   const typeIcon = typeIcons[templateType] || <Package size={20} />;
 
   return (
@@ -2221,9 +2193,9 @@ function EnvironmentRow({
       alignItems: 'center',
       gap: '12px',
       padding: '16px',
-      background: 'rgba(255,255,255,0.02)',
+      background: 'var(--surface-hover)',
       borderRadius: '12px',
-      border: '1px solid rgba(255,255,255,0.06)',
+      border: '1px solid var(--ui-border-muted)',
     }}>
       <div style={{
         width: '40px',
@@ -2238,10 +2210,10 @@ function EnvironmentRow({
         {typeIcon}
       </div>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: '14px', fontWeight: '500', color: '#fff' }}>
+        <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--ui-text-primary)' }}>
           {environment.name}
         </div>
-        <div style={{ fontSize: '12px', color: '#666', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ fontSize: '12px', color: 'var(--ui-text-muted)', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ textTransform: 'capitalize' }}>{templateType}</span>
           <span>•</span>
           <span>Created {new Date(environment.created_at).toLocaleDateString()}</span>
@@ -2253,7 +2225,7 @@ function EnvironmentRow({
             rel="noopener noreferrer"
             style={{ 
               fontSize: '12px', 
-              color: '#3b82f6',
+              color: 'var(--status-info)',
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
@@ -2271,12 +2243,12 @@ function EnvironmentRow({
         <span style={{
           padding: '4px 10px',
           borderRadius: '6px',
-          background: environment.status === 'running' ? 'rgba(34,197,94,0.1)' : 
-                     environment.status === 'provisioning' ? 'rgba(59,130,246,0.1)' :
-                     'rgba(239,68,68,0.1)',
-          color: environment.status === 'running' ? '#22c55e' : 
-                 environment.status === 'provisioning' ? '#3b82f6' :
-                 '#ef4444',
+          background: environment.status === 'running' ? 'var(--status-success-bg)' : 
+                     environment.status === 'provisioning' ? 'var(--status-info-bg)' :
+                     'var(--status-error-bg)',
+          color: environment.status === 'running' ? 'var(--status-success)' : 
+                 environment.status === 'provisioning' ? 'var(--status-info)' :
+                 'var(--status-error)',
           fontSize: '12px',
           fontWeight: '500',
           textTransform: 'capitalize',
@@ -2295,7 +2267,7 @@ function EnvironmentRow({
             borderRadius: '6px',
             border: 'none',
             background: 'transparent',
-            color: '#666',
+            color: 'var(--ui-text-muted)',
             cursor: isDestroying ? 'not-allowed' : 'pointer',
             opacity: isDestroying ? 0.5 : 1,
           }}

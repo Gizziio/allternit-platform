@@ -137,6 +137,7 @@
   --accent-chat: #B08D6E;
   --accent-cowork: #9A7BAA;
   --accent-code: #6B9A7B;
+  --accent-browser: #6B8FA0;
   --accent-primary: #B08D6E;
   --accent-secondary: #D4B08C;
 
@@ -192,9 +193,11 @@
   --shell-mode-chat-soft: color-mix(in srgb, var(--accent-chat) 16%, var(--surface-panel));
   --shell-mode-cowork-soft: color-mix(in srgb, var(--accent-cowork) 16%, var(--surface-panel));
   --shell-mode-code-soft: color-mix(in srgb, var(--accent-code) 16%, var(--surface-panel));
+  --shell-mode-browser-soft: color-mix(in srgb, var(--accent-browser) 16%, var(--surface-panel));
   --shell-mode-chat-strong: color-mix(in srgb, var(--accent-chat) 56%, var(--surface-panel-muted));
   --shell-mode-cowork-strong: color-mix(in srgb, var(--accent-cowork) 56%, var(--surface-panel-muted));
   --shell-mode-code-strong: color-mix(in srgb, var(--accent-code) 56%, var(--surface-panel-muted));
+  --shell-mode-browser-strong: color-mix(in srgb, var(--accent-browser) 56%, var(--surface-panel-muted));
   --chat-composer-bg: color-mix(in srgb, var(--surface-floating) 94%, var(--surface-panel) 6%);
   --chat-composer-border: var(--ui-border-default);
   --chat-composer-hover: var(--shell-item-hover);
@@ -302,6 +305,7 @@
   --font-serif: 'Times New Roman', Times, serif; /* For the main greeting */
   --accent-cowork: #B08BC0;
   --accent-code: #7BB08B;
+  --accent-browser: #69A8C8;
   --accent-primary: #D4B08C;
   --accent-secondary: #B08D6E;
 
@@ -357,9 +361,11 @@
   --shell-mode-chat-soft: color-mix(in srgb, var(--accent-chat) 16%, var(--surface-panel));
   --shell-mode-cowork-soft: color-mix(in srgb, var(--accent-cowork) 16%, var(--surface-panel));
   --shell-mode-code-soft: color-mix(in srgb, var(--accent-code) 16%, var(--surface-panel));
+  --shell-mode-browser-soft: color-mix(in srgb, var(--accent-browser) 16%, var(--surface-panel));
   --shell-mode-chat-strong: color-mix(in srgb, var(--accent-chat) 50%, var(--surface-panel-muted));
   --shell-mode-cowork-strong: color-mix(in srgb, var(--accent-cowork) 50%, var(--surface-panel-muted));
   --shell-mode-code-strong: color-mix(in srgb, var(--accent-code) 50%, var(--surface-panel-muted));
+  --shell-mode-browser-strong: color-mix(in srgb, var(--accent-browser) 50%, var(--surface-panel-muted));
   --chat-composer-bg: color-mix(in srgb, var(--surface-floating) 96%, var(--surface-panel) 4%);
   --chat-composer-border: var(--ui-border-default);
   --chat-composer-hover: var(--shell-item-hover);

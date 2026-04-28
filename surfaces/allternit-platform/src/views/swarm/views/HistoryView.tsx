@@ -208,7 +208,7 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
               onClick={() => setChartType(type)}
               className="px-3 py-1.5 rounded-md text-xs font-medium transition-all capitalize"
               style={{
-                background: chartType === type ? `${modeColors.accent}20` : 'rgba(255,255,255,0.03)',
+                background: chartType === type ? `${modeColors.accent}20` : 'var(--surface-hover)',
                 color: chartType === type ? modeColors.accent : TEXT.secondary,
                 border: `1px solid ${chartType === type ? `${modeColors.accent}40` : 'transparent'}`,
               }}
@@ -227,7 +227,7 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
               onClick={() => setTimeRange(range)}
               className="px-3 py-1.5 rounded-md text-xs font-medium transition-all"
               style={{
-                background: timeRange === range ? `${modeColors.accent}20` : 'rgba(255,255,255,0.03)',
+                background: timeRange === range ? `${modeColors.accent}20` : 'var(--surface-hover)',
                 color: timeRange === range ? modeColors.accent : TEXT.secondary,
                 border: `1px solid ${timeRange === range ? `${modeColors.accent}40` : 'transparent'}`,
               }}
@@ -243,7 +243,7 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
             onClick={() => handleExport('csv')}
             disabled={isExporting}
             className="px-3 py-1.5 rounded-md text-xs font-medium transition-all hover:bg-white/5 disabled:opacity-50"
-            style={{ background: 'rgba(255,255,255,0.03)', color: TEXT.secondary }}
+            style={{ background: 'var(--surface-hover)', color: TEXT.secondary }}
           >
             <FileCsv size={12} weight="duotone" style={{ marginRight: 4 }} />
             CSV
@@ -252,7 +252,7 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
             onClick={() => handleExport('json')}
             disabled={isExporting}
             className="px-3 py-1.5 rounded-md text-xs font-medium transition-all hover:bg-white/5 disabled:opacity-50"
-            style={{ background: 'rgba(255,255,255,0.03)', color: TEXT.secondary }}
+            style={{ background: 'var(--surface-hover)', color: TEXT.secondary }}
           >
             <FileCode size={12} weight="duotone" style={{ marginRight: 4 }} />
             JSON
@@ -275,7 +275,7 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
                     </linearGradient>
                   ))}
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--surface-hover)" />
                 <XAxis 
                   dataKey="time" 
                   stroke={TEXT.tertiary}
@@ -291,7 +291,7 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
                 <Tooltip
                   contentStyle={{
                     background: 'rgba(13, 11, 9, 0.95)',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    border: '1px solid var(--ui-border-default)',
                     borderRadius: '8px',
                     fontSize: '12px',
                   }}
@@ -322,7 +322,7 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
               </AreaChart>
             ) : chartType === 'line' ? (
               <LineChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--surface-hover)" />
                 <XAxis 
                   dataKey="time" 
                   stroke={TEXT.tertiary}
@@ -338,7 +338,7 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
                 <Tooltip
                   contentStyle={{
                     background: 'rgba(13, 11, 9, 0.95)',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    border: '1px solid var(--ui-border-default)',
                     borderRadius: '8px',
                     fontSize: '12px',
                   }}
@@ -368,7 +368,7 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
               </LineChart>
             ) : (
               <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--surface-hover)" />
                 <XAxis 
                   dataKey="time" 
                   stroke={TEXT.tertiary}
@@ -384,7 +384,7 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
                 <Tooltip
                   contentStyle={{
                     background: 'rgba(13, 11, 9, 0.95)',
-                    border: '1px solid rgba(255,255,255,0.1)',
+                    border: '1px solid var(--ui-border-default)',
                     borderRadius: '8px',
                     fontSize: '12px',
                   }}
@@ -417,12 +417,12 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
         <div 
           className="w-72 border-l overflow-auto"
           style={{ 
-            background: 'rgba(255,255,255,0.02)',
-            borderColor: 'rgba(255,255,255,0.05)',
+            background: 'var(--surface-hover)',
+            borderColor: 'var(--surface-hover)',
           }}
         >
           {/* Metric Toggles */}
-          <div className="p-4 border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+          <div className="p-4 border-b" style={{ borderColor: 'var(--surface-hover)' }}>
             <h3 className="text-xs font-bold uppercase tracking-wider mb-3" style={{ color: TEXT.tertiary }}>
               Metrics
             </h3>
@@ -437,8 +437,8 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
                     onClick={() => toggleMetric(metric.key)}
                     className="w-full p-3 rounded-xl text-left transition-all border"
                     style={{
-                      background: isVisible ? `${metric.color}10` : 'rgba(255,255,255,0.02)',
-                      borderColor: isVisible ? `${metric.color}30` : 'rgba(255,255,255,0.05)',
+                      background: isVisible ? `${metric.color}10` : 'var(--surface-hover)',
+                      borderColor: isVisible ? `${metric.color}30` : 'var(--surface-hover)',
                     }}
                   >
                     <div className="flex items-center justify-between mb-1">
@@ -457,7 +457,7 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
                     </div>
                     
                     {isVisible && stat && (
-                      <div className="mt-2 pt-2 border-t space-y-1" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+                      <div className="mt-2 pt-2 border-t space-y-1" style={{ borderColor: 'var(--surface-hover)' }}>
                         <div className="flex justify-between text-[10px]">
                           <span style={{ color: TEXT.tertiary }}>Min</span>
                           <span style={{ color: TEXT.secondary }}>{metric.formatter(stat.min)}</span>

@@ -22,7 +22,6 @@ export const DEFAULT_POLICIES: Record<ViewType, SpawnPolicy> = {
   "chat-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
   "cowork-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
   "code-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
-  "browser-agent-session": { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
   
   terminal: { singleton: false, maxInstances: 10, allowNew: true, surface: "view", ownsTabs: false },
 

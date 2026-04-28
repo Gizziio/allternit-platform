@@ -55,11 +55,11 @@ const stateColors: Record<CodeSessionState, string> = {
   PLANNING: '#7f8cff',
   PLAN_READY: '#b077ff',
   EXECUTING: '#45c56b',
-  AWAITING_APPROVAL: '#f59e0b',
-  CHANGESET_READY: '#10b981',
-  APPLYING: '#06b6d4',
-  VERIFYING: '#22c55e',
-  DONE: '#34d399',
+  AWAITING_APPROVAL: 'var(--status-warning)',
+  CHANGESET_READY: 'var(--status-success)',
+  APPLYING: 'var(--status-info)',
+  VERIFYING: 'var(--status-success)',
+  DONE: 'var(--status-success)',
   FAILED: '#ff6b6b',
   TERMINATED: '#9ca3af',
 };
@@ -76,7 +76,7 @@ function sectionButtonStyle(expanded: boolean): React.CSSProperties {
     alignItems: 'center',
     gap: 8,
     padding: '6px 8px',
-    background: expanded ? 'rgba(255,255,255,0.04)' : 'transparent',
+    background: expanded ? 'var(--surface-hover)' : 'transparent',
     border: 'none',
     borderRadius: 8,
     color: 'var(--text-tertiary)',
@@ -121,7 +121,7 @@ function SessionRow({
       style={{
         width: '100%',
         border: `1px solid ${isActive ? 'var(--accent-chat)' : 'var(--border-subtle)'}`,
-        background: isActive ? 'rgba(86, 169, 255, 0.12)' : 'rgba(255,255,255,0.02)',
+        background: isActive ? 'rgba(86, 169, 255, 0.12)' : 'var(--surface-hover)',
         borderRadius: 10,
         padding: 10,
         cursor: 'pointer',
@@ -165,9 +165,9 @@ function SessionRow({
               minWidth: 20,
               height: 20,
               borderRadius: 999,
-              background: '#f59e0b22',
+              background: 'var(--status-warning-bg)',
               border: '1px solid #f59e0b77',
-              color: '#f59e0b',
+              color: 'var(--status-warning)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -208,7 +208,7 @@ function SessionRow({
             display: 'flex',
             alignItems: 'flex-start',
             gap: 6,
-            color: '#ff8f8f',
+            color: 'var(--status-error)',
             fontSize: 11,
             lineHeight: 1.4,
           }}
@@ -308,7 +308,7 @@ export function CodeRail({ onOpen }: CodeRailProps) {
           <div
             style={{
               border: '1px solid var(--border-subtle)',
-              background: 'rgba(255,255,255,0.02)',
+              background: 'var(--surface-hover)',
               borderRadius: 10,
               padding: 10,
               display: 'flex',
@@ -323,7 +323,7 @@ export function CodeRail({ onOpen }: CodeRailProps) {
               </span>
               <span
                 style={pillStyle(
-                  activeWorkspace.repo_status.dirty ? '#ffb24c' : '#58d68d',
+                  activeWorkspace.repo_status.dirty ? 'var(--status-warning)' : 'var(--status-success)',
                 )}
               >
                 {activeWorkspace.repo_status.dirty ? 'DIRTY' : 'CLEAN'}
@@ -451,7 +451,7 @@ export function CodeRail({ onOpen }: CodeRailProps) {
                       alignItems: 'center',
                       gap: 8,
                       padding: '8px 10px',
-                      background: 'rgba(255,255,255,0.02)',
+                      background: 'var(--surface-hover)',
                       border: '1px solid var(--border-subtle)',
                       borderRadius: 8,
                       color: 'var(--text-secondary)',

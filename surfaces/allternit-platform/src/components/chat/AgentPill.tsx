@@ -109,7 +109,7 @@ export function AgentPill({ agent, onRemove }: AgentPillProps) {
           marginLeft: 2,
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+          e.currentTarget.style.background = "var(--ui-border-muted)";
           e.currentTarget.style.color = THEME.textPrimary;
         }}
         onMouseLeave={(e) => {

@@ -17,8 +17,7 @@
 
 import * as React from 'react';
 const { useState, useCallback, useEffect, useRef } = React;
-import { useSidecarStore } from '../stores/useSidecarStore';
-import { useAllternitRails, AllternitRailsClient, DagState, DagNode, BusMessage } from '../kernel/AllternitRailsBridge';
+import { useAllternitRails, DagNode, BusMessage } from '../kernel/AllternitRailsBridge';
 import type { AllternitProgram } from '../types/programs';
 
 interface WorkflowBuilderProgramProps {
@@ -268,7 +267,6 @@ const BusMessagePanel: React.FC<{
 // ============================================================================
 
 export const WorkflowBuilderProgram: React.FC<WorkflowBuilderProgramProps> = ({ program }) => {
-  const store = useSidecarStore();
   const canvasRef = useRef<HTMLDivElement>(null);
   
   // Get workspace ID from program state or use default
@@ -285,7 +283,7 @@ export const WorkflowBuilderProgram: React.FC<WorkflowBuilderProgramProps> = ({ 
   const [visualNodes, setVisualNodes] = useState<Record<string, VisualNode>>({});
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [scale, setScale] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [pan] = useState({ x: 0, y: 0 });
   const [activeTab, setActiveTab] = useState<'canvas' | 'messages' | 'logs'>('canvas');
 
   // Initialize visual nodes from DAG data

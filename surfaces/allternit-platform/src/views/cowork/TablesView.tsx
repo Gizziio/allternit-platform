@@ -119,7 +119,7 @@ export const TablesView: React.FC = () => {
                   borderRadius: '6px',
                   border: '1px solid var(--border-subtle)',
                   backgroundColor: 'transparent',
-                  color: '#af52de',
+                  color: 'var(--accent-cowork)',
                   fontSize: '13px',
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -128,7 +128,7 @@ export const TablesView: React.FC = () => {
                 onMouseEnter={(e) => {
                   const target = e.currentTarget;
                   target.style.backgroundColor = 'rgba(175, 82, 222, 0.1)';
-                  target.style.borderColor = '#af52de';
+                  target.style.borderColor = 'var(--accent-cowork)';
                 }}
                 onMouseLeave={(e) => {
                   const target = e.currentTarget;

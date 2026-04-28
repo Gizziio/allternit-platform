@@ -20,7 +20,7 @@ const getModeColor = (mode: SkillMode): string => {
   switch (mode) {
     case 'Network': return '#4a90fe';
     case 'DOM': return '#673ab7';
-    case 'API': return '#34c759';
+    case 'API': return 'var(--status-success)';
     default: return '#8e8e93';
   }
 };
@@ -141,7 +141,7 @@ export function SkillsRegistryView() {
                       {skill.name}
                     </h3>
                     {skill.status === 'active' && (
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#34c759' }} />
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--status-success)' }} />
                     )}
                   </div>
                   <p style={{ fontSize: 12, color: 'var(--text-tertiary)', margin: '0 0 10px 0', lineHeight: 1.4 }}>
@@ -196,7 +196,7 @@ export function SkillsRegistryView() {
                       padding: '6px 10px',
                       borderRadius: 6,
                       border: 'none',
-                      background: '#34c759',
+                      background: 'var(--status-success)',
                       color: 'white',
                       cursor: 'pointer',
                       display: 'flex',

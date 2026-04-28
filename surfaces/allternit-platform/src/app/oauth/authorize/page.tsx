@@ -120,7 +120,7 @@ function AuthorizeContent() {
 
   return (
     <div style={{
-      minHeight: '100vh', background: '#0A0806',
+      minHeight: '100vh', background: 'var(--surface-canvas)',
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       fontFamily: 'inherit', padding: '24px 16px',
     }}>
@@ -139,9 +139,9 @@ function AuthorizeContent() {
             exit={{ opacity: 0, y: -16, scale: 0.97 }}
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
             style={{
-              width: '100%', maxWidth: 480, background: '#110E0B', borderRadius: 20,
-              border: '1px solid rgba(255,255,255,0.08)',
-              boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.03)',
+              width: '100%', maxWidth: 480, background: 'var(--surface-panel)', borderRadius: 20,
+              border: '1px solid var(--ui-border-muted)',
+              boxShadow: '0 32px 80px var(--shell-overlay-backdrop), 0 0 0 1px var(--surface-hover)',
               overflow: 'hidden',
             }}
           >
@@ -167,7 +167,7 @@ function AuthorizeContent() {
                 <strong style={{ fontWeight: 700 }}>Allternit account</strong>
               </motion.h1>
 
-              <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', marginBottom: 20 }} />
+              <div style={{ height: 1, background: 'var(--ui-border-muted)', marginBottom: 20 }} />
 
               {/* Scopes */}
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.45, duration: 0.4 }}>
@@ -187,11 +187,11 @@ function AuthorizeContent() {
                 </div>
               </motion.div>
 
-              <div style={{ height: 1, background: 'rgba(255,255,255,0.06)', margin: '24px 0 20px' }} />
+              <div style={{ height: 1, background: 'var(--ui-border-muted)', margin: '24px 0 20px' }} />
 
               {/* Error */}
               {error && (
-                <div style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', fontSize: 12.5, color: 'rgba(239,68,68,0.9)' }}>
+                <div style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: 'var(--status-error-bg)', border: '1px solid rgba(239,68,68,0.2)', fontSize: 12.5, color: 'rgba(239,68,68,0.9)' }}>
                   {error}
                 </div>
               )}
@@ -205,7 +205,7 @@ function AuthorizeContent() {
                   style={{
                     width: '100%', padding: '13px 20px', borderRadius: 12, border: 'none',
                     background: loading ? 'rgba(217,119,87,0.6)' : 'linear-gradient(135deg, #E8886A 0%, #D97757 100%)',
-                    color: '#fff', fontSize: 14, fontWeight: 700,
+                    color: 'var(--ui-text-inverse)', fontSize: 14, fontWeight: 700,
                     cursor: loading || declined ? 'not-allowed' : 'pointer',
                     letterSpacing: '-0.01em',
                     boxShadow: loading ? 'none' : '0 4px 20px rgba(217,119,87,0.3)',
@@ -219,7 +219,7 @@ function AuthorizeContent() {
                       <motion.span
                         animate={{ rotate: 360 }}
                         transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
-                        style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%' }}
+                        style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'var(--ui-text-inverse)', borderRadius: '50%' }}
                       />
                       Authorizing…
                     </span>
@@ -248,14 +248,14 @@ function AuthorizeContent() {
             {/* Footer */}
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8, duration: 0.35 }}
-              style={{ borderTop: '1px solid rgba(255,255,255,0.05)', background: '#0D0A07', padding: '14px 36px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 6 }}
+              style={{ borderTop: '1px solid var(--surface-hover)', background: 'var(--surface-canvas)', padding: '14px 36px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 6 }}
             >
               <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', margin: 0 }}>
                 Logged in as <span style={{ color: 'rgba(255,255,255,0.55)' }}>{userEmail || 'your account'}</span>
               </p>
               <a
                 href={`/oauth/select-account?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${oauthState}`}
-                style={{ fontSize: 12, color: '#D97757', textDecoration: 'none', opacity: 0.8 }}
+                style={{ fontSize: 12, color: 'var(--accent-primary)', textDecoration: 'none', opacity: 0.8 }}
                 onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = '1'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.opacity = '0.8'; }}
               >

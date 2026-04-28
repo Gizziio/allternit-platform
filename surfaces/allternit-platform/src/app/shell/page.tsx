@@ -16,7 +16,7 @@ const ShellApp = dynamic(
           alignItems: 'center',
           justifyContent: 'center',
           background: '#0F0C0A',
-          color: '#D4B08C',
+          color: 'var(--accent-primary)',
           gap: 16,
         }}
       >
@@ -25,7 +25,7 @@ const ShellApp = dynamic(
             width: 32,
             height: 32,
             border: '2px solid rgba(212, 176, 140, 0.2)',
-            borderTopColor: '#D4B08C',
+            borderTopColor: 'var(--accent-primary)',
             borderRadius: '50%',
             animation: 'spin 1s linear infinite',
           }}

@@ -12,8 +12,6 @@ import { GlassSurface } from '@/design/GlassSurface';
 import {
   Anchor,
   Shield,
-  Pulse as Activity,
-  Users,
   Plus,
   Power,
   Warning,
@@ -117,9 +115,9 @@ function HookRow({ hook, onToggle }: { hook: Hook; onToggle: (id: string) => voi
 
 function ExecutionLogEntry({ execution }: { execution: HookExecution }) {
   const resultConfig: Record<string, { bg: string; color: string; icon: React.ReactNode }> = {
-    passed: { bg: 'rgba(52, 199, 89, 0.08)', color: '#34c759', icon: <CheckCircle size={16} /> },
+    passed: { bg: 'rgba(52, 199, 89, 0.08)', color: 'var(--status-success)', icon: <CheckCircle size={16} /> },
     blocked: { bg: 'rgba(255, 159, 10, 0.08)', color: '#ff9f0a', icon: <Shield size={16} /> },
-    error: { bg: 'rgba(255, 59, 48, 0.08)', color: '#ff3b30', icon: <Warning size={16} /> },
+    error: { bg: 'rgba(255, 59, 48, 0.08)', color: 'var(--status-error)', icon: <Warning size={16} /> },
   };
 
   const config = resultConfig[execution.result];

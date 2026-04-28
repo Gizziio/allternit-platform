@@ -1,10 +1,10 @@
 /**
  * DeleteConfirmModal - Unified delete confirmation modal for all rail items
- * Uses React Portal to render at document body level for proper z-index stacking
+ * Refactored to use the shared Modal component for consistent presentation.
  */
 
-import React, { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
+import React from 'react';
+import { Modal, ModalHeader, ModalBody, ModalFooter, ModalButton } from '@/components/ui/Modal';
 
 interface DeleteConfirmModalProps {
   title: string;
@@ -14,35 +14,13 @@ interface DeleteConfirmModalProps {
   onConfirm: () => void;
 }
 
-export function DeleteConfirmModal({ 
+export function DeleteConfirmModal({
   title,
-  itemName, 
+  itemName,
   itemType,
-  onCancel, 
-  onConfirm 
+  onCancel,
+  onConfirm,
 }: DeleteConfirmModalProps) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    
-    // Handle escape key
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancel();
-    };
-    document.addEventListener('keydown', handleEscape);
-    
-    // Lock body scroll
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = originalOverflow;
-      setMounted(false);
-    };
-  }, [onCancel]);
-
   const getDeleteMessage = () => {
     switch (itemType) {
       case 'project':
@@ -58,132 +36,22 @@ export function DeleteConfirmModal({
     }
   };
 
-  const modalContent = (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100vw',
-        height: '100vh',
-        zIndex: 2147483647,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
-      {/* Full screen backdrop - blocks all clicks */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          zIndex: 2147483647,
-          background: 'var(--shell-overlay-backdrop)',
-          backdropFilter: 'blur(4px)',
-        }}
-        onClick={onCancel}
-      />
-      
-      {/* Modal content */}
-      <div
-        style={{
-          position: 'relative',
-          zIndex: 2147483648,
-          background: 'var(--shell-dialog-bg)',
-          borderRadius: 16,
-          border: '1px solid var(--shell-dialog-border)',
-          padding: '28px 32px',
-          minWidth: 380,
-          maxWidth: 460,
-          boxShadow: 'var(--shadow-xl)',
-          pointerEvents: 'auto',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Title */}
-        <h3 style={{ 
-          margin: '0 0 16px 0', 
-          fontSize: 20, 
-          fontWeight: 700, 
-          color: 'var(--shell-dialog-title)',
-          letterSpacing: '-0.01em',
-        }}>
-          {title}
-        </h3>
-        
-        {/* Message */}
-        <p style={{ 
-          margin: '0 0 28px 0', 
-          fontSize: 15, 
-          color: 'var(--shell-dialog-text)',
-          lineHeight: 1.6,
-        }}>
+  return (
+    <Modal isOpen onClose={onCancel} size="small" usePortal>
+      <ModalHeader title={title} onClose={onCancel} />
+      <ModalBody>
+        <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--text-secondary)', margin: 0 }}>
           {getDeleteMessage()}
         </p>
-        
-        {/* Buttons */}
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-          <button
-            onClick={onCancel}
-            style={{
-              padding: '11px 22px',
-              borderRadius: 10,
-              border: '1px solid var(--ui-border-default)',
-              background: 'transparent',
-              color: 'var(--ui-text-secondary)',
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              pointerEvents: 'auto',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--shell-item-hover)';
-              e.currentTarget.style.color = 'var(--shell-item-fg)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.color = 'var(--ui-text-secondary)';
-            }}
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            style={{
-              padding: '11px 22px',
-              borderRadius: 10,
-              border: 'none',
-              background: 'var(--shell-danger-bg)',
-              color: 'var(--shell-danger-fg)',
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: 'pointer',
-              boxShadow: 'var(--shadow-sm)',
-              transition: 'all 0.2s',
-              pointerEvents: 'auto',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--shell-danger-bg-hover)';
-              e.currentTarget.style.boxShadow = 'var(--shadow-md)';
-              e.currentTarget.style.transform = 'translateY(-1px)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'var(--shell-danger-bg)';
-              e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
-              e.currentTarget.style.transform = 'none';
-            }}
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
+      </ModalBody>
+      <ModalFooter>
+        <ModalButton onClick={onCancel} variant="secondary">
+          Cancel
+        </ModalButton>
+        <ModalButton onClick={onConfirm} variant="danger">
+          Delete
+        </ModalButton>
+      </ModalFooter>
+    </Modal>
   );
-
-  // Use portal to render at body level
-  if (!mounted) return null;
-  return createPortal(modalContent, document.body);
 }
-
-export default DeleteConfirmModal;

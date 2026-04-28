@@ -5,6 +5,7 @@ import {
   UsersThree,
   TerminalWindow,
   Palette,
+  Globe,
   type Icon
 } from '@phosphor-icons/react';
 import type { AppMode } from './ShellHeader';
@@ -53,9 +54,18 @@ const MODES: ModeConfig[] = [
     label: 'Design',
     icon: Palette,
     accentColor: 'rgba(212,176,140,0.9)',
-    accentLight: 'rgba(212,176,140,0.12)',
+    accentLight: 'color-mix(in srgb, var(--accent-primary) 12%, transparent)',
     accentDark: 'rgba(212,176,140,0.6)',
     description: 'Visual design canvas with live preview'
+  },
+  {
+    id: 'browser',
+    label: 'Browser',
+    icon: Globe,
+    accentColor: 'var(--accent-browser)',
+    accentLight: 'var(--shell-mode-browser-soft)',
+    accentDark: 'var(--shell-mode-browser-strong)',
+    description: 'Web browser with AI operator'
   }
 ];
 
@@ -70,7 +80,7 @@ export function useModePersistence(): { mode: AppMode; setMode: (newMode: AppMod
     // Load mode from localStorage on mount
     try {
       const savedMode = localStorage.getItem(MODE_STORAGE_KEY) as AppMode | null;
-      if (savedMode && ['chat', 'cowork', 'code', 'design'].includes(savedMode)) {
+      if (savedMode && ['chat', 'cowork', 'code', 'design', 'browser'].includes(savedMode)) {
         setMode(savedMode);
       }
     } catch {

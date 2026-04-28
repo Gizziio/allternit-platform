@@ -21,13 +21,13 @@ interface BranchSelectorProps {
 
 const THEME = {
   textPrimary: '#ECECEC',
-  textSecondary: '#9B9B9B',
-  textMuted: '#6B6B6B',
-  accent: '#D4956A',
+  textSecondary: 'var(--ui-text-secondary)',
+  textMuted: 'var(--ui-text-muted)',
+  accent: 'var(--accent-primary)',
   bg: '#2B2520',
   menuBg: '#332D27',
-  hoverBg: 'rgba(255,255,255,0.05)',
-  border: 'rgba(255,255,255,0.08)',
+  hoverBg: 'var(--surface-hover)',
+  border: 'var(--ui-border-muted)',
 };
 
 /**
@@ -88,7 +88,7 @@ export function BranchSelector({
           transition: 'border-color 0.15s',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
+          e.currentTarget.style.borderColor = 'var(--ui-border-strong)';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.borderColor = THEME.border;
@@ -163,7 +163,7 @@ export function BranchSelector({
                   borderRadius: 8,
                   border: 'none',
                   background: branch.id === currentBranchId 
-                    ? 'rgba(212,149,106,0.1)' 
+                    ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' 
                     : 'transparent',
                   cursor: 'pointer',
                   textAlign: 'left',
@@ -186,7 +186,7 @@ export function BranchSelector({
                     borderRadius: 6,
                     background: branch.id === currentBranchId
                       ? 'rgba(212,149,106,0.2)'
-                      : 'rgba(255,255,255,0.05)',
+                      : 'var(--surface-hover)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',

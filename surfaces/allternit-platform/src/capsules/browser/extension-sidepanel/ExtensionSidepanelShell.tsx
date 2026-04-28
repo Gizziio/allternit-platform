@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 import type {
   ExtensionSidepanelActivity,
@@ -11,7 +12,6 @@ import type {
   ExtensionSidepanelHistoricalEvent,
   ExtensionSidepanelHistoryDetailViewProps,
   ExtensionSidepanelHistoryListViewProps,
-  ExtensionSidepanelSessionRecord,
 } from "./ExtensionSidepanelShell.types";
 
 type View = { name: "chat" } | { name: "config" } | { name: "history" } | { name: "history-detail"; sessionId: string };
@@ -87,6 +87,48 @@ const EXTENSION_SIDEPANEL_ANIMATIONS = `
   }
 }
 `;
+
+const typedKeys = new Set<string>();
+
+function TypewriterText({ text, speed = 12, className = "" }: { text: string; speed?: number; className?: string }) {
+  const [displayed, setDisplayed] = useState(text);
+  const keyRef = useRef(text);
+
+  useEffect(() => {
+    const key = text;
+    keyRef.current = key;
+    if (typedKeys.has(key) || text.length === 0) {
+      setDisplayed(text);
+      return;
+    }
+    setDisplayed("");
+    let i = 0;
+    const interval = setInterval(() => {
+      if (keyRef.current !== key) {
+        clearInterval(interval);
+        return;
+      }
+      i++;
+      if (i >= text.length) {
+        setDisplayed(text);
+        typedKeys.add(key);
+        clearInterval(interval);
+      } else {
+        setDisplayed(text.slice(0, i));
+      }
+    }, speed);
+    return () => clearInterval(interval);
+  }, [text, speed]);
+
+  return (
+    <span className={className}>
+      {displayed}
+      {!typedKeys.has(text) && displayed.length < text.length && (
+        <span className="inline-block w-[2px] h-[0.9em] bg-current align-middle ml-[1px] animate-pulse" />
+      )}
+    </span>
+  );
+}
 
 const DEFAULT_COPY: ExtensionSidepanelCopy = {
   title: "Allternit Extension",
@@ -380,12 +422,25 @@ function timeAgo(ts: number): string {
 
 function Logo({ className }: { className?: string }) {
   return (
-    <img
-      src="/assets/page-agent-64.png"
-      alt="Page Agent"
+    <div
       className={className}
-      draggable={false}
-    />
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        borderRadius: "8px",
+        background: "var(--primary)",
+        color: "var(--primary-foreground)",
+        fontSize: "10px",
+        fontWeight: 700,
+        letterSpacing: "0.05em",
+      }}
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <path d="m9 12 2 2 4-4" />
+      </svg>
+    </div>
   );
 }
 
@@ -504,13 +559,6 @@ function TypingAnimation({
 }
 
 function StatusDot({ status }: { status: ExtensionSidepanelAdapter["status"] }) {
-  const colorClass = {
-    idle: "bg-muted-foreground",
-    running: "bg-blue-500",
-    completed: "bg-green-500",
-    error: "bg-destructive",
-  }[status];
-
   const label = {
     idle: "Ready",
     running: "Running",
@@ -518,9 +566,19 @@ function StatusDot({ status }: { status: ExtensionSidepanelAdapter["status"] }) 
     error: "Error",
   }[status];
 
+  const dotColor = {
+    idle: "hsl(0 0% 43.9%)",
+    running: "#69A8C8",
+    completed: "#4ade80",
+    error: "hsl(0 46.8% 39.6%)",
+  }[status];
+
   return (
     <div className="flex items-center gap-1.5">
-      <span className={cn("size-2 rounded-full", colorClass, status === "running" && "animate-pulse")} />
+      <span
+        className={cn("size-2 rounded-full", status === "running" && "animate-pulse")}
+        style={{ background: dotColor }}
+      />
       <span className="text-xs text-muted-foreground">{label}</span>
     </div>
   );
@@ -647,7 +705,7 @@ function ResultCard({
           Result: {success ? "Success" : "Failed"}
         </span>
       </div>
-      <p className="pl-5 text-[11px] text-muted-foreground whitespace-pre-wrap">{text}</p>
+      <p className="pl-5 text-[11px] text-muted-foreground whitespace-pre-wrap"><TypewriterText text={text} speed={8} /></p>
     </div>
   );
 }
@@ -805,7 +863,7 @@ function RawSection({ rawRequest, rawResponse }: { rawRequest?: unknown; rawResp
 
 function StepCard({ event }: { event: Extract<ExtensionSidepanelHistoricalEvent, { type: "step" }> }) {
   return (
-    <div className="rounded-lg border border-border bg-muted/40 p-2.5 border-l-2 border-l-blue-500/50">
+    <div className="rounded-lg border border-border bg-muted/40 p-2.5 border-l-2" style={{ borderLeftColor: 'rgba(105,168,200,0.5)' }}>
       <div className="mb-2 text-[11px] font-semibold tracking-wide text-foreground">
         Step #{(event.stepIndex ?? 0) + 1}
       </div>
@@ -816,10 +874,12 @@ function StepCard({ event }: { event: Extract<ExtensionSidepanelHistoricalEvent,
         <div>
           <div className="mb-1 text-[11px] font-semibold tracking-wide text-foreground">Actions</div>
           <div className="flex items-start gap-2">
-            <ActionIcon
-              name={event.action.name}
-              className="mt-0.5 size-3.5 shrink-0 text-blue-500"
-            />
+            <span style={{ color: '#69A8C8' }}>
+              <ActionIcon
+                name={event.action.name}
+                className="mt-0.5 size-3.5 shrink-0"
+              />
+            </span>
             <div className="min-w-0 flex-1">
               <p className="mb-0.5 line-clamp-1 break-all text-xs text-foreground/80 hover:line-clamp-none">
                 <span className="font-medium text-foreground/70">{event.action.name}</span>
@@ -851,10 +911,12 @@ function ObservationCard({
   event: Extract<ExtensionSidepanelHistoricalEvent, { type: "observation" }>;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-muted/40 p-2.5 border-l-2 border-l-green-500/50">
+    <div className="rounded-lg border border-border bg-muted/40 p-2.5 border-l-2" style={{ borderLeftColor: 'rgba(74,222,128,0.5)' }}>
       <div className="flex items-start gap-2">
-        <Eye className="mt-0.5 size-3.5 shrink-0 text-green-500" />
-        <span className="text-[11px] text-muted-foreground">{event.content}</span>
+        <span style={{ color: 'var(--status-success)' }}>
+          <Eye className="mt-0.5 size-3.5 shrink-0" />
+        </span>
+        <TypewriterText text={event.content} className="text-[11px] text-muted-foreground" />
       </div>
     </div>
   );
@@ -866,7 +928,7 @@ function RetryCard({ event }: { event: Extract<ExtensionSidepanelHistoricalEvent
       <div className="flex items-start gap-1.5">
         <RefreshCw className="mt-0.5 size-3 shrink-0 text-amber-500" />
         <span className="text-xs text-amber-600 dark:text-amber-400">
-          {event.message} ({event.attempt}/{event.maxAttempts})
+          <TypewriterText text={`${event.message} (${event.attempt}/${event.maxAttempts})`} />
         </span>
       </div>
     </div>
@@ -878,7 +940,7 @@ function ErrorCard({ event }: { event: Extract<ExtensionSidepanelHistoricalEvent
     <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-2.5">
       <div className="flex items-start gap-1.5">
         <XCircle className="mt-0.5 size-3 shrink-0 text-destructive" />
-        <span className="text-xs text-destructive">{event.message}</span>
+        <span className="text-xs text-destructive"><TypewriterText text={event.message} /></span>
       </div>
       <RawSection rawResponse={event.rawResponse} />
     </div>
@@ -893,7 +955,7 @@ function UserTakeoverCard({
   return (
     <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5">
       <span className="text-xs text-amber-700 dark:text-amber-300">
-        {event.message ?? "User takeover requested."}
+        <TypewriterText text={event.message ?? "User takeover requested."} />
       </span>
     </div>
   );
@@ -1253,103 +1315,13 @@ export function ExtensionSidepanelShell({
     [handleSubmit],
   );
 
-  if (view.name === "config") {
-    return (
-      <section
-        data-testid={testId}
-        className={cn(
-          "relative flex flex-col overflow-hidden bg-background text-foreground",
-          prefersDark && "dark",
-          containerClassName ?? "h-dvh",
-        )}
-        style={themeStyle}
-      >
-        {renderConfigView ? (
-          renderConfigView({
-            config: adapter.config,
-            copy: shellCopy,
-            pageLabel: adapter.pageLabel,
-            onBack: () => setView({ name: "chat" }),
-            onSave: (nextConfig) => {
-              adapter.configure(nextConfig);
-              setView({ name: "chat" });
-            },
-          })
-        ) : (
-          <DefaultConfigView
-            config={adapter.config}
-            copy={shellCopy}
-            pageLabel={adapter.pageLabel}
-            onBack={() => setView({ name: "chat" })}
-            onSave={(nextConfig) => {
-              adapter.configure(nextConfig);
-              setView({ name: "chat" });
-            }}
-          />
-        )}
-      </section>
-    );
-  }
+  const isSubView = view.name === "config" || view.name === "history" || view.name === "history-detail";
 
-  if (view.name === "history") {
-    return (
-      <section
-        data-testid={testId}
-        className={cn(
-          "relative flex flex-col overflow-hidden bg-background text-foreground",
-          prefersDark && "dark",
-          containerClassName ?? "h-dvh",
-        )}
-        style={themeStyle}
-      >
-        {renderHistoryListView ? (
-          renderHistoryListView({
-            sessions: adapter.sessions,
-            onBack: () => setView({ name: "chat" }),
-            onSelect: (sessionId) => setView({ name: "history-detail", sessionId }),
-            onDeleteSession: adapter.deleteSession,
-            onClearSessions: adapter.clearSessions,
-          })
-        ) : (
-          <DefaultHistoryListView
-            sessions={adapter.sessions}
-            onBack={() => setView({ name: "chat" })}
-            onSelect={(sessionId) => setView({ name: "history-detail", sessionId })}
-            onDeleteSession={adapter.deleteSession}
-            onClearSessions={adapter.clearSessions}
-          />
-        )}
-      </section>
-    );
-  }
-
-  if (view.name === "history-detail") {
-    return (
-      <section
-        data-testid={testId}
-        className={cn(
-          "relative flex flex-col overflow-hidden bg-background text-foreground",
-          prefersDark && "dark",
-          containerClassName ?? "h-dvh",
-        )}
-        style={themeStyle}
-      >
-        {renderHistoryDetailView ? (
-          renderHistoryDetailView({
-            session: selectedSession,
-            sessionId: view.sessionId,
-            onBack: () => setView({ name: "history" }),
-          })
-        ) : (
-          <DefaultHistoryDetailView
-            session={selectedSession}
-            sessionId={view.sessionId}
-            onBack={() => setView({ name: "history" })}
-          />
-        )}
-      </section>
-    );
-  }
+  const getViewVariants = (name: View["name"]) => ({
+    hidden: { opacity: 0, x: name === "chat" ? -20 : 20 },
+    visible: { opacity: 1, x: 0, transition: { duration: 0.2, ease: [0.4, 0, 0.2, 1] as const } },
+    exit: { opacity: 0, x: name === "chat" ? 20 : -20, transition: { duration: 0.15, ease: [0.4, 0, 1, 1] as const } },
+  });
 
   return (
     <section
@@ -1364,97 +1336,191 @@ export function ExtensionSidepanelShell({
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[18px] border border-border/80 bg-card shadow-2xl">
         <MotionOverlay active={isRunning} />
 
-        <header className="flex items-center justify-between border-b border-border/80 px-4 py-3">
-          <div className="flex items-center gap-2.5">
-            {brandIcon ?? <Logo className="size-5" />}
-            <span className="text-sm font-semibold">{shellCopy.title}</span>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <StatusDot status={adapter.status} />
-            <button
-              type="button"
-              aria-label="Open history"
-              onClick={() => setView({ name: "history" })}
-              className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            >
-              <HistoryIcon className="size-3.5" />
-            </button>
-            <button
-              type="button"
-              aria-label="Open settings"
-              onClick={() => setView({ name: "config" })}
-              className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            >
-              <SettingsIcon className="size-3.5" />
-            </button>
-          </div>
-        </header>
-
-        <main className="flex min-h-0 flex-1 flex-col">
-          {adapter.currentTask && (
-            <div className="border-b bg-muted/20 px-4 py-2.5">
-              <div className="text-[10px] text-muted-foreground">Task</div>
-              <div className="truncate text-xs font-medium" title={adapter.currentTask}>
-                {adapter.currentTask}
-              </div>
+        {!isSubView && (
+          <header className="flex items-center justify-between border-b border-border/80 px-4 py-3">
+            <div className="flex items-center gap-2.5">
+              {brandIcon ?? <Logo className="size-5" />}
+              <span className="text-sm font-semibold">{shellCopy.title}</span>
             </div>
-          )}
 
-          <div ref={historyRef} className="flex-1 space-y-3 overflow-y-auto p-4">
-            {showEmptyState && <EmptyState copy={shellCopy} brandIcon={brandIcon} />}
-            {adapter.history.map((event, index) => (
-              <EventCard key={`extension-event-${index}`} event={event} />
-            ))}
-            {adapter.activity && <ActivityCard activity={adapter.activity} />}
-          </div>
+            <div className="flex items-center gap-1.5">
+              <StatusDot status={adapter.status} />
+              <button
+                type="button"
+                aria-label="Open history"
+                onClick={() => setView({ name: "history" })}
+                className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <HistoryIcon className="size-3.5" />
+              </button>
+              <button
+                type="button"
+                aria-label="Open settings"
+                onClick={() => setView({ name: "config" })}
+                className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <SettingsIcon className="size-3.5" />
+              </button>
+            </div>
+          </header>
+        )}
+
+        <main className="flex min-h-0 flex-1 flex-col relative">
+          <AnimatePresence mode="wait">
+            {view.name === "config" && (
+              <motion.div key="config" variants={getViewVariants("config")} initial="hidden" animate="visible" exit="exit" className="absolute inset-0">
+                {renderConfigView ? (
+                  renderConfigView({
+                    config: adapter.config,
+                    copy: shellCopy,
+                    pageLabel: adapter.pageLabel,
+                    onBack: () => setView({ name: "chat" }),
+                    onSave: (nextConfig) => {
+                      adapter.configure(nextConfig);
+                      setView({ name: "chat" });
+                    },
+                  })
+                ) : (
+                  <DefaultConfigView
+                    config={adapter.config}
+                    copy={shellCopy}
+                    pageLabel={adapter.pageLabel}
+                    onBack={() => setView({ name: "chat" })}
+                    onSave={(nextConfig) => {
+                      adapter.configure(nextConfig);
+                      setView({ name: "chat" });
+                    }}
+                  />
+                )}
+              </motion.div>
+            )}
+
+            {view.name === "history" && (
+              <motion.div key="history" variants={getViewVariants("history")} initial="hidden" animate="visible" exit="exit" className="absolute inset-0">
+                {renderHistoryListView ? (
+                  renderHistoryListView({
+                    sessions: adapter.sessions,
+                    onBack: () => setView({ name: "chat" }),
+                    onSelect: (sessionId) => setView({ name: "history-detail", sessionId }),
+                    onDeleteSession: adapter.deleteSession,
+                    onClearSessions: adapter.clearSessions,
+                  })
+                ) : (
+                  <DefaultHistoryListView
+                    sessions={adapter.sessions}
+                    onBack={() => setView({ name: "chat" })}
+                    onSelect={(sessionId) => setView({ name: "history-detail", sessionId })}
+                    onDeleteSession={adapter.deleteSession}
+                    onClearSessions={adapter.clearSessions}
+                  />
+                )}
+              </motion.div>
+            )}
+
+            {view.name === "history-detail" && (
+              <motion.div key="history-detail" variants={getViewVariants("history-detail")} initial="hidden" animate="visible" exit="exit" className="absolute inset-0">
+                {renderHistoryDetailView ? (
+                  renderHistoryDetailView({
+                    session: selectedSession,
+                    sessionId: view.sessionId,
+                    onBack: () => setView({ name: "history" }),
+                  })
+                ) : (
+                  <DefaultHistoryDetailView
+                    session={selectedSession}
+                    sessionId={view.sessionId}
+                    onBack={() => setView({ name: "history" })}
+                  />
+                )}
+              </motion.div>
+            )}
+
+            {view.name === "chat" && (
+              <motion.div key="chat" variants={getViewVariants("chat")} initial="hidden" animate="visible" exit="exit" className="flex min-h-0 flex-1 flex-col">
+                {adapter.currentTask && (
+                  <div className="border-b bg-muted/20 px-4 py-2.5">
+                    <div className="text-[10px] text-muted-foreground">Task</div>
+                    <div className="truncate text-xs font-medium" title={adapter.currentTask}>
+                      {adapter.currentTask}
+                    </div>
+                  </div>
+                )}
+
+                <div ref={historyRef} className="flex-1 space-y-3 overflow-y-auto p-4">
+                  {showEmptyState && <EmptyState copy={shellCopy} brandIcon={brandIcon} />}
+                  {adapter.history.map((event, index) => (
+                    <motion.div
+                      key={`extension-event-${index}`}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.03, duration: 0.2 }}
+                    >
+                      <EventCard event={event} />
+                    </motion.div>
+                  ))}
+                  {adapter.activity && (
+                    <motion.div
+                      key="activity"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <ActivityCard activity={adapter.activity} />
+                    </motion.div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </main>
 
-        <footer className="border-t border-border/80 p-3.5">
-          {renderComposer ? (
-            renderComposer({
-              isRunning,
-              value: inputValue,
-              placeholder: composerPlaceholder,
-              onValueChange: setInputValue,
-              onSubmit: (taskValue) => handleSubmit(taskValue),
-              onStop: handleStop,
-            })
-          ) : (
-            <form
-              onSubmit={handleSubmit}
-              className="relative rounded-[14px] border border-input bg-background/80 shadow-sm"
-            >
-              <textarea
-                ref={textareaRef}
-                rows={1}
-                value={inputValue}
-                disabled={isRunning}
-                placeholder={composerPlaceholder}
-                onChange={(event) => setInputValue(event.target.value)}
-                onKeyDown={handleKeyDown}
-                className="min-h-12 w-full resize-none bg-transparent px-4 py-3 pr-14 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
-              />
-
-              <button
-                type={isRunning ? "button" : "submit"}
-                onClick={isRunning ? handleStop : undefined}
-                disabled={!isRunning && inputValue.trim().length === 0}
-                aria-label={isRunning ? "Stop task" : "Send task"}
-                className={cn(
-                  "absolute bottom-1.5 right-1.5 inline-flex size-10 items-center justify-center rounded-xl transition-colors",
-                  isRunning
-                    ? "bg-destructive text-white hover:opacity-90"
-                    : inputValue.trim().length > 0
-                      ? "bg-zinc-300 text-zinc-950 hover:bg-zinc-200"
-                      : "bg-muted text-muted-foreground",
-                )}
+        {!isSubView && (
+          <footer className="border-t border-border/80 p-3.5">
+            {renderComposer ? (
+              renderComposer({
+                isRunning,
+                value: inputValue,
+                placeholder: composerPlaceholder,
+                onValueChange: setInputValue,
+                onSubmit: (taskValue) => handleSubmit(taskValue),
+                onStop: handleStop,
+              })
+            ) : (
+              <form
+                onSubmit={handleSubmit}
+                className="relative rounded-[14px] border border-input bg-background/80 shadow-sm"
               >
-                {isRunning ? <Square className="size-3.5 fill-current" /> : <Send className="size-3.5" />}
-              </button>
-            </form>
-          )}
-        </footer>
+                <textarea
+                  ref={textareaRef}
+                  rows={1}
+                  value={inputValue}
+                  disabled={isRunning}
+                  placeholder={composerPlaceholder}
+                  onChange={(event) => setInputValue(event.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="min-h-12 w-full resize-none bg-transparent px-4 py-3 pr-14 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
+                />
+
+                <button
+                  type={isRunning ? "button" : "submit"}
+                  onClick={isRunning ? handleStop : undefined}
+                  disabled={!isRunning && inputValue.trim().length === 0}
+                  aria-label={isRunning ? "Stop task" : "Send task"}
+                  className={cn(
+                    "absolute bottom-1.5 right-1.5 inline-flex size-10 items-center justify-center rounded-xl transition-colors",
+                    isRunning
+                      ? "bg-destructive text-white hover:opacity-90"
+                      : inputValue.trim().length > 0
+                        ? "bg-zinc-300 text-zinc-950 hover:bg-zinc-200"
+                        : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {isRunning ? <Square className="size-3.5 fill-current" /> : <Send className="size-3.5" />}
+                </button>
+              </form>
+            )}
+          </footer>
+        )}
       </div>
     </section>
   );

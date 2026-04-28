@@ -15,7 +15,10 @@ import {
   Warning,
   Square,
   FloppyDisk,
-  GitCommit
+  GitCommit,
+  Star,
+  Shield,
+  ArrowsLeftRight
 } from "@phosphor-icons/react";
 import { useAgentStore } from "@/lib/agents/agent.store";
 import type { 
@@ -49,7 +52,6 @@ const STUDIO_THEME = {
 };
 
 export function AgentDetailView({ agentId }: { agentId: string }) {
-  console.log('[AgentDetailView] Rendering for agentId:', agentId);
   
   const {
     agents,
@@ -61,19 +63,16 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
   } = useAgentStore();
 
   const agent = agents.find(a => a.id === agentId);
-  console.log('[AgentDetailView] Found agent:', agent?.name);
   
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showDashboard, setShowDashboard] = useState(false);
   
   if (!agent) {
-    console.log('[AgentDetailView] No agent found, returning null');
     return null;
   }
 
   // Show full Agent Dashboard
   if (showDashboard) {
-    console.log('[AgentDetailView] Rendering dashboard for agent:', agentId);
     return (
       <motion.div
         initial={{ opacity: 0 }}
@@ -105,15 +104,15 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
   const agentCharacterStats = characterStats[agentId];
 
   const statusColors: Record<string, string> = {
-    'online': '#22c55e',
-    'offline': '#6b7280',
-    'busy': '#f59e0b',
-    'error': '#ef4444',
-    'running': '#f59e0b',
-    'completed': '#22c55e',
-    'failed': '#ef4444',
-    'idle': '#9B9B9B',
-    'pending': '#9B9B9B',
+    'online': 'var(--status-success)',
+    'offline': 'var(--ui-text-muted)',
+    'busy': 'var(--status-warning)',
+    'error': 'var(--status-error)',
+    'running': 'var(--status-warning)',
+    'completed': 'var(--status-success)',
+    'failed': 'var(--status-error)',
+    'idle': 'var(--ui-text-secondary)',
+    'pending': 'var(--ui-text-secondary)',
   };
 
   const handleDelete = async () => {
@@ -226,7 +225,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
                   width: '16px',
                   height: '16px',
                   borderRadius: '50%',
-                  background: statusColors[agent.status] || '#6b7280',
+                  background: statusColors[agent.status] || 'var(--ui-text-muted)',
                   border: `3px solid ${STUDIO_THEME.bgCard}`,
                 }} />
               </div>
@@ -299,9 +298,135 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
               )}
             </div>
 
+            {/* Agent Card / Storefront Metadata */}
+            {agent.agentCard && (
+              <div style={{ marginBottom: '20px', padding: '12px', borderRadius: '10px', background: 'var(--surface-hover)', border: `1px solid ${STUDIO_THEME.borderSubtle}` }}>
+                <label style={{
+                  fontSize: '11px',
+                  color: STUDIO_THEME.textMuted,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  display: 'block',
+                  marginBottom: '10px',
+                }}>
+                  Agent Card
+                </label>
+
+                {agent.agentCard.tagline && (
+                  <p style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary, fontStyle: 'italic', margin: '0 0 10px 0' }}>
+                    "{agent.agentCard.tagline}"
+                  </p>
+                )}
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
+                  {agent.rating != null && (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: STUDIO_THEME.textPrimary }}>
+                      <Star weight="fill" style={{ width: 12, height: 12, color: 'var(--status-warning)' }} />
+                      {agent.rating.toFixed(1)}
+                      {agent.reviewCount != null && (
+                        <span style={{ color: STUDIO_THEME.textMuted }}>({agent.reviewCount})</span>
+                      )}
+                    </span>
+                  )}
+                  {agent.totalRuns != null && (
+                    <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted }}>
+                      {agent.totalRuns.toLocaleString()} runs
+                    </span>
+                  )}
+                  {agent.successRate != null && (
+                    <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted }}>
+                      {agent.successRate}% success
+                    </span>
+                  )}
+                  {agent.avgResponseTime != null && (
+                    <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted }}>
+                      {agent.avgResponseTime}s avg
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+                  {agent.agentCard.trustTier && (
+                    <span style={{
+                      display: 'flex', alignItems: 'center', gap: '4px',
+                      padding: '2px 8px', borderRadius: '999px',
+                      background: Number(agent.agentCard.trustTier) <= 2 ? 'var(--status-success-bg)' : 'var(--status-warning-bg)',
+                      color: Number(agent.agentCard.trustTier) <= 2 ? 'var(--status-success)' : 'var(--status-warning)',
+                      fontSize: '11px',
+                    }}>
+                      <Shield weight="fill" style={{ width: 10, height: 10 }} />
+                      Trust Tier {agent.agentCard.trustTier}
+                    </span>
+                  )}
+                  {agent.agentCard.canDelegate && (
+                    <span style={{
+                      display: 'flex', alignItems: 'center', gap: '4px',
+                      padding: '2px 8px', borderRadius: '999px',
+                      background: 'rgba(139,92,246,0.12)',
+                      color: '#a78bfa',
+                      fontSize: '11px',
+                    }}>
+                      <ArrowsLeftRight style={{ width: 10, height: 10 }} />
+                      Can Delegate
+                    </span>
+                  )}
+                  {agent.category && (
+                    <span style={{
+                      padding: '2px 8px', borderRadius: '999px',
+                      background: `${STUDIO_THEME.accent}15`,
+                      color: STUDIO_THEME.accent,
+                      fontSize: '11px',
+                    }}>
+                      {agent.category}
+                    </span>
+                  )}
+                  {agent.isPublic && (
+                    <span style={{
+                      padding: '2px 8px', borderRadius: '999px',
+                      background: 'rgba(56,189,248,0.12)',
+                      color: '#38bdf8',
+                      fontSize: '11px',
+                    }}>
+                      Public
+                    </span>
+                  )}
+                </div>
+
+                {agent.agentCard.capabilityDescription && (
+                  <p style={{ fontSize: '12px', color: STUDIO_THEME.textSecondary, lineHeight: 1.5, margin: '0 0 10px 0' }}>
+                    {agent.agentCard.capabilityDescription}
+                  </p>
+                )}
+
+                {agent.tags && agent.tags.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '8px' }}>
+                    {agent.tags.map((tag) => (
+                      <span key={tag} style={{
+                        padding: '2px 8px', borderRadius: '999px',
+                        background: 'var(--surface-hover)',
+                        color: STUDIO_THEME.textMuted,
+                        fontSize: '10px',
+                      }}>{tag}</span>
+                    ))}
+                  </div>
+                )}
+
+                {agent.agentCard.examples && agent.agentCard.examples.length > 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <span style={{ fontSize: '11px', color: STUDIO_THEME.textMuted }}>Examples</span>
+                    {agent.agentCard.examples.slice(0, 3).map((ex, i) => (
+                      <span key={i} style={{ fontSize: '11px', color: STUDIO_THEME.textSecondary, fontFamily: 'monospace' }}>
+                        → {ex}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Teammate Profile (from Multica) */}
             {agent.teammateProfile && (
-              <div style={{ marginBottom: '20px', padding: '12px', borderRadius: '10px', background: 'rgba(255,255,255,0.03)', border: `1px solid ${STUDIO_THEME.borderSubtle}` }}>
+              <div style={{ marginBottom: '20px', padding: '12px', borderRadius: '10px', background: 'var(--surface-hover)', border: `1px solid ${STUDIO_THEME.borderSubtle}` }}>
                 <label style={{
                   fontSize: '11px',
                   color: STUDIO_THEME.textMuted,
@@ -317,7 +442,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
                     <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted }}>Status</span>
                     <span style={{
                       fontSize: '13px',
-                      color: agent.teammateProfile.status === 'idle' ? '#10b981' : agent.teammateProfile.status === 'busy' ? '#f59e0b' : '#9ca3af',
+                      color: agent.teammateProfile.status === 'idle' ? 'var(--status-success)' : agent.teammateProfile.status === 'busy' ? 'var(--status-warning)' : 'var(--ui-text-muted)',
                       fontWeight: 500,
                     }}>
                       {agent.teammateProfile.status === 'idle' ? 'Available' : agent.teammateProfile.status === 'busy' ? 'Busy' : 'Offline'}
@@ -408,7 +533,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
                 style={{
                   padding: '10px 16px',
                   borderRadius: '8px',
-                  background: '#dc2626',
+                  background: 'var(--status-error)',
                   border: 'none',
                   color: 'white',
                   fontSize: '13px',
@@ -493,7 +618,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
                         <div style={{
                           flex: 1,
                           height: '6px',
-                          background: 'rgba(255,255,255,0.1)',
+                          background: 'var(--ui-border-default)',
                           borderRadius: '3px',
                           overflow: 'hidden',
                         }}>
@@ -538,7 +663,6 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          console.log('[AgentDetailView] Launch Dashboard clicked');
           setShowDashboard(true);
         }}
         style={{
@@ -550,14 +674,14 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
           borderRadius: '999px',
           background: `linear-gradient(to right, ${STUDIO_THEME.accent}, #B08D6E)`,
           border: 'none',
-          color: '#1A1612',
+          color: 'var(--ui-text-inverse)',
           fontSize: '14px',
           fontWeight: 600,
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+          boxShadow: '0 8px 24px var(--surface-panel)',
         }}
       >
         <Activity style={{ width: 18, height: 18 }} />
@@ -622,7 +746,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
                 style={{
                   padding: '10px 16px',
                   borderRadius: '8px',
-                  background: '#dc2626',
+                  background: 'var(--status-error)',
                   border: 'none',
                   color: 'white',
                   fontSize: '13px',

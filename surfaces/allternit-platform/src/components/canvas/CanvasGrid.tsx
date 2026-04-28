@@ -26,7 +26,7 @@ export function CanvasGrid({ viewport }: CanvasGridProps) {
           position: 'absolute',
           inset: '-200%',
           backgroundImage:
-            'linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.04) 1px, transparent 1px)',
+            'linear-gradient(to right, var(--surface-hover) 1px, transparent 1px), linear-gradient(to bottom, var(--surface-hover) 1px, transparent 1px)',
           backgroundSize: `${majorSize}px ${majorSize}px`,
           transform: `translate(${viewport.x % majorSize}px, ${viewport.y % majorSize}px) scale(${viewport.zoom})`,
           transformOrigin: '0 0',

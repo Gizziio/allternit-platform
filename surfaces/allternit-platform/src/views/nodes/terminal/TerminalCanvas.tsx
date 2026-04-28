@@ -28,6 +28,7 @@ import {
 const Grid = SquaresFour;
 import { cn } from '@/lib/utils';
 import 'xterm/css/xterm.css';
+import { openInBrowser } from '@/lib/openInBrowser';
 
 // ============================================================================
 // Theme Helper
@@ -131,7 +132,7 @@ function CanvasTerminal({
     
     term.loadAddon(new WebLinksAddon((event, uri) => {
       event.preventDefault();
-      window.open(uri, '_blank', 'noopener,noreferrer');
+      openInBrowser(uri);
     }));
 
     term.open(terminalRef.current);

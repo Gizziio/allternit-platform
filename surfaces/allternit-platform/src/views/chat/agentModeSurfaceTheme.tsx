@@ -15,7 +15,7 @@ export interface AgentModeSurfaceTheme {
 
 const SURFACE_THEMES: Record<AgentModeSurface, AgentModeSurfaceTheme> = {
   chat: {
-    accent: '#D4956A',
+    accent: 'var(--accent-primary)',
     glow: 'rgba(212,149,106,0.28)',
     soft: 'rgba(212,149,106,0.14)',
     wash: 'rgba(212,149,106,0.18)',

@@ -47,21 +47,6 @@ export interface CoworkModeAgentTasksProps extends BaseAgentSessionProps {
   taskFilter?: 'all' | 'pending' | 'running' | 'completed';
 }
 
-// Browser Mode: Agent-driven browsing
-export interface BrowserModeAgentSessionProps extends BaseAgentSessionProps {
-  mode: 'browser';
-  /** Initial URL */
-  initialUrl?: string;
-  /** Show browser controls */
-  showControls?: boolean;
-  /** Agent can interact with page */
-  enableInteraction?: boolean;
-  /** Recording mode */
-  recording?: boolean;
-  /** Show DOM inspector */
-  showInspector?: boolean;
-}
-
 export interface AgentSessionState {
   isLoading: boolean;
   isStreaming: boolean;

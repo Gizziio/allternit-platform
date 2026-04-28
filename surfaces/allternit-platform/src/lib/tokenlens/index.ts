@@ -146,7 +146,7 @@ export function getUsage(
   }
   
   // Otherwise it's the token estimation overload
-  const { text, modelId, maxTokens = 4096 } = params;
+  const { text, maxTokens = 4096 } = params;
   
   // Estimate prompt tokens from text
   const inputTokens = estimateTokenCount(text);

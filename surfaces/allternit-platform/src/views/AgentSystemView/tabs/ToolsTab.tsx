@@ -11,12 +11,8 @@
 import React, { useState, useEffect } from "react";
 import {
   FileText,
-  FloppyDisk,
   Trash,
   MagnifyingGlass,
-  Funnel,
-  DownloadSimple,
-  UploadSimple,
   GearSix,
   Database,
   ArrowsClockwise,
@@ -33,7 +29,6 @@ export function ToolsTab() {
     snapshots,
     snapshotStats,
     receipts,
-    isLoading,
     fetchTemplates,
     fetchSnapshots,
     fetchReceipts,

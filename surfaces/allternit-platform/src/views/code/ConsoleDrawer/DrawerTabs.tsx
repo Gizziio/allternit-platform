@@ -52,7 +52,7 @@ interface DrawerTabsProps {
 
 export function DrawerTabs({ activeTab, onTabChange }: DrawerTabsProps) {
   return (
-    <div style={{ display: 'flex', gap: 2, padding: '0 16px', borderBottom: '1px solid var(--border-subtle)', background: 'rgba(0,0,0,0.2)', flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', gap: 2, padding: '0 16px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--surface-hover)', flexWrap: 'wrap' }}>
       {/* Primary Operations */}
       <Tab id="queue" label="Queue" icon={Kanban} active={activeTab === 'queue'} onClick={onTabChange} />
       <Tab id="terminal" label="Terminal" icon={Terminal} active={activeTab === 'terminal'} onClick={onTabChange} />

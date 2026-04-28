@@ -15,12 +15,9 @@ import {
   ArrowCounterClockwise,
   CheckCircle,
   Clock,
-  Hash,
   User,
-  Chat,
   Plus,
   CircleNotch,
-  Warning,
 } from '@phosphor-icons/react';
 
 interface Checkpoint {

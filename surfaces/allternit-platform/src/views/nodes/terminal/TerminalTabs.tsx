@@ -2,9 +2,8 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { NodeTerminal } from './NodeTerminal';
-import { nodeTerminalService, type TerminalSession, type SandboxConfig, type VolumeMount } from './terminal.service';
+import { nodeTerminalService, type TerminalSession, type VolumeMount } from './terminal.service';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   X,
@@ -88,7 +87,7 @@ const SHELL_OPTIONS = [
 export function TerminalTabs({ initialNodeId, className = '' }: TerminalTabsProps) {
   const [sessions, setSessions] = useState<TerminalSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-  const [statusTick, setStatusTick] = useState(0);
+  const [, setStatusTick] = useState(0);
   const [showNewDialog, setShowNewDialog] = useState(false);
   const [availableNodes, setAvailableNodes] = useState<Array<{ id: string; hostname: string }>>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);

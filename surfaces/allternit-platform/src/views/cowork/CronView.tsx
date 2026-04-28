@@ -16,7 +16,6 @@ import {
   FolderOpen,
   Robot,
   CheckSquare,
-  DotsThreeVertical,
   Calendar,
   Sparkle,
   Cpu,
@@ -24,7 +23,6 @@ import {
   Warning,
   CircleNotch,
 } from '@phosphor-icons/react';
-import { useModelSelection } from '@/providers/model-selection-provider';
 import { ModelPicker, type ModelSelection } from '@/components/model-picker';
 import { useAgentStore } from '@/lib/agents';
 import { HeartbeatScheduler } from '@/components/agent-workspace';
@@ -34,7 +32,6 @@ import {
   deleteScheduledJob,
   listScheduledJobs,
   updateScheduledJob,
-  type ScheduledJobConfig 
 } from '@/lib/agents/scheduled-jobs.service';
 
 // Automation with scheduling info
@@ -293,7 +290,7 @@ export function CronView() {
       {/* Header */}
       <div style={{
         padding: '24px 24px 16px',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        borderBottom: '1px solid var(--ui-border-muted)',
       }}>
         {/* Title row - centered */}
         <div style={{
@@ -306,14 +303,14 @@ export function CronView() {
               margin: 0,
               fontSize: 24,
               fontWeight: 600,
-              color: '#f0c8aa',
+              color: 'var(--accent-primary)',
             }}>
               Cron
             </h1>
             <p style={{
               margin: '4px 0 0 0',
               fontSize: 14,
-              color: '#6b6b6b',
+              color: 'var(--ui-text-muted)',
             }}>
               Schedule and automate your automations
             </p>
@@ -327,7 +324,7 @@ export function CronView() {
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '16px 24px',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        borderBottom: '1px solid var(--ui-border-muted)',
       }}>
         <div style={{ display: 'flex', gap: 8 }}>
           <TabButton
@@ -364,9 +361,9 @@ export function CronView() {
               padding: '6px 12px',
               height: 32,
               background: 'transparent',
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: '1px solid var(--ui-border-default)',
               borderRadius: 8,
-              color: '#9b9b9b',
+              color: 'var(--ui-text-secondary)',
               fontSize: 13,
               fontWeight: 600,
               cursor: isLoading ? 'not-allowed' : 'pointer',
@@ -388,19 +385,19 @@ export function CronView() {
               background: 'linear-gradient(135deg, rgba(217,119,87,0.9) 0%, rgba(212,176,140,0.8) 100%)',
               border: 'none',
               borderRadius: 8,
-              color: '#fff',
+              color: 'var(--ui-text-primary)',
               fontSize: 13,
               fontWeight: 600,
               cursor: isLoading ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: 6,
-            transition: 'all 0.2s',
+            transition: 'var(--transition-fast)',
             whiteSpace: 'nowrap',
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.transform = 'translateY(-1px)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(217,119,87,0.3)';
+            e.currentTarget.style.boxShadow = '0 4px 12px color-mix(in srgb, var(--accent-primary) 30%, transparent)';
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.transform = 'none';
@@ -417,12 +414,12 @@ export function CronView() {
       {error && (
         <div style={{
           padding: '12px 24px',
-          background: 'rgba(239, 68, 68, 0.1)',
-          borderBottom: '1px solid rgba(239, 68, 68, 0.2)',
+          background: 'var(--status-error-bg)',
+          borderBottom: '1px solid color-mix(in srgb, var(--status-error) 30%, transparent)',
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          color: '#ef4444',
+          color: 'var(--status-error)',
           fontSize: '13px',
         }}>
           <Warning size={16} />
@@ -433,7 +430,7 @@ export function CronView() {
               marginLeft: 'auto',
               background: 'transparent',
               border: 'none',
-              color: '#ef4444',
+              color: 'var(--status-error)',
               cursor: 'pointer',
               fontSize: '12px',
             }}
@@ -540,16 +537,16 @@ function TabButton({
         borderRadius: 10,
         border: 'none',
         background: active 
-          ? 'linear-gradient(135deg, rgba(217,119,87,0.18) 0%, rgba(212,176,140,0.12) 100%)' 
+          ? 'linear-gradient(135deg, rgba(217,119,87,0.18) 0%, color-mix(in srgb, var(--accent-primary) 12%, transparent) 100%)' 
           : 'transparent',
-        color: active ? '#f0c8aa' : '#6b6b6b',
+        color: active ? 'var(--accent-primary)' : 'var(--ui-text-muted)',
         fontSize: 13,
         fontWeight: 600,
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
         gap: 8,
-        transition: 'all 0.2s',
+        transition: 'var(--transition-fast)',
       }}
     >
       <Icon size={16} />
@@ -581,11 +578,6 @@ function AutomationCard({
     return FREQUENCY_OPTIONS.find(o => o.value === freq)?.label || freq;
   };
 
-  const formatNextRun = (nextRun?: string) => {
-    if (!nextRun) return 'Not scheduled';
-    const date = new Date(nextRun);
-    return date.toLocaleString();
-  };
 
   // Get display name for model/agent
   const getModelOrAgentDisplay = () => {
@@ -600,19 +592,19 @@ function AutomationCard({
       onClick={onClick}
       style={{
         padding: 20,
-        background: 'rgba(255,255,255,0.03)',
+        background: 'var(--surface-hover)',
         borderRadius: 16,
-        border: '1px solid rgba(255,255,255,0.06)',
+        border: '1px solid var(--ui-border-muted)',
         cursor: 'pointer',
-        transition: 'all 0.2s',
+        transition: 'var(--transition-fast)',
       }}
       onMouseEnter={(e) => {
-        e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-        e.currentTarget.style.borderColor = 'rgba(212,176,140,0.2)';
+        e.currentTarget.style.background = 'var(--surface-hover)';
+        e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--accent-primary) 20%, transparent)';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
+        e.currentTarget.style.background = 'var(--surface-hover)';
+        e.currentTarget.style.borderColor = 'var(--ui-border-muted)';
       }}
     >
       {/* Header */}
@@ -628,12 +620,12 @@ function AutomationCard({
           borderRadius: 10,
           background: automation.mode === 'agent'
             ? 'linear-gradient(135deg, rgba(167,139,250,0.2) 0%, rgba(167,139,250,0.1) 100%)'
-            : 'linear-gradient(135deg, rgba(217,119,87,0.2) 0%, rgba(212,176,140,0.1) 100%)',
+            : 'linear-gradient(135deg, color-mix(in srgb, var(--accent-primary) 20%, transparent) 0%, color-mix(in srgb, var(--accent-primary) 10%, transparent) 100%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
         }}>
-          {automation.mode === 'agent' ? <Robot size={20} color="#d4c5f9" /> : <CheckSquare size={20} color="#d4b08c" />}
+          {automation.mode === 'agent' ? <Robot size={20} color="#d4c5f9" /> : <CheckSquare size={20} color="var(--accent-primary)" />}
         </div>
 
         <div style={{
@@ -644,8 +636,8 @@ function AutomationCard({
           <span style={{
             padding: '4px 10px',
             borderRadius: 20,
-            background: automation.isActive ? 'rgba(34,197,94,0.1)' : 'rgba(107,107,107,0.1)',
-            color: automation.isActive ? '#22c55e' : '#6b6b6b',
+            background: automation.isActive ? 'var(--status-success-bg)' : 'rgba(107,107,107,0.1)',
+            color: automation.isActive ? 'var(--status-success)' : 'var(--ui-text-muted)',
             fontSize: 11,
             fontWeight: 600,
           }}>
@@ -663,8 +655,8 @@ function AutomationCard({
               height: 32,
               borderRadius: 8,
               border: 'none',
-              background: isRunning ? 'rgba(107,107,107,0.1)' : 'rgba(217,119,87,0.1)',
-              color: isRunning ? '#6b6b6b' : '#d4b08c',
+              background: isRunning ? 'rgba(107,107,107,0.1)' : 'color-mix(in srgb, var(--accent-primary) 10%, transparent)',
+              color: isRunning ? 'var(--ui-text-muted)' : 'var(--accent-primary)',
               cursor: isRunning ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -685,7 +677,7 @@ function AutomationCard({
         margin: '0 0 8px 0',
         fontSize: 16,
         fontWeight: 600,
-        color: '#f0c8aa',
+        color: 'var(--accent-primary)',
       }}>
         {automation.name}
       </h3>
@@ -693,7 +685,7 @@ function AutomationCard({
       <p style={{
         margin: '0 0 16px 0',
         fontSize: 13,
-        color: '#6b6b6b',
+        color: 'var(--ui-text-muted)',
         lineHeight: 1.5,
         display: '-webkit-box',
         WebkitLineClamp: 2,
@@ -709,18 +701,18 @@ function AutomationCard({
         alignItems: 'center',
         gap: 16,
         paddingTop: 16,
-        borderTop: '1px solid rgba(255,255,255,0.06)',
+        borderTop: '1px solid var(--ui-border-muted)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Calendar size={14} color="#6b6b6b" />
-          <span style={{ fontSize: 12, color: '#6b6b6b' }}>
+          <Calendar size={14} color="var(--ui-text-muted)" />
+          <span style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>
             {getFrequencyLabel(automation.frequency)}
           </span>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          {automation.mode === 'agent' ? <Robot size={14} color="#6b6b6b" /> : <Cpu size={14} color="#6b6b6b" />}
-          <span style={{ fontSize: 12, color: '#6b6b6b' }}>
+          {automation.mode === 'agent' ? <Robot size={14} color="var(--ui-text-muted)" /> : <Cpu size={14} color="var(--ui-text-muted)" />}
+          <span style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>
             {getModelOrAgentDisplay()}
           </span>
         </div>
@@ -803,10 +795,6 @@ function AutomationForm({
   const isValid = formData.name.trim() && formData.description.trim() && formData.prompt.trim() &&
     (formData.mode === 'task' ? formData.modelSelection : formData.agentId);
   
-  const handleSave = () => {
-    if (!isValid) return;
-    // Handled inline in onClick now
-  };
   
   const handleModelSelect = (selection: ModelSelection) => {
     setFormData({ 
@@ -830,19 +818,19 @@ function AutomationForm({
   return (
     <OverlayContainer onClose={onClose}>
       <div style={{
-        background: 'linear-gradient(180deg, rgba(37,33,31,0.98), rgba(26,23,22,0.98))',
+        background: 'var(--surface-floating)',
         borderRadius: 20,
-        border: '1px solid rgba(212,176,140,0.2)',
+        border: '1px solid color-mix(in srgb, var(--accent-primary) 20%, transparent)',
         width: '100%',
         maxWidth: 560,
         maxHeight: '90vh',
         overflow: 'auto',
-        boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
+        boxShadow: '0 25px 50px var(--shell-overlay-backdrop)',
       }}>
         {/* Header */}
         <div style={{
           padding: '24px 24px 16px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          borderBottom: '1px solid var(--ui-border-muted)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -851,7 +839,7 @@ function AutomationForm({
             margin: 0,
             fontSize: 20,
             fontWeight: 600,
-            color: '#f0c8aa',
+            color: 'var(--accent-primary)',
           }}>
             {mode === 'create' ? 'Create Scheduled Task' : 'Edit Scheduled Task'}
           </h2>
@@ -863,7 +851,7 @@ function AutomationForm({
               borderRadius: 8,
               border: 'none',
               background: 'transparent',
-              color: '#6b6b6b',
+              color: 'var(--ui-text-muted)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -882,7 +870,7 @@ function AutomationForm({
               display: 'block',
               fontSize: 12,
               fontWeight: 600,
-              color: '#9b9b9b',
+              color: 'var(--ui-text-secondary)',
               marginBottom: 8,
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
@@ -920,10 +908,10 @@ function AutomationForm({
               style={{
                 width: '100%',
                 padding: '12px 16px',
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.1)',
+                background: 'var(--surface-hover)',
+                border: '1px solid var(--ui-border-default)',
                 borderRadius: 10,
-                color: '#f0c8aa',
+                color: 'var(--accent-primary)',
                 fontSize: 14,
                 outline: 'none',
               }}
@@ -940,10 +928,10 @@ function AutomationForm({
               style={{
                 width: '100%',
                 padding: '12px 16px',
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.1)',
+                background: 'var(--surface-hover)',
+                border: '1px solid var(--ui-border-default)',
                 borderRadius: 10,
-                color: '#f0c8aa',
+                color: 'var(--accent-primary)',
                 fontSize: 14,
                 outline: 'none',
               }}
@@ -960,10 +948,10 @@ function AutomationForm({
               style={{
                 width: '100%',
                 padding: '12px 16px',
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.1)',
+                background: 'var(--surface-hover)',
+                border: '1px solid var(--ui-border-default)',
                 borderRadius: 10,
-                color: '#f0c8aa',
+                color: 'var(--accent-primary)',
                 fontSize: 14,
                 outline: 'none',
                 resize: 'vertical',
@@ -980,10 +968,10 @@ function AutomationForm({
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'var(--surface-hover)',
+                  border: '1px solid var(--ui-border-default)',
                   borderRadius: 10,
-                  color: formData.modelSelection ? '#f0c8aa' : '#6b6b6b',
+                  color: formData.modelSelection ? 'var(--accent-primary)' : 'var(--ui-text-muted)',
                   fontSize: 14,
                   cursor: 'pointer',
                   display: 'flex',
@@ -995,9 +983,9 @@ function AutomationForm({
                 <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   {formData.modelSelection ? (
                     <>
-                      <Sparkle size={16} color="#d4b08c" />
+                      <Sparkle size={16} color="var(--accent-primary)" />
                       {formData.modelSelection.modelName || formData.modelSelection.modelId}
-                      <span style={{ color: '#6b6b6b', fontSize: 12 }}>
+                      <span style={{ color: 'var(--ui-text-muted)', fontSize: 12 }}>
                         via {formData.modelSelection.providerId}
                       </span>
                     </>
@@ -1018,10 +1006,10 @@ function AutomationForm({
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'var(--surface-hover)',
+                  border: '1px solid var(--ui-border-default)',
                   borderRadius: 10,
-                  color: formData.agentId ? '#f0c8aa' : '#6b6b6b',
+                  color: formData.agentId ? 'var(--accent-primary)' : 'var(--ui-text-muted)',
                   fontSize: 14,
                   cursor: 'pointer',
                   display: 'flex',
@@ -1059,10 +1047,10 @@ function AutomationForm({
                     left: 0,
                     right: 0,
                     marginTop: 4,
-                    background: 'linear-gradient(180deg, rgba(37,33,31,0.98), rgba(26,23,22,0.98))',
+                    background: 'var(--surface-floating)',
                     borderRadius: 10,
-                    border: '1px solid rgba(212,176,140,0.14)',
-                    boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+                    border: '1px solid color-mix(in srgb, var(--accent-primary) 14%, transparent)',
+                    boxShadow: 'var(--shadow-lg)',
                     zIndex: 9999,
                     overflow: 'hidden',
                     maxHeight: 300,
@@ -1071,7 +1059,7 @@ function AutomationForm({
                     {agents.length === 0 ? (
                       <div style={{
                         padding: '16px',
-                        color: '#6b6b6b',
+                        color: 'var(--ui-text-muted)',
                         fontSize: 14,
                         textAlign: 'center',
                       }}>
@@ -1089,7 +1077,7 @@ function AutomationForm({
                             background: formData.agentId === agent.id 
                               ? 'rgba(167,139,250,0.1)' 
                               : 'transparent',
-                            color: formData.agentId === agent.id ? '#d4c5f9' : '#9b9b9b',
+                            color: formData.agentId === agent.id ? '#d4c5f9' : 'var(--ui-text-secondary)',
                             fontSize: 14,
                             cursor: 'pointer',
                             textAlign: 'left',
@@ -1099,7 +1087,7 @@ function AutomationForm({
                           }}
                           onMouseEnter={(e) => {
                             if (formData.agentId !== agent.id) {
-                              e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                              e.currentTarget.style.background = 'var(--surface-hover)';
                             }
                           }}
                           onMouseLeave={(e) => {
@@ -1112,7 +1100,7 @@ function AutomationForm({
                           <div>
                             <div style={{ fontWeight: 500 }}>{agent.name}</div>
                             {agent.description && (
-                              <div style={{ fontSize: 12, color: '#6b6b6b', marginTop: 2 }}>
+                              <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', marginTop: 2 }}>
                                 {agent.description}
                               </div>
                             )}
@@ -1140,10 +1128,10 @@ function AutomationForm({
                 style={{
                   flex: 1,
                   padding: '12px 16px',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'var(--surface-hover)',
+                  border: '1px solid var(--ui-border-default)',
                   borderRadius: 10,
-                  color: '#f0c8aa',
+                  color: 'var(--accent-primary)',
                   fontSize: 14,
                   outline: 'none',
                 }}
@@ -1154,10 +1142,10 @@ function AutomationForm({
                 }}
                 style={{
                   padding: '12px 16px',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'var(--surface-hover)',
+                  border: '1px solid var(--ui-border-default)',
                   borderRadius: 10,
-                  color: '#d4b08c',
+                  color: 'var(--accent-primary)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -1178,10 +1166,10 @@ function AutomationForm({
                 style={{
                   width: '100%',
                   padding: '12px 16px',
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'var(--surface-hover)',
+                  border: '1px solid var(--ui-border-default)',
                   borderRadius: 10,
-                  color: '#f0c8aa',
+                  color: 'var(--accent-primary)',
                   fontSize: 14,
                   cursor: 'pointer',
                   display: 'flex',
@@ -1209,10 +1197,10 @@ function AutomationForm({
                     left: 0,
                     right: 0,
                     marginTop: 4,
-                    background: 'linear-gradient(180deg, rgba(37,33,31,0.98), rgba(26,23,22,0.98))',
+                    background: 'var(--surface-floating)',
                     borderRadius: 10,
-                    border: '1px solid rgba(212,176,140,0.14)',
-                    boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+                    border: '1px solid color-mix(in srgb, var(--accent-primary) 14%, transparent)',
+                    boxShadow: 'var(--shadow-lg)',
                     zIndex: 9999,
                     overflow: 'hidden',
                   }}>
@@ -1228,9 +1216,9 @@ function AutomationForm({
                           padding: '12px 16px',
                           border: 'none',
                           background: formData.frequency === option.value 
-                            ? 'rgba(212,176,140,0.1)' 
+                            ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' 
                             : 'transparent',
-                          color: formData.frequency === option.value ? '#f0c8aa' : '#9b9b9b',
+                          color: formData.frequency === option.value ? 'var(--accent-primary)' : 'var(--ui-text-secondary)',
                           fontSize: 14,
                           cursor: 'pointer',
                           textAlign: 'left',
@@ -1249,7 +1237,7 @@ function AutomationForm({
         {/* Footer */}
         <div style={{
           padding: '16px 24px 24px',
-          borderTop: '1px solid rgba(255,255,255,0.06)',
+          borderTop: '1px solid var(--ui-border-muted)',
           display: 'flex',
           gap: 12,
           justifyContent: 'flex-end',
@@ -1259,9 +1247,9 @@ function AutomationForm({
             style={{
               padding: '12px 20px',
               borderRadius: 10,
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: '1px solid var(--ui-border-default)',
               background: 'transparent',
-              color: '#9b9b9b',
+              color: 'var(--ui-text-secondary)',
               fontSize: 14,
               fontWeight: 600,
               cursor: 'pointer',
@@ -1308,8 +1296,8 @@ function AutomationForm({
               border: 'none',
               background: isValid 
                 ? 'linear-gradient(135deg, rgba(217,119,87,0.9) 0%, rgba(212,176,140,0.8) 100%)' 
-                : 'rgba(255,255,255,0.1)',
-              color: isValid ? '#fff' : '#6b6b6b',
+                : 'var(--ui-border-default)',
+              color: isValid ? '#fff' : 'var(--ui-text-muted)',
               fontSize: 14,
               fontWeight: 600,
               cursor: isValid ? 'pointer' : 'not-allowed',
@@ -1376,19 +1364,19 @@ function AutomationDetailOverlay({
   return (
     <OverlayContainer onClose={onClose}>
       <div style={{
-        background: 'linear-gradient(180deg, rgba(37,33,31,0.98), rgba(26,23,22,0.98))',
+        background: 'var(--surface-floating)',
         borderRadius: 20,
-        border: '1px solid rgba(212,176,140,0.2)',
+        border: '1px solid color-mix(in srgb, var(--accent-primary) 20%, transparent)',
         width: '100%',
         maxWidth: 480,
         maxHeight: '90vh',
         overflow: 'auto',
-        boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
+        boxShadow: '0 25px 50px var(--shell-overlay-backdrop)',
       }}>
         {/* Header */}
         <div style={{
           padding: '24px 24px 16px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          borderBottom: '1px solid var(--ui-border-muted)',
         }}>
           <div style={{
             display: 'flex',
@@ -1401,7 +1389,7 @@ function AutomationDetailOverlay({
                 margin: '0 0 8px 0',
                 fontSize: 22,
                 fontWeight: 600,
-                color: '#f0c8aa',
+                color: 'var(--accent-primary)',
               }}>
                 {automation.name}
               </h2>
@@ -1413,8 +1401,8 @@ function AutomationDetailOverlay({
                 <span style={{
                   padding: '4px 10px',
                   borderRadius: 20,
-                  background: automation.isActive ? 'rgba(34,197,94,0.1)' : 'rgba(107,107,107,0.1)',
-                  color: automation.isActive ? '#22c55e' : '#6b6b6b',
+                  background: automation.isActive ? 'var(--status-success-bg)' : 'rgba(107,107,107,0.1)',
+                  color: automation.isActive ? 'var(--status-success)' : 'var(--ui-text-muted)',
                   fontSize: 11,
                   fontWeight: 600,
                 }}>
@@ -1423,7 +1411,7 @@ function AutomationDetailOverlay({
                 {automation.isActive && automation.nextRun && (
                   <span style={{
                     fontSize: 12,
-                    color: '#6b6b6b',
+                    color: 'var(--ui-text-muted)',
                   }}>
                     Next run: {new Date(automation.nextRun).toLocaleString()}
                   </span>
@@ -1439,7 +1427,7 @@ function AutomationDetailOverlay({
                 borderRadius: 8,
                 border: 'none',
                 background: 'transparent',
-                color: '#6b6b6b',
+                color: 'var(--ui-text-muted)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -1475,14 +1463,14 @@ function AutomationDetailOverlay({
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '16px',
-            background: 'rgba(255,255,255,0.03)',
+            background: 'var(--surface-hover)',
             borderRadius: 12,
             marginBottom: 24,
           }}>
             <span style={{
               fontSize: 14,
               fontWeight: 500,
-              color: '#9b9b9b',
+              color: 'var(--ui-text-secondary)',
             }}>
               {automation.isActive ? 'Active' : 'Inactive'}
             </span>
@@ -1494,7 +1482,7 @@ function AutomationDetailOverlay({
           
           {/* Details */}
           <div style={{
-            borderTop: '1px solid rgba(255,255,255,0.06)',
+            borderTop: '1px solid var(--ui-border-muted)',
             paddingTop: 24,
           }}>
             <DetailItem label="Description" value={automation.description} />
@@ -1538,7 +1526,7 @@ function OverlayContainer({ children, onClose }: { children: React.ReactNode; on
         style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(0,0,0,0.7)',
+          background: 'var(--shell-overlay-backdrop)',
           backdropFilter: 'blur(8px)',
           zIndex: 10000,
         }}
@@ -1577,13 +1565,13 @@ function FormField({
         display: 'block',
         fontSize: 12,
         fontWeight: 600,
-        color: required ? '#d4b08c' : '#9b9b9b',
+        color: required ? 'var(--accent-primary)' : 'var(--ui-text-secondary)',
         marginBottom: 8,
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
       }}>
         {label}
-        {required && <span style={{ color: '#ef4444', marginLeft: 4 }}>*</span>}
+        {required && <span style={{ color: 'var(--status-error)', marginLeft: 4 }}>*</span>}
       </label>
       {children}
     </div>
@@ -1608,9 +1596,9 @@ function ModeButton({
         flex: 1,
         padding: '12px 16px',
         borderRadius: 10,
-        border: `1px solid ${active ? 'rgba(212,176,140,0.3)' : 'rgba(255,255,255,0.1)'}`,
-        background: active ? 'rgba(212,176,140,0.1)' : 'transparent',
-        color: active ? '#f0c8aa' : '#6b6b6b',
+        border: `1px solid ${active ? 'color-mix(in srgb, var(--accent-primary) 30%, transparent)' : 'var(--ui-border-default)'}`,
+        background: active ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'transparent',
+        color: active ? 'var(--accent-primary)' : 'var(--ui-text-muted)',
         fontSize: 14,
         fontWeight: 600,
         cursor: 'pointer',
@@ -1640,9 +1628,9 @@ function ActionButton({
   isLoading?: boolean;
 }) {
   const colors = {
-    default: { bg: 'rgba(255,255,255,0.05)', color: '#9b9b9b' },
-    danger: { bg: 'rgba(239,68,68,0.1)', color: '#ef4444' },
-    primary: { bg: 'rgba(217,119,87,0.2)', color: '#d4b08c' },
+    default: { bg: 'var(--surface-hover)', color: 'var(--ui-text-secondary)' },
+    danger: { bg: 'var(--status-error-bg)', color: 'var(--status-error)' },
+    primary: { bg: 'color-mix(in srgb, var(--accent-primary) 20%, transparent)', color: 'var(--accent-primary)' },
   };
   
   return (
@@ -1655,7 +1643,7 @@ function ActionButton({
         borderRadius: 10,
         border: 'none',
         background: isLoading ? 'rgba(107,107,107,0.1)' : colors[variant].bg,
-        color: isLoading ? '#6b6b6b' : colors[variant].color,
+        color: isLoading ? 'var(--ui-text-muted)' : colors[variant].color,
         fontSize: 13,
         fontWeight: 600,
         cursor: isLoading ? 'not-allowed' : 'pointer',
@@ -1687,14 +1675,14 @@ function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: (chec
         background: checked ? 'rgba(34,197,94,0.3)' : 'rgba(107,107,107,0.3)',
         cursor: 'pointer',
         position: 'relative',
-        transition: 'background 0.2s',
+        transition: 'var(--transition-fast)',
       }}
     >
       <div style={{
         width: 20,
         height: 20,
         borderRadius: '50%',
-        background: checked ? '#22c55e' : '#6b6b6b',
+        background: checked ? 'var(--status-success)' : 'var(--ui-text-muted)',
         position: 'absolute',
         top: 3,
         left: checked ? 25 : 3,
@@ -1710,7 +1698,7 @@ function DetailItem({ label, value, icon: Icon }: { label: string; value: string
       <div style={{
         fontSize: 11,
         fontWeight: 600,
-        color: '#6b6b6b',
+        color: 'var(--ui-text-muted)',
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
         marginBottom: 4,
@@ -1719,7 +1707,7 @@ function DetailItem({ label, value, icon: Icon }: { label: string; value: string
       </div>
       <div style={{
         fontSize: 14,
-        color: '#9b9b9b',
+        color: 'var(--ui-text-secondary)',
         lineHeight: 1.5,
         display: 'flex',
         alignItems: 'center',
@@ -1745,13 +1733,13 @@ function EmptyState({
     <div style={{
       padding: '80px 20px',
       textAlign: 'center',
-      color: '#6b6b6b',
+      color: 'var(--ui-text-muted)',
     }}>
       <Icon size={64} style={{ opacity: 0.3, marginBottom: 24 }} />
       <h3 style={{ 
         fontSize: 18, 
         fontWeight: 600, 
-        color: '#9b9b9b',
+        color: 'var(--ui-text-secondary)',
         margin: '0 0 8px 0' 
       }}>
         {title}
@@ -1778,7 +1766,7 @@ function DeleteConfirmDialog({
         style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(0,0,0,0.6)',
+          background: 'var(--shell-overlay-backdrop)',
           zIndex: 10002,
         }}
         onClick={onCancel}
@@ -1789,27 +1777,27 @@ function DeleteConfirmDialog({
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          background: 'linear-gradient(180deg, rgba(37,33,31,0.98), rgba(26,23,22,0.98))',
+          background: 'var(--surface-floating)',
           borderRadius: 16,
-          border: '1px solid rgba(212,176,140,0.2)',
+          border: '1px solid color-mix(in srgb, var(--accent-primary) 20%, transparent)',
           padding: '24px',
           minWidth: 320,
           zIndex: 10003,
-          boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+          boxShadow: 'var(--shadow-xl)',
         }}
       >
         <h3 style={{ 
           margin: '0 0 12px 0', 
           fontSize: 16, 
           fontWeight: 700, 
-          color: '#f0c8aa' 
+          color: 'var(--accent-primary)' 
         }}>
           {title}
         </h3>
         <p style={{ 
           margin: '0 0 20px 0', 
           fontSize: 13, 
-          color: '#9b9b9b',
+          color: 'var(--ui-text-secondary)',
           lineHeight: 1.5 
         }}>
           {message}
@@ -1820,9 +1808,9 @@ function DeleteConfirmDialog({
             style={{
               padding: '8px 16px',
               borderRadius: 8,
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: '1px solid var(--ui-border-default)',
               background: 'transparent',
-              color: '#9b9b9b',
+              color: 'var(--ui-text-secondary)',
               fontSize: 13,
               fontWeight: 600,
               cursor: 'pointer',
@@ -1837,7 +1825,7 @@ function DeleteConfirmDialog({
               borderRadius: 8,
               border: 'none',
               background: 'linear-gradient(135deg, rgba(239,68,68,0.8) 0%, rgba(220,38,38,0.8) 100%)',
-              color: '#fff',
+              color: 'var(--ui-text-primary)',
               fontSize: 13,
               fontWeight: 600,
               cursor: 'pointer',
@@ -1873,7 +1861,7 @@ function AgentHeartbeatsTab({ selectedAgent, onSelectAgent }: AgentHeartbeatsTab
         alignItems: 'center',
         justifyContent: 'center',
         height: '100%',
-        color: '#6b6b6b',
+        color: 'var(--ui-text-muted)',
       }}>
         <ArrowsClockwise size={24} style={{ animation: 'spin 1s linear infinite', marginRight: 12 }} />
         Loading agents...
@@ -1893,9 +1881,9 @@ function AgentHeartbeatsTab({ selectedAgent, onSelectAgent }: AgentHeartbeatsTab
           justifyContent: 'space-between',
           marginBottom: 16,
           padding: '12px 16px',
-          background: 'rgba(255,255,255,0.03)',
+          background: 'var(--surface-hover)',
           borderRadius: 12,
-          border: '1px solid rgba(255,255,255,0.06)',
+          border: '1px solid var(--ui-border-muted)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{
@@ -1910,10 +1898,10 @@ function AgentHeartbeatsTab({ selectedAgent, onSelectAgent }: AgentHeartbeatsTab
               <Robot size={18} color="#d4c5f9" />
             </div>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: '#f0c8aa' }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--accent-primary)' }}>
                 {agent?.name || 'Unknown Agent'}
               </div>
-              <div style={{ fontSize: 12, color: '#6b6b6b' }}>
+              <div style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>
                 Managing heartbeat tasks
               </div>
             </div>
@@ -1923,9 +1911,9 @@ function AgentHeartbeatsTab({ selectedAgent, onSelectAgent }: AgentHeartbeatsTab
             style={{
               padding: '8px 16px',
               borderRadius: 8,
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: '1px solid var(--ui-border-default)',
               background: 'transparent',
-              color: '#9b9b9b',
+              color: 'var(--ui-text-secondary)',
               fontSize: 13,
               fontWeight: 600,
               cursor: 'pointer',
@@ -1945,13 +1933,13 @@ function AgentHeartbeatsTab({ selectedAgent, onSelectAgent }: AgentHeartbeatsTab
             agentId={selectedAgent} 
             onClose={() => onSelectAgent(null)}
             theme={{
-              bg: '#1a1716',
-              bgCard: 'rgba(255,255,255,0.03)',
-              textPrimary: '#f0c8aa',
-              textSecondary: '#9b9b9b',
-              textMuted: '#6b6b6b',
-              accent: '#d4b08c',
-              borderSubtle: 'rgba(255,255,255,0.06)',
+              bg: 'var(--surface-canvas)',
+              bgCard: 'var(--surface-hover)',
+              textPrimary: 'var(--accent-primary)',
+              textSecondary: 'var(--ui-text-secondary)',
+              textMuted: 'var(--ui-text-muted)',
+              accent: 'var(--accent-primary)',
+              borderSubtle: 'var(--ui-border-muted)',
             }}
           />
         </div>
@@ -1975,15 +1963,15 @@ function AgentHeartbeatsTab({ selectedAgent, onSelectAgent }: AgentHeartbeatsTab
       <div style={{
         marginBottom: 20,
         padding: '16px 20px',
-        background: 'linear-gradient(135deg, rgba(167,139,250,0.08) 0%, rgba(212,176,140,0.08) 100%)',
+        background: 'linear-gradient(135deg, rgba(167,139,250,0.08) 0%, color-mix(in srgb, var(--accent-primary) 8%, transparent) 100%)',
         borderRadius: 12,
-        border: '1px solid rgba(212,176,140,0.1)',
+        border: '1px solid color-mix(in srgb, var(--accent-primary) 10%, transparent)',
       }}>
         <h3 style={{
           margin: '0 0 8px 0',
           fontSize: 16,
           fontWeight: 600,
-          color: '#f0c8aa',
+          color: 'var(--accent-primary)',
           display: 'flex',
           alignItems: 'center',
           gap: 8,
@@ -1994,7 +1982,7 @@ function AgentHeartbeatsTab({ selectedAgent, onSelectAgent }: AgentHeartbeatsTab
         <p style={{
           margin: 0,
           fontSize: 13,
-          color: '#9b9b9b',
+          color: 'var(--ui-text-secondary)',
           lineHeight: 1.5,
         }}>
           Configure periodic tasks that agents execute automatically. Heartbeat tasks are stored in each agent's workspace and synced with the scheduler.
@@ -2012,19 +2000,19 @@ function AgentHeartbeatsTab({ selectedAgent, onSelectAgent }: AgentHeartbeatsTab
             onClick={() => onSelectAgent(agent.id)}
             style={{
               padding: 20,
-              background: 'rgba(255,255,255,0.03)',
+              background: 'var(--surface-hover)',
               borderRadius: 12,
-              border: '1px solid rgba(255,255,255,0.06)',
+              border: '1px solid var(--ui-border-muted)',
               cursor: 'pointer',
-              transition: 'all 0.2s',
+              transition: 'var(--transition-fast)',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-              e.currentTarget.style.borderColor = 'rgba(212,176,140,0.2)';
+              e.currentTarget.style.background = 'var(--surface-hover)';
+              e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--accent-primary) 20%, transparent)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
+              e.currentTarget.style.background = 'var(--surface-hover)';
+              e.currentTarget.style.borderColor = 'var(--ui-border-muted)';
             }}
           >
             <div style={{
@@ -2044,7 +2032,7 @@ function AgentHeartbeatsTab({ selectedAgent, onSelectAgent }: AgentHeartbeatsTab
                 justifyContent: 'center',
                 flexShrink: 0,
               }}>
-                <Robot size={22} color={agent.status === 'running' ? '#22c55e' : '#d4c5f9'} />
+                <Robot size={22} color={agent.status === 'running' ? 'var(--status-success)' : '#d4c5f9'} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{
@@ -2056,7 +2044,7 @@ function AgentHeartbeatsTab({ selectedAgent, onSelectAgent }: AgentHeartbeatsTab
                   <span style={{
                     fontSize: 15,
                     fontWeight: 600,
-                    color: '#f0c8aa',
+                    color: 'var(--accent-primary)',
                   }}>
                     {agent.name}
                   </span>
@@ -2064,13 +2052,13 @@ function AgentHeartbeatsTab({ selectedAgent, onSelectAgent }: AgentHeartbeatsTab
                     width: 8,
                     height: 8,
                     borderRadius: '50%',
-                    background: agent.status === 'running' ? '#22c55e' : '#6b6b6b',
+                    background: agent.status === 'running' ? 'var(--status-success)' : 'var(--ui-text-muted)',
                   }} />
                 </div>
                 <p style={{
                   margin: '0 0 12px 0',
                   fontSize: 13,
-                  color: '#6b6b6b',
+                  color: 'var(--ui-text-muted)',
                   lineHeight: 1.4,
                   display: '-webkit-box',
                   WebkitLineClamp: 2,
@@ -2086,16 +2074,16 @@ function AgentHeartbeatsTab({ selectedAgent, onSelectAgent }: AgentHeartbeatsTab
                 }}>
                   <span style={{
                     fontSize: 11,
-                    color: '#9b9b9b',
+                    color: 'var(--ui-text-secondary)',
                     padding: '4px 10px',
-                    background: 'rgba(255,255,255,0.05)',
+                    background: 'var(--surface-hover)',
                     borderRadius: 6,
                   }}>
                     {agent.type}
                   </span>
                   <span style={{
                     fontSize: 11,
-                    color: '#d4b08c',
+                    color: 'var(--accent-primary)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: 4,

@@ -25,7 +25,6 @@ import {
   useRustStreamAdapter,
   type ChatMessage as StreamChatMessage,
 } from '@/lib/ai/rust-stream-adapter';
-import { useRunnerStore } from '../../runner/runner.store';
 import { useDrawerStore } from '../../drawers/drawer.store';
 import {
   getActiveSession,
@@ -43,7 +42,6 @@ import {
   getAgentSessionDescriptor,
 } from '@/lib/agents';
 import { useCodeSessionStore, type CodeSession } from './CodeSessionStore';
-import type { CreateModeSessionOptions } from '@/lib/agents/mode-session-store';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ACIComputerUseBar } from '@/capsules/browser/ACIComputerUseSidecar';
 
@@ -218,37 +216,13 @@ const utilityControlStyle: React.CSSProperties = {
 };
 
 const codeMenuTheme = {
-  menuBg: '#332D27',
-  menuBorder: 'rgba(255,255,255,0.08)',
-  textPrimary: '#ECECEC',
-  textSecondary: '#9B9B9B',
-  textMuted: '#6B6B6B',
-  accent: '#D4956A',
-  hoverBg: 'rgba(255,255,255,0.05)',
-};
-
-const codeOverlaySurfaceStyle: React.CSSProperties = {
-  borderRadius: 12,
-  border: `1px solid ${codeMenuTheme.menuBorder}`,
-  background: codeMenuTheme.menuBg,
-  boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-};
-
-const codeOverlayHeaderStyle: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: 10,
-  padding: '8px 12px 10px',
-  borderBottom: `1px solid ${codeMenuTheme.menuBorder}`,
-};
-
-const codeOverlayLabelStyle: React.CSSProperties = {
-  fontSize: 11,
-  fontWeight: 800,
-  color: codeMenuTheme.accent,
-  textTransform: 'uppercase',
-  letterSpacing: '0.05em',
+  menuBg: 'var(--surface-floating)',
+  menuBorder: 'var(--ui-border-muted)',
+  textPrimary: 'var(--ui-text-primary)',
+  textSecondary: 'var(--ui-text-secondary)',
+  textMuted: 'var(--ui-text-muted)',
+  accent: 'var(--accent-primary)',
+  hoverBg: 'var(--surface-hover)',
 };
 
 export function CodeCanvas({ isPreviewCollapsed: _isPreviewCollapsed }: CodeCanvasProps) {
@@ -272,7 +246,6 @@ export function CodeCanvas({ isPreviewCollapsed: _isPreviewCollapsed }: CodeCanv
     }),
     [embeddedSessionId, embeddedSession, embeddedDescriptor, isEmbeddedAgentSession],
   );
-  const codeAgentModeEnabled = isEmbeddedAgentSession && embeddedDescriptor.sessionMode === 'agent';
   const setActiveCodeSession = useCodeSessionStore(
     (state) => state.setActiveSession,
   );
@@ -545,7 +518,6 @@ function CodeSessionSurface({
   const {
     messages,
     isLoading,
-    submitMessage,
     regenerate,
     stop,
   } = useRustStreamAdapter({
@@ -1186,16 +1158,7 @@ function ComposerUtilityBar({
           </button>
 
           {showSessionPicker ? (
-            <>
-              <div style={{ position: 'fixed', inset: 0, zIndex: 120 }} onClick={onToggleSessionPicker} />
-              <div style={{ position: 'absolute', left: 0, bottom: 'calc(100% + 12px)', zIndex: 121 }}>
-                <SessionPickerPopover
-                  activeSessionId={activeSessionId}
-                  sessions={workspaceSessions}
-                  onSelect={onSetActiveSession}
-                />
-              </div>
-            </>
+            <div style={{ position: 'fixed', inset: 0, zIndex: 120 }} onClick={onToggleSessionPicker} />
           ) : null}
         </div>
 
@@ -1212,16 +1175,7 @@ function ComposerUtilityBar({
           </button>
 
           {showWorkspacePicker ? (
-            <>
-              <div style={{ position: 'fixed', inset: 0, zIndex: 120 }} onClick={onToggleWorkspacePicker} />
-              <div style={{ position: 'absolute', left: 0, bottom: 'calc(100% + 12px)', zIndex: 121 }}>
-                <WorkspacePickerPopover
-                  workspaces={workspaces}
-                  activeWorkspaceId={activeWorkspaceId}
-                  onSelect={onConfirmWorkspace}
-                />
-              </div>
-            </>
+            <div style={{ position: 'fixed', inset: 0, zIndex: 120 }} onClick={onToggleWorkspacePicker} />
           ) : null}
         </div>
 
@@ -1297,10 +1251,10 @@ function CompactUtilityBar({
           style={{
             width: 320,
             padding: 0,
-            background: '#332D27',
-            border: '1px solid rgba(255,255,255,0.08)',
+            background: 'var(--surface-panel)',
+            border: '1px solid var(--ui-border-muted)',
             borderRadius: 12,
-            boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+            boxShadow: '0 10px 30px var(--shell-overlay-backdrop)',
           }}
         >
           <div style={{ padding: 8 }}>
@@ -1309,12 +1263,12 @@ function CompactUtilityBar({
               alignItems: 'center', 
               justifyContent: 'space-between',
               padding: '8px 12px 10px',
-              borderBottom: '1px solid rgba(255,255,255,0.08)'
+              borderBottom: '1px solid var(--ui-border-muted)'
             }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: '#D4956A', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Workspace
               </div>
-              <div style={{ fontSize: 11, color: '#6B6B6B' }}>{workspaces.length} repos</div>
+              <div style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>{workspaces.length} repos</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingTop: 6 }}>
               {workspaces.map((workspace) => (
@@ -1330,15 +1284,15 @@ function CompactUtilityBar({
                     borderRadius: 8,
                     border: 'none',
                     background: workspace.workspace_id === activeWorkspaceId
-                      ? 'rgba(255,255,255,0.05)'
+                      ? 'var(--surface-hover)'
                       : 'transparent',
-                    color: '#ECECEC',
+                    color: 'var(--ui-text-primary)',
                     textAlign: 'left',
                     cursor: 'pointer',
                   }}
                   onMouseEnter={(e) => {
                     if (workspace.workspace_id !== activeWorkspaceId) {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                      e.currentTarget.style.background = 'var(--surface-hover)';
                     }
                   }}
                   onMouseLeave={(e) => {
@@ -1348,7 +1302,7 @@ function CompactUtilityBar({
                   }}
                 >
                   <div style={{ fontSize: 12, fontWeight: 700 }}>{workspace.display_name}</div>
-                  <div style={{ marginTop: 4, fontSize: 11, color: '#9B9B9B', lineHeight: 1.5 }}>
+                  <div style={{ marginTop: 4, fontSize: 11, color: 'var(--ui-text-secondary)', lineHeight: 1.5 }}>
                     {workspace.root_path}
                   </div>
                 </button>
@@ -1394,7 +1348,7 @@ function CompactUtilityBar({
             borderRadius: '8px 0 0 8px',
             border: '1px solid rgba(255, 255, 255, 0.08)',
             borderRight: 'none',
-            background: layoutMode === 'thread' ? 'rgba(255,255,255,0.08)' : 'transparent',
+            background: layoutMode === 'thread' ? 'var(--ui-border-muted)' : 'transparent',
             color: layoutMode === 'thread' ? 'var(--text-primary)' : 'var(--text-secondary)',
             fontSize: 11,
             fontWeight: 600,
@@ -1413,7 +1367,7 @@ function CompactUtilityBar({
             padding: '6px 10px',
             borderRadius: '0 8px 8px 0',
             border: '1px solid rgba(255, 255, 255, 0.08)',
-            background: layoutMode === 'canvas' ? 'rgba(255,255,255,0.08)' : 'transparent',
+            background: layoutMode === 'canvas' ? 'var(--ui-border-muted)' : 'transparent',
             color: layoutMode === 'canvas' ? 'var(--text-primary)' : 'var(--text-secondary)',
             fontSize: 11,
             fontWeight: 600,
@@ -1422,264 +1376,6 @@ function CompactUtilityBar({
         >
           Canvas
         </button>
-      </div>
-    </div>
-  );
-}
-
-function CodeActionPills({
-  activeAction,
-  align,
-  onPreviewTemplate,
-  onSelectTemplate,
-  onToggleAction,
-}: {
-  activeAction: ActionGroup | null;
-  align: 'left' | 'center';
-  onPreviewTemplate: (prompt: string) => void;
-  onSelectTemplate: (prompt: string) => void;
-  onToggleAction: (id: ActionGroupId) => void;
-}) {
-  return (
-    <div style={{ marginTop: 12, position: 'relative' }}>
-      <div
-        data-testid="code-action-strip"
-        style={{
-          display: 'flex',
-          gap: 8,
-          flexWrap: 'wrap',
-          justifyContent: align === 'center' ? 'center' : 'flex-start',
-        }}
-      >
-        {CODE_ACTION_GROUPS.map((group) => {
-          const Icon = group.icon;
-          const isActive = activeAction?.id === group.id;
-          return (
-            <button
-              key={group.id}
-              type="button"
-              onClick={() => onToggleAction(group.id)}
-              onMouseEnter={() => onPreviewTemplate(group.templates[0]?.prompt ?? '')}
-              onFocus={() => onPreviewTemplate(group.templates[0]?.prompt ?? '')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '8px 12px',
-                borderRadius: 999,
-                border: isActive
-                  ? `1px solid ${group.accent}55`
-                  : '1px solid rgba(255, 255, 255, 0.08)',
-                background: isActive ? `${group.accent}18` : 'rgba(14, 17, 20, 0.16)',
-                color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              <Icon size={14} color={group.accent} />
-              {group.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {activeAction && (
-        <div
-          style={{
-            marginTop: 10,
-            padding: 12,
-            ...codeOverlaySurfaceStyle,
-          }}
-        >
-          <div
-            style={{
-              ...codeOverlayHeaderStyle,
-              margin: '-12px -12px 10px',
-            }}
-          >
-            <div style={{ ...codeOverlayLabelStyle, color: activeAction.accent }}>
-              {activeAction.label}
-            </div>
-            <button
-              type="button"
-              onClick={() => onToggleAction(activeAction.id)}
-              style={{ border: 'none', background: 'transparent', color: codeMenuTheme.textMuted, cursor: 'pointer', fontSize: 11, fontWeight: 700 }}
-            >
-              Close
-            </button>
-          </div>
-
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-              gap: 8,
-            }}
-          >
-            {activeAction.templates.map((template) => (
-              <button
-                key={template.label}
-                type="button"
-                onFocus={() => onPreviewTemplate(template.prompt)}
-                onClick={() => onSelectTemplate(template.prompt)}
-                style={{
-                  padding: '12px 14px',
-                  borderRadius: 8,
-                  border: 'none',
-                  background: 'transparent',
-                  color: codeMenuTheme.textPrimary,
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                }}
-                onMouseLeave={(event) => {
-                  event.currentTarget.style.background = 'transparent';
-                }}
-                onMouseEnter={(event) => {
-                  onPreviewTemplate(template.prompt);
-                  event.currentTarget.style.background = codeMenuTheme.hoverBg;
-                }}
-              >
-                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 6 }}>{template.label}</div>
-                <div
-                  style={{
-                    fontSize: 11,
-                    lineHeight: 1.45,
-                    color: codeMenuTheme.textMuted,
-                    display: '-webkit-box',
-                    WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                  }}
-                >
-                  {template.prompt}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SessionPickerPopover({
-  activeSessionId,
-  onSelect,
-  sessions,
-}: {
-  activeSessionId: string;
-  onSelect: (sessionId: string) => void;
-  sessions: ReturnType<typeof getSessionsForWorkspace>;
-}) {
-  return (
-    <div data-testid="code-session-popover" style={{ ...codeOverlaySurfaceStyle, width: 336, padding: 8 }}>
-      <div style={codeOverlayHeaderStyle}>
-        <div style={codeOverlayLabelStyle}>Session</div>
-        <div style={{ fontSize: 11, color: codeMenuTheme.textMuted }}>{sessions.length} active</div>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingTop: 6 }}>
-        {sessions.map((session) => {
-          const isActive = session.session_id === activeSessionId;
-          return (
-            <button
-              key={session.session_id}
-              type="button"
-              onClick={() => onSelect(session.session_id)}
-              style={{
-                padding: '10px 12px',
-                borderRadius: 8,
-                border: 'none',
-                background: isActive ? codeMenuTheme.hoverBg : 'transparent',
-                color: codeMenuTheme.textPrimary,
-                textAlign: 'left',
-                cursor: 'pointer',
-              }}
-              onMouseEnter={(event) => {
-                if (!isActive) {
-                  event.currentTarget.style.background = codeMenuTheme.hoverBg;
-                }
-              }}
-              onMouseLeave={(event) => {
-                if (!isActive) {
-                  event.currentTarget.style.background = 'transparent';
-                }
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                <div style={{ fontSize: 12, fontWeight: 700 }}>{session.title}</div>
-                <div style={{ fontSize: 10, color: isActive ? codeMenuTheme.accent : codeMenuTheme.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  {session.mode}
-                </div>
-              </div>
-              <div style={{ marginTop: 4, fontSize: 11, color: codeMenuTheme.textMuted, lineHeight: 1.45 }}>
-                {session.state}
-                {session.branch ? ` / ${session.branch}` : ''}
-              </div>
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function WorkspacePickerPopover({
-  workspaces,
-  activeWorkspaceId,
-  onSelect,
-}: {
-  workspaces: ReturnType<typeof useCodeModeStore.getState>['workspaces'];
-  activeWorkspaceId: string;
-  onSelect: (workspaceId: string) => void;
-}) {
-  return (
-    <div
-      data-testid="code-workspace-picker"
-      style={{
-        ...codeOverlaySurfaceStyle,
-        width: 320,
-        padding: 8,
-      }}
-    >
-      <div style={codeOverlayHeaderStyle}>
-        <div style={codeOverlayLabelStyle}>Workspace</div>
-        <div style={{ fontSize: 11, color: codeMenuTheme.textMuted }}>{workspaces.length} repos</div>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingTop: 6 }}>
-        {workspaces.map((workspace) => (
-          <button
-            key={workspace.workspace_id}
-            type="button"
-            onClick={() => onSelect(workspace.workspace_id)}
-            style={{
-              padding: '10px 12px',
-              borderRadius: 8,
-              border: 'none',
-              background: workspace.workspace_id === activeWorkspaceId
-                ? codeMenuTheme.hoverBg
-                : 'transparent',
-              color: codeMenuTheme.textPrimary,
-              textAlign: 'left',
-              cursor: 'pointer',
-            }}
-            onMouseEnter={(event) => {
-              if (workspace.workspace_id !== activeWorkspaceId) {
-                event.currentTarget.style.background = codeMenuTheme.hoverBg;
-              }
-            }}
-            onMouseLeave={(event) => {
-              if (workspace.workspace_id !== activeWorkspaceId) {
-                event.currentTarget.style.background = 'transparent';
-              }
-            }}
-          >
-            <div style={{ fontSize: 12, fontWeight: 700 }}>{workspace.display_name}</div>
-            <div style={{ marginTop: 4, fontSize: 11, color: codeMenuTheme.textMuted, lineHeight: 1.5 }}>
-              {workspace.root_path}
-            </div>
-          </button>
-        ))}
       </div>
     </div>
   );

@@ -72,7 +72,7 @@ export function AudioRenderer({
       const randomHeight = Math.sin(i * 0.3) * 0.5 + 0.5;
       const barHeight = height * 0.6 * randomHeight;
       
-      ctx.fillStyle = isPlayed ? '#D4956A' : 'rgba(255,255,255,0.2)';
+      ctx.fillStyle = isPlayed ? 'var(--accent-primary)' : 'rgba(255,255,255,0.2)';
       ctx.fillRect(
         i * barWidth + 1,
         (height - barHeight) / 2,

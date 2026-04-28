@@ -98,7 +98,7 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
     });
   };
 
-  const confidenceColor = artifact.confidence >= 0.7 ? '#22c55e' : artifact.confidence >= 0.5 ? '#eab308' : '#ef4444';
+  const confidenceColor = artifact.confidence >= 0.7 ? 'var(--status-success)' : artifact.confidence >= 0.5 ? 'var(--status-warning)' : 'var(--status-error)';
 
   const hasAnalysis = artifact.analysis && (
     (artifact.analysis.issues?.length || 0) > 0 ||
@@ -114,12 +114,12 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1000,
+    zIndex: 100,
     padding: '24px',
   };
 
   const containerStyle: React.CSSProperties = {
-    background: '#1a1a1a',
+    background: 'var(--surface-panel)',
     borderRadius: '16px',
     width: '100%',
     maxWidth: '1200px',
@@ -144,7 +144,7 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
     borderRadius: '8px',
     border: '1px solid #333',
     background: 'transparent',
-    color: '#fff',
+    color: 'var(--ui-text-primary)',
     cursor: disabled ? 'not-allowed' : 'pointer',
     opacity: disabled ? 0.5 : 1,
     display: 'flex',
@@ -162,7 +162,7 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
 
   const viewerStyle: React.CSSProperties = {
     flex: 1,
-    background: '#0a0a0a',
+    background: 'var(--surface-panel)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -196,14 +196,14 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
     if (artifact.data.textContent) {
       return (
         <pre style={{ 
-          background: '#1a1a1a', 
+          background: 'var(--surface-panel)', 
           border: '1px solid #333', 
           borderRadius: '8px', 
           padding: '16px',
           fontFamily: 'monospace',
           fontSize: '13px',
           lineHeight: 1.6,
-          color: '#fff',
+          color: 'var(--ui-text-primary)',
           maxWidth: '100%',
           maxHeight: '100%',
           overflow: 'auto',
@@ -217,14 +217,14 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
     if (artifact.data.jsonData) {
       return (
         <pre style={{ 
-          background: '#1a1a1a', 
+          background: 'var(--surface-panel)', 
           border: '1px solid #333', 
           borderRadius: '8px', 
           padding: '16px',
           fontFamily: 'monospace',
           fontSize: '12px',
           lineHeight: 1.5,
-          color: '#fff',
+          color: 'var(--ui-text-primary)',
           maxWidth: '100%',
           maxHeight: '100%',
           overflow: 'auto',
@@ -240,7 +240,7 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
         alignItems: 'center', 
         justifyContent: 'center',
         padding: '40px 20px',
-        color: '#666',
+        color: 'var(--ui-text-muted)',
         textAlign: 'center',
       }}>
         <div style={{ fontSize: '48px', marginBottom: '16px' }}>{typeIcons[artifact.type]}</div>
@@ -267,8 +267,8 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
               {typeIcons[artifact.type]}
             </div>
             <div>
-              <div style={{ fontSize: '16px', fontWeight: 600, color: '#fff' }}>{typeLabels[artifact.type]}</div>
-              <div style={{ fontSize: '12px', color: '#888', marginTop: '2px' }}>ID: {artifact.id}</div>
+              <div style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ui-text-primary)' }}>{typeLabels[artifact.type]}</div>
+              <div style={{ fontSize: '12px', color: 'var(--ui-text-muted)', marginTop: '2px' }}>ID: {artifact.id}</div>
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -278,7 +278,7 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
                 <button style={buttonStyle(!hasNext)} onClick={() => onNavigate('next')} disabled={!hasNext}>→</button>
               </>
             )}
-            <button style={{...buttonStyle(), fontSize: '20px', color: '#888'}} onClick={onClose}>×</button>
+            <button style={{...buttonStyle(), fontSize: '20px', color: 'var(--ui-text-muted)'}} onClick={onClose}>×</button>
           </div>
         </div>
 
@@ -287,32 +287,32 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
 
           <div style={sidebarStyle}>
             <div style={sectionStyle}>
-              <h4 style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: '#888', margin: '0 0 12px 0' }}>
+              <h4 style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--ui-text-muted)', margin: '0 0 12px 0' }}>
                 Confidence Score
               </h4>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ fontSize: '32px', fontWeight: 700, color: confidenceColor, fontVariantNumeric: 'tabular-nums' }}>
                   {Math.round(artifact.confidence * 100)}%
                 </div>
-                <div style={{ flex: 1, height: '8px', background: '#0a0a0a', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ flex: 1, height: '8px', background: 'var(--surface-panel)', borderRadius: '4px', overflow: 'hidden' }}>
                   <div style={{ height: '100%', width: `${artifact.confidence * 100}%`, background: confidenceColor, borderRadius: '4px', transition: 'width 0.3s ease' }} />
                 </div>
               </div>
             </div>
 
             <div style={sectionStyle}>
-              <h4 style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: '#888', margin: '0 0 12px 0' }}>
+              <h4 style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--ui-text-muted)', margin: '0 0 12px 0' }}>
                 Metadata
               </h4>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontSize: '11px', color: '#888' }}>Captured</span>
-                  <span style={{ fontSize: '13px', color: '#fff', fontVariantNumeric: 'tabular-nums' }}>{formatTimestamp(artifact.timestamp)}</span>
+                  <span style={{ fontSize: '11px', color: 'var(--ui-text-muted)' }}>Captured</span>
+                  <span style={{ fontSize: '13px', color: 'var(--ui-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{formatTimestamp(artifact.timestamp)}</span>
                 </div>
                 {Object.entries(artifact.metadata).slice(0, 3).map(([key, value]) => (
                   <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <span style={{ fontSize: '11px', color: '#888' }}>{key}</span>
-                    <span style={{ fontSize: '13px', color: '#fff', fontVariantNumeric: 'tabular-nums' }}>{String(value)}</span>
+                    <span style={{ fontSize: '11px', color: 'var(--ui-text-muted)' }}>{key}</span>
+                    <span style={{ fontSize: '13px', color: 'var(--ui-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{String(value)}</span>
                   </div>
                 ))}
               </div>
@@ -320,14 +320,14 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
 
             {hasAnalysis && (
               <div style={{ ...sectionStyle, flex: 1, overflow: 'auto' }}>
-                <h4 style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: '#888', margin: '0 0 12px 0' }}>
+                <h4 style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--ui-text-muted)', margin: '0 0 12px 0' }}>
                   Analysis
                 </h4>
                 <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {artifact.analysis?.issues?.map((issue, i) => (
                     <li key={`issue-${i}`} style={{ 
                       display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '10px 12px', borderRadius: '8px', fontSize: '13px', lineHeight: 1.5,
-                      background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)'
+                      background: 'rgba(239, 68, 68, 0.1)', color: 'var(--status-error)', border: '1px solid rgba(239, 68, 68, 0.3)'
                     }}>
                       <span>❌</span> {issue}
                     </li>
@@ -335,7 +335,7 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
                   {artifact.analysis?.warnings?.map((warning, i) => (
                     <li key={`warning-${i}`} style={{ 
                       display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '10px 12px', borderRadius: '8px', fontSize: '13px', lineHeight: 1.5,
-                      background: 'rgba(234, 179, 8, 0.1)', color: '#eab308', border: '1px solid rgba(234, 179, 8, 0.3)'
+                      background: 'var(--status-warning-bg)', color: 'var(--status-warning)', border: '1px solid color-mix(in srgb, var(--status-warning) 30%, transparent)'
                     }}>
                       <span>⚠️</span> {warning}
                     </li>
@@ -343,7 +343,7 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
                   {artifact.analysis?.recommendations?.map((rec, i) => (
                     <li key={`rec-${i}`} style={{ 
                       display: 'flex', alignItems: 'flex-start', gap: '8px', padding: '10px 12px', borderRadius: '8px', fontSize: '13px', lineHeight: 1.5,
-                      background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.3)'
+                      background: 'rgba(59, 130, 246, 0.1)', color: 'var(--status-info)', border: '1px solid rgba(59, 130, 246, 0.3)'
                     }}>
                       <span>💡</span> {rec}
                     </li>

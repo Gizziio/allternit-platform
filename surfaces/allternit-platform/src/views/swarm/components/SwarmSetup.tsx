@@ -23,7 +23,7 @@ import {
   Minus,
   CaretDown,
 } from '@phosphor-icons/react';
-import { BACKGROUND, BORDER, TEXT, MODE_COLORS, STATUS } from '@/design/allternit.tokens';
+import { TEXT, STATUS } from '@/design/allternit.tokens';
 import { swarmApi } from '../../../lib/swarm/swarm.api';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -31,9 +31,9 @@ import { swarmApi } from '../../../lib/swarm/swarm.api';
 const ACCENT = '#c17817';
 const ACCENT_DIM = 'rgba(193, 120, 23, 0.15)';
 const ACCENT_BORDER = 'rgba(193, 120, 23, 0.3)';
-const BG_CARD = 'rgba(255,255,255,0.03)';
-const BG_INPUT = 'rgba(255,255,255,0.05)';
-const BORDER_COLOR = 'rgba(255,255,255,0.07)';
+const BG_CARD = 'var(--surface-hover)';
+const BG_INPUT = 'var(--surface-hover)';
+const BORDER_COLOR = 'var(--ui-border-muted)';
 const BORDER_FOCUS = 'rgba(193, 120, 23, 0.5)';
 
 // ─── Provider catalogue ───────────────────────────────────────────────────────
@@ -446,7 +446,7 @@ export function SwarmSetup({ onLaunched }: SwarmSetupProps) {
               return (
                 <React.Fragment key={role.id}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, borderRadius: 12, background: BG_CARD, border: `1px solid ${BORDER_COLOR}` }}>
-                    <div style={{ width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: 'rgba(255,255,255,0.05)' }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, background: 'var(--surface-hover)' }}>
                       <Icon size={14} color={TEXT.secondary} />
                     </div>
                     <div style={{ width: 96, flexShrink: 0 }}>
@@ -483,11 +483,11 @@ export function SwarmSetup({ onLaunched }: SwarmSetupProps) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{ fontSize: 12, color: TEXT.secondary }}>Max iterations</span>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <button onClick={() => setMaxIterations(v => Math.max(1, v - 1))} style={{ width: 24, height: 24, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', border: 'none', cursor: 'pointer' }}>
+              <button onClick={() => setMaxIterations(v => Math.max(1, v - 1))} style={{ width: 24, height: 24, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-hover)', border: 'none', cursor: 'pointer' }}>
                 <Minus size={10} color={TEXT.secondary} />
               </button>
               <span style={{ width: 24, textAlign: 'center', fontSize: 13, fontWeight: 500, color: TEXT.primary, fontVariantNumeric: 'tabular-nums' }}>{maxIterations}</span>
-              <button onClick={() => setMaxIterations(v => Math.min(10, v + 1))} style={{ width: 24, height: 24, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', border: 'none', cursor: 'pointer' }}>
+              <button onClick={() => setMaxIterations(v => Math.min(10, v + 1))} style={{ width: 24, height: 24, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface-hover)', border: 'none', cursor: 'pointer' }}>
                 <Plus size={10} color={TEXT.secondary} />
               </button>
             </div>
@@ -496,7 +496,7 @@ export function SwarmSetup({ onLaunched }: SwarmSetupProps) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button
               onClick={() => setEscalate(v => !v)}
-              style={{ position: 'relative', width: 32, height: 18, borderRadius: 9, background: escalate ? ACCENT : 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', padding: 0 }}
+              style={{ position: 'relative', width: 32, height: 18, borderRadius: 9, background: escalate ? ACCENT : 'var(--ui-border-default)', border: 'none', cursor: 'pointer', padding: 0 }}
             >
               <span style={{ position: 'absolute', top: 2, width: 14, height: 14, borderRadius: '50%', background: '#fff', left: escalate ? 16 : 2, transition: 'left 0.15s ease' }} />
             </button>
@@ -519,7 +519,7 @@ export function SwarmSetup({ onLaunched }: SwarmSetupProps) {
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
             width: '100%', padding: '14px 0', borderRadius: 12,
             fontWeight: 600, fontSize: 13, border: 'none',
-            background: canLaunch ? ACCENT : 'rgba(255,255,255,0.05)',
+            background: canLaunch ? ACCENT : 'var(--surface-hover)',
             color: canLaunch ? '#000' : TEXT.tertiary,
             cursor: canLaunch ? 'pointer' : 'not-allowed',
             opacity: isLaunching ? 0.7 : 1,
@@ -529,7 +529,7 @@ export function SwarmSetup({ onLaunched }: SwarmSetupProps) {
         >
           {isLaunching ? (
             <>
-              <span style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid rgba(0,0,0,0.3)', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
+              <span style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid var(--surface-panel)', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />
               Launching…
             </>
           ) : (

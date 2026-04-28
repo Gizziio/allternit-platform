@@ -88,7 +88,7 @@ function TerminalClerkContent() {
           align-items: center;
           justify-content: space-between;
           padding: 16px 24px;
-          border-bottom: 1px solid rgba(255,255,255,0.04);
+          border-bottom: 1px solid var(--surface-hover);
           flex-shrink: 0;
         }
         .terminal-auth-logo {
@@ -163,7 +163,7 @@ function TerminalClerkContent() {
         .terminal-auth-card {
           background: #1A1410;
           border-radius: 20px;
-          border: 1px solid rgba(255,255,255,0.07);
+          border: 1px solid var(--ui-border-muted);
           padding: 28px;
           box-shadow: 0 8px 32px rgba(0,0,0,0.4);
           overflow: hidden;

@@ -10,8 +10,8 @@ import { Robot } from '@phosphor-icons/react';
 import { SwarmAgent } from '../types';
 import { AgentCard } from '../components/AgentCard';
 
-const TEXT_MUTED = '#8b8680';
-const TEXT_SUBTLE = '#5c5854';
+const TEXT_MUTED = 'var(--ui-text-muted)';
+const TEXT_SUBTLE = 'var(--ui-text-muted)';
 const BG_SURFACE = '#121110';
 const ACCENT = '#c17817';
 

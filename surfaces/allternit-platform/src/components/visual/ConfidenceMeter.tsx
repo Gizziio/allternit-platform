@@ -16,9 +16,9 @@ interface ConfidenceMeterProps {
 }
 
 function getColor(confidence: number, threshold: number): string {
-  if (confidence >= threshold) return '#22c55e'; // Green
+  if (confidence >= threshold) return 'var(--status-success)'; // Green
   if (confidence >= threshold * 0.85) return '#eab308'; // Yellow
-  return '#ef4444'; // Red
+  return 'var(--status-error)'; // Red
 }
 
 function getStatus(confidence: number, threshold: number): 'passed' | 'warning' | 'failed' {
@@ -114,7 +114,7 @@ export const ConfidenceMeter: React.FC<ConfidenceMeterProps> = ({
 
   const labelStyle: React.CSSProperties = {
     fontSize: pixelSize * 0.12,
-    color: '#888',
+    color: 'var(--ui-text-muted)',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
   };
@@ -139,7 +139,7 @@ export const ConfidenceMeter: React.FC<ConfidenceMeterProps> = ({
     alignItems: 'center',
     gap: '6px',
     fontSize: '11px',
-    color: '#888',
+    color: 'var(--ui-text-muted)',
   };
 
   return (
@@ -190,7 +190,7 @@ export const ConfidenceMeter: React.FC<ConfidenceMeterProps> = ({
           width: '6px', 
           height: '6px', 
           borderRadius: '50%', 
-          background: confidence >= threshold ? '#22c55e' : '#444',
+          background: confidence >= threshold ? 'var(--status-success)' : '#444',
           transition: 'background 0.3s'
         }} />
         Threshold: {Math.round(threshold * 100)}%

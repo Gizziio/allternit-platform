@@ -277,10 +277,10 @@ function handleLaunchProgram(
           theme: {
             id: 'modern',
             name: 'Modern',
-            primaryColor: '#3b82f6',
+            primaryColor: 'var(--status-info)',
             secondaryColor: '#8b5cf6',
             backgroundColor: '#ffffff',
-            textColor: '#1f2937',
+            textColor: 'var(--surface-panel)',
             fontHeading: 'system-ui, sans-serif',
             fontBody: 'system-ui, sans-serif',
           },

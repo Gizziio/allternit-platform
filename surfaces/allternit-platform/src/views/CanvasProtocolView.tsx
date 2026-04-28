@@ -152,7 +152,7 @@ const ACTIVE_CANVASES: ActiveCanvas[] = [
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, { bg: string; text: string; border: string }> = {
-    Active: { bg: 'rgba(52, 199, 89, 0.08)', text: '#34c759', border: 'rgba(52, 199, 89, 0.2)' },
+    Active: { bg: 'rgba(52, 199, 89, 0.08)', text: 'var(--status-success)', border: 'rgba(52, 199, 89, 0.2)' },
     Beta: { bg: 'rgba(255, 159, 10, 0.08)', text: '#ff9f0a', border: 'rgba(255, 159, 10, 0.2)' },
     Planned: { bg: 'rgba(142, 142, 147, 0.08)', text: '#8e8e93', border: 'rgba(142, 142, 147, 0.2)' },
   };
@@ -204,7 +204,7 @@ function CanvasTypeCard({ canvas }: { canvas: CanvasType }) {
 
 function ActiveCanvasPanel({ canvas }: { canvas: ActiveCanvas }) {
   const stateColors: Record<string, string> = {
-    mounted: '#34c759',
+    mounted: 'var(--status-success)',
     idle: '#aeaeae',
     streaming: '#ff9f0a',
   };

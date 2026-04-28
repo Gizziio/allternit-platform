@@ -37,7 +37,6 @@ import {
   validateMarketplaceManifestV1,
   type ValidationResult,
   type PluginManifestV1,
-  type PluginMarketplaceManifestV1,
 } from '../plugins/pluginStandards';
 
 // ============================================================================
@@ -45,23 +44,23 @@ import {
 // ============================================================================
 
 const THEME = {
-  bg: '#0c0a09',
+  bg: 'var(--surface-canvas)',
   bgDeep: '#080706',
-  bgElevated: '#1c1917',
+  bgElevated: 'var(--surface-panel)',
   bgGlass: 'rgba(28, 25, 23, 0.85)',
   cardSurface: 'rgba(21, 18, 16, 0.82)',
-  accent: '#d4b08c',
+  accent: 'var(--accent-primary)',
   accentMuted: 'rgba(212, 176, 140, 0.15)',
   accentGlow: 'rgba(212, 176, 140, 0.3)',
-  textPrimary: '#e7e5e4',
-  textSecondary: '#a8a29e',
-  textTertiary: '#78716c',
+  textPrimary: 'var(--ui-text-primary)',
+  textSecondary: 'var(--ui-text-secondary)',
+  textTertiary: 'var(--ui-text-muted)',
   border: 'rgba(212, 176, 140, 0.1)',
   borderStrong: 'rgba(212, 176, 140, 0.2)',
-  success: '#22c55e',
-  danger: '#ef4444',
-  warning: '#f59e0b',
-  info: '#3b82f6',
+  success: 'var(--status-success)',
+  danger: 'var(--status-error)',
+  warning: 'var(--status-warning)',
+  info: 'var(--status-info)',
 };
 
 // ============================================================================
@@ -452,7 +451,7 @@ function UrlInput({ onLoad, loading }: UrlInputProps) {
           borderRadius: 8,
           border: 'none',
           background: THEME.accent,
-          color: '#1a1917',
+          color: 'var(--surface-canvas)',
           fontSize: 13,
           fontWeight: 600,
           cursor: loading ? 'not-allowed' : 'pointer',
@@ -1202,12 +1201,12 @@ export function PluginManifestValidator({
             borderRadius: 8,
             background: THEME.bgElevated,
             border: `1px solid ${THEME.border}`,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            boxShadow: '0 4px 12px var(--surface-panel)',
             display: 'flex',
             alignItems: 'center',
             gap: 8,
             animation: 'slideIn 0.2s ease',
-            zIndex: 1000,
+            zIndex: 180,
           }}
         >
           <CheckCircle size={16} color={THEME.success} />

@@ -26,7 +26,7 @@ export const MODE_CAPABILITIES: Record<string, ModeCapability> = {
     name: 'Research',
     description: 'Create research documents with citations',
     icon: 'FileText',
-    color: '#3b82f6',
+    color: 'var(--status-info)',
     features: [
       'web-search',
       'citation-generation',
@@ -43,7 +43,7 @@ export const MODE_CAPABILITIES: Record<string, ModeCapability> = {
     name: 'Data',
     description: 'Analyze data with spreadsheets & charts',
     icon: 'Table',
-    color: '#10b981',
+    color: 'var(--status-success)',
     features: [
       'csv-parser',
       'excel-parser',
@@ -60,7 +60,7 @@ export const MODE_CAPABILITIES: Record<string, ModeCapability> = {
     name: 'Slides',
     description: 'Create presentations with speaker notes',
     icon: 'MonitorPlay',
-    color: '#f59e0b',
+    color: 'var(--status-warning)',
     features: [
       'auto-outline',
       'slide-renderer',
@@ -110,7 +110,7 @@ export const MODE_CAPABILITIES: Record<string, ModeCapability> = {
     name: 'Agents',
     description: 'Multi-agent orchestration',
     icon: 'Cpu',
-    color: '#ef4444',
+    color: 'var(--status-error)',
     features: [
       'agent-coordinator',
       'task-decomposition',
@@ -127,7 +127,7 @@ export const MODE_CAPABILITIES: Record<string, ModeCapability> = {
     name: 'Flow',
     description: 'Build automation workflows',
     icon: 'Network',
-    color: '#06b6d4',
+    color: 'var(--status-info)',
     features: [
       'flow-designer',
       'trigger-system',

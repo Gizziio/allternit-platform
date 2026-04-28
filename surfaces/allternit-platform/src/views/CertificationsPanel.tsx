@@ -20,11 +20,11 @@ interface Certification {
 
 function getTierColor(tier: string) {
   switch (tier) {
-    case 'CORE': return '#3b82f6';
+    case 'CORE': return 'var(--status-info)';
     case 'OPS': return '#8b5cf6';
     case 'AGENTS': return '#ec4899';
-    case 'ADV': return '#f59e0b';
-    default: return '#6b7280';
+    case 'ADV': return 'var(--status-warning)';
+    default: return 'var(--ui-text-muted)';
   }
 }
 
@@ -179,7 +179,7 @@ export function CertificationsPanel() {
                         fontSize: 10,
                         fontWeight: 700,
                         background: '#22c55e22',
-                        color: '#22c55e',
+                        color: 'var(--status-success)',
                         textTransform: 'uppercase',
                       }}>Verified</span>
                     )}

@@ -5,12 +5,9 @@
  * unified plugin system with command routing, skill execution, and MCP support.
  */
 
-import { 
-  ALL_CLAUDE_DESKTOP_PLUGINS, 
+import {
+  ALL_CLAUDE_DESKTOP_PLUGINS,
   getPluginById,
-  getCommand,
-  ClaudeDesktopPlugin,
-  PluginCommand 
 } from '@/plugins/vendor/claude-desktop-registry';
 
 // =============================================================================

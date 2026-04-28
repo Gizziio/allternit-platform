@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import {
   SquaresFour,
   Play,
@@ -17,19 +17,12 @@ import {
   X,
   CaretLeft,
   Plus,
-  Pause,
-  ArrowClockwise,
   Terminal,
   Trash,
-  PencilSimple,
   Clock,
-  Warning,
   CheckCircle,
-  Funnel,
-  MagnifyingGlass,
   ArrowsClockwise,
   PaperPlaneTilt,
-  Tray,
   Chat,
   Pulse as Activity,
   Cpu,
@@ -38,37 +31,22 @@ import {
   FolderOpen,
   Lightning,
   Shield,
-  Lock,
-  LockOpen,
-  Eye,
-  CaretDown,
-  CaretRight,
   Copy,
   Check,
   TrendUp,
-  CurrencyDollar,
-  HardDrives,
   HardDrive,
   GitBranch,
-  ChatCircle,
   ThumbsUp,
   ThumbsDown,
   Archive,
   XCircle,
   CircleNotch,
   DownloadSimple,
-  UploadSimple,
   PlugsConnected,
   Stack,
-  Sparkle,
-  Code,
-  Database,
   FileText,
   ShareNetwork,
-  Bookmark,
   DotsThreeVertical,
-  FloppyDisk,
-  Package,
 } from '@phosphor-icons/react';
 
 // Stores
@@ -78,25 +56,15 @@ import { useUnifiedStore } from '@/lib/agents/unified.store';
 import { skillInstallerApi } from '@/services/SkillInstallerApiService';
 import { useToast } from '@/hooks/use-toast';
 import { useTelemetrySnapshot } from '@/lib/telemetry/useTelemetrySnapshot';
-import { agentWorkspaceService } from '@/lib/agents/agent-workspace.service';
-import { SkillBuilderWizard, HeartbeatScheduler, PackageManager } from '@/components/agent-workspace';
+
 import { WorkspaceTab } from './WorkspaceTab';
 import { CharacterLayerPanel } from '@/views/agent-character/CharacterLayerPanel';
 
-// Character service
-import { 
-  CHARACTER_SETUPS, 
-  getSpecialtyOptions, 
-  getSetupStatDefinitions,
-  loadCharacterLayer,
-  saveCharacterLayer,
-  computeCharacterStats,
-  parseCharacterBlueprint 
-} from '@/lib/agents/character.service';
+
 
 // Types
-import type { Agent, AgentRun, AgentTask, Checkpoint, AgentMailMessage, AgentMailThread } from '@/lib/agents/agent.types';
-import type { CharacterStats, CharacterLayerConfig, AvatarConfig } from '@/lib/agents/character.types';
+import type { Agent, AgentRun, AgentTask } from '@/lib/agents/agent.types';
+import type { CharacterStats } from '@/lib/agents/character.types';
 import type { Skill } from '@/services/SkillInstallerApiService';
 import type { McpConnector } from '@/lib/db/schema';
 
@@ -108,20 +76,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
-import { Separator } from '@/components/ui/separator';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+
 
 // Registry
 import { FEATURE_PLUGIN_REGISTRY } from '@/plugins/feature.registry';
@@ -132,10 +95,10 @@ const STUDIO_THEME = {
   bg: '#2B2520',
   bgCard: '#352F29',
   textPrimary: '#ECECEC',
-  textSecondary: '#9B9B9B',
-  textMuted: '#6B6B6B',
-  accent: '#D4956A',
-  borderSubtle: 'rgba(255,255,255,0.06)',
+  textSecondary: 'var(--ui-text-secondary)',
+  textMuted: 'var(--ui-text-muted)',
+  accent: 'var(--accent-primary)',
+  borderSubtle: 'var(--ui-border-muted)',
 };
 
 type TabId = 'overview' | 'runs' | 'tasks' | 'checkpoints' | 'tools' | 'comms' | 'monitoring' | 'environment' | 'swarm' | 'character' | 'workspace' | 'settings';
@@ -637,9 +600,9 @@ function ToolsTab({ agent }: { agent: Agent }) {
                         {testStatus && (
                           <div style={{ 
                             fontSize: '11px', 
-                            color: testStatus.status === 'connected' ? '#22c55e' : 
-                                   testStatus.status === 'error' ? '#ef4444' : 
-                                   testStatus.status === 'authorizing' ? '#f59e0b' : STUDIO_THEME.textMuted,
+                            color: testStatus.status === 'connected' ? 'var(--status-success)' : 
+                                   testStatus.status === 'error' ? 'var(--status-error)' : 
+                                   testStatus.status === 'authorizing' ? 'var(--status-warning)' : STUDIO_THEME.textMuted,
                             marginTop: 4 
                           }}>
                             {testStatus.status === 'testing' ? 'Testing...' : testStatus.message}
@@ -816,11 +779,6 @@ function CommsTab({ agent }: { agent: Agent }) {
     setWihId(''); setDiffRef('');
   };
 
-  const handleDecideReview = async (approve: boolean) => {
-    if (!selectedThread) return;
-    await unified.decideReview(selectedThread, approve, 'Decision made from dashboard');
-  };
-
   const handleAck = async (messageId: string) => {
     await acknowledgeMail(agent.id, messageId);
   };
@@ -844,7 +802,7 @@ function CommsTab({ agent }: { agent: Agent }) {
           {agentThreads.map(thread => (
             <div key={thread.id} onClick={() => setSelectedThread(thread.id)} style={{
               padding: '12px 16px', cursor: 'pointer',
-              background: selectedThread === thread.id ? 'rgba(255,255,255,0.05)' : 'transparent',
+              background: selectedThread === thread.id ? 'var(--surface-hover)' : 'transparent',
               borderLeft: selectedThread === thread.id ? `3px solid ${STUDIO_THEME.accent}` : '3px solid transparent',
             }}>
               <div style={{ fontSize: '13px', fontWeight: 500, color: STUDIO_THEME.textPrimary }}>{thread.subject}</div>
@@ -896,7 +854,7 @@ function CommsTab({ agent }: { agent: Agent }) {
                     </div>
                   </div>
                   {msg.requiresAck && msg.status !== 'acknowledged' && msg.fromAgentId !== agent.id && (
-                    <div style={{ marginTop: 4, padding: '4px 8px', background: 'rgba(245,158,11,0.2)', borderRadius: 4, fontSize: '11px', color: '#f59e0b' }}>
+                    <div style={{ marginTop: 4, padding: '4px 8px', background: 'rgba(245,158,11,0.2)', borderRadius: 4, fontSize: '11px', color: 'var(--status-warning)' }}>
                       Acknowledgment Required
                     </div>
                   )}
@@ -1059,11 +1017,11 @@ function MonitoringTab({ agent }: { agent: Agent }) {
                 </div>
                 <div style={{ height: 8, background: STUDIO_THEME.bg, borderRadius: 4, overflow: 'hidden' }}>
                   <div style={{ width: `${Math.min((tokenUsage.input / (tokenUsage.total || 1)) * 100, 100)}%`, height: '100%', background: STUDIO_THEME.accent, borderRadius: 4, float: 'left' }} />
-                  <div style={{ width: `${Math.min((tokenUsage.output / (tokenUsage.total || 1)) * 100, 100)}%`, height: '100%', background: '#22c55e', borderRadius: 4, float: 'left' }} />
+                  <div style={{ width: `${Math.min((tokenUsage.output / (tokenUsage.total || 1)) * 100, 100)}%`, height: '100%', background: 'var(--status-success)', borderRadius: 4, float: 'left' }} />
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: '12px' }}>
                   <span style={{ color: STUDIO_THEME.accent }}>Input: {tokenUsage.input.toLocaleString()}</span>
-                  <span style={{ color: '#22c55e' }}>Output: {tokenUsage.output.toLocaleString()}</span>
+                  <span style={{ color: 'var(--status-success)' }}>Output: {tokenUsage.output.toLocaleString()}</span>
                 </div>
               </>
             )}
@@ -1142,7 +1100,7 @@ function MonitoringTab({ agent }: { agent: Agent }) {
             {selectedMetric === 'failed' && agentRuns.filter(r => r.status === 'failed').map(run => (
               <div key={run.id} style={{ padding: '12px', borderBottom: `1px solid ${STUDIO_THEME.borderSubtle}` }}>
                 <div style={{ color: STUDIO_THEME.textPrimary }}>Run {run.id.slice(0, 8)}</div>
-                <div style={{ color: '#ef4444', fontSize: '12px' }}>{(run.metadata?.error as string) || 'Unknown error'}</div>
+                <div style={{ color: 'var(--status-error)', fontSize: '12px' }}>{(run.metadata?.error as string) || 'Unknown error'}</div>
               </div>
             ))}
             {selectedMetric === 'reviews' && agentReviews.filter(r => r.status === 'pending').map(review => (
@@ -1380,7 +1338,7 @@ function EnvironmentTab({ agent }: { agent: Agent }) {
                   {saveMessage && (
                     <span style={{ 
                       fontSize: '13px', 
-                      color: saveMessage.includes('success') ? '#22c55e' : '#ef4444' 
+                      color: saveMessage.includes('success') ? 'var(--status-success)' : 'var(--status-error)' 
                     }}>
                       {saveMessage}
                     </span>
@@ -1481,7 +1439,7 @@ function SwarmTab({ agent }: { agent: Agent }) {
   const { agents, updateAgent, sendMail } = useAgentStore();
   const subAgents = agents.filter(a => a.parentAgentId === agent.id);
   const availableAgents = agents.filter(a => a.id !== agent.id);
-  const [showAddSubagent, setShowAddSubagent] = useState(false);
+  const [, setShowAddSubagent] = useState(false);
   const [swarmStrategy, setSwarmStrategy] = useState((agent.config?.swarmStrategy as string) || 'hierarchical');
   const [coordinatingWith, setCoordinatingWith] = useState<string | null>(null);
   const [coordinationMessage, setCoordinationMessage] = useState<string | null>(null);
@@ -1578,9 +1536,9 @@ function SwarmTab({ agent }: { agent: Agent }) {
         {coordinationMessage && (
           <div style={{ 
             padding: '12px 16px', 
-            background: coordinationMessage.includes('sent') ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+            background: coordinationMessage.includes('sent') ? 'var(--status-success-bg)' : 'var(--status-error-bg)',
             borderRadius: '8px',
-            color: coordinationMessage.includes('sent') ? '#22c55e' : '#ef4444',
+            color: coordinationMessage.includes('sent') ? 'var(--status-success)' : 'var(--status-error)',
             fontSize: '13px'
           }}>
             {coordinationMessage}
@@ -1617,182 +1575,7 @@ function SwarmTab({ agent }: { agent: Agent }) {
 }
 
 // =============================================================================
-// CHARACTER TAB - Actually Changes Agent
-// =============================================================================
-
-function CharacterTab({ agent, stats }: { agent: Agent; stats?: CharacterStats }) {
-  const { character, characterTelemetry, loadCharacterLayer, saveCharacterLayer, updateAgent } = useAgentStore();
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [editedStats, setEditedStats] = useState<Record<string, number>>({});
-  const [selectedSetup, setSelectedSetup] = useState((agent.config?.characterBlueprint as any)?.setup || 'generalist');
-  const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([]);
-  const telemetry = characterTelemetry[agent.id] || [];
-  const charConfig = character[agent.id];
-
-  useEffect(() => {
-    loadCharacterLayer(agent.id);
-  }, [agent.id]);
-
-  useEffect(() => {
-    if (stats) setEditedStats(stats.stats);
-  }, [stats]);
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      // Save character stats
-      await saveCharacterLayer(agent.id, {
-        ...charConfig,
-        progression: {
-          ...charConfig?.progression,
-          stats: editedStats as any,
-        },
-      });
-      
-      // Update agent configuration
-      await updateAgent(agent.id, {
-        config: {
-          ...agent.config,
-          characterBlueprint: {
-            setup: selectedSetup,
-            specialtySkills: selectedSpecialties,
-          },
-        },
-      });
-      
-      setIsEditing(false);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const setupOptions = CHARACTER_SETUPS;
-  const specialtyOptions = getSpecialtyOptions(selectedSetup);
-
-  if (!stats) return <EmptyMessage>No character data available</EmptyMessage>;
-
-  return (
-    <ScrollArea style={{ height: '100%', padding: '20px' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        {/* Header */}
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '20px', padding: '24px',
-          borderRadius: '12px', border: `1px solid ${STUDIO_THEME.borderSubtle}`,
-          background: `linear-gradient(135deg, ${STUDIO_THEME.bgCard} 0%, rgba(212,149,106,0.08) 100%)`,
-        }}>
-          <div style={{ width: 80, height: 80, borderRadius: 16, overflow: 'hidden', border: `2px solid ${STUDIO_THEME.accent}` }}>
-            <AgentAvatar config={agent.config?.avatar as any} size={80} />
-          </div>
-          <div style={{ flex: 1 }}>
-            {isEditing ? (
-              <>
-                <Select value={selectedSetup} onValueChange={setSelectedSetup}>
-                  <SelectTrigger style={{ marginBottom: 8 }}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {setupOptions.map(setup => (
-                      <SelectItem key={setup.id} value={setup.id}>{setup.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <div style={{ color: STUDIO_THEME.accent, fontSize: '14px' }}>
-                  Level {stats.level} • {stats.xp} XP
-                </div>
-              </>
-            ) : (
-              <>
-                <h2 style={{ color: STUDIO_THEME.textPrimary, margin: 0, fontSize: '24px', fontWeight: 600, fontFamily: 'Georgia, serif' }}>
-                  {stats.class}
-                </h2>
-                <p style={{ color: STUDIO_THEME.accent, margin: '4px 0 0 0', fontSize: '16px' }}>
-                  Level {stats.level} • {stats.xp} XP
-                </p>
-              </>
-            )}
-          </div>
-          <Button onClick={() => isEditing ? handleSave() : setIsEditing(true)} disabled={isSaving}>
-            {isSaving ? <CircleNotch style={{ width: 16, height: 16, marginRight: 8, animation: 'spin 1s linear infinite' }} /> : isEditing ? <><Check style={{ width: 16, height: 16, marginRight: 8 }} />Save</> : <><PencilSimple style={{ width: 16, height: 16, marginRight: 8 }} />Edit</>}
-          </Button>
-        </div>
-
-        {/* Specialties */}
-        {isEditing && (
-          <Section title="Specialties" icon={Sparkle}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-              {specialtyOptions.map((specialty: string) => (
-                <button
-                  key={specialty}
-                  onClick={() => {
-                    setSelectedSpecialties(prev => 
-                      prev.includes(specialty) 
-                        ? prev.filter(s => s !== specialty)
-                        : [...prev, specialty]
-                    );
-                  }}
-                  style={{
-                    padding: '8px 16px', borderRadius: '20px', border: 'none',
-                    background: selectedSpecialties.includes(specialty) ? STUDIO_THEME.accent : STUDIO_THEME.bgCard,
-                    color: selectedSpecialties.includes(specialty) ? STUDIO_THEME.bg : STUDIO_THEME.textSecondary,
-                    cursor: 'pointer', fontSize: '13px',
-                  }}
-                >
-                  {specialty}
-                </button>
-              ))}
-            </div>
-          </Section>
-        )}
-
-        {/* Stats */}
-        <Section title="Attributes" icon={Activity}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {stats.statDefinitions?.map(stat => {
-              const value = editedStats[stat.key] ?? stats.stats[stat.key] ?? 0;
-              return (
-                <div key={stat.key}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                    <span style={{ color: STUDIO_THEME.textSecondary, fontSize: '14px' }}>{stat.label}</span>
-                    {isEditing ? (
-                      <Input 
-                        type="number" 
-                        value={value} 
-                        onChange={e => setEditedStats(s => ({ ...s, [stat.key]: parseInt(e.target.value) || 0 }))}
-                        style={{ width: 80, textAlign: 'right' }}
-                      />
-                    ) : (
-                      <span style={{ color: STUDIO_THEME.textPrimary, fontWeight: 600 }}>{value}</span>
-                    )}
-                  </div>
-                  <div style={{ height: 8, backgroundColor: STUDIO_THEME.bgCard, borderRadius: 4, overflow: 'hidden', border: `1px solid ${STUDIO_THEME.borderSubtle}` }}>
-                    <div style={{ width: `${Math.min(value, 100)}%`, height: '100%', background: `linear-gradient(90deg, ${STUDIO_THEME.accent}, ${STUDIO_THEME.accent}aa)`, borderRadius: 4 }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </Section>
-
-        {/* Telemetry */}
-        <Section title="Recent Activity" icon={Clock}>
-          {telemetry.slice(0, 5).map((event, i) => (
-            <div key={i} style={{ padding: '12px 16px', borderRadius: '8px', border: `1px solid ${STUDIO_THEME.borderSubtle}`, background: STUDIO_THEME.bgCard, marginBottom: '8px' }}>
-              <div style={{ color: STUDIO_THEME.textPrimary, fontSize: '13px', textTransform: 'capitalize' }}>
-                {event.type.replace(/_/g, ' ')}
-              </div>
-              <div style={{ color: STUDIO_THEME.textMuted, fontSize: '12px' }}>
-                {new Date(event.timestamp).toLocaleString()}
-              </div>
-            </div>
-          ))}
-          {telemetry.length === 0 && <EmptyMessage>No recent activity</EmptyMessage>}
-        </Section>
-      </div>
-    </ScrollArea>
-  );
-}
-
+// SETTINGS TAB
 // =============================================================================
 
 function SettingsTab({ agent }: { agent: Agent }) {
@@ -1963,7 +1746,7 @@ function SettingsTab({ agent }: { agent: Agent }) {
 
         {/* Danger Zone */}
         <div style={{ padding: '20px', borderRadius: '10px', border: '1px solid rgba(239,68,68,0.3)', backgroundColor: 'rgba(239,68,68,0.05)' }}>
-          <h4 style={{ color: '#ef4444', margin: '0 0 16px 0', fontSize: '14px', fontWeight: 600 }}>Danger Zone</h4>
+          <h4 style={{ color: 'var(--status-error)', margin: '0 0 16px 0', fontSize: '14px', fontWeight: 600 }}>Danger Zone</h4>
           <Button variant="destructive" onClick={() => setShowDeleteConfirm(true)} disabled={isDeleting}>
             <Trash style={{ width: 16, height: 16, marginRight: 8 }} />
             {isDeleting ? 'Deleting...' : 'Delete Agent'}
@@ -2211,7 +1994,7 @@ function MetricCard({ label, value, icon: Icon, color, onClick }: { label: strin
 
 function DetailOverlay({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={onClose}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 180 }} onClick={onClose}>
       <div style={{ width: 700, maxHeight: '80vh', background: STUDIO_THEME.bgCard, borderRadius: 12, padding: 24, border: `1px solid ${STUDIO_THEME.borderSubtle}`, overflow: 'auto' }} onClick={e => e.stopPropagation()}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <h3 style={{ margin: 0, color: STUDIO_THEME.textPrimary }}>{title}</h3>
@@ -2225,9 +2008,9 @@ function DetailOverlay({ title, children, onClose }: { title: string; children: 
 
 function StatusBadge({ status, size = 'sm' }: { status: string; size?: 'sm' | 'lg' }) {
   const colors: Record<string, string> = {
-    completed: '#22c55e', success: '#22c55e', failed: '#ef4444', error: '#ef4444',
-    running: '#f59e0b', active: '#3b82f6', pending: STUDIO_THEME.textMuted,
-    queued: STUDIO_THEME.textMuted, idle: STUDIO_THEME.textMuted, paused: '#f59e0b',
+    completed: 'var(--status-success)', success: 'var(--status-success)', failed: 'var(--status-error)', error: 'var(--status-error)',
+    running: 'var(--status-warning)', active: 'var(--status-info)', pending: STUDIO_THEME.textMuted,
+    queued: STUDIO_THEME.textMuted, idle: STUDIO_THEME.textMuted, paused: 'var(--status-warning)',
   };
   const color = colors[status] || STUDIO_THEME.textMuted;
   return (

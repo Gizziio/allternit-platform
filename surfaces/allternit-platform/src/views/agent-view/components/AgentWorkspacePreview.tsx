@@ -65,8 +65,8 @@ export function AgentWorkspacePreview({
         style={{
           padding: "12px 16px",
           borderRadius: "10px",
-          background: "rgba(255,255,255,0.02)",
-          border: "1px solid rgba(255,255,255,0.06)",
+          background: "var(--surface-hover)",
+          border: "1px solid var(--ui-border-muted)",
         }}
       >
         <div
@@ -101,7 +101,7 @@ export function AgentWorkspacePreview({
                 border: `1px solid ${
                   isSelected
                     ? "rgba(212,149,106,0.2)"
-                    : "rgba(255,255,255,0.06)"
+                    : "var(--ui-border-muted)"
                 }`,
                 background: isSelected
                   ? "rgba(212,149,106,0.04)"
@@ -131,7 +131,7 @@ export function AgentWorkspacePreview({
                     border: `1px solid ${
                       isSelected
                         ? STUDIO_THEME.accent
-                        : "rgba(255,255,255,0.15)"
+                        : "var(--ui-border-strong)"
                     }`,
                     background: isSelected ? STUDIO_THEME.accent : "transparent",
                     display: "flex",
@@ -224,7 +224,7 @@ export function AgentWorkspacePreview({
                           padding: "10px",
                           borderRadius: "8px",
                           background: "rgba(0,0,0,0.25)",
-                          border: "1px solid rgba(255,255,255,0.06)",
+                          border: "1px solid var(--ui-border-muted)",
                           color: STUDIO_THEME.textSecondary,
                           fontSize: "11px",
                           lineHeight: 1.5,

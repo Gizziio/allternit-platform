@@ -24,19 +24,19 @@ import type { DependencyTreeNode, DependencyResolutionResult } from '../plugins/
 // ============================================================================
 
 const THEME = {
-  bg: '#0c0a09',
-  bgElevated: '#1c1917',
-  accent: '#d4b08c',
+  bg: 'var(--surface-canvas)',
+  bgElevated: 'var(--surface-panel)',
+  accent: 'var(--accent-primary)',
   accentMuted: 'rgba(212, 176, 140, 0.15)',
-  textPrimary: '#e7e5e4',
-  textSecondary: '#a8a29e',
-  textTertiary: '#78716c',
+  textPrimary: 'var(--ui-text-primary)',
+  textSecondary: 'var(--ui-text-secondary)',
+  textTertiary: 'var(--ui-text-muted)',
   border: 'rgba(212, 176, 140, 0.1)',
   borderStrong: 'rgba(212, 176, 140, 0.2)',
-  success: '#22c55e',
-  warning: '#f59e0b',
-  danger: '#ef4444',
-  info: '#3b82f6',
+  success: 'var(--status-success)',
+  warning: 'var(--status-warning)',
+  danger: 'var(--status-error)',
+  info: 'var(--status-info)',
 };
 
 // ============================================================================
@@ -189,7 +189,7 @@ function TreeNode({
           alignItems: 'center',
           gap: 8,
           padding: `6px 12px 6px ${12 + depth * indentWidth}px`,
-          backgroundColor: isHovered ? 'rgba(255,255,255,0.04)' : 'transparent',
+          backgroundColor: isHovered ? 'var(--surface-hover)' : 'transparent',
           border: 'none',
           borderRadius: 6,
           cursor: hasChildren || onNodeClick ? 'pointer' : 'default',
@@ -283,7 +283,7 @@ function TreeNode({
             backgroundColor: THEME.bgElevated,
             border: `1px solid ${THEME.border}`,
             borderRadius: 6,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            boxShadow: '0 4px 12px var(--surface-panel)',
             pointerEvents: 'none',
             marginTop: -4,
           }}

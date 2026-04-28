@@ -24,15 +24,14 @@ import {
   TestTube,
   Headphones,
   Target,
-  Stack,
   CaretRight,
   CaretLeft,
   Check,
   Sparkle,
 } from '@phosphor-icons/react';
 
-import { SAND, MODE_COLORS, GLASS, TEXT, createGlassStyle } from '@/design/allternit.tokens';
-import { SPECIALIST_TEMPLATES, getTemplatesByCategory } from '@/lib/agents/agent-templates.specialist';
+import { MODE_COLORS, TEXT } from '@/design/allternit.tokens';
+import { getTemplatesByCategory } from '@/lib/agents/agent-templates.specialist';
 import type { SpecialistTemplate, AgentCategory } from '@/lib/agents/agent-templates.specialist';
 import { Button } from '@/components/ui/button';
 
@@ -294,8 +293,8 @@ function CategoryStep({ selectedCategory, onSelect, theme }: CategoryStepProps) 
           onClick={() => onSelect(cat.id)}
           className="p-4 rounded-xl border text-left transition-all"
           style={{
-            background: selectedCategory === cat.id ? theme.soft : 'rgba(255,255,255,0.02)',
-            borderColor: selectedCategory === cat.id ? theme.border : 'rgba(255,255,255,0.08)',
+            background: selectedCategory === cat.id ? theme.soft : 'var(--surface-hover)',
+            borderColor: selectedCategory === cat.id ? theme.border : 'var(--ui-border-muted)',
           }}
         >
           <div
@@ -348,8 +347,8 @@ function TemplateStep({ category, selectedTemplate, onSelect, onBack, theme }: T
             onClick={() => onSelect(template)}
             className="w-full p-4 rounded-xl border text-left transition-all"
             style={{
-              background: selectedTemplate?.id === template.id ? theme.soft : 'rgba(255,255,255,0.02)',
-              borderColor: selectedTemplate?.id === template.id ? theme.border : 'rgba(255,255,255,0.08)',
+              background: selectedTemplate?.id === template.id ? theme.soft : 'var(--surface-hover)',
+              borderColor: selectedTemplate?.id === template.id ? theme.border : 'var(--ui-border-muted)',
             }}
           >
             <div className="flex items-start justify-between">
@@ -366,7 +365,7 @@ function TemplateStep({ category, selectedTemplate, onSelect, onBack, theme }: T
                       key={tag}
                       className="text-xs px-2 py-0.5 rounded"
                       style={{
-                        background: 'rgba(255,255,255,0.05)',
+                        background: 'var(--surface-hover)',
                         color: TEXT.tertiary,
                       }}
                     >
@@ -409,7 +408,7 @@ function ReviewStep({ template, onBack, onNext, theme }: ReviewStepProps) {
     >
       <div
         className="p-4 rounded-xl mb-4"
-        style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${theme.border}` }}
+        style={{ background: 'var(--surface-hover)', border: `1px solid ${theme.border}` }}
       >
         <div className="flex items-center gap-3 mb-3">
           <div
@@ -457,7 +456,7 @@ function ReviewStep({ template, onBack, onNext, theme }: ReviewStepProps) {
           <CaretLeft size={16} />
           Back
         </Button>
-        <Button variant="default" onClick={onNext} className="flex-1 gap-2" style={{ background: theme.accent, color: '#1A1612' }}>
+        <Button variant="default" onClick={onNext} className="flex-1 gap-2" style={{ background: theme.accent, color: 'var(--ui-text-inverse)' }}>
           Continue
           <CaretRight size={16} />
         </Button>
@@ -493,7 +492,7 @@ function NameStep({ template, agentName, onNameChange, onBack, onComplete, theme
           placeholder={template.name}
           className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2"
           style={{
-            background: 'rgba(0,0,0,0.3)',
+            background: 'var(--surface-panel)',
             borderColor: theme.border,
             color: TEXT.primary,
             '--tw-ring-color': theme.accent,
@@ -506,7 +505,7 @@ function NameStep({ template, agentName, onNameChange, onBack, onComplete, theme
 
       <div
         className="p-4 rounded-xl mb-4"
-        style={{ background: 'rgba(255,255,255,0.02)', border: `1px solid ${theme.border}` }}
+        style={{ background: 'var(--surface-hover)', border: `1px solid ${theme.border}` }}
       >
         <p className="text-sm" style={{ color: TEXT.secondary }}>
           Creating from template: <span style={{ color: theme.accent }}>{template.name}</span>
@@ -525,7 +524,7 @@ function NameStep({ template, agentName, onNameChange, onBack, onComplete, theme
           className="flex-1 gap-2"
           style={{
             background: agentName.trim() ? theme.accent : theme.border,
-            color: '#1A1612',
+            color: 'var(--ui-text-inverse)',
             opacity: !agentName.trim() ? 0.5 : 1,
           }}
         >

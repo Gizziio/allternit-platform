@@ -3,10 +3,15 @@ import { z } from 'zod';
 import { GlassCard } from '@/design/glass/GlassCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { CaretUp, CaretDown, Table as TableIcon } from '@phosphor-icons/react';
+import { CaretUp, CaretDown } from '@phosphor-icons/react';
 import { VideoUseRenderer } from './video-use/VideoUseRenderer';
 import { VideoEditorView } from '../../views/design/video/VideoEditorView';
 import { Hyperframe } from '../../views/design/hyperframes/HyperframeRenderer';
+import { OrchestratorProgram } from '../../allternit-os/programs/OrchestratorProgram';
+
+// Stub for missing Evaluator component
+const Evaluator = () => <div className="p-4 text-sm text-muted-foreground">Evaluator view not available</div>;
+const Orchestrator = OrchestratorProgram;
 
 // ============================================================================
 // Component Schemas (Zod)
@@ -68,12 +73,14 @@ export const schemas = {
     optionB: z.object({ label: z.string(), content: z.string() }),
     onSelect: z.string().optional(),
   }),
-  'v:video-use': z.object({
-    title: z.string().optional(),
-    videoUrl: z.string().optional(),
-    transcript: z.array(z.object({
-      time: z.number(),
-      text: z.string()
+  'v:video-manifest': z.object({
+    template: z.string(),
+    css: z.string().optional(),
+    timeline: z.array(z.object({
+      id: z.string(),
+      start: z.number(),
+      duration: z.number(),
+      effect: z.string()
     })),
   }),
   'v:video-editor': z.object({
@@ -161,7 +168,7 @@ const Stack = ({ spacing, direction, align, children }: any) => (
     style={{ 
       display: 'flex', 
       flexDirection: direction === 'horizontal' ? 'row' : 'column',
-      gap: `${spacing * 4}px`,
+      gap: `calc(var(--design-spacing-unit, 4px) * ${spacing})`,
       alignItems: align,
       width: '100%',
     }}
@@ -175,7 +182,7 @@ const Grid = ({ cols, gap, children }: any) => (
     style={{ 
       display: 'grid', 
       gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
-      gap: `${gap * 4}px`,
+      gap: `calc(var(--design-spacing-unit, 4px) * ${gap})`,
       width: '100%',
     }}
   >
@@ -245,72 +252,20 @@ const OpenUICard = ({ title, variant, elevation, children }: any) => (
   </GlassCard>
 );
 
-const Orchestrator = ({ steps, currentStep }: any) => (
-  <div className="w-full p-4 rounded-xl border border-white/5 bg-black/20 flex flex-col gap-3">
-    {steps?.map((step: any, idx: number) => {
-      const isCurrent = idx === currentStep;
-      const isPast = idx < currentStep;
-      const isFailed = step.status === 'failed';
-      
-      let colorClass = 'text-white/30';
-      if (isCurrent || step.status === 'running') colorClass = 'text-[var(--accent-primary)] animate-pulse';
-      if (isPast || step.status === 'completed') colorClass = 'text-green-400';
-      if (isFailed) colorClass = 'text-red-400';
-
-      return (
-        <div key={idx} className="flex gap-3">
-          <div className="flex flex-col items-center">
-             <div className={`w-3 h-3 rounded-full border-2 ${isCurrent ? 'border-[var(--accent-primary)] bg-[var(--accent-primary)]/20' : 'border-current bg-transparent'} ${colorClass}`} />
-             {idx < steps.length - 1 && <div className={`w-0.5 h-full my-1 ${isPast ? 'bg-green-400/30' : 'bg-white/5'}`} />}
-          </div>
-          <div className="pb-3 pt-0.5">
-            <div className={`text-[11px] font-bold uppercase tracking-wider ${colorClass}`}>{step.title}</div>
-            {step.detail && <div className="text-[10px] text-white/50 mt-0.5">{step.detail}</div>}
-          </div>
+const VideoManifestPreview = ({ template, css, timeline }: any) => (
+  <div className="w-full flex flex-col gap-4">
+    <div className="text-[10px] font-bold opacity-40 uppercase tracking-widest">HTML Manifestation Preview</div>
+    <div 
+      className="w-full aspect-video bg-black rounded-xl border border-white/10 overflow-hidden relative"
+      dangerouslySetInnerHTML={{ __html: `<style>${css}</style>${template}` }}
+    />
+    <div className="grid grid-cols-2 gap-2">
+      {timeline?.map((t: any) => (
+        <div key={t.id} className="p-2 bg-white/5 rounded border border-white/5 text-[9px]">
+           <span className="opacity-40">[{t.start}s]</span> {t.effect}
         </div>
-      );
-    })}
-  </div>
-);
-
-const Evaluator = ({ title, optionA, optionB, onSelect }: any) => (
-  <div className="w-full flex flex-col gap-3">
-    {title && <div className="text-[11px] font-bold text-white/50 uppercase tracking-widest">{title}</div>}
-    <div className="grid grid-cols-2 gap-3">
-       <button onClick={() => onSelect && handleUIAction(onSelect, { selection: 'A' })} className="p-4 text-left rounded-xl border border-white/10 bg-white/5 hover:bg-[var(--accent-primary)]/10 hover:border-[var(--accent-primary)]/50 transition-all group">
-         <div className="text-[10px] font-bold text-[var(--accent-primary)] mb-2 uppercase tracking-widest group-hover:text-[var(--accent-primary)]">{optionA?.label || 'Option A'}</div>
-         <div className="text-[11px] text-white/70 leading-relaxed font-mono">{optionA?.content}</div>
-       </button>
-       <button onClick={() => onSelect && handleUIAction(onSelect, { selection: 'B' })} className="p-4 text-left rounded-xl border border-white/10 bg-white/5 hover:bg-[var(--accent-primary)]/10 hover:border-[var(--accent-primary)]/50 transition-all group">
-         <div className="text-[10px] font-bold text-[var(--accent-primary)] mb-2 uppercase tracking-widest group-hover:text-[var(--accent-primary)]">{optionB?.label || 'Option B'}</div>
-         <div className="text-[11px] text-white/70 leading-relaxed font-mono">{optionB?.content}</div>
-       </button>
+      ))}
     </div>
-  </div>
-);
-
-const OnePager = ({ title, subtitle, children }: any) => (
-  <div className="w-full max-w-2xl mx-auto py-12 px-8 flex flex-col gap-8 transition-all" style={{ backgroundColor: 'var(--design-color-background)', fontFamily: 'var(--design-type-fontFamily)' }}>
-     <div className="border-b border-current pb-6 flex flex-col gap-2" style={{ color: 'var(--design-color-primary)' }}>
-        <h1 className="text-4xl font-serif font-medium leading-[1.1]">{title}</h1>
-        {subtitle && <p className="text-lg opacity-60 font-serif italic">{subtitle}</p>}
-     </div>
-     <div className="flex flex-col gap-6 text-lg leading-[1.55]" style={{ color: 'var(--design-color-text)' }}>
-        {children}
-     </div>
-  </div>
-);
-
-const DiagramArc = ({ labels, values }: any) => (
-  <div className="w-full p-6 flex flex-col gap-4 border border-current/10 rounded" style={{ color: 'var(--design-color-primary)' }}>
-     <div className="flex justify-around items-end h-32 gap-2">
-        {values.map((v: number, i: number) => (
-          <div key={i} className="flex flex-col items-center gap-2 flex-1">
-             <div className="w-full bg-current opacity-20 rounded-t" style={{ height: `${v}%` }} />
-             <span className="text-[10px] font-bold uppercase tracking-tighter truncate w-full text-center">{labels[i]}</span>
-          </div>
-        ))}
-     </div>
   </div>
 );
 
@@ -325,7 +280,7 @@ const SkillGraph = ({ nodes, links }: any) => (
         const from = nodes.find((n: any) => n.id === l.from);
         const to = nodes.find((n: any) => n.id === l.to);
         if (!from || !to) return null;
-        return <line key={i} x1={from.x || 50} y1={from.y || 50} x2={to.x || 100} y2={to.y || 100} stroke="rgba(212,176,140,0.2)" strokeWidth="1" />;
+        return <line key={i} x1={from.x || 50} y1={from.y || 50} x2={to.x || 100} y2={to.y || 100} stroke="var(--ui-border-default)" strokeWidth="1" />;
       })}
     </svg>
     {nodes?.map((n: any) => (
@@ -340,13 +295,13 @@ const Pipeline = ({ items }: any) => (
   <div className="w-full flex flex-col gap-2">
     {items?.map((item: any, i: number) => (
       <div key={i} className="p-3 bg-white/5 border border-white/10 rounded-xl flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-[var(--accent-primary)]/20 flex items-center justify-center text-[10px] font-black">{item.platform[0]}</div>
+        <div className="w-8 h-8 rounded-lg bg-[var(--accent-primary)]/20 flex items-center justify-center text-[10px] font-black" style={{ backgroundColor: 'var(--design-color-primary, var(--accent-chat))', color: '#000' }}>{item.platform[0]}</div>
         <div className="flex-1">
           <div className="text-xs font-bold">{item.platform}</div>
           <div className="text-[10px] opacity-40 uppercase">{item.status}</div>
         </div>
         <div className="w-24 h-1.5 bg-white/5 rounded-full overflow-hidden">
-          <div className="h-full bg-[var(--accent-primary)]" style={{ width: item.status === 'Ready' ? '100%' : '40%' }} />
+          <div className="h-full bg-[var(--accent-primary)]" style={{ width: item.status === 'Ready' ? '100%' : '40%', backgroundColor: 'var(--design-color-primary)' }} />
         </div>
       </div>
     ))}
@@ -368,8 +323,21 @@ export const componentRegistry: Record<string, React.ComponentType<any>> = {
   'v:evaluator': Evaluator,
   'v:video-use': VideoUseRenderer,
   'v:video-editor': VideoEditorView,
-  'v:one-pager': OnePager,
-  'v:diagram-arc': DiagramArc,
+  'v:video-manifest': VideoManifestPreview,
+  'v:one-pager': ({ title, subtitle, children }: any) => (
+     <div className="w-full p-8 border border-white/10 rounded-xl bg-white/5">
+        <h1 className="text-2xl font-bold">{title}</h1>
+        {subtitle && <p className="opacity-40">{subtitle}</p>}
+        <div className="mt-4">{children}</div>
+     </div>
+  ),
+  'v:diagram-arc': ({ labels, values }: any) => (
+     <div className="w-full flex gap-2 items-end h-24">
+        {values?.map((v: number, i: number) => (
+           <div key={i} className="flex-1 bg-[var(--design-color-primary)] opacity-40 rounded-t" style={{ height: `${v}%` }} />
+        ))}
+     </div>
+  ),
   'v:skill-graph': SkillGraph,
   'v:pipeline': Pipeline,
   'v:input': ({ label, name, ...props }: any) => (

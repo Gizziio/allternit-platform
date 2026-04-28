@@ -10,15 +10,6 @@
 import { useMemo, useState, useCallback } from 'react';
 import {
   GlassOptions,
-  GlassElevation,
-  GlassVariant,
-  GlassHover,
-  GlassBorder,
-  GlassBlur,
-  GlassOpacity,
-  GlassPadding,
-  GlassRounded,
-  GlassTransition,
   buildGlassStyles,
   buildGlassClasses,
   getHoverStyles,

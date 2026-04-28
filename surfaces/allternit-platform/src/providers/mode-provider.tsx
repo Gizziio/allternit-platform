@@ -27,7 +27,7 @@ export function ModeProvider({
   useEffect(() => {
     try {
       const savedMode = localStorage.getItem(MODE_STORAGE_KEY) as AppMode | null;
-      if (savedMode && ['chat', 'cowork', 'code'].includes(savedMode)) {
+      if (savedMode && ['chat', 'cowork', 'code', 'design', 'browser'].includes(savedMode)) {
         setModeState(savedMode);
         onModeChange?.(savedMode);
       }

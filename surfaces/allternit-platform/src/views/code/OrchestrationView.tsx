@@ -47,7 +47,7 @@ export function OrchestrationView() {
           flexDirection: 'column', 
           alignItems: 'center', 
           justifyContent: 'center',
-          color: '#666',
+          color: 'var(--ui-text-muted)',
           padding: 60
         }}>
           <Robot size={64} style={{ marginBottom: 16, opacity: 0.3 }} />
@@ -118,7 +118,7 @@ export function OrchestrationView() {
                 </div>
                 <div style={{ 
                   fontSize: 11, 
-                  color: '#888',
+                  color: 'var(--ui-text-muted)',
                   marginTop: 4,
                   display: 'flex',
                   alignItems: 'center',
@@ -149,8 +149,8 @@ export function OrchestrationView() {
 
 function getStatusColor(status: string): string {
   switch (status) {
-    case 'working': return '#10b981';
-    case 'waiting': return '#f59e0b';
+    case 'working': return 'var(--status-success)';
+    case 'waiting': return 'var(--status-warning)';
     case 'idle': return '#8e8e93';
     default: return '#8e8e93';
   }

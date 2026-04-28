@@ -16,13 +16,9 @@ import { speechToText } from "@/services/voice";
 type SpeechInputMode = "speech-recognition" | "media-recorder" | "none";
 
 // Use types from SpeechToText service to avoid duplication
-import type { 
-  SpeechRecognition, 
+import type {
+  SpeechRecognition,
   SpeechRecognitionEvent,
-  SpeechRecognitionResultList,
-  SpeechRecognitionResult,
-  SpeechRecognitionAlternative,
-  SpeechRecognitionErrorEvent
 } from "@/services/voice/SpeechToText";
 
 export type SpeechInputProps = ComponentProps<typeof Button> & {

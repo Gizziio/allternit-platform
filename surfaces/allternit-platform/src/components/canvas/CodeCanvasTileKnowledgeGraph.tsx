@@ -22,10 +22,10 @@ interface GraphEdge {
 }
 
 const NODE_COLORS: Record<string, string> = {
-  live: '#10b981',
-  stale: '#ef4444',
+  live: 'var(--status-success)',
+  stale: 'var(--status-error)',
   file: '#8b5cf6',
-  summary: '#f59e0b',
+  summary: 'var(--status-warning)',
 };
 
 function buildGraph(claims: H5iClaim[], summaries: H5iSummary[]): { nodes: GraphNode[]; edges: GraphEdge[] } {
@@ -173,7 +173,7 @@ export function CodeCanvasTileKnowledgeGraph({ workspacePath }: CodeCanvasTileKn
 
   if (error) {
     return (
-      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#ef4444', fontSize: 12, gap: 8 }}>
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--status-error)', fontSize: 12, gap: 8 }}>
         <div>{error}</div>
         <button onClick={load} style={{ padding: '4px 12px', borderRadius: 6, border: '1px solid var(--glass-border)', background: 'var(--glass-bg)', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer' }}>
           Retry

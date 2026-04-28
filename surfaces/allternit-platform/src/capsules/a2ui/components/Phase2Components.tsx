@@ -6,8 +6,7 @@
 
 "use client";
 
-import React, { useState, useCallback, useMemo, useRef, useEffect } from "react";
-import { motion } from "framer-motion";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { format, parseISO } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -20,7 +19,7 @@ import {
   TextUnderline,
   TextStrikethrough,
   TextHOne,
-  TextHTwo,
+
   Code,
   Quotes,
   List,
@@ -31,7 +30,7 @@ import {
   CaretRight,
   CaretDown,
   MagnifyingGlass,
-  DotsSixVertical,
+
   Clock,
   CheckCircle,
   Warning,

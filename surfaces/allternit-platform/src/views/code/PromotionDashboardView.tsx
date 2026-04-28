@@ -35,14 +35,14 @@ interface Proposal {
 
 const getRiskColor = (risk: string): string => {
   switch (risk) {
-    case 'Low': return '#34c759';
-    case 'Medium': return '#ffa500';
-    case 'High': return '#ff3b30';
-    default: return '#8e8e93';
+    case 'Low': return 'var(--status-success)';
+    case 'Medium': return 'var(--status-warning)';
+    case 'High': return 'var(--status-error)';
+    default: return 'var(--ui-text-muted)';
   }
 };
 
-const getCheckIcon = (status: string): React.ComponentType | null => {
+const getCheckIcon = (status: string): React.ComponentType<any> | null => {
   switch (status) {
     case 'passed': return CheckCircle;
     case 'failed': return XCircle;
@@ -53,10 +53,10 @@ const getCheckIcon = (status: string): React.ComponentType | null => {
 
 const getCheckColor = (status: string): string => {
   switch (status) {
-    case 'passed': return '#34c759';
-    case 'failed': return '#ff3b30';
-    case 'running': return '#ffa500';
-    default: return '#888';
+    case 'passed': return 'var(--status-success)';
+    case 'failed': return 'var(--status-error)';
+    case 'running': return 'var(--status-warning)';
+    default: return 'var(--ui-text-muted)';
   }
 };
 
@@ -225,8 +225,8 @@ export function PromotionDashboardView() {
                         <div style={{
                           padding: '4px 10px',
                           borderRadius: 4,
-                          background: '#34c75920',
-                          color: '#34c759',
+                          background: 'var(--status-success-bg)',
+                          color: 'var(--status-success)',
                           fontSize: 10,
                           fontWeight: 700
                         }}>
@@ -237,8 +237,8 @@ export function PromotionDashboardView() {
                         <div style={{
                           padding: '4px 10px',
                           borderRadius: 4,
-                          background: '#ff3b3020',
-                          color: '#ff3b30',
+                          background: 'var(--status-error-bg)',
+                          color: 'var(--status-error)',
                           fontSize: 10,
                           fontWeight: 700
                         }}>
@@ -249,8 +249,8 @@ export function PromotionDashboardView() {
                         <div style={{
                           padding: '4px 10px',
                           borderRadius: 4,
-                          background: '#ffa50020',
-                          color: '#ffa500',
+                          background: 'var(--status-warning-bg)',
+                          color: 'var(--status-warning)',
                           fontSize: 10,
                           fontWeight: 700
                         }}>
@@ -331,7 +331,7 @@ export function PromotionDashboardView() {
                             {file.path}
                           </span>
                           <span style={{ color: 'var(--text-tertiary)', fontSize: 10, fontVariantNumeric: 'tabular-nums' }}>
-                            <span style={{ color: '#34c759' }}>+{file.additions}</span> <span style={{ color: '#ff3b30' }}>-{file.deletions}</span>
+                            <span style={{ color: 'var(--status-success)' }}>+{file.additions}</span> <span style={{ color: 'var(--status-error)' }}>-{file.deletions}</span>
                           </span>
                         </div>
                       ))}
@@ -349,7 +349,7 @@ export function PromotionDashboardView() {
                         padding: '8px 12px',
                         borderRadius: 6,
                         border: 'none',
-                        background: '#34c759',
+                        background: 'var(--status-success)',
                         color: 'white',
                         fontSize: 12,
                         fontWeight: 700,
@@ -367,7 +367,7 @@ export function PromotionDashboardView() {
                         borderRadius: 6,
                         border: '1px solid var(--border-subtle)',
                         background: 'transparent',
-                        color: '#ff3b30',
+                        color: 'var(--status-error)',
                         fontSize: 12,
                         fontWeight: 700,
                         cursor: 'pointer',

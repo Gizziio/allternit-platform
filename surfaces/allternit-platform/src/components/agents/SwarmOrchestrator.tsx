@@ -24,10 +24,8 @@
 import React, {
   useState,
   useCallback,
-  useRef,
   useEffect,
   useMemo,
-  useId,
 } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -50,8 +48,6 @@ import {
   Position,
   MarkerType,
   useKeyPress,
-  NodeDragHandler,
-  SelectionDragHandler,
   OnSelectionChangeParams,
   BackgroundVariant,
 } from 'reactflow';
@@ -65,26 +61,20 @@ import {
   GearSix,
   Chat,
   GitBranch,
-  ShareNetwork,
   Trash,
   Copy,
   FloppyDisk,
   Lightning,
   Pulse as Activity,
-  DotsThreeVertical,
   CaretRight,
-  CaretDown,
   Network,
   Target,
-  DotsSixVertical,
   X,
   Check,
   Warning,
   ArrowsClockwise,
   DownloadSimple,
-  UploadSimple,
   ArrowCounterClockwise,
-  ArrowClockwise,
   ArrowsOut,
   ArrowsIn,
   Lock,
@@ -92,24 +82,17 @@ import {
   Eye,
   EyeSlash,
   MagnifyingGlass,
-  Funnel,
   Stack,
   Cpu,
   Clock,
   TrendUp,
   Radio,
-  StopCircle,
-  PlayCircle,
 } from '@phosphor-icons/react';
 
 import {
-  SAND,
   MODE_COLORS,
   createGlassStyle,
-  RADIUS,
-  SPACE,
   TEXT,
-  SHADOW,
   type AgentMode,
 } from '@/design/allternit.tokens';
 
@@ -364,7 +347,7 @@ const ROLE_CONFIG: Record<AgentRole, {
   maxOutputs: number;
 }> = {
   coordinator: {
-    color: '#D4956A',
+    color: 'var(--accent-primary)',
     bgColor: 'rgba(212, 149, 106, 0.15)',
     borderColor: 'rgba(212, 149, 106, 0.5)',
     icon: Network,
@@ -560,7 +543,7 @@ const AgentNodeComponent: React.FC<NodeProps<AgentNodeData>> = ({
               key={cap}
               className="text-[10px] px-2 py-0.5 rounded-full"
               style={{
-                background: 'rgba(0,0,0,0.3)',
+                background: 'var(--bg-tertiary)',
                 color: TEXT.secondary,
                 border: `1px solid ${roleConfig.borderColor}`,
               }}
@@ -572,7 +555,7 @@ const AgentNodeComponent: React.FC<NodeProps<AgentNodeData>> = ({
             <span
               className="text-[10px] px-2 py-0.5 rounded-full"
               style={{
-                background: 'rgba(0,0,0,0.3)',
+                background: 'var(--bg-tertiary)',
                 color: TEXT.tertiary,
               }}
             >
@@ -697,17 +680,10 @@ const SwarmOrchestratorInner: React.FC<SwarmOrchestratorProps> = ({
   className,
 }) => {
   const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.chat;
-  const componentId = useId();
-  
+
   // ReactFlow hooks
   const {
     fitView,
-    zoomIn,
-    zoomOut,
-    getNodes,
-    getEdges,
-    setCenter,
-    project,
   } = useReactFlow<AgentNodeData>();
 
   // State
@@ -723,7 +699,7 @@ const SwarmOrchestratorInner: React.FC<SwarmOrchestratorProps> = ({
   const [executionMode, setExecutionMode] = useState<ExecutionMode>(
     initialSwarm?.executionMode || 'adaptive'
   );
-  const [routingStrategy, setRoutingStrategy] = useState<RoutingStrategy>(
+  const [routingStrategy] = useState<RoutingStrategy>(
     initialSwarm?.routing.strategy || 'capabilityBased'
   );
   const [routingConfig, setRoutingConfig] = useState<RoutingConfig>(
@@ -748,13 +724,11 @@ const SwarmOrchestratorInner: React.FC<SwarmOrchestratorProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [showValidationPanel, setShowValidationPanel] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [agentFilter, setAgentFilter] = useState<AgentRole | 'all'>('all');
 
   // Keyboard shortcuts
   const deletePressed = useKeyPress('Delete');
   const escapePressed = useKeyPress('Escape');
   const savePressed = useKeyPress(['Meta+s', 'Ctrl+s']);
-  const selectAllPressed = useKeyPress(['Meta+a', 'Ctrl+a']);
 
   // ============================================================================
   // Initialization
@@ -1236,7 +1210,7 @@ const SwarmOrchestratorInner: React.FC<SwarmOrchestratorProps> = ({
   return (
     <div
       className={`h-screen flex flex-col overflow-hidden ${className || ''}`}
-      style={{ background: '#0D0B09' }}
+      style={{ background: 'var(--surface-canvas)' }}
     >
       {/* Header */}
       <OrchestratorHeader
@@ -1312,7 +1286,7 @@ const SwarmOrchestratorInner: React.FC<SwarmOrchestratorProps> = ({
             
             <Controls
               style={{
-                background: '#1A1612',
+                background: 'var(--surface-panel)',
                 borderColor: modeColors.border,
                 borderWidth: 1,
                 borderStyle: 'solid',
@@ -1324,17 +1298,17 @@ const SwarmOrchestratorInner: React.FC<SwarmOrchestratorProps> = ({
                 nodeStrokeColor={modeColors.accent}
                 nodeColor={(node) => {
                   const colors: Record<AgentRole, string> = {
-                    coordinator: '#D4956A',
+                    coordinator: 'var(--accent-primary)',
                     worker: '#79C47C',
                     specialist: '#69A8C8',
                     reviewer: '#A78BFA',
                     gatekeeper: '#F472B6',
                   };
-                  return colors[node.data?.role as AgentRole] || '#666';
+                  return colors[node.data?.role as AgentRole] || 'var(--ui-text-muted)';
                 }}
                 maskColor="rgba(0,0,0,0.8)"
                 style={{
-                  background: '#1A1612',
+                  background: 'var(--surface-panel)',
                   border: `1px solid ${modeColors.border}`,
                 }}
               />
@@ -1345,7 +1319,7 @@ const SwarmOrchestratorInner: React.FC<SwarmOrchestratorProps> = ({
               <div
                 className="flex items-center gap-1 p-1 rounded-lg"
                 style={{
-                  background: 'rgba(0,0,0,0.5)',
+                  background: 'var(--shell-overlay-backdrop)',
                   border: `1px solid ${modeColors.border}`,
                 }}
               >
@@ -1530,7 +1504,7 @@ function OrchestratorHeader({
       className="flex items-center justify-between px-6 py-4 border-b"
       style={{
         borderColor: modeColors.border,
-        background: 'rgba(0,0,0,0.3)',
+        background: 'var(--bg-tertiary)',
       }}
     >
       {/* Left Section */}
@@ -1592,7 +1566,7 @@ function OrchestratorHeader({
       {/* Center Tabs */}
       <div
         className="flex items-center rounded-lg p-1"
-        style={{ background: 'rgba(0,0,0,0.3)' }}
+        style={{ background: 'var(--bg-tertiary)' }}
       >
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -1621,7 +1595,7 @@ function OrchestratorHeader({
               onClick={onExport}
               className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all hover:opacity-80"
               style={{
-                background: 'rgba(255,255,255,0.05)',
+                background: 'var(--surface-hover)',
                 color: TEXT.secondary,
               }}
             >
@@ -1634,7 +1608,7 @@ function OrchestratorHeader({
               disabled={isSaving}
               className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all hover:opacity-80 disabled:opacity-50"
               style={{
-                background: 'rgba(255,255,255,0.05)',
+                background: 'var(--surface-hover)',
                 color: TEXT.secondary,
               }}
             >
@@ -1652,7 +1626,7 @@ function OrchestratorHeader({
                 className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
                 style={{
                   background: 'rgba(251,191,36,0.2)',
-                  color: '#fbbf24',
+                  color: 'var(--status-warning)',
                 }}
               >
                 <Pause size={14} />
@@ -1665,7 +1639,7 @@ function OrchestratorHeader({
                 className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all"
                 style={{
                   background: 'rgba(74,222,128,0.2)',
-                  color: '#4ade80',
+                  color: 'var(--status-success)',
                 }}
               >
                 <Play size={14} fill="currentColor" />
@@ -1676,8 +1650,8 @@ function OrchestratorHeader({
               onClick={onStop}
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all"
               style={{
-                background: '#f87171',
-                color: '#fff',
+                background: 'var(--status-error)',
+                color: 'var(--ui-text-primary)',
               }}
             >
               <Square size={14} fill="currentColor" />
@@ -1692,7 +1666,7 @@ function OrchestratorHeader({
               className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all disabled:opacity-50"
               style={{
                 background: modeColors.accent,
-                color: '#1A1612',
+                color: 'var(--ui-text-inverse)',
               }}
             >
               <Play size={14} fill="currentColor" />
@@ -1731,7 +1705,7 @@ function AgentPalette({
       className="w-72 border-r flex flex-col"
       style={{
         borderColor: modeColors.border,
-        background: 'rgba(0,0,0,0.2)',
+        background: 'var(--surface-hover)',
       }}
     >
       {/* Header */}
@@ -1754,7 +1728,7 @@ function AgentPalette({
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-3 py-2 rounded-lg text-sm outline-none"
             style={{
-              background: 'rgba(0,0,0,0.3)',
+              background: 'var(--bg-tertiary)',
               border: `1px solid ${modeColors.border}`,
               color: TEXT.primary,
             }}
@@ -1777,7 +1751,7 @@ function AgentPalette({
                 background:
                   selectedRole === role
                     ? ROLE_CONFIG[role].bgColor
-                    : 'rgba(0,0,0,0.3)',
+                    : 'var(--surface-panel)',
                 color:
                   selectedRole === role
                     ? ROLE_CONFIG[role].color
@@ -1804,7 +1778,7 @@ function AgentPalette({
               layout
               className="rounded-lg overflow-hidden"
               style={{
-                background: 'rgba(255,255,255,0.03)',
+                background: 'var(--surface-hover)',
                 border: `1px solid ${modeColors.border}`,
               }}
             >
@@ -1951,7 +1925,7 @@ function NodeConfigPanel({
             onChange={(e) => onUpdate({ name: e.target.value })}
             className="w-full px-3 py-2 rounded-lg text-sm outline-none"
             style={{
-              background: 'rgba(0,0,0,0.3)',
+              background: 'var(--bg-tertiary)',
               border: `1px solid ${modeColors.border}`,
               color: TEXT.primary,
             }}
@@ -1976,7 +1950,7 @@ function NodeConfigPanel({
                   background:
                     node.data.role === role
                       ? ROLE_CONFIG[role].bgColor
-                      : 'rgba(0,0,0,0.3)',
+                      : 'var(--surface-panel)',
                   color:
                     node.data.role === role
                       ? ROLE_CONFIG[role].color
@@ -2015,7 +1989,7 @@ function NodeConfigPanel({
             }
             className="w-full px-3 py-2 rounded-lg text-sm outline-none"
             style={{
-              background: 'rgba(0,0,0,0.3)',
+              background: 'var(--bg-tertiary)',
               border: `1px solid ${modeColors.border}`,
               color: TEXT.primary,
             }}
@@ -2087,7 +2061,7 @@ function NodeConfigPanel({
               }
               className="w-full px-3 py-2 rounded-lg text-sm outline-none"
               style={{
-                background: 'rgba(0,0,0,0.3)',
+                background: 'var(--bg-tertiary)',
                 border: `1px solid ${modeColors.border}`,
                 color: TEXT.primary,
               }}
@@ -2103,7 +2077,7 @@ function NodeConfigPanel({
               }
               className="w-full px-3 py-2 rounded-lg text-sm outline-none"
               style={{
-                background: 'rgba(0,0,0,0.3)',
+                background: 'var(--bg-tertiary)',
                 border: `1px solid ${modeColors.border}`,
                 color: TEXT.primary,
               }}
@@ -2118,7 +2092,7 @@ function NodeConfigPanel({
           onClick={onDuplicate}
           className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all"
           style={{
-            background: 'rgba(255,255,255,0.05)',
+            background: 'var(--surface-hover)',
             color: TEXT.secondary,
             border: `1px solid ${modeColors.border}`,
           }}
@@ -2132,7 +2106,7 @@ function NodeConfigPanel({
           className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all"
           style={{
             background: 'rgba(248,113,113,0.1)',
-            color: '#f87171',
+            color: 'var(--status-error)',
             border: '1px solid rgba(248,113,113,0.2)',
           }}
         >
@@ -2218,7 +2192,7 @@ function ConfigurationPanel({
                   rows={3}
                   className="w-full px-3 py-2 rounded-lg text-sm outline-none resize-none"
                   style={{
-                    background: 'rgba(0,0,0,0.3)',
+                    background: 'var(--bg-tertiary)',
                     border: `1px solid ${modeColors.border}`,
                     color: TEXT.primary,
                   }}
@@ -2253,7 +2227,7 @@ function ConfigurationPanel({
                       background:
                         executionMode === mode
                           ? modeColors.soft
-                          : 'rgba(255,255,255,0.03)',
+                          : 'var(--surface-hover)',
                       border: `1px solid ${
                         executionMode === mode ? modeColors.border : 'transparent'
                       }`,
@@ -2265,13 +2239,13 @@ function ConfigurationPanel({
                         background:
                           executionMode === mode
                             ? modeColors.accent
-                            : 'rgba(255,255,255,0.05)',
+                            : 'var(--surface-hover)',
                       }}
                     >
                       <Icon
                         size={20}
                         style={{
-                          color: executionMode === mode ? '#0D0B09' : modeColors.accent,
+                          color: executionMode === mode ? 'var(--ui-text-inverse)' : modeColors.accent,
                         }}
                       />
                     </div>
@@ -2326,7 +2300,7 @@ function ConfigurationPanel({
                       background:
                         routingConfig.strategy === strategy
                           ? modeColors.soft
-                          : 'rgba(255,255,255,0.03)',
+                          : 'var(--surface-hover)',
                       border: `1px solid ${
                         routingConfig.strategy === strategy
                           ? modeColors.border
@@ -2374,7 +2348,7 @@ function ConfigurationPanel({
                   disabled={!canEdit}
                   className="w-full px-3 py-2 rounded-lg text-sm outline-none"
                   style={{
-                    background: 'rgba(0,0,0,0.3)',
+                    background: 'var(--bg-tertiary)',
                     border: `1px solid ${modeColors.border}`,
                     color: TEXT.primary,
                   }}
@@ -2397,7 +2371,7 @@ function ConfigurationPanel({
                   disabled={!canEdit}
                   className="w-full px-3 py-2 rounded-lg text-sm outline-none"
                   style={{
-                    background: 'rgba(0,0,0,0.3)',
+                    background: 'var(--bg-tertiary)',
                     border: `1px solid ${modeColors.border}`,
                     color: TEXT.primary,
                   }}
@@ -2419,7 +2393,7 @@ function ConfigurationPanel({
                   disabled={!canEdit}
                   className="w-full px-3 py-2 rounded-lg text-sm outline-none"
                   style={{
-                    background: 'rgba(0,0,0,0.3)',
+                    background: 'var(--bg-tertiary)',
                     border: `1px solid ${modeColors.border}`,
                     color: TEXT.primary,
                   }}
@@ -2499,17 +2473,17 @@ function MonitoringPanel({
     switch (status) {
       case 'running':
       case 'starting':
-        return '#4ade80';
+        return 'var(--status-success)';
       case 'paused':
-        return '#fbbf24';
+        return 'var(--status-warning)';
       case 'completed':
         return '#69A8C8';
       case 'failed':
       case 'cancelled':
       case 'timeout':
-        return '#f87171';
+        return 'var(--status-error)';
       default:
-        return '#666';
+        return 'var(--ui-text-muted)';
     }
   };
 
@@ -2526,7 +2500,7 @@ function MonitoringPanel({
             <h2 className="text-2xl font-semibold" style={{ color: TEXT.primary }}>
               Execution Monitor
             </h2>
-            <div className="flex rounded-lg p-1" style={{ background: 'rgba(0,0,0,0.3)' }}>
+            <div className="flex rounded-lg p-1" style={{ background: 'var(--bg-tertiary)' }}>
               <button
                 onClick={() => setActiveView('current')}
                 className="px-3 py-1.5 rounded text-sm font-medium transition-all"
@@ -2603,7 +2577,7 @@ function MonitoringPanel({
                 </div>
                 <div
                   className="h-3 rounded-full overflow-hidden"
-                  style={{ background: 'rgba(255,255,255,0.05)' }}
+                  style={{ background: 'var(--surface-hover)' }}
                 >
                   <motion.div
                     className="h-full rounded-full"
@@ -2673,7 +2647,7 @@ function MonitoringPanel({
                         <div
                           className="w-3 h-3 rounded-full"
                           style={{
-                            background: isActive ? '#4ade80' : '#666',
+                            background: isActive ? 'var(--status-success)' : 'var(--ui-text-muted)',
                             boxShadow: isActive ? '0 0 10px #4ade80' : 'none',
                           }}
                         />
@@ -2812,7 +2786,7 @@ function PropertiesPanel({
       className="w-56 border-l p-4"
       style={{
         borderColor: modeColors.border,
-        background: 'rgba(0,0,0,0.2)',
+        background: 'var(--surface-hover)',
       }}
     >
       <h3 className="text-sm font-semibold mb-4" style={{ color: TEXT.primary }}>
@@ -2854,7 +2828,7 @@ function PropertiesPanel({
         style={{
           background: 'rgba(251,191,36,0.05)',
           border: '1px solid rgba(251,191,36,0.2)',
-          color: '#fbbf24',
+          color: 'var(--status-warning)',
         }}
       >
         <div className="flex items-center gap-2 mb-1">
@@ -2914,7 +2888,7 @@ function ValidationPanel({ errors, onClose, modeColors }: ValidationPanelProps) 
                   background:
                     error.severity === 'error'
                       ? 'rgba(248,113,113,0.1)'
-                      : 'rgba(251,191,36,0.1)',
+                      : 'var(--status-warning-bg)',
                   border: `1px solid ${
                     error.severity === 'error'
                       ? 'rgba(248,113,113,0.2)'
@@ -2966,8 +2940,8 @@ function ToolbarButton({ icon: Icon, onClick, active, tooltip }: ToolbarButtonPr
       title={tooltip}
       className="p-2 rounded transition-all"
       style={{
-        background: active ? 'rgba(255,255,255,0.1)' : 'transparent',
-        color: active ? '#fff' : TEXT.secondary,
+        background: active ? 'var(--ui-border-default)' : 'transparent',
+        color: active ? 'var(--ui-text-inverse)' : TEXT.secondary,
       }}
     >
       <Icon size={16} />
@@ -2987,7 +2961,7 @@ function InfoCard({ label, value, subvalue, modeColors }: InfoCardProps) {
     <div
       className="p-3 rounded-lg"
       style={{
-        background: 'rgba(255,255,255,0.03)',
+        background: 'var(--surface-hover)',
         border: `1px solid ${modeColors.border}`,
       }}
     >
@@ -3021,7 +2995,7 @@ function MetricCard({ label, value, icon: Icon, modeColors }: MetricCardProps) {
     <div
       className="p-4 rounded-xl text-center"
       style={{
-        background: 'rgba(255,255,255,0.03)',
+        background: 'var(--surface-hover)',
         border: `1px solid ${modeColors.border}`,
       }}
     >

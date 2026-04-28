@@ -120,7 +120,7 @@ export function CanvasToolbar({
         top: 12,
         left: '50%',
         transform: 'translateX(-50%)',
-        zIndex: 1000,
+        zIndex: 100,
         display: 'flex',
         alignItems: 'center',
         gap: 8,

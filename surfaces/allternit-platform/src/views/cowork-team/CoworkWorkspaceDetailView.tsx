@@ -14,12 +14,12 @@ interface Props {
 }
 
 const STATUS_COLORS: Record<BoardItemStatus, string> = {
-  backlog:     '#6b7280',
-  todo:        '#06b6d4',
-  in_progress: '#af52de',
-  in_review:   '#f59e0b',
-  done:        '#22c55e',
-  blocked:     '#ef4444',
+  backlog:     'var(--ui-text-muted)',
+  todo:        'var(--status-info)',
+  in_progress: 'var(--accent-cowork)',
+  in_review:   'var(--status-warning)',
+  done:        'var(--status-success)',
+  blocked:     'var(--status-error)',
 };
 
 const ALL_STATUSES: BoardItemStatus[] = ['backlog', 'todo', 'in_progress', 'in_review', 'done', 'blocked'];
@@ -129,7 +129,7 @@ export function CoworkWorkspaceDetailView({ workspaceId }: Props): JSX.Element {
                   <div
                     style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #3b82f6, #af52de)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                   >
-                    <span style={{ color: '#fff', fontWeight: 700, fontSize: 13 }}>
+                    <span style={{ color: 'var(--ui-text-inverse)', fontWeight: 700, fontSize: 13 }}>
                       {getInitials(member.userId ?? member.agentId ?? '?')}
                     </span>
                   </div>
@@ -138,17 +138,17 @@ export function CoworkWorkspaceDetailView({ workspaceId }: Props): JSX.Element {
                     {member.userId ?? member.agentId}
                   </span>
 
-                  <span style={{ padding: '2px 10px', borderRadius: 20, background: '#af52de22', border: '1px solid #af52de55', color: '#af52de', fontSize: 11, fontWeight: 600, textTransform: 'capitalize' }}>
+                  <span style={{ padding: '2px 10px', borderRadius: 20, background: 'color-mix(in srgb, var(--accent-cowork) 13%, transparent)', border: '1px solid #af52de55', color: 'var(--accent-cowork)', fontSize: 11, fontWeight: 600, textTransform: 'capitalize' }}>
                     {member.role}
                   </span>
 
-                  <span style={{ padding: '2px 10px', borderRadius: 20, background: isAgent ? '#06b6d422' : '#22c55e22', border: `1px solid ${isAgent ? '#06b6d455' : '#22c55e55'}`, color: isAgent ? '#06b6d4' : '#22c55e', fontSize: 11, fontWeight: 600 }}>
+                  <span style={{ padding: '2px 10px', borderRadius: 20, background: isAgent ? 'var(--status-info-bg)' : 'var(--status-success-bg)', border: `1px solid ${isAgent ? 'color-mix(in srgb, var(--status-info) 33%, transparent)' : 'color-mix(in srgb, var(--status-success) 33%, transparent)'}`, color: isAgent ? 'var(--status-info)' : 'var(--status-success)', fontSize: 11, fontWeight: 600 }}>
                     {isAgent ? 'Agent' : 'Human'}
                   </span>
 
                   <button
                     onClick={() => removeMember(workspaceId, member.id)}
-                    style={{ padding: '5px 8px', borderRadius: 6, background: '#ef444422', border: '1px solid #ef444455', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                    style={{ padding: '5px 8px', borderRadius: 6, background: 'var(--status-error-bg)', border: '1px solid #ef444455', color: 'var(--status-error)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                     title="Remove member"
                   >
                     <Trash size={13} />
@@ -180,7 +180,7 @@ export function CoworkWorkspaceDetailView({ workspaceId }: Props): JSX.Element {
           <button
             onClick={handleInvite}
             disabled={!inviteEmail.trim()}
-            style={{ padding: '7px 16px', borderRadius: 7, background: '#22c55e', border: 'none', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: inviteEmail.trim() ? 1 : 0.5 }}
+            style={{ padding: '7px 16px', borderRadius: 7, background: 'var(--status-success)', border: 'none', color: 'var(--ui-text-inverse)', fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, opacity: inviteEmail.trim() ? 1 : 0.5 }}
           >
             <UserPlus size={14} />
             Add

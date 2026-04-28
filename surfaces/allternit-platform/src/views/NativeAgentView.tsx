@@ -12,51 +12,29 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 // Store - Using ChatSessionStore for native agent view
 import {
   useChatSessionStore,
-  useActiveChatSession,
   type ChatSession as NativeSession,
   type ModeSessionMessage as NativeMessage,
 } from "@/views/chat/ChatSessionStore";
-import type { ModeSessionMessage, ModeSession } from "@/lib/agents/mode-session-store";
 
 // Type aliases for backward compatibility
-type ToolCall = { id: string; name: string; arguments: Record<string, unknown> };
 interface Canvas { id: string; sessionId: string; content: string; type: string; title?: string; }
 interface SessionUpdateInput { name?: string; description?: string; metadata?: Record<string, unknown>; }
 interface RuntimeExecutionModeStatus { mode: string; updatedAt: string; supportedModes: string[]; }
 import type { Reply, TextReplyItem } from "@/lib/agents/replies-stream";
 import { useWorkspace } from "@/agent-workspace/useWorkspace";
 import { MilestoneProgress } from "@/components/AllternitNative/MilestoneProgress";
-import {
-  ToolCallVisualization,
-  useToolCallAccent,
-  ToolConfirmation,
-  ToolQuestionDisplay,
-} from "@/components/agents";
+import { ToolCallVisualization } from "@/components/agents";
 
 // UI Components
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 
 // Icons
@@ -73,27 +51,11 @@ import {
   Layout,
   Code,
   FileText,
-  Image,
   Terminal,
-  Radio,
-  Pulse as Activity,
-  Clock,
   StackSimple,
-  TextT,
-  FileCode,
-  Check,
-  X,
-  Warning,
   Sparkle,
   Chat,
-  CaretDown,
   Wrench,
-  ArrowUpRight,
-  Monitor,
-  ArrowsOut,
-  ArrowsIn,
-  FloppyDisk,
-  ArrowCounterClockwise,
   Lightning,
 } from '@phosphor-icons/react';
 import { cn } from "@/lib/utils";
@@ -671,7 +633,6 @@ function CanvasPanel({ sessionId }: { sessionId: string | null }) {
   // Canvases not yet implemented in new store - stub for compatibility
   const canvases: string[] = [];
   const canvasMap: Record<string, Canvas> = {};
-  const updateCanvas = async (_id: string, _content: string) => {};
   const deleteCanvas = async (_id: string) => {};
   const [activeCanvasId, setActiveCanvasId] = useState<string | null>(null);
 
@@ -759,41 +720,5 @@ function CanvasPanel({ sessionId }: { sessionId: string | null }) {
   );
 }
 
-// ============================================================================
-// Error Banner Component
-// ============================================================================
-
-function ErrorBanner() {
-  const error = useChatSessionStore((state) => state.error);
-  const clearError = useChatSessionStore((state) => () => state.error = null);
-
-  return (
-    <AnimatePresence>
-      {error && (
-        <motion.div
-          initial={{ height: 0, opacity: 0 }}
-          animate={{ height: "auto", opacity: 1 }}
-          exit={{ height: 0, opacity: 0 }}
-          className="bg-red-500/10 border-b border-red-500/20 overflow-hidden"
-        >
-          <div className="px-6 py-2 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-red-400 text-xs font-medium">
-              <Warning className="h-3.5 w-3.5" />
-              <span>{error}</span>
-            </div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={clearError}
-              className="h-6 w-6 rounded-md hover:bg-red-500/20 text-red-400"
-            >
-              <X size={12} />
-            </Button>
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-}
 
 export default NativeAgentView;

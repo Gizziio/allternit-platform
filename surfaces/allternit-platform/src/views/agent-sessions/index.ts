@@ -5,7 +5,7 @@
  * - Chat Mode: Conversation-based agent sessions
  * - Cowork Mode: Task-based agent workflows with scheduling
  * - Code Mode: Agent Development Environment (ADE)
- * - Browser Mode: Agent-driven browser sessions
+
  * 
  * All views use consistent Allternit dark obsidian theming.
  * 
@@ -14,13 +14,11 @@
 
 export { ChatModeAgentSession } from './ChatModeAgentSession';
 export { CoworkModeAgentTasks } from './CoworkModeAgentTasks';
-export { BrowserModeAgentSession } from './BrowserModeAgentSession';
 export { AgentSessionLayout } from './AgentSessionLayout';
 
 export type {
   ChatModeAgentSessionProps,
   CoworkModeAgentTasksProps,
-  BrowserModeAgentSessionProps,
   AgentSessionMode,
   AgentSessionState,
   AgentSessionMessage,

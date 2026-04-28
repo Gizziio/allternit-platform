@@ -127,7 +127,7 @@ export const DraftsView: React.FC = () => {
                   borderRadius: '6px',
                   border: 'none',
                   backgroundColor: 'transparent',
-                  color: editingId === draft.id ? '#af52de' : 'var(--text-secondary)',
+                  color: editingId === draft.id ? 'var(--accent-cowork)' : 'var(--text-secondary)',
                   fontSize: '13px',
                   fontWeight: 500,
                   cursor: 'pointer',

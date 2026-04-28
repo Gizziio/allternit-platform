@@ -55,17 +55,17 @@ interface LogEntry {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<AgentMetric['status'], { color: string; label: string; dotColor: string }> = {
-  active:  { color: '#34c759', label: 'Active',  dotColor: '#34c759' },
-  idle:    { color: '#aeaeae', label: 'Idle',    dotColor: '#aeaeae' },
-  error:   { color: '#ff3b30', label: 'Error',   dotColor: '#ff3b30' },
-  paused:  { color: '#ff9f0a', label: 'Paused',  dotColor: '#ff9f0a' },
+  active:  { color: 'var(--status-success)', label: 'Active',  dotColor: 'var(--status-success)' },
+  idle:    { color: 'var(--ui-text-muted)', label: 'Idle',    dotColor: 'var(--ui-text-muted)' },
+  error:   { color: 'var(--status-error)', label: 'Error',   dotColor: 'var(--status-error)' },
+  paused:  { color: 'var(--status-warning)', label: 'Paused',  dotColor: 'var(--status-warning)' },
 };
 
 const LOG_LEVEL_CONFIG: Record<LogEntry['level'], { color: string; bg: string }> = {
-  info:  { color: '#aeaeae', bg: 'rgba(174,174,174,0.08)' },
-  warn:  { color: '#ff9f0a', bg: 'rgba(255,159,10,0.08)' },
-  error: { color: '#ff3b30', bg: 'rgba(255,59,48,0.10)' },
-  debug: { color: '#636366', bg: 'transparent' },
+  info:  { color: 'var(--ui-text-muted)', bg: 'var(--surface-hover)' },
+  warn:  { color: 'var(--status-warning)', bg: 'var(--status-warning-bg)' },
+  error: { color: 'var(--status-error)', bg: 'var(--status-error-bg)' },
+  debug: { color: 'var(--ui-text-muted)', bg: 'transparent' },
 };
 
 function StatusDot({ status }: { status: AgentMetric['status'] }) {
@@ -96,7 +96,7 @@ function MetricCard({ metric }: { metric: SystemMetric }) {
         </span>
         <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>{metric.unit}</span>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: metric.trend === 'up' ? '#ff9f0a' : metric.trend === 'down' ? '#34c759' : 'var(--text-tertiary)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: metric.trend === 'up' ? 'var(--status-warning)' : metric.trend === 'down' ? 'var(--status-success)' : 'var(--text-tertiary)' }}>
         <TrendIcon size={12} weight="bold" />
         {metric.trendValue} vs yesterday
       </div>
@@ -177,8 +177,8 @@ export function MonitorView() {
       <div style={{ display: 'flex', gap: 12, marginBottom: 28, flexWrap: 'wrap' }}>
         {[
           { icon: Robot,      label: `${agents.length} total agents`,    color: 'var(--text-secondary)' },
-          { icon: CheckCircle,label: `${activeCount} active`,            color: '#34c759' },
-          { icon: Warning,    label: `${errorCount} with errors`,        color: '#ff3b30' },
+          { icon: CheckCircle,label: `${activeCount} active`,            color: 'var(--status-success)' },
+          { icon: Warning,    label: `${errorCount} with errors`,        color: 'var(--status-error)' },
           { icon: Cpu,        label: `Avg ${avgLatency}ms latency`,      color: 'var(--accent-chat)' },
           { icon: ChartLine,  label: `${(totalTokens/1000).toFixed(0)}K tokens today`, color: 'var(--accent-primary)' },
         ].map(({ icon: Icon, label, color }) => (
@@ -331,7 +331,7 @@ export function MonitorView() {
                   padding: '6px 16px', borderRadius: 20,
                   background: logFilter === level ? 'var(--accent-chat)' : 'var(--bg-secondary)',
                   border: '1px solid var(--border-subtle)',
-                  color: logFilter === level ? '#fff' : 'var(--text-secondary)',
+                  color: logFilter === level ? 'var(--ui-text-inverse)' : 'var(--ui-text-secondary)',
                   fontWeight: 600, fontSize: 12, cursor: 'pointer',
                   textTransform: 'uppercase', letterSpacing: '0.05em',
                 }}

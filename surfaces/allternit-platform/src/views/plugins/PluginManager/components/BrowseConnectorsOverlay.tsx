@@ -139,7 +139,7 @@ export function BrowseConnectorsOverlay({
               padding: '7px 10px',
               borderRadius: 6,
               border: 'none',
-              backgroundColor: tab === 'featured' ? 'rgba(255,255,255,0.1)' : 'transparent',
+              backgroundColor: tab === 'featured' ? 'var(--ui-border-default)' : 'transparent',
               color: tab === 'featured' ? THEME.textPrimary : THEME.textSecondary,
               fontSize: 13,
               cursor: 'pointer',
@@ -153,7 +153,7 @@ export function BrowseConnectorsOverlay({
               padding: '7px 10px',
               borderRadius: 6,
               border: 'none',
-              backgroundColor: tab === 'all' ? 'rgba(255,255,255,0.1)' : 'transparent',
+              backgroundColor: tab === 'all' ? 'var(--ui-border-default)' : 'transparent',
               color: tab === 'all' ? THEME.textPrimary : THEME.textSecondary,
               fontSize: 13,
               cursor: 'pointer',
@@ -173,7 +173,7 @@ export function BrowseConnectorsOverlay({
               border: `1px solid ${THEME.border}`,
               borderRadius: 8,
               padding: '7px 10px',
-              backgroundColor: 'rgba(255,255,255,0.03)',
+              backgroundColor: 'var(--surface-hover)',
             }}
           >
             <MagnifyingGlass size={14} color={THEME.textTertiary} />
@@ -199,7 +199,7 @@ export function BrowseConnectorsOverlay({
             style={{
               borderRadius: 8,
               border: `1px solid ${THEME.border}`,
-              backgroundColor: 'rgba(255,255,255,0.03)',
+              backgroundColor: 'var(--surface-hover)',
               color: THEME.textSecondary,
               fontSize: 12,
               padding: '7px 9px',
@@ -218,7 +218,7 @@ export function BrowseConnectorsOverlay({
             style={{
               borderRadius: 8,
               border: `1px solid ${THEME.border}`,
-              backgroundColor: 'rgba(255,255,255,0.03)',
+              backgroundColor: 'var(--surface-hover)',
               color: THEME.textSecondary,
               fontSize: 12,
               padding: '7px 9px',
@@ -286,7 +286,7 @@ export function BrowseConnectorsOverlay({
                 onClick={() => void loadConnectorCatalog()}
                 style={{
                   border: `1px solid ${THEME.borderStrong}`,
-                  backgroundColor: 'rgba(255,255,255,0.03)',
+                  backgroundColor: 'var(--surface-hover)',
                   color: THEME.textPrimary,
                   borderRadius: 8,
                   padding: '7px 11px',
@@ -309,7 +309,7 @@ export function BrowseConnectorsOverlay({
                     style={{
                       border: `1px solid ${THEME.border}`,
                       borderRadius: 10,
-                      backgroundColor: 'rgba(255,255,255,0.02)',
+                      backgroundColor: 'var(--surface-hover)',
                       padding: 12,
                       display: 'flex',
                       alignItems: 'center',
@@ -349,7 +349,7 @@ export function BrowseConnectorsOverlay({
                         height: 28,
                         borderRadius: 8,
                         border: `1px solid ${THEME.borderStrong}`,
-                        backgroundColor: 'rgba(255,255,255,0.03)',
+                        backgroundColor: 'var(--surface-hover)',
                         color: THEME.textPrimary,
                         cursor: alreadyAdded ? 'default' : 'pointer',
                         flexShrink: 0,

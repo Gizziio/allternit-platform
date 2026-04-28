@@ -42,8 +42,8 @@ export function CodeCanvasTilePreview({ url, filePath }: CodeCanvasTilePreviewPr
           alignItems: 'center',
           gap: 6,
           padding: '6px 10px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
-          background: 'rgba(255,255,255,0.02)',
+          borderBottom: '1px solid var(--ui-border-muted)',
+          background: 'var(--surface-hover)',
           flexShrink: 0,
         }}
       >

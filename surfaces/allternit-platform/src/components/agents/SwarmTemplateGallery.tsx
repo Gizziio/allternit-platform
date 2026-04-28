@@ -41,12 +41,12 @@ const CATEGORY_CONFIG: Record<string, {
   Development: {
     label: 'Development',
     icon: Code,
-    color: '#60a5fa',
+    color: 'var(--status-info)',
   },
   Testing: {
     label: 'Testing',
     icon: TestTube,
-    color: '#4ade80',
+    color: 'var(--status-success)',
   },
   Documentation: {
     label: 'Documentation',
@@ -111,9 +111,9 @@ function TemplateCard({
       `}
       style={{
         background: isSelected
-          ? `linear-gradient(135deg, ${categoryConfig.color}22 0%, rgba(255,255,255,0.03) 100%)`
-          : 'rgba(255,255,255,0.02)',
-        borderColor: isSelected ? categoryConfig.color : 'rgba(255,255,255,0.08)',
+          ? `linear-gradient(135deg, ${categoryConfig.color}22 0%, var(--surface-hover) 100%)`
+          : 'var(--surface-hover)',
+        borderColor: isSelected ? categoryConfig.color : 'var(--ui-border-muted)',
       }}
     >
       {/* Selection Indicator */}
@@ -336,8 +336,8 @@ export function SwarmTemplateGallery({
             <div
               className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
               style={{
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.1)',
+                background: 'var(--surface-hover)',
+                border: '1px solid var(--ui-border-default)',
               }}
             >
               <MagnifyingGlass size={32} className="text-white/20" />

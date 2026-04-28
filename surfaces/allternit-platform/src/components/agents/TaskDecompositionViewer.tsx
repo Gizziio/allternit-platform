@@ -75,10 +75,10 @@ function TaskItem({
   onSkip?: () => void;
 }) {
   const statusConfig: Record<TaskStatus, { icon: any; color: string; label: string }> = {
-    pending: { icon: Circle, color: '#6b7280', label: 'Pending' },
-    in_progress: { icon: Clock, color: '#3b82f6', label: 'In Progress' },
-    completed: { icon: CheckCircle, color: '#22c55e', label: 'Completed' },
-    failed: { icon: Warning, color: '#ef4444', label: 'Failed' },
+    pending: { icon: Circle, color: 'var(--ui-text-muted)', label: 'Pending' },
+    in_progress: { icon: Clock, color: 'var(--status-info)', label: 'In Progress' },
+    completed: { icon: CheckCircle, color: 'var(--status-success)', label: 'Completed' },
+    failed: { icon: Warning, color: 'var(--status-error)', label: 'Failed' },
     skipped: { icon: Circle, color: '#4b5563', label: 'Skipped' },
   };
 
@@ -321,8 +321,8 @@ export function TaskDecompositionViewer({
             <div
               className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
               style={{
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.1)',
+                background: 'var(--surface-hover)',
+                border: '1px solid var(--ui-border-default)',
               }}
             >
               <ListChecks size={32} className="text-white/20" />

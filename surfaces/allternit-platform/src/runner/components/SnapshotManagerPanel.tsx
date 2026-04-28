@@ -5,7 +5,7 @@ import { useDakStore } from "../dak.store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Database,
@@ -14,23 +14,18 @@ import {
   ArrowsClockwise,
   HardDrive,
   Pulse as Activity,
-  Clock,
-  Hash,
   Play,
-  CheckCircle,
-  XCircle,
   Percent,
 } from '@phosphor-icons/react';
-import type { ToolSnapshot, SnapshotStats } from "../dak.types";
+import type { ToolSnapshot } from "../dak.types";
 
 export function SnapshotManagerPanel() {
-  const { 
-    snapshots, 
+  const {
+    snapshots,
     snapshotStats,
-    isLoading,
     fetchSnapshots,
     clearSnapshot,
-    clearAllSnapshots 
+    clearAllSnapshots
   } = useDakStore();
   
   const [searchQuery, setSearchQuery] = useState("");

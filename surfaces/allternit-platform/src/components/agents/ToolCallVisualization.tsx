@@ -287,7 +287,7 @@ function SingleToolCallView({
                 fontSize: 9,
                 padding: "2px 6px",
                 borderRadius: 4,
-                background: "rgba(255,255,255,0.08)",
+                background: "var(--ui-border-muted)",
                 color: "#7a6b5d",
                 textTransform: "uppercase",
                 letterSpacing: "0.05em",
@@ -361,7 +361,7 @@ function SingleToolCallView({
                 padding: "4px 8px",
                 borderRadius: 4,
                 border: "none",
-                background: "rgba(239,68,68,0.1)",
+                background: "var(--status-error-bg)",
                 color: "#ef4444",
                 cursor: "pointer",
                 fontSize: 11,
@@ -386,7 +386,7 @@ function SingleToolCallView({
         <div
           style={{
             padding: "0 12px 12px",
-            borderTop: "1px solid rgba(255,255,255,0.06)",
+            borderTop: "1px solid var(--ui-border-muted)",
             animation: "slideDown 0.2s ease",
           }}
         >
@@ -454,7 +454,7 @@ function SectionHeader({
             fontSize: 9,
             padding: "1px 5px",
             borderRadius: 4,
-            background: "rgba(255,255,255,0.08)",
+            background: "var(--ui-border-muted)",
             color: "#7a6b5d",
           }}
         >
@@ -475,7 +475,7 @@ function CodeBlock({ content, maxHeight = 150 }: { content: string; maxHeight?: 
         margin: 0,
         padding: 10,
         borderRadius: 8,
-        background: "rgba(0,0,0,0.3)",
+        background: "var(--surface-panel)",
         fontSize: 11,
         fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
         color: "#d1c3b4",
@@ -495,7 +495,7 @@ function ErrorBlock({ error }: { error: string }) {
       style={{
         padding: 10,
         borderRadius: 8,
-        background: "rgba(239,68,68,0.1)",
+        background: "var(--status-error-bg)",
         border: "1px solid rgba(239,68,68,0.2)",
       }}
     >
@@ -561,7 +561,7 @@ function ResultViewer({ result }: { result: unknown }) {
           gap: 8,
           padding: 10,
           borderRadius: 8,
-          background: result ? "rgba(121,196,124,0.1)" : "rgba(239,68,68,0.1)",
+          background: result ? "rgba(121,196,124,0.1)" : "var(--status-error-bg)",
         }}
       >
         {result ? (
@@ -603,8 +603,8 @@ function ResultViewer({ result }: { result: unknown }) {
               style={{
                 padding: 10,
                 borderRadius: 8,
-                background: "rgba(0,0,0,0.2)",
-                border: "1px solid rgba(255,255,255,0.05)",
+                background: "var(--surface-hover)",
+                border: "1px solid var(--surface-hover)",
               }}
             >
               <div
@@ -658,7 +658,7 @@ function ResultViewer({ result }: { result: unknown }) {
                 gap: 6,
                 padding: "6px 8px",
                 borderRadius: 6,
-                background: "rgba(0,0,0,0.2)",
+                background: "var(--surface-hover)",
                 fontSize: 11,
                 color: item.type === "directory" ? "#a8998c" : "#d1c3b4",
               }}
@@ -685,12 +685,13 @@ function ResultViewer({ result }: { result: unknown }) {
 }
 
 // Helper hook to get surface accent color
-export function useToolCallAccent(surface: "chat" | "cowork" | "code" | "browser"): string {
+export function useToolCallAccent(surface: "chat" | "cowork" | "code" | "browser" | "design"): string {
   const colors = {
     chat: "#D4956A",
     cowork: "#A78BFA",
     code: "#79C47C",
     browser: "#69A8C8",
+    design: "#D4B08C",
   };
   return colors[surface];
 }

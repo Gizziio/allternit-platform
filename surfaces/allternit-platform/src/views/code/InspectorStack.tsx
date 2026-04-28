@@ -118,7 +118,7 @@ const getFileIcon = (type: 'typescript' | 'json' | 'markdown'): React.ReactNode 
             justifyContent: 'center',
             fontSize: 10,
             fontWeight: 700,
-            color: '#333',
+            color: 'var(--surface-hover)',
           }}
         >
           {'{}'}

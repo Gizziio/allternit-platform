@@ -9,17 +9,14 @@
  */
 
 import { loadPlugin, type PluginId } from './index';
-import { 
-  deterministicExecutor, 
+import {
+  deterministicExecutor,
   exportToPortableFormat,
-  type DeterministicRequest,
-  type DeterministicResponse,
   type PortablePlugin
 } from './deterministic-executor';
-import { 
-  isVendorCommand, 
+import {
+  isVendorCommand,
   parseCommandInput,
-  executeVendorCommand 
 } from './vendor-integration';
 import { getBundledPlugin } from './marketplace-integration';
 import { getPluginById } from './registry';

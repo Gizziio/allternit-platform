@@ -203,7 +203,7 @@ export function AskUserQuestionWizard({
         border: `1px solid ${accentColor}30`,
         background: "linear-gradient(180deg, #2B2520 0%, #1a1714 100%)",
         overflow: "hidden",
-        boxShadow: `0 28px 100px rgba(0,0,0,0.5), 0 0 0 1px ${accentColor}20`,
+        boxShadow: `0 28px 100px var(--shell-overlay-backdrop), 0 0 0 1px ${accentColor}20`,
         maxWidth: 640,
         width: "100%",
       }}
@@ -269,7 +269,7 @@ function WizardHeader({
     <div
       style={{
         padding: "20px 24px",
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
+        borderBottom: "1px solid var(--ui-border-muted)",
         background: `linear-gradient(90deg, ${accentColor}08, transparent)`,
       }}
     >
@@ -301,7 +301,7 @@ function WizardHeader({
       </div>
 
       {/* Progress Bar */}
-      <div style={{ marginTop: 16, height: 4, background: "rgba(255,255,255,0.06)", borderRadius: 2 }}>
+      <div style={{ marginTop: 16, height: 4, background: "var(--ui-border-muted)", borderRadius: 2 }}>
         <div
           style={{
             height: "100%",
@@ -381,7 +381,7 @@ function StepContent({
             gap: 6,
             padding: 10,
             borderRadius: 8,
-            background: "rgba(255,255,255,0.03)",
+            background: "var(--surface-hover)",
             fontSize: 12,
             color: "#7a6b5d",
           }}
@@ -419,7 +419,7 @@ function QuestionInput({
             padding: "12px 14px",
             borderRadius: 10,
             border: `1px solid ${accentColor}40`,
-            background: "rgba(0,0,0,0.3)",
+            background: "var(--surface-panel)",
             color: "#f6eee7",
             fontSize: 14,
             outline: "none",
@@ -439,7 +439,7 @@ function QuestionInput({
             padding: "12px 14px",
             borderRadius: 10,
             border: `1px solid ${accentColor}40`,
-            background: "rgba(0,0,0,0.3)",
+            background: "var(--surface-panel)",
             color: "#f6eee7",
             fontSize: 14,
             outline: "none",
@@ -463,7 +463,7 @@ function QuestionInput({
             padding: "12px 14px",
             borderRadius: 10,
             border: `1px solid ${accentColor}40`,
-            background: "rgba(0,0,0,0.3)",
+            background: "var(--surface-panel)",
             color: "#f6eee7",
             fontSize: 14,
             outline: "none",
@@ -521,8 +521,8 @@ function QuestionInput({
               gap: 8,
               padding: "14px 20px",
               borderRadius: 10,
-              border: `1px solid ${value === true ? "#79C47C" : "rgba(255,255,255,0.1)"}`,
-              background: value === true ? "rgba(121,196,124,0.15)" : "rgba(0,0,0,0.2)",
+              border: `1px solid ${value === true ? "#79C47C" : "var(--ui-border-default)"}`,
+              background: value === true ? "rgba(121,196,124,0.15)" : "var(--surface-hover)",
               color: value === true ? "#79C47C" : "#a8998c",
               fontSize: 14,
               fontWeight: 600,
@@ -542,8 +542,8 @@ function QuestionInput({
               gap: 8,
               padding: "14px 20px",
               borderRadius: 10,
-              border: `1px solid ${value === false ? "#ef4444" : "rgba(255,255,255,0.1)"}`,
-              background: value === false ? "rgba(239,68,68,0.15)" : "rgba(0,0,0,0.2)",
+              border: `1px solid ${value === false ? "#ef4444" : "var(--ui-border-default)"}`,
+              background: value === false ? "var(--status-error-bg)" : "var(--surface-hover)",
               color: value === false ? "#ef4444" : "#a8998c",
               fontSize: 14,
               fontWeight: 600,
@@ -586,8 +586,8 @@ function SelectOption({
           gap: 12,
           padding: 14,
           borderRadius: 12,
-          border: `1px solid ${selected ? accentColor : option.disabled ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.08)"}`,
-          background: selected ? `${accentColor}10` : option.disabled ? "rgba(0,0,0,0.1)" : "rgba(0,0,0,0.2)",
+          border: `1px solid ${selected ? accentColor : option.disabled ? "var(--surface-hover)" : "var(--ui-border-muted)"}`,
+          background: selected ? `${accentColor}10` : option.disabled ? "rgba(0,0,0,0.1)" : "var(--surface-hover)",
           opacity: option.disabled ? 0.5 : 1,
           cursor: option.disabled ? "not-allowed" : "pointer",
           textAlign: "left",
@@ -642,7 +642,7 @@ function SelectOption({
               padding: "4px 8px",
               borderRadius: 6,
               border: "none",
-              background: "rgba(255,255,255,0.05)",
+              background: "var(--surface-hover)",
               color: "#7a6b5d",
               fontSize: 11,
               cursor: "pointer",
@@ -687,8 +687,8 @@ function MultiSelectOption({
         gap: 12,
         padding: 12,
         borderRadius: 10,
-        border: `1px solid ${selected ? accentColor : option.disabled ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.08)"}`,
-        background: selected ? `${accentColor}10` : option.disabled ? "rgba(0,0,0,0.1)" : "rgba(0,0,0,0.2)",
+        border: `1px solid ${selected ? accentColor : option.disabled ? "var(--surface-hover)" : "var(--ui-border-muted)"}`,
+        background: selected ? `${accentColor}10` : option.disabled ? "rgba(0,0,0,0.1)" : "var(--surface-hover)",
         opacity: option.disabled ? 0.5 : 1,
         cursor: option.disabled ? "not-allowed" : "pointer",
         textAlign: "left",
@@ -731,8 +731,8 @@ function OptionPreview({ preview }: { preview: QuestionOptionPreview }) {
         marginLeft: 32,
         padding: 12,
         borderRadius: 10,
-        background: "rgba(0,0,0,0.3)",
-        border: "1px solid rgba(255,255,255,0.06)",
+        background: "var(--surface-panel)",
+        border: "1px solid var(--ui-border-muted)",
       }}
     >
       {preview.type === "code" && (
@@ -862,7 +862,7 @@ function WizardFooter({
         justifyContent: "space-between",
         alignItems: "center",
         padding: "16px 24px 20px",
-        borderTop: "1px solid rgba(255,255,255,0.06)",
+        borderTop: "1px solid var(--ui-border-muted)",
       }}
     >
       <button
@@ -874,7 +874,7 @@ function WizardFooter({
           gap: 6,
           padding: "10px 16px",
           borderRadius: 10,
-          border: "1px solid rgba(255,255,255,0.1)",
+          border: "1px solid var(--ui-border-default)",
           background: "transparent",
           color: isFirstStep ? "#4a4a4a" : "#d1c3b4",
           fontSize: 13,
@@ -893,7 +893,7 @@ function WizardFooter({
             style={{
               padding: "10px 16px",
               borderRadius: 10,
-              border: "1px solid rgba(255,255,255,0.1)",
+              border: "1px solid var(--ui-border-default)",
               background: "transparent",
               color: "#7a6b5d",
               fontSize: 13,
@@ -953,7 +953,7 @@ function ReviewView({
         border: `1px solid ${accentColor}30`,
         background: "linear-gradient(180deg, #2B2520 0%, #1a1714 100%)",
         overflow: "hidden",
-        boxShadow: `0 28px 100px rgba(0,0,0,0.5), 0 0 0 1px ${accentColor}20`,
+        boxShadow: `0 28px 100px var(--shell-overlay-backdrop), 0 0 0 1px ${accentColor}20`,
         maxWidth: 640,
         width: "100%",
       }}
@@ -961,7 +961,7 @@ function ReviewView({
       <div
         style={{
           padding: "20px 24px",
-          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          borderBottom: "1px solid var(--ui-border-muted)",
           background: `linear-gradient(90deg, ${accentColor}08, transparent)`,
         }}
       >
@@ -1002,7 +1002,7 @@ function ReviewView({
                   style={{
                     padding: "8px 12px",
                     borderRadius: 8,
-                    background: "rgba(0,0,0,0.3)",
+                    background: "var(--surface-panel)",
                     fontSize: 13,
                     color: "#d1c3b4",
                   }}
@@ -1016,7 +1016,7 @@ function ReviewView({
                   padding: "6px 10px",
                   borderRadius: 6,
                   border: "none",
-                  background: "rgba(255,255,255,0.05)",
+                  background: "var(--surface-hover)",
                   color: "#7a6b5d",
                   fontSize: 11,
                   cursor: "pointer",
@@ -1038,7 +1038,7 @@ function ReviewView({
           display: "flex",
           justifyContent: "space-between",
           padding: "16px 24px 20px",
-          borderTop: "1px solid rgba(255,255,255,0.06)",
+          borderTop: "1px solid var(--ui-border-muted)",
         }}
       >
         <button
@@ -1049,7 +1049,7 @@ function ReviewView({
             gap: 6,
             padding: "10px 16px",
             borderRadius: 10,
-            border: "1px solid rgba(255,255,255,0.1)",
+            border: "1px solid var(--ui-border-default)",
             background: "transparent",
             color: "#d1c3b4",
             fontSize: 13,

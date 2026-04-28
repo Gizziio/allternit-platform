@@ -6,12 +6,12 @@ import { useWorkspaceStore } from '@/stores/workspace.store';
 import { useAgentStore } from '@/lib/agents/agent.store';
 
 const STATUS_COLORS: Record<string, string> = {
-  backlog: '#6b7280',
-  todo: '#06b6d4',
-  in_progress: '#af52de',
-  in_review: '#f59e0b',
-  done: '#22c55e',
-  blocked: '#ef4444',
+  backlog: 'var(--ui-text-muted)',
+  todo: 'var(--status-info)',
+  in_progress: 'var(--accent-cowork)',
+  in_review: 'var(--status-warning)',
+  done: 'var(--status-success)',
+  blocked: 'var(--status-error)',
 };
 
 export const CoworkTeamDashboard: React.FC = () => {
@@ -157,8 +157,8 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => (
       borderRadius: '4px',
       fontSize: '11px',
       fontWeight: 600,
-      background: `${STATUS_COLORS[status] ?? '#6b7280'}22`,
-      color: STATUS_COLORS[status] ?? '#6b7280',
+      background: `${STATUS_COLORS[status] ?? 'var(--ui-text-muted)'}22`,
+      color: STATUS_COLORS[status] ?? 'var(--ui-text-muted)',
       textTransform: 'capitalize',
     }}
   >

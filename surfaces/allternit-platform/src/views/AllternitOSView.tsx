@@ -15,7 +15,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { AllternitOSProvider } from '../allternit-os';
-import { AllternitConsole, AllternitConsoleToggle } from '../allternit-os/components/AllternitConsole';
+import { AllternitConsole } from '../allternit-os/components/AllternitConsole';
 import {
   Cpu,
   FileText,

@@ -61,16 +61,6 @@ export class MyAllternitPlugin {
   public readonly version: string = PLUGIN_VERSION;
 
   /**
-   * Storage instance for persisting plugin data
-   */
-  private _storage: any = null;
-
-  /**
-   * Logger instance
-   */
-  private _logger: any = null;
-
-  /**
    * Plugin settings
    */
   private settings: Record<string, any> = {};
@@ -301,34 +291,6 @@ export class MyAllternitPlugin {
     // this.disposables.push(() => configListener.dispose());
 
     console.log(`[${this.name}] Event listeners registered`);
-  }
-
-  /**
-   * Handle workspace change event
-   */
-  private _handleWorkspaceChange(data: any): void {
-    console.log(`[${this.name}] Workspace changed:`, data);
-    // Implementation: React to workspace changes
-  }
-
-  /**
-   * Handle configuration change
-   */
-  private _handleConfigChange(key: string): void {
-    console.log(`[${this.name}] Config changed:`, key);
-    // Implementation: React to config changes
-  }
-
-  // ==========================================================================
-  // PLUGIN ACTIONS
-  // ==========================================================================
-
-  /**
-   * Handle a plugin action
-   */
-  private _handleAction(args: any): void {
-    console.log(`[${this.name}] Handling action:`, args);
-    // Implementation: Execute plugin functionality
   }
 
   /**

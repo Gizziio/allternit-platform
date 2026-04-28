@@ -89,110 +89,67 @@ export function BaseProjectView({
   emptyState,
   showEmptyState = false,
 }: BaseProjectViewProps) {
-  // Responsive breakpoint
   const [isWide, setIsWide] = useState(true);
 
   useEffect(() => {
-    const checkWidth = () => {
-      setIsWide(window.innerWidth >= 1200);
-    };
-    
+    const checkWidth = () => setIsWide(window.innerWidth >= 1200);
     checkWidth();
     window.addEventListener('resize', checkWidth);
     return () => window.removeEventListener('resize', checkWidth);
   }, []);
 
   return (
-    <div style={{
-      height: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden',
-    }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
       <div style={{
         padding: '20px 24px 16px',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        borderBottom: '1px solid var(--ui-border-muted)',
         flexShrink: 0,
       }}>
-        {/* Title row with actions on right */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-        }}>
-          {/* Left spacer for balance */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
           <div style={{ width: 120 }} />
 
-          {/* Centered Title */}
           <div style={{ textAlign: 'center', flex: 1 }}>
-            <h1 style={{
-              margin: 0,
-              fontSize: 28,
-              fontWeight: 600,
-              color: '#f0f0f0',
-              marginBottom: 4,
-            }}>
+            <h1 style={{ margin: 0, fontSize: 28, fontWeight: 600, color: 'var(--ui-text-primary)', marginBottom: 4 }}>
               {title}
             </h1>
             {description && (
-              <p style={{
-                margin: 0,
-                fontSize: 14,
-                color: '#6b6b6b',
-              }}>
+              <p style={{ margin: 0, fontSize: 14, color: 'var(--ui-text-muted)' }}>
                 {description}
               </p>
             )}
           </div>
 
-          {/* Right side: New Button, Menu, Star */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            width: 120,
-            justifyContent: 'flex-end',
-          }}>
-            {/* New Chat/Task Button */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: 120, justifyContent: 'flex-end' }}>
             {onNewItem && (
               <button
                 onClick={onNewItem}
                 style={{
                   padding: '6px 12px',
                   height: 32,
-                  background: 'linear-gradient(135deg, rgba(217,119,87,0.9) 0%, rgba(212,176,140,0.8) 100%)',
+                  background: 'var(--accent-primary)',
                   border: 'none',
                   borderRadius: 8,
-                  color: '#fff',
+                  color: 'var(--ui-text-inverse)',
                   fontSize: 13,
                   fontWeight: 600,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: 6,
-                  transition: 'all 0.2s',
+                  transition: 'opacity var(--transition-fast)',
                   whiteSpace: 'nowrap',
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(217,119,87,0.3)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'none';
-                  e.currentTarget.style.boxShadow = 'none';
-                }}
+                onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.88'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
               >
                 <Plus size={16} />
                 {newButtonLabel}
               </button>
             )}
 
-            {menuContent && (
-              <div style={{ position: 'relative' }}>
-                {menuContent}
-              </div>
-            )}
+            {menuContent && <div style={{ position: 'relative' }}>{menuContent}</div>}
+
             {onToggleStar && (
               <button
                 onClick={onToggleStar}
@@ -202,40 +159,25 @@ export function BaseProjectView({
                   borderRadius: 8,
                   border: 'none',
                   background: 'transparent',
-                  color: isStarred ? '#d4b08c' : '#6b6b6b',
+                  color: isStarred ? 'var(--accent-primary)' : 'var(--ui-text-muted)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  transition: 'all 0.2s',
+                  transition: 'color var(--transition-fast)',
                 }}
-                onMouseEnter={(e) => {
-                  if (!isStarred) e.currentTarget.style.color = '#9b9b9b';
-                }}
-                onMouseLeave={(e) => {
-                  if (!isStarred) e.currentTarget.style.color = '#6b6b6b';
-                }}
+                onMouseEnter={(e) => { if (!isStarred) e.currentTarget.style.color = 'var(--ui-text-secondary)'; }}
+                onMouseLeave={(e) => { if (!isStarred) e.currentTarget.style.color = 'var(--ui-text-muted)'; }}
               >
-                <Star size={18} fill={isStarred ? '#d4b08c' : 'none'} />
+                <Star size={18} fill={isStarred ? 'currentColor' : 'none'} />
               </button>
             )}
           </div>
         </div>
 
-        {/* Tabs row with back button on left */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginTop: 20,
-        }}>
-          {/* Left side: Back button above tabs */}
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 8,
-          }}>
-            {/* Back button directly above tabs */}
+        {/* Tabs row */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {onBack && (
               <button
                 onClick={onBack}
@@ -246,25 +188,21 @@ export function BaseProjectView({
                   padding: 0,
                   background: 'transparent',
                   border: 'none',
-                  color: '#6b6b6b',
+                  color: 'var(--ui-text-muted)',
                   fontSize: 13,
                   cursor: 'pointer',
-                  transition: 'color 0.2s',
+                  transition: 'color var(--transition-fast)',
                   marginBottom: 4,
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.color = '#9b9b9b'}
-                onMouseLeave={(e) => e.currentTarget.style.color = '#6b6b6b'}
+                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--ui-text-secondary)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--ui-text-muted)'; }}
               >
                 <ArrowLeft size={16} />
                 <span>All projects</span>
               </button>
             )}
-            
-            {/* Tabs */}
-            <div style={{
-              display: 'flex',
-              gap: 8,
-            }}>
+
+            <div style={{ display: 'flex', gap: 8 }}>
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
@@ -273,17 +211,15 @@ export function BaseProjectView({
                     padding: '8px 16px',
                     borderRadius: 8,
                     border: 'none',
-                    background: activeTab === tab.id 
-                      ? 'rgba(255,255,255,0.08)' 
-                      : 'transparent',
-                    color: activeTab === tab.id ? '#f0f0f0' : '#6b6b6b',
+                    background: activeTab === tab.id ? 'var(--surface-active)' : 'transparent',
+                    color: activeTab === tab.id ? 'var(--ui-text-primary)' : 'var(--ui-text-muted)',
                     fontSize: 13,
                     fontWeight: 600,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: 6,
-                    transition: 'all 0.2s',
+                    transition: 'all var(--transition-fast)',
                     whiteSpace: 'nowrap',
                   }}
                 >
@@ -291,7 +227,7 @@ export function BaseProjectView({
                   {tab.count !== undefined && (
                     <span style={{
                       fontSize: 11,
-                      color: activeTab === tab.id ? '#9b9b9b' : '#4b4b4b',
+                      color: activeTab === tab.id ? 'var(--ui-text-secondary)' : 'var(--ui-text-muted)',
                     }}>
                       {tab.count}
                     </span>
@@ -304,27 +240,11 @@ export function BaseProjectView({
       </div>
 
       {/* Main content area */}
-      <div style={{
-        flex: 1,
-        display: 'flex',
-        flexDirection: isWide ? 'row' : 'column',
-        overflow: 'hidden',
-      }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: isWide ? 'row' : 'column', overflow: 'hidden' }}>
         {/* Left content */}
-        <div style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          padding: '24px',
-          minWidth: 0,
-        }}>
-          {/* Input bar at top */}
-          <div style={{ marginBottom: 24 }}>
-            {inputBar}
-          </div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '24px', minWidth: 0 }}>
+          <div style={{ marginBottom: 24 }}>{inputBar}</div>
 
-          {/* Content or empty state */}
           {showEmptyState && emptyState ? (
             <div style={{
               flex: 1,
@@ -333,39 +253,24 @@ export function BaseProjectView({
               alignItems: 'center',
               justifyContent: 'center',
               padding: '40px 20px',
-              border: '1px solid rgba(255,255,255,0.06)',
+              border: '1px solid var(--ui-border-muted)',
               borderRadius: 12,
             }}>
-              <p style={{
-                margin: 0,
-                fontSize: 14,
-                color: '#6b6b6b',
-                textAlign: 'center',
-              }}>
+              <p style={{ margin: 0, fontSize: 14, color: 'var(--ui-text-muted)', textAlign: 'center' }}>
                 {emptyState.message}
               </p>
               {emptyState.subMessage && (
-                <p style={{
-                  margin: '8px 0 0 0',
-                  fontSize: 13,
-                  color: '#4b4b4b',
-                  textAlign: 'center',
-                }}>
+                <p style={{ margin: '8px 0 0 0', fontSize: 13, color: 'var(--ui-text-muted)', textAlign: 'center', opacity: 0.7 }}>
                   {emptyState.subMessage}
                 </p>
               )}
             </div>
           ) : (
-            <div style={{
-              flex: 1,
-              overflow: 'auto',
-            }}>
-              {children}
-            </div>
+            <div style={{ flex: 1, overflow: 'auto' }}>{children}</div>
           )}
         </div>
 
-        {/* Right sidebar (or bottom on small screens) */}
+        {/* Right sidebar */}
         <div style={{
           width: isWide ? 320 : '100%',
           padding: isWide ? '24px 24px 24px 0' : '0 24px 24px',
@@ -374,26 +279,20 @@ export function BaseProjectView({
           gap: 16,
           overflow: isWide ? 'auto' : 'visible',
           flexShrink: 0,
-          borderTop: isWide ? 'none' : '1px solid rgba(255,255,255,0.06)',
+          borderTop: isWide ? 'none' : '1px solid var(--ui-border-muted)',
         }}>
-          {/* Memory Section */}
           <SidebarSection
             title="Memory"
             isWide={isWide}
-            rightElement={<span style={{ fontSize: 12, color: '#4b4b4b' }}>Only you</span>}
+            rightElement={<span style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>Only you</span>}
           >
             {sidebarSections.memory || (
-              <p style={{
-                margin: 0,
-                fontSize: 13,
-                color: '#4b4b4b',
-              }}>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--ui-text-muted)' }}>
                 Project memory will show here after a few chats.
               </p>
             )}
           </SidebarSection>
 
-          {/* Instructions Section */}
           <SidebarSection
             title="Instructions"
             isWide={isWide}
@@ -401,16 +300,9 @@ export function BaseProjectView({
               <button
                 onClick={sidebarSections.onAddInstruction}
                 style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: 6,
-                  border: 'none',
-                  background: 'transparent',
-                  color: '#6b6b6b',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  width: 24, height: 24, borderRadius: 6, border: 'none',
+                  background: 'transparent', color: 'var(--ui-text-muted)',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
               >
                 <Plus size={16} />
@@ -418,17 +310,12 @@ export function BaseProjectView({
             }
           >
             {sidebarSections.instructions || (
-              <p style={{
-                margin: 0,
-                fontSize: 13,
-                color: '#4b4b4b',
-              }}>
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--ui-text-muted)' }}>
                 Add instructions to tailor responses
               </p>
             )}
           </SidebarSection>
 
-          {/* Files Section */}
           <SidebarSection
             title="Files"
             isWide={isWide}
@@ -436,16 +323,9 @@ export function BaseProjectView({
               <button
                 onClick={sidebarSections.onAddFile}
                 style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: 6,
-                  border: 'none',
-                  background: 'transparent',
-                  color: '#6b6b6b',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
+                  width: 24, height: 24, borderRadius: 6, border: 'none',
+                  background: 'transparent', color: 'var(--ui-text-muted)',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 }}
               >
                 <Plus size={16} />
@@ -453,46 +333,13 @@ export function BaseProjectView({
             }
           >
             {sidebarSections.files || (
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                padding: '20px 0',
-              }}>
-                <div style={{
-                  display: 'flex',
-                  gap: 4,
-                  marginBottom: 12,
-                }}>
-                  <div style={{
-                    width: 32,
-                    height: 40,
-                    background: 'rgba(255,255,255,0.03)',
-                    borderRadius: 4,
-                    border: '1px solid rgba(255,255,255,0.06)',
-                  }} />
-                  <div style={{
-                    width: 32,
-                    height: 40,
-                    background: 'rgba(255,255,255,0.03)',
-                    borderRadius: 4,
-                    border: '1px solid rgba(255,255,255,0.06)',
-                  }} />
-                  <div style={{
-                    width: 32,
-                    height: 40,
-                    background: 'rgba(255,255,255,0.05)',
-                    borderRadius: 4,
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    transform: 'translateY(-4px)',
-                  }} />
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 0' }}>
+                <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
+                  <div style={{ width: 32, height: 40, background: 'var(--surface-hover)', borderRadius: 4, border: '1px solid var(--ui-border-muted)' }} />
+                  <div style={{ width: 32, height: 40, background: 'var(--surface-hover)', borderRadius: 4, border: '1px solid var(--ui-border-muted)' }} />
+                  <div style={{ width: 32, height: 40, background: 'var(--surface-active)', borderRadius: 4, border: '1px solid var(--ui-border-default)', transform: 'translateY(-4px)' }} />
                 </div>
-                <p style={{
-                  margin: 0,
-                  fontSize: 12,
-                  color: '#4b4b4b',
-                  textAlign: 'center',
-                }}>
+                <p style={{ margin: 0, fontSize: 12, color: 'var(--ui-text-muted)', textAlign: 'center' }}>
                   Add PDFs, documents, or other text to reference in this project.
                 </p>
               </div>
@@ -504,7 +351,6 @@ export function BaseProjectView({
   );
 }
 
-// Sidebar Section Component
 interface SidebarSectionProps {
   title: string;
   rightElement?: ReactNode;
@@ -516,35 +362,23 @@ function SidebarSection({ title, rightElement, children, isWide }: SidebarSectio
   return (
     <div style={{
       padding: 16,
-      background: 'rgba(255,255,255,0.02)',
+      background: 'var(--surface-hover)',
       borderRadius: 12,
-      border: '1px solid rgba(255,255,255,0.06)',
+      border: '1px solid var(--ui-border-muted)',
       flex: isWide ? 'none' : 1,
       minWidth: isWide ? 'auto' : 200,
     }}>
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 12,
-      }}>
-        <span style={{
-          fontSize: 13,
-          fontWeight: 600,
-          color: '#9b9b9b',
-        }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ui-text-secondary)' }}>
           {title}
         </span>
         {rightElement}
       </div>
-      <div>
-        {children}
-      </div>
+      <div>{children}</div>
     </div>
   );
 }
 
-// Project Menu Button Component
 export function ProjectMenuButton({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = React.useState(false);
 
@@ -553,31 +387,18 @@ export function ProjectMenuButton({ children }: { children: ReactNode }) {
       <button
         onClick={() => setIsOpen(!isOpen)}
         style={{
-          width: 32,
-          height: 32,
-          borderRadius: 8,
-          border: 'none',
-          background: isOpen ? 'rgba(255,255,255,0.08)' : 'transparent',
-          color: '#6b6b6b',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          transition: 'all 0.2s',
+          width: 32, height: 32, borderRadius: 8, border: 'none',
+          background: isOpen ? 'var(--surface-active)' : 'transparent',
+          color: 'var(--ui-text-muted)',
+          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'all var(--transition-fast)',
         }}
       >
         <DotsThreeOutline size={18} />
       </button>
       {isOpen && (
         <>
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 9998,
-            }}
-            onClick={() => setIsOpen(false)}
-          />
+          <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} onClick={() => setIsOpen(false)} />
           <div
             style={{
               position: 'absolute',
@@ -585,10 +406,10 @@ export function ProjectMenuButton({ children }: { children: ReactNode }) {
               right: 0,
               marginTop: 8,
               minWidth: 160,
-              background: 'linear-gradient(180deg, rgba(37,33,31,0.98), rgba(26,23,22,0.98))',
+              background: 'var(--surface-floating)',
               borderRadius: 12,
-              border: '1px solid rgba(255,255,255,0.1)',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+              border: '1px solid var(--ui-border-default)',
+              boxShadow: 'var(--shadow-lg)',
               zIndex: 9999,
               overflow: 'hidden',
               padding: '8px 0',
@@ -603,7 +424,6 @@ export function ProjectMenuButton({ children }: { children: ReactNode }) {
   );
 }
 
-// Session/Task Card Component
 export interface ProjectItemCardProps {
   title: string;
   subtitle?: string;
@@ -612,74 +432,54 @@ export interface ProjectItemCardProps {
   icon?: ReactNode;
 }
 
-export function ProjectItemCard({
-  title,
-  subtitle,
-  onClick,
-  isActive = false,
-  icon,
-}: ProjectItemCardProps) {
+export function ProjectItemCard({ title, subtitle, onClick, isActive = false, icon }: ProjectItemCardProps) {
   return (
     <div
       onClick={onClick}
       style={{
         padding: '16px 20px',
-        background: isActive 
-          ? 'rgba(255,255,255,0.05)' 
-          : 'transparent',
+        background: isActive ? 'var(--surface-active)' : 'transparent',
         borderRadius: 12,
-        border: `1px solid ${isActive ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.06)'}`,
+        border: `1px solid ${isActive ? 'var(--ui-border-default)' : 'var(--ui-border-muted)'}`,
         cursor: onClick ? 'pointer' : 'default',
         display: 'flex',
         alignItems: 'center',
         gap: 12,
-        transition: 'all 0.2s',
+        transition: 'all var(--transition-fast)',
         marginBottom: 8,
       }}
       onMouseEnter={(e) => {
         if (!isActive) {
-          e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+          e.currentTarget.style.background = 'var(--surface-hover)';
+          e.currentTarget.style.borderColor = 'var(--ui-border-default)';
         }
       }}
       onMouseLeave={(e) => {
         if (!isActive) {
           e.currentTarget.style.background = 'transparent';
-          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
+          e.currentTarget.style.borderColor = 'var(--ui-border-muted)';
         }
       }}
     >
       {icon && (
         <div style={{
-          width: 36,
-          height: 36,
-          borderRadius: 10,
-          background: 'rgba(255,255,255,0.05)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: '#9b9b9b',
+          width: 36, height: 36, borderRadius: 10,
+          background: 'var(--surface-active)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: 'var(--ui-text-secondary)',
         }}>
           {icon}
         </div>
       )}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
-          fontSize: 14,
-          fontWeight: 500,
-          color: '#ececec',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
+          fontSize: 14, fontWeight: 500, color: 'var(--ui-text-primary)',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {title}
         </div>
         {subtitle && (
-          <div style={{
-            fontSize: 12,
-            color: '#6b6b6b',
-            marginTop: 2,
-          }}>
+          <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', marginTop: 2 }}>
             {subtitle}
           </div>
         )}
@@ -688,7 +488,6 @@ export function ProjectItemCard({
   );
 }
 
-// File Item Component
 export interface FileItemProps {
   name: string;
   size?: string;
@@ -698,56 +497,36 @@ export interface FileItemProps {
 export function FileItem({ name, size, onDelete }: FileItemProps) {
   return (
     <div style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 10,
+      display: 'flex', alignItems: 'center', gap: 10,
       padding: '10px 12px',
-      background: 'rgba(255,255,255,0.03)',
+      background: 'var(--surface-hover)',
       borderRadius: 8,
       marginBottom: 8,
     }}>
       <div style={{
-        width: 32,
-        height: 32,
-        borderRadius: 8,
-        background: 'rgba(212,176,140,0.1)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#d4b08c',
+        width: 32, height: 32, borderRadius: 8,
+        background: 'color-mix(in srgb, var(--accent-primary) 12%, var(--surface-panel))',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: 'var(--accent-primary)',
       }}>
         <FileText size={16} />
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
-          fontSize: 13,
-          color: '#ececec',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
+          fontSize: 13, color: 'var(--ui-text-primary)',
+          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>
           {name}
         </div>
-        {size && (
-          <div style={{ fontSize: 11, color: '#6b6b6b' }}>
-            {size}
-          </div>
-        )}
+        {size && <div style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>{size}</div>}
       </div>
       {onDelete && (
         <button
           onClick={onDelete}
           style={{
-            width: 24,
-            height: 24,
-            borderRadius: 6,
-            border: 'none',
-            background: 'transparent',
-            color: '#6b6b6b',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+            width: 24, height: 24, borderRadius: 6, border: 'none',
+            background: 'transparent', color: 'var(--ui-text-muted)',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
         >
           <X size={14} />
@@ -757,7 +536,6 @@ export function FileItem({ name, size, onDelete }: FileItemProps) {
   );
 }
 
-// Instruction Item Component
 export interface InstructionItemProps {
   text: string;
   onEdit?: () => void;
@@ -766,38 +544,18 @@ export interface InstructionItemProps {
 
 export function InstructionItem({ text, onEdit, onDelete }: InstructionItemProps) {
   return (
-    <div style={{
-      padding: '12px',
-      background: 'rgba(255,255,255,0.03)',
-      borderRadius: 8,
-      marginBottom: 8,
-    }}>
-      <p style={{
-        margin: 0,
-        fontSize: 13,
-        color: '#9b9b9b',
-        lineHeight: 1.5,
-      }}>
+    <div style={{ padding: '12px', background: 'var(--surface-hover)', borderRadius: 8, marginBottom: 8 }}>
+      <p style={{ margin: 0, fontSize: 13, color: 'var(--ui-text-secondary)', lineHeight: 1.5 }}>
         {text}
       </p>
-      <div style={{
-        display: 'flex',
-        gap: 8,
-        marginTop: 8,
-      }}>
+      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
         {onEdit && (
           <button
             onClick={onEdit}
             style={{
-              padding: '4px 8px',
-              background: 'transparent',
-              border: 'none',
-              color: '#6b6b6b',
-              fontSize: 11,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
+              padding: '4px 8px', background: 'transparent', border: 'none',
+              color: 'var(--ui-text-muted)', fontSize: 11, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 4,
             }}
           >
             <PencilSimple size={12} />
@@ -808,15 +566,9 @@ export function InstructionItem({ text, onEdit, onDelete }: InstructionItemProps
           <button
             onClick={onDelete}
             style={{
-              padding: '4px 8px',
-              background: 'transparent',
-              border: 'none',
-              color: '#ef4444',
-              fontSize: 11,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
+              padding: '4px 8px', background: 'transparent', border: 'none',
+              color: 'var(--status-error)', fontSize: 11, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 4,
             }}
           >
             <Trash size={12} />

@@ -75,19 +75,19 @@ export const AgentCard: React.FC<AgentCardProps> = ({
 
 function getMoodColor(mood: string): string {
   const colors: Record<string, string> = {
-    idle: '#9E9E9E',
-    focused: '#2196F3',
-    thinking: '#FF9800',
-    uncertain: '#FFC107',
-    celebrating: '#4CAF50',
-    warning: '#FF5722',
-    error: '#F44336',
+    idle: 'var(--ui-text-muted)',
+    focused: 'var(--status-info)',
+    thinking: 'var(--status-warning)',
+    uncertain: 'var(--status-warning)',
+    celebrating: 'var(--status-success)',
+    warning: 'var(--status-error)',
+    error: 'var(--status-error)',
     listening: '#9C27B0',
     speaking: '#00BCD4',
     sleeping: '#607D8B',
     confused: '#795548',
   };
-  return colors[mood] || '#9E9E9E';
+  return colors[mood] || 'var(--ui-text-muted)';
 }
 
 export default AgentCard;

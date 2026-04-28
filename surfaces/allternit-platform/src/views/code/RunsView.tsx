@@ -58,7 +58,7 @@ export function RunsView() {
           flexDirection: 'column', 
           alignItems: 'center', 
           justifyContent: 'center',
-          color: '#666'
+          color: 'var(--ui-text-muted)'
         }}>
           <ClockCounterClockwise size={64} style={{ marginBottom: 16, opacity: 0.3 }} />
           <p>No executions yet. Start one from the Plan tab.</p>
@@ -130,7 +130,7 @@ export function RunsView() {
                   border: '1px solid #ff3b30', 
                   background: 'transparent', 
                   cursor: 'pointer',
-                  color: '#ff3b30'
+                  color: 'var(--status-error)'
                 }}
               >
                 Cancel

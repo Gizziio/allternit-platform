@@ -81,7 +81,7 @@ const MARKETPLACE_ITEMS: MarketplaceItem[] = [
     rating: 4.5,
     installed: true,
     icon: <MagnifyingGlass size={24} />,
-    color: '#3b82f6',
+    color: 'var(--status-info)',
   },
   {
     id: 'code-executor',
@@ -93,7 +93,7 @@ const MARKETPLACE_ITEMS: MarketplaceItem[] = [
     rating: 4.7,
     installed: false,
     icon: <Code size={24} />,
-    color: '#ef4444',
+    color: 'var(--status-error)',
   },
   {
     id: 'file-manager',
@@ -161,7 +161,7 @@ const MARKETPLACE_ITEMS: MarketplaceItem[] = [
     rating: 4.8,
     installed: false,
     icon: <Lightning size={24} />,
-    color: '#d4b08c',
+    color: 'var(--accent-primary)',
   },
 ];
 
@@ -245,7 +245,7 @@ export const MarketplaceView: React.FC = () => {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '13px' }}>
         <span style={{ color: 'var(--text-secondary)' }}>
-          {rating.toFixed(1)} {<Star size={14} style={{ fill: '#fbbf24', color: '#fbbf24' }} />}
+          {rating.toFixed(1)} {<Star size={14} style={{ fill: 'var(--status-warning)', color: 'var(--status-warning)' }} />}
         </span>
       </div>
     );
@@ -262,7 +262,7 @@ export const MarketplaceView: React.FC = () => {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-          <Storefront size={28} style={{ color: '#d4b08c' }} />
+          <Storefront size={28} style={{ color: 'var(--accent-primary)' }} />
           <h1 style={{ fontSize: '28px', fontWeight: '600', color: 'var(--text-primary)', margin: 0 }}>
             Marketplace
           </h1>
@@ -297,7 +297,7 @@ export const MarketplaceView: React.FC = () => {
                 border: 'none',
                 backgroundColor: 'transparent',
                 color:
-                  activeCategory === category ? '#d4b08c' : 'var(--text-secondary)',
+                  activeCategory === category ? 'var(--accent-primary)' : 'var(--text-secondary)',
                 fontSize: '14px',
                 fontWeight: activeCategory === category ? '600' : '400',
                 cursor: 'pointer',
@@ -350,7 +350,7 @@ export const MarketplaceView: React.FC = () => {
                 transition: 'border-color 0.2s ease',
               }}
               onFocus={(e) => {
-                e.currentTarget.style.borderColor = '#d4b08c';
+                e.currentTarget.style.borderColor = 'var(--accent-primary)';
               }}
               onBlur={(e) => {
                 e.currentTarget.style.borderColor = 'var(--border-subtle)';
@@ -493,8 +493,8 @@ export const MarketplaceView: React.FC = () => {
                         style={{
                           flex: 1,
                           padding: '8px 12px',
-                          backgroundColor: '#d4b08c',
-                          color: '#1a1612',
+                          backgroundColor: 'var(--accent-primary)',
+                          color: 'var(--ui-text-inverse)',
                           border: 'none',
                           borderRadius: '6px',
                           fontSize: '12px',

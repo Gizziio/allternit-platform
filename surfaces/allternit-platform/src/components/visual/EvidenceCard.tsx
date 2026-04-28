@@ -42,11 +42,11 @@ const typeLabels: Record<ArtifactType, string> = {
 };
 
 const typeColors: Record<ArtifactType, { bg: string; text: string }> = {
-  ui_state: { bg: 'rgba(59, 130, 246, 0.15)', text: '#3b82f6' },
-  coverage_map: { bg: 'rgba(34, 197, 94, 0.15)', text: '#22c55e' },
-  console_output: { bg: 'rgba(234, 179, 8, 0.15)', text: '#eab308' },
+  ui_state: { bg: 'rgba(59, 130, 246, 0.15)', text: 'var(--status-info)' },
+  coverage_map: { bg: 'rgba(34, 197, 94, 0.15)', text: 'var(--status-success)' },
+  console_output: { bg: 'var(--status-warning-bg)', text: 'var(--status-warning)' },
   visual_diff: { bg: 'rgba(168, 85, 247, 0.15)', text: '#a855f7' },
-  error_state: { bg: 'rgba(239, 68, 68, 0.15)', text: '#ef4444' },
+  error_state: { bg: 'rgba(239, 68, 68, 0.15)', text: 'var(--status-error)' },
 };
 
 export const EvidenceCard: React.FC<EvidenceCardProps> = ({
@@ -61,11 +61,11 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({
 }) => {
   const [imageError, setImageError] = useState(false);
   const typeColor = typeColors[type];
-  const confidenceColor = confidence >= 0.7 ? '#22c55e' : confidence >= 0.5 ? '#eab308' : '#ef4444';
+  const confidenceColor = confidence >= 0.7 ? 'var(--status-success)' : confidence >= 0.5 ? 'var(--status-warning)' : 'var(--status-error)';
 
   const cardStyle: React.CSSProperties = {
-    background: '#1a1a1a',
-    border: `1px solid ${isSelected ? '#3b82f6' : confidence >= 0.7 ? 'rgba(34, 197, 94, 0.3)' : confidence >= 0.5 ? 'rgba(234, 179, 8, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+    background: 'var(--surface-panel)',
+    border: `1px solid ${isSelected ? 'var(--status-info)' : confidence >= 0.7 ? 'rgba(34, 197, 94, 0.3)' : confidence >= 0.5 ? 'rgba(234, 179, 8, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
     borderRadius: '12px',
     padding: '16px',
     cursor: onClick ? 'pointer' : 'default',
@@ -104,13 +104,13 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({
     fontSize: '13px',
     fontWeight: 600,
     fontVariantNumeric: 'tabular-nums',
-    background: confidence >= 0.7 ? 'rgba(34, 197, 94, 0.15)' : confidence >= 0.5 ? 'rgba(234, 179, 8, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+    background: confidence >= 0.7 ? 'var(--status-success-bg)' : confidence >= 0.5 ? 'var(--status-warning-bg)' : 'var(--status-error-bg)',
     color: confidenceColor,
   };
 
   const previewStyle: React.CSSProperties = {
     aspectRatio: '16 / 10',
-    background: '#0a0a0a',
+    background: 'var(--surface-hover)',
     borderRadius: '8px',
     overflow: 'hidden',
     display: 'flex',
@@ -124,13 +124,13 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({
     flexDirection: 'column',
     alignItems: 'center',
     gap: '8px',
-    color: '#666',
+    color: 'var(--ui-text-muted)',
     fontSize: '13px',
   };
 
   const progressBarStyle: React.CSSProperties = {
     height: '4px',
-    background: '#0a0a0a',
+    background: 'var(--surface-hover)',
     borderRadius: '2px',
     overflow: 'hidden',
     marginTop: '8px',
@@ -155,15 +155,15 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({
     alignItems: 'center',
     gap: '4px',
     padding: '4px 10px',
-    background: '#0a0a0a',
+    background: 'var(--surface-hover)',
     borderRadius: '6px',
     fontSize: '11px',
-    color: '#888',
+    color: 'var(--ui-text-muted)',
   };
 
   const timestampStyle: React.CSSProperties = {
     fontSize: '11px',
-    color: '#666',
+    color: 'var(--ui-text-muted)',
     marginTop: '8px',
   };
 
@@ -216,7 +216,7 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({
               width: '48px', 
               height: '48px', 
               borderRadius: '12px', 
-              background: '#2a2a2a',
+              background: 'var(--surface-hover)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -238,7 +238,7 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({
           {Object.entries(metadata).slice(0, 3).map(([key, value]) => (
             <div key={key} style={metadataItemStyle}>
               <span style={{ fontWeight: 500 }}>{key}:</span>
-              <span style={{ color: '#fff' }}>{String(value)}</span>
+              <span style={{ color: 'var(--ui-text-primary)' }}>{String(value)}</span>
             </div>
           ))}
         </div>

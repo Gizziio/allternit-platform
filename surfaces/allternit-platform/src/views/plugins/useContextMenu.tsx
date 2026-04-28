@@ -126,14 +126,14 @@ import {
 } from '@phosphor-icons/react';
 
 const THEME = {
-  bg: '#1c1917',
+  bg: 'var(--surface-panel)',
   border: 'rgba(212, 176, 140, 0.15)',
-  textPrimary: '#e7e5e4',
-  textSecondary: '#a8a29e',
-  textTertiary: '#78716c',
-  hoverBg: 'rgba(255,255,255,0.05)',
-  danger: '#ef4444',
-  accent: '#d4b08c',
+  textPrimary: 'var(--ui-text-primary)',
+  textSecondary: 'var(--ui-text-secondary)',
+  textTertiary: 'var(--ui-text-muted)',
+  hoverBg: 'var(--surface-hover)',
+  danger: 'var(--status-error)',
+  accent: 'var(--accent-primary)',
 };
 
 interface ContextMenuProps {
@@ -167,7 +167,7 @@ export function ContextMenu({ state, menuRef, actions, onClose }: ContextMenuPro
         borderRadius: 8,
         padding: '4px',
         minWidth: 180,
-        zIndex: 1000,
+        zIndex: 165,
         boxShadow: '0 10px 40px rgba(0,0,0,0.4)',
       }}
     >

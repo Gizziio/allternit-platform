@@ -12,11 +12,11 @@ interface ForkButtonProps {
 }
 
 const THEME = {
-  textMuted: '#6B6B6B',
-  textSecondary: '#9B9B9B',
-  accent: '#D4956A',
-  hoverBg: 'rgba(255,255,255,0.08)',
-  success: '#22c55e',
+  textMuted: 'var(--ui-text-muted)',
+  textSecondary: 'var(--ui-text-secondary)',
+  accent: 'var(--accent-primary)',
+  hoverBg: 'var(--ui-border-muted)',
+  success: 'var(--status-success)',
 };
 
 /**
@@ -60,7 +60,7 @@ export function ForkButton({
         borderRadius: 6,
         border: 'none',
         background: isForked 
-          ? 'rgba(34,197,94,0.1)' 
+          ? 'var(--status-success-bg)' 
           : 'transparent',
         cursor: isForking || isForked ? 'default' : 'pointer',
         color: isForked 
@@ -121,8 +121,8 @@ export function MessageActions({ children, className }: MessageActionsProps) {
         padding: '4px 8px',
         borderRadius: 8,
         background: 'rgba(43,37,32,0.95)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+        border: '1px solid var(--ui-border-muted)',
+        boxShadow: '0 4px 12px var(--surface-panel)',
       }}
     >
       {children}

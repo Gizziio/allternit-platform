@@ -59,10 +59,10 @@ export interface VisualVerificationPanelProps {
 }
 
 const statusColors: Record<string, { bg: string; text: string }> = {
-  completed: { bg: 'rgba(34, 197, 94, 0.15)', text: '#22c55e' },
-  running: { bg: 'rgba(59, 130, 246, 0.15)', text: '#3b82f6' },
-  failed: { bg: 'rgba(239, 68, 68, 0.15)', text: '#ef4444' },
-  pending: { bg: 'rgba(107, 114, 128, 0.15)', text: '#6b7280' },
+  completed: { bg: 'rgba(34, 197, 94, 0.15)', text: 'var(--status-success)' },
+  running: { bg: 'rgba(59, 130, 246, 0.15)', text: 'var(--status-info)' },
+  failed: { bg: 'rgba(239, 68, 68, 0.15)', text: 'var(--status-error)' },
+  pending: { bg: 'rgba(107, 114, 128, 0.15)', text: 'var(--ui-text-muted)' },
 };
 
 export const VisualVerificationPanel: React.FC<VisualVerificationPanelProps> = ({
@@ -101,7 +101,7 @@ export const VisualVerificationPanel: React.FC<VisualVerificationPanelProps> = (
   if (!status) {
     return (
       <div style={{ 
-        background: '#1a1a1a', 
+        background: 'var(--surface-panel)', 
         border: '1px solid #333', 
         borderRadius: '16px', 
         overflow: 'hidden',
@@ -114,7 +114,7 @@ export const VisualVerificationPanel: React.FC<VisualVerificationPanelProps> = (
           alignItems: 'center', 
           justifyContent: 'center',
           padding: '60px 20px',
-          color: '#666',
+          color: 'var(--ui-text-muted)',
           textAlign: 'center',
           gap: '16px',
         }}>
@@ -122,7 +122,7 @@ export const VisualVerificationPanel: React.FC<VisualVerificationPanelProps> = (
             width: '80px', 
             height: '80px', 
             borderRadius: '20px', 
-            background: '#0a0a0a',
+            background: 'var(--surface-panel)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -140,7 +140,7 @@ export const VisualVerificationPanel: React.FC<VisualVerificationPanelProps> = (
   return (
     <div 
       style={{ 
-        background: '#1a1a1a', 
+        background: 'var(--surface-panel)', 
         border: '1px solid #333', 
         borderRadius: '16px', 
         overflow: 'hidden',
@@ -158,7 +158,7 @@ export const VisualVerificationPanel: React.FC<VisualVerificationPanelProps> = (
         justifyContent: 'space-between', 
         padding: '20px 24px',
         borderBottom: '1px solid #333',
-        background: '#0a0a0a',
+        background: 'var(--surface-panel)',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div style={{ 
@@ -172,8 +172,8 @@ export const VisualVerificationPanel: React.FC<VisualVerificationPanelProps> = (
             fontSize: '24px',
           }}>🔍</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#fff', margin: 0 }}>Visual Verification</h3>
-            <span style={{ fontSize: '13px', color: '#888', fontFamily: 'monospace' }}>{wihId || status.wihId}</span>
+            <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--ui-text-primary)', margin: 0 }}>Visual Verification</h3>
+            <span style={{ fontSize: '13px', color: 'var(--ui-text-muted)', fontFamily: 'monospace' }}>{wihId || status.wihId}</span>
           </div>
           <div style={{ 
             display: 'flex', 
@@ -201,8 +201,8 @@ export const VisualVerificationPanel: React.FC<VisualVerificationPanelProps> = (
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {status.status === 'running' && (
             <>
-              <span style={{ fontSize: '13px', color: '#888' }}>Analyzing...</span>
-              <div style={{ width: '100px', height: '4px', background: '#2a2a2a', borderRadius: '2px', overflow: 'hidden' }}>
+              <span style={{ fontSize: '13px', color: 'var(--ui-text-muted)' }}>Analyzing...</span>
+              <div style={{ width: '100px', height: '4px', background: 'var(--surface-hover)', borderRadius: '2px', overflow: 'hidden' }}>
                 <div style={{ width: '60%', height: '100%', background: 'linear-gradient(90deg, #3b82f6, #8b5cf6)', transition: 'width 0.3s ease' }} />
               </div>
             </>
@@ -222,7 +222,7 @@ export const VisualVerificationPanel: React.FC<VisualVerificationPanelProps> = (
                 cursor: 'pointer',
                 border: '1px solid #333',
                 background: 'transparent',
-                color: '#fff',
+                color: 'var(--ui-text-primary)',
               }}
             >🔄</button>
           )}
@@ -240,7 +240,7 @@ export const VisualVerificationPanel: React.FC<VisualVerificationPanelProps> = (
                 cursor: 'pointer',
                 border: '1px solid #ef4444',
                 background: 'rgba(239, 68, 68, 0.15)',
-                color: '#ef4444',
+                color: 'var(--status-error)',
               }}
             >Request Bypass</button>
           )}
@@ -258,7 +258,7 @@ export const VisualVerificationPanel: React.FC<VisualVerificationPanelProps> = (
             background: 'rgba(239, 68, 68, 0.1)', 
             border: '1px solid rgba(239, 68, 68, 0.3)', 
             borderRadius: '12px', 
-            color: '#ef4444', 
+            color: 'var(--status-error)', 
             fontSize: '14px',
           }}>
             <span>⚠️</span>
@@ -275,11 +275,11 @@ export const VisualVerificationPanel: React.FC<VisualVerificationPanelProps> = (
             alignItems: 'center', 
             gap: '16px', 
             padding: '24px', 
-            background: '#0a0a0a', 
+            background: 'var(--surface-panel)', 
             borderRadius: '12px',
             minWidth: '200px',
           }}>
-            <div style={{ fontSize: '14px', fontWeight: 600, color: '#fff' }}>Overall Confidence</div>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ui-text-primary)' }}>Overall Confidence</div>
             <ConfidenceMeter
               confidence={status.overallConfidence}
               threshold={status.threshold}
@@ -292,7 +292,7 @@ export const VisualVerificationPanel: React.FC<VisualVerificationPanelProps> = (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
               <div style={{ 
-                background: '#0a0a0a', 
+                background: 'var(--surface-panel)', 
                 border: '1px solid #333', 
                 borderRadius: '12px', 
                 padding: '16px', 
@@ -300,16 +300,16 @@ export const VisualVerificationPanel: React.FC<VisualVerificationPanelProps> = (
                 flexDirection: 'column', 
                 gap: '8px',
               }}>
-                <span style={{ fontSize: '12px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Artifacts</span>
+                <span style={{ fontSize: '12px', color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Artifacts</span>
                 <span style={{ 
                   fontSize: '24px', 
                   fontWeight: 700, 
-                  color: passedCount === totalCount ? '#22c55e' : passedCount > totalCount / 2 ? '#eab308' : '#ef4444',
+                  color: passedCount === totalCount ? 'var(--status-success)' : passedCount > totalCount / 2 ? 'var(--status-warning)' : 'var(--status-error)',
                   fontVariantNumeric: 'tabular-nums',
                 }}>{passedCount}/{totalCount}</span>
               </div>
               <div style={{ 
-                background: '#0a0a0a', 
+                background: 'var(--surface-panel)', 
                 border: '1px solid #333', 
                 borderRadius: '12px', 
                 padding: '16px', 
@@ -317,11 +317,11 @@ export const VisualVerificationPanel: React.FC<VisualVerificationPanelProps> = (
                 flexDirection: 'column', 
                 gap: '8px',
               }}>
-                <span style={{ fontSize: '12px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Threshold</span>
-                <span style={{ fontSize: '24px', fontWeight: 700, color: '#fff', fontVariantNumeric: 'tabular-nums' }}>{Math.round(status.threshold * 100)}%</span>
+                <span style={{ fontSize: '12px', color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Threshold</span>
+                <span style={{ fontSize: '24px', fontWeight: 700, color: 'var(--ui-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{Math.round(status.threshold * 100)}%</span>
               </div>
               <div style={{ 
-                background: '#0a0a0a', 
+                background: 'var(--surface-panel)', 
                 border: '1px solid #333', 
                 borderRadius: '12px', 
                 padding: '16px', 
@@ -329,8 +329,8 @@ export const VisualVerificationPanel: React.FC<VisualVerificationPanelProps> = (
                 flexDirection: 'column', 
                 gap: '8px',
               }}>
-                <span style={{ fontSize: '12px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Duration</span>
-                <span style={{ fontSize: '24px', fontWeight: 700, color: '#fff', fontVariantNumeric: 'tabular-nums' }}>
+                <span style={{ fontSize: '12px', color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Duration</span>
+                <span style={{ fontSize: '24px', fontWeight: 700, color: 'var(--ui-text-primary)', fontVariantNumeric: 'tabular-nums' }}>
                   {status.completedAt 
                     ? `${Math.round((new Date(status.completedAt).getTime() - new Date(status.startedAt).getTime()) / 1000)}s`
                     : '--'}
@@ -356,14 +356,14 @@ export const VisualVerificationPanel: React.FC<VisualVerificationPanelProps> = (
               <h4 style={{ 
                 fontSize: '14px', 
                 fontWeight: 600, 
-                color: '#fff', 
+                color: 'var(--ui-text-primary)', 
                 margin: 0,
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
               }}>
                 Evidence Artifacts
-                <span style={{ fontSize: '12px', color: '#888', fontWeight: 'normal', textTransform: 'none' }}>({filteredArtifacts.length} items)</span>
+                <span style={{ fontSize: '12px', color: 'var(--ui-text-muted)', fontWeight: 'normal', textTransform: 'none' }}>({filteredArtifacts.length} items)</span>
               </h4>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <button
@@ -374,9 +374,9 @@ export const VisualVerificationPanel: React.FC<VisualVerificationPanelProps> = (
                     fontSize: '12px',
                     fontWeight: 500,
                     cursor: 'pointer',
-                    border: `1px solid ${artifactFilter === 'all' ? '#3b82f6' : '#333'}`,
+                    border: `1px solid ${artifactFilter === 'all' ? 'var(--status-info)' : 'var(--surface-hover)'}`,
                     background: artifactFilter === 'all' ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-                    color: artifactFilter === 'all' ? '#3b82f6' : '#888',
+                    color: artifactFilter === 'all' ? 'var(--status-info)' : 'var(--ui-text-muted)',
                   }}
                 >All</button>
                 {(['ui_state', 'coverage_map', 'console_output', 'visual_diff', 'error_state'] as ArtifactType[]).map(type => (
@@ -389,9 +389,9 @@ export const VisualVerificationPanel: React.FC<VisualVerificationPanelProps> = (
                       fontSize: '12px',
                       fontWeight: 500,
                       cursor: 'pointer',
-                      border: `1px solid ${artifactFilter === type ? '#3b82f6' : '#333'}`,
+                      border: `1px solid ${artifactFilter === type ? 'var(--status-info)' : 'var(--surface-hover)'}`,
                       background: artifactFilter === type ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
-                      color: artifactFilter === type ? '#3b82f6' : '#888',
+                      color: artifactFilter === type ? 'var(--status-info)' : 'var(--ui-text-muted)',
                     }}
                   >
                     {type.replace('_', ' ')}

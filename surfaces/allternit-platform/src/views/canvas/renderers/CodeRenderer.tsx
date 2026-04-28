@@ -15,7 +15,6 @@ import {
   Check,
   Monitor,
   FileCode,
-  ArrowsOut,
   ArrowsClockwise,
   Terminal,
 } from '@phosphor-icons/react';
@@ -36,7 +35,6 @@ export function CodeRenderer({
   sessionId,
   onMoATaskUpdate,
 }: CodeRendererProps) {
-  const [showPreview, setShowPreview] = useState(true);
   const [copied, setCopied] = useState(false);
   const [previewMode, setPreviewMode] = useState<'split' | 'code' | 'preview'>('split');
   const [isRunning, setIsRunning] = useState(false);
@@ -129,13 +127,6 @@ export function CodeRenderer({
     
     if (language === 'javascript' || language === 'jsx') {
       try {
-        // Create a safe execution context
-        const mockConsole = {
-          log: (...args: unknown[]) => logs.push(args.map(String).join(' ')),
-          error: (...args: unknown[]) => logs.push('ERROR: ' + args.map(String).join(' ')),
-          warn: (...args: unknown[]) => logs.push('WARN: ' + args.map(String).join(' ')),
-        };
-        
         // Execute in iframe for isolation
         if (iframeRef.current) {
           const iframe = iframeRef.current;

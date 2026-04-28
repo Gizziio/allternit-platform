@@ -69,7 +69,7 @@ export function CodeFocusView({ tile, onExit }: CodeFocusViewProps) {
               padding: '0 12px',
               borderRadius: 10,
               border: '1px solid rgba(255, 255, 255, 0.08)',
-              background: 'rgba(255,255,255,0.05)',
+              background: 'var(--surface-hover)',
               color: 'var(--text-secondary)',
               fontSize: 12,
               fontWeight: 600,

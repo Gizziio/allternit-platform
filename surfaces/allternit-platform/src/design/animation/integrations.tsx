@@ -9,11 +9,10 @@
 
 import React from 'react';
 import { motion, TargetAndTransition } from 'framer-motion';
-import { GlassCard } from '../glass/GlassCard';
 import { GlassSurface, GlassIntensity } from '../glass/GlassSurface';
 import { useReducedMotion } from './accessibility';
 import { animationTiming } from './timing';
-import { buttonTap, hoverLift, cardInteractions, hoverGlow } from './micro-interactions';
+import { buttonTap, hoverLift, hoverGlow } from './micro-interactions';
 
 export interface AnimatedGlassCardProps {
   children: React.ReactNode;

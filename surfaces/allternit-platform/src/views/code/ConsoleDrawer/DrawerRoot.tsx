@@ -159,7 +159,7 @@ export function DrawerRoot() {
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '0 -20px 40px rgba(0,0,0,0.2)',
+          boxShadow: '0 -20px 40px var(--surface-hover)',
         }}
       >
         {isOpen && (

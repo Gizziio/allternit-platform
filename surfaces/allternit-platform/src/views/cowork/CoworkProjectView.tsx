@@ -14,8 +14,8 @@ import {
 } from '@phosphor-icons/react';
 import { useCoworkStore } from './CoworkStore';
 import { useNav } from '@/nav/useNav';
-import { 
-  BaseProjectView, 
+import {
+  BaseProjectView,
   ProjectItemCard,
   ProjectMenuButton,
   FileItem,
@@ -28,10 +28,10 @@ interface CoworkProjectViewProps {
 }
 
 export function CoworkProjectView({ projectId }: CoworkProjectViewProps) {
-  const { 
-    projects, 
-    tasks, 
-    activeProjectId, 
+  const {
+    projects,
+    tasks,
+    activeProjectId,
     setActiveProject,
     createTask,
     deleteTask,
@@ -41,62 +41,62 @@ export function CoworkProjectView({ projectId }: CoworkProjectViewProps) {
     activeTaskId,
     setActiveTask,
   } = useCoworkStore();
-  
+
   const { dispatch } = useNav();
   const [activeTab, setActiveTab] = useState('tasks');
   const [isStarred, setIsStarred] = useState(false);
   const [composerInput, setComposerInput] = useState('');
-  
+
   // Modal states
   const [showAddFile, setShowAddFile] = useState(false);
   const [showAddInstruction, setShowAddInstruction] = useState(false);
   const [instructionText, setInstructionText] = useState('');
   const [projectInstructions, setProjectInstructions] = useState<string[]>([]);
   const [projectFiles, setProjectFiles] = useState<Array<{id: string; name: string; size: number}>>([]);
-  
+
   // Get current project
   const currentProjectId = projectId || activeProjectId;
-  const project = useMemo(() => 
+  const project = useMemo(() =>
     projects.find(p => p.id === currentProjectId),
     [projects, currentProjectId]
   );
-  
+
   // Filter tasks for this project
-  const projectTasks = useMemo(() => 
+  const projectTasks = useMemo(() =>
     (tasks || []).filter(t => t.projectId === currentProjectId && t.mode !== 'agent'),
     [tasks, currentProjectId]
   );
-  
-  const projectAgentTasks = useMemo(() => 
+
+  const projectAgentTasks = useMemo(() =>
     (tasks || []).filter(t => t.projectId === currentProjectId && t.mode === 'agent'),
     [tasks, currentProjectId]
   );
-  
+
   const displayTasks = activeTab === 'tasks' ? projectTasks : projectAgentTasks;
   const hasContent = displayTasks.length > 0 || projectFiles.length > 0;
-  
+
   // Handle back to workspace
   const handleBack = () => {
     setActiveProject(null);
     dispatch({ type: 'OPEN_VIEW', viewType: 'workspace' });
   };
-  
+
   // Handle create task from composer
   const handleSend = (text: string) => {
     if (!text.trim() || !currentProjectId) return;
-    
+
     const mode = activeTab === 'agent-tasks' ? 'agent' : 'task';
     createTask(text.trim(), mode, currentProjectId);
     setComposerInput('');
   };
-  
+
   // Handle new task button
   const handleNewTask = () => {
     if (!currentProjectId) return;
     const mode = activeTab === 'agent-tasks' ? 'agent' : 'task';
     createTask(`New ${mode === 'agent' ? 'Agent ' : ''}Task`, mode, currentProjectId);
   };
-  
+
   // Handle project rename
   const handleRename = () => {
     const newTitle = prompt('Rename project:', project?.title);
@@ -104,7 +104,7 @@ export function CoworkProjectView({ projectId }: CoworkProjectViewProps) {
       renameProject(currentProjectId, newTitle.trim());
     }
   };
-  
+
   // Handle project delete
   const handleDelete = () => {
     if (confirm(`Delete "${project?.title}"? All tasks will be unassigned.`)) {
@@ -133,27 +133,27 @@ export function CoworkProjectView({ projectId }: CoworkProjectViewProps) {
     }
     setShowAddFile(false);
   };
-  
+
   if (!project) {
     return (
-      <div style={{ 
-        height: '100%', 
-        display: 'flex', 
-        alignItems: 'center', 
+      <div style={{
+        height: '100%',
+        display: 'flex',
+        alignItems: 'center',
         justifyContent: 'center',
-        color: '#9b9b9b'
+        color: 'var(--ui-text-secondary)',
       }}>
         <div style={{ textAlign: 'center' }}>
           <p>Project not found</p>
-          <button 
+          <button
             onClick={handleBack}
             style={{
               marginTop: 16,
               padding: '8px 16px',
-              background: 'rgba(212,176,140,0.1)',
+              background: 'color-mix(in srgb, var(--accent-cowork) 10%, var(--surface-panel))',
               border: 'none',
               borderRadius: 8,
-              color: '#d4b08c',
+              color: 'var(--accent-cowork)',
               cursor: 'pointer',
             }}
           >
@@ -174,7 +174,7 @@ export function CoworkProjectView({ projectId }: CoworkProjectViewProps) {
           padding: '10px 16px',
           border: 'none',
           background: 'transparent',
-          color: '#9b9b9b',
+          color: 'var(--ui-text-secondary)',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
@@ -192,7 +192,7 @@ export function CoworkProjectView({ projectId }: CoworkProjectViewProps) {
           padding: '10px 16px',
           border: 'none',
           background: 'transparent',
-          color: '#9b9b9b',
+          color: 'var(--ui-text-secondary)',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
@@ -214,7 +214,7 @@ export function CoworkProjectView({ projectId }: CoworkProjectViewProps) {
           padding: '10px 16px',
           border: 'none',
           background: 'transparent',
-          color: '#ef4444',
+          color: 'var(--status-error)',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
@@ -292,12 +292,12 @@ export function CoworkProjectView({ projectId }: CoworkProjectViewProps) {
         sidebarSections={sidebarSectionsData}
         showEmptyState={!hasContent}
         emptyState={{
-          message: activeTab === 'tasks' 
+          message: activeTab === 'tasks'
             ? 'Tasks will appear here.'
             : activeTab === 'agent-tasks'
             ? 'Agent tasks will appear here.'
             : 'Sources will appear here.',
-          subMessage: activeTab === 'tasks' 
+          subMessage: activeTab === 'tasks'
             ? 'Create a task to get started with this project.'
             : activeTab === 'agent-tasks'
             ? 'Create an agent task to get autonomous assistance.'
@@ -375,14 +375,14 @@ function TaskCard({ task, isActive, onClick, onRename, onDelete, isAgent }: Task
   const [showMenu, setShowMenu] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
-  
+
   const handleSaveRename = () => {
     if (editTitle.trim() && editTitle !== task.title) {
       onRename(editTitle.trim());
     }
     setIsEditing(false);
   };
-  
+
   if (isEditing) {
     return (
       <div
@@ -390,7 +390,7 @@ function TaskCard({ task, isActive, onClick, onRename, onDelete, isAgent }: Task
           padding: '16px 20px',
           background: 'transparent',
           borderRadius: 12,
-          border: '1px solid rgba(212,176,140,0.3)',
+          border: '1px solid var(--ui-border-default)',
           marginBottom: 8,
         }}
       >
@@ -413,40 +413,38 @@ function TaskCard({ task, isActive, onClick, onRename, onDelete, isAgent }: Task
             background: 'transparent',
             border: 'none',
             outline: 'none',
-            color: '#f0c8aa',
+            color: 'var(--ui-text-primary)',
           }}
         />
       </div>
     );
   }
-  
+
   return (
     <div
       onClick={onClick}
       style={{
         padding: '16px 20px',
-        background: isActive 
-          ? 'rgba(212,176,140,0.1)' 
-          : 'transparent',
+        background: isActive ? 'var(--surface-active)' : 'transparent',
         borderRadius: 12,
-        border: `1px solid ${isActive ? 'rgba(212,176,140,0.2)' : 'rgba(255,255,255,0.06)'}`,
+        border: `1px solid ${isActive ? 'var(--ui-border-default)' : 'var(--ui-border-muted)'}`,
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
         gap: 12,
-        transition: 'all 0.2s',
+        transition: 'var(--transition-fast)',
         marginBottom: 8,
       }}
       onMouseEnter={(e) => {
         if (!isActive) {
-          e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+          e.currentTarget.style.background = 'var(--surface-hover)';
+          e.currentTarget.style.borderColor = 'var(--ui-border-default)';
         }
       }}
       onMouseLeave={(e) => {
         if (!isActive) {
           e.currentTarget.style.background = 'transparent';
-          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
+          e.currentTarget.style.borderColor = 'var(--ui-border-muted)';
         }
       }}
     >
@@ -455,32 +453,32 @@ function TaskCard({ task, isActive, onClick, onRename, onDelete, isAgent }: Task
         width: 8,
         height: 8,
         borderRadius: '50%',
-        background: task.status === 'completed' ? '#22c55e' : 
-                   task.status === 'in_progress' ? '#d4b08c' : '#6b6b6b',
+        background: task.status === 'completed' ? 'var(--status-success)' :
+                   task.status === 'in_progress' ? 'var(--accent-primary)' : 'var(--ui-text-muted)',
         flexShrink: 0,
       }} />
-      
+
       {/* Icon */}
       <div style={{
         width: 36,
         height: 36,
         borderRadius: 10,
-        background: 'rgba(255,255,255,0.05)',
+        background: 'var(--surface-hover)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        color: '#9b9b9b',
+        color: 'var(--ui-text-secondary)',
         flexShrink: 0,
       }}>
         {isAgent ? <Robot size={18} /> : <CheckSquare size={18} />}
       </div>
-      
+
       {/* Content */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
           fontSize: 14,
           fontWeight: isActive ? 600 : 500,
-          color: isActive ? '#f0c8aa' : '#ececec',
+          color: isActive ? 'var(--accent-primary)' : 'var(--ui-text-primary)',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
@@ -489,15 +487,15 @@ function TaskCard({ task, isActive, onClick, onRename, onDelete, isAgent }: Task
         </div>
         <div style={{
           fontSize: 12,
-          color: '#6b6b6b',
+          color: 'var(--ui-text-muted)',
           marginTop: 2,
         }}>
           {isAgent ? 'Agent task' : 'Task'} • {new Date(task.createdAt).toLocaleDateString()}
         </div>
       </div>
-      
+
       {/* Menu */}
-      <div 
+      <div
         style={{ position: 'relative' }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -508,8 +506,8 @@ function TaskCard({ task, isActive, onClick, onRename, onDelete, isAgent }: Task
             height: 28,
             borderRadius: 6,
             border: 'none',
-            background: showMenu ? 'rgba(255,255,255,0.08)' : 'transparent',
-            color: '#6b6b6b',
+            background: showMenu ? 'var(--surface-active)' : 'transparent',
+            color: 'var(--ui-text-muted)',
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -518,7 +516,7 @@ function TaskCard({ task, isActive, onClick, onRename, onDelete, isAgent }: Task
         >
           <DotsThreeOutline size={16} />
         </button>
-        
+
         {showMenu && (
           <>
             <div
@@ -536,10 +534,10 @@ function TaskCard({ task, isActive, onClick, onRename, onDelete, isAgent }: Task
                 right: 0,
                 marginTop: 4,
                 minWidth: 140,
-                background: 'linear-gradient(180deg, rgba(37,33,31,0.98), rgba(26,23,22,0.98))',
+                background: 'var(--surface-floating)',
                 borderRadius: 10,
-                border: '1px solid rgba(212,176,140,0.14)',
-                boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+                border: '1px solid var(--ui-border-muted)',
+                boxShadow: 'var(--shadow-lg)',
                 zIndex: 9999,
                 overflow: 'hidden',
               }}
@@ -555,7 +553,7 @@ function TaskCard({ task, isActive, onClick, onRename, onDelete, isAgent }: Task
                   padding: '10px 14px',
                   border: 'none',
                   background: 'transparent',
-                  color: '#9b9b9b',
+                  color: 'var(--ui-text-secondary)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -563,8 +561,8 @@ function TaskCard({ task, isActive, onClick, onRename, onDelete, isAgent }: Task
                   fontSize: 12,
                   textAlign: 'left',
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-hover)')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
               >
                 <PencilSimple size={14} />
                 Rename
@@ -579,7 +577,7 @@ function TaskCard({ task, isActive, onClick, onRename, onDelete, isAgent }: Task
                   padding: '10px 14px',
                   border: 'none',
                   background: 'transparent',
-                  color: '#ef4444',
+                  color: 'var(--status-error)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -587,8 +585,8 @@ function TaskCard({ task, isActive, onClick, onRename, onDelete, isAgent }: Task
                   fontSize: 12,
                   textAlign: 'left',
                 }}
-                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'}
-                onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'color-mix(in srgb, var(--status-error) 10%, transparent)')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
               >
                 <Trash size={14} />
                 Delete
@@ -609,7 +607,7 @@ function AddFileModal({ onClose, onUpload }: { onClose: () => void; onUpload: ()
         style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(0,0,0,0.6)',
+          background: 'var(--shell-overlay-backdrop)',
           backdropFilter: 'blur(4px)',
           zIndex: 10000,
         }}
@@ -621,44 +619,44 @@ function AddFileModal({ onClose, onUpload }: { onClose: () => void; onUpload: ()
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          background: 'linear-gradient(180deg, rgba(37,33,31,0.98), rgba(26,23,22,0.98))',
+          background: 'var(--surface-floating)',
           borderRadius: 16,
-          border: '1px solid rgba(255,255,255,0.1)',
+          border: '1px solid var(--ui-border-default)',
           padding: '24px',
           minWidth: 360,
           zIndex: 10001,
-          boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+          boxShadow: 'var(--shadow-xl)',
         }}
       >
-        <h3 style={{ 
-          margin: '0 0 16px 0', 
-          fontSize: 16, 
-          fontWeight: 700, 
-          color: '#f0f0f0' 
+        <h3 style={{
+          margin: '0 0 16px 0',
+          fontSize: 16,
+          fontWeight: 700,
+          color: 'var(--ui-text-primary)',
         }}>
           Add sources
         </h3>
-        
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <button
             onClick={onUpload}
             style={{
               width: '100%',
               padding: '12px 16px',
-              border: 'none',
-              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid var(--ui-border-muted)',
+              background: 'var(--surface-hover)',
               borderRadius: 8,
-              color: '#9b9b9b',
+              color: 'var(--ui-text-secondary)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: 10,
               fontSize: 13,
               textAlign: 'left',
-              transition: 'background 0.2s',
+              transition: 'var(--transition-fast)',
             }}
-            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-active)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'var(--surface-hover)')}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -667,15 +665,15 @@ function AddFileModal({ onClose, onUpload }: { onClose: () => void; onUpload: ()
             </svg>
             Upload from device
           </button>
-          
+
           <button
             style={{
               width: '100%',
               padding: '12px 16px',
-              border: 'none',
-              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid var(--ui-border-muted)',
+              background: 'var(--surface-hover)',
               borderRadius: 8,
-              color: '#9b9b9b',
+              color: 'var(--ui-text-secondary)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -693,17 +691,17 @@ function AddFileModal({ onClose, onUpload }: { onClose: () => void; onUpload: ()
             </svg>
             Add text content
           </button>
-          
-          <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '8px 0' }} />
-          
+
+          <div style={{ height: 1, background: 'var(--ui-border-muted)', margin: '8px 0' }} />
+
           <button
             style={{
               width: '100%',
               padding: '12px 16px',
-              border: 'none',
-              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid var(--ui-border-muted)',
+              background: 'var(--surface-hover)',
               borderRadius: 8,
-              color: '#9b9b9b',
+              color: 'var(--ui-text-secondary)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -718,17 +716,17 @@ function AddFileModal({ onClose, onUpload }: { onClose: () => void; onUpload: ()
               </svg>
               GitHub
             </span>
-            <span style={{ color: '#4b4b4b' }}>Connect</span>
+            <span style={{ color: 'var(--ui-text-muted)' }}>Connect</span>
           </button>
-          
+
           <button
             style={{
               width: '100%',
               padding: '12px 16px',
-              border: 'none',
-              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid var(--ui-border-muted)',
+              background: 'var(--surface-hover)',
               borderRadius: 8,
-              color: '#9b9b9b',
+              color: 'var(--ui-text-secondary)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -743,20 +741,20 @@ function AddFileModal({ onClose, onUpload }: { onClose: () => void; onUpload: ()
               </svg>
               Google Drive
             </span>
-            <span style={{ color: '#4b4b4b' }}>Connect</span>
+            <span style={{ color: 'var(--ui-text-muted)' }}>Connect</span>
           </button>
         </div>
-        
+
         <button
           onClick={onClose}
           style={{
             marginTop: 16,
             width: '100%',
             padding: '10px',
-            border: 'none',
-            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid var(--ui-border-default)',
+            background: 'transparent',
             borderRadius: 8,
-            color: '#9b9b9b',
+            color: 'var(--ui-text-secondary)',
             cursor: 'pointer',
             fontSize: 13,
           }}
@@ -769,15 +767,15 @@ function AddFileModal({ onClose, onUpload }: { onClose: () => void; onUpload: ()
 }
 
 // Add Instruction Modal
-function AddInstructionModal({ 
-  value, 
-  onChange, 
-  onClose, 
-  onSave 
-}: { 
-  value: string; 
-  onChange: (v: string) => void; 
-  onClose: () => void; 
+function AddInstructionModal({
+  value,
+  onChange,
+  onClose,
+  onSave,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onClose: () => void;
   onSave: () => void;
 }) {
   return (
@@ -786,7 +784,7 @@ function AddInstructionModal({
         style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(0,0,0,0.6)',
+          background: 'var(--shell-overlay-backdrop)',
           backdropFilter: 'blur(4px)',
           zIndex: 10000,
         }}
@@ -798,32 +796,32 @@ function AddInstructionModal({
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          background: 'linear-gradient(180deg, rgba(37,33,31,0.98), rgba(26,23,22,0.98))',
+          background: 'var(--surface-floating)',
           borderRadius: 16,
-          border: '1px solid rgba(255,255,255,0.1)',
+          border: '1px solid var(--ui-border-default)',
           padding: '24px',
           width: '90%',
           maxWidth: 480,
           zIndex: 10001,
-          boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+          boxShadow: 'var(--shadow-xl)',
         }}
       >
-        <h3 style={{ 
-          margin: '0 0 8px 0', 
-          fontSize: 16, 
-          fontWeight: 700, 
-          color: '#f0f0f0' 
+        <h3 style={{
+          margin: '0 0 8px 0',
+          fontSize: 16,
+          fontWeight: 700,
+          color: 'var(--ui-text-primary)',
         }}>
           Set project instructions
         </h3>
         <p style={{
           margin: '0 0 16px 0',
           fontSize: 13,
-          color: '#6b6b6b',
+          color: 'var(--ui-text-muted)',
         }}>
           Provide relevant instructions and information for tasks within this project.
         </p>
-        
+
         <textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -832,10 +830,10 @@ function AddInstructionModal({
             width: '100%',
             minHeight: 120,
             padding: 12,
-            background: 'rgba(0,0,0,0.3)',
-            border: '1px solid rgba(255,255,255,0.1)',
+            background: 'var(--bg-tertiary)',
+            border: '1px solid var(--ui-border-default)',
             borderRadius: 8,
-            color: '#f0f0f0',
+            color: 'var(--ui-text-primary)',
             fontSize: 14,
             fontFamily: 'inherit',
             resize: 'vertical',
@@ -843,16 +841,16 @@ function AddInstructionModal({
             marginBottom: 16,
           }}
         />
-        
+
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
           <button
             onClick={onClose}
             style={{
               padding: '8px 16px',
               borderRadius: 8,
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: '1px solid var(--ui-border-default)',
               background: 'transparent',
-              color: '#9b9b9b',
+              color: 'var(--ui-text-secondary)',
               fontSize: 13,
               fontWeight: 600,
               cursor: 'pointer',
@@ -867,8 +865,8 @@ function AddInstructionModal({
               padding: '8px 16px',
               borderRadius: 8,
               border: 'none',
-              background: value.trim() ? '#f0f0f0' : 'rgba(255,255,255,0.1)',
-              color: value.trim() ? '#1a1a1a' : '#4b4b4b',
+              background: value.trim() ? 'var(--accent-primary)' : 'var(--surface-hover)',
+              color: value.trim() ? 'var(--ui-text-inverse)' : 'var(--ui-text-muted)',
               fontSize: 13,
               fontWeight: 600,
               cursor: value.trim() ? 'pointer' : 'not-allowed',

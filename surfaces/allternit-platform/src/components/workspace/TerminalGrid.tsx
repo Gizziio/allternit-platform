@@ -41,7 +41,7 @@ function TerminalPane({ pane, isActive, onClick, onClose }: TerminalPaneProps) {
         yellow: '#f59e0b',
         blue: '#3b82f6',
         magenta: '#8b5cf6',
-        cyan: '#06b6d4',
+        cyan: 'var(--status-info)',
         white: '#f3f4f6',
         brightBlack: '#6b7280',
         brightRed: '#f87171',

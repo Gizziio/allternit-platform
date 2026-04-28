@@ -30,7 +30,7 @@ const ActivityView: React.FC = () => {
       action: "Created document 'Q4 Strategy'",
       timestamp: '2 hours ago',
       icon: <FileText size={16} />,
-      iconBg: '#007aff',
+      iconBg: 'var(--status-info)',
     },
     {
       id: '2',
@@ -38,7 +38,7 @@ const ActivityView: React.FC = () => {
       action: 'Executed analysis workflow',
       timestamp: '4 hours ago',
       icon: <Lightning size={16} />,
-      iconBg: '#34c759',
+      iconBg: 'var(--status-success)',
     },
     {
       id: '3',
@@ -46,7 +46,7 @@ const ActivityView: React.FC = () => {
       action: 'Started workspace session',
       timestamp: '6 hours ago',
       icon: <Clock size={16} />,
-      iconBg: '#af52de',
+      iconBg: 'var(--ui-text-muted)',
     },
     {
       id: '4',
@@ -54,7 +54,7 @@ const ActivityView: React.FC = () => {
       action: 'Completed task "Review Q3 metrics"',
       timestamp: '8 hours ago',
       icon: <CheckSquare size={16} />,
-      iconBg: '#ff9500',
+      iconBg: 'var(--status-warning)',
     },
     {
       id: '5',
@@ -62,7 +62,7 @@ const ActivityView: React.FC = () => {
       action: "Updated document 'Budget Planning'",
       timestamp: '10 hours ago',
       icon: <FileText size={16} />,
-      iconBg: '#007aff',
+      iconBg: 'var(--status-info)',
     },
     {
       id: '6',
@@ -70,7 +70,7 @@ const ActivityView: React.FC = () => {
       action: 'Generated report for stakeholders',
       timestamp: '1 day ago',
       icon: <Lightning size={16} />,
-      iconBg: '#34c759',
+      iconBg: 'var(--status-success)',
     },
     {
       id: '7',
@@ -78,7 +78,7 @@ const ActivityView: React.FC = () => {
       action: 'Ended workspace session',
       timestamp: '1 day ago',
       icon: <Clock size={16} />,
-      iconBg: '#af52de',
+      iconBg: 'var(--ui-text-muted)',
     },
     {
       id: '8',
@@ -86,7 +86,7 @@ const ActivityView: React.FC = () => {
       action: "Shared document 'Team OKRs'",
       timestamp: '2 days ago',
       icon: <FileText size={16} />,
-      iconBg: '#007aff',
+      iconBg: 'var(--status-info)',
     },
     {
       id: '9',
@@ -94,7 +94,7 @@ const ActivityView: React.FC = () => {
       action: 'Created task "Research competitors"',
       timestamp: '2 days ago',
       icon: <CheckSquare size={16} />,
-      iconBg: '#ff9500',
+      iconBg: 'var(--status-warning)',
     },
     {
       id: '10',
@@ -102,7 +102,7 @@ const ActivityView: React.FC = () => {
       action: 'Scheduled recurring analysis',
       timestamp: '3 days ago',
       icon: <Lightning size={16} />,
-      iconBg: '#34c759',
+      iconBg: 'var(--status-success)',
     },
   ];
 

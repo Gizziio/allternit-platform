@@ -7,7 +7,7 @@
 "use client";
 
 import React, { useState, useCallback, useMemo } from "react";
-import { format, parseISO, isValid, isBefore, isAfter, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, getDay, getDate } from "date-fns";
+import { format, parseISO, isBefore, isAfter, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, getDate } from "date-fns";
 
 // Recharts imports - requires: npm install recharts
 // Stub implementation for now - replace with actual recharts when installed
@@ -75,7 +75,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
   Calendar,
@@ -85,7 +85,6 @@ import {
   Image,
   CaretLeft,
   CaretRight,
-  Clock,
 } from '@phosphor-icons/react';
 
 // Import types

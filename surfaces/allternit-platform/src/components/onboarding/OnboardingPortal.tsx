@@ -21,7 +21,7 @@ export function OnboardingPortal() {
         left: 0,
         width: '100vw',
         height: '100vh',
-        zIndex: 2147483647, // Max z-index
+        zIndex: 200, // System layer — above modals, below dev
         overflow: 'hidden',
         display: 'flex',
         alignItems: 'center',

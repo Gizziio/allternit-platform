@@ -1,32 +1,26 @@
 import React from 'react';
 import { GlassSurface } from '../design/GlassSurface';
-import { tokens } from '../design/tokens';
 import { AllternitOperatorStatus } from '../components/AllternitOperatorStatus';
 import { EnvironmentSelector, EnvironmentType } from './EnvironmentSelector';
 import {
-  ChatText,
-  UsersThree,
-  TerminalWindow,
   CaretLeft,
   CaretRight,
-  Command,
   Sun,
   Moon,
   SidebarSimple,
-  Gear,
   FileCode,
 } from '@phosphor-icons/react';
 
 import { ModeSwitcher } from './ModeSwitcher';
 
-export type AppMode = 'chat' | 'cowork' | 'code' | 'design';
+export type AppMode = 'chat' | 'cowork' | 'code' | 'design' | 'browser';
 
 interface ShellHeaderProps {
   title?: string;
   onBack?: () => void;
   onForward?: () => void;
-  activeMode: 'chat' | 'cowork' | 'code' | 'design';
-  onModeChange: (mode: 'chat' | 'cowork' | 'code' | 'design') => void;
+  activeMode: AppMode;
+  onModeChange: (mode: AppMode) => void;
   theme: 'light' | 'dark';
   onThemeToggle: () => void;
   isRailCollapsed: boolean;
@@ -187,39 +181,5 @@ export function ShellHeader({
         </button>
       </div>
     </GlassSurface>
-  );
-}
-
-interface ModeButtonProps {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ComponentType<{ size?: number; weight?: string; color?: string }>;
-  label: string;
-  color: string;
-}
-
-function ModeButton({ active, onClick, icon: Icon, label, color }: ModeButtonProps): JSX.Element {
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        padding: '6px 16px',
-        borderRadius: 11,
-        border: 'none',
-        background: active ? 'var(--bg-secondary)' : 'transparent',
-        color: active ? color : 'var(--text-tertiary)',
-        cursor: 'pointer',
-        transition: 'all 0.2s',
-        fontSize: 13,
-        fontWeight: 600,
-        boxShadow: active ? 'var(--shadow-sm)' : 'none',
-      }}
-    >
-      <Icon size={18} weight={active ? 'duotone' : 'regular'} />
-      {label}
-    </button>
   );
 }

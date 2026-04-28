@@ -6,41 +6,34 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Globe,
   ArrowsClockwise,
-  ArrowLeft,
   ArrowRight,
-  Camera,
   Robot,
   CircleNotch,
-  Warning,
   Plus,
   X,
   Lock,
   MagnifyingGlass,
   CaretLeft,
   CaretRight,
-  DotsThreeOutline,
-  Terminal,
   Pulse as Activity,
   Shield,
   Lightning,
-  ClockCounterClockwise,
 } from '@phosphor-icons/react';
 
 // Design System
 import { GlassSurface } from '@/design/glass/GlassSurface';
-import { GlassButton, GlassIconButton } from '@/design/glass/GlassButton';
-import { GlassInput } from '@/design/glass/GlassInput';
+import { GlassIconButton } from '@/design/glass/GlassButton';
 import { AllternitLogo } from '@/components/AllternitLogo';
 import { ArchitectLogo } from '@/components/ai-elements/ArchitectLogo';
 import { cn } from '@/lib/utils';
 
 // Store & Types
-import { useBrowserStore, useActiveTab } from '@/capsules/browser/browser.store';
-import { BrowserTab, WebTab } from '@/capsules/browser/browser.types';
+import { useBrowserStore } from '@/capsules/browser/browser.store';
+import { WebTab } from '@/capsules/browser/browser.types';
 import { useBrowserAgentStore } from '@/capsules/browser/browserAgent.store';
 
 // ============================================================================
@@ -50,12 +43,11 @@ import { useBrowserAgentStore } from '@/capsules/browser/browserAgent.store';
 export function BrowserView() {
   // Store state
   const { tabs, activeTabId, addTab, closeTab, setActiveTab, updateTab } = useBrowserStore();
-  const { status: agentStatus, runGoal, stopExecution, setIsBrowserCapsuleMounted } = useBrowserAgentStore();
+  const { status: agentStatus, stopExecution, setIsBrowserCapsuleMounted } = useBrowserAgentStore();
   
   // Local UI state
   const activeTab = tabs.find(t => t.id === activeTabId);
   const [urlInput, setUrlInput] = useState('');
-  const [agentInput, setAgentInput] = useState('');
   const [isHoveringTab, setIsHoveringTab] = useState<string | null>(null);
 
   // Mark browser capsule as mounted to suppress global ACIComputerUseSidecar
@@ -89,14 +81,6 @@ export function BrowserView() {
       updateTab(activeTabId, { url: targetUrl, title: targetUrl } as Partial<WebTab>);
     } else {
       addTab(targetUrl);
-    }
-  };
-
-  // Handle Agent Goal
-  const handleAgentRun = () => {
-    if (agentInput.trim()) {
-      runGoal(agentInput.trim());
-      setAgentInput('');
     }
   };
 
@@ -263,7 +247,7 @@ export function BrowserView() {
         {/* Floating Agent Status Pill (Conditional) */}
         {agentStatus === 'Running' && (
           <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 animate-slide-up">
-            <GlassSurface intensity="thick" rounded="full" className="px-6 py-2 border-[#D4B08C]/40 shadow-[0_0_30px_rgba(212,176,140,0.2)]">
+            <GlassSurface intensity="thick" rounded="full" className="px-6 py-2 border-[#D4B08C]/40 shadow-[0_0_30px_var(--ui-border-default)]">
               <div className="flex items-center gap-3">
                 <div className="relative">
                   <div className="absolute inset-0 animate-ping bg-[#D4B08C] rounded-full opacity-20" />

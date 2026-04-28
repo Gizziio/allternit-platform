@@ -8,6 +8,7 @@
  */
 
 import { CommandAction } from './CommandPalette';
+import { openInBrowser } from '@/lib/openInBrowser';
 
 // Navigation callback type - to be provided by consuming app
 export type NavigateFunction = (path: string) => void;
@@ -277,7 +278,7 @@ export function createDefaultActions(config: CommandActionsConfig): CommandActio
       name: 'Documentation',
       shortcut: [],
       keywords: 'documentation docs help guide',
-      perform: () => window.open('/docs', '_blank'),
+      perform: () => openInBrowser('/docs'),
       icon: 'command',
       section: COMMAND_SECTIONS.HELP,
     },

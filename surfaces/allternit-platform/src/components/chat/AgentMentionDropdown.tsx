@@ -3,6 +3,7 @@
 import React, { useEffect, useRef } from "react";
 
 import { AgentAvatar } from "@/components/Avatar";
+import { AgentStorefrontCard } from "@/components/agents";
 import type { Agent } from "@/lib/agents";
 
 interface AgentMentionDropdownProps {
@@ -12,6 +13,7 @@ interface AgentMentionDropdownProps {
   onSelect: (agent: Agent) => void;
   onHoverIndex?: (index: number) => void;
   onClose: () => void;
+  position?: { x: number; y: number };
 }
 
 const THEME = {
@@ -31,6 +33,7 @@ export function AgentMentionDropdown({
   onSelect,
   onHoverIndex,
   onClose,
+  position,
 }: AgentMentionDropdownProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -139,7 +142,7 @@ export function AgentMentionDropdown({
                 display: "flex",
                 alignItems: "center",
                 gap: 10,
-                padding: "8px 10px",
+                padding: "4px 6px",
                 borderRadius: 8,
                 border: "none",
                 background: isSelected
@@ -163,71 +166,12 @@ export function AgentMentionDropdown({
                   : "transparent";
               }}
             >
-              <div
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 8,
-                  background: isSelected
-                    ? "rgba(212, 176, 140, 0.18)"
-                    : "rgba(255,255,255,0.06)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: isSelected ? THEME.accent : THEME.textSecondary,
-                  flexShrink: 0,
-                  overflow: "hidden",
-                }}
-              >
-                {avatarConfig ? (
-                  <AgentAvatar
-                    config={avatarConfig as any}
-                    size={24}
-                    emotion="steady"
-                    isAnimating={false}
-                    showGlow={false}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: 6,
-                      background: THEME.accent,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: '#fff',
-                    }}
-                  >
-                    {agent.name.charAt(0).toUpperCase()}
-                  </div>
-                )}
-              </div>
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 600,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {agent.name}
-                </div>
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: THEME.textSecondary,
-                    marginTop: 1,
-                  }}
-                >
-                  {agent.provider} · {agent.model}
-                </div>
-              </div>
+              <AgentStorefrontCard
+                agent={agent}
+                compact
+                style={{ background: 'transparent', border: 'none', padding: 0, flex: 1 }}
+                onClick={() => onSelect(agent)}
+              />
             </button>
           );
         })}

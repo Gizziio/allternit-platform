@@ -75,9 +75,9 @@ export function MascotPreview({ config, name }: { config: any; name: string }) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'rgba(255,255,255,0.03)',
+          background: 'var(--surface-hover)',
           border: `1px solid ${STUDIO_THEME.borderSubtle}`,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+          boxShadow: '0 8px 32px var(--surface-hover)',
           position: 'relative'
         }}
       >

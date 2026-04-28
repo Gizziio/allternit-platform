@@ -27,14 +27,14 @@ const baseStyle: React.CSSProperties = {
   justifyContent: 'center',
   padding: '60px 40px',
   textAlign: 'center',
-  color: '#888',
+  color: 'var(--ui-text-muted)',
 };
 
 const iconContainerStyle: React.CSSProperties = {
   width: '80px',
   height: '80px',
   borderRadius: '20px',
-  background: '#0a0a0a',
+  background: 'var(--surface-panel)',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
@@ -51,7 +51,7 @@ const titleStyle: React.CSSProperties = {
 
 const descriptionStyle: React.CSSProperties = {
   fontSize: '14px',
-  color: '#888',
+  color: 'var(--ui-text-muted)',
   margin: '0 0 24px 0',
   maxWidth: '400px',
 };
@@ -60,7 +60,7 @@ const buttonStyle: React.CSSProperties = {
   padding: '12px 24px',
   borderRadius: '8px',
   border: 'none',
-  background: '#3b82f6',
+  background: 'var(--status-info)',
   color: '#fff',
   fontSize: '14px',
   fontWeight: 500,
@@ -73,7 +73,7 @@ const secondaryButtonStyle: React.CSSProperties = {
   borderRadius: '8px',
   border: '1px solid #333',
   background: 'transparent',
-  color: '#888',
+  color: 'var(--ui-text-muted)',
   fontSize: '14px',
   fontWeight: 500,
   cursor: 'pointer',
@@ -133,11 +133,11 @@ export const VerificationFailed: React.FC<{
 }> = ({ wihId, error, onRetry, onBypass }) => (
   <div style={{ ...baseStyle, background: 'rgba(239, 68, 68, 0.05)', borderRadius: '12px' }}>
     <div style={{ ...iconContainerStyle, background: 'rgba(239, 68, 68, 0.15)' }}>❌</div>
-    <h3 style={{ ...titleStyle, color: '#ef4444' }}>Verification Failed</h3>
+    <h3 style={{ ...titleStyle, color: 'var(--status-error)' }}>Verification Failed</h3>
     <p style={descriptionStyle}>{error}</p>
     <div style={{ display: 'flex', gap: '12px' }}>
       <button style={buttonStyle} onClick={onRetry}>Retry</button>
-      <button style={{ ...secondaryButtonStyle, borderColor: '#ef4444', color: '#ef4444' }} onClick={onBypass}>
+      <button style={{ ...secondaryButtonStyle, borderColor: 'var(--status-error)', color: 'var(--status-error)' }} onClick={onBypass}>
         Request Bypass
       </button>
     </div>
@@ -151,12 +151,12 @@ export const VerificationPassed: React.FC<{
 }> = ({ wihId, confidence, onViewDetails }) => (
   <div style={{ ...baseStyle, background: 'rgba(34, 197, 94, 0.05)', borderRadius: '12px' }}>
     <div style={{ ...iconContainerStyle, background: 'rgba(34, 197, 94, 0.15)' }}>✅</div>
-    <h3 style={{ ...titleStyle, color: '#22c55e' }}>Verification Passed</h3>
+    <h3 style={{ ...titleStyle, color: 'var(--status-success)' }}>Verification Passed</h3>
     <p style={descriptionStyle}>
       {wihId} passed visual verification with {Math.round(confidence * 100)}% confidence.
       All required artifacts meet quality thresholds.
     </p>
-    <button style={{ ...buttonStyle, background: '#22c55e' }} onClick={onViewDetails}>
+    <button style={{ ...buttonStyle, background: 'var(--status-success)' }} onClick={onViewDetails}>
       View Details
     </button>
   </div>

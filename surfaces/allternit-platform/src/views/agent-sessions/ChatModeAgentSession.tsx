@@ -15,7 +15,7 @@
  */
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   PaperPlaneTilt,
   Paperclip,
@@ -24,29 +24,21 @@ import {
   User,
   CircleNotch,
   Copy,
-  Check,
-  ArrowsClockwise,
   DotsThreeOutline,
-  Plus,
-  Clock,
-  Chat,
   GearSix,
 } from '@phosphor-icons/react';
 
 import {
   MODE_COLORS,
-  createGlassStyle,
   TEXT,
 } from '@/design/allternit.tokens';
 
 import {
   ToolCallVisualization,
   useToolCallAccent,
-  ToolConfirmation,
-  ToolQuestionDisplay,
 } from '@/components/agents';
 
-import { AgentSessionLayout, WorkbenchSection, WorkbenchItem, CanvasPanel } from './AgentSessionLayout';
+import { AgentSessionLayout, CanvasPanel } from './AgentSessionLayout';
 import type { ChatModeAgentSessionProps, AgentSessionMessage, AgentSessionCanvas } from './types';
 
 // ============================================================================
@@ -69,9 +61,7 @@ export function ChatModeAgentSession({
   const [messages, setMessages] = useState<AgentSessionMessage[]>([]);
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
-  const [showCanvas, setShowCanvas] = useState(true);
-  const [showWorkbench, setShowWorkbench] = useState(true);
-  const [canvases, setCanvases] = useState<AgentSessionCanvas[]>([]);
+  const [canvases] = useState<AgentSessionCanvas[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // Scroll to bottom on new messages
@@ -175,7 +165,7 @@ export function ChatModeAgentSession({
                     onClick={() => setInput(suggestion)}
                     className="p-3 rounded-xl text-left text-sm transition-all"
                     style={{
-                      background: 'rgba(255,255,255,0.03)',
+                      background: 'var(--surface-hover)',
                       border: `1px solid ${modeColors.border}`,
                       color: TEXT.secondary,
                     }}
@@ -215,13 +205,13 @@ export function ChatModeAgentSession({
         {/* Input Area */}
         <div 
           className="p-4 border-t"
-          style={{ borderColor: modeColors.border, background: 'rgba(0,0,0,0.3)' }}
+          style={{ borderColor: modeColors.border, background: 'var(--surface-panel)' }}
         >
           <div className="flex items-end gap-2">
             <button
               className="p-3 rounded-xl transition-colors shrink-0"
               style={{ 
-                background: 'rgba(255,255,255,0.05)',
+                background: 'var(--surface-hover)',
                 color: TEXT.tertiary,
               }}
               title="Attach file"
@@ -312,7 +302,7 @@ function ChatMessage({
         <div 
           className="inline-block px-4 py-3 rounded-2xl text-left"
           style={{
-            background: isUser ? modeColors.soft : 'rgba(255,255,255,0.05)',
+            background: isUser ? modeColors.soft : 'var(--surface-hover)',
             border: `1px solid ${isUser ? modeColors.border : 'transparent'}`,
             color: TEXT.primary,
             borderRadius: isUser ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
@@ -343,51 +333,6 @@ function ChatMessage({
         </div>
       </div>
     </motion.div>
-  );
-}
-
-function ChatWorkbenchRail({ mode }: { mode: 'chat' }) {
-  const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.chat;
-  
-  return (
-    <div className="py-2">
-      <WorkbenchSection title="Conversations" mode={mode}>
-        <div className="space-y-1">
-          <WorkbenchItem
-            icon={Chat}
-            label="Current Session"
-            active
-            mode={mode}
-          />
-          <WorkbenchItem
-            icon={Clock}
-            label="Recent"
-            badge={3}
-            mode={mode}
-          />
-          <WorkbenchItem
-            icon={Robot}
-            label="All Agents"
-            mode={mode}
-          />
-        </div>
-      </WorkbenchSection>
-      
-      <WorkbenchSection title="Context" mode={mode}>
-        <div className="space-y-1">
-          <WorkbenchItem
-            icon={Sparkle}
-            label="Attached Files"
-            mode={mode}
-          />
-          <WorkbenchItem
-            icon={Clock}
-            label="History"
-            mode={mode}
-          />
-        </div>
-      </WorkbenchSection>
-    </div>
   );
 }
 
@@ -431,7 +376,7 @@ function ChatCanvasPanel({ mode, canvases }: { mode: 'chat'; canvases: AgentSess
             key={canvas.id}
             className="p-3 rounded-xl"
             style={{
-              background: 'rgba(255,255,255,0.03)',
+              background: 'var(--surface-hover)',
               border: `1px solid ${modeColors.border}`,
             }}
           >
@@ -446,7 +391,7 @@ function ChatCanvasPanel({ mode, canvases }: { mode: 'chat'; canvases: AgentSess
             <pre 
               className="text-xs overflow-auto p-2 rounded"
               style={{ 
-                background: 'rgba(0,0,0,0.3)',
+                background: 'var(--surface-panel)',
                 color: TEXT.secondary,
                 maxHeight: 200,
               }}

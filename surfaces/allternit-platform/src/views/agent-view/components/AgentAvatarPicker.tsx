@@ -44,8 +44,8 @@ export function AgentAvatarPicker({ name, config, onChange }: AgentAvatarPickerP
           justifyContent: "center",
           padding: "24px",
           borderRadius: "12px",
-          background: "rgba(255,255,255,0.02)",
-          border: "1px solid rgba(255,255,255,0.06)",
+          background: "var(--surface-hover)",
+          border: "1px solid var(--ui-border-muted)",
         }}
       >
         <motion.div
@@ -163,12 +163,12 @@ export function AgentAvatarPicker({ name, config, onChange }: AgentAvatarPickerP
                 border: `1px solid ${
                   config.shape === shape
                     ? "rgba(212,149,106,0.4)"
-                    : "rgba(255,255,255,0.08)"
+                    : "var(--ui-border-muted)"
                 }`,
                 background:
                   config.shape === shape
                     ? "rgba(212,149,106,0.08)"
-                    : "rgba(255,255,255,0.02)",
+                    : "var(--surface-hover)",
                 color: STUDIO_THEME.textSecondary,
                 fontSize: "12px",
                 cursor: "pointer",
@@ -211,8 +211,8 @@ export function AgentAvatarPicker({ name, config, onChange }: AgentAvatarPickerP
             width: "60px",
             padding: "8px 12px",
             borderRadius: "8px",
-            background: "rgba(255,255,255,0.03)",
-            border: "1px solid rgba(255,255,255,0.08)",
+            background: "var(--surface-hover)",
+            border: "1px solid var(--ui-border-muted)",
             color: STUDIO_THEME.textPrimary,
             fontSize: "16px",
             fontWeight: 700,

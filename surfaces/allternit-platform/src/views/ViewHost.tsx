@@ -26,7 +26,7 @@ class ViewRenderBoundary extends Component<
   render() {
     if (this.state.error) {
       return (
-        <div style={{ padding: 32, color: '#ef4444', background: '#1e1e1e', height: '100%' }}>
+        <div style={{ padding: 32, color: 'var(--status-error)', background: '#1e1e1e', height: '100%' }}>
           <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>
             View Error: {this.props.viewType}
           </h2>
@@ -35,7 +35,7 @@ class ViewRenderBoundary extends Component<
           </pre>
           <button
             onClick={() => this.setState({ error: null })}
-            style={{ marginTop: 16, padding: '8px 16px', background: '#333', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}
+            style={{ marginTop: 16, padding: '8px 16px', background: 'var(--surface-hover)', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer' }}
           >
             Retry
           </button>

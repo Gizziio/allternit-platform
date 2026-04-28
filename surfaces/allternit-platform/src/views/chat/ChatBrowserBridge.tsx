@@ -29,7 +29,6 @@ import {
   DotsThreeOutline,
   Globe,
   SquaresFour,
-  Terminal,
 } from '@phosphor-icons/react';
 
 // ============================================================================
@@ -157,7 +156,7 @@ export function MessageA2UIActions({
   source,
   onOpen,
 }: OpenInBrowserButtonProps) {
-  const { addA2UITab, addTab } = useBrowserStore();
+  const { addA2UITab } = useBrowserStore();
 
   const handleOpenInBrowser = () => {
     const tabId = addA2UITab(payload, title || "Chat App", source);
@@ -213,10 +212,6 @@ export function ChatBrowserBridge({
         addA2UITab(payload, title || `App ${idx + 1}`, `chat-${chatId}`);
       }, idx * 100);
     });
-  };
-
-  const openWebPage = (url: string) => {
-    addTab(url);
   };
 
   return (

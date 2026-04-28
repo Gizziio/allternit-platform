@@ -6,6 +6,7 @@ import { FitAddon } from 'xterm-addon-fit';
 import { SearchAddon } from 'xterm-addon-search';
 import { WebLinksAddon } from 'xterm-addon-web-links';
 import 'xterm/css/xterm.css';
+import { openInBrowser } from '@/lib/openInBrowser';
 import { nodeTerminalService, TerminalSessionInfo } from './terminal.service';
 import { GripVertical, X, Plus, Search, Trash2 } from 'lucide-react';
 
@@ -91,7 +92,7 @@ function CanvasTerminal({
     term.loadAddon(searchAddon);
     
     term.loadAddon(new WebLinksAddon((event, uri) => {
-      window.open(uri, '_blank');
+      openInBrowser(uri);
     }));
 
     term.open(terminalRef.current);

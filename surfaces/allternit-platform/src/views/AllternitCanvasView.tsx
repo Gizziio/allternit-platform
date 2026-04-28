@@ -15,14 +15,10 @@ import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ArrowsOut,
-  ArrowsIn,
   Columns,
-  Rows,
   MonitorPlay,
   Sparkle,
   CaretLeft,
-  CaretRight,
 } from '@phosphor-icons/react';
 import { GlassSurface } from '@/design/GlassSurface';
 import { Button } from '@/components/ui/button';
@@ -60,25 +56,23 @@ export function AllternitCanvasView({
   const [fullscreenCanvas, setFullscreenCanvas] = useState(false);
   
   // Canvas state
-  const [activeArtifactId, setActiveArtifactId] = useState<string | null>(initialArtifactId || null);
+  const [, setActiveArtifactId] = useState<string | null>(initialArtifactId || null);
   const [activeRenderer, setActiveRenderer] = useState<ArtifactKind | null>(null);
   
   // MoA state
   const [moaTasks, setMoaTasks] = useState<Array<{
     id: string;
     type: string;
-    status: 'pending' | 'running' | 'complete' | 'error';
+    status: 'pending' | 'running' | 'complete' | 'error' | 'skipped';
     progress?: number;
     title: string;
   }>>([]);
 
   // Hooks
-  const { 
-    artifacts, 
-    activeArtifact, 
-    streamStatus, 
+  const {
+    artifacts,
+    activeArtifact,
     handleArtifactSelect,
-    handleStreamUpdate 
   } = useCanvasStream({
     sessionId,
     initialArtifactId,
@@ -115,22 +109,11 @@ export function AllternitCanvasView({
     };
   }, [sourceView, layoutMode, panelSizes, saveLayout]);
 
-  // Handle artifact selection from stream
-  const handleArtifactStreamed = useCallback((artifactId: string, kind: ArtifactKind) => {
-    setActiveArtifactId(artifactId);
-    setActiveRenderer(kind);
-    
-    // Auto-expand canvas if hidden
-    if (!showChat && layoutMode === 'horizontal') {
-      setPanelSize('canvas', 100);
-    }
-  }, [showChat, layoutMode, setPanelSize]);
-
   // Handle MoA task updates (from parent or stream)
   const handleMoATaskUpdate = useCallback((tasks: Array<{
     id: string;
     type: string;
-    status: 'pending' | 'running' | 'complete' | 'error';
+    status: 'pending' | 'running' | 'complete' | 'error' | 'skipped';
     progress?: number;
     title: string;
   }>) => {

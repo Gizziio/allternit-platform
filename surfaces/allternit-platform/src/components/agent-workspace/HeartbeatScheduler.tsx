@@ -12,11 +12,7 @@ import {
   Plus,
   Trash,
   Play,
-  Pause,
   Warning,
-  CheckCircle,
-  Calendar,
-  Repeat,
   CaretDown,
   CaretRight,
   GearSix,
@@ -36,7 +32,6 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface HeartbeatTask {
   id: string;
@@ -63,13 +58,13 @@ interface HeartbeatSchedulerProps {
 }
 
 const STUDIO_THEME = {
-  textPrimary: '#ECECEC',
-  textSecondary: '#A0A0A0',
-  textMuted: '#6B6B6B',
-  accent: '#D4956A',
+  textPrimary: 'var(--ui-text-primary)',
+  textSecondary: 'var(--ui-text-secondary)',
+  textMuted: 'var(--ui-text-muted)',
+  accent: 'var(--accent-primary)',
   bgCard: 'rgba(42, 33, 26, 0.6)',
-  bg: '#0E0D0C',
-  borderSubtle: 'rgba(255,255,255,0.08)',
+  bg: 'var(--surface-canvas)',
+  borderSubtle: 'var(--ui-border-muted)',
 };
 
 // Parse HEARTBEAT.md content to extract tasks
@@ -337,7 +332,7 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
               borderRadius: '6px',
               background: theme.accent,
               border: 'none',
-              color: '#fff',
+              color: 'var(--ui-text-inverse)',
               fontSize: '12px',
               fontWeight: 500,
               cursor: 'pointer',
@@ -359,7 +354,7 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
               borderRadius: '6px',
               background: isSaving ? theme.textMuted : theme.accent,
               border: 'none',
-              color: '#fff',
+              color: 'var(--ui-text-inverse)',
               fontSize: '12px',
               fontWeight: 500,
               cursor: isSaving ? 'not-allowed' : 'pointer',
@@ -405,8 +400,8 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
             gap: '8px',
           }}
         >
-          <Warning style={{ width: 16, height: 16, color: '#ef4444' }} />
-          <span style={{ fontSize: '13px', color: '#ef4444' }}>{error}</span>
+          <Warning style={{ width: 16, height: 16, color: 'var(--status-error)' }} />
+          <span style={{ fontSize: '13px', color: 'var(--status-error)' }}>{error}</span>
         </div>
       )}
 

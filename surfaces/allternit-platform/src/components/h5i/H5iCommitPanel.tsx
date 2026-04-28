@@ -47,16 +47,16 @@ export function H5iCommitPanel({ workspacePath, sessionId, onClose }: H5iCommitP
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
-        zIndex: 10001,
+        zIndex: 180,
         width: 440,
         display: 'flex',
         flexDirection: 'column',
         borderRadius: 16,
-        border: '1px solid rgba(255,255,255,0.08)',
+        border: '1px solid var(--ui-border-muted)',
         background: 'rgba(11,14,16,0.96)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+        boxShadow: '0 20px 50px var(--shell-overlay-backdrop)',
         overflow: 'hidden',
       }}
     >
@@ -67,7 +67,7 @@ export function H5iCommitPanel({ workspacePath, sessionId, onClose }: H5iCommitP
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '14px 16px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          borderBottom: '1px solid var(--ui-border-muted)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -96,8 +96,8 @@ export function H5iCommitPanel({ workspacePath, sessionId, onClose }: H5iCommitP
               width: '100%',
               padding: '8px 10px',
               borderRadius: 8,
-              border: '1px solid rgba(255,255,255,0.08)',
-              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid var(--ui-border-muted)',
+              background: 'var(--surface-hover)',
               color: 'var(--text-secondary)',
               fontSize: 13,
               outline: 'none',
@@ -118,8 +118,8 @@ export function H5iCommitPanel({ workspacePath, sessionId, onClose }: H5iCommitP
                 width: '100%',
                 padding: '8px 10px',
                 borderRadius: 8,
-                border: '1px solid rgba(255,255,255,0.08)',
-                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid var(--ui-border-muted)',
+                background: 'var(--surface-hover)',
                 color: 'var(--text-secondary)',
                 fontSize: 13,
                 outline: 'none',
@@ -138,8 +138,8 @@ export function H5iCommitPanel({ workspacePath, sessionId, onClose }: H5iCommitP
                 width: '100%',
                 padding: '8px 10px',
                 borderRadius: 8,
-                border: '1px solid rgba(255,255,255,0.08)',
-                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid var(--ui-border-muted)',
+                background: 'var(--surface-hover)',
                 color: 'var(--text-secondary)',
                 fontSize: 13,
                 outline: 'none',
@@ -161,8 +161,8 @@ export function H5iCommitPanel({ workspacePath, sessionId, onClose }: H5iCommitP
               width: '100%',
               padding: '8px 10px',
               borderRadius: 8,
-              border: '1px solid rgba(255,255,255,0.08)',
-              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid var(--ui-border-muted)',
+              background: 'var(--surface-hover)',
               color: 'var(--text-secondary)',
               fontSize: 13,
               outline: 'none',
@@ -180,7 +180,7 @@ export function H5iCommitPanel({ workspacePath, sessionId, onClose }: H5iCommitP
             padding: '10px 14px',
             borderRadius: 10,
             border: 'none',
-            background: loading ? 'rgba(255,255,255,0.06)' : '#10b981',
+            background: loading ? 'var(--ui-border-muted)' : 'var(--status-success)',
             color: '#fff',
             fontSize: 13,
             fontWeight: 600,
@@ -210,7 +210,7 @@ export function H5iCommitPanel({ workspacePath, sessionId, onClose }: H5iCommitP
             style={{
               padding: 10,
               borderRadius: 8,
-              background: result.success ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)',
+              background: result.success ? 'rgba(16,185,129,0.08)' : 'var(--status-error-bg)',
               border: `1px solid ${result.success ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`,
               display: 'flex',
               alignItems: 'center',
@@ -220,12 +220,12 @@ export function H5iCommitPanel({ workspacePath, sessionId, onClose }: H5iCommitP
             {result.success ? (
               <>
                 <Check size={16} color="#10b981" />
-                <span style={{ fontSize: 12, color: '#10b981' }}>
+                <span style={{ fontSize: 12, color: 'var(--status-success)' }}>
                   Committed {result.hash ? `(${result.hash.slice(0, 7)})` : ''}
                 </span>
               </>
             ) : (
-              <span style={{ fontSize: 12, color: '#ef4444' }}>{result.error}</span>
+              <span style={{ fontSize: 12, color: 'var(--status-error)' }}>{result.error}</span>
             )}
           </div>
         )}

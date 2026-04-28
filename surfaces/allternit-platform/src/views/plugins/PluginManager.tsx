@@ -36,11 +36,8 @@ import {
   Terminal,
   PuzzlePiece as Puzzle,
   PlugsConnected,
-  HardDrives,
   WebhooksLogo,
-  Sparkle,
   SquaresFour,
-  Check,
   Command,
   BookOpen,
   Wrench,
@@ -49,22 +46,13 @@ import {
   GearSix,
   Info,
   ArrowSquareOut,
-  DownloadSimple,
   ArrowsClockwise,
   CircleNotch,
-  FilePlus,
-  FolderPlus,
-  Trash,
   PencilSimple,
-  UploadSimple,
-  FileCode,
-  GitBranch,
   Package,
-  Warning,
-  EnvelopeSimple,
 } from '@phosphor-icons/react';
 import { useFileSystem, type FileSystemAPI } from '../../plugins/fileSystem';
-import type { SimpleCapability, FileNode, MarketplacePlugin } from '../../plugins/capability.types';
+import type { FileNode, MarketplacePlugin } from '../../plugins/capability.types';
 import { AddCapabilityForm, type CapabilityFormPayload } from './AddCapabilityForms';
 import { useCliToolsApi } from '../../plugins/useCliToolsApi';
 import { useKeyboardShortcuts, useDebouncedValue, useFocusManager } from './useKeyboardShortcuts';
@@ -81,31 +69,22 @@ import { UpdateBadge } from '../../components/UpdateBadge';
 import { UpdateNotification } from '../../components/UpdateNotification';
 import { UpdateModal } from '../../components/UpdateModal';
 import {
-  searchMarketplace,
-  PLUGIN_CATEGORIES,
-  fetchPluginFromGitHub,
-  fetchConnectorMarketplaceCatalog,
-  fetchExternalMarketplaceDirectories,
   CURATED_MARKETPLACE_SOURCES,
-  type ConnectorMarketplaceCatalogItem,
-  type ExternalMarketplaceDirectoryEntry,
 } from '../../plugins/marketplaceApi';
 import { enable as enableCapabilityState, disable as disableCapabilityState } from '../../plugins/capabilityEnabled.store';
-import { PluginManifestValidator } from '../../components/PluginManifestValidator';
-import { StarRating } from '../../components/StarRating';
 import { PluginReviews } from '../../components/PluginReviews';
-import { getRatingSummary } from '../../plugins/reviews';
 import {
   resolveDependencies,
-  checkDependencies,
   type DependencyResolutionResult,
   type DependencyConflict,
 } from '../../plugins/dependencies';
 import { DependencyTree } from '../../components/DependencyTree';
 import { DependencyModal } from '../../components/DependencyModal';
 import { DependencyConflictModal } from '../../components/DependencyConflictModal';
+import { McpMarketplace } from '@/components/agents';
+import { useToolRegistryStore } from '@/lib/agents/tool-registry.store';
 
-import { THEME, CONNECTOR_TYPE_OPTIONS } from './PluginManager/constants';
+import { THEME } from './PluginManager/constants';
 import { 
   TabId, 
   Capability, 
@@ -118,18 +97,15 @@ import {
   CreateMenuAction
 } from './PluginManager/types';
 import { 
-  normalizeMarketplacePluginPayload, 
-  parseGitHubRepoRef, 
-  isVersionNewer, 
   isPluginBlockedByTrustPolicy,
-  slugify,
-  extractPluginRecordsFromZip
+  slugify
 } from './PluginManager/utils';
 import { GenericContent, FileContent } from './PluginManager/components/ContentPreview';
 import { SkillUploadModal } from './PluginManager/components/SkillUploadModal';
 import { ConnectorConnectModal } from './PluginManager/components/ConnectorConnectModal';
 import { BrowseConnectorsOverlay } from './PluginManager/components/BrowseConnectorsOverlay';
 import { BrowsePluginsOverlay } from './PluginManager/components/BrowsePluginsOverlay';
+import { openInBrowser } from '@/lib/openInBrowser';
 
 interface PluginManagerProps {
   isOpen: boolean;
@@ -151,22 +127,13 @@ const TABS: { id: TabId; label: string; icon: React.ElementType }[] = [
   { id: 'connectors', label: 'Connectors', icon: PlugsConnected },
 ];
 
-const TAB_ICON: Record<TabId, string> = {
-  skills: 'book-open',
-  commands: 'command',
-  'cli-tools': 'terminal',
-  plugins: 'puzzle',
-  mcps: 'cpu',
-  webhooks: 'webhook',
-  connectors: 'plug',
-};
+
 
 // ============================================================================
 // Storage Keys
 // ============================================================================
 
 const ENABLED_OVERRIDES_STORAGE_KEY = 'allternit:plugin-manager:enabled-overrides:v1';
-const CUSTOM_CAPABILITIES_STORAGE_KEY = 'allternit:plugin-manager:custom-capabilities:v1';
 const MARKETPLACE_INSTALLS_STORAGE_KEY = 'allternit:plugin-manager:marketplace-installs:v1';
 const PERSONAL_MARKETPLACE_STORAGE_KEY = 'allternit:plugin-manager:personal-marketplaces:v1';
 const CONNECTOR_CONNECTIONS_STORAGE_KEY = 'allternit:plugin-manager:connector-connections:v1';
@@ -455,15 +422,6 @@ function isTextArchiveFile(path: string): boolean {
   return textExtensions.some((ext) => lower.endsWith(ext));
 }
 
-function collectPluginRecords(payload: unknown): unknown[] {
-  if (Array.isArray(payload)) return payload;
-  if (payload && typeof payload === 'object') {
-    const asRecord = payload as Record<string, unknown>;
-    if (Array.isArray(asRecord.plugins)) return asRecord.plugins;
-  }
-  return [payload];
-}
-
 async function extractSkillFromZip(file: File): Promise<{
   name: string;
   description: string;
@@ -512,122 +470,6 @@ async function extractSkillFromZip(file: File): Promise<{
     description,
     skillContent,
     bundledFiles,
-  };
-}
-
-function buildCapabilityFromForm(tab: TabId, payload: CapabilityFormPayload): Capability {
-  const name = payload.name.trim() || 'Untitled';
-  const now = new Date().toISOString();
-  const base: Capability = {
-    id: `custom-${tab}-${slugify(name)}-${Date.now()}`,
-    name,
-    description: payload.description?.trim() || `${name} (${tab})`,
-    icon: TAB_ICON[tab],
-    enabled: true,
-    version: '1.0.0',
-    author: 'User',
-    updatedAt: now,
-    content: payload.content,
-  };
-
-  if (tab === 'commands') {
-    return {
-      ...base,
-      trigger: payload.trigger?.trim() || `/${slugify(name)}`,
-      content: payload.content || payload.description || '',
-    };
-  }
-
-  if (tab === 'connectors') {
-    return {
-      ...base,
-      appName: payload.appName?.trim() || name,
-      content: payload.description || '',
-    };
-  }
-
-  if (tab === 'cli-tools') {
-    return {
-      ...base,
-      command: payload.command?.trim() || slugify(name),
-      content: payload.description || '',
-    };
-  }
-
-  if (tab === 'mcps') {
-    return {
-      ...base,
-      content: JSON.stringify(
-        {
-          name,
-          description: payload.description || '',
-          command: payload.command || '',
-          args: payload.args || [],
-        },
-        null,
-        2
-      ),
-      language: 'json',
-    };
-  }
-
-  if (tab === 'webhooks') {
-    return {
-      ...base,
-      content: JSON.stringify(
-        {
-          name,
-          description: payload.description || '',
-          path: payload.path || '',
-          eventType: payload.eventType || '',
-          connectedSkill: payload.connectedSkill || '',
-        },
-        null,
-        2
-      ),
-      language: 'json',
-    };
-  }
-
-  if (tab === 'plugins') {
-    return {
-      ...base,
-      files: [
-        {
-          id: `custom-plugin-root-${Date.now()}`,
-          name: slugify(name),
-          type: 'directory',
-          path: '/',
-          expanded: true,
-          children: [
-            {
-              id: `custom-plugin-json-${Date.now()}`,
-              name: 'plugin.json',
-              type: 'file',
-              path: '/plugin.json',
-              language: 'json',
-              content: JSON.stringify(
-                {
-                  id: slugify(name),
-                  name,
-                  description: payload.description || '',
-                  version: '1.0.0',
-                  author: 'User',
-                  enabled: true,
-                },
-                null,
-                2
-              ),
-            },
-          ],
-        },
-      ],
-    };
-  }
-
-  return {
-    ...base,
-    content: payload.content || payload.description || '',
   };
 }
 
@@ -731,7 +573,7 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings }: PluginManager
   const [availableUpdates, setAvailableUpdates] = useState<UpdateInfo[]>([]);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [isCheckingForUpdates, setIsCheckingForUpdates] = useState(false);
-  const [updateNotificationDismissed, setUpdateNotificationDismissed] = useState(false);
+  const [updateNotificationDismissed] = useState(false);
 
   // Dependency handling state
   const [pendingPluginInstall, setPendingPluginInstall] = useState<MarketplacePlugin | null>(null);
@@ -769,10 +611,6 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings }: PluginManager
     updateCapabilityMetadata,
     updateFileContent,
     deleteCapability,
-    createFileInTree,
-    createDirectoryInTree,
-    deleteFileInTree,
-    renameFileInTree,
     toggleCapabilityEnabled,
   } = useFileSystem();
 
@@ -1970,7 +1808,7 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings }: PluginManager
         right: 0,
         bottom: 0,
         background:
-          'radial-gradient(1200px 680px at 12% -10%, rgba(212, 176, 140, 0.17) 0%, rgba(212, 176, 140, 0) 62%), radial-gradient(900px 520px at 88% 0%, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0) 66%), linear-gradient(180deg, rgba(10, 9, 8, 0.96) 0%, rgba(7, 6, 5, 0.99) 100%)',
+          'radial-gradient(1200px 680px at 12% -10%, rgba(212, 176, 140, 0.17) 0%, rgba(212, 176, 140, 0) 62%), radial-gradient(900px 520px at 88% 0%, var(--ui-border-muted) 0%, rgba(255,255,255,0) 66%), linear-gradient(180deg, rgba(10, 9, 8, 0.96) 0%, rgba(7, 6, 5, 0.99) 100%)',
         backdropFilter: 'blur(20px)',
         zIndex: 100,
         display: 'block',
@@ -2104,6 +1942,51 @@ function PluginManagerContent({ isOpen, onClose, onOpenSettings }: PluginManager
           onCreateCustomConnector={handleOpenCreateConnector}
           existingConnectorNames={connectorNameSet}
         />
+      )}
+      {showBrowseOverlay && activeTab === 'mcps' && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 200,
+            background: 'rgba(0,0,0,0.85)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            flexDirection: 'column',
+            padding: 24,
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h2 style={{ fontSize: 18, fontWeight: 600, color: THEME.textPrimary, margin: 0 }}>MCP Marketplace</h2>
+            <button
+              onClick={() => setShowBrowseOverlay(false)}
+              style={{
+                padding: '6px 12px',
+                borderRadius: 6,
+                background: 'transparent',
+                border: `1px solid ${THEME.border}`,
+                color: THEME.textPrimary,
+                fontSize: 13,
+                cursor: 'pointer',
+              }}
+            >
+              Close
+            </button>
+          </div>
+          <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+            <McpMarketplace
+              onInstall={async (tool) => {
+                try {
+                  await useToolRegistryStore.getState().registerTool(tool);
+                  showInfo(`MCP tool "${tool.name}" registered`);
+                  await refresh();
+                } catch (err) {
+                  showError(`Failed to register MCP tool: ${err instanceof Error ? err.message : String(err)}`);
+                }
+              }}
+            />
+          </div>
+        </div>
       )}
 
       {/* File Input */}
@@ -2502,7 +2385,7 @@ function LeftPane({
                   backgroundColor: THEME.accent,
                   borderRadius: 10,
                   fontSize: 10,
-                  color: '#0c0a09',
+                  color: 'var(--surface-canvas)',
                   marginLeft: 4,
                 }}
               >
@@ -2649,7 +2532,7 @@ function MiddlePane({
             alignItems: 'center',
             gap: 8,
             padding: '6px 10px',
-            backgroundColor: 'rgba(255,255,255,0.05)',
+            backgroundColor: 'var(--surface-hover)',
             borderRadius: 6,
             border: `1px solid ${THEME.border}`,
           }}
@@ -2675,7 +2558,7 @@ function MiddlePane({
 
         {/* Add Button with Dropdown */}
         <div style={{ position: 'relative' }}>
-          {(activeTab === 'plugins' || activeTab === 'connectors') && (
+          {(activeTab === 'plugins' || activeTab === 'connectors' || activeTab === 'mcps') && (
             <button
               onClick={onBrowsePlugins}
               style={{
@@ -2708,7 +2591,7 @@ function MiddlePane({
                 width: 28,
                 height: 28,
                 borderRadius: 6,
-                backgroundColor: 'rgba(255,255,255,0.05)',
+                backgroundColor: 'var(--surface-hover)',
                 border: `1px solid ${THEME.border}`,
                 color: THEME.textSecondary,
                 cursor: 'pointer',
@@ -2769,7 +2652,7 @@ function MiddlePane({
             width: 28,
             height: 28,
             borderRadius: 6,
-            backgroundColor: 'rgba(255,255,255,0.05)',
+            backgroundColor: 'var(--surface-hover)',
             border: `1px solid ${THEME.border}`,
             color: THEME.textSecondary,
             cursor: 'pointer',
@@ -2789,7 +2672,7 @@ function MiddlePane({
               width: 28,
               height: 28,
               borderRadius: 6,
-              backgroundColor: 'rgba(255,255,255,0.05)',
+              backgroundColor: 'var(--surface-hover)',
               border: `1px solid ${THEME.border}`,
               color: THEME.textSecondary,
               cursor: 'pointer',
@@ -2814,7 +2697,7 @@ function MiddlePane({
               borderRadius: 8,
               border: '1px solid rgba(239, 68, 68, 0.35)',
               backgroundColor: 'rgba(239, 68, 68, 0.12)',
-              color: '#fca5a5',
+              color: 'var(--status-error)',
               fontSize: 12,
             }}
             role="alert"
@@ -2850,7 +2733,7 @@ function MiddlePane({
               const isActiveItem = isSelected && activeSelection === 'item';
               const hasActiveFileInItem = Boolean(isSelected && selectedFileId && activeSelection === 'file');
               const rowBackground = isActiveItem
-                ? 'rgba(255,255,255,0.08)'
+                ? 'var(--ui-border-muted)'
                 : hasActiveFileInItem
                   ? 'rgba(255,255,255,0.045)'
                   : 'transparent';
@@ -2964,7 +2847,7 @@ function MiddlePane({
               Create your first {TABS.find(t => t.id === activeTab)?.label.toLowerCase().slice(0, -1)} to get started
             </div>
             <button
-              onClick={activeTab === 'plugins' || activeTab === 'connectors'
+              onClick={activeTab === 'plugins' || activeTab === 'connectors' || activeTab === 'mcps'
                 ? onBrowsePlugins
                 : onToggleCreateMenu}
               style={{
@@ -3153,7 +3036,7 @@ function RightPaneEmptyState() {
           height: 58,
           borderRadius: 14,
           border: `1px solid ${THEME.borderStrong}`,
-          backgroundColor: 'rgba(255,255,255,0.03)',
+          backgroundColor: 'var(--surface-hover)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -3219,7 +3102,6 @@ function RightPane({
   
   const displayItem = selectedFile || item;
   const isFileView = !!selectedFile;
-  const language = selectedFile?.language || (selectedFile?.name.endsWith('.json') ? 'json' : 'text');
   const isConnectorItem = itemType === 'connectors' && !isFileView;
   const connectorEnabled = connectorGroupId === 'desktop' || connectorGroupId === 'connected';
   const toggleEnabled = isConnectorItem ? connectorEnabled : item.enabled;
@@ -3272,7 +3154,7 @@ function RightPane({
                     borderRadius: 6,
                     border: 'none',
                     backgroundColor: THEME.accent,
-                    color: '#0c0a09',
+                    color: 'var(--surface-canvas)',
                     fontSize: 13,
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -3437,7 +3319,7 @@ function RightPane({
               gap: 6,
               padding: '6px 12px',
               borderRadius: 6,
-              backgroundColor: viewMode === 'human' ? 'rgba(255,255,255,0.1)' : 'transparent',
+              backgroundColor: viewMode === 'human' ? 'var(--ui-border-default)' : 'transparent',
               border: 'none',
               color: viewMode === 'human' ? THEME.textPrimary : THEME.textTertiary,
               fontSize: 13,
@@ -3456,7 +3338,7 @@ function RightPane({
               gap: 6,
               padding: '6px 12px',
               borderRadius: 6,
-              backgroundColor: viewMode === 'code' ? 'rgba(255,255,255,0.1)' : 'transparent',
+              backgroundColor: viewMode === 'code' ? 'var(--ui-border-default)' : 'transparent',
               border: 'none',
               color: viewMode === 'code' ? THEME.textPrimary : THEME.textTertiary,
               fontSize: 13,
@@ -3572,7 +3454,7 @@ function RightPane({
                                 alignItems: 'center',
                                 justifyContent: 'space-between',
                                 padding: '8px 12px',
-                                backgroundColor: 'rgba(255,255,255,0.03)',
+                                backgroundColor: 'var(--surface-hover)',
                                 borderRadius: 6,
                               }}
                             >
@@ -3820,7 +3702,7 @@ function ConnectorContent({
                 padding: '7px 12px',
                 borderRadius: 7,
                 border: `1px solid ${THEME.borderStrong}`,
-                backgroundColor: 'rgba(255,255,255,0.04)',
+                backgroundColor: 'var(--surface-hover)',
                 color: THEME.textPrimary,
                 fontSize: 12,
                 cursor: 'pointer',
@@ -3876,7 +3758,7 @@ function ConnectorContent({
           ))}
         </ul>
         <button
-          onClick={() => window.open('https://docs.allternit.dev/connectors', '_blank')}
+          onClick={() => openInBrowser('https://docs.allternit.dev/connectors')}
           style={{
             marginTop: 12,
             border: 'none',
@@ -3919,13 +3801,6 @@ function CreateMenuItem({ children, onClick }: { children: React.ReactNode; onCl
 // ============================================================================
 // Publish Tab Components
 // ============================================================================
-
-import { validatePluginManifestV1, validateMarketplaceManifestV1 } from '../../plugins/pluginStandards';
-
-interface ValidationResult {
-  valid: boolean;
-  errors: string[];
-}
 
 // ============================================================================
 // Publish Tab Main View

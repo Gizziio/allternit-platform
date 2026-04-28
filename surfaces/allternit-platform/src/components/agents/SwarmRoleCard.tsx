@@ -36,7 +36,7 @@ const ROLE_CONFIG: Record<SwarmRole, {
   leader: {
     label: 'Leader',
     icon: Users,
-    color: '#60a5fa', // blue-400
+    color: 'var(--status-info)', // blue-400
     bgColor: 'rgba(96, 165, 250, 0.15)',
     borderColor: 'rgba(96, 165, 250, 0.4)',
     gradient: 'linear-gradient(135deg, rgba(96, 165, 250, 0.2) 0%, rgba(96, 165, 250, 0.05) 100%)',
@@ -52,7 +52,7 @@ const ROLE_CONFIG: Record<SwarmRole, {
   worker: {
     label: 'Worker',
     icon: Code,
-    color: '#4ade80', // green-400
+    color: 'var(--status-success)', // green-400
     bgColor: 'rgba(74, 222, 128, 0.15)',
     borderColor: 'rgba(74, 222, 128, 0.4)',
     gradient: 'linear-gradient(135deg, rgba(74, 222, 128, 0.2) 0%, rgba(74, 222, 128, 0.05) 100%)',
@@ -217,7 +217,7 @@ export function SwarmRoleCard({
           <div className="flex-1 min-w-0">
             <h3
               className="text-sm font-bold mb-1 truncate"
-              style={{ color: isSelected ? config.color : '#f0f0f0' }}
+              style={{ color: isSelected ? config.color : 'var(--ui-text-primary)' }}
             >
               {config.label}
             </h3>

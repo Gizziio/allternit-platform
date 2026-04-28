@@ -15,7 +15,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Play,
   Square,
-  Pause,
   Pulse as Activity,
   CheckCircle,
   Clock,
@@ -38,16 +37,14 @@ import {
   Key,
   ArrowsClockwise,
   Warning,
-  DownloadSimple,
-  FileText,
   GitBranch,
   Graph,
 } from '@phosphor-icons/react';
 
 export function RailsView() {
   const {
-    agents, runs, tasks, checkpoints, commits, queue, mail, mailThreads, reviews,
-    activeRunId, activeRunOutput, activeRunTrace, isLoadingRuns, isLoadingMail, isLoadingReviews,
+    agents, runs, checkpoints, queue, mail, mailThreads, reviews,
+    activeRunId, activeRunOutput, activeRunTrace,
     fetchAgents, fetchRuns, fetchTasks, fetchCheckpoints, fetchCommits, fetchQueue,
     fetchMail, fetchMailThreads, fetchReviews, startRun, cancelRun, pauseRun, resumeRun,
     createCheckpoint, restoreCheckpoint, enqueue, dequeue, sendMail, acknowledgeMail,
@@ -55,8 +52,8 @@ export function RailsView() {
   } = useAgentStore();
 
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
-  const [isLoadingAgentData, setIsLoadingAgentData] = useState(false);
-  const [agentDataError, setAgentDataError] = useState<string | null>(null);
+  const [, setIsLoadingAgentData] = useState(false);
+  const [, setAgentDataError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => { fetchAgents(); fetchQueue(); }, [fetchAgents, fetchQueue]);
@@ -694,7 +691,7 @@ interface ManagedLease {
 }
 
 function useLeases() {
-  const [leases, setLeases] = useState<ManagedLease[]>([]);
+  const [leases] = useState<ManagedLease[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
   // Simulate fetching leases from Rails API
@@ -919,7 +916,7 @@ interface DagInfo {
 }
 
 function useDags() {
-  const [dags, setDags] = useState<DagInfo[]>([]);
+  const [dags] = useState<DagInfo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
   const fetchDags = useCallback(async () => {

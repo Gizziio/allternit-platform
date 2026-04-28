@@ -20,9 +20,8 @@ export const AllternitOpenUIRenderer: React.FC<AllternitOpenUIRendererProps> = (
   return (
     <div className={className}>
       <Renderer 
-        stream={stream}
-        components={componentRegistry}
-        schemas={schemas}
+        response={stream}
+        library={componentRegistry as any}
       />
     </div>
   );

@@ -317,7 +317,7 @@ export function AutoFlowModeView() {
                   key={`line-${n.id}`}
                   x1={n.x + 60} y1={n.y + 20}
                   x2={next.x} y2={next.y + 20}
-                  stroke="rgba(255,255,255,0.1)"
+                  stroke="var(--ui-border-default)"
                   strokeWidth={2}
                 />
               );
@@ -332,12 +332,12 @@ export function AutoFlowModeView() {
                 top: n.y,
                 background: n.type === 'trigger' ? 'rgba(6,182,212,0.15)' :
                            n.type === 'condition' ? 'rgba(245,158,11,0.15)' :
-                           'rgba(255,255,255,0.05)',
+                           'var(--surface-hover)',
                 borderColor: n.type === 'trigger' ? 'rgba(6,182,212,0.3)' :
                             n.type === 'condition' ? 'rgba(245,158,11,0.3)' :
-                            'rgba(255,255,255,0.1)',
+                            'var(--ui-border-default)',
                 color: n.type === 'trigger' ? '#22d3ee' :
-                       n.type === 'condition' ? '#fbbf24' :
+                       n.type === 'condition' ? 'var(--status-warning)' :
                        'rgba(255,255,255,0.8)',
               }}
             >

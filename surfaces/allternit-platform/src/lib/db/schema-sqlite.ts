@@ -231,6 +231,26 @@ export const schema = {
 };
 
 // ============================================================================
+// MCP OAuth Sessions - stores OAuth flow state for MCP connectors
+// ============================================================================
+export const mcpOAuthSession = sqliteTable("McpOAuthSession", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  mcpConnectorId: text("mcpConnectorId").notNull(),
+  state: text("state").notNull().unique(),
+  codeVerifier: text("codeVerifier"),
+  // JSON fields: use { mode: "json" } so Drizzle auto-serializes/deserializes
+  clientInfo: text("clientInfo", { mode: "json" }).$type<Record<string, unknown>>(),
+  tokens: text("tokens", { mode: "json" }).$type<Record<string, unknown>>(),
+  metadata: text("metadata", { mode: "json" }).$type<Record<string, unknown>>(),
+  isAuthenticated: integer("isAuthenticated", { mode: "boolean" }).notNull().default(false),
+  createdAt: integer("createdAt", { mode: "timestamp" }).default(sql`(unixepoch())`).notNull(),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).default(sql`(unixepoch())`).notNull(),
+});
+
+export type McpOAuthSession = typeof mcpOAuthSession.$inferSelect;
+export type McpConnector = typeof mcpConnector.$inferSelect;
+
+// ============================================================================
 // A2UI Sessions - Stores A2UI capsule state
 // ============================================================================
 export const a2uiSession = sqliteTable("A2UISession", {

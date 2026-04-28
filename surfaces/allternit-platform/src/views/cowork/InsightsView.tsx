@@ -53,9 +53,9 @@ const InsightsView: React.FC = () => {
 
   // Document breakdown
   const documentBreakdown: DocumentBreakdown[] = [
-    { type: 'Documents', percentage: 45, color: '#007aff' },
-    { type: 'Tables', percentage: 30, color: '#af52de' },
-    { type: 'Files', percentage: 25, color: '#34c759' },
+    { type: 'Documents', percentage: 45, color: 'var(--status-info)' },
+    { type: 'Tables', percentage: 30, color: 'var(--accent-cowork)' },
+    { type: 'Files', percentage: 25, color: 'var(--status-success)' },
   ];
 
   return (
@@ -105,8 +105,8 @@ const InsightsView: React.FC = () => {
                     style={{
                       color:
                         stat.trend.direction === 'up'
-                          ? '#34c759'
-                          : '#ff9500',
+                          ? 'var(--status-success)'
+                          : 'var(--status-warning)',
                     }}
                   >
                     {stat.trend.direction === 'up' ? (
@@ -137,7 +137,7 @@ const InsightsView: React.FC = () => {
               key={`heatmap-${idx}`}
               className="w-4 h-4 rounded-sm"
               style={{
-                backgroundColor: '#af52de',
+                backgroundColor: 'var(--accent-cowork)',
                 opacity: Math.max(0.1, intensity),
               }}
               title={`Intensity: ${Math.round(intensity * 100)}%`}

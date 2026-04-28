@@ -20,7 +20,7 @@ export interface DesignTokens {
 
 const DEFAULT_TOKENS: DesignTokens = {
   colors: {
-    primary: '#d4b08c',
+    primary: 'var(--accent-primary)',
     background: '#0f0d0c',
     surface: 'rgba(255, 255, 255, 0.03)',
     text: '#e8e0d8',
@@ -41,8 +41,8 @@ const DEFAULT_TOKENS: DesignTokens = {
     button: '6px',
   },
   shadows: {
-    soft: '0 4px 12px rgba(0,0,0,0.2)',
-    hard: '0 8px 24px rgba(0,0,0,0.5)',
+    soft: '0 4px 12px var(--surface-hover)',
+    hard: '0 8px 24px var(--shell-overlay-backdrop)',
   },
   metadata: {
     brandName: 'Allternit Default',

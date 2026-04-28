@@ -20,6 +20,7 @@ import {
 import { cn } from '@/lib/utils'
 import { Button } from '@/design/Button'
 import { GlassCard } from '@/design/GlassCard'
+import { openInBrowser } from '@/lib/openInBrowser';
 
 export interface RemoteSessionQRModalProps {
   open: boolean
@@ -129,7 +130,7 @@ export function RemoteSessionQRModal({
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => window.open(sessionUrl, '_blank')}
+                      onClick={() => openInBrowser(sessionUrl)}
                     >
                       <ArrowSquareOut className="w-4 h-4" />
                     </Button>

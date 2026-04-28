@@ -136,7 +136,10 @@ export class McpOAuthClientProvider implements OAuthClientProvider {
 
     this.cachedAuthData = await updateSessionByState({
       state: this.currentOAuthState,
-      updates: data,
+      updates: {
+        ...data,
+        clientInfo: data.clientInfo ? data.clientInfo as unknown as Record<string, unknown> : null,
+      },
     });
 
     return this.cachedAuthData;

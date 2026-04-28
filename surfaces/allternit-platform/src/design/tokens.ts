@@ -27,8 +27,8 @@ export const tokens = {
   shadows: {
     xs: 'var(--shadow-sm)',
     sm: 'var(--shadow-sm)',
-    md: '0 8px 32px rgba(0,0,0,0.2)',
-    lg: '0 12px 48px rgba(0,0,0,0.3)',
+    md: '0 8px 32px var(--surface-hover)',
+    lg: '0 12px 48px var(--surface-panel)',
     xl: '0 16px 64px rgba(0,0,0,0.4)',
     glass: '0 8px 32px rgba(0,0,0,0.25)',
     glow: '0 0 20px rgba(212, 176, 140, 0.25)',
@@ -56,6 +56,6 @@ export const tokens = {
     textSecondary: 'var(--text-secondary)',
     textTertiary: 'var(--text-tertiary)',
     accentChat: 'var(--accent-chat)',
-    accentCode: '#34c759'
+    accentCode: 'var(--status-success)'
   }
 };

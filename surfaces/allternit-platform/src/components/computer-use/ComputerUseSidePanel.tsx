@@ -29,7 +29,7 @@ interface ComputerUseSidePanelProps {
 // ============================================================================
 
 const STATUS_CONFIG = {
-  Idle:             { label: 'Ready',           color: 'rgba(255,255,255,0.3)',  bg: 'rgba(255,255,255,0.06)' },
+  Idle:             { label: 'Ready',           color: 'rgba(255,255,255,0.3)',  bg: 'var(--ui-border-muted)' },
   Running:          { label: 'Running',          color: STATUS.success,                bg: 'rgba(16,185,129,0.12)'  },
   WaitingApproval:  { label: 'Waiting',          color: STATUS.warning,                bg: `${STATUS.warning}1f`  },
   Blocked:          { label: 'Blocked',          color: STATUS.error,                bg: '#ef44441f'   },
@@ -68,7 +68,7 @@ export function ComputerUseSidePanel({ onClose, agentModeSurface, onEnableAgentM
         display: 'flex',
         flexDirection: 'column',
         background: '#1C1814',
-        borderLeft: '1px solid rgba(255,255,255,0.08)',
+        borderLeft: '1px solid var(--ui-border-muted)',
         animation: 'allternit-panel-slidein 0.22s cubic-bezier(0.22,1,0.36,1)',
         overflow: 'hidden',
       }}
@@ -79,7 +79,7 @@ export function ComputerUseSidePanel({ onClose, agentModeSurface, onEnableAgentM
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '14px 16px',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        borderBottom: '1px solid var(--ui-border-muted)',
         flexShrink: 0,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -114,7 +114,7 @@ export function ComputerUseSidePanel({ onClose, agentModeSurface, onEnableAgentM
             color: 'rgba(255,255,255,0.4)',
             cursor: 'pointer',
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = TEXT.primary; }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--ui-border-muted)'; e.currentTarget.style.color = TEXT.primary; }}
           onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; }}
         >
           <X size={14} />
@@ -171,8 +171,8 @@ export function ComputerUseSidePanel({ onClose, agentModeSurface, onEnableAgentM
           marginBottom: '16px',
           padding: '12px 14px',
           borderRadius: '10px',
-          background: 'rgba(255,255,255,0.03)',
-          border: '1px solid rgba(255,255,255,0.06)',
+          background: 'var(--surface-hover)',
+          border: '1px solid var(--ui-border-muted)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
             <span style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
@@ -205,8 +205,8 @@ export function ComputerUseSidePanel({ onClose, agentModeSurface, onEnableAgentM
             marginBottom: '16px',
             padding: '12px 14px',
             borderRadius: '10px',
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.06)',
+            background: 'var(--surface-hover)',
+            border: '1px solid var(--ui-border-muted)',
           }}>
             <div style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px' }}>
               Goal
@@ -253,8 +253,8 @@ export function ComputerUseSidePanel({ onClose, agentModeSurface, onEnableAgentM
                     gap: '8px',
                     padding: '8px 10px',
                     borderRadius: '8px',
-                    background: 'rgba(255,255,255,0.02)',
-                    border: '1px solid rgba(255,255,255,0.04)',
+                    background: 'var(--surface-hover)',
+                    border: '1px solid var(--surface-hover)',
                   }}>
                     <div style={{
                       width: '5px',

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { capturePage, quickCapture, deepCapture } from '../capture'
 import type { CaptureResult, CaptureOptions } from '../types'
+import { openInBrowser } from '@/lib/openInBrowser';
 
 interface CaptureCardProps {
   url: string
@@ -60,7 +61,7 @@ export function CaptureCard({ url, onClose, onComplete }: CaptureCardProps) {
 
   const handleOpenFigma = () => {
     // Open Figma plugin deep link or just Figma
-    window.open('https://www.figma.com/', '_blank')
+    openInBrowser('https://www.figma.com/')
   }
 
   const formatTime = () => {

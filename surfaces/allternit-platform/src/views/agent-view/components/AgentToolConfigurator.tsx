@@ -120,7 +120,7 @@ export function AgentToolConfigurator({
         style={{
           padding: "16px",
           borderRadius: "10px",
-          background: "rgba(239,68,68,0.08)",
+          background: "var(--status-error-bg)",
           border: "1px solid rgba(239,68,68,0.15)",
           color: "#f87171",
           fontSize: "13px",
@@ -137,8 +137,8 @@ export function AgentToolConfigurator({
         style={{
           padding: "24px",
           borderRadius: "10px",
-          background: "rgba(255,255,255,0.02)",
-          border: "1px solid rgba(255,255,255,0.06)",
+          background: "var(--surface-hover)",
+          border: "1px solid var(--ui-border-muted)",
           textAlign: "center",
         }}
       >
@@ -174,8 +174,8 @@ export function AgentToolConfigurator({
           justifyContent: "space-between",
           padding: "8px 12px",
           borderRadius: "8px",
-          background: "rgba(255,255,255,0.03)",
-          border: "1px solid rgba(255,255,255,0.06)",
+          background: "var(--surface-hover)",
+          border: "1px solid var(--ui-border-muted)",
         }}
       >
         <span style={{ fontSize: "12px", color: STUDIO_THEME.textSecondary }}>
@@ -255,11 +255,11 @@ export function AgentToolConfigurator({
                       border: `1px solid ${
                         isEnabled
                           ? "rgba(212,149,106,0.25)"
-                          : "rgba(255,255,255,0.06)"
+                          : "var(--ui-border-muted)"
                       }`,
                       background: isEnabled
                         ? "rgba(212,149,106,0.08)"
-                        : "rgba(255,255,255,0.02)",
+                        : "var(--surface-hover)",
                       cursor: "pointer",
                       transition: "all 0.15s ease",
                     }}
@@ -341,7 +341,7 @@ export function AgentToolConfigurator({
                                 fontSize: "9px",
                                 padding: "1px 5px",
                                 borderRadius: "4px",
-                                background: "rgba(255,255,255,0.04)",
+                                background: "var(--surface-hover)",
                                 color: STUDIO_THEME.textMuted,
                               }}
                             >

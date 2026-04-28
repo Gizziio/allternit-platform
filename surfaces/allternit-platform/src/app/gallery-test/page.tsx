@@ -18,12 +18,12 @@ export default function GalleryTestPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#0D0B09',
-      color: '#fff',
+      background: 'var(--surface-canvas)',
+      color: 'var(--ui-text-primary)',
       fontFamily: 'system-ui, sans-serif',
       padding: '32px',
     }}>
-      <h1 style={{ fontSize: '14px', color: '#888', marginBottom: '32px', fontWeight: 500 }}>
+      <h1 style={{ fontSize: '14px', color: 'var(--ui-text-muted)', marginBottom: '32px', fontWeight: 500 }}>
         Gallery isolation harness · /gallery-test
       </h1>
 
@@ -42,13 +42,13 @@ export default function GalleryTestPage() {
         <div style={{
           marginTop: '48px',
           padding: '16px',
-          background: '#1a1a1a',
+          background: 'var(--surface-panel)',
           borderRadius: '8px',
           fontFamily: 'monospace',
           fontSize: '12px',
-          color: '#0f0',
+          color: 'var(--status-success)',
         }}>
-          <div style={{ color: '#888', marginBottom: '8px' }}>Event log:</div>
+          <div style={{ color: 'var(--ui-text-muted)', marginBottom: '8px' }}>Event log:</div>
           {log.map((entry, i) => <div key={i}>{entry}</div>)}
         </div>
       )}

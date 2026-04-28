@@ -18,11 +18,11 @@ interface Export {
 const getFormatColor = (format: Export['format']) => {
   switch (format) {
     case 'PDF':
-      return { bg: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' };
+      return { bg: 'rgba(239, 68, 68, 0.1)', color: 'var(--status-error)' };
     case 'CSV':
-      return { bg: 'rgba(34, 197, 94, 0.1)', color: '#22c55e' };
+      return { bg: 'rgba(34, 197, 94, 0.1)', color: 'var(--status-success)' };
     case 'JSON':
-      return { bg: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' };
+      return { bg: 'rgba(59, 130, 246, 0.1)', color: 'var(--status-info)' };
     case 'XLSX':
       return { bg: 'rgba(168, 85, 247, 0.1)', color: '#a855f7' };
     default:
@@ -124,7 +124,7 @@ export const ExportsView: React.FC = () => {
                         padding: '6px 12px',
                         borderRadius: '4px',
                         backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                        color: '#22c55e',
+                        color: 'var(--status-success)',
                         fontSize: '13px',
                         fontWeight: 500,
                       }}
@@ -141,7 +141,7 @@ export const ExportsView: React.FC = () => {
                         padding: '8px 12px',
                         borderRadius: '4px',
                         border: 'none',
-                        backgroundColor: '#af52de',
+                        backgroundColor: 'var(--accent-cowork)',
                         color: '#fff',
                         fontSize: '13px',
                         fontWeight: 600,

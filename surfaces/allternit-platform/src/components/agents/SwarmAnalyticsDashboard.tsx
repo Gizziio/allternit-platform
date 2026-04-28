@@ -153,9 +153,9 @@ function MetricCard({
 
 function HealthStatusCard({ health }: { health: SwarmHealthStatus }) {
   const statusConfig = {
-    healthy: { color: '#22c55e', label: 'Healthy', icon: CheckCircle },
-    degraded: { color: '#f59e0b', label: 'Degraded', icon: Warning },
-    unhealthy: { color: '#ef4444', label: 'Unhealthy', icon: XCircle },
+    healthy: { color: 'var(--status-success)', label: 'Healthy', icon: CheckCircle },
+    degraded: { color: 'var(--status-warning)', label: 'Degraded', icon: Warning },
+    unhealthy: { color: 'var(--status-error)', label: 'Unhealthy', icon: XCircle },
   };
 
   const config = statusConfig[health.status];
@@ -219,10 +219,10 @@ function HealthStatusCard({ health }: { health: SwarmHealthStatus }) {
                 style={{
                   color:
                     issue.severity === 'critical'
-                      ? '#ef4444'
+                      ? 'var(--status-error)'
                       : issue.severity === 'warning'
-                      ? '#f59e0b'
-                      : '#3b82f6',
+                      ? 'var(--status-warning)'
+                      : 'var(--status-info)',
                 }}
               />
               <div>
@@ -245,12 +245,12 @@ function HealthStatusCard({ health }: { health: SwarmHealthStatus }) {
 
 function ExecutionTimeline({ timeline }: { timeline: ExecutionTimelineEntry[] }) {
   const eventConfig: Record<string, { color: string; icon: any; label: string }> = {
-    start: { color: '#22c55e', icon: Play, label: 'Started' },
-    checkpoint: { color: '#3b82f6', icon: CheckCircle, label: 'Checkpoint' },
-    complete: { color: '#22c55e', icon: CheckCircle, label: 'Completed' },
-    error: { color: '#ef4444', icon: XCircle, label: 'Error' },
-    pause: { color: '#f59e0b', icon: Pause, label: 'Paused' },
-    resume: { color: '#3b82f6', icon: Play, label: 'Resumed' },
+    start: { color: 'var(--status-success)', icon: Play, label: 'Started' },
+    checkpoint: { color: 'var(--status-info)', icon: CheckCircle, label: 'Checkpoint' },
+    complete: { color: 'var(--status-success)', icon: CheckCircle, label: 'Completed' },
+    error: { color: 'var(--status-error)', icon: XCircle, label: 'Error' },
+    pause: { color: 'var(--status-warning)', icon: Pause, label: 'Paused' },
+    resume: { color: 'var(--status-info)', icon: Play, label: 'Resumed' },
   };
 
   return (
@@ -535,9 +535,9 @@ export function SwarmAnalyticsDashboard({
               </div>
               <div className="space-y-3">
                 {[
-                  { label: 'P50', value: metrics.p50ExecutionTime, color: '#22c55e' },
-                  { label: 'P95', value: metrics.p95ExecutionTime, color: '#f59e0b' },
-                  { label: 'P99', value: metrics.p99ExecutionTime, color: '#ef4444' },
+                  { label: 'P50', value: metrics.p50ExecutionTime, color: 'var(--status-success)' },
+                  { label: 'P95', value: metrics.p95ExecutionTime, color: 'var(--status-warning)' },
+                  { label: 'P99', value: metrics.p99ExecutionTime, color: 'var(--status-error)' },
                 ].map((stat) => (
                   <div key={stat.label} className="space-y-1">
                     <div className="flex items-center justify-between text-xs">

@@ -33,7 +33,7 @@ export const Switch: React.FC<SwitchProps> = ({ checked, onChange, onCheckedChan
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: checked ? '#d4b08c' : 'rgba(255,255,255,0.1)',
+          backgroundColor: checked ? 'var(--accent-primary)' : 'var(--ui-border-default)',
           borderRadius: '24px',
           transition: '0.3s',
         }}

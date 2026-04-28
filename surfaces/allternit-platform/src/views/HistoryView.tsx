@@ -31,9 +31,9 @@ interface Session {
  * Mode color indicators
  */
 const MODE_COLORS = {
-  chat: '#007aff',
-  cowork: '#af52de',
-  code: '#34c759',
+  chat: 'var(--status-info)',
+  cowork: 'var(--accent-cowork)',
+  code: 'var(--status-success)',
 } as const;
 
 

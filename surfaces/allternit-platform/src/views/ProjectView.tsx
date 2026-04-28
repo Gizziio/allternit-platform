@@ -137,7 +137,7 @@ export function ProjectView() {
           padding: '10px 16px',
           border: 'none',
           background: 'transparent',
-          color: '#9b9b9b',
+          color: 'var(--ui-text-secondary)',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
@@ -155,7 +155,7 @@ export function ProjectView() {
           padding: '10px 16px',
           border: 'none',
           background: 'transparent',
-          color: '#9b9b9b',
+          color: 'var(--ui-text-secondary)',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
@@ -179,7 +179,7 @@ export function ProjectView() {
           padding: '10px 16px',
           border: 'none',
           background: 'transparent',
-          color: '#ef4444',
+          color: 'var(--status-error)',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
@@ -355,7 +355,7 @@ function AddFileModal({ onClose, onUpload }: { onClose: () => void; onUpload: ()
         style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(0,0,0,0.6)',
+          background: 'var(--shell-overlay-backdrop)',
           backdropFilter: 'blur(4px)',
           zIndex: 10000,
         }}
@@ -367,44 +367,32 @@ function AddFileModal({ onClose, onUpload }: { onClose: () => void; onUpload: ()
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          background: 'linear-gradient(180deg, rgba(37,33,31,0.98), rgba(26,23,22,0.98))',
+          background: 'var(--surface-floating)',
           borderRadius: 16,
-          border: '1px solid rgba(255,255,255,0.1)',
+          border: '1px solid var(--ui-border-default)',
           padding: '24px',
           minWidth: 360,
           zIndex: 10001,
-          boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+          boxShadow: 'var(--shadow-xl)',
         }}
       >
-        <h3 style={{ 
-          margin: '0 0 16px 0', 
-          fontSize: 16, 
-          fontWeight: 700, 
-          color: '#f0f0f0' 
-        }}>
+        <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 700, color: 'var(--ui-text-primary)' }}>
           Add sources
         </h3>
-        
+
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <button
             onClick={onUpload}
             style={{
-              width: '100%',
-              padding: '12px 16px',
-              border: 'none',
-              background: 'rgba(255,255,255,0.05)',
-              borderRadius: 8,
-              color: '#9b9b9b',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              fontSize: 13,
-              textAlign: 'left',
-              transition: 'background 0.2s',
+              width: '100%', padding: '12px 16px',
+              border: '1px solid var(--ui-border-muted)',
+              background: 'var(--surface-hover)',
+              borderRadius: 8, color: 'var(--ui-text-secondary)',
+              cursor: 'pointer', display: 'flex', alignItems: 'center',
+              gap: 10, fontSize: 13, textAlign: 'left', transition: 'background var(--transition-fast)',
             }}
-            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-active)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface-hover)'; }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -413,21 +401,15 @@ function AddFileModal({ onClose, onUpload }: { onClose: () => void; onUpload: ()
             </svg>
             Upload from device
           </button>
-          
+
           <button
             style={{
-              width: '100%',
-              padding: '12px 16px',
-              border: 'none',
-              background: 'rgba(255,255,255,0.05)',
-              borderRadius: 8,
-              color: '#9b9b9b',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              fontSize: 13,
-              textAlign: 'left',
+              width: '100%', padding: '12px 16px',
+              border: '1px solid var(--ui-border-muted)',
+              background: 'var(--surface-hover)',
+              borderRadius: 8, color: 'var(--ui-text-secondary)',
+              cursor: 'pointer', display: 'flex', alignItems: 'center',
+              gap: 10, fontSize: 13, textAlign: 'left',
             }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -439,23 +421,16 @@ function AddFileModal({ onClose, onUpload }: { onClose: () => void; onUpload: ()
             </svg>
             Add text content
           </button>
-          
-          <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', margin: '8px 0' }} />
-          
+
+          <div style={{ height: 1, background: 'var(--ui-border-muted)', margin: '8px 0' }} />
+
           <button
             style={{
-              width: '100%',
-              padding: '12px 16px',
-              border: 'none',
-              background: 'rgba(255,255,255,0.05)',
-              borderRadius: 8,
-              color: '#9b9b9b',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              fontSize: 13,
-              textAlign: 'left',
+              width: '100%', padding: '12px 16px', border: 'none',
+              background: 'var(--surface-hover)', borderRadius: 8,
+              color: 'var(--ui-text-secondary)', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              fontSize: 13, textAlign: 'left',
             }}
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -464,23 +439,16 @@ function AddFileModal({ onClose, onUpload }: { onClose: () => void; onUpload: ()
               </svg>
               GitHub
             </span>
-            <span style={{ color: '#4b4b4b' }}>Connect</span>
+            <span style={{ color: 'var(--ui-text-muted)' }}>Connect</span>
           </button>
-          
+
           <button
             style={{
-              width: '100%',
-              padding: '12px 16px',
-              border: 'none',
-              background: 'rgba(255,255,255,0.05)',
-              borderRadius: 8,
-              color: '#9b9b9b',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              fontSize: 13,
-              textAlign: 'left',
+              width: '100%', padding: '12px 16px', border: 'none',
+              background: 'var(--surface-hover)', borderRadius: 8,
+              color: 'var(--ui-text-secondary)', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              fontSize: 13, textAlign: 'left',
             }}
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -489,22 +457,18 @@ function AddFileModal({ onClose, onUpload }: { onClose: () => void; onUpload: ()
               </svg>
               Google Drive
             </span>
-            <span style={{ color: '#4b4b4b' }}>Connect</span>
+            <span style={{ color: 'var(--ui-text-muted)' }}>Connect</span>
           </button>
         </div>
-        
+
         <button
           onClick={onClose}
           style={{
-            marginTop: 16,
-            width: '100%',
-            padding: '10px',
-            border: 'none',
-            background: 'rgba(255,255,255,0.05)',
-            borderRadius: 8,
-            color: '#9b9b9b',
-            cursor: 'pointer',
-            fontSize: 13,
+            marginTop: 16, width: '100%', padding: '10px',
+            border: '1px solid var(--ui-border-default)',
+            background: 'transparent',
+            borderRadius: 8, color: 'var(--ui-text-secondary)',
+            cursor: 'pointer', fontSize: 13,
           }}
         >
           Cancel
@@ -515,15 +479,15 @@ function AddFileModal({ onClose, onUpload }: { onClose: () => void; onUpload: ()
 }
 
 // Add Instruction Modal
-function AddInstructionModal({ 
-  value, 
-  onChange, 
-  onClose, 
-  onSave 
-}: { 
-  value: string; 
-  onChange: (v: string) => void; 
-  onClose: () => void; 
+function AddInstructionModal({
+  value,
+  onChange,
+  onClose,
+  onSave
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onClose: () => void;
   onSave: () => void;
 }) {
   return (
@@ -532,7 +496,7 @@ function AddInstructionModal({
         style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(0,0,0,0.6)',
+          background: 'var(--shell-overlay-backdrop)',
           backdropFilter: 'blur(4px)',
           zIndex: 10000,
         }}
@@ -544,32 +508,32 @@ function AddInstructionModal({
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          background: 'linear-gradient(180deg, rgba(37,33,31,0.98), rgba(26,23,22,0.98))',
+          background: 'var(--surface-floating)',
           borderRadius: 16,
-          border: '1px solid rgba(255,255,255,0.1)',
+          border: '1px solid var(--ui-border-default)',
           padding: '24px',
           width: '90%',
           maxWidth: 480,
           zIndex: 10001,
-          boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+          boxShadow: 'var(--shadow-xl)',
         }}
       >
-        <h3 style={{ 
-          margin: '0 0 8px 0', 
-          fontSize: 16, 
-          fontWeight: 700, 
-          color: '#f0f0f0' 
+        <h3 style={{
+          margin: '0 0 8px 0',
+          fontSize: 16,
+          fontWeight: 700,
+          color: 'var(--ui-text-primary)'
         }}>
           Set project instructions
         </h3>
         <p style={{
           margin: '0 0 16px 0',
           fontSize: 13,
-          color: '#6b6b6b',
+          color: 'var(--ui-text-muted)',
         }}>
           Provide relevant instructions and information for chats within this project.
         </p>
-        
+
         <textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -578,10 +542,10 @@ function AddInstructionModal({
             width: '100%',
             minHeight: 120,
             padding: 12,
-            background: 'rgba(0,0,0,0.3)',
-            border: '1px solid rgba(255,255,255,0.1)',
+            background: 'var(--bg-tertiary)',
+            border: '1px solid var(--ui-border-default)',
             borderRadius: 8,
-            color: '#f0f0f0',
+            color: 'var(--ui-text-primary)',
             fontSize: 14,
             fontFamily: 'inherit',
             resize: 'vertical',
@@ -589,16 +553,16 @@ function AddInstructionModal({
             marginBottom: 16,
           }}
         />
-        
+
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
           <button
             onClick={onClose}
             style={{
               padding: '8px 16px',
               borderRadius: 8,
-              border: '1px solid rgba(255,255,255,0.1)',
+              border: '1px solid var(--ui-border-default)',
               background: 'transparent',
-              color: '#9b9b9b',
+              color: 'var(--ui-text-secondary)',
               fontSize: 13,
               fontWeight: 600,
               cursor: 'pointer',
@@ -613,8 +577,8 @@ function AddInstructionModal({
               padding: '8px 16px',
               borderRadius: 8,
               border: 'none',
-              background: value.trim() ? '#f0f0f0' : 'rgba(255,255,255,0.1)',
-              color: value.trim() ? '#1a1a1a' : '#4b4b4b',
+              background: value.trim() ? 'var(--accent-primary)' : 'var(--surface-hover)',
+              color: value.trim() ? 'var(--ui-text-inverse)' : 'var(--ui-text-muted)',
               fontSize: 13,
               fontWeight: 600,
               cursor: value.trim() ? 'pointer' : 'not-allowed',

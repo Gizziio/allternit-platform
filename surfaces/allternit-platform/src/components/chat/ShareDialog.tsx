@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 function QRCodeSVG({ 
   value, 
   size = 160, 
-  fgColor = '#D4956A',
+  fgColor = 'var(--accent-primary)',
   bgColor = 'transparent' 
 }: { 
   value: string; 
@@ -85,15 +85,15 @@ interface ShareDialogProps {
 }
 
 const THEME = {
-  textPrimary: '#ECECEC',
-  textSecondary: '#9B9B9B',
-  textMuted: '#6B6B6B',
-  accent: '#D4956A',
-  success: '#22c55e',
-  bg: '#2B2520',
-  surfaceBg: '#332D27',
-  border: 'rgba(255,255,255,0.08)',
-  hoverBg: 'rgba(255,255,255,0.05)',
+  textPrimary: 'var(--ui-text-primary)',
+  textSecondary: 'var(--ui-text-secondary)',
+  textMuted: 'var(--ui-text-muted)',
+  accent: 'var(--accent-primary)',
+  success: 'var(--status-success)',
+  bg: 'var(--surface-panel)',
+  surfaceBg: 'var(--surface-floating)',
+  border: 'var(--ui-border-muted)',
+  hoverBg: 'var(--surface-hover)',
 };
 
 export function ShareDialog({
@@ -168,11 +168,11 @@ export function ShareDialog({
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0,0,0,0.6)',
+        background: 'var(--shell-overlay-backdrop)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 1000,
+        zIndex: 180,
       }}
       onClick={onClose}
     >
@@ -186,7 +186,7 @@ export function ShareDialog({
           background: THEME.surfaceBg,
           borderRadius: 16,
           border: `1px solid ${THEME.border}`,
-          boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+          boxShadow: '0 20px 60px var(--shell-overlay-backdrop)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -307,7 +307,7 @@ export function ShareDialog({
                     width: 36,
                     height: 36,
                     borderRadius: 10,
-                    background: 'rgba(255,255,255,0.05)',
+                    background: 'var(--surface-hover)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -348,7 +348,7 @@ export function ShareDialog({
                       justifyContent: 'center',
                     }}
                   >
-                    <Check size={12} style={{ color: '#fff' }} />
+                    <Check size={12} style={{ color: 'var(--ui-text-inverse)' }} />
                   </div>
                 )}
               </button>
@@ -388,7 +388,7 @@ export function ShareDialog({
                     width: 36,
                     height: 36,
                     borderRadius: 10,
-                    background: 'rgba(212,149,106,0.1)',
+                    background: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -429,7 +429,7 @@ export function ShareDialog({
                       justifyContent: 'center',
                     }}
                   >
-                    <Check size={12} style={{ color: '#fff' }} />
+                    <Check size={12} style={{ color: 'var(--ui-text-inverse)' }} />
                   </div>
                 )}
               </button>
@@ -461,7 +461,7 @@ export function ShareDialog({
                     padding: '10px 14px',
                     borderRadius: 8,
                     border: `1px solid ${THEME.border}`,
-                    background: 'rgba(255,255,255,0.03)',
+                    background: 'var(--surface-hover)',
                   }}
                 >
                   <Link size={16} style={{ color: THEME.textMuted, flexShrink: 0 }} aria-hidden="true" />
@@ -519,7 +519,7 @@ export function ShareDialog({
                   marginTop: 20,
                   padding: 20,
                   borderRadius: 12,
-                  background: 'rgba(255,255,255,0.03)',
+                  background: 'var(--surface-hover)',
                   border: `1px solid ${THEME.border}`,
                   display: 'flex',
                   flexDirection: 'column',
@@ -539,8 +539,8 @@ export function ShareDialog({
                   style={{
                     padding: 16,
                     borderRadius: 12,
-                    background: '#fff',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+                    background: 'var(--ui-text-primary)',
+                    boxShadow: '0 4px 20px var(--surface-hover)',
                   }}
                 >
                   <QRCodeSVG value={shareUrl} size={160} fgColor="#1a1a1a" />
@@ -556,7 +556,7 @@ export function ShareDialog({
                       if (ctx) {
                         canvas.width = 400;
                         canvas.height = 400;
-                        ctx.fillStyle = '#fff';
+                        ctx.fillStyle = 'white';
                         ctx.fillRect(0, 0, 400, 400);
                         
                         const img = new Image();
@@ -608,11 +608,11 @@ export function ShareDialog({
               role="alert"
               style={{
                 fontSize: 13,
-                color: '#ef4444',
+                color: 'var(--status-error)',
                 margin: '16px 0 0',
                 padding: '10px 14px',
                 borderRadius: 8,
-                background: 'rgba(239,68,68,0.1)',
+                background: 'var(--status-error-bg)',
               }}
             >
               {error}

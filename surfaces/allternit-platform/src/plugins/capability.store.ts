@@ -7,16 +7,15 @@
  * Pattern: LocalStorage persistence + Event bus for cross-component sync
  */
 
-import type { 
-  Capability, 
-  CapabilityType, 
-  Skill, 
-  Command, 
-  Connector, 
-  McpServer, 
-  Plugin, 
-  CliTool, 
-  Webhook 
+import type {
+  Capability,
+  CapabilityType,
+  Skill,
+  Command,
+  Connector,
+  McpServer,
+  CliTool,
+  Webhook
 } from './capability.types';
 
 // ============================================================================
@@ -29,13 +28,6 @@ const STORAGE_KEYS: Record<CapabilityType, string> = {
   connector: 'allternit:capabilities:connectors:v1',
   mcp: 'allternit:capabilities:mcps:v1',
   plugin: 'allternit:capabilities:plugins:v1',
-  'cli-tool': 'allternit:capabilities:cli-tools:v1',
-  webhook: 'allternit:capabilities:webhooks:v1',
-};
-
-// Additional feature keys (not part of CapabilityType)
-const FEATURE_KEYS = {
-  plugin: 'allternit:feature-plugins:v1', // Keep existing key for backward compat
   'cli-tool': 'allternit:capabilities:cli-tools:v1',
   webhook: 'allternit:capabilities:webhooks:v1',
 };
@@ -405,20 +397,6 @@ export function subscribeToCapabilityChanges(type: CapabilityType, fn: Listener)
 // ============================================================================
 // Read/Write Functions
 // ============================================================================
-
-function readEnabled<T extends Capability>(type: CapabilityType, defaults: T[]): T[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEYS[type]);
-    if (!raw) {
-      // First run: return defaults filtered by enabledByDefault
-      return defaults.filter((d) => d.enabledByDefault);
-    }
-    const enabledIds = new Set(safeJSONParse<string[]>(raw, []));
-    return defaults.map((d) => ({ ...d, enabled: enabledIds.has(d.id) }));
-  } catch {
-    return defaults.filter((d) => d.enabledByDefault);
-  }
-}
 
 function writeEnabled(type: CapabilityType, enabledIds: Set<string>): void {
   try {

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Copy, Trash, Plus, MagnifyingGlass, Scissors, Selection } from '@phosphor-icons/react';
+import { Copy, Trash, MagnifyingGlass, Scissors, Selection } from '@phosphor-icons/react';
 import { GlassCard } from '../../design/GlassCard';
 
 interface ClipboardItem {
@@ -85,14 +85,14 @@ export function DesignClipboardSidebar({
           <button 
             onClick={() => addItem('design')}
             disabled={!activeContent?.design}
-            style={{ flex: 1, padding: "8px", borderRadius: "8px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "#fff", fontSize: "10px", fontWeight: 700, cursor: "pointer", opacity: activeContent?.design ? 1 : 0.3 }}
+            style={{ flex: 1, padding: "8px", borderRadius: "8px", background: "var(--surface-hover)", border: "1px solid var(--ui-border-muted)", color: "#fff", fontSize: "10px", fontWeight: 700, cursor: "pointer", opacity: activeContent?.design ? 1 : 0.3 }}
           >
             Save Design
           </button>
           <button 
              onClick={() => addItem('ui')}
              disabled={!activeContent?.ui}
-             style={{ flex: 1, padding: "8px", borderRadius: "8px", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)", color: "#fff", fontSize: "10px", fontWeight: 700, cursor: "pointer", opacity: activeContent?.ui ? 1 : 0.3 }}
+             style={{ flex: 1, padding: "8px", borderRadius: "8px", background: "var(--surface-hover)", border: "1px solid var(--ui-border-muted)", color: "#fff", fontSize: "10px", fontWeight: 700, cursor: "pointer", opacity: activeContent?.ui ? 1 : 0.3 }}
           >
             Save UI
           </button>
@@ -107,7 +107,7 @@ export function DesignClipboardSidebar({
              value={searchTerm}
              onChange={e => setSearchTerm(e.target.value)}
              placeholder="Search snippets..." 
-             style={{ width: "100%", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", padding: "8px 8px 8px 32px", fontSize: "11px", color: "#fff", outline: "none" }} 
+             style={{ width: "100%", background: "var(--surface-hover)", border: "1px solid var(--ui-border-muted)", borderRadius: "8px", padding: "8px 8px 8px 32px", fontSize: "11px", color: "#fff", outline: "none" }} 
            />
          </div>
       </div>

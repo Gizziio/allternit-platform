@@ -35,7 +35,6 @@ import {
   CircleNotch,
   Clock,
   Lightning,
-  Shield,
   Code,
   Database,
   Layout,
@@ -43,7 +42,6 @@ import {
   X,
   Eye,
   EyeSlash,
-  Copy,
   ArrowSquareOut,
   ArrowsClockwise,
 } from '@phosphor-icons/react';
@@ -56,7 +54,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   environmentApi, 

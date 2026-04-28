@@ -74,7 +74,7 @@ function TerminalInstance({ pane, isActive }: {
           yellow: '#f59e0b',
           blue: '#3b82f6',
           magenta: '#8b5cf6',
-          cyan: '#06b6d4',
+          cyan: 'var(--status-info)',
           white: '#f3f4f6',
           brightBlack: '#6b7280',
           brightRed: '#f87171',
@@ -380,7 +380,7 @@ export function UnifiedTerminal({ sessionId = 'allternit-session' }: UnifiedTerm
           style={{
             padding: '6px 12px',
             background: isLoading ? '#4b5563' : '#2563eb',
-            color: 'white',
+            color: 'var(--ui-text-primary)',
             border: 'none',
             borderRadius: 6,
             fontSize: 12,
@@ -401,7 +401,7 @@ export function UnifiedTerminal({ sessionId = 'allternit-session' }: UnifiedTerm
           padding: '8px 12px',
           background: '#ef444420',
           borderBottom: '1px solid #ef4444',
-          color: '#ef4444',
+          color: 'var(--status-error)',
           fontSize: 12,
         }}>
           {error}
@@ -426,7 +426,7 @@ export function UnifiedTerminal({ sessionId = 'allternit-session' }: UnifiedTerm
               style={{
                 padding: '8px 16px',
                 background: '#2563eb',
-                color: 'white',
+                color: 'var(--ui-text-primary)',
                 border: 'none',
                 borderRadius: 6,
                 fontSize: 12,

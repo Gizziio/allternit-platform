@@ -16,6 +16,7 @@ export interface ClientRuntimeBackendSnapshot extends RuntimeBackendResponse {
   resolved_gateway_url: string;
   resolved_gateway_ws_url: string;
   fetched_at: string;
+  gateway_token?: string | null;
 }
 
 let inflightSnapshotPromise: Promise<ClientRuntimeBackendSnapshot> | null = null;
@@ -78,6 +79,7 @@ function persistSnapshot(snapshot: ClientRuntimeBackendSnapshot): ClientRuntimeB
   win.__ALLTERNIT_GATEWAY_URL__ = snapshot.resolved_gateway_url;
   win.__ALLTERNIT_GATEWAY_URL = snapshot.resolved_gateway_url;
   win.__ALLTERNIT_API_URL = `${snapshot.resolved_gateway_url}/api/v1`;
+  win.__ALLTERNIT_GATEWAY_TOKEN__ = snapshot.gateway_token ?? null;
 
   try {
     window.localStorage.setItem(SNAPSHOT_STORAGE_KEY, JSON.stringify(snapshot));
@@ -95,7 +97,7 @@ function persistSnapshot(snapshot: ClientRuntimeBackendSnapshot): ClientRuntimeB
 }
 
 export function applyRuntimeBackendSnapshot(
-  runtimeBackend: RuntimeBackendResponse | null | undefined,
+  runtimeBackend: (RuntimeBackendResponse & { gateway_token?: string | null }) | null | undefined,
 ): ClientRuntimeBackendSnapshot {
   const fallback = readStoredSnapshot() ?? buildDefaultSnapshot();
   const resolvedGatewayUrl = normalizeBaseUrl(
@@ -123,6 +125,14 @@ export function getRuntimeGatewayBaseUrlSync(): string {
 
 export function getRuntimeGatewayWsBaseUrlSync(): string {
   return getRuntimeBackendSnapshotSync().resolved_gateway_ws_url;
+}
+
+export function getRuntimeGatewayTokenSync(): string | null {
+  if (!isBrowser()) return null;
+  const win = window as unknown as Window & Record<string, unknown>;
+  const winToken = win.__ALLTERNIT_GATEWAY_TOKEN__;
+  if (typeof winToken === 'string') return winToken || null;
+  return getRuntimeBackendSnapshotSync().gateway_token ?? null;
 }
 
 export async function loadRuntimeBackendSnapshot(

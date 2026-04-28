@@ -7,30 +7,23 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Globe,
   SquaresFour,
-  PuzzlePiece as Puzzle,
   Terminal,
-  ArrowsClockwise,
   Play,
   Square,
   Camera,
   FileText,
-  Cursor,
-  CircleNotch,
-  Warning,
 } from '@phosphor-icons/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { GlassCard } from '../../design/GlassCard';
 import { A2UIRenderer } from '../a2ui/A2UIRenderer';
-import { 
-  useBrowserAutomation, 
-  useBrowserStatus,
+import {
+  useBrowserAutomation,
   browserClient,
-  type BrowserTab,
 } from '../../integration/browser-client';
 import type { A2UIPayload } from './browser.types';
 
@@ -42,101 +35,6 @@ function cn(...inputs: ClassValue[]) {
 // WebView Component with Browser Automation
 // ═════════════════════════════════════════════════════════════════════════════
 
-interface AutomatedWebViewProps {
-  url: string;
-  targetId?: string;
-  onNavigate?: (url: string) => void;
-}
-
-function AutomatedWebView({ url, targetId, onNavigate }: AutomatedWebViewProps) {
-  const [snapshot, setSnapshot] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Take snapshot when URL changes
-  useEffect(() => {
-    const takeSnapshot = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const result = await browserClient.getSnapshot({ 
-          format: 'ai',
-          targetId 
-        });
-        setSnapshot(result.snapshot);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to get snapshot');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    takeSnapshot();
-  }, [url, targetId]);
-
-  if (loading) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-[var(--bg-secondary)]">
-        <CircleNotch className="w-8 h-8 animate-spin text-[var(--accent-chat)]" />
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-[var(--bg-secondary)] p-8">
-        <div className="text-center">
-          <Warning className="w-12 h-12 mx-auto mb-4 text-red-500" />
-          <h3 className="text-lg font-semibold mb-2">Browser Automation Error</h3>
-          <p className="text-sm text-[var(--text-secondary)] mb-4">{error}</p>
-          <p className="text-xs text-[var(--text-tertiary)]">
-            Make sure the browser control server is running on port 9222
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="w-full h-full flex flex-col bg-[var(--bg-secondary)]">
-      {/* Snapshot Display */}
-      <div className="flex-1 overflow-auto p-4">
-        {snapshot ? (
-          <pre className="font-mono text-sm text-[var(--text-secondary)] whitespace-pre-wrap">
-            {snapshot}
-          </pre>
-        ) : (
-          <div className="text-center text-[var(--text-tertiary)]">
-            No snapshot available
-          </div>
-        )}
-      </div>
-      
-      {/* Action Bar */}
-      <div className="p-3 border-t border-[var(--border-subtle)] flex items-center gap-2">
-        <button
-          onClick={() => browserClient.getSnapshot({ format: 'ai', targetId })}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--glass-bg-elevated)] 
-                     hover:bg-[var(--glass-bg-hover)] text-sm"
-        >
-          <ArrowsClockwise size={16} />
-          Refresh
-        </button>
-        <button
-          onClick={async () => {
-            const result = await browserClient.takeScreenshot({ targetId });
-            console.log('Screenshot saved:', result.path);
-          }}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--glass-bg-elevated)] 
-                     hover:bg-[var(--glass-bg-hover)] text-sm"
-        >
-          <Camera size={16} />
-          Screenshot
-        </button>
-      </div>
-    </div>
-  );
-}
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Browser Control Panel
@@ -310,12 +208,6 @@ function CanvasHostPanel() {
               className="flex-1 px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)]
                          text-sm focus:outline-none focus:border-[var(--accent-chat)]"
             />
-            <button
-              onClick={() => window.open(iframeUrl, '_blank')}
-              className="px-3 py-2 rounded-lg bg-[var(--glass-bg-elevated)] hover:bg-[var(--glass-bg-hover)]"
-            >
-              <Globe size={16} />
-            </button>
           </div>
         </div>
 
@@ -415,7 +307,7 @@ const sampleA2UIPayload: A2UIPayload = {
 };
 
 function A2UIPanel() {
-  const [dataModel, setDataModel] = useState({});
+  const [, setDataModel] = useState({});
 
   const handleAction = useCallback((actionId: string, payload?: Record<string, unknown>) => {
     console.log('[A2UI] Action:', actionId, payload);

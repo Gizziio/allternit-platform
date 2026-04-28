@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { QrCode as QrCodeIcon, DeviceMobile, Laptop, Check, X, EnvelopeSimple, Monitor } from '@phosphor-icons/react'
+import { DeviceMobile, Laptop, Check, X, EnvelopeSimple, Monitor } from '@phosphor-icons/react'
 import { usePlatformUser } from '@/lib/platform-auth-client'
 import QRCode from 'react-qr-code'
 
@@ -12,9 +12,9 @@ interface PairingDialogProps {
 }
 
 export function PairingDialog({ isOpen, onClose, sessionId }: PairingDialogProps) {
-  const { isLoaded, isSignedIn } = usePlatformUser()
-  const [isPaired, setIsPaired] = useState(false)
-  const [pairingCode, setPairingCode] = useState('')
+  const { isLoaded } = usePlatformUser()
+  const [, setIsPaired] = useState(false)
+  const [, setPairingCode] = useState('')
   const [qrValue, setQrValue] = useState('')
 
   useEffect(() => {

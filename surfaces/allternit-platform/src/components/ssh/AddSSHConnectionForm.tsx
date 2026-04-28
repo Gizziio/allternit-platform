@@ -171,7 +171,7 @@ export function AddSSHConnectionForm({
       left: 0,
       right: 0,
       bottom: 0,
-      background: 'rgba(0,0,0,0.7)',
+      background: 'var(--shell-overlay-backdrop)',
       backdropFilter: 'blur(4px)',
       display: 'flex',
       alignItems: 'center',
@@ -187,7 +187,7 @@ export function AddSSHConnectionForm({
       border: '1px solid #333',
       borderRadius: '16px',
       overflow: 'hidden',
-      boxShadow: '0 24px 80px rgba(0,0,0,0.5)',
+      boxShadow: '0 24px 80px var(--shell-overlay-backdrop)',
       display: 'flex',
       flexDirection: 'column',
     },
@@ -261,7 +261,7 @@ export function AddSSHConnectionForm({
       padding: '10px 12px',
       borderRadius: '8px',
       border: '1px solid #444',
-      background: '#1a1a1a',
+      background: 'var(--surface-panel)',
       color: TEXT.primary,
       fontSize: '13px',
       outline: 'none',
@@ -280,7 +280,7 @@ export function AddSSHConnectionForm({
       display: 'flex',
       gap: '8px',
       padding: '4px',
-      background: '#252525',
+      background: 'var(--surface-panel)',
       borderRadius: '8px',
       border: '1px solid #333',
     },
@@ -312,7 +312,7 @@ export function AddSSHConnectionForm({
       padding: '10px 16px',
       borderRadius: '8px',
       border: 'none',
-      background: '#252525',
+      background: 'var(--surface-panel)',
       color: TEXT.primary,
       fontSize: '13px',
       fontWeight: 500,
@@ -327,7 +327,7 @@ export function AddSSHConnectionForm({
       borderRadius: '8px',
       border: 'none',
       background: SAND[500],
-      color: '#1a1a1a',
+      color: 'var(--ui-text-inverse)',
       fontSize: '13px',
       fontWeight: 500,
       cursor: 'pointer',
@@ -361,8 +361,8 @@ export function AddSSHConnectionForm({
           <button 
             style={styles.closeBtn} 
             onClick={handleClose}
-            onMouseEnter={(e) => { e.currentTarget.style.background = '#252525'; e.currentTarget.style.color = '#fff'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#888'; }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-panel)'; e.currentTarget.style.color = 'var(--ui-text-primary)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--ui-text-muted)'; }}
           >
             <X size={20} />
           </button>
@@ -396,7 +396,7 @@ export function AddSSHConnectionForm({
                 </label>
                 <input
                   type="text"
-                  style={{ ...styles.input, borderColor: errors.name ? STATUS.error : '#444' }}
+                  style={{ ...styles.input, borderColor: errors.name ? STATUS.error : 'var(--ui-border-default)' }}
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
                   placeholder="My Server"
@@ -416,7 +416,7 @@ export function AddSSHConnectionForm({
                 </label>
                 <input
                   type="text"
-                  style={{ ...styles.input, borderColor: errors.host ? STATUS.error : '#444' }}
+                  style={{ ...styles.input, borderColor: errors.host ? STATUS.error : 'var(--ui-border-default)' }}
                   value={formData.host}
                   onChange={(e) => handleInputChange('host', e.target.value)}
                   placeholder="user@hostname"
@@ -445,7 +445,7 @@ export function AddSSHConnectionForm({
                   <label style={styles.label}>Username</label>
                   <input
                     type="text"
-                    style={{ ...styles.input, borderColor: errors.username ? STATUS.error : '#444' }}
+                    style={{ ...styles.input, borderColor: errors.username ? STATUS.error : 'var(--ui-border-default)' }}
                     value={formData.username}
                     onChange={(e) => handleInputChange('username', e.target.value)}
                     placeholder="root"
@@ -496,7 +496,7 @@ export function AddSSHConnectionForm({
                       <input ref={fileInputRef} type="file" accept=".pem,.key,.txt" onChange={handleFileUpload} style={{ display: 'none' }} />
                       <button
                         type="button"
-                        style={{ padding: '10px', borderRadius: '8px', border: '1px solid #444', background: '#252525', color: TEXT.primary, cursor: 'pointer' }}
+                        style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--ui-border-default)', background: 'var(--surface-panel)', color: TEXT.primary, cursor: 'pointer' }}
                         onClick={() => fileInputRef.current?.click()}
                       >
                         <UploadSimple size={16} />
@@ -525,7 +525,7 @@ export function AddSSHConnectionForm({
                   <div style={{ position: 'relative' }}>
                     <input
                       type={showPassword ? 'text' : 'password'}
-                      style={{ ...styles.input, borderColor: errors.password ? STATUS.error : '#444', paddingRight: '40px' }}
+                      style={{ ...styles.input, borderColor: errors.password ? STATUS.error : 'var(--ui-border-default)', paddingRight: '40px' }}
                       value={formData.password}
                       onChange={(e) => handleInputChange('password', e.target.value)}
                       placeholder="Enter SSH password"
@@ -547,8 +547,8 @@ export function AddSSHConnectionForm({
                 <div
                   style={{
                     ...styles.testResult,
-                    background: testResult.success ? `${STATUS.success}1a` : '#ef44441a',
-                    borderColor: testResult.success ? `${STATUS.success}4c` : '#ef44444c',
+                    background: testResult.success ? `${STATUS.success}1a` : 'var(--status-error-bg)',
+                    borderColor: testResult.success ? `${STATUS.success}4c` : 'color-mix(in srgb, var(--status-error) 30%, transparent)',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
@@ -600,7 +600,7 @@ export function AddSSHConnectionForm({
                 <div>
                   <h4 style={{ fontSize: '13px', fontWeight: 500, color: TEXT.primary, marginBottom: '4px' }}>Generate SSH keys</h4>
                   <p style={{ fontSize: '12px', color: TEXT.secondary }}>If needed, run:</p>
-                  <div style={{ marginTop: '8px', padding: '10px 12px', background: '#252525', borderRadius: '6px', fontFamily: 'monospace', fontSize: '11px', color: SAND[500] }}>
+                  <div style={{ marginTop: '8px', padding: '10px 12px', background: 'var(--surface-panel)', borderRadius: '6px', fontFamily: 'monospace', fontSize: '11px', color: SAND[500] }}>
                     ssh-keygen -t ed25519 -C "allternit-email.com"
                   </div>
                 </div>
@@ -610,7 +610,7 @@ export function AddSSHConnectionForm({
                 <div>
                   <h4 style={{ fontSize: '13px', fontWeight: 500, color: TEXT.primary, marginBottom: '4px' }}>Copy your public key</h4>
                   <p style={{ fontSize: '12px', color: TEXT.secondary }}>Run this to authorize your key:</p>
-                  <div style={{ marginTop: '8px', padding: '10px 12px', background: '#252525', borderRadius: '6px', fontFamily: 'monospace', fontSize: '11px', color: SAND[500] }}>
+                  <div style={{ marginTop: '8px', padding: '10px 12px', background: 'var(--surface-panel)', borderRadius: '6px', fontFamily: 'monospace', fontSize: '11px', color: SAND[500] }}>
                     ssh-copy-id -i ~/.ssh/id_ed25519.pub user@server
                   </div>
                 </div>

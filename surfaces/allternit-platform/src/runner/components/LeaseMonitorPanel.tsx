@@ -5,30 +5,26 @@ import { useDakStore } from "../dak.store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Key,
-  ArrowsClockwise,
   LockOpen,
+  ArrowsClockwise,
   Clock,
   Warning,
-  CheckCircle,
-  Plus,
-  Funnel,
   MagnifyingGlass,
 } from '@phosphor-icons/react';
 import type { ManagedLease } from "../dak.types";
 
 export function LeaseMonitorPanel() {
-  const { 
-    leases, 
+  const {
+    leases,
     selectedLeaseId,
-    isLoading,
     fetchLeases,
     renewLease,
     releaseLease,
-    selectLease 
+    selectLease
   } = useDakStore();
   
   const [filterAgentId, setFilterAgentId] = useState("");

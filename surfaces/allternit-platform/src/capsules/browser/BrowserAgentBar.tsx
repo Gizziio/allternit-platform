@@ -25,7 +25,6 @@ import {
   Hand,
   Sparkle,
   CheckCircle,
-  Warning,
   XCircle,
   Clock,
   CaretDown,
@@ -35,7 +34,6 @@ import {
   Camera,
   DotsThreeVertical,
   SidebarSimple,
-  Shield,
   ShieldWarning,
   Lightning,
 } from '@phosphor-icons/react';
@@ -44,10 +42,8 @@ import {
   BrowserAgentStatus,
   BrowserAgentMode,
   BrowserEndpoint,
-  RiskTier,
   STATUS_TO_RENDERER,
   MODE_TO_RISK_LIMIT,
-  getRiskTierLabel,
 } from './browserAgent.types';
 import { useBrowserAgentStore } from './browserAgent.store';
 import { getPolicyEngine } from '@/capsules/browser/policyService';
@@ -70,7 +66,6 @@ export function BrowserAgentBar({
     mode,
     endpoint,
     goal,
-    setGoal,
     runGoal,
     stopExecution,
     takeOver,
@@ -199,12 +194,6 @@ export function BrowserAgentBar({
       default:
         return 'Unknown';
     }
-  };
-
-  // Get mode label
-  const getModeLabel = (): string => {
-    const tier = MODE_TO_RISK_LIMIT[mode];
-    return `${mode} (Tier ${tier})`;
   };
 
   // Get endpoint label

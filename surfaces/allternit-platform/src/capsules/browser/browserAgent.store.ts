@@ -265,6 +265,8 @@ export interface BrowserAgentState {
   pageAgentActivity: PageAgentActivity | null;
   pageAgentHistory: PageAgentHistoricalEvent[];
   pageAgentSessions: PageAgentSessionRecord[];
+  pageAgentTargetTabId: string | null;
+  setPageAgentTargetTabId: (id: string | null) => void;
 
   // AI SDK model string used for computer-use runs — any vision-capable model
   // e.g. 'anthropic/claude-sonnet-4.6', 'openai/gpt-5.4', 'google/gemini-2.5-pro'
@@ -408,6 +410,7 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
     pageAgentActivity: null,
     pageAgentHistory: [],
     pageAgentSessions: [],
+    pageAgentTargetTabId: null,
     aciModel: 'anthropic/claude-sonnet-4.6',
     setAciModel: (model) => set({ aciModel: model }),
     isBrowserCapsuleMounted: false,
@@ -575,6 +578,7 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
               status: 'Idle',
               pageAgentStatus: 'error',
               pageAgentActivity: { type: 'error', message: error ?? 'Failed to start' },
+              pageAgentTargetTabId: null,
             });
             return;
           }
@@ -610,6 +614,7 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
                   status: 'Idle',
                   pageAgentStatus: success ? 'completed' : 'error',
                   pageAgentActivity: null,
+                  pageAgentTargetTabId: null,
                   pageAgentHistory: ensurePageAgentHistory(s.pageAgentHistory, { success, data }),
                   pageAgentSessions: appendPageAgentSession(s.pageAgentSessions, {
                     id: createPageAgentSessionId(),
@@ -849,7 +854,7 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
     // Stop page-agent task
     stopPageAgent: () => {
       const { pageAgentSessionId } = get();
-      set({ status: 'Idle', pageAgentStatus: 'idle', pageAgentActivity: null, currentAction: null });
+      set({ status: 'Idle', pageAgentStatus: 'idle', pageAgentActivity: null, currentAction: null, pageAgentTargetTabId: null });
       if (pageAgentSessionId) {
         fetch(getPageAgentStopEndpoint(pageAgentSessionId), { method: 'POST' }).catch(() => {});
       }
@@ -864,6 +869,7 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
     clearPageAgentSessions: () => {
       set({ pageAgentSessions: [] });
     },
+    setPageAgentTargetTabId: (id) => set({ pageAgentTargetTabId: id }),
 
     // Stop execution
     stopExecution: () => {

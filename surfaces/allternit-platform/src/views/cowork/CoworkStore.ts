@@ -93,35 +93,11 @@ interface CoworkState {
   toggleOcr: () => void;
   toggleLabels: () => void;
 
+  // === Session (backward compat) ===
+  startSession: (type: string, context: string) => string;
 
 }
 
-// Helper to sync state from underlying stores
-function syncFromTaskStore(set: (state: Partial<CoworkState>) => void) {
-  const taskState = useTaskStore.getState();
-  set({
-    tasks: taskState.tasks,
-    activeTaskId: taskState.activeTaskId,
-    projects: taskState.projects,
-    activeProjectId: taskState.activeProjectId,
-    taskTimers: taskState.taskTimers,
-    auditLogs: taskState.auditLogs,
-    pendingMutations: taskState.pendingMutations,
-    apiEnabled: taskState.apiEnabled,
-  });
-}
-
-function syncFromUIStore(set: (state: Partial<CoworkState>) => void) {
-  const uiState = useCoworkUIStore.getState();
-  set({
-    activeTab: uiState.activeTab === 'agent-tasks' ? 'agent-tasks' : 'tasks',
-    selectedEventId: uiState.selectedEventId,
-    isTimelineExpanded: uiState.isTimelineExpanded,
-    viewportZoom: uiState.viewportZoom,
-    showOcr: uiState.showOcr,
-    showLabels: uiState.showLabels,
-  });
-}
 
 export const useCoworkStore = create<CoworkState>()((set, get) => {
   // Initialize state from underlying stores
@@ -223,7 +199,6 @@ export const useCoworkStore = create<CoworkState>()((set, get) => {
       };
       const result = engine.optimize(input);
       const rankMap = new Map<string, number>(result.orderedTasks.map((id: string, idx: number) => [id, idx + 1]));
-      const riskMap = new Map(result.schedule.map((s: { taskId: string; risk: number }) => [s.taskId, s.risk]));
       const store = useTaskStore.getState();
       for (const t of tasks) {
         const rank = rankMap.get(t.id);
@@ -257,7 +232,9 @@ export const useCoworkStore = create<CoworkState>()((set, get) => {
     toggleLabels: () => useCoworkUIStore.getState().toggleLabels(),
     setActiveTab: (tab) => useCoworkUIStore.getState().setActiveTab(tab as CoworkTab),
     setApiEnabled: (enabled) => useTaskStore.getState().setApiEnabled(enabled),
-
+    startSession: (_type: string, _context: string) => {
+      return `cowork-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    },
 
   };
 });

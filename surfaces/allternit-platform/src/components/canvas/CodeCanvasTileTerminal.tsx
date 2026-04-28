@@ -125,7 +125,7 @@ export function CodeCanvasTileTerminal({ workspacePath }: CodeCanvasTileTerminal
       >
         {output}
       </pre>
-      <div style={{ display: 'flex', alignItems: 'center', padding: '4px 8px', borderTop: '1px solid rgba(255,255,255,0.08)', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', padding: '4px 8px', borderTop: '1px solid var(--ui-border-muted)', gap: 8 }}>
         <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>$</span>
         <input
           ref={inputRef}
@@ -149,7 +149,7 @@ export function CodeCanvasTileTerminal({ workspacePath }: CodeCanvasTileTerminal
         </div>
       )}
       {status === 'error' && (
-        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(11,14,16,0.9)', color: '#ef4444', fontSize: 12, gap: 8 }}>
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(11,14,16,0.9)', color: 'var(--status-error)', fontSize: 12, gap: 8 }}>
           <div>{errorMsg}</div>
         </div>
       )}

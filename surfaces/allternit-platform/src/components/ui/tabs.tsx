@@ -68,8 +68,8 @@ export const TabsTrigger: React.FC<{
         padding: '8px 16px',
         borderRadius: '6px',
         border: 'none',
-        background: isActive ? 'rgba(255,255,255,0.1)' : 'transparent',
-        color: isActive ? '#fff' : '#888',
+        background: isActive ? 'var(--ui-border-default)' : 'transparent',
+        color: isActive ? '#fff' : 'var(--ui-text-muted)',
         fontSize: '14px',
         cursor: 'pointer',
       }}

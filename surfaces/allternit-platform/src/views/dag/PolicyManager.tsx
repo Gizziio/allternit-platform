@@ -14,27 +14,22 @@ import {
   Shield,
   Plus,
   MagnifyingGlass,
-  Funnel,
-  DotsThreeVertical,
   PencilSimple,
   Trash,
   Copy,
   Power,
   Warning,
   CheckCircle,
-  XCircle,
   CaretDown,
   CaretRight,
   Clock,
   FileText,
   Lock,
-  Eye,
   X,
   ArrowsClockwise,
 } from '@phosphor-icons/react';
 import {
   listPolicies,
-  getPolicy,
   createPolicy,
   updatePolicy,
   deletePolicy,
@@ -54,18 +49,18 @@ import type {
 
 // Policy type configurations
 const POLICY_TYPES: { value: PolicyType; label: string; color: string; icon: React.ReactNode }[] = [
-  { value: 'security', label: 'Security', color: '#ef4444', icon: <Shield size={14} /> },
+  { value: 'security', label: 'Security', color: 'var(--status-error)', icon: <Shield size={14} /> },
   { value: 'compliance', label: 'Compliance', color: '#8b5cf6', icon: <CheckCircle size={14} /> },
-  { value: 'operational', label: 'Operational', color: '#3b82f6', icon: <Clock size={14} /> },
-  { value: 'data', label: 'Data', color: '#10b981', icon: <FileText size={14} /> },
-  { value: 'access', label: 'Access', color: '#f59e0b', icon: <Lock size={14} /> },
+  { value: 'operational', label: 'Operational', color: 'var(--status-info)', icon: <Clock size={14} /> },
+  { value: 'data', label: 'Data', color: 'var(--status-success)', icon: <FileText size={14} /> },
+  { value: 'access', label: 'Access', color: 'var(--status-warning)', icon: <Lock size={14} /> },
 ];
 
 const SEVERITY_LEVELS: { value: PolicySeverity; label: string; color: string }[] = [
-  { value: 'critical', label: 'Critical', color: '#ef4444' },
-  { value: 'high', label: 'High', color: '#f97316' },
-  { value: 'medium', label: 'Medium', color: '#f59e0b' },
-  { value: 'low', label: 'Low', color: '#3b82f6' },
+  { value: 'critical', label: 'Critical', color: 'var(--status-error)' },
+  { value: 'high', label: 'High', color: 'var(--status-warning)' },
+  { value: 'medium', label: 'Medium', color: 'var(--status-warning)' },
+  { value: 'low', label: 'Low', color: 'var(--status-info)' },
 ];
 
 const ENFORCEMENT_MODES: { value: EnforcementMode; label: string; description: string }[] = [
@@ -202,21 +197,21 @@ export function PolicyManager() {
   };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#1a1a1a' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--surface-panel)' }}>
       {/* Header */}
       <div style={{ 
         padding: '20px 24px', 
-        borderBottom: '1px solid #333',
+        borderBottom: '1px solid var(--ui-border-muted)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        background: '#1a1a1a',
+        background: 'var(--surface-panel)',
       }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: '#fff' }}>
+          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: 'var(--ui-text-primary)' }}>
             Policy Manager
           </h1>
-          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#888' }}>
+          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--ui-text-secondary)' }}>
             {policies.length} policies • {violations.filter(v => v.status === 'open').length} open violations
           </p>
         </div>
@@ -226,9 +221,9 @@ export function PolicyManager() {
             style={{
               padding: '8px 16px',
               borderRadius: 6,
-              border: '1px solid #444',
-              background: showViolationsPanel ? '#d4b08c' : 'transparent',
-              color: showViolationsPanel ? '#1a1a1a' : '#e5e5e5',
+              border: '1px solid var(--ui-border-default)',
+              background: showViolationsPanel ? 'var(--accent-primary)' : 'transparent',
+              color: showViolationsPanel ? 'var(--ui-text-inverse)' : 'var(--ui-text-primary)',
               fontSize: 13,
               fontWeight: 500,
               cursor: 'pointer',
@@ -242,8 +237,8 @@ export function PolicyManager() {
             {violations.filter(v => v.status === 'open').length > 0 && (
               <span style={{
                 padding: '2px 8px',
-                background: '#ef4444',
-                color: '#fff',
+                background: 'var(--status-error)',
+                color: 'var(--ui-text-primary)',
                 borderRadius: 10,
                 fontSize: 11,
                 fontWeight: 600,
@@ -258,8 +253,8 @@ export function PolicyManager() {
               padding: '8px 16px',
               borderRadius: 6,
               border: 'none',
-              background: '#d4b08c',
-              color: '#1a1a1a',
+              background: 'var(--accent-primary)',
+              color: 'var(--ui-text-inverse)',
               fontSize: 13,
               fontWeight: 600,
               cursor: 'pointer',
@@ -277,14 +272,14 @@ export function PolicyManager() {
       {/* Filters */}
       <div style={{ 
         padding: '12px 24px', 
-        borderBottom: '1px solid #333',
+        borderBottom: '1px solid var(--ui-border-muted)',
         display: 'flex',
         alignItems: 'center',
         gap: 12,
-        background: '#1a1a1a',
+        background: 'var(--surface-panel)',
       }}>
         <div style={{ position: 'relative', flex: 1, maxWidth: 300 }}>
-          <MagnifyingGlass size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#666' }} />
+          <MagnifyingGlass size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--ui-text-muted)' }} />
           <input
             type="text"
             placeholder="Search policies..."
@@ -294,9 +289,9 @@ export function PolicyManager() {
               width: '100%',
               padding: '8px 12px 8px 36px',
               borderRadius: 6,
-              border: '1px solid #444',
-              background: '#252525',
-              color: '#e5e5e5',
+              border: '1px solid var(--ui-border-default)',
+              background: 'var(--surface-panel)',
+              color: 'var(--ui-text-primary)',
               fontSize: 13,
               outline: 'none',
             }}
@@ -308,9 +303,9 @@ export function PolicyManager() {
           style={{
             padding: '8px 12px',
             borderRadius: 6,
-            border: '1px solid #444',
-            background: '#252525',
-            color: '#e5e5e5',
+            border: '1px solid var(--ui-border-default)',
+            background: 'var(--surface-panel)',
+            color: 'var(--ui-text-primary)',
             fontSize: 13,
             cursor: 'pointer',
           }}
@@ -326,9 +321,9 @@ export function PolicyManager() {
           style={{
             padding: '8px 12px',
             borderRadius: 6,
-            border: '1px solid #444',
-            background: '#252525',
-            color: '#e5e5e5',
+            border: '1px solid var(--ui-border-default)',
+            background: 'var(--surface-panel)',
+            color: 'var(--ui-text-primary)',
             fontSize: 13,
             cursor: 'pointer',
           }}
@@ -342,9 +337,9 @@ export function PolicyManager() {
           style={{
             padding: '8px 12px',
             borderRadius: 6,
-            border: '1px solid #444',
+            border: '1px solid var(--ui-border-default)',
             background: 'transparent',
-            color: '#888',
+            color: 'var(--ui-text-secondary)',
             cursor: 'pointer',
           }}
         >
@@ -395,29 +390,29 @@ export function PolicyManager() {
           <div style={{ 
             width: 380, 
             borderLeft: '1px solid #333',
-            background: '#1f1f1f',
+            background: 'var(--surface-hover)',
             overflow: 'auto',
           }}>
             <div style={{ 
               padding: '16px 20px', 
-              borderBottom: '1px solid #333',
+              borderBottom: '1px solid var(--ui-border-muted)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
             }}>
-              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#fff' }}>
+              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
                 Recent Violations
               </h3>
               <button 
                 onClick={() => setShowViolationsPanel(false)}
-                style={{ background: 'transparent', border: 'none', color: '#666', cursor: 'pointer' }}
+                style={{ background: 'transparent', border: 'none', color: 'var(--ui-text-muted)', cursor: 'pointer' }}
               >
                 <X size={18} />
               </button>
             </div>
             <div style={{ padding: 12 }}>
               {violations.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: 40, color: '#666' }}>
+                <div style={{ textAlign: 'center', padding: 40, color: 'var(--ui-text-muted)' }}>
                   <CheckCircle size={32} style={{ marginBottom: 12 }} />
                   <p>No violations found</p>
                 </div>
@@ -482,9 +477,9 @@ function PolicyCard({
 
   return (
     <div style={{
-      background: '#252525',
+      background: 'var(--surface-panel)',
       borderRadius: 8,
-      border: '1px solid #333',
+      border: '1px solid var(--ui-border-muted)',
       overflow: 'hidden',
     }}>
       <div 
@@ -500,7 +495,7 @@ function PolicyCard({
         <button style={{
           background: 'transparent',
           border: 'none',
-          color: '#888',
+          color: 'var(--ui-text-secondary)',
           cursor: 'pointer',
           padding: 0,
           display: 'flex',
@@ -524,14 +519,14 @@ function PolicyCard({
 
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
               {policy.name}
             </span>
             {policy.status === 'active' ? (
               <span style={{
                 padding: '2px 8px',
-                background: '#22c55e20',
-                color: '#22c55e',
+                background: 'var(--status-success-bg)',
+                color: 'var(--status-success)',
                 borderRadius: 4,
                 fontSize: 11,
                 fontWeight: 600,
@@ -541,8 +536,8 @@ function PolicyCard({
             ) : (
               <span style={{
                 padding: '2px 8px',
-                background: '#66666620',
-                color: '#888',
+                background: 'var(--surface-active)',
+                color: 'var(--ui-text-secondary)',
                 borderRadius: 4,
                 fontSize: 11,
                 fontWeight: 600,
@@ -553,8 +548,8 @@ function PolicyCard({
             {violations.length > 0 && (
               <span style={{
                 padding: '2px 8px',
-                background: '#ef444420',
-                color: '#ef4444',
+                background: 'var(--status-error-bg)',
+                color: 'var(--status-error)',
                 borderRadius: 4,
                 fontSize: 11,
                 fontWeight: 600,
@@ -563,7 +558,7 @@ function PolicyCard({
               </span>
             )}
           </div>
-          <p style={{ margin: '4px 0 0 0', fontSize: 13, color: '#888' }}>
+          <p style={{ margin: '4px 0 0 0', fontSize: 13, color: 'var(--ui-text-secondary)' }}>
             {policy.description}
           </p>
         </div>
@@ -581,8 +576,8 @@ function PolicyCard({
           </span>
           <span style={{
             padding: '4px 10px',
-            background: '#333',
-            color: '#aaa',
+            background: 'var(--surface-hover)',
+            color: 'var(--ui-text-muted)',
             borderRadius: 4,
             fontSize: 12,
           }}>
@@ -597,8 +592,8 @@ function PolicyCard({
               padding: '6px 10px',
               borderRadius: 6,
               border: 'none',
-              background: policy.status === 'active' ? '#22c55e20' : '#66666620',
-              color: policy.status === 'active' ? '#22c55e' : '#888',
+              background: policy.status === 'active' ? 'var(--status-success-bg)' : 'var(--surface-active)',
+              color: policy.status === 'active' ? 'var(--status-success)' : 'var(--ui-text-muted)',
               cursor: 'pointer',
             }}
             title={policy.status === 'active' ? 'Disable' : 'Enable'}
@@ -612,7 +607,7 @@ function PolicyCard({
               borderRadius: 6,
               border: 'none',
               background: 'transparent',
-              color: '#888',
+              color: 'var(--ui-text-secondary)',
               cursor: 'pointer',
             }}
             title="Edit"
@@ -626,7 +621,7 @@ function PolicyCard({
               borderRadius: 6,
               border: 'none',
               background: 'transparent',
-              color: '#888',
+              color: 'var(--ui-text-secondary)',
               cursor: 'pointer',
             }}
             title="Clone"
@@ -640,7 +635,7 @@ function PolicyCard({
               borderRadius: 6,
               border: 'none',
               background: 'transparent',
-              color: '#ef4444',
+              color: 'var(--status-error)',
               cursor: 'pointer',
             }}
             title="Delete"
@@ -653,34 +648,34 @@ function PolicyCard({
       {isExpanded && (
         <div style={{ 
           padding: '16px 20px', 
-          borderTop: '1px solid #333',
-          background: '#1f1f1f',
+          borderTop: '1px solid var(--ui-border-muted)',
+          background: 'var(--surface-hover)',
         }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20 }}>
             <div>
-              <h4 style={{ margin: '0 0 8px 0', fontSize: 12, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              <h4 style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                 Rules ({policy.rules.length})
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {policy.rules.map(rule => (
                   <div key={rule.id} style={{ 
                     padding: '8px 12px', 
-                    background: '#252525',
+                    background: 'var(--surface-panel)',
                     borderRadius: 6,
                     fontSize: 13,
-                    color: '#aaa',
+                    color: 'var(--ui-text-muted)',
                   }}>
                     {rule.name}
-                    {!rule.enabled && <span style={{ marginLeft: 8, color: '#666' }}>(disabled)</span>}
+                    {!rule.enabled && <span style={{ marginLeft: 8, color: 'var(--ui-text-muted)' }}>(disabled)</span>}
                   </div>
                 ))}
               </div>
             </div>
             <div>
-              <h4 style={{ margin: '0 0 8px 0', fontSize: 12, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              <h4 style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                 Scope
               </h4>
-              <div style={{ fontSize: 13, color: '#aaa' }}>
+              <div style={{ fontSize: 13, color: 'var(--ui-text-muted)' }}>
                 {policy.appliesTo.agents?.length ? (
                   <p>{policy.appliesTo.agents.length} agents</p>
                 ) : (
@@ -692,10 +687,10 @@ function PolicyCard({
               </div>
             </div>
             <div>
-              <h4 style={{ margin: '0 0 8px 0', fontSize: 12, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              <h4 style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                 Metadata
               </h4>
-              <div style={{ fontSize: 13, color: '#aaa' }}>
+              <div style={{ fontSize: 13, color: 'var(--ui-text-muted)' }}>
                 <p>Version: {policy.version}</p>
                 <p>Created: {new Date(policy.createdAt).toLocaleDateString()}</p>
                 <p>Updated: {new Date(policy.updatedAt).toLocaleDateString()}</p>
@@ -703,10 +698,10 @@ function PolicyCard({
                   {policy.tags.map(tag => (
                     <span key={tag} style={{
                       padding: '2px 8px',
-                      background: '#333',
+                      background: 'var(--surface-hover)',
                       borderRadius: 4,
                       fontSize: 11,
-                      color: '#888',
+                      color: 'var(--ui-text-secondary)',
                     }}>
                       {tag}
                     </span>
@@ -731,13 +726,13 @@ function ViolationCard({ violation }: { violation: PolicyViolation }) {
   return (
     <div style={{
       padding: 12,
-      background: '#252525',
+      background: 'var(--surface-panel)',
       borderRadius: 6,
       marginBottom: 8,
       borderLeft: `3px solid ${severity.color}`,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
           {violation.policyName}
         </span>
         <span style={{
@@ -751,15 +746,15 @@ function ViolationCard({ violation }: { violation: PolicyViolation }) {
           {severity.label}
         </span>
       </div>
-      <p style={{ margin: '0 0 8px 0', fontSize: 12, color: '#888' }}>
+      <p style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--ui-text-secondary)' }}>
         {violation.agentName} • {new Date(violation.createdAt).toLocaleString()}
       </p>
       <div style={{ display: 'flex', gap: 4 }}>
         {violation.status === 'open' && (
           <span style={{
             padding: '2px 8px',
-            background: '#ef444420',
-            color: '#ef4444',
+            background: 'var(--status-error-bg)',
+            color: 'var(--status-error)',
             borderRadius: 4,
             fontSize: 11,
           }}>
@@ -812,7 +807,7 @@ function PolicyModal({
     <div style={{
       position: 'fixed',
       inset: 0,
-      background: 'rgba(0,0,0,0.7)',
+      background: 'var(--shell-overlay-backdrop)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -821,29 +816,29 @@ function PolicyModal({
       <div style={{
         width: 600,
         maxHeight: '90vh',
-        background: '#1a1a1a',
+        background: 'var(--surface-panel)',
         borderRadius: 12,
-        border: '1px solid #333',
+        border: '1px solid var(--ui-border-muted)',
         overflow: 'auto',
       }}>
         <div style={{
           padding: '20px 24px',
-          borderBottom: '1px solid #333',
+          borderBottom: '1px solid var(--ui-border-muted)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
         }}>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: '#fff' }}>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
             {title}
           </h2>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--ui-text-secondary)', cursor: 'pointer' }}>
             <X size={20} />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} style={{ padding: 24 }}>
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#aaa', marginBottom: 6 }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
               Policy Name
             </label>
             <input
@@ -855,16 +850,16 @@ function PolicyModal({
                 width: '100%',
                 padding: '10px 12px',
                 borderRadius: 6,
-                border: '1px solid #444',
-                background: '#252525',
-                color: '#e5e5e5',
+                border: '1px solid var(--ui-border-default)',
+                background: 'var(--surface-panel)',
+                color: 'var(--ui-text-primary)',
                 fontSize: 14,
               }}
             />
           </div>
 
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#aaa', marginBottom: 6 }}>
+            <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
               Description
             </label>
             <textarea
@@ -875,9 +870,9 @@ function PolicyModal({
                 width: '100%',
                 padding: '10px 12px',
                 borderRadius: 6,
-                border: '1px solid #444',
-                background: '#252525',
-                color: '#e5e5e5',
+                border: '1px solid var(--ui-border-default)',
+                background: 'var(--surface-panel)',
+                color: 'var(--ui-text-primary)',
                 fontSize: 14,
                 resize: 'vertical',
               }}
@@ -886,7 +881,7 @@ function PolicyModal({
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
             <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#aaa', marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
                 Type
               </label>
               <select
@@ -896,9 +891,9 @@ function PolicyModal({
                   width: '100%',
                   padding: '10px 12px',
                   borderRadius: 6,
-                  border: '1px solid #444',
-                  background: '#252525',
-                  color: '#e5e5e5',
+                  border: '1px solid var(--ui-border-default)',
+                  background: 'var(--surface-panel)',
+                  color: 'var(--ui-text-primary)',
                   fontSize: 14,
                 }}
               >
@@ -908,7 +903,7 @@ function PolicyModal({
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#aaa', marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
                 Severity
               </label>
               <select
@@ -918,9 +913,9 @@ function PolicyModal({
                   width: '100%',
                   padding: '10px 12px',
                   borderRadius: 6,
-                  border: '1px solid #444',
-                  background: '#252525',
-                  color: '#e5e5e5',
+                  border: '1px solid var(--ui-border-default)',
+                  background: 'var(--surface-panel)',
+                  color: 'var(--ui-text-primary)',
                   fontSize: 14,
                 }}
               >
@@ -930,7 +925,7 @@ function PolicyModal({
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#aaa', marginBottom: 6 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
                 Enforcement
               </label>
               <select
@@ -940,9 +935,9 @@ function PolicyModal({
                   width: '100%',
                   padding: '10px 12px',
                   borderRadius: 6,
-                  border: '1px solid #444',
-                  background: '#252525',
-                  color: '#e5e5e5',
+                  border: '1px solid var(--ui-border-default)',
+                  background: 'var(--surface-panel)',
+                  color: 'var(--ui-text-primary)',
                   fontSize: 14,
                 }}
               >
@@ -955,11 +950,11 @@ function PolicyModal({
 
           <div style={{
             padding: 12,
-            background: '#252525',
+            background: 'var(--surface-panel)',
             borderRadius: 6,
             marginBottom: 16,
           }}>
-            <p style={{ margin: 0, fontSize: 12, color: '#888' }}>
+            <p style={{ margin: 0, fontSize: 12, color: 'var(--ui-text-secondary)' }}>
               {ENFORCEMENT_MODES.find(m => m.value === formData.enforcementMode)?.description}
             </p>
           </div>
@@ -971,9 +966,9 @@ function PolicyModal({
               style={{
                 padding: '10px 20px',
                 borderRadius: 6,
-                border: '1px solid #444',
+                border: '1px solid var(--ui-border-default)',
                 background: 'transparent',
-                color: '#aaa',
+                color: 'var(--ui-text-muted)',
                 fontSize: 14,
                 cursor: 'pointer',
               }}
@@ -986,8 +981,8 @@ function PolicyModal({
                 padding: '10px 20px',
                 borderRadius: 6,
                 border: 'none',
-                background: '#d4b08c',
-                color: '#1a1a1a',
+                background: 'var(--accent-primary)',
+                color: 'var(--ui-text-inverse)',
                 fontSize: 14,
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -1008,7 +1003,7 @@ function PolicyModal({
 
 function LoadingState() {
   return (
-    <div style={{ textAlign: 'center', padding: 60, color: '#666' }}>
+    <div style={{ textAlign: 'center', padding: 60, color: 'var(--ui-text-muted)' }}>
       <ArrowsClockwise size={32} style={{ animation: 'spin 1s linear infinite' }} />
       <p>Loading policies...</p>
     </div>
@@ -1018,16 +1013,16 @@ function LoadingState() {
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div style={{ textAlign: 'center', padding: 60 }}>
-      <Warning size={32} color="#ef4444" />
-      <p style={{ color: '#ef4444', marginBottom: 16 }}>{message}</p>
+      <Warning size={32} color="var(--status-error)" />
+      <p style={{ color: 'var(--status-error)', marginBottom: 16 }}>{message}</p>
       <button
         onClick={onRetry}
         style={{
           padding: '8px 16px',
           borderRadius: 6,
-          border: '1px solid #444',
+          border: '1px solid var(--ui-border-default)',
           background: 'transparent',
-          color: '#aaa',
+          color: 'var(--ui-text-muted)',
           cursor: 'pointer',
         }}
       >
@@ -1039,9 +1034,9 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
 
 function EmptyState({ onCreate }: { onCreate: () => void }) {
   return (
-    <div style={{ textAlign: 'center', padding: 60, color: '#666' }}>
+    <div style={{ textAlign: 'center', padding: 60, color: 'var(--ui-text-muted)' }}>
       <Shield size={48} style={{ marginBottom: 16 }} />
-      <h3 style={{ margin: '0 0 8px 0', fontSize: 16, color: '#aaa' }}>No policies yet</h3>
+      <h3 style={{ margin: '0 0 8px 0', fontSize: 16, color: 'var(--ui-text-muted)' }}>No policies yet</h3>
       <p style={{ margin: '0 0 16px 0', fontSize: 14 }}>Create your first policy to start enforcing governance rules.</p>
       <button
         onClick={onCreate}
@@ -1049,8 +1044,8 @@ function EmptyState({ onCreate }: { onCreate: () => void }) {
           padding: '10px 20px',
           borderRadius: 6,
           border: 'none',
-          background: '#d4b08c',
-          color: '#1a1a1a',
+          background: 'var(--accent-primary)',
+          color: 'var(--ui-text-inverse)',
           fontSize: 14,
           fontWeight: 600,
           cursor: 'pointer',

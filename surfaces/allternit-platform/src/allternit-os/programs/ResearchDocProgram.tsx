@@ -10,13 +10,8 @@
  */
 
 import * as React from 'react';
-const { useState, useRef, useEffect, useCallback } = React;
+const { useState, useRef, useEffect } = React;
 import { useSidecarStore } from '../stores/useSidecarStore';
-import { 
-  downloadMarkdown, 
-  downloadHTML, 
-  exportToPDF 
-} from '../utils/ExportUtilities';
 import type { 
   AllternitProgram, 
   ResearchDocState, 
@@ -613,9 +608,7 @@ export const ResearchDocProgram: React.FC<ResearchDocProgramProps> = ({ program 
   const store = useSidecarStore();
   const state = program.state as ResearchDocState;
   const [activeTocId, setActiveTocId] = useState<string>();
-  const [showCitationManager, setShowCitationManager] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
-  const [streamBuffer, setStreamBuffer] = useState('');
   
   // Check if this program is currently streaming
   const isProgramStreaming = store.activeStreams[program.id] || false;

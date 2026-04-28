@@ -174,7 +174,7 @@ export function TemplatesView({ modeColors, onApplyTemplate }: TemplatesViewProp
       {/* Header */}
       <div 
         className="px-6 py-4 border-b flex items-center justify-between"
-        style={{ borderColor: 'rgba(255,255,255,0.05)' }}
+        style={{ borderColor: 'var(--surface-hover)' }}
       >
         <div className="flex items-center gap-4">
           {/* Search */}
@@ -191,8 +191,8 @@ export function TemplatesView({ modeColors, onApplyTemplate }: TemplatesViewProp
               placeholder="Search templates..."
               className="pl-9 pr-4 py-2 rounded-lg text-sm outline-none w-64"
               style={{
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.08)',
+                background: 'var(--surface-hover)',
+                border: '1px solid var(--ui-border-muted)',
                 color: TEXT.primary,
               }}
             />
@@ -206,7 +206,7 @@ export function TemplatesView({ modeColors, onApplyTemplate }: TemplatesViewProp
                 onClick={() => setSelectedRole(role)}
                 className="px-3 py-1.5 rounded-md text-xs font-medium transition-all capitalize"
                 style={{
-                  background: selectedRole === role ? `${modeColors.accent}20` : 'rgba(255,255,255,0.03)',
+                  background: selectedRole === role ? `${modeColors.accent}20` : 'var(--surface-hover)',
                   color: selectedRole === role ? modeColors.accent : TEXT.secondary,
                   border: `1px solid ${selectedRole === role ? `${modeColors.accent}40` : 'transparent'}`,
                 }}
@@ -220,7 +220,7 @@ export function TemplatesView({ modeColors, onApplyTemplate }: TemplatesViewProp
         {/* Actions */}
         <div className="flex items-center gap-2">
           <label className="px-3 py-1.5 rounded-md text-xs font-medium transition-all hover:bg-white/5 cursor-pointer"
-            style={{ background: 'rgba(255,255,255,0.03)', color: TEXT.secondary }}
+            style={{ background: 'var(--surface-hover)', color: TEXT.secondary }}
           >
             <Upload size={12} weight="duotone" style={{ marginRight: 6, display: 'inline' }} />
             Import
@@ -235,7 +235,7 @@ export function TemplatesView({ modeColors, onApplyTemplate }: TemplatesViewProp
           <button
             onClick={handleExport}
             className="px-3 py-1.5 rounded-md text-xs font-medium transition-all hover:bg-white/5"
-            style={{ background: 'rgba(255,255,255,0.03)', color: TEXT.secondary }}
+            style={{ background: 'var(--surface-hover)', color: TEXT.secondary }}
           >
             <Export size={12} weight="duotone" style={{ marginRight: 6 }} />
             Export
@@ -257,7 +257,7 @@ export function TemplatesView({ modeColors, onApplyTemplate }: TemplatesViewProp
           <div className="h-full flex flex-col items-center justify-center">
             <div 
               className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-              style={{ background: 'rgba(255,255,255,0.03)' }}
+              style={{ background: 'var(--surface-hover)' }}
             >
               <Stack size={28} color={TEXT.tertiary} weight="duotone" />
             </div>
@@ -324,8 +324,8 @@ function TemplateCard({ template, modeColors, onApply, onEdit, onDuplicate, onDe
     <div 
       className="p-4 rounded-xl border transition-all hover:border-white/20 group"
       style={{ 
-        background: 'rgba(255,255,255,0.02)',
-        borderColor: 'rgba(255,255,255,0.05)',
+        background: 'var(--surface-hover)',
+        borderColor: 'var(--surface-hover)',
       }}
     >
       {/* Header */}
@@ -389,7 +389,7 @@ function TemplateCard({ template, modeColors, onApply, onEdit, onDuplicate, onDe
           <span 
             key={cap}
             className="text-[10px] px-1.5 py-0.5 rounded"
-            style={{ background: 'rgba(255,255,255,0.03)', color: TEXT.tertiary }}
+            style={{ background: 'var(--surface-hover)', color: TEXT.tertiary }}
           >
             {cap}
           </span>
@@ -402,7 +402,7 @@ function TemplateCard({ template, modeColors, onApply, onEdit, onDuplicate, onDe
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between pt-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+      <div className="flex items-center justify-between pt-3 border-t" style={{ borderColor: 'var(--surface-hover)' }}>
         <span className="text-[10px]" style={{ color: TEXT.tertiary }}>
           Used {template.usageCount} times
         </span>
@@ -451,14 +451,14 @@ function TemplateModal({ template, modeColors, onSave, onClose }: TemplateModalP
   return (
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+      style={{ background: 'var(--shell-overlay-backdrop)', backdropFilter: 'blur(4px)' }}
       onClick={onClose}
     >
       <div 
         className="w-full max-w-md p-6 rounded-2xl border"
         style={{ 
           background: BACKGROUND.primary,
-          borderColor: 'rgba(255,255,255,0.1)',
+          borderColor: 'var(--ui-border-default)',
         }}
         onClick={e => e.stopPropagation()}
       >
@@ -478,8 +478,8 @@ function TemplateModal({ template, modeColors, onSave, onClose }: TemplateModalP
               required
               className="w-full px-3 py-2 rounded-lg text-sm outline-none"
               style={{
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.08)',
+                background: 'var(--surface-hover)',
+                border: '1px solid var(--ui-border-muted)',
                 color: TEXT.primary,
               }}
             />
@@ -495,8 +495,8 @@ function TemplateModal({ template, modeColors, onSave, onClose }: TemplateModalP
               rows={3}
               className="w-full px-3 py-2 rounded-lg text-sm outline-none resize-none"
               style={{
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.08)',
+                background: 'var(--surface-hover)',
+                border: '1px solid var(--ui-border-muted)',
                 color: TEXT.primary,
               }}
             />
@@ -512,8 +512,8 @@ function TemplateModal({ template, modeColors, onSave, onClose }: TemplateModalP
                 onChange={e => setForm({ ...form, role: e.target.value as AgentRole })}
                 className="w-full px-3 py-2 rounded-lg text-sm outline-none"
                 style={{
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.08)',
+                  background: 'var(--surface-hover)',
+                  border: '1px solid var(--ui-border-muted)',
                   color: TEXT.primary,
                 }}
               >
@@ -533,8 +533,8 @@ function TemplateModal({ template, modeColors, onSave, onClose }: TemplateModalP
                 onChange={e => setForm({ ...form, model: e.target.value })}
                 className="w-full px-3 py-2 rounded-lg text-sm outline-none"
                 style={{
-                  background: 'rgba(255,255,255,0.03)',
-                  border: '1px solid rgba(255,255,255,0.08)',
+                  background: 'var(--surface-hover)',
+                  border: '1px solid var(--ui-border-muted)',
                   color: TEXT.primary,
                 }}
               >
@@ -557,8 +557,8 @@ function TemplateModal({ template, modeColors, onSave, onClose }: TemplateModalP
               placeholder="e.g., code-review, testing, documentation"
               className="w-full px-3 py-2 rounded-lg text-sm outline-none"
               style={{
-                background: 'rgba(255,255,255,0.03)',
-                border: '1px solid rgba(255,255,255,0.08)',
+                background: 'var(--surface-hover)',
+                border: '1px solid var(--ui-border-muted)',
                 color: TEXT.primary,
               }}
             />
@@ -569,7 +569,7 @@ function TemplateModal({ template, modeColors, onSave, onClose }: TemplateModalP
               type="button"
               onClick={onClose}
               className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all hover:bg-white/5"
-              style={{ background: 'rgba(255,255,255,0.05)', color: TEXT.secondary }}
+              style={{ background: 'var(--surface-hover)', color: TEXT.secondary }}
             >
               Cancel
             </button>

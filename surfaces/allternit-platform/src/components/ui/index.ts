@@ -28,6 +28,7 @@ export { Table } from './table';
 export { HoverCard } from './hover-card';
 export { Alert } from './alert';
 export { ToastProvider } from './toast-provider';
+export { Modal, ModalHeader, ModalBody, ModalFooter, ModalButton } from './Modal';
 export { Spinner } from './spinner';
 export { EmptyState } from './empty-state';
 export { InputGroup } from './input-group';

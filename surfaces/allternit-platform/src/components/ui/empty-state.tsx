@@ -37,8 +37,8 @@ const defaultIcons: Record<EmptyStateVariant, ReactNode> = {
       width: '64px', 
       height: '64px', 
       borderRadius: '50%',
-      border: '3px solid rgba(212,176,140,0.1)',
-      borderTopColor: '#d4b08c',
+      border: '3px solid color-mix(in srgb, var(--accent-primary) 10%, transparent)',
+      borderTopColor: 'var(--accent-primary)',
       animation: 'spin 1s linear infinite'
     }} />
   ),
@@ -126,8 +126,8 @@ export function EmptyState({
                 padding: '10px 20px',
                 borderRadius: '8px',
                 border: action.variant === 'secondary' ? '1px solid rgba(255,255,255,0.2)' : 'none',
-                background: action.variant === 'secondary' ? 'transparent' : '#d4b08c',
-                color: action.variant === 'secondary' ? '#fff' : '#1a1a1a',
+                background: action.variant === 'secondary' ? 'transparent' : 'var(--accent-primary)',
+                color: action.variant === 'secondary' ? '#fff' : 'var(--ui-text-inverse)',
                 fontSize: '14px',
                 fontWeight: 500,
                 cursor: 'pointer',

@@ -10,9 +10,9 @@
  */
 
 import * as React from 'react';
-const { useState, useEffect, useRef, useCallback } = React;
+const { useState, useEffect } = React;
 import { useSidecarStore } from '../stores/useSidecarStore';
-import type { TaskNode, Agent } from '../types/programs';
+import type { TaskNode } from '../types/programs';
 
 // Import the REAL terminal implementation
 import { TerminalTabs } from '@/views/nodes/terminal/TerminalTabs';
@@ -28,15 +28,6 @@ export interface AllternitConsoleProps {
 }
 
 type ConsoleTab = 'terminal' | 'kanban' | 'automation';
-
-interface TerminalLine {
-  id: string;
-  type: 'input' | 'output' | 'error' | 'system' | 'agent';
-  content: string;
-  timestamp: string;
-  agentId?: string;
-  metadata?: Record<string, unknown>;
-}
 
 interface KanbanColumn {
   id: string;
@@ -153,7 +144,7 @@ const AgentTerminal: React.FC = () => {
 // ============================================================================
 
 const KanbanBoard: React.FC = () => {
-  const store = useSidecarStore();
+  useSidecarStore();
   
   const columns: KanbanColumn[] = [
     { id: 'pending', title: '📋 Pending', status: 'pending', color: 'bg-gray-500' },

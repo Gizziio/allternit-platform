@@ -20,28 +20,22 @@ import {
   Key,
   HardDrives as Server,
   Trash,
-  PencilSimple,
   CheckCircle,
   XCircle,
-  Clock,
   ComputerTower,
-  House,
-  LockKey,
   Download,
   Upload,
   Copy,
   Eye,
-  EyeSlash,
   MagnifyingGlass,
   Star,
-  StarHalf,
 } from '@phosphor-icons/react';
 import { TEXT, STATUS, SAND } from '@/design/allternit.tokens';
 import { sshApi } from '@/api/infrastructure/ssh';
 import { sshKeyApi, type SSHKey, type SSHKeyGenerateResult } from '@/api/infrastructure/ssh-keys';
 import { runtimeBackendApi } from '@/api/infrastructure/runtime-backend';
 import { VPSConnectionModal } from '@/components/vps';
-import { SSHConnectionsList, type SSHConnection } from '@/components/ssh';
+import { type SSHConnection } from '@/components/ssh';
 import type { SSHConnectionFormData, SSHConnectionTestResult } from '@/components/ssh';
 
 // ============================================================================
@@ -52,14 +46,6 @@ interface SSHConnectionWithFavorites extends SSHConnection {
   isFavorite?: boolean;
   tags?: string[];
   group?: string;
-}
-
-interface JumpHostConfig {
-  id: string;
-  name: string;
-  host: string;
-  port: number;
-  username: string;
 }
 
 // ============================================================================
@@ -82,7 +68,7 @@ function SSHKeyManagerPanel({
   const [showImportModal, setShowImportModal] = useState(false);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [showPrivateKey, setShowPrivateKey] = useState<Record<string, boolean>>({});
+  const [, setShowPrivateKey] = useState<Record<string, boolean>>({});
   const [generatedKey, setGeneratedKey] = useState<SSHKeyGenerateResult | null>(null);
 
   // Load keys on mount
@@ -141,7 +127,7 @@ function SSHKeyManagerPanel({
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#fff', margin: 0 }}>
+        <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ui-text-primary)', margin: 0 }}>
           SSH Keys
         </h3>
         <div style={{ flex: 1 }} />
@@ -152,7 +138,7 @@ function SSHKeyManagerPanel({
             borderRadius: '6px',
             border: 'none',
             background: SAND[500],
-            color: '#1a1a1a',
+            color: 'var(--ui-text-inverse)',
             fontSize: '13px',
             fontWeight: 500,
             cursor: 'pointer',
@@ -169,9 +155,9 @@ function SSHKeyManagerPanel({
           style={{
             padding: '8px 14px',
             borderRadius: '6px',
-            border: '1px solid rgba(255,255,255,0.1)',
+            border: '1px solid var(--ui-border-default)',
             background: 'transparent',
-            color: '#888',
+            color: 'var(--ui-text-secondary)',
             fontSize: '13px',
             fontWeight: 500,
             cursor: 'pointer',
@@ -191,7 +177,7 @@ function SSHKeyManagerPanel({
           style={{
             padding: '12px 16px',
             borderRadius: '8px',
-            background: 'rgba(239,68,68,0.1)',
+            background: 'var(--status-error-bg)',
             border: '1px solid rgba(239,68,68,0.25)',
             display: 'flex',
             alignItems: 'center',
@@ -220,9 +206,9 @@ function SSHKeyManagerPanel({
             padding: '40px',
             textAlign: 'center',
             color: TEXT.secondary,
-            background: 'rgba(255,255,255,0.02)',
+            background: 'var(--surface-hover)',
             borderRadius: '10px',
-            border: '1px dashed rgba(255,255,255,0.1)',
+            border: '1px dashed var(--ui-border-default)',
           }}
         >
           <Key size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
@@ -239,8 +225,8 @@ function SSHKeyManagerPanel({
               style={{
                 padding: '16px',
                 borderRadius: '10px',
-                background: selectedKeyId === key.id ? 'rgba(196,154,122,0.1)' : 'rgba(255,255,255,0.03)',
-                border: `1px solid ${selectedKeyId === key.id ? SAND[500] : 'rgba(255,255,255,0.06)'}`,
+                background: selectedKeyId === key.id ? 'rgba(196,154,122,0.1)' : 'var(--surface-hover)',
+                border: `1px solid ${selectedKeyId === key.id ? SAND[500] : 'var(--ui-border-muted)'}`,
                 cursor: onKeySelect ? 'pointer' : 'default',
               }}
               onClick={() => onKeySelect?.(key)}
@@ -248,7 +234,7 @@ function SSHKeyManagerPanel({
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <Key size={20} color={SAND[500]} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '14px', fontWeight: 500, color: '#fff' }}>
+                  <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--ui-text-primary)' }}>
                     {key.name}
                   </div>
                   <div style={{ fontSize: '12px', color: TEXT.secondary, marginTop: '2px' }}>
@@ -265,7 +251,7 @@ function SSHKeyManagerPanel({
                     borderRadius: '4px',
                     border: 'none',
                     background: 'transparent',
-                    color: '#888',
+                    color: 'var(--ui-text-secondary)',
                     cursor: 'pointer',
                   }}
                 >
@@ -281,7 +267,7 @@ function SSHKeyManagerPanel({
                     borderRadius: '4px',
                     border: 'none',
                     background: 'transparent',
-                    color: '#888',
+                    color: 'var(--ui-text-secondary)',
                     cursor: 'pointer',
                   }}
                 >
@@ -307,7 +293,7 @@ function SSHKeyManagerPanel({
 
               {/* Expanded Details */}
               {expandedKey === key.id && (
-                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--ui-border-muted)' }}>
                   <div style={{ fontSize: '12px', color: TEXT.secondary, marginBottom: '6px' }}>
                     Public Key:
                   </div>
@@ -316,9 +302,9 @@ function SSHKeyManagerPanel({
                       display: 'block',
                       padding: '10px',
                       borderRadius: '6px',
-                      background: 'rgba(0,0,0,0.3)',
+                      background: 'var(--bg-tertiary)',
                       fontSize: '11px',
-                      color: '#aaa',
+                      color: 'var(--ui-text-muted)',
                       wordBreak: 'break-all',
                       fontFamily: 'monospace',
                     }}
@@ -392,9 +378,9 @@ function GenerateKeyModal({
                 width: '100%',
                 padding: '10px 12px',
                 borderRadius: '6px',
-                border: '1px solid rgba(255,255,255,0.1)',
-                background: 'rgba(0,0,0,0.3)',
-                color: '#fff',
+                border: '1px solid var(--ui-border-default)',
+                background: 'var(--bg-tertiary)',
+                color: 'var(--ui-text-primary)',
                 fontSize: '14px',
               }}
             />
@@ -410,9 +396,9 @@ function GenerateKeyModal({
                   flex: 1,
                   padding: '10px',
                   borderRadius: '6px',
-                  border: `1px solid ${type === 'ed25519' ? SAND[500] : 'rgba(255,255,255,0.1)'}`,
-                  background: type === 'ed25519' ? 'rgba(196,154,122,0.1)' : 'rgba(0,0,0,0.3)',
-                  color: type === 'ed25519' ? SAND[500] : '#888',
+                  border: `1px solid ${type === 'ed25519' ? SAND[500] : 'var(--ui-border-default)'}`,
+                  background: type === 'ed25519' ? 'rgba(196,154,122,0.1)' : 'var(--surface-panel)',
+                  color: type === 'ed25519' ? SAND[500] : 'var(--ui-text-muted)',
                   cursor: 'pointer',
                 }}
               >
@@ -424,9 +410,9 @@ function GenerateKeyModal({
                   flex: 1,
                   padding: '10px',
                   borderRadius: '6px',
-                  border: `1px solid ${type === 'rsa' ? SAND[500] : 'rgba(255,255,255,0.1)'}`,
-                  background: type === 'rsa' ? 'rgba(196,154,122,0.1)' : 'rgba(0,0,0,0.3)',
-                  color: type === 'rsa' ? SAND[500] : '#888',
+                  border: `1px solid ${type === 'rsa' ? SAND[500] : 'var(--ui-border-default)'}`,
+                  background: type === 'rsa' ? 'rgba(196,154,122,0.1)' : 'var(--surface-panel)',
+                  color: type === 'rsa' ? SAND[500] : 'var(--ui-text-muted)',
                   cursor: 'pointer',
                 }}
               >
@@ -443,7 +429,7 @@ function GenerateKeyModal({
               borderRadius: '6px',
               border: 'none',
               background: SAND[500],
-              color: '#1a1a1a',
+              color: 'var(--ui-text-inverse)',
               fontSize: '14px',
               fontWeight: 600,
               cursor: name.trim() ? 'pointer' : 'not-allowed',
@@ -455,7 +441,7 @@ function GenerateKeyModal({
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div style={{ padding: '12px', borderRadius: '8px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', color: '#22c55e', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ padding: '12px', borderRadius: '8px', background: 'var(--status-success-bg)', border: '1px solid rgba(34,197,94,0.3)', color: 'var(--status-success)', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <CheckCircle size={20} weight="fill" />
             Key generated successfully!
           </div>
@@ -463,7 +449,7 @@ function GenerateKeyModal({
             <label style={{ display: 'block', fontSize: '13px', color: TEXT.secondary, marginBottom: '6px' }}>
               Public Key (safe to share)
             </label>
-            <code style={{ display: 'block', padding: '10px', borderRadius: '6px', background: 'rgba(0,0,0,0.3)', fontSize: '11px', color: '#aaa', wordBreak: 'break-all', fontFamily: 'monospace' }}>
+            <code style={{ display: 'block', padding: '10px', borderRadius: '6px', background: 'var(--bg-tertiary)', fontSize: '11px', color: 'var(--ui-text-muted)', wordBreak: 'break-all', fontFamily: 'monospace' }}>
               {generatedKey.public_key}
             </code>
           </div>
@@ -471,7 +457,7 @@ function GenerateKeyModal({
             <label style={{ display: 'block', fontSize: '13px', color: TEXT.secondary, marginBottom: '6px' }}>
               Private Key (keep secret!)
             </label>
-            <code style={{ display: 'block', padding: '10px', borderRadius: '6px', background: 'rgba(239,68,68,0.1)', fontSize: '11px', color: '#ff6b6b', wordBreak: 'break-all', fontFamily: 'monospace', border: '1px solid rgba(239,68,68,0.3)' }}>
+            <code style={{ display: 'block', padding: '10px', borderRadius: '6px', background: 'var(--status-error-bg)', fontSize: '11px', color: '#ff6b6b', wordBreak: 'break-all', fontFamily: 'monospace', border: '1px solid color-mix(in srgb, var(--status-error) 40%, transparent)' }}>
               {generatedKey.private_key}
             </code>
           </div>
@@ -482,7 +468,7 @@ function GenerateKeyModal({
               borderRadius: '6px',
               border: 'none',
               background: SAND[500],
-              color: '#1a1a1a',
+              color: 'var(--ui-text-inverse)',
               fontSize: '14px',
               fontWeight: 600,
               cursor: 'pointer',
@@ -526,9 +512,9 @@ function ImportKeyModal({
               width: '100%',
               padding: '10px 12px',
               borderRadius: '6px',
-              border: '1px solid rgba(255,255,255,0.1)',
-              background: 'rgba(0,0,0,0.3)',
-              color: '#fff',
+              border: '1px solid var(--ui-border-default)',
+              background: 'var(--bg-tertiary)',
+              color: 'var(--ui-text-primary)',
               fontSize: '14px',
             }}
           />
@@ -546,9 +532,9 @@ function ImportKeyModal({
               width: '100%',
               padding: '10px 12px',
               borderRadius: '6px',
-              border: '1px solid rgba(255,255,255,0.1)',
-              background: 'rgba(0,0,0,0.3)',
-              color: '#fff',
+              border: '1px solid var(--ui-border-default)',
+              background: 'var(--bg-tertiary)',
+              color: 'var(--ui-text-primary)',
               fontSize: '13px',
               fontFamily: 'monospace',
               resize: 'vertical',
@@ -568,9 +554,9 @@ function ImportKeyModal({
               width: '100%',
               padding: '10px 12px',
               borderRadius: '6px',
-              border: '1px solid rgba(255,255,255,0.1)',
-              background: 'rgba(0,0,0,0.3)',
-              color: '#fff',
+              border: '1px solid var(--ui-border-default)',
+              background: 'var(--bg-tertiary)',
+              color: 'var(--ui-text-primary)',
               fontSize: '14px',
             }}
           />
@@ -584,7 +570,7 @@ function ImportKeyModal({
             borderRadius: '6px',
             border: 'none',
             background: SAND[500],
-            color: '#1a1a1a',
+            color: 'var(--ui-text-inverse)',
             fontSize: '14px',
             fontWeight: 600,
             cursor: name.trim() && privateKey.trim() ? 'pointer' : 'not-allowed',
@@ -615,7 +601,7 @@ function Modal({
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0,0,0,0.7)',
+        background: 'var(--shell-overlay-backdrop)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -626,9 +612,9 @@ function Modal({
     >
       <div
         style={{
-          background: '#1a1a1a',
+          background: 'var(--surface-panel)',
           borderRadius: '12px',
-          border: '1px solid rgba(255,255,255,0.1)',
+          border: '1px solid var(--ui-border-default)',
           maxWidth: '500px',
           width: '100%',
           maxHeight: '80vh',
@@ -639,13 +625,13 @@ function Modal({
         <div
           style={{
             padding: '16px 20px',
-            borderBottom: '1px solid rgba(255,255,255,0.06)',
+            borderBottom: '1px solid var(--ui-border-muted)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
           }}
         >
-          <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#fff', margin: 0 }}>{title}</h3>
+          <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ui-text-primary)', margin: 0 }}>{title}</h3>
           <button
             onClick={onClose}
             style={{
@@ -653,7 +639,7 @@ function Modal({
               borderRadius: '4px',
               border: 'none',
               background: 'transparent',
-              color: '#888',
+              color: 'var(--ui-text-secondary)',
               cursor: 'pointer',
             }}
           >
@@ -918,14 +904,14 @@ export function SSHConnectionManager() {
           padding: '24px',
           borderRadius: '12px',
           background: 'linear-gradient(135deg, rgba(37,37,37,0.6) 0%, rgba(37,37,37,0.3) 100%)',
-          border: '1px solid rgba(255,255,255,0.08)',
+          border: '1px solid var(--ui-border-muted)',
         }}
       >
         <h2
           style={{
             fontSize: '20px',
             fontWeight: 600,
-            color: '#fff',
+            color: 'var(--ui-text-primary)',
             margin: '0 0 8px 0',
             letterSpacing: '-0.3px',
           }}
@@ -953,8 +939,8 @@ export function SSHConnectionManager() {
           marginBottom: '20px',
           padding: '4px',
           borderRadius: '10px',
-          background: 'rgba(255,255,255,0.03)',
-          border: '1px solid rgba(255,255,255,0.06)',
+          background: 'var(--surface-hover)',
+          border: '1px solid var(--ui-border-muted)',
           width: 'fit-content',
         }}
       >
@@ -965,14 +951,14 @@ export function SSHConnectionManager() {
             borderRadius: '8px',
             border: 'none',
             background: activeTab === 'connections' ? SAND[500] : 'transparent',
-            color: activeTab === 'connections' ? '#1a1a1a' : '#888',
+            color: activeTab === 'connections' ? 'var(--ui-text-inverse)' : 'var(--ui-text-muted)',
             fontSize: '14px',
             fontWeight: 500,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            transition: 'all 0.2s',
+            transition: 'var(--transition-fast)',
           }}
         >
           <Server size={18} />
@@ -985,14 +971,14 @@ export function SSHConnectionManager() {
             borderRadius: '8px',
             border: 'none',
             background: activeTab === 'keys' ? SAND[500] : 'transparent',
-            color: activeTab === 'keys' ? '#1a1a1a' : '#888',
+            color: activeTab === 'keys' ? 'var(--ui-text-inverse)' : 'var(--ui-text-muted)',
             fontSize: '14px',
             fontWeight: 500,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            transition: 'all 0.2s',
+            transition: 'var(--transition-fast)',
           }}
         >
           <Key size={18} />
@@ -1007,7 +993,7 @@ export function SSHConnectionManager() {
             marginBottom: '20px',
             padding: '14px 18px',
             borderRadius: '10px',
-            background: 'rgba(239,68,68,0.1)',
+            background: 'var(--status-error-bg)',
             border: '1px solid rgba(239,68,68,0.25)',
             display: 'flex',
             alignItems: 'center',
@@ -1048,7 +1034,7 @@ export function SSHConnectionManager() {
               padding: '16px 20px',
               borderRadius: '10px',
               background: 'rgba(37,37,37,0.4)',
-              border: '1px solid rgba(255,255,255,0.06)',
+              border: '1px solid var(--ui-border-muted)',
             }}
           >
             <button
@@ -1058,14 +1044,14 @@ export function SSHConnectionManager() {
                 borderRadius: '8px',
                 border: 'none',
                 background: SAND[500],
-                color: '#1a1a1a',
+                color: 'var(--ui-text-inverse)',
                 fontSize: '14px',
                 fontWeight: 600,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                transition: 'all 0.2s',
+                transition: 'var(--transition-fast)',
                 boxShadow: '0 2px 8px rgba(196,154,122,0.25)',
               }}
             >
@@ -1085,7 +1071,7 @@ export function SSHConnectionManager() {
             >
               <MagnifyingGlass
                 size={16}
-                style={{ position: 'absolute', left: '12px', color: '#666' }}
+                style={{ position: 'absolute', left: '12px', color: 'var(--ui-text-muted)' }}
               />
               <input
                 type="text"
@@ -1095,9 +1081,9 @@ export function SSHConnectionManager() {
                 style={{
                   padding: '8px 12px 8px 36px',
                   borderRadius: '6px',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  background: 'rgba(0,0,0,0.3)',
-                  color: '#fff',
+                  border: '1px solid var(--ui-border-default)',
+                  background: 'var(--bg-tertiary)',
+                  color: 'var(--ui-text-primary)',
                   fontSize: '13px',
                   width: '200px',
                 }}
@@ -1110,9 +1096,9 @@ export function SSHConnectionManager() {
               style={{
                 padding: '10px 16px',
                 borderRadius: '8px',
-                border: '1px solid rgba(255,255,255,0.1)',
+                border: '1px solid var(--ui-border-default)',
                 background: 'transparent',
-                color: '#888',
+                color: 'var(--ui-text-secondary)',
                 fontSize: '13px',
                 cursor: isLoading ? 'not-allowed' : 'pointer',
                 display: 'flex',
@@ -1144,7 +1130,7 @@ export function SSHConnectionManager() {
               label="Connected"
               value={connections.filter((c) => c.status === 'connected').length}
               icon={CheckCircle}
-              color="#22c55e"
+              color="var(--status-success)"
             />
             <StatCard
               label="Favorites"
@@ -1175,7 +1161,7 @@ export function SSHConnectionManager() {
             padding: '20px',
             borderRadius: '10px',
             background: 'rgba(37,37,37,0.4)',
-            border: '1px solid rgba(255,255,255,0.06)',
+            border: '1px solid var(--ui-border-muted)',
           }}
         >
           <SSHKeyManagerPanel
@@ -1206,7 +1192,7 @@ function StatCard({
   label,
   value,
   icon: Icon,
-  color = '#888',
+  color = 'var(--ui-text-muted)',
 }: {
   label: string;
   value: number;
@@ -1219,7 +1205,7 @@ function StatCard({
         padding: '16px',
         borderRadius: '10px',
         background: 'rgba(37,37,37,0.4)',
-        border: '1px solid rgba(255,255,255,0.06)',
+        border: '1px solid var(--ui-border-muted)',
         display: 'flex',
         alignItems: 'center',
         gap: '12px',
@@ -1240,7 +1226,7 @@ function StatCard({
       </div>
       <div>
         <div style={{ fontSize: '12px', color: TEXT.secondary }}>{label}</div>
-        <div style={{ fontSize: '20px', fontWeight: 600, color: '#fff' }}>{value}</div>
+        <div style={{ fontSize: '20px', fontWeight: 600, color: 'var(--ui-text-primary)' }}>{value}</div>
       </div>
     </div>
   );
@@ -1284,13 +1270,13 @@ function EnhancedSSHConnectionsList({
           padding: '60px',
           textAlign: 'center',
           color: TEXT.secondary,
-          background: 'rgba(255,255,255,0.02)',
+          background: 'var(--surface-hover)',
           borderRadius: '12px',
-          border: '1px dashed rgba(255,255,255,0.1)',
+          border: '1px dashed var(--ui-border-default)',
         }}
       >
         <ComputerTower size={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
-        <h3 style={{ fontSize: '18px', fontWeight: 500, color: '#fff', margin: '0 0 8px 0' }}>
+        <h3 style={{ fontSize: '18px', fontWeight: 500, color: 'var(--ui-text-primary)', margin: '0 0 8px 0' }}>
           No SSH Connections
         </h3>
         <p style={{ fontSize: '14px', margin: '0 0 20px 0' }}>
@@ -1303,7 +1289,7 @@ function EnhancedSSHConnectionsList({
             borderRadius: '8px',
             border: 'none',
             background: SAND[500],
-            color: '#1a1a1a',
+            color: 'var(--ui-text-inverse)',
             fontSize: '14px',
             fontWeight: 600,
             cursor: 'pointer',
@@ -1324,18 +1310,18 @@ function EnhancedSSHConnectionsList({
           style={{
             padding: '16px 20px',
             borderRadius: '10px',
-            background: connection.status === 'connected' ? 'rgba(34,197,94,0.05)' : 'rgba(255,255,255,0.03)',
+            background: connection.status === 'connected' ? 'rgba(34,197,94,0.05)' : 'var(--surface-hover)',
             border: `1px solid ${
               connection.status === 'connected'
                 ? 'rgba(34,197,94,0.2)'
                 : connection.status === 'error'
                 ? 'rgba(239,68,68,0.2)'
-                : 'rgba(255,255,255,0.06)'
+                : 'var(--ui-border-muted)'
             }`,
             display: 'flex',
             alignItems: 'center',
             gap: '16px',
-            transition: 'all 0.2s',
+            transition: 'var(--transition-fast)',
           }}
         >
           {/* Favorite Star */}
@@ -1361,12 +1347,12 @@ function EnhancedSSHConnectionsList({
               borderRadius: '50%',
               background:
                 connection.status === 'connected'
-                  ? '#22c55e'
+                  ? 'var(--status-success)'
                   : connection.status === 'connecting'
-                  ? '#f59e0b'
+                  ? 'var(--status-warning)'
                   : connection.status === 'error'
-                  ? '#ef4444'
-                  : '#666',
+                  ? 'var(--status-error)'
+                  : 'var(--ui-text-muted)',
               animation: connection.status === 'connecting' ? 'pulse 1.5s infinite' : undefined,
             }}
           />
@@ -1374,7 +1360,7 @@ function EnhancedSSHConnectionsList({
           {/* Connection Info */}
           <div style={{ flex: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '14px', fontWeight: 500, color: '#fff' }}>
+              <span style={{ fontSize: '14px', fontWeight: 500, color: 'var(--ui-text-primary)' }}>
                 {connection.name}
               </span>
               {connection.tags?.map((tag) => (
@@ -1412,9 +1398,9 @@ function EnhancedSSHConnectionsList({
                 style={{
                   padding: '6px 12px',
                   borderRadius: '6px',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  border: '1px solid var(--ui-border-default)',
                   background: 'transparent',
-                  color: '#888',
+                  color: 'var(--ui-text-secondary)',
                   fontSize: '12px',
                   cursor: 'pointer',
                 }}
@@ -1422,7 +1408,7 @@ function EnhancedSSHConnectionsList({
                 Disconnect
               </button>
             ) : connection.status === 'connecting' ? (
-              <span style={{ fontSize: '12px', color: '#f59e0b' }}>Connecting...</span>
+              <span style={{ fontSize: '12px', color: 'var(--status-warning)' }}>Connecting...</span>
             ) : (
               <button
                 onClick={() => onConnect(connection.id)}
@@ -1430,8 +1416,8 @@ function EnhancedSSHConnectionsList({
                   padding: '6px 12px',
                   borderRadius: '6px',
                   border: 'none',
-                  background: 'rgba(34,197,94,0.2)',
-                  color: '#22c55e',
+                  background: 'var(--status-success-bg)',
+                  color: 'var(--status-success)',
                   fontSize: '12px',
                   cursor: 'pointer',
                 }}
@@ -1447,7 +1433,7 @@ function EnhancedSSHConnectionsList({
                 borderRadius: '6px',
                 border: 'none',
                 background: 'transparent',
-                color: '#666',
+                color: 'var(--ui-text-muted)',
                 cursor: 'pointer',
               }}
               title="Test Connection"

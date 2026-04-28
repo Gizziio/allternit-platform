@@ -179,11 +179,11 @@ export function ArtifactCard({ artifact, isSelected, onClick }: ArtifactCardProp
         borderRadius: "10px",
         border: isSelected
           ? `1.5px solid rgba(212,176,140,0.55)`
-          : `1.5px solid ${hovered ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.09)"}`,
+          : `1.5px solid ${hovered ? "var(--ui-border-strong)" : "var(--ui-border-muted)"}`,
         background: isSelected
-          ? "rgba(212,176,140,0.07)"
+          ? "color-mix(in srgb, var(--accent-primary) 7%, transparent)"
           : hovered
-          ? "rgba(255,255,255,0.04)"
+          ? "var(--surface-hover)"
           : "rgba(255,255,255,0.025)",
         cursor: "pointer",
         textAlign: "left",
@@ -200,8 +200,8 @@ export function ArtifactCard({ artifact, isSelected, onClick }: ArtifactCardProp
           width: "36px",
           height: "36px",
           borderRadius: "8px",
-          background: "rgba(255,255,255,0.06)",
-          border: "1px solid rgba(255,255,255,0.08)",
+          background: "var(--ui-border-muted)",
+          border: "1px solid var(--ui-border-muted)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -273,7 +273,7 @@ export function ArtifactCard({ artifact, isSelected, onClick }: ArtifactCardProp
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            boxShadow: 'var(--shadow-md)',
             zIndex: 10,
             transition: 'transform 0.2s ease',
           }}
@@ -406,7 +406,7 @@ export function ArtifactSidePanel({ artifact, onClose }: ArtifactSidePanelProps)
         minWidth: "440px",
         display: "flex",
         flexDirection: "column",
-        borderLeft: "1px solid rgba(255,255,255,0.08)",
+        borderLeft: "1px solid var(--ui-border-muted)",
         background: "#1e1a17",
         position: "relative",
         overflow: "hidden",
@@ -420,7 +420,7 @@ export function ArtifactSidePanel({ artifact, onClose }: ArtifactSidePanelProps)
           alignItems: "center",
           justifyContent: "space-between",
           padding: "10px 16px",
-          borderBottom: "1px solid rgba(255,255,255,0.07)",
+          borderBottom: "1px solid var(--ui-border-muted)",
           flexShrink: 0,
         }}
       >
@@ -448,8 +448,8 @@ export function ArtifactSidePanel({ artifact, onClose }: ArtifactSidePanelProps)
               letterSpacing: "0.06em",
               textTransform: "uppercase",
               color: "rgba(255,255,255,0.3)",
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              background: "var(--ui-border-muted)",
+              border: "1px solid var(--ui-border-muted)",
               padding: "2px 7px",
               borderRadius: "100px",
               flexShrink: 0,
@@ -470,12 +470,12 @@ export function ArtifactSidePanel({ artifact, onClose }: ArtifactSidePanelProps)
                 gap: "5px",
                 padding: "5px 10px",
                 borderRadius: "7px",
-                border: "1px solid rgba(255,255,255,0.09)",
+                border: "1px solid var(--ui-border-muted)",
                 background: copyError 
-                  ? "rgba(239,68,68,0.15)" 
+                  ? "var(--status-error-bg)" 
                   : isCopied 
                     ? "rgba(74,222,128,0.10)" 
-                    : "rgba(255,255,255,0.04)",
+                    : "var(--surface-hover)",
                 color: copyError 
                   ? "rgba(239,68,68,0.9)" 
                   : isCopied 
@@ -514,12 +514,12 @@ export function ArtifactSidePanel({ artifact, onClose }: ArtifactSidePanelProps)
                 gap: "5px",
                 padding: "5px 10px",
                 borderRadius: "7px",
-                border: "1px solid rgba(255,255,255,0.09)",
+                border: "1px solid var(--ui-border-muted)",
                 background: showRenderModal
                   ? "rgba(248,165,113,0.12)"
                   : hf.status === 'done'
                   ? "rgba(74,222,128,0.10)"
-                  : "rgba(255,255,255,0.04)",
+                  : "var(--surface-hover)",
                 color: hf.status === 'done'
                   ? "rgba(74,222,128,0.9)"
                   : "rgba(248,165,113,0.8)",
@@ -549,18 +549,18 @@ export function ArtifactSidePanel({ artifact, onClose }: ArtifactSidePanelProps)
               width: "28px",
               height: "28px",
               borderRadius: "7px",
-              border: "1px solid rgba(255,255,255,0.09)",
-              background: "rgba(255,255,255,0.03)",
+              border: "1px solid var(--ui-border-muted)",
+              background: "var(--surface-hover)",
               color: "rgba(255,255,255,0.45)",
               cursor: "pointer",
               transition: "background 0.12s, color 0.12s",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(255,255,255,0.08)";
+              e.currentTarget.style.background = "var(--ui-border-muted)";
               e.currentTarget.style.color = "rgba(255,255,255,0.8)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = "rgba(255,255,255,0.03)";
+              e.currentTarget.style.background = "var(--surface-hover)";
               e.currentTarget.style.color = "rgba(255,255,255,0.45)";
             }}
           >
@@ -573,7 +573,7 @@ export function ArtifactSidePanel({ artifact, onClose }: ArtifactSidePanelProps)
       {showRenderModal && artifact.kind === 'html' && (
         <div
           style={{
-            borderBottom: "1px solid rgba(255,255,255,0.07)",
+            borderBottom: "1px solid var(--ui-border-muted)",
             padding: "12px 16px",
             background: "rgba(248,165,113,0.04)",
             flexShrink: 0,
@@ -594,8 +594,8 @@ export function ArtifactSidePanel({ artifact, onClose }: ArtifactSidePanelProps)
                     style={{
                       padding: "4px 10px",
                       borderRadius: "6px",
-                      border: `1px solid ${renderFormat === fmt ? "rgba(248,165,113,0.5)" : "rgba(255,255,255,0.09)"}`,
-                      background: renderFormat === fmt ? "rgba(248,165,113,0.12)" : "rgba(255,255,255,0.03)",
+                      border: `1px solid ${renderFormat === fmt ? "rgba(248,165,113,0.5)" : "var(--ui-border-muted)"}`,
+                      background: renderFormat === fmt ? "rgba(248,165,113,0.12)" : "var(--surface-hover)",
                       color: renderFormat === fmt ? "rgba(248,165,113,0.9)" : "rgba(255,255,255,0.4)",
                       fontSize: "11px",
                       fontWeight: 600,
@@ -644,7 +644,7 @@ export function ArtifactSidePanel({ artifact, onClose }: ArtifactSidePanelProps)
               <div style={{ color: "rgba(255,255,255,0.35)", wordBreak: "break-all", fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>{hf.savedPath}</div>
               <button
                 onClick={hf.reset}
-                style={{ marginTop: "8px", padding: "4px 10px", borderRadius: "6px", border: "1px solid rgba(255,255,255,0.09)", background: "rgba(255,255,255,0.03)", color: "rgba(255,255,255,0.4)", fontSize: "11px", cursor: "pointer" }}
+                style={{ marginTop: "8px", padding: "4px 10px", borderRadius: "6px", border: "1px solid var(--ui-border-muted)", background: "var(--surface-hover)", color: "rgba(255,255,255,0.4)", fontSize: "11px", cursor: "pointer" }}
               >
                 Render another
               </button>
@@ -757,7 +757,7 @@ function ArtifactContent({ artifact }: { artifact: SelectedArtifact }) {
                     <td
                       key={j}
                       style={{
-                        border: "1px solid rgba(255,255,255,0.08)",
+                        border: "1px solid var(--ui-border-muted)",
                         padding: "6px 10px",
                         color: "rgba(236,236,236,0.75)",
                       }}
@@ -868,7 +868,7 @@ function HtmlPreview({ html }: { html: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       {/* Tab bar */}
-      <div style={{ display: "flex", borderBottom: "1px solid rgba(255,255,255,0.07)", padding: "0 8px", flexShrink: 0 }}>
+      <div style={{ display: "flex", borderBottom: "1px solid var(--ui-border-muted)", padding: "0 8px", flexShrink: 0 }}>
         <button style={tabStyle(tab === "preview")} onClick={() => setTab("preview")}>Preview</button>
         <button style={tabStyle(tab === "source")} onClick={() => setTab("source")}>Source</button>
       </div>

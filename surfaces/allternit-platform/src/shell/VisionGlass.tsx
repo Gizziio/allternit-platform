@@ -79,7 +79,7 @@ export function VisionGlass(): JSX.Element {
   }, []);
 
   return (
-    <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 9999 }}>
+    <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 230 }}>
       {actions.map(action => (
         <div key={action.id} style={{
           position: "absolute",

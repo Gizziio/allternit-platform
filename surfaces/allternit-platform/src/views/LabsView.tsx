@@ -1,25 +1,14 @@
 /**
  * A://Labs View - Learning Portal
- *
- * UI component for browsing live A://Labs Canvas tracks,
- * downloading Udemy source courses, and managing course content.
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  BookOpen, 
-  Download, 
-  FolderOpen, 
-  Settings, 
-  Search, 
-  Play, 
-  Pause, 
-  Trash2, 
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  BookOpen,
+  Settings,
+  Play,
   RefreshCw,
-  AlertCircle,
   CheckCircle,
-  Clock,
-  HardDrive,
   ExternalLink,
   Eye,
   GraduationCap,
@@ -40,36 +29,7 @@ import { notebookApi } from './research/hooks/useNotebookApi';
 
 import type { ModeSessionMessage } from '@/lib/agents/mode-session-store';
 
-// Types
-interface UdemyCourse {
-  id: number;
-  title: string;
-  headline: string;
-  image_240x135: string;
-  url: string;
-  published_title: string;
-  num_lectures?: number;
-}
-
-interface LocalCourse {
-  id: number;
-  title: string;
-  downloadDate: string;
-  status: 'downloading' | 'completed' | 'failed' | 'partial';
-  totalFiles: number;
-  totalSize: number;
-  path: string;
-}
-
-interface DownloadProgress {
-  courseId: number;
-  fileName: string;
-  downloaded: number;
-  total: number;
-  speed: number;
-}
-
-type Tab = 'discovery' | 'research' | 'tracks' | 'browse' | 'downloads' | 'certifications' | 'agent-elements' | 'settings';
+type Tab = 'discovery' | 'research' | 'tracks' | 'certifications' | 'agent-elements' | 'settings';
 
 const LABS_STORAGE_KEY = 'allternit-labs-config';
 
@@ -257,13 +217,95 @@ const AGENT_ELEMENTS_PREVIEW_MESSAGES: ModeSessionMessage[] = [
   },
 ];
 
+// ─── Design tokens ───────────────────────────────────────────────────────────
+const L = {
+  bg:          'var(--surface-canvas)',
+  bgCard:      'var(--surface-panel)',
+  bgElevated:  'var(--surface-floating)',
+  border:      'var(--ui-border-muted)',
+  borderMed:   'var(--ui-border-default)',
+  textPrimary: 'var(--ui-text-primary)',
+  textSec:     'var(--ui-text-secondary)',
+  textTer:     'var(--ui-text-muted)',
+  accent:      '#a78bfa',
+  accentDim:   'rgba(167,139,250,0.10)',
+  accentBorder:'rgba(167,139,250,0.20)',
+  gold:        'var(--status-warning)',
+} as const;
+
+const LABS_CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,900&family=Syne:wght@400;500;600;700;800&display=swap');
+
+  .labs-root { scrollbar-width: thin; scrollbar-color: rgba(167,139,250,.18) transparent; }
+  .labs-root::before {
+    content:''; position:fixed; inset:0; pointer-events:none; z-index:9999;
+    opacity:.032;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23g)'/%3E%3C/svg%3E");
+    background-size:256px;
+  }
+  .labs-root::-webkit-scrollbar { width:5px; }
+  .labs-root::-webkit-scrollbar-thumb { background:rgba(167,139,250,.18); border-radius:99px; }
+  .labs-root::-webkit-scrollbar-track { background:transparent; }
+
+  .labs-serif  { font-family:'Fraunces',Georgia,'Times New Roman',serif !important; }
+  .labs-display{ font-family:'Syne',system-ui,sans-serif !important; }
+
+  @keyframes labs-reveal { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+  .labs-reveal { opacity:0; }
+  .labs-reveal.is-visible { animation:labs-reveal .68s cubic-bezier(.16,1,.3,1) forwards; }
+
+  @keyframes labs-slide-in { from{transform:translateX(100%);opacity:0} to{transform:translateX(0);opacity:1} }
+  @keyframes labs-spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+  .labs-spin { animation:labs-spin 1s linear infinite; }
+
+  .labs-card-hover { transition:all .22s cubic-bezier(.4,0,.2,1); }
+  .labs-card-hover:hover { transform:translateY(-4px); box-shadow:0 16px 48px rgba(0,0,0,.5); }
+  .labs-img-zoom img { transition:transform .4s cubic-bezier(.4,0,.2,1); }
+  .labs-img-zoom:hover img { transform:scale(1.04); }
+
+  .labs-tab-btn {
+    padding:12px 18px; background:transparent; border:none;
+    border-bottom:2px solid transparent; cursor:pointer;
+    font-size:13px; display:flex; align-items:center; gap:6px;
+    transition:all .18s; margin-bottom:-1px; white-space:nowrap;
+  }
+  .labs-tab-btn.active { border-bottom-color:#a78bfa; color:#f0f0f0; font-weight:600; }
+  .labs-tab-btn:not(.active) { color:#484848; font-weight:400; }
+  .labs-tab-btn:not(.active):hover { color:#888; }
+
+  .labs-input {
+    width:100%; padding:10px 14px;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:10px; color:#f0f0f0; font-size:14px;
+    outline:none; transition:border-color .18s; box-sizing:border-box;
+  }
+  .labs-input:focus { border-color:rgba(167,139,250,.4); }
+  .labs-input::placeholder { color:#3a3a3a; }
+`;
+
+function useLabsReveal<T extends HTMLElement = HTMLDivElement>() {
+  const ref = useRef<T>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.classList.add('labs-reveal');
+    const obs = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) { el.classList.add('is-visible'); obs.disconnect(); }
+    }, { threshold: 0.07 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return ref;
+}
+
 function getTierColor(tier: string) {
   switch (tier) {
-    case 'CORE': return '#3b82f6';
+    case 'CORE': return 'var(--status-info)';
     case 'OPS': return '#8b5cf6';
     case 'AGENTS': return '#ec4899';
-    case 'ADV': return '#f59e0b';
-    default: return '#6b7280';
+    case 'ADV': return 'var(--status-warning)';
+    default: return 'var(--ui-text-muted)';
   }
 }
 
@@ -277,36 +319,142 @@ function getTierIcon(tier: string) {
   }
 }
 
+// ─── CourseCard ──────────────────────────────────────────────────────────────
+interface CourseCardProps {
+  course: ALABSCourse;
+  tierColor: string;
+  canvasToken: string;
+  onOpenNotebook: () => void;
+  onSyncCanvas: () => void;
+}
+
+function CourseCard({ course, tierColor, canvasToken, onOpenNotebook, onSyncCanvas }: CourseCardProps) {
+  const ref = useLabsReveal<HTMLDivElement>();
+  const TierIcon = getTierIcon(course.tier);
+
+  return (
+    <div ref={ref} className="labs-card-hover" style={{
+      background: L.bgCard,
+      border: `1px solid ${L.border}`,
+      borderRadius: 16,
+      overflow: 'hidden',
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
+      {/* Cover image */}
+      <div className="labs-img-zoom" style={{ position: 'relative', height: 160, flexShrink: 0, overflow: 'hidden' }}>
+        <img
+          src={course.coverImage}
+          alt={course.title}
+          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
+        />
+        {/* Gradient overlay */}
+        <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(to bottom, transparent 40%, rgba(14,14,14,.92) 100%)` }} />
+        {/* Tier badge */}
+        <div style={{
+          position: 'absolute', top: 12, left: 12,
+          display: 'flex', alignItems: 'center', gap: 5,
+          padding: '4px 10px',
+          background: `${tierColor}22`,
+          border: `1px solid ${tierColor}44`,
+          borderRadius: 99, backdropFilter: 'blur(8px)',
+        }}>
+          <TierIcon size={11} color={tierColor} />
+          <span className="labs-display" style={{ fontSize: 9.5, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', color: tierColor }}>{course.tier}</span>
+        </div>
+        {/* Module count */}
+        <div style={{ position: 'absolute', top: 12, right: 12 }}>
+          <span className="labs-display" style={{ fontSize: 9.5, fontWeight: 700, color: 'rgba(255,255,255,.45)', letterSpacing: '.06em' }}>{course.modules} modules</span>
+        </div>
+        {/* Course code bottom-left */}
+        <div style={{ position: 'absolute', bottom: 12, left: 14 }}>
+          <span className="labs-display" style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.18em', textTransform: 'uppercase', color: `${tierColor}bb` }}>{course.code}</span>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{ padding: '18px 20px 20px', flex: 1, display: 'flex', flexDirection: 'column', gap: 0 }}>
+        {/* Title */}
+        <h3 className="labs-serif" style={{
+          fontSize: 17, fontWeight: 900, fontStyle: 'italic',
+          margin: '0 0 10px', color: L.textPrimary,
+          letterSpacing: '-.02em', lineHeight: 1.25,
+        }}>{course.title}</h3>
+
+        {/* Description */}
+        <p style={{
+          fontSize: 12.5, color: L.textSec, margin: '0 0 16px',
+          lineHeight: 1.6, overflow: 'hidden', textOverflow: 'ellipsis',
+          display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical',
+        }}>{course.description}</p>
+
+        {/* Capstone box */}
+        <div style={{
+          padding: '10px 14px', marginBottom: 18,
+          background: `${tierColor}0a`, border: `1px solid ${tierColor}20`,
+          borderRadius: 10,
+        }}>
+          <div className="labs-display" style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase', color: tierColor, marginBottom: 5 }}>Capstone</div>
+          <div style={{ fontSize: 12, color: L.textPrimary, lineHeight: 1.4 }}>{course.capstone}</div>
+        </div>
+
+        {/* Actions */}
+        <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={onOpenNotebook}
+              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px 14px', background: `linear-gradient(135deg,${tierColor},${tierColor}bb)`, border: 'none', borderRadius: 9, color: 'var(--ui-text-primary)', fontWeight: 700, fontSize: 12.5, cursor: 'pointer', boxShadow: `0 4px 14px ${tierColor}30` }}
+            >
+              <BookOpen size={13} /> Open Notebook
+            </button>
+            <a href={course.canvasUrl} target="_blank" rel="noopener noreferrer"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '9px 12px', background: 'rgba(255,255,255,.04)', border: `1px solid ${L.border}`, borderRadius: 9, color: L.textSec, textDecoration: 'none', transition: 'background .18s' }}
+              title="Open in Canvas"
+            >
+              <ExternalLink size={13} />
+            </a>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {canvasToken && (
+              <button onClick={onSyncCanvas}
+                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 14px', background: 'rgba(255,255,255,.04)', border: `1px solid ${L.border}`, borderRadius: 9, color: L.textSec, cursor: 'pointer', fontSize: 12, fontWeight: 600, transition: 'background .18s' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,.08)'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,.04)'; }}
+              >
+                <RefreshCw size={12} /> Sync Canvas
+              </button>
+            )}
+            {course.demosUrl && (
+              <a href={course.demosUrl} target="_blank" rel="noopener noreferrer"
+                style={{ flex: canvasToken ? 0 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 14px', background: 'rgba(255,255,255,.04)', border: `1px solid ${L.border}`, borderRadius: 9, color: L.textSec, textDecoration: 'none', fontSize: 12, fontWeight: 600 }}
+              >
+                <Eye size={12} /> Try Demo
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function LabsView() {
   const { dispatch } = useNav();
   const [activeTab, setActiveTab] = useState<Tab>('discovery');
-  const [courses, setCourses] = useState<UdemyCourse[]>([]);
-  const [localCourses, setLocalCourses] = useState<LocalCourse[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [accessToken, setAccessToken] = useState('');
-  const [subDomain, setSubDomain] = useState('www');
-  const [downloadPath, setDownloadPath] = useState('~/Downloads/UdemyCourses');
   const [canvasToken, setCanvasToken] = useState('');
   const [canvasDomain, setCanvasDomain] = useState('https://canvas.instructure.com');
-  const [downloading, setDownloading] = useState<number | null>(null);
-  const [progress, setProgress] = useState<DownloadProgress | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
 
-  // Load config from localStorage
+  // Load Canvas config from localStorage
   useEffect(() => {
     const saved = localStorage.getItem(LABS_STORAGE_KEY);
     if (saved) {
       try {
         const config = JSON.parse(saved);
-        setAccessToken(config.accessToken || '');
-        setSubDomain(config.subDomain || 'www');
-        setDownloadPath(config.downloadPath || '~/Downloads/UdemyCourses');
         setCanvasToken(config.canvasToken || '');
         setCanvasDomain(config.canvasDomain || 'https://canvas.instructure.com');
-      } catch (e) {
-        console.error('Failed to load labs config:', e);
+      } catch {
+        // ignore malformed config
       }
     }
   }, []);
@@ -315,7 +463,6 @@ export function LabsView() {
   useEffect(() => {
     const handler = (e: CustomEvent<{ notebookId?: string }>) => {
       setActiveTab('research');
-      // Notebook ID can be passed to ResearchTab via a store or query param
       if (e.detail?.notebookId) {
         window.dispatchEvent(new CustomEvent('allternit:research-open-notebook', {
           detail: { notebookId: e.detail.notebookId }
@@ -326,131 +473,17 @@ export function LabsView() {
     return () => window.removeEventListener('allternit:open-research-notebook' as any, handler);
   }, []);
 
-  // Save config to localStorage
-  const saveConfig = useCallback((config: { accessToken?: string; subDomain?: string; downloadPath?: string; canvasToken?: string; canvasDomain?: string }) => {
+  const saveConfig = useCallback((config: { canvasToken?: string; canvasDomain?: string }) => {
     const current = JSON.parse(localStorage.getItem(LABS_STORAGE_KEY) || '{}');
-    const updated = { ...current, ...config };
-    localStorage.setItem(LABS_STORAGE_KEY, JSON.stringify(updated));
-    
-    if (config.accessToken !== undefined) setAccessToken(config.accessToken);
-    if (config.subDomain !== undefined) setSubDomain(config.subDomain);
-    if (config.downloadPath !== undefined) setDownloadPath(config.downloadPath);
+    localStorage.setItem(LABS_STORAGE_KEY, JSON.stringify({ ...current, ...config }));
     if (config.canvasToken !== undefined) setCanvasToken(config.canvasToken);
     if (config.canvasDomain !== undefined) setCanvasDomain(config.canvasDomain);
   }, []);
 
-  // Show notification
   const showNotification = useCallback((msg: string) => {
     setNotification(msg);
     setTimeout(() => setNotification(null), 4000);
   }, []);
-
-  // Fetch courses from Udemy via backend
-  const fetchCourses = useCallback(async () => {
-    if (!accessToken) {
-      setError('Please enter your Udemy access token in Settings');
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch('/api/v1/udemy/courses', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          accessToken,
-          subDomain,
-          page: 1,
-          pageSize: 50,
-          search: searchQuery || undefined,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Failed to fetch: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setCourses(data.results || []);
-      showNotification(`Loaded ${data.results?.length || 0} enrolled courses`);
-    } catch (err: any) {
-      setError(err.message || 'Failed to fetch courses');
-    } finally {
-      setLoading(false);
-    }
-  }, [accessToken, subDomain, searchQuery, showNotification]);
-
-  // Download a course (simulation - in production, calls backend service)
-  const downloadCourse = useCallback(async (course: UdemyCourse) => {
-    if (downloading) {
-      showNotification('A download is already in progress');
-      return;
-    }
-
-    setDownloading(course.id);
-    setProgress({
-      courseId: course.id,
-      fileName: 'Initializing...',
-      downloaded: 0,
-      total: 0,
-      speed: 0,
-    });
-    setError(null);
-
-    try {
-      // NOTE: This is a placeholder. In production, call the actual downloader API
-      // For now, we simulate the download flow
-      showNotification(`Download started: ${course.title}`);
-      
-      // Simulate progress (remove in production)
-      let pct = 0;
-      const interval = setInterval(() => {
-        pct += 10;
-        if (pct >= 100) {
-          clearInterval(interval);
-          setDownloading(null);
-          setProgress(null);
-          
-          // Add to local courses
-          const newLocal: LocalCourse = {
-            id: course.id,
-            title: course.title,
-            downloadDate: new Date().toISOString(),
-            status: 'completed',
-            totalFiles: 0,
-            totalSize: 0,
-            path: `${downloadPath}/${course.id}-${course.title.replace(/[^a-zA-Z0-9]/g, '-')}`,
-          };
-          setLocalCourses(prev => [...prev, newLocal]);
-          showNotification(`Download complete: ${course.title}`);
-        } else {
-          setProgress({
-            courseId: course.id,
-            fileName: `Downloading lecture ${Math.floor(pct / 10)}...`,
-            downloaded: pct,
-            total: 100,
-            speed: 0,
-          });
-        }
-      }, 500);
-
-    } catch (err: any) {
-      setError(err.message || 'Download failed');
-      setDownloading(null);
-      setProgress(null);
-    }
-  }, [downloading, downloadPath, showNotification]);
-
-  // Delete local course
-  const deleteCourse = useCallback(async (courseId: number, title: string) => {
-    if (!confirm(`Delete "${title}" from local storage?`)) return;
-    
-    setLocalCourses(prev => prev.filter(c => c.id !== courseId));
-    showNotification(`Deleted: ${title}`);
-  }, [showNotification]);
 
   // Open course-linked notebook
   const openCourseNotebook = useCallback(async (course: ALABSCourse) => {
@@ -566,439 +599,142 @@ export function LabsView() {
     return notebookId;
   }
 
-  // Format file size
-  const formatSize = (bytes: number): string => {
-    if (!bytes || bytes === 0) return '0 B';
-    const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(1024));
-    return `${(bytes / Math.pow(1024, i)).toFixed(i > 0 ? 1 : 0)} ${units[i]}`;
-  };
-
-  // Format date
-  const formatDate = (isoDate: string): string => {
-    const date = new Date(isoDate);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric' 
-    });
-  };
+  const tabs = [
+    { id: 'discovery'      as Tab, icon: Compass,       label: 'Discovery' },
+    { id: 'research'       as Tab, icon: FlaskConical,  label: 'Research' },
+    { id: 'tracks'         as Tab, icon: GraduationCap, label: 'A://Labs Tracks' },
+    { id: 'certifications' as Tab, icon: Award,         label: 'Certifications' },
+    { id: 'agent-elements' as Tab, icon: Rocket,        label: 'Agent Elements' },
+    { id: 'settings'       as Tab, icon: Settings,      label: 'Settings' },
+  ];
 
   return (
-    <div style={{
+    <div className="labs-root" style={{
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
-      background: 'var(--bg-primary, #0a0a0a)',
-      color: 'var(--text-primary, #e5e5e5)',
+      background: L.bg,
+      color: L.textPrimary,
+      position: 'relative',
     }}>
+      <style>{LABS_CSS}</style>
+
       {/* Notification Toast */}
       {notification && (
-        <div style={{
-          position: 'fixed',
-          top: 20,
-          right: 20,
-          background: 'var(--success-bg, #065f46)',
-          border: '1px solid var(--success-border, #059669)',
-          borderRadius: 8,
-          padding: '12px 20px',
-          zIndex: 9999,
-          animation: 'slideIn 0.3s ease-out',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <CheckCircle size={18} color="#34d399" />
-            <span>{notification}</span>
+        <div style={{ position:'fixed', top:20, right:20, background:'#0d1f17', border:'1px solid rgba(52,211,153,.25)', borderRadius:12, padding:'12px 20px', zIndex:190, animation:'labs-slide-in .3s ease-out', boxShadow:'0 8px 32px rgba(0,0,0,.4)' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:9 }}>
+            <CheckCircle size={16} color="#34d399" />
+            <span style={{ fontSize:13, color:'var(--ui-text-primary)' }}>{notification}</span>
           </div>
         </div>
       )}
 
-      {/* Header */}
-      <div style={{
-        padding: '24px 32px',
-        borderBottom: '1px solid var(--border-subtle, #27272a)',
-        background: 'var(--bg-secondary, #111113)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-          <GraduationCap size={32} color="#a78bfa" />
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div style={{ background:L.bgCard, borderBottom:`1px solid ${L.border}`, flexShrink:0, position:'relative', overflow:'hidden' }}>
+        {/* Ambient orbs */}
+        <div style={{ position:'absolute', top:-80, right:80, width:320, height:320, background:'radial-gradient(circle,rgba(167,139,250,.08),transparent 70%)', filter:'blur(50px)', pointerEvents:'none' }}/>
+        <div style={{ position:'absolute', bottom:-60, left:60, width:200, height:200, background:'radial-gradient(circle,rgba(245,158,11,.05),transparent 70%)', filter:'blur(40px)', pointerEvents:'none' }}/>
+
+        {/* Title row */}
+        <div style={{ padding:'28px 36px 20px', display:'flex', alignItems:'flex-start', justifyContent:'space-between', position:'relative' }}>
           <div>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:9, marginBottom:10 }}>
+              <div style={{ width:20, height:1, background:L.accent, opacity:.5 }}/>
+              <span className="labs-display" style={{ fontSize:9.5, fontWeight:700, letterSpacing:'.2em', textTransform:'uppercase', color:L.accent }}>Learning Portal</span>
+            </div>
+            <h1 className="labs-serif" style={{ fontSize:46, fontWeight:900, fontStyle:'italic', margin:'0 0 6px', letterSpacing:'-.03em', lineHeight:1, color:L.textPrimary }}>
               A://Labs
             </h1>
-            <p style={{ fontSize: 13, color: 'var(--text-muted, #a1a1aa)', margin: 0 }}>
-              Learning Portal & Course Manager
+            <p className="labs-display" style={{ fontSize:12.5, color:L.textSec, margin:0, letterSpacing:'.01em' }}>
+              10 live courses · 65 modules · open-source demos
             </p>
           </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
-            <a
-              href="https://allternit.com/demos"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '10px 20px',
-                background: 'linear-gradient(135deg, #f59e0b, #fbbf24)',
-                border: 'none',
-                borderRadius: 8,
-                color: '#0a0a0a',
-                fontWeight: 600,
-                fontSize: 14,
-                textDecoration: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(245, 158, 11, 0.3)',
-              }}
-            >
-              <Play size={18} />
-              Open-Source Demos
-            </a>
-            <button
-              onClick={() => dispatch({ type: 'OPEN_VIEW', viewType: 'catalog' })}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 8,
-                padding: '10px 20px',
-                background: 'linear-gradient(135deg, #3b82f6, #06b6d4)',
-                border: 'none',
-                borderRadius: 8,
-                color: '#fff',
-                fontWeight: 600,
-                fontSize: 14,
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)',
-              }}
-            >
-              <Globe size={18} />
-              Browse Free Catalog
-            </button>
+
+          {/* Stats + CTAs */}
+          <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:16, paddingTop:4 }}>
+            <div style={{ display:'flex', gap:28 }}>
+              {[
+                { val:'65', label:'Modules',     color:L.gold },
+                { val:'10', label:'Live Courses', color:'var(--status-success)' },
+                { val:'51', label:'Assignments',  color:L.accent },
+              ].map(s => (
+                <div key={s.label} style={{ textAlign:'center' }}>
+                  <div className="labs-serif" style={{ fontSize:28, fontWeight:900, fontStyle:'italic', color:s.color, lineHeight:1 }}>{s.val}</div>
+                  <div className="labs-display" style={{ fontSize:9, fontWeight:700, letterSpacing:'.12em', textTransform:'uppercase', color:L.textTer, marginTop:3 }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ display:'flex', gap:10 }}>
+              <a href="https://allternit.com/demos" target="_blank" rel="noopener noreferrer"
+                style={{ display:'flex', alignItems:'center', gap:7, padding:'9px 18px', background:`linear-gradient(135deg,${L.gold},#d97706)`, border:'none', borderRadius:10, color:'var(--ui-text-inverse)', fontWeight:700, fontSize:13, textDecoration:'none', cursor:'pointer', boxShadow:`0 4px 16px rgba(245,158,11,.25)` }}
+              >
+                <Play size={15} /> Open-Source Demos
+              </a>
+              <button onClick={() => dispatch({ type:'OPEN_VIEW', viewType:'catalog' })}
+                style={{ display:'flex', alignItems:'center', gap:7, padding:'9px 18px', background:'rgba(255,255,255,.05)', border:`1px solid ${L.borderMed}`, borderRadius:10, color:L.textPrimary, fontWeight:600, fontSize:13, cursor:'pointer', transition:'all .18s' }}
+                onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,.09)';}}
+                onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,.05)';}}
+              >
+                <Globe size={15} /> Browse Free Catalog
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: 8 }}>
-          {([
-            { id: 'discovery' as Tab, icon: Compass, label: 'Discovery' },
-            { id: 'research' as Tab, icon: FlaskConical, label: 'Research' },
-            { id: 'tracks' as Tab, icon: GraduationCap, label: 'A://Labs Tracks' },
-            { id: 'browse' as Tab, icon: BookOpen, label: 'Browse Udemy' },
-            { id: 'downloads' as Tab, icon: Download, label: 'My Downloads' },
-            { id: 'certifications' as Tab, icon: Award, label: 'Certifications' },
-            { id: 'agent-elements' as Tab, icon: Rocket, label: 'Agent Elements' },
-            { id: 'settings' as Tab, icon: Settings, label: 'Settings' },
-          ]).map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '8px 16px',
-                background: activeTab === tab.id 
-                  ? 'var(--accent, #7c3aed)' 
-                  : 'transparent',
-                border: '1px solid var(--border-subtle, #27272a)',
-                borderRadius: 6,
-                color: activeTab === tab.id ? '#fff' : 'var(--text-secondary, #d4d4d8)',
-                cursor: 'pointer',
-                fontSize: 14,
-                fontWeight: 500,
-                transition: 'all 0.2s',
-              }}
+        {/* Tab bar — minimal underline strip */}
+        <div style={{ display:'flex', overflowX:'auto', borderTop:`1px solid ${L.border}`, paddingLeft:36, paddingRight:36, scrollbarWidth:'none' }}>
+          {tabs.map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+              className={`labs-tab-btn labs-display${activeTab===tab.id?' active':''}`}
             >
-              <tab.icon size={16} />
-              {tab.label}
+              <tab.icon size={13} /> {tab.label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Content Area */}
-      <div style={{ flex: 1, overflow: 'auto', padding: 32 }}>
-        {/* Error Banner */}
-        {error && (
-          <div style={{
-            marginBottom: 20,
-            padding: '12px 16px',
-            background: 'var(--error-bg, #450a0a)',
-            border: '1px solid var(--error-border, #b91c1c)',
-            borderRadius: 8,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-          }}>
-            <AlertCircle size={18} color="#f87171" />
-            <span>{error}</span>
-            <button
-              onClick={() => setError(null)}
-              style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#f87171', cursor: 'pointer' }}
-            >
-              ✕
-            </button>
-          </div>
+      {/* ── Content ─────────────────────────────────────────────────────────── */}
+      <div style={{ flex:1, overflowY:'auto', padding:'32px 36px' }}>
+
+        {/* ── Discovery ── */}
+        {activeTab === 'discovery' && <DiscoveryFeed />}
+
+        {/* ── Research ── */}
+        {activeTab === 'research' && (
+          <div style={{ height:'calc(100vh - 260px)', minHeight:500 }}><ResearchTab /></div>
         )}
 
-        {/* Download Progress Bar */}
-        {downloading && progress && (
-          <div style={{
-            marginBottom: 20,
-            padding: 16,
-            background: 'var(--bg-secondary, #111113)',
-            border: '1px solid var(--border-subtle, #27272a)',
-            borderRadius: 8,
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span style={{ fontSize: 14, fontWeight: 500 }}>
-                <Download size={16} style={{ display: 'inline', marginRight: 6 }} />
-                Downloading...
-              </span>
-              <span style={{ fontSize: 13, color: 'var(--text-muted, #a1a1aa)' }}>
-                {Math.round((progress.downloaded / progress.total) * 100)}%
-              </span>
-            </div>
-            <div style={{
-              height: 6,
-              background: 'var(--bg-tertiary, #18181b)',
-              borderRadius: 3,
-              overflow: 'hidden',
-            }}>
-              <div style={{
-                height: '100%',
-                width: `${(progress.downloaded / progress.total) * 100}%`,
-                background: 'linear-gradient(90deg, #7c3aed, #a78bfa)',
-                transition: 'width 0.3s',
-              }} />
-            </div>
-            <div style={{ marginTop: 8, fontSize: 12, color: 'var(--text-muted, #a1a1aa)' }}>
-              {progress.fileName}
-            </div>
-          </div>
-        )}
-
-        {/* Discovery Tab */}
-        {activeTab === 'discovery' && (
-          <DiscoveryFeed />
-        )}
-
-        {/* Tracks Tab */}
+        {/* ── Tracks ── */}
         {activeTab === 'tracks' && (
           <div>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 12,
-              marginBottom: 24,
-            }}>
-              <GraduationCap size={28} color="#a78bfa" />
-              <div>
-                <h2 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>
-                  A://Labs Learning Tracks
-                </h2>
-                <p style={{ fontSize: 13, color: 'var(--text-muted, #a1a1aa)', margin: '4px 0 0' }}>
-                  10 live Canvas courses · 65 modules · 51 assignments · open-source demos
-                </p>
-              </div>
-              <div style={{ marginLeft: 'auto', display: 'flex', gap: 20, textAlign: 'center' }}>
-                <div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: '#f59e0b' }}>65</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted, #a1a1aa)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Modules</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: '#22c55e' }}>10</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted, #a1a1aa)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Demos</div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: '#3b82f6' }}>0</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted, #a1a1aa)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Audit Issues</div>
-                </div>
-              </div>
-            </div>
-
-            {(['CORE', 'OPS', 'AGENTS', 'ADV'] as const).map(tier => {
+            {(['CORE','OPS','AGENTS','ADV'] as const).map(tier => {
               const TierIcon = getTierIcon(tier);
+              const tierColor = getTierColor(tier);
               const tierCourses = ALABS_COURSES.filter(c => c.tier === tier);
               return (
-                <div key={tier} style={{ marginBottom: 32 }}>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                    marginBottom: 16,
-                    padding: '10px 14px',
-                    background: 'var(--bg-secondary, #111113)',
-                    border: `1px solid ${getTierColor(tier)}33`,
-                    borderRadius: 8,
-                  }}>
-                    <TierIcon size={20} color={getTierColor(tier)} />
-                    <span style={{ fontSize: 15, fontWeight: 600, color: getTierColor(tier) }}>
-                      Tier {tier}
-                    </span>
-                    <span style={{ fontSize: 12, color: 'var(--text-muted, #a1a1aa)', marginLeft: 'auto' }}>
-                      {tierCourses.length} courses
-                    </span>
+                <div key={tier} style={{ marginBottom:52 }}>
+                  {/* Tier section header */}
+                  <div style={{ display:'flex', alignItems:'center', gap:14, marginBottom:20 }}>
+                    <div style={{ width:36, height:36, borderRadius:10, background:`${tierColor}14`, border:`1px solid ${tierColor}28`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                      <TierIcon size={18} color={tierColor} />
+                    </div>
+                    <div>
+                      <span className="labs-serif" style={{ fontSize:22, fontWeight:900, fontStyle:'italic', color:L.textPrimary, letterSpacing:'-.02em' }}>Tier {tier}</span>
+                    </div>
+                    <div style={{ flex:1, height:1, background:`linear-gradient(to right,${tierColor}25,transparent)` }}/>
+                    <span className="labs-display" style={{ fontSize:10, fontWeight:700, letterSpacing:'.1em', textTransform:'uppercase', color:L.textTer }}>{tierCourses.length} courses</span>
                   </div>
 
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                    gap: 16,
-                  }}>
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:16 }}>
                     {tierCourses.map(course => (
-                      <div
+                      <CourseCard
                         key={course.code}
-                        style={{
-                          display: 'block',
-                          background: 'var(--bg-secondary, #111113)',
-                          border: '1px solid var(--border-subtle, #27272a)',
-                          borderRadius: 10,
-                          padding: 20,
-                          color: 'var(--text-primary, #e5e5e5)',
-                          transition: 'transform 0.2s, box-shadow 0.2s, border-color 0.2s',
-                        }}
-                        onMouseEnter={(e) => {
-                          (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-4px)';
-                          (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 24px rgba(0,0,0,0.4)';
-                          (e.currentTarget as HTMLDivElement).style.borderColor = getTierColor(tier);
-                        }}
-                        onMouseLeave={(e) => {
-                          (e.currentTarget as HTMLDivElement).style.transform = '';
-                          (e.currentTarget as HTMLDivElement).style.boxShadow = '';
-                          (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-subtle, #27272a)';
-                        }}
-                      >
-                        <a href={course.canvasUrl} target="_blank" rel="noopener noreferrer"
-                          style={{ display: 'block', textDecoration: 'none', color: 'inherit' }}
-                        >
-                          <img
-                            src={course.coverImage}
-                            alt={course.title}
-                            style={{
-                              width: '100%',
-                              height: 140,
-                              objectFit: 'cover',
-                              borderRadius: 6,
-                              marginBottom: 12,
-                              background: '#0b0b0c',
-                            }}
-                          />
-                        </a>
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 8,
-                          marginBottom: 10,
-                        }}>
-                          <span style={{
-                            padding: '3px 8px',
-                            borderRadius: 4,
-                            fontSize: 11,
-                            fontWeight: 700,
-                            background: `${getTierColor(tier)}22`,
-                            color: getTierColor(tier),
-                            textTransform: 'uppercase',
-                            letterSpacing: 0.5,
-                          }}>
-                            {course.code}
-                          </span>
-                          <span style={{ fontSize: 11, color: 'var(--text-muted, #a1a1aa)' }}>
-                            {course.modules} modules
-                          </span>
-                        </div>
-
-                        <h3 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 8px' }}>
-                          {course.title}
-                        </h3>
-                        <p style={{
-                          fontSize: 13,
-                          color: 'var(--text-secondary, #d4d4d8)',
-                          margin: '0 0 14px',
-                          lineHeight: 1.5,
-                        }}>
-                          {course.description}
-                        </p>
-
-                        <div style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 12,
-                          fontSize: 12,
-                        }}>
-                          <a
-                            href={course.canvasUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--text-muted, #a1a1aa)', textDecoration: 'none' }}
-                          >
-                            <ExternalLink size={14} />
-                            Open in Canvas
-                          </a>
-                          <button
-                            onClick={() => openCourseNotebook(course)}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 6,
-                              background: 'none',
-                              border: 'none',
-                              color: '#a78bfa',
-                              cursor: 'pointer',
-                              fontSize: 12,
-                              padding: 0,
-                            }}
-                          >
-                            <BookOpen size={14} />
-                            Open Notebook
-                          </button>
-                          {canvasToken && course.canvasUrl && localStorage.getItem(`course-notebook-${course.id}`) && (
-                            <button
-                              onClick={() => syncCanvasForCourse(course)}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 6,
-                                background: 'none',
-                                border: 'none',
-                                color: '#34d399',
-                                cursor: 'pointer',
-                                fontSize: 12,
-                                padding: 0,
-                              }}
-                            >
-                              <RefreshCw size={14} />
-                              Sync Canvas
-                            </button>
-                          )}
-                          {course.demosUrl && (
-                            <a
-                              href={course.demosUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 6,
-                                color: '#f59e0b',
-                                textDecoration: 'none',
-                              }}
-                            >
-                              <Play size={14} />
-                              Try Demo
-                            </a>
-                          )}
-                        </div>
-
-                        <div style={{
-                          marginTop: 12,
-                          paddingTop: 12,
-                          borderTop: '1px solid var(--border-subtle, #27272a)',
-                          fontSize: 12,
-                          color: 'var(--text-muted, #a1a1aa)',
-                        }}>
-                          <strong style={{ color: 'var(--text-secondary, #d4d4d8)' }}>Capstone:</strong> {course.capstone}
-                        </div>
-                      </div>
+                        course={course}
+                        tierColor={tierColor}
+                        canvasToken={canvasToken}
+                        onOpenNotebook={() => openCourseNotebook(course)}
+                        onSyncCanvas={() => syncCanvasForCourse(course)}
+                      />
                     ))}
                   </div>
                 </div>
@@ -1007,533 +743,79 @@ export function LabsView() {
           </div>
         )}
 
-        {/* Browse Tab */}
-        {activeTab === 'browse' && (
-          <div>
-            {/* Search Bar */}
-            <div style={{ marginBottom: 24, display: 'flex', gap: 12 }}>
-              <div style={{ flex: 1, position: 'relative' }}>
-                <Search 
-                  size={18} 
-                  color="#a1a1aa" 
-                  style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} 
-                />
-                <input
-                  type="text"
-                  placeholder="Search your courses..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && fetchCourses()}
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px 10px 40px',
-                    background: 'var(--bg-secondary, #111113)',
-                    border: '1px solid var(--border-subtle, #27272a)',
-                    borderRadius: 6,
-                    color: 'var(--text-primary, #e5e5e5)',
-                    fontSize: 14,
-                  }}
-                />
-              </div>
-              <button
-                onClick={fetchCourses}
-                disabled={loading}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '10px 20px',
-                  background: 'var(--accent, #7c3aed)',
-                  border: 'none',
-                  borderRadius: 6,
-                  color: '#fff',
-                  fontWeight: 600,
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  fontSize: 14,
-                  opacity: loading ? 0.6 : 1,
-                }}
-              >
-                <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-                {loading ? 'Loading...' : 'Refresh'}
-              </button>
-            </div>
+        {/* ── Certifications ── */}
+        {activeTab === 'certifications' && <CertificationsPanel />}
 
-            {/* Course Grid */}
-            {courses.length === 0 && !loading ? (
-              <div style={{
-                textAlign: 'center',
-                padding: 60,
-                color: 'var(--text-muted, #a1a1aa)',
-              }}>
-                <BookOpen size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
-                <p style={{ fontSize: 16, marginBottom: 8 }}>
-                  No courses loaded
-                </p>
-                <p style={{ fontSize: 13 }}>
-                  Click "Refresh" to fetch your Udemy courses
-                </p>
-              </div>
-            ) : (
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                gap: 20,
-              }}>
-                {courses
-                  .filter(c => c.title.toLowerCase().includes(searchQuery.toLowerCase()))
-                  .map(course => {
-                    const isDownloaded = localCourses.some(lc => lc.id === course.id);
-                    const isDownloading = downloading === course.id;
-
-                    return (
-                      <div
-                        key={course.id}
-                        style={{
-                          background: 'var(--bg-secondary, #111113)',
-                          border: '1px solid var(--border-subtle, #27272a)',
-                          borderRadius: 10,
-                          overflow: 'hidden',
-                          transition: 'transform 0.2s, box-shadow 0.2s',
-                        }}
-                        onMouseEnter={(e) => {
-                          (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-4px)';
-                          (e.currentTarget as HTMLDivElement).style.boxShadow = '0 8px 24px rgba(0,0,0,0.4)';
-                        }}
-                        onMouseLeave={(e) => {
-                          (e.currentTarget as HTMLDivElement).style.transform = '';
-                          (e.currentTarget as HTMLDivElement).style.boxShadow = '';
-                        }}
-                      >
-                        {/* Course Image */}
-                        <div style={{ position: 'relative' }}>
-                          <img
-                            src={course.image_240x135}
-                            alt={course.title}
-                            style={{ width: '100%', height: 135, objectFit: 'cover' }}
-                          />
-                          {isDownloaded && (
-                            <div style={{
-                              position: 'absolute',
-                              top: 8,
-                              right: 8,
-                              background: '#059669',
-                              borderRadius: 20,
-                              padding: '4px 10px',
-                              fontSize: 11,
-                              fontWeight: 600,
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: 4,
-                            }}>
-                              <CheckCircle size={12} />
-                              Downloaded
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Course Info */}
-                        <div style={{ padding: 16 }}>
-                          <h3 style={{ fontSize: 16, fontWeight: 600, margin: '0 0 8px' }}>
-                            {course.title}
-                          </h3>
-                          <p style={{ 
-                            fontSize: 13, 
-                            color: 'var(--text-muted, #a1a1aa)', 
-                            margin: '0 0 12px',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                          }}>
-                            {course.headline}
-                          </p>
-
-                          {/* Action Buttons */}
-                          <div style={{ display: 'flex', gap: 8 }}>
-                            <button
-                              onClick={() => downloadCourse(course)}
-                              disabled={isDownloading || isDownloaded}
-                              style={{
-                                flex: 1,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: 6,
-                                padding: '8px 12px',
-                                background: isDownloading 
-                                  ? 'var(--text-muted, #a1a1aa)' 
-                                  : isDownloaded 
-                                    ? '#059669' 
-                                    : 'var(--accent, #7c3aed)',
-                                border: 'none',
-                                borderRadius: 6,
-                                color: '#fff',
-                                fontWeight: 600,
-                                fontSize: 13,
-                                cursor: isDownloading || isDownloaded ? 'not-allowed' : 'pointer',
-                              }}
-                            >
-                              {isDownloading ? (
-                                <>
-                                  <RefreshCw size={14} className="animate-spin" />
-                                  Downloading...
-                                </>
-                              ) : isDownloaded ? (
-                                <>
-                                  <CheckCircle size={14} />
-                                  Downloaded
-                                </>
-                              ) : (
-                                <>
-                                  <Download size={14} />
-                                  Download
-                                </>
-                              )}
-                            </button>
-                            <a
-                              href={`https://${subDomain}.udemy.com${course.url}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '8px 12px',
-                                background: 'transparent',
-                                border: '1px solid var(--border-subtle, #27272a)',
-                                borderRadius: 6,
-                                color: 'var(--text-secondary, #d4d4d8)',
-                                textDecoration: 'none',
-                              }}
-                            >
-                              <ExternalLink size={14} />
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Downloads Tab */}
-        {/* Research Tab */}
-        {activeTab === 'research' && (
-          <div style={{ height: 'calc(100vh - 200px)', minHeight: 500 }}>
-            <ResearchTab />
-          </div>
-        )}
-
-        {activeTab === 'downloads' && (
-          <div>
-            <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 20 }}>
-              <FolderOpen size={20} style={{ display: 'inline', marginRight: 8 }} />
-              My Downloaded Courses
-            </h2>
-
-            {localCourses.length === 0 ? (
-              <div style={{
-                textAlign: 'center',
-                padding: 60,
-                color: 'var(--text-muted, #a1a1aa)',
-              }}>
-                <HardDrive size={48} style={{ margin: '0 auto 16px', opacity: 0.3 }} />
-                <p style={{ fontSize: 16, marginBottom: 8 }}>No courses downloaded yet</p>
-                <p style={{ fontSize: 13 }}>
-                  Go to "Browse Courses" to download your courses
-                </p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                {localCourses.map(course => (
-                  <div
-                    key={course.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 16,
-                      padding: 16,
-                      background: 'var(--bg-secondary, #111113)',
-                      border: '1px solid var(--border-subtle, #27272a)',
-                      borderRadius: 8,
-                    }}
-                  >
-                    <div style={{ flex: 1 }}>
-                      <h3 style={{ fontSize: 15, fontWeight: 600, margin: '0 0 4px' }}>
-                        {course.title}
-                      </h3>
-                      <div style={{ display: 'flex', gap: 16, fontSize: 12, color: 'var(--text-muted, #a1a1aa)' }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <Clock size={12} />
-                          {formatDate(course.downloadDate)}
-                        </span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <HardDrive size={12} />
-                          {formatSize(course.totalSize)}
-                        </span>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                          {course.status === 'completed' ? (
-                            <CheckCircle size={12} color="#34d399" />
-                          ) : (
-                            <AlertCircle size={12} color="#f87171" />
-                          )}
-                          {course.status}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button
-                        onClick={() => showNotification(`Opening: ${course.path}`)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 6,
-                          padding: '8px 12px',
-                          background: 'transparent',
-                          border: '1px solid var(--border-subtle, #27272a)',
-                          borderRadius: 6,
-                          color: 'var(--text-secondary, #d4d4d8)',
-                          cursor: 'pointer',
-                          fontSize: 13,
-                        }}
-                      >
-                        <FolderOpen size={14} />
-                        Open Folder
-                      </button>
-                      <button
-                        onClick={() => deleteCourse(course.id, course.title)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          padding: 8,
-                          background: 'transparent',
-                          border: '1px solid var(--error-border, #b91c1c)',
-                          borderRadius: 6,
-                          color: '#f87171',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Certifications Tab */}
-        {activeTab === 'certifications' && (
-          <CertificationsPanel />
-        )}
-
+        {/* ── Agent Elements ── */}
         {activeTab === 'agent-elements' && (
-          <div style={{ minHeight: '70vh' }}>
-            <div style={{ marginBottom: 20 }}>
-              <h2 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>
-                Agent Elements Preview
-              </h2>
-              <p style={{ fontSize: 13, color: 'var(--text-muted, #a1a1aa)', margin: '6px 0 0' }}>
-                Internal preview for composition-root imports. This keeps `agent-chat`, `message-list`, `input-bar`, model and mode selectors reachable without replacing the main chat surface.
+          <div style={{ minHeight:'70vh' }}>
+            <div style={{ marginBottom:24 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                <div style={{ width:16, height:1, background:'#ec4899', opacity:.5 }}/>
+                <span className="labs-display" style={{ fontSize:9.5, fontWeight:700, letterSpacing:'.18em', textTransform:'uppercase', color:'#ec4899' }}>Internal Preview</span>
+              </div>
+              <h2 className="labs-serif" style={{ fontSize:30, fontWeight:900, fontStyle:'italic', margin:'0 0 6px', letterSpacing:'-.025em', color:L.textPrimary, lineHeight:1 }}>Agent Elements</h2>
+              <p className="labs-display" style={{ fontSize:12, color:L.textSec, margin:0, letterSpacing:'.01em', lineHeight:1.6 }}>
+                Composition-root preview — agent-chat, message-list, input-bar, model &amp; mode selectors.
               </p>
             </div>
-            <div
-              style={{
-                height: 'calc(100vh - 320px)',
-                minHeight: 640,
-                borderRadius: 20,
-                overflow: 'hidden',
-                border: '1px solid var(--border-subtle, #27272a)',
-              }}
-            >
-              <AgentElementsWorkspace
-                messages={AGENT_ELEMENTS_PREVIEW_MESSAGES}
-                isLoading={false}
-                onSend={async () => {}}
-                onStop={() => {}}
-              />
+            <div style={{ height:'calc(100vh - 340px)', minHeight:580, borderRadius:16, overflow:'hidden', border:`1px solid ${L.border}`, boxShadow:'0 24px 64px rgba(0,0,0,.4)' }}>
+              <AgentElementsWorkspace messages={AGENT_ELEMENTS_PREVIEW_MESSAGES} isLoading={false} onSend={async()=>{}} onStop={()=>{}}/>
             </div>
           </div>
         )}
 
-        {/* Settings Tab */}
+        {/* ── Settings ── */}
         {activeTab === 'settings' && (
-          <div style={{ maxWidth: 600 }}>
-            <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 24 }}>
-              <Settings size={20} style={{ display: 'inline', marginRight: 8 }} />
-              Settings
-            </h2>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              {/* Access Token */}
-              <div>
-                <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8 }}>
-                  Udemy Access Token
-                </label>
-                <input
-                  type="password"
-                  value={accessToken}
-                  onChange={(e) => saveConfig({ accessToken: e.target.value })}
-                  placeholder="Paste your Udemy access token here"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    background: 'var(--bg-secondary, #111113)',
-                    border: '1px solid var(--border-subtle, #27272a)',
-                    borderRadius: 6,
-                    color: 'var(--text-primary, #e5e5e5)',
-                    fontSize: 14,
-                  }}
-                />
-                <p style={{ fontSize: 12, color: 'var(--text-muted, #a1a1aa)', marginTop: 6 }}>
-                  Get your token from browser DevTools → Application → Cookies → access_token
-                </p>
+          <div style={{ maxWidth:520 }}>
+            <div style={{ marginBottom:36 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                <div style={{ width:16, height:1, background:L.textSec, opacity:.4 }}/>
+                <span className="labs-display" style={{ fontSize:9.5, fontWeight:700, letterSpacing:'.18em', textTransform:'uppercase', color:L.textSec }}>Configuration</span>
               </div>
+              <h2 className="labs-serif" style={{ fontSize:30, fontWeight:900, fontStyle:'italic', margin:0, letterSpacing:'-.025em', color:L.textPrimary, lineHeight:1 }}>Settings</h2>
+            </div>
 
-              {/* Subdomain */}
-              <div>
-                <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8 }}>
-                  Udemy Subdomain
-                </label>
-                <input
-                  type="text"
-                  value={subDomain}
-                  onChange={(e) => saveConfig({ subDomain: e.target.value })}
-                  placeholder="www (or your business subdomain)"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    background: 'var(--bg-secondary, #111113)',
-                    border: '1px solid var(--border-subtle, #27272a)',
-                    borderRadius: 6,
-                    color: 'var(--text-primary, #e5e5e5)',
-                    fontSize: 14,
-                  }}
-                />
+            <div style={{ marginBottom:32 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:20 }}>
+                <span className="labs-display" style={{ fontSize:10, fontWeight:800, letterSpacing:'.14em', textTransform:'uppercase', color:L.accent }}>Canvas LMS</span>
+                <div style={{ flex:1, height:1, background:L.border }}/>
               </div>
+              <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
+                <div>
+                  <label className="labs-display" style={{ display:'block', fontSize:10, fontWeight:700, letterSpacing:'.1em', textTransform:'uppercase', color:L.textSec, marginBottom:8 }}>API Token</label>
+                  <input type="password" value={canvasToken}
+                    onChange={e => saveConfig({ canvasToken: e.target.value })}
+                    placeholder="Paste your Canvas API token here"
+                    className="labs-input"
+                  />
+                  <p style={{ fontSize:11, color:L.textTer, marginTop:6, lineHeight:1.55 }}>Canvas → Account → Settings → Approved Integrations → New Access Token</p>
+                </div>
+                <div>
+                  <label className="labs-display" style={{ display:'block', fontSize:10, fontWeight:700, letterSpacing:'.1em', textTransform:'uppercase', color:L.textSec, marginBottom:8 }}>Domain</label>
+                  <input type="text" value={canvasDomain}
+                    onChange={e => saveConfig({ canvasDomain: e.target.value })}
+                    placeholder="https://canvas.instructure.com"
+                    className="labs-input"
+                  />
+                </div>
+              </div>
+            </div>
 
-              {/* Download Path */}
-              <div>
-                <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8 }}>
-                  Download Directory
-                </label>
-                <input
-                  type="text"
-                  value={downloadPath}
-                  onChange={(e) => saveConfig({ downloadPath: e.target.value })}
-                  placeholder="~/Downloads/UdemyCourses"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    background: 'var(--bg-secondary, #111113)',
-                    border: '1px solid var(--border-subtle, #27272a)',
-                    borderRadius: 6,
-                    color: 'var(--text-primary, #e5e5e5)',
-                    fontSize: 14,
-                  }}
-                />
-              </div>
-
-              {/* Canvas Token */}
-              <div>
-                <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8 }}>
-                  Canvas API Token
-                </label>
-                <input
-                  type="password"
-                  value={canvasToken}
-                  onChange={(e) => saveConfig({ canvasToken: e.target.value })}
-                  placeholder="Paste your Canvas API token here"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    background: 'var(--bg-secondary, #111113)',
-                    border: '1px solid var(--border-subtle, #27272a)',
-                    borderRadius: 6,
-                    color: 'var(--text-primary, #e5e5e5)',
-                    fontSize: 14,
-                  }}
-                />
-                <p style={{ fontSize: 12, color: 'var(--text-muted, #a1a1aa)', marginTop: 6 }}>
-                  Get your token from Canvas → Account → Settings → Approved Integrations → New Access Token
-                </p>
-              </div>
-
-              {/* Canvas Domain */}
-              <div>
-                <label style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 8 }}>
-                  Canvas Domain
-                </label>
-                <input
-                  type="text"
-                  value={canvasDomain}
-                  onChange={(e) => saveConfig({ canvasDomain: e.target.value })}
-                  placeholder="https://canvas.instructure.com"
-                  style={{
-                    width: '100%',
-                    padding: '10px 12px',
-                    background: 'var(--bg-secondary, #111113)',
-                    border: '1px solid var(--border-subtle, #27272a)',
-                    borderRadius: 6,
-                    color: 'var(--text-primary, #e5e5e5)',
-                    fontSize: 14,
-                  }}
-                />
-              </div>
-
-              {/* Info Card */}
-              <div style={{
-                padding: 16,
-                background: 'var(--info-bg, #1e1b4b)',
-                border: '1px solid var(--info-border, #4338ca)',
-                borderRadius: 8,
-                fontSize: 13,
-              }}>
-                <p style={{ margin: '0 0 8px', fontWeight: 600 }}>
-                  <Eye size={14} style={{ display: 'inline', marginRight: 6 }} />
-                  Getting Your Access Token
-                </p>
-                <ol style={{ margin: 0, paddingLeft: 20 }}>
-                  <li>Log in to Udemy in your browser</li>
-                  <li>Open DevTools (F12)</li>
-                  <li>Go to Application/Storage tab</li>
-                  <li>Find Cookies → udemy.com</li>
-                  <li>Copy the <code>access_token</code> value</li>
-                  <li>Paste it above</li>
-                </ol>
-              </div>
+            <div style={{ padding:'18px 20px', background:L.accentDim, border:`1px solid ${L.accentBorder}`, borderRadius:13 }}>
+              <p className="labs-display" style={{ margin:'0 0 12px', fontWeight:700, fontSize:11, letterSpacing:'.08em', textTransform:'uppercase', color:L.accent, display:'flex', alignItems:'center', gap:6 }}>
+                <Eye size={12}/> Getting Your Canvas Token
+              </p>
+              <ol style={{ margin:0, paddingLeft:18, color:L.textSec, fontSize:12, lineHeight:2 }}>
+                <li>Log in to Canvas</li>
+                <li>Go to Account → Settings</li>
+                <li>Scroll to Approved Integrations</li>
+                <li>Click <em>New Access Token</em> and copy the generated value</li>
+              </ol>
             </div>
           </div>
         )}
       </div>
-
-      {/* CSS Animations */}
-      <style>{`
-        @keyframes slideIn {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-
-        .animate-spin {
-          animation: spin 1s linear infinite;
-        }
-      `}</style>
     </div>
   );
 }

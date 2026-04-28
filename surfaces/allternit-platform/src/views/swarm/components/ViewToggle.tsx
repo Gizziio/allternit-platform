@@ -18,10 +18,10 @@ import { SwarmViewMode } from '../types';
 
 const ACCENT = '#c17817';
 const BG_SURFACE = '#121110';
-const BG_HOVER = '#1a1917';
-const BORDER_COLOR = '#272522';
-const TEXT_MUTED = '#8b8680';
-const TEXT_COLOR = '#e8e6e3';
+const BG_HOVER = 'var(--surface-canvas)';
+const BORDER_COLOR = 'var(--ui-border-muted)';
+const TEXT_MUTED = 'var(--ui-text-muted)';
+const TEXT_COLOR = 'var(--ui-text-primary)';
 
 interface ViewToggleProps {
   current: SwarmViewMode;
@@ -93,7 +93,7 @@ export function ViewToggle({ current, onChange }: ViewToggleProps) {
           style={{
             background: BG_SURFACE,
             border: `1px solid ${BORDER_COLOR}`,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+            boxShadow: '0 8px 24px var(--surface-panel)',
           }}
         >
           {viewModes.map(({ id, label, Icon }) => {

@@ -46,8 +46,8 @@ export function CodeCanvasTileKnowledge({ workspacePath }: CodeCanvasTileKnowled
           display: 'flex',
           gap: 4,
           padding: '6px 10px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
-          background: 'rgba(255,255,255,0.02)',
+          borderBottom: '1px solid var(--ui-border-muted)',
+          background: 'var(--surface-hover)',
           flexShrink: 0,
         }}
       >
@@ -58,7 +58,7 @@ export function CodeCanvasTileKnowledge({ workspacePath }: CodeCanvasTileKnowled
             padding: '4px 8px',
             borderRadius: 6,
             border: 'none',
-            background: tab === 'claims' ? 'rgba(255,255,255,0.08)' : 'transparent',
+            background: tab === 'claims' ? 'var(--ui-border-muted)' : 'transparent',
             color: tab === 'claims' ? 'var(--text-primary)' : 'var(--text-muted)',
             fontSize: 11,
             fontWeight: 600,
@@ -79,7 +79,7 @@ export function CodeCanvasTileKnowledge({ workspacePath }: CodeCanvasTileKnowled
             padding: '4px 8px',
             borderRadius: 6,
             border: 'none',
-            background: tab === 'summaries' ? 'rgba(255,255,255,0.08)' : 'transparent',
+            background: tab === 'summaries' ? 'var(--ui-border-muted)' : 'transparent',
             color: tab === 'summaries' ? 'var(--text-primary)' : 'var(--text-muted)',
             fontSize: 11,
             fontWeight: 600,
@@ -109,10 +109,10 @@ export function CodeCanvasTileKnowledge({ workspacePath }: CodeCanvasTileKnowled
             style={{
               padding: 10,
               borderRadius: 8,
-              background: 'rgba(239,68,68,0.08)',
+              background: 'var(--status-error-bg)',
               border: '1px solid rgba(239,68,68,0.2)',
               fontSize: 11,
-              color: '#ef4444',
+              color: 'var(--status-error)',
             }}
           >
             {error}
@@ -147,7 +147,7 @@ export function CodeCanvasTileKnowledge({ workspacePath }: CodeCanvasTileKnowled
                       fontSize: 10,
                       fontWeight: 700,
                       textTransform: 'uppercase',
-                      color: claim.status === 'live' ? '#10b981' : '#ef4444',
+                      color: claim.status === 'live' ? 'var(--status-success)' : 'var(--status-error)',
                     }}
                   >
                     {claim.status}
@@ -165,7 +165,7 @@ export function CodeCanvasTileKnowledge({ workspacePath }: CodeCanvasTileKnowled
                           fontSize: 10,
                           fontFamily: 'monospace',
                           color: 'var(--text-muted)',
-                          background: 'rgba(255,255,255,0.04)',
+                          background: 'var(--surface-hover)',
                           padding: '1px 6px',
                           borderRadius: 4,
                         }}
@@ -198,7 +198,7 @@ export function CodeCanvasTileKnowledge({ workspacePath }: CodeCanvasTileKnowled
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                  <FileText size={12} color={summary.valid ? '#3b82f6' : '#ef4444'} />
+                  <FileText size={12} color={summary.valid ? 'var(--status-info)' : 'var(--status-error)'} />
                   <span style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--text-secondary)', flex: 1 }}>
                     {summary.path}
                   </span>
@@ -209,7 +209,7 @@ export function CodeCanvasTileKnowledge({ workspacePath }: CodeCanvasTileKnowled
                       padding: '1px 6px',
                       borderRadius: 4,
                       background: summary.valid ? 'rgba(59,130,246,0.15)' : 'rgba(239,68,68,0.15)',
-                      color: summary.valid ? '#3b82f6' : '#ef4444',
+                      color: summary.valid ? 'var(--status-info)' : 'var(--status-error)',
                     }}
                   >
                     {summary.valid ? 'Valid' : 'Stale'}

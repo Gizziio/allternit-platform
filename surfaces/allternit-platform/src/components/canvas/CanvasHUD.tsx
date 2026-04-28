@@ -25,7 +25,7 @@ export function CanvasHUD({ tiles }: CanvasHUDProps) {
         position: 'absolute',
         top: 16,
         left: 16,
-        zIndex: 1000,
+        zIndex: 100,
         padding: '8px 14px',
         borderRadius: 12,
         border: '1px solid var(--glass-border)',

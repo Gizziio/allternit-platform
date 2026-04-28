@@ -74,7 +74,7 @@ export function SkillsHub({ onSync }: SkillsHubProps) {
           marginBottom: 16,
         }}
       >
-        <h3 style={{ margin: 0, fontSize: 14, color: '#f3f4f6' }}>
+        <h3 style={{ margin: 0, fontSize: 14, color: 'var(--ui-text-primary)' }}>
           Portable Skills
         </h3>
         <button
@@ -98,7 +98,7 @@ export function SkillsHub({ onSync }: SkillsHubProps) {
             key={skill.name}
             style={{
               padding: 12,
-              background: '#1f2937',
+              background: 'var(--surface-panel)',
               border: '1px solid #374151',
             }}
           >
@@ -114,7 +114,7 @@ export function SkillsHub({ onSync }: SkillsHubProps) {
                   style={{
                     fontSize: 13,
                     fontWeight: 600,
-                    color: '#f3f4f6',
+                    color: 'var(--ui-text-primary)',
                     marginBottom: 4,
                   }}
                 >
@@ -122,7 +122,7 @@ export function SkillsHub({ onSync }: SkillsHubProps) {
                 </div>
                 {skill.description && (
                   <div
-                    style={{ fontSize: 11, color: '#9ca3af', marginBottom: 8 }}
+                    style={{ fontSize: 11, color: 'var(--ui-text-muted)', marginBottom: 8 }}
                   >
                     {skill.description}
                   </div>
@@ -146,8 +146,8 @@ export function SkillsHub({ onSync }: SkillsHubProps) {
                     fontSize: 10,
                     padding: '2px 8px',
                     borderRadius: 4,
-                    background: inst.installed ? '#065f46' : '#374151',
-                    color: inst.installed ? '#34d399' : '#9ca3af',
+                    background: inst.installed ? '#065f46' : 'var(--ui-border-default)',
+                    color: inst.installed ? 'var(--status-success)' : 'var(--ui-text-muted)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: 4,
@@ -186,7 +186,7 @@ export function SkillsHub({ onSync }: SkillsHubProps) {
           style={{
             textAlign: 'center',
             padding: 32,
-            color: '#6b7280',
+            color: 'var(--ui-text-muted)',
             fontSize: 12,
           }}
         >

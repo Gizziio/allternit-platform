@@ -25,8 +25,8 @@ export function CardSkeleton({ isLarge = false }: CardSkeletonProps) {
     <div
       className={`p-5 rounded-xl border animate-pulse ${isLarge ? 'col-span-2 row-span-2' : ''}`}
       style={{
-        background: 'rgba(255,255,255,0.02)',
-        borderColor: 'rgba(255,255,255,0.05)',
+        background: 'var(--surface-hover)',
+        borderColor: 'var(--surface-hover)',
       }}
     >
       {/* Header */}
@@ -34,22 +34,22 @@ export function CardSkeleton({ isLarge = false }: CardSkeletonProps) {
         <div className="flex items-center gap-3">
           <div 
             className="w-10 h-10 rounded-xl"
-            style={{ background: 'rgba(255,255,255,0.05)' }}
+            style={{ background: 'var(--surface-hover)' }}
           />
           <div>
             <div 
               className="w-24 h-4 rounded mb-2"
-              style={{ background: 'rgba(255,255,255,0.05)' }}
+              style={{ background: 'var(--surface-hover)' }}
             />
             <div 
               className="w-12 h-3 rounded"
-              style={{ background: 'rgba(255,255,255,0.03)' }}
+              style={{ background: 'var(--surface-hover)' }}
             />
           </div>
         </div>
         <div 
           className="w-12 h-6 rounded"
-          style={{ background: 'rgba(255,255,255,0.03)' }}
+          style={{ background: 'var(--surface-hover)' }}
         />
       </div>
 
@@ -58,12 +58,12 @@ export function CardSkeleton({ isLarge = false }: CardSkeletonProps) {
         <div className="space-y-2 mb-4">
           <div 
             className="h-1.5 rounded-full"
-            style={{ background: 'rgba(255,255,255,0.03)' }}
+            style={{ background: 'var(--surface-hover)' }}
           />
           {isLarge && (
             <div 
               className="h-1.5 rounded-full w-2/3"
-              style={{ background: 'rgba(255,255,255,0.03)' }}
+              style={{ background: 'var(--surface-hover)' }}
             />
           )}
         </div>
@@ -72,15 +72,15 @@ export function CardSkeleton({ isLarge = false }: CardSkeletonProps) {
       {/* Footer */}
       <div 
         className="absolute bottom-5 left-5 right-5 pt-3 flex justify-between"
-        style={{ borderTop: '1px solid rgba(255,255,255,0.03)' }}
+        style={{ borderTop: '1px solid var(--surface-hover)' }}
       >
         <div 
           className="w-12 h-3 rounded"
-          style={{ background: 'rgba(255,255,255,0.03)' }}
+          style={{ background: 'var(--surface-hover)' }}
         />
         <div 
           className="w-16 h-3 rounded"
-          style={{ background: 'rgba(255,255,255,0.03)' }}
+          style={{ background: 'var(--surface-hover)' }}
         />
       </div>
     </div>
@@ -122,19 +122,19 @@ export function DetailLoading() {
       <div 
         className="w-64 border-r p-4 space-y-2"
         style={{ 
-          background: 'rgba(255,255,255,0.02)',
-          borderColor: 'rgba(255,255,255,0.05)',
+          background: 'var(--surface-hover)',
+          borderColor: 'var(--surface-hover)',
         }}
       >
         <div 
           className="w-full h-10 rounded-xl mb-4"
-          style={{ background: 'rgba(255,255,255,0.03)' }}
+          style={{ background: 'var(--surface-hover)' }}
         />
         {[...Array(4)].map((_, i) => (
           <div 
             key={i}
             className="w-full h-14 rounded-xl"
-            style={{ background: 'rgba(255,255,255,0.03)' }}
+            style={{ background: 'var(--surface-hover)' }}
           />
         ))}
       </div>
@@ -145,23 +145,23 @@ export function DetailLoading() {
         <div 
           className="p-6 rounded-2xl border mb-6"
           style={{ 
-            background: 'rgba(255,255,255,0.02)',
-            borderColor: 'rgba(255,255,255,0.05)',
+            background: 'var(--surface-hover)',
+            borderColor: 'var(--surface-hover)',
           }}
         >
           <div className="flex items-center justify-center mb-4">
             <div 
               className="w-24 h-24 rounded-3xl"
-              style={{ background: 'rgba(255,255,255,0.05)' }}
+              style={{ background: 'var(--surface-hover)' }}
             />
           </div>
           <div 
             className="w-32 h-5 rounded mx-auto mb-2"
-            style={{ background: 'rgba(255,255,255,0.05)' }}
+            style={{ background: 'var(--surface-hover)' }}
           />
           <div 
             className="w-24 h-3 rounded mx-auto"
-            style={{ background: 'rgba(255,255,255,0.03)' }}
+            style={{ background: 'var(--surface-hover)' }}
           />
         </div>
 
@@ -172,17 +172,17 @@ export function DetailLoading() {
               key={i}
               className="p-4 rounded-xl border"
               style={{ 
-                background: 'rgba(255,255,255,0.02)',
-                borderColor: 'rgba(255,255,255,0.05)',
+                background: 'var(--surface-hover)',
+                borderColor: 'var(--surface-hover)',
               }}
             >
               <div 
                 className="w-12 h-3 rounded mb-2"
-                style={{ background: 'rgba(255,255,255,0.03)' }}
+                style={{ background: 'var(--surface-hover)' }}
               />
               <div 
                 className="w-20 h-5 rounded"
-                style={{ background: 'rgba(255,255,255,0.05)' }}
+                style={{ background: 'var(--surface-hover)' }}
               />
             </div>
           ))}
@@ -314,7 +314,7 @@ export function RefreshIndicator() {
     <div 
       className="absolute top-4 right-4 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs"
       style={{ 
-        background: 'rgba(0,0,0,0.5)',
+        background: 'var(--shell-overlay-backdrop)',
         color: TEXT.secondary,
         backdropFilter: 'blur(4px)',
       }}

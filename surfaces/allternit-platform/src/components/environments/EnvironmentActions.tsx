@@ -9,18 +9,15 @@
  */
 
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   Copy,
   DownloadSimple,
   UploadSimple,
   Archive,
-  ArrowCounterClockwise,
   GitBranch,
   FileCode,
   Cube,
   Check,
-  X,
   CircleNotch,
   CaretDown,
   ArrowSquareOut,
@@ -43,9 +40,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { environmentApi } from '@/api/infrastructure';
 import type { Environment, EnvironmentTemplate } from '@/api/infrastructure';
+import { openInBrowser } from '@/lib/openInBrowser';
 
 export interface EnvironmentActionsProps {
   environment: Environment;
@@ -405,7 +402,7 @@ volumes:
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem
-            onClick={() => environment.url && window.open(environment.url, '_blank')}
+            onClick={() => environment.url && openInBrowser(environment.url)}
             disabled={!environment.url}
           >
             <ArrowSquareOut className="w-4 h-4 mr-2" />

@@ -57,7 +57,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     id: connector.id,
     name: connector.name,
     url: connector.url,
-    type: connector.type,
+    type: connector.type as 'http' | 'sse',
   });
 
   try {

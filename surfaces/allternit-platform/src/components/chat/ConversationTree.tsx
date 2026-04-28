@@ -23,16 +23,16 @@ interface ConversationTreeProps {
 
 const THEME = {
   textPrimary: '#ECECEC',
-  textSecondary: '#9B9B9B',
-  textMuted: '#6B6B6B',
-  accent: '#D4956A',
-  userAccent: '#3b82f6',
+  textSecondary: 'var(--ui-text-secondary)',
+  textMuted: 'var(--ui-text-muted)',
+  accent: 'var(--accent-primary)',
+  userAccent: 'var(--status-info)',
   bg: '#2B2520',
-  nodeBg: 'rgba(255,255,255,0.03)',
-  activeNodeBg: 'rgba(212,149,106,0.1)',
-  border: 'rgba(255,255,255,0.08)',
+  nodeBg: 'var(--surface-hover)',
+  activeNodeBg: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)',
+  border: 'var(--ui-border-muted)',
   activeBorder: 'rgba(212,149,106,0.3)',
-  line: 'rgba(255,255,255,0.1)',
+  line: 'var(--ui-border-default)',
 };
 
 /**
@@ -85,7 +85,7 @@ export function ConversationTree({
             }}
             onMouseEnter={(e) => {
               if (!node.isActive) {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                e.currentTarget.style.background = 'var(--ui-border-muted)';
               }
             }}
             onMouseLeave={(e) => {

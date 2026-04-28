@@ -28,7 +28,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend,
 } from 'recharts';
 import {
   Pulse as Activity,
@@ -37,14 +36,10 @@ import {
   Lightning,
   Clock,
   TrendUp,
-  Calendar,
-  Funnel,
   DownloadSimple,
   ShareNetwork,
-  CaretDown,
   ChartBar,
   ChartPie,
-  Users,
   Target,
 } from '@phosphor-icons/react';
 
@@ -53,9 +48,7 @@ import {
   MODE_COLORS,
   createGlassStyle,
   RADIUS,
-  SPACE,
   TEXT,
-  SHADOW,
   type AgentMode,
 } from '@/design/allternit.tokens';
 
@@ -199,7 +192,7 @@ export function SessionAnalyticsDashboard({
   const chartColors = {
     primary: modeColors.accent,
     secondary: SAND[600],
-    grid: 'rgba(255,255,255,0.05)',
+    grid: 'var(--surface-hover)',
     text: TEXT.secondary,
   };
 
@@ -286,7 +279,7 @@ export function SessionAnalyticsDashboard({
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#1A1612',
+                  backgroundColor: 'var(--surface-panel)',
                   border: `1px solid ${modeColors.border}`,
                   borderRadius: RADIUS.md,
                 }}
@@ -340,7 +333,7 @@ export function SessionAnalyticsDashboard({
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#1A1612',
+                  backgroundColor: 'var(--surface-panel)',
                   border: `1px solid ${modeColors.border}`,
                   borderRadius: RADIUS.md,
                 }}
@@ -382,7 +375,7 @@ export function SessionAnalyticsDashboard({
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#1A1612',
+                  backgroundColor: 'var(--surface-panel)',
                   border: `1px solid ${modeColors.border}`,
                   borderRadius: RADIUS.md,
                 }}
@@ -433,7 +426,7 @@ export function SessionAnalyticsDashboard({
                 </Pie>
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#1A1612',
+                    backgroundColor: 'var(--surface-panel)',
                     border: `1px solid ${modeColors.border}`,
                     borderRadius: RADIUS.md,
                   }}
@@ -494,7 +487,7 @@ export function SessionAnalyticsDashboard({
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#1A1612',
+                  backgroundColor: 'var(--surface-panel)',
                   border: `1px solid ${modeColors.border}`,
                   borderRadius: RADIUS.md,
                 }}
@@ -544,7 +537,7 @@ export function SessionAnalyticsDashboard({
                 </div>
                 <div 
                   className="h-2 rounded-full overflow-hidden"
-                  style={{ background: 'rgba(255,255,255,0.05)' }}
+                  style={{ background: 'var(--surface-hover)' }}
                 >
                   <motion.div
                     initial={{ width: 0 }}
@@ -602,7 +595,7 @@ function DashboardHeader({
         {/* View Selector */}
         <div 
           className="flex items-center rounded-lg p-1"
-          style={{ background: 'rgba(0,0,0,0.3)' }}
+          style={{ background: 'var(--surface-panel)' }}
         >
           {views.map((view) => {
             const Icon = view.icon;
@@ -626,7 +619,7 @@ function DashboardHeader({
         {/* Time Range */}
         <div 
           className="flex items-center rounded-lg overflow-hidden"
-          style={{ background: 'rgba(0,0,0,0.3)' }}
+          style={{ background: 'var(--surface-panel)' }}
         >
           {(['7d', '30d', '90d'] as const).map((range) => (
             <button
@@ -647,7 +640,7 @@ function DashboardHeader({
         <button
           className="p-2 rounded-lg transition-colors"
           style={{
-            background: 'rgba(255,255,255,0.05)',
+            background: 'var(--surface-hover)',
             color: TEXT.secondary,
           }}
         >
@@ -656,7 +649,7 @@ function DashboardHeader({
         <button
           className="p-2 rounded-lg transition-colors"
           style={{
-            background: 'rgba(255,255,255,0.05)',
+            background: 'var(--surface-hover)',
             color: TEXT.secondary,
           }}
         >
@@ -709,7 +702,7 @@ function MetricCard({
         </div>
         <div 
           className="flex items-center gap-1 text-sm"
-          style={{ color: isPositive ? '#4ade80' : '#f87171' }}
+          style={{ color: isPositive ? 'var(--status-success)' : 'var(--status-error)' }}
         >
           <TrendUp size={14} />
           {change}

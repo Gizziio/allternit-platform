@@ -11,16 +11,16 @@ interface H5iDiffPanelProps {
 }
 
 const sideConfig = {
-  A: { label: 'Session A', color: '#3b82f6', bg: 'rgba(59,130,246,0.08)' },
-  B: { label: 'Session B', color: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
-  both: { label: 'Both', color: '#10b981', bg: 'rgba(16,185,129,0.08)' },
+  A: { label: 'Session A', color: 'var(--status-info)', bg: 'rgba(59,130,246,0.08)' },
+  B: { label: 'Session B', color: 'var(--status-error)', bg: 'var(--status-error-bg)' },
+  both: { label: 'Both', color: 'var(--status-success)', bg: 'rgba(16,185,129,0.08)' },
 };
 
 const typeConfig = {
-  OBSERVE: { color: '#3b82f6' },
+  OBSERVE: { color: 'var(--status-info)' },
   THINK: { color: '#8b5cf6' },
-  ACT: { color: '#10b981' },
-  NOTE: { color: '#f59e0b' },
+  ACT: { color: 'var(--status-success)' },
+  NOTE: { color: 'var(--status-warning)' },
 };
 
 export function H5iDiffPanel({ workspacePath, sessions, onClose }: H5iDiffPanelProps) {
@@ -56,17 +56,17 @@ export function H5iDiffPanel({ workspacePath, sessions, onClose }: H5iDiffPanelP
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
-        zIndex: 10001,
+        zIndex: 180,
         width: 560,
         maxHeight: '80vh',
         display: 'flex',
         flexDirection: 'column',
         borderRadius: 16,
-        border: '1px solid rgba(255,255,255,0.08)',
+        border: '1px solid var(--ui-border-muted)',
         background: 'rgba(11,14,16,0.96)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+        boxShadow: '0 20px 50px var(--shell-overlay-backdrop)',
         overflow: 'hidden',
       }}
     >
@@ -77,7 +77,7 @@ export function H5iDiffPanel({ workspacePath, sessions, onClose }: H5iDiffPanelP
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '14px 16px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          borderBottom: '1px solid var(--ui-border-muted)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -106,8 +106,8 @@ export function H5iDiffPanel({ workspacePath, sessions, onClose }: H5iDiffPanelP
                 width: '100%',
                 padding: '8px 10px',
                 borderRadius: 8,
-                border: '1px solid rgba(255,255,255,0.08)',
-                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid var(--ui-border-muted)',
+                background: 'var(--surface-hover)',
                 color: 'var(--text-secondary)',
                 fontSize: 13,
                 outline: 'none',
@@ -137,8 +137,8 @@ export function H5iDiffPanel({ workspacePath, sessions, onClose }: H5iDiffPanelP
                 width: '100%',
                 padding: '8px 10px',
                 borderRadius: 8,
-                border: '1px solid rgba(255,255,255,0.08)',
-                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid var(--ui-border-muted)',
+                background: 'var(--surface-hover)',
                 color: 'var(--text-secondary)',
                 fontSize: 13,
                 outline: 'none',
@@ -162,7 +162,7 @@ export function H5iDiffPanel({ workspacePath, sessions, onClose }: H5iDiffPanelP
             padding: '10px 14px',
             borderRadius: 10,
             border: 'none',
-            background: loading ? 'rgba(255,255,255,0.06)' : '#f59e0b',
+            background: loading ? 'var(--ui-border-muted)' : 'var(--status-warning)',
             color: '#000',
             fontSize: 13,
             fontWeight: 600,
@@ -193,10 +193,10 @@ export function H5iDiffPanel({ workspacePath, sessions, onClose }: H5iDiffPanelP
             style={{
               padding: 10,
               borderRadius: 8,
-              background: 'rgba(239,68,68,0.08)',
+              background: 'var(--status-error-bg)',
               border: '1px solid rgba(239,68,68,0.2)',
               fontSize: 12,
-              color: '#ef4444',
+              color: 'var(--status-error)',
               marginBottom: 12,
             }}
           >

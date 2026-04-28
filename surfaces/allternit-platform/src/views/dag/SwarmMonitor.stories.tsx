@@ -51,7 +51,7 @@ const SwarmMonitorComplete = () => {
           </button>
           <div>
             <span style={{ fontSize: '14px', fontWeight: 600 }}>Swarm</span>
-            <span style={{ marginLeft: '8px', fontSize: '12px', padding: '2px 8px', background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '4px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>5</span>
+            <span style={{ marginLeft: '8px', fontSize: '12px', padding: '2px 8px', background: 'var(--status-error-bg)', color: 'var(--status-error)', borderRadius: '4px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>5</span>
           </div>
         </div>
         
@@ -69,7 +69,7 @@ const SwarmMonitorComplete = () => {
 
         {/* Horizontal Scroll Strip */}
         <div style={{ flex: 1, overflowX: 'auto', display: 'flex', gap: '8px', padding: '8px 0' }}>
-          <button style={{ width: '40px', height: '40px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '8px', cursor: 'pointer', color: '#f59e0b', fontSize: '20px', flexShrink: 0 }}>+</button>
+          <button style={{ width: '40px', height: '40px', background: 'rgba(245, 158, 11, 0.1)', border: '1px solid rgba(245, 158, 11, 0.3)', borderRadius: '8px', cursor: 'pointer', color: 'var(--status-warning)', fontSize: '20px', flexShrink: 0 }}>+</button>
           
           {threads.map(thread => (
             <div 
@@ -106,7 +106,7 @@ const SwarmMonitorComplete = () => {
               )}
               {thread.status === 'failed' && (
                 <div style={{ padding: '0 8px 6px' }}>
-                  <span style={{ fontSize: '9px', color: '#ef4444' }}>⚠ Failed</span>
+                  <span style={{ fontSize: '9px', color: 'var(--status-error)' }}>⚠ Failed</span>
                 </div>
               )}
             </div>
@@ -117,7 +117,7 @@ const SwarmMonitorComplete = () => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <button 
             onClick={() => setShowHealthPanel(!showHealthPanel)}
-            style={{ width: '32px', height: '32px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444' }}
+            style={{ width: '32px', height: '32px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--status-error)' }}
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
           </button>
@@ -140,7 +140,7 @@ const SwarmMonitorComplete = () => {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '12px' }}>
             <div style={{ background: '#0f172a', borderRadius: '6px', padding: '12px' }}>
               <div style={{ fontSize: '11px', color: '#64748b' }}>Status</div>
-              <div style={{ fontSize: '13px', fontWeight: 500, color: '#f59e0b' }}>Degraded</div>
+              <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--status-warning)' }}>Degraded</div>
             </div>
             <div style={{ background: '#0f172a', borderRadius: '6px', padding: '12px' }}>
               <div style={{ fontSize: '11px', color: '#64748b' }}>Active Agents</div>
@@ -156,13 +156,13 @@ const SwarmMonitorComplete = () => {
             </div>
           </div>
           <div>
-            <h4 style={{ fontSize: '11px', fontWeight: 600, color: '#ef4444', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <h4 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--status-error)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
               Circuit Breakers Open
             </h4>
-            <div style={{ background: 'rgba(239, 68, 68, 0.1)', borderRadius: '6px', padding: '8px 12px', fontSize: '12px', color: '#e2e8f0', display: 'flex', justifyContent: 'space-between' }}>
+            <div style={{ background: 'var(--status-error-bg)', borderRadius: '6px', padding: '8px 12px', fontSize: '12px', color: '#e2e8f0', display: 'flex', justifyContent: 'space-between' }}>
               <span>agent-build-01</span>
-              <span style={{ color: '#ef4444' }}>5 failures</span>
+              <span style={{ color: 'var(--status-error)' }}>5 failures</span>
             </div>
           </div>
         </div>
@@ -194,19 +194,19 @@ const SwarmMonitorComplete = () => {
                   <StatusDot status={thread.status} />
                   <span style={{ fontSize: '10px', fontFamily: 'monospace', color: '#64748b' }}>{thread.id}</span>
                   <span style={{ fontSize: '12px', color: selectedThreadId === thread.id ? '#f59e0b' : '#94a3b8', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{thread.goal}</span>
-                  {thread.pinned && <span style={{ color: '#f59e0b' }}>📌</span>}
+                  {thread.pinned && <span style={{ color: 'var(--status-warning)' }}>📌</span>}
                 </div>
               ))}
             </div>
             <div style={{ padding: '12px', borderTop: '1px solid #1e293b', fontSize: '11px', color: '#64748b' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                <span>Running:</span><span style={{ color: '#10b981' }}>5</span>
+                <span>Running:</span><span style={{ color: 'var(--status-success)' }}>5</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                <span>Completed:</span><span style={{ color: '#3b82f6' }}>1</span>
+                <span>Completed:</span><span style={{ color: 'var(--status-info)' }}>1</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span>Failed:</span><span style={{ color: '#ef4444' }}>1</span>
+                <span>Failed:</span><span style={{ color: 'var(--status-error)' }}>1</span>
               </div>
             </div>
           </div>
@@ -220,20 +220,20 @@ const SwarmMonitorComplete = () => {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#e2e8f0' }}>{selectedThread.id}</h2>
-                  {selectedThread.pinned && <span style={{ color: '#f59e0b' }}>📌</span>}
+                  {selectedThread.pinned && <span style={{ color: 'var(--status-warning)' }}>📌</span>}
                 </div>
                 <p style={{ margin: 0, fontSize: '14px', color: '#64748b' }}>{selectedThread.goal}</p>
               </div>
             </div>
             <div style={{ display: 'flex', gap: '4px' }}>
               {selectedThread.status === 'running' && (
-                <button style={{ width: '32px', height: '32px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#f59e0b' }}>⏸</button>
+                <button style={{ width: '32px', height: '32px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--status-warning)' }}>⏸</button>
               )}
               {selectedThread.status === 'paused' && (
-                <button style={{ width: '32px', height: '32px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#10b981' }}>▶</button>
+                <button style={{ width: '32px', height: '32px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--status-success)' }}>▶</button>
               )}
               <button style={{ width: '32px', height: '32px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#a855f7' }}>✨</button>
-              <button style={{ width: '32px', height: '32px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444' }}>■</button>
+              <button style={{ width: '32px', height: '32px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--status-error)' }}>■</button>
             </div>
           </div>
           
@@ -264,10 +264,10 @@ const SwarmMonitorComplete = () => {
             {selectedThread.status === 'failed' && (
               <>
                 <div style={{ color: '#94a3b8' }}>[14:55:05] Bundling with Vite...</div>
-                <div style={{ color: '#ef4444' }}>[14:55:30] ✗ Build failed: Out of memory</div>
+                <div style={{ color: 'var(--status-error)' }}>[14:55:30] ✗ Build failed: Out of memory</div>
               </>
             )}
-            {selectedThread.status === 'running' && <div style={{ color: '#f59e0b', marginTop: '8px', animation: 'pulse 1s infinite' }}>_</div>}
+            {selectedThread.status === 'running' && <div style={{ color: 'var(--status-warning)', marginTop: '8px', animation: 'pulse 1s infinite' }}>_</div>}
           </div>
 
           {/* Progress */}
@@ -293,7 +293,7 @@ const SwarmMonitorComplete = () => {
             <span style={{ fontSize: '13px', color: '#cbd5e1' }}>Episode E1</span>
             <span style={{ fontSize: '11px', color: '#64748b', flex: 1 }}>Deployed to staging with zero downtime</span>
             <span style={{ fontSize: '11px', color: '#64748b' }}>3 decisions · 2 artifacts</span>
-            <span style={{ fontSize: '11px', padding: '2px 8px', background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', borderRadius: '4px' }}>85% compressed</span>
+            <span style={{ fontSize: '11px', padding: '2px 8px', background: 'rgba(245, 158, 11, 0.1)', color: 'var(--status-warning)', borderRadius: '4px' }}>85% compressed</span>
             <button style={{ fontSize: '11px', padding: '4px 12px', background: 'transparent', border: '1px solid #334155', borderRadius: '4px', color: '#cbd5e1', cursor: 'pointer' }}>Use as Context</button>
           </div>
         </div>

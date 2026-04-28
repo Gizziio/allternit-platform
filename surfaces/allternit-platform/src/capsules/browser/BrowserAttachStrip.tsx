@@ -26,31 +26,31 @@ function toneForStatus(status: string): { bg: string; border: string; text: stri
       return {
         bg: `${STATUS.success}24`,
         border: `${STATUS.success}4c`,
-        text: '#bbf7d0',
+        text: 'var(--status-success)',
       };
     case 'WaitingApproval':
       return {
         bg: 'rgba(217,119,6,0.16)',
         border: `${STATUS.warning}4c`,
-        text: '#fde68a',
+        text: 'var(--status-warning)',
       };
     case 'Blocked':
       return {
         bg: 'rgba(185,28,28,0.14)',
-        border: '#ef444442',
-        text: '#fecaca',
+        border: 'color-mix(in srgb, var(--status-error) 26%, transparent)',
+        text: 'var(--status-error)',
       };
     case 'Done':
       return {
         bg: `${STATUS.info}1f`,
         border: `${STATUS.info}3d`,
-        text: '#bfdbfe',
+        text: 'var(--status-info)',
       };
     default:
       return {
         bg: 'rgba(148,163,184,0.12)',
         border: 'rgba(148,163,184,0.22)',
-        text: '#cbd5e1',
+        text: 'var(--ui-text-secondary)',
       };
   }
 }
@@ -187,11 +187,11 @@ export function BrowserAttachStrip() {
                 gap: 6,
                 padding: '6px 9px',
                 borderRadius: 999,
-                background: endpoint ? 'rgba(16,185,129,0.12)' : 'rgba(148,163,184,0.12)',
+                background: endpoint ? `${STATUS.success}1f` : 'rgba(148,163,184,0.12)',
                 border: endpoint
-                  ? '1px solid rgba(52,211,153,0.22)'
+                  ? `1px solid ${STATUS.success}38`
                   : '1px solid rgba(148,163,184,0.18)',
-                color: endpoint ? '#a7f3d0' : '#cbd5e1',
+                color: endpoint ? 'var(--status-success)' : 'var(--ui-text-secondary)',
                 fontSize: 11,
                 fontWeight: 600,
               }}
@@ -209,7 +209,7 @@ export function BrowserAttachStrip() {
                 borderRadius: 999,
                 background: `${SAND[500]}14`,
                 border: `1px solid ${SAND[500]}2e`,
-                color: '#e7d3bf',
+                color: 'var(--ui-text-secondary)',
                 fontSize: 11,
                 fontWeight: 600,
               }}
@@ -228,7 +228,7 @@ export function BrowserAttachStrip() {
                   borderRadius: 999,
                   background: `${STATUS.info}1f`,
                   border: `1px solid ${STATUS.info}33`,
-                  color: '#bfdbfe',
+                  color: 'var(--status-info)',
                   fontSize: 11,
                   fontWeight: 600,
                 }}
@@ -245,7 +245,7 @@ export function BrowserAttachStrip() {
             style={{
               fontSize: 12,
               fontWeight: 600,
-              color: '#f5efe8',
+              color: 'var(--ui-text-primary)',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
@@ -260,7 +260,7 @@ export function BrowserAttachStrip() {
               gap: 10,
               marginTop: 4,
               flexWrap: 'wrap',
-              color: '#97826f',
+              color: 'var(--ui-text-muted)',
               fontSize: 11,
             }}
           >
@@ -301,9 +301,9 @@ export function BrowserAttachStrip() {
               minWidth: 170,
               padding: '8px 10px',
               borderRadius: 10,
-              border: '1px solid rgba(255,255,255,0.08)',
-              background: 'rgba(255,255,255,0.04)',
-              color: '#f3ede5',
+              border: '1px solid var(--ui-border-muted)',
+              background: 'var(--surface-hover)',
+              color: 'var(--ui-text-primary)',
               fontSize: 12,
             }}
           >
@@ -339,8 +339,8 @@ export function BrowserAttachStrip() {
                   padding: '8px 10px',
                   borderRadius: 10,
                   border: `1px solid ${SAND[500]}40`,
-                  background: 'rgba(0,0,0,0.28)',
-                  color: '#f8f3ed',
+                  background: 'var(--surface-hover)',
+                  color: 'var(--ui-text-primary)',
                   fontSize: 12,
                 }}
               />
@@ -356,7 +356,7 @@ export function BrowserAttachStrip() {
                   borderRadius: 10,
                   border: '1px solid rgba(52,211,153,0.22)',
                   background: 'rgba(16,185,129,0.12)',
-                  color: '#a7f3d0',
+                  color: 'var(--status-success)',
                   fontSize: 12,
                   fontWeight: 600,
                 }}
@@ -376,8 +376,8 @@ export function BrowserAttachStrip() {
                 padding: '8px 10px',
                 borderRadius: 10,
                 border: `1px solid ${SAND[500]}2e`,
-                background: 'rgba(255,255,255,0.04)',
-                color: engineHealthy === false ? '#fca5a5' : '#f3ddc6',
+                background: 'var(--surface-hover)',
+                color: engineHealthy === false ? 'var(--status-error)' : 'var(--ui-text-secondary)',
                 fontSize: 12,
                 fontWeight: 600,
               }}
@@ -397,9 +397,9 @@ export function BrowserAttachStrip() {
               gap: 6,
               padding: '8px 10px',
               borderRadius: 10,
-              border: '1px solid rgba(255,255,255,0.08)',
-              background: 'rgba(255,255,255,0.04)',
-              color: '#d7c7b8',
+              border: '1px solid var(--ui-border-muted)',
+              background: 'var(--surface-hover)',
+              color: 'var(--ui-text-secondary)',
             }}
           >
             <ArrowsClockwise size={13} />
@@ -418,7 +418,7 @@ export function BrowserAttachStrip() {
                   borderRadius: 10,
                   border: '1px solid rgba(52,211,153,0.22)',
                   background: 'rgba(16,185,129,0.12)',
-                  color: '#a7f3d0',
+                  color: 'var(--status-success)',
                   fontSize: 12,
                   fontWeight: 700,
                 }}
@@ -435,9 +435,9 @@ export function BrowserAttachStrip() {
                   gap: 6,
                   padding: '8px 10px',
                   borderRadius: 10,
-                  border: '1px solid rgba(239,68,68,0.38)',
-                  background: 'rgba(185,28,28,0.12)',
-                  color: '#fecaca',
+                  border: `1px solid ${STATUS.error}5c`,
+                  background: `${STATUS.error}1a`,
+                  color: 'var(--status-error)',
                   fontSize: 12,
                   fontWeight: 700,
                 }}
@@ -459,7 +459,7 @@ export function BrowserAttachStrip() {
                   borderRadius: 10,
                   border: `1px solid ${STATUS.info}33`,
                   background: `${STATUS.info}1f`,
-                  color: '#bfdbfe',
+                  color: 'var(--status-info)',
                   fontSize: 12,
                   fontWeight: 700,
                 }}
@@ -476,9 +476,9 @@ export function BrowserAttachStrip() {
                   gap: 6,
                   padding: '8px 10px',
                   borderRadius: 10,
-                  border: '1px solid rgba(239,68,68,0.38)',
-                  background: 'rgba(185,28,28,0.12)',
-                  color: '#fecaca',
+                  border: `1px solid ${STATUS.error}5c`,
+                  background: `${STATUS.error}1a`,
+                  color: 'var(--status-error)',
                   fontSize: 12,
                   fontWeight: 700,
                 }}
@@ -500,7 +500,7 @@ export function BrowserAttachStrip() {
                   borderRadius: 10,
                   border: `1px solid ${SAND[500]}38`,
                   background: `${SAND[500]}1f`,
-                  color: '#f3ddc6',
+                  color: 'var(--ui-text-primary)',
                   fontSize: 12,
                   fontWeight: 700,
                 }}
@@ -519,7 +519,7 @@ export function BrowserAttachStrip() {
                   borderRadius: 10,
                   border: '1px solid rgba(250,204,21,0.2)',
                   background: 'rgba(202,138,4,0.12)',
-                  color: '#fde68a',
+                  color: 'var(--status-warning)',
                   fontSize: 12,
                   fontWeight: 700,
                 }}
@@ -540,7 +540,7 @@ export function BrowserAttachStrip() {
                 borderRadius: 10,
                 border: `1px solid ${SAND[500]}38`,
                 background: `${SAND[500]}1f`,
-                color: '#f3ddc6',
+                color: 'var(--ui-text-primary)',
                 fontSize: 12,
                 fontWeight: 700,
               }}

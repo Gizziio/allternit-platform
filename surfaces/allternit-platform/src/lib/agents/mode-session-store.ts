@@ -26,10 +26,8 @@ import {
   type AgentContext,
 } from './native-agent-api';
 import { subscribeSSE } from '../sse/global-sse-manager';
-import type { 
-  ContextPack, 
+import type {
   ContextPackOptions,
-  ScheduledTask 
 } from './agent-context-pack';
 
 // ============================================================================
@@ -123,19 +121,10 @@ export interface SendMessageOptions {
 
 import { agentWorkspaceFS, AgentWorkspace } from './agent-workspace-files';
 import { AgentTrustTiers } from './agent-trust-tiers';
-import { HeartbeatTaskManager, getHeartbeatTaskManager, parseHeartbeatTasks } from './agent-heartbeat-executor';
-import { agentCronScheduler, useAgentCronScheduler } from './agent-cron-scheduler';
-import { coworkIntegration, useCoworkIntegration } from './agent-cowork-integration';
+import { getHeartbeatTaskManager } from './agent-heartbeat-executor';
+import { agentCronScheduler } from './agent-cron-scheduler';
+import { coworkIntegration } from './agent-cowork-integration';
 import { setupSessionAutoRefresh } from './agent-workspace-watcher';
-
-let contextPackBuilder: typeof import('./agent-context-pack') | null = null;
-
-async function getContextPackBuilder() {
-  if (!contextPackBuilder) {
-    contextPackBuilder = await import('./agent-context-pack');
-  }
-  return contextPackBuilder;
-}
 
 // ============================================================================
 // Helpers
@@ -297,8 +286,6 @@ async function buildContextPackForSession(
   // Build system prompt from workspace files
   const systemPrompt = buildSystemPrompt(workspace);
   
-  // Parse HEARTBEAT.md for startup tasks
-  const heartbeatFile = workspace.files.find(f => f.name.toUpperCase() === 'HEARTBEAT.MD');
   const startupTasks: Array<{ id: string; action: string; args?: Record<string, unknown> }> = [];
   
   // Generate hash for caching
@@ -453,8 +440,8 @@ async function sendMessageWithContext(
   session: ModeSession,
   options: SendMessageOptions
 ): Promise<void> {
-  const { text, skipContext, callbacks } = options;
-  
+  const { text, skipContext } = options;
+
   // Build context pack if agent mode
   let contextPack: AgentContextPack | null = null;
   if (!skipContext && session.metadata.sessionMode === 'agent') {
@@ -464,7 +451,7 @@ async function sendMessageWithContext(
       session._contextPack = contextPack;
     }
   }
-  
+
   // Send message via API
   await sessionApi.sendMessage(session.id, {
     text,
@@ -593,6 +580,8 @@ export interface ModeSessionState {
 
   // Agent mode integration
   appendOptimisticEvent: (sessionId: string, event: unknown) => void;
+  appendAssistantMessage: (sessionId: string, message: { id: string; content: string; metadata?: Record<string, unknown> }) => void;
+  updateMessage: (sessionId: string, messageId: string, updates: Partial<ModeSessionMessage>) => void;
 }
 
 export function createModeSessionStore(config: StoreConfig) {
@@ -1276,6 +1265,38 @@ export function createModeSessionStore(config: StoreConfig) {
             }));
           },
 
+          appendAssistantMessage: (sessionId: string, message) => {
+            const assistantMsg: ModeSessionMessage = {
+              id: message.id,
+              role: 'assistant',
+              content: message.content,
+              timestamp: new Date().toISOString(),
+              metadata: message.metadata,
+            };
+            set((state) => ({
+              sessions: state.sessions.map((s) =>
+                s.id === sessionId
+                  ? { ...s, messages: [...s.messages, assistantMsg] }
+                  : s
+              ),
+            }));
+          },
+
+          updateMessage: (sessionId: string, messageId: string, updates) => {
+            set((state) => ({
+              sessions: state.sessions.map((s) =>
+                s.id === sessionId
+                  ? {
+                      ...s,
+                      messages: s.messages.map((m) =>
+                        m.id === messageId ? { ...m, ...updates } : m
+                      ),
+                    }
+                  : s
+              ),
+            }));
+          },
+
           loadSessions: async () => {
             set({ isLoading: true, error: null });
 
@@ -1321,7 +1342,6 @@ export function createModeSessionStore(config: StoreConfig) {
                 const workspace = await agentWorkspaceFS.loadWorkspace(session.metadata.agentId);
 
                 if (workspace) {
-                  const trustTiers = AgentTrustTiers.fromWorkspace(workspace);
                   const systemPrompt = buildSystemPrompt(workspace);
                   
                   // Update session with new context

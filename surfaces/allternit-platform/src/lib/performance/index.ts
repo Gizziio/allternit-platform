@@ -30,15 +30,6 @@ export const PERFORMANCE_THRESHOLDS: Record<string, { good: number; poor: number
   INP: { good: 200, poor: 500 },      // Interaction to Next Paint (ms)
 };
 
-function getRating(name: string, value: number): 'good' | 'needs-improvement' | 'poor' {
-  const thresholds = PERFORMANCE_THRESHOLDS[name];
-  if (!thresholds) return 'good';
-  
-  if (value <= thresholds.good) return 'good';
-  if (value <= thresholds.poor) return 'needs-improvement';
-  return 'poor';
-}
-
 /**
  * Report Web Vitals metrics
  */

@@ -4,7 +4,6 @@ import { useAgentSurfaceModeStore, type AgentModeSurface } from "@/stores/agent-
 import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
 import { useCodeSessionStore } from "@/views/code/CodeSessionStore";
 import { useCoworkSessionStore } from "@/views/cowork/CoworkSessionStore";
-import { useBrowserSessionStore } from "@/views/browser/BrowserSessionStore";
 
 import { useAgentStore } from "./agent.store";
 import type { Agent } from "./agent.types";
@@ -30,15 +29,12 @@ export function useSurfaceAgentModeEnabled(surface: AgentModeSurface): boolean {
   const chatSessionId = useChatSessionStore((s) => s.activeSessionId);
   const codeSessionId = useCodeSessionStore((s) => s.activeSessionId);
   const coworkSessionId = useCoworkSessionStore((s) => s.activeSessionId);
-  const browserSessionId = useBrowserSessionStore((s) => s.activeSessionId);
-
   const chatSessions = useChatSessionStore((s) => s.sessions);
   const codeSessions = useCodeSessionStore((s) => s.sessions);
   const coworkSessions = useCoworkSessionStore((s) => s.sessions);
-  const browserSessions = useBrowserSessionStore((s) => s.sessions);
 
-  const activeId = surface === "code" ? codeSessionId : surface === "cowork" ? coworkSessionId : surface === "browser" ? browserSessionId : chatSessionId;
-  const sessions = surface === "code" ? codeSessions : surface === "cowork" ? coworkSessions : surface === "browser" ? browserSessions : chatSessions;
+  const activeId = surface === "code" ? codeSessionId : surface === "cowork" ? coworkSessionId : chatSessionId;
+  const sessions = surface === "code" ? codeSessions : surface === "cowork" ? coworkSessions : chatSessions;
 
   const session = activeId ? (sessions.find((s) => s.id === activeId) ?? null) : null;
   const descriptor = getAgentSessionDescriptor(session?.metadata);

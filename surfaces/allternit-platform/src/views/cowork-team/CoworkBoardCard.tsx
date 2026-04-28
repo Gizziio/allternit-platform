@@ -22,19 +22,19 @@ const STATUS_ORDER: BoardItemStatus[] = [
 ];
 
 const STATUS_COLORS: Record<string, string> = {
-  backlog: '#6b7280',
-  todo: '#06b6d4',
-  in_progress: '#af52de',
-  in_review: '#f59e0b',
-  done: '#22c55e',
-  blocked: '#ef4444',
+  backlog: 'var(--ui-text-muted)',
+  todo: 'var(--status-info)',
+  in_progress: 'var(--accent-cowork)',
+  in_review: 'var(--status-warning)',
+  done: 'var(--status-success)',
+  blocked: 'var(--status-error)',
 };
 
 function priorityColor(priority: number): string {
-  if (priority >= 76) return '#ef4444';
-  if (priority >= 51) return '#f97316';
-  if (priority >= 26) return '#f59e0b';
-  return '#22c55e';
+  if (priority >= 76) return 'var(--status-error)';
+  if (priority >= 51) return 'var(--status-warning)';
+  if (priority >= 26) return 'var(--status-warning)';
+  return 'var(--status-success)';
 }
 
 function nextStatus(current: BoardItemStatus): BoardItemStatus | null {
@@ -49,7 +49,7 @@ export const CoworkBoardCard: React.FC<Props> = ({ item, onAssign, onMove }) => 
   const [expanding, setExpanding] = useState(false);
 
   const next = nextStatus(item.status);
-  const accentColor = STATUS_COLORS[item.status] ?? '#6b7280';
+  const accentColor = STATUS_COLORS[item.status] ?? 'var(--ui-text-muted)';
   const pColor = priorityColor(item.priority ?? 50);
   const commentCount = item.comments?.length ?? 0;
 
@@ -249,9 +249,9 @@ export const CoworkBoardCard: React.FC<Props> = ({ item, onAssign, onMove }) => 
               gap: '3px',
               padding: '3px 8px',
               borderRadius: '4px',
-              background: expanding ? '#af52de18' : 'transparent',
+              background: expanding ? 'color-mix(in srgb, var(--accent-cowork) 9%, transparent)' : 'transparent',
               border: '1px solid var(--border-subtle)',
-              color: expanding ? '#af52de' : 'var(--text-secondary)',
+              color: expanding ? 'var(--accent-cowork)' : 'var(--text-secondary)',
               fontSize: '11px',
               cursor: expanding ? 'default' : 'pointer',
               transition: 'color 0.15s, border-color 0.15s',
@@ -259,8 +259,8 @@ export const CoworkBoardCard: React.FC<Props> = ({ item, onAssign, onMove }) => 
             onMouseEnter={(e) => {
               if (expanding) return;
               const el = e.currentTarget as HTMLButtonElement;
-              el.style.color = '#af52de';
-              el.style.borderColor = '#af52de55';
+              el.style.color = 'var(--accent-cowork)';
+              el.style.borderColor = 'color-mix(in srgb, var(--accent-cowork) 33%, transparent)';
             }}
             onMouseLeave={(e) => {
               if (expanding) return;

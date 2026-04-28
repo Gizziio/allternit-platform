@@ -66,11 +66,11 @@ export function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => voi
     .slice(0, 2);
 
   const statusColors: Record<string, string> = {
-    'online': '#22c55e',
-    'offline': '#6b7280',
-    'busy': '#f59e0b',
-    'error': '#ef4444',
-    'running': '#f59e0b'
+    'online': 'var(--status-success)',
+    'offline': 'var(--ui-text-muted)',
+    'busy': 'var(--status-warning)',
+    'error': 'var(--status-error)',
+    'running': 'var(--status-warning)'
   };
   
   return (
@@ -85,7 +85,7 @@ export function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => voi
         border: `1px solid ${isHovered ? `${STUDIO_THEME.accent}50` : STUDIO_THEME.borderSubtle}`,
         background: STUDIO_THEME.bgCard,
         overflow: 'hidden',
-        boxShadow: isHovered ? '0 8px 24px rgba(0,0,0,0.3)' : '0 2px 8px rgba(0,0,0,0.1)',
+        boxShadow: isHovered ? '0 8px 24px var(--surface-panel)' : '0 2px 8px rgba(0,0,0,0.1)',
         transition: 'all 0.3s ease'
       }}
     >
@@ -114,7 +114,7 @@ export function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => voi
                 width: '14px',
                 height: '14px',
                 borderRadius: '50%',
-                background: statusColors[agent.status] || '#6b7280',
+                background: statusColors[agent.status] || 'var(--ui-text-muted)',
                 border: `2px solid ${STUDIO_THEME.bgCard}`
               }} />
             </div>
@@ -152,7 +152,7 @@ export function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => voi
                   <span style={{
                     padding: '2px 8px',
                     borderRadius: '999px',
-                    background: 'rgba(255,255,255,0.06)',
+                    background: 'var(--ui-border-muted)',
                     color: STUDIO_THEME.textSecondary,
                     fontSize: '11px',
                     fontWeight: 500
@@ -165,7 +165,7 @@ export function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => voi
                     padding: '2px 8px',
                     borderRadius: '999px',
                     background: 'rgba(59, 130, 246, 0.15)',
-                    color: '#60a5fa',
+                    color: 'var(--status-info)',
                     fontSize: '11px',
                     fontWeight: 500
                   }}>
@@ -178,7 +178,7 @@ export function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => voi
                     padding: '2px 8px',
                     borderRadius: '999px',
                     background: agent.teammateProfile.status === 'busy' ? 'rgba(245, 158, 11, 0.15)' : agent.teammateProfile.status === 'offline' ? 'rgba(107, 114, 128, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-                    color: agent.teammateProfile.status === 'busy' ? '#f59e0b' : agent.teammateProfile.status === 'offline' ? '#9ca3af' : '#10b981',
+                    color: agent.teammateProfile.status === 'busy' ? 'var(--status-warning)' : agent.teammateProfile.status === 'offline' ? 'var(--ui-text-muted)' : 'var(--status-success)',
                     fontSize: '11px',
                     fontWeight: 500
                   }}>
@@ -234,7 +234,7 @@ export function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => voi
             marginTop: '12px',
             padding: '10px',
             borderRadius: '8px',
-            background: 'rgba(0,0,0,0.2)',
+            background: 'var(--surface-hover)',
             border: `1px solid ${STUDIO_THEME.borderSubtle}`
           }}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
@@ -259,7 +259,7 @@ export function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => voi
                 <span style={{
                   padding: '3px 10px',
                   borderRadius: '6px',
-                  background: 'rgba(255,255,255,0.06)',
+                  background: 'var(--ui-border-muted)',
                   color: STUDIO_THEME.textMuted,
                   fontSize: '12px'
                 }}>
@@ -276,7 +276,7 @@ export function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => voi
               <div key={definition.key} style={{
                 padding: '8px 10px',
                 borderRadius: '6px',
-                background: 'rgba(0,0,0,0.2)',
+                background: 'var(--surface-hover)',
                 border: `1px solid ${STUDIO_THEME.borderSubtle}`,
                 display: 'flex',
                 alignItems: 'center',
@@ -298,7 +298,7 @@ export function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => voi
             <span key={cap} style={{
               padding: '3px 10px',
               borderRadius: '6px',
-              background: 'rgba(255,255,255,0.06)',
+              background: 'var(--ui-border-muted)',
               color: STUDIO_THEME.textSecondary,
               fontSize: '12px',
               border: `1px solid ${STUDIO_THEME.borderSubtle}`

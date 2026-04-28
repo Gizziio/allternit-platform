@@ -41,11 +41,11 @@ export const RunsView: React.FC = () => {
       case 'running':
         return 'var(--text-primary)';
       case 'completed':
-        return '#22c55e';
+        return 'var(--status-success)';
       case 'failed':
-        return '#ef4444';
+        return 'var(--status-error)';
       case 'queued':
-        return '#9ca3af';
+        return 'var(--ui-text-muted)';
       default:
         return 'var(--text-secondary)';
     }
@@ -102,7 +102,7 @@ export const RunsView: React.FC = () => {
                 fontWeight: 500,
                 cursor: 'pointer',
                 backgroundColor:
-                  activeFilter === filter ? '#af52de' : 'var(--bg-secondary)',
+                  activeFilter === filter ? 'var(--accent-cowork)' : 'var(--bg-secondary)',
                 color: activeFilter === filter ? '#fff' : 'var(--text-secondary)',
                 transition: 'all 0.2s ease',
               }}
@@ -181,8 +181,8 @@ export const RunsView: React.FC = () => {
                           fontSize: '11px',
                           padding: '2px 8px',
                           borderRadius: '4px',
-                          backgroundColor: run.runtime === 'Cloud' ? '#dbeafe' : '#fce7f3',
-                          color: run.runtime === 'Cloud' ? '#0369a1' : '#be185d',
+                          backgroundColor: run.runtime === 'Cloud' ? 'var(--status-info-bg)' : 'var(--surface-active)',
+                          color: run.runtime === 'Cloud' ? 'var(--status-info)' : 'var(--status-error)',
                           fontWeight: 500,
                         }}
                       >
@@ -204,8 +204,8 @@ export const RunsView: React.FC = () => {
                             width: '18px',
                             height: '18px',
                             borderRadius: '50%',
-                            backgroundColor: run.assignedTo.type === 'agent' ? '#3b82f6' : '#af52de',
-                            color: '#fff',
+                            backgroundColor: run.assignedTo.type === 'agent' ? 'var(--status-info)' : 'var(--accent-cowork)',
+                            color: 'var(--ui-text-inverse)',
                             fontSize: '10px',
                           }}
                         >

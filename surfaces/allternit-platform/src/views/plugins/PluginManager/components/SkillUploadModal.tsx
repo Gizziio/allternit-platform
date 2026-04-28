@@ -77,7 +77,7 @@ export function SkillUploadModal({
             width: '100%',
             borderRadius: 10,
             border: `1px dashed ${isDragActive ? THEME.accent : THEME.borderStrong}`,
-            backgroundColor: isDragActive ? THEME.accentMuted : 'rgba(255,255,255,0.02)',
+            backgroundColor: isDragActive ? THEME.accentMuted : 'var(--surface-hover)',
             padding: '28px 14px',
             textAlign: 'center',
             color: THEME.textSecondary,

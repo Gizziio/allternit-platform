@@ -15,7 +15,7 @@ import { useToolCallAccent } from "./ToolCallVisualization";
 
 interface AgentChatIntegrationProps {
   sessionId: string;
-  surface?: "chat" | "cowork" | "code" | "browser";
+  surface?: "chat" | "cowork" | "code" | "browser" | "design";
   children?: React.ReactNode;
 }
 
@@ -79,7 +79,7 @@ interface EnhancedMessageItemProps {
     }>;
     toolCallId?: string;
   };
-  surface?: "chat" | "cowork" | "code" | "browser";
+  surface?: "chat" | "cowork" | "code" | "browser" | "design";
   isStreaming?: boolean;
 }
 

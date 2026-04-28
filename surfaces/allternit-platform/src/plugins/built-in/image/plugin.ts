@@ -16,10 +16,7 @@ import type {
 } from '../types';
 import {
   generateImages,
-  generateVariations,
-  getImageProviders,
   type ImageGenerationResult,
-  type GeneratedImage,
 } from '@/lib/agents/modes/image-generation';
 
 export interface ImageConfig extends PluginConfig {

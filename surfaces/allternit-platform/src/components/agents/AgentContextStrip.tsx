@@ -109,9 +109,9 @@ function getSurfacePalette(surface: AgentModeSurface): SurfacePalette {
     default:
       return {
         accent: "#D4956A",
-        glow: "rgba(212,149,106,0.28)",
-        soft: "rgba(212,149,106,0.14)",
-        border: "rgba(212,149,106,0.14)",
+        glow: "color-mix(in srgb, var(--accent-primary) 28%, transparent)",
+        soft: "color-mix(in srgb, var(--accent-primary) 14%, transparent)",
+        border: "color-mix(in srgb, var(--accent-primary) 14%, transparent)",
       };
   }
 }
@@ -156,9 +156,9 @@ function ActionChip({
         gap: 6,
         borderRadius: 999,
         border: "1px solid",
-        borderColor: active ? palette.border : "rgba(255,255,255,0.08)",
-        background: active ? palette.soft : "rgba(255,255,255,0.03)",
-        color: active ? palette.accent : "#c2b4a6",
+        borderColor: active ? palette.border : "var(--ui-border-default)",
+        background: active ? palette.soft : "var(--surface-hover)",
+        color: active ? palette.accent : "var(--ui-text-muted)",
         cursor: "pointer",
         padding: "6px 10px",
         fontSize: 11,
@@ -188,7 +188,7 @@ function InfoChip({
         gap: 6,
         borderRadius: 999,
         padding: "5px 9px",
-        background: "rgba(255,255,255,0.04)",
+        background: "var(--surface-hover)",
         border: `1px solid ${palette.border}`,
         color: "#eadfd4",
         fontSize: 11,
@@ -263,8 +263,8 @@ export function AgentContextStrip({
         borderRadius: 22,
         border: `1px solid ${palette.border}`,
         background:
-          "linear-gradient(180deg, rgba(35,30,28,0.9) 0%, rgba(24,21,20,0.95) 100%)",
-        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.04), 0 18px 44px rgba(0,0,0,0.2), 0 0 0 1px ${palette.glow}`,
+          "linear-gradient(180deg, var(--surface-floating) 0%, var(--surface-floating) 100%)",
+        boxShadow: `inset 0 1px 0 var(--surface-hover), 0 18px 44px var(--surface-hover), 0 0 0 1px ${palette.glow}`,
         overflow: "hidden",
       }}
     >
@@ -282,7 +282,7 @@ export function AgentContextStrip({
           justifyContent: "space-between",
           gap: 16,
           padding: "14px 16px 12px",
-          background: `linear-gradient(110deg, ${palette.soft}, rgba(255,255,255,0.015) 56%, rgba(255,255,255,0.02) 100%)`,
+          background: `linear-gradient(110deg, ${palette.soft}, rgba(255,255,255,0.015) 56%, var(--surface-hover) 100%)`,
         }}
       >
         <div style={{ minWidth: 0, flex: 1 }}>
@@ -317,10 +317,10 @@ export function AgentContextStrip({
             <span
               style={{
                 borderRadius: 999,
-                border: "1px solid rgba(255,255,255,0.06)",
+                border: "1px solid var(--ui-border-muted)",
                 background: localDraft
-                  ? "rgba(245,158,11,0.12)"
-                  : "rgba(255,255,255,0.04)",
+                  ? "var(--status-warning-bg)"
+                  : "var(--surface-hover)",
                 color: localDraft ? "#fcd34d" : "#d1c3b4",
                 padding: "4px 8px",
                 fontSize: 10,
@@ -398,8 +398,8 @@ export function AgentContextStrip({
               alignItems: "center",
               justifyContent: "center",
               borderRadius: 11,
-              border: "1px solid rgba(255,255,255,0.06)",
-              background: "rgba(255,255,255,0.04)",
+              border: "1px solid var(--ui-border-muted)",
+              background: "var(--surface-hover)",
               color: "#b6a89b",
               cursor: "pointer",
               flexShrink: 0,
@@ -447,8 +447,8 @@ export function AgentContextStrip({
           style={{
             marginTop: 12,
             borderRadius: 18,
-            border: "1px solid rgba(255,255,255,0.05)",
-            background: "rgba(255,255,255,0.03)",
+            border: "1px solid var(--surface-hover)",
+            background: "var(--surface-hover)",
             padding: 14,
           }}
         >
@@ -527,7 +527,7 @@ function MetaCard({
     <div
       style={{
         borderRadius: 14,
-        border: "1px solid rgba(255,255,255,0.04)",
+        border: "1px solid var(--surface-hover)",
         background: "rgba(16,12,10,0.24)",
         padding: "12px 12px 11px",
       }}
@@ -729,7 +729,7 @@ function ToolsDrawer({ tools, isLoading, toolsEnabled, palette, sessionId }: Too
           marginTop: 8,
           padding: 10,
           borderRadius: 10,
-          background: "rgba(255,255,255,0.03)",
+          background: "var(--surface-hover)",
           border: `1px solid ${palette.border}`,
           fontSize: 11,
           color: "#a8998c",
@@ -791,7 +791,7 @@ function ToolRegistryPanel({
           style={{
             padding: "4px 8px",
             borderRadius: 6,
-            border: "1px solid rgba(255,255,255,0.1)",
+            border: "1px solid var(--ui-border-default)",
             background: "transparent",
             color: "#a8998c",
             fontSize: 11,
@@ -818,7 +818,7 @@ function ToolRegistryPanel({
           padding: "8px 12px",
           borderRadius: 8,
           border: `1px solid ${palette.border}`,
-          background: "rgba(0,0,0,0.2)",
+          background: "var(--surface-hover)",
           color: "#f6eee7",
           fontSize: 12,
           outline: "none",
@@ -833,7 +833,7 @@ function ToolRegistryPanel({
             padding: "4px 10px",
             borderRadius: 999,
             border: "none",
-            background: selectedCategory === null ? palette.soft : "rgba(255,255,255,0.05)",
+            background: selectedCategory === null ? palette.soft : "var(--surface-hover)",
             color: selectedCategory === null ? palette.accent : "#a8998c",
             fontSize: 10,
             fontWeight: 600,
@@ -850,7 +850,7 @@ function ToolRegistryPanel({
               padding: "4px 10px",
               borderRadius: 999,
               border: "none",
-              background: selectedCategory === cat ? palette.soft : "rgba(255,255,255,0.05)",
+              background: selectedCategory === cat ? palette.soft : "var(--surface-hover)",
               color: selectedCategory === cat ? palette.accent : "#a8998c",
               fontSize: 10,
               fontWeight: 600,
@@ -902,7 +902,7 @@ function RegistryToolItem({
     <div
       style={{
         borderRadius: 10,
-        border: `1px solid ${tool.isEnabled ? palette.border : "rgba(255,255,255,0.05)"}`,
+        border: `1px solid ${tool.isEnabled ? palette.border : "var(--surface-hover)"}`,
         background: tool.isEnabled ? "rgba(16,12,10,0.24)" : "rgba(0,0,0,0.1)",
         overflow: "hidden",
         opacity: tool.isEnabled ? 1 : 0.7,
@@ -969,8 +969,8 @@ function RegistryToolItem({
             style={{
               padding: "3px 8px",
               borderRadius: 6,
-              border: `1px solid ${tool.requiresConfirmation ? "#fbbf24" : "rgba(255,255,255,0.1)"}`,
-              background: tool.requiresConfirmation ? "rgba(251,191,36,0.1)" : "transparent",
+              border: `1px solid ${tool.requiresConfirmation ? "#fbbf24" : "var(--ui-border-default)"}`,
+              background: tool.requiresConfirmation ? "var(--status-warning-bg)" : "transparent",
               color: tool.requiresConfirmation ? "#fbbf24" : "#7a6b5d",
               fontSize: 10,
               cursor: "pointer",
@@ -998,7 +998,7 @@ function RegistryToolItem({
       </div>
 
       {expanded && (
-        <div style={{ padding: "0 10px 10px", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+        <div style={{ padding: "0 10px 10px", borderTop: "1px solid var(--surface-hover)" }}>
           <div style={{ paddingTop: 8, fontSize: 11, color: "#a8998c", lineHeight: 1.4 }}>
             {tool.description}
           </div>
@@ -1019,8 +1019,8 @@ function ToolItem({ tool, palette }: { tool: Tool; palette: SurfacePalette }) {
           width: "100%",
           padding: "8px 12px",
           borderRadius: 8,
-          border: "1px solid rgba(255,255,255,0.06)",
-          background: "rgba(255,255,255,0.02)",
+          border: "1px solid var(--ui-border-muted)",
+          background: "var(--surface-hover)",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
@@ -1046,7 +1046,7 @@ function ToolItem({ tool, palette }: { tool: Tool; palette: SurfacePalette }) {
         <div
           style={{
             padding: "0 12px 12px",
-            borderTop: `1px solid rgba(255,255,255,0.04)`,
+            borderTop: `1px solid var(--surface-hover)`,
           }}
         >
           <div style={{ paddingTop: 10 }}>
@@ -1275,7 +1275,7 @@ function FileBrowser({
           gap: 8,
           marginBottom: 10,
           padding: "8px 10px",
-          background: "rgba(255,255,255,0.03)",
+          background: "var(--surface-hover)",
           borderRadius: 8,
           fontSize: 11,
           color: "#a8998c",
@@ -1345,7 +1345,7 @@ function FileNodeItem({
           color: "#d1c3b4",
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+          e.currentTarget.style.background = "var(--surface-hover)";
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.background = "transparent";
@@ -1435,7 +1435,7 @@ function WorkspaceInfo({
       <div
         style={{
           borderRadius: 14,
-          border: `1px solid rgba(255,255,255,0.04)`,
+          border: `1px solid var(--surface-hover)`,
           background: "rgba(16,12,10,0.24)",
           padding: "12px 12px 11px",
         }}
@@ -1604,11 +1604,11 @@ function AutomationDrawer({ automationEnabled, localDraft, palette }: Automation
           style={{
             position: "fixed",
             inset: 0,
-            background: "rgba(0,0,0,0.7)",
+            background: "var(--shell-overlay-backdrop)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            zIndex: 1000,
+            zIndex: 100,
             padding: 20,
           }}
           onClick={(e) => {
@@ -1663,7 +1663,7 @@ function AutomationDrawer({ automationEnabled, localDraft, palette }: Automation
           gap: 8,
           padding: "10px 12px",
           borderRadius: 10,
-          background: localDraft ? "rgba(245,158,11,0.12)" : "rgba(16,12,10,0.24)",
+          background: localDraft ? "var(--status-warning-bg)" : "rgba(16,12,10,0.24)",
           border: `1px solid ${localDraft ? "rgba(245,158,11,0.2)" : palette.border}`,
         }}
       >
@@ -1688,7 +1688,7 @@ function AutomationDrawer({ automationEnabled, localDraft, palette }: Automation
           style={{
             padding: "3px 8px",
             borderRadius: 999,
-            background: automationEnabled ? "rgba(121,196,124,0.2)" : "rgba(255,255,255,0.08)",
+            background: automationEnabled ? "rgba(121,196,124,0.2)" : "var(--ui-border-muted)",
             color: automationEnabled ? "#79C47C" : "#a8998c",
             fontSize: 10,
             fontWeight: 700,
@@ -1729,7 +1729,7 @@ function AutomationDrawer({ automationEnabled, localDraft, palette }: Automation
           style={{
             padding: "10px 12px",
             borderRadius: 8,
-            background: "rgba(239,68,68,0.15)",
+            background: "var(--status-error-bg)",
             border: "1px solid rgba(239,68,68,0.3)",
             display: "flex",
             alignItems: "center",
@@ -1838,7 +1838,7 @@ function ScheduledJobsView({
             padding: "6px 12px",
             borderRadius: 999,
             border: `1px solid ${palette.border}`,
-            background: automationEnabled ? palette.soft : "rgba(255,255,255,0.05)",
+            background: automationEnabled ? palette.soft : "var(--surface-hover)",
             color: automationEnabled ? palette.accent : "#666",
             fontSize: 11,
             fontWeight: 700,
@@ -1895,7 +1895,7 @@ function ScheduledJobsView({
               padding: "4px 10px",
               borderRadius: 6,
               border: `1px solid ${palette.border}`,
-              background: automationEnabled ? palette.soft : "rgba(255,255,255,0.05)",
+              background: automationEnabled ? palette.soft : "var(--surface-hover)",
               color: automationEnabled ? palette.accent : "#666",
               fontSize: 10,
               fontWeight: 600,
@@ -2009,7 +2009,7 @@ function JobCard({ job, palette, automationEnabled, onEdit, onDelete, onRunNow, 
             alignItems: "center",
             gap: 8,
             padding: "6px 8px",
-            background: "rgba(0,0,0,0.2)",
+            background: "var(--surface-hover)",
             borderRadius: 6,
             fontSize: 11,
             marginBottom: 8,
@@ -2105,7 +2105,7 @@ function ActionButton({
         padding: "4px 10px",
         borderRadius: 6,
         border: `1px solid ${danger ? "rgba(239,68,68,0.3)" : palette.border}`,
-        background: danger ? "rgba(239,68,68,0.1)" : "transparent",
+        background: danger ? "var(--status-error-bg)" : "transparent",
         color: disabled ? "#666" : danger ? "#ef4444" : "#a8998c",
         fontSize: 10,
         fontWeight: 500,
@@ -2298,7 +2298,7 @@ function AutomationConfigView({ palette }: { palette: SurfacePalette }) {
             padding: "8px 12px",
             borderRadius: 8,
             border: "1px solid rgba(121,196,124,0.3)",
-            background: isRunning ? "rgba(255,255,255,0.05)" : "rgba(121,196,124,0.15)",
+            background: isRunning ? "var(--surface-hover)" : "rgba(121,196,124,0.15)",
             color: isRunning ? "#666" : "#79C47C",
             fontSize: 11,
             fontWeight: 600,
@@ -2316,7 +2316,7 @@ function AutomationConfigView({ palette }: { palette: SurfacePalette }) {
             padding: "8px 12px",
             borderRadius: 8,
             border: "1px solid rgba(239,68,68,0.3)",
-            background: !isRunning ? "rgba(255,255,255,0.05)" : "rgba(239,68,68,0.15)",
+            background: !isRunning ? "var(--surface-hover)" : "var(--status-error-bg)",
             color: !isRunning ? "#666" : "#ef4444",
             fontSize: 11,
             fontWeight: 600,
@@ -2332,7 +2332,7 @@ function AutomationConfigView({ palette }: { palette: SurfacePalette }) {
           marginTop: 8,
           padding: 10,
           borderRadius: 10,
-          background: "rgba(255,255,255,0.03)",
+          background: "var(--surface-hover)",
           border: `1px solid ${palette.border}`,
           fontSize: 11,
           color: "#a8998c",

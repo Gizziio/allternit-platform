@@ -248,8 +248,22 @@ const OPENCLAW_CLI_MODELS: ModelData[] = [
   },
 ];
 
+// The default model downloaded during "Add Local Brain" onboarding
+export const LOCAL_BRAIN_MODEL_ID = "local-brain";
+export const LOCAL_BRAIN_OLLAMA_ID = "llama3.2:3b";
+
 // Local Models (Ollama)
 const LOCAL_MODELS: ModelData[] = [
+  {
+    id: LOCAL_BRAIN_MODEL_ID,
+    name: "Local Brain",
+    provider: "ollama",
+    modelId: LOCAL_BRAIN_OLLAMA_ID,
+    runtimeType: "local",
+    description: "Offline · private · works on any machine",
+    logo: LOGOS.ollama,
+    features: { vision: false, fileUpload: false, webSearch: false, reasoning: false, codeExecution: false },
+  },
   {
     id: "ollama-llama3.3",
     name: "Llama 3.3 (Local)",
@@ -316,7 +330,7 @@ export const DEFAULT_MODEL = "kimi/kimi-for-coding";
 export const MODEL_GROUPS = [
   { title: "Cloud Models", models: AI_SDK_MODELS },
   { title: "CLI Agents", models: OPENCLAW_CLI_MODELS },
-  { title: "Local Models", models: LOCAL_MODELS },
+  { title: "Local Brain", models: LOCAL_MODELS },
 ];
 
 // Helper functions

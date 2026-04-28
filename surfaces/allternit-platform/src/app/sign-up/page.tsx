@@ -54,7 +54,7 @@ function SignUpContent() {
           align-items: center;
           justify-content: space-between;
           padding: 16px 24px;
-          border-bottom: 1px solid rgba(255,255,255,0.04);
+          border-bottom: 1px solid var(--surface-hover);
           flex-shrink: 0;
         }
         .signup-logo {
@@ -117,7 +117,7 @@ function SignUpContent() {
         .signup-card {
           background: #1A1410;
           border-radius: 20px;
-          border: 1px solid rgba(255,255,255,0.07);
+          border: 1px solid var(--ui-border-muted);
           padding: 28px;
           box-shadow: 0 8px 32px rgba(0,0,0,0.4);
           overflow: hidden;
@@ -137,7 +137,7 @@ function SignUpContent() {
           gap: 10px;
           margin-bottom: 10px;
         }
-        .signup-also-line { flex: 1; height: 1px; background: rgba(255,255,255,0.05); }
+        .signup-also-line { flex: 1; height: 1px; background: var(--surface-hover); }
         .signup-also-label {
           font-size: 10px;
           color: #3A2A1E;
@@ -155,7 +155,7 @@ function SignUpContent() {
           border-radius: 12px;
           text-decoration: none;
           background: #1A1410;
-          border: 1px solid rgba(255,255,255,0.07);
+          border: 1px solid var(--ui-border-muted);
           min-width: 0;
         }
         .signup-pill-title {

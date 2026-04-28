@@ -12,7 +12,7 @@
  */
 
 // Core utilities
-export { type GlassBlur, type GlassBorder, type GlassElevation, type GlassHover, type GlassOpacity, type GlassOptions, type GlassPadding, type GlassRounded, type GlassTransition, type GlassVariant, blurValues, borderStyles, buildGlassClasses, buildGlassStyles, elevationShadows, fallbackBackgrounds, focusRingStyles, getActiveStyles, getHoverStyles, glassEffects, gpuAcceleratedStyles, hoverTransforms, opacityValues, paddingValues, roundedValues, supportsBackdropFilter, transitionValues, useBackdropFilterSupport, variantColors } from './glass-utils';
+export { type GlassBlur, type GlassBorder, type GlassElevation, type GlassHover, type GlassOpacity, type GlassOptions, type GlassPadding, type GlassRounded, type GlassTransition, type GlassVariant, blurValues, borderStyles, buildGlassClasses, buildGlassStyles, elevationShadows, fallbackBackgrounds, getActiveStyles, getHoverStyles, paddingValues, roundedValues, supportsBackdropFilter, transitionValues, variantColors } from './glass-utils';
 
 // Hook
 export { type UseGlassOptions, type UseGlassReturn, useGlass, useGlassButton, useGlassCard, useGlassDialog, useGlassInput, useGlassPanel, useGlassTooltip } from './useGlass';

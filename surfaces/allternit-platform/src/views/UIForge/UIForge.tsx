@@ -11,8 +11,7 @@ import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { AllternitOpenUIRenderer } from '@/lib/openui/AllternitOpenUIRenderer';
@@ -21,14 +20,9 @@ import { schemas } from '@/lib/openui/registry';
 import { ContextWindowCard } from '@/components/ai-elements/ContextWindowCard';
 import {
   Palette,
-  Code,
   Eye,
   DownloadSimple,
-  Plus,
-  Trash,
-  FloppyDisk,
   Copy,
-  Check,
   MagicWand,
   Sparkle,
   Terminal,

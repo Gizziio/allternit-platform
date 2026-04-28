@@ -23,8 +23,8 @@ function ResizeGrip({ hovered }: { hovered: boolean }) {
       width: 3,
       height: 40,
       borderRadius: 2,
-      background: '#D4B08C',
-      opacity: hovered ? 1 : 0,
+      background: 'var(--accent-primary)',
+      opacity: hovered ? 1 : 0.35,
       transition: 'opacity 0.15s',
     }} />
   );
@@ -59,20 +59,20 @@ export function ShellFrame({
   railWidth?: number;
   /** Called when the user drags the rail resize handle. */
   onRailWidthChange?: (width: number) => void;
+
 }) {
   const { mode } = useMode();
   const selectedAgentIdBySurface = useAgentSurfaceModeStore((s) => s.selectedAgentIdBySurface);
 
   const currentSurface: AgentModeSurface =
+    mode === 'browser' ? 'browser' :
     mode === 'cowork' ? 'cowork' :
-    mode === 'code' ? 'code' : 'chat';
+    mode === 'code' ? 'code' :
+    mode === 'design' ? 'design' : 'chat';
 
   const isAgentActive = !!selectedAgentIdBySurface[currentSurface];
 
-  const railGradient = isAgentActive
-    ? 'linear-gradient(180deg, ' + getAgentModeSurfaceTheme(currentSurface).wash + ' 0%, ' + getAgentModeSurfaceTheme(currentSurface).soft + ' 50%, transparent 100%)'
-    : 'transparent';
-  const canvasGradient = isAgentActive
+  const agentGlow = isAgentActive
     ? 'radial-gradient(100% 80% at 50% 0%, ' + getAgentModeSurfaceTheme(currentSurface).fog + ' 0%, ' + getAgentModeSurfaceTheme(currentSurface).soft + ' 60%, ' + getAgentModeSurfaceTheme(currentSurface).panelTint + ' 100%)'
     : 'transparent';
 
@@ -165,7 +165,7 @@ export function ShellFrame({
     }}>
       <WorkspaceBackground />
 
-      {/* Rail Container with Agent Glow */}
+      {/* Rail Container — solid panel with subtle border */}
       {!isRailCollapsed && (
         <div style={{
           gridRow: '1',
@@ -175,7 +175,8 @@ export function ShellFrame({
           overflow: 'hidden',
           padding: '0px',
           zIndex: 1,
-          background: railGradient,
+          background: isAgentActive ? 'color-mix(in srgb, var(--shell-panel-bg) 88%, transparent)' : 'var(--shell-panel-bg)',
+          borderRight: '1px solid var(--border-subtle)',
           position: 'relative',
         }}>
           {rail}
@@ -196,6 +197,7 @@ export function ShellFrame({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              borderRight: '1px solid var(--border-subtle)',
             }}
           >
             <ResizeGrip hovered={railHandleHovered || railResizing} />
@@ -203,7 +205,7 @@ export function ShellFrame({
         </div>
       )}
 
-      {/* Main Canvas with Agent Glow */}
+      {/* Main Canvas — unified agent glow, views provide their own surfaces */}
       <div style={{
         gridRow: '1',
         gridColumn: '2',
@@ -212,7 +214,7 @@ export function ShellFrame({
         padding: '0px',
         zIndex: 1,
         minWidth: 0,
-        background: canvasGradient,
+        background: agentGlow,
         transition: 'background 0.3s ease',
       }}>
         <div data-shell-card style={{

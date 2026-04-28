@@ -22,9 +22,9 @@ export interface TrendChartProps {
 }
 
 const getLineColor = (confidence: number): string => {
-  if (confidence >= 0.7) return '#22c55e';
-  if (confidence >= 0.5) return '#eab308';
-  return '#ef4444';
+  if (confidence >= 0.7) return 'var(--status-success)';
+  if (confidence >= 0.5) return 'var(--status-warning)';
+  return 'var(--status-error)';
 };
 
 const formatDate = (timestamp: string): string => {
@@ -94,11 +94,11 @@ export const TrendChart: React.FC<TrendChartProps> = ({
 
   if (data.length === 0) {
     return (
-      <div style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: '12px', padding: '20px' }}>
+      <div style={{ background: 'var(--surface-panel)', border: '1px solid var(--ui-border-default)', borderRadius: '12px', padding: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-          <h4 style={{ fontSize: '14px', fontWeight: 600, color: '#fff', margin: 0 }}>Confidence Trend</h4>
+          <h4 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ui-text-primary)', margin: 0 }}>Confidence Trend</h4>
         </div>
-        <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
+        <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ui-text-muted)' }}>
           No data available
         </div>
       </div>
@@ -106,23 +106,23 @@ export const TrendChart: React.FC<TrendChartProps> = ({
   }
 
   return (
-    <div style={{ background: '#1a1a1a', border: '1px solid #333', borderRadius: '12px', padding: '20px' }}>
+    <div style={{ background: 'var(--surface-panel)', border: '1px solid var(--ui-border-default)', borderRadius: '12px', padding: '20px' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-        <h4 style={{ fontSize: '14px', fontWeight: 600, color: '#fff', margin: 0 }}>Confidence Trend</h4>
+        <h4 style={{ fontSize: '14px', fontWeight: 600, color: 'var(--ui-text-primary)', margin: 0 }}>Confidence Trend</h4>
         <div style={{ display: 'flex', gap: '16px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-            <span style={{ fontSize: '16px', fontWeight: 600, color: stats.trend === 'up' ? '#22c55e' : stats.trend === 'down' ? '#ef4444' : '#fff', fontVariantNumeric: 'tabular-nums' }}>
+            <span style={{ fontSize: '16px', fontWeight: 600, color: stats.trend === 'up' ? 'var(--status-success)' : stats.trend === 'down' ? 'var(--status-error)' : 'var(--ui-text-primary)', fontVariantNumeric: 'tabular-nums' }}>
               {stats.trend === 'up' && '↑ '}{stats.trend === 'down' && '↓ '}{Math.round(stats.avg * 100)}%
             </span>
-            <span style={{ fontSize: '11px', color: '#888' }}>Average</span>
+            <span style={{ fontSize: '11px', color: 'var(--ui-text-muted)' }}>Average</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-            <span style={{ fontSize: '16px', fontWeight: 600, color: '#fff', fontVariantNumeric: 'tabular-nums' }}>{Math.round(stats.min * 100)}%</span>
-            <span style={{ fontSize: '11px', color: '#888' }}>Min</span>
+            <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ui-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{Math.round(stats.min * 100)}%</span>
+            <span style={{ fontSize: '11px', color: 'var(--ui-text-muted)' }}>Min</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-            <span style={{ fontSize: '16px', fontWeight: 600, color: '#fff', fontVariantNumeric: 'tabular-nums' }}>{Math.round(stats.max * 100)}%</span>
-            <span style={{ fontSize: '11px', color: '#888' }}>Max</span>
+            <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ui-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{Math.round(stats.max * 100)}%</span>
+            <span style={{ fontSize: '11px', color: 'var(--ui-text-muted)' }}>Max</span>
           </div>
         </div>
       </div>
@@ -136,11 +136,11 @@ export const TrendChart: React.FC<TrendChartProps> = ({
                 y1={yScale(tick)}
                 x2={chartWidth - padding.right}
                 y2={yScale(tick)}
-                stroke="#333"
+                stroke="var(--ui-border-default)"
                 strokeWidth={1}
                 strokeDasharray="4,4"
               />
-              <text x={padding.left - 10} y={yScale(tick) + 4} textAnchor="end" fill="#888" fontSize="11" fontWeight="500">
+              <text x={padding.left - 10} y={yScale(tick) + 4} textAnchor="end" fill="var(--ui-text-muted)" fontSize="11" fontWeight="500">
                 {Math.round(tick * 100)}%
               </text>
             </g>
@@ -151,7 +151,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
             y1={yScale(threshold)}
             x2={chartWidth - padding.right}
             y2={yScale(threshold)}
-            stroke="#eab308"
+            stroke="var(--status-warning)"
             strokeWidth={2}
             strokeDasharray="8,4"
           />
@@ -164,7 +164,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
               cx={xScale(i)}
               cy={yScale(point.confidence)}
               r={hoveredIndex === i ? 6 : 4}
-              fill="#1a1a1a"
+              fill="var(--surface-panel)"
               stroke={getLineColor(point.confidence)}
               strokeWidth={hoveredIndex === i ? 3 : 2}
               style={{ cursor: 'pointer', transition: 'all 0.2s' }}
@@ -176,7 +176,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
           ))}
 
           {[0, Math.floor(data.length / 2), data.length - 1].map(i => (
-            <text key={i} x={xScale(i)} y={chartHeight - 10} textAnchor="middle" fill="#888" fontSize="11">
+            <text key={i} x={xScale(i)} y={chartHeight - 10} textAnchor="middle" fill="var(--ui-text-muted)" fontSize="11">
               {formatDate(data[i].timestamp)}
             </text>
           ))}
@@ -188,7 +188,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
             left: tooltipPos.x,
             top: tooltipPos.y - 60,
             transform: 'translateX(-50%)',
-            background: '#1a1a1a',
+            background: 'var(--surface-panel)',
             border: '1px solid #333',
             borderRadius: '8px',
             padding: '12px 16px',
@@ -197,7 +197,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
             minWidth: '140px',
           }}>
-            <div style={{ fontSize: '11px', color: '#888', marginBottom: '4px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--ui-text-muted)', marginBottom: '4px' }}>
               {formatDate(data[hoveredIndex].timestamp)} at {formatTime(data[hoveredIndex].timestamp)}
             </div>
             <div style={{ 
@@ -209,18 +209,18 @@ export const TrendChart: React.FC<TrendChartProps> = ({
               {Math.round(data[hoveredIndex].confidence * 100)}% Confidence
             </div>
             {data[hoveredIndex].wihId && (
-              <div style={{ fontSize: '11px', color: '#888', marginTop: '4px', fontFamily: 'monospace' }}>{data[hoveredIndex].wihId}</div>
+              <div style={{ fontSize: '11px', color: 'var(--ui-text-muted)', marginTop: '4px', fontFamily: 'monospace' }}>{data[hoveredIndex].wihId}</div>
             )}
           </div>
         )}
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #333' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#888' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--ui-text-muted)' }}>
           <div style={{ width: '20px', height: '2px', background: trendColor }} />
           Confidence
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#888' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--ui-text-muted)' }}>
           <div style={{ width: '20px', height: '2px', background: 'repeating-linear-gradient(to right, #eab308 0px, #eab308 4px, transparent 4px, transparent 8px)' }} />
           Threshold ({Math.round(threshold * 100)}%)
         </div>

@@ -124,7 +124,7 @@ export const MODE_DESCRIPTIONS: Record<string, {
     label: 'Auto-Architect',
     description: 'PSO-evolved optimal agent architectures',
     icon: 'Sparkles',
-    color: '#D4956A',
+    color: 'var(--accent-primary)',
   },
   claude_swarm: {
     label: 'Parallel Swarm',
@@ -136,7 +136,7 @@ export const MODE_DESCRIPTIONS: Record<string, {
     label: 'Closed Loop',
     description: '5-step: Brainstorm→Plan→Work→Review→Compound',
     icon: 'RefreshCw',
-    color: '#60A5FA',
+    color: 'var(--status-info)',
   },
   hybrid: {
     label: 'Hybrid',
@@ -148,7 +148,7 @@ export const MODE_DESCRIPTIONS: Record<string, {
     label: 'Auto-Detect',
     description: 'Task-analyzed optimal mode selection',
     icon: 'Bot',
-    color: '#9CA3AF',
+    color: 'var(--ui-text-muted)',
   },
 };
 

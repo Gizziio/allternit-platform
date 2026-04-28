@@ -65,12 +65,12 @@ export function AuditLogViewer({ taskId, taskTitle, onClose }: AuditLogViewerPro
 
   const actionColor = (action: string) => {
     switch (action) {
-      case 'created': return '#22c55e';
-      case 'deleted': return '#ef4444';
-      case 'status_changed': return '#3b82f6';
+      case 'created': return 'var(--status-success)';
+      case 'deleted': return 'var(--status-error)';
+      case 'status_changed': return 'var(--status-info)';
       case 'assigned': return '#a855f7';
-      case 'commented': return '#06b6d4';
-      case 'time_tracked': return '#f59e0b';
+      case 'commented': return 'var(--status-info)';
+      case 'time_tracked': return 'var(--status-warning)';
       default: return 'var(--text-secondary)';
     }
   };
@@ -92,8 +92,8 @@ export function AuditLogViewer({ taskId, taskTitle, onClose }: AuditLogViewerPro
       left: 0,
       right: 0,
       bottom: 0,
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      zIndex: 1000,
+      backgroundColor: 'var(--shell-overlay-backdrop)',
+      zIndex: 180,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -183,7 +183,7 @@ export function AuditLogViewer({ taskId, taskTitle, onClose }: AuditLogViewerPro
                           margin: 0,
                           fontSize: '11px',
                           color: 'var(--text-tertiary)',
-                          backgroundColor: 'rgba(0,0,0,0.2)',
+                          backgroundColor: 'var(--surface-hover)',
                           padding: '6px 10px',
                           borderRadius: '6px',
                           overflow: 'auto',
@@ -221,7 +221,7 @@ export function AuditLogViewer({ taskId, taskTitle, onClose }: AuditLogViewerPro
                 borderRadius: '6px',
                 border: 'none',
                 backgroundColor: page <= 1 ? 'var(--bg-secondary)' : 'rgba(59, 130, 246, 0.15)',
-                color: page <= 1 ? 'var(--text-tertiary)' : '#60a5fa',
+                color: page <= 1 ? 'var(--text-tertiary)' : 'var(--status-info)',
                 fontSize: '12px',
                 fontWeight: 600,
                 cursor: page <= 1 ? 'not-allowed' : 'pointer',
@@ -243,7 +243,7 @@ export function AuditLogViewer({ taskId, taskTitle, onClose }: AuditLogViewerPro
                 borderRadius: '6px',
                 border: 'none',
                 backgroundColor: page >= pagination.pages ? 'var(--bg-secondary)' : 'rgba(59, 130, 246, 0.15)',
-                color: page >= pagination.pages ? 'var(--text-tertiary)' : '#60a5fa',
+                color: page >= pagination.pages ? 'var(--text-tertiary)' : 'var(--status-info)',
                 fontSize: '12px',
                 fontWeight: 600,
                 cursor: page >= pagination.pages ? 'not-allowed' : 'pointer',

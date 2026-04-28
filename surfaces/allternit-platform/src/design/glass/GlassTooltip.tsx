@@ -99,7 +99,7 @@ export function GlassTooltip({
   visible: visibleProp,
   maxWidth = 250,
   darkMode = false,
-  zIndex = 1000,
+  zIndex = 168,
   disabled = false,
   arrow = true,
 }: GlassTooltipProps) {

@@ -68,8 +68,8 @@ export function AgentSessionLayout({
       <header 
         className="h-12 flex items-center justify-between px-4 border-b shrink-0 z-10"
         style={{ 
-          background: 'rgba(0,0,0,0.6)',
-          borderColor: 'rgba(255,255,255,0.05)',
+          background: 'var(--shell-overlay-backdrop)',
+          borderColor: 'var(--surface-hover)',
         }}
       >
         <div className="flex items-center gap-3">
@@ -116,7 +116,7 @@ export function AgentSessionLayout({
         {/* Left Pane: Chat (Always Main Workspace) */}
         <main 
           className="flex-1 border-r relative"
-          style={{ borderColor: 'rgba(255,255,255,0.05)' }}
+          style={{ borderColor: 'var(--surface-hover)' }}
         >
           {children}
         </main>
@@ -144,8 +144,8 @@ export function AgentSessionLayout({
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             className="absolute inset-x-10 bottom-10 top-20 z-50 flex flex-col rounded-xl overflow-hidden shadow-2xl border"
             style={{ 
-              background: '#0a0a0a', 
-              borderColor: 'rgba(255,255,255,0.1)',
+              background: 'var(--surface-panel)', 
+              borderColor: 'var(--ui-border-default)',
               boxShadow: '0 24px 48px rgba(0,0,0,0.8)'
             }}
           >

@@ -5,30 +5,7 @@ import { useModelSelection } from "@/providers/model-selection-provider";
 import { ModelPicker } from "@/components/model-picker";
 import { Suggestions, type SuggestionItem } from "@/components/agent-elements/input/suggestions";
 import { AgentContextStrip } from "@/components/agents/AgentContextStrip";
-import {
-  Sparkles,
-  CalendarClock,
-  Image,
-  FileText,
-  Plus,
-  ArrowUp,
-  ArrowDown,
-  Briefcase,
-  CheckCircle,
-  Clock,
-  AlertCircle,
-  Circle,
-  Hammer,
-  Search,
-  FileCode,
-  Bug,
-  Lightbulb,
-  Zap,
-  Target,
-  type LucideIcon
-} from "lucide-react";
-// ShareDialog is not available - create inline or skip for now
-const ShareDialogPlaceholder = ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) => null;
+import { ArrowDown } from "lucide-react";
 
 import { ChatComposer } from "@/views/chat/ChatComposer";
 export { ChatComposer as NewChatInput }; // EXPORT FOR LEGACY IMPORTS
@@ -42,6 +19,8 @@ import {
   usePendingPermissions,
   usePendingQuestions,
 } from "@/lib/agents";
+import { isSwarmAgentId, getSwarmIdFromAgent } from "@/lib/agents/swarm-as-agent";
+import { useAdvancedAgentStore } from "@/lib/agents/agent-advanced.store";
 import { useChatSessionStore } from "@/views/chat/ChatSessionStore";
 import { useSurfaceAgentSelection } from "@/lib/agents/surface-agent-context";
 import { useThreadAgentSessionsStore } from "@/stores/thread-agent-sessions.store";
@@ -52,6 +31,7 @@ import { AgentModeBackdrop } from "./chat/agentModeSurfaceTheme";
 import { useUnifiedStore } from "@/lib/agents/unified.store";
 import { useRuntimeExecutionMode } from "@/hooks/useRuntimeExecutionMode";
 import { useModeCanvasBridge } from "@/hooks/useModeCanvasBridge";
+import { useLocalBrainStatus } from "@/hooks/useLocalBrainStatus";
 import {
   ComposerPermissionInfoBar,
   ComposerQuestionBar,
@@ -146,7 +126,7 @@ export function ChatView({
   initialMessage?: string,
   onInitialMessageSent?: () => void,
   /** Callback to open full agent session view instead of embedded chat */
-  onOpenAgentSession?: (text: string, surface: 'chat' | 'cowork' | 'code' | 'browser') => void;
+  onOpenAgentSession?: (text: string, surface: 'chat' | 'cowork' | 'code') => void;
 }) {
   const { id: chatId, isPersisted } = useChatId();
   const { createThread, renameThread, threads, activeThreadId } = useChatStore();
@@ -215,10 +195,10 @@ export function ChatView({
   const { selection: modelSelection, selectModel, startSelection, isSelecting, cancelSelection } = useModelSelection();
 
   const selectedModel = modelSelection?.modelId ?? modelSelection?.profileId ?? MODELS[0].id;
-  const runtimeModelId = modelSelection?.modelId;
-
-  const { executionMode, setMode } = useRuntimeExecutionMode();
+  const { executionMode } = useRuntimeExecutionMode();
   const brainMode = executionMode?.mode === 'plan' ? 'plan' : 'build';
+  const { ollamaRunning, modelReady } = useLocalBrainStatus();
+  const isLocalBrainSelected = selectedModel === 'local-brain' || modelSelection?.profileId === 'ollama';
   const chatUserMessages = useUserMessages(chatId ?? undefined);
   const chatStreaming = useChatSessionStore((state) =>
     chatId ? (state.streamingBySession[chatId]?.isStreaming ?? false) : false,
@@ -261,11 +241,6 @@ export function ChatView({
   const [showJumpToBottom, setShowJumpToBottom] = useState(false);
   // Artifact side panel
   const [selectedArtifact, setSelectedArtifact] = useState<SelectedArtifact | null>(null);
-  const handleSelectArtifact = useCallback((artifact: SelectedArtifact) => {
-    setSelectedArtifact((prev) =>
-      prev?.title === artifact.title ? null : artifact
-    );
-  }, []);
   const handleCloseArtifact = useCallback(() => setSelectedArtifact(null), []);
 
   const isAgentSessionEmbedded = embeddedAgentSession.isEmbedded;
@@ -377,18 +352,26 @@ export function ChatView({
   const [launchMascotAttention, setLaunchMascotAttention] = useState<GizziAttention | null>(null);
   const mascotResetTimeoutRef = useRef<number | null>(null);
   
-  // Share dialog state (placeholder)
-  const shareVisibility: 'private' | 'workspace' | 'public' = 'private';
-  const currentChatId = chatId || 'welcome';
-
-
-
   // Unified Store - WIHs for quick tasks
-  const { wihs, fetchWihs, selectWih } = useUnifiedStore();
+  const { fetchWihs } = useUnifiedStore();
   
   useEffect(() => {
     fetchWihs();
   }, [fetchWihs]);
+
+  // Restore last @mentioned agent when entering a thread
+  useEffect(() => {
+    if (!chatId) {
+      setMentionAgentId(null);
+      return;
+    }
+    const lastAgentId = useThreadAgentSessionsStore.getState().getLastMentionAgentId(chatId);
+    if (lastAgentId) {
+      setMentionAgentId(lastAgentId);
+    } else {
+      setMentionAgentId(null);
+    }
+  }, [chatId]);
 
   // Send initial message if provided (for Cowork mode from launchpad)
   const hasSentInitialMessage = useRef(false);
@@ -426,7 +409,7 @@ export function ChatView({
         `Welcome back, ${userName}`,
         "Ready to Build?",
         "The Architect's Den",
-        "A2Rchitech",
+        "Allternit",
         "Good to see you, Architect",
         "Creative Control",
         "Morning Ritual"
@@ -484,6 +467,72 @@ export function ChatView({
 
     // ── Phase 2: Per-message agent routing via @mention ─────────────────────
     if (mentionAgentId && chatId) {
+      // Case A: Swarm agent — trigger swarm execution
+      if (isSwarmAgentId(mentionAgentId)) {
+        const swarmId = getSwarmIdFromAgent(mentionAgentId);
+        if (swarmId) {
+          try {
+            const runId = await useAdvancedAgentStore.getState().startSwarmRun(swarmId, text.trim());
+            console.log('[ChatView] Swarm run started:', runId);
+            // Persist the mention agent for this thread
+            useThreadAgentSessionsStore.getState().setLastMentionAgentId(chatId, mentionAgentId);
+
+            // ── A2A Response Loop: Poll swarm messages and inject into chat ──
+            const swarm = useAdvancedAgentStore.getState().swarms.find((s) => s.id === swarmId);
+            const swarmName = swarm?.name || 'Swarm';
+            const tempMsgId = `swarm-${runId}`;
+            useChatSessionStore.getState().appendAssistantMessage(chatId, {
+              id: tempMsgId,
+              content: `🐝 ${swarmName} is deliberating...`,
+              metadata: { swarmRunId: runId, swarmId, status: 'running' },
+            });
+
+            const pollSwarm = async () => {
+              const maxAttempts = 15;
+              for (let attempt = 0; attempt < maxAttempts; attempt++) {
+                await new Promise((r) => setTimeout(r, 3000));
+                try {
+                  await useAdvancedAgentStore.getState().fetchSwarmMessages(runId);
+                  const messages = useAdvancedAgentStore.getState().swarmMessages[runId] || [];
+                  const answer = messages
+                    .filter((m) => m.type === 'answer' || m.type === 'consensus')
+                    .pop();
+                  if (answer) {
+                    useChatSessionStore.getState().updateMessage(chatId, tempMsgId, {
+                      content: answer.content,
+                      metadata: { swarmRunId: runId, swarmId, status: 'completed', fromAgent: answer.from },
+                    });
+                    return;
+                  }
+                  const runs = useAdvancedAgentStore.getState().swarmRuns[swarmId] || [];
+                  const run = runs.find((r) => r.id === runId);
+                  if (run?.status === 'failed') {
+                    useChatSessionStore.getState().updateMessage(chatId, tempMsgId, {
+                      content: `🐝 ${swarmName} encountered an error during deliberation.`,
+                      metadata: { swarmRunId: runId, swarmId, status: 'failed' },
+                    });
+                    return;
+                  }
+                } catch (pollErr) {
+                  console.error('[ChatView] Swarm poll error:', pollErr);
+                }
+              }
+              // Timeout
+              useChatSessionStore.getState().updateMessage(chatId, tempMsgId, {
+                content: `🐝 ${swarmName} is still working. Check the Swarm Monitor for live updates.`,
+                metadata: { swarmRunId: runId, swarmId, status: 'timeout' },
+              });
+            };
+
+            pollSwarm();
+          } catch (err) {
+            console.error('[ChatView] Failed to start swarm run:', err);
+          }
+        }
+        return;
+      }
+
+      // Case B: Regular agent — create/find sub-session
       const threadStore = useThreadAgentSessionsStore.getState();
       let agentSessionId = threadStore.getAgentSessionId(chatId, mentionAgentId);
 
@@ -507,8 +556,8 @@ export function ChatView({
       if (agentSessionId) {
         await sendNativeMessageStream(agentSessionId, { text: text.trim() });
       }
-      // Clear mention agent after send (transient)
-      setMentionAgentId(null);
+      // Persist the mention agent for this thread
+      useThreadAgentSessionsStore.getState().setLastMentionAgentId(chatId, mentionAgentId);
       return;
     }
 
@@ -597,48 +646,6 @@ export function ChatView({
     window.addEventListener('allternit:ui-action' as any, handleUIAction);
     return () => window.removeEventListener('allternit:ui-action' as any, handleUIAction);
   }, [handleSend]);
-
-  // Helper: Get icon based on WIH title/content
-  const getWihIcon = useCallback((wih: typeof wihs[0]): React.ReactNode => {
-    const title = (wih.title || '').toLowerCase();
-    const description = (wih.description || '').toLowerCase();
-    const text = `${title} ${description}`;
-    
-    if (text.includes('bug') || text.includes('fix') || text.includes('error')) return <Bug size={20} />;
-    if (text.includes('test') || text.includes('verify') || text.includes('check')) return <CheckCircle size={20} />;
-    if (text.includes('refactor') || text.includes('clean') || text.includes('organize')) return <Sparkles size={20} />;
-    if (text.includes('search') || text.includes('find') || text.includes('lookup')) return <Search size={20} />;
-    if (text.includes('implement') || text.includes('build') || text.includes('create') || text.includes('add')) return <Hammer size={20} />;
-    if (text.includes('optimize') || text.includes('improve') || text.includes('perf')) return <Zap size={20} />;
-    if (text.includes('review') || text.includes('audit')) return <FileCode size={20} />;
-    if (text.includes('plan') || text.includes('design') || text.includes('architecture')) return <Lightbulb size={20} />;
-    if (text.includes('deploy') || text.includes('release') || text.includes('ship')) return <Target size={20} />;
-    if (wih.status === 'blocked') return <AlertCircle size={20} />;
-    if (wih.status === 'ready') return <Clock size={20} />;
-    
-    return <Briefcase size={20} />;
-  }, []);
-
-  // Helper: Handle WIH click
-  const handleWihClick = useCallback((wih: typeof wihs[0]) => {
-    selectWih(wih.wih_id);
-    // Send a message about working on this WIH
-    const message = `Work on: ${wih.title || wih.wih_id}`;
-    handleSend(message);
-  }, [selectWih, handleSend]);
-
-  // Filter and sort WIHs for quick tasks
-  const quickTasks = useMemo(() => {
-    return wihs
-      .filter(w => ['open', 'ready'].includes(w.status))
-      .sort((a, b) => {
-        // Sort by status (ready first), then by title
-        if (a.status === 'ready' && b.status !== 'ready') return -1;
-        if (b.status === 'ready' && a.status !== 'ready') return 1;
-        return (a.title || '').localeCompare(b.title || '');
-      })
-      .slice(0, 5); // Limit to top 5
-  }, [wihs]);
 
   const handleRegenerate = useCallback(() => {
     if (isAgentSessionEmbedded && embeddedAgentSession.sessionId) {
@@ -783,6 +790,50 @@ export function ChatView({
             minHeight: 0,  // Prevent pushing beyond bounds
           }}>
             {embeddedAgentStrip}
+
+            {/* No-provider banner — shown when nothing is connected */}
+            {!modelSelection && !isAgentSessionEmbedded && (
+              <div style={{
+                width: '100%', marginBottom: 24,
+                padding: '14px 18px', borderRadius: 14,
+                background: 'color-mix(in srgb, var(--accent-chat) 6%, var(--surface-panel, var(--bg-secondary)))',
+                border: '1px solid color-mix(in srgb, var(--accent-chat) 20%, transparent)',
+                display: 'flex', alignItems: 'center', gap: 14,
+              }}>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: 'color-mix(in srgb, var(--accent-chat) 12%, transparent)',
+                  color: 'var(--accent-chat)',
+                }}>
+                  {/* Brain icon inline */}
+                  <svg width="18" height="18" viewBox="0 0 256 256" fill="currentColor">
+                    <path d="M248,124a56.11,56.11,0,0,0-32-50.61V72a48,48,0,0,0-88-26.49A48,48,0,0,0,40,72v1.39A56,56,0,0,0,72,180.27V184a24,24,0,0,0,24,24h64a24,24,0,0,0,24-24v-3.73A56.09,56.09,0,0,0,248,124ZM96,200a8,8,0,0,1-8-8v-4h32v12Zm72,0H152V188h32v4A8,8,0,0,1,168,200Zm8-28H80a40,40,0,0,1-8-79.22V72a32,32,0,0,1,64,0v8h16V72a32,32,0,0,1,64,0v20.78A40,40,0,0,1,176,172Z"/>
+                  </svg>
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ui-text-primary, var(--text-primary))', marginBottom: 2 }}>
+                    No AI connected
+                  </div>
+                  <div style={{ fontSize: 11, color: 'var(--ui-text-muted, var(--text-tertiary))' }}>
+                    {ollamaRunning && !modelReady
+                      ? 'Ollama is running — download Local Brain to chat offline, or connect a cloud provider.'
+                      : 'Connect a cloud provider, or add a Local Brain to chat offline with no API key.'}
+                  </div>
+                </div>
+                <button
+                  onClick={startSelection}
+                  style={{
+                    flexShrink: 0, padding: '6px 14px', borderRadius: 8,
+                    background: 'var(--accent-chat)', color: '#fff',
+                    border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                  }}
+                >
+                  Connect
+                </button>
+              </div>
+            )}
+
             {/* Interactive Logo Section */}
             <div style={{ marginBottom: '64px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <div
@@ -854,6 +905,7 @@ export function ChatView({
                 onSend={handleSend}
                 onAgentSend={onOpenAgentSession ? (text) => onOpenAgentSession(text, agentSurface) : undefined}
                 onMentionAgentChange={setMentionAgentId}
+                mentionAgentId={mentionAgentId}
                 isLoading={activeIsLoading}
                 placeholder="What's brewing today?"
                 variant="large"
@@ -949,7 +1001,7 @@ export function ChatView({
                     alignItems: 'center',
                     gap: '6px',
                     border: 'none',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                    boxShadow: '0 4px 12px var(--surface-panel)',
                     cursor: 'pointer'
                   }}
                 >
@@ -974,6 +1026,42 @@ export function ChatView({
 
       </div>{/* end content row */}
 
+      {/* Ollama-down warning — shown above composer when local-brain is selected but Ollama isn't running */}
+      {isLocalBrainSelected && !ollamaRunning && (
+        <div style={{
+          position: 'absolute', bottom: 80, left: 0, right: 0,
+          display: 'flex', justifyContent: 'center',
+          padding: '0 20px', zIndex: 41, pointerEvents: 'none',
+        }}>
+          <div style={{
+            maxWidth: 640, width: '100%',
+            padding: '9px 14px', borderRadius: 10,
+            background: 'color-mix(in srgb, #f59e0b 10%, var(--surface-panel, var(--bg-secondary)))',
+            border: '1px solid color-mix(in srgb, #f59e0b 30%, transparent)',
+            display: 'flex', alignItems: 'center', gap: 10,
+            pointerEvents: 'auto',
+          }}>
+            <span style={{ fontSize: 13 }}>⚠️</span>
+            <span style={{ fontSize: 12, color: 'var(--ui-text-primary, var(--text-primary))' }}>
+              <strong>Local Brain is offline.</strong> Make sure Ollama is running, then{' '}
+              <button
+                onClick={() => { /* refresh status */ window.dispatchEvent(new Event('focus')); }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent-chat)', fontSize: 12, fontWeight: 600, padding: 0, textDecoration: 'underline' }}
+              >
+                retry
+              </button>
+              {' '}or{' '}
+              <button
+                onClick={startSelection}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent-chat)', fontSize: 12, fontWeight: 600, padding: 0, textDecoration: 'underline' }}
+              >
+                switch model
+              </button>.
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* 2. Floating Bottom Input + Disclaimer */}
       {/* Always show input in cowork mode, otherwise depend on chat state */}
       {(mode === 'cowork' || !isChatEmpty || hideEmptyState) && (
@@ -997,6 +1085,7 @@ export function ChatView({
               onSend={handleSend}
               onAgentSend={onOpenAgentSession ? (text) => onOpenAgentSession(text, agentSurface) : undefined}
               onMentionAgentChange={setMentionAgentId}
+              mentionAgentId={mentionAgentId}
               isLoading={activeIsLoading}
               onStop={handleStop}
               selectedModel={selectedModel}

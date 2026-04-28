@@ -7,7 +7,7 @@
 
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GlassSurface } from '@/design/GlassSurface';
 import { GlassCard } from '@/design/GlassCard';
 import { Button } from '@/components/ui/button';
@@ -15,11 +15,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import {
   Globe,
   Play,
-  Square,
   ArrowsClockwise,
   Pulse as Activity,
   CheckCircle,
@@ -31,7 +29,6 @@ import {
   Keyboard,
   Camera,
   DownloadSimple,
-  MagnifyingGlass,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { GATEWAY_URL } from '@/integration/api-client';
@@ -85,7 +82,7 @@ export function OperatorBrowserView() {
   const [selectedTask, setSelectedTask] = useState<BrowserTask | null>(null);
   const [url, setUrl] = useState('https://');
   const [isCreating, setIsCreating] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [, setIsLoading] = useState(true);
 
   // Check operator health on mount
   useEffect(() => {

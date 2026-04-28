@@ -15,7 +15,7 @@ const ShellApp = dynamic(
         aria-busy="true"
         aria-label="Loading Allternit Platform"
         className="w-screen h-dvh flex flex-col items-center justify-center gap-6"
-        style={{ background: '#1A1612' }}
+        style={{ background: 'var(--surface-panel)' }}
       >
         <div className="flex items-center gap-2 select-none">
           <span style={{ color: '#D97757', fontFamily: 'monospace', fontSize: 24, fontWeight: 400 }}>A://</span>

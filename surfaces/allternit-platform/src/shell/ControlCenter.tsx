@@ -19,12 +19,9 @@
 "use client";
 
 import React, { useState, useCallback, useEffect } from 'react';
-import Link from 'next/link';
 import {
   X,
   GearSix,
-  Cloud,
-  Key,
   Shield,
   PuzzlePiece as Puzzle,
   Cpu,
@@ -136,7 +133,7 @@ export function ControlCenter({
       // Load environment status
       const envManager = getEnvironmentManager();
       envManager.getEnvironments().then(envs => {
-        console.log('Available environments:', envs);
+        // envs loaded
       });
     }
   }, [isOpen]);

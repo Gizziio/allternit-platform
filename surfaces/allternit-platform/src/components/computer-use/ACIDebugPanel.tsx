@@ -4,14 +4,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   X,
   Pulse as Activity,
-  Camera,
-  ClipboardText,
-  ArrowCounterClockwise,
-  CheckCircle,
-  XCircle,
-  Warning,
-  Clock,
-  Lightning,
   List,
   Eye,
   Bug,
@@ -86,7 +78,7 @@ function ActionRow({ record }: { record: ActionRecord }) {
     <div
       style={{
         borderRadius: 6,
-        background: record.result_success ? 'rgba(16,185,129,0.06)' : 'rgba(239,68,68,0.08)',
+        background: record.result_success ? 'rgba(16,185,129,0.06)' : 'var(--status-error-bg)',
         border: `1px solid ${record.result_success ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.2)'}`,
         marginBottom: 4,
         overflow: 'hidden',
@@ -117,7 +109,7 @@ function ActionRow({ record }: { record: ActionRecord }) {
       </button>
 
       {expanded && (
-        <div style={{ padding: '0 10px 8px', borderTop: `1px solid rgba(255,255,255,0.05)` }}>
+        <div style={{ padding: '0 10px 8px', borderTop: `1px solid var(--surface-hover)` }}>
           {record.url_after && (
             <p style={{ margin: '4px 0', fontSize: 11, color: `${SAND[500]}90`, wordBreak: 'break-all' }}>
               {record.url_after}
@@ -233,7 +225,7 @@ export function ACIDebugPanel({
         bottom: 0,
         width: 360,
         background: BACKGROUND.elevated,
-        borderLeft: `1px solid rgba(255,255,255,0.08)`,
+        borderLeft: `1px solid var(--ui-border-muted)`,
         display: 'flex',
         flexDirection: 'column',
         zIndex: 9000,
@@ -246,7 +238,7 @@ export function ACIDebugPanel({
       <div
         style={{
           padding: '12px 16px',
-          borderBottom: '1px solid rgba(255,255,255,0.07)',
+          borderBottom: '1px solid var(--ui-border-muted)',
           display: 'flex',
           alignItems: 'center',
           gap: 8,
@@ -283,7 +275,7 @@ export function ACIDebugPanel({
       <div
         style={{
           display: 'flex',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          borderBottom: '1px solid var(--ui-border-muted)',
           flexShrink: 0,
         }}
       >
@@ -321,7 +313,7 @@ export function ACIDebugPanel({
         <div
           style={{
             padding: '6px 16px',
-            background: 'rgba(239,68,68,0.1)',
+            background: 'var(--status-error-bg)',
             borderBottom: '1px solid rgba(239,68,68,0.2)',
             fontSize: 11,
             color: STATUS.error,
@@ -367,7 +359,7 @@ export function ACIDebugPanel({
                 <img
                   src={`data:image/png;base64,${r.after_screenshot}`}
                   alt={`step ${r.step}`}
-                  style={{ width: '100%', borderRadius: 6, border: '1px solid rgba(255,255,255,0.08)' }}
+                  style={{ width: '100%', borderRadius: 6, border: '1px solid var(--ui-border-muted)' }}
                 />
               </div>
             ))}
@@ -396,13 +388,13 @@ export function ACIDebugPanel({
                     marginBottom: 12,
                   }}
                 >
-                  <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: 12 }}>
+                  <div style={{ background: 'var(--surface-hover)', borderRadius: 8, padding: 12 }}>
                     <div style={{ fontSize: 11, color: `${SAND[500]}70` }}>Active Sessions</div>
                     <div style={{ fontSize: 22, fontWeight: 700, color: SAND[300], marginTop: 4 }}>
                       {fleet.total_sessions}
                     </div>
                   </div>
-                  <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: 12 }}>
+                  <div style={{ background: 'var(--surface-hover)', borderRadius: 8, padding: 12 }}>
                     <div style={{ fontSize: 11, color: `${SAND[500]}70` }}>Capacity</div>
                     <div style={{ fontSize: 22, fontWeight: 700, color: SAND[300], marginTop: 4 }}>
                       {fleet.total_capacity}
@@ -418,7 +410,7 @@ export function ACIDebugPanel({
                       alignItems: 'center',
                       gap: 8,
                       padding: '7px 10px',
-                      background: 'rgba(255,255,255,0.04)',
+                      background: 'var(--surface-hover)',
                       borderRadius: 6,
                       marginBottom: 4,
                       fontSize: 12,
@@ -436,7 +428,7 @@ export function ACIDebugPanel({
                         width: 48,
                         height: 4,
                         borderRadius: 2,
-                        background: 'rgba(255,255,255,0.1)',
+                        background: 'var(--ui-border-default)',
                         overflow: 'hidden',
                       }}
                     >
@@ -486,7 +478,7 @@ export function ACIDebugPanel({
       <div
         style={{
           padding: '8px 16px',
-          borderTop: '1px solid rgba(255,255,255,0.06)',
+          borderTop: '1px solid var(--ui-border-muted)',
           fontSize: 10,
           color: `${SAND[500]}50`,
           display: 'flex',

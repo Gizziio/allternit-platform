@@ -6,11 +6,7 @@ import {
   GitBranch,
   CaretDown,
   Circle,
-  FileText,
-  Chat,
   PaperPlaneTilt,
-  GitDiff,
-  Trash,
 } from '@phosphor-icons/react';
 import GlassSurface from '@/design/GlassSurface';
 
@@ -24,7 +20,6 @@ interface Commit {
   branch?: string;
   isMerge: boolean;
 }
-type MockCommit = Commit;
 
 interface StagedFile {
   filename: string;
@@ -48,7 +43,7 @@ export const GitView: React.FC = () => {
           message: c.message,
           author: c.author,
           avatar: c.author.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase(),
-          avatarColor: '#3b82f6',
+          avatarColor: 'var(--status-info)',
           timestamp: new Date(c.date).toLocaleDateString(),
           isMerge: c.message.toLowerCase().startsWith('merge'),
         })))
@@ -68,11 +63,11 @@ export const GitView: React.FC = () => {
   const getStatusBadgeColor = (status: 'M' | 'A' | 'D'): { bg: string; color: string; label: string } => {
     switch (status) {
       case 'M':
-        return { bg: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6', label: 'M' };
+        return { bg: 'rgba(59, 130, 246, 0.15)', color: 'var(--status-info)', label: 'M' };
       case 'A':
-        return { bg: 'rgba(52, 199, 89, 0.15)', color: '#34c759', label: 'A' };
+        return { bg: 'rgba(52, 199, 89, 0.15)', color: 'var(--status-success)', label: 'A' };
       case 'D':
-        return { bg: 'rgba(255, 59, 48, 0.15)', color: '#ff3b30', label: 'D' };
+        return { bg: 'rgba(255, 59, 48, 0.15)', color: 'var(--status-error)', label: 'D' };
     }
   };
 

@@ -58,7 +58,7 @@ function DiffHunkView({ hunk, fileChangeId, changeSetId }: { hunk: DiffHunk, fil
     <GlassCard style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
       <div style={{ 
         padding: '4px 12px', 
-        background: 'rgba(255,255,255,0.03)', 
+        background: 'var(--surface-hover)', 
         borderBottom: '1px solid var(--border-subtle)',
         fontSize: 10,
         fontFamily: 'monospace',
@@ -93,7 +93,7 @@ function DiffHunkView({ hunk, fileChangeId, changeSetId }: { hunk: DiffHunk, fil
               {line.newLineNumber}
             </div>
             <div style={{ 
-              color: line.type === 'addition' ? '#34c759' : line.type === 'deletion' ? '#ff3b30' : 'inherit',
+              color: line.type === 'addition' ? 'var(--status-success)' : line.type === 'deletion' ? 'var(--status-error)' : 'inherit',
               paddingLeft: 4
             }}>
               {line.type === 'addition' ? '+' : line.type === 'deletion' ? '-' : ' '}

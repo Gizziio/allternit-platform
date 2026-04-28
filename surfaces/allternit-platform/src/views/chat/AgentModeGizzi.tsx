@@ -1158,7 +1158,7 @@ export function AgentModeGizzi({
                       fontSize: 10,
                       fontWeight: 900,
                       color: '#e0e0e0',
-                      fontFamily: 'Arial, sans-serif',
+                      fontFamily: 'var(--font-sans)',
                       letterSpacing: '1px',
                       textShadow: '0 1px 2px rgba(0,0,0,0.8)',
                     }}>
@@ -2625,7 +2625,7 @@ export function AgentModeGizzi({
                       fontSize: 8,
                       fontWeight: 900,
                       color: '#fff',
-                      fontFamily: 'Arial, sans-serif',
+                      fontFamily: 'var(--font-sans)',
                     }}>G</span>
                   </div>
                 </motion.div>
@@ -2950,7 +2950,7 @@ export function AgentModeGizzi({
               left: '50%',
               transform: 'translateX(-50%)',
               pointerEvents: 'none',
-              zIndex: 9999,
+              zIndex: 160,
             }}
           >
             <div

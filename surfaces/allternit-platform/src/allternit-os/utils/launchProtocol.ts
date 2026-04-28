@@ -117,7 +117,7 @@ export function launchPresentation(
   const defaultTheme: PresentationState['theme'] = {
     id: 'modern',
     name: 'Modern',
-    primaryColor: '#3b82f6',
+    primaryColor: 'var(--status-info)',
     secondaryColor: '#8b5cf6',
     backgroundColor: '#0f172a',
     textColor: '#f1f5f9',

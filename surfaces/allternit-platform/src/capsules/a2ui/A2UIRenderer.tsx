@@ -7,30 +7,18 @@
 // ============================================================================
 
 import React, { useCallback, useMemo, useState } from 'react';
-import * as RadixDialog from '@radix-ui/react-dialog';
 import * as RadixTooltip from '@radix-ui/react-tooltip';
-import * as RadixPopover from '@radix-ui/react-popover';
 import * as RadixTabs from '@radix-ui/react-tabs';
-import * as RadixAccordion from '@radix-ui/react-accordion';
 // Note: Additional Radix components can be added as needed:
 // import * as RadixCheckbox from '@radix-ui/react-checkbox';
 // import * as RadixRadioGroup from '@radix-ui/react-radio-group';
 // import * as RadixSlider from '@radix-ui/react-slider';
-import * as RadixSwitch from '@radix-ui/react-switch';
-import * as RadixSelect from '@radix-ui/react-select';
-import * as RadixDropdownMenu from '@radix-ui/react-dropdown-menu';
 import {
   Check,
-  CaretDown,
-  CaretRight,
-  CaretLeft,
-  CaretUp,
   X,
   Warning,
   CheckCircle,
   Info,
-  MagnifyingGlass,
-  DotsThreeOutline,
   CircleNotch,
   Copy,
 } from '@phosphor-icons/react';
@@ -49,26 +37,12 @@ import {
   type CardProps,
   type ButtonProps,
   type TextFieldProps,
-  type SelectProps,
-  type SwitchProps,
-  type CheckboxProps,
-  type RadioGroupProps,
-  type SliderProps,
-  type ListProps,
-  type DataTableProps,
   type BadgeProps,
-  type ProgressProps,
   type SpinnerProps,
   type TabsProps,
-  type AccordionProps,
   type AlertProps,
-  type DialogProps,
-  type TooltipProps,
-  type PopoverProps,
-  type MenuProps,
   type ImageProps,
   type CodeProps,
-  type SearchProps,
 } from './a2ui.types';
 
 // ============================================================================
@@ -585,12 +559,6 @@ function TabsRenderer({ node, context }: ComponentRendererProps) {
   if (!isVisible(props, context.dataModel)) return null;
 
   const activeTab = String(resolvePath(context.dataModel, props.activeTabPath) ?? props.tabs[0]?.id);
-
-  const variantClasses: Record<string, string> = {
-    default: '',
-    pills: '',
-    underline: '',
-  };
 
   return (
     <RadixTabs.Root

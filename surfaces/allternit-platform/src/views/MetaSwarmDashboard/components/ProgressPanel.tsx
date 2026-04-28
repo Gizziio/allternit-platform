@@ -159,8 +159,7 @@ function DAGVisualization({
 
 export function ProgressPanel({ className }: ProgressPanelProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [selectedTask, setSelectedTask] = useState<string | null>(null);
+  const [, setSessions] = useState<Session[]>([]);
 
   useEffect(() => {
     // Fetch initial data

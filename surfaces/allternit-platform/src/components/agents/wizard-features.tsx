@@ -25,21 +25,17 @@ import {
   Check,
   X,
   Keyboard,
-  Question as HelpCircle,
   Warning,
-  CheckCircle,
   WifiHigh,
   WifiSlash,
   ArrowsClockwise,
   ShareNetwork,
-  Lightning,
-  Clock,
   ChartBar,
 } from '@phosphor-icons/react';
 
 import { TEXT, MODE_COLORS } from '@/design/allternit.tokens';
 import { useTranslation, getAvailableLanguages, getLanguageInfo, type LanguageCode } from '@/lib/i18n';
-import { useWizardShortcuts, formatShortcutForDisplay, WIZARD_SHORTCUTS } from '@/hooks/use-wizard-shortcuts';
+import { useWizardShortcuts, formatShortcutForDisplay } from '@/hooks/use-wizard-shortcuts';
 import {
   prepareForExport,
   downloadConfigFile,
@@ -50,7 +46,7 @@ import {
   type ExportedAgentConfig,
 } from '@/lib/agents/config-import-export';
 import { apiWithFallback, useApiWithFallback, type ApiVerificationResult } from '@/lib/agents/api-verification';
-import { wizardAnalytics, useWizardAnalytics, type WizardEventType } from '@/lib/analytics/wizard-analytics';
+import { wizardAnalytics, useWizardAnalytics } from '@/lib/analytics/wizard-analytics';
 
 import type {
   CharacterLayerConfig,
@@ -176,7 +172,7 @@ export function LanguageSelector({ currentLanguage, onLanguageChange, modeColors
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
         style={{
-          background: 'rgba(255,255,255,0.05)',
+          background: 'var(--surface-hover)',
           color: TEXT.secondary,
           border: `1px solid ${modeColors.border}`,
         }}
@@ -196,7 +192,7 @@ export function LanguageSelector({ currentLanguage, onLanguageChange, modeColors
             exit={{ opacity: 0, y: -10 }}
             className="absolute right-0 top-full mt-2 w-48 rounded-xl border shadow-xl z-50 overflow-hidden"
             style={{
-              background: '#1A1612',
+              background: 'var(--surface-panel)',
               borderColor: modeColors.border,
             }}
           >
@@ -304,7 +300,7 @@ export function ExportImportPanel({
     if (!file) return;
 
     try {
-      const { config, warnings } = await importFromFile(file);
+      const { config } = await importFromFile(file);
 
       // Validate
       const validation = validateImportedConfig(config);
@@ -341,7 +337,7 @@ export function ExportImportPanel({
     if (!file) return;
 
     try {
-      const { config, warnings } = await importFromFile(file);
+      const { config } = await importFromFile(file);
       const validation = validateImportedConfig(config);
       if (!validation.valid) {
         setImportError(`Invalid configuration: ${validation.errors.join(', ')}`);
@@ -361,7 +357,7 @@ export function ExportImportPanel({
         onClick={() => setIsOpen(true)}
         className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
         style={{
-          background: 'rgba(255,255,255,0.05)',
+          background: 'var(--surface-hover)',
           color: TEXT.secondary,
           border: `1px solid ${modeColors.border}`,
         }}
@@ -393,7 +389,7 @@ export function ExportImportPanel({
               <div
                 className="w-full max-w-lg rounded-2xl border shadow-2xl overflow-hidden"
                 style={{
-                  background: '#1A1612',
+                  background: 'var(--surface-panel)',
                   borderColor: modeColors.border,
                 }}
                 onClick={(e) => e.stopPropagation()}
@@ -429,7 +425,7 @@ export function ExportImportPanel({
                         style={{
                           background: 'rgba(59, 130, 246, 0.1)',
                           border: `1px solid rgba(59, 130, 246, 0.3)`,
-                          color: '#60A5FA',
+                          color: 'var(--status-info)',
                         }}
                       >
                         <FileCode size={18} />
@@ -453,7 +449,7 @@ export function ExportImportPanel({
                         onClick={handleCopyToClipboard}
                         className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
                         style={{
-                          background: 'rgba(255,255,255,0.05)',
+                          background: 'var(--surface-hover)',
                           border: `1px solid ${modeColors.border}`,
                           color: TEXT.secondary,
                         }}
@@ -465,7 +461,7 @@ export function ExportImportPanel({
                         onClick={handleShare}
                         className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
                         style={{
-                          background: 'rgba(255,255,255,0.05)',
+                          background: 'var(--surface-hover)',
                           border: `1px solid ${modeColors.border}`,
                           color: TEXT.secondary,
                         }}
@@ -517,8 +513,8 @@ export function ExportImportPanel({
                           border: `1px solid rgba(239, 68, 68, 0.3)`,
                         }}
                       >
-                        <Warning size={16} className="flex-shrink-0 mt-0.5" style={{ color: '#EF4444' }} />
-                        <p className="text-sm" style={{ color: '#EF4444' }}>
+                        <Warning size={16} className="flex-shrink-0 mt-0.5" style={{ color: 'var(--status-error)' }} />
+                        <p className="text-sm" style={{ color: 'var(--status-error)' }}>
                           {importError}
                         </p>
                       </div>
@@ -565,7 +561,7 @@ export function KeyboardShortcutsPanel({ isOpen, onClose, modeColors }: Keyboard
         <div
           className="w-full max-w-lg rounded-2xl border shadow-2xl overflow-hidden"
           style={{
-            background: '#1A1612',
+            background: 'var(--surface-panel)',
             borderColor: modeColors.border,
           }}
           onClick={(e) => e.stopPropagation()}
@@ -597,7 +593,7 @@ export function KeyboardShortcutsPanel({ isOpen, onClose, modeColors }: Keyboard
                   key={shortcut.name}
                   className="flex items-center justify-between p-3 rounded-lg"
                   style={{
-                    background: 'rgba(255,255,255,0.03)',
+                    background: 'var(--surface-hover)',
                   }}
                 >
                   <span className="text-sm font-medium" style={{ color: TEXT.secondary }}>
@@ -606,7 +602,7 @@ export function KeyboardShortcutsPanel({ isOpen, onClose, modeColors }: Keyboard
                   <kbd
                     className="px-2 py-1 rounded text-xs font-mono"
                     style={{
-                      background: 'rgba(255,255,255,0.1)',
+                      background: 'var(--ui-border-default)',
                       color: TEXT.primary,
                     }}
                   >
@@ -630,7 +626,7 @@ export function KeyboardShortcutsPanel({ isOpen, onClose, modeColors }: Keyboard
               className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
               style={{
                 background: modeColors.accent,
-                color: '#1A1612',
+                color: 'var(--ui-text-inverse)',
               }}
             >
               Got it
@@ -659,7 +655,7 @@ export function ApiHealthIndicator({ modeColors, onClick }: ApiHealthIndicatorPr
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: 'rgba(255,255,255,0.05)' }}>
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: 'var(--surface-hover)' }}>
         <ArrowsClockwise size={14} className="animate-spin" style={{ color: TEXT.tertiary }} />
         <span className="text-xs" style={{ color: TEXT.tertiary }}>Checking API...</span>
       </div>
@@ -676,7 +672,7 @@ export function ApiHealthIndicator({ modeColors, onClick }: ApiHealthIndicatorPr
       style={{
         background: isHealthy ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
         border: `1px solid ${isHealthy ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
-        color: isHealthy ? '#10B981' : '#F59E0B',
+        color: isHealthy ? 'var(--status-success)' : 'var(--status-warning)',
       }}
       aria-label={isHealthy ? 'API is healthy' : 'API has issues'}
     >
@@ -724,7 +720,7 @@ export function AnalyticsConsentBanner({ onAccept, onDecline, modeColors }: Anal
       <div
         className="max-w-2xl mx-auto p-4 rounded-xl border shadow-xl"
         style={{
-          background: '#1A1612',
+          background: 'var(--surface-panel)',
           borderColor: modeColors.border,
         }}
       >
@@ -733,7 +729,7 @@ export function AnalyticsConsentBanner({ onAccept, onDecline, modeColors }: Anal
             className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
             style={{ background: 'rgba(59, 130, 246, 0.1)' }}
           >
-            <ChartBar size={20} style={{ color: '#3B82F6' }} />
+            <ChartBar size={20} style={{ color: 'var(--status-info)' }} />
           </div>
           <div className="flex-1">
             <h3 className="text-sm font-semibold mb-1" style={{ color: TEXT.primary }}>
@@ -748,7 +744,7 @@ export function AnalyticsConsentBanner({ onAccept, onDecline, modeColors }: Anal
                 onClick={handleAccept}
                 className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                 style={{
-                  background: '#3B82F6',
+                  background: 'var(--status-info)',
                   color: 'white',
                 }}
               >
@@ -758,7 +754,7 @@ export function AnalyticsConsentBanner({ onAccept, onDecline, modeColors }: Anal
                 onClick={handleDecline}
                 className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                 style={{
-                  background: 'rgba(255,255,255,0.1)',
+                  background: 'var(--ui-border-default)',
                   color: TEXT.secondary,
                 }}
               >
@@ -880,7 +876,7 @@ export function WizardHeader({
         <span className="text-sm font-medium" style={{ color: TEXT.tertiary }}>
           Step {currentStep + 1} of {totalSteps}
         </span>
-        <div className="w-32 h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.1)' }}>
+        <div className="w-32 h-2 rounded-full overflow-hidden" style={{ background: 'var(--ui-border-default)' }}>
           <motion.div
             className="h-full rounded-full"
             style={{ background: modeColors.accent }}
@@ -917,9 +913,9 @@ export function WizardHeader({
             roleCard: { domain: '', inputs: [], outputs: [], definitionOfDone: [], hardBans: [], escalation: [], metrics: [] },
             voice: { style: '', rules: [], microBans: [], tone: { formality: 0.5, enthusiasm: 0.5, empathy: 0.5, directness: 0.5 } },
             progression: { class: '', relevantStats: [], level: { maxLevel: 10, xpFormula: 'linear' } },
-            avatar: { type: 'color', style: { primaryColor: '#D4956A', accentColor: '#E0A070' } }
+            avatar: { type: 'color', style: { primaryColor: 'var(--accent-primary)', accentColor: '#E0A070' } }
           }}
-          avatar={{ type: 'color', fallbackColor: '#D4956A', colors: { primary: '#D4956A', secondary: '#1a1a1a', glow: 'rgba(212,149,106,0.3)' } }}
+          avatar={{ type: 'color', fallbackColor: 'var(--accent-primary)', colors: { primary: 'var(--accent-primary)', secondary: 'var(--ui-text-inverse)', glow: 'rgba(212,149,106,0.3)' } }}
           tools={{ enabled: [], systemPrompt: '', temperature: 0.7, maxIterations: 10 }}
           capabilities={[]}
           onImport={() => {}}

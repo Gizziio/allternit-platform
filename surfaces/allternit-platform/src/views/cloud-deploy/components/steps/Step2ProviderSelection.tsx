@@ -8,6 +8,7 @@
 import React, { useState } from 'react';
 import { PROVIDERS, Provider } from '../../data/providers';
 import { ProviderComparison } from '../ProviderComparison';
+import { openInBrowser } from '@/lib/openInBrowser';
 
 interface Step2ProviderSelectionProps {
   selectedProvider: string;
@@ -29,7 +30,7 @@ export const Step2ProviderSelection: React.FC<Step2ProviderSelectionProps> = ({
   const handleSignupClick = (e: React.MouseEvent, provider: Provider) => {
     e.preventDefault();
     e.stopPropagation();
-    window.open(provider.signupUrl, '_blank', 'noopener,noreferrer');
+    openInBrowser(provider.signupUrl);
     setJustSignedUp(provider.id);
   };
 
@@ -42,7 +43,7 @@ export const Step2ProviderSelection: React.FC<Step2ProviderSelectionProps> = ({
     const provider = providers.find(p => p.id === providerId);
     if (provider && !provider.apiConsoleUrl) {
       // No API console - they need to sign up manually first
-      window.open(provider.signupUrl, '_blank', 'noopener,noreferrer');
+      openInBrowser(provider.signupUrl);
       return;
     }
     onNext(providerId);

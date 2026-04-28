@@ -303,14 +303,14 @@ export const ExplorerView: React.FC = () => {
                     gap: '8px',
                     padding: '6px 8px',
                     borderRadius: '4px',
-                    background: 'rgba(255,255,255,0.05)',
+                    background: 'var(--surface-hover)',
                     cursor: 'pointer',
                   }}
                   onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.1)';
+                    (e.currentTarget as HTMLElement).style.background = 'var(--ui-border-default)';
                   }}
                   onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)';
+                    (e.currentTarget as HTMLElement).style.background = 'var(--surface-hover)';
                   }}
                 >
                   {getDroppedFileIcon(file)}

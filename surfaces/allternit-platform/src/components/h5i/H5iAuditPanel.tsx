@@ -72,11 +72,11 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
 
   const riskColor = result
     ? result.aiRatio > 0.7
-      ? '#ef4444'
+      ? 'var(--status-error)'
       : result.aiRatio > 0.4
-        ? '#f59e0b'
-        : '#10b981'
-    : '#6b7280';
+        ? 'var(--status-warning)'
+        : 'var(--status-success)'
+    : 'var(--ui-text-muted)';
 
   return (
     <div
@@ -85,17 +85,17 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
-        zIndex: 10001,
+        zIndex: 180,
         width: 480,
         maxHeight: '80vh',
         display: 'flex',
         flexDirection: 'column',
         borderRadius: 16,
-        border: '1px solid rgba(255,255,255,0.08)',
+        border: '1px solid var(--ui-border-muted)',
         background: 'rgba(11,14,16,0.96)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+        boxShadow: '0 20px 50px var(--shell-overlay-backdrop)',
         overflow: 'hidden',
       }}
     >
@@ -106,7 +106,7 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '14px 16px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          borderBottom: '1px solid var(--ui-border-muted)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -125,8 +125,8 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
                   ? 'rgba(16,185,129,0.15)'
                   : 'rgba(245,158,11,0.15)',
                 color: status.initialized
-                  ? '#10b981'
-                  : '#f59e0b',
+                  ? 'var(--status-success)'
+                  : 'var(--status-warning)',
               }}
             >
               {status.initialized ? 'Active' : 'Not Initialized'}
@@ -157,7 +157,7 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
               background: 'rgba(245,158,11,0.08)',
               border: '1px solid rgba(245,158,11,0.2)',
               fontSize: 13,
-              color: '#f59e0b',
+              color: 'var(--status-warning)',
               marginBottom: 12,
             }}
           >
@@ -173,7 +173,7 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
             padding: '10px 14px',
             borderRadius: 10,
             border: 'none',
-            background: loading ? 'rgba(255,255,255,0.06)' : 'var(--accent-code)',
+            background: loading ? 'var(--ui-border-muted)' : 'var(--accent-code)',
             color: '#fff',
             fontSize: 13,
             fontWeight: 600,
@@ -204,10 +204,10 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
             style={{
               padding: 12,
               borderRadius: 10,
-              background: 'rgba(239,68,68,0.08)',
+              background: 'var(--status-error-bg)',
               border: '1px solid rgba(239,68,68,0.2)',
               fontSize: 12,
-              color: '#ef4444',
+              color: 'var(--status-error)',
               marginBottom: 12,
             }}
           >
@@ -222,8 +222,8 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
               style={{
                 padding: 14,
                 borderRadius: 12,
-                background: 'rgba(255,255,255,0.02)',
-                border: '1px solid rgba(255,255,255,0.06)',
+                background: 'var(--surface-hover)',
+                border: '1px solid var(--ui-border-muted)',
               }}
             >
               <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>
@@ -266,7 +266,7 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
                     style={{
                       padding: '6px 10px',
                       borderRadius: 6,
-                      background: 'rgba(255,255,255,0.02)',
+                      background: 'var(--surface-hover)',
                       fontSize: 12,
                       color: 'var(--text-secondary)',
                       fontFamily: 'monospace',
@@ -285,15 +285,15 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
                 style={{
                   padding: 12,
                   borderRadius: 10,
-                  background: 'rgba(239,68,68,0.08)',
+                  background: 'var(--status-error-bg)',
                   border: '1px solid rgba(239,68,68,0.2)',
                 }}
               >
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#ef4444', marginBottom: 6 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--status-error)', marginBottom: 6 }}>
                   LEAKED TOKENS DETECTED
                 </div>
                 {result.leakedTokens.map((t, i) => (
-                  <div key={i} style={{ fontSize: 12, color: '#ef4444', fontFamily: 'monospace' }}>
+                  <div key={i} style={{ fontSize: 12, color: 'var(--status-error)', fontFamily: 'monospace' }}>
                     {t}
                   </div>
                 ))}
@@ -310,11 +310,11 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
                   border: '1px solid rgba(245,158,11,0.2)',
                 }}
               >
-                <div style={{ fontSize: 11, fontWeight: 600, color: '#f59e0b', marginBottom: 6 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--status-warning)', marginBottom: 6 }}>
                   PROMPT INJECTION HITS
                 </div>
                 {result.promptInjectionHits.map((h, i) => (
-                  <div key={i} style={{ fontSize: 12, color: '#f59e0b', fontFamily: 'monospace' }}>
+                  <div key={i} style={{ fontSize: 12, color: 'var(--status-warning)', fontFamily: 'monospace' }}>
                     {h}
                   </div>
                 ))}
@@ -333,7 +333,7 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
                     style={{
                       padding: '6px 10px',
                       borderRadius: 6,
-                      background: 'rgba(255,255,255,0.02)',
+                      background: 'var(--surface-hover)',
                       fontSize: 12,
                       color: 'var(--text-secondary)',
                       fontFamily: 'monospace',
@@ -357,7 +357,7 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
                     marginTop: 8,
                     padding: 10,
                     borderRadius: 8,
-                    background: 'rgba(0,0,0,0.2)',
+                    background: 'var(--surface-hover)',
                     fontSize: 11,
                     fontFamily: 'monospace',
                     color: 'var(--text-secondary)',

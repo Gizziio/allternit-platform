@@ -196,8 +196,8 @@ function AgentMessageBubble({
         gap: 10,
         padding: 10,
         borderRadius: 12,
-        background: isFromSelf ? `${accentColor}10` : "rgba(255,255,255,0.03)",
-        border: message.read ? "1px solid rgba(255,255,255,0.05)" : `1px solid ${accentColor}30`,
+        background: isFromSelf ? `${accentColor}10` : "var(--surface-hover)",
+        border: message.read ? "1px solid var(--surface-hover)" : `1px solid ${accentColor}30`,
         marginLeft: showThreadIndicator ? 24 : 0,
         position: "relative",
       }}
@@ -264,7 +264,7 @@ function AgentMessageBubble({
             style={{
               fontSize: 11,
               color: "#7a6b5d",
-              background: "rgba(255,255,255,0.05)",
+              background: "var(--surface-hover)",
               padding: "2px 6px",
               borderRadius: 4,
             }}

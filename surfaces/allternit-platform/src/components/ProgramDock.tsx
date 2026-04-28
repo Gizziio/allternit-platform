@@ -22,13 +22,13 @@ import { motion } from 'framer-motion';
 import { useChatStore } from '@/views/chat/ChatStore';
 
 const PROGRAMS = [
-  { id: 'research-doc', name: 'Research', icon: FileText, color: '#3b82f6', shortcut: 'R' },
-  { id: 'data-grid', name: 'Data', icon: Table, color: '#10b981', shortcut: 'D' },
-  { id: 'presentation', name: 'Slides', icon: Presentation, color: '#f59e0b', shortcut: 'P' },
+  { id: 'research-doc', name: 'Research', icon: FileText, color: 'var(--status-info)', shortcut: 'R' },
+  { id: 'data-grid', name: 'Data', icon: Table, color: 'var(--status-success)', shortcut: 'D' },
+  { id: 'presentation', name: 'Slides', icon: Presentation, color: 'var(--status-warning)', shortcut: 'P' },
   { id: 'code-preview', name: 'Code', icon: Code, color: '#8b5cf6', shortcut: 'C' },
   { id: 'asset-manager', name: 'Assets', icon: FolderOpen, color: '#ec4899', shortcut: 'A' },
-  { id: 'orchestrator', name: 'Agents', icon: Cpu, color: '#ef4444', shortcut: 'O' },
-  { id: 'workflow-builder', name: 'Flow', icon: Graph, color: '#06b6d4', shortcut: 'F' },
+  { id: 'orchestrator', name: 'Agents', icon: Cpu, color: 'var(--status-error)', shortcut: 'O' },
+  { id: 'workflow-builder', name: 'Flow', icon: Graph, color: 'var(--status-info)', shortcut: 'F' },
   { id: 'browser', name: 'Web', icon: Globe, color: '#6366f1', shortcut: 'W' },
 ] as const;
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DeviceMobile as Smartphone, Code, Play, DeviceMobileCamera, AppWindow, Globe, Cpu, WifiHigh } from '@phosphor-icons/react';
+import { DeviceMobile as Smartphone, Play, DeviceMobileCamera, AppWindow, Cpu, WifiHigh } from '@phosphor-icons/react';
 import { GlassCard } from '../../../design/GlassCard';
 import { DesignMdRenderer } from '@/lib/openui/DesignMdRenderer';
 
@@ -19,16 +19,15 @@ export function MobileDevWorkspace({
   projectName?: string 
 }) {
   const [device, setDevice] = useState<'iphone' | 'android' | 'tablet'>('iphone');
-  const [isSimulating, setIsInitializing] = useState(false);
 
   return (
     <div style={{ display: "flex", width: "100%", height: "100%", background: "#050505" }}>
       {/* Left: Device Preview */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", borderRight: "1px solid rgba(255,255,255,0.06)", padding: "40px" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", borderRight: "1px solid var(--ui-border-muted)", padding: "40px" }}>
         
         <div style={{ marginBottom: "24px", display: "flex", gap: "8px" }}>
-           <button onClick={() => setDevice('iphone')} style={{ padding: "8px 16px", borderRadius: "8px", background: device === 'iphone' ? 'rgba(212,176,140,0.1)' : 'transparent', border: "1px solid", borderColor: device === 'iphone' ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)', color: device === 'iphone' ? '#fff' : 'rgba(255,255,255,0.4)', fontSize: "11px", fontWeight: 800, cursor: "pointer" }}>iOS</button>
-           <button onClick={() => setDevice('android')} style={{ padding: "8px 16px", borderRadius: "8px", background: device === 'android' ? 'rgba(212,176,140,0.1)' : 'transparent', border: "1px solid", borderColor: device === 'android' ? 'var(--accent-primary)' : 'rgba(255,255,255,0.1)', color: device === 'android' ? '#fff' : 'rgba(255,255,255,0.4)', fontSize: "11px", fontWeight: 800, cursor: "pointer" }}>Android</button>
+           <button onClick={() => setDevice('iphone')} style={{ padding: "8px 16px", borderRadius: "8px", background: device === 'iphone' ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'transparent', border: "1px solid", borderColor: device === 'iphone' ? 'var(--accent-primary)' : 'var(--ui-border-default)', color: device === 'iphone' ? '#fff' : 'rgba(255,255,255,0.4)', fontSize: "11px", fontWeight: 800, cursor: "pointer" }}>iOS</button>
+           <button onClick={() => setDevice('android')} style={{ padding: "8px 16px", borderRadius: "8px", background: device === 'android' ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'transparent', border: "1px solid", borderColor: device === 'android' ? 'var(--accent-primary)' : 'var(--ui-border-default)', color: device === 'android' ? '#fff' : 'rgba(255,255,255,0.4)', fontSize: "11px", fontWeight: 800, cursor: "pointer" }}>Android</button>
         </div>
 
         {/* Frame */}
@@ -38,7 +37,7 @@ export function MobileDevWorkspace({
           background: "#000", 
           borderRadius: "40px", 
           border: "8px solid #1a1714", 
-          boxShadow: "0 24px 64px rgba(0,0,0,0.6)",
+          boxShadow: "0 24px 64px var(--shell-overlay-backdrop)",
           position: "relative",
           overflow: "hidden",
           display: "flex",
@@ -56,7 +55,7 @@ export function MobileDevWorkspace({
 
       {/* Right: Vibe Code Controls */}
       <div style={{ width: "380px", display: "flex", flexDirection: "column", background: "rgba(10, 10, 12, 0.5)" }}>
-        <div style={{ padding: "20px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <div style={{ padding: "20px", borderBottom: "1px solid var(--ui-border-muted)" }}>
            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
              <Smartphone size={20} color="var(--accent-primary)" weight="duotone" />
              <h3 style={{ fontSize: "13px", fontWeight: 900, color: "#fff", tracking: "-0.01em" }}>Vibe Mobile SDK</h3>
@@ -77,7 +76,7 @@ export function MobileDevWorkspace({
 
            <div style={{ flex: 1 }}>
               <div style={{ fontSize: "10px", fontWeight: 800, color: "rgba(255,255,255,0.3)", marginBottom: "8px", textTransform: "uppercase" }}>Generated Component DNA</div>
-              <div style={{ height: "200px", background: "rgba(0,0,0,0.3)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "12px", padding: "12px", overflow: "auto" }}>
+              <div style={{ height: "200px", background: "var(--surface-panel)", border: "1px solid var(--ui-border-muted)", borderRadius: "12px", padding: "12px", overflow: "auto" }}>
                  <pre style={{ fontSize: "10px", color: "rgba(255,255,255,0.5)", fontMono: "monospace", margin: 0 }}>
                     {mobileCode || `// Expo/React Native logic\n// (Waiting for agent to stream...)\n\nimport { View, Text } from 'react-native';\n\nexport default function App() {\n  return (\n    <View>\n      <Text>Initialized</Text>\n    </View>\n  );\n}`}
                  </pre>

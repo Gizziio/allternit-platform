@@ -26,19 +26,7 @@ export interface KeyboardShortcutsOptions {
 }
 
 export function useKeyboardShortcuts(options: KeyboardShortcutsOptions) {
-  const {
-    isOpen,
-    onClose,
-    onFocusSearch,
-    onNavigateUp,
-    onNavigateDown,
-    onNavigateLeft,
-    onNavigateRight,
-    onEnter,
-    onEscape,
-    onCreateNew,
-    onSave,
-  } = options;
+  const { isOpen } = options;
 
   const handlersRef = useRef(options);
   handlersRef.current = options;

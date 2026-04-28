@@ -11,10 +11,10 @@ interface H5iContextPanelProps {
 }
 
 const typeConfig: Record<H5iContextEntry['type'], { icon: React.ReactNode; color: string; bg: string }> = {
-  OBSERVE: { icon: <Eye size={14} />, color: '#3b82f6', bg: 'rgba(59,130,246,0.08)' },
+  OBSERVE: { icon: <Eye size={14} />, color: 'var(--status-info)', bg: 'rgba(59,130,246,0.08)' },
   THINK: { icon: <Brain size={14} />, color: '#8b5cf6', bg: 'rgba(139,92,246,0.08)' },
-  ACT: { icon: <Lightning size={14} />, color: '#10b981', bg: 'rgba(16,185,129,0.08)' },
-  NOTE: { icon: <Note size={14} />, color: '#f59e0b', bg: 'rgba(245,158,11,0.08)' },
+  ACT: { icon: <Lightning size={14} />, color: 'var(--status-success)', bg: 'rgba(16,185,129,0.08)' },
+  NOTE: { icon: <Note size={14} />, color: 'var(--status-warning)', bg: 'rgba(245,158,11,0.08)' },
 };
 
 export function H5iContextPanel({ workspacePath, sessionId, onClose }: H5iContextPanelProps) {
@@ -52,17 +52,17 @@ export function H5iContextPanel({ workspacePath, sessionId, onClose }: H5iContex
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
-        zIndex: 10001,
+        zIndex: 180,
         width: 520,
         maxHeight: '80vh',
         display: 'flex',
         flexDirection: 'column',
         borderRadius: 16,
-        border: '1px solid rgba(255,255,255,0.08)',
+        border: '1px solid var(--ui-border-muted)',
         background: 'rgba(11,14,16,0.96)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+        boxShadow: '0 20px 50px var(--shell-overlay-backdrop)',
         overflow: 'hidden',
       }}
     >
@@ -73,7 +73,7 @@ export function H5iContextPanel({ workspacePath, sessionId, onClose }: H5iContex
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '14px 16px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          borderBottom: '1px solid var(--ui-border-muted)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -107,10 +107,10 @@ export function H5iContextPanel({ workspacePath, sessionId, onClose }: H5iContex
             style={{
               padding: 12,
               borderRadius: 10,
-              background: 'rgba(239,68,68,0.08)',
+              background: 'var(--status-error-bg)',
               border: '1px solid rgba(239,68,68,0.2)',
               fontSize: 12,
-              color: '#ef4444',
+              color: 'var(--status-error)',
             }}
           >
             {error}

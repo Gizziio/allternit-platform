@@ -10,12 +10,12 @@ import React from 'react';
 const THEME = {
   bg: '#0c0a09',
   text: '#e7e5e4',
-  comment: '#6b7280',
+  comment: 'var(--ui-text-muted)',
   keyword: '#c084fc',
-  string: '#4ade80',
-  number: '#fbbf24',
-  function: '#60a5fa',
-  operator: '#f87171',
+  string: 'var(--status-success)',
+  number: 'var(--status-warning)',
+  function: 'var(--status-info)',
+  operator: 'var(--status-error)',
   punctuation: '#9ca3af',
   tag: '#f472b6',
   attr: '#a78bfa',
@@ -306,7 +306,7 @@ function tokenizeMarkdown(line: string): Token[] {
 
   // Headers
   if (line.match(/^#{1,6}\s/)) {
-    return [{ text: line, color: '#d4b08c' }];
+    return [{ text: line, color: 'var(--accent-primary)' }];
   }
 
   // Code block
@@ -635,21 +635,21 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
         // Headers
         if (line.startsWith('# ')) {
           return (
-            <h1 key={i} style={{ fontSize: 28, color: '#d4b08c', margin: '24px 0 16px', fontWeight: 600 }}>
+            <h1 key={i} style={{ fontSize: 28, color: 'var(--accent-primary)', margin: '24px 0 16px', fontWeight: 600 }}>
               {parseInlineMarkdown(line.slice(2))}
             </h1>
           );
         }
         if (line.startsWith('## ')) {
           return (
-            <h2 key={i} style={{ fontSize: 22, color: '#d4b08c', margin: '20px 0 12px', fontWeight: 600 }}>
+            <h2 key={i} style={{ fontSize: 22, color: 'var(--accent-primary)', margin: '20px 0 12px', fontWeight: 600 }}>
               {parseInlineMarkdown(line.slice(3))}
             </h2>
           );
         }
         if (line.startsWith('### ')) {
           return (
-            <h3 key={i} style={{ fontSize: 18, color: '#d4b08c', margin: '16px 0 10px', fontWeight: 600 }}>
+            <h3 key={i} style={{ fontSize: 18, color: 'var(--accent-primary)', margin: '16px 0 10px', fontWeight: 600 }}>
               {parseInlineMarkdown(line.slice(4))}
             </h3>
           );
@@ -659,7 +659,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
         if (line.startsWith('```')) {
           return (
             <div key={i} style={{ 
-              backgroundColor: 'rgba(0,0,0,0.3)', 
+              backgroundColor: 'var(--surface-panel)', 
               padding: '8px 12px',
               borderRadius: 6,
               fontFamily: 'monospace',
@@ -689,7 +689,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
 
         // Horizontal rule
         if (line.match(/^-{3,}$/)) {
-          return <hr key={i} style={{ border: 'none', borderTop: '1px solid rgba(212,176,140,0.2)', margin: '24px 0' }} />;
+          return <hr key={i} style={{ border: 'none', borderTop: '1px solid var(--ui-border-default)', margin: '24px 0' }} />;
         }
 
         // Unordered list
@@ -740,12 +740,12 @@ function parseInlineMarkdown(text: string): React.ReactNode {
       parts.push(remaining.slice(0, codeMatch.index));
       parts.push(
         <code key={key++} style={{
-          backgroundColor: 'rgba(0,0,0,0.3)',
+          backgroundColor: 'var(--surface-panel)',
           padding: '2px 6px',
           borderRadius: 4,
           fontFamily: 'monospace',
           fontSize: 12,
-          color: '#d4b08c'
+          color: 'var(--accent-primary)'
         }}>
           {codeMatch[1]}
         </code>
@@ -782,7 +782,7 @@ function parseInlineMarkdown(text: string): React.ReactNode {
           href={linkMatch[2]} 
           target="_blank" 
           rel="noopener noreferrer"
-          style={{ color: '#60a5fa', textDecoration: 'none' }}
+          style={{ color: 'var(--status-info)', textDecoration: 'none' }}
         >
           {linkMatch[1]}
         </a>

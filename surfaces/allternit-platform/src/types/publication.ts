@@ -37,6 +37,19 @@ export interface Publication {
     markdown?: string;
     html?: string;
     pdfUrl?: string;
+    sources?: {
+      source: string;
+      title: string;
+      url: string;
+      engagement?: {
+        score?: number;
+        commentCount?: number;
+        stars?: number;
+        forks?: number;
+      };
+      relevanceScore?: number;
+      focusAreas?: string[];
+    }[];
   };
   readingTime: number;
   featured?: boolean;

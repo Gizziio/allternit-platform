@@ -5,8 +5,7 @@
  * Uses: AI SDK for synthesis + web search via browser automation
  */
 
-import { generateText, streamText, tool } from 'ai';
-import { z } from 'zod';
+import { generateText } from 'ai';
 import {
   createComputerUseClient,
   type AllternitComputerUseClient,

@@ -18,12 +18,10 @@ import {
   ArrowsInLineVertical,
   Clock,
   FolderOpen,
-  SidebarSimple,
   Sparkle,
   Wrench,
   X,
 } from '@phosphor-icons/react';
-import { motion, AnimatePresence } from 'framer-motion';
 
 // Chat components
 import { ChatComposer } from '../chat/ChatComposer';
@@ -34,7 +32,7 @@ import { useDropTarget, type FileWithData } from '@/components/GlobalDropzone';
 import { AttachmentPreview, AttachmentPreviewModal, type AttachmentPreviewItem } from '@/components/chat/AttachmentPreview';
 
 // AI streaming (same as Chat mode)
-import { useRustStreamAdapter, type ChatMessage } from '@/lib/ai/rust-stream-adapter';
+import { useRustStreamAdapter } from '@/lib/ai/rust-stream-adapter';
 
 // Cowork-specific components
 import { useCoworkStore } from './CoworkStore';
@@ -65,7 +63,6 @@ import {
   getOpenClawWorkspacePathFromAgent,
   mapNativeMessagesToStreamMessages,
 } from '@/lib/agents';
-import type { AgentModeSurface } from '@/stores/agent-surface-mode.store';
 import { useCoworkSessionStore } from './CoworkSessionStore';
 import { AgentModeBackdrop } from '../chat/agentModeSurfaceTheme';
 import { useModeCanvasBridge } from '@/hooks/useModeCanvasBridge';
@@ -77,10 +74,10 @@ const THEME = {
   bg: '#2B2520',
   bgGradient: 'linear-gradient(to top, #2B2520 60%, transparent)',
   textPrimary: '#ECECEC',
-  textSecondary: '#9B9B9B',
-  textMuted: '#6B6B6B',
-  accent: '#D4956A',
-  borderSubtle: 'rgba(255,255,255,0.06)',
+  textSecondary: 'var(--ui-text-secondary)',
+  textMuted: 'var(--ui-text-muted)',
+  accent: 'var(--accent-primary)',
+  borderSubtle: 'var(--ui-border-muted)',
 };
 
 const MAX_COWORK_TASK_TITLE_LENGTH = 64;
@@ -108,15 +105,15 @@ function CoworkErrorFallback() {
       flexDirection: 'column', 
       alignItems: 'center', 
       justifyContent: 'center',
-      color: '#ececec'
+      color: 'var(--ui-text-primary)'
     }}>
       <h2 style={{ fontFamily: 'Georgia, serif', marginBottom: 12 }}>Cowork Error</h2>
-      <p style={{ color: '#666', marginBottom: 24 }}>The collaborative workspace encountered an error.</p>
+      <p style={{ color: 'var(--ui-text-muted)', marginBottom: 24 }}>The collaborative workspace encountered an error.</p>
       <button 
         onClick={() => window.location.reload()}
         style={{
           padding: '10px 20px',
-          background: '#333',
+          background: 'var(--surface-hover)',
           border: '1px solid #444',
           borderRadius: 8,
           color: 'white',
@@ -142,9 +139,6 @@ export function CoworkRoot() {
 }
 
 function CoworkRootContent() {
-  // FINGERPRINT: Verify this file is actually running
-  console.log("COWORKROOT_CHATFIRST_FINGERPRINT");
-  
   const {
     activeProjectId,
   } = useCoworkStore();
@@ -270,8 +264,8 @@ function CoworkRootContent() {
   return (
     <DataStreamProvider>
       <ChatIdProvider
-        chatId={coworkSessionId || session?.id || embeddedAgentSession?.sessionId || 'cowork-embedded'}
-        isPersisted={Boolean(coworkSessionId || session?.id || embeddedAgentSession?.sessionId)}
+        chatId={coworkSessionId || embeddedAgentSession?.sessionId || 'cowork-embedded'}
+        isPersisted={Boolean(coworkSessionId || embeddedAgentSession?.sessionId)}
         source="local"
       >
         <MessageTreeProvider>
@@ -301,23 +295,23 @@ function CoworkRootContent() {
                               transform: 'translateX(-50%)',
                               zIndex: 100,
                               maxWidth: '90%',
-                              background: 'rgba(43, 37, 32, 0.95)',
+                              background: 'var(--surface-floating)',
                               backdropFilter: 'blur(10px)',
                               borderRadius: 16,
-                              border: '1px solid rgba(175, 82, 222, 0.3)',
-                              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                              border: '1px solid var(--border-default)',
+                              boxShadow: 'var(--shadow-lg)',
                             }}>
                               <div style={{
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'space-between',
                                 padding: '8px 12px 0',
-                                borderBottom: '1px solid rgba(255,255,255,0.06)',
+                                borderBottom: '1px solid var(--ui-border-muted)',
                               }}>
                                 <span style={{
                                   fontSize: 11,
                                   fontWeight: 600,
-                                  color: '#af52de',
+                                  color: 'var(--accent-cowork)',
                                   textTransform: 'uppercase',
                                   letterSpacing: '0.05em',
                                 }}>
@@ -356,7 +350,7 @@ function CoworkRootContent() {
                           
                           {/* Cowork Chat - Transcript + Composer integrated */}
                           <CoworkChat
-                            sessionId={coworkSessionId || session?.id || embeddedAgentSession?.sessionId || 'cowork-embedded'}
+                            sessionId={coworkSessionId || embeddedAgentSession?.sessionId || 'cowork-embedded'}
                             initialMessage={initialMessage}
                             onInitialMessageSent={() => setInitialMessage(null)}
                           />
@@ -364,10 +358,10 @@ function CoworkRootContent() {
                           {/* Permission + Question gate modals — float above transcript.
                             Only meaningful when using a native gizzi-code session (embedded agent),
                             but harmless to render for legacy CoworkStore sessions (empty pending lists). */}
-                          {(embeddedAgentSession?.sessionId || session?.id) && (
+                          {(embeddedAgentSession?.sessionId) && (
                             <div className="coworkGateOverlay">
-                              <PermissionModal sessionId={embeddedAgentSession?.sessionId || session?.id || ''} />
-                              <QuestionModal sessionId={embeddedAgentSession?.sessionId || session?.id || ''} />
+                              <PermissionModal sessionId={embeddedAgentSession?.sessionId || ''} />
+                              <QuestionModal sessionId={embeddedAgentSession?.sessionId || ''} />
                             </div>
                           )}
 
@@ -457,7 +451,7 @@ const coworkStyles = `
 
 /* Slider handle - visible when rail is shown */
 .coworkRailSlider {
-  width: 4px;
+  width: 6px;
   height: 100%;
   background: transparent;
   border: none;
@@ -472,20 +466,20 @@ const coworkStyles = `
 }
 
 .coworkRailSlider:hover {
-  background: var(--border-subtle, rgba(255,255,255,0.1));
+  background: var(--border-subtle, var(--ui-border-default));
 }
 
 .coworkRailSliderLine {
-  width: 2px;
+  width: 3px;
   height: 40px;
-  background: var(--text-muted, #6B6B6B);
-  border-radius: 1px;
-  opacity: 0.3;
-  transition: opacity 0.2s;
+  background: var(--accent-primary);
+  border-radius: 2px;
+  opacity: 0.35;
+  transition: opacity 0.15s;
 }
 
 .coworkRailSlider:hover .coworkRailSliderLine {
-  opacity: 0.8;
+  opacity: 1;
 }
 
 /* Handle - visible when rail is collapsed */
@@ -498,7 +492,7 @@ const coworkStyles = `
   height: 60px;
   background: transparent;
   border: none;
-  border-left: 2px solid var(--border-subtle, rgba(255,255,255,0.1));
+  border-left: 2px solid var(--border-subtle, var(--ui-border-default));
   cursor: pointer;
   padding: 0;
   z-index: 50;
@@ -512,23 +506,24 @@ const coworkStyles = `
 }
 
 .coworkRailHandleLine {
-  width: 2px;
+  width: 3px;
   height: 20px;
-  background: var(--text-muted, #6B6B6B);
-  border-radius: 1px;
-  opacity: 0.3;
-  transition: opacity 0.2s;
+  background: var(--accent-primary);
+  border-radius: 2px;
+  opacity: 0.35;
+  transition: opacity 0.15s;
 }
 
 .coworkRailHandle:hover .coworkRailHandleLine {
-  opacity: 0.8;
+  opacity: 1;
 }
 
 .coworkRail {
   min-width: 0;
   height: 100%;
   overflow: auto;
-  /* NO background - inherits from app shell */
+  background: var(--shell-panel-bg);
+  border-left: 1px solid var(--border-subtle);
 }
 
 .coworkChatContainer {
@@ -578,7 +573,7 @@ interface CoworkComposeEventDetail {
 }
 
 function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkChatProps) {
-  const { selection: modelSelection, selectModel, startSelection, isSelecting, cancelSelection } = useModelSelection();
+  const { selection: modelSelection, selectModel, startSelection } = useModelSelection();
   const { agentModeEnabled, selectedAgentId, selectedAgent } =
     useSurfaceAgentSelection('cowork');
   const embeddedSessionId = useCoworkSessionStore((s) => s.activeSessionId);
@@ -665,7 +660,7 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
       return;
     }
     const taskMode: 'task' | 'agent' = agentModeEnabled ? 'agent' : 'task';
-    const createdTask = createTask(
+    createTask(
       buildCoworkTaskTitleFromMessage(normalizedMessage),
       taskMode,
       activeProjectId || undefined,
@@ -912,7 +907,7 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
       height: '100%',
       width: '100%',
       background: embeddedAgentSession?.isEmbedded
-        ? 'radial-gradient(circle at top right, rgba(167,139,250,0.08), transparent 34%), linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0) 18%)'
+        ? 'radial-gradient(circle at top right, rgba(167,139,250,0.08), transparent 34%), linear-gradient(180deg, var(--surface-hover) 0%, rgba(0,0,0,0) 18%)'
         : 'transparent',
       position: 'relative',
       overflow: 'hidden',
@@ -923,10 +918,10 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
       {/* Desktop Automation Permission Warning */}
       {showPermWarning && (
         <div style={{
-          padding: '8px 16px', background: 'rgba(245,158,11,0.12)',
+          padding: '8px 16px', background: 'var(--status-warning-bg)',
           borderBottom: '1px solid rgba(245,158,11,0.25)', display: 'flex',
           alignItems: 'center', justifyContent: 'center', gap: 12, fontSize: 12,
-          color: '#fbbf24', flexShrink: 0
+          color: 'var(--status-warning)', flexShrink: 0
         }}>
           <span>⚠️ Desktop automation requires system permissions</span>
           <button
@@ -939,7 +934,7 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
             }}
             style={{
               padding: '3px 10px', borderRadius: 4, border: '1px solid #fbbf24',
-              background: 'transparent', color: '#fbbf24', fontSize: 11,
+              background: 'transparent', color: 'var(--status-warning)', fontSize: 11,
               fontWeight: 600, cursor: 'pointer'
             }}
           >
@@ -1112,17 +1107,15 @@ function EmbeddedCoworkAgentRail() {
         padding: '18px 18px 24px',
         display: 'grid',
         gap: 14,
-        background:
-          'linear-gradient(180deg, rgba(38,33,48,0.72) 0%, rgba(24,22,28,0.88) 100%)',
-        borderLeft: '1px solid rgba(167,139,250,0.1)',
+        background: 'var(--surface-panel)',
+        borderLeft: '1px solid var(--ui-border-muted)',
       }}
     >
       <div
         style={{
           borderRadius: 18,
-          border: '1px solid rgba(167,139,250,0.14)',
-          background:
-            'linear-gradient(135deg, rgba(167,139,250,0.16), rgba(255,255,255,0.02) 58%, rgba(0,0,0,0.1) 100%)',
+          border: '1px solid var(--ui-border-default)',
+          background: 'color-mix(in srgb, var(--accent-cowork) 10%, var(--surface-panel))',
           padding: 14,
           display: 'grid',
           gap: 6,
@@ -1134,7 +1127,7 @@ function EmbeddedCoworkAgentRail() {
             fontWeight: 800,
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
-            color: '#d4c5f9',
+            color: 'var(--accent-cowork)',
           }}
         >
           Cowork Agent Lane
@@ -1143,7 +1136,7 @@ function EmbeddedCoworkAgentRail() {
           style={{
             fontSize: 14,
             fontWeight: 700,
-            color: '#f0ebfa',
+            color: 'var(--ui-text-primary)',
           }}
         >
           {descriptor.agentName || 'Unbound session'}
@@ -1152,7 +1145,7 @@ function EmbeddedCoworkAgentRail() {
           style={{
             fontSize: 12,
             lineHeight: 1.5,
-            color: '#b8aec9',
+            color: 'var(--ui-text-secondary)',
           }}
         >
           Keep the brief, files, tools, and automation context attached to this cowork thread while staying in the same working surface.
@@ -1189,8 +1182,8 @@ function EmbeddedCoworkAgentRail() {
         <div
           style={{
             borderRadius: 18,
-            border: '1px solid rgba(167,139,250,0.14)',
-            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid var(--ui-border-default)',
+            background: 'var(--surface-hover)',
             padding: 14,
             display: 'grid',
             gap: 10,
@@ -1201,7 +1194,7 @@ function EmbeddedCoworkAgentRail() {
               display: 'flex',
               alignItems: 'center',
               gap: 8,
-              color: '#d4c5f9',
+              color: 'var(--accent-cowork)',
               fontSize: 12,
               fontWeight: 800,
               letterSpacing: '0.08em',
@@ -1267,9 +1260,9 @@ function LifecycleButton({
         gap: 8,
         padding: '6px 10px',
         borderRadius: 8,
-        border: `1px solid ${variant === 'danger' ? 'rgba(239,68,68,0.3)' : 'rgba(167,139,250,0.2)'}`,
-        background: variant === 'danger' ? 'rgba(239,68,68,0.08)' : 'rgba(167,139,250,0.08)',
-        color: variant === 'danger' ? '#fca5a5' : '#d4c5f9',
+        border: `1px solid ${variant === 'danger' ? 'rgba(239,68,68,0.3)' : 'var(--ui-border-default)'}`,
+        background: variant === 'danger' ? 'var(--status-error-bg)' : 'var(--surface-hover)',
+        color: variant === 'danger' ? 'var(--status-error)' : 'var(--ui-text-primary)',
         fontSize: 12,
         fontWeight: 600,
         cursor: loading ? 'wait' : 'pointer',
@@ -1300,8 +1293,8 @@ function EmbeddedRailCard({
     <div
       style={{
         borderRadius: 18,
-        border: '1px solid rgba(167,139,250,0.14)',
-        background: 'rgba(255,255,255,0.03)',
+        border: '1px solid var(--ui-border-default)',
+        background: 'var(--surface-hover)',
         padding: 14,
         display: 'grid',
         gap: 10,
@@ -1312,7 +1305,7 @@ function EmbeddedRailCard({
           display: 'flex',
           alignItems: 'center',
           gap: 8,
-          color: '#d4c5f9',
+          color: 'var(--accent-cowork)',
           fontSize: 12,
           fontWeight: 800,
           letterSpacing: '0.08em',
@@ -1336,7 +1329,7 @@ function EmbeddedRailCard({
               fontWeight: 800,
               letterSpacing: '0.08em',
               textTransform: 'uppercase',
-              color: '#9b8db8',
+              color: 'var(--ui-text-muted)',
             }}
           >
             {label}
@@ -1345,7 +1338,7 @@ function EmbeddedRailCard({
             style={{
               fontSize: 13,
               lineHeight: 1.45,
-              color: '#f6eee7',
+              color: 'var(--ui-text-primary)',
               wordBreak: 'break-word',
             }}
           >

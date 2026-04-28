@@ -11,24 +11,19 @@
  */
 
 import React, { useState, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Wrench,
   Plus,
   Trash,
   CaretRight,
   CaretLeft,
-  Check,
   FileText,
   Code,
-  GearSix,
   Play,
   FloppyDisk,
   X,
   Warning,
-  Tag,
-  User,
-  Clock,
   Shield,
   Cube,
 } from '@phosphor-icons/react';
@@ -57,11 +52,11 @@ interface SkillBuilderWizardProps {
 const STUDIO_THEME = {
   textPrimary: '#ECECEC',
   textSecondary: '#A0A0A0',
-  textMuted: '#6B6B6B',
-  accent: '#D4956A',
+  textMuted: 'var(--ui-text-muted)',
+  accent: 'var(--accent-primary)',
   bgCard: 'rgba(42, 33, 26, 0.6)',
   bg: '#0E0D0C',
-  borderSubtle: 'rgba(255,255,255,0.08)',
+  borderSubtle: 'var(--ui-border-muted)',
 };
 
 type StepId = 'metadata' | 'interface' | 'execution' | 'examples' | 'review';
@@ -986,8 +981,8 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
             {error && (
               <div style={{ padding: '12px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Warning style={{ width: 16, height: 16, color: '#ef4444' }} />
-                  <span style={{ fontSize: '13px', color: '#ef4444' }}>{error}</span>
+                  <Warning style={{ width: 16, height: 16, color: 'var(--status-error)' }} />
+                  <span style={{ fontSize: '13px', color: 'var(--status-error)' }}>{error}</span>
                 </div>
               </div>
             )}
@@ -1000,7 +995,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
     <div style={{ 
       position: 'fixed', 
       inset: 0, 
-      background: 'rgba(0,0,0,0.7)', 
+      background: 'var(--shell-overlay-backdrop)', 
       display: 'flex', 
       alignItems: 'center', 
       justifyContent: 'center',

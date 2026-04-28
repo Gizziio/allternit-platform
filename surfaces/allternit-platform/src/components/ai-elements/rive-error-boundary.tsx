@@ -59,11 +59,11 @@ export class RiveErrorBoundary extends Component<Props, State> {
           border: '1px dashed rgba(0,0,0,0.1)'
         }}>
           <div style={{ textAlign: 'center' }}>
-            <p style={{ margin: 0, color: 'rgba(0,0,0,0.5)', fontSize: 14 }}>
+            <p style={{ margin: 0, color: 'var(--shell-overlay-backdrop)', fontSize: 14 }}>
               Animation unavailable
             </p>
             {process.env.NODE_ENV === 'development' && this.state.error && (
-              <details style={{ marginTop: 8, fontSize: 12, color: 'rgba(0,0,0,0.3)' }}>
+              <details style={{ marginTop: 8, fontSize: 12, color: 'var(--surface-panel)' }}>
                 <summary>Error details</summary>
                 <pre style={{ marginTop: 4 }}>{this.state.error.message}</pre>
               </details>

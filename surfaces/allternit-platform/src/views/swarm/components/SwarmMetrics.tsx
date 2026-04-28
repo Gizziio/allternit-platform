@@ -24,7 +24,7 @@ export function SwarmMetrics({ metrics, modeColors }: SwarmMetricsProps) {
       className="w-64 border-l overflow-auto p-4 font-mono text-sm"
       style={{ 
         background: BACKGROUND.primary,
-        borderColor: 'rgba(255,255,255,0.08)',
+        borderColor: 'var(--ui-border-muted)',
       }}
     >
       <h3 

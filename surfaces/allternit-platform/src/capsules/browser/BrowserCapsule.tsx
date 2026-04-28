@@ -19,12 +19,10 @@ import {
   Terminal,
   SquaresFour,
   PuzzlePiece as Puzzle,
-  DotsThreeOutline,
   ArrowsClockwise,
   CaretLeft,
   CaretRight,
   House,
-  Star,
   Warning,
 } from '@phosphor-icons/react';
 import { clsx, type ClassValue } from 'clsx';
@@ -32,7 +30,7 @@ import { twMerge } from 'tailwind-merge';
 import { isElectronShell, getWebProxyUrl } from '@/lib/platform';
 
 // Store and Types
-import { useBrowserStore, useActiveTab, parseBrowserInput } from './browser.store';
+import { useBrowserStore, parseBrowserInput } from './browser.store';
 import type { BrowserTab, WebTab, A2UITab, MiniappTab, ComponentTab, A2UIPayload } from './browser.types';
 
 // Extension Bridge
@@ -304,8 +302,6 @@ function WebContent({ tab }: { tab: WebTab }) {
 
 /** A2UI content renderer */
 function A2UIContent({ tab }: { tab: A2UITab }) {
-  const { updateTab } = useBrowserStore();
-
   const handleAction = useCallback(
     (actionId: string, payload?: Record<string, unknown>) => {
       console.log('[Browser:A2UI] Action triggered:', actionId, payload);
@@ -336,7 +332,7 @@ function A2UIContent({ tab }: { tab: A2UITab }) {
 
 /** Miniapp content renderer */
 function MiniappContent({ tab }: { tab: MiniappTab }) {
-  const { manifest, entryPoint } = tab;
+  const { manifest } = tab;
 
   // Render based on entry type
   switch (manifest.entry.type) {
@@ -477,7 +473,7 @@ export function BrowserCapsule() {
   const activeTab = tabs.find((t) => t.id === activeTabId);
   
   // Initialize extension bridge for direct Chrome extension communication
-  const { isConnected: isExtensionConnected } = useExtensionBridge();
+  useExtensionBridge();
 
   return (
     <div className="h-full flex flex-col p-3">

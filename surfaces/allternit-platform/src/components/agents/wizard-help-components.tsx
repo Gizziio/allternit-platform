@@ -13,7 +13,7 @@
  * @version 1.0.0
  */
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Question as HelpCircle,
@@ -30,42 +30,23 @@ import {
   ArrowCounterClockwise,
   SkipForward,
   Chat,
-  MagnifyingGlass,
   Star,
   Lightning,
   Target,
-  ArrowRight,
-  ArrowsOut,
-  ArrowsIn,
 } from '@phosphor-icons/react';
 
 import {
   STEP_HELP_CONTENT,
   FIELD_TOOLTIPS,
-  getModelSuggestions,
-  getToolSuggestions,
-  getSystemPromptSuggestions,
-  validateAgentName,
-  validateDescription,
-  validateHardBans,
-  validateTools,
-  validateTemperature,
   ONBOARDING_TOUR_STEPS,
   getRandomTip,
-  type StepHelpContent,
-  type FieldTooltip,
   type SmartSuggestion,
   type ValidationResult,
-  type OnboardingStep,
 } from '@/lib/agents/wizard-help.constants';
 
 import {
-  SAND,
   MODE_COLORS,
   TEXT,
-  RADIUS,
-  SPACE,
-  SHADOW,
 } from '@/design/allternit.tokens';
 
 // ============================================================================
@@ -147,7 +128,7 @@ export function HelpPanel({ isOpen, onClose, currentStepId, modeColors }: HelpPa
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="fixed right-0 top-0 bottom-0 w-full max-w-md z-50 overflow-hidden flex flex-col"
-            style={{ background: '#1A1612' }}
+            style={{ background: 'var(--surface-panel)' }}
           >
             {/* Header */}
             <div
@@ -208,7 +189,7 @@ export function HelpPanel({ isOpen, onClose, currentStepId, modeColors }: HelpPa
                 className="p-4 rounded-xl"
                 style={{ background: 'rgba(16, 185, 129, 0.1)', border: `1px solid rgba(16, 185, 129, 0.3)` }}
               >
-                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: '#10B981' }}>
+                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--status-success)' }}>
                   <Star size={16} />
                   Best Practices
                 </h3>
@@ -225,9 +206,9 @@ export function HelpPanel({ isOpen, onClose, currentStepId, modeColors }: HelpPa
               {/* Tips */}
               <div
                 className="p-4 rounded-xl"
-                style={{ background: 'rgba(245, 158, 11, 0.1)', border: `1px solid rgba(245, 158, 11, 0.3)` }}
+                style={{ background: 'var(--status-warning-bg)', border: `1px solid color-mix(in srgb, var(--status-warning) 30%, transparent)` }}
               >
-                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: '#F59E0B' }}>
+                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--status-warning)' }}>
                   <Lightbulb size={16} />
                   Pro Tips
                 </h3>
@@ -252,7 +233,7 @@ export function HelpPanel({ isOpen, onClose, currentStepId, modeColors }: HelpPa
                     <div
                       key={idx}
                       className="p-3 rounded-lg"
-                      style={{ background: 'rgba(255,255,255,0.03)' }}
+                      style={{ background: 'var(--surface-hover)' }}
                     >
                       <p className="text-sm font-medium mb-1" style={{ color: TEXT.primary }}>
                         {qa.question}
@@ -280,7 +261,7 @@ export function HelpPanel({ isOpen, onClose, currentStepId, modeColors }: HelpPa
                         target="_blank"
                         rel="noopener noreferrer"
                         className="flex items-center justify-between p-3 rounded-lg transition-colors group"
-                        style={{ background: 'rgba(255,255,255,0.03)' }}
+                        style={{ background: 'var(--surface-hover)' }}
                       >
                         <span className="text-sm" style={{ color: TEXT.secondary }}>
                           {link.label}
@@ -340,7 +321,7 @@ export function HelpButton({ fieldId, stepId, modeColors, size = 'md' }: HelpBut
             exit={{ opacity: 0, y: 4 }}
             className="absolute z-50 mt-2 w-72 p-3 rounded-lg shadow-lg"
             style={{
-              background: '#1A1612',
+              background: 'var(--surface-panel)',
               border: `1px solid ${modeColors.border}`,
               left: '50%',
               transform: 'translateX(-50%)',
@@ -361,7 +342,7 @@ export function HelpButton({ fieldId, stepId, modeColors, size = 'md' }: HelpBut
             {tooltip.warning && (
               <div
                 className="mt-2 text-xs flex items-start gap-1"
-                style={{ color: '#F59E0B' }}
+                style={{ color: 'var(--status-warning)' }}
               >
                 <Warning size={12} className="flex-shrink-0 mt-0.5" />
                 <span>{tooltip.warning}</span>
@@ -390,18 +371,6 @@ export function OnboardingTour({
   const currentTourStep = ONBOARDING_TOUR_STEPS[tourStepIndex];
 
   useEffect(() => {
-    // Reset tour when wizard step changes
-    const relevantSteps = ONBOARDING_TOUR_STEPS.filter(s => 
-      s.id.startsWith('identity') || 
-      s.id.startsWith('character') ||
-      s.id.startsWith('role') ||
-      s.id.startsWith('voice') ||
-      s.id.startsWith('tools') ||
-      s.id.startsWith('plugins') ||
-      s.id.startsWith('workspace') ||
-      s.id.startsWith('review')
-    );
-    
     // Find first step matching current wizard step
     const stepPrefix = ['identity', 'character', 'avatar', 'role', 'voice', 'advanced', 'tools', 'plugins', 'workspace', 'review'][currentStep];
     const matchingIndex = ONBOARDING_TOUR_STEPS.findIndex(s => s.id.startsWith(stepPrefix || ''));
@@ -440,7 +409,7 @@ export function OnboardingTour({
         <div
           className="rounded-xl shadow-2xl overflow-hidden"
           style={{
-            background: '#1A1612',
+            background: 'var(--surface-panel)',
             border: `2px solid ${modeColors.border}`,
           }}
         >
@@ -480,9 +449,9 @@ export function OnboardingTour({
             {currentTourStep.tip && (
               <div
                 className="p-2 rounded-lg flex items-start gap-2"
-                style={{ background: 'rgba(245, 158, 11, 0.1)' }}
+                style={{ background: 'var(--status-warning-bg)' }}
               >
-                <Lightbulb size={14} className="flex-shrink-0 mt-0.5" style={{ color: '#F59E0B' }} />
+                <Lightbulb size={14} className="flex-shrink-0 mt-0.5" style={{ color: 'var(--status-warning)' }} />
                 <p className="text-xs" style={{ color: TEXT.secondary }}>
                   {currentTourStep.tip}
                 </p>
@@ -521,7 +490,7 @@ export function OnboardingTour({
                 className="px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors flex items-center gap-1"
                 style={{
                   background: modeColors.accent,
-                  color: '#1A1612',
+                  color: 'var(--ui-text-inverse)',
                 }}
               >
                 {tourStepIndex === ONBOARDING_TOUR_STEPS.length - 1 ? 'Finish' : 'Next'}
@@ -564,13 +533,13 @@ export function SmartSuggestions({ suggestions, onApplySuggestion, modeColors }:
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high':
-        return { bg: 'rgba(239, 68, 68, 0.1)', border: 'rgba(239, 68, 68, 0.3)', text: '#EF4444' };
+        return { bg: 'var(--status-error-bg)', border: 'color-mix(in srgb, var(--status-error) 30%, transparent)', text: 'var(--status-error)' };
       case 'medium':
-        return { bg: 'rgba(245, 158, 11, 0.1)', border: 'rgba(245, 158, 11, 0.3)', text: '#F59E0B' };
+        return { bg: 'var(--status-warning-bg)', border: 'color-mix(in srgb, var(--status-warning) 30%, transparent)', text: 'var(--status-warning)' };
       case 'low':
-        return { bg: 'rgba(59, 130, 246, 0.1)', border: 'rgba(59, 130, 246, 0.3)', text: '#3B82F6' };
+        return { bg: 'rgba(59, 130, 246, 0.1)', border: 'rgba(59, 130, 246, 0.3)', text: 'var(--status-info)' };
       default:
-        return { bg: 'rgba(255,255,255,0.05)', border: modeColors.border, text: TEXT.secondary };
+        return { bg: 'var(--surface-hover)', border: modeColors.border, text: TEXT.secondary };
     }
   };
 
@@ -592,7 +561,7 @@ export function SmartSuggestions({ suggestions, onApplySuggestion, modeColors }:
             <div className="flex items-start gap-3">
               <div
                 className="w-8 h-8 rounded flex items-center justify-center flex-shrink-0"
-                style={{ background: 'rgba(255,255,255,0.05)' }}
+                style={{ background: 'var(--surface-hover)' }}
               >
                 <Icon size={16} style={{ color: colors.text }} />
               </div>
@@ -649,13 +618,13 @@ export function ValidationFeedback({ validations, modeColors }: ValidationFeedba
   const getColor = (severity: string) => {
     switch (severity) {
       case 'error':
-        return { bg: 'rgba(239, 68, 68, 0.1)', border: 'rgba(239, 68, 68, 0.3)', text: '#EF4444' };
+        return { bg: 'var(--status-error-bg)', border: 'color-mix(in srgb, var(--status-error) 30%, transparent)', text: 'var(--status-error)' };
       case 'warning':
-        return { bg: 'rgba(245, 158, 11, 0.1)', border: 'rgba(245, 158, 11, 0.3)', text: '#F59E0B' };
+        return { bg: 'var(--status-warning-bg)', border: 'color-mix(in srgb, var(--status-warning) 30%, transparent)', text: 'var(--status-warning)' };
       case 'info':
-        return { bg: 'rgba(59, 130, 246, 0.1)', border: 'rgba(59, 130, 246, 0.3)', text: '#3B82F6' };
+        return { bg: 'rgba(59, 130, 246, 0.1)', border: 'rgba(59, 130, 246, 0.3)', text: 'var(--status-info)' };
       default:
-        return { bg: 'rgba(255,255,255,0.05)', border: modeColors.border, text: TEXT.secondary };
+        return { bg: 'var(--surface-hover)', border: modeColors.border, text: TEXT.secondary };
     }
   };
 
@@ -736,11 +705,11 @@ export function QuickTip({ modeColors }: QuickTipProps) {
     <div
       className="p-3 rounded-lg flex items-start gap-3"
       style={{
-        background: 'rgba(245, 158, 11, 0.1)',
-        border: `1px solid rgba(245, 158, 11, 0.3)`,
+        background: 'var(--status-warning-bg)',
+        border: `1px solid color-mix(in srgb, var(--status-warning) 30%, transparent)`,
       }}
     >
-      <Lightbulb size={16} className="flex-shrink-0 mt-0.5" style={{ color: '#F59E0B' }} />
+      <Lightbulb size={16} className="flex-shrink-0 mt-0.5" style={{ color: 'var(--status-warning)' }} />
       <p className="text-xs flex-1" style={{ color: TEXT.secondary }}>
         {tip}
       </p>
@@ -818,12 +787,6 @@ export function HelpProvider({ children }: { children: React.ReactNode }) {
       setShowOnboarding(true);
     }
   }, []);
-
-  const handleCompleteOnboarding = () => {
-    setShowOnboarding(false);
-    setHasCompletedOnboarding(true);
-    localStorage.setItem('agent-wizard-onboarding-completed', 'true');
-  };
 
   return (
     <HelpContext.Provider

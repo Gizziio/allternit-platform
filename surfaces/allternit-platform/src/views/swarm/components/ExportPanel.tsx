@@ -80,13 +80,13 @@ export function ExportPanel({ modeColors, onClose }: ExportPanelProps) {
       className="absolute top-14 right-4 w-72 rounded-xl border shadow-xl z-50"
       style={{ 
         background: BACKGROUND.primary,
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: 'var(--ui-border-default)',
       }}
     >
       {/* Header */}
       <div 
         className="px-4 py-3 border-b flex items-center justify-between"
-        style={{ borderColor: 'rgba(255,255,255,0.05)' }}
+        style={{ borderColor: 'var(--surface-hover)' }}
       >
         <span className="text-sm font-medium" style={{ color: TEXT.primary }}>Export Data</span>
         <button 
@@ -99,7 +99,7 @@ export function ExportPanel({ modeColors, onClose }: ExportPanelProps) {
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b" style={{ borderColor: 'rgba(255,255,255,0.05)' }}>
+      <div className="flex border-b" style={{ borderColor: 'var(--surface-hover)' }}>
         {(['agents', 'metrics'] as const).map(tab => (
           <button
             key={tab}
@@ -130,7 +130,7 @@ export function ExportPanel({ modeColors, onClose }: ExportPanelProps) {
                   onClick={() => handleExportAgents(format)}
                   disabled={isExporting}
                   className="py-2 rounded-lg text-xs font-medium transition-all hover:bg-white/5 disabled:opacity-50"
-                  style={{ background: 'rgba(255,255,255,0.03)', color: TEXT.secondary }}
+                  style={{ background: 'var(--surface-hover)', color: TEXT.secondary }}
                 >
                   {format === 'csv' ? <FileCsv size={16} weight="duotone" style={{ margin: '0 auto 4px' }} /> : format === 'json' ? <FileCode size={16} weight="duotone" style={{ margin: '0 auto 4px' }} /> : <FileText size={16} weight="duotone" style={{ margin: '0 auto 4px' }} />}
                   {format.toUpperCase()}
@@ -141,7 +141,7 @@ export function ExportPanel({ modeColors, onClose }: ExportPanelProps) {
             <button
               onClick={handleCopySnapshot}
               className="w-full py-2 rounded-lg text-xs font-medium transition-all hover:bg-white/5"
-              style={{ background: 'rgba(255,255,255,0.03)', color: TEXT.secondary }}
+              style={{ background: 'var(--surface-hover)', color: TEXT.secondary }}
             >
               <Clipboard size={12} weight="duotone" style={{ marginRight: 6 }} />
               Copy Snapshot
@@ -158,7 +158,7 @@ export function ExportPanel({ modeColors, onClose }: ExportPanelProps) {
                 onClick={() => handleExportMetrics('csv')}
                 disabled={isExporting}
                 className="py-2 rounded-lg text-xs font-medium transition-all hover:bg-white/5 disabled:opacity-50"
-                style={{ background: 'rgba(255,255,255,0.03)', color: TEXT.secondary }}
+                style={{ background: 'var(--surface-hover)', color: TEXT.secondary }}
               >
                 <FileCsv size={16} weight="duotone" style={{ margin: '0 auto 4px' }} />
                 CSV
@@ -167,7 +167,7 @@ export function ExportPanel({ modeColors, onClose }: ExportPanelProps) {
                 onClick={() => handleExportMetrics('json')}
                 disabled={isExporting}
                 className="py-2 rounded-lg text-xs font-medium transition-all hover:bg-white/5 disabled:opacity-50"
-                style={{ background: 'rgba(255,255,255,0.03)', color: TEXT.secondary }}
+                style={{ background: 'var(--surface-hover)', color: TEXT.secondary }}
               >
                 <FileCode size={16} weight="duotone" style={{ margin: '0 auto 4px' }} />
                 JSON

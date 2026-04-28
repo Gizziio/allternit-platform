@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Folder, CircleNotch, Check, Shield, Warning } from '@phosphor-icons/react';
-import { THEME, PLUGIN_TYPE_OPTIONS, PLUGIN_CATEGORIES_PUBLISH } from '../constants';
+import { THEME, PLUGIN_TYPE_OPTIONS } from '../constants';
 import type { PluginType } from '../types';
 import type { FileSystemAPI } from '../../../../plugins/fileSystem';
 import { ModalOverlay } from './ModalOverlay';
@@ -144,7 +144,7 @@ export function CreatePluginModal({ fs, onClose, showInfo, showError }: CreatePl
           <div style={{ width: 56, height: 56, borderRadius: '50%', backgroundColor: 'rgba(34,197,94,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}><Check size={28} color="#22c55e" /></div>
           <h3 style={{ margin: '0 0 8px 0', fontSize: 18, color: THEME.textPrimary }}>Plugin Created Successfully!</h3>
           <p style={{ margin: '0 0 16px 0', fontSize: 13, color: THEME.textSecondary }}>Your plugin has been created at:</p>
-          <code style={{ display: 'block', padding: 12, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.05)', border: `1px solid ${THEME.border}`, fontSize: 12, color: THEME.accent, marginBottom: 20, wordBreak: 'break-all' }}>{createdPath}</code>
+          <code style={{ display: 'block', padding: 12, borderRadius: 8, backgroundColor: 'var(--surface-hover)', border: `1px solid ${THEME.border}`, fontSize: 12, color: THEME.accent, marginBottom: 20, wordBreak: 'break-all' }}>{createdPath}</code>
           <button onClick={onClose} style={{ padding: '10px 24px', borderRadius: 8, border: 'none', backgroundColor: THEME.accent, color: THEME.bg, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}>Done</button>
         </div>
       </ModalOverlay>
@@ -159,13 +159,13 @@ export function CreatePluginModal({ fs, onClose, showInfo, showError }: CreatePl
       </div>
       <div style={{ marginBottom: 16 }}>
         <label style={{ display: 'block', fontSize: 12, color: THEME.textTertiary, marginBottom: 6 }}>Plugin Name *</label>
-        <input type="text" value={pluginName} onChange={(e) => setPluginName(e.target.value)} placeholder="My Awesome Plugin" style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${THEME.border}`, backgroundColor: 'rgba(255,255,255,0.03)', color: THEME.textPrimary, fontSize: 14, outline: 'none' }} />
+        <input type="text" value={pluginName} onChange={(e) => setPluginName(e.target.value)} placeholder="My Awesome Plugin" style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${THEME.border}`, backgroundColor: 'var(--surface-hover)', color: THEME.textPrimary, fontSize: 14, outline: 'none' }} />
       </div>
       <div style={{ marginBottom: 16 }}>
         <label style={{ display: 'block', fontSize: 12, color: THEME.textTertiary, marginBottom: 6 }}>Plugin Type</label>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
           {PLUGIN_TYPE_OPTIONS.map((option) => (
-            <button key={option.value} onClick={() => setPluginType(option.value)} style={{ padding: '10px 12px', borderRadius: 8, border: `1px solid ${pluginType === option.value ? THEME.accentGlow : THEME.border}`, backgroundColor: pluginType === option.value ? THEME.accentMuted : 'rgba(255,255,255,0.03)', color: pluginType === option.value ? THEME.textPrimary : THEME.textSecondary, fontSize: 13, cursor: 'pointer', textAlign: 'left' }}>
+            <button key={option.value} onClick={() => setPluginType(option.value)} style={{ padding: '10px 12px', borderRadius: 8, border: `1px solid ${pluginType === option.value ? THEME.accentGlow : THEME.border}`, backgroundColor: pluginType === option.value ? THEME.accentMuted : 'var(--surface-hover)', color: pluginType === option.value ? THEME.textPrimary : THEME.textSecondary, fontSize: 13, cursor: 'pointer', textAlign: 'left' }}>
               <div style={{ fontWeight: 600, marginBottom: 2 }}>{option.label}</div>
               <div style={{ fontSize: 11, opacity: 0.7 }}>{option.description}</div>
             </button>
@@ -174,13 +174,13 @@ export function CreatePluginModal({ fs, onClose, showInfo, showError }: CreatePl
       </div>
       <div style={{ marginBottom: 16 }}>
         <label style={{ display: 'block', fontSize: 12, color: THEME.textTertiary, marginBottom: 6 }}>Description</label>
-        <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What does this plugin do?" rows={3} style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${THEME.border}`, backgroundColor: 'rgba(255,255,255,0.03)', color: THEME.textPrimary, fontSize: 14, outline: 'none', resize: 'vertical', minHeight: 80 }} />
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="What does this plugin do?" rows={3} style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${THEME.border}`, backgroundColor: 'var(--surface-hover)', color: THEME.textPrimary, fontSize: 14, outline: 'none', resize: 'vertical', minHeight: 80 }} />
       </div>
       <div style={{ marginBottom: 20 }}>
         <label style={{ display: 'block', fontSize: 12, color: THEME.textTertiary, marginBottom: 6 }}>Save Location *</label>
         <div style={{ display: 'flex', gap: 8 }}>
-          <input type="text" value={saveLocation} onChange={(e) => setSaveLocation(e.target.value)} placeholder="/path/to/plugins" style={{ flex: 1, padding: '10px 12px', borderRadius: 8, border: `1px solid ${THEME.border}`, backgroundColor: 'rgba(255,255,255,0.03)', color: THEME.textPrimary, fontSize: 14, outline: 'none' }} />
-          <button onClick={handleSelectDirectory} style={{ padding: '10px 16px', borderRadius: 8, border: `1px solid ${THEME.borderStrong}`, backgroundColor: 'rgba(255,255,255,0.05)', color: THEME.textSecondary, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><Folder size={14} />Browse</button>
+          <input type="text" value={saveLocation} onChange={(e) => setSaveLocation(e.target.value)} placeholder="/path/to/plugins" style={{ flex: 1, padding: '10px 12px', borderRadius: 8, border: `1px solid ${THEME.border}`, backgroundColor: 'var(--surface-hover)', color: THEME.textPrimary, fontSize: 14, outline: 'none' }} />
+          <button onClick={handleSelectDirectory} style={{ padding: '10px 16px', borderRadius: 8, border: `1px solid ${THEME.borderStrong}`, backgroundColor: 'var(--surface-hover)', color: THEME.textSecondary, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}><Folder size={14} />Browse</button>
         </div>
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
@@ -237,7 +237,7 @@ export function ValidatePluginModal({ onClose, showInfo, showError }: ValidatePl
         <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: THEME.textTertiary }}><X size={20} /></button>
       </div>
       {!validationResult && !isValidating && (
-        <div onDragOver={(e) => { e.preventDefault(); setIsDragActive(true); }} onDragLeave={() => setIsDragActive(false)} onDrop={(e) => { e.preventDefault(); setIsDragActive(false); const file = e.dataTransfer.files?.[0]; if (file) void handleFileContent(file); }} onClick={() => fileInputRef.current?.click()} style={{ padding: '40px 24px', borderRadius: 10, border: `2px dashed ${isDragActive ? THEME.accent : THEME.borderStrong}`, backgroundColor: isDragActive ? 'rgba(212,176,140,0.1)' : 'rgba(255,255,255,0.02)', textAlign: 'center', cursor: 'pointer' }}>
+        <div onDragOver={(e) => { e.preventDefault(); setIsDragActive(true); }} onDragLeave={() => setIsDragActive(false)} onDrop={(e) => { e.preventDefault(); setIsDragActive(false); const file = e.dataTransfer.files?.[0]; if (file) void handleFileContent(file); }} onClick={() => fileInputRef.current?.click()} style={{ padding: '40px 24px', borderRadius: 10, border: `2px dashed ${isDragActive ? THEME.accent : THEME.borderStrong}`, backgroundColor: isDragActive ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'var(--surface-hover)', textAlign: 'center', cursor: 'pointer' }}>
           <Shield size={40} color={THEME.textTertiary} style={{ marginBottom: 12 }} />
           <p style={{ margin: 0, fontSize: 14, color: THEME.textSecondary }}>Drag and drop plugin.json here or click to browse</p>
           <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files?.[0]; if (file) void handleFileContent(file); }} />
@@ -246,9 +246,9 @@ export function ValidatePluginModal({ onClose, showInfo, showError }: ValidatePl
       {isValidating && <div style={{ textAlign: 'center', padding: '40px 0' }}><CircleNotch size={32} style={{ animation: 'spin 1s linear infinite', color: THEME.accent }} /><p style={{ margin: '12px 0 0', fontSize: 13, color: THEME.textSecondary }}>Validating...</p></div>}
       {validationResult && !isValidating && (
         <div>
-          <div style={{ padding: 16, borderRadius: 10, border: `1px solid ${validationResult.valid ? 'rgba(34,197,94,0.35)' : 'rgba(239,68,68,0.35)'}`, backgroundColor: validationResult.valid ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ padding: 16, borderRadius: 10, border: `1px solid ${validationResult.valid ? 'rgba(34,197,94,0.35)' : 'rgba(239,68,68,0.35)'}`, backgroundColor: validationResult.valid ? 'var(--status-success-bg)' : 'var(--status-error-bg)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
             {validationResult.valid ? <Check size={24} color="#22c55e" /> : <Warning size={24} color="#ef4444" />}
-            <div><div style={{ fontSize: 15, fontWeight: 600, color: validationResult.valid ? '#4ade80' : '#fca5a5' }}>{validationResult.valid ? 'Valid Manifest' : 'Validation Failed'}</div></div>
+            <div><div style={{ fontSize: 15, fontWeight: 600, color: validationResult.valid ? 'var(--status-success)' : 'var(--status-error)' }}>{validationResult.valid ? 'Valid Manifest' : 'Validation Failed'}</div></div>
           </div>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}><button onClick={() => setValidationResult(null)} style={{ padding: '10px 16px', borderRadius: 6, border: `1px solid ${THEME.border}`, backgroundColor: 'transparent', color: THEME.textSecondary, fontSize: 13, cursor: 'pointer' }}>Validate Another</button><button onClick={onClose} style={{ padding: '10px 16px', borderRadius: 6, border: 'none', backgroundColor: THEME.accent, color: THEME.bg, fontSize: 13, cursor: 'pointer', fontWeight: 600 }}>Done</button></div>
         </div>
@@ -265,8 +265,8 @@ interface SubmitToMarketplaceModalProps {
 
 export function SubmitToMarketplaceModal({ onClose, onSubmit, showInfo }: SubmitToMarketplaceModalProps) {
   const [repoUrl, setRepoUrl] = useState('');
-  const [shortDescription, setShortDescription] = useState('');
-  const [category, setCategory] = useState('productivity');
+  const [shortDescription] = useState('');
+  const [category] = useState('productivity');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
 
@@ -304,7 +304,7 @@ export function SubmitToMarketplaceModal({ onClose, onSubmit, showInfo }: Submit
       </div>
       <div style={{ marginBottom: 16 }}>
         <label style={{ display: 'block', fontSize: 12, color: THEME.textTertiary, marginBottom: 6 }}>GitHub Repository URL *</label>
-        <input type="text" value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} placeholder="https://github.com/username/my-plugin" style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${isValidGitHubUrl || !repoUrl ? THEME.border : 'rgba(239,68,68,0.5)'}`, backgroundColor: 'rgba(255,255,255,0.03)', color: THEME.textPrimary, fontSize: 14, outline: 'none' }} />
+        <input type="text" value={repoUrl} onChange={(e) => setRepoUrl(e.target.value)} placeholder="https://github.com/username/my-plugin" style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: `1px solid ${isValidGitHubUrl || !repoUrl ? THEME.border : 'rgba(239,68,68,0.5)'}`, backgroundColor: 'var(--surface-hover)', color: THEME.textPrimary, fontSize: 14, outline: 'none' }} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
         <button onClick={onClose} style={{ padding: '10px 16px', borderRadius: 6, border: `1px solid ${THEME.border}`, backgroundColor: 'transparent', color: THEME.textSecondary, fontSize: 13, cursor: 'pointer' }}>Cancel</button>

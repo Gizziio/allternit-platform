@@ -274,7 +274,7 @@ export function BrowserAgentOverlay({
           <CursorClick
             className="w-6 h-6 text-blue-500 opacity-60"
             style={{
-              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
+              filter: 'drop-shadow(0 2px 4px var(--surface-panel))',
             }}
           />
         </div>

@@ -64,11 +64,11 @@ const GoalsView: React.FC = () => {
   const getStatusColor = (status: Goal['status']): string => {
     switch (status) {
       case 'active':
-        return '#34c759';
+        return 'var(--status-success)';
       case 'completed':
-        return '#007aff';
+        return 'var(--status-info)';
       case 'paused':
-        return '#ff9500';
+        return 'var(--status-warning)';
       default:
         return 'var(--text-tertiary)';
     }
@@ -111,8 +111,8 @@ const GoalsView: React.FC = () => {
         <button
           className="flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors"
           style={{
-            backgroundColor: '#D4B08C',
-            color: '#1A1612',
+            backgroundColor: 'var(--accent-primary)',
+            color: 'var(--ui-text-inverse)',
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.opacity = '0.9';

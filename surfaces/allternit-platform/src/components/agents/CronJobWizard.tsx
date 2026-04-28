@@ -8,11 +8,10 @@
  * - Preview and validation
  */
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import {
   Calendar,
   Clock,
-  Play,
   FloppyDisk,
   X,
   CaretRight,
@@ -24,11 +23,8 @@ import {
   Terminal,
   Globe,
   FileText,
-  Database,
-  EnvelopeSimple,
   Code,
   GearSix,
-  MagicWand,
   Robot,
 } from '@phosphor-icons/react';
 
@@ -989,9 +985,9 @@ export function CronJobWizard({
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.7)",
+        background: "var(--shell-overlay-backdrop)",
         backdropFilter: "blur(8px)",
-        zIndex: 1000,
+        zIndex: 180,
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -1008,7 +1004,7 @@ export function CronJobWizard({
           borderRadius: 20,
           border: `1px solid ${accentColor}30`,
           background: "linear-gradient(180deg, #2B2520 0%, #1a1714 100%)",
-          boxShadow: `0 28px 100px rgba(0,0,0,0.5), 0 0 0 1px ${accentColor}20`,
+          boxShadow: `0 28px 100px var(--shell-overlay-backdrop), 0 0 0 1px ${accentColor}20`,
         }}
       >
         {/* Header */}
@@ -1045,7 +1041,7 @@ export function CronJobWizard({
 
         {/* Progress */}
         {step !== "success" && (
-          <div style={{ padding: "12px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+          <div style={{ padding: "12px 20px", borderBottom: "1px solid var(--ui-border-muted)" }}>
             <div style={{ display: "flex", gap: 8 }}>
               {["template", "configure", "schedule", "review"].map((s, i) => (
                 <div
@@ -1057,7 +1053,7 @@ export function CronJobWizard({
                     background:
                       i <= ["template", "configure", "schedule", "review"].indexOf(step)
                         ? accentColor
-                        : "rgba(255,255,255,0.1)",
+                        : "var(--ui-border-default)",
                   }}
                 />
               ))}
@@ -1109,8 +1105,8 @@ export function CronJobWizard({
                 marginTop: 16,
                 padding: 12,
                 borderRadius: 10,
-                background: "rgba(239,68,68,0.1)",
-                border: "1px solid rgba(239,68,68,0.2)",
+                background: "var(--status-error-bg)",
+                border: "1px solid color-mix(in srgb, var(--status-error) 20%, transparent)",
                 display: "flex",
                 alignItems: "center",
                 gap: 8,
@@ -1131,7 +1127,7 @@ export function CronJobWizard({
               display: "flex",
               justifyContent: "space-between",
               padding: "16px 20px",
-              borderTop: "1px solid rgba(255,255,255,0.06)",
+              borderTop: "1px solid var(--ui-border-muted)",
             }}
           >
             <button
@@ -1142,7 +1138,7 @@ export function CronJobWizard({
                 gap: 6,
                 padding: "8px 14px",
                 borderRadius: 10,
-                border: "1px solid rgba(255,255,255,0.1)",
+                border: "1px solid var(--ui-border-default)",
                 background: "transparent",
                 color: "#d1c3b4",
                 fontSize: 13,
@@ -1256,7 +1252,7 @@ function TemplateSelectionStep({
               padding: "6px 12px",
               borderRadius: 999,
               border: "none",
-              background: selectedCategory === cat.id ? accentColor : "rgba(255,255,255,0.05)",
+              background: selectedCategory === cat.id ? accentColor : "var(--surface-hover)",
               color: selectedCategory === cat.id ? "#1a1714" : "#a8998c",
               fontSize: 12,
               fontWeight: 600,
@@ -1281,8 +1277,8 @@ function TemplateSelectionStep({
               gap: 8,
               padding: 14,
               borderRadius: 12,
-              border: `1px solid rgba(255,255,255,0.08)`,
-              background: "rgba(0,0,0,0.2)",
+              border: `1px solid var(--ui-border-muted)`,
+              background: "var(--surface-hover)",
               cursor: "pointer",
               textAlign: "left",
               transition: "all 0.2s",
@@ -1292,8 +1288,8 @@ function TemplateSelectionStep({
               e.currentTarget.style.background = `${accentColor}10`;
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)";
-              e.currentTarget.style.background = "rgba(0,0,0,0.2)";
+              e.currentTarget.style.borderColor = "var(--ui-border-muted)";
+              e.currentTarget.style.background = "var(--surface-hover)";
             }}
           >
             <div style={{ color: accentColor }}>{template.icon}</div>
@@ -1374,8 +1370,8 @@ function ConfigureStep({
             width: "100%",
             padding: "10px 12px",
             borderRadius: 10,
-            border: "1px solid rgba(255,255,255,0.1)",
-            background: "rgba(0,0,0,0.3)",
+            border: "1px solid var(--ui-border-default)",
+            background: "var(--surface-panel)",
             color: "#f6eee7",
             fontSize: 14,
             outline: "none",
@@ -1474,8 +1470,8 @@ function ConfigureStep({
               width: "100%",
               padding: "10px 12px",
               borderRadius: 10,
-              border: "1px solid rgba(255,255,255,0.1)",
-              background: "rgba(0,0,0,0.3)",
+              border: "1px solid var(--ui-border-default)",
+              background: "var(--surface-panel)",
               color: "#f6eee7",
               fontSize: 13,
               outline: "none",
@@ -1505,8 +1501,8 @@ function ParameterField({
     width: "100%",
     padding: "8px 10px",
     borderRadius: 8,
-    border: "1px solid rgba(255,255,255,0.1)",
-    background: "rgba(0,0,0,0.3)",
+    border: "1px solid var(--ui-border-default)",
+    background: "var(--surface-panel)",
     color: "#f6eee7",
     fontSize: 13,
     outline: "none",
@@ -1553,8 +1549,8 @@ function ParameterField({
             gap: 8,
             padding: "8px 12px",
             borderRadius: 8,
-            border: `1px solid ${value ? accentColor : "rgba(255,255,255,0.1)"}`,
-            background: value ? `${accentColor}20` : "rgba(0,0,0,0.3)",
+            border: `1px solid ${value ? accentColor : "var(--ui-border-default)"}`,
+            background: value ? `${accentColor}20` : "var(--surface-panel)",
             color: value ? accentColor : "#a8998c",
             fontSize: 13,
             cursor: "pointer",
@@ -1655,8 +1651,8 @@ function MultiSelectField({
               gap: 10,
               padding: "8px 10px",
               borderRadius: 8,
-              border: `1px solid ${isSelected ? accentColor : "rgba(255,255,255,0.1)"}`,
-              background: isSelected ? `${accentColor}15` : "rgba(0,0,0,0.2)",
+              border: `1px solid ${isSelected ? accentColor : "var(--ui-border-default)"}`,
+              background: isSelected ? `${accentColor}15` : "var(--surface-hover)",
               cursor: "pointer",
               textAlign: "left",
             }}
@@ -1724,8 +1720,8 @@ function ScheduleStep({
                 gap: 12,
                 padding: "12px 14px",
                 borderRadius: 10,
-                border: `1px solid ${config.schedule === preset.value && preset.value !== "custom" ? accentColor : "rgba(255,255,255,0.08)"}`,
-                background: config.schedule === preset.value && preset.value !== "custom" ? `${accentColor}15` : "rgba(0,0,0,0.2)",
+                border: `1px solid ${config.schedule === preset.value && preset.value !== "custom" ? accentColor : "var(--ui-border-muted)"}`,
+                background: config.schedule === preset.value && preset.value !== "custom" ? `${accentColor}15` : "var(--surface-hover)",
                 cursor: "pointer",
                 textAlign: "left",
               }}
@@ -1767,7 +1763,7 @@ function ScheduleStep({
                 padding: "10px 12px",
                 borderRadius: 10,
                 border: `1px solid ${isValid ? accentColor : "#ef4444"}`,
-                background: "rgba(0,0,0,0.3)",
+                background: "var(--surface-panel)",
                 color: "#f6eee7",
                 fontSize: 14,
                 fontFamily: "monospace",
@@ -1784,7 +1780,7 @@ function ScheduleStep({
           <div style={{
             padding: 12,
             borderRadius: 10,
-            background: "rgba(0,0,0,0.2)",
+            background: "var(--surface-hover)",
             fontSize: 12,
             color: "#7a6b5d",
           }}>
@@ -1797,7 +1793,7 @@ function ScheduleStep({
             style={{
               padding: "8px 14px",
               borderRadius: 10,
-              border: "1px solid rgba(255,255,255,0.1)",
+              border: "1px solid var(--ui-border-default)",
               background: "transparent",
               color: "#9f8a78",
               fontSize: 12,
@@ -1814,8 +1810,8 @@ function ScheduleStep({
         marginTop: 16,
         padding: 16,
         borderRadius: 12,
-        background: "rgba(0,0,0,0.2)",
-        border: "1px solid rgba(255,255,255,0.06)",
+        background: "var(--surface-hover)",
+        border: "1px solid var(--ui-border-muted)",
       }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: "#f6eee7", marginBottom: 12 }}>
           Additional Options
@@ -1835,8 +1831,8 @@ function ScheduleStep({
                 marginTop: 4,
                 padding: "6px 10px",
                 borderRadius: 6,
-                border: "1px solid rgba(255,255,255,0.1)",
-                background: "rgba(0,0,0,0.3)",
+                border: "1px solid var(--ui-border-default)",
+                background: "var(--surface-panel)",
                 color: "#f6eee7",
                 fontSize: 13,
               }}
@@ -1855,8 +1851,8 @@ function ScheduleStep({
                 marginTop: 4,
                 padding: "6px 10px",
                 borderRadius: 6,
-                border: "1px solid rgba(255,255,255,0.1)",
-                background: "rgba(0,0,0,0.3)",
+                border: "1px solid var(--ui-border-default)",
+                background: "var(--surface-panel)",
                 color: "#f6eee7",
                 fontSize: 13,
               }}
@@ -1944,7 +1940,7 @@ function ReviewStep({
           <div style={{
             padding: 10,
             borderRadius: 8,
-            background: "rgba(0,0,0,0.3)",
+            background: "var(--surface-panel)",
             fontSize: 12,
             color: "#a8998c",
             maxHeight: 100,

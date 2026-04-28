@@ -5,16 +5,14 @@ import { useDakStore } from "../dak.store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Package,
   DownloadSimple,
   FileText,
   GitBranch,
-  Key,
   Hash,
-  MagnifyingGlass,
   Calendar,
   ArrowsClockwise,
   CaretRight,
@@ -26,7 +24,6 @@ export function ContextPackBrowser() {
   const { 
     contextPacks, 
     selectedContextPackId,
-    isLoading,
     fetchContextPacks,
     selectContextPack 
   } = useDakStore();

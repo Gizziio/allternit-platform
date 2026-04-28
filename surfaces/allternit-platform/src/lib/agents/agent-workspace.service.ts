@@ -7,11 +7,9 @@
 
 import { getAgent, createAgent } from './agent.service';
 import { filesApi } from './files-api';
-import type { 
-  CreateAgentInput, 
-  Agent, 
+import type {
+  CreateAgentInput,
   AgentWorkspace,
-  AgentStatus,
   AgentWorkspaceLayers
 } from './agent.types';
 
@@ -31,7 +29,6 @@ interface FileSystemSnapshot {
 }
 
 import {
-  type WorkspaceTemplate,
   getTemplate,
   listTemplates,
   substituteTemplateVariables,

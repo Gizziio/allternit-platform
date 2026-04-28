@@ -2,11 +2,9 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Warning,
   Stack,
   CheckCircle,
   Cpu,
-  Gauge,
   GitBranch,
   ClockCounterClockwise,
   CircleNotch,

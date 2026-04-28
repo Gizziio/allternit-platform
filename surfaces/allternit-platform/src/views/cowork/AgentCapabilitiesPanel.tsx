@@ -11,8 +11,6 @@ import {
   Terminal,
   BookOpen,
   PlugsConnected,
-  HardDrives,
-  WebhooksLogo,
   CaretRight,
   CaretDown,
   Sparkle,
@@ -21,13 +19,13 @@ import type { Plugin, PluginCommand, PluginSkill, PluginConnector } from '../../
 import { useCapabilities } from '../../plugins/useCapabilities';
 
 const THEME = {
-  bg: '#0c0a09',
-  bgElevated: '#1c1917',
-  accent: '#d4b08c',
+  bg: 'var(--surface-canvas)',
+  bgElevated: 'var(--surface-panel)',
+  accent: 'var(--accent-primary)',
   accentMuted: 'rgba(212, 176, 140, 0.15)',
-  textPrimary: '#e7e5e4',
-  textSecondary: '#a8a29e',
-  textTertiary: '#78716c',
+  textPrimary: 'var(--ui-text-primary)',
+  textSecondary: 'var(--ui-text-secondary)',
+  textTertiary: 'var(--ui-text-muted)',
   border: 'rgba(212, 176, 140, 0.1)',
 };
 
@@ -511,7 +509,7 @@ function CapabilitiesOverlay({
         inset: 0,
         background: 'rgba(0,0,0,0.8)',
         backdropFilter: 'blur(4px)',
-        zIndex: 1000,
+        zIndex: 180,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

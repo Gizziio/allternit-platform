@@ -269,7 +269,7 @@ const GizziPersona = memo(({
   size = 64
 }: any) => {
   return (
-    <div style={{ color: '#D4B08C' }} className={className}>
+    <div style={{ color: 'var(--accent-primary)' }} className={className}>
       <MatrixLogo 
         state={state} 
         energy={energyLevel}

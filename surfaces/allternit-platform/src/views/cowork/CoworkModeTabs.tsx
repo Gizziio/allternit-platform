@@ -113,7 +113,7 @@ export function CoworkModeTabs({
                   : 'transparent',
                 border: isActive 
                   ? `1px solid ${surfaceTheme?.accent || '#A78BFA'}` 
-                  : '1px solid rgba(255,255,255,0.06)',
+                  : '1px solid var(--ui-border-muted)',
                 boxShadow: isActive 
                   ? `0 0 20px ${surfaceTheme?.glow || 'rgba(167,139,250,0.2)'}` 
                   : 'none',

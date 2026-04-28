@@ -49,16 +49,16 @@ export function H5iMcpPanel({ onClose }: H5iMcpPanelProps) {
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
-        zIndex: 10001,
+        zIndex: 180,
         width: 480,
         display: 'flex',
         flexDirection: 'column',
         borderRadius: 16,
-        border: '1px solid rgba(255,255,255,0.08)',
+        border: '1px solid var(--ui-border-muted)',
         background: 'rgba(11,14,16,0.96)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+        boxShadow: '0 20px 50px var(--shell-overlay-backdrop)',
         overflow: 'hidden',
       }}
     >
@@ -69,7 +69,7 @@ export function H5iMcpPanel({ onClose }: H5iMcpPanelProps) {
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '14px 16px',
-          borderBottom: '1px solid rgba(255,255,255,0.06)',
+          borderBottom: '1px solid var(--ui-border-muted)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -97,10 +97,10 @@ export function H5iMcpPanel({ onClose }: H5iMcpPanelProps) {
             style={{
               padding: 10,
               borderRadius: 8,
-              background: 'rgba(239,68,68,0.08)',
+              background: 'var(--status-error-bg)',
               border: '1px solid rgba(239,68,68,0.2)',
               fontSize: 12,
-              color: '#ef4444',
+              color: 'var(--status-error)',
             }}
           >
             {error}
@@ -120,7 +120,7 @@ export function H5iMcpPanel({ onClose }: H5iMcpPanelProps) {
               }}
             >
               <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>MCP Server</div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: config.mcpAvailable ? '#10b981' : '#f59e0b' }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: config.mcpAvailable ? 'var(--status-success)' : 'var(--status-warning)' }}>
                 {config.mcpAvailable ? 'Available' : 'Not Available'}
               </div>
             </div>
@@ -139,8 +139,8 @@ export function H5iMcpPanel({ onClose }: H5iMcpPanelProps) {
                     gap: 4,
                     padding: '4px 8px',
                     borderRadius: 6,
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid var(--ui-border-muted)',
+                    background: 'var(--surface-hover)',
                     color: 'var(--text-secondary)',
                     fontSize: 11,
                     cursor: 'pointer',
@@ -154,7 +154,7 @@ export function H5iMcpPanel({ onClose }: H5iMcpPanelProps) {
                 style={{
                   padding: 12,
                   borderRadius: 8,
-                  background: 'rgba(0,0,0,0.2)',
+                  background: 'var(--surface-hover)',
                   fontSize: 11,
                   fontFamily: 'monospace',
                   color: 'var(--text-secondary)',
@@ -171,9 +171,9 @@ export function H5iMcpPanel({ onClose }: H5iMcpPanelProps) {
               <strong style={{ color: 'var(--text-secondary)' }}>Setup:</strong>
               <ol style={{ margin: '6px 0 0 16px', padding: 0 }}>
                 <li>Copy the config above</li>
-                <li>Paste into <code style={{ fontFamily: 'monospace', background: 'rgba(255,255,255,0.04)', padding: '1px 4px', borderRadius: 3 }}>~/.claude/settings.json</code></li>
+                <li>Paste into <code style={{ fontFamily: 'monospace', background: 'var(--surface-hover)', padding: '1px 4px', borderRadius: 3 }}>~/.claude/settings.json</code></li>
                 <li>Restart Claude Code</li>
-                <li>Agents can now use h5i tools: <code style={{ fontFamily: 'monospace', background: 'rgba(255,255,255,0.04)', padding: '1px 4px', borderRadius: 3 }}>h5i_log</code>, <code style={{ fontFamily: 'monospace', background: 'rgba(255,255,255,0.04)', padding: '1px 4px', borderRadius: 3 }}>h5i_blame</code>, <code style={{ fontFamily: 'monospace', background: 'rgba(255,255,255,0.04)', padding: '1px 4px', borderRadius: 3 }}>h5i_context_trace</code></li>
+                <li>Agents can now use h5i tools: <code style={{ fontFamily: 'monospace', background: 'var(--surface-hover)', padding: '1px 4px', borderRadius: 3 }}>h5i_log</code>, <code style={{ fontFamily: 'monospace', background: 'var(--surface-hover)', padding: '1px 4px', borderRadius: 3 }}>h5i_blame</code>, <code style={{ fontFamily: 'monospace', background: 'var(--surface-hover)', padding: '1px 4px', borderRadius: 3 }}>h5i_context_trace</code></li>
               </ol>
             </div>
           </div>

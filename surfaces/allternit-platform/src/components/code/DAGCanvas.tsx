@@ -49,9 +49,9 @@ export function DAGCanvas({ nodes, edges, onNodeClick }: DAGCanvasProps) {
               background: 'var(--bg-primary)',
               border: '1px solid var(--border-subtle)',
               borderLeft: '4px solid ' + (
-                node.status === 'completed' ? '#34c759' : 
+                node.status === 'completed' ? 'var(--status-success)' : 
                 node.status === 'running' ? '#0a84ff' : 
-                node.status === 'failed' ? '#ff3b30' : '#8e8e93'
+                node.status === 'failed' ? 'var(--status-error)' : '#8e8e93'
               ),
               cursor: 'pointer',
               zIndex: 1

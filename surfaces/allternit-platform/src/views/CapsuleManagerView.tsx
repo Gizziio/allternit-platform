@@ -157,9 +157,7 @@ export function CapsuleManagerView({ context }: CapsuleManagerViewProps) {
             <ShellCapsuleRenderer
               capsule={viewingCapsule}
               onClose={handleCloseCapsule}
-              onEvent={(event: CapsuleEvent) => console.log('[CapsuleManagerView] Event:', event)}
               onToolInvoke={async (toolName: string, params: unknown) => {
-                console.log('[CapsuleManagerView] Tool invoked:', toolName, params);
                 return { success: true };
               }}
               defaultSize={{ width: 800, height: 600 }}

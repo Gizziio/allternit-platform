@@ -1,7 +1,6 @@
 'use client';
 
 import { SwarmSetup } from '@/views/swarm/components/SwarmSetup';
-import { SwarmADE } from '@/views/swarm';
 
 export default function SwarmPreviewPage() {
   return (

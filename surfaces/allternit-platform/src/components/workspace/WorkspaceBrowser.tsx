@@ -175,9 +175,9 @@ function ConnectionStatus({
   serverUrl?: string;
 }) {
   const statusConfig = {
-    connected: { color: '#10b981', text: 'Connected', icon: '✓' },
-    connecting: { color: '#f59e0b', text: 'Connecting...', icon: '⟳' },
-    error: { color: '#ef4444', text: 'Error', icon: '✕' },
+    connected: { color: 'var(--status-success)', text: 'Connected', icon: '✓' },
+    connecting: { color: 'var(--status-warning)', text: 'Connecting...', icon: '⟳' },
+    error: { color: 'var(--status-error)', text: 'Error', icon: '✕' },
   };
 
   const config = statusConfig[status];

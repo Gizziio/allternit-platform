@@ -32,10 +32,10 @@ type Suite = 'A' | 'D' | 'F';
 // ─────────────────────────────────────────────────────────────
 
 const GRADE_COLORS: Record<string, { bg: string; border: string; color: string }> = {
-  production: { bg: 'rgba(34,197,94,0.12)',   border: 'rgba(34,197,94,0.35)',  color: '#22c55e' },
-  beta:       { bg: 'rgba(245,158,11,0.12)',  border: 'rgba(245,158,11,0.35)', color: '#f59e0b' },
-  experimental:{ bg: 'rgba(239,68,68,0.12)',  border: 'rgba(239,68,68,0.35)',  color: '#ef4444' },
-  unknown:    { bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.3)' },
+  production: { bg: 'var(--status-success-bg)',   border: 'rgba(34,197,94,0.35)',  color: 'var(--status-success)' },
+  beta:       { bg: 'var(--status-warning-bg)',  border: 'rgba(245,158,11,0.35)', color: 'var(--status-warning)' },
+  experimental:{ bg: 'var(--status-error-bg)',  border: 'rgba(239,68,68,0.35)',  color: 'var(--status-error)' },
+  unknown:    { bg: 'var(--surface-hover)', border: 'var(--ui-border-default)', color: 'rgba(255,255,255,0.3)' },
 };
 
 function gradeStyle(grade: string): React.CSSProperties {
@@ -130,7 +130,7 @@ export function ConformanceDashboard() {
   return (
     <div style={{
       background: '#0a0908',
-      borderTop: '1px solid rgba(212,176,140,0.1)',
+      borderTop: '1px solid color-mix(in srgb, var(--accent-primary) 10%, transparent)',
       padding: 10,
       fontFamily: 'monospace',
     }}>
@@ -150,8 +150,8 @@ export function ConformanceDashboard() {
                 fontSize: 9,
                 fontFamily: 'monospace',
                 fontWeight: 700,
-                background: running === `suite-${s}` ? 'rgba(99,252,241,0.15)' : 'rgba(255,255,255,0.04)',
-                border: `1px solid ${running === `suite-${s}` ? 'rgba(99,252,241,0.4)' : 'rgba(255,255,255,0.1)'}`,
+                background: running === `suite-${s}` ? 'rgba(99,252,241,0.15)' : 'var(--surface-hover)',
+                border: `1px solid ${running === `suite-${s}` ? 'rgba(99,252,241,0.4)' : 'var(--ui-border-default)'}`,
                 borderRadius: 4,
                 color: running === `suite-${s}` ? '#63fcf1' : 'rgba(255,255,255,0.35)',
                 cursor: running !== null ? 'not-allowed' : 'pointer',
@@ -169,8 +169,8 @@ export function ConformanceDashboard() {
               padding: '2px 7px',
               fontSize: 9,
               fontFamily: 'monospace',
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.1)',
+              background: 'var(--surface-hover)',
+              border: '1px solid var(--ui-border-default)',
               borderRadius: 4,
               color: 'rgba(255,255,255,0.3)',
               cursor: loading ? 'not-allowed' : 'pointer',
@@ -185,7 +185,7 @@ export function ConformanceDashboard() {
       {error && (
         <div style={{
           padding: '5px 8px',
-          background: 'rgba(239,68,68,0.08)',
+          background: 'var(--status-error-bg)',
           border: '1px solid rgba(239,68,68,0.2)',
           borderRadius: 5,
           fontSize: 9,
@@ -219,7 +219,7 @@ export function ConformanceDashboard() {
             fontSize: 9,
           }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid rgba(212,176,140,0.1)' }}>
+              <tr style={{ borderBottom: '1px solid color-mix(in srgb, var(--accent-primary) 10%, transparent)' }}>
                 {['Adapter', 'Suite A', 'Suite D', 'Suite F', 'Grade'].map((h) => (
                   <th key={h} style={{
                     padding: '3px 6px',
@@ -239,7 +239,7 @@ export function ConformanceDashboard() {
               {grades.map((adapter) => (
                 <tr
                   key={adapter.adapter_id}
-                  style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+                  style={{ borderBottom: '1px solid var(--surface-hover)' }}
                 >
                   <td style={{
                     padding: '4px 6px',
@@ -262,7 +262,7 @@ export function ConformanceDashboard() {
                             <span style={gradeStyle(suite.grade)}>{suite.grade}</span>
                           </>
                         ) : (
-                          <span style={{ color: 'rgba(255,255,255,0.15)' }}>—</span>
+                          <span style={{ color: 'var(--ui-border-strong)' }}>—</span>
                         )}
                       </td>
                     );

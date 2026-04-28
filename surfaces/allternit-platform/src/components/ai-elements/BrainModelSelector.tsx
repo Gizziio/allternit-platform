@@ -12,15 +12,10 @@ import { useState, useEffect } from 'react';
 import {
   Check,
   Lock,
-  ArrowsClockwise,
   Terminal,
-  Warning,
-  CircleNotch,
-  CaretRight,
   Brain,
 } from '@phosphor-icons/react';
 import { cn } from '../../lib/utils';
-import { Button } from '../ui/button';
 import {
   Dialog,
   DialogContent,
@@ -34,7 +29,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../ui/select';
-import { Input } from '../ui/input';
 import { useProviderAuth } from '../../hooks/useProviderAuth';
 import { useToast } from '../../hooks/use-toast';
 import { ProviderModelSelector } from './ProviderModelSelector';

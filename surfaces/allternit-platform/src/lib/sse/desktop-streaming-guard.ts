@@ -33,13 +33,13 @@ export function createDesktopStreamingGuard(
   nativeFetch: typeof window.fetch,
   desktopFetch: typeof window.fetch
 ): typeof window.fetch {
-  return (input: RequestInfo | URL, init?: RequestInit) => {
+  return ((input: RequestInfo | URL, init?: RequestInit) => {
     if (isStreamingRequest(input, init)) {
       // Use native fetch for SSE — bypasses Tauri/Electron HTTP plugin
       return nativeFetch(input, init);
     }
     return desktopFetch(input, init);
-  };
+  }) as typeof window.fetch;
 }
 
 /**
@@ -58,12 +58,12 @@ export function installDesktopStreamingGuard(): void {
 
   const originalFetch = window.fetch.bind(window);
 
-  window.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
+  window.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
     if (isStreamingRequest(input, init)) {
       return originalFetch(input, init);
     }
     return originalFetch(input, init);
-  };
+  }) as typeof window.fetch;
 
   console.log('[DesktopStreamingGuard] Installed SSE bypass for desktop webview');
 }

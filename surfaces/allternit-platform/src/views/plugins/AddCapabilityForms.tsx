@@ -27,12 +27,12 @@ type TabId = 'skills' | 'commands' | 'connectors' | 'mcps' | 'cli-tools' | 'webh
 const THEME = {
   bg: 'rgba(15, 14, 13, 0.95)',
   bgElevated: 'rgba(26, 25, 23, 0.98)',
-  accent: '#d4b08c',
+  accent: 'var(--accent-primary)',
   accentMuted: 'rgba(212,176,140,0.15)',
-  textPrimary: '#e7e5e4',
-  textSecondary: '#a8a29e',
-  textTertiary: '#78716c',
-  border: 'rgba(212,176,140,0.1)',
+  textPrimary: 'var(--ui-text-primary)',
+  textSecondary: 'var(--ui-text-secondary)',
+  textTertiary: 'var(--ui-text-muted)',
+  border: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)',
 };
 
 interface AddFormProps {
@@ -108,7 +108,7 @@ function FormWrapper({
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0,0,0,0.7)',
+        background: 'var(--shell-overlay-backdrop)',
         backdropFilter: 'blur(4px)',
         zIndex: 1001,
         display: 'flex',
@@ -125,7 +125,7 @@ function FormWrapper({
           borderRadius: 16,
           background: THEME.bgElevated,
           border: `1px solid ${THEME.border}`,
-          boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
+          boxShadow: '0 25px 50px var(--shell-overlay-backdrop)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -193,7 +193,7 @@ function FormWrapper({
               borderRadius: 8,
               border: 'none',
               background: THEME.accent,
-              color: '#1a1917',
+              color: 'var(--surface-canvas)',
               fontSize: 14,
               fontWeight: 600,
               cursor: isSubmitDisabled ? 'not-allowed' : 'pointer',
@@ -258,7 +258,7 @@ function TextInput({
         padding: '10px 14px',
         borderRadius: 8,
         border: `1px solid ${THEME.border}`,
-        background: 'rgba(255,255,255,0.03)',
+        background: 'var(--surface-hover)',
         color: THEME.textPrimary,
         fontSize: 14,
         outline: 'none',
@@ -290,7 +290,7 @@ function TextArea({
         padding: '10px 14px',
         borderRadius: 8,
         border: `1px solid ${THEME.border}`,
-        background: 'rgba(255,255,255,0.03)',
+        background: 'var(--surface-hover)',
         color: THEME.textPrimary,
         fontSize: 14,
         outline: 'none',
@@ -320,7 +320,7 @@ function Select({
         padding: '10px 14px',
         borderRadius: 8,
         border: `1px solid ${THEME.border}`,
-        background: 'rgba(255,255,255,0.03)',
+        background: 'var(--surface-hover)',
         color: THEME.textPrimary,
         fontSize: 14,
         outline: 'none',
@@ -370,7 +370,7 @@ function TagInput({
             padding: '8px 12px',
             borderRadius: 6,
             border: `1px solid ${THEME.border}`,
-            background: 'rgba(255,255,255,0.03)',
+            background: 'var(--surface-hover)',
             color: THEME.textPrimary,
             fontSize: 13,
           }}
@@ -798,7 +798,7 @@ function AddWebhookForm({
             padding: '10px 14px',
             borderRadius: 8,
             border: `1px solid ${THEME.border}`,
-            background: 'rgba(255,255,255,0.03)',
+            background: 'var(--surface-hover)',
             color: THEME.textPrimary,
             fontSize: 14,
           }}
@@ -1261,12 +1261,12 @@ function AddPluginWizardForm({
             </FormField>
           )}
           {!pluginValidation.valid && (
-            <div style={{ color: '#fca5a5', fontSize: 12, marginBottom: 8 }}>
+            <div style={{ color: 'var(--status-error)', fontSize: 12, marginBottom: 8 }}>
               {pluginValidation.errors.join(' ')}
             </div>
           )}
           {includeMarketplaceTemplate && !marketplaceValidation.valid && (
-            <div style={{ color: '#fca5a5', fontSize: 12 }}>
+            <div style={{ color: 'var(--status-error)', fontSize: 12 }}>
               {marketplaceValidation.errors.join(' ')}
             </div>
           )}

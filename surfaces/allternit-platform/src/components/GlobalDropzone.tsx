@@ -262,7 +262,7 @@ export function GlobalDropzoneProvider({ children }: GlobalDropzoneProviderProps
           style={{
             position: 'fixed',
             inset: 0,
-            zIndex: 9999,
+            zIndex: 230,
             pointerEvents: 'auto',
           }}
           onDragEnter={(e: DragEvent<HTMLDivElement>) => handleDragEnter(e as unknown as DragEvent)}
@@ -291,17 +291,17 @@ interface GlobalDropzoneOverlayProps {
 
 function GlobalDropzoneOverlay({ target, isReject }: GlobalDropzoneOverlayProps) {
   const targetConfig = {
-    chat: { icon: Chat, label: 'Drop to attach in chat', color: '#D4956A' },
-    cowork: { icon: FolderOpen, label: 'Drop to upload to files', color: '#af52de' },
-    code: { icon: Code, label: 'Drop to add to project', color: '#34c759' },
-    agent: { icon: UploadSimple, label: 'Drop to use with agent', color: '#3b82f6' },
-    rail: { icon: FolderOpen, label: 'Drop to quick upload', color: '#D4956A' },
-    global: { icon: UploadSimple, label: 'Drop files anywhere', color: '#D4956A' },
+    chat: { icon: Chat, label: 'Drop to attach in chat', color: 'var(--accent-primary)' },
+    cowork: { icon: FolderOpen, label: 'Drop to upload to files', color: 'var(--accent-cowork)' },
+    code: { icon: Code, label: 'Drop to add to project', color: 'var(--status-success)' },
+    agent: { icon: UploadSimple, label: 'Drop to use with agent', color: 'var(--status-info)' },
+    rail: { icon: FolderOpen, label: 'Drop to quick upload', color: 'var(--accent-primary)' },
+    global: { icon: UploadSimple, label: 'Drop files anywhere', color: 'var(--accent-primary)' },
   };
 
   const config = target ? targetConfig[target] : targetConfig.global;
   const Icon = isReject ? X : config.icon;
-  const color = isReject ? '#ef4444' : config.color;
+  const color = isReject ? 'var(--status-error)' : config.color;
 
   return (
     <div
@@ -348,7 +348,7 @@ function GlobalDropzoneOverlay({ target, isReject }: GlobalDropzoneOverlayProps)
           style={{
             fontSize: 22,
             fontWeight: 600,
-            color: isReject ? '#ef4444' : '#faf6f1',
+            color: isReject ? 'var(--status-error)' : '#faf6f1',
             margin: '0 0 8px',
           }}
         >

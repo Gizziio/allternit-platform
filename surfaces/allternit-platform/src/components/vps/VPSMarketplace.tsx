@@ -10,6 +10,7 @@ import {
 } from '@phosphor-icons/react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { openInBrowser } from '@/lib/openInBrowser';
 
 export interface VPSProvider {
   id: string;
@@ -265,7 +266,7 @@ export const VPSMarketplace: React.FC<VPSMarketplaceProps> = ({
 
   const handleProviderSelect = (provider: VPSProvider) => {
     onSelectProvider?.(provider.id);
-    window.open(provider.signupUrl, "_blank", "noopener,noreferrer");
+    openInBrowser(provider.signupUrl);
   };
 
   const handleConnectExisting = () => {

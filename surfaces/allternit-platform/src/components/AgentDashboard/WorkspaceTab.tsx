@@ -10,11 +10,8 @@ import {
   Wrench,
   Clock,
   Package,
-  CircleNotch,
   Check,
   X,
-  Eye,
-  EyeSlash,
 } from '@phosphor-icons/react';
 import { agentWorkspaceService } from '@/lib/agents/agent-workspace.service';
 import { Button } from '@/components/ui/button';
@@ -25,11 +22,11 @@ import type { Agent, AgentWorkspaceLayers } from '@/lib/agents/agent.types';
 const STUDIO_THEME = {
   textPrimary: '#ECECEC',
   textSecondary: '#A0A0A0',
-  textMuted: '#6B6B6B',
-  accent: '#D4956A',
+  textMuted: 'var(--ui-text-muted)',
+  accent: 'var(--accent-primary)',
   bgCard: '#352F29',
   bg: '#2B2520',
-  borderSubtle: 'rgba(255,255,255,0.06)',
+  borderSubtle: 'var(--ui-border-muted)',
 };
 
 interface WorkspaceTabProps {
@@ -66,7 +63,7 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
   const [showHeartbeatScheduler, setShowHeartbeatScheduler] = useState(false);
   const [showPackageManager, setShowPackageManager] = useState(false);
   const [layers, setLayers] = useState<AgentWorkspaceLayers>(DEFAULT_LAYERS);
-  const [isLoadingLayers, setIsLoadingLayers] = useState(false);
+  const [isLoadingLayers] = useState(false);
 
   useEffect(() => {
     loadWorkspaceFiles();
@@ -262,7 +259,7 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
               borderRadius: '8px',
               marginBottom: '12px',
             }}>
-              <span style={{ fontSize: '12px', color: '#ef4444' }}>{error}</span>
+              <span style={{ fontSize: '12px', color: 'var(--status-error)' }}>{error}</span>
             </div>
           )}
 
@@ -356,7 +353,7 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
                   style={{
                     fontSize: '10px',
                     padding: '4px 8px',
-                    background: isEnabled ? `${STUDIO_THEME.accent}25` : 'rgba(255,255,255,0.05)',
+                    background: isEnabled ? `${STUDIO_THEME.accent}25` : 'var(--surface-hover)',
                     color: isEnabled ? STUDIO_THEME.accent : STUDIO_THEME.textMuted,
                     borderRadius: '4px',
                     border: `1px solid ${isEnabled ? `${STUDIO_THEME.accent}40` : STUDIO_THEME.borderSubtle}`,
@@ -371,11 +368,11 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
                     if (isEnabled) {
                       e.currentTarget.style.background = `${STUDIO_THEME.accent}35`;
                     } else {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                      e.currentTarget.style.background = 'var(--ui-border-muted)';
                     }
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.background = isEnabled ? `${STUDIO_THEME.accent}25` : 'rgba(255,255,255,0.05)';
+                    e.currentTarget.style.background = isEnabled ? `${STUDIO_THEME.accent}25` : 'var(--surface-hover)';
                   }}
                   title={`${isEnabled ? 'Hide' : 'Show'} ${layer} layer files`}
                 >

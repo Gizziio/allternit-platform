@@ -54,7 +54,7 @@ export function EditAgentForm({ agent, onCancel }: { agent: Agent; onCancel: () 
           </div>
           <div className="flex gap-3 pt-4">
             <Button type="button" variant="ghost" onClick={onCancel} className="flex-1">Cancel</Button>
-            <Button type="submit" disabled={isSubmitting} className="flex-1" style={{ background: STUDIO_THEME.accent, color: '#1A1612' }}>
+            <Button type="submit" disabled={isSubmitting} className="flex-1" style={{ background: STUDIO_THEME.accent, color: 'var(--ui-text-inverse)' }}>
               {isSubmitting ? "Saving..." : "Save Changes"}
             </Button>
           </div>

@@ -14,17 +14,8 @@ import {
   Plus,
   Trash,
   PencilSimple,
-  Cpu,
-  HardDrive,
-  Clock,
-  TrendUp,
-  TrendDown,
   Pulse as Activity,
   Check,
-  X,
-  Warning,
-  Play,
-  Pause,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -46,7 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 
 export interface AutoScalingRule {
   id: string;

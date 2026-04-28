@@ -6,22 +6,7 @@ export { BrowserCapsuleEnhanced as BrowserCapsule, openSampleA2UITab, sampleA2UI
 export { BrowserCapsuleEnhanced, sampleA2UIPayload as sampleA2UIPayloadEnhanced } from './BrowserCapsuleEnhanced';
 export { BrowserCapsuleReal } from './BrowserCapsuleReal';
 export { BrowserChatPane } from './BrowserChatPane';
-export { BrowserExtensionPane } from './BrowserExtensionPane';
-export { ExtensionSidepanelShell } from './extension-sidepanel/ExtensionSidepanelShell';
-export { BrowserChatPaneMenu } from './BrowserChatPaneMenu';
-export { useBrowserExtensionPaneAdapter } from './browserExtensionPane.adapter';
-export { useBrowserChatPaneStore } from './browserChatPane.store';
 export { useExtensionBridge, isExtensionConnected } from './useExtensionBridge';
-export type { BrowserChatPaneState, ScheduledTaskBanner } from './browserChatPane.store';
-export type {
-  ExtensionSidepanelAdapter,
-  ExtensionSidepanelConfig,
-  ExtensionSidepanelCopy,
-  ExtensionSidepanelActivity,
-  ExtensionSidepanelHistoricalEvent,
-  ExtensionSidepanelSessionRecord,
-  ExtensionSidepanelStatus,
-} from './extension-sidepanel/ExtensionSidepanelShell.types';
 export { useBrowserStore, useActiveTab, useTabCount, useActiveTabType, parseBrowserInput } from './browser.store';
 export {
   createWebTab,

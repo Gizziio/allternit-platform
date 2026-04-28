@@ -10,8 +10,8 @@ import {
 export { STUDIO_THEME };
 import { AgentDetailView } from "./agent-view/components/AgentDetailView";
 import { CreateAgentForm, CreationProgressAnimation } from "./agent-view/components/CreateAgentForm";
-import { AgentCard } from "./agent-view/components/AgentCard";
 import { AgentGalleryCard } from "./agent-view/components/AgentGalleryCard";
+import { AgentLeaderboard } from "@/components/agents";
 import { EmptyAgentState } from "./agent-view/components/EmptyAgentState";
 import { EditAgentForm } from "./agent-view/components/EditAgentForm";
 
@@ -153,7 +153,7 @@ export function AgentView({ hideCreateButton = false, forceListMode = false, tit
               padding: '8px 16px',
               borderRadius: '6px',
               background: `linear-gradient(to right, ${STUDIO_THEME.accent}, #B08D6E)`,
-              color: '#1A1612',
+              color: 'var(--ui-text-inverse)',
               fontSize: '14px',
               fontWeight: 600,
               border: 'none',
@@ -213,13 +213,21 @@ export function AgentView({ hideCreateButton = false, forceListMode = false, tit
             }}
           />
         ) : (
-          <AgentGalleryGrid
-            agents={agents}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            onSelectAgent={selectAgent}
-            forceListMode={forceListMode}
-          />
+          <>
+            <div style={{ padding: '0 8px', marginBottom: 8 }}>
+              <AgentLeaderboard
+                agents={agents}
+                onSelectAgent={(agent) => selectAgent(agent.id)}
+              />
+            </div>
+            <AgentGalleryGrid
+              agents={agents}
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              onSelectAgent={selectAgent}
+              forceListMode={forceListMode}
+            />
+          </>
         )}
       </div>
     </div>
@@ -265,8 +273,8 @@ function AgentGalleryGrid({ agents, searchQuery, onSearchChange, onSelectAgent, 
             gap: "10px",
             padding: "10px 14px",
             borderRadius: "10px",
-            background: "rgba(255,255,255,0.03)",
-            border: "1px solid rgba(255,255,255,0.06)",
+            background: "var(--surface-hover)",
+            border: "1px solid var(--ui-border-muted)",
             transition: "border-color 0.2s",
           }}
         >
@@ -292,8 +300,8 @@ function AgentGalleryGrid({ agents, searchQuery, onSearchChange, onSelectAgent, 
             width: "36px",
             height: "36px",
             borderRadius: "10px",
-            border: "1px solid rgba(255,255,255,0.06)",
-            background: "rgba(255,255,255,0.03)",
+            border: "1px solid var(--ui-border-muted)",
+            background: "var(--surface-hover)",
             color: STUDIO_THEME.textMuted,
             display: "flex",
             alignItems: "center",

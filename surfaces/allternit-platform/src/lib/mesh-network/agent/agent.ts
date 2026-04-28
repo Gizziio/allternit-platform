@@ -5,11 +5,11 @@
  * Runs on user's VPS as unprivileged service.
  */
 
-import { spawn, exec } from 'child_process';
+import { exec } from 'child_process';
 import { promisify } from 'util';
-import { writeFile, readFile, mkdir, unlink, access } from 'fs/promises';
+import { writeFile, readFile } from 'fs/promises';
 import { join } from 'path';
-import { createHash, randomBytes } from 'crypto';
+import { createHash } from 'crypto';
 import type { 
   MeshAgentConfig, 
   MeshAgentStatus, 
@@ -17,7 +17,6 @@ import type {
   AgentUpdateInfo,
   AgentUpdateProgress,
   HeadscaleServerConfig,
-  TailscaleServerConfig,
 } from '../types';
 
 const execAsync = promisify(exec);
@@ -27,7 +26,6 @@ const execAsync = promisify(exec);
 // ============================================================================
 
 const AGENT_CONFIG_PATH = process.env.AGENT_CONFIG || '/etc/allternit/agent.json';
-const AGENT_LOG_PATH = process.env.AGENT_LOG_PATH || '/var/log/allternit';
 const AGENT_LOG_LEVEL = process.env.AGENT_LOG_LEVEL || 'info';
 
 // ============================================================================

@@ -91,7 +91,7 @@ export function OptimizedImage({
   width,
   height,
   lazy = true,
-  placeholderColor = '#f3f4f6',
+  placeholderColor = 'var(--ui-text-primary)',
   blurHash,
   objectFit = 'cover',
   className = '',

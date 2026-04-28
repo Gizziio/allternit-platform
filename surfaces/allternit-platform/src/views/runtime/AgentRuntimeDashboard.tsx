@@ -106,10 +106,10 @@ export function AgentRuntimeDashboard() {
 
   const statusColor = (status: string) => {
     switch (status) {
-      case 'online': return '#22c55e';
-      case 'busy': return '#f59e0b';
-      case 'offline': return '#6b7280';
-      default: return '#6b7280';
+      case 'online': return 'var(--status-success)';
+      case 'busy': return 'var(--status-warning)';
+      case 'offline': return 'var(--ui-text-muted)';
+      default: return 'var(--ui-text-muted)';
     }
   };
 
@@ -135,7 +135,7 @@ export function AgentRuntimeDashboard() {
             padding: '8px 14px',
             borderRadius: '8px',
             border: 'none',
-            backgroundColor: '#3b82f6',
+            backgroundColor: 'var(--status-info)',
             color: '#fff',
             fontSize: '13px',
             fontWeight: 600,
@@ -210,7 +210,7 @@ export function AgentRuntimeDashboard() {
               </select>
             </div>
             <div style={{ display: 'flex', gap: 'var(--spacing-sm)' }}>
-              <button onClick={handleAdd} style={{ padding: '8px 14px', borderRadius: '6px', border: 'none', backgroundColor: '#22c55e', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+              <button onClick={handleAdd} style={{ padding: '8px 14px', borderRadius: '6px', border: 'none', backgroundColor: 'var(--status-success)', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
                 <Check size={16} weight="bold" />
               </button>
               <button onClick={() => setShowAdd(false)} style={{ padding: '8px 14px', borderRadius: '6px', border: 'none', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
@@ -255,7 +255,7 @@ export function AgentRuntimeDashboard() {
                     <option value="offline">Offline</option>
                   </select>
                   <div style={{ display: 'flex', gap: 'var(--spacing-sm)', justifyContent: 'flex-end' }}>
-                    <button onClick={() => handleSaveEdit(rt.id)} style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', backgroundColor: '#22c55e', color: '#fff', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
+                    <button onClick={() => handleSaveEdit(rt.id)} style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', backgroundColor: 'var(--status-success)', color: '#fff', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
                       <Check size={14} weight="bold" />
                     </button>
                     <button onClick={() => setEditingId(null)} style={{ padding: '4px 10px', borderRadius: '6px', border: 'none', backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
@@ -281,7 +281,7 @@ export function AgentRuntimeDashboard() {
                       <button
                         onClick={() => handleDelete(rt.id)}
                         title="Delete"
-                        style={{ padding: '4px', borderRadius: '4px', border: 'none', background: 'transparent', color: '#ef4444', cursor: 'pointer' }}
+                        style={{ padding: '4px', borderRadius: '4px', border: 'none', background: 'transparent', color: 'var(--status-error)', cursor: 'pointer' }}
                       >
                         <Trash size={14} />
                       </button>
@@ -307,7 +307,7 @@ export function AgentRuntimeDashboard() {
                     {parseClis(rt.agentClis).length > 0 && (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
                         {parseClis(rt.agentClis).map((cli) => (
-                          <span key={cli} style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '999px', background: 'rgba(59, 130, 246, 0.15)', color: '#60a5fa', fontWeight: 500 }}>
+                          <span key={cli} style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '999px', background: 'rgba(59, 130, 246, 0.15)', color: 'var(--status-info)', fontWeight: 500 }}>
                             {cli}
                           </span>
                         ))}

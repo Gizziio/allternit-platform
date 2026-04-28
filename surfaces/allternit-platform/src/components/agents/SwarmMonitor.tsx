@@ -6,7 +6,7 @@
  */
 
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Lightning,
   Shield,
@@ -93,9 +93,9 @@ function CircuitBreakerCard({
   onReset?: (agentId: string) => void;
 }) {
   const stateConfig: Record<CircuitBreakerState, { color: string; label: string; icon: any }> = {
-    closed: { color: '#22c55e', label: 'Closed', icon: CheckCircle },
-    open: { color: '#ef4444', label: 'Open', icon: XCircle },
-    'half-open': { color: '#f59e0b', label: 'Half-Open', icon: Warning },
+    closed: { color: 'var(--status-success)', label: 'Closed', icon: CheckCircle },
+    open: { color: 'var(--status-error)', label: 'Open', icon: XCircle },
+    'half-open': { color: 'var(--status-warning)', label: 'Half-Open', icon: Warning },
   };
 
   const config = stateConfig[breaker.state];
@@ -204,9 +204,9 @@ function QuarantineCard({
   onRelease?: (agentId: string) => void;
 }) {
   const severityConfig = {
-    critical: { color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)' },
-    warning: { color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' },
-    info: { color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.15)' },
+    critical: { color: 'var(--status-error)', bg: 'rgba(239, 68, 68, 0.15)' },
+    warning: { color: 'var(--status-warning)', bg: 'rgba(245, 158, 11, 0.15)' },
+    info: { color: 'var(--status-info)', bg: 'rgba(59, 130, 246, 0.15)' },
   };
 
   const config = severityConfig[agent.severity];
@@ -292,10 +292,10 @@ function QuarantineCard({
 
 function ActivityFeedItem({ entry }: { entry: ActivityFeedEntry }) {
   const typeConfig: Record<string, { color: string; icon: any; label: string }> = {
-    message: { color: '#3b82f6', icon: Chat, label: 'Message' },
-    tool_use: { color: '#f59e0b', icon: Lightning, label: 'Tool Use' },
-    checkpoint: { color: '#22c55e', icon: CheckCircle, label: 'Checkpoint' },
-    error: { color: '#ef4444', icon: Warning, label: 'Error' },
+    message: { color: 'var(--status-info)', icon: Chat, label: 'Message' },
+    tool_use: { color: 'var(--status-warning)', icon: Lightning, label: 'Tool Use' },
+    checkpoint: { color: 'var(--status-success)', icon: CheckCircle, label: 'Checkpoint' },
+    error: { color: 'var(--status-error)', icon: Warning, label: 'Error' },
     state_change: { color: '#a78bfa', icon: Activity, label: 'State Change' },
     human_review: { color: '#ec4899', icon: Users, label: 'Human Review' },
   };

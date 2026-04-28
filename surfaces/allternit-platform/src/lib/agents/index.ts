@@ -199,6 +199,10 @@ export {
   useCharacterStats,
 } from "./agent.store";
 
+export { useAgentsWithSwarms, useSwarmAgents } from "./use-agents-with-swarms";
+export { swarmToAgent, isSwarmAgentId, getSwarmIdFromAgent } from "./swarm-as-agent";
+export { useA2ADelegation } from "./use-a2a-delegation";
+
 export type {
   AgentSessionDescriptor,
   AgentSessionFeatures,
@@ -450,6 +454,8 @@ export {
   useSelectedTemplate,
   useSwarmMessages,
 } from "./agent-advanced.store";
+
+export { useAgentRatingsStore } from "@/stores/agent-ratings.store";
 
 // ============================================================================
 // Mode-Specific Session Stores (Independent per Surface)

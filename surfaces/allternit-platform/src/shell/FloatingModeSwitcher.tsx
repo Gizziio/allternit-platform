@@ -2,11 +2,12 @@ import React from 'react';
 import { GlassSurface } from '../design/GlassSurface';
 import { tokens } from '../design/tokens';
 import type { Icon } from '@phosphor-icons/react';
-import { ChatText, UsersThree, TerminalWindow, Palette, CaretLeft, CaretRight, SidebarSimple, Sun, Moon } from '@phosphor-icons/react';
+import { ChatText, UsersThree, TerminalWindow, Palette, Globe, CaretLeft, CaretRight, SidebarSimple, Sun, Moon } from '@phosphor-icons/react';
+import type { AppMode } from './ShellHeader';
 
 interface FloatingModeSwitcherProps {
-  activeMode: 'chat' | 'cowork' | 'code' | 'design';
-  onModeChange: (mode: 'chat' | 'cowork' | 'code' | 'design') => void;
+  activeMode: AppMode;
+  onModeChange: (mode: AppMode) => void;
   onRailToggle: () => void;
   theme: 'light' | 'dark';
   onThemeToggle: () => void;
@@ -19,7 +20,7 @@ export function FloatingModeSwitcher({ activeMode, onModeChange, onRailToggle, t
       top: 16,
       left: '50%',
       transform: 'translateX(-50%)',
-      zIndex: 1000,
+      zIndex: 100,
       display: 'flex',
       alignItems: 'center',
       gap: 12,
@@ -47,6 +48,7 @@ export function FloatingModeSwitcher({ activeMode, onModeChange, onRailToggle, t
         <ModePill active={activeMode === 'cowork'} onClick={() => onModeChange('cowork')} icon={UsersThree} label="Cowork" color="var(--accent-cowork)" />
         <ModePill active={activeMode === 'code'} onClick={() => onModeChange('code')} icon={TerminalWindow} label="Code" color="var(--accent-code)" />
         <ModePill active={activeMode === 'design'} onClick={() => onModeChange('design')} icon={Palette} label="Design" color="rgba(212,176,140,0.9)" />
+        <ModePill active={activeMode === 'browser'} onClick={() => onModeChange('browser')} icon={Globe} label="Browser" color="var(--accent-browser)" />
 
         <div style={{ width: 1, height: 20, background: 'var(--border-subtle)' }} />
 

@@ -208,7 +208,7 @@ export function AllternitDocumentEditor({
             colors: {
               editor: {
                 text: '#ECECEC',
-                background: '#1a1a1a',
+                background: 'var(--surface-panel)',
               },
               menu: {
                 text: '#ECECEC',
@@ -216,7 +216,7 @@ export function AllternitDocumentEditor({
               },
               tooltip: {
                 text: '#ECECEC',
-                background: '#333',
+                background: 'var(--surface-hover)',
               },
             },
             borderRadius: 6,

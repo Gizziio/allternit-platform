@@ -1,22 +1,18 @@
 "use client";
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   GitBranch,
   FloppyDisk,
   Play,
-  Plus,
   Trash,
-  GearSix,
   CursorClick,
-  ArrowRight,
   CheckCircle,
   Warning,
   SquaresFour,
   MagicWand,
   X,
 } from '@phosphor-icons/react';
-import { GlassSurface } from '@/design/GlassSurface';
 import { useWorkflow } from '@/hooks/useWorkflow';
 import { WorkflowPhase } from '@/types/workflow';
 import { 
@@ -124,11 +120,6 @@ export function WorkflowDesignerView() {
     }));
   }, [nodes, edges, autoLayout]);
 
-  // Check if adding an edge would create a cycle
-  const canConnect = useCallback((from: string, to: string): boolean => {
-    return !wouldCreateCycle(from, to, edges);
-  }, [edges, wouldCreateCycle]);
-
   const handleAddNode = (type: string) => {
     const nodeType = NODE_TYPES.find(t => t.id === type);
     const newNode: DesignerNode = {
@@ -156,38 +147,8 @@ export function WorkflowDesignerView() {
     setValidationResult(null);
   };
 
-  const handleAddEdge = (from: string, to: string) => {
-    // Check if connection would create a cycle
-    if (!canConnect(from, to)) {
-      alert('Cannot connect: This would create a cycle in the workflow');
-      return;
-    }
-    
-    const newEdge: DesignerEdge = {
-      id: `edge-${Date.now()}`,
-      from,
-      to,
-    };
-    setEdges(prev => [...prev, newEdge]);
-    setValidationResult(null);
-  };
-
-  const handleDeleteEdge = (id: string) => {
-    setEdges(prev => prev.filter(e => e.id !== id));
-    if (selectedEdge === id) setSelectedEdge(null);
-    setValidationResult(null);
-  };
-
   const selectedNodeData = nodes.find(n => n.id === selectedNode);
 
-  // Get severity color for validation messages
-  const getSeverityColor = (severity: 'error' | 'warning') => {
-    return severity === 'error' ? 'text-red-500' : 'text-yellow-500';
-  };
-
-  const getSeverityBg = (severity: 'error' | 'warning') => {
-    return severity === 'error' ? 'bg-red-500/10' : 'bg-yellow-500/10';
-  };
 
   return (
     <div className="flex h-full">

@@ -46,7 +46,7 @@ export function RunTraceView() {
           <div style={{ fontSize: 11, fontFamily: 'monospace', margin: '8px 0', background: 'rgba(0,0,0,0.1)', padding: 8, borderRadius: 4 }}>
             {JSON.stringify(call.args, null, 2)}
           </div>
-          <div style={{ fontSize: 11, fontWeight: 600, color: call.status === 'complete' ? '#34c759' : '#ff9500' }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: call.status === 'complete' ? 'var(--status-success)' : 'var(--status-warning)' }}>
             {call.status.toUpperCase()}
           </div>
           {call.result && (

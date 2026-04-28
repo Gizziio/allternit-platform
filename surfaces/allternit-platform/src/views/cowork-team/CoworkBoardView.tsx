@@ -16,12 +16,12 @@ interface ColumnDef {
 }
 
 const COLUMNS: ColumnDef[] = [
-  { status: 'backlog', label: 'Backlog', accent: '#6b7280' },
-  { status: 'todo', label: 'To Do', accent: '#06b6d4' },
-  { status: 'in_progress', label: 'In Progress', accent: '#af52de' },
-  { status: 'in_review', label: 'In Review', accent: '#f59e0b' },
-  { status: 'done', label: 'Done', accent: '#22c55e' },
-  { status: 'blocked', label: 'Blocked', accent: '#ef4444' },
+  { status: 'backlog', label: 'Backlog', accent: 'var(--ui-text-muted)' },
+  { status: 'todo', label: 'To Do', accent: 'var(--status-info)' },
+  { status: 'in_progress', label: 'In Progress', accent: 'var(--accent-cowork)' },
+  { status: 'in_review', label: 'In Review', accent: 'var(--status-warning)' },
+  { status: 'done', label: 'Done', accent: 'var(--status-success)' },
+  { status: 'blocked', label: 'Blocked', accent: 'var(--status-error)' },
 ];
 
 export const CoworkBoardView: React.FC = () => {
@@ -65,7 +65,7 @@ export const CoworkBoardView: React.FC = () => {
             onClick={() => setPrdModalOpen(true)}
             style={{
               padding: '8px 16px', borderRadius: '8px',
-              background: '#af52de22', color: '#af52de',
+              background: '#af52de22', color: 'var(--accent-cowork)',
               border: '1px solid #af52de55', fontSize: '14px',
               fontWeight: 600, cursor: 'pointer',
               display: 'flex', alignItems: 'center', gap: '6px',
@@ -78,7 +78,7 @@ export const CoworkBoardView: React.FC = () => {
             onClick={handleAddItem}
             style={{
               padding: '8px 18px', borderRadius: '8px',
-              background: '#af52de', color: '#fff',
+              background: 'var(--accent-cowork)', color: '#fff',
               border: 'none', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
             }}
           >

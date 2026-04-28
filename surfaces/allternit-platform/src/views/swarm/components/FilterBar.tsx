@@ -4,17 +4,17 @@
  * Based on demo-v3/v4/v5.html design specification
  */
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback } from 'react';
 import { MagnifyingGlass } from '@phosphor-icons/react';
 import { AgentRole, AgentStatus } from '../types';
 import { useFilters, useSwarmMonitorStore } from '../SwarmMonitor.store';
-import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/allternit.tokens';
+import { STATUS, TEXT } from '@/design/allternit.tokens';
 
 const ACCENT = '#c17817';
 const BG_SURFACE = '#121110';
-const BORDER_COLOR = '#272522';
-const TEXT_MUTED = '#8b8680';
-const TEXT_COLOR = '#e8e6e3';
+const BORDER_COLOR = 'var(--ui-border-muted)';
+const TEXT_MUTED = 'var(--ui-text-muted)';
+const TEXT_COLOR = 'var(--ui-text-primary)';
 
 const roleOptions: { value: AgentRole; label: string; color: string }[] = [
   { value: 'orchestrator', label: 'Orch', color: ACCENT },
@@ -41,28 +41,6 @@ export function FilterBar() {
   const agents = useSwarmMonitorStore(state => state.agents);
   const filteredAgents = useSwarmMonitorStore(state => state.filteredAgents);
 
-  // Calculate counts for each role and status
-  const counts = useMemo(() => {
-    const roleCounts: Record<AgentRole, number> = {
-      orchestrator: 0,
-      worker: 0,
-      specialist: 0,
-      reviewer: 0,
-    };
-    const statusCounts: Record<AgentStatus, number> = {
-      working: 0,
-      idle: 0,
-      error: 0,
-      offline: 0,
-    };
-
-    agents.forEach(agent => {
-      roleCounts[agent.role]++;
-      statusCounts[agent.status]++;
-    });
-
-    return { role: roleCounts, status: statusCounts };
-  }, [agents]);
 
   const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(e.target.value);
@@ -79,7 +57,7 @@ export function FilterBar() {
   return (
     <div
       className="px-6 py-3 border-b flex items-center gap-4"
-      style={{ borderColor: 'rgba(255,255,255,0.05)' }}
+      style={{ borderColor: 'var(--surface-hover)' }}
     >
       {/* Results Count */}
       <div className="text-xs" style={{ color: TEXT_MUTED }}>
@@ -103,7 +81,7 @@ export function FilterBar() {
           placeholder="Search agents..."
           className="w-full pl-9 pr-4 py-2 rounded-lg text-sm outline-none transition-colors"
           style={{
-            background: 'rgba(255,255,255,0.03)',
+            background: 'var(--surface-hover)',
             border: `1px solid ${BORDER_COLOR}`,
             color: TEXT_COLOR,
           }}

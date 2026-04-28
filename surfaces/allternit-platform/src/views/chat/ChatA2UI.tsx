@@ -12,7 +12,6 @@ import type { A2UIPayload } from "@/capsules/a2ui/a2ui.types";
 import { useBrowserStore } from "@/capsules/browser/browser.store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   ArrowSquareOut,
   ArrowsOut,
@@ -55,7 +54,6 @@ interface MessageA2UIProps {
 export function MessageA2UI({ part, messageId, onAction }: MessageA2UIProps) {
   const { addA2UITab } = useBrowserStore();
   const [isExpanded, setIsExpanded] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
   const [dataModel, setDataModel] = useState<Record<string, unknown>>(
     () => part.payload.dataModel || {}
   );
@@ -63,7 +61,6 @@ export function MessageA2UI({ part, messageId, onAction }: MessageA2UIProps) {
   // Handle actions from A2UI components
   const handleAction = useCallback(
     (actionId: string, payload?: Record<string, unknown>) => {
-      console.log("[ChatA2UI] Action triggered:", actionId, payload);
 
       // Check if this is a known action from the part definition
       const definedAction = part.actions?.find((a) => a.action === actionId);
@@ -85,7 +82,7 @@ export function MessageA2UI({ part, messageId, onAction }: MessageA2UIProps) {
 
   // Open this A2UI in browser tab
   const handleOpenInBrowser = () => {
-    const tabId = addA2UITab(
+    addA2UITab(
       {
         ...part.payload,
         dataModel, // Include current data model state
@@ -93,7 +90,6 @@ export function MessageA2UI({ part, messageId, onAction }: MessageA2UIProps) {
       part.title || "Chat App",
       part.source
     );
-    console.log("[ChatA2UI] Opened in browser tab:", tabId);
   };
 
   if (!isExpanded) {
@@ -226,12 +222,6 @@ export function useChatA2UI() {
       payload: unknown
     ) => {
       // This would typically call your API to send the action to the agent
-      console.log("[useChatA2UI] Sending action:", {
-        chatId,
-        messageId,
-        actionId,
-        payload,
-      });
 
       // Example API call:
       // await fetch('/api/chat/action', {

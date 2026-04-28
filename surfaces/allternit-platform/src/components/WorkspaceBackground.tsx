@@ -129,7 +129,7 @@ export function WorkspaceBackground() {
             linear-gradient(to bottom, color-mix(in srgb, var(--ui-border-muted) 32%, transparent) 1px, transparent 1px)
           `,
           backgroundSize: '24px 24px',
-          maskImage: 'linear-gradient(180deg, rgba(0,0,0,0.9), rgba(0,0,0,0.3) 55%, transparent 100%)',
+          maskImage: 'linear-gradient(180deg, rgba(0,0,0,0.9), var(--surface-panel) 55%, transparent 100%)',
         }}
       />
 

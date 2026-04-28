@@ -3,18 +3,14 @@
 import React, { useState } from 'react';
 import {
   GitBranch,
-  Play,
   Square,
   ArrowCounterClockwise,
   Clock,
   CheckCircle,
   XCircle,
   CircleNotch,
-  Terminal,
-  Pulse as Activity,
   CaretRight,
 } from '@phosphor-icons/react';
-import { GlassSurface } from '@/design/GlassSurface';
 import { StatusBadge } from '../components/StatusBadge';
 import { ProgressBar } from '../components/ProgressBar';
 
@@ -39,7 +35,7 @@ interface Execution {
 }
 
 export function WorkflowMonitorView() {
-  const [execution, setExecution] = useState<Execution>({
+  const [execution] = useState<Execution>({
     id: 'exec-2024-001',
     workflow_id: 'wf-1',
     workflow_name: 'CI/CD Pipeline',

@@ -20,11 +20,9 @@
  * - Deterministic actions are enforced
  */
 
-import type { ModePlugin, PluginCapability } from './types';
+import type { ModePlugin } from './types';
 import type { PluginCategory } from './marketplace';
 import type { FeaturePlugin } from '@/plugins/feature.types';
-import type { MarketplacePlugin } from '@/plugins/capability.types';
-import type { LoadedLocalPlugin } from '@/plugins/localPluginLoader';
 
 // =============================================================================
 // PLUGIN SOURCE TYPES
@@ -114,9 +112,6 @@ const STORAGE_KEYS = {
   ENABLED: 'allternit:unified-plugins:enabled:v1',
   LOCAL_PATHS: 'allternit:unified-plugins:local-paths:v1',
 };
-
-// Default plugin directory (Electron app data)
-const DEFAULT_PLUGIN_DIR = 'plugins';
 
 // =============================================================================
 // UNIFIED PLUGIN REGISTRY CLASS

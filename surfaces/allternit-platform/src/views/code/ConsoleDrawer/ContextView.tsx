@@ -18,7 +18,6 @@ import {
   Plus,
   EnvelopeSimple,
   Pulse as Activity,
-  GearSix,
   ClockCounterClockwise,
 } from '@phosphor-icons/react';
 import { useUnifiedStore } from "@/lib/agents/unified.store";
@@ -34,7 +33,6 @@ export function ContextView() {
     wihs,
     executions,
     logs,
-    activeMainTab,
     setActiveMainTab,
     activeDrawerTab,
     setActiveDrawerTab,
@@ -44,8 +42,6 @@ export function ContextView() {
     closeWih,
     fetchWihs,
     fetchDags,
-
-    fetchAgents,
     checkHealth,
   } = useUnifiedStore();
 
@@ -84,14 +80,6 @@ export function ContextView() {
     if (currentWih) {
       selectWih(currentWih.wih_id);
     }
-  };
-
-  const handleGoToStatus = () => {
-    setActiveMainTab("status");
-  };
-
-  const handleGoToMail = () => {
-    setActiveMainTab("mail");
   };
 
   const handleExecuteDag = async () => {
@@ -372,7 +360,7 @@ export function ContextView() {
                     onClick={handleViewExecutions}
                     style={{
                       fontSize: 11,
-                      color: '#0a84ff',
+                      color: 'var(--status-info)',
                       background: 'none',
                       border: 'none',
                       cursor: 'pointer',
@@ -689,8 +677,8 @@ function StatBox({
         textAlign: 'center'
       }}
     >
-      <div style={{ fontSize: 20, fontWeight: 700, color: '#0a84ff' }}>{value}</div>
-      <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>{label}</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--status-info)' }}>{value}</div>
+      <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', marginTop: 4 }}>{label}</div>
     </button>
   );
 }
@@ -754,10 +742,10 @@ function DrawerTabButton({
       onClick={onClick}
       style={{
         padding: '10px',
-        background: isActive ? '#0a84ff' : 'var(--bg-secondary)',
-        border: `1px solid ${isActive ? '#0a84ff' : 'var(--border-subtle)'}`,
+        background: isActive ? 'var(--status-info)' : 'var(--bg-secondary)',
+        border: `1px solid ${isActive ? 'var(--status-info)' : 'var(--border-subtle)'}`,
         borderRadius: 6,
-        color: isActive ? '#fff' : '#888',
+        color: isActive ? 'var(--ui-text-inverse)' : 'var(--ui-text-muted)',
         fontSize: 12,
         fontWeight: isActive ? 600 : 500,
         cursor: 'pointer',

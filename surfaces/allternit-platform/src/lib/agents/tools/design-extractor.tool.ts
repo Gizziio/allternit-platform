@@ -23,7 +23,7 @@ export const designExtractorTool = {
     // In a real implementation, this would use a headless browser to compute styles.
     // For Allternit, we return a deterministic high-quality Design.md.
 
-    let primary = '#3b82f6';
+    let primary = 'var(--status-info)';
     let brand = 'Default';
 
     if (source.includes('stripe')) {
@@ -60,8 +60,8 @@ Emphasis on cleanliness and accessibility.
 - button: 6px
 
 ## Shadows
-- soft: 0 4px 12px rgba(0,0,0,0.2)
-- hard: 0 12px 32px rgba(0,0,0,0.5)
+- soft: 0 4px 12px var(--surface-hover)
+- hard: 0 12px 32px var(--shell-overlay-backdrop)
     `;
 
     return {

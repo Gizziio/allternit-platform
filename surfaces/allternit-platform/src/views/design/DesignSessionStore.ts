@@ -1,21 +1,17 @@
-/**
- * Design Session Store
- * 
- * **ARCHITECTURE**: Isolated session store for Blueprint Studio (Design Mode).
- * Separates design manifestations from general chat history.
- * 
- * **BACKEND**: origin_surface='design'
- */
-
-import { 
-  createModeSessionStore, 
-  type ModeSession, 
+import {
+  createModeSessionStore,
+  type ModeSession,
   type CreateModeSessionOptions,
   type SendMessageOptions,
   type ModeSessionMessage,
 } from '@/lib/agents/mode-session-store';
 
-// Local alias
+/**
+ * DesignSessionStore - Dedicated session management for Allternit Studio.
+ * Completely independent from Chat, Code, and Cowork modes.
+ */
+
+// Local alias for use within this file
 type DesignSession = ModeSession;
 
 export type {
@@ -28,7 +24,7 @@ export type {
 export const useDesignSessionStore = createModeSessionStore({
   name: 'DesignSessionStore',
   storageKey: 'allternit-design-sessions',
-  originSurface: 'design',
+  originSurface: 'chat', // Use 'chat' as surface type for LLM compatibility, but store is isolated
 });
 
 // ---------------------------------------------------------------------------

@@ -89,7 +89,7 @@ function ToastContainer({
         position: 'fixed',
         top: '16px',
         right: '16px',
-        zIndex: 9999,
+        zIndex: 190,
         display: 'flex',
         flexDirection: 'column',
         gap: '8px',
@@ -112,10 +112,10 @@ function ToastItem({
   onRemove: (id: string) => void;
 }) {
   const colors: Record<ToastType, { bg: string; border: string; icon: string }> = {
-    info: { bg: 'rgba(59,130,246,0.1)', border: 'rgba(59,130,246,0.3)', icon: '#3b82f6' },
-    success: { bg: 'rgba(34,197,94,0.1)', border: 'rgba(34,197,94,0.3)', icon: '#22c55e' },
-    warning: { bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.3)', icon: '#f59e0b' },
-    error: { bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.3)', icon: '#ef4444' },
+    info: { bg: 'var(--status-info-bg)', border: 'rgba(59,130,246,0.3)', icon: 'var(--status-info)' },
+    success: { bg: 'var(--status-success-bg)', border: 'rgba(34,197,94,0.3)', icon: 'var(--status-success)' },
+    warning: { bg: 'var(--status-warning-bg)', border: 'rgba(245,158,11,0.3)', icon: 'var(--status-warning)' },
+    error: { bg: 'var(--status-error-bg)', border: 'rgba(239,68,68,0.3)', icon: 'var(--status-error)' },
   };
 
   const { bg, border, icon } = colors[toast.type];
@@ -130,12 +130,12 @@ function ToastItem({
   return (
     <div
       style={{
-        background: '#1a1a1a',
+        background: 'var(--surface-panel)',
         border: `1px solid ${border}`,
         borderLeft: `4px solid ${icon}`,
         borderRadius: '8px',
         padding: '12px 16px',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+        boxShadow: '0 4px 12px var(--surface-panel)',
         animation: 'toast-slide-in 0.3s ease-out',
         display: 'flex',
         alignItems: 'flex-start',

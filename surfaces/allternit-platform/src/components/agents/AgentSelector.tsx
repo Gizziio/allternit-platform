@@ -45,8 +45,8 @@ export function AgentSelector({ surface, compact = false }: AgentSelectorProps) 
       <div
         className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium"
         style={{
-          background: 'rgba(255,255,255,0.05)',
-          color: '#9B9B9B',
+          background: 'var(--surface-hover)',
+          color: 'var(--ui-text-secondary)',
         }}
       >
         <span className="animate-pulse">Loading agents...</span>
@@ -60,8 +60,8 @@ export function AgentSelector({ surface, compact = false }: AgentSelectorProps) 
       <div
         className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium"
         style={{
-          background: 'rgba(245,158,11,0.1)',
-          color: '#f59e0b',
+          background: 'var(--status-warning-bg)',
+          color: 'var(--status-warning)',
         }}
       >
         <span>No agents available</span>
@@ -78,8 +78,8 @@ export function AgentSelector({ surface, compact = false }: AgentSelectorProps) 
         style={{
           background: selectedAgent
             ? 'rgba(212,149,106,0.15)'
-            : 'rgba(255,255,255,0.05)',
-          color: selectedAgent ? '#D4956A' : '#9B9B9B',
+            : 'var(--surface-hover)',
+          color: selectedAgent ? 'var(--accent-primary)' : 'var(--ui-text-secondary)',
           border: '1px solid rgba(212,149,106,0.3)',
           paddingRight: '32px',
         }}
@@ -96,7 +96,7 @@ export function AgentSelector({ surface, compact = false }: AgentSelectorProps) 
       <CaretDown
         size={14}
         className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"
-        style={{ color: selectedAgent ? '#D4956A' : '#9B9B9B' }}
+        style={{ color: selectedAgent ? 'var(--accent-primary)' : 'var(--ui-text-secondary)' }}
       />
     </div>
   );

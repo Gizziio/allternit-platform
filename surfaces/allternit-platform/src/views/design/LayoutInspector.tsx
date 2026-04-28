@@ -99,8 +99,8 @@ function LayoutBtn({ icon, active, onClick, label }: any) {
       style={{
         display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px",
         padding: "8px", borderRadius: "8px", border: "1px solid",
-        background: active ? "rgba(212,176,140,0.1)" : "rgba(255,255,255,0.02)",
-        borderColor: active ? "var(--accent-primary)" : "rgba(255,255,255,0.05)",
+        background: active ? "color-mix(in srgb, var(--accent-primary) 10%, transparent)" : "var(--surface-hover)",
+        borderColor: active ? "var(--accent-primary)" : "var(--surface-hover)",
         color: active ? "#fff" : "rgba(255,255,255,0.4)",
         cursor: "pointer", transition: "all 0.2s"
       }}

@@ -69,9 +69,7 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
         isolation: 'isolate',
         display: 'flex',
         flexDirection: 'column',
-        background: embeddedAgentSession?.isEmbedded
-          ? 'radial-gradient(circle at top right, rgba(121,196,124,0.08), transparent 34%), linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0) 18%)'
-          : 'transparent',
+        background: 'transparent',
       }}
     >
       <AgentModeBackdrop

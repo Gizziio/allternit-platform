@@ -32,13 +32,13 @@ const THEME = {
   bg: '#2B2520',
   cardBg: '#3A332B',
   textPrimary: '#ECECEC',
-  textSecondary: '#9B9B9B',
-  textMuted: '#6B6B6B',
-  accent: '#D4956A',
-  success: '#22c55e',
-  warning: '#f59e0b',
-  error: '#ef4444',
-  border: 'rgba(255,255,255,0.08)',
+  textSecondary: 'var(--ui-text-secondary)',
+  textMuted: 'var(--ui-text-muted)',
+  accent: 'var(--accent-primary)',
+  success: 'var(--status-success)',
+  warning: 'var(--status-warning)',
+  error: 'var(--status-error)',
+  border: 'var(--ui-border-muted)',
 };
 
 export interface Receipt {
@@ -438,8 +438,8 @@ export function ReceiptView({ receipt, onClose }: ReceiptViewProps) {
           style={{
             padding: '10px',
             background: receipt.verification.overallPassed 
-              ? 'rgba(34,197,94,0.1)' 
-              : 'rgba(245,158,11,0.1)',
+              ? 'var(--status-success-bg)' 
+              : 'var(--status-warning-bg)',
             borderRadius: '8px',
             marginBottom: '12px',
             display: 'flex',

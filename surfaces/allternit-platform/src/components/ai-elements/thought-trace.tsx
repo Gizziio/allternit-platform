@@ -384,7 +384,7 @@ export const ThoughtTrace = memo(({ steps, isStreaming = false, isComplete = fal
         {/* Clean list — single left rule, no dots, no colored labels */}
         <div style={{
           paddingLeft: '16px',
-          borderLeft: '1px solid rgba(255,255,255,0.08)',
+          borderLeft: '1px solid var(--ui-border-muted)',
           display: 'flex',
           flexDirection: 'column',
           gap: '6px',

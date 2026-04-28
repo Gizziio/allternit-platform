@@ -78,11 +78,11 @@ function CheckpointTimelineItem({
   onExport: () => void;
 }) {
   const reasonColors: Record<string, { bg: string; color: string; label: string }> = {
-    auto: { bg: 'rgba(96, 165, 250, 0.15)', color: '#60a5fa', label: 'Auto' },
-    manual: { bg: 'rgba(74, 222, 128, 0.15)', color: '#4ade80', label: 'Manual' },
+    auto: { bg: 'rgba(96, 165, 250, 0.15)', color: 'var(--status-info)', label: 'Auto' },
+    manual: { bg: 'rgba(74, 222, 128, 0.15)', color: 'var(--status-success)', label: 'Manual' },
     pre_action: { bg: 'rgba(251, 146, 60, 0.15)', color: '#fb923c', label: 'Pre-Action' },
     post_action: { bg: 'rgba(167, 139, 250, 0.15)', color: '#a78bfa', label: 'Post-Action' },
-    error: { bg: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', label: 'Error' },
+    error: { bg: 'rgba(239, 68, 68, 0.15)', color: 'var(--status-error)', label: 'Error' },
   };
 
   const reasonConfig = reasonColors[checkpoint.metadata.reason] || reasonColors.auto;
@@ -92,8 +92,8 @@ function CheckpointTimelineItem({
       layout
       className="rounded-lg border border-white/5 overflow-hidden"
       style={{
-        background: isExpanded ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)',
-        borderColor: isExpanded ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.05)',
+        background: isExpanded ? 'var(--surface-hover)' : 'var(--surface-hover)',
+        borderColor: isExpanded ? 'var(--ui-border-default)' : 'var(--surface-hover)',
       }}
     >
       {/* Header */}
@@ -241,11 +241,11 @@ function ExecutionTraceViewer({
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
 
   const eventTypeConfig: Record<string, { icon: any; color: string; label: string }> = {
-    'step-start': { icon: Play, color: '#60a5fa', label: 'Step Start' },
-    'step-complete': { icon: CheckCircle, color: '#4ade80', label: 'Complete' },
-    'step-error': { icon: Warning, color: '#ef4444', label: 'Error' },
+    'step-start': { icon: Play, color: 'var(--status-info)', label: 'Step Start' },
+    'step-complete': { icon: CheckCircle, color: 'var(--status-success)', label: 'Complete' },
+    'step-error': { icon: Warning, color: 'var(--status-error)', label: 'Error' },
     'tool-call': { icon: Database, color: '#fb923c', label: 'Tool Call' },
-    'tool-result': { icon: CheckCircle, color: '#4ade80', label: 'Result' },
+    'tool-result': { icon: CheckCircle, color: 'var(--status-success)', label: 'Result' },
     'llm-call': { icon: Database, color: '#a78bfa', label: 'LLM Call' },
     'llm-response': { icon: CheckCircle, color: '#a78bfa', label: 'Response' },
     'subagent-spawn': { icon: Play, color: '#2dd4bf', label: 'Spawn Agent' },
@@ -290,7 +290,7 @@ function ExecutionTraceViewer({
             layout
             className="rounded-lg border border-white/5 overflow-hidden"
             style={{
-              background: isExpanded ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)',
+              background: isExpanded ? 'var(--surface-hover)' : 'var(--surface-hover)',
             }}
           >
             <div

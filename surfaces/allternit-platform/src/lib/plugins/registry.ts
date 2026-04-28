@@ -16,7 +16,7 @@
  * - Automate (Amber): Workflow & orchestration plugins
  */
 
-import type { ModePlugin, PluginCapability } from './types';
+import type { PluginCapability } from './types';
 import type { PluginCategory } from './marketplace';
 
 // =============================================================================

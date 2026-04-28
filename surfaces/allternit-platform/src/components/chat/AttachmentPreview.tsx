@@ -84,21 +84,21 @@ function getFileColor(type: AttachmentPreviewItem['type']): string {
     case 'image':
     case 'gif':
     case 'screenshot':
-      return '#D4956A';
+      return 'var(--accent-primary)';
     case 'document':
-      return '#ef4444';
+      return 'var(--status-error)';
     case 'code':
-      return '#3b82f6';
+      return 'var(--status-info)';
     case 'spreadsheet':
-      return '#22c55e';
+      return 'var(--status-success)';
     case 'json':
-      return '#f59e0b';
+      return 'var(--status-warning)';
     case 'video':
       return '#a855f7';
     case 'audio':
       return '#ec4899';
     default:
-      return '#9B9B9B';
+      return 'var(--ui-text-secondary)';
   }
 }
 
@@ -131,7 +131,7 @@ export function AttachmentPreview({
   return (
     <div style={{
       padding: '12px 16px',
-      borderTop: '1px solid rgba(255,255,255,0.06)',
+      borderTop: '1px solid var(--ui-border-muted)',
     }}>
       <div style={{
         display: 'flex',
@@ -195,8 +195,8 @@ function AttachmentCard({ item, onRemove, onPreview, variant }: AttachmentCardPr
         position: 'relative',
         width: 140,
         flexShrink: 0,
-        background: 'rgba(255,255,255,0.03)',
-        border: `1px solid ${isHovered ? color : 'rgba(255,255,255,0.08)'}`,
+        background: 'var(--surface-hover)',
+        border: `1px solid ${isHovered ? color : 'var(--ui-border-muted)'}`,
         borderRadius: 12,
         overflow: 'hidden',
         transition: 'border-color 0.2s',
@@ -282,8 +282,8 @@ function AttachmentCard({ item, onRemove, onPreview, variant }: AttachmentCardPr
                   height: 32,
                   borderRadius: 8,
                   border: 'none',
-                  background: 'rgba(255,255,255,0.15)',
-                  color: '#fff',
+                  background: 'var(--ui-border-strong)',
+                  color: 'var(--ui-text-inverse)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -303,8 +303,8 @@ function AttachmentCard({ item, onRemove, onPreview, variant }: AttachmentCardPr
                 height: 32,
                 borderRadius: 8,
                 border: 'none',
-                background: 'rgba(255,255,255,0.15)',
-                color: '#fff',
+                background: 'var(--ui-border-strong)',
+                color: 'var(--ui-text-inverse)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -329,8 +329,8 @@ function AttachmentCard({ item, onRemove, onPreview, variant }: AttachmentCardPr
               height: 22,
               borderRadius: 6,
               border: 'none',
-              background: isHovered ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0.3)',
-              color: '#fff',
+              background: isHovered ? 'var(--shell-overlay-backdrop)' : 'var(--surface-panel)',
+              color: 'var(--ui-text-inverse)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -355,7 +355,7 @@ function AttachmentCard({ item, onRemove, onPreview, variant }: AttachmentCardPr
             background: color,
             fontSize: 9,
             fontWeight: 700,
-            color: '#000',
+            color: 'var(--ui-text-inverse)',
             textTransform: 'uppercase',
           }}
         >
@@ -410,8 +410,8 @@ function CompactCard({ item, isImage, color, Icon, size, onRemove, imageError, s
         alignItems: 'center',
         gap: 8,
         padding: '6px 10px',
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.08)',
+        background: 'var(--surface-hover)',
+        border: '1px solid var(--ui-border-muted)',
         borderRadius: 10,
         minWidth: 0,
       }}
@@ -522,7 +522,7 @@ export function AttachmentPreviewModal({ item, isOpen, onClose }: AttachmentPrev
         position: 'fixed',
         inset: 0,
         background: 'rgba(0,0,0,0.9)',
-        zIndex: 10000,
+        zIndex: 165,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -537,7 +537,7 @@ export function AttachmentPreviewModal({ item, isOpen, onClose }: AttachmentPrev
         style={{
           maxWidth: '90vw',
           maxHeight: '90vh',
-          background: '#1a1a1a',
+          background: 'var(--surface-panel)',
           borderRadius: 16,
           overflow: 'hidden',
           boxShadow: `0 25px 50px -12px ${color}40`,
@@ -550,7 +550,7 @@ export function AttachmentPreviewModal({ item, isOpen, onClose }: AttachmentPrev
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '16px 20px',
-            borderBottom: '1px solid rgba(255,255,255,0.08)',
+            borderBottom: '1px solid var(--ui-border-muted)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -568,7 +568,7 @@ export function AttachmentPreviewModal({ item, isOpen, onClose }: AttachmentPrev
               <Icon size={18} color={color} aria-hidden="true" />
             </div>
             <div>
-              <p id="attachment-preview-title" style={{ margin: 0, fontSize: 14, fontWeight: 600, color: '#fff' }}>
+              <p id="attachment-preview-title" style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--ui-text-inverse)' }}>
                 {item.name}
               </p>
               {item.size && (
@@ -586,8 +586,8 @@ export function AttachmentPreviewModal({ item, isOpen, onClose }: AttachmentPrev
               style={{
                 padding: '8px 16px',
                 borderRadius: 8,
-                background: 'rgba(255,255,255,0.1)',
-                color: '#fff',
+                background: 'var(--ui-border-default)',
+                color: 'var(--ui-text-inverse)',
                 fontSize: 13,
                 fontWeight: 500,
                 textDecoration: 'none',
@@ -639,11 +639,11 @@ export function AttachmentPreviewModal({ item, isOpen, onClose }: AttachmentPrev
               style={{
                 margin: 0,
                 padding: 20,
-                background: '#0d0d0d',
+                background: 'var(--surface-canvas)',
                 borderRadius: 8,
                 fontSize: 13,
                 lineHeight: 1.6,
-                color: '#e0e0e0',
+                color: 'var(--ui-text-primary)',
                 fontFamily: "monospace",
                 maxHeight: 'calc(90vh - 200px)',
                 overflow: 'auto',
@@ -655,10 +655,10 @@ export function AttachmentPreviewModal({ item, isOpen, onClose }: AttachmentPrev
             <div
               style={{
                 padding: 20,
-                background: '#0d0d0d',
+                background: 'var(--surface-canvas)',
                 borderRadius: 8,
                 maxWidth: 600,
-                color: '#e0e0e0',
+                color: 'var(--ui-text-primary)',
                 fontSize: 14,
                 lineHeight: 1.6,
                 whiteSpace: 'pre-wrap',

@@ -17,7 +17,6 @@ import {
   animate,
 } from 'framer-motion';
 import { useReducedMotion } from './accessibility';
-import { animationTiming } from './timing';
 
 export type SwipeDirection = 'left' | 'right' | 'up' | 'down';
 
@@ -55,7 +54,6 @@ export function useSwipe(options: SwipeOptions = {}) {
     velocity = 0.5,
     onSwipe,
     onSwipeProgress,
-    elasticity = 0.2,
   } = options;
 
   const [swipeDirection, setSwipeDirection] = useState<SwipeDirection | null>(null);
@@ -235,7 +233,7 @@ export function PullToRefresh({
 }: PullToRefreshProps) {
   const prefersReducedMotion = useReducedMotion();
   const [internalRefreshing, setInternalRefreshing] = useState(false);
-  const [pullProgress, setPullProgress] = useState(0);
+  const [, setPullProgress] = useState(0);
   
   const isRefreshing = externalRefreshing ?? internalRefreshing;
   const y = useMotionValue(0);
@@ -347,8 +345,6 @@ export function DraggableList<T>({
   renderItem: (item: T, index: number, dragControls: ReturnType<typeof useDragControls>) => React.ReactNode;
   className?: string;
 }) {
-  const prefersReducedMotion = useReducedMotion();
-  
   return (
     <div className={className}>
       {items.map((item, index) => {
@@ -388,7 +384,7 @@ export function SwipeableItem({
   const background = useTransform(
     x,
     [-threshold, 0, threshold],
-    ['#ef4444', 'transparent', '#22c55e']
+    ['var(--status-error)', 'transparent', 'var(--status-success)']
   );
 
   const handleDragEnd = useCallback((

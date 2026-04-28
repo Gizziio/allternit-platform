@@ -4,22 +4,16 @@
  * Block-based markdown editor inspired by Notion
  */
 
-import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { Block, Document, BlockType, EditorProps, EditorAPI, SlashCommand, OpenTab, DocumentFile } from './types';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { Block, BlockType, EditorProps, SlashCommand } from './types';
 import { BlockRenderer } from './BlockRenderer';
 import { SlashCommandMenu } from './SlashCommandMenu';
-import { FileTree } from './FileTree';
-import { TabBar } from './TabBar';
-import { cn } from './cn';
-import { v4 as uuidv4 } from 'uuid';
 import {
   Plus,
-  DotsThree as MoreHorizontal,
   CaretLeft as ChevronLeft,
   CaretRight as ChevronRight,
   Download,
   FileText,
-  Clock,
 } from '@phosphor-icons/react';
 
 // Generate unique ID

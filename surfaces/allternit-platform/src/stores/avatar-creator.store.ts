@@ -380,7 +380,6 @@ export const useAvatarCreatorStore = create<AvatarCreatorState & AvatarCreatorAc
       // ============================================================================
       
       setConfig: (config) => {
-        const state = get();
         get()._addToHistory(config, 'Set config');
         set({ 
           currentConfig: config,
@@ -702,7 +701,6 @@ export const useAvatarCreatorStore = create<AvatarCreatorState & AvatarCreatorAc
       // ============================================================================
       
       applyTemplate: (template) => {
-        const state = get();
         const config = cloneAvatarConfig(template.config);
         get()._addToHistory(config, `Apply template: ${template.name}`);
         set({ 
@@ -862,7 +860,6 @@ export const useAvatarCreatorStore = create<AvatarCreatorState & AvatarCreatorAc
           const result = validateAvatarConfig(parsed);
           
           if (result.success && result.data) {
-            const state = get();
             get()._addToHistory(result.data, 'Import config');
             set({ 
               currentConfig: result.data,

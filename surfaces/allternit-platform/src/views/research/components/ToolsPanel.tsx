@@ -153,7 +153,7 @@ export function ToolsPanel({
               style={{
                 backgroundColor: 'rgba(52, 211, 153, 0.1)',
                 border: '1px solid rgba(52, 211, 153, 0.2)',
-                color: '#34d399',
+                color: 'var(--status-success)',
               }}
             >
               {canvasSyncLoading && <Loader2 size={12} className="animate-spin" />}

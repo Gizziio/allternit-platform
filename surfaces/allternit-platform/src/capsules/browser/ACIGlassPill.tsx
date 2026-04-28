@@ -84,7 +84,7 @@ function StatusDot({ status }: { status: string }) {
               : isWaiting  ? STATUS.warning
               : isBlocked  ? STATUS.error
               : isDone     ? STATUS.success
-              : '#6b7280';
+              : 'var(--ui-text-muted)';
 
   return (
     <span
@@ -136,10 +136,10 @@ function PillButton({
 }) {
   const bg = accent === 'green' ? 'rgba(16,185,129,0.15)'
            : accent === 'red'   ? '#ef44441f'
-           : 'rgba(255,255,255,0.06)';
+           : 'var(--ui-border-muted)';
   const hoverBg = accent === 'green' ? 'rgba(16,185,129,0.25)'
                 : accent === 'red'   ? '#ef444438'
-                : 'rgba(255,255,255,0.1)';
+                : 'var(--ui-border-default)';
   const color = accent === 'green' ? STATUS.success
               : accent === 'red'   ? STATUS.error
               : 'rgba(255,255,255,0.55)';
@@ -294,7 +294,7 @@ export function ACIGlassPill({ placement = 'top-left', bottomOffset = 0 }: ACIGl
           </div>
 
           {/* Divider */}
-          <span style={{ width: 1, height: 14, background: 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
+          <span style={{ width: 1, height: 14, background: 'var(--ui-border-default)', flexShrink: 0 }} />
 
           {/* Action text */}
           <span style={{
@@ -313,7 +313,7 @@ export function ACIGlassPill({ placement = 'top-left', bottomOffset = 0 }: ACIGl
           {/* Step counter */}
           {hasSteps && (
             <>
-              <span style={{ width: 1, height: 14, background: 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
+              <span style={{ width: 1, height: 14, background: 'var(--ui-border-default)', flexShrink: 0 }} />
               <span style={{
                 fontSize: 11,
                 color: `${SAND[500]}b2`,
@@ -345,7 +345,7 @@ export function ACIGlassPill({ placement = 'top-left', bottomOffset = 0 }: ACIGl
           )}
 
           {/* Divider before controls */}
-          <span style={{ width: 1, height: 14, background: 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
+          <span style={{ width: 1, height: 14, background: 'var(--ui-border-default)', flexShrink: 0 }} />
 
           {/* Controls */}
           {requiresApproval ? (
@@ -390,7 +390,7 @@ export function ACIGlassPill({ placement = 'top-left', bottomOffset = 0 }: ACIGl
               background: 'rgba(20, 18, 16, 0.72)',
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255,255,255,0.07)',
+              border: '1px solid var(--ui-border-muted)',
               borderRadius: 8,
             }}
           >

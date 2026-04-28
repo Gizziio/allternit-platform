@@ -106,7 +106,7 @@ export const DocumentsView: React.FC = () => {
                 fontSize: '13px',
                 fontWeight: 500,
                 cursor: 'pointer',
-                backgroundColor: typeFilter === type ? '#af52de' : 'var(--bg-secondary)',
+                backgroundColor: typeFilter === type ? 'var(--accent-cowork)' : 'var(--bg-secondary)',
                 color: typeFilter === type ? '#fff' : 'var(--text-secondary)',
                 transition: 'all 0.2s ease',
               }}
@@ -184,7 +184,7 @@ export const DocumentsView: React.FC = () => {
                       padding: '6px 12px',
                       borderRadius: '4px',
                       border: 'none',
-                      backgroundColor: '#af52de',
+                      backgroundColor: 'var(--accent-cowork)',
                       color: '#fff',
                       fontSize: '12px',
                       fontWeight: 500,

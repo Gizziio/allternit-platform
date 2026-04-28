@@ -46,16 +46,16 @@ export function getMoodDisplayName(mood: Mood): string {
 
 export function getMoodColor(mood: Mood): string {
   const colors: Record<Mood, string> = {
-    [Mood.Idle]: '#9CA3AF',
-    [Mood.Focused]: '#3B82F6',
-    [Mood.Thinking]: '#8B5CF6',
-    [Mood.Uncertain]: '#F59E0B',
-    [Mood.Celebrating]: '#10B981',
-    [Mood.Warning]: '#F59E0B',
-    [Mood.Error]: '#EF4444',
+    [Mood.Idle]: 'var(--ui-text-muted)',
+    [Mood.Focused]: 'var(--status-info)',
+    [Mood.Thinking]: 'var(--ui-text-muted)',
+    [Mood.Uncertain]: 'var(--status-warning)',
+    [Mood.Celebrating]: 'var(--status-success)',
+    [Mood.Warning]: 'var(--status-warning)',
+    [Mood.Error]: 'var(--status-error)',
     [Mood.Listening]: '#06B6D4',
     [Mood.Speaking]: '#6366F1',
-    [Mood.Sleeping]: '#6B7280',
+    [Mood.Sleeping]: 'var(--ui-text-muted)',
     [Mood.Confused]: '#F97316',
   };
   return colors[mood];

@@ -5,7 +5,7 @@
  * Each plugin is lazy-loaded to reduce bundle size.
  */
 
-import type { ModePlugin, PluginCapability } from './types';
+import type { ModePlugin } from './types';
 
 // Plugin definitions with lazy loading
 export const PLUGINS = {

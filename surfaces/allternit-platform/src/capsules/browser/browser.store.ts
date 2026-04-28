@@ -13,7 +13,6 @@ import type {
   A2UITab,
   MiniappTab,
   ComponentTab,
-  ChromeStreamTab,
   A2UIPayload,
   MiniappManifest,
   ProtocolParseResult,
@@ -35,6 +34,11 @@ import type {
  */
 export function parseBrowserInput(input: string): ProtocolParseResult {
   const trimmed = input.trim();
+
+  // Preserve about:blank and other about: URLs
+  if (trimmed.toLowerCase().startsWith('about:')) {
+    return { type: 'web', resource: trimmed };
+  }
 
   // Check for explicit protocols
   const protocolMatch = trimmed.match(/^([a-z]+):\/\/(.+)$/i);
@@ -176,7 +180,6 @@ interface BrowserStore {
   addA2UITab: (payload: A2UIPayload, title?: string, source?: string) => string;
   addMiniappTab: (manifest: MiniappManifest, capsuleId: string, entryPoint?: string) => string;
   addComponentTab: (componentId: string, title?: string, props?: Record<string, unknown>) => string;
-  addChromeStreamTab: (sessionId: string, signalingUrl: string, iceServers?: RTCIceServer[], resolution?: string) => string;
   closeTab: (id: string) => void;
   setActiveTab: (id: string) => void;
   updateTab: (id: string, updates: Partial<BrowserTab>) => void;
@@ -203,6 +206,15 @@ interface BrowserStore {
   closeTabsToRight: (id: string) => void;
   duplicateTab: (id: string) => void;
 
+  // Pin & Reorder
+  pinTab: (id: string) => void;
+  unpinTab: (id: string) => void;
+  reorderTabs: (fromIndex: number, toIndex: number) => void;
+
+  // Tab Groups
+  setTabGroup: (id: string, group: string | undefined, groupColor?: string) => void;
+  removeTabFromGroup: (id: string) => void;
+
   // History
   addRecentVisit: (url: string, title: string) => void;
   clearRecentVisits: () => void;
@@ -217,7 +229,7 @@ interface BrowserStore {
 // Store Implementation
 // ============================================================================
 
-const initialTab = createWebTab('https://www.google.com', 'Google');
+const initialTab = createWebTab('about:blank', 'New Tab');
 
 export const useBrowserStore = create<BrowserStore>()(
   devtools(
@@ -230,7 +242,7 @@ export const useBrowserStore = create<BrowserStore>()(
       chatPaneOpen: true,
       chatPaneWidth: BROWSER_CHAT_PANE_DEFAULT_WIDTH,
       recentVisits: [],
-      tabHistory: { [initialTab.id]: ['https://www.google.com'] },
+      tabHistory: { [initialTab.id]: ['about:blank'] },
       tabHistoryIndex: { [initialTab.id]: 0 },
       tabLoading: {},
 
@@ -282,26 +294,6 @@ export const useBrowserStore = create<BrowserStore>()(
           activeTabId: newTab.id,
         }));
         return newTab.id;
-      },
-
-      addChromeStreamTab: (sessionId: string, signalingUrl: string, iceServers?: RTCIceServer[], resolution?: string) => {
-        const id = `chrome-${sessionId}`;
-        const newTab: ChromeStreamTab = {
-          id,
-          title: 'Chrome Session',
-          isActive: false,
-          contentType: 'chrome-stream',
-          sessionId,
-          signalingUrl,
-          iceServers,
-          resolution: resolution || '1920x1080',
-          streamStatus: 'connecting',
-        };
-        set((state) => ({
-          tabs: [...state.tabs.map((t) => ({ ...t, isActive: false })), newTab],
-          activeTabId: id,
-        }));
-        return id;
       },
 
       closeTab: (id: string) => {
@@ -435,6 +427,39 @@ export const useBrowserStore = create<BrowserStore>()(
           const newActiveId = newTabs.find((t) => t.id === state.activeTabId) ? state.activeTabId : id;
           return { tabs: newTabs, activeTabId: newActiveId };
         });
+      },
+
+      pinTab: (id: string) => {
+        set((state) => ({
+          tabs: state.tabs.map((t) => t.id === id ? { ...t, pinned: true } as BrowserTab : t),
+        }));
+      },
+
+      unpinTab: (id: string) => {
+        set((state) => ({
+          tabs: state.tabs.map((t) => t.id === id ? { ...t, pinned: false } as BrowserTab : t),
+        }));
+      },
+
+      reorderTabs: (fromIndex: number, toIndex: number) => {
+        set((state) => {
+          const newTabs = [...state.tabs];
+          const [moved] = newTabs.splice(fromIndex, 1);
+          newTabs.splice(toIndex, 0, moved);
+          return { tabs: newTabs };
+        });
+      },
+
+      setTabGroup: (id: string, group: string | undefined, groupColor?: string) => {
+        set((state) => ({
+          tabs: state.tabs.map((t) => t.id === id ? { ...t, group: group ?? undefined, groupColor: group ? (groupColor || t.groupColor) : undefined } as BrowserTab : t),
+        }));
+      },
+
+      removeTabFromGroup: (id: string) => {
+        set((state) => ({
+          tabs: state.tabs.map((t) => t.id === id ? { ...t, group: undefined, groupColor: undefined } as BrowserTab : t),
+        }));
       },
 
       duplicateTab: (id: string) => {

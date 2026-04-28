@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Robot, 
@@ -18,11 +18,9 @@ import {
   Lightning, 
   Paperclip, 
   FileText, 
-  ShieldCheck, 
-  Warning, 
-  Check, 
+  ShieldCheck,
+  Warning,
   Stack,
-  Plus,
   Sun,
   Moon,
 } from "@phosphor-icons/react";
@@ -57,7 +55,7 @@ import {
   detectPluginConflicts,
   generateEnhancedWorkspaceDocuments,
 } from "@/lib/agents/agent.service";
-import { agentWorkspaceService } from "@/lib/agents/agent-workspace.service";
+
 import {
   getDefaultCharacterLayer, 
   computeCharacterStats, 
@@ -66,7 +64,6 @@ import {
 } from "@/lib/agents/character.service";
 import { useWizardPersistence } from "@/components/agents/AgentCreationWizard.persistence";
 import { useAvatarCreatorStore } from "@/stores/avatar-creator.store";
-import { AvatarCreatorStep } from "@/views/agent-creation/AvatarCreatorStep";
 import { MascotPreview } from "./AgentMascotPreview";
 import { AgentTemplateSelector } from "./AgentTemplateSelector";
 import { AgentToolConfigurator } from "./AgentToolConfigurator";
@@ -76,26 +73,21 @@ import {
   type AvatarPickerConfig,
 } from "./AgentAvatarPicker";
 import {
-  AgentWorkspacePreview,
   generateWorkspaceDocs,
   type WorkspaceDocument,
 } from "./AgentWorkspacePreview";
-import { 
-  MASCOT_TEMPLATES, 
-  CAPABILITY_CATEGORIES, 
-  AGENT_CAPABILITIES_ENHANCED, 
+import {
   ENHANCED_HARD_BAN_CATEGORIES,
 } from "../AgentView.constants";
 import { useStudioTheme } from "../useStudioTheme";
 import * as voiceService from "@/lib/agents/voice.service";
-import { api, GATEWAY_URL } from "@/integration/api-client";
+import { api } from "@/integration/api-client";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TagInput } from "@/components/ui/tag-input";
 import { WorkspaceLayerConfigurator } from "@/components/WorkspaceLayerConfigurator";
@@ -104,7 +96,6 @@ import { BrowserCompatibilityWarning as BrowserCompatibilityWarningComponent } f
 import { DraftSavedIndicator } from "@/components/agents/AgentCreationWizard.persistence";
 import type { AvatarConfig, CharacterStats } from "@/lib/agents/character.types";
 import { CHARACTER_SETUPS } from "@/lib/agents/character.service";
-import { SPECIALIST_TEMPLATES } from "@/lib/agents/agent-templates.specialist";
 import type { SpecialistTemplate } from "@/lib/agents/agent-templates.specialist";
 
 export function CreateAgentForm({ 
@@ -167,8 +158,8 @@ export function CreateAgentForm({
   );
 
   // Workspace document selection
-  const [workspaceDocs, setWorkspaceDocs] = useState<WorkspaceDocument[]>([]);
-  const [selectedWorkspacePaths, setSelectedWorkspacePaths] = useState<string[]>([]);
+  const [, setWorkspaceDocs] = useState<WorkspaceDocument[]>([]);
+  const [, setSelectedWorkspacePaths] = useState<string[]>([]);
 
   // UPGRADE: New Personality State
   const [personality, setPersonality] = useState({
@@ -202,8 +193,6 @@ export function CreateAgentForm({
 
   const {
   loadState,
-  saveState,
-  clearState,
   hasLocalStorage,
   saveStatus,
   browserCompatibility,
@@ -243,7 +232,7 @@ export function CreateAgentForm({
         const template: AgentTemplate = JSON.parse(templateJson);
         sessionStorage.removeItem('agentTemplate');
         
-        console.log('[CreateAgentForm] Applying template:', template.id);
+        // Template applied silently
         
         // Advance to identity step automatically
         setActiveStep('identity');
@@ -277,9 +266,9 @@ export function CreateAgentForm({
             mascotTemplate: template.mascotTemplate,
             colors: {
               primary: template.avatarColors?.primary || template.color,
-              secondary: template.avatarColors?.secondary || '#60A5FA',
+              secondary: template.avatarColors?.secondary || 'var(--status-info)',
               glow: template.avatarColors?.glow || '#93C5FD',
-              outline: 'rgba(0,0,0,0.5)'
+              outline: 'var(--shell-overlay-backdrop)'
             }
           } as any;
           
@@ -307,7 +296,7 @@ export function CreateAgentForm({
       const localMascot = (avatarConfig as any).mascotTemplate;
       
       if (localMascot !== currentStoreMascot) {
-        console.log('[CreateAgentForm] Updating store from local config:', localMascot);
+        // Store updated from local config
         store.setConfig(avatarConfig);
       }
     }
@@ -316,9 +305,9 @@ export function CreateAgentForm({
 
   // UPGRADE: Enhanced State Variables
   const [isModelsLoading, setIsModelsLoading] = useState(true);
-  const [isCapabilitiesLoading, setIsCapabilitiesLoading] = useState(true);
+  const [, setIsCapabilitiesLoading] = useState(true);
   const [apiModels, setApiModels] = useState<any[]>([]);
-  const [apiCapabilities, setApiCapabilities] = useState<any[]>([]);
+  const [, setApiCapabilities] = useState<any[]>([]);
   const [submitStatus, setSubmitStatus] = useState<{ type: 'success' | 'error', message: string } | null>(null);
   const [isForgeQueued, setIsForgeQueued] = useState(false);
   const [workspaceWarning, setWorkspaceWarning] = useState<string | null>(null);
@@ -410,12 +399,10 @@ export function CreateAgentForm({
     // If not on review step, just go to next step (form submit acts as "Next")
     if (activeStep !== "review") {
       if (!stepValidation[activeStep]) {
-        console.log('[CreateAgentForm] Step validation failed for:', activeStep);
         return;
       }
       const nextStep = CREATE_FLOW_STEPS[activeStepIndex + 1];
       if (nextStep) {
-        console.log('[CreateAgentForm] Advancing to step:', nextStep.id);
         setActiveStep(nextStep.id);
       }
       return;
@@ -477,11 +464,7 @@ export function CreateAgentForm({
       avatar: avatarConfig,
     };
     
-    console.log('[CreateAgentForm] Creating agent with enhanced payload:', { 
-      name: payload.name, 
-      type: payload.type,
-      activeStep 
-    });
+    // Creating agent with enhanced payload
     
     // Create agent immediately — no artificial delay
     setWorkspaceWarning(null);
@@ -492,39 +475,10 @@ export function CreateAgentForm({
       let createdAgent: Agent | null = null;
       let workspaceCreated = false;
       try {
-        console.log('[CreateAgentForm] Calling createAgent via API...');
-        
-        // 1. Create the agent in the backend
-        const agentResponse = await api.post('/api/v1/agents', {
-          name: payload.name,
-          description: payload.description,
-          agent_type: payload.type,
-          model: payload.model,
-          provider: payload.provider,
-          capabilities: payload.capabilities,
-          system_prompt: payload.systemPrompt,
-          tools: payload.tools,
-          max_iterations: payload.maxIterations,
-          temperature: payload.temperature,
-          config: payload.config,
-        }) as any;
+        // 1. Create the agent via store (single source of truth — hits API + updates UI)
+        createdAgent = await createAgent(payload);
 
-        if (!agentResponse.ok) {
-          throw new Error(agentResponse.error || 'Failed to create agent via API');
-        }
-
-        createdAgent = {
-          id: agentResponse.data.id || `agent-${Date.now()}`,
-          ...payload,
-          status: 'idle',
-          createdAt: Date.now().toString(),
-          updatedAt: Date.now().toString(),
-        } as unknown as Agent;
-        
-        // Also update local store for UI purposes if needed
-        await createAgent(payload);
-        
-        // 2. Create agent workspace
+        // 2. Initialize workspace on backend
         try {
           const workspaceDocs = generateEnhancedWorkspaceDocuments(payload.config, {
             name: payload.name,
@@ -532,19 +486,14 @@ export function CreateAgentForm({
             model: payload.model,
             provider: payload.provider
           });
-          
+
           const workspaceResponse = await api.post(`/api/v1/agents/${createdAgent.id}/workspace/initialize`, {
             documents: workspaceDocs,
           }) as any;
-          
+
           if (!workspaceResponse.ok) {
             console.warn('[CreateAgentForm] Workspace initialization via API failed:', workspaceResponse.error);
           }
-
-          await agentWorkspaceService.create({
-            ...payload,
-            avatar: avatarConfig,
-          }, 'allternit-standard', undefined, workspaceLayers);
           workspaceCreated = true;
         } catch (workspaceError) {
           console.error('[CreateAgentForm] Workspace creation failed:', workspaceError);
@@ -575,14 +524,6 @@ export function CreateAgentForm({
     })();
   };
 
-  const toggleCapability = (capId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      capabilities: prev.capabilities?.includes(capId)
-        ? prev.capabilities.filter(c => c !== capId)
-        : [...(prev.capabilities || []), capId]
-    }));
-  };
 
   const toggleSpecialty = (skill: string) => {
     setBlueprint((prev) => {
@@ -778,12 +719,6 @@ export function CreateAgentForm({
     color: isSelected ? STUDIO_THEME.textPrimary : STUDIO_THEME.textSecondary,
   });
 
-  const stepDescriptionStyle: React.CSSProperties = {
-    fontSize: '12px',
-    color: STUDIO_THEME.textMuted,
-    marginTop: '4px',
-  };
-
   const formSectionStyle: React.CSSProperties = {
     borderRadius: '12px',
     border: `1px solid ${STUDIO_THEME.borderSubtle}`,
@@ -853,7 +788,7 @@ export function CreateAgentForm({
     padding: '10px 20px',
     borderRadius: '8px',
     background: `linear-gradient(to right, ${STUDIO_THEME.accent}, #B08D6E)`,
-    color: '#1A1612',
+    color: 'var(--ui-text-inverse)',
     fontSize: '14px',
     fontWeight: 600,
     border: 'none',
@@ -879,7 +814,7 @@ export function CreateAgentForm({
     borderRadius: '8px',
     background: 'rgba(239, 68, 68, 0.1)',
     border: '1px solid rgba(239, 68, 68, 0.3)',
-    color: '#ef4444',
+    color: 'var(--status-error)',
     marginBottom: '16px',
     display: 'flex',
     alignItems: 'center',
@@ -890,24 +825,13 @@ export function CreateAgentForm({
     borderRadius: '8px',
     background: 'rgba(245, 158, 11, 0.12)',
     border: '1px solid rgba(245, 158, 11, 0.35)',
-    color: '#fbbf24',
+    color: 'var(--status-warning)',
     marginBottom: '16px',
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
   };
   const isBusy = isCreating || isForgeQueued;
-
-  // Manual Calculation for review step entries
-  const projectedStatEntries = useMemo(() => {
-    return projectedStats.relevantStats
-      .map((key) => ({
-        key,
-        value: projectedStats.stats[key] ?? 0,
-        definition: setupStatDefinitions.find((definition) => definition.key === key) || null,
-      }))
-      .filter((entry) => entry.definition);
-  }, [projectedStats, setupStatDefinitions]);
 
   return (
     <div style={containerStyle}>
@@ -923,12 +847,12 @@ export function CreateAgentForm({
           borderRadius: '12px',
           background: submitStatus.type === 'success' ? 'rgba(34, 197, 94, 0.9)' : 'rgba(239, 68, 68, 0.9)',
           backdropFilter: 'blur(8px)',
-          border: `1px solid ${submitStatus.type === 'success' ? '#22c55e' : '#ef4444'}`,
+          border: `1px solid ${submitStatus.type === 'success' ? 'var(--status-success)' : 'var(--status-error)'}`,
           color: 'white',
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+          boxShadow: '0 8px 32px var(--surface-hover)',
           animation: 'slideDown 0.3s ease-out'
         }}>
           {submitStatus.type === 'success' ? <CheckCircle style={{ width: 20, height: 20 }} /> : <Warning style={{ width: 20, height: 20 }} />}
@@ -1189,7 +1113,7 @@ export function CreateAgentForm({
                   </SelectContent>
                 </Select>
                 {orchestrators.length === 0 && (
-                  <p style={{ fontSize: '12px', color: '#f59e0b', marginTop: '8px' }}>
+                  <p style={{ fontSize: '12px', color: 'var(--status-warning)', marginTop: '8px' }}>
                     You need an orchestrator before creating a sub-agent.
                   </p>
                 )}
@@ -1390,14 +1314,14 @@ export function CreateAgentForm({
                         textAlign: 'left',
                         transition: 'all 0.2s ease',
                         background: isSelected ? 'rgba(239, 68, 68, 0.1)' : STUDIO_THEME.bg,
-                        border: `1px solid ${isSelected ? '#ef4444' : STUDIO_THEME.borderSubtle}`,
+                        border: `1px solid ${isSelected ? 'var(--status-error)' : STUDIO_THEME.borderSubtle}`,
                       }}
                     >
-                      <div style={{ padding: '8px', borderRadius: '8px', background: isSelected ? '#ef444420' : 'rgba(255,255,255,0.05)' }}>
-                        <Icon size={18} style={{ color: isSelected ? '#ef4444' : STUDIO_THEME.textSecondary }} />
+                      <div style={{ padding: '8px', borderRadius: '8px', background: isSelected ? '#ef444420' : 'var(--surface-hover)' }}>
+                        <Icon size={18} style={{ color: isSelected ? 'var(--status-error)' : STUDIO_THEME.textSecondary }} />
                       </div>
                       <div>
-                        <div style={{ fontWeight: 500, color: isSelected ? '#ef4444' : STUDIO_THEME.textPrimary, fontSize: '14px' }}>{(ban as any).label}</div>
+                        <div style={{ fontWeight: 500, color: isSelected ? 'var(--status-error)' : STUDIO_THEME.textPrimary, fontSize: '14px' }}>{(ban as any).label}</div>
                         <div style={{ fontSize: '11px', color: STUDIO_THEME.textMuted, marginTop: '2px' }}>{(ban as any).description}</div>
                       </div>
                     </button>
@@ -1734,7 +1658,7 @@ export function CreateAgentForm({
                 })}
               </div>
               {cardSeed.hardBanCategories.length === 0 && (
-                <p style={{ fontSize: '12px', color: '#f59e0b', marginTop: '12px' }}>
+                <p style={{ fontSize: '12px', color: 'var(--status-warning)', marginTop: '12px' }}>
                   Select at least one hard-ban category so tool blocking is enforceable.
                 </p>
               )}
@@ -1840,7 +1764,7 @@ export function CreateAgentForm({
                                     width: '8px',
                                     height: '8px',
                                     borderRadius: '50%',
-                                    background: model.provider === 'openai' ? '#10a37f' : model.provider === 'anthropic' ? '#d97757' : '#3b82f6'
+                                    background: model.provider === 'openai' ? '#10a37f' : model.provider === 'anthropic' ? '#d97757' : 'var(--status-info)'
                                   }} />
                                   <span style={{ fontWeight: 600, fontSize: '13px' }}>{model.name}</span>
                                 </div>
@@ -1934,7 +1858,7 @@ export function CreateAgentForm({
                 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     {formData.voice?.enabled ? (
-                      <SpeakerHigh style={{ width: 20, height: 20, color: '#22c55e' }} />
+                      <SpeakerHigh style={{ width: 20, height: 20, color: 'var(--status-success)' }} />
                     ) : (
                       <SpeakerSlash style={{ width: 20, height: 20, color: STUDIO_THEME.textMuted }} />
                     )}
@@ -2520,7 +2444,7 @@ export function CreateAgentForm({
                           padding: '4px 10px',
                           borderRadius: '10px',
                           background: 'rgba(239, 68, 68, 0.15)',
-                          color: '#ef4444',
+                          color: 'var(--status-error)',
                         }}>
                           {b.category}
                         </span>
@@ -2586,7 +2510,7 @@ export function CreateAgentForm({
                           config={{ 
                             type: 'mascot', 
                             style: { 
-                              primaryColor: avatarConfig.colors?.primary || '#3B82F6',
+                              primaryColor: avatarConfig.colors?.primary || 'var(--status-info)',
                               accentColor: avatarConfig.colors?.glow || '#93C5FD' 
                             }, 
                             mascot: { 
@@ -2749,34 +2673,6 @@ export function CreationProgressAnimation({
   );
 }
 
-// Internal Helper functions moved from AgentView.service if needed
-// (These were likely local in AgentView.tsx)
-
-function PluginConflictWarning({ selectedTools }: { selectedTools: string[] }) {
-  const conflicts = detectPluginConflicts(selectedTools);
-  if (!conflicts.hasConflict) return null;
-
-  return (
-    <div style={{
-      padding: '12px 16px',
-      borderRadius: '8px',
-      background: conflicts.severity === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-      border: `1px solid ${conflicts.severity === 'error' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(245, 158, 11, 0.2)'}`,
-      color: conflicts.severity === 'error' ? '#ef4444' : '#f59e0b',
-      fontSize: '13px',
-      marginBottom: '16px',
-      display: 'flex',
-      gap: '10px'
-    }}>
-      <Warning size={18} style={{ flexShrink: 0 }} />
-      <div>
-        <div style={{ fontWeight: 600 }}>Tool Conflict Detected</div>
-        <p style={{ margin: '4px 0 0 0', opacity: 0.9 }}>{conflicts.conflicts.join(', ')}</p>
-      </div>
-    </div>
-  );
-}
-
 function DuplicateNameWarning({ agentName }: { agentName: string }) {
   const { agents } = useAgentStore();
   const exists = useMemo(() =>
@@ -2792,7 +2688,7 @@ function DuplicateNameWarning({ agentName }: { agentName: string }) {
       borderRadius: '6px',
       background: 'rgba(245, 158, 11, 0.1)',
       border: '1px solid rgba(245, 158, 11, 0.2)',
-      color: '#f59e0b',
+      color: 'var(--status-warning)',
       fontSize: '12px',
       display: 'flex',
       alignItems: 'center',

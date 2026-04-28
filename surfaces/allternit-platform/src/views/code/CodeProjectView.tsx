@@ -147,7 +147,7 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
           padding: '10px 16px',
           border: 'none',
           background: 'transparent',
-          color: '#9b9b9b',
+          color: 'var(--ui-text-secondary)',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
@@ -165,7 +165,7 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
           padding: '10px 16px',
           border: 'none',
           background: 'transparent',
-          color: '#9b9b9b',
+          color: 'var(--ui-text-secondary)',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
@@ -184,7 +184,7 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
           padding: '10px 16px',
           border: 'none',
           background: 'transparent',
-          color: '#ef4444',
+          color: 'var(--status-error)',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
@@ -251,7 +251,7 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
         tabs={[
           { id: 'threads', label: 'Threads', count: workspaceThreads.length },
           { id: 'agent-threads', label: 'Agent Threads', count: workspaceAgentThreads.length },
-          { id: 'telemetry', label: 'Telemetry', icon: <ActivityIcon size={14} /> },
+          { id: 'telemetry', label: 'Telemetry' },
           { id: 'sources', label: 'Sources', count: workspaceFiles.length },
         ]}
         activeTab={activeTab}
@@ -372,7 +372,7 @@ function AddFileModal({ onClose, onUpload }: { onClose: () => void; onUpload: ()
         style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(0,0,0,0.6)',
+          background: 'var(--shell-overlay-backdrop)',
           backdropFilter: 'blur(4px)',
           zIndex: 10000,
         }}
@@ -384,16 +384,16 @@ function AddFileModal({ onClose, onUpload }: { onClose: () => void; onUpload: ()
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          background: 'linear-gradient(180deg, rgba(37,33,31,0.98), rgba(26,23,22,0.98))',
+          background: 'var(--surface-floating)',
           borderRadius: 16,
-          border: '1px solid rgba(255,255,255,0.1)',
+          border: '1px solid var(--ui-border-default)',
           padding: '24px',
           minWidth: 360,
           zIndex: 10001,
-          boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+          boxShadow: 'var(--shadow-xl)',
         }}
       >
-        <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 700, color: '#f0f0f0' }}>
+        <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 700, color: 'var(--ui-text-primary)' }}>
           Add sources
         </h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -402,10 +402,10 @@ function AddFileModal({ onClose, onUpload }: { onClose: () => void; onUpload: ()
             style={{
               width: '100%',
               padding: '12px 16px',
-              border: 'none',
-              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid var(--ui-border-default)',
+              background: 'var(--surface-hover)',
               borderRadius: 8,
-              color: '#9b9b9b',
+              color: 'var(--ui-text-secondary)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -428,10 +428,10 @@ function AddFileModal({ onClose, onUpload }: { onClose: () => void; onUpload: ()
             marginTop: 16,
             width: '100%',
             padding: '10px',
-            border: 'none',
-            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid var(--ui-border-default)',
+            background: 'transparent',
             borderRadius: 8,
-            color: '#9b9b9b',
+            color: 'var(--ui-text-secondary)',
             cursor: 'pointer',
             fontSize: 13,
           }}
@@ -460,7 +460,7 @@ function AddInstructionModal({
         style={{
           position: 'fixed',
           inset: 0,
-          background: 'rgba(0,0,0,0.6)',
+          background: 'var(--shell-overlay-backdrop)',
           backdropFilter: 'blur(4px)',
           zIndex: 10000,
         }}
@@ -472,17 +472,17 @@ function AddInstructionModal({
           top: '50%',
           left: '50%',
           transform: 'translate(-50%, -50%)',
-          background: 'linear-gradient(180deg, rgba(37,33,31,0.98), rgba(26,23,22,0.98))',
+          background: 'var(--surface-floating)',
           borderRadius: 16,
-          border: '1px solid rgba(255,255,255,0.1)',
+          border: '1px solid var(--ui-border-default)',
           padding: '24px',
           width: '90%',
           maxWidth: 480,
           zIndex: 10001,
-          boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+          boxShadow: 'var(--shadow-xl)',
         }}
       >
-        <h3 style={{ margin: '0 0 8px 0', fontSize: 16, fontWeight: 700, color: '#f0f0f0' }}>
+        <h3 style={{ margin: '0 0 8px 0', fontSize: 16, fontWeight: 700, color: 'var(--ui-text-primary)' }}>
           Set workspace instructions
         </h3>
         <textarea
@@ -493,18 +493,18 @@ function AddInstructionModal({
             width: '100%',
             minHeight: 120,
             padding: 12,
-            background: 'rgba(0,0,0,0.3)',
-            border: '1px solid rgba(255,255,255,0.1)',
+            background: 'var(--bg-tertiary)',
+            border: '1px solid var(--ui-border-default)',
             borderRadius: 8,
-            color: '#f0f0f0',
+            color: 'var(--ui-text-primary)',
             fontSize: 14,
             outline: 'none',
             marginBottom: 16,
           }}
         />
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ color: '#9b9b9b', background: 'transparent', border: 'none', cursor: 'pointer' }}>Cancel</button>
-          <button onClick={onSave} style={{ padding: '8px 16px', borderRadius: 8, background: '#f0f0f0', color: '#1a1a1a', border: 'none', cursor: 'pointer' }}>Save</button>
+          <button onClick={onClose} style={{ color: 'var(--ui-text-secondary)', background: 'transparent', border: 'none', cursor: 'pointer' }}>Cancel</button>
+          <button onClick={onSave} style={{ padding: '8px 16px', borderRadius: 8, background: 'var(--accent-primary)', color: 'var(--ui-text-inverse)', border: 'none', cursor: 'pointer' }}>Save</button>
         </div>
       </div>
     </>

@@ -17,20 +17,12 @@ import {
   Pulse as Activity,
   Lock,
   LockOpen,
-  User,
-  Robot,
-  Globe,
   HardDrives,
   ArrowsClockwise,
   Bell,
-  Funnel,
-  CaretRight,
   TrendUp,
   TrendDown,
   X,
-  Eye,
-  EyeSlash,
-  GearSix,
   XCircle,
 } from '@phosphor-icons/react';
 import {
@@ -51,21 +43,21 @@ import type {
 
 // Event type configurations
 const EVENT_TYPES: { value: SecurityEventType; label: string; color: string; icon: React.ReactNode }[] = [
-  { value: 'authentication', label: 'Auth', color: '#3b82f6', icon: <Lock size={14} /> },
+  { value: 'authentication', label: 'Auth', color: 'var(--status-info)', icon: <Lock size={14} /> },
   { value: 'authorization', label: 'Access', color: '#8b5cf6', icon: <LockOpen size={14} /> },
-  { value: 'policy_violation', label: 'Policy', color: '#ef4444', icon: <Warning size={14} /> },
-  { value: 'anomaly', label: 'Anomaly', color: '#f59e0b', icon: <Activity size={14} /> },
-  { value: 'threat', label: 'Threat', color: '#dc2626', icon: <Warning size={14} /> },
-  { value: 'compliance', label: 'Compliance', color: '#10b981', icon: <CheckCircle size={14} /> },
-  { value: 'system', label: 'System', color: '#6b7280', icon: <HardDrives size={14} /> },
+  { value: 'policy_violation', label: 'Policy', color: 'var(--status-error)', icon: <Warning size={14} /> },
+  { value: 'anomaly', label: 'Anomaly', color: 'var(--status-warning)', icon: <Activity size={14} /> },
+  { value: 'threat', label: 'Threat', color: 'var(--status-error)', icon: <Warning size={14} /> },
+  { value: 'compliance', label: 'Compliance', color: 'var(--status-success)', icon: <CheckCircle size={14} /> },
+  { value: 'system', label: 'System', color: 'var(--ui-text-muted)', icon: <HardDrives size={14} /> },
 ];
 
 const SEVERITY_CONFIG: Record<SecurityEventSeverity, { color: string; bgColor: string; label: string }> = {
-  info: { color: '#6b7280', bgColor: '#37415120', label: 'Info' },
-  low: { color: '#3b82f6', bgColor: '#3b82f620', label: 'Low' },
-  medium: { color: '#f59e0b', bgColor: '#f59e0b20', label: 'Medium' },
-  high: { color: '#f97316', bgColor: '#f9731620', label: 'High' },
-  critical: { color: '#ef4444', bgColor: '#ef444420', label: 'Critical' },
+  info: { color: 'var(--ui-text-muted)', bgColor: 'var(--surface-active)', label: 'Info' },
+  low: { color: 'var(--status-info)', bgColor: 'var(--status-info-bg)', label: 'Low' },
+  medium: { color: 'var(--status-warning)', bgColor: 'var(--status-warning-bg)', label: 'Medium' },
+  high: { color: 'var(--status-warning)', bgColor: 'var(--status-warning-bg)', label: 'High' },
+  critical: { color: 'var(--status-error)', bgColor: 'var(--status-error-bg)', label: 'Critical' },
 };
 
 // ============================================================================
@@ -154,33 +146,22 @@ export function SecurityDashboard() {
     }
   };
 
-  // Get threat level color
-  const getThreatColor = (level: string) => {
-    switch (level) {
-      case 'low': return '#22c55e';
-      case 'medium': return '#f59e0b';
-      case 'high': return '#f97316';
-      case 'critical': return '#ef4444';
-      default: return '#6b7280';
-    }
-  };
-
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#1a1a1a' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--surface-panel)' }}>
       {/* Header */}
       <div style={{ 
         padding: '20px 24px', 
-        borderBottom: '1px solid #333',
+        borderBottom: '1px solid var(--ui-border-muted)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        background: '#1a1a1a',
+        background: 'var(--surface-panel)',
       }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: '#fff' }}>
+          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: 'var(--ui-text-primary)' }}>
             Security Dashboard
           </h1>
-          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#888' }}>
+          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--ui-text-secondary)' }}>
             Last updated: {lastRefresh.toLocaleTimeString()}
           </p>
         </div>
@@ -190,9 +171,9 @@ export function SecurityDashboard() {
             style={{
               padding: '8px 16px',
               borderRadius: 6,
-              border: '1px solid #444',
+              border: '1px solid var(--ui-border-default)',
               background: 'transparent',
-              color: '#aaa',
+              color: 'var(--ui-text-muted)',
               fontSize: 13,
               cursor: 'pointer',
               display: 'flex',
@@ -209,10 +190,10 @@ export function SecurityDashboard() {
       {/* Tabs */}
       <div style={{ 
         padding: '0 24px', 
-        borderBottom: '1px solid #333',
+        borderBottom: '1px solid var(--ui-border-muted)',
         display: 'flex',
         gap: 0,
-        background: '#1a1a1a',
+        background: 'var(--surface-panel)',
       }}>
         {[
           { id: 'overview', label: 'Overview' },
@@ -227,7 +208,7 @@ export function SecurityDashboard() {
               border: 'none',
               borderBottom: activeTab === tab.id ? '2px solid #d4b08c' : '2px solid transparent',
               background: 'transparent',
-              color: activeTab === tab.id ? '#d4b08c' : '#888',
+              color: activeTab === tab.id ? 'var(--accent-primary)' : 'var(--ui-text-muted)',
               fontSize: 14,
               fontWeight: 500,
               cursor: 'pointer',
@@ -240,10 +221,10 @@ export function SecurityDashboard() {
             {tab.count !== undefined && tab.count > 0 && (
               <span style={{
                 padding: '2px 8px',
-                background: activeTab === tab.id ? '#d4b08c20' : '#ef4444',
+                background: activeTab === tab.id ? 'color-mix(in srgb, var(--accent-primary) 12%, transparent)' : 'var(--status-error)',
                 borderRadius: 10,
                 fontSize: 11,
-                color: activeTab === tab.id ? '#d4b08c' : '#fff',
+                color: activeTab === tab.id ? 'var(--accent-primary)' : 'var(--ui-text-primary)',
               }}>
                 {tab.count}
               </span>
@@ -311,11 +292,11 @@ function OverviewTab({
 }) {
   const getThreatColor = (level: string) => {
     switch (level) {
-      case 'low': return '#22c55e';
-      case 'medium': return '#f59e0b';
-      case 'high': return '#f97316';
-      case 'critical': return '#ef4444';
-      default: return '#6b7280';
+      case 'low': return 'var(--status-success)';
+      case 'medium': return 'var(--status-warning)';
+      case 'high': return 'var(--status-warning)';
+      case 'critical': return 'var(--status-error)';
+      default: return 'var(--ui-text-muted)';
     }
   };
 
@@ -345,7 +326,7 @@ function OverviewTab({
           <Shield size={28} />
         </div>
         <div>
-          <div style={{ fontSize: 12, color: '#888', textTransform: 'uppercase', letterSpacing: 1 }}>
+          <div style={{ fontSize: 12, color: 'var(--ui-text-secondary)', textTransform: 'uppercase', letterSpacing: 1 }}>
             Current Threat Level
           </div>
           <div style={{ 
@@ -370,26 +351,26 @@ function OverviewTab({
           label="Active Alerts"
           value={overview.activeAlerts}
           icon={<Bell size={20} />}
-          color="#ef4444"
+          color="var(--status-error)"
           trend={overview.metrics.totalViolations24h > 5 ? 'up' : 'down'}
         />
         <MetricCard
           label="Unresolved Violations"
           value={overview.unresolvedViolations}
           icon={<Warning size={20} />}
-          color="#f59e0b"
+          color="var(--status-warning)"
         />
         <MetricCard
           label="Pending Approvals"
           value={overview.pendingApprovals}
           icon={<Clock size={20} />}
-          color="#3b82f6"
+          color="var(--status-info)"
         />
         <MetricCard
           label="Compliance Score"
           value={`${overview.complianceStatus.score}%`}
           icon={<CheckCircle size={20} />}
-          color="#22c55e"
+          color="var(--status-success)"
           trend={overview.complianceStatus.score > 80 ? 'up' : 'down'}
         />
       </div>
@@ -397,7 +378,7 @@ function OverviewTab({
       {/* Recent Events */}
       <div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#fff' }}>
+          <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
             Recent Security Events
           </h3>
           <button style={{
@@ -405,7 +386,7 @@ function OverviewTab({
             borderRadius: 6,
             border: 'none',
             background: 'transparent',
-            color: '#d4b08c',
+            color: 'var(--accent-primary)',
             fontSize: 13,
             cursor: 'pointer',
           }}>
@@ -415,7 +396,7 @@ function OverviewTab({
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {events.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: 40, color: '#666' }}>
+            <div style={{ textAlign: 'center', padding: 40, color: 'var(--ui-text-muted)' }}>
               <CheckCircle size={32} />
               <p>No recent security events</p>
             </div>
@@ -433,7 +414,7 @@ function OverviewTab({
 
       {/* 24h Metrics */}
       <div style={{ marginTop: 24 }}>
-        <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 600, color: '#fff' }}>
+        <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
           Last 24 Hours
         </h3>
         <div style={{ 
@@ -441,11 +422,11 @@ function OverviewTab({
           gridTemplateColumns: 'repeat(5, 1fr)', 
           gap: 12,
         }}>
-          <StatBox label="Violations" value={overview.metrics.totalViolations24h} color="#ef4444" />
+          <StatBox label="Violations" value={overview.metrics.totalViolations24h} color="var(--status-error)" />
           <StatBox label="Blocked" value={overview.metrics.blockedActions24h} color="#f97316" />
-          <StatBox label="Approved" value={overview.metrics.approvedRequests24h} color="#22c55e" />
-          <StatBox label="Rejected" value={overview.metrics.rejectedRequests24h} color="#888" />
-          <StatBox label="Enforcement" value={`${Math.round(overview.metrics.policyEnforcementRate * 100)}%`} color="#3b82f6" />
+          <StatBox label="Approved" value={overview.metrics.approvedRequests24h} color="var(--status-success)" />
+          <StatBox label="Rejected" value={overview.metrics.rejectedRequests24h} color="var(--ui-text-secondary)" />
+          <StatBox label="Enforcement" value={`${Math.round(overview.metrics.policyEnforcementRate * 100)}%`} color="var(--status-info)" />
         </div>
       </div>
     </div>
@@ -484,7 +465,7 @@ function EventsTab({
         gap: 12,
         marginBottom: 20,
         padding: 16,
-        background: '#252525',
+        background: 'var(--surface-panel)',
         borderRadius: 8,
       }}>
         <select
@@ -493,9 +474,9 @@ function EventsTab({
           style={{
             padding: '8px 12px',
             borderRadius: 6,
-            border: '1px solid #444',
-            background: '#1a1a1a',
-            color: '#e5e5e5',
+            border: '1px solid var(--ui-border-default)',
+            background: 'var(--surface-panel)',
+            color: 'var(--ui-text-primary)',
             fontSize: 13,
           }}
         >
@@ -510,9 +491,9 @@ function EventsTab({
           style={{
             padding: '8px 12px',
             borderRadius: 6,
-            border: '1px solid #444',
-            background: '#1a1a1a',
-            color: '#e5e5e5',
+            border: '1px solid var(--ui-border-default)',
+            background: 'var(--surface-panel)',
+            color: 'var(--ui-text-primary)',
             fontSize: 13,
           }}
         >
@@ -527,7 +508,7 @@ function EventsTab({
           display: 'flex', 
           alignItems: 'center', 
           gap: 8, 
-          color: '#aaa', 
+          color: 'var(--ui-text-muted)', 
           fontSize: 13,
           cursor: 'pointer',
         }}>
@@ -543,9 +524,9 @@ function EventsTab({
       {/* Events List */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {events.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 60, color: '#666' }}>
+          <div style={{ textAlign: 'center', padding: 60, color: 'var(--ui-text-muted)' }}>
             <CheckCircle size={48} style={{ marginBottom: 16 }} />
-            <h3 style={{ margin: '0 0 8px 0', fontSize: 16, color: '#aaa' }}>No events found</h3>
+            <h3 style={{ margin: '0 0 8px 0', fontSize: 16, color: 'var(--ui-text-muted)' }}>No events found</h3>
             <p>No security events match your current filters.</p>
           </div>
         ) : (
@@ -575,10 +556,10 @@ function ComplianceTab({
 }) {
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'compliant': return '#22c55e';
-      case 'at_risk': return '#f59e0b';
-      case 'non_compliant': return '#ef4444';
-      default: return '#888';
+      case 'compliant': return 'var(--status-success)';
+      case 'at_risk': return 'var(--status-warning)';
+      case 'non_compliant': return 'var(--status-error)';
+      default: return 'var(--ui-text-muted)';
     }
   };
 
@@ -587,7 +568,7 @@ function ComplianceTab({
       {/* Overall Score */}
       <div style={{
         padding: 32,
-        background: '#252525',
+        background: 'var(--surface-panel)',
         borderRadius: 12,
         marginBottom: 24,
         display: 'flex',
@@ -608,7 +589,7 @@ function ComplianceTab({
             width: 100,
             height: 100,
             borderRadius: '50%',
-            background: '#252525',
+            background: 'var(--surface-panel)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -617,16 +598,16 @@ function ComplianceTab({
             <span style={{ fontSize: 32, fontWeight: 700, color: getStatusColor(compliance.overall) }}>
               {compliance.score}%
             </span>
-            <span style={{ fontSize: 11, color: '#888', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: 11, color: 'var(--ui-text-secondary)', textTransform: 'uppercase' }}>
               {compliance.overall}
             </span>
           </div>
         </div>
         <div style={{ flex: 1 }}>
-          <h3 style={{ margin: '0 0 8px 0', fontSize: 18, fontWeight: 600, color: '#fff' }}>
+          <h3 style={{ margin: '0 0 8px 0', fontSize: 18, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
             Compliance Status
           </h3>
-          <p style={{ margin: '0 0 16px 0', fontSize: 14, color: '#888' }}>
+          <p style={{ margin: '0 0 16px 0', fontSize: 14, color: 'var(--ui-text-secondary)' }}>
             Last assessment: {new Date(compliance.lastAssessmentAt).toLocaleString()}
           </p>
           <button
@@ -635,8 +616,8 @@ function ComplianceTab({
               padding: '8px 16px',
               borderRadius: 6,
               border: 'none',
-              background: '#d4b08c',
-              color: '#1a1a1a',
+              background: 'var(--accent-primary)',
+              color: 'var(--ui-text-inverse)',
               fontSize: 13,
               fontWeight: 600,
               cursor: 'pointer',
@@ -648,19 +629,19 @@ function ComplianceTab({
       </div>
 
       {/* Frameworks */}
-      <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 600, color: '#fff' }}>
+      <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
         Compliance Frameworks
       </h3>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16, marginBottom: 24 }}>
         {compliance.frameworks.map(framework => (
           <div key={framework.id} style={{
             padding: 20,
-            background: '#252525',
+            background: 'var(--surface-panel)',
             borderRadius: 8,
             border: `1px solid ${getStatusColor(framework.status)}30`,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <span style={{ fontSize: 15, fontWeight: 600, color: '#fff' }}>
+              <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
                 {framework.name}
               </span>
               <span style={{
@@ -675,7 +656,7 @@ function ComplianceTab({
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <div style={{ flex: 1, height: 6, background: '#333', borderRadius: 3 }}>
+              <div style={{ flex: 1, height: 6, background: 'var(--surface-hover)', borderRadius: 3 }}>
                 <div style={{
                   width: `${framework.score}%`,
                   height: '100%',
@@ -687,7 +668,7 @@ function ComplianceTab({
                 {framework.score}%
               </span>
             </div>
-            <div style={{ fontSize: 12, color: '#666' }}>
+            <div style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>
               {framework.passedControls} of {framework.totalControls} controls passed
             </div>
           </div>
@@ -695,34 +676,34 @@ function ComplianceTab({
       </div>
 
       {/* Controls */}
-      <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 600, color: '#fff' }}>
+      <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
         Control Status
       </h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {compliance.controls.slice(0, 20).map(control => (
           <div key={control.id} style={{
             padding: '12px 16px',
-            background: '#252525',
+            background: 'var(--surface-panel)',
             borderRadius: 6,
             display: 'flex',
             alignItems: 'center',
             gap: 12,
           }}>
             {control.status === 'passed' ? (
-              <CheckCircle size={18} color="#22c55e" />
+              <CheckCircle size={18} color="var(--status-success)" />
             ) : control.status === 'failed' ? (
-              <XCircle size={18} color="#ef4444" />
+              <XCircle size={18} color="var(--status-error)" />
             ) : (
-              <Warning size={18} color="#888" />
+              <Warning size={18} color="var(--ui-text-secondary)" />
             )}
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 14, color: '#fff' }}>{control.name}</div>
-              <div style={{ fontSize: 12, color: '#666' }}>{control.framework}</div>
+              <div style={{ fontSize: 14, color: 'var(--ui-text-primary)' }}>{control.name}</div>
+              <div style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>{control.framework}</div>
             </div>
             <span style={{
               padding: '2px 8px',
-              background: control.status === 'passed' ? '#22c55e20' : control.status === 'failed' ? '#ef444420' : '#66666620',
-              color: control.status === 'passed' ? '#22c55e' : control.status === 'failed' ? '#ef4444' : '#888',
+              background: control.status === 'passed' ? 'var(--status-success-bg)' : control.status === 'failed' ? 'var(--status-error-bg)' : 'var(--surface-active)',
+              color: control.status === 'passed' ? 'var(--status-success)' : control.status === 'failed' ? 'var(--status-error)' : 'var(--ui-text-muted)',
               borderRadius: 4,
               fontSize: 11,
             }}>
@@ -748,9 +729,9 @@ function EventCard({ event, onClick }: { event: SecurityEvent; onClick: () => vo
       onClick={onClick}
       style={{
         padding: '14px 18px',
-        background: event.acknowledgedAt ? '#1f1f1f' : '#252525',
+        background: event.acknowledgedAt ? 'var(--surface-panel)' : 'var(--surface-panel)',
         borderRadius: 8,
-        border: '1px solid #333',
+        border: '1px solid var(--ui-border-muted)',
         display: 'flex',
         alignItems: 'center',
         gap: 14,
@@ -773,7 +754,7 @@ function EventCard({ event, onClick }: { event: SecurityEvent; onClick: () => vo
 
       <div style={{ flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-          <span style={{ fontSize: 14, fontWeight: 500, color: '#fff' }}>
+          <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--ui-text-primary)' }}>
             {event.title}
           </span>
           <span style={{
@@ -789,8 +770,8 @@ function EventCard({ event, onClick }: { event: SecurityEvent; onClick: () => vo
           {event.acknowledgedAt && (
             <span style={{
               padding: '2px 8px',
-              background: '#66666620',
-              color: '#888',
+              background: 'var(--surface-active)',
+              color: 'var(--ui-text-secondary)',
               borderRadius: 4,
               fontSize: 10,
             }}>
@@ -798,16 +779,16 @@ function EventCard({ event, onClick }: { event: SecurityEvent; onClick: () => vo
             </span>
           )}
         </div>
-        <p style={{ margin: 0, fontSize: 12, color: '#888' }}>
+        <p style={{ margin: 0, fontSize: 12, color: 'var(--ui-text-secondary)' }}>
           {event.description}
         </p>
       </div>
 
       <div style={{ textAlign: 'right' }}>
-        <div style={{ fontSize: 12, color: '#666' }}>
+        <div style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>
           {new Date(event.createdAt).toLocaleTimeString()}
         </div>
-        <div style={{ fontSize: 11, color: '#555' }}>
+        <div style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>
           {event.source.agentName || event.source.userId || 'System'}
         </div>
       </div>
@@ -837,7 +818,7 @@ function EventDetailModal({
     <div style={{
       position: 'fixed',
       inset: 0,
-      background: 'rgba(0,0,0,0.7)',
+      background: 'var(--shell-overlay-backdrop)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -846,14 +827,14 @@ function EventDetailModal({
       <div style={{
         width: 550,
         maxHeight: '90vh',
-        background: '#1a1a1a',
+        background: 'var(--surface-panel)',
         borderRadius: 12,
-        border: '1px solid #333',
+        border: '1px solid var(--ui-border-muted)',
         overflow: 'auto',
       }}>
         <div style={{
           padding: '20px 24px',
-          borderBottom: '1px solid #333',
+          borderBottom: '1px solid var(--ui-border-muted)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -872,7 +853,7 @@ function EventDetailModal({
               {typeConfig.icon}
             </div>
             <div>
-              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#fff' }}>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
                 {event.title}
               </h2>
               <span style={{
@@ -887,53 +868,53 @@ function EventDetailModal({
               </span>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--ui-text-secondary)', cursor: 'pointer' }}>
             <X size={20} />
           </button>
         </div>
 
         <div style={{ padding: 24 }}>
           <div style={{ marginBottom: 20 }}>
-            <h3 style={{ margin: '0 0 8px 0', fontSize: 12, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            <h3 style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
               Description
             </h3>
-            <p style={{ margin: 0, fontSize: 14, color: '#aaa', lineHeight: 1.6 }}>
+            <p style={{ margin: 0, fontSize: 14, color: 'var(--ui-text-muted)', lineHeight: 1.6 }}>
               {event.description}
             </p>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginBottom: 20 }}>
             <div>
-              <h3 style={{ margin: '0 0 8px 0', fontSize: 12, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              <h3 style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                 Source
               </h3>
-              <div style={{ padding: 12, background: '#252525', borderRadius: 6 }}>
+              <div style={{ padding: 12, background: 'var(--surface-panel)', borderRadius: 6 }}>
                 {event.source.agentName && (
-                  <div style={{ fontSize: 13, color: '#fff', marginBottom: 4 }}>
+                  <div style={{ fontSize: 13, color: 'var(--ui-text-primary)', marginBottom: 4 }}>
                     Agent: {event.source.agentName}
                   </div>
                 )}
                 {event.source.userId && (
-                  <div style={{ fontSize: 13, color: '#fff', marginBottom: 4 }}>
+                  <div style={{ fontSize: 13, color: 'var(--ui-text-primary)', marginBottom: 4 }}>
                     User: {event.source.userId}
                   </div>
                 )}
                 {event.source.ip && (
-                  <div style={{ fontSize: 13, color: '#888' }}>
+                  <div style={{ fontSize: 13, color: 'var(--ui-text-secondary)' }}>
                     IP: {event.source.ip}
                   </div>
                 )}
               </div>
             </div>
             <div>
-              <h3 style={{ margin: '0 0 8px 0', fontSize: 12, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              <h3 style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                 Target
               </h3>
-              <div style={{ padding: 12, background: '#252525', borderRadius: 6 }}>
-                <div style={{ fontSize: 13, color: '#fff', marginBottom: 4 }}>
+              <div style={{ padding: 12, background: 'var(--surface-panel)', borderRadius: 6 }}>
+                <div style={{ fontSize: 13, color: 'var(--ui-text-primary)', marginBottom: 4 }}>
                   Type: {event.target?.type || 'N/A'}
                 </div>
-                <div style={{ fontSize: 13, color: '#888' }}>
+                <div style={{ fontSize: 13, color: 'var(--ui-text-secondary)' }}>
                   ID: {event.target?.identifier || 'N/A'}
                 </div>
               </div>
@@ -941,11 +922,11 @@ function EventDetailModal({
           </div>
 
           <div style={{ marginBottom: 20 }}>
-            <h3 style={{ margin: '0 0 8px 0', fontSize: 12, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            <h3 style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
               Metadata
             </h3>
-            <div style={{ padding: 12, background: '#252525', borderRadius: 6 }}>
-              <code style={{ fontSize: 12, color: '#d4b08c' }}>
+            <div style={{ padding: 12, background: 'var(--surface-panel)', borderRadius: 6 }}>
+              <code style={{ fontSize: 12, color: 'var(--accent-primary)' }}>
                 {JSON.stringify(event.metadata, null, 2)}
               </code>
             </div>
@@ -958,9 +939,9 @@ function EventDetailModal({
                 style={{
                   padding: '10px 20px',
                   borderRadius: 6,
-                  border: '1px solid #444',
+                  border: '1px solid var(--ui-border-default)',
                   background: 'transparent',
-                  color: '#aaa',
+                  color: 'var(--ui-text-muted)',
                   fontSize: 14,
                   cursor: 'pointer',
                 }}
@@ -975,8 +956,8 @@ function EventDetailModal({
                   padding: '10px 20px',
                   borderRadius: 6,
                   border: 'none',
-                  background: '#22c55e',
-                  color: '#fff',
+                  background: 'var(--status-success)',
+                  color: 'var(--ui-text-primary)',
                   fontSize: 14,
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -1012,7 +993,7 @@ function MetricCard({
   return (
     <div style={{
       padding: 20,
-      background: '#252525',
+      background: 'var(--surface-panel)',
       borderRadius: 8,
       display: 'flex',
       alignItems: 'center',
@@ -1032,10 +1013,10 @@ function MetricCard({
       </div>
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: 24, fontWeight: 700, color }}>{value}</div>
-        <div style={{ fontSize: 13, color: '#888' }}>{label}</div>
+        <div style={{ fontSize: 13, color: 'var(--ui-text-secondary)' }}>{label}</div>
       </div>
       {trend && (
-        <div style={{ color: trend === 'up' ? '#22c55e' : '#ef4444' }}>
+        <div style={{ color: trend === 'up' ? 'var(--status-success)' : 'var(--status-error)' }}>
           {trend === 'up' ? <TrendUp size={20} /> : <TrendDown size={20} />}
         </div>
       )}
@@ -1047,19 +1028,19 @@ function StatBox({ label, value, color }: { label: string; value: number | strin
   return (
     <div style={{
       padding: 16,
-      background: '#252525',
+      background: 'var(--surface-panel)',
       borderRadius: 8,
       textAlign: 'center',
     }}>
       <div style={{ fontSize: 24, fontWeight: 700, color, marginBottom: 4 }}>{value}</div>
-      <div style={{ fontSize: 12, color: '#888' }}>{label}</div>
+      <div style={{ fontSize: 12, color: 'var(--ui-text-secondary)' }}>{label}</div>
     </div>
   );
 }
 
 function LoadingState() {
   return (
-    <div style={{ textAlign: 'center', padding: 60, color: '#666' }}>
+    <div style={{ textAlign: 'center', padding: 60, color: 'var(--ui-text-muted)' }}>
       <ArrowsClockwise size={32} style={{ animation: 'spin 1s linear infinite' }} />
       <p>Loading security data...</p>
     </div>
@@ -1069,16 +1050,16 @@ function LoadingState() {
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div style={{ textAlign: 'center', padding: 60 }}>
-      <Warning size={32} color="#ef4444" />
-      <p style={{ color: '#ef4444', marginBottom: 16 }}>{message}</p>
+      <Warning size={32} color="var(--status-error)" />
+      <p style={{ color: 'var(--status-error)', marginBottom: 16 }}>{message}</p>
       <button
         onClick={onRetry}
         style={{
           padding: '8px 16px',
           borderRadius: 6,
-          border: '1px solid #444',
+          border: '1px solid var(--ui-border-default)',
           background: 'transparent',
-          color: '#aaa',
+          color: 'var(--ui-text-muted)',
           cursor: 'pointer',
         }}
       >

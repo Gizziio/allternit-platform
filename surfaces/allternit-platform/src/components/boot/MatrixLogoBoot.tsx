@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/allternit.tokens';
+import { SAND } from '@/design/allternit.tokens';
 
 // ============================================================================
 // MATRIX LOGO BOOT - Phase 1 Technical Initialization
@@ -253,7 +253,7 @@ const faceStyle: React.CSSProperties = {
 
 const frontFaceStyle: React.CSSProperties = {
   transform: 'translateZ(8px)',
-  boxShadow: 'inset 0 0 10px rgba(0,0,0,0.2)',
+  boxShadow: 'inset 0 0 10px var(--surface-hover)',
 };
 
 const backFaceStyle: React.CSSProperties = {

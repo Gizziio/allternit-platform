@@ -85,8 +85,8 @@ export const FileOutputCard = memo(function FileOutputCard({
         gap: "8px",
         padding: "5px 10px 5px 9px",
         borderRadius: "8px",
-        border: "1px solid rgba(255,255,255,0.07)",
-        background: "rgba(255,255,255,0.03)",
+        border: "1px solid var(--ui-border-muted)",
+        background: "var(--surface-hover)",
         cursor: onClick ? "pointer" : "default",
         maxWidth: "100%",
         minWidth: 0,
@@ -94,7 +94,7 @@ export const FileOutputCard = memo(function FileOutputCard({
         userSelect: "none",
       }}
       onMouseEnter={e => onClick && ((e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.055)")}
-      onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.background = "rgba(255,255,255,0.03)")}
+      onMouseLeave={e => ((e.currentTarget as HTMLDivElement).style.background = "var(--surface-hover)")}
     >
       {/* File icon */}
       <FileIcon filename={basename} color="rgba(255,255,255,0.35)" />

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Search, 
   Package, 
@@ -11,7 +11,6 @@ import {
   Wifi, 
   Sparkles,
   ExternalLink,
-  Filter,
   ChevronDown,
   ChevronUp,
   Users
@@ -20,21 +19,20 @@ import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardHeader, CardContent, CardFooter } from '@/components/ui/card';
 import { 
-  getBundledPlugins, 
+  getBundledPlugins,
   getDownloadablePlugins,
   getBundledBySource,
   searchPlugins,
   EXTERNAL_MARKETPLACE_SOURCES,
   MARKETPLACE_STATS,
-  type BundledPlugin,
-  type DownloadablePlugin,
   type UnifiedMarketplacePlugin
 } from '@/lib/plugins/marketplace-integration';
 import { TeamSkillsPanel } from './TeamSkillsPanel';
-import { CATEGORY_METADATA, formatAgentDisplayName, type PluginCategory } from '@/lib/plugins/marketplace';
+import { CATEGORY_METADATA } from '@/lib/plugins/marketplace';
+import { openInBrowser } from '@/lib/openInBrowser';
 
 // =============================================================================
 // PLUGIN CARD COMPONENT
@@ -294,8 +292,8 @@ function PluginGrid({ plugins }: { plugins: UnifiedMarketplacePlugin[] }) {
 export function PluginMarketplace() {
   const [activeTab, setActiveTab] = useState('all');
   const [search, setSearch] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [loading] = useState(false);
+  const [error] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState({
     builtin: true,
     vendor: true,
@@ -504,7 +502,7 @@ export function PluginMarketplace() {
                             variant="outline" 
                             size="sm" 
                             className="w-full border-zinc-700 text-zinc-400 hover:text-zinc-200"
-                            onClick={() => window.open(source.url.replace('/marketplace.json', ''), '_blank')}
+                            onClick={() => openInBrowser(source.url.replace('/marketplace.json', ''))}
                           >
                             Browse Source
                           </Button>

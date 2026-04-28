@@ -16,26 +16,21 @@ import {
   Warning,
   User,
   Lock,
-  LockOpen,
   Archive,
   ArrowsClockwise,
-  Plus,
-  Funnel,
-  ArrowRight,
   FileText,
 } from '@phosphor-icons/react';
 import type { WihInfo } from "../dak.types";
 
 export function WIHManagerPanel() {
-  const { 
-    wihs, 
+  const {
+    wihs,
     myWihs,
     selectedWihId,
-    isLoading,
     fetchWihs,
     pickupWih,
     closeWih,
-    selectWih 
+    selectWih
   } = useDakStore();
   
   const [filterDagId, setFilterDagId] = useState("");

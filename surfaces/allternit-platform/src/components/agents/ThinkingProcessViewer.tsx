@@ -78,12 +78,12 @@ function ThoughtItem({
   const [isExpanded, setIsExpanded] = useState(false);
 
   const typeConfig: Record<ThoughtType, { icon: any; color: string; label: string; bg: string }> = {
-    analysis: { icon: Brain, color: '#60a5fa', label: 'Analysis', bg: 'rgba(96, 165, 250, 0.15)' },
+    analysis: { icon: Brain, color: 'var(--status-info)', label: 'Analysis', bg: 'rgba(96, 165, 250, 0.15)' },
     planning: { icon: Target, color: '#a78bfa', label: 'Planning', bg: 'rgba(167, 139, 250, 0.15)' },
     decision: { icon: Lightning, color: '#fb923c', label: 'Decision', bg: 'rgba(251, 146, 60, 0.15)' },
-    reflection: { icon: Lightbulb, color: '#22c55e', label: 'Insight', bg: 'rgba(34, 197, 94, 0.15)' },
-    research: { icon: MagnifyingGlass, color: '#3b82f6', label: 'Research', bg: 'rgba(59, 130, 246, 0.15)' },
-    coding: { icon: Code, color: '#4ade80', label: 'Coding', bg: 'rgba(74, 222, 128, 0.15)' },
+    reflection: { icon: Lightbulb, color: 'var(--status-success)', label: 'Insight', bg: 'rgba(34, 197, 94, 0.15)' },
+    research: { icon: MagnifyingGlass, color: 'var(--status-info)', label: 'Research', bg: 'rgba(59, 130, 246, 0.15)' },
+    coding: { icon: Code, color: 'var(--status-success)', label: 'Coding', bg: 'rgba(74, 222, 128, 0.15)' },
     writing: { icon: FileText, color: '#f472b6', label: 'Writing', bg: 'rgba(244, 114, 182, 0.15)' },
     communication: { icon: Chat, color: '#2dd4bf', label: 'Communication', bg: 'rgba(45, 212, 191, 0.15)' },
   };
@@ -370,8 +370,8 @@ export function ThinkingProcessViewer({
               <div
                 className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
                 style={{
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  background: 'var(--surface-hover)',
+                  border: '1px solid var(--ui-border-default)',
                 }}
               >
                 <Brain size={32} className="text-white/20" />

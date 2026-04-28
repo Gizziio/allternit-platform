@@ -63,19 +63,19 @@ export function InboxView() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: 16, gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: '#f3f4f6' }}>
-          Inbox {unreadCount > 0 && <span style={{ background: '#ff3b30', color: '#fff', borderRadius: 10, padding: '1px 8px', fontSize: 11 }}>{unreadCount}</span>}
+        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
+          Inbox {unreadCount > 0 && <span style={{ background: 'var(--status-error)', color: '#fff', borderRadius: 10, padding: '1px 8px', fontSize: 11 }}>{unreadCount}</span>}
         </span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
           <button
             onClick={() => setFilter('all')}
-            style={{ background: filter === 'all' ? '#374151' : 'transparent', color: '#d1d5db', border: '1px solid #374151', borderRadius: 4, padding: '4px 10px', fontSize: 11, cursor: 'pointer' }}
+            style={{ background: filter === 'all' ? 'var(--ui-border-default)' : 'transparent', color: 'var(--ui-text-primary)', border: '1px solid #374151', borderRadius: 4, padding: '4px 10px', fontSize: 11, cursor: 'pointer' }}
           >
             All
           </button>
           <button
             onClick={() => setFilter('unread')}
-            style={{ background: filter === 'unread' ? '#374151' : 'transparent', color: '#d1d5db', border: '1px solid #374151', borderRadius: 4, padding: '4px 10px', fontSize: 11, cursor: 'pointer' }}
+            style={{ background: filter === 'unread' ? 'var(--ui-border-default)' : 'transparent', color: 'var(--ui-text-primary)', border: '1px solid #374151', borderRadius: 4, padding: '4px 10px', fontSize: 11, cursor: 'pointer' }}
           >
             Unread
           </button>
@@ -84,7 +84,7 @@ export function InboxView() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, overflow: 'auto' }}>
         {filtered.length === 0 && (
-          <div style={{ padding: 24, textAlign: 'center', color: '#9ca3af', fontSize: 13 }}>No notifications</div>
+          <div style={{ padding: 24, textAlign: 'center', color: 'var(--ui-text-muted)', fontSize: 13 }}>No notifications</div>
         )}
         {filtered.map((item) => (
           <div
@@ -94,7 +94,7 @@ export function InboxView() {
               display: 'flex',
               gap: 10,
               padding: 10,
-              background: item.read ? '#111827' : '#1f2937',
+              background: item.read ? 'var(--surface-canvas)' : 'var(--surface-panel)',
               border: '1px solid #374151',
               borderRadius: 6,
               cursor: 'pointer',
@@ -103,15 +103,15 @@ export function InboxView() {
           >
             <div style={{ fontSize: 14, marginTop: 2 }}>{typeIcon(item.type)}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: '#f3f4f6', marginBottom: 2 }}>{item.title}</div>
-              <div style={{ fontSize: 11, color: '#9ca3af' }}>{item.body}</div>
-              <div style={{ fontSize: 10, color: '#6b7280', marginTop: 4 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ui-text-primary)', marginBottom: 2 }}>{item.title}</div>
+              <div style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>{item.body}</div>
+              <div style={{ fontSize: 10, color: 'var(--ui-text-muted)', marginTop: 4 }}>
                 {new Date(item.createdAt).toLocaleString()}
               </div>
             </div>
             <button
               onClick={(e) => { e.stopPropagation(); dismiss(item.id); }}
-              style={{ background: 'none', border: 'none', color: '#6b7280', cursor: 'pointer', fontSize: 12 }}
+              style={{ background: 'none', border: 'none', color: 'var(--ui-text-muted)', cursor: 'pointer', fontSize: 12 }}
             >
               ✕
             </button>

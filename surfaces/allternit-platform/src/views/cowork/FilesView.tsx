@@ -4,9 +4,6 @@ import {
   CaretRight,
   List,
   SquaresFour,
-  UploadSimple,
-  FileText,
-  Image,
 } from '@phosphor-icons/react';
 import GlassSurface from '@/design/GlassSurface';
 import { useDropTarget, type FileWithData } from '@/components/GlobalDropzone';
@@ -27,15 +24,6 @@ interface Folder {
   name: string;
   expanded: boolean;
   children: FileNode[];
-}
-
-interface DroppedFile {
-  id: string;
-  name: string;
-  type: 'image' | 'document' | 'other';
-  dataUrl: string;
-  size: number;
-  extractedText?: string;
 }
 
 
@@ -98,12 +86,6 @@ export const FilesView: React.FC = () => {
   // Register as drop target for cowork files
   useDropTarget('cowork', handleDroppedFiles);
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
   const getFileIcon = (fileType: string) => {
     return (
       <div
@@ -118,10 +100,10 @@ export const FilesView: React.FC = () => {
                            fileType === 'CSV' ? 'rgba(34, 197, 94, 0.1)' : 
                            fileType === 'TS' ? 'rgba(59, 130, 246, 0.1)' : 
                            'rgba(156, 163, 175, 0.1)',
-          color: fileType === 'PDF' ? '#ef4444' : 
-                 fileType === 'CSV' ? '#22c55e' : 
-                 fileType === 'TS' ? '#3b82f6' : 
-                 '#9ca3af',
+          color: fileType === 'PDF' ? 'var(--status-error)' : 
+                 fileType === 'CSV' ? 'var(--status-success)' : 
+                 fileType === 'TS' ? 'var(--status-info)' : 
+                 'var(--ui-text-muted)',
           fontSize: '10px',
           fontWeight: 600,
         }}
@@ -131,27 +113,6 @@ export const FilesView: React.FC = () => {
     );
   };
 
-  const getDroppedFileIcon = (file: DroppedFile) => {
-    if (file.type === 'image') {
-      return (
-        <div style={{ width: 32, height: 32, borderRadius: 4, overflow: 'hidden' }}>
-          <img src={file.dataUrl} alt={file.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        </div>
-      );
-    }
-    if (file.type === 'document') {
-      return (
-        <div style={{
-          width: 32, height: 32, borderRadius: 4,
-          background: 'rgba(239, 68, 68, 0.1)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <FileText size={16} color="#ef4444" />
-        </div>
-      );
-    }
-    return getFileIcon('FILE');
-  };
 
   return (
     <div style={{ padding: 'var(--spacing-lg)', position: 'relative' }}>
@@ -174,7 +135,7 @@ export const FilesView: React.FC = () => {
               style={{
                 background: 'none',
                 border: 'none',
-                color: '#af52de',
+                color: 'var(--accent-cowork)',
                 cursor: 'pointer',
                 textDecoration: 'none',
                 padding: 0,
@@ -275,7 +236,7 @@ export const FilesView: React.FC = () => {
                 padding: '6px 12px',
                 borderRadius: '4px',
                 border: 'none',
-                backgroundColor: viewMode === 'list' ? '#af52de' : 'var(--bg-secondary)',
+                backgroundColor: viewMode === 'list' ? 'var(--accent-cowork)' : 'var(--bg-secondary)',
                 color: viewMode === 'list' ? '#fff' : 'var(--text-secondary)',
                 cursor: 'pointer',
                 display: 'flex',
@@ -294,7 +255,7 @@ export const FilesView: React.FC = () => {
                 padding: '6px 12px',
                 borderRadius: '4px',
                 border: 'none',
-                backgroundColor: viewMode === 'grid' ? '#af52de' : 'var(--bg-secondary)',
+                backgroundColor: viewMode === 'grid' ? 'var(--accent-cowork)' : 'var(--bg-secondary)',
                 color: viewMode === 'grid' ? '#fff' : 'var(--text-secondary)',
                 cursor: 'pointer',
                 display: 'flex',

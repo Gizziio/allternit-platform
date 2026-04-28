@@ -10,7 +10,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Shield,
   CheckCircle,
   XCircle,
   Clock,
@@ -21,17 +20,12 @@ import {
   Database,
   Globe,
   GearSix,
-  CaretRight,
-  CaretDown,
   ArrowsClockwise,
   MagnifyingGlass,
-  Funnel,
-  DotsThreeVertical,
   Check,
   X,
   Timer,
   Users,
-  Lock,
   LockOpen,
 } from '@phosphor-icons/react';
 import {
@@ -49,19 +43,19 @@ import type {
 
 // Approval type configurations
 const APPROVAL_TYPES: { value: ApprovalType; label: string; icon: React.ReactNode; color: string }[] = [
-  { value: 'tool_execution', label: 'Tool Execution', icon: <Code size={16} />, color: '#3b82f6' },
-  { value: 'file_access', label: 'File Access', icon: <FileText size={16} />, color: '#10b981' },
-  { value: 'policy_override', label: 'Policy Override', icon: <LockOpen size={16} />, color: '#f59e0b' },
+  { value: 'tool_execution', label: 'Tool Execution', icon: <Code size={16} />, color: 'var(--status-info)' },
+  { value: 'file_access', label: 'File Access', icon: <FileText size={16} />, color: 'var(--status-success)' },
+  { value: 'policy_override', label: 'Policy Override', icon: <LockOpen size={16} />, color: 'var(--status-warning)' },
   { value: 'deployment', label: 'Deployment', icon: <Globe size={16} />, color: '#8b5cf6' },
-  { value: 'data_export', label: 'Data Export', icon: <Database size={16} />, color: '#ef4444' },
+  { value: 'data_export', label: 'Data Export', icon: <Database size={16} />, color: 'var(--status-error)' },
 ];
 
 const STATUS_CONFIG: Record<ApprovalStatus, { label: string; color: string; bgColor: string; icon: React.ReactNode }> = {
-  pending: { label: 'Pending', color: '#f59e0b', bgColor: '#f59e0b20', icon: <Clock size={14} /> },
-  approved: { label: 'Approved', color: '#22c55e', bgColor: '#22c55e20', icon: <CheckCircle size={14} /> },
-  rejected: { label: 'Rejected', color: '#ef4444', bgColor: '#ef444420', icon: <XCircle size={14} /> },
-  expired: { label: 'Expired', color: '#888', bgColor: '#66666620', icon: <Timer size={14} /> },
-  cancelled: { label: 'Cancelled', color: '#666', bgColor: '#66666620', icon: <X size={14} /> },
+  pending: { label: 'Pending', color: 'var(--status-warning)', bgColor: 'var(--status-warning-bg)', icon: <Clock size={14} /> },
+  approved: { label: 'Approved', color: 'var(--status-success)', bgColor: 'var(--status-success-bg)', icon: <CheckCircle size={14} /> },
+  rejected: { label: 'Rejected', color: 'var(--status-error)', bgColor: 'var(--status-error-bg)', icon: <XCircle size={14} /> },
+  expired: { label: 'Expired', color: 'var(--ui-text-secondary)', bgColor: 'var(--surface-active)', icon: <Timer size={14} /> },
+  cancelled: { label: 'Cancelled', color: 'var(--ui-text-muted)', bgColor: 'var(--surface-active)', icon: <X size={14} /> },
 };
 
 // ============================================================================
@@ -177,21 +171,21 @@ export function PolicyGating() {
   };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#1a1a1a' }}>
+    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--surface-panel)' }}>
       {/* Header */}
       <div style={{ 
         padding: '20px 24px', 
-        borderBottom: '1px solid #333',
+        borderBottom: '1px solid var(--ui-border-muted)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        background: '#1a1a1a',
+        background: 'var(--surface-panel)',
       }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: '#fff' }}>
+          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: 'var(--ui-text-primary)' }}>
             Policy Gating
           </h1>
-          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#888' }}>
+          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--ui-text-secondary)' }}>
             Approval workflows and access control
           </p>
         </div>
@@ -202,8 +196,8 @@ export function PolicyGating() {
               padding: '8px 16px',
               borderRadius: 6,
               border: 'none',
-              background: activeTab === 'requests' ? '#d4b08c' : '#333',
-              color: activeTab === 'requests' ? '#1a1a1a' : '#aaa',
+              background: activeTab === 'requests' ? 'var(--accent-primary)' : 'var(--surface-hover)',
+              color: activeTab === 'requests' ? 'var(--ui-text-inverse)' : 'var(--ui-text-muted)',
               fontSize: 13,
               fontWeight: 500,
               cursor: 'pointer',
@@ -217,8 +211,8 @@ export function PolicyGating() {
               padding: '8px 16px',
               borderRadius: 6,
               border: 'none',
-              background: activeTab === 'workflows' ? '#d4b08c' : '#333',
-              color: activeTab === 'workflows' ? '#1a1a1a' : '#aaa',
+              background: activeTab === 'workflows' ? 'var(--accent-primary)' : 'var(--surface-hover)',
+              color: activeTab === 'workflows' ? 'var(--ui-text-inverse)' : 'var(--ui-text-muted)',
               fontSize: 13,
               fontWeight: 500,
               cursor: 'pointer',
@@ -234,16 +228,16 @@ export function PolicyGating() {
           {/* Stats */}
           <div style={{ 
             padding: '16px 24px', 
-            borderBottom: '1px solid #333',
+            borderBottom: '1px solid var(--ui-border-muted)',
             display: 'grid',
             gridTemplateColumns: 'repeat(4, 1fr)',
             gap: 16,
-            background: '#1a1a1a',
+            background: 'var(--surface-panel)',
           }}>
             <StatCard 
               label="Pending" 
               value={stats.pending} 
-              color="#f59e0b" 
+              color="var(--status-warning)" 
               icon={<Clock size={20} />}
               active={pendingOnly}
               onClick={() => setPendingOnly(true)}
@@ -251,7 +245,7 @@ export function PolicyGating() {
             <StatCard 
               label="Approved" 
               value={stats.approved} 
-              color="#22c55e" 
+              color="var(--status-success)" 
               icon={<CheckCircle size={20} />}
               active={!pendingOnly}
               onClick={() => setPendingOnly(false)}
@@ -259,7 +253,7 @@ export function PolicyGating() {
             <StatCard 
               label="Rejected" 
               value={stats.rejected} 
-              color="#ef4444" 
+              color="var(--status-error)" 
               icon={<XCircle size={20} />}
               active={!pendingOnly}
               onClick={() => setPendingOnly(false)}
@@ -267,7 +261,7 @@ export function PolicyGating() {
             <StatCard 
               label="Expired" 
               value={stats.expired} 
-              color="#888" 
+              color="var(--ui-text-secondary)" 
               icon={<Timer size={20} />}
               active={!pendingOnly}
               onClick={() => setPendingOnly(false)}
@@ -277,14 +271,14 @@ export function PolicyGating() {
           {/* Filters */}
           <div style={{ 
             padding: '12px 24px', 
-            borderBottom: '1px solid #333',
+            borderBottom: '1px solid var(--ui-border-muted)',
             display: 'flex',
             alignItems: 'center',
             gap: 12,
-            background: '#1a1a1a',
+            background: 'var(--surface-panel)',
           }}>
             <div style={{ position: 'relative', flex: 1, maxWidth: 300 }}>
-              <MagnifyingGlass size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#666' }} />
+              <MagnifyingGlass size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--ui-text-muted)' }} />
               <input
                 type="text"
                 placeholder="Search requests..."
@@ -294,9 +288,9 @@ export function PolicyGating() {
                   width: '100%',
                   padding: '8px 12px 8px 36px',
                   borderRadius: 6,
-                  border: '1px solid #444',
-                  background: '#252525',
-                  color: '#e5e5e5',
+                  border: '1px solid var(--ui-border-default)',
+                  background: 'var(--surface-panel)',
+                  color: 'var(--ui-text-primary)',
                   fontSize: 13,
                   outline: 'none',
                 }}
@@ -308,9 +302,9 @@ export function PolicyGating() {
               style={{
                 padding: '8px 12px',
                 borderRadius: 6,
-                border: '1px solid #444',
-                background: '#252525',
-                color: '#e5e5e5',
+                border: '1px solid var(--ui-border-default)',
+                background: 'var(--surface-panel)',
+                color: 'var(--ui-text-primary)',
                 fontSize: 13,
                 cursor: 'pointer',
               }}
@@ -325,9 +319,9 @@ export function PolicyGating() {
               style={{
                 padding: '8px 12px',
                 borderRadius: 6,
-                border: '1px solid #444',
+                border: '1px solid var(--ui-border-default)',
                 background: 'transparent',
-                color: '#888',
+                color: 'var(--ui-text-secondary)',
                 cursor: 'pointer',
               }}
             >
@@ -411,15 +405,15 @@ function ApprovalCard({
     <div 
       onClick={onClick}
       style={{
-        background: '#252525',
+        background: 'var(--surface-panel)',
         borderRadius: 8,
-        border: '1px solid #333',
+        border: '1px solid var(--ui-border-muted)',
         padding: '16px 20px',
         display: 'flex',
         alignItems: 'center',
         gap: 16,
         cursor: 'pointer',
-        transition: 'all 0.2s',
+        transition: 'var(--transition-fast)',
       }}
     >
       <div style={{
@@ -437,7 +431,7 @@ function ApprovalCard({
 
       <div style={{ flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
             {approval.title}
           </span>
           <span style={{
@@ -457,8 +451,8 @@ function ApprovalCard({
           {isExpired && isPending && (
             <span style={{
               padding: '2px 8px',
-              background: '#ef444420',
-              color: '#ef4444',
+              background: 'var(--status-error-bg)',
+              color: 'var(--status-error)',
               borderRadius: 4,
               fontSize: 11,
             }}>
@@ -466,15 +460,15 @@ function ApprovalCard({
             </span>
           )}
         </div>
-        <p style={{ margin: 0, fontSize: 13, color: '#888', lineHeight: 1.4 }}>
+        <p style={{ margin: 0, fontSize: 13, color: 'var(--ui-text-secondary)', lineHeight: 1.4 }}>
           {approval.description}
         </p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 8 }}>
-          <span style={{ fontSize: 12, color: '#666' }}>
+          <span style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>
             <User size={12} style={{ display: 'inline', marginRight: 4 }} />
             {approval.requester.agentName}
           </span>
-          <span style={{ fontSize: 12, color: '#666' }}>
+          <span style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>
             <Clock size={12} style={{ display: 'inline', marginRight: 4 }} />
             {new Date(approval.createdAt).toLocaleString()}
           </span>
@@ -502,7 +496,7 @@ function ApprovalCard({
               borderRadius: 6,
               border: '1px solid #ef4444',
               background: 'transparent',
-              color: '#ef4444',
+              color: 'var(--status-error)',
               fontSize: 13,
               fontWeight: 500,
               cursor: 'pointer',
@@ -520,8 +514,8 @@ function ApprovalCard({
               padding: '8px 16px',
               borderRadius: 6,
               border: 'none',
-              background: '#22c55e',
-              color: '#fff',
+              background: 'var(--status-success)',
+              color: 'var(--ui-text-primary)',
               fontSize: 13,
               fontWeight: 600,
               cursor: 'pointer',
@@ -563,7 +557,7 @@ function ApprovalDetailModal({
     <div style={{
       position: 'fixed',
       inset: 0,
-      background: 'rgba(0,0,0,0.7)',
+      background: 'var(--shell-overlay-backdrop)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -572,14 +566,14 @@ function ApprovalDetailModal({
       <div style={{
         width: 600,
         maxHeight: '90vh',
-        background: '#1a1a1a',
+        background: 'var(--surface-panel)',
         borderRadius: 12,
-        border: '1px solid #333',
+        border: '1px solid var(--ui-border-muted)',
         overflow: 'auto',
       }}>
         <div style={{
           padding: '20px 24px',
-          borderBottom: '1px solid #333',
+          borderBottom: '1px solid var(--ui-border-muted)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -598,7 +592,7 @@ function ApprovalDetailModal({
               {typeConfig.icon}
             </div>
             <div>
-              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: '#fff' }}>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
                 {approval.title}
               </h2>
               <span style={{
@@ -613,7 +607,7 @@ function ApprovalDetailModal({
               </span>
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer' }}>
+          <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'var(--ui-text-secondary)', cursor: 'pointer' }}>
             <X size={20} />
           </button>
         </div>
@@ -621,22 +615,22 @@ function ApprovalDetailModal({
         <div style={{ padding: 24 }}>
           {/* Description */}
           <div style={{ marginBottom: 24 }}>
-            <h3 style={{ margin: '0 0 8px 0', fontSize: 12, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            <h3 style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
               Description
             </h3>
-            <p style={{ margin: 0, fontSize: 14, color: '#aaa', lineHeight: 1.6 }}>
+            <p style={{ margin: 0, fontSize: 14, color: 'var(--ui-text-muted)', lineHeight: 1.6 }}>
               {approval.description}
             </p>
           </div>
 
           {/* Requester Info */}
           <div style={{ marginBottom: 24 }}>
-            <h3 style={{ margin: '0 0 8px 0', fontSize: 12, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            <h3 style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
               Requester
             </h3>
             <div style={{ 
               padding: 12, 
-              background: '#252525', 
+              background: 'var(--surface-panel)', 
               borderRadius: 6,
               display: 'flex',
               alignItems: 'center',
@@ -646,19 +640,19 @@ function ApprovalDetailModal({
                 width: 36,
                 height: 36,
                 borderRadius: '50%',
-                background: '#d4b08c20',
+                background: 'color-mix(in srgb, var(--accent-primary) 12%, transparent)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#d4b08c',
+                color: 'var(--accent-primary)',
               }}>
                 <User size={18} />
               </div>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 500, color: '#fff' }}>
+                <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--ui-text-primary)' }}>
                   {approval.requester.agentName}
                 </div>
-                <div style={{ fontSize: 12, color: '#666' }}>
+                <div style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>
                   Agent ID: {approval.requester.agentId}
                 </div>
               </div>
@@ -667,22 +661,22 @@ function ApprovalDetailModal({
 
           {/* Resource Details */}
           <div style={{ marginBottom: 24 }}>
-            <h3 style={{ margin: '0 0 8px 0', fontSize: 12, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            <h3 style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
               Resource
             </h3>
-            <div style={{ padding: 12, background: '#252525', borderRadius: 6 }}>
+            <div style={{ padding: 12, background: 'var(--surface-panel)', borderRadius: 6 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <span style={{ fontSize: 13, color: '#888' }}>Type:</span>
-                <span style={{ fontSize: 13, color: '#fff' }}>{approval.resource.type}</span>
+                <span style={{ fontSize: 13, color: 'var(--ui-text-secondary)' }}>Type:</span>
+                <span style={{ fontSize: 13, color: 'var(--ui-text-primary)' }}>{approval.resource.type}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                <span style={{ fontSize: 13, color: '#888' }}>Identifier:</span>
-                <code style={{ fontSize: 12, color: '#d4b08c', background: '#1a1a1a', padding: '2px 6px', borderRadius: 4 }}>
+                <span style={{ fontSize: 13, color: 'var(--ui-text-secondary)' }}>Identifier:</span>
+                <code style={{ fontSize: 12, color: 'var(--accent-primary)', background: 'var(--surface-panel)', padding: '2px 6px', borderRadius: 4 }}>
                   {approval.resource.identifier}
                 </code>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 13, color: '#888' }}>Risk Level:</span>
+                <span style={{ fontSize: 13, color: 'var(--ui-text-secondary)' }}>Risk Level:</span>
                 <span style={{
                   padding: '2px 8px',
                   background: getRiskColor(approval.resource.riskLevel).bg,
@@ -700,35 +694,35 @@ function ApprovalDetailModal({
           {/* Decisions */}
           {approval.decisions.length > 0 && (
             <div style={{ marginBottom: 24 }}>
-              <h3 style={{ margin: '0 0 8px 0', fontSize: 12, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              <h3 style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                 Decisions
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {approval.decisions.map((decision, index) => (
                   <div key={index} style={{ 
                     padding: 12, 
-                    background: '#252525', 
+                    background: 'var(--surface-panel)', 
                     borderRadius: 6,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 12,
                   }}>
                     {decision.decision === 'approved' ? (
-                      <CheckCircle size={18} color="#22c55e" />
+                      <CheckCircle size={18} color="var(--status-success)" />
                     ) : (
-                      <XCircle size={18} color="#ef4444" />
+                      <XCircle size={18} color="var(--status-error)" />
                     )}
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, color: '#fff' }}>
+                      <div style={{ fontSize: 13, color: 'var(--ui-text-primary)' }}>
                         {decision.reviewerName || decision.reviewerId}
                       </div>
                       {decision.note && (
-                        <div style={{ fontSize: 12, color: '#888', marginTop: 2 }}>
+                        <div style={{ fontSize: 12, color: 'var(--ui-text-secondary)', marginTop: 2 }}>
                           "{decision.note}"
                         </div>
                       )}
                     </div>
-                    <span style={{ fontSize: 11, color: '#666' }}>
+                    <span style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>
                       {new Date(decision.timestamp).toLocaleString()}
                     </span>
                   </div>
@@ -741,7 +735,7 @@ function ApprovalDetailModal({
           {isPending && (
             <>
               <div style={{ marginBottom: 16 }}>
-                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: '#aaa', marginBottom: 6 }}>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
                   Note (optional)
                 </label>
                 <textarea
@@ -753,9 +747,9 @@ function ApprovalDetailModal({
                     width: '100%',
                     padding: '10px 12px',
                     borderRadius: 6,
-                    border: '1px solid #444',
-                    background: '#252525',
-                    color: '#e5e5e5',
+                    border: '1px solid var(--ui-border-default)',
+                    background: 'var(--surface-panel)',
+                    color: 'var(--ui-text-primary)',
                     fontSize: 14,
                     resize: 'vertical',
                   }}
@@ -770,7 +764,7 @@ function ApprovalDetailModal({
                     borderRadius: 6,
                     border: '1px solid #ef4444',
                     background: 'transparent',
-                    color: '#ef4444',
+                    color: 'var(--status-error)',
                     fontSize: 14,
                     fontWeight: 500,
                     cursor: 'pointer',
@@ -788,8 +782,8 @@ function ApprovalDetailModal({
                     padding: '10px 20px',
                     borderRadius: 6,
                     border: 'none',
-                    background: '#22c55e',
-                    color: '#fff',
+                    background: 'var(--status-success)',
+                    color: 'var(--ui-text-primary)',
                     fontSize: 14,
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -815,7 +809,7 @@ function ApprovalDetailModal({
 // ============================================================================
 
 function WorkflowConfiguration() {
-  const [workflows, setWorkflows] = useState([
+  const [workflows] = useState([
     { id: 'wf-1', name: 'Critical Tool Execution', type: 'tool_execution', approvers: 2, autoEscalate: true, timeout: 30 },
     { id: 'wf-2', name: 'Sensitive File Access', type: 'file_access', approvers: 1, autoEscalate: true, timeout: 60 },
     { id: 'wf-3', name: 'Production Deployment', type: 'deployment', approvers: 2, autoEscalate: false, timeout: 120 },
@@ -825,10 +819,10 @@ function WorkflowConfiguration() {
   return (
     <div style={{ flex: 1, overflow: 'auto', padding: 24 }}>
       <div style={{ maxWidth: 800 }}>
-        <h2 style={{ margin: '0 0 24px 0', fontSize: 16, fontWeight: 600, color: '#fff' }}>
+        <h2 style={{ margin: '0 0 24px 0', fontSize: 16, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
           Approval Workflows
         </h2>
-        <p style={{ margin: '0 0 24px 0', fontSize: 14, color: '#888' }}>
+        <p style={{ margin: '0 0 24px 0', fontSize: 14, color: 'var(--ui-text-secondary)' }}>
           Configure approval requirements for different action types. Set the number of required approvers,
           escalation settings, and timeout periods.
         </p>
@@ -837,9 +831,9 @@ function WorkflowConfiguration() {
           {workflows.map(workflow => (
             <div key={workflow.id} style={{
               padding: 20,
-              background: '#252525',
+              background: 'var(--surface-panel)',
               borderRadius: 8,
-              border: '1px solid #333',
+              border: '1px solid var(--ui-border-muted)',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -847,19 +841,19 @@ function WorkflowConfiguration() {
                     width: 40,
                     height: 40,
                     borderRadius: 8,
-                    background: '#333',
+                    background: 'var(--surface-hover)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#d4b08c',
+                    color: 'var(--accent-primary)',
                   }}>
                     <GearSix size={20} />
                   </div>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
                       {workflow.name}
                     </div>
-                    <div style={{ fontSize: 12, color: '#666' }}>
+                    <div style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>
                       Type: {workflow.type}
                     </div>
                   </div>
@@ -867,9 +861,9 @@ function WorkflowConfiguration() {
                 <button style={{
                   padding: '6px 12px',
                   borderRadius: 6,
-                  border: '1px solid #444',
+                  border: '1px solid var(--ui-border-default)',
                   background: 'transparent',
-                  color: '#aaa',
+                  color: 'var(--ui-text-muted)',
                   fontSize: 12,
                   cursor: 'pointer',
                 }}>
@@ -879,27 +873,27 @@ function WorkflowConfiguration() {
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
                 <div>
-                  <div style={{ fontSize: 11, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+                  <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
                     Required Approvals
                   </div>
-                  <div style={{ fontSize: 14, color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ fontSize: 14, color: 'var(--ui-text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
                     <Users size={14} />
                     {workflow.approvers}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+                  <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
                     Auto-escalate
                   </div>
-                  <div style={{ fontSize: 14, color: workflow.autoEscalate ? '#22c55e' : '#888' }}>
+                  <div style={{ fontSize: 14, color: workflow.autoEscalate ? 'var(--status-success)' : 'var(--ui-text-muted)' }}>
                     {workflow.autoEscalate ? 'Enabled' : 'Disabled'}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, color: '#666', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+                  <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
                     Timeout
                   </div>
-                  <div style={{ fontSize: 14, color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <div style={{ fontSize: 14, color: 'var(--ui-text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
                     <Timer size={14} />
                     {workflow.timeout} min
                   </div>
@@ -916,7 +910,7 @@ function WorkflowConfiguration() {
           borderRadius: 6,
           border: '1px dashed #444',
           background: 'transparent',
-          color: '#888',
+          color: 'var(--ui-text-secondary)',
           fontSize: 14,
           cursor: 'pointer',
         }}>
@@ -951,9 +945,9 @@ function StatCard({
       onClick={onClick}
       style={{
         padding: 16,
-        background: active ? `${color}15` : '#252525',
+        background: active ? `${color}15` : 'var(--surface-panel)',
         borderRadius: 8,
-        border: `1px solid ${active ? color : '#333'}`,
+        border: `1px solid ${active ? color : 'var(--surface-hover)'}`,
         display: 'flex',
         alignItems: 'center',
         gap: 12,
@@ -975,7 +969,7 @@ function StatCard({
       </div>
       <div>
         <div style={{ fontSize: 24, fontWeight: 700, color }}>{value}</div>
-        <div style={{ fontSize: 12, color: '#888' }}>{label}</div>
+        <div style={{ fontSize: 12, color: 'var(--ui-text-secondary)' }}>{label}</div>
       </div>
     </button>
   );
@@ -983,7 +977,7 @@ function StatCard({
 
 function LoadingState() {
   return (
-    <div style={{ textAlign: 'center', padding: 60, color: '#666' }}>
+    <div style={{ textAlign: 'center', padding: 60, color: 'var(--ui-text-muted)' }}>
       <ArrowsClockwise size={32} style={{ animation: 'spin 1s linear infinite' }} />
       <p>Loading approvals...</p>
     </div>
@@ -993,16 +987,16 @@ function LoadingState() {
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
     <div style={{ textAlign: 'center', padding: 60 }}>
-      <Warning size={32} color="#ef4444" />
-      <p style={{ color: '#ef4444', marginBottom: 16 }}>{message}</p>
+      <Warning size={32} color="var(--status-error)" />
+      <p style={{ color: 'var(--status-error)', marginBottom: 16 }}>{message}</p>
       <button
         onClick={onRetry}
         style={{
           padding: '8px 16px',
           borderRadius: 6,
-          border: '1px solid #444',
+          border: '1px solid var(--ui-border-default)',
           background: 'transparent',
-          color: '#aaa',
+          color: 'var(--ui-text-muted)',
           cursor: 'pointer',
         }}
       >
@@ -1014,9 +1008,9 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
 
 function EmptyState({ pendingOnly }: { pendingOnly: boolean }) {
   return (
-    <div style={{ textAlign: 'center', padding: 60, color: '#666' }}>
+    <div style={{ textAlign: 'center', padding: 60, color: 'var(--ui-text-muted)' }}>
       <CheckCircle size={48} style={{ marginBottom: 16 }} />
-      <h3 style={{ margin: '0 0 8px 0', fontSize: 16, color: '#aaa' }}>
+      <h3 style={{ margin: '0 0 8px 0', fontSize: 16, color: 'var(--ui-text-muted)' }}>
         {pendingOnly ? 'No pending approvals' : 'No approvals found'}
       </h3>
       <p style={{ margin: 0, fontSize: 14 }}>
@@ -1030,11 +1024,11 @@ function EmptyState({ pendingOnly }: { pendingOnly: boolean }) {
 
 function getRiskColor(risk: string): { bg: string; text: string } {
   switch (risk) {
-    case 'critical': return { bg: '#ef444420', text: '#ef4444' };
-    case 'high': return { bg: '#f9731620', text: '#f97316' };
-    case 'medium': return { bg: '#f59e0b20', text: '#f59e0b' };
-    case 'low': return { bg: '#22c55e20', text: '#22c55e' };
-    default: return { bg: '#66666620', text: '#888' };
+    case 'critical': return { bg: 'var(--status-error-bg)', text: 'var(--status-error)' };
+    case 'high': return { bg: 'var(--status-warning-bg)', text: 'var(--status-warning)' };
+    case 'medium': return { bg: 'var(--status-warning-bg)', text: 'var(--status-warning)' };
+    case 'low': return { bg: 'var(--status-success-bg)', text: 'var(--status-success)' };
+    default: return { bg: 'var(--surface-active)', text: 'var(--ui-text-muted)' };
   }
 }
 

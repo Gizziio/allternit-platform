@@ -20,12 +20,12 @@ interface State {
 }
 
 const THEME = {
-  bg: '#0c0a09',
-  textPrimary: '#e7e5e4',
-  textSecondary: '#a8a29e',
-  textTertiary: '#78716c',
-  accent: '#d4b08c',
-  danger: '#ef4444',
+  bg: 'var(--surface-canvas)',
+  textPrimary: 'var(--ui-text-primary)',
+  textSecondary: 'var(--ui-text-secondary)',
+  textTertiary: 'var(--ui-text-muted)',
+  accent: 'var(--accent-primary)',
+  danger: 'var(--status-error)',
   border: 'rgba(212, 176, 140, 0.1)',
 };
 
@@ -126,7 +126,7 @@ export class ErrorBoundary extends Component<Props, State> {
           {this.state.error && (
             <div
               style={{
-                backgroundColor: 'rgba(0,0,0,0.3)',
+                backgroundColor: 'var(--surface-panel)',
                 border: `1px solid ${THEME.border}`,
                 borderRadius: 8,
                 padding: 16,
@@ -188,7 +188,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 borderRadius: 8,
                 border: 'none',
                 backgroundColor: THEME.accent,
-                color: '#0c0a09',
+                color: 'var(--ui-text-inverse)',
                 fontSize: 14,
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -275,7 +275,7 @@ export function ErrorToastContainer({ toasts, onDismiss }: ErrorToastContainerPr
         position: 'fixed',
         bottom: 24,
         right: 24,
-        zIndex: 1000,
+        zIndex: 180,
         display: 'flex',
         flexDirection: 'column',
         gap: 8,
@@ -293,7 +293,7 @@ export function ErrorToastContainer({ toasts, onDismiss }: ErrorToastContainerPr
             border: `1px solid ${toast.type === 'error' ? 'rgba(239, 68, 68, 0.3)' : 
                                   toast.type === 'warning' ? 'rgba(251, 191, 36, 0.3)' : 
                                   'rgba(96, 165, 250, 0.3)'}`,
-            color: toast.type === 'error' ? '#fca5a5' : 
+            color: toast.type === 'error' ? 'var(--status-error)' : 
                    toast.type === 'warning' ? '#fcd34d' : 
                    '#93c5fd',
             fontSize: 13,

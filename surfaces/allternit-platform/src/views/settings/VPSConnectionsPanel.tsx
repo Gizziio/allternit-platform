@@ -272,7 +272,7 @@ export function VPSConnectionsPanel() {
           padding: '24px',
           borderRadius: '12px',
           background: 'linear-gradient(135deg, rgba(37,37,37,0.6) 0%, rgba(37,37,37,0.3) 100%)',
-          border: '1px solid rgba(255,255,255,0.08)',
+          border: '1px solid var(--ui-border-muted)',
         }}
       >
         <h2 style={{ 
@@ -302,7 +302,7 @@ export function VPSConnectionsPanel() {
             marginBottom: '20px',
             padding: '14px 18px',
             borderRadius: '10px',
-            background: 'rgba(239,68,68,0.1)',
+            background: 'var(--status-error-bg)',
             border: '1px solid rgba(239,68,68,0.25)',
             display: 'flex',
             alignItems: 'center',
@@ -343,7 +343,7 @@ export function VPSConnectionsPanel() {
           padding: '16px 20px',
           borderRadius: '10px',
           background: 'rgba(37,37,37,0.4)',
-          border: '1px solid rgba(255,255,255,0.06)',
+          border: '1px solid var(--ui-border-muted)',
         }}
       >
         <button
@@ -353,7 +353,7 @@ export function VPSConnectionsPanel() {
             borderRadius: '8px',
             border: 'none',
             background: SAND[500],
-            color: '#1a1a1a',
+            color: 'var(--ui-text-inverse)',
             fontSize: '14px',
             fontWeight: '600',
             cursor: 'pointer',
@@ -386,9 +386,9 @@ export function VPSConnectionsPanel() {
           style={{
             padding: '10px 16px',
             borderRadius: '8px',
-            border: '1px solid rgba(255,255,255,0.1)',
+            border: '1px solid var(--ui-border-default)',
             background: 'transparent',
-            color: '#888',
+            color: 'var(--ui-text-muted)',
             fontSize: '13px',
             cursor: isLoading ? 'not-allowed' : 'pointer',
             display: 'flex',
@@ -399,15 +399,15 @@ export function VPSConnectionsPanel() {
           }}
           onMouseEnter={(e) => {
             if (!isLoading) {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+              e.currentTarget.style.background = 'var(--surface-hover)';
               e.currentTarget.style.color = '#fff';
-              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
+              e.currentTarget.style.borderColor = 'var(--ui-border-strong)';
             }
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'transparent';
-            e.currentTarget.style.color = '#888';
-            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+            e.currentTarget.style.color = 'var(--ui-text-muted)';
+            e.currentTarget.style.borderColor = 'var(--ui-border-default)';
           }}
         >
           <ArrowClockwise size={16} className={isLoading ? 'animate-spin' : undefined} />

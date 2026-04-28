@@ -9,13 +9,8 @@ import type {
   Agent,
   Session,
   ProgressUpdate,
-  RoutingDecision,
   Pattern,
-  FileLock,
-  TriageResult,
-  QualityCheck,
   BudgetInfo,
-  SwarmMode,
 } from './types';
 
 const API_BASE = process.env.NEXT_PUBLIC_META_SWARM_API_URL || 'ws://localhost:8080';

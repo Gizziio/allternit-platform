@@ -21,22 +21,22 @@ import { GizziMascot } from "@/components/ai-elements/GizziMascot";
 import { ContextWindowCard } from "@/components/ai-elements/ContextWindowCard";
 
 const THEME = {
-  bg: '#2B2520',
-  inputBg: '#3A332B',
-  textPrimary: '#ECECEC',
-  textSecondary: '#9B9B9B',
-  textMuted: '#6B6B6B',
-  accent: '#D4956A',
-  border: 'rgba(255,255,255,0.08)',
-  hoverBg: 'rgba(255,255,255,0.05)',
-  inputBorder: 'rgba(255,255,255,0.1)',
+  bg: 'var(--surface-panel)',
+  inputBg: 'var(--surface-hover)',
+  textPrimary: 'var(--ui-text-primary)',
+  textSecondary: 'var(--ui-text-secondary)',
+  textMuted: 'var(--ui-text-muted)',
+  accent: 'var(--accent-primary)',
+  border: 'var(--ui-border-muted)',
+  hoverBg: 'var(--surface-hover)',
+  inputBorder: 'var(--ui-border-default)',
 };
 
 // Agent mode theme colors (matching ChatComposer exactly)
 const AGENT_THEME = {
-  accent: '#22c55e',
-  glow: 'rgba(34, 197, 94, 0.4)',
-  soft: 'rgba(34, 197, 94, 0.15)',
+  accent: 'var(--status-success)',
+  glow: 'color-mix(in srgb, var(--status-success) 40%, transparent)',
+  soft: 'var(--status-success-bg)',
 };
 
 // CSS animations for Gizzi mascot
@@ -100,11 +100,11 @@ function getKindIcon(kind: TraceEntry['kind']) {
     case 'tool':
       return <Wrench {...iconProps} style={{ color: THEME.accent }} />;
     case 'info':
-      return <Info {...iconProps} style={{ color: '#3b82f6' }} />;
+      return <Info {...iconProps} style={{ color: 'var(--status-info)' }} />;
     case 'error':
-      return <Warning {...iconProps} style={{ color: '#ef4444' }} />;
+      return <Warning {...iconProps} style={{ color: 'var(--status-error)' }} />;
     case 'success':
-      return <CheckCircle {...iconProps} style={{ color: '#22c55e' }} />;
+      return <CheckCircle {...iconProps} style={{ color: 'var(--status-success)' }} />;
     default:
       return <Info {...iconProps} style={{ color: THEME.textMuted }} />;
   }
@@ -124,9 +124,9 @@ function getStatusIndicator(status: TraceEntry['status']) {
         }} />
       );
     case 'success':
-      return <CheckCircle size={12} style={{ color: '#22c55e' }} />;
+      return <CheckCircle size={12} style={{ color: 'var(--status-success)' }} />;
     case 'error':
-      return <Warning size={12} style={{ color: '#ef4444' }} />;
+      return <Warning size={12} style={{ color: 'var(--status-error)' }} />;
     default:
       return null;
   }
@@ -146,8 +146,8 @@ function TraceEntryItem({ entry }: { entry: TraceEntry }) {
   }, [entry.timestamp]);
 
   const hasDetails = !!entry.detail;
-  const statusColor = entry.status === 'error' ? '#ef4444' 
-    : entry.status === 'success' ? '#22c55e' 
+  const statusColor = entry.status === 'error' ? 'var(--status-error)' 
+    : entry.status === 'success' ? 'var(--status-success)' 
     : THEME.accent;
 
   return (
@@ -156,16 +156,16 @@ function TraceEntryItem({ entry }: { entry: TraceEntry }) {
         marginLeft: 38,
         marginBottom: 4,
         background: entry.status === 'error' 
-          ? 'rgba(239,68,68,0.08)' 
+          ? 'var(--status-error-bg)' 
           : entry.status === 'success'
-          ? 'rgba(34,197,94,0.08)'
-          : 'rgba(255,255,255,0.03)',
+          ? 'var(--status-success-bg)'
+          : 'var(--surface-hover)',
         borderRadius: '8px',
         border: `1px solid ${entry.status === 'error' 
-          ? 'rgba(239,68,68,0.2)' 
+          ? 'color-mix(in srgb, var(--status-error) 20%, transparent)' 
           : entry.status === 'success'
-          ? 'rgba(34,197,94,0.2)'
-          : 'rgba(255,255,255,0.06)'}`,
+          ? 'var(--status-success-bg)'
+          : 'var(--ui-border-muted)'}`,
         overflow: 'hidden',
         transition: 'all 0.2s ease',
       }}
@@ -182,7 +182,7 @@ function TraceEntryItem({ entry }: { entry: TraceEntry }) {
           transition: 'background 0.15s ease',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+          e.currentTarget.style.background = 'var(--surface-hover)';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.background = 'transparent';
@@ -211,7 +211,7 @@ function TraceEntryItem({ entry }: { entry: TraceEntry }) {
           width: 20,
           height: 20,
           borderRadius: '4px',
-          background: 'rgba(255,255,255,0.06)',
+          background: 'var(--surface-active)',
           flexShrink: 0,
         }}>
           {getKindIcon(entry.kind)}
@@ -232,7 +232,7 @@ function TraceEntryItem({ entry }: { entry: TraceEntry }) {
         <div style={{ 
           flex: 1,
           minWidth: 0,
-          color: entry.status === 'error' ? '#ef4444' : THEME.textSecondary, 
+          color: entry.status === 'error' ? 'var(--status-error)' : THEME.textSecondary, 
           fontSize: 12,
           fontWeight: 500,
           whiteSpace: 'nowrap',
@@ -264,7 +264,7 @@ function TraceEntryItem({ entry }: { entry: TraceEntry }) {
           <div
             style={{
               padding: '8px 10px',
-              background: 'rgba(0,0,0,0.2)',
+              background: 'var(--surface-hover)',
               borderRadius: '6px',
               color: THEME.textMuted,
               fontSize: 11,
@@ -293,14 +293,14 @@ function PlanPreview({ plan, onApprove, onReject }: {
     <div style={{
       margin: '0 0 16px 38px',
       padding: '16px',
-      background: 'rgba(58, 51, 43, 0.8)',
+      background: 'var(--surface-floating)',
       borderRadius: '12px',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
+      border: '1px solid var(--ui-border-default)',
       display: 'flex',
       flexDirection: 'column',
       gap: 12,
       animation: 'slideDown 0.3s ease',
-      boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+      boxShadow: '0 4px 20px var(--surface-hover)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -311,8 +311,8 @@ function PlanPreview({ plan, onApprove, onReject }: {
           fontSize: 10, 
           padding: '2px 8px', 
           borderRadius: '99px', 
-          background: plan.risk === 'high' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)',
-          color: plan.risk === 'high' ? '#ef4444' : '#22c55e',
+          background: plan.risk === 'high' ? 'var(--status-error-bg)' : 'var(--status-success-bg)',
+          color: plan.risk === 'high' ? 'var(--status-error)' : 'var(--status-success)',
           fontWeight: 700,
           textTransform: 'uppercase'
         }}>
@@ -327,13 +327,13 @@ function PlanPreview({ plan, onApprove, onReject }: {
               width: 18, 
               height: 18, 
               borderRadius: '50%', 
-              background: step.status === 'completed' ? '#22c55e' : 'rgba(255,255,255,0.1)',
+              background: step.status === 'completed' ? 'var(--status-success)' : 'var(--ui-border-default)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: 10,
               fontWeight: 700,
-              color: step.status === 'completed' ? '#000' : THEME.textMuted,
+              color: step.status === 'completed' ? 'var(--ui-text-inverse)' : THEME.textMuted,
               flexShrink: 0
             }}>
               {step.status === 'completed' ? <Check size={10} strokeWidth={4} /> : idx + 1}
@@ -358,8 +358,8 @@ function PlanPreview({ plan, onApprove, onReject }: {
             flex: 1, 
             padding: '8px', 
             borderRadius: '8px', 
-            background: 'rgba(255,255,255,0.05)', 
-            border: '1px solid rgba(255,255,255,0.1)',
+            background: 'var(--surface-hover)', 
+            border: '1px solid var(--ui-border-default)',
             color: THEME.textPrimary,
             fontSize: 12,
             fontWeight: 600,
@@ -376,7 +376,7 @@ function PlanPreview({ plan, onApprove, onReject }: {
             borderRadius: '8px', 
             background: THEME.accent, 
             border: 'none',
-            color: '#000',
+            color: 'var(--ui-text-inverse)',
             fontSize: 12,
             fontWeight: 700,
             cursor: 'pointer',
@@ -479,7 +479,7 @@ export function AgentRunner() {
         background: THEME.bg,
         borderRadius: '16px',
         border: `1px solid ${THEME.border}`,
-        boxShadow: '0 25px 80px rgba(0,0,0,0.6)',
+        boxShadow: '0 25px 80px var(--shell-overlay-backdrop)',
         overflow: 'hidden',
       }}>
         {/* Header drag area */}
@@ -633,7 +633,7 @@ export function AgentRunner() {
                   color: THEME.textSecondary,
                   fontSize: '13px',
                   cursor: 'pointer',
-                  transition: 'all 0.2s',
+                  transition: 'var(--transition-fast)',
                   flexShrink: 0,
                 }}
               >
@@ -664,7 +664,7 @@ export function AgentRunner() {
                       padding: '4px',
                       minWidth: '160px',
                       zIndex: 51,
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                      boxShadow: 'var(--shadow-md)',
                     }}
                   >
                     {[
@@ -686,7 +686,7 @@ export function AgentRunner() {
                           padding: '8px 12px',
                           borderRadius: '6px',
                           border: 'none',
-                          background: selectedModel.id === model.id ? 'rgba(255,255,255,0.08)' : 'transparent',
+                          background: selectedModel.id === model.id ? 'var(--ui-border-muted)' : 'transparent',
                           color: THEME.textPrimary,
                           fontSize: '13px',
                           cursor: 'pointer',
@@ -709,7 +709,7 @@ export function AgentRunner() {
                   width: '32px',
                   height: '32px',
                   borderRadius: '50%',
-                  background: 'rgba(255,255,255,0.08)',
+                  background: 'var(--surface-active)',
                   border: `1px solid ${THEME.inputBorder}`,
                   color: THEME.accent,
                   display: 'flex',
@@ -717,7 +717,7 @@ export function AgentRunner() {
                   justifyContent: 'center',
                   cursor: 'pointer',
                   flexShrink: 0,
-                  transition: 'all 0.2s',
+                  transition: 'var(--transition-fast)',
                 }}
               >
                 <Square size={12} fill="currentColor" />
@@ -730,15 +730,15 @@ export function AgentRunner() {
                   width: '32px',
                   height: '32px',
                   borderRadius: '50%',
-                  background: input.trim() ? THEME.accent : 'rgba(255,255,255,0.06)',
+                  background: input.trim() ? THEME.accent : 'var(--ui-border-muted)',
                   border: 'none',
-                  color: input.trim() ? '#FFF' : THEME.textMuted,
+                  color: input.trim() ? 'var(--ui-text-inverse)' : THEME.textMuted,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: input.trim() ? 'pointer' : 'default',
                   flexShrink: 0,
-                  transition: 'all 0.2s',
+                  transition: 'var(--transition-fast)',
                 }}
               >
                 <ArrowUp size={18} />
@@ -799,7 +799,7 @@ export function AgentRunner() {
       background: THEME.bg,
       borderRadius: '16px',
       border: `1px solid ${THEME.border}`,
-      boxShadow: '0 25px 80px rgba(0,0,0,0.6)',
+      boxShadow: '0 25px 80px var(--shell-overlay-backdrop)',
       overflow: 'hidden',
     }}>
       {animationStyle}
@@ -866,7 +866,7 @@ export function AgentRunner() {
               justifyContent: 'center',
               fontSize: 12,
               fontWeight: 600,
-              color: '#FFF',
+              color: 'var(--ui-text-inverse)',
               flexShrink: 0,
             }}>
               U
@@ -948,7 +948,7 @@ export function AgentRunner() {
             <div style={{
               width: 14,
               height: 14,
-              border: '2px solid rgba(255,255,255,0.1)',
+              border: '2px solid var(--ui-border-default)',
               borderTopColor: THEME.accent,
               borderRadius: '50%',
               animation: 'spin 1s linear infinite',
@@ -1083,7 +1083,7 @@ export function AgentRunner() {
                 color: THEME.textSecondary,
                 fontSize: '13px',
                 cursor: 'pointer',
-                transition: 'all 0.2s',
+                transition: 'var(--transition-fast)',
                 flexShrink: 0,
               }}
             >
@@ -1114,7 +1114,7 @@ export function AgentRunner() {
                     padding: '4px',
                     minWidth: '160px',
                     zIndex: 51,
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                    boxShadow: 'var(--shadow-md)',
                   }}
                 >
                   {[
@@ -1136,7 +1136,7 @@ export function AgentRunner() {
                         padding: '8px 12px',
                         borderRadius: '6px',
                         border: 'none',
-                        background: selectedModel.id === model.id ? 'rgba(255,255,255,0.08)' : 'transparent',
+                        background: selectedModel.id === model.id ? 'var(--ui-border-muted)' : 'transparent',
                         color: THEME.textPrimary,
                         fontSize: '13px',
                         cursor: 'pointer',
@@ -1159,7 +1159,7 @@ export function AgentRunner() {
                 width: '32px',
                 height: '32px',
                 borderRadius: '50%',
-                background: 'rgba(255,255,255,0.08)',
+                background: 'var(--surface-active)',
                 border: `1px solid ${THEME.inputBorder}`,
                 color: THEME.accent,
                 display: 'flex',
@@ -1167,7 +1167,7 @@ export function AgentRunner() {
                 justifyContent: 'center',
                 cursor: 'pointer',
                 flexShrink: 0,
-                transition: 'all 0.2s',
+                transition: 'var(--transition-fast)',
               }}
             >
               <Square size={12} fill="currentColor" />
@@ -1180,15 +1180,15 @@ export function AgentRunner() {
                 width: '32px',
                 height: '32px',
                 borderRadius: '50%',
-                background: input.trim() ? THEME.accent : 'rgba(255,255,255,0.06)',
+                background: input.trim() ? THEME.accent : 'var(--ui-border-muted)',
                 border: 'none',
-                color: input.trim() ? '#FFF' : THEME.textMuted,
+                color: input.trim() ? 'var(--ui-text-inverse)' : THEME.textMuted,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 cursor: input.trim() ? 'pointer' : 'default',
                 flexShrink: 0,
-                transition: 'all 0.2s',
+                transition: 'var(--transition-fast)',
               }}
             >
               <ArrowUp size={18} />

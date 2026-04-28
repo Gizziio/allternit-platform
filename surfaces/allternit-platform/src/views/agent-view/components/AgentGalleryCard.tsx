@@ -223,7 +223,7 @@ export function AgentGalleryCard({ agent, onClick, index = 0 }: AgentGalleryCard
                   right: 0,
                   width: "140px",
                   background: "#1a1a2e",
-                  border: "1px solid rgba(255,255,255,0.08)",
+                  border: "1px solid var(--ui-border-muted)",
                   borderRadius: "10px",
                   padding: "6px",
                   zIndex: 50,
@@ -279,7 +279,7 @@ export function AgentGalleryCard({ agent, onClick, index = 0 }: AgentGalleryCard
             style={{
               padding: "2px 8px",
               borderRadius: "999px",
-              background: "rgba(255,255,255,0.04)",
+              background: "var(--surface-hover)",
               color: STUDIO_THEME.textMuted,
               fontSize: "10px",
               fontWeight: 500,

@@ -95,7 +95,7 @@ export class SwarmErrorBoundary extends Component<Props, State> {
                 <pre 
                   className="p-3 rounded-lg text-xs overflow-auto max-h-40"
                   style={{ 
-                    background: 'rgba(0,0,0,0.3)',
+                    background: 'var(--surface-panel)',
                     color: TEXT.secondary,
                   }}
                 >
@@ -110,7 +110,7 @@ export class SwarmErrorBoundary extends Component<Props, State> {
                 onClick={this.handleReset}
                 className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:opacity-80"
                 style={{ 
-                  background: 'rgba(255,255,255,0.05)',
+                  background: 'var(--surface-hover)',
                   color: TEXT.secondary,
                 }}
               >

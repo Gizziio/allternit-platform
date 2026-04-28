@@ -177,7 +177,7 @@ export function CanvasContextMenu({
         position: 'fixed',
         left: posX,
         top: posY,
-        zIndex: 10000,
+        zIndex: 165,
         width: menuWidth,
         padding: '6px',
         borderRadius: 12,

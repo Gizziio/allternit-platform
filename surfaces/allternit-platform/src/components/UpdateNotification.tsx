@@ -20,17 +20,17 @@ import type { UpdateInfo } from '../plugins/updateChecker';
 // ============================================================================
 
 const THEME = {
-  bg: '#0c0a09',
-  bgElevated: '#1c1917',
-  accent: '#d4b08c',
+  bg: 'var(--surface-canvas)',
+  bgElevated: 'var(--surface-panel)',
+  accent: 'var(--accent-primary)',
   accentMuted: 'rgba(212, 176, 140, 0.15)',
-  textPrimary: '#e7e5e4',
-  textSecondary: '#a8a29e',
-  textTertiary: '#78716c',
+  textPrimary: 'var(--ui-text-primary)',
+  textSecondary: 'var(--ui-text-secondary)',
+  textTertiary: 'var(--ui-text-muted)',
   border: 'rgba(212, 176, 140, 0.1)',
   borderStrong: 'rgba(212, 176, 140, 0.2)',
-  success: '#22c55e',
-  warning: '#f59e0b',
+  success: 'var(--status-success)',
+  warning: 'var(--status-warning)',
 };
 
 // ============================================================================
@@ -224,7 +224,7 @@ function SingleNotification({
               backgroundColor: 'rgba(239, 68, 68, 0.1)',
               borderRadius: 6,
               fontSize: 11,
-              color: '#fca5a5',
+              color: 'var(--status-error)',
               display: 'flex',
               alignItems: 'center',
               gap: 6,
@@ -364,7 +364,7 @@ export function UpdateNotification({
         position: 'fixed',
         top: 24,
         right: 24,
-        zIndex: 1000,
+        zIndex: 190,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'flex-end',
@@ -433,7 +433,7 @@ export function CompactUpdateNotification({ count, onClick }: CompactUpdateNotif
         position: 'fixed',
         top: 24,
         right: 24,
-        zIndex: 1000,
+        zIndex: 190,
         padding: '12px 16px',
         backgroundColor: THEME.bgElevated,
         border: `1px solid ${THEME.borderStrong}`,

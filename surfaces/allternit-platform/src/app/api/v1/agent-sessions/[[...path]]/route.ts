@@ -16,7 +16,7 @@ type GizziSessionInfo = {
   directory?: string;
   version?: string;
   agentID?: string;
-  surface?: "chat" | "cowork" | "code" | "browser";
+  surface?: "chat" | "cowork" | "code" | "browser" | "design";
   permission?: unknown;
   time?: {
     created?: number;
@@ -154,6 +154,7 @@ function transformSession(info: GizziSessionInfo) {
       version: info.version,
       agent_id: info.agentID,
       surface: info.surface,
+      originSurface: info.surface,
       permission: info.permission,
     },
   };
@@ -247,6 +248,7 @@ async function transformBusEvent(event: GizziBusEvent) {
           version: info.version,
           agent_id: info.agentID,
           surface: info.surface,
+          originSurface: info.surface,
           permission: info.permission,
         },
       };
@@ -508,7 +510,7 @@ export async function POST(
         body: {
           title: body.name || body.title || "New Session",
           agentID: body.agent_id ?? body.agentId,
-          surface: body.surface ?? body.metadata?.surface,
+          surface: body.origin_surface ?? body.surface ?? body.metadata?.surface,
         },
       });
       return NextResponse.json(transformSession(session));
@@ -578,7 +580,7 @@ export async function PATCH(
           archived:
             typeof body.active === "boolean" ? !body.active : undefined,
           permission: body.metadata?.permission,
-          surface: body.metadata?.surface ?? body.surface,
+          surface: body.origin_surface ?? body.metadata?.surface ?? body.surface,
         },
       },
     );

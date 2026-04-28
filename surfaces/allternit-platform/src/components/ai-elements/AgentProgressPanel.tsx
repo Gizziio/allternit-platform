@@ -17,15 +17,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckCircle,
   Warning,
-  CircleNotch,
   FolderOpen,
   FileText,
   Plus,
   X,
-  CaretRight,
-  Terminal,
-  Globe,
-  Wrench,
 } from '@phosphor-icons/react';
 import { InlineSpinner } from "@/components/ai-elements/inline-spinner";
 import type { ChatMessage } from "@/lib/ai/rust-stream-adapter";
@@ -190,7 +185,7 @@ const TaskRow = memo(function TaskRow({
         alignItems: "center",
         gap: "7px",
         padding: "5px 0",
-        borderBottom: "1px solid rgba(255,255,255,0.03)",
+        borderBottom: "1px solid var(--surface-hover)",
         position: "relative",
       }}
     >
@@ -234,8 +229,8 @@ const TaskRow = memo(function TaskRow({
             transition={{ duration: 0.1 }}
             onClick={() => onAskAbout(task)}
             style={{
-              background: "rgba(212,176,140,0.12)",
-              border: "1px solid rgba(212,176,140,0.2)",
+              background: "color-mix(in srgb, var(--accent-primary) 12%, transparent)",
+              border: "1px solid var(--ui-border-default)",
               borderRadius: "4px",
               width: 16,
               height: 16,
@@ -303,7 +298,7 @@ export const AgentProgressPanel = memo(function AgentProgressPanel({
         width: 252,
         minWidth: 252,
         flexShrink: 0,
-        borderLeft: "1px solid rgba(255,255,255,0.06)",
+        borderLeft: "1px solid var(--ui-border-muted)",
         background: "rgba(6,6,8,0.6)",
         backdropFilter: "blur(16px)",
         display: "flex",
@@ -317,7 +312,7 @@ export const AgentProgressPanel = memo(function AgentProgressPanel({
         alignItems: "center",
         gap: "8px",
         padding: "12px 14px 10px",
-        borderBottom: "1px solid rgba(255,255,255,0.05)",
+        borderBottom: "1px solid var(--surface-hover)",
         flexShrink: 0,
       }}>
         {runningCount > 0 ? (

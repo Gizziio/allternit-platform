@@ -12,13 +12,8 @@ import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 import { railsApi } from "./rails.service";
 import type {
-  PlanNewRequest,
-  PlanRefineRequest,
   WihInfo,
-  WihPickupRequest,
-  WihCloseRequest,
   ManagedLease,
-  LeaseRequest,
   ContextPack,
   Receipt,
   ReceiptQueryRequest,
@@ -1270,7 +1265,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
       
       wihs.forEach((wih) => {
         if (wih.assignee) {
-          const existing = agentMap.get(wih.assignee);
+          agentMap.get(wih.assignee);
           agentMap.set(wih.assignee, {
             agentId: wih.assignee,
             name: wih.assignee,
@@ -1302,7 +1297,7 @@ export const useUnifiedStore = create<UnifiedStore>()(
           text = text.replace(new RegExp(`{{${key}}}`, "g"), String(value));
         });
         
-        const dagId = await get().createDag(text);
+        await get().createDag(text);
         set({ isLoading: false });
       } catch (err: any) {
         set({ error: err.message, isLoading: false });

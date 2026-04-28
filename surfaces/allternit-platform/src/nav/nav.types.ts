@@ -114,7 +114,6 @@ export type ViewType =
   | "chat-agent-session"
   | "cowork-agent-session"
   | "code-agent-session"
-  | "browser-agent-session"
   // Product Discovery
   | "products"
   // A://Labs - Course Management

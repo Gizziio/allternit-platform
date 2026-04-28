@@ -189,7 +189,7 @@ export function CodeSessionBar() {
           )}
 
           {activeSession && activeSession.pending_approvals_count > 0 && (
-            <span data-testid="code-sessionbar-pending-pill" style={pillStyle('#f59e0b')}>
+            <span data-testid="code-sessionbar-pending-pill" style={pillStyle('var(--status-warning)')}>
               <WarningCircle size={12} weight="fill" />
               {`${activeSession.pending_approvals_count} pending`}
             </span>

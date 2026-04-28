@@ -59,8 +59,8 @@ export function SkillManager({ api }: SkillManagerProps) {
       {/* Header Stats */}
       <div className="skill-manager__stats">
         <StatCard label="Total Skills" value={stats.total} icon="🛠️" />
-        <StatCard label="Installed" value={stats.installed} icon="✓" color="#10b981" />
-        <StatCard label="Available" value={stats.available} icon="⬇" color="#3b82f6" />
+        <StatCard label="Installed" value={stats.installed} icon="✓" color="var(--status-success)" />
+        <StatCard label="Available" value={stats.available} icon="⬇" color="var(--status-info)" />
       </div>
 
       <div className="skill-manager__content">
@@ -148,7 +148,7 @@ function StatCard({ label, value, icon, color }: {
 }) {
   return (
     <div className="skill-stat-card">
-      <span className="skill-stat-card__icon" style={{ color: color || '#888' }}>{icon}</span>
+      <span className="skill-stat-card__icon" style={{ color: color || 'var(--ui-text-muted)' }}>{icon}</span>
       <div className="skill-stat-card__content">
         <span className="skill-stat-card__value">{value}</span>
         <span className="skill-stat-card__label">{label}</span>

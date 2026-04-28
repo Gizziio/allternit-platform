@@ -861,25 +861,25 @@ export function getScoreLabel(score: number): {
   if (score >= 90) {
     return {
       label: 'Excellent',
-      color: '#10B981',
+      color: 'var(--status-success)',
       description: 'Your prompt is well-crafted and should produce excellent results.',
     };
   } else if (score >= 75) {
     return {
       label: 'Good',
-      color: '#3B82F6',
+      color: 'var(--status-info)',
       description: 'Your prompt is good but could benefit from minor improvements.',
     };
   } else if (score >= 50) {
     return {
       label: 'Fair',
-      color: '#F59E0B',
+      color: 'var(--status-warning)',
       description: 'Your prompt needs improvement to be effective.',
     };
   } else {
     return {
       label: 'Needs Work',
-      color: '#EF4444',
+      color: 'var(--status-error)',
       description: 'Your prompt requires significant improvements.',
     };
   }

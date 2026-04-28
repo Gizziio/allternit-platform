@@ -31,11 +31,11 @@ export const buttonVariants = (options?: { variant?: string; size?: string }) =>
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ children, variant = 'default', size = 'default', style, ...props }, ref) => {
     const variantStyles = {
-      default: { background: '#d4b08c', color: '#0a0a0a', border: 'none' },
-      secondary: { background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none' },
-      outline: { background: 'transparent', color: '#d4b08c', border: '1px solid #d4b08c' },
-      ghost: { background: 'transparent', color: '#888', border: 'none' },
-      destructive: { background: '#ef4444', color: '#fff', border: 'none' },
+      default: { background: 'var(--accent-primary)', color: 'var(--ui-text-inverse)', border: 'none' },
+      secondary: { background: 'var(--ui-border-default)', color: '#fff', border: 'none' },
+      outline: { background: 'transparent', color: 'var(--accent-primary)', border: '1px solid #d4b08c' },
+      ghost: { background: 'transparent', color: 'var(--ui-text-muted)', border: 'none' },
+      destructive: { background: 'var(--status-error)', color: '#fff', border: 'none' },
     };
     
     const sizeStyles = {

@@ -23,7 +23,6 @@ import {
 import { MemoryKernelView } from './MemoryKernelView';
 import { PerformanceAnalyticsView } from '@/components/agents/PerformanceAnalyticsView';
 import { AgentView } from './AgentView';
-import { SkillsRegistryView } from './code/SkillsRegistryView';
 import { useAgentStore, agentWorkspaceService } from '../lib/agents';
 import { useChatSessions } from './chat/ChatSessionStore';
 import { WorkspaceTab } from './WorkspaceTab';
@@ -53,7 +52,7 @@ export function AgentHub() {
   const [hoveredTab, setHoveredTab] = useState<AgentTab | null>(null);
   const [isClient, setIsClient] = useState(false);
   const sessions = useChatSessions();
-  const { agents, createAgent, fetchAgents, setViewMode } = useAgentStore();
+  const { createAgent, fetchAgents } = useAgentStore();
   const STUDIO_THEME = useStudioTheme();
   const gizziCreatingRef = useRef(false);
   const tabMenuRef = useRef<HTMLDivElement | null>(null);
@@ -274,16 +273,14 @@ export function AgentHub() {
           <div className="h-full w-full" style={{ height: '100%', minHeight: 0, overflow: 'auto' }}>
             <CreateAgentForm 
               onCancel={() => {
-                console.log('[AgentHub] Create cancelled, switching to registry');
                 setActiveTab('registry');
               }}
               onShowForge={(name) => {
                 console.log('[AgentHub] Forge animation shown for:', name);
               }}
               onComplete={(agent, workspaceCreated) => {
-                console.log('[AgentHub] Agent creation complete:', agent?.id, 'workspace:', workspaceCreated);
-                // Stay on studio but show success - let user see the forge animation complete
-                // The form handles its own completion state
+                // Auto-switch to registry so user sees their new agent
+                setActiveTab('registry');
               }}
             />
           </div>
@@ -523,8 +520,8 @@ function AgentHubThemeToggle() {
         width: 36,
         height: 36,
         borderRadius: '8px',
-        border: '1px solid rgba(255,255,255,0.08)',
-        background: '#1f1f1f',
+        border: '1px solid var(--ui-border-muted)',
+        background: 'var(--surface-panel)',
         color: '#a0a0a0',
         display: 'flex',
         alignItems: 'center',
@@ -533,7 +530,7 @@ function AgentHubThemeToggle() {
         transition: 'all 0.2s ease',
       }}
       onMouseEnter={(e) => {
-        (e.currentTarget as HTMLButtonElement).style.color = '#d4956a';
+        (e.currentTarget as HTMLButtonElement).style.color = 'var(--accent-primary)';
       }}
       onMouseLeave={(e) => {
         (e.currentTarget as HTMLButtonElement).style.color = '#a0a0a0';

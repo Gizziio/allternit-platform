@@ -3,12 +3,12 @@ import { useBoardStore, type BoardItem } from '@/stores/board.store';
 import { useWorkspaceStore } from '@/stores/workspace.store';
 
 const COLUMNS: { id: BoardItem['status']; label: string; color: string }[] = [
-  { id: 'backlog', label: 'Backlog', color: '#6b7280' },
-  { id: 'todo', label: 'Todo', color: '#0a84ff' },
-  { id: 'in_progress', label: 'In Progress', color: '#f59e0b' },
+  { id: 'backlog', label: 'Backlog', color: 'var(--ui-text-muted)' },
+  { id: 'todo', label: 'Todo', color: 'var(--status-info)' },
+  { id: 'in_progress', label: 'In Progress', color: 'var(--status-warning)' },
   { id: 'in_review', label: 'In Review', color: '#8b5cf6' },
-  { id: 'done', label: 'Done', color: '#10b981' },
-  { id: 'blocked', label: 'Blocked', color: '#ff3b30' },
+  { id: 'done', label: 'Done', color: 'var(--status-success)' },
+  { id: 'blocked', label: 'Blocked', color: 'var(--status-error)' },
 ];
 
 export function WorkspaceBoardView() {
@@ -69,7 +69,7 @@ export function WorkspaceBoardView() {
         <select
           value={activeWorkspaceId ?? ''}
           onChange={(e) => useWorkspaceStore.getState().setActiveWorkspace(e.target.value || null)}
-          style={{ background: '#1f2937', color: '#f3f4f6', border: '1px solid #374151', borderRadius: 6, padding: '6px 12px' }}
+          style={{ background: 'var(--surface-panel)', color: 'var(--ui-text-primary)', border: '1px solid #374151', borderRadius: 6, padding: '6px 12px' }}
         >
           <option value="">Select workspace...</option>
           {workspaces.map((ws) => (
@@ -82,9 +82,9 @@ export function WorkspaceBoardView() {
             onChange={(e) => setNewTitle(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
             placeholder="New board item..."
-            style={{ flex: 1, background: '#1f2937', color: '#f3f4f6', border: '1px solid #374151', borderRadius: 6, padding: '6px 12px' }}
+            style={{ flex: 1, background: 'var(--surface-panel)', color: 'var(--ui-text-primary)', border: '1px solid #374151', borderRadius: 6, padding: '6px 12px' }}
           />
-          <button onClick={handleCreate} style={{ background: '#0a84ff', color: '#fff', border: 'none', borderRadius: 6, padding: '6px 16px', cursor: 'pointer' }}>
+          <button onClick={handleCreate} style={{ background: 'var(--status-info)', color: 'var(--ui-text-inverse)', border: 'none', borderRadius: 6, padding: '6px 16px', cursor: 'pointer' }}>
             Add
           </button>
         </div>
@@ -103,8 +103,8 @@ export function WorkspaceBoardView() {
               style={{
                 minWidth: 220,
                 maxWidth: 280,
-                background: dropTarget === col.id ? 'rgba(10,132,255,0.1)' : '#1f2937',
-                border: `1px solid ${dropTarget === col.id ? '#0a84ff' : '#374151'}`,
+                background: dropTarget === col.id ? 'var(--status-info-bg)' : 'var(--surface-panel)',
+                border: `1px solid ${dropTarget === col.id ? 'var(--status-info)' : 'var(--ui-border-default)'}`,
                 borderRadius: 8,
                 display: 'flex',
                 flexDirection: 'column',
@@ -114,8 +114,8 @@ export function WorkspaceBoardView() {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, padding: '4px 8px' }}>
                 <div style={{ width: 10, height: 10, borderRadius: '50%', background: col.color }} />
-                <span style={{ fontSize: 12, fontWeight: 600, color: '#d1d5db', textTransform: 'uppercase' }}>{col.label}</span>
-                <span style={{ marginLeft: 'auto', fontSize: 11, color: '#9ca3af', background: '#374151', padding: '2px 6px', borderRadius: 10 }}>{colItems.length}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ui-text-secondary)', textTransform: 'uppercase' }}>{col.label}</span>
+                <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--ui-text-muted)', background: 'var(--ui-border-default)', padding: '2px 6px', borderRadius: 10 }}>{colItems.length}</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto', flex: 1 }}>
                 {colItems.map((item) => (
@@ -125,7 +125,7 @@ export function WorkspaceBoardView() {
                     onDragStart={(e) => handleDragStart(e, item.id)}
                     onClick={() => { setActiveItem(item.id); setShowDetail(true); }}
                     style={{
-                      background: activeItemId === item.id ? '#374151' : '#111827',
+                      background: activeItemId === item.id ? 'var(--ui-border-default)' : 'var(--surface-canvas)',
                       border: '1px solid #374151',
                       borderRadius: 6,
                       padding: 10,
@@ -133,19 +133,19 @@ export function WorkspaceBoardView() {
                       opacity: draggedId === item.id ? 0.5 : 1,
                     }}
                   >
-                    <div style={{ fontSize: 13, color: '#f3f4f6', marginBottom: 4 }}>{item.title}</div>
+                    <div style={{ fontSize: 13, color: 'var(--ui-text-primary)', marginBottom: 4 }}>{item.title}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                       {item.priority > 50 && (
-                        <span style={{ fontSize: 10, color: '#f59e0b', background: 'rgba(245,158,11,0.15)', padding: '1px 6px', borderRadius: 4 }}>High</span>
+                        <span style={{ fontSize: 10, color: 'var(--status-warning)', background: 'rgba(245,158,11,0.15)', padding: '1px 6px', borderRadius: 4 }}>High</span>
                       )}
                       {item.estimatedMinutes && (
-                        <span style={{ fontSize: 10, color: '#9ca3af' }}>{item.estimatedMinutes}m</span>
+                        <span style={{ fontSize: 10, color: 'var(--ui-text-muted)' }}>{item.estimatedMinutes}m</span>
                       )}
                       {item.assigneeName && (
-                        <span style={{ fontSize: 10, color: '#0a84ff' }}>@{item.assigneeName}</span>
+                        <span style={{ fontSize: 10, color: 'var(--status-info)' }}>@{item.assigneeName}</span>
                       )}
                       {item.deadline && (
-                        <span style={{ fontSize: 10, color: new Date(item.deadline) < new Date() ? '#ff3b30' : '#9ca3af' }}>
+                        <span style={{ fontSize: 10, color: new Date(item.deadline) < new Date() ? 'var(--status-error)' : 'var(--ui-text-muted)' }}>
                           {new Date(item.deadline).toLocaleDateString()}
                         </span>
                       )}
@@ -166,7 +166,7 @@ export function WorkspaceBoardView() {
           top: 16,
           bottom: 16,
           width: 340,
-          background: '#1f2937',
+          background: 'var(--surface-panel)',
           border: '1px solid #374151',
           borderRadius: 8,
           padding: 16,
@@ -176,21 +176,21 @@ export function WorkspaceBoardView() {
           zIndex: 10,
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ margin: 0, fontSize: 15, color: '#f3f4f6' }}>{activeItem.title}</h3>
-            <button onClick={() => setShowDetail(false)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}>✕</button>
+            <h3 style={{ margin: 0, fontSize: 15, color: 'var(--ui-text-primary)' }}>{activeItem.title}</h3>
+            <button onClick={() => setShowDetail(false)} style={{ background: 'none', border: 'none', color: 'var(--ui-text-muted)', cursor: 'pointer' }}>✕</button>
           </div>
-          <div style={{ fontSize: 12, color: '#9ca3af' }}>{activeItem.description || 'No description'}</div>
+          <div style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>{activeItem.description || 'No description'}</div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {activeItem.labels?.map((l) => (
-              <span key={l} style={{ fontSize: 10, background: '#374151', color: '#d1d5db', padding: '2px 8px', borderRadius: 4 }}>{l}</span>
+              <span key={l} style={{ fontSize: 10, background: 'var(--ui-border-default)', color: 'var(--ui-text-secondary)', padding: '2px 8px', borderRadius: 4 }}>{l}</span>
             ))}
           </div>
           <div style={{ borderTop: '1px solid #374151', paddingTop: 8 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', marginBottom: 6 }}>Comments</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--ui-text-muted)', marginBottom: 6 }}>Comments</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 200, overflowY: 'auto' }}>
               {(comments[activeItem.id] || []).map((c) => (
-                <div key={c.id} style={{ fontSize: 12, color: '#d1d5db' }}>
-                  <span style={{ color: '#0a84ff' }}>{c.authorType === 'agent' ? '🤖' : '👤'} {c.authorId.slice(0, 8)}</span>: {c.body}
+                <div key={c.id} style={{ fontSize: 12, color: 'var(--ui-text-secondary)' }}>
+                  <span style={{ color: 'var(--status-info)' }}>{c.authorType === 'agent' ? '🤖' : '👤'} {c.authorId.slice(0, 8)}</span>: {c.body}
                 </div>
               ))}
             </div>
@@ -200,15 +200,15 @@ export function WorkspaceBoardView() {
                 onChange={(e) => setCommentText(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
                 placeholder="Add comment..."
-                style={{ flex: 1, background: '#111827', color: '#f3f4f6', border: '1px solid #374151', borderRadius: 6, padding: '4px 8px', fontSize: 12 }}
+                style={{ flex: 1, background: 'var(--surface-canvas)', color: 'var(--ui-text-primary)', border: '1px solid #374151', borderRadius: 6, padding: '4px 8px', fontSize: 12 }}
               />
-              <button onClick={handleAddComment} style={{ background: '#0a84ff', color: '#fff', border: 'none', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontSize: 12 }}>Post</button>
+              <button onClick={handleAddComment} style={{ background: 'var(--status-info)', color: 'var(--ui-text-inverse)', border: 'none', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontSize: 12 }}>Post</button>
             </div>
           </div>
         </div>
       )}
 
-      {isLoading && <div style={{ position: 'absolute', top: 8, right: 16, fontSize: 11, color: '#9ca3af' }}>Loading...</div>}
+      {isLoading && <div style={{ position: 'absolute', top: 8, right: 16, fontSize: 11, color: 'var(--ui-text-muted)' }}>Loading...</div>}
     </div>
   );
 }

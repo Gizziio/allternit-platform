@@ -9,7 +9,7 @@
  */
 
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   UploadSimple,
   DownloadSimple,
@@ -19,15 +19,10 @@ import {
   Check,
   X,
   CircleNotch,
-  Play,
-  ArrowCounterClockwise,
   GearSix,
-  Plus,
-  Trash,
   Clock,
   Warning,
   ArrowsClockwise,
-  CaretRight,
 } from '@phosphor-icons/react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -43,7 +38,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Environment } from '@/api/infrastructure';
 
@@ -97,7 +91,7 @@ export function EnvironmentSync({
     { date: new Date(Date.now() - 3600000), status: 'success', files: 45 },
     { date: new Date(Date.now() - 86400000), status: 'success', files: 12 },
   ]);
-  const [pendingFiles, setPendingFiles] = useState<SyncFile[]>([
+  const [pendingFiles] = useState<SyncFile[]>([
     { path: 'src/components/new-feature.tsx', type: 'file', size: 3456, modified: new Date(), status: 'pending', direction: 'up' },
     { path: 'package.json', type: 'file', size: 2890, modified: new Date(), status: 'conflict', direction: 'up' },
     { path: 'README.md', type: 'file', size: 1234, modified: new Date(), status: 'pending', direction: 'down' },

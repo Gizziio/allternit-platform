@@ -5,15 +5,11 @@
  * Users can choose to enable mesh networking during VPS onboarding.
  */
 
-import { 
-  generateHeadscaleServerScript, 
-  generateHeadscaleUpdateScript 
+import {
+  generateHeadscaleServerScript,
 } from '../deploy/headscale-install';
-import { generateInstallScript } from '../agent/install';
-import type { 
-  HeadscaleServerConfig, 
-  MeshProvider, 
-  VPSRegistrationResponse 
+import type {
+  MeshProvider,
 } from '../types';
 
 // ============================================================================
@@ -125,7 +121,7 @@ export class VPSSetupService {
   ): Promise<{ installCommand: string; domain: string }> {
     const domain = params.host; // Use VPS IP or domain
     
-    const installScript = generateHeadscaleServerScript({
+    generateHeadscaleServerScript({
       domain,
       port: 8080,
       withWebUI: true,

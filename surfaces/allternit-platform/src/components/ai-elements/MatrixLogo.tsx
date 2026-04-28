@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, memo } from 'react';
-import { motion, MotionConfig, useSpring, useMotionValue, useTransform, AnimatePresence, useMotionTemplate } from 'framer-motion';
+import { motion, MotionConfig, useSpring, useMotionValue, useTransform, useMotionTemplate } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 interface MatrixLogoProps {
@@ -112,7 +112,7 @@ export const MatrixLogo = memo(({
         {/* Structural Extensions (Integrated Rays) */}
         <motion.div 
           className="absolute inset-0"
-          style={{ transform: `translateZ(${isSmall ? -15 : -30}px)`, color: '#D4B08C' }}
+          style={{ transform: `translateZ(${isSmall ? -15 : -30}px)`, color: 'var(--accent-primary)' }}
           animate={isCompacting ? { rotate: 360 } : isThinking ? { rotate: 360 } : isListening ? { rotate: 360 } : { rotate: 0 }}
           transition={isCompacting ? { repeat: Infinity, duration: 0.8, ease: "linear" } : isThinking ? { repeat: Infinity, duration: 8, ease: "linear" } : isListening ? { repeat: Infinity, duration: 4, ease: "linear" } : { type: "spring" }}
         >
@@ -201,11 +201,7 @@ export const MatrixLogo = memo(({
  * Individual technical block with magnetic hover and 3D response
  */
 const Block = ({ data, mouseX, mouseY, state, energy, isSmall }: any) => {
-  const isThinking = state === "thinking";
   const isSpeaking = state === "speaking";
-  const isListening = state === "listening";
-  const isAsleep = state === "asleep";
-  const isCompacting = state === "compacting";
 
   const blockSize = isSmall ? 8 : 10;
   const gap = isSmall ? 1 : 2;
@@ -242,7 +238,7 @@ const Block = ({ data, mouseX, mouseY, state, energy, isSmall }: any) => {
         z: zLift,
         left: `calc(50% - ${blockSize / 2}px)`,
         top: `calc(50% - ${blockSize / 2}px)`,
-        backgroundColor: '#D4B08C',
+        backgroundColor: 'var(--accent-primary)',
         opacity: data.accent ? 0.7 : 1,
         transformStyle: "preserve-3d",
         // Variants no longer animate scale, so magnetic scale is safe here.

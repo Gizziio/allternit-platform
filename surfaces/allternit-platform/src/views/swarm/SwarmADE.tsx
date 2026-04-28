@@ -38,7 +38,6 @@ import { ExportPanel } from './components/ExportPanel';
 import {
   GridLoading,
   DetailLoading,
-  InitialLoading,
   EmptyState,
   RefreshIndicator
 } from './components/LoadingStates';
@@ -49,7 +48,7 @@ import { KanbanView } from './views/KanbanView';
 import { ConsoleView } from './views/ConsoleView';
 import { DetailView } from './views/DetailView';
 import { HistoryView } from './views/HistoryView';
-import type { SwarmViewMode, SwarmAgent, TopologyNode, TimelineTask, MetricsDataPoint } from './types';
+import type { SwarmAgent, TopologyNode, TimelineTask, MetricsDataPoint } from './types';
 
 // ============================================================================
 // Mock Data Generators for Visualizations
@@ -147,17 +146,15 @@ interface SwarmMonitorProps {
 }
 
 function SwarmMonitorContent({ className }: SwarmMonitorProps) {
-  const { 
-    viewMode, 
-    selectedAgentId, 
-    setViewMode, 
-    selectAgent, 
+  const {
+    viewMode,
+    setViewMode,
+    selectAgent,
     refreshAgents,
     isLoading,
     error,
     searchQuery,
     clearFilters,
-    isBatchMode,
   } = useSwarmMonitorStore();
   
   const [showExportPanel, setShowExportPanel] = useState(false);
@@ -224,7 +221,7 @@ function SwarmMonitorContent({ className }: SwarmMonitorProps) {
   const topologyNodes = React.useMemo(() => generateTopologyNodes(agents), [agents]);
   const topologyEdges = React.useMemo(() => generateTopologyEdges(agents), [agents]);
   const timelineTasks = React.useMemo(() => generateTimelineTasks(agents), [agents]);
-  const timelineMetrics = React.useMemo(() => calculateTimelineMetrics(timelineTasks), [timelineTasks]);
+  React.useMemo(() => calculateTimelineMetrics(timelineTasks), [timelineTasks]);
 
   const topologyMetrics = React.useMemo(() => ({
     messageRate: metrics.throughput ?? 0,
@@ -365,7 +362,7 @@ function SwarmMonitorContent({ className }: SwarmMonitorProps) {
           onClick={() => setShowExportPanel(!showExportPanel)}
           className="absolute top-2 right-16 flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-medium z-10 transition-colors hover:bg-white/5"
           style={{
-            background: 'rgba(255,255,255,0.05)',
+            background: 'var(--surface-hover)',
             color: TEXT.secondary,
           }}
         >

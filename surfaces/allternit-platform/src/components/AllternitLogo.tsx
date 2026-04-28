@@ -29,7 +29,7 @@ export function AllternitLogo({ size = 'md', variant = 'horizontal', showText = 
 
   // Allternit Brand Colors from design system (dark theme optimized)
   const brandColors = {
-    primary: '#D4B08C',    // nude-400 (brighter for dark theme)
+    primary: 'var(--accent-primary)',    // nude-400 (brighter for dark theme)
     secondary: '#B08D6E',  // sand-500
     accent: '#D97757',     // Warm accent
     light: '#ECECEC',      // Primary text for dark theme
@@ -119,7 +119,7 @@ export function AllternitLogo({ size = 'md', variant = 'horizontal', showText = 
 export function AllternitOrb({ className = '' }: { className?: string }) {
   const brandColors = {
     primary: '#B08D6E',
-    secondary: '#D4B08C',
+    secondary: 'var(--accent-primary)',
     accent: '#D97757',
   };
 
@@ -186,7 +186,7 @@ export function BrandBadge({
   className = ''
 }: BrandBadgeProps) {
   const brandColors = {
-    primary: '#D4B08C',
+    primary: 'var(--accent-primary)',
     secondary: '#B08D6E',
     accent: '#D97757',
     light: '#ECECEC',

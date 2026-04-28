@@ -15,11 +15,7 @@ import {
   Stack,
   CaretDown,
   MagnifyingGlass,
-  Funnel,
-  Eye,
-  Clock,
   Tag,
-  ChartBar,
 } from '@phosphor-icons/react';
 
 interface MemoryEvent {
@@ -96,9 +92,9 @@ function EventRow({ event, onToggle }: { event: MemoryEvent; onToggle: (id: stri
 
 function EntityCard({ entity }: { entity: Entity }) {
   const typeColors: Record<string, string> = {
-    Person: '#34c759',
+    Person: 'var(--status-success)',
     Company: '#ff9f0a',
-    Project: '#007aff',
+    Project: 'var(--status-info)',
     File: '#5ac8fa',
     Session: '#9b59b6',
     Tool: '#3498db',

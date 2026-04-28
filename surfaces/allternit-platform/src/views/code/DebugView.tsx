@@ -104,11 +104,11 @@ export function DebugView() {
   const getLogLevelColor = (level: ConsoleLogEntry['level']) => {
     switch (level) {
       case 'ERROR':
-        return '#EF4444';
+        return 'var(--status-error)';
       case 'WARN':
-        return '#F59E0B';
+        return 'var(--status-warning)';
       case 'INFO':
-        return '#3B82F6';
+        return 'var(--status-info)';
       case 'LOG':
       default:
         return `var(--text-secondary)`;

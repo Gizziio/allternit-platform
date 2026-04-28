@@ -12,15 +12,12 @@ import { GlassSurface } from '@/design/GlassSurface';
 import {
   GitBranch,
   GitCommit,
-  Database,
   CaretRight,
   Plus,
-  Tag,
   Clock,
   User,
   FileText,
   BookOpen,
-  CaretDown,
 } from '@phosphor-icons/react';
 
 interface Branch {
@@ -163,7 +160,7 @@ function BranchItem({ branch }: { branch: Branch }) {
 
 function CommitRow({ commit }: { commit: Commit }) {
   const statusColors: Record<string, { bg: string; text: string }> = {
-    committed: { bg: 'rgba(52, 199, 89, 0.08)', text: '#34c759' },
+    committed: { bg: 'rgba(52, 199, 89, 0.08)', text: 'var(--status-success)' },
     staged: { bg: 'rgba(255, 159, 10, 0.08)', text: '#ff9f0a' },
     working: { bg: 'rgba(142, 142, 147, 0.08)', text: '#8e8e93' },
   };

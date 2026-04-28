@@ -179,7 +179,7 @@ function SwarmSuggestionCard({
       style={{
         borderRadius: 16,
         border: '1px solid rgba(212,149,106,0.3)',
-        background: 'linear-gradient(135deg, rgba(212,149,106,0.1), rgba(121,196,124,0.05))',
+        background: 'linear-gradient(135deg, color-mix(in srgb, var(--accent-primary) 10%, transparent), rgba(121,196,124,0.05))',
         padding: 20,
       }}
     >
@@ -199,10 +199,10 @@ function SwarmSuggestionCard({
           {suggestion.icon}
         </div>
         <div>
-          <div style={{ fontSize: 15, fontWeight: 600, color: '#f6eee7' }}>
+          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
             Use Swarm Mode?
           </div>
-          <div style={{ fontSize: 12, color: '#a8998c' }}>
+          <div style={{ fontSize: 12, color: 'var(--ui-text-secondary)' }}>
             Detected {Math.round(suggestion.confidence * 100)}% match for parallel execution
           </div>
         </div>
@@ -213,12 +213,12 @@ function SwarmSuggestionCard({
         style={{
           padding: 12,
           borderRadius: 10,
-          background: 'rgba(0,0,0,0.3)',
+          background: 'var(--surface-panel)',
           marginBottom: 16,
         }}
       >
-        <div style={{ fontSize: 11, color: '#7a6b5d', marginBottom: 4 }}>TASK</div>
-        <div style={{ fontSize: 14, color: '#f6eee7', lineHeight: 1.5 }}>
+        <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', marginBottom: 4 }}>TASK</div>
+        <div style={{ fontSize: 14, color: 'var(--ui-text-primary)', lineHeight: 1.5 }}>
           {suggestion.task}
         </div>
       </div>
@@ -247,9 +247,9 @@ function SwarmSuggestionCard({
             flex: 1,
             padding: '10px 16px',
             borderRadius: 8,
-            border: '1px solid rgba(255,255,255,0.1)',
+            border: '1px solid var(--ui-border-default)',
             background: 'transparent',
-            color: '#a8998c',
+            color: 'var(--ui-text-secondary)',
             fontSize: 13,
             fontWeight: 600,
             cursor: 'pointer',
@@ -268,8 +268,8 @@ function SwarmSuggestionCard({
             padding: '10px 16px',
             borderRadius: 8,
             border: '1px solid #D4956A',
-            background: '#D4956A',
-            color: '#1a1714',
+            background: 'var(--accent-primary)',
+            color: 'var(--ui-text-inverse)',
             fontSize: 13,
             fontWeight: 700,
             cursor: 'pointer',
@@ -306,7 +306,7 @@ function SwarmQuickAction({
         borderRadius: 8,
         border: '1px dashed rgba(212,149,106,0.3)',
         background: 'transparent',
-        color: '#D4956A',
+        color: 'var(--accent-primary)',
         fontSize: 12,
         cursor: 'pointer',
         alignSelf: 'flex-start',
@@ -378,7 +378,7 @@ export function SwarmAwareWizard({
             </span>
           </div>
           {swarmTriggers.map((trigger, i) => (
-            <div key={i} style={{ fontSize: 11, color: '#a8998c' }}>
+            <div key={i} style={{ fontSize: 11, color: 'var(--ui-text-secondary)' }}>
               Step {trigger.step + 1}: {trigger.mode} mode
             </div>
           ))}
@@ -410,7 +410,7 @@ function getModeDescription(mode: string): string {
 }
 
 function getModeIcon(mode: string): React.ReactNode {
-  const iconProps = { size: 20, style: { color: '#D4956A' } };
+  const iconProps = { size: 20, style: { color: 'var(--accent-primary)' } };
   
   switch (mode) {
     case 'swarm_agentic':

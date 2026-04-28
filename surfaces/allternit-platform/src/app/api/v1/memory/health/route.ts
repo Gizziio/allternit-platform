@@ -8,7 +8,7 @@ export async function GET() {
   // In production, this would check actual service health
   return NextResponse.json({
     status: 'healthy',
-    uptime_ms: Date.now() - globalThis.__allternitStartTime || Date.now(),
+    uptime_ms: Date.now() - ((globalThis as any).__allternitStartTime || Date.now()),
     memory: {
       ollamaConnected: true,
       databaseConnected: true,

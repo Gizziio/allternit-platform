@@ -26,7 +26,7 @@ export function PublishTabView({ fs, onOpenCreateModal, onOpenValidateModal, onO
           padding: 24,
           borderRadius: 12,
           border: `1px solid ${THEME.border}`,
-          backgroundColor: 'rgba(255,255,255,0.02)',
+          backgroundColor: 'var(--surface-hover)',
           marginBottom: 24,
         }}
       >
