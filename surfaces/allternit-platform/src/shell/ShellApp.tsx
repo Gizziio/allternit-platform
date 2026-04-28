@@ -103,7 +103,6 @@ import { MemoryKernelView } from '../views/MemoryKernelView';
 import { AutonomousCodeFactoryView } from '../views/AutonomousCodeFactoryView';
 // DAG Task Views - P4/P5 Integration
 import {
-  SwarmMonitor,
   PolicyManager,
   TaskExecutor,
   OntologyViewer,
@@ -2413,6 +2412,8 @@ function AuthGate({ children }: { children: React.ReactNode }): JSX.Element | nu
     if (isSignedIn) {
       setAllowed(true);
     } else {
+      // Guard: if already on /sign-in, don't re-redirect (prevents encode loop)
+      if (window.location.pathname.startsWith('/sign-in')) return;
       const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
       router.replace(`/sign-in?redirect_url=${returnUrl}`);
     }

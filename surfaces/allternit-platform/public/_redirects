@@ -5,12 +5,19 @@
 /.well-known/* /.well-known/:splat 200
 /favicon.svg /favicon.svg 200
 
-# Clerk auth sub-path routing (clean URLs — no .html to avoid CF 308 bug)
+# Clerk auth sub-path routing (exact match + sub-paths)
+/sign-in /sign-in 200
 /sign-in/* /sign-in 200
+/sign-up /sign-up 200
 /sign-up/* /sign-up 200
 
 # Shell sub-routes
+/shell /shell 200
 /shell/* /shell 200
+
+# Other app routes that must not fall through to root (would trigger AuthGate loop)
+/connect /connect 200
+/connect/* /connect 200
 
 # SPA fallback (rewrite to root path, not /index.html, to avoid CF loop detection)
 /* / 200
