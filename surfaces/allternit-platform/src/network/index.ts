@@ -21,15 +21,28 @@ const resolveBaseURL = (): string => {
     ? (window as unknown as { __ALLTERNIT_BASE_URL__?: string }).__ALLTERNIT_BASE_URL__
     : undefined;
 
-  // Check for Vite environment variable
+  // Check tunnel snapshot set by /connect page (CF Pages → cloudflared flow)
+  let tunnelUrl: string | undefined;
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = window.localStorage.getItem('allternit.runtime-backend.snapshot');
+      if (stored) {
+        const snap = JSON.parse(stored) as { resolved_gateway_url?: string };
+        const gw = snap?.resolved_gateway_url ?? '';
+        if (gw && !/^https?:\/\/(?:127\.0\.0\.1|localhost)/.test(gw)) tunnelUrl = gw;
+      }
+    } catch {}
+  }
+
+  // Check for Next.js environment variable
   const envUrl = process.env.NEXT_PUBLIC_ALLTERNIT_BASE_URL;
 
   // Default fallback
   const defaultUrl = 'http://127.0.0.1:3210';
 
-  // Return first valid URL
-  const candidate = injectedUrl || envUrl || defaultUrl;
-  
+  // Return first valid URL (tunnel takes priority over env when on CF Pages)
+  const candidate = injectedUrl || tunnelUrl || envUrl || defaultUrl;
+
   // Normalize URL (remove trailing slash)
   return candidate.replace(/\/+$/, '');
 };

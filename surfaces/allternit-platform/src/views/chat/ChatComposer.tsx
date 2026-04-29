@@ -70,7 +70,7 @@ import {
   type Agent,
   type OpenClawDiscoveredAgent,
 } from '@/lib/agents';
-import { useActiveChatSessionId, useActiveChatSession } from './ChatSessionStore';
+import { useActiveChatSession } from './ChatSessionStore';
 import { AgentModeGizzi } from './AgentModeGizzi';
 import { getAgentModeSurfaceTheme } from './agentModeSurfaceTheme';
 import { useRecordingStore } from '@/stores/recording.store';
@@ -79,7 +79,18 @@ import { useUnifiedStore } from '@/lib/agents/unified.store';
 
 // Terminal Server URL for fetching real models
 declare const __TERMINAL_SERVER_URL__: string | undefined;
-const PROVIDER_DISCOVERY_URL = '/api/v1/providers';
+function getProviderDiscoveryUrl(): string {
+  if (typeof window === 'undefined') return '/api/v1/providers';
+  try {
+    const stored = window.localStorage.getItem('allternit.runtime-backend.snapshot');
+    if (stored) {
+      const snap = JSON.parse(stored) as { resolved_gateway_url?: string };
+      const gw = snap?.resolved_gateway_url ?? '';
+      if (gw && !/^https?:\/\/(?:127\.0\.0\.1|localhost)/.test(gw)) return `${gw}/api/v1/providers`;
+    }
+  } catch {}
+  return '/api/v1/providers';
+}
 
 // ============================================================================
 // Theme
@@ -901,7 +912,7 @@ export function ChatComposer({
     let cancelled = false;
     async function fetchTerminalModels() {
       try {
-        const response = await fetch(PROVIDER_DISCOVERY_URL, { signal: AbortSignal.timeout(5000) });
+        const response = await fetch(getProviderDiscoveryUrl(), { signal: AbortSignal.timeout(5000) });
         if (!response.ok || cancelled) return;
         const data = await response.json();
         const allModels: any[] = [];
@@ -4588,7 +4599,7 @@ interface BrowseAllModelsOverlayProps {
 
 function BrowseAllModelsOverlay({ isOpen, onClose, onSelectModel, currentModel }: BrowseAllModelsOverlayProps) {
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
-  const [models, setModels] = useState<Array<{id: string; name: string; providerId: string; providerName: string}>>([]);
+  const [, setModels] = useState<Array<{id: string; name: string; providerId: string; providerName: string}>>([]);
   const [providers, setProviders] = useState<Array<{id: string; name: string; modelCount: number}>>([]);
   const [providerModels, setProviderModels] = useState<Array<{id: string; name: string}>>([]);
   const [loading, setLoading] = useState(false);
@@ -4601,7 +4612,7 @@ function BrowseAllModelsOverlay({ isOpen, onClose, onSelectModel, currentModel }
     async function fetchModels() {
       setLoading(true);
       try {
-        const response = await fetch(PROVIDER_DISCOVERY_URL, { signal: AbortSignal.timeout(5000) });
+        const response = await fetch(getProviderDiscoveryUrl(), { signal: AbortSignal.timeout(5000) });
         if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
         const data = await response.json();
 
@@ -4652,7 +4663,7 @@ function BrowseAllModelsOverlay({ isOpen, onClose, onSelectModel, currentModel }
     async function fetchProviderModels() {
       setLoadingProvider(true);
       try {
-        const response = await fetch(PROVIDER_DISCOVERY_URL, { signal: AbortSignal.timeout(5000) });
+        const response = await fetch(getProviderDiscoveryUrl(), { signal: AbortSignal.timeout(5000) });
         if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
         const data = await response.json();
 

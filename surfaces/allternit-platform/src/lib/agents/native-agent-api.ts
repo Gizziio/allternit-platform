@@ -15,14 +15,40 @@
  */
 
 // ============================================================================
-// API Configuration
+// API Configuration — Runtime-resolved to support cloudflared tunnel from CF Pages
 // ============================================================================
 
-const API_V1_BASE = "/api/v1";
-const AGENT_SESSION_API_BASE = `${API_V1_BASE}/agent-sessions`;
-const TOOLS_API_BASE = API_V1_BASE;
-const RUNTIME_API_BASE = API_V1_BASE;
-const APP_API_BASE = "";
+/**
+ * When a cloudflared tunnel is active (set by /connect page), returns the
+ * tunnel's HTTPS origin so all API calls route through it. Falls back to ""
+ * (relative paths) for the local desktop Next.js server.
+ *
+ * Reads lazily from localStorage so it picks up the URL stored by /connect
+ * on every call — no stale cache across tunnel reconnects.
+ */
+function getGatewayOrigin(): string {
+  if (typeof window === 'undefined') return '';
+  const win = window as Record<string, unknown>;
+  const fromWin = typeof win.__ALLTERNIT_GATEWAY_URL__ === 'string' ? win.__ALLTERNIT_GATEWAY_URL__ as string : '';
+  if (fromWin && !/^https?:\/\/(?:127\.0\.0\.1|localhost)/.test(fromWin)) return fromWin;
+  try {
+    const stored = window.localStorage.getItem('allternit.runtime-backend.snapshot');
+    if (stored) {
+      const snap = JSON.parse(stored) as { resolved_gateway_url?: string };
+      const gw = snap?.resolved_gateway_url ?? '';
+      if (gw && !/^https?:\/\/(?:127\.0\.0\.1|localhost)/.test(gw)) return gw;
+    }
+  } catch {}
+  return '';
+}
+
+const getApiV1Base = () => `${getGatewayOrigin()}/api/v1`;
+const getAgentSessionBase = () => `${getApiV1Base()}/agent-sessions`;
+const getToolsBase = () => getApiV1Base();
+const getRuntimeBase = () => getApiV1Base();
+// chat: local desktop uses Next.js /api/agent-chat; tunnel rewrites /api/v1/agent-chat → /agent-chat on allternit-api
+// Returns base such that appending /agent-chat gives the correct URL in both environments
+const getAgentChatBase = () => getGatewayOrigin() ? `${getGatewayOrigin()}/api/v1` : '/api';
 
 // ============================================================================
 // Types - Backend API Response Shapes
@@ -334,7 +360,7 @@ export const sessionApi = {
    * GET /api/v1/agent-sessions
    */
   async listSessions(): Promise<BackendSession[]> {
-    const response = await fetch(AGENT_SESSION_API_BASE);
+    const response = await fetch(getAgentSessionBase());
     const data = await handleResponse<BackendSessionListResponse>(response);
     return data.sessions.map(normalizeSessionPayload);
   },
@@ -345,7 +371,7 @@ export const sessionApi = {
    */
   async getSession(sessionId: string): Promise<BackendSession> {
     const response = await fetch(
-      `${AGENT_SESSION_API_BASE}/${encodeURIComponent(sessionId)}`,
+      `${getAgentSessionBase()}/${encodeURIComponent(sessionId)}`,
     );
     const data = await handleResponse<BackendSessionPayload>(response);
     return normalizeSessionPayload(data);
@@ -358,7 +384,7 @@ export const sessionApi = {
   async createSession(
     options: CreateNativeAgentSessionRequest = {},
   ): Promise<BackendSession> {
-    const response = await fetch(AGENT_SESSION_API_BASE, {
+    const response = await fetch(getAgentSessionBase(), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -404,7 +430,7 @@ export const sessionApi = {
     },
   ): Promise<BackendSession> {
     const response = await fetch(
-      `${AGENT_SESSION_API_BASE}/${encodeURIComponent(sessionId)}`,
+      `${getAgentSessionBase()}/${encodeURIComponent(sessionId)}`,
       {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -432,7 +458,7 @@ export const sessionApi = {
    * DELETE /api/v1/agent-sessions/:id
    */
   async deleteSession(sessionId: string): Promise<void> {
-    const url = `${AGENT_SESSION_API_BASE}/${encodeURIComponent(sessionId)}`;
+    const url = `${getAgentSessionBase()}/${encodeURIComponent(sessionId)}`;
     console.log('[NativeAgentApi] DELETE request to:', url);
     const response = await fetch(
       url,
@@ -453,7 +479,7 @@ export const sessionApi = {
    */
   async listMessages(sessionId: string): Promise<BackendMessage[]> {
     const response = await fetch(
-      `${AGENT_SESSION_API_BASE}/${encodeURIComponent(sessionId)}/messages`,
+      `${getAgentSessionBase()}/${encodeURIComponent(sessionId)}/messages`,
     );
     return handleResponse<BackendMessage[]>(response);
   },
@@ -467,7 +493,7 @@ export const sessionApi = {
     message: { text: string; role?: string },
   ): Promise<BackendMessage> {
     const response = await fetch(
-      `${AGENT_SESSION_API_BASE}/${encodeURIComponent(sessionId)}/messages`,
+      `${getAgentSessionBase()}/${encodeURIComponent(sessionId)}/messages`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -482,7 +508,7 @@ export const sessionApi = {
    * GET /api/v1/agent-sessions/sync
    */
   createSyncSource(): EventSource {
-    return new EventSource(`${AGENT_SESSION_API_BASE}/sync`);
+    return new EventSource(`${getAgentSessionBase()}/sync`);
   },
 };
 
@@ -492,14 +518,14 @@ export const sessionApi = {
 
 export const runtimeApi = {
   async getExecutionMode(): Promise<BackendRuntimeExecutionMode> {
-    const response = await fetch(`${RUNTIME_API_BASE}/runtime/execution-mode`);
+    const response = await fetch(`${getRuntimeBase()}/runtime/execution-mode`);
     return handleResponse<BackendRuntimeExecutionMode>(response);
   },
 
   async setExecutionMode(
     mode: RuntimeExecutionMode,
   ): Promise<BackendRuntimeExecutionMode> {
-    const response = await fetch(`${RUNTIME_API_BASE}/runtime/execution-mode`, {
+    const response = await fetch(`${getRuntimeBase()}/runtime/execution-mode`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ mode }),
@@ -547,7 +573,7 @@ export const chatApi = {
     signal?: AbortSignal,
     agentContext?: AgentContext,
   ): Promise<void> {
-    const response = await fetch(`${APP_API_BASE}/api/agent-chat`, {
+    const response = await fetch(`${getAgentChatBase()}/agent-chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ chatId: sessionId, message, runtimeModelId: modelId, ...(agentContext ?? {}) }),
@@ -705,7 +731,7 @@ export const chatApi = {
    */
   async abortGeneration(sessionId: string): Promise<void> {
     const response = await fetch(
-      `${AGENT_SESSION_API_BASE}/${encodeURIComponent(sessionId)}/abort`,
+      `${getAgentSessionBase()}/${encodeURIComponent(sessionId)}/abort`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -727,7 +753,7 @@ export const chatApi = {
     role: string = "system",
   ): Promise<void> {
     const response = await fetch(
-      `${AGENT_SESSION_API_BASE}/${encodeURIComponent(sessionId)}/messages`,
+      `${getAgentSessionBase()}/${encodeURIComponent(sessionId)}/messages`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -750,7 +776,7 @@ export const toolsApi = {
    * GET /api/v1/tools
    */
   async listTools(): Promise<BackendTool[]> {
-    const response = await fetch(`${TOOLS_API_BASE}/tools`);
+    const response = await fetch(`${getToolsBase()}/tools`);
     const data = await handleResponse<{
       native?: BackendTool[];
       mcp?: BackendTool[];
@@ -767,7 +793,7 @@ export const toolsApi = {
     toolId: string,
     args: Record<string, unknown>,
   ): Promise<BackendToolResult> {
-    const response = await fetch(`${TOOLS_API_BASE}/tools/execute`, {
+    const response = await fetch(`${getToolsBase()}/tools/execute`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
