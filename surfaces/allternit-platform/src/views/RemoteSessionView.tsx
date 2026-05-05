@@ -141,7 +141,7 @@ export function RemoteSessionView() {
         cursor: '#00ff00',
       },
       fontSize: 14,
-      fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+      fontFamily: 'var(--font-mono)',
       cursorBlink: true,
       scrollback: 10000,
       convertEol: true,

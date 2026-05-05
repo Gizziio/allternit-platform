@@ -477,7 +477,7 @@ function CodeBlock({ content, maxHeight = 150 }: { content: string; maxHeight?: 
         borderRadius: 8,
         background: "var(--surface-panel)",
         fontSize: 11,
-        fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+        fontFamily: 'var(--font-mono)',
         color: "#d1c3b4",
         overflow: "auto",
         maxHeight,
@@ -511,7 +511,7 @@ function ErrorBlock({ error }: { error: string }) {
           style={{
             margin: 0,
             fontSize: 11,
-            fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+            fontFamily: 'var(--font-mono)',
             color: "#ef4444",
             whiteSpace: "pre-wrap",
             wordBreak: "break-word",

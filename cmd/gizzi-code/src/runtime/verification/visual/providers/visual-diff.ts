@@ -215,7 +215,7 @@ export class VisualDiffCaptureProvider extends VisualCaptureProvider {
     body {
       margin: 0;
       padding: 20px;
-      font-family: system-ui, sans-serif;
+      font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, sans-serif;
       background: #f5f5f5;
     }
     #root {

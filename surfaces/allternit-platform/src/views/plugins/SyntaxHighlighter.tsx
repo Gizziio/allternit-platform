@@ -48,7 +48,7 @@ export function SyntaxHighlighter({
         margin: 0,
         padding: '16px 0',
         backgroundColor: THEME.bg,
-        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+        fontFamily: 'var(--font-mono)',
         fontSize: 13,
         lineHeight: 1.6,
         overflow: 'auto',

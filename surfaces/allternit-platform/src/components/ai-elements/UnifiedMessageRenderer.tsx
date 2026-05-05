@@ -1194,7 +1194,7 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
           <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: part.operation === 'create' ? 'rgba(74,222,128,0.8)' : part.operation === 'delete' ? 'rgba(248,113,113,0.8)' : 'rgba(97,175,239,0.8)' }}>
             {part.operation}
           </span>
-          <span style={{ fontSize: "12px", fontFamily: "ui-monospace, monospace", color: "rgba(236,236,236,0.55)" }}>
+          <span style={{ fontSize: "12px", fontFamily: 'var(--font-mono)', color: "rgba(236,236,236,0.55)" }}>
             {part.path}
           </span>
         </div>
@@ -1318,7 +1318,7 @@ function FileChangeCard({
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",
-            fontFamily: "ui-monospace, monospace",
+            fontFamily: 'var(--font-mono)',
           }}
         >
           {filename}
@@ -1332,7 +1332,7 @@ function FileChangeCard({
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
-              fontFamily: "ui-monospace, monospace",
+              fontFamily: 'var(--font-mono)',
             }}
           >
             {dir}

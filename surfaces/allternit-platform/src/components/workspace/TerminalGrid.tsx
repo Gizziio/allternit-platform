@@ -53,7 +53,7 @@ function TerminalPane({ pane, isActive, onClick, onClose }: TerminalPaneProps) {
         brightWhite: '#f9fafb',
       },
       fontSize: 12,
-      fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
+      fontFamily: 'var(--font-mono)',
       rows: 10,
       cols: 40,
     });

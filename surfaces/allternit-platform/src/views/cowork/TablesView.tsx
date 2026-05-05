@@ -82,7 +82,7 @@ export const TablesView: React.FC = () => {
                       borderRadius: '4px',
                       backgroundColor: 'var(--bg-secondary)',
                       color: 'var(--text-tertiary)',
-                      fontFamily: 'Monaco, monospace',
+                      fontFamily: 'var(--font-mono)',
                     }}
                   >
                     {col}

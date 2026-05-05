@@ -37,7 +37,7 @@
     html { scroll-behavior: smooth; }
 
     body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: var(--bg-primary);
       color: var(--text-primary);
       line-height: 1.6;
@@ -188,7 +188,7 @@
       border-radius: 12px;
       overflow: hidden;
       margin: 20px 0;
-      font-family: 'JetBrains Mono', monospace;
+      font-family: 'Allternit Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
       font-size: 0.85rem;
     }
     .code-header {
@@ -675,7 +675,7 @@
 <section class="section" id="sec1">
   <div class="badge">Core Concept</div>
   <h2>The <span class="accent">Adapter</span> System</h2>
-  <p>An adapter is a translation layer. It takes the universal <code style="background:var(--bg-tertiary);padding:2px 6px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:0.9em;">PluginHost</code> interface and maps it to the specific capabilities of a target platform.</p>
+  <p>An adapter is a translation layer. It takes the universal <code style="background:var(--bg-tertiary);padding:2px 6px;border-radius:4px;font-family: 'Allternit Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', monospace;font-size:0.9em;">PluginHost</code> interface and maps it to the specific capabilities of a target platform.</p>
 
   <div class="viz-container">
     <div class="viz-title">Click an adapter to inspect its platform mapping</div>
@@ -1256,7 +1256,7 @@ result = <span class="code-keyword">await</span> tool.call({<span class="code-st
     <div style="text-align:center;margin-top:16px;">
       <button class="reveal-btn" onclick="runLifecycle()">▶ Run Lifecycle</button>
     </div>
-    <div id="lifecycle-log" style="margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--text-muted);text-align:center;min-height:24px;"></div>
+    <div id="lifecycle-log" style="margin-top:16px;font-family: 'Allternit Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', monospace;font-size:0.8rem;color:var(--text-muted);text-align:center;min-height:24px;"></div>
   </div>
 
   <h3>Group Chat: The Adapters Discuss Graceful Degradation</h3>

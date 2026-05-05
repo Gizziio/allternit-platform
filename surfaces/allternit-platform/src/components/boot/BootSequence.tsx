@@ -950,7 +950,7 @@ const titleStyle: React.CSSProperties = {
   color: SAND[500],
   margin: 0,
   letterSpacing: '0.05em',
-  fontFamily: 'system-ui, -apple-system, sans-serif',
+  fontFamily: 'var(--font-sans)',
 };
 
 const subtitleStyle: React.CSSProperties = {

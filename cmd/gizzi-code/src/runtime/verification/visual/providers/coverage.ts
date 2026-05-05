@@ -270,8 +270,8 @@ export class CoverageCaptureProvider extends VisualCaptureProvider {
 <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <style>
-      .header { font-family: system-ui, sans-serif; }
-      .metric { font-family: system-ui, sans-serif; font-weight: bold; }
+      .header { font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, sans-serif; }
+      .metric { font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, sans-serif; font-weight: bold; }
     </style>
   </defs>
   

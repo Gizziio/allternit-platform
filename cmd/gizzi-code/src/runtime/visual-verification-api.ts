@@ -255,7 +255,7 @@ visualVerificationRouter.get("/:wihId/export", async (c) => {
   <meta charset="UTF-8"/>
   <title>Verification Report – ${evidence.wih_id}</title>
   <style>
-    body{font-family:system-ui,sans-serif;max-width:900px;margin:2rem auto;color:#1e293b}
+    body{font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,sans-serif;max-width:900px;margin:2rem auto;color:#1e293b}
     h1{font-size:1.5rem}
     .badge{display:inline-block;padding:.25rem .75rem;border-radius:9999px;color:#fff;font-weight:700;background:${statusColor}}
     table{width:100%;border-collapse:collapse;margin-top:1rem}

@@ -107,7 +107,7 @@ function CoworkErrorFallback() {
       justifyContent: 'center',
       color: 'var(--ui-text-primary)'
     }}>
-      <h2 style={{ fontFamily: 'Georgia, serif', marginBottom: 12 }}>Cowork Error</h2>
+      <h2 style={{ fontFamily: "'Allternit Serif', Georgia, ui-serif, Cambria, 'Times New Roman', Times, serif", marginBottom: 12 }}>Cowork Error</h2>
       <p style={{ color: 'var(--ui-text-muted)', marginBottom: 24 }}>The collaborative workspace encountered an error.</p>
       <button 
         onClick={() => window.location.reload()}

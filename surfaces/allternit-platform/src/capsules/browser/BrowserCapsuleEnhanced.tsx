@@ -1661,7 +1661,7 @@ export function BrowserCapsuleEnhanced({
         overflow: 'hidden',
         background: BACKGROUND.primary,
         color: TEXT.primary,
-        fontFamily: 'system-ui, -apple-system, sans-serif',
+        fontFamily: 'var(--font-sans)',
         userSelect: 'none',
       }}
     >

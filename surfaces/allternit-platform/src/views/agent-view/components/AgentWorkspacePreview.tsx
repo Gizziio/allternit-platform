@@ -230,7 +230,7 @@ export function AgentWorkspacePreview({
                           lineHeight: 1.5,
                           maxHeight: "200px",
                           overflow: "auto",
-                          fontFamily: "ui-monospace, monospace",
+                          fontFamily: 'var(--font-mono)',
                           whiteSpace: "pre-wrap",
                         }}
                       >

@@ -243,7 +243,7 @@ function BriefingReader({ briefing, onClose }: { briefing: BriefingData; onClose
                 <code style={{
                   fontSize: 13, background: 'color-mix(in srgb, var(--accent-primary) 8%, transparent)', padding: '2px 6px', borderRadius: 4,
                   color: 'rgba(212,176,140,0.9)', border: '1px solid color-mix(in srgb, var(--accent-primary) 15%, transparent)',
-                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                  fontFamily: 'var(--font-mono)',
                 }}>{children}</code>
               ),
               hr: () => (

@@ -3386,7 +3386,7 @@ function RightPane({
                 backgroundColor: 'transparent',
                 border: 'none',
                 color: THEME.textPrimary,
-                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                fontFamily: 'var(--font-mono)',
                 fontSize: 13,
                 lineHeight: 1.6,
                 resize: 'none',
@@ -3521,7 +3521,7 @@ function CommandContent({ item, viewMode }: { item: Capability; viewMode: 'human
             borderRadius: 6,
             color: THEME.accent,
             fontSize: 14,
-            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+            fontFamily: 'var(--font-mono)',
           }}
         >
           {item.trigger}

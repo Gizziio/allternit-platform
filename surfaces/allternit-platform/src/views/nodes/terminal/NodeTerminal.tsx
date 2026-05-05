@@ -96,7 +96,7 @@ export function NodeTerminal({
         brightWhite: '#f0f6fc',
       },
       fontSize: 13,
-      fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+      fontFamily: 'var(--font-mono)',
       fontWeight: 400,
       fontWeightBold: 600,
       rows: session.rows,

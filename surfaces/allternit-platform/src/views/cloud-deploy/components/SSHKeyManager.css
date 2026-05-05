@@ -208,7 +208,7 @@
 }
 
 .ssh-key-fingerprint {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   color: var(--text-secondary, #8b8b9a);
   margin-bottom: 4px;
@@ -267,7 +267,7 @@
   background: var(--bg-primary, #1a1a2e);
   padding: 12px;
   border-radius: 8px;
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 12px;
   color: var(--text-primary, #fff);
   word-break: break-all;

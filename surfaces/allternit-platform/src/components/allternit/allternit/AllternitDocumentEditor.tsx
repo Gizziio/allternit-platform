@@ -220,7 +220,7 @@ export function AllternitDocumentEditor({
               },
             },
             borderRadius: 6,
-            fontFamily: "'Inter', system-ui, sans-serif",
+            fontFamily: "'Allternit Sans', Inter, ui-sans-serif, system-ui, sans-serif",
           }}
         />
       </div>

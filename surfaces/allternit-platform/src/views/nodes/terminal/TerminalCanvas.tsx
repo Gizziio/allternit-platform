@@ -113,7 +113,7 @@ function CanvasTerminal({
       cursorBlink: true,
       theme: terminalTheme,
       fontSize: 13,
-      fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+      fontFamily: 'var(--font-mono)',
       scrollback: 10000,
       // Enable clipboard API
       allowProposedApi: true,

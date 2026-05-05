@@ -181,7 +181,7 @@ export class ErrorStateCaptureProvider extends VisualCaptureProvider {
         const isCodeLine = line.trim().startsWith("at ");
         const color = isCodeLine ? "#666" : "#333";
         const fontWeight = isCodeLine ? "normal" : "bold";
-        return `<div style="color: ${color}; font-weight: ${fontWeight}; font-family: monospace; font-size: 12px; margin: 2px 0;">${this.escapeHtml(line)}</div>`;
+        return `<div style="color: ${color}; font-weight: ${fontWeight}; font-family: var(--font-mono); font-size: 12px; margin: 2px 0;">${this.escapeHtml(line)}</div>`;
       })
       .join("") || "<em>No stack trace</em>";
     
@@ -195,7 +195,7 @@ export class ErrorStateCaptureProvider extends VisualCaptureProvider {
     body {
       margin: 0;
       padding: 30px;
-      font-family: system-ui, -apple-system, sans-serif;
+      font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
       background: #f8d7da;
       color: #721c24;
     }
@@ -209,7 +209,7 @@ export class ErrorStateCaptureProvider extends VisualCaptureProvider {
       border-left: 5px solid #dc3545;
     }
     h1 { margin-top: 0; color: #dc3545; font-size: 24px; }
-    .test-name { font-family: monospace; background: #f8f9fa; padding: 8px 12px; border-radius: 4px; margin: 10px 0; }
+    .test-name { font-family: var(--font-mono); background: #f8f9fa; padding: 8px 12px; border-radius: 4px; margin: 10px 0; }
     .error-message { 
       background: #f8d7da; 
       color: #721c24; 

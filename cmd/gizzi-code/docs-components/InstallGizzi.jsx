@@ -19,7 +19,7 @@ const InstallGizzi = () => {
     }}>
       {/* Gizzi Mascot ASCII */}
       <pre style={{
-        fontFamily: "'Courier New', monospace",
+        fontFamily: 'var(--font-mono)',
         fontSize: '14px',
         lineHeight: '1.2',
         marginBottom: '20px',
@@ -56,7 +56,7 @@ const InstallGizzi = () => {
         margin: '0 auto 20px'
       }}>
         <code style={{
-          fontFamily: "'Courier New', monospace",
+          fontFamily: 'var(--font-mono)',
           fontSize: '16px',
           color: '#d97757',
           flex: 1,

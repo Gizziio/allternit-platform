@@ -288,7 +288,7 @@ export default function DesignModeView() {
   const [chatInput, setChatInput] = useState("");
   const [designMd, setDesignMd] = useState<string | null>(null);
   const [uiStream, setUiStream] = useState<string | null>(null);
-  const [tokens, setTokens] = useState({ radius: 12, spacing: 4, primary: 'var(--accent-primary)', font: 'Inter' });
+  const [tokens, setTokens] = useState({ radius: 12, spacing: 4, primary: 'var(--accent-primary)', font: 'Allternit Sans' });
   const [, _setIsManifesting] = useState(false);
   const [graphData] = useState({ nodes: [], links: [] });
   const [darkMode, setDarkMode] = useState(true);

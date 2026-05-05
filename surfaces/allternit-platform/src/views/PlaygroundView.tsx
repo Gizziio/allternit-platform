@@ -90,7 +90,7 @@ const TEMPLATES: TemplateDefinition[] = [
 <title>Dashboard</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  body { font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
          background: #0f0f0f; color: #e5e5e5; min-height: 100vh; padding: 24px; }
   h1 { font-size: 22px; font-weight: 700; margin-bottom: 20px; color: #d4b08c; }
   .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
@@ -154,7 +154,7 @@ const TEMPLATES: TemplateDefinition[] = [
 <head><meta charset="UTF-8">
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:-apple-system,sans-serif; background:#0f0f0f; color:#e5e5e5; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:32px; }
+  body { font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:#0f0f0f; color:#e5e5e5; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:32px; }
   .row { display:flex; gap:20px; flex-wrap:wrap; justify-content:center; }
   .card { width:210px; border-radius:16px; padding:24px; }
   .v1 { background:#1c1917; border:1px solid color-mix(in srgb, var(--accent-primary) 20%, transparent); }
@@ -191,7 +191,7 @@ const TEMPLATES: TemplateDefinition[] = [
       title: 'Revenue Chart',
       content: `<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
-<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0f0f0f;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:-apple-system,sans-serif}.wrap{background:#1c1917;border:1px solid rgba(212,176,140,.15);border-radius:16px;padding:24px}h2{color:#d4b08c;font-size:16px;font-weight:700;margin-bottom:20px}</style>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0f0f0f;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}.wrap{background:#1c1917;border:1px solid rgba(212,176,140,.15);border-radius:16px;padding:24px}h2{color:#d4b08c;font-size:16px;font-weight:700;margin-bottom:20px}</style>
 </head><body><div class="wrap"><h2>Monthly Revenue</h2><canvas id="c" width="480" height="240"></canvas></div>
 <script>
 const data=[12,18,15,22,28,31],labels=['Jan','Feb','Mar','Apr','May','Jun'];
@@ -217,7 +217,7 @@ data.forEach((v,i)=>{ctx.beginPath();ctx.arc(x(i),y(v),5,0,Math.PI*2);ctx.fillSt
     demoArtifact: {
       type: 'html',
       title: 'Copy Review',
-      content: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0f0f0f;font-family:-apple-system,sans-serif;color:#e5e5e5;padding:24px}h2{color:#d4b08c;font-size:18px;margin-bottom:20px;font-weight:700}.row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}.box{background:#1c1917;border-radius:10px;padding:16px}.before{border-left:3px solid #ef4444}.after{border-left:3px solid #22c55e}.label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}.before .label{color:#ef4444}.after .label{color:#22c55e}.text{font-size:14px;line-height:1.6}.note{background:rgba(212,176,140,.08);border-radius:8px;padding:12px 16px;border-left:3px solid #d4b08c}.note p{font-size:12px;color:#a8a29e;line-height:1.5}.note strong{color:#d4b08c}</style></head><body><h2>Copy Review</h2><div class="row"><div class="box before"><div class="label">Before</div><div class="text">"Click here to submit your information to proceed to the next step."</div></div><div class="box after"><div class="label">After</div><div class="text">"Continue"</div></div></div><div class="note"><p><strong>Reduction:</strong> 13 words → 1 word (92% shorter)</p><p><strong>Why:</strong> "Click here" is redundant on a button. "Submit your information" is verbose and clinical. "Proceed to the next step" is bureaucratic. "Continue" is friendly, universally understood, and respects the user's intelligence.</p></div></body></html>`,
+      content: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0f0f0f;font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#e5e5e5;padding:24px}h2{color:#d4b08c;font-size:18px;margin-bottom:20px;font-weight:700}.row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}.box{background:#1c1917;border-radius:10px;padding:16px}.before{border-left:3px solid #ef4444}.after{border-left:3px solid #22c55e}.label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}.before .label{color:#ef4444}.after .label{color:#22c55e}.text{font-size:14px;line-height:1.6}.note{background:rgba(212,176,140,.08);border-radius:8px;padding:12px 16px;border-left:3px solid #d4b08c}.note p{font-size:12px;color:#a8a29e;line-height:1.5}.note strong{color:#d4b08c}</style></head><body><h2>Copy Review</h2><div class="row"><div class="box before"><div class="label">Before</div><div class="text">"Click here to submit your information to proceed to the next step."</div></div><div class="box after"><div class="label">After</div><div class="text">"Continue"</div></div></div><div class="note"><p><strong>Reduction:</strong> 13 words → 1 word (92% shorter)</p><p><strong>Why:</strong> "Click here" is redundant on a button. "Submit your information" is verbose and clinical. "Proceed to the next step" is bureaucratic. "Continue" is friendly, universally understood, and respects the user's intelligence.</p></div></body></html>`,
     },
   },
   {
@@ -229,7 +229,7 @@ data.forEach((v,i)=>{ctx.beginPath();ctx.arc(x(i),y(v),5,0,Math.PI*2);ctx.fillSt
     demoArtifact: {
       type: 'html',
       title: 'Diff Review',
-      content: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0f0f0f;font-family:'SF Mono',monospace;color:#e5e5e5;padding:24px}h2{font-family:-apple-system,sans-serif;color:#d4b08c;font-size:18px;margin-bottom:20px}.diff{background:#1c1917;border-radius:10px;overflow:hidden;border:1px solid rgba(212,176,140,.1)}.dh{display:grid;grid-template-columns:1fr 1fr;background:#0f0f0f;padding:8px 16px}.dh span{font-size:11px;color:#57534e;font-family:-apple-system,sans-serif}.line{display:grid;grid-template-columns:1fr 1fr}.cell{padding:2px 16px;font-size:12px;line-height:1.7}.del{background:rgba(239,68,68,.1);color:#fca5a5}.add{background:rgba(34,197,94,.1);color:#86efac}.ctx{color:#57534e}.sum{background:rgba(212,176,140,.06);border-radius:10px;padding:16px;margin-top:16px;border:1px solid rgba(212,176,140,.15)}.sum h3{font-family:-apple-system,sans-serif;font-size:13px;color:#d4b08c;margin-bottom:8px}.sum p{font-family:-apple-system,sans-serif;font-size:12px;color:#a8a29e;line-height:1.5}</style></head><body><h2>Diff Review — var → const</h2><div class="diff"><div class="dh"><span>Before</span><span>After</span></div><div class="line"><div class="cell del">- var count = 0;</div><div class="cell add">+ const count = 0;</div></div><div class="line"><div class="cell del">- var name = getUser();</div><div class="cell add">+ const name = getUser();</div></div><div class="line"><div class="cell del">- var items = fetch();</div><div class="cell add">+ const items = fetch();</div></div><div class="line"><div class="cell ctx">  processItems(items);</div><div class="cell ctx">  processItems(items);</div></div><div class="line"><div class="cell del">- var result = compute();</div><div class="cell add">+ const result = compute();</div></div></div><div class="sum"><h3>✓ LGTM — Good change</h3><p>Using <code style="color:#d4b08c">const</code> is correct here since no bindings are reassigned. This prevents accidental mutation and signals intent clearly. If a value needs to change later, upgrade to <code style="color:#d4b08c">let</code> — never back to <code style="color:#ef4444">var</code>.</p></div></body></html>`,
+      content: `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0f0f0f;font-family:var(--font-mono);color:#e5e5e5;padding:24px}h2{font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#d4b08c;font-size:18px;margin-bottom:20px}.diff{background:#1c1917;border-radius:10px;overflow:hidden;border:1px solid rgba(212,176,140,.1)}.dh{display:grid;grid-template-columns:1fr 1fr;background:#0f0f0f;padding:8px 16px}.dh span{font-size:11px;color:#57534e;font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}.line{display:grid;grid-template-columns:1fr 1fr}.cell{padding:2px 16px;font-size:12px;line-height:1.7}.del{background:rgba(239,68,68,.1);color:#fca5a5}.add{background:rgba(34,197,94,.1);color:#86efac}.ctx{color:#57534e}.sum{background:rgba(212,176,140,.06);border-radius:10px;padding:16px;margin-top:16px;border:1px solid rgba(212,176,140,.15)}.sum h3{font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:13px;color:#d4b08c;margin-bottom:8px}.sum p{font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:12px;color:#a8a29e;line-height:1.5}</style></head><body><h2>Diff Review — var → const</h2><div class="diff"><div class="dh"><span>Before</span><span>After</span></div><div class="line"><div class="cell del">- var count = 0;</div><div class="cell add">+ const count = 0;</div></div><div class="line"><div class="cell del">- var name = getUser();</div><div class="cell add">+ const name = getUser();</div></div><div class="line"><div class="cell del">- var items = fetch();</div><div class="cell add">+ const items = fetch();</div></div><div class="line"><div class="cell ctx">  processItems(items);</div><div class="cell ctx">  processItems(items);</div></div><div class="line"><div class="cell del">- var result = compute();</div><div class="cell add">+ const result = compute();</div></div></div><div class="sum"><h3>✓ LGTM — Good change</h3><p>Using <code style="color:#d4b08c">const</code> is correct here since no bindings are reassigned. This prevents accidental mutation and signals intent clearly. If a value needs to change later, upgrade to <code style="color:#d4b08c">let</code> — never back to <code style="color:#ef4444">var</code>.</p></div></body></html>`,
     },
   },
 ];
@@ -424,7 +424,7 @@ export function PlaygroundView() {
     <div style={{
       display: 'flex', flexDirection: 'column', height: '100%',
       background: 'var(--surface-canvas)', color: 'var(--ui-text-primary)',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontFamily: 'var(--font-sans)',
       overflow: 'hidden',
     }}>
       {/* ── Top bar ─────────────────────────────────────────────────────── */}
@@ -525,7 +525,7 @@ export function PlaygroundView() {
                     <textarea value={systemPrompt} onChange={(e) => setSystemPrompt(e.target.value)} rows={5}
                       style={{
                         width: '100%', background: 'var(--surface-canvas)', border: 'none', resize: 'vertical',
-                        color: 'var(--accent-primary)', fontSize: 11, fontFamily: '"SF Mono","Fira Code",monospace',
+                        color: 'var(--accent-primary)', fontSize: 11, fontFamily: 'var(--font-mono)',
                         lineHeight: 1.65, padding: '9px 11px', outline: 'none',
                       }}
                       placeholder="You are a helpful assistant..."
@@ -675,7 +675,7 @@ export function PlaygroundView() {
               <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
                 {artifact ? (
                   <pre style={{
-                    fontFamily: '"SF Mono","Fira Code",monospace', fontSize: 11, color: 'var(--accent-primary)',
+                    fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--accent-primary)',
                     lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
                     background: 'var(--surface-canvas)', padding: 16, borderRadius: 8, margin: 0,
                   }}>{artifact.content}</pre>
@@ -688,7 +688,7 @@ export function PlaygroundView() {
             {rightTab === 'console' && (
               <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
                 <pre style={{
-                  fontFamily: '"SF Mono","Fira Code",monospace', fontSize: 11, color: 'var(--ui-text-muted)',
+                  fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ui-text-muted)',
                   lineHeight: 1.8, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0,
                 }}>
                   {streamText

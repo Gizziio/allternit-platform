@@ -225,7 +225,7 @@ export class PlaywrightBrowser {
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <style>
             * { box-sizing: border-box; }
-            body { margin: 0; padding: 20px; font-family: system-ui, sans-serif; background: #f5f5f5; }
+            body { margin: 0; padding: 20px; font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, sans-serif; background: #f5f5f5; }
             #root { display: inline-block; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
             ${styles}
           </style>

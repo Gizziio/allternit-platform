@@ -97,7 +97,7 @@ export function CodeRenderer({
       const html = `<!DOCTYPE html>
 <html>
 <head>
-  <style>body { font-family: system-ui; padding: 20px; }</style>
+  <style>body { font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, sans-serif; padding: 20px; }</style>
 </head>
 <body>
   <div id="app"></div>

@@ -207,13 +207,13 @@
 }
 
 .instance-name {
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-weight: 600;
   color: #4f46e5;
 }
 
 .metric-value {
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .metric-value.warning {

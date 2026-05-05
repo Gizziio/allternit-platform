@@ -1098,7 +1098,7 @@ function ExtensionDetail({ onClose }: { onClose:()=>void }) {
               {cmds.map((c,i)=>(
                 <div key={i} style={{padding:'13px 16px',background:'rgba(0,0,0,.25)',borderRadius:10,border:`1px solid ${T.border}`,display:'flex',alignItems:'center',gap:12}}>
                   <div style={{width:22,height:22,borderRadius:'50%',background:'var(--status-info-bg)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,color:'var(--status-info)',fontWeight:700,flexShrink:0}}>{i+1}</div>
-                  <div style={{flex:1}}><div style={{fontSize:10.5,color:T.textTer,marginBottom:3}}>{c.l}</div><code style={{fontSize:12.5,color:'var(--accent-primary)',fontFamily:'monospace'}}>{c.c}</code></div>
+                  <div style={{flex:1}}><div style={{fontSize:10.5,color:T.textTer,marginBottom:3}}>{c.l}</div><code style={{fontSize:12.5,color:'var(--accent-primary)',fontFamily: 'var(--font-mono)'}}>{c.c}</code></div>
                   <button onClick={()=>copy(c.c)} style={{padding:6,borderRadius:7,background:copied===c.c?'rgba(34,197,94,.14)':'rgba(255,255,255,.04)',border:'none',cursor:'pointer',color:copied===c.c?'var(--status-success)':T.textSec,transition:'all .2s'}}>
                     {copied===c.c?<CheckCircle size={13}/>:<Copy size={13}/>}
                   </button>
@@ -1118,7 +1118,7 @@ function ExtensionDetail({ onClose }: { onClose:()=>void }) {
             <div style={{marginBottom:9}}>{f.i}</div>
             <h5 style={{fontSize:12.5,fontWeight:600,color:T.textPrimary,margin:'0 0 5px 0'}}>{f.t}</h5>
             <p style={{fontSize:11.5,color:T.textSec,margin:'0 0 10px 0',lineHeight:1.5}}>{f.d}</p>
-            <div style={{display:'inline-flex',alignItems:'center',gap:3,padding:'2px 7px',background:'var(--surface-hover)',borderRadius:5,fontSize:10.5,color:T.textTer,fontFamily:'monospace'}}>
+            <div style={{display:'inline-flex',alignItems:'center',gap:3,padding:'2px 7px',background:'var(--surface-hover)',borderRadius:5,fontSize:10.5,color:T.textTer,fontFamily: 'var(--font-mono)'}}>
               <Command size={9}/> {f.sc}
             </div>
           </div>

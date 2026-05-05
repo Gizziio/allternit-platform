@@ -255,7 +255,7 @@ export const RunsView: React.FC = () => {
                         style={{
                           fontSize: '12px',
                           color: 'var(--text-secondary)',
-                          fontFamily: 'Monaco, monospace',
+                          fontFamily: 'var(--font-mono)',
                           backgroundColor: 'var(--bg-secondary)',
                           padding: '4px 8px',
                           borderRadius: '4px',

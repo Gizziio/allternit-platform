@@ -96,7 +96,7 @@ export default function StatusPage() {
       }}>
         <a href="/" style={{ display: "flex", alignItems: "center", gap: 6, textDecoration: "none" }}>
           <span style={{ fontFamily: "var(--font-mono)", fontSize: 18, color: "#D97757" }}>A://</span>
-          <span style={{ fontFamily: "Georgia, serif", fontSize: 18, color: "#1A1612" }}>LLTERNIT</span>
+          <span style={{ fontFamily: "'Allternit Serif', Georgia, ui-serif, Cambria, 'Times New Roman', Times, serif", fontSize: 18, color: "#1A1612" }}>LLTERNIT</span>
         </a>
         <a href="https://allternit.com" style={{ fontSize: 13, color: "#9B9B9B", textDecoration: "none" }}>← allternit.com</a>
       </nav>
@@ -107,7 +107,7 @@ export default function StatusPage() {
             Operations
           </p>
           <h1 style={{
-            fontFamily: "Georgia, serif",
+            fontFamily: "'Allternit Serif', Georgia, ui-serif, Cambria, 'Times New Roman', Times, serif",
             fontWeight: 400,
             fontSize: 40,
             color: "#1A1612",

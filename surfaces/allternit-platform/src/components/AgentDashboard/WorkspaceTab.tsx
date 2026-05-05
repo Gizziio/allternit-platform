@@ -450,7 +450,7 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
                 borderRadius: 0,
                 background: STUDIO_THEME.bg,
                 color: STUDIO_THEME.textPrimary,
-                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+                fontFamily: 'var(--font-mono)',
                 fontSize: '13px',
                 lineHeight: 1.6,
                 resize: 'none',

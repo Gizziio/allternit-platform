@@ -8,7 +8,7 @@ const HTML_SUCCESS = `<!DOCTYPE html>
 <head>
   <title>GIZZI - Authorization Successful</title>
   <style>
-    body { font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #1a1a2e; color: #eee; }
+    body { font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #1a1a2e; color: #eee; }
     .container { text-align: center; padding: 2rem; }
     h1 { color: #4ade80; margin-bottom: 1rem; }
     p { color: #aaa; }
@@ -28,11 +28,11 @@ const HTML_ERROR = (error: string) => `<!DOCTYPE html>
 <head>
   <title>GIZZI - Authorization Failed</title>
   <style>
-    body { font-family: system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #1a1a2e; color: #eee; }
+    body { font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, -apple-system, sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #1a1a2e; color: #eee; }
     .container { text-align: center; padding: 2rem; }
     h1 { color: #f87171; margin-bottom: 1rem; }
     p { color: #aaa; }
-    .error { color: #fca5a5; font-family: monospace; margin-top: 1rem; padding: 1rem; background: rgba(248,113,113,0.1); border-radius: 0.5rem; }
+    .error { color: #fca5a5; font-family: var(--font-mono); margin-top: 1rem; padding: 1rem; background: rgba(248,113,113,0.1); border-radius: 0.5rem; }
   </style>
 </head>
 <body>

@@ -42,7 +42,7 @@ const SwarmMonitorComplete = () => {
   };
   
   return (
-    <div style={{ height: '100vh', width: '100vw', background: '#0d0d0d', color: '#e2e8f0', fontFamily: 'system-ui, sans-serif', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100vh', width: '100vw', background: '#0d0d0d', color: '#e2e8f0', fontFamily: 'var(--font-sans)', display: 'flex', flexDirection: 'column' }}>
       {/* Top Strip */}
       <div style={{ height: '64px', borderBottom: '1px solid #1e293b', display: 'flex', alignItems: 'center', gap: '8px', padding: '0 12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

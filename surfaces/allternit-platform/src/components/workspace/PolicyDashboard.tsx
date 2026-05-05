@@ -485,7 +485,7 @@ export const policyDashboardStyles = `
 
 .policy-rule-item__tool {
   color: #666;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .policy-dashboard__detail {
@@ -594,7 +594,7 @@ export const policyDashboardStyles = `
   background: #0f0f0f;
   padding: 0.375rem 0.75rem;
   border-radius: 4px;
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 0.875rem;
   color: #3b82f6;
 }

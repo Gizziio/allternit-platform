@@ -229,7 +229,7 @@ export function ACIDebugPanel({
         display: 'flex',
         flexDirection: 'column',
         zIndex: 9000,
-        fontFamily: 'system-ui, sans-serif',
+        fontFamily: 'var(--font-sans)',
         fontSize: 13,
         color: TEXT.primary,
       }}

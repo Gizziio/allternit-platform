@@ -489,7 +489,7 @@ function TextInput({ value, onChange, placeholder }: TextInputProps) {
         background: THEME.bgElevated,
         color: THEME.textPrimary,
         fontSize: 13,
-        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+        fontFamily: 'var(--font-mono)',
         lineHeight: 1.5,
         resize: 'vertical',
         outline: 'none',
@@ -987,7 +987,7 @@ export function PluginManifestValidator({
         borderRadius: 12,
         border: `1px solid ${THEME.border}`,
         overflow: 'hidden',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
+        fontFamily: 'var(--font-sans)',
       }}
     >
       {/* Header */}

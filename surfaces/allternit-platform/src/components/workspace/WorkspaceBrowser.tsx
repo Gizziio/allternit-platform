@@ -236,7 +236,7 @@ export const workspaceBrowserStyles = `
   height: 100vh;
   background: #0f0f0f;
   color: #e0e0e0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .workspace-browser__header {

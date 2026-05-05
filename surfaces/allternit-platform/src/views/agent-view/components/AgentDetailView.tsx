@@ -235,7 +235,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
                   fontWeight: 600,
                   color: STUDIO_THEME.textPrimary,
                   margin: '0 0 6px 0',
-                  fontFamily: 'Georgia, serif',
+                  fontFamily: "'Allternit Serif', Georgia, ui-serif, Cambria, 'Times New Roman', Times, serif",
                 }}>
                   {agent.name}
                 </h3>
@@ -715,7 +715,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
               fontWeight: 600,
               color: STUDIO_THEME.textPrimary,
               margin: '0 0 8px 0',
-              fontFamily: 'Georgia, serif',
+              fontFamily: "'Allternit Serif', Georgia, ui-serif, Cambria, 'Times New Roman', Times, serif",
             }}>
               Delete Agent
             </h3>

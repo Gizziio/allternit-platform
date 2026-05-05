@@ -316,7 +316,7 @@ const titleStyle: React.CSSProperties = {
   color: SAND[500],
   letterSpacing: '0.15em',
   margin: 0,
-  fontFamily: 'system-ui, -apple-system, sans-serif',
+  fontFamily: 'var(--font-sans)',
   textShadow: '0 0 30px `${SAND[500]}4c`',
 };
 

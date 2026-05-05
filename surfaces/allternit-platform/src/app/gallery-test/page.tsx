@@ -20,7 +20,7 @@ export default function GalleryTestPage() {
       minHeight: '100vh',
       background: 'var(--surface-canvas)',
       color: 'var(--ui-text-primary)',
-      fontFamily: 'system-ui, sans-serif',
+      fontFamily: 'var(--font-sans)',
       padding: '32px',
     }}>
       <h1 style={{ fontSize: '14px', color: 'var(--ui-text-muted)', marginBottom: '32px', fontWeight: 500 }}>

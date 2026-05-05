@@ -30,7 +30,7 @@ const COUNTER_APP_HTML = `<!DOCTYPE html>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
       min-height: 100vh;
       display: flex;
@@ -128,7 +128,7 @@ const COUNTER_APP_HTML = `<!DOCTYPE html>
       padding: 8px 12px;
       border-radius: 8px;
       font-size: 11px;
-      font-family: monospace;
+      font-family: var(--font-mono);
       background: var(--surface-panel);
       color: rgba(255,255,255,0.4);
       opacity: 0;

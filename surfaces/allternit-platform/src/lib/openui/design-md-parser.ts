@@ -27,7 +27,7 @@ const DEFAULT_TOKENS: DesignTokens = {
     muted: 'rgba(255, 255, 255, 0.4)',
   },
   typography: {
-    fontFamily: '"Inter", sans-serif',
+    fontFamily: '"Allternit Sans", Inter, ui-sans-serif, system-ui, sans-serif',
     baseSize: '14px',
     headingScale: '1.2',
   },

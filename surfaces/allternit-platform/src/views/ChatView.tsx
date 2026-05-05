@@ -867,7 +867,7 @@ export function ChatView({
                 fontWeight: 500,
                 color: THEME.textPrimary,
                 margin: '0 0 24px 0',
-                fontFamily: 'Georgia, serif',
+                fontFamily: "'Allternit Serif', Georgia, ui-serif, Cambria, 'Times New Roman', Times, serif",
                 letterSpacing: '-0.02em',
                 minHeight: '60px'
               }}>

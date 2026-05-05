@@ -291,7 +291,7 @@ function spawnElectronOverlay(panel: PermissionPanel, settingsAppName: string) {
       <meta charset="UTF-8">
       <style>
         body {
-          margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          margin: 0; padding: 0; font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
           background: rgba(30, 30, 30, 0.95); color: #fff; border-radius: 12px;
           overflow: hidden; user-select: none; -webkit-app-region: drag;
           box-shadow: 0 20px 60px rgba(0,0,0,0.4);

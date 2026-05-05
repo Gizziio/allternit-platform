@@ -70,7 +70,7 @@
   background: var(--bg-secondary, #16162a);
   padding: 2px 8px;
   border-radius: 4px;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .header-actions {
@@ -402,7 +402,7 @@
   flex: 1;
   overflow-y: auto;
   padding: 12px;
-  font-family: 'Monaco', 'Menlo', monospace;
+  font-family: 'Allternit Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
   font-size: 12px;
 }
 

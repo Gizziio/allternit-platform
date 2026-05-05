@@ -116,7 +116,7 @@ function exportAsHtml(
 <head>
   <title>Verification Certificate - ${certificate.id}</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; }
+    body { font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; }
     h1, h2, h3 { color: #333; }
     code { background: #f4f4f4; padding: 0.2em 0.4em; border-radius: 3px; }
     pre { background: #f4f4f4; padding: 1em; overflow-x: auto; }
@@ -267,7 +267,7 @@ function exportReportAsHtml(
   <title>${options.title || "Verification Report"}</title>
   <style>
     body { 
-      font-family: system-ui, -apple-system, sans-serif; 
+      font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, -apple-system, sans-serif; 
       max-width: 1000px; 
       margin: 0 auto; 
       padding: 2rem;
@@ -280,7 +280,7 @@ function exportReportAsHtml(
       background: #f4f4f4; 
       padding: 0.2em 0.4em; 
       border-radius: 3px;
-      font-family: "SF Mono", Monaco, monospace;
+      font-family: 'Allternit Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
       font-size: 0.9em;
     }
     pre { 

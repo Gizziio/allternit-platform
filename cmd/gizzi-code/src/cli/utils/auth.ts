@@ -102,7 +102,7 @@ function startCallbackServer(state: string, codeVerifier: string): Promise<{ cod
         res.writeHead(200, { 'Content-Type': 'text/html' })
         res.end(`
           <html>
-            <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+            <body style="font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, sans-serif; text-align: center; padding: 50px;">
               <h1>✓ Authentication Successful</h1>
               <p>You can close this window and return to the CLI.</p>
             </body>

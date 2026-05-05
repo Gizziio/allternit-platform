@@ -69,7 +69,7 @@ export function AgentAvatarPicker({ name, config, onChange }: AgentAvatarPickerP
             justifyContent: "center",
             fontSize: "32px",
             fontWeight: 700,
-            fontFamily: "system-ui, sans-serif",
+            fontFamily: 'var(--font-sans)',
             boxShadow: `0 4px 20px ${config.bgColor}40`,
           }}
         >
@@ -217,7 +217,7 @@ export function AgentAvatarPicker({ name, config, onChange }: AgentAvatarPickerP
             fontSize: "16px",
             fontWeight: 700,
             textAlign: "center",
-            fontFamily: "system-ui, sans-serif",
+            fontFamily: 'var(--font-sans)',
             outline: "none",
           }}
         />

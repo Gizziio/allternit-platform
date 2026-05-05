@@ -660,7 +660,7 @@ export const skillManagerStyles = `
 
 .skill-detail-row__value {
   font-size: 0.875rem;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .skill-modal__dependencies,
@@ -683,7 +683,7 @@ export const skillManagerStyles = `
   padding: 0.75rem;
   background: #0f0f0f;
   border-radius: 6px;
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-size: 0.875rem;
   color: #3b82f6;
 }

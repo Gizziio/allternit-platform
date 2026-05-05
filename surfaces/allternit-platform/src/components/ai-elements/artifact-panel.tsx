@@ -245,7 +245,7 @@ export function ArtifactCard({ artifact, isSelected, onClick }: ArtifactCardProp
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
-              fontFamily: artifact.kind === "code" ? "ui-monospace, monospace" : undefined,
+              fontFamily: artifact.kind === "code" ? "var(--font-mono)" : undefined,
             }}
           >
             {artifact.content
@@ -641,7 +641,7 @@ export function ArtifactSidePanel({ artifact, onClose }: ArtifactSidePanelProps)
           ) : hf.status === 'done' ? (
             <div style={{ fontSize: "12px", color: "rgba(74,222,128,0.85)" }}>
               <div style={{ fontWeight: 600, marginBottom: "3px" }}>Saved!</div>
-              <div style={{ color: "rgba(255,255,255,0.35)", wordBreak: "break-all", fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>{hf.savedPath}</div>
+              <div style={{ color: "rgba(255,255,255,0.35)", wordBreak: "break-all", fontFamily: 'var(--font-mono)', fontSize: "11px" }}>{hf.savedPath}</div>
               <button
                 onClick={hf.reset}
                 style={{ marginTop: "8px", padding: "4px 10px", borderRadius: "6px", border: "1px solid var(--ui-border-muted)", background: "var(--surface-hover)", color: "rgba(255,255,255,0.4)", fontSize: "11px", cursor: "pointer" }}
@@ -819,7 +819,7 @@ function MermaidRenderer({ content }: { content: string }) {
         <div style={{ fontSize: "11px", color: "rgba(248,113,113,0.7)", marginBottom: "10px", textTransform: "uppercase", letterSpacing: "0.07em" }}>
           Diagram error
         </div>
-        <pre style={{ fontSize: "12px", color: "#abb2bf", whiteSpace: "pre-wrap", lineHeight: 1.65, fontFamily: "ui-monospace, monospace" }}>
+        <pre style={{ fontSize: "12px", color: "#abb2bf", whiteSpace: "pre-wrap", lineHeight: 1.65, fontFamily: 'var(--font-mono)' }}>
           {content}
         </pre>
       </div>
@@ -899,7 +899,7 @@ function HtmlPreview({ html }: { html: string }) {
               color: "#abb2bf",
               whiteSpace: "pre-wrap",
               lineHeight: 1.65,
-              fontFamily: "ui-monospace, monospace",
+              fontFamily: 'var(--font-mono)',
               margin: 0,
             }}
           >

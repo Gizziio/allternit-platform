@@ -2128,7 +2128,7 @@ function ModePreviewCode() {
   return (
     <div style={{
       background: 'rgba(0,0,0,0.35)', borderRadius: 10, padding: '12px 14px',
-      fontFamily: 'ui-monospace, monospace', fontSize: 11.5,
+      fontFamily: 'var(--font-mono)', fontSize: 11.5,
       border: '1px solid var(--ui-border-muted)',
     }}>
       {lines.map((l, i) => (
@@ -2169,7 +2169,7 @@ function ModePreviewBrowser() {
         <div style={{
           flex: 1, padding: '3px 8px', borderRadius: 5,
           background: 'var(--surface-hover)', border: '1px solid var(--ui-border-muted)',
-          fontSize: 10, color: 'rgba(255,255,255,0.35)', fontFamily: 'ui-monospace, monospace',
+          fontSize: 10, color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-mono)',
         }}>
           competitor.com/pricing
         </div>

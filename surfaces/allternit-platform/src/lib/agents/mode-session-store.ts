@@ -438,7 +438,8 @@ async function executeStartupTasks(
  */
 async function sendMessageWithContext(
   session: ModeSession,
-  options: SendMessageOptions
+  options: SendMessageOptions,
+  sessionApi: SessionApi,
 ): Promise<void> {
   const { text, skipContext } = options;
 
@@ -465,7 +466,8 @@ async function sendMessageWithContext(
 async function streamMessageWithContext(
   session: ModeSession,
   options: SendMessageOptions,
-  signal?: AbortSignal,
+  signal: AbortSignal | undefined,
+  chatApi: ChatApi,
 ): Promise<void> {
   const { text, skipContext, callbacks } = options;
   
@@ -812,7 +814,7 @@ export function createModeSessionStore(config: StoreConfig) {
             }));
 
             try {
-              await sendMessageWithContext(session, options);
+              await sendMessageWithContext(session, options, config.sessionApi);
               
               // Reload messages
               const backendMessages = await sessionApi.listMessages(sessionId);
@@ -1098,7 +1100,7 @@ export function createModeSessionStore(config: StoreConfig) {
                   },
                 },
               };
-              await streamMessageWithContext(session, wrappedOptions, abortController.signal);
+              await streamMessageWithContext(session, wrappedOptions, abortController.signal, config.chatApi);
             } catch (error) {
               const err = error instanceof Error ? error : new Error(String(error));
               const errorMessage: ModeSessionMessage = {

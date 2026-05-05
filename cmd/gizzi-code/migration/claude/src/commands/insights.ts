@@ -2271,7 +2271,7 @@ function generateHtmlReport(
 
   const css = `
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f8fafc; color: #334155; line-height: 1.65; padding: 48px 24px; }
+    body { font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; color: #334155; line-height: 1.65; padding: 48px 24px; }
     .container { max-width: 800px; margin: 0 auto; }
     h1 { font-size: 32px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
     h2 { font-size: 20px; font-weight: 600; color: #0f172a; margin-top: 48px; margin-bottom: 16px; }
@@ -2319,7 +2319,7 @@ function generateHtmlReport(
     .claude-md-item { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; padding: 10px 0; border-bottom: 1px solid #dbeafe; }
     .claude-md-item:last-child { border-bottom: none; }
     .cmd-checkbox { margin-top: 2px; }
-    .cmd-code { background: white; padding: 8px 12px; border-radius: 4px; font-size: 12px; color: #1e40af; border: 1px solid #bfdbfe; font-family: monospace; display: block; white-space: pre-wrap; word-break: break-word; flex: 1; }
+    .cmd-code { background: white; padding: 8px 12px; border-radius: 4px; font-size: 12px; color: #1e40af; border: 1px solid #bfdbfe; font-family: var(--font-mono); display: block; white-space: pre-wrap; word-break: break-word; flex: 1; }
     .cmd-why { font-size: 12px; color: #64748b; width: 100%; padding-left: 24px; margin-top: 4px; }
     .features-section, .patterns-section { display: flex; flex-direction: column; gap: 12px; margin: 16px 0; }
     .feature-card { background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 16px; }
@@ -2333,14 +2333,14 @@ function generateHtmlReport(
     .feature-example:first-child { border-top: none; }
     .example-desc { font-size: 13px; color: #334155; margin-bottom: 6px; }
     .example-code-row { display: flex; align-items: flex-start; gap: 8px; }
-    .example-code { flex: 1; background: #f1f5f9; padding: 8px 12px; border-radius: 4px; font-family: monospace; font-size: 12px; color: #334155; overflow-x: auto; white-space: pre-wrap; }
+    .example-code { flex: 1; background: #f1f5f9; padding: 8px 12px; border-radius: 4px; font-family: var(--font-mono); font-size: 12px; color: #334155; overflow-x: auto; white-space: pre-wrap; }
     .copyable-prompt-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0; }
     .copyable-prompt-row { display: flex; align-items: flex-start; gap: 8px; }
-    .copyable-prompt { flex: 1; background: #f8fafc; padding: 10px 12px; border-radius: 4px; font-family: monospace; font-size: 12px; color: #334155; border: 1px solid #e2e8f0; white-space: pre-wrap; line-height: 1.5; }
+    .copyable-prompt { flex: 1; background: #f8fafc; padding: 10px 12px; border-radius: 4px; font-family: var(--font-mono); font-size: 12px; color: #334155; border: 1px solid #e2e8f0; white-space: pre-wrap; line-height: 1.5; }
     .feature-code { background: #f8fafc; padding: 12px; border-radius: 6px; margin-top: 12px; border: 1px solid #e2e8f0; display: flex; align-items: flex-start; gap: 8px; }
-    .feature-code code { flex: 1; font-family: monospace; font-size: 12px; color: #334155; white-space: pre-wrap; }
+    .feature-code code { flex: 1; font-family: var(--font-mono); font-size: 12px; color: #334155; white-space: pre-wrap; }
     .pattern-prompt { background: #f8fafc; padding: 12px; border-radius: 6px; margin-top: 12px; border: 1px solid #e2e8f0; }
-    .pattern-prompt code { font-family: monospace; font-size: 12px; color: #334155; display: block; white-space: pre-wrap; margin-bottom: 8px; }
+    .pattern-prompt code { font-family: var(--font-mono); font-size: 12px; color: #334155; display: block; white-space: pre-wrap; margin-bottom: 8px; }
     .prompt-label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: #64748b; margin-bottom: 6px; }
     .copy-btn { background: #e2e8f0; border: none; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; color: #475569; flex-shrink: 0; }
     .copy-btn:hover { background: #cbd5e1; }

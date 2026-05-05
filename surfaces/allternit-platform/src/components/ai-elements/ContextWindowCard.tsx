@@ -65,7 +65,7 @@ export function ContextWindowCard({ children, threadId: propThreadId }: ContextW
           padding: "20px",
           zIndex: 165,
           color: "#fff",
-          fontFamily: "system-ui, -apple-system, sans-serif",
+          fontFamily: 'var(--font-sans)',
           animation: "fade-in 0.2s ease-out",
           backdropFilter: "blur(20px)",
         }}

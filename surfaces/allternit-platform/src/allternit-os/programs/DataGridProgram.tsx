@@ -144,7 +144,7 @@ function buildChartJsHtml(
 ): string {
   const xCol = columns.find(c => c.id === xColId);
   const yCol = columns.find(c => c.id === yColId);
-  if (!xCol || !yCol) return '<html><body><p style="color:#aaa;font-family:sans-serif;padding:16px">No numeric column found for chart</p></body></html>';
+  if (!xCol || !yCol) return '<html><body><p style="color:#aaa;font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,sans-serif;padding:16px">No numeric column found for chart</p></body></html>';
 
   const labels = rows.map(r => String(r.cells[xColId] ?? ''));
   const values = rows.map(r => {
@@ -175,7 +175,7 @@ function buildChartJsHtml(
 <meta charset="utf-8">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <style>
-  body { margin:0; padding:12px; background:#0f172a; font-family:system-ui,sans-serif; }
+  body { margin:0; padding:12px; background:#0f172a; font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,sans-serif; }
   h3 { color:#f1f5f9; font-size:13px; margin:0 0 10px; font-weight:500; }
   canvas { max-height:280px; }
 </style>

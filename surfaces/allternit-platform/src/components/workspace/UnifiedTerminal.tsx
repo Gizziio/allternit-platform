@@ -86,7 +86,7 @@ function TerminalInstance({ pane, isActive }: {
           brightWhite: '#f9fafb',
         },
         fontSize: 13,
-        fontFamily: 'ui-monospace, SFMono-Regular, "Courier New", monospace',
+        fontFamily: 'var(--font-mono)',
         rows: 24,
         cols: 80,
         allowProposedApi: true,

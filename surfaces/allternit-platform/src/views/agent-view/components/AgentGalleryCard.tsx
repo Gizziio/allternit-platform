@@ -76,7 +76,7 @@ function AgentCardAvatar({ agent }: { agent: Agent }) {
         fontSize: 18,
         fontWeight: 700,
         flexShrink: 0,
-        fontFamily: "system-ui, sans-serif",
+        fontFamily: 'var(--font-sans)',
       }}
     >
       {initial}

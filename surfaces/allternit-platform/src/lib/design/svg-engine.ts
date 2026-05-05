@@ -59,7 +59,7 @@ export function componentToSvg(tag: string, props: any): SvgNode {
               y: '25',
               'text-anchor': 'middle',
               fill: '#000',
-              style: 'font-family: Inter; font-weight: bold; font-size: 12px;'
+              style: 'font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, sans-serif; font-weight: bold; font-size: 12px;'
             },
             text: props.label
           }
@@ -73,12 +73,12 @@ export function componentToSvg(tag: string, props: any): SvgNode {
         children: [
           {
             tag: 'text',
-            attrs: { y: '20', style: 'font-family: Inter; font-size: 10px; fill: rgba(255,255,255,0.4);' },
+            attrs: { y: '20', style: 'font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, sans-serif; font-size: 10px; fill: rgba(255,255,255,0.4);' },
             text: props.label
           },
           {
             tag: 'text',
-            attrs: { y: '45', style: 'font-family: Inter; font-size: 24px; font-weight: 800; fill: #fff;' },
+            attrs: { y: '45', style: 'font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, sans-serif; font-size: 24px; font-weight: 800; fill: #fff;' },
             text: String(props.val)
           }
         ]

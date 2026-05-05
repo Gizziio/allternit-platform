@@ -82,7 +82,7 @@ export const CapsuleFrame: React.FC<CapsuleFrameProps> = ({
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       font-size: 14px;
       line-height: 1.5;
       color: #333;

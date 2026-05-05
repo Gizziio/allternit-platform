@@ -138,7 +138,7 @@ export function SiteFooter() {
               style={{ opacity: 0, transform: 'translateY(32px)' }}
             >
               <h3 style={{
-                fontFamily: 'Georgia, serif',
+                fontFamily: "'Allternit Serif', Georgia, ui-serif, Cambria, 'Times New Roman', Times, serif",
                 fontSize: 16, fontWeight: 400,
                 color: 'rgba(255,255,255,0.9)',
                 marginBottom: 22, lineHeight: 1.3,

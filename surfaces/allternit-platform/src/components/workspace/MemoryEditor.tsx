@@ -473,7 +473,7 @@ export const memoryEditorStyles = `
   border-radius: 6px;
   padding: 1rem;
   color: #e0e0e0;
-  font-family: 'Monaco', 'Menlo', monospace;
+  font-family: 'Allternit Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
   font-size: 0.875rem;
   line-height: 1.6;
   resize: none;

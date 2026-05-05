@@ -143,7 +143,7 @@ function createSplashWindow(): BrowserWindow {
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: linear-gradient(135deg, #0a0a0f 0%, #1a1512 50%, #12121a 100%);
       color: #D4B08C;
       height: 100vh;
@@ -156,7 +156,7 @@ function createSplashWindow(): BrowserWindow {
       border: 1px solid rgba(212, 176, 140, 0.2);
     }
     .mascot {
-      font-family: 'Courier New', monospace;
+      font-family: 'Allternit Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
       font-size: 12px;
       line-height: 1.2;
       white-space: pre;
@@ -170,7 +170,7 @@ function createSplashWindow(): BrowserWindow {
       font-size: clamp(26px, 6.4vw, 31px);
       font-weight: 700;
       color: #D4B08C;
-      font-family: Georgia, 'Times New Roman', serif;
+      font-family: 'Allternit Serif', Georgia, ui-serif, Cambria, 'Times New Roman', Times, serif;
       margin-bottom: 8px;
       letter-spacing: 1.4px;
       line-height: 1;

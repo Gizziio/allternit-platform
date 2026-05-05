@@ -137,7 +137,7 @@ function generateSandboxHTML(
       background: #dc2626;
       color: white;
       padding: 8px 16px;
-      font-family: system-ui, sans-serif;
+      font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, sans-serif;
       font-size: 14px;
       z-index: 10000;
     }

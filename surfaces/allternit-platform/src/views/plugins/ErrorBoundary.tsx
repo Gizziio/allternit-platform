@@ -138,7 +138,7 @@ export class ErrorBoundary extends Component<Props, State> {
             >
               <code
                 style={{
-                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                  fontFamily: 'var(--font-mono)',
                   fontSize: 12,
                   color: THEME.danger,
                   whiteSpace: 'pre-wrap',
@@ -152,7 +152,7 @@ export class ErrorBoundary extends Component<Props, State> {
                     marginTop: 12,
                     paddingTop: 12,
                     borderTop: `1px solid ${THEME.border}`,
-                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                    fontFamily: 'var(--font-mono)',
                     fontSize: 11,
                     color: THEME.textTertiary,
                     whiteSpace: 'pre-wrap',

@@ -148,10 +148,7 @@ const HTML_SUCCESS = `<!doctype html>
     <title>GIZZI - Codex Authorization Successful</title>
     <style>
       body {
-        font-family:
-          system-ui,
-          -apple-system,
-          sans-serif;
+        font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
         display: flex;
         justify-content: center;
         align-items: center;
@@ -190,10 +187,7 @@ const HTML_ERROR = (error: string) => `<!doctype html>
     <title>GIZZI - Codex Authorization Failed</title>
     <style>
       body {
-        font-family:
-          system-ui,
-          -apple-system,
-          sans-serif;
+        font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
         display: flex;
         justify-content: center;
         align-items: center;
@@ -215,7 +209,7 @@ const HTML_ERROR = (error: string) => `<!doctype html>
       }
       .error {
         color: #ff917b;
-        font-family: monospace;
+        font-family: var(--font-mono);
         margin-top: 1rem;
         padding: 1rem;
         background: #3c140d;

@@ -131,7 +131,7 @@ export default function ConnectPage() {
         {/* Logo */}
         <div className="mb-8 flex items-center justify-center gap-2 select-none">
           <span style={{ color: '#D97757', fontFamily: 'var(--font-mono)', fontSize: 22, fontWeight: 400 }}>A://</span>
-          <span style={{ color: '#ECECEC', fontFamily: 'Georgia, serif', fontSize: 22, fontWeight: 400 }}>LLTERNIT</span>
+          <span style={{ color: '#ECECEC', fontFamily: "'Allternit Serif', Georgia, ui-serif, Cambria, 'Times New Roman', Times, serif", fontSize: 22, fontWeight: 400 }}>LLTERNIT</span>
         </div>
 
         {/* Card */}

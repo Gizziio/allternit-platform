@@ -64,7 +64,7 @@ function loginPage(callbackUrl) {
   <style>
     :root { color-scheme: light; }
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: ui-sans-serif, system-ui, sans-serif; background: #f5f5f5; }
+    body { margin: 0; font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, sans-serif; background: #f5f5f5; }
     .wrap { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; gap: 16px; }
     h1 { margin: 0; font-size: 20px; color: #111; font-weight: 600; }
     p  { margin: 0; font-size: 14px; color: #666; }

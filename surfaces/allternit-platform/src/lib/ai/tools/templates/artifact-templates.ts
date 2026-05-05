@@ -45,7 +45,7 @@ const KANBAN_BOARD = `<!DOCTYPE html>
 <title>Kanban Board</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh;padding:20px}
+body{font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh;padding:20px}
 h1{font-size:18px;font-weight:600;margin-bottom:20px;color:#f1f5f9}
 .board{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;height:calc(100vh - 80px)}
 .col{background:#1a1d27;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:8px;border:1px solid #2d3148}
@@ -144,21 +144,21 @@ const REGEX_TESTER = `<!DOCTYPE html>
 <title>Regex Tester</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f1117;color:#e2e8f0;height:100vh;display:flex;flex-direction:column;padding:18px;gap:14px}
+body{font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f1117;color:#e2e8f0;height:100vh;display:flex;flex-direction:column;padding:18px;gap:14px}
 label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin-bottom:4px;display:block}
 .row{display:flex;gap:10px;align-items:center}
 .pattern-wrap{display:flex;align-items:center;background:#1a1d27;border:1px solid #2d3148;border-radius:8px;overflow:hidden;flex:1}
-.slash{padding:0 10px;color:#4f5a8a;font-size:18px;font-family:monospace;user-select:none}
-#pattern{flex:1;background:transparent;border:none;padding:10px 0;color:#e2e8f0;font-size:14px;font-family:monospace;outline:none}
+.slash{padding:0 10px;color:#4f5a8a;font-size:18px;font-family: var(--font-mono);user-select:none}
+#pattern{flex:1;background:transparent;border:none;padding:10px 0;color:#e2e8f0;font-size:14px;font-family: var(--font-mono);outline:none}
 .flags-row{display:flex;gap:8px}
 .flag-btn{padding:5px 12px;border-radius:6px;border:1px solid #2d3148;background:transparent;color:#94a3b8;cursor:pointer;font-size:12px;font-weight:600;transition:all .12s}
 .flag-btn.active{background:#3b4fd8;border-color:#3b4fd8;color:#fff}
 .textarea-wrap{flex:1;position:relative;min-height:100px}
-#teststr{width:100%;height:100%;min-height:120px;background:#1a1d27;border:1px solid #2d3148;border-radius:8px;padding:10px;color:transparent;caret-color:#e2e8f0;font-size:14px;font-family:monospace;outline:none;resize:none;position:relative;z-index:2}
-#highlight{position:absolute;inset:0;padding:10px;font-size:14px;font-family:monospace;line-height:1.5;white-space:pre-wrap;word-break:break-all;pointer-events:none;border-radius:8px;color:#e2e8f0}
+#teststr{width:100%;height:100%;min-height:120px;background:#1a1d27;border:1px solid #2d3148;border-radius:8px;padding:10px;color:transparent;caret-color:#e2e8f0;font-size:14px;font-family: var(--font-mono);outline:none;resize:none;position:relative;z-index:2}
+#highlight{position:absolute;inset:0;padding:10px;font-size:14px;font-family: var(--font-mono);line-height:1.5;white-space:pre-wrap;word-break:break-all;pointer-events:none;border-radius:8px;color:#e2e8f0}
 mark{background:#f59e0b40;color:#fbbf24;border-radius:2px}
 .results{background:#1a1d27;border:1px solid #2d3148;border-radius:8px;padding:12px;flex:1;overflow-y:auto;max-height:180px}
-.match-item{font-size:12px;font-family:monospace;padding:4px 8px;border-radius:4px;margin-bottom:4px;background:#252836;display:flex;gap:12px}
+.match-item{font-size:12px;font-family: var(--font-mono);padding:4px 8px;border-radius:4px;margin-bottom:4px;background:#252836;display:flex;gap:12px}
 .match-idx{color:#60a5fa;min-width:50px}
 .match-val{color:#34d399;font-weight:600}
 .match-pos{color:#94a3b8}
@@ -255,24 +255,24 @@ const MARKDOWN_EDITOR = `<!DOCTYPE html>
 <title>Markdown Editor</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f1117;color:#e2e8f0;height:100vh;display:flex;flex-direction:column}
+body{font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f1117;color:#e2e8f0;height:100vh;display:flex;flex-direction:column}
 .toolbar{display:flex;align-items:center;gap:6px;padding:10px 16px;background:#1a1d27;border-bottom:1px solid #2d3148;flex-shrink:0}
 .toolbar h1{font-size:14px;font-weight:600;margin-right:8px;color:#94a3b8}
-.tb-btn{padding:4px 10px;border-radius:5px;border:1px solid #2d3148;background:transparent;color:#94a3b8;cursor:pointer;font-size:12px;font-weight:600;font-family:monospace;transition:all .12s}
+.tb-btn{padding:4px 10px;border-radius:5px;border:1px solid #2d3148;background:transparent;color:#94a3b8;cursor:pointer;font-size:12px;font-weight:600;font-family: var(--font-mono);transition:all .12s}
 .tb-btn:hover{background:#252836;color:#e2e8f0}
 .stats{margin-left:auto;font-size:11px;color:#475569}
 .panes{display:flex;flex:1;overflow:hidden}
 .pane{flex:1;display:flex;flex-direction:column;overflow:hidden}
 .pane-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#475569;padding:8px 14px;background:#13151f;border-bottom:1px solid #1e2235;flex-shrink:0}
 .divider{width:1px;background:#1e2235;flex-shrink:0}
-#editor{flex:1;background:#13151f;border:none;padding:14px;color:#e2e8f0;font-size:14px;font-family:monospace;line-height:1.7;outline:none;resize:none;overflow-y:auto}
+#editor{flex:1;background:#13151f;border:none;padding:14px;color:#e2e8f0;font-size:14px;font-family: var(--font-mono);line-height:1.7;outline:none;resize:none;overflow-y:auto}
 #preview{flex:1;padding:14px 18px;overflow-y:auto;line-height:1.7;font-size:14px}
 #preview h1,#preview h2,#preview h3,#preview h4{margin:1em 0 .4em;font-weight:600;color:#f1f5f9}
 #preview h1{font-size:1.6em;border-bottom:1px solid #1e2235;padding-bottom:.3em}
 #preview h2{font-size:1.3em;border-bottom:1px solid #1e2235;padding-bottom:.2em}
 #preview h3{font-size:1.1em}
 #preview p{margin:.6em 0;color:#cbd5e1}
-#preview code{background:#1e2235;padding:2px 6px;border-radius:4px;font-family:monospace;font-size:13px;color:#7dd3fc}
+#preview code{background:#1e2235;padding:2px 6px;border-radius:4px;font-family: var(--font-mono);font-size:13px;color:#7dd3fc}
 #preview pre{background:#1a1d27;border:1px solid #2d3148;border-radius:8px;padding:12px;overflow-x:auto;margin:.8em 0}
 #preview pre code{background:none;padding:0;color:#e2e8f0}
 #preview blockquote{border-left:3px solid #3b4fd8;padding:.3em 1em;margin:.6em 0;color:#94a3b8;background:#13151f}
@@ -381,7 +381,7 @@ const JSON_FORMATTER = `<!DOCTYPE html>
 <title>JSON Formatter</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0f1117;color:#e2e8f0;height:100vh;display:flex;flex-direction:column}
+body{font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f1117;color:#e2e8f0;height:100vh;display:flex;flex-direction:column}
 .toolbar{display:flex;align-items:center;gap:8px;padding:10px 16px;background:#1a1d27;border-bottom:1px solid #2d3148;flex-shrink:0}
 .toolbar h1{font-size:14px;font-weight:600;color:#94a3b8;margin-right:4px}
 .btn{padding:5px 14px;border-radius:6px;border:1px solid #2d3148;background:transparent;color:#94a3b8;cursor:pointer;font-size:12px;font-weight:600;transition:all .12s}
@@ -396,8 +396,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .pane{flex:1;display:flex;flex-direction:column;overflow:hidden}
 .pane-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#475569;padding:8px 14px;background:#13151f;border-bottom:1px solid #1e2235;flex-shrink:0}
 .divider{width:1px;background:#1e2235}
-#input{flex:1;background:#13151f;border:none;padding:14px;color:#cbd5e1;font-size:13px;font-family:monospace;line-height:1.6;outline:none;resize:none}
-#output{flex:1;padding:14px;overflow:auto;font-size:13px;font-family:monospace;line-height:1.6;background:#0f1117}
+#input{flex:1;background:#13151f;border:none;padding:14px;color:#cbd5e1;font-size:13px;font-family: var(--font-mono);line-height:1.6;outline:none;resize:none}
+#output{flex:1;padding:14px;overflow:auto;font-size:13px;font-family: var(--font-mono);line-height:1.6;background:#0f1117}
 .jkey{color:#60a5fa}
 .jstr{color:#34d399}
 .jnum{color:#f59e0b}
@@ -501,7 +501,7 @@ const KPI_DASHBOARD = `<!DOCTYPE html>
 <title>KPI Dashboard</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0b0d14;color:#e2e8f0;min-height:100vh;padding:20px}
+body{font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0b0d14;color:#e2e8f0;min-height:100vh;padding:20px}
 h1{font-size:16px;font-weight:600;color:#94a3b8;margin-bottom:20px}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
 .card{background:#13151f;border:1px solid #1e2235;border-radius:12px;padding:18px;cursor:pointer;transition:border-color .15s}
@@ -593,7 +593,7 @@ const INVOICE_GENERATOR = `<!DOCTYPE html>
 <title>Invoice Generator</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0b0d14;color:#e2e8f0;min-height:100vh;padding:20px}
+body{font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0b0d14;color:#e2e8f0;min-height:100vh;padding:20px}
 .layout{display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:1100px;margin:0 auto}
 .panel{background:#13151f;border:1px solid #1e2235;border-radius:12px;padding:18px;margin-bottom:16px}
 h2{font-size:13px;font-weight:600;color:#94a3b8;margin-bottom:14px;text-transform:uppercase;letter-spacing:.06em}
@@ -731,7 +731,7 @@ const DATA_TABLE = `<!DOCTYPE html>
 <title>Data Table</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0b0d14;color:#e2e8f0;height:100vh;display:flex;flex-direction:column;padding:18px;gap:14px}
+body{font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0b0d14;color:#e2e8f0;height:100vh;display:flex;flex-direction:column;padding:18px;gap:14px}
 .toolbar{display:flex;align-items:center;gap:10px}
 h1{font-size:15px;font-weight:600;color:#f1f5f9;margin-right:4px}
 .search-wrap{position:relative;flex:1;max-width:280px}
@@ -823,7 +823,7 @@ function render(){
     '<tr><td style="color:#475569">#'+r.id+'</td><td style="font-weight:600;color:#f1f5f9">'+r.name+'</td><td style="color:#64748b">'+r.email+'</td>'
     +'<td><span class="r-'+r.role+'">'+r.role+'</span></td>'
     +'<td><span class="badge b-'+r.status.toLowerCase()+'">'+r.status+'</span></td>'
-    +'<td>'+r.joined+'</td><td style="font-family:monospace">'+r.score+'</td></tr>'
+    +'<td>'+r.joined+'</td><td style="font-family:var(--font-mono)">'+r.score+'</td></tr>'
   ).join('');
   document.getElementById('pg-info').textContent='Page '+(page+1)+' of '+(maxPage+1);
   document.getElementById('prev-btn').disabled=page===0;
@@ -846,7 +846,7 @@ const BUDGET_TRACKER = `<!DOCTYPE html>
 <title>Budget Tracker</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#0b0d14;color:#e2e8f0;min-height:100vh;padding:18px}
+body{font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0b0d14;color:#e2e8f0;min-height:100vh;padding:18px}
 h1{font-size:16px;font-weight:600;color:#f1f5f9;margin-bottom:18px}
 .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
 .sum-card{background:#13151f;border:1px solid #1e2235;border-radius:10px;padding:14px}

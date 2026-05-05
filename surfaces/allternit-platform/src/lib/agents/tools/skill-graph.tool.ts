@@ -1,6 +1,3 @@
-import fs from 'fs';
-import path from 'path';
-
 export const skillGraphTool: any = {
   name: "skill_graph_ops",
   description: "Synchronize, manifest, and deploy content nodes using the local /content-skill-graph folder.",
@@ -23,6 +20,11 @@ export const skillGraphTool: any = {
     const graphDir = '/Users/macbook/Desktop/content-skill-graph';
     
     try {
+      // Use eval to hide require from client bundlers (server-only execution)
+      const req = eval('require');
+      const fs = req('fs');
+      const path = req('path');
+      
       if (!fs.existsSync(graphDir)) {
         return { error: "Skill graph directory not found." };
       }

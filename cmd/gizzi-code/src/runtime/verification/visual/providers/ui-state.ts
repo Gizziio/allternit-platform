@@ -275,7 +275,7 @@ export class UIStateCaptureProvider extends VisualCaptureProvider {
     body {
       margin: 0;
       padding: 20px;
-      font-family: system-ui, -apple-system, sans-serif;
+      font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
       background: #f5f5f5;
     }
     #root {

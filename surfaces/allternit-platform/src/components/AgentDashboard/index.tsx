@@ -190,7 +190,7 @@ function DashboardHeader({ agent, stats, onClose, activeTab }: {
             <AgentAvatar config={agent.config?.avatar as any} size={40} />
           </div>
           <div>
-            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: STUDIO_THEME.textPrimary, fontFamily: 'Georgia, serif' }}>
+            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: STUDIO_THEME.textPrimary, fontFamily: "'Allternit Serif', Georgia, ui-serif, Cambria, 'Times New Roman', Times, serif" }}>
               {agent.name}
             </h3>
             <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: STUDIO_THEME.textMuted }}>

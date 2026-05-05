@@ -124,7 +124,7 @@ export function SessionReplayViewer({
         height: '100%',
         background: BACKGROUND.primary,
         color: TEXT.primary,
-        fontFamily: 'system-ui, sans-serif',
+        fontFamily: 'var(--font-sans)',
         fontSize: 13,
         userSelect: 'none',
       }}

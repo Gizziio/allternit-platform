@@ -154,7 +154,7 @@ export function exportToHTML(
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${state.topic}</title>
   <style>
-    body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #333; }
+    body { font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #333; }
     h1, h2, h3, h4 { color: #111; margin-top: 2rem; }
     h1 { font-size: 2rem; border-bottom: 2px solid #eee; padding-bottom: 0.5rem; }
     a { color: #0066cc; }
@@ -465,7 +465,7 @@ export function exportPresentationToPDF(state: PresentationState): void {
   <style>
     @page { size: 297mm 210mm; margin: 0; }
     @media print { .slide { page-break-after: always; height: 100vh; box-sizing: border-box; } }
-    body { font-family: system-ui, sans-serif; margin: 0; }
+    body { font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, sans-serif; margin: 0; }
   </style>
 </head>
 <body>${slides}</body>

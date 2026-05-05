@@ -40,7 +40,7 @@ function CodeBlock({ code, lang = 'bash' }: { code: string; lang?: string }) {
           {copied ? '✓ Copied' : 'Copy'}
         </button>
       </div>
-      <pre style={{ margin: 0, padding: '16px', overflow: 'auto', fontSize: 13, lineHeight: 1.6, fontFamily: 'ui-monospace, monospace', color: '#e6edf3' }}>
+      <pre style={{ margin: 0, padding: '16px', overflow: 'auto', fontSize: 13, lineHeight: 1.6, fontFamily: 'var(--font-mono)', color: '#e6edf3' }}>
         <code>{code}</code>
       </pre>
     </div>
@@ -224,7 +224,7 @@ export default function App() {
   const ActiveComponent = SECTION_COMPONENTS[activeSection];
 
   return (
-    <div style={{ display: 'flex', height: '100%', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', color: '#e6edf3', background: '#010409' }}>
+    <div style={{ display: 'flex', height: '100%', fontFamily: 'var(--font-sans)', color: '#e6edf3', background: '#010409' }}>
       <nav style={{ width: 220, flexShrink: 0, borderRight: '1px solid #30363d', padding: '24px 0', background: '#0d1117' }}>
         <div style={{ padding: '0 16px 20px', borderBottom: '1px solid #30363d', marginBottom: 8 }}>
           <div style={{ fontWeight: 700, fontSize: 15 }}>Allternit</div>

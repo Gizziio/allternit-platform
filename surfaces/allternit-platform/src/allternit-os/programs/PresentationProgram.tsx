@@ -75,7 +75,7 @@ const exportToPPTX = async (state: PresentationState): Promise<void> => {
   <title>${state.title || 'Presentation'} - Export</title>
   <style>
     @page { size: 10in 5.625in; margin: 0; }
-    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
+    body { font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, sans-serif; margin: 0; padding: 20px; background: #f5f5f5; }
     .slide { page-break-inside: avoid; }
     @media print {
       body { background: white; padding: 0; }

@@ -378,7 +378,7 @@ const exportDocumentToPDF = async (state: ResearchDocState): Promise<void> => {
       <style>
         @page { margin: 20mm; }
         body {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
           max-width: 210mm;
           margin: 0 auto;
           padding: 20mm;
@@ -491,7 +491,7 @@ const ExportMenu: React.FC<{ state: ResearchDocState }> = ({ state }) => {
   <meta charset="UTF-8">
   <title>${state.topic || 'Research Document'}</title>
   <style>
-    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; line-height: 1.6; }
+    body { font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, sans-serif; max-width: 800px; margin: 40px auto; padding: 0 20px; line-height: 1.6; }
     h1 { font-size: 2em; border-bottom: 2px solid #eee; padding-bottom: 10px; }
     h2 { font-size: 1.5em; margin-top: 30px; }
     a { color: #2563eb; }

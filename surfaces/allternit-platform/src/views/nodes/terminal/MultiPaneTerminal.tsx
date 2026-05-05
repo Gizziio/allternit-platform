@@ -238,7 +238,7 @@ function TerminalCard({
       cursorBlink: true,
       theme: terminalTheme,
       fontSize: fontSize,
-      fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+      fontFamily: 'var(--font-mono)',
       fontWeight: 400,
       scrollback: 10000,
       allowProposedApi: true,

@@ -665,7 +665,7 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
               fontWeight: 500,
               color: TEXT.primary,
               marginBottom: 8,
-              fontFamily: 'Georgia, "Times New Roman", serif',
+              fontFamily: "'Allternit Serif', Georgia, ui-serif, Cambria, 'Times New Roman', Times, serif",
               animation: `${greeting.titleAnim} 0.6s ease-out 100ms both`,
             }}>
               {greeting.title}

@@ -112,7 +112,7 @@ export function AgentTemplateSelector({
             color: STUDIO_THEME.textPrimary,
             fontSize: "14px",
             outline: "none",
-            fontFamily: "system-ui, sans-serif",
+            fontFamily: 'var(--font-sans)',
           }}
         />
       </div>

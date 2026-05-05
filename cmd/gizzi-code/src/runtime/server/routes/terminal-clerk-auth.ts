@@ -144,7 +144,7 @@ function htmlPage(input: { title: string; body: string; color: string }) {
   <title>${input.title}</title>
   <style>
     :root { color-scheme: dark; }
-    body { margin: 0; font-family: ui-sans-serif, system-ui, sans-serif; background: #0f1115; color: #d4d9e1; }
+    body { margin: 0; font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, sans-serif; background: #0f1115; color: #d4d9e1; }
     .wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
     .card { width: min(520px, 100%); border: 1px solid #2a2f3a; border-radius: 12px; background: #151a23; padding: 20px; }
     h1 { margin: 0 0 10px; font-size: 20px; color: ${input.color}; }

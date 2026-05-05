@@ -693,7 +693,7 @@ export function CreateAgentForm({
     fontWeight: 500,
     color: STUDIO_THEME.textPrimary,
     margin: 0,
-    fontFamily: 'Georgia, serif',
+    fontFamily: "'Allternit Serif', Georgia, ui-serif, Cambria, 'Times New Roman', Times, serif",
   };
 
   const subtitleStyle: React.CSSProperties = {
@@ -732,7 +732,7 @@ export function CreateAgentForm({
     fontWeight: 600,
     color: STUDIO_THEME.textPrimary,
     margin: '0 0 16px 0',
-    fontFamily: 'Georgia, serif',
+    fontFamily: "'Allternit Serif', Georgia, ui-serif, Cambria, 'Times New Roman', Times, serif",
     display: 'flex',
     alignItems: 'center',
     gap: '8px',

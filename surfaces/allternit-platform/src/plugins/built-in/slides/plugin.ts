@@ -259,7 +259,7 @@ Format as JSON:
     "name": "${theme}",
     "primaryColor": "#6366f1",
     "secondaryColor": "#8b5cf6",
-    "font": "Inter"
+    "font": "Allternit Sans"
   }
 }`,
       temperature: 0.4,
@@ -288,7 +288,7 @@ Format as JSON:
         name: theme,
         primaryColor: '#6366f1',
         secondaryColor: '#8b5cf6',
-        font: 'Inter',
+        font: 'Allternit Sans',
       },
     };
   }

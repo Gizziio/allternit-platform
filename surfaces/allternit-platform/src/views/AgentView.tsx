@@ -174,7 +174,7 @@ export function AgentView({ hideCreateButton = false, forceListMode = false, tit
             fontWeight: 600,
             color: STUDIO_THEME.textPrimary,
             margin: 0,
-            fontFamily: 'Georgia, serif'
+            fontFamily: "'Allternit Serif', Georgia, ui-serif, Cambria, 'Times New Roman', Times, serif"
           }}>{title}</h1>
           <p style={{
             fontSize: '13px',
@@ -291,7 +291,7 @@ function AgentGalleryGrid({ agents, searchQuery, onSearchChange, onSelectAgent, 
               outline: "none",
               color: STUDIO_THEME.textPrimary,
               fontSize: "14px",
-              fontFamily: "system-ui, sans-serif",
+              fontFamily: 'var(--font-sans)',
             }}
           />
         </div>

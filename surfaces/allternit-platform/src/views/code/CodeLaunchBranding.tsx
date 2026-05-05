@@ -420,7 +420,7 @@ export function CodeLaunchBranding({
           fontWeight: 600,
           letterSpacing: '-0.03em',
           color: 'var(--text-primary)',
-          fontFamily: 'Georgia, serif',
+          fontFamily: "'Allternit Serif', Georgia, ui-serif, Cambria, 'Times New Roman', Times, serif",
         }}
       >
         {greeting.title}

@@ -192,7 +192,7 @@ export function ReceiptView({ receipt, onClose }: ReceiptViewProps) {
         borderRadius: '12px',
         border: `1px solid ${THEME.border}`,
         padding: '16px',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
+        fontFamily: 'var(--font-sans)',
         color: THEME.textPrimary,
         maxHeight: '70vh',
         overflow: 'auto',

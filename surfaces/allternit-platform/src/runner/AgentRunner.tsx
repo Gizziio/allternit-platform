@@ -269,7 +269,7 @@ function TraceEntryItem({ entry }: { entry: TraceEntry }) {
               color: THEME.textMuted,
               fontSize: 11,
               lineHeight: 1.5,
-              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+              fontFamily: 'var(--font-mono)',
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-word',
               borderLeft: `2px solid ${statusColor}`,
