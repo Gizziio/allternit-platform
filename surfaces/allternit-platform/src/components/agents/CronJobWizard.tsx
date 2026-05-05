@@ -1590,7 +1590,7 @@ function ParameterField({
           }}
           placeholder={param.placeholder}
           rows={4}
-          style={{ ...inputStyle, fontFamily: "monospace", fontSize: 12 }}
+          style={{ ...inputStyle, fontFamily: "var(--font-mono)", fontSize: 12 }}
         />
       ) : param.type === "number" ? (
         <input
@@ -1766,7 +1766,7 @@ function ScheduleStep({
                 background: "var(--surface-panel)",
                 color: "#f6eee7",
                 fontSize: 14,
-                fontFamily: "monospace",
+                fontFamily: "var(--font-mono)",
                 outline: "none",
               }}
             />
@@ -1945,7 +1945,7 @@ function ReviewStep({
             color: "#a8998c",
             maxHeight: 100,
             overflow: "auto",
-            fontFamily: "monospace",
+            fontFamily: "var(--font-mono)",
           }}>
             {config.prompt.slice(0, 200)}{config.prompt.length > 200 ? "..." : ""}
           </div>

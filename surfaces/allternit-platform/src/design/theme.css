@@ -1,6 +1,8 @@
 
 :root {
-  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Allternit Sans', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: 'Allternit Serif', Georgia, ui-serif, Cambria, 'Times New Roman', Times, serif;
+  --font-mono: 'Allternit Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', monospace;
   
   /* ==========================================================================
      SPACING SYSTEM (4px base grid)
@@ -302,7 +304,7 @@
   --glass-border: rgba(212, 176, 140, 0.16);
   
   --accent-chat: #D97757; /* Coral/Orange accent from screenshot */
-  --font-serif: 'Times New Roman', Times, serif; /* For the main greeting */
+  --font-serif: 'Allternit Serif', Georgia, ui-serif, Cambria, 'Times New Roman', Times, serif;
   --accent-cowork: #B08BC0;
   --accent-code: #7BB08B;
   --accent-browser: #69A8C8;
@@ -798,7 +800,7 @@ body {
 
 /* Inline code — amber tint */
 .allternit-markdown :not(pre) > code {
-  font-family: ui-monospace, monospace;
+  font-family: var(--font-mono);
   font-size: 0.82em;
   padding: 0.15em 0.4em;
   border-radius: 4px;

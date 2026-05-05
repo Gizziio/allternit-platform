@@ -280,7 +280,7 @@ function CanvasMode({ tab }: { tab?: A2UITab }) {
       <div style={{ flex: 1, background: 'var(--surface-hover)', borderRadius: 4, border: '1px solid var(--surface-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center', opacity: 0.1 }}>
           <SquaresFour style={{ width: 64, height: 64, margin: '0 auto 16px' }} />
-          <p style={{ fontSize: 10, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.5em' }}>Waiting_for_signal...</p>
+          <p style={{ fontSize: 10, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.5em' }}>Waiting_for_signal...</p>
         </div>
       </div>
     </div>
@@ -301,7 +301,7 @@ function StudioMode() {
       <div style={{ flex: 1, background: 'var(--surface-hover)', borderRadius: 4, border: '1px solid var(--surface-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center', opacity: 0.1 }}>
           <Sparkle style={{ width: 64, height: 64, margin: '0 auto 16px' }} />
-          <p style={{ fontSize: 10, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.5em' }}>Initialize_Workspace...</p>
+          <p style={{ fontSize: 10, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.5em' }}>Initialize_Workspace...</p>
         </div>
       </div>
     </div>
@@ -2120,7 +2120,7 @@ export function BrowserCapsuleEnhanced({
                 <div style={{ position: 'absolute', inset: 0, background: BACKGROUND.primary, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
                   <Warning style={{ width: 48, height: 48, color: 'rgba(239,68,68,0.6)', marginBottom: 16 }} />
                   <div style={{ fontSize: 11, fontWeight: 900, color: 'rgba(248,113,113,0.8)', textTransform: 'uppercase', letterSpacing: '0.3em', marginBottom: 8 }}>CONNECTION_FAILED</div>
-                  <div style={{ fontSize: 10, fontFamily: 'monospace', color: 'rgba(155,155,155,0.4)', maxWidth: 320, textAlign: 'center' }}>Could not load {(activeTab as WebTab).url}</div>
+                  <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'rgba(155,155,155,0.4)', maxWidth: 320, textAlign: 'center' }}>Could not load {(activeTab as WebTab).url}</div>
                 </div>
               )}
               {!iframeLoaded && !iframeError && (
@@ -2147,7 +2147,7 @@ export function BrowserCapsuleEnhanced({
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ marginBottom: 80, opacity: 0.4, transform: 'scale(0.9)' }}><AllternitLogo size="lg" variant="stacked" /></div>
-              <p style={{ fontSize: 10, fontFamily: 'monospace', color: 'rgba(155,155,155,0.2)', textTransform: 'uppercase', letterSpacing: '0.5em' }}>INITIALIZING_KERNEL...</p>
+              <p style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'rgba(155,155,155,0.2)', textTransform: 'uppercase', letterSpacing: '0.5em' }}>INITIALIZING_KERNEL...</p>
             </div>
           )
         ) : contentMode === 'canvas' ? (

@@ -72,7 +72,7 @@
   background: #141414 !important;
   border: 1px solid #2a2a2a !important;
   border-radius: 8px !important;
-  font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+  font-family: 'Allternit Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, monospace !important;
   font-size: 13px !important;
   padding: 16px !important;
   margin: 16px 0 !important;
@@ -237,7 +237,7 @@
   color: #D4956A !important; /* Allternit accent */
   padding: 2px 6px !important;
   border-radius: 4px !important;
-  font-family: 'JetBrains Mono', monospace !important;
+  font-family: 'Allternit Mono', 'SFMono-Regular', Menlo, Monaco, monospace !important;
   font-size: 0.9em !important;
 }
 

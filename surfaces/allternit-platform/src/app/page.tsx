@@ -23,7 +23,7 @@ function AppLoader() {
     >
       {/* Wordmark */}
       <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', userSelect: 'none' }}>
-        <span style={{ color: '#D97757', fontFamily: 'monospace', fontSize: 22, fontWeight: 400, letterSpacing: '0.04em' }}>A://</span>
+        <span style={{ color: '#D97757', fontFamily: 'var(--font-mono)', fontSize: 22, fontWeight: 400, letterSpacing: '0.04em' }}>A://</span>
         <span style={{ color: '#C8BDB4', fontFamily: 'Georgia, serif', fontSize: 22, fontWeight: 400, letterSpacing: '0.18em' }}>LLTERNIT</span>
       </div>
 

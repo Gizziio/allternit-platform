@@ -9,7 +9,7 @@ export function ProblemsView() {
         <XCircle size={20} color="#ff3b30" weight="fill" style={{ marginTop: 2 }} />
         <div>
           <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>Syntax Error</div>
-          <div style={{ fontSize: 12, opacity: 0.7, fontFamily: 'monospace' }}>src/views/code/CodeCanvas.tsx:44:12</div>
+          <div style={{ fontSize: 12, opacity: 0.7, fontFamily: 'var(--font-mono)' }}>src/views/code/CodeCanvas.tsx:44:12</div>
           <div style={{ fontSize: 12, marginTop: 4, color: 'var(--text-secondary)' }}>Unexpected token, expected curly braces</div>
         </div>
       </GlassCard>
@@ -18,7 +18,7 @@ export function ProblemsView() {
         <Warning size={20} color="#ff9500" weight="fill" style={{ marginTop: 2 }} />
         <div>
           <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>Unused Variable</div>
-          <div style={{ fontSize: 12, opacity: 0.7, fontFamily: 'monospace' }}>src/shell/ShellRail.tsx:120:5</div>
+          <div style={{ fontSize: 12, opacity: 0.7, fontFamily: 'var(--font-mono)' }}>src/shell/ShellRail.tsx:120:5</div>
           <div style={{ fontSize: 12, marginTop: 4, color: 'var(--text-secondary)' }}>'isExpanded' is declared but never read</div>
         </div>
       </GlassCard>

@@ -155,7 +155,7 @@ export function ToolConfirmation({
               border: "1px solid var(--ui-border-muted)",
               fontSize: 11,
               color: "#a8998c",
-              fontFamily: "monospace",
+              fontFamily: "var(--font-mono)",
               overflow: "auto",
               maxHeight: 120,
             }}
@@ -305,7 +305,7 @@ export function InlineToolConfirmation({
           background: "var(--surface-hover)",
           fontSize: 11,
           color: "#a8998c",
-          fontFamily: "monospace",
+          fontFamily: "var(--font-mono)",
           marginBottom: 12,
           overflow: "auto",
           maxHeight: 80,

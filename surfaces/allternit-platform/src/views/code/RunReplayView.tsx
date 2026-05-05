@@ -243,7 +243,7 @@ export function RunReplayView() {
                     <GlassCard style={{ padding: 12, marginLeft: 8, marginTop: 4, background: 'rgba(255, 255, 255, 0.04)' }}>
                       <pre style={{
                         fontSize: 10,
-                        fontFamily: 'JetBrains Mono, monospace',
+                        fontFamily: 'Allternit Mono, SFMono-Regular, Menlo, Monaco, monospace',
                         color: 'var(--text-secondary)',
                         margin: 0,
                         overflow: 'auto',
@@ -312,7 +312,7 @@ export function RunReplayView() {
                   </div>
                   <pre style={{
                     fontSize: 9,
-                    fontFamily: 'JetBrains Mono, monospace',
+                    fontFamily: 'Allternit Mono, SFMono-Regular, Menlo, Monaco, monospace',
                     color: 'var(--text-secondary)',
                     margin: 0,
                     padding: 8,

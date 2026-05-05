@@ -328,7 +328,7 @@ function ActiveCard({ workspace }: { workspace: ActiveWorkspace }) {
           </div>
         </div>
       </div>
-      <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', marginTop: 10, fontFamily: 'monospace' }}>
+      <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', marginTop: 10, fontFamily: 'var(--font-mono)' }}>
         {workspace.path}
       </div>
     </div>
@@ -443,7 +443,7 @@ export function WorkspaceTab({ onSwitchToRegistry }: WorkspaceTabProps = {}) {
                 The Workspace tab syncs agents to your gizzi-code sessions. Start gizzi-code
                 to enable agent switching.
               </div>
-              <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', marginTop: 12, fontFamily: 'monospace' }}>
+              <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', marginTop: 12, fontFamily: 'var(--font-mono)' }}>
                 Expected on port 4096
               </div>
             </div>

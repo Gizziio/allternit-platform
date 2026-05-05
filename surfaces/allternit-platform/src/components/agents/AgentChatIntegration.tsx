@@ -128,7 +128,7 @@ export function EnhancedMessageItem({
               style={{
                 margin: 0,
                 fontSize: 12,
-                fontFamily: "monospace",
+                fontFamily: "var(--font-mono)",
                 color: "#a8998c",
                 overflow: "auto",
                 maxHeight: 150,

@@ -155,7 +155,7 @@ function SearchResultItem({ result, i }: { result: Record<string, unknown>; i: n
           <div style={{
             fontSize: 11,
             color: "rgba(255,255,255,0.32)",
-            fontFamily: "monospace",
+            fontFamily: "var(--font-mono)",
           }}>
             {host}
           </div>
@@ -288,7 +288,7 @@ function NavigateCard({ state, input, error }: BrowserToolCardProps) {
           flex: 1,
           fontSize: 11,
           color: isBlocked ? "rgba(248,113,113,0.7)" : "rgba(255,255,255,0.5)",
-          fontFamily: "monospace",
+          fontFamily: "var(--font-mono)",
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
@@ -342,7 +342,7 @@ function ClickCard({ state, input }: BrowserToolCardProps) {
             borderRadius: 4,
             padding: "1px 5px",
             color: "rgba(236,236,236,0.8)",
-            fontFamily: "monospace",
+            fontFamily: "var(--font-mono)",
           }}>
             {desc.length > 60 ? desc.slice(0, 60) + "…" : desc}
           </code>
@@ -372,7 +372,7 @@ function TypeCard({ state, input }: BrowserToolCardProps) {
               borderRadius: 4,
               padding: "1px 5px",
               color: "rgba(236,236,236,0.8)",
-              fontFamily: "monospace",
+              fontFamily: "var(--font-mono)",
             }}>
               {text.length > 60 ? text.slice(0, 60) + "…" : text}
             </code></>

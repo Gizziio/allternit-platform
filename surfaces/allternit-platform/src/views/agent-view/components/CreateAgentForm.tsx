@@ -2309,7 +2309,7 @@ export function CreateAgentForm({
                             border: `1px solid ${STUDIO_THEME.borderSubtle}`,
                           }}>
                             <FileText style={{ width: 14, height: 14, color: STUDIO_THEME.accent, flexShrink: 0 }} />
-                            <span style={{ fontFamily: 'monospace', fontSize: '12px', color: STUDIO_THEME.textPrimary }}>{doc.path}</span>
+                            <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: STUDIO_THEME.textPrimary }}>{doc.path}</span>
                             <span style={{ fontSize: '10px', color: STUDIO_THEME.textMuted, marginLeft: 'auto' }}>
                               {doc.content.length} chars
                             </span>

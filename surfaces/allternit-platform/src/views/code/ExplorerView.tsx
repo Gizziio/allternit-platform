@@ -154,7 +154,7 @@ const FileTreeItem: React.FC<FileTreeItemProps> = ({
       }}
     >
       {getLanguageIcon(node.language)}
-      <span style={{ fontFamily: node.language ? "'JetBrains Mono', ui-monospace, monospace" : 'inherit' }}>
+      <span style={{ fontFamily: node.language ? "'Allternit Mono', 'SFMono-Regular', ui-monospace, monospace" : 'inherit' }}>
         {node.name}
       </span>
     </div>

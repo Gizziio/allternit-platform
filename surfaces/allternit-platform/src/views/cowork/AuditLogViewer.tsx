@@ -188,7 +188,7 @@ export function AuditLogViewer({ taskId, taskTitle, onClose }: AuditLogViewerPro
                           borderRadius: '6px',
                           overflow: 'auto',
                           maxHeight: 120,
-                          fontFamily: 'monospace',
+                          fontFamily: 'var(--font-mono)',
                         }}>
                           {JSON.stringify(payload, null, 2)}
                         </pre>

@@ -95,7 +95,7 @@ export default function StatusPage() {
         justifyContent: "space-between",
       }}>
         <a href="/" style={{ display: "flex", alignItems: "center", gap: 6, textDecoration: "none" }}>
-          <span style={{ fontFamily: "monospace", fontSize: 18, color: "#D97757" }}>A://</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: 18, color: "#D97757" }}>A://</span>
           <span style={{ fontFamily: "Georgia, serif", fontSize: 18, color: "#1A1612" }}>LLTERNIT</span>
         </a>
         <a href="https://allternit.com" style={{ fontSize: 13, color: "#9B9B9B", textDecoration: "none" }}>← allternit.com</a>
@@ -214,7 +214,7 @@ export default function StatusPage() {
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     {svc.latencyMs !== null && svc.status !== "outage" && (
-                      <span style={{ fontSize: 12, color: "#9B9B9B", fontFamily: "monospace" }}>
+                      <span style={{ fontSize: 12, color: "#9B9B9B", fontFamily: "var(--font-mono)" }}>
                         {formatLatency(svc.latencyMs)}
                       </span>
                     )}

@@ -50,7 +50,7 @@ function gradeStyle(grade: string): React.CSSProperties {
     color: style.color,
     fontSize: 9,
     fontWeight: 700,
-    fontFamily: 'monospace',
+    fontFamily: 'var(--font-mono)',
     letterSpacing: '0.06em',
     textTransform: 'uppercase' as const,
     whiteSpace: 'nowrap' as const,
@@ -132,7 +132,7 @@ export function ConformanceDashboard() {
       background: '#0a0908',
       borderTop: '1px solid color-mix(in srgb, var(--accent-primary) 10%, transparent)',
       padding: 10,
-      fontFamily: 'monospace',
+      fontFamily: 'var(--font-mono)',
     }}>
       {/* Header row */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -148,7 +148,7 @@ export function ConformanceDashboard() {
               style={{
                 padding: '2px 7px',
                 fontSize: 9,
-                fontFamily: 'monospace',
+                fontFamily: 'var(--font-mono)',
                 fontWeight: 700,
                 background: running === `suite-${s}` ? 'rgba(99,252,241,0.15)' : 'var(--surface-hover)',
                 border: `1px solid ${running === `suite-${s}` ? 'rgba(99,252,241,0.4)' : 'var(--ui-border-default)'}`,
@@ -168,7 +168,7 @@ export function ConformanceDashboard() {
             style={{
               padding: '2px 7px',
               fontSize: 9,
-              fontFamily: 'monospace',
+              fontFamily: 'var(--font-mono)',
               background: 'var(--surface-hover)',
               border: '1px solid var(--ui-border-default)',
               borderRadius: 4,
@@ -244,7 +244,7 @@ export function ConformanceDashboard() {
                   <td style={{
                     padding: '4px 6px',
                     color: 'rgba(212,176,140,0.8)',
-                    fontFamily: 'monospace',
+                    fontFamily: 'var(--font-mono)',
                     maxWidth: 140,
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',

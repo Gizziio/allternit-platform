@@ -508,7 +508,7 @@ export function AddSSHConnectionForm({
                   <div style={styles.formGroup}>
                     <label style={styles.label}>Or paste private key</label>
                     <textarea
-                      style={{ ...styles.input, minHeight: '100px', fontFamily: 'monospace', fontSize: '12px', resize: 'none' }}
+                      style={{ ...styles.input, minHeight: '100px', fontFamily: 'var(--font-mono)', fontSize: '12px', resize: 'none' }}
                       value={formData.privateKey}
                       onChange={(e) => handleInputChange('privateKey', e.target.value)}
                       placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
@@ -600,7 +600,7 @@ export function AddSSHConnectionForm({
                 <div>
                   <h4 style={{ fontSize: '13px', fontWeight: 500, color: TEXT.primary, marginBottom: '4px' }}>Generate SSH keys</h4>
                   <p style={{ fontSize: '12px', color: TEXT.secondary }}>If needed, run:</p>
-                  <div style={{ marginTop: '8px', padding: '10px 12px', background: 'var(--surface-panel)', borderRadius: '6px', fontFamily: 'monospace', fontSize: '11px', color: SAND[500] }}>
+                  <div style={{ marginTop: '8px', padding: '10px 12px', background: 'var(--surface-panel)', borderRadius: '6px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: SAND[500] }}>
                     ssh-keygen -t ed25519 -C "allternit-email.com"
                   </div>
                 </div>
@@ -610,7 +610,7 @@ export function AddSSHConnectionForm({
                 <div>
                   <h4 style={{ fontSize: '13px', fontWeight: 500, color: TEXT.primary, marginBottom: '4px' }}>Copy your public key</h4>
                   <p style={{ fontSize: '12px', color: TEXT.secondary }}>Run this to authorize your key:</p>
-                  <div style={{ marginTop: '8px', padding: '10px 12px', background: 'var(--surface-panel)', borderRadius: '6px', fontFamily: 'monospace', fontSize: '11px', color: SAND[500] }}>
+                  <div style={{ marginTop: '8px', padding: '10px 12px', background: 'var(--surface-panel)', borderRadius: '6px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: SAND[500] }}>
                     ssh-copy-id -i ~/.ssh/id_ed25519.pub user@server
                   </div>
                 </div>

@@ -245,7 +245,7 @@ export function CanvasContextMenu({
               {item.icon && <span style={{ opacity: 0.7 }}>{item.icon}</span>}
               <span style={{ flex: 1 }}>{item.label}</span>
               {item.shortcut && (
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
                   {item.shortcut}
                 </span>
               )}

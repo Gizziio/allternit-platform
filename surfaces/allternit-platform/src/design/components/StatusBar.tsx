@@ -71,7 +71,7 @@ export function StatusBar({
         padding: compact ? "0.5rem 0.75rem" : "0.75rem 1rem",
         background: theme.bg,
         borderTop: `1px solid ${theme.muted}30`,
-        fontFamily: "monospace",
+        fontFamily: "var(--font-mono)",
         fontSize: compact ? "0.75rem" : "0.875rem",
       }}
     >

@@ -957,7 +957,7 @@ const subtitleStyle: React.CSSProperties = {
   fontSize: '13px',
   color: `${SAND[500]}99`,
   margin: '8px 0 0',
-  fontFamily: 'JetBrains Mono, Monaco, Consolas, monospace',
+  fontFamily: 'Allternit Mono, Monaco, Consolas, monospace',
 };
 
 const dotsContainerStyle: React.CSSProperties = {

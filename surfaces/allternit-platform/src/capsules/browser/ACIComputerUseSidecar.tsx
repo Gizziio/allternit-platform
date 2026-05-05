@@ -137,7 +137,7 @@ function ElementHighlight({
           borderRadius: 4,
           fontSize: 9, fontWeight: 700,
           color,
-          fontFamily: 'monospace',
+          fontFamily: 'var(--font-mono)',
           textTransform: 'uppercase',
           letterSpacing: '0.06em',
           whiteSpace: 'nowrap',
@@ -179,7 +179,7 @@ function ApprovalCard() {
       {approvalRiskTier && (
         <div style={{
           fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.15em',
-          color: riskColor, marginBottom: 10, fontFamily: 'monospace',
+          color: riskColor, marginBottom: 10, fontFamily: 'var(--font-mono)',
         }}>
           ⚠ Risk: {approvalRiskTier}
         </div>
@@ -194,7 +194,7 @@ function ApprovalCard() {
           color: 'var(--ui-text-muted)',
           lineHeight: 1.5,
           marginBottom: 12,
-          fontFamily: 'monospace',
+          fontFamily: 'var(--font-mono)',
         }}>
           {approvalActionSummary}
         </div>
@@ -542,7 +542,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
               fontSize: 9, fontWeight: 700,
               color: 'rgba(212,176,140,0.45)',
               textTransform: 'uppercase', letterSpacing: '0.12em',
-              fontFamily: 'monospace', flexShrink: 0,
+              fontFamily: 'var(--font-mono)', flexShrink: 0,
             }}>
               COMPUTER USE
             </button>
@@ -567,7 +567,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
           {currentAction?.stepIndex != null && currentAction?.totalSteps != null && currentAction.totalSteps > 1 && (
             <span style={{
               fontSize: 10, color: 'rgba(212,176,140,0.5)',
-              fontFamily: 'monospace', fontWeight: 700, flexShrink: 0,
+              fontFamily: 'var(--font-mono)', fontWeight: 700, flexShrink: 0,
             }}>
               {currentAction.stepIndex}/{currentAction.totalSteps}
             </span>
@@ -577,7 +577,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
           {adapterLabel && (
             <span style={{
               fontSize: 9, color: 'rgba(255,255,255,0.22)',
-              fontFamily: 'monospace', flexShrink: 0,
+              fontFamily: 'var(--font-mono)', flexShrink: 0,
             }}>
               {adapterLabel}{currentLayer ? ` · ${currentLayer}` : ''}
             </span>
@@ -713,7 +713,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
                       borderRadius: '50%',
                       animation: 'aci-sidecar-spin 0.9s linear infinite',
                     }} />
-                    <span style={{ fontSize: 10, color: 'rgba(212,176,140,0.3)', fontFamily: 'monospace', letterSpacing: '0.1em' }}>
+                    <span style={{ fontSize: 10, color: 'rgba(212,176,140,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
                       CONNECTING…
                     </span>
                   </div>
@@ -724,10 +724,10 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
                     alignItems: 'center', justifyContent: 'center', gap: 8,
                     padding: 20,
                   }}>
-                    <span style={{ fontSize: 10, color: 'rgba(239,68,68,0.7)', fontFamily: 'monospace', textAlign: 'center' }}>
+                    <span style={{ fontSize: 10, color: 'rgba(239,68,68,0.7)', fontFamily: 'var(--font-mono)', textAlign: 'center' }}>
                       {serviceError}
                     </span>
-                    <span style={{ fontSize: 9, color: 'rgba(212,176,140,0.3)', fontFamily: 'monospace', textAlign: 'center' }}>
+                    <span style={{ fontSize: 9, color: 'rgba(212,176,140,0.3)', fontFamily: 'var(--font-mono)', textAlign: 'center' }}>
                       Check the agent logs for details.
                     </span>
                   </div>
@@ -737,7 +737,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
                     background: 'linear-gradient(135deg, #0a0908 0%, #111010 100%)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
-                    <span style={{ fontSize: 10, color: 'var(--ui-border-default)', fontFamily: 'monospace', letterSpacing: '0.1em' }}>
+                    <span style={{ fontSize: 10, color: 'var(--ui-border-default)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
                       NO SIGNAL
                     </span>
                   </div>
@@ -807,20 +807,20 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
             {/* AX Tree panel */}
             {showAxTree && axTree && (
               <div style={{ borderTop: '1px solid var(--surface-hover)', padding: 8, maxHeight: 200, overflowY: 'auto', flexShrink: 0 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginBottom: 4, fontFamily: 'monospace' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginBottom: 4, fontFamily: 'var(--font-mono)' }}>
                   AX · {(axSurface ?? 'WINDOW').toUpperCase()}
                 </div>
                 {axDiff.size > 0 && (
                   <div style={{ display: 'flex', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 9, color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 9, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>
                       <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--status-success)', display: 'inline-block', flexShrink: 0 }} />
                       Added
                     </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 9, color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 9, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>
                       <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--status-error)', display: 'inline-block', flexShrink: 0 }} />
                       Removed
                     </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 9, color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 9, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>
                       <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--status-warning)', display: 'inline-block', flexShrink: 0 }} />
                       Modified
                     </span>
@@ -894,7 +894,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
                 </svg>
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(16,185,129,0.85)', marginBottom: 1 }}>Task Complete</div>
-                  <div style={{ fontSize: 9, color: 'rgba(16,185,129,0.5)', fontFamily: 'monospace' }}>
+                  <div style={{ fontSize: 9, color: 'rgba(16,185,129,0.5)', fontFamily: 'var(--font-mono)' }}>
                     {lastEventMessage || goal}
                   </div>
                 </div>
@@ -940,11 +940,11 @@ function AXTreeDisplay({
 
   return (
     <div style={diffStyle}>
-      <span style={{ fontSize: 10, fontFamily: 'monospace', color: node.is_interactive ? '#a855f7' : 'rgba(255,255,255,0.3)' }}>
+      <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: node.is_interactive ? '#a855f7' : 'rgba(255,255,255,0.3)' }}>
         {refLabel}<span style={{ color: 'rgba(255,255,255,0.5)' }}>{node.role}</span>
       </span>
       {nameLabel && (
-        <span style={{ fontSize: 10, fontFamily: 'monospace', color: 'rgba(255,255,255,0.55)', marginLeft: 4 }}>
+        <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'rgba(255,255,255,0.55)', marginLeft: 4 }}>
           {nameLabel.slice(0, 40)}
         </span>
       )}
@@ -1044,7 +1044,7 @@ export function ACIComputerUseBar({ suppressInBrowserMode = true, className }: A
             fontSize: 9, fontWeight: 700,
             color: 'rgba(212,176,140,0.4)',
             textTransform: 'uppercase', letterSpacing: '0.12em',
-            fontFamily: 'monospace', flexShrink: 0,
+            fontFamily: 'var(--font-mono)', flexShrink: 0,
           }}>
             Computer Use
           </button>
@@ -1068,7 +1068,7 @@ export function ACIComputerUseBar({ suppressInBrowserMode = true, className }: A
         {/* Step counter */}
         {stepIndex != null && totalSteps != null && totalSteps > 1 && (
           <span style={{
-            fontSize: 9, fontFamily: 'monospace', fontWeight: 700,
+            fontSize: 9, fontFamily: 'var(--font-mono)', fontWeight: 700,
             color: 'rgba(212,176,140,0.4)', flexShrink: 0,
           }}>
             {stepIndex}/{totalSteps}
@@ -1078,7 +1078,7 @@ export function ACIComputerUseBar({ suppressInBrowserMode = true, className }: A
         {/* Adapter */}
         {adapterLabel && (
           <span style={{
-            fontSize: 9, fontFamily: 'monospace',
+            fontSize: 9, fontFamily: 'var(--font-mono)',
             color: 'rgba(255,255,255,0.18)', flexShrink: 0,
           }}>
             {adapterLabel}

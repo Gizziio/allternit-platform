@@ -19,7 +19,7 @@ export default function DebugModePage() {
   }, [router]);
 
   return (
-    <div style={{ background: '#0a0908', color: '#fff', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'monospace' }}>
+    <div style={{ background: '#0a0908', color: '#fff', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-mono)' }}>
       Loading shell…
     </div>
   );

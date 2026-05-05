@@ -61,7 +61,7 @@ function DiffHunkView({ hunk, fileChangeId, changeSetId }: { hunk: DiffHunk, fil
         background: 'var(--surface-hover)', 
         borderBottom: '1px solid var(--border-subtle)',
         fontSize: 10,
-        fontFamily: 'monospace',
+        fontFamily: 'var(--font-mono)',
         opacity: 0.5
       }}>
         @@ -{hunk.oldStart},{hunk.oldLines} +{hunk.newStart},{hunk.newLines} @@ {hunk.header}
@@ -70,7 +70,7 @@ function DiffHunkView({ hunk, fileChangeId, changeSetId }: { hunk: DiffHunk, fil
       <div style={{ 
         padding: 12, 
         background: 'rgba(0,0,0,0.1)', 
-        fontFamily: 'monospace', 
+        fontFamily: 'var(--font-mono)', 
         fontSize: 12, 
         whiteSpace: 'pre', 
         lineHeight: 1.6,

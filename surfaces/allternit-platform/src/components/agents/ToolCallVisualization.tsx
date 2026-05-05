@@ -612,7 +612,7 @@ function ResultViewer({ result }: { result: unknown }) {
                   fontSize: 10,
                   color: "#a8998c",
                   marginBottom: 4,
-                  fontFamily: "monospace",
+                  fontFamily: "var(--font-mono)",
                 }}
               >
                 {item.file}:{item.line}
@@ -621,7 +621,7 @@ function ResultViewer({ result }: { result: unknown }) {
                 style={{
                   margin: 0,
                   fontSize: 11,
-                  fontFamily: "monospace",
+                  fontFamily: "var(--font-mono)",
                   color: "#d1c3b4",
                   overflow: "auto",
                 }}

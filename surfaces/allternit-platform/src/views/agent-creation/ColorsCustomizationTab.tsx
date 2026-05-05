@@ -97,7 +97,7 @@ export const ColorsCustomizationTab: React.FC = () => {
                 backgroundColor: STUDIO_THEME.bg,
                 color: STUDIO_THEME.textPrimary,
                 fontSize: '13px',
-                fontFamily: 'monospace',
+                fontFamily: 'var(--font-mono)',
               }}
             />
           </div>

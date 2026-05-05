@@ -105,7 +105,7 @@ export const FileOutputCard = memo(function FileOutputCard({
           fontSize: "12px",
           fontWeight: 500,
           color: "rgba(236,236,236,0.78)",
-          fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)",
+          fontFamily: "var(--font-mono, 'Allternit Mono', monospace)",
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
@@ -116,7 +116,7 @@ export const FileOutputCard = memo(function FileOutputCard({
           <div style={{
             fontSize: "10px",
             color: "rgba(255,255,255,0.28)",
-            fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)",
+            fontFamily: "var(--font-mono, 'Allternit Mono', monospace)",
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",

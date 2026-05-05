@@ -104,7 +104,7 @@ function ActionRow({ record }: { record: ActionRecord }) {
           {record.step}
         </span>
         <StatusDot ok={record.result_success} />
-        <span style={{ flex: 1, fontFamily: 'monospace' }}>{record.action_type}</span>
+        <span style={{ flex: 1, fontFamily: 'var(--font-mono)' }}>{record.action_type}</span>
         <span style={{ color: `${SAND[500]}70`, fontSize: 10 }}>{record.duration_ms}ms</span>
       </button>
 
@@ -460,7 +460,7 @@ export function ACIDebugPanel({
                 style={{
                   margin: 0,
                   fontSize: 11,
-                  fontFamily: 'monospace',
+                  fontFamily: 'var(--font-mono)',
                   color: `${SAND[400]}e0`,
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-all',

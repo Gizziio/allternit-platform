@@ -877,7 +877,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                     background: 'var(--surface-panel)',
                     borderRadius: '8px',
                     padding: '16px',
-                    fontFamily: 'monospace',
+                    fontFamily: 'var(--font-mono)',
                     fontSize: '12px',
                     maxHeight: '400px',
                     overflow: 'auto',

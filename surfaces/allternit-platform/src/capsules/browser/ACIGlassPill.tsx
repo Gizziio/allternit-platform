@@ -286,7 +286,7 @@ export function ACIGlassPill({ placement = 'top-left', bottomOffset = 0 }: ACIGl
               letterSpacing: '0.1em',
               color: `${SAND[500]}a6`,
               textTransform: 'uppercase',
-              fontFamily: 'monospace',
+              fontFamily: 'var(--font-mono)',
             }}>
               ACI
             </span>
@@ -317,7 +317,7 @@ export function ACIGlassPill({ placement = 'top-left', bottomOffset = 0 }: ACIGl
               <span style={{
                 fontSize: 11,
                 color: `${SAND[500]}b2`,
-                fontFamily: 'monospace',
+                fontFamily: 'var(--font-mono)',
                 fontWeight: 600,
                 flexShrink: 0,
                 letterSpacing: '0.03em',
@@ -401,7 +401,7 @@ export function ACIGlassPill({ placement = 'top-left', bottomOffset = 0 }: ACIGl
                 color: `${SAND[500]}80`,
                 textTransform: 'uppercase',
                 letterSpacing: '0.08em',
-                fontFamily: 'monospace',
+                fontFamily: 'var(--font-mono)',
               }}>
                 {currentLayer}
               </span>
@@ -413,7 +413,7 @@ export function ACIGlassPill({ placement = 'top-left', bottomOffset = 0 }: ACIGl
               <span style={{
                 fontSize: 9,
                 color: 'rgba(255,255,255,0.35)',
-                fontFamily: 'monospace',
+                fontFamily: 'var(--font-mono)',
               }}>
                 {adapter}
               </span>

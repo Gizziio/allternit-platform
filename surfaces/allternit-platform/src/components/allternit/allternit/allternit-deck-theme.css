@@ -144,7 +144,7 @@
 }
 
 .reveal pre code {
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-family: 'Allternit Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, monospace;
   font-size: 0.6em;
   line-height: 1.5;
   color: #ECECEC;

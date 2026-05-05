@@ -209,7 +209,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
               {Math.round(data[hoveredIndex].confidence * 100)}% Confidence
             </div>
             {data[hoveredIndex].wihId && (
-              <div style={{ fontSize: '11px', color: 'var(--ui-text-muted)', marginTop: '4px', fontFamily: 'monospace' }}>{data[hoveredIndex].wihId}</div>
+              <div style={{ fontSize: '11px', color: 'var(--ui-text-muted)', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>{data[hoveredIndex].wihId}</div>
             )}
           </div>
         )}

@@ -72,7 +72,7 @@ const T = {
 // ─── Global keyframes ─────────────────────────────────────────────────────────
 
 const PDV_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,900&family=Syne:wght@400;500;600;700;800&display=swap');
+  /* Allternit Typography System — no external font imports */
 
   /* ── Grain overlay ──────────────────────────────────────────────── */
   .pdv-root {
@@ -93,8 +93,8 @@ const PDV_CSS = `
   .pdv-root::-webkit-scrollbar-track { background: transparent; }
 
   /* ── Typefaces ──────────────────────────────────────────────────── */
-  .pdv-serif  { font-family: 'Fraunces', Georgia, 'Times New Roman', serif !important; }
-  .pdv-display{ font-family: 'Syne', system-ui, sans-serif !important; }
+  .pdv-serif  { font-family: 'Allternit Serif', Georgia, ui-serif, Cambria, 'Times New Roman', serif !important; }
+  .pdv-display{ font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, -apple-system, sans-serif !important; }
 
   /* ── Scroll-reveal ──────────────────────────────────────────────── */
   @keyframes pdv-reveal { from { opacity:0; transform:translateY(28px); } to { opacity:1; transform:translateY(0); } }
@@ -105,7 +105,7 @@ const PDV_CSS = `
 
   /* ── Quote mark ─────────────────────────────────────────────────── */
   .pdv-quote-mark {
-    font-family: 'Fraunces', Georgia, serif;
+    font-family: 'Allternit Serif', Georgia, ui-serif, serif;
     font-size: 96px; line-height: 1; font-weight: 900; font-style: italic;
     color: rgba(212,176,140,.09);
     position: absolute; top: 8px; left: 20px;

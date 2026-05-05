@@ -363,7 +363,7 @@ function AgentMessageBubble({
               style={{
                 fontSize: 10,
                 color: "#5a4d3f",
-                fontFamily: "monospace",
+                fontFamily: "var(--font-mono)",
                 marginLeft: "auto",
               }}
             >

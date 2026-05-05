@@ -163,7 +163,7 @@ export function CodeCanvasTileKnowledge({ workspacePath }: CodeCanvasTileKnowled
                         key={p}
                         style={{
                           fontSize: 10,
-                          fontFamily: 'monospace',
+                          fontFamily: 'var(--font-mono)',
                           color: 'var(--text-muted)',
                           background: 'var(--surface-hover)',
                           padding: '1px 6px',
@@ -199,7 +199,7 @@ export function CodeCanvasTileKnowledge({ workspacePath }: CodeCanvasTileKnowled
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                   <FileText size={12} color={summary.valid ? 'var(--status-info)' : 'var(--status-error)'} />
-                  <span style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--text-secondary)', flex: 1 }}>
+                  <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', flex: 1 }}>
                     {summary.path}
                   </span>
                   <span
@@ -220,7 +220,7 @@ export function CodeCanvasTileKnowledge({ workspacePath }: CodeCanvasTileKnowled
                     {summary.text}
                   </div>
                 )}
-                <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 4, fontFamily: 'monospace' }}>
+                <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 4, fontFamily: 'var(--font-mono)' }}>
                   blob:{summary.blobOid.slice(0, 8)}
                 </div>
               </div>

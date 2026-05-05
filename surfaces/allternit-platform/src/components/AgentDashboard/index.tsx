@@ -1373,7 +1373,7 @@ function EnvironmentTab({ agent }: { agent: Agent }) {
     }
   }
 }`}
-                style={{ minHeight: 200, fontFamily: 'monospace', fontSize: '13px' }}
+                style={{ minHeight: 200, fontFamily: 'var(--font-mono)', fontSize: '13px' }}
               />
             </TabsContent>
             <TabsContent value="nix">
@@ -1391,7 +1391,7 @@ pkgs.mkShell {
     echo "${agent.name} environment loaded"
   '';
 }`}
-                style={{ minHeight: 200, fontFamily: 'monospace', fontSize: '13px' }}
+                style={{ minHeight: 200, fontFamily: 'var(--font-mono)', fontSize: '13px' }}
               />
             </TabsContent>
             <TabsContent value="dockerfile">
@@ -1407,7 +1407,7 @@ RUN apk add --no-cache git curl
 COPY . .
 
 CMD ["sh"]`}
-                style={{ minHeight: 200, fontFamily: 'monospace', fontSize: '13px' }}
+                style={{ minHeight: 200, fontFamily: 'var(--font-mono)', fontSize: '13px' }}
               />
             </TabsContent>
           </Tabs>
@@ -2084,7 +2084,7 @@ function AddToolDialog({ onClose, onAdd }: { onClose: () => void; onAdd: (tool: 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <Input placeholder="Tool name..." value={toolData.name} onChange={e => setToolData(d => ({ ...d, name: e.target.value }))} />
           <Input placeholder="Description..." value={toolData.description} onChange={e => setToolData(d => ({ ...d, description: e.target.value }))} />
-          <Textarea placeholder="Parameters (JSON)..." value={toolData.parameters} onChange={e => setToolData(d => ({ ...d, parameters: e.target.value }))} style={{ minHeight: 100, fontFamily: 'monospace' }} />
+          <Textarea placeholder="Parameters (JSON)..." value={toolData.parameters} onChange={e => setToolData(d => ({ ...d, parameters: e.target.value }))} style={{ minHeight: 100, fontFamily: 'var(--font-mono)' }} />
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>

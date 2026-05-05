@@ -415,7 +415,7 @@ export function AgentDetailView({ agentId }: { agentId: string }) {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <span style={{ fontSize: '11px', color: STUDIO_THEME.textMuted }}>Examples</span>
                     {agent.agentCard.examples.slice(0, 3).map((ex, i) => (
-                      <span key={i} style={{ fontSize: '11px', color: STUDIO_THEME.textSecondary, fontFamily: 'monospace' }}>
+                      <span key={i} style={{ fontSize: '11px', color: STUDIO_THEME.textSecondary, fontFamily: 'var(--font-mono)' }}>
                         → {ex}
                       </span>
                     ))}

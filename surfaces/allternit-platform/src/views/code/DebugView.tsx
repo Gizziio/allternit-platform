@@ -48,7 +48,7 @@ const VariableTreeNode: React.FC<{
         className="flex items-center gap-1 py-1 px-2 hover:bg-opacity-50 cursor-pointer"
         style={{
           paddingLeft: `${level * 16 + 8}px`,
-          fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+          fontFamily: "'Allternit Mono', 'SFMono-Regular', ui-monospace, monospace",
           fontSize: '12px',
         }}
         onClick={() => hasChildren && setIsExpanded(!isExpanded)}
@@ -241,7 +241,7 @@ export function DebugView() {
             border: `1px solid var(--border-subtle)`,
             color: `var(--text-primary)`,
             fontWeight: '500',
-            fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+            fontFamily: "'Allternit Mono', 'SFMono-Regular', ui-monospace, monospace",
           }}
         >
           <option>All Levels</option>
@@ -280,7 +280,7 @@ export function DebugView() {
             className="flex-1 overflow-y-auto"
             style={{
               backgroundColor: `var(--bg-primary)`,
-              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+              fontFamily: "'Allternit Mono', 'SFMono-Regular', ui-monospace, monospace",
               fontSize: '12px',
             }}
           >
@@ -317,7 +317,7 @@ export function DebugView() {
               className="flex-1 overflow-y-auto"
               style={{
                 backgroundColor: `var(--bg-primary)`,
-                fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                fontFamily: "'Allternit Mono', 'SFMono-Regular', ui-monospace, monospace",
                 fontSize: '12px',
                 lineHeight: '1.5',
               }}
@@ -389,7 +389,7 @@ export function DebugView() {
               className="flex-1 overflow-y-auto"
               style={{
                 backgroundColor: `var(--bg-primary)`,
-                fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                fontFamily: "'Allternit Mono', 'SFMono-Regular', ui-monospace, monospace",
                 fontSize: '11px',
               }}
             >
@@ -428,7 +428,7 @@ export function DebugView() {
         style={{
           backgroundColor: `var(--bg-secondary)`,
           borderColor: `var(--border-subtle)`,
-          fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+          fontFamily: "'Allternit Mono', 'SFMono-Regular', ui-monospace, monospace",
         }}
       >
         <span
@@ -449,7 +449,7 @@ export function DebugView() {
           style={{
             color: `var(--text-primary)`,
             fontSize: '12px',
-            fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+            fontFamily: "'Allternit Mono', 'SFMono-Regular', ui-monospace, monospace",
           }}
         />
       </div>

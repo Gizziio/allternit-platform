@@ -275,7 +275,7 @@ export function SchedulerView() {
                   borderRadius: 6,
                   color: 'var(--text-primary)',
                   fontSize: 13,
-                  fontFamily: 'monospace'
+                  fontFamily: 'var(--font-mono)'
                 }}
               />
               <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', marginTop: 4 }}>
@@ -374,7 +374,7 @@ export function SchedulerView() {
                   <div style={{ 
                     fontSize: 11, 
                     opacity: 0.6, 
-                    fontFamily: 'monospace',
+                    fontFamily: 'var(--font-mono)',
                     marginTop: 4
                   }}>
                     {job.schedule}

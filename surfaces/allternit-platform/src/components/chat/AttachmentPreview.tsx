@@ -644,7 +644,7 @@ export function AttachmentPreviewModal({ item, isOpen, onClose }: AttachmentPrev
                 fontSize: 13,
                 lineHeight: 1.6,
                 color: 'var(--ui-text-primary)',
-                fontFamily: "monospace",
+                fontFamily: "var(--font-mono)",
                 maxHeight: 'calc(90vh - 200px)',
                 overflow: 'auto',
               }}

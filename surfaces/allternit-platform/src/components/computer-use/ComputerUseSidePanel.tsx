@@ -188,7 +188,7 @@ export function ComputerUseSidePanel({ onClose, agentModeSurface, onEnableAgentM
             </div>
           </div>
           {currentAdapterId && (
-            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>
+            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>
               {currentAdapterId}
             </div>
           )}

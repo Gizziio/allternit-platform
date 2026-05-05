@@ -111,7 +111,7 @@ export function CodeCanvasTileTerminal({ workspacePath }: CodeCanvasTileTerminal
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0b0e10', color: '#e2e8f0', fontFamily: 'monospace', fontSize: 13 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0b0e10', color: '#e2e8f0', fontFamily: 'var(--font-mono)', fontSize: 13 }}>
       <pre
         ref={outputRef}
         style={{
@@ -136,7 +136,7 @@ export function CodeCanvasTileTerminal({ workspacePath }: CodeCanvasTileTerminal
             background: 'transparent',
             border: 'none',
             color: '#e2e8f0',
-            fontFamily: 'monospace',
+            fontFamily: 'var(--font-mono)',
             fontSize: 13,
             outline: 'none',
           }}

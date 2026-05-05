@@ -628,7 +628,7 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
                   {electronTunnel?.status === 'running' && electronTunnel.url && (
                     <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', padding: '8px 10px', borderRadius: 8, background: 'var(--surface-canvas)' }}>
                       Web access active — your browser can also reach this at{' '}
-                      <span style={{ fontFamily: 'monospace', color: 'var(--ui-text-secondary)' }}>{electronTunnel.url}</span>
+                      <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--ui-text-secondary)' }}>{electronTunnel.url}</span>
                     </div>
                   )}
                   {connMsg && (
@@ -1616,7 +1616,7 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
                   : 'var(--surface-panel-muted)',
                 fontSize: 11, fontWeight: 700, letterSpacing: '0.02em',
                 color: sel ? 'var(--accent-primary)' : 'var(--ui-text-muted)',
-                fontFamily: 'monospace',
+                fontFamily: 'var(--font-mono)',
               }}>
                 {m.source === 'ollama' ? 'OL' : m.source === 'lmstudio' ? 'LM' : 'AI'}
               </div>
@@ -1942,7 +1942,7 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
                           }}
                           onKeyDown={(e) => { if (e.key === 'Enter') validateKey(p.id); }}
                           placeholder={p.keyPlaceholder}
-                          style={{ ...inputStyle, width: '100%', paddingRight: 80, fontFamily: 'monospace' }}
+                          style={{ ...inputStyle, width: '100%', paddingRight: 80, fontFamily: 'var(--font-mono)' }}
                           autoFocus
                         />
                         <button
@@ -2028,7 +2028,7 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
                                   <span style={{ fontSize: 12, fontWeight: mSel ? 600 : 400, color: 'var(--ui-text-primary)' }}>
                                     {m.name}
                                   </span>
-                                  <span style={{ fontSize: 10, color: 'var(--ui-text-muted)', marginLeft: 'auto', fontFamily: 'monospace' }}>
+                                  <span style={{ fontSize: 10, color: 'var(--ui-text-muted)', marginLeft: 'auto', fontFamily: 'var(--font-mono)' }}>
                                     {m.id}
                                   </span>
                                 </button>

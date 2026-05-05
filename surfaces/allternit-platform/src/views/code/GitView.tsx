@@ -192,7 +192,7 @@ export const GitView: React.FC = () => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                     <span
                       style={{
-                        fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                        fontFamily: "'Allternit Mono', 'SFMono-Regular', ui-monospace, monospace",
                         fontSize: '12px',
                         color: 'var(--text-tertiary)',
                       }}
@@ -292,7 +292,7 @@ export const GitView: React.FC = () => {
                   </span>
                   <span
                     style={{
-                      fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                      fontFamily: "'Allternit Mono', 'SFMono-Regular', ui-monospace, monospace",
                       color: 'var(--text-primary)',
                     }}
                   >

@@ -374,7 +374,7 @@ export function KanbanBoard() {
               {selectedWih.blocked_by.map(depId => (
                 <div key={depId} style={{ 
                   fontSize: 12, 
-                  fontFamily: 'monospace',
+                  fontFamily: 'var(--font-mono)',
                   padding: '4px 8px',
                   background: 'var(--bg-primary)',
                   borderRadius: 4,

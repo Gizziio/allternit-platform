@@ -32,7 +32,7 @@ function CodeBlock({ code, lang = 'bash' }: { code: string; lang?: string }) {
   return (
     <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', background: '#0d1117', border: '1px solid #30363d' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: '#161b22', borderBottom: '1px solid #30363d' }}>
-        <span style={{ fontSize: 11, color: '#8b949e', fontFamily: 'monospace' }}>{lang}</span>
+        <span style={{ fontSize: 11, color: '#8b949e', fontFamily: 'var(--font-mono)' }}>{lang}</span>
         <button
           onClick={copy}
           style={{ fontSize: 11, color: copied ? '#3fb950' : '#8b949e', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 8px' }}
@@ -72,7 +72,7 @@ function Overview() {
       </div>
       <div style={{ padding: 16, borderRadius: 8, border: '1px solid #388bfd40', background: '#388bfd10' }}>
         <strong>Base URL:</strong>{' '}
-        <code style={{ fontFamily: 'monospace', color: '#79c0ff' }}>https://api.allternit.com/v1</code>
+        <code style={{ fontFamily: 'var(--font-mono)', color: '#79c0ff' }}>https://api.allternit.com/v1</code>
       </div>
     </div>
   );
@@ -83,7 +83,7 @@ function Authentication() {
     <div>
       <h2 style={{ fontSize: 22, fontWeight: 600, marginBottom: 8 }}>Authentication</h2>
       <p style={{ color: '#8b949e', marginBottom: 20 }}>
-        All API requests require a Bearer token in the <code style={{ fontFamily: 'monospace' }}>Authorization</code> header.
+        All API requests require a Bearer token in the <code style={{ fontFamily: 'var(--font-mono)' }}>Authorization</code> header.
       </p>
       <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>Environment Variable</h3>
       <CodeBlock code={CODE.apiKey} lang="env" />
@@ -117,11 +117,11 @@ function ApiReference() {
         {endpoints.map((ep) => (
           <div key={ep.path} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 6, border: '1px solid #30363d', background: '#0d1117' }}>
             <span style={{
-              fontFamily: 'monospace', fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
+              fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
               background: ep.method === 'POST' ? '#388bfd20' : '#3fb95020',
               color: ep.method === 'POST' ? '#79c0ff' : '#56d364',
             }}>{ep.method}</span>
-            <code style={{ fontFamily: 'monospace', fontSize: 13, color: '#e6edf3' }}>{ep.path}</code>
+            <code style={{ fontFamily: 'var(--font-mono)', fontSize: 13, color: '#e6edf3' }}>{ep.path}</code>
             <span style={{ fontSize: 13, color: '#8b949e', marginLeft: 'auto' }}>{ep.desc}</span>
           </div>
         ))}

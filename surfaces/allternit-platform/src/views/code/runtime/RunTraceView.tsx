@@ -43,7 +43,7 @@ export function RunTraceView() {
       {toolCalls.map(call => (
         <GlassCard key={call.id} style={{ padding: 12, borderLeft: '3px solid #ff9500' }}>
           <div style={{ fontSize: 12, fontWeight: 600 }}>Tool: {call.toolName}</div>
-          <div style={{ fontSize: 11, fontFamily: 'monospace', margin: '8px 0', background: 'rgba(0,0,0,0.1)', padding: 8, borderRadius: 4 }}>
+          <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', margin: '8px 0', background: 'rgba(0,0,0,0.1)', padding: 8, borderRadius: 4 }}>
             {JSON.stringify(call.args, null, 2)}
           </div>
           <div style={{ fontSize: 11, fontWeight: 600, color: call.status === 'complete' ? 'var(--status-success)' : 'var(--status-warning)' }}>

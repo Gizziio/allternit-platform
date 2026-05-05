@@ -257,7 +257,7 @@ export function WorkspaceLayerConfigurator({
                         background: `${theme.textMuted}15`,
                         color: theme.textMuted,
                         borderRadius: '4px',
-                        fontFamily: 'monospace',
+                        fontFamily: 'var(--font-mono)',
                       }}
                     >
                       {file}

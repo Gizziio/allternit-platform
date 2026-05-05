@@ -129,7 +129,7 @@ export const EyesCustomizationTab: React.FC = () => {
                 <span
                   style={{
                     fontSize: '18px',
-                    fontFamily: 'monospace',
+                    fontFamily: 'var(--font-mono)',
                     letterSpacing: '-2px',
                   }}
                 >
@@ -233,7 +233,7 @@ export const EyesCustomizationTab: React.FC = () => {
               backgroundColor: STUDIO_THEME.bg,
               color: STUDIO_THEME.textPrimary,
               fontSize: '13px',
-              fontFamily: 'monospace',
+              fontFamily: 'var(--font-mono)',
             }}
           />
         </div>

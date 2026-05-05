@@ -235,7 +235,7 @@ export function MonitorView() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 200 }}>
                     <StatusDot status={agent.status} />
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: 14, fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-primary)' }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, fontFamily: 'Allternit Mono, SFMono-Regular, Menlo, Monaco, monospace', color: 'var(--text-primary)' }}>
                         {agent.name}
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
@@ -361,7 +361,7 @@ export function MonitorView() {
                     alignItems: 'center',
                   }}
                 >
-                  <span style={{ fontSize: 11, fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-tertiary)' }}>
+                  <span style={{ fontSize: 11, fontFamily: 'Allternit Mono, SFMono-Regular, Menlo, Monaco, monospace', color: 'var(--text-tertiary)' }}>
                     {entry.time}
                   </span>
                   <span style={{
@@ -370,7 +370,7 @@ export function MonitorView() {
                   }}>
                     {entry.level}
                   </span>
-                  <span style={{ fontSize: 12, fontFamily: 'JetBrains Mono, monospace', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: 12, fontFamily: 'Allternit Mono, SFMono-Regular, Menlo, Monaco, monospace', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {entry.agent}
                   </span>
                   <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>

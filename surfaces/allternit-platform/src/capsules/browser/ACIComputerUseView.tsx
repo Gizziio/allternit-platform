@@ -135,7 +135,7 @@ function TopStrip({
           color: 'rgba(212,176,140,0.45)',
           textTransform: 'uppercase',
           letterSpacing: '0.12em',
-          fontFamily: 'monospace',
+          fontFamily: 'var(--font-mono)',
           flexShrink: 0,
         }}
       >
@@ -167,7 +167,7 @@ function TopStrip({
             style={{
               fontSize: 10,
               color: 'rgba(212,176,140,0.65)',
-              fontFamily: 'monospace',
+              fontFamily: 'var(--font-mono)',
               fontWeight: 700,
               flexShrink: 0,
             }}
@@ -185,7 +185,7 @@ function TopStrip({
             style={{
               fontSize: 9,
               color: 'rgba(255,255,255,0.25)',
-              fontFamily: 'monospace',
+              fontFamily: 'var(--font-mono)',
               letterSpacing: '0.05em',
               flexShrink: 0,
             }}
@@ -257,7 +257,7 @@ function ElementHighlight({
             fontSize: 9,
             fontWeight: 700,
             color,
-            fontFamily: 'monospace',
+            fontFamily: 'var(--font-mono)',
             textTransform: 'uppercase',
             letterSpacing: '0.06em',
             whiteSpace: 'nowrap',
@@ -418,7 +418,7 @@ export function ACIComputerUseView({
               <div
                 style={{
                   fontSize: 9,
-                  fontFamily: 'monospace',
+                  fontFamily: 'var(--font-mono)',
                   color: '#555',
                   textTransform: 'uppercase',
                   letterSpacing: '0.5em',
@@ -440,7 +440,7 @@ export function ACIComputerUseView({
               <div style={{ fontSize: 28, opacity: 0.4 }}>⚡</div>
               <div
                 style={{
-                  fontSize: 11, fontFamily: 'monospace',
+                  fontSize: 11, fontFamily: 'var(--font-mono)',
                   color: 'var(--status-error)', letterSpacing: '0.08em',
                 }}
               >

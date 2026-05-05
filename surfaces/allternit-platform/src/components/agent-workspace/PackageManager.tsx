@@ -609,7 +609,7 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
                               ) : (
                                 <FileText style={{ width: 14, height: 14, color: theme.textMuted }} />
                               )}
-                              <span style={{ fontSize: '13px', color: theme.textPrimary, fontFamily: 'monospace' }}>
+                              <span style={{ fontSize: '13px', color: theme.textPrimary, fontFamily: 'var(--font-mono)' }}>
                                 {file.path}
                               </span>
                             </div>

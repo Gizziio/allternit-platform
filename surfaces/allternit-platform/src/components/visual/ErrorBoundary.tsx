@@ -85,7 +85,7 @@ export class VisualVerificationErrorBoundary extends Component<ErrorBoundaryProp
               background: 'var(--surface-panel)',
               borderRadius: '8px',
               marginBottom: '16px',
-              fontFamily: 'monospace',
+              fontFamily: 'var(--font-mono)',
               fontSize: '12px',
               color: 'var(--status-error)',
             }}>

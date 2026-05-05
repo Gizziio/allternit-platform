@@ -366,7 +366,7 @@ export function KanbanDAG() {
               <>
                 <div style={{ marginBottom: 16 }}>
                   <label style={{ fontSize: 11, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>ID</label>
-                  <div style={{ fontSize: 13, fontFamily: 'monospace' }}>{node.id}</div>
+                  <div style={{ fontSize: 13, fontFamily: 'var(--font-mono)' }}>{node.id}</div>
                 </div>
                 <div style={{ marginBottom: 16 }}>
                   <label style={{ fontSize: 11, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>Title</label>
@@ -396,7 +396,7 @@ export function KanbanDAG() {
                 {node.wih_id && (
                   <div style={{ marginBottom: 16 }}>
                     <label style={{ fontSize: 11, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>WIH ID</label>
-                    <div style={{ fontSize: 12, fontFamily: 'monospace' }}>{node.wih_id}</div>
+                    <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)' }}>{node.wih_id}</div>
                   </div>
                 )}
               </>

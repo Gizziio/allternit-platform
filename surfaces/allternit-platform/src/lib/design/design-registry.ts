@@ -125,7 +125,7 @@ AI-native development environment with high focus and vibrant activity states.
 - surface: #161616
 - text: #d1d5db
 ## Typography
-- fontFamily: "JetBrains Mono, Inter"
+- fontFamily: "Allternit Mono, Inter"
 ## Radii
 - base: 8px
     `
@@ -341,7 +341,7 @@ Stark, functional developer utility focusing on documentation and delivery.
 - surface: #0a0a0a
 - text: #ededed
 ## Typography
-- fontFamily: "Geist, JetBrains Mono"
+- fontFamily: "Geist, Allternit Mono"
 ## Radii
 - base: 2px
     `

@@ -173,7 +173,7 @@ export const VisualVerificationPanel: React.FC<VisualVerificationPanelProps> = (
           }}>🔍</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--ui-text-primary)', margin: 0 }}>Visual Verification</h3>
-            <span style={{ fontSize: '13px', color: 'var(--ui-text-muted)', fontFamily: 'monospace' }}>{wihId || status.wihId}</span>
+            <span style={{ fontSize: '13px', color: 'var(--ui-text-muted)', fontFamily: 'var(--font-mono)' }}>{wihId || status.wihId}</span>
           </div>
           <div style={{ 
             display: 'flex', 

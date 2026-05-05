@@ -315,7 +315,7 @@ function ToolInputDisplay({ input }: { input: unknown }) {
           <div key={k} style={{ display: "flex", gap: "6px", fontSize: "12px", lineHeight: "1.5" }}>
             <span style={{
               flexShrink: 0,
-              fontFamily: "monospace",
+              fontFamily: "var(--font-mono)",
               color: "rgba(212,176,140,0.55)",
               fontWeight: 600,
               fontSize: "11px",

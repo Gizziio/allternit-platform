@@ -856,7 +856,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
                           background: theme.bgCard, 
                           border: `1px solid ${theme.borderSubtle}`, 
                           color: theme.textPrimary,
-                          fontFamily: 'monospace',
+                          fontFamily: 'var(--font-mono)',
                           fontSize: '12px',
                         }}
                       />
@@ -874,7 +874,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
                           background: theme.bgCard, 
                           border: `1px solid ${theme.borderSubtle}`, 
                           color: theme.textPrimary,
-                          fontFamily: 'monospace',
+                          fontFamily: 'var(--font-mono)',
                           fontSize: '12px',
                         }}
                       />
@@ -938,7 +938,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
               <div style={{ padding: '12px', background: theme.bg, borderRadius: '8px', border: `1px solid ${theme.borderSubtle}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                   <FileText style={{ width: 16, height: 16, color: theme.accent }} />
-                  <span style={{ fontSize: '13px', color: theme.textPrimary, fontFamily: 'monospace' }}>
+                  <span style={{ fontSize: '13px', color: theme.textPrimary, fontFamily: 'var(--font-mono)' }}>
                     .allternit/skills/{formData.id || generateSkillId(formData.name)}/SKILL.md
                   </span>
                 </div>
@@ -959,7 +959,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
               <div style={{ padding: '12px', background: theme.bg, borderRadius: '8px', border: `1px solid ${theme.borderSubtle}` }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                   <Code style={{ width: 16, height: 16, color: theme.accent }} />
-                  <span style={{ fontSize: '13px', color: theme.textPrimary, fontFamily: 'monospace' }}>
+                  <span style={{ fontSize: '13px', color: theme.textPrimary, fontFamily: 'var(--font-mono)' }}>
                     .allternit/skills/{formData.id || generateSkillId(formData.name)}/contract.json
                   </span>
                 </div>

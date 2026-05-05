@@ -93,7 +93,7 @@ function ChatMockup({ accent }: { accent: string }) {
           <div style={{
             width: 24, height: 24, borderRadius: '50%', background: accent,
             flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 9, fontWeight: 800, color: 'var(--ui-text-primary)', fontFamily: 'monospace',
+            fontSize: 9, fontWeight: 800, color: 'var(--ui-text-primary)', fontFamily: 'var(--font-mono)',
           }}>G</div>
           <div style={{
             maxWidth: '80%', padding: '9px 13px',
@@ -216,11 +216,11 @@ function CodeMockup({ accent }: { accent: string }) {
         {['●', '●', '●'].map((d, i) => (
           <div key={i} style={{ width: 9, height: 9, borderRadius: '50%', background: ['#ff5f56','#ffbd2e','#27c93f'][i] }} />
         ))}
-        <div style={{ marginLeft: 8, fontSize: 10.5, color: '#8a7060', fontFamily: 'monospace' }}>agent.ts</div>
+        <div style={{ marginLeft: 8, fontSize: 10.5, color: '#8a7060', fontFamily: 'var(--font-mono)' }}>agent.ts</div>
       </div>
 
       {/* Code */}
-      <div style={{ flex: 1, padding: '14px 16px', fontFamily: 'monospace', fontSize: 11, lineHeight: 1.75, overflowY: 'hidden' }}>
+      <div style={{ flex: 1, padding: '14px 16px', fontFamily: 'var(--font-mono)', fontSize: 11, lineHeight: 1.75, overflowY: 'hidden' }}>
         <div><span style={{ color: '#9b8070' }}>1 </span><span style={{ color: '#6366f1' }}>async function</span> <span style={{ color: accent }}>createAgent</span><span style={{ color: '#4a3628' }}>(config: AgentConfig) {'{'}</span></div>
         <div><span style={{ color: '#9b8070' }}>2 </span><span style={{ color: '#4a3628' }}>  </span><span style={{ color: '#6366f1' }}>const</span><span style={{ color: '#4a3628' }}> agent = </span><span style={{ color: '#6366f1' }}>await</span><span style={{ color: '#4a3628' }}> Gizzi.spawn(config)</span></div>
         <div><span style={{ color: '#9b8070' }}>3 </span><span style={{ color: '#4a3628' }}>  </span><span style={{ color: '#6366f1' }}>await</span><span style={{ color: '#4a3628' }}> agent.run()</span></div>
@@ -272,7 +272,7 @@ function BrowserMockup({ accent }: { accent: string }) {
         <div style={{
           flex: 1, padding: '4px 10px', borderRadius: 8,
           background: '#fff', border: '1px solid rgba(0,0,0,0.1)',
-          fontSize: 10.5, color: '#4a3628', fontFamily: 'monospace',
+          fontSize: 10.5, color: '#4a3628', fontFamily: 'var(--font-mono)',
         }}>
           docs.allternit.com/agents
         </div>
@@ -369,7 +369,7 @@ export function AuthPreview() {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{
-              fontFamily: 'monospace', fontSize: 14, fontWeight: 800,
+              fontFamily: 'var(--font-mono)', fontSize: 14, fontWeight: 800,
               color: slide.accent, letterSpacing: '-0.01em',
             }}>
               {slide.label}

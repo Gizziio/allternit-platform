@@ -212,7 +212,7 @@ const TaskRow = memo(function TaskRow({
         overflow: "hidden",
         textOverflow: "ellipsis",
         whiteSpace: "nowrap",
-        fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)",
+        fontFamily: "var(--font-mono, 'Allternit Mono', monospace)",
         fontSize: "11px",
         letterSpacing: "0.005em",
       }}>
@@ -390,7 +390,7 @@ export const AgentProgressPanel = memo(function AgentProgressPanel({
               <span style={{
                 fontSize: "11px",
                 color: "rgba(255,255,255,0.35)",
-                fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)",
+                fontFamily: "var(--font-mono, 'Allternit Mono', monospace)",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
@@ -416,7 +416,7 @@ export const AgentProgressPanel = memo(function AgentProgressPanel({
                   <span style={{
                     fontSize: "11px",
                     color: "rgba(255,255,255,0.32)",
-                    fontFamily: "var(--font-mono, 'JetBrains Mono', monospace)",
+                    fontFamily: "var(--font-mono, 'Allternit Mono', monospace)",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
                     whiteSpace: "nowrap",

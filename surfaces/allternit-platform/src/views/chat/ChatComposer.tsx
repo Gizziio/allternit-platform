@@ -1889,7 +1889,7 @@ export function ChatComposer({
                 onMouseEnter={(e) => { e.currentTarget.style.background = THEME.hoverBg; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
               >
-                <span style={{ color: THEME.accent, fontFamily: 'monospace', fontWeight: 700, fontSize: 12 }}>{cmd.command}</span>
+                <span style={{ color: THEME.accent, fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 12 }}>{cmd.command}</span>
                 <span style={{ color: THEME.textSecondary }}>{cmd.label}</span>
               </button>
             ))}
@@ -2126,7 +2126,7 @@ export function ChatComposer({
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--chat-composer-soft)'; }}
                 >
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ color: THEME.accent, fontFamily: 'monospace', fontSize: 12, fontWeight: 700 }}>
+                    <div style={{ color: THEME.accent, fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700 }}>
                       {cmd.command}
                     </div>
                     <div style={{ color: THEME.textSecondary, fontSize: 12 }}>
@@ -4864,7 +4864,7 @@ function BrowseAllModelsOverlay({ isOpen, onClose, onSelectModel, currentModel }
                               }}>Active</span>
                             )}
                           </div>
-                          <div style={{ fontSize: '12px', color: THEME.textMuted, fontFamily: 'monospace' }}>
+                          <div style={{ fontSize: '12px', color: THEME.textMuted, fontFamily: 'var(--font-mono)' }}>
                             {model.id}
                           </div>
                         </div>

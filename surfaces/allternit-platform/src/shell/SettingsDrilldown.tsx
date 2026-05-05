@@ -139,7 +139,7 @@ function SubmenuFlyout({
         >
           <span>{child.label}</span>
           {child.shortcut && (
-            <span style={{ fontSize: '12px', color: 'var(--shell-item-muted)', fontFamily: 'monospace' }}>
+            <span style={{ fontSize: '12px', color: 'var(--shell-item-muted)', fontFamily: 'var(--font-mono)' }}>
               {child.shortcut}
             </span>
           )}
@@ -481,7 +481,7 @@ function MenuItem({
       <span style={{ flex: 1 }}>{item.label}</span>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         {item.shortcut && !hasSubmenu && (
-          <span style={{ fontSize: '12px', color: 'var(--shell-item-muted)', fontFamily: 'monospace' }}>
+          <span style={{ fontSize: '12px', color: 'var(--shell-item-muted)', fontFamily: 'var(--font-mono)' }}>
             {item.shortcut}
           </span>
         )}

@@ -269,7 +269,7 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
                       background: 'var(--surface-hover)',
                       fontSize: 12,
                       color: 'var(--text-secondary)',
-                      fontFamily: 'monospace',
+                      fontFamily: 'var(--font-mono)',
                       marginBottom: 4,
                     }}
                   >
@@ -293,7 +293,7 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
                   LEAKED TOKENS DETECTED
                 </div>
                 {result.leakedTokens.map((t, i) => (
-                  <div key={i} style={{ fontSize: 12, color: 'var(--status-error)', fontFamily: 'monospace' }}>
+                  <div key={i} style={{ fontSize: 12, color: 'var(--status-error)', fontFamily: 'var(--font-mono)' }}>
                     {t}
                   </div>
                 ))}
@@ -314,7 +314,7 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
                   PROMPT INJECTION HITS
                 </div>
                 {result.promptInjectionHits.map((h, i) => (
-                  <div key={i} style={{ fontSize: 12, color: 'var(--status-warning)', fontFamily: 'monospace' }}>
+                  <div key={i} style={{ fontSize: 12, color: 'var(--status-warning)', fontFamily: 'var(--font-mono)' }}>
                     {h}
                   </div>
                 ))}
@@ -336,7 +336,7 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
                       background: 'var(--surface-hover)',
                       fontSize: 12,
                       color: 'var(--text-secondary)',
-                      fontFamily: 'monospace',
+                      fontFamily: 'var(--font-mono)',
                       marginBottom: 4,
                     }}
                   >
@@ -359,7 +359,7 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
                     borderRadius: 8,
                     background: 'var(--surface-hover)',
                     fontSize: 11,
-                    fontFamily: 'monospace',
+                    fontFamily: 'var(--font-mono)',
                     color: 'var(--text-secondary)',
                     overflow: 'auto',
                     maxHeight: 200,

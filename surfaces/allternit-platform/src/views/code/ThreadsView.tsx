@@ -199,7 +199,7 @@ export const ThreadsView: React.FC = () => {
                             backgroundColor: 'rgba(52, 199, 89, 0.15)',
                             color: 'var(--status-success)',
                             borderRadius: '3px',
-                            fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                            fontFamily: "'Allternit Mono', 'SFMono-Regular', ui-monospace, monospace",
                           }}
                         >
                           {thread.linkedFile}:{thread.linkedLine}

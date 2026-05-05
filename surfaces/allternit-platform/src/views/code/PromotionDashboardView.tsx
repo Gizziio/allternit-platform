@@ -327,7 +327,7 @@ export function PromotionDashboardView() {
                           justifyContent: 'space-between',
                           alignItems: 'center'
                         }}>
-                          <span style={{ color: 'var(--text-secondary)', fontFamily: 'JetBrains Mono, monospace' }}>
+                          <span style={{ color: 'var(--text-secondary)', fontFamily: 'Allternit Mono, SFMono-Regular, Menlo, Monaco, monospace' }}>
                             {file.path}
                           </span>
                           <span style={{ color: 'var(--text-tertiary)', fontSize: 10, fontVariantNumeric: 'tabular-nums' }}>

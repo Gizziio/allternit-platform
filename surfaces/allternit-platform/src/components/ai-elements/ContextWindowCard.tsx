@@ -122,7 +122,7 @@ function ContextRow({ icon, label, value }: { icon: React.ReactNode, label: stri
         {icon}
         <span>{label}</span>
       </div>
-      <span style={{ color: "#fff", fontWeight: 500, fontFamily: "monospace" }}>{value}</span>
+      <span style={{ color: "#fff", fontWeight: 500, fontFamily: "var(--font-mono)" }}>{value}</span>
     </div>
   );
 }

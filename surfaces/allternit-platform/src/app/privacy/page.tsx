@@ -20,7 +20,7 @@ export default function PrivacyPage() {
       {/* Nav */}
       <nav style={{ borderBottom: '1px solid #E8D9C8', padding: '0 32px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <a href="/" style={{ display: 'flex', alignItems: 'center', gap: 6, textDecoration: 'none' }}>
-          <span style={{ fontFamily: 'monospace', fontSize: 18, color: '#D97757' }}>A://</span>
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 18, color: '#D97757' }}>A://</span>
           <span style={{ fontFamily: 'Georgia, serif', fontSize: 18, color: 'var(--ui-text-inverse)' }}>LLTERNIT</span>
         </a>
         <a href="https://allternit.com" style={{ fontSize: 13, color: 'var(--ui-text-secondary)', textDecoration: 'none' }}>← allternit.com</a>

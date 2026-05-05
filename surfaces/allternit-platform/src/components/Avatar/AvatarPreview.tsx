@@ -323,7 +323,7 @@ export const AvatarPreview: React.FC<AvatarPreviewProps> = ({ className = '' }) 
               backgroundColor: STUDIO_THEME.bgCard,
               color: STUDIO_THEME.textPrimary,
               fontSize: '12px',
-              fontFamily: 'monospace',
+              fontFamily: 'var(--font-mono)',
               resize: 'vertical',
               marginBottom: '12px',
             }}

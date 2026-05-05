@@ -662,7 +662,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
               backgroundColor: 'var(--surface-panel)', 
               padding: '8px 12px',
               borderRadius: 6,
-              fontFamily: 'monospace',
+              fontFamily: 'var(--font-mono)',
               fontSize: 12,
               color: '#78716c',
               margin: '8px 0'
@@ -743,7 +743,7 @@ function parseInlineMarkdown(text: string): React.ReactNode {
           backgroundColor: 'var(--surface-panel)',
           padding: '2px 6px',
           borderRadius: 4,
-          fontFamily: 'monospace',
+          fontFamily: 'var(--font-mono)',
           fontSize: 12,
           color: 'var(--accent-primary)'
         }}>

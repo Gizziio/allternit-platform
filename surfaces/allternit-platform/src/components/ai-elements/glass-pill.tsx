@@ -287,7 +287,7 @@ export const TerminalPill = memo(({ command, output, state = "running", collapsi
         <pre
           style={{
             fontSize: "11px",
-            fontFamily: "monospace",
+            fontFamily: "var(--font-mono)",
             color: "rgba(236,236,236,0.55)",
             lineHeight: "1.6",
             whiteSpace: "pre-wrap",

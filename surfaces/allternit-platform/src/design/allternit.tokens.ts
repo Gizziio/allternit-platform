@@ -234,9 +234,9 @@ export const RADIUS = {
 
 export const TYPOGRAPHY = {
   fontFamily: {
-    sans: '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif',
-    serif: 'Georgia, "Times New Roman", Times, serif',
-    mono: '"SF Mono", "Fira Code", "JetBrains Mono", monospace',
+    sans: '"Allternit Sans", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    serif: '"Allternit Serif", Georgia, ui-serif, Cambria, "Times New Roman", Times, serif',
+    mono: '"Allternit Mono", "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", monospace',
   },
   size: {
     xs: '11px',

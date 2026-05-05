@@ -576,7 +576,7 @@ function DetailItem({ label, value }: { label: string; value: string }) {
       <div
         style={{
           fontSize: 13,
-          fontFamily: "monospace",
+          fontFamily: "var(--font-mono)",
           color: "var(--text-primary, #f0f0f0)",
           overflow: "hidden",
           textOverflow: "ellipsis",
@@ -696,7 +696,7 @@ function ContextPackDetail({
                       background: "var(--bg-secondary, #141414)",
                       borderRadius: 4,
                       fontSize: 10,
-                      fontFamily: "monospace",
+                      fontFamily: "var(--font-mono)",
                       color: "#888",
                     }}
                   >
@@ -765,7 +765,7 @@ function ReceiptDetail({ receipt }: { receipt: Receipt }) {
           <span
             style={{
               fontSize: 12,
-              fontFamily: "monospace",
+              fontFamily: "var(--font-mono)",
               color: "#888",
             }}
           >

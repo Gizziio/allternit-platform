@@ -156,7 +156,7 @@ export function H5iMcpPanel({ onClose }: H5iMcpPanelProps) {
                   borderRadius: 8,
                   background: 'var(--surface-hover)',
                   fontSize: 11,
-                  fontFamily: 'monospace',
+                  fontFamily: 'var(--font-mono)',
                   color: 'var(--text-secondary)',
                   overflow: 'auto',
                   maxHeight: 200,
@@ -171,9 +171,9 @@ export function H5iMcpPanel({ onClose }: H5iMcpPanelProps) {
               <strong style={{ color: 'var(--text-secondary)' }}>Setup:</strong>
               <ol style={{ margin: '6px 0 0 16px', padding: 0 }}>
                 <li>Copy the config above</li>
-                <li>Paste into <code style={{ fontFamily: 'monospace', background: 'var(--surface-hover)', padding: '1px 4px', borderRadius: 3 }}>~/.claude/settings.json</code></li>
+                <li>Paste into <code style={{ fontFamily: 'var(--font-mono)', background: 'var(--surface-hover)', padding: '1px 4px', borderRadius: 3 }}>~/.claude/settings.json</code></li>
                 <li>Restart Claude Code</li>
-                <li>Agents can now use h5i tools: <code style={{ fontFamily: 'monospace', background: 'var(--surface-hover)', padding: '1px 4px', borderRadius: 3 }}>h5i_log</code>, <code style={{ fontFamily: 'monospace', background: 'var(--surface-hover)', padding: '1px 4px', borderRadius: 3 }}>h5i_blame</code>, <code style={{ fontFamily: 'monospace', background: 'var(--surface-hover)', padding: '1px 4px', borderRadius: 3 }}>h5i_context_trace</code></li>
+                <li>Agents can now use h5i tools: <code style={{ fontFamily: 'var(--font-mono)', background: 'var(--surface-hover)', padding: '1px 4px', borderRadius: 3 }}>h5i_log</code>, <code style={{ fontFamily: 'var(--font-mono)', background: 'var(--surface-hover)', padding: '1px 4px', borderRadius: 3 }}>h5i_blame</code>, <code style={{ fontFamily: 'var(--font-mono)', background: 'var(--surface-hover)', padding: '1px 4px', borderRadius: 3 }}>h5i_context_trace</code></li>
               </ol>
             </div>
           </div>

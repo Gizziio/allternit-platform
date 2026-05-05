@@ -100,7 +100,7 @@ export function CodeCanvasTileDiff({ diffText, filePath }: CodeCanvasTileDiffPro
       style={{
         height: '100%',
         overflow: 'auto',
-        fontFamily: 'monospace',
+        fontFamily: 'var(--font-mono)',
         fontSize: 12,
         lineHeight: 1.6,
       }}

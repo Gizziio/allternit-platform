@@ -44,7 +44,7 @@ export default function GalleryTestPage() {
           padding: '16px',
           background: 'var(--surface-panel)',
           borderRadius: '8px',
-          fontFamily: 'monospace',
+          fontFamily: 'var(--font-mono)',
           fontSize: '12px',
           color: 'var(--status-success)',
         }}>

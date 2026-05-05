@@ -522,7 +522,7 @@ export function ReceiptView({ receipt, onClose }: ReceiptViewProps) {
           borderTop: `1px solid ${THEME.border}`,
           fontSize: '10px',
           color: THEME.textMuted,
-          fontFamily: 'monospace',
+          fontFamily: 'var(--font-mono)',
         }}
       >
         Receipt Hash: {receipt.hash}

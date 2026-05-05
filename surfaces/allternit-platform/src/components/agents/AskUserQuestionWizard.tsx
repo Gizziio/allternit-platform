@@ -743,7 +743,7 @@ function OptionPreview({ preview }: { preview: QuestionOptionPreview }) {
             borderRadius: 6,
             background: "rgba(0,0,0,0.4)",
             fontSize: 11,
-            fontFamily: "monospace",
+            fontFamily: "var(--font-mono)",
             color: "#d1c3b4",
             overflow: "auto",
           }}

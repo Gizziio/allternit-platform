@@ -290,7 +290,7 @@ function ArtifactPreview({ artifact }: { artifact: Artifact | null }) {
       <div style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
         <pre style={{
           background: 'var(--surface-canvas)', padding: 20, borderRadius: 10, color: 'var(--accent-primary)',
-          fontSize: 12, fontFamily: 'monospace', overflowX: 'auto',
+          fontSize: 12, fontFamily: 'var(--font-mono)', overflowX: 'auto',
         }}>{artifact.content}</pre>
       </div>
     );
@@ -732,7 +732,7 @@ function ConfigSlider({
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
         <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ui-text-muted)' }}>{label}</span>
-        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent-primary)', fontFamily: 'monospace' }}>{display}</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)' }}>{display}</span>
       </div>
       <input type="range" min={min} max={max} step={step} value={value}
         onChange={(e) => onChange(parseFloat(e.target.value))}

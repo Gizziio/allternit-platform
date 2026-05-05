@@ -414,7 +414,7 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
                 <FileText style={{ width: 16, height: 16, color: STUDIO_THEME.accent, flexShrink: 0 }} />
                 <span style={{
                   fontSize: '13px',
-                  fontFamily: 'monospace',
+                  fontFamily: 'var(--font-mono)',
                   color: STUDIO_THEME.textPrimary,
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',

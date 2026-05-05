@@ -306,7 +306,7 @@ function SSHKeyManagerPanel({
                       fontSize: '11px',
                       color: 'var(--ui-text-muted)',
                       wordBreak: 'break-all',
-                      fontFamily: 'monospace',
+                      fontFamily: 'var(--font-mono)',
                     }}
                   >
                     {key.public_key}
@@ -449,7 +449,7 @@ function GenerateKeyModal({
             <label style={{ display: 'block', fontSize: '13px', color: TEXT.secondary, marginBottom: '6px' }}>
               Public Key (safe to share)
             </label>
-            <code style={{ display: 'block', padding: '10px', borderRadius: '6px', background: 'var(--bg-tertiary)', fontSize: '11px', color: 'var(--ui-text-muted)', wordBreak: 'break-all', fontFamily: 'monospace' }}>
+            <code style={{ display: 'block', padding: '10px', borderRadius: '6px', background: 'var(--bg-tertiary)', fontSize: '11px', color: 'var(--ui-text-muted)', wordBreak: 'break-all', fontFamily: 'var(--font-mono)' }}>
               {generatedKey.public_key}
             </code>
           </div>
@@ -457,7 +457,7 @@ function GenerateKeyModal({
             <label style={{ display: 'block', fontSize: '13px', color: TEXT.secondary, marginBottom: '6px' }}>
               Private Key (keep secret!)
             </label>
-            <code style={{ display: 'block', padding: '10px', borderRadius: '6px', background: 'var(--status-error-bg)', fontSize: '11px', color: '#ff6b6b', wordBreak: 'break-all', fontFamily: 'monospace', border: '1px solid color-mix(in srgb, var(--status-error) 40%, transparent)' }}>
+            <code style={{ display: 'block', padding: '10px', borderRadius: '6px', background: 'var(--status-error-bg)', fontSize: '11px', color: '#ff6b6b', wordBreak: 'break-all', fontFamily: 'var(--font-mono)', border: '1px solid color-mix(in srgb, var(--status-error) 40%, transparent)' }}>
               {generatedKey.private_key}
             </code>
           </div>
@@ -536,7 +536,7 @@ function ImportKeyModal({
               background: 'var(--bg-tertiary)',
               color: 'var(--ui-text-primary)',
               fontSize: '13px',
-              fontFamily: 'monospace',
+              fontFamily: 'var(--font-mono)',
               resize: 'vertical',
             }}
           />

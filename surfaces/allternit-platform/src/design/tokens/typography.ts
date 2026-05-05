@@ -13,25 +13,26 @@
  * Primary, mono, and display typefaces
  */
 export const fontFamily = {
-  /** 
-   * Primary sans-serif font stack
-   * Inter as primary with system fallbacks
+  /**
+   * Allternit Sans — Primary UI font stack
+   * Used for: app UI, navigation, buttons, labels, dashboards, settings
    */
-  sans: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-  /** 
-   * Monospace font stack for code
-   * JetBrains Mono preferred with fallbacks
+  sans: '"Allternit Sans", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+  /**
+   * Allternit Mono — Code and protocol font stack
+   * Used for: code, logs, traces, terminal output, agent execution steps
    */
-  mono: '"JetBrains Mono", "Fira Code", "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace',
-  /** 
-   * Display font for headlines
-   * Cal Sans for distinctive headings
+  mono: '"Allternit Mono", "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+  /**
+   * Allternit Sans — Display font for headlines
+   * Same stack as sans, used for visual consistency
    */
-  display: '"Cal Sans", Inter, system-ui, sans-serif',
-  /** 
-   * Serif font stack for editorial content
+  display: '"Allternit Sans", Inter, system-ui, -apple-system, sans-serif',
+  /**
+   * Allternit Serif — Editorial and research font stack
+   * Used for: research articles, whitepapers, essays, reports, institutional text
    */
-  serif: 'Georgia, Cambria, "Times New Roman", Times, serif',
+  serif: '"Allternit Serif", Georgia, ui-serif, Cambria, "Times New Roman", Times, serif',
 } as const;
 
 /**

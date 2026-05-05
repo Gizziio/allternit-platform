@@ -325,7 +325,7 @@ const subtitleStyle: React.CSSProperties = {
   color: `${SAND[500]}99`,
   letterSpacing: '0.08em',
   margin: 0,
-  fontFamily: 'JetBrains Mono, Monaco, Consolas, monospace',
+  fontFamily: 'Allternit Mono, Monaco, Consolas, monospace',
 };
 
 const techDetailsStyle: React.CSSProperties = {
@@ -339,7 +339,7 @@ const techTextStyle: React.CSSProperties = {
   fontSize: '10px',
   color: `${SAND[500]}80`,
   letterSpacing: '0.1em',
-  fontFamily: 'JetBrains Mono, Monaco, Consolas, monospace',
+  fontFamily: 'Allternit Mono, Monaco, Consolas, monospace',
 };
 
 const techDividerStyle: React.CSSProperties = {

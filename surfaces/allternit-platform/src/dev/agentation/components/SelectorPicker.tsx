@@ -58,7 +58,7 @@ const styles: Record<string, React.CSSProperties> = {
     border: '1px solid #e2e8f0',
     borderRadius: 6,
     fontSize: 12,
-    fontFamily: 'monospace',
+    fontFamily: 'var(--font-mono)',
     color: '#1e293b',
     cursor: 'pointer',
     textAlign: 'left',

@@ -1393,7 +1393,7 @@ export function AgentModeGizzi({
                       fontSize: 7,
                       fontWeight: 800,
                       color: '#48bb78',
-                      fontFamily: 'monospace',
+                      fontFamily: 'var(--font-mono)',
                     }}>
                       01
                     </div>
@@ -1469,7 +1469,7 @@ export function AgentModeGizzi({
                       bottom: '110%',
                       left: `calc(50% + ${(i - 2) * 15}px)`,
                       fontSize: 8,
-                      fontFamily: 'monospace',
+                      fontFamily: 'var(--font-mono)',
                       fontWeight: 700,
                       color: '#48bb78',
                       textShadow: '0 0 4px #48bb78',
@@ -1749,7 +1749,7 @@ export function AgentModeGizzi({
                       fontSize: 10,
                       fontWeight: 800,
                       color: '#000',
-                      fontFamily: 'monospace',
+                      fontFamily: 'var(--font-mono)',
                     }}>
                       ⟨/⟩
                     </span>
@@ -1795,7 +1795,7 @@ export function AgentModeGizzi({
                       fontSize: 14,
                       fontWeight: 800,
                       color: '#fbbf24',
-                      fontFamily: 'monospace',
+                      fontFamily: 'var(--font-mono)',
                       textShadow: '0 0 10px rgba(251, 191, 36, 0.8)',
                       zIndex: 50,
                     }}
@@ -1848,7 +1848,7 @@ export function AgentModeGizzi({
                       bottom: '50%',
                       left: '50%',
                       fontSize: 14,
-                      fontFamily: 'monospace',
+                      fontFamily: 'var(--font-mono)',
                       fontWeight: 700,
                       color: theme.accent,
                       textShadow: `0 0 8px ${theme.glow}`,
@@ -1961,7 +1961,7 @@ export function AgentModeGizzi({
                     borderRadius: 8,
                     boxShadow: `0 4px 20px ${theme.glow}`,
                     overflow: 'hidden',
-                    fontFamily: 'monospace',
+                    fontFamily: 'var(--font-mono)',
                   }}
                 >
                   {/* Terminal header */}
@@ -2265,7 +2265,7 @@ export function AgentModeGizzi({
                     pointerEvents: 'none',
                     zIndex: 50,
                     whiteSpace: 'nowrap',
-                    fontFamily: 'monospace',
+                    fontFamily: 'var(--font-mono)',
                     letterSpacing: '0.05em',
                   }}
                 >
@@ -2315,7 +2315,7 @@ export function AgentModeGizzi({
                       position: 'absolute',
                       bottom: '50%',
                       left: `${15 + col * 10}%`,
-                      fontFamily: 'monospace',
+                      fontFamily: 'var(--font-mono)',
                       fontSize: 12,
                       fontWeight: 700,
                       color: '#00ff41',
@@ -2376,7 +2376,7 @@ export function AgentModeGizzi({
                     fontSize: 14,
                     fontWeight: 800,
                     color: '#00ff41',
-                    fontFamily: 'monospace',
+                    fontFamily: 'var(--font-mono)',
                     letterSpacing: '0.05em',
                   }}>
                     BUFFER OVERFLOW
@@ -2384,7 +2384,7 @@ export function AgentModeGizzi({
                   <div style={{
                     fontSize: 10,
                     color: '#00ff41',
-                    fontFamily: 'monospace',
+                    fontFamily: 'var(--font-mono)',
                     marginTop: 2,
                     opacity: 0.8,
                   }}>
@@ -2696,7 +2696,7 @@ export function AgentModeGizzi({
                     fontSize: 20,
                     fontWeight: 900,
                     color: '#dc2626',
-                    fontFamily: 'monospace',
+                    fontFamily: 'var(--font-mono)',
                     zIndex: 55,
                   }}
                 >
@@ -2961,7 +2961,7 @@ export function AgentModeGizzi({
                 border: '1px solid rgba(100, 100, 100, 0.3)',
                 boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
                 textAlign: 'center',
-                fontFamily: 'monospace',
+                fontFamily: 'var(--font-mono)',
                 fontSize: 12,
                 color: 'rgba(200, 200, 200, 0.9)',
                 letterSpacing: '0.02em',

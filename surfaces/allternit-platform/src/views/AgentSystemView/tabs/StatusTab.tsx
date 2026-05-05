@@ -562,7 +562,7 @@ function LogItem({ log }: { log: { id: string; timestamp: number; level: string;
         background: "var(--bg-primary, #0a0a0a)",
         borderRadius: 6,
         fontSize: 11,
-        fontFamily: "monospace",
+        fontFamily: "var(--font-mono)",
       }}
     >
       <div

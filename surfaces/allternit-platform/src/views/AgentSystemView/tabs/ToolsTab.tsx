@@ -303,7 +303,7 @@ function TemplatesSection({
               padding: 16,
               borderRadius: 8,
               marginBottom: 24,
-              fontFamily: "monospace",
+              fontFamily: "var(--font-mono)",
               fontSize: 13,
               whiteSpace: "pre-wrap",
               lineHeight: 1.6,
@@ -796,7 +796,7 @@ function ReceiptsSection({
                   style={{
                     fontSize: 13,
                     fontWeight: 600,
-                    fontFamily: "monospace",
+                    fontFamily: "var(--font-mono)",
                   }}
                 >
                   {receipt.receipt_id}

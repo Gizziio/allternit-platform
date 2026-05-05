@@ -60,7 +60,7 @@ export function CodeCanvasTilePreview({ url, filePath }: CodeCanvasTilePreviewPr
             border: 'none',
             color: 'var(--text-secondary)',
             fontSize: 11,
-            fontFamily: 'monospace',
+            fontFamily: 'var(--font-mono)',
             outline: 'none',
           }}
           placeholder="Enter URL..."

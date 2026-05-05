@@ -234,7 +234,7 @@ const L = {
 } as const;
 
 const LABS_CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,700;0,9..144,900;1,9..144,900&family=Syne:wght@400;500;600;700;800&display=swap');
+  /* Allternit Typography System — no external font imports */
 
   .labs-root { scrollbar-width: thin; scrollbar-color: rgba(167,139,250,.18) transparent; }
   .labs-root::before {
@@ -247,8 +247,8 @@ const LABS_CSS = `
   .labs-root::-webkit-scrollbar-thumb { background:rgba(167,139,250,.18); border-radius:99px; }
   .labs-root::-webkit-scrollbar-track { background:transparent; }
 
-  .labs-serif  { font-family:'Fraunces',Georgia,'Times New Roman',serif !important; }
-  .labs-display{ font-family:'Syne',system-ui,sans-serif !important; }
+  .labs-serif  { font-family: 'Allternit Serif', Georgia, ui-serif, Cambria, 'Times New Roman', serif !important; }
+  .labs-display{ font-family: 'Allternit Sans', Inter, ui-sans-serif, system-ui, -apple-system, sans-serif !important; }
 
   @keyframes labs-reveal { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
   .labs-reveal { opacity:0; }

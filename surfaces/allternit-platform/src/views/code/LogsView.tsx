@@ -185,7 +185,7 @@ export function LogsView() {
                 display: 'flex',
                 gap: 12,
                 padding: '6px 16px',
-                fontFamily: 'monospace',
+                fontFamily: 'var(--font-mono)',
                 fontSize: 12,
                 lineHeight: 1.6,
                 borderBottom: '1px solid var(--surface-hover)'

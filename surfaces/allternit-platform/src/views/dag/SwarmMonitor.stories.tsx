@@ -87,7 +87,7 @@ const SwarmMonitorComplete = () => {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 8px', borderBottom: '1px solid rgba(30, 41, 59, 0.5)' }}>
                 <StatusDot status={thread.status} />
-                <span style={{ fontSize: '10px', fontFamily: 'monospace', color: '#64748b' }}>{thread.id}</span>
+                <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: '#64748b' }}>{thread.id}</span>
                 {thread.pinned && <svg width="10" height="10" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2L12 22M2 12L22 12"/></svg>}
               </div>
               <div style={{ padding: '4px 8px' }}>
@@ -192,7 +192,7 @@ const SwarmMonitorComplete = () => {
                   }}
                 >
                   <StatusDot status={thread.status} />
-                  <span style={{ fontSize: '10px', fontFamily: 'monospace', color: '#64748b' }}>{thread.id}</span>
+                  <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: '#64748b' }}>{thread.id}</span>
                   <span style={{ fontSize: '12px', color: selectedThreadId === thread.id ? '#f59e0b' : '#94a3b8', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{thread.goal}</span>
                   {thread.pinned && <span style={{ color: 'var(--status-warning)' }}>📌</span>}
                 </div>
@@ -245,7 +245,7 @@ const SwarmMonitorComplete = () => {
           </div>
 
           {/* Terminal */}
-          <div style={{ background: '#020617', border: '1px solid #1e293b', borderRadius: '8px', padding: '16px', fontFamily: 'monospace', fontSize: '13px', minHeight: '300px' }}>
+          <div style={{ background: '#020617', border: '1px solid #1e293b', borderRadius: '8px', padding: '16px', fontFamily: 'var(--font-mono)', fontSize: '13px', minHeight: '300px' }}>
             <div style={{ color: '#64748b', marginBottom: '8px' }}>$ swarm thread --tactic={selectedThread.tactic} --goal="{selectedThread.goal}"</div>
             {selectedThread.status === 'running' && (
               <>

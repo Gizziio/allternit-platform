@@ -991,7 +991,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <div style={{ marginBottom: '16px' }}>
                     <h5 style={{ fontSize: '13px', fontWeight: '600', color: 'var(--ui-text-primary)', margin: '0 0 12px 0' }}>Generated Changes Pending Approval</h5>
                     <div style={{ padding: '12px', background: 'var(--surface-hover)', borderRadius: '6px', marginBottom: '12px' }}>
-                      <code style={{ fontSize: '12px', color: 'var(--accent-primary)', fontFamily: 'monospace' }}>
+                      <code style={{ fontSize: '12px', color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)' }}>
                         // Generated code example<br/>fn optimized_auth() {'{'}<br/>&nbsp;&nbsp;validate_jwt_token()?;<br/>{'}'}
                       </code>
                     </div>
@@ -1477,7 +1477,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         {SHORTCUTS.map((item, index) => (
           <div key={index} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: index !== SHORTCUTS.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}>
             <div style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--ui-text-primary)', borderRight: '1px solid var(--border-subtle)' }}>{item.action}</div>
-            <div style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--ui-text-primary)', fontFamily: 'monospace', backgroundColor: 'var(--bg-secondary)' }}>{item.shortcut}</div>
+            <div style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--ui-text-primary)', fontFamily: 'var(--font-mono)', backgroundColor: 'var(--bg-secondary)' }}>{item.shortcut}</div>
           </div>
         ))}
       </div>
@@ -1811,7 +1811,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
         <p style={{ fontSize: 12, color: 'var(--text-tertiary)', margin: '10px 0 0', lineHeight: 1.5 }}>
           Revoking access signs Gizzi Code out on all machines. Re-authorize by running{' '}
-          <code style={{ fontFamily: 'monospace', background: 'var(--bg-secondary)', padding: '1px 5px', borderRadius: 3 }}>gizzi login</code>.
+          <code style={{ fontFamily: 'var(--font-mono)', background: 'var(--bg-secondary)', padding: '1px 5px', borderRadius: 3 }}>gizzi login</code>.
         </p>
       </section>
     </div>
@@ -1896,7 +1896,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{label}</span>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         {status && <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: status === 'success' ? 'var(--status-success)' : status === 'warning' ? 'var(--status-warning)' : 'var(--status-error)' }} />}
-        <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-primary)', fontFamily: 'monospace' }}>{value}</span>
+        <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>{value}</span>
       </div>
     </div>
   );

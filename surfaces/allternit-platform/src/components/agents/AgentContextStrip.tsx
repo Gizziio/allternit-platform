@@ -1078,7 +1078,7 @@ function ToolItem({ tool, palette }: { tool: Tool; palette: SurfacePalette }) {
                         fontSize: 11,
                       }}
                     >
-                      <span style={{ color: palette.accent, fontFamily: "monospace" }}>
+                      <span style={{ color: palette.accent, fontFamily: "var(--font-mono)" }}>
                         {key}
                       </span>
                       <span style={{ color: "#7a6b5d" }}>
@@ -1279,7 +1279,7 @@ function FileBrowser({
           borderRadius: 8,
           fontSize: 11,
           color: "#a8998c",
-          fontFamily: "monospace",
+          fontFamily: "var(--font-mono)",
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
@@ -2015,7 +2015,7 @@ function JobCard({ job, palette, automationEnabled, onEdit, onDelete, onRunNow, 
             marginBottom: 8,
           }}
         >
-          <span style={{ fontFamily: "monospace", color: palette.accent }}>{job.schedule}</span>
+          <span style={{ fontFamily: "var(--font-mono)", color: palette.accent }}>{job.schedule}</span>
           <span style={{ color: "#666" }}>•</span>
           <span style={{ color: "#a8998c" }}>{scheduleDescription}</span>
         </div>
