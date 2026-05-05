@@ -144,7 +144,7 @@ function buildChartJsHtml(
 ): string {
   const xCol = columns.find(c => c.id === xColId);
   const yCol = columns.find(c => c.id === yColId);
-  if (!xCol || !yCol) return '<html><body><p style="color:#aaa;font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,sans-serif;padding:16px">No numeric column found for chart</p></body></html>';
+  if (!xCol || !yCol) return `<html><body><p style="color:#aaa;font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,sans-serif;padding:16px">No numeric column found for chart</p></body></html>`;
 
   const labels = rows.map(r => String(r.cells[xColId] ?? ''));
   const values = rows.map(r => {
