@@ -177,7 +177,7 @@ function generateRealisticPlaceholder(url: URL): string {
     
     <!-- Address Bar -->
     <rect x="100" y="12" width="800" height="26" rx="13" fill="white"/>
-    <text x="120" y="30" font-family="system-ui, sans-serif" font-size="12" fill="#495057">
+    <text x="120" y="30" font-family="'Allternit Sans', Inter, ui-sans-serif, system-ui, sans-serif" font-size="12" fill="#495057">
       🔒 ${domain}${path}
     </text>
     
@@ -192,12 +192,12 @@ function generateRealisticPlaceholder(url: URL): string {
     
     <!-- Screenshot Badge -->
     <rect x="1080" y="60" width="160" height="30" rx="4" fill="#0066cc"/>
-    <text x="1160" y="80" font-family="system-ui, sans-serif" font-size="12" fill="white" text-anchor="middle">
+    <text x="1160" y="80" font-family="'Allternit Sans', Inter, ui-sans-serif, system-ui, sans-serif" font-size="12" fill="white" text-anchor="middle">
       📸 Allternit Screenshot
     </text>
     
     <!-- URL Watermark -->
-    <text x="640" y="420" font-family="system-ui, sans-serif" font-size="24" fill="#dee2e6" text-anchor="middle" font-weight="bold">
+    <text x="640" y="420" font-family="'Allternit Sans', Inter, ui-sans-serif, system-ui, sans-serif" font-size="24" fill="#dee2e6" text-anchor="middle" font-weight="bold">
       ${domain}
     </text>
   </svg>`)}`;

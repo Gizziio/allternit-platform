@@ -250,14 +250,14 @@ export class CoverageCaptureProvider extends VisualCaptureProvider {
         
         // Line number
         linesSvg += `<rect x="0" y="${y}" width="50" height="${lineHeight}" fill="#f5f5f5" />`;
-        linesSvg += `<text x="45" y="${y + 14}" font-family="monospace" font-size="12" fill="#666" text-anchor="end">${i + 1}</text>`;
+        linesSvg += `<text x="45" y="${y + 14}" font-family="'Allternit Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', monospace" font-size="12" fill="#666" text-anchor="end">${i + 1}</text>`;
         
         // Line background
         linesSvg += `<rect x="50" y="${y}" width="${width - 50}" height="${lineHeight}" fill="${bgColor}" />`;
         
         // Code text (escaped)
         const code = this.escapeXml(sourceLines[i].substring(0, 80));
-        linesSvg += `<text x="60" y="${y + 14}" font-family="monospace" font-size="12" fill="#333">${code}</text>`;
+        linesSvg += `<text x="60" y="${y + 14}" font-family="'Allternit Mono', 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', monospace" font-size="12" fill="#333">${code}</text>`;
         
         // Coverage indicator
         if (!isEmpty) {

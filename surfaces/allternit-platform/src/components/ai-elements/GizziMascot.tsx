@@ -1275,7 +1275,7 @@ export function GizziMascot({
             fill="#D97757"
             fontSize="8.2"
             fontWeight="700"
-            fontFamily='"SFMono-Regular", "SF Mono", Consolas, "Liberation Mono", Menlo, monospace'
+            fontFamily='var(--font-mono)'
             letterSpacing="-0.4"
             data-testid="gizzi-mouth"
           >
