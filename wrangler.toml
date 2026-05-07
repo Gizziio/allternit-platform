@@ -1,11 +1,6 @@
 name = "ai-allternit"
+pages_build_output_dir = "surfaces/ai.allternit.com/dist"
 compatibility_date = "2024-04-08"
 
-# Cloudflare Pages configuration
-# This deploys the Next.js app with API routes as Functions
-
 [build]
-command = "cd surfaces/platform && pnpm install && pnpm prisma generate && pnpm exec next-on-pages"
-
-[build.upload]
-format = "directory"
+command = "pnpm install && CLOUDFLARE_PAGES=1 bash scripts/build-cloudflare-platform.sh --no-zip"

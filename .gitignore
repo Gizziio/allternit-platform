@@ -12,6 +12,7 @@ target/
 .env
 .env.*
 !.env.example
+!.env.production
 target/
 debug/
 release/

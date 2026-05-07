@@ -353,7 +353,7 @@ const nextConfig: NextConfig = {
   ],
 
   output: process.env.ALLTERNIT_BUILD_MODE === 'desktop' ? 'standalone' : process.env.CLOUDFLARE_PAGES === '1' ? 'export' : undefined,
-  distDir: process.env.CLOUDFLARE_PAGES === '1' ? 'out' : '.next',
+  distDir: process.env.CLOUDFLARE_PAGES === '1' ? 'dist' : '.next',
 
   outputFileTracingRoot: path.join(__dirname, '../../'),
 
