@@ -619,7 +619,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "/Users/macbook/Desktop/allternit-workspace/allternit/surfaces/allternit-platform/src/generated/prisma",
+      "value": "/Users/macbook/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com/src/generated/prisma",
       "fromEnvVar": null
     },
     "config": {
@@ -637,7 +637,7 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "/Users/macbook/Desktop/allternit-workspace/allternit/surfaces/allternit-platform/prisma/schema.prisma",
+    "sourceFilePath": "/Users/macbook/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com/prisma/schema.prisma",
     "isCustomOutput": true
   },
   "relativeEnvPaths": {
@@ -651,6 +651,7 @@ const config = {
     "db"
   ],
   "activeProvider": "sqlite",
+  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {
