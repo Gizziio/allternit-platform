@@ -14,9 +14,9 @@
 # Start the development environment
 make dev
 
-# Or start individual services
-cd 7-apps/shell && pnpm dev      # Shell web app
-cd 6-ui/allternit-platform && pnpm dev  # UI component library
+# Or start the platform surfaces explicitly
+pnpm dev:platform                # Next.js platform app on :3013
+pnpm dev:platform-stack          # Platform app + Rust API on :8013
 ```
 
 ---

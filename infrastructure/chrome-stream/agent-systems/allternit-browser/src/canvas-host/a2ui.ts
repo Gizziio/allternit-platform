@@ -26,7 +26,7 @@ async function resolveA2uiRoot(): Promise<string | null> {
     path.resolve(process.cwd(), 'src/canvas-host/a2ui'),
     path.resolve(process.cwd(), 'dist/canvas-host/a2ui'),
     // From bundle directory
-    path.resolve(process.cwd(), '5-ui/allternit-platform/dist-a2ui'),
+    path.resolve(process.cwd(), '5-ui/ai-allternit/dist-a2ui'),
   ];
   
   if (process.execPath) {

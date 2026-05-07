@@ -8,11 +8,11 @@
   "homepage": "https://docs.gizziio.com",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Gizziio/allternit-platform.git",
+    "url": "https://github.com/Gizziio/ai-allternit.git",
     "directory": "cmd/gizzi-code"
   },
   "bugs": {
-    "url": "https://github.com/Gizziio/allternit-platform/issues"
+    "url": "https://github.com/Gizziio/ai-allternit/issues"
   },
   "keywords": [
     "allternitchitect",

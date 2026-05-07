@@ -1,0 +1,6 @@
+- generic [active] [ref=e1]:
+  - status "Loading Allternit Platform" [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]: A://
+      - generic [ref=e5]: LLTERNIT
+  - alert [ref=e10]

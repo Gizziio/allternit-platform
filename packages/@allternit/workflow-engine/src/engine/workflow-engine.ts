@@ -605,12 +605,41 @@ export function createWorkflowEngine(config: WorkflowEngineConfig = {}): Workflo
    */
   function resumeExecution(executionId: string): boolean {
     const execution = executions.get(executionId);
-    if (execution && execution.status === 'paused') {
-      execution.status = 'running';
-      // TODO: Resume execution logic
-      return true;
-    }
-    return false;
+    if (!execution || execution.status !== 'paused') return false;
+
+    const workflow = workflows.get(execution.workflowId);
+    if (!workflow) return false;
+
+    execution.status = 'running';
+    activeExecutions.add(executionId);
+
+    const dag = buildDAG(workflow);
+    const completed = execution.context?.state.completedNodes ?? [];
+
+    // Find nodes whose dependencies are satisfied but haven't run yet
+    const frontier = dag.nodes.filter(node => {
+      if (completed.includes(node.id)) return false;
+      const deps = dag.connections.filter(c => c.target === node.id);
+      return deps.every(c => completed.includes(c.source));
+    });
+
+    Promise.all(frontier.map(node => executeNode(node, execution, dag)))
+      .then(() => {
+        execution.status = 'completed';
+        execution.completedAt = new Date().toISOString();
+      })
+      .catch(error => {
+        execution.status = 'failed';
+        execution.error = {
+          code: 'RESUME_ERROR',
+          message: error instanceof Error ? error.message : String(error),
+        };
+      })
+      .finally(() => {
+        activeExecutions.delete(executionId);
+      });
+
+    return true;
   }
 
   /**

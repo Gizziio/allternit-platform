@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useCoworkStore } from '../../surfaces/allternit-platform/src/views/cowork/CoworkStore';
+import { useCoworkStore } from '../../surfaces/ai.allternit.com/src/views/cowork/CoworkStore';
 
 function resetStore() {
   useCoworkStore.setState({

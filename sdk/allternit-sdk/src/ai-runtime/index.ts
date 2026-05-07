@@ -3,10 +3,29 @@ export { AllternitHarness } from './harness/index.js';
 export type { 
   HarnessConfig, 
   StreamRequest, 
+  Message,
   HarnessResponse,
   HarnessStreamChunk,
   HarnessMode,
 } from './harness/types.js';
+
+// Agent runtime
+export {
+  AllternitAgent,
+  AgentRun,
+} from './agents/index.js';
+export type {
+  AgentProfile,
+  AgentProfileCapability,
+  ReplyRequest,
+  ReplyOutcome,
+} from './agents/types.js';
+
+// Tools
+export { ToolRegistry } from './tools/registry.js';
+export type {
+  ToolDefinition,
+} from './tools/types.js';
 
 // System prompts
 export { 

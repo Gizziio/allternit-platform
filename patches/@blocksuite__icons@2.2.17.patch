@@ -1,0 +1,24 @@
+diff --git a/dist/lit.js b/dist/lit.js
+index 269785e1260bb0ea6a5fbdac14ede36cbc4aee78..293a3db3477571cca2800968fb72b9a3118cbe5c 100644
+--- a/dist/lit.js
++++ b/dist/lit.js
+@@ -7671,6 +7671,7 @@ exports.ChatPanelIcon = ChatPanel;
+ exports.ChatWithAiIcon = ChatWithAi;
+ exports.CheckBoxCheckLinearIcon = CheckBoxCheckLinear;
+ exports.CheckBoxCheckSolidIcon = CheckBoxCheckSolid;
++exports.CheckBoxCkeckSolidIcon = CheckBoxCheckSolid;
+ exports.CheckBoxIntermediateIcon = CheckBoxIntermediate;
+ exports.CheckBoxUnIcon = CheckBoxUn;
+ exports.ChemicalPanelIcon = ChemicalPanel;
+diff --git a/dist/lit.mjs b/dist/lit.mjs
+index e7b237b6dc8cdfc00596ba5936f995878be621bf..12feeab448122116b9a4505693503e0a8e9cbe5c 100644
+--- a/dist/lit.mjs
++++ b/dist/lit.mjs
+@@ -7671,6 +7671,7 @@
+   ChatWithAi as ChatWithAiIcon,
+   CheckBoxCheckLinear as CheckBoxCheckLinearIcon,
+   CheckBoxCheckSolid as CheckBoxCheckSolidIcon,
++  CheckBoxCheckSolid as CheckBoxCkeckSolidIcon,
+   CheckBoxIntermediate as CheckBoxIntermediateIcon,
+   CheckBoxUn as CheckBoxUnIcon,
+   ChemicalPanel as ChemicalPanelIcon,

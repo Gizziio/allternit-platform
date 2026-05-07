@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      width: 280px;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #1A1612;
+      color: #ECECEC;
+    }
+    .brand {
+      font-size: 14px;
+      font-weight: 700;
+      color: #D4B08C;
+      margin-bottom: 12px;
+      letter-spacing: 0.02em;
+    }
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #9B9B9B;
+      margin-bottom: 12px;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #4ade80;
+    }
+    .status-dot.offline { background: #f87171; }
+    .count {
+      font-size: 24px;
+      font-weight: 700;
+      color: #D4B08C;
+      margin-bottom: 4px;
+    }
+    .label {
+      font-size: 11px;
+      color: #6E6E6E;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 16px;
+    }
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    button {
+      padding: 8px 12px;
+      border: 1px solid rgba(212, 176, 140, 0.2);
+      border-radius: 8px;
+      background: rgba(212, 176, 140, 0.08);
+      color: #D4B08C;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    button:hover {
+      background: rgba(212, 176, 140, 0.14);
+      border-color: rgba(212, 176, 140, 0.3);
+    }
+    .hint {
+      font-size: 11px;
+      color: #6E6E6E;
+      margin-top: 12px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <div class="brand">X Bookmark Cache</div>
+  <div class="status">
+    <span class="status-dot" id="statusDot"></span>
+    <span id="statusText">Checking server...</span>
+  </div>
+  <div class="count" id="count">—</div>
+  <div class="label">bookmarks cached</div>
+  <div class="actions">
+    <button id="openViewer">Open Viewer</button>
+    <button id="exportJson">Export JSON</button>
+    <button id="exportPipeline">Export to Pipeline</button>
+  </div>
+  <div class="hint">
+    Browse your X.com bookmarks page to auto-capture. No API key needed.
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+services:
+  browser-agent:
+    build:
+      context: ../../../../tools/cowork-integration/sources/browser-use
+      dockerfile: Dockerfile
+    ports:
+      - "${BROWSER_AGENT_PORT:-8763}:8765"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - BROWSER_USE_LOGGING_LEVEL=INFO
+      - BROWSER_USE_MCP_PORT=8765
+      - BROWSER_USE_MCP_HOST=0.0.0.0
+    command: ["python", "-m", "browser_use.mcp", "--mcp", "--host", "0.0.0.0", "--port", "8765"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8765/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    shm_size: "2gb"

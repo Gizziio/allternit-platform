@@ -1,0 +1,45 @@
+[
+  {
+    "id": "signal-2026-04-27-daily-brief",
+    "slug": "daily-brief-2026-04-27",
+    "type": "blog",
+    "contentType": "signal",
+    "status": "published",
+    "title": "Daily AI Brief: April 27, 2026",
+    "subtitle": "Allternit Signal · Curated Intelligence",
+    "abstract": "Daily curated intelligence for April 27, 2026. Featuring 5 arXiv papers, 5 HN stories, 5 Reddit discussions. All sources linked for deep reading.",
+    "authors": [
+      "Allternit Signal"
+    ],
+    "teams": [
+      "research"
+    ],
+    "tags": [
+      "daily-brief",
+      "ai-news",
+      "curated"
+    ],
+    "keywords": [
+      "briefing",
+      "curated",
+      "intelligence"
+    ],
+    "createdAt": "2026-04-27T10:10:29.714Z",
+    "updatedAt": "2026-04-27T10:10:29.714Z",
+    "publishedAt": "2026-04-27T10:10:29.714Z",
+    "content": {
+      "markdown": "## arXiv\n\n**Agentic World Modeling: Foundations, Capabilities, Laws, and Beyond**  \nA comprehensive survey arguing that world modeling is the central bottleneck as AI agents shift from passive text generation to active, sustained goal-directed interaction.  \nhttp://arxiv.org/abs/2604.22748v1\n\n**An Undecidability Proof for the Plan Existence Problem**  \nProves that determining whether a sequence of epistemic actions can achieve a given modal-logic goal from an initial Kripke state is undecidable.  \nhttp://arxiv.org/abs/2604.22736v1\n\n**Aligning Dense Retrievers with LLM Utility via Distillation**  \nProposes distilling LLM utility signals into dense retrievers to improve precision in Retrieval-Augmented Generation beyond standard similarity search.  \nhttp://arxiv.org/abs/2604.22722v1\n\n**CRAFT: Clustered Regression for Adaptive Filtering of Training data**  \nIntroduces a regression-based clustering method to extract small, high-quality subsets from massive corpora for efficient model fine-tuning.  \nhttp://arxiv.org/abs/2604.22693v1\n\n**How Supply Chain Dependencies Complicate Bias Measurement and Accountability Attribution in AI Hiring Applications**  \nAnalyzes how complex third-party supply chains in AI hiring tools create structural barriers to measuring bias and assigning accountability under new regulations.  \nhttp://arxiv.org/abs/2604.22679v1\n\n## Hacker News\n\n**Flipdiscs**  \nAn open-source platform and hardware toolkit for building kinetic interfaces with electromechanical flip-disc displays.  \nhttps://flipdisc.io\n\n**I bought Friendster for $30k – Here's what I'm doing with it**  \nThe founder recounts acquiring the defunct social network's assets and his plans to revive or repurpose the legacy platform.  \nhttps://ca98am79.medium.com/i-bought-friendster-for-30k-heres-what-i-m-doing-with-it-d5e8ddb3991d\n\n**Bob Odenkirk would like to remind you that life is a meaningless farce**  \nA profile of the comedian reflecting on mortality, creativity, and finding meaning in absurdity after his 2021 heart attack.  \nhttps://www.nytimes.com/2026/04/25/magazine/bob-odenkirk-interview.html\n\n**It's OK to abandon your side-project (2024)**  \nA developer's reflection on why abandoning unfinished side projects is a healthy and necessary part of the creative process.  \nhttps://robbowen.digital/wrote-about/abandoned-side-projects/\n\n**AI should elevate your thinking, not replace it**  \nAn essay arguing that AI tools are most valuable when they augment human reasoning rather than automating it away entirely.  \nhttps://www.koshyjohn.com/blog/ai-should-elevate-your-thinking-not-replace-it/\n\n## Reddit r/MachineLearning\n\n**I did 15 AI Engineer interviews in the last 6 months**  \nA candidate's retrospective on the current AI engineering interview landscape, noting a shift away from deep math proofs toward practical system design.  \nhttps://www.reddit.com/r/MachineLearning/comments/1swxcvo/i_did_15_ai_engineer_interviews_in_the_last_6/\n\n**Submitting to top ML Conferences without Sharing code**  \nResearchers debate whether code submission should remain mandatory for venues like NeurIPS as AI-assisted coding blurs reproducibility lines.  \nhttps://www.reddit.com/r/MachineLearning/comments/1swtk3h/submitting_to_top_ml_conferences_without_sharing/\n\n**Value of top conference workshop papers for PhD admissios**  \nAn undergraduate asks how much first-author workshop papers at major ML conferences weigh in PhD admissions compared to full papers.  \nhttps://www.reddit.com/r/MachineLearning/comments/1swwsin/value_of_top_conference_workshop_papers_for_phd/\n\n**Can Geometric Deep Learning lead eliminate the need of \"Brute Force\" pre-training**  \nDiscussion on whether geometric priors (grids, graphs, groups, manifolds) could reduce reliance on massive-scale pre-training.  \nhttps://www.reddit.com/r/MachineLearning/comments/1swkxx1/can_geometric_deep_learning_lead_eliminate_the/\n\n**freshman in ML: how do you identify actually open research problems?**  \nAdvice thread for early-stage researchers on distinguishing tractable, novel problems from already-solved or ill-defined ones.  \nhttps://www.reddit.com/r/MachineLearning/comments/1swuw9g/freshman_in_ml_how_do_you_identify_actually_open/"
+    },
+    "readingTime": 3,
+    "featured": false,
+    "series": "Daily AI Brief",
+    "metrics": {
+      "views": 0,
+      "uniqueVisitors": 0,
+      "downloads": 0,
+      "citationCount": 0
+    },
+    "license": "CC BY 4.0",
+    "accessLevel": "public"
+  }
+]

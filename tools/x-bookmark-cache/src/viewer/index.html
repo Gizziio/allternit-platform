@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>X Bookmark Cache</title>
+  <style>
+    :root {
+      --bg: #1A1612;
+      --bg2: #2A211A;
+      --bg3: #362B22;
+      --accent: #D4B08C;
+      --text: #ECECEC;
+      --text2: #9B9B9B;
+      --text3: #6E6E6E;
+      --border: rgba(212, 176, 140, 0.10);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    header {
+      position: sticky; top: 0; z-index: 10;
+      background: rgba(26, 22, 18, 0.92);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .brand { font-size: 16px; font-weight: 700; color: var(--accent); letter-spacing: 0.02em; }
+    .stats { display: flex; gap: 16px; font-size: 12px; color: var(--text3); }
+    .stat-value { color: var(--accent); font-weight: 600; }
+    .search {
+      flex: 1; max-width: 400px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 14px;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+    }
+    .search:focus { border-color: rgba(212, 176, 140, 0.3); }
+    .search::placeholder { color: var(--text3); }
+    main { max-width: 800px; margin: 0 auto; padding: 24px; }
+    .loading { text-align: center; padding: 60px; color: var(--text3); }
+    .tweet {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 12px;
+      transition: all 0.15s;
+    }
+    .tweet:hover {
+      border-color: rgba(212, 176, 140, 0.2);
+      transform: translateY(-1px);
+    }
+    .tweet-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .author {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .author-name { font-weight: 600; font-size: 14px; }
+    .author-handle { font-size: 13px; color: var(--text3); }
+    .tweet-date { font-size: 12px; color: var(--text3); }
+    .tweet-text {
+      font-size: 14px; line-height: 1.6;
+      color: var(--text); margin-bottom: 12px;
+      white-space: pre-wrap;
+    }
+    .tweet-text a { color: var(--accent); text-decoration: none; }
+    .tweet-footer {
+      display: flex; align-items: center; gap: 16px;
+      font-size: 12px; color: var(--text3);
+    }
+    .metric { display: flex; align-items: center; gap: 4px; }
+    .tweet-actions {
+      display: flex; gap: 8px; margin-left: auto;
+    }
+    .btn {
+      padding: 4px 10px; border-radius: 6px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--text2); font-size: 11px; cursor: pointer;
+      transition: all 0.15s; text-decoration: none;
+    }
+    .btn:hover { border-color: rgba(212, 176, 140, 0.25); color: var(--accent); }
+    .empty {
+      text-align: center; padding: 80px 24px; color: var(--text3);
+    }
+    .empty h2 { font-size: 20px; color: var(--text2); margin-bottom: 8px; }
+    .pagination {
+      display: flex; justify-content: center; gap: 8px;
+      padding: 24px;
+    }
+    .page-btn {
+      padding: 6px 14px; border-radius: 6px;
+      border: 1px solid var(--border); background: var(--bg2);
+      color: var(--text2); font-size: 12px; cursor: pointer;
+    }
+    .page-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">X Bookmark Cache</div>
+    <div class="stats">
+      <span><span class="stat-value" id="statTotal">—</span> bookmarks</span>
+      <span><span class="stat-value" id="statAuthors">—</span> authors</span>
+    </div>
+    <input type="text" class="search" id="searchInput" placeholder="Search bookmarks...">
+  </header>
+  <main>
+    <div id="content">
+      <div class="loading">Loading bookmarks...</div>
+    </div>
+    <div class="pagination" id="pagination"></div>
+  </main>
+
+  <script>
+    const API = 'http://localhost:34100';
+    let page = 0;
+    const PAGE_SIZE = 50;
+
+    async function loadStats() {
+      try {
+        const stats = await fetch(`${API}/api/stats`).then(r => r.json());
+        document.getElementById('statTotal').textContent = stats.totalBookmarks.toLocaleString();
+        document.getElementById('statAuthors').textContent = stats.uniqueAuthors.toLocaleString();
+      } catch {}
+    }
+
+    function escapeHtml(str) {
+      return str?.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') || '';
+    }
+
+    function linkify(text) {
+      return escapeHtml(text)
+        .replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>')
+        .replace(/@(\w+)/g, '<a href="https://x.com/$1" target="_blank" rel="noopener">@$1</a>');
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function renderTweet(bm) {
+      return `
+        <div class="tweet">
+          <div class="tweet-header">
+            <div class="author">
+              <div>
+                <div class="author-name">${escapeHtml(bm.author_name || 'Unknown')}</div>
+                <div class="author-handle">@${escapeHtml(bm.author_handle || 'unknown')}</div>
+              </div>
+            </div>
+            <div class="tweet-date">${formatDate(bm.created_at)}</div>
+          </div>
+          <div class="tweet-text">${linkify(bm.text)}</div>
+          <div class="tweet-footer">
+            <span class="metric">♥ ${bm.likes || 0}</span>
+            <span class="metric">↻ ${bm.retweets || 0}</span>
+            <span class="metric">💬 ${bm.replies || 0}</span>
+            <div class="tweet-actions">
+              <a class="btn" href="${bm.url}" target="_blank" rel="noopener">Open</a>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function loadBookmarks(query = '') {
+      const content = document.getElementById('content');
+      content.innerHTML = '<div class="loading">Loading...</div>';
+
+      try {
+        const url = query
+          ? `${API}/api/bookmarks/search?q=${encodeURIComponent(query)}`
+          : `${API}/api/bookmarks?limit=${PAGE_SIZE}&offset=${page * PAGE_SIZE}`;
+        const items = await fetch(url).then(r => r.json());
+
+        if (!items.length) {
+          content.innerHTML = `
+            <div class="empty">
+              <h2>No bookmarks yet</h2>
+              <p>Browse x.com/bookmarks with the extension installed to start capturing.</p>
+            </div>
+          `;
+          return;
+        }
+
+        content.innerHTML = items.map(renderTweet).join('');
+
+        // Pagination
+        const pag = document.getElementById('pagination');
+        pag.innerHTML = `
+          <button class="page-btn" ${page === 0 ? 'disabled' : ''} onclick="prevPage()">← Prev</button>
+          <button class="page-btn" ${items.length < PAGE_SIZE ? 'disabled' : ''} onclick="nextPage()">Next →</button>
+        `;
+      } catch {
+        content.innerHTML = `
+          <div class="empty">
+            <h2>Server offline</h2>
+            <p>Start the server with: npm start</p>
+          </div>
+        `;
+      }
+    }
+
+    function nextPage() { page++; loadBookmarks(document.getElementById('searchInput').value); }
+    function prevPage() { if (page > 0) { page--; loadBookmarks(document.getElementById('searchInput').value); } }
+
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      page = 0;
+      loadBookmarks(e.target.value);
+    });
+
+    loadStats();
+    loadBookmarks();
+  </script>
+</body>
+</html>

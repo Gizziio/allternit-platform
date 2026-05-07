@@ -36,6 +36,9 @@
   "scripts": {
     "build": "pnpm -r build",
     "dev": "concurrently \"cd cmd/allternit-api && cargo run\" \"pnpm --filter @allternit/runtime serve\" \"pnpm --filter @allternit/desktop dev\"",
+    "dev:platform": "pnpm --dir surfaces/ai.allternit.com dev",
+    "dev:platform:clean": "pnpm --dir surfaces/ai.allternit.com dev:clean",
+    "dev:platform-stack": "concurrently \"cd cmd/allternit-api && cargo run\" \"pnpm --dir surfaces/ai.allternit.com dev\"",
     "dev:api": "cd cmd/allternit-api && cargo run",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { IntelliScheduleEngine } from '../../surfaces/allternit-platform/src/lib/intelli-schedule/IntelliScheduleEngine';
-import { useCoworkStore } from '../../surfaces/allternit-platform/src/views/cowork/CoworkStore';
-import type { IntelliScheduleInput } from '../../surfaces/allternit-platform/src/lib/intelli-schedule/types';
+import { IntelliScheduleEngine } from '../../surfaces/ai.allternit.com/src/lib/intelli-schedule/IntelliScheduleEngine';
+import { useCoworkStore } from '../../surfaces/ai.allternit.com/src/views/cowork/CoworkStore';
+import type { IntelliScheduleInput } from '../../surfaces/ai.allternit.com/src/lib/intelli-schedule/types';
 
 function resetStore() {
   useCoworkStore.setState({

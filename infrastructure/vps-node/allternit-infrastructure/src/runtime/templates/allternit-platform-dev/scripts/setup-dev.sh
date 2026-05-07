@@ -92,16 +92,16 @@ else
 fi
 
 # Create .env.local for UI
-if [ -d "6-ui/allternit-platform" ]; then
-    if [ ! -f "6-ui/allternit-platform/.env.local" ]; then
-        cat > 6-ui/allternit-platform/.env.local << 'EOF'
+if [ -d "6-ui/ai-allternit" ]; then
+    if [ ! -f "6-ui/ai-allternit/.env.local" ]; then
+        cat > 6-ui/ai-allternit/.env.local << 'EOF'
 # Local development environment variables
 NEXT_PUBLIC_API_URL=http://localhost:8080
 NEXT_PUBLIC_WS_URL=ws://localhost:8080
 NEXT_PUBLIC_APP_NAME=Allternit Platform
 NEXT_PUBLIC_APP_VERSION=dev
 EOF
-        log_success "Created 6-ui/allternit-platform/.env.local"
+        log_success "Created 6-ui/ai-allternit/.env.local"
     fi
 fi
 
@@ -111,9 +111,9 @@ fi
 log_info "Installing Node.js dependencies..."
 
 # UI workspace
-if [ -d "6-ui/allternit-platform" ]; then
-    log_info "Installing 6-ui/allternit-platform dependencies..."
-    cd "$WORKSPACE_DIR/6-ui/allternit-platform"
+if [ -d "6-ui/ai-allternit" ]; then
+    log_info "Installing 6-ui/ai-allternit dependencies..."
+    cd "$WORKSPACE_DIR/6-ui/ai-allternit"
     
     # Use pnpm for faster installs
     if [ -f "pnpm-lock.yaml" ]; then
@@ -125,7 +125,7 @@ if [ -d "6-ui/allternit-platform" ]; then
     log_success "UI dependencies installed"
     cd "$WORKSPACE_DIR"
 else
-    log_warning "6-ui/allternit-platform directory not found"
+    log_warning "6-ui/ai-allternit directory not found"
 fi
 
 # =============================================================================
@@ -189,8 +189,8 @@ if command -v detect-secrets &> /dev/null; then
 fi
 
 # Run linting on staged files
-if command -v pnpm &> /dev/null && [ -f "6-ui/allternit-platform/package.json" ]; then
-    cd 6-ui/allternit-platform
+if command -v pnpm &> /dev/null && [ -f "6-ui/ai-allternit/package.json" ]; then
+    cd 6-ui/ai-allternit
     pnpm lint-staged || true
 fi
 
@@ -215,7 +215,7 @@ if [ -f "$HOME/.bashrc" ]; then
 # Allternit Platform Aliases
 alias allternit='cd /workspace'
 alias allternit-kernel='cd /workspace/1-kernel'
-alias allternit-ui='cd /workspace/6-ui/allternit-platform'
+alias allternit-ui='cd /workspace/6-ui/ai-allternit'
 alias allternit-apps='cd /workspace/7-apps'
 alias allternit-agents='cd /workspace/8-agents'
 

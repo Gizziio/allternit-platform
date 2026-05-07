@@ -2,7 +2,7 @@
  * VM Image Manager
  *
  * Production-ready image management system for downloading, building, and caching
- * VM images for the allternit-platform VM executor.
+ * VM images for the ai-allternit VM executor.
  *
  * @module VMImageManager
  * @version 1.0.0
@@ -23,10 +23,10 @@ const pipeline = util.promisify(stream.pipeline);
 // =============================================================================
 
 /** Base URL for GitHub releases */
-export const RELEASES_URL = "https://github.com/allternit-platform/vm-images/releases";
+export const RELEASES_URL = "https://github.com/ai-allternit/vm-images/releases";
 
 /** API URL for GitHub releases */
-export const GITHUB_API_URL = "https://api.github.com/repos/allternit-platform/vm-images/releases";
+export const GITHUB_API_URL = "https://api.github.com/repos/ai-allternit/vm-images/releases";
 
 /** Default cache directory */
 export const DEFAULT_CACHE_DIR = path.join(os.homedir(), ".allternit", "images");
@@ -380,7 +380,7 @@ function detectArchitecture(): Architecture {
 /**
  * VM Image Manager
  *
- * Manages downloading, building, and caching of VM images for the allternit-platform.
+ * Manages downloading, building, and caching of VM images for the ai-allternit.
  *
  * @example
  * ```typescript

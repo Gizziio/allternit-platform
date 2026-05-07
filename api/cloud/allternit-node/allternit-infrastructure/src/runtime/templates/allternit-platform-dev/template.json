@@ -1,5 +1,5 @@
 {
-  "id": "allternit-platform-dev",
+  "id": "ai-allternit-dev",
   "name": "Allternit Platform Development",
   "description": "Full development environment for working on the Allternit platform. Includes Node.js, Go, Rust, PostgreSQL, Redis, and all necessary tools for monorepo development.",
   "version": "1.0.0",
@@ -208,6 +208,6 @@
     "darwin/arm64"
   ],
   "documentationUrl": "https://docs.allternit.com/dev/platform-dev",
-  "repositoryUrl": "https://github.com/allternit-platform/allternit",
-  "issuesUrl": "https://github.com/allternit-platform/allternit/issues"
+  "repositoryUrl": "https://github.com/ai-allternit/allternit",
+  "issuesUrl": "https://github.com/ai-allternit/allternit/issues"
 }

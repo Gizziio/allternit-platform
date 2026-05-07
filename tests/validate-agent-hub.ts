@@ -5,8 +5,8 @@
  * Run with: bun run validate-agent-hub.ts
  */
 
-import { SPECIALIST_TEMPLATES, getTemplateById, createAgentFromTemplate } from './6-ui/allternit-platform/src/lib/agents/agent-templates.specialist';
-import { exportAgent, importAgentFromString, validateAgentConfig } from './6-ui/allternit-platform/src/lib/agents/agent-template-io';
+import { SPECIALIST_TEMPLATES, getTemplateById, createAgentFromTemplate } from './6-ui/ai-allternit/src/lib/agents/agent-templates.specialist';
+import { exportAgent, importAgentFromString, validateAgentConfig } from './6-ui/ai-allternit/src/lib/agents/agent-template-io';
 
 console.log('🔍 Agent Hub Validation Test\n');
 

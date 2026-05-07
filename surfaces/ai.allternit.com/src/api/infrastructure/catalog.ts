@@ -1,0 +1,161 @@
+import type { CloudProvider } from './cloud';
+import type { EnvironmentTemplate } from './environments';
+
+export const environmentTemplateCatalog: EnvironmentTemplate[] = [
+  {
+    id: 'allternit-platform-dev',
+    name: 'Allternit Platform Dev',
+    type: 'devcontainer',
+    description: 'Complete Allternit platform development environment with all services pre-configured.',
+    icon: 'sparkles',
+    features: ['Node.js 20', 'Rust', 'Python', 'Docker', 'PostgreSQL', 'Redis'],
+    setupTime: '3 minutes',
+    tags: ['official', 'fullstack'],
+    defaultPorts: [3000, 8787, 5432, 6379],
+    preinstalledTools: ['git', 'gh', 'cargo', 'pnpm', 'python3', 'docker'],
+    resourceRequirements: {
+      minMemory: '4GB',
+      minCpu: 2,
+      recommendedDisk: '20GB',
+    },
+    config: {
+      devcontainer: {
+        image: 'mcr.microsoft.com/devcontainers/typescript-node:20',
+        features: ['ghcr.io/devcontainers/features/docker-in-docker:2'],
+      },
+    },
+  },
+  {
+    id: 'allternit-agent-workspace',
+    name: 'Allternit Agent Workspace',
+    type: 'devcontainer',
+    description: 'Lightweight environment for agent development and testing.',
+    icon: 'bot',
+    features: ['Node.js 20', 'Python 3.11', 'Agent SDK', 'Test Framework'],
+    setupTime: '2 minutes',
+    tags: ['official', 'agent'],
+    defaultPorts: [3000, 8080],
+    preinstalledTools: ['git', 'node', 'python3', 'pip'],
+    resourceRequirements: {
+      minMemory: '2GB',
+      minCpu: 1,
+      recommendedDisk: '10GB',
+    },
+    config: {
+      devcontainer: {
+        image: 'mcr.microsoft.com/devcontainers/python:3.11',
+      },
+    },
+  },
+  {
+    id: 'nodejs-typescript',
+    name: 'Node.js + TypeScript',
+    type: 'devcontainer',
+    description: 'Modern Node.js development with TypeScript support.',
+    icon: 'code',
+    features: ['Node.js 20', 'TypeScript', 'ESLint', 'Prettier', 'Jest'],
+    setupTime: '1 minute',
+    tags: ['nodejs', 'web'],
+    defaultPorts: [3000, 8080],
+    preinstalledTools: ['node', 'npm', 'pnpm', 'yarn'],
+    resourceRequirements: {
+      minMemory: '1GB',
+      minCpu: 1,
+      recommendedDisk: '5GB',
+    },
+    config: {
+      devcontainer: {
+        image: 'mcr.microsoft.com/devcontainers/typescript-node:20',
+      },
+    },
+  },
+  {
+    id: 'python-ml',
+    name: 'Python ML/Data Science',
+    type: 'devcontainer',
+    description: 'Data science environment with PyTorch, TensorFlow, and Jupyter.',
+    icon: 'brain',
+    features: ['Python 3.11', 'PyTorch', 'TensorFlow', 'Jupyter', 'Pandas', 'NumPy'],
+    setupTime: '4 minutes',
+    tags: ['python', 'ml', 'data-science'],
+    defaultPorts: [8888, 6006, 5000],
+    preinstalledTools: ['python3', 'pip', 'jupyter', 'conda'],
+    resourceRequirements: {
+      minMemory: '8GB',
+      minCpu: 4,
+      recommendedDisk: '50GB',
+    },
+    config: {
+      devcontainer: {
+        image: 'mcr.microsoft.com/devcontainers/python:3.11',
+        features: ['ghcr.io/devcontainers/features/nvidia-cuda:1'],
+      },
+    },
+  },
+  {
+    id: 'rust-systems',
+    name: 'Rust Systems Programming',
+    type: 'devcontainer',
+    description: 'Rust development environment with cargo and common tools.',
+    icon: 'cpu',
+    features: ['Rust 1.75+', 'Cargo', 'Clippy', 'Rustfmt', 'VS Code extensions'],
+    setupTime: '2 minutes',
+    tags: ['rust', 'systems'],
+    defaultPorts: [8080],
+    preinstalledTools: ['rustc', 'cargo', 'rustfmt', 'clippy'],
+    resourceRequirements: {
+      minMemory: '2GB',
+      minCpu: 2,
+      recommendedDisk: '10GB',
+    },
+    config: {
+      devcontainer: {
+        image: 'mcr.microsoft.com/devcontainers/rust:latest',
+      },
+    },
+  },
+];
+
+export const cloudProviderCatalog: CloudProvider[] = [
+  {
+    id: 'hetzner',
+    name: 'Hetzner',
+    logo: 'hetzner',
+    description: 'High performance cloud servers with strong price-to-performance.',
+    status: 'coming_soon',
+    popular: true,
+    signup_url: 'https://www.hetzner.com/cloud',
+    features: ['AMD EPYC CPUs', 'NVMe SSDs', 'Unmetered traffic', 'DDoS protection'],
+    currency: '€',
+    starting_price: 4.51,
+    period: 'month',
+    deploy_time: 'Backend not wired',
+  },
+  {
+    id: 'digitalocean',
+    name: 'DigitalOcean',
+    logo: 'digitalocean',
+    description: 'Developer-friendly cloud platform with simple pricing.',
+    status: 'coming_soon',
+    popular: true,
+    signup_url: 'https://www.digitalocean.com',
+    features: ['SSD storage', 'Global data centers', 'Kubernetes', 'App Platform'],
+    currency: '$',
+    starting_price: 4,
+    period: 'month',
+    deploy_time: 'Backend not wired',
+  },
+  {
+    id: 'aws',
+    name: 'AWS',
+    logo: 'aws',
+    description: 'Broad infrastructure ecosystem and global regions.',
+    status: 'coming_soon',
+    signup_url: 'https://aws.amazon.com',
+    features: ['EC2', 'IAM', 'VPC', 'Global regions'],
+    currency: '$',
+    starting_price: 3.8,
+    period: 'month',
+    deploy_time: 'Backend not wired',
+  },
+];

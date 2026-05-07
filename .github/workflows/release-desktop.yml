@@ -54,25 +54,25 @@ jobs:
       # ── Step 1: Build Next.js platform as standalone server ──────────────────
       - name: Install platform dependencies
         run: pnpm install --frozen-lockfile
-        working-directory: surfaces/allternit-platform
+        working-directory: surfaces/ai.allternit.com
 
       - name: Build Next.js platform (standalone)
         run: ALLTERNIT_BUILD_MODE=desktop pnpm build
-        working-directory: surfaces/allternit-platform
+        working-directory: surfaces/ai.allternit.com
 
       - name: Copy standalone server to desktop resources
         run: |
           DEST=surfaces/allternit-desktop/resources/platform-server
           rm -rf "$DEST"
           mkdir -p "$DEST"
-          cp -r surfaces/allternit-platform/.next/standalone/. "$DEST/"
-          if [ -d surfaces/allternit-platform/.next/static ]; then
+          cp -r surfaces/ai.allternit.com/.next/standalone/. "$DEST/"
+          if [ -d surfaces/ai.allternit.com/.next/static ]; then
             mkdir -p "$DEST/.next/static"
-            cp -r surfaces/allternit-platform/.next/static/. "$DEST/.next/static/"
+            cp -r surfaces/ai.allternit.com/.next/static/. "$DEST/.next/static/"
           fi
-          if [ -d surfaces/allternit-platform/public ]; then
+          if [ -d surfaces/ai.allternit.com/public ]; then
             mkdir -p "$DEST/public"
-            cp -r surfaces/allternit-platform/public/. "$DEST/public/"
+            cp -r surfaces/ai.allternit.com/public/. "$DEST/public/"
           fi
 
       # ── Step 2: Build gizzi-code (AI runtime — the brain) ───────────────────
@@ -218,12 +218,12 @@ jobs:
 
       - name: Install platform dependencies
         run: pnpm install --frozen-lockfile
-        working-directory: surfaces/allternit-platform
+        working-directory: surfaces/ai.allternit.com
 
       - name: Build Next.js platform (standalone)
         shell: bash
         run: ALLTERNIT_BUILD_MODE=desktop pnpm build
-        working-directory: surfaces/allternit-platform
+        working-directory: surfaces/ai.allternit.com
 
       - name: Copy standalone server to desktop resources
         shell: bash
@@ -231,10 +231,10 @@ jobs:
           DEST=surfaces/allternit-desktop/resources/platform-server
           rm -rf "$DEST"
           mkdir -p "$DEST"
-          cp -r surfaces/allternit-platform/.next/standalone/. "$DEST/"
-          if [ -d surfaces/allternit-platform/.next/static ]; then
+          cp -r surfaces/ai.allternit.com/.next/standalone/. "$DEST/"
+          if [ -d surfaces/ai.allternit.com/.next/static ]; then
             mkdir -p "$DEST/.next/static"
-            cp -r surfaces/allternit-platform/.next/static/. "$DEST/.next/static/"
+            cp -r surfaces/ai.allternit.com/.next/static/. "$DEST/.next/static/"
           fi
 
       - name: Build allternit-api (Windows)

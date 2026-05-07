@@ -96,7 +96,7 @@ allternit/
 │   ├── allternit-kernel/            # Go - Core services
 │   └── allternit-infrastructure/    # Rust - Infrastructure layer
 ├── surfaces/                       # Frontend
-│   └── allternit-platform/          # Next.js/React application
+│   └── ai-allternit/          # Next.js/React application
 ├── cmd/                     # Application shells
 │   └── shell/
 ├── 8-agents/                   # Agent definitions
@@ -133,7 +133,7 @@ redis-cli -u $REDIS_URL
 ### Working with the UI
 
 ```bash
-cd surfaces/allternit-platform
+cd surfaces/ai.allternit.com
 
 # Install dependencies
 pnpm install
@@ -249,7 +249,7 @@ sqlx migrate revert
 ### TypeScript (Prisma)
 
 ```bash
-cd surfaces/allternit-platform
+cd surfaces/ai.allternit.com
 
 # Generate migration
 pnpm prisma migrate dev --name add_users
@@ -276,7 +276,7 @@ cd domains/kernel && go test ./...
 cd domains/kernel/allternit-infrastructure && cargo test
 
 # UI tests
-cd surfaces/allternit-platform && pnpm test
+cd surfaces/ai.allternit.com && pnpm test
 ```
 
 ### Integration Tests
@@ -365,7 +365,7 @@ API_GATEWAY_PORT=8082
 sudo chown -R $(id -u):$(id -g) .
 
 # Fix node_modules permissions
-sudo chown -R $(id -u):$(id -g) surfaces/allternit-platform/node_modules
+sudo chown -R $(id -u):$(id -g) surfaces/ai.allternit.com/node_modules
 ```
 
 ### Hot Reload Not Working
@@ -438,7 +438,7 @@ tasks:
   build:
     cmds:
       - echo "Building..."
-      - cd surfaces/allternit-platform && pnpm build
+      - cd surfaces/ai.allternit.com && pnpm build
       - cd domains/kernel/allternit-kernel && go build
   
   test:
@@ -474,8 +474,8 @@ Run with: `task build` or `task test`
 
 ## Support
 
-- GitHub Issues: https://github.com/allternit-platform/allternit/issues
-- Discord: https://discord.gg/allternit-platform
+- GitHub Issues: https://github.com/ai-allternit/allternit/issues
+- Discord: https://discord.gg/ai-allternit
 - Email: dev@allternit.com
 
 ## License

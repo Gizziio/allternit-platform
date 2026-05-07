@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
-  "description": "Allternit Office Add-in plugin registry. Plugin content lives canonically at surfaces/allternit-platform/src/plugins/vendor/office-{excel,word,powerpoint}/",
+  "description": "Allternit Office Add-in plugin registry. Plugin content lives canonically at surfaces/ai.allternit.com/src/plugins/vendor/office-{excel,word,powerpoint}/",
   "surface": "office-addin",
   "exclusive": true,
-  "canonical_path": "surfaces/allternit-platform/src/plugins/vendor/",
+  "canonical_path": "surfaces/ai.allternit.com/src/plugins/vendor/",
   "plugins": [
     {
       "id": "allternit-office-excel",
@@ -13,7 +13,7 @@
       "host": "excel",
       "icon": "📊",
       "requiredOfficeApi": "ExcelApi 1.9",
-      "path": "surfaces/allternit-platform/src/plugins/vendor/office-excel",
+      "path": "surfaces/ai.allternit.com/src/plugins/vendor/office-excel",
       "tags": ["excel", "spreadsheet", "data", "formulas", "charts", "financial"],
       "exclusive": true,
       "bundled": true
@@ -26,7 +26,7 @@
       "host": "powerpoint",
       "icon": "📽️",
       "requiredOfficeApi": "PowerPointApi 1.3",
-      "path": "surfaces/allternit-platform/src/plugins/vendor/office-powerpoint",
+      "path": "surfaces/ai.allternit.com/src/plugins/vendor/office-powerpoint",
       "tags": ["powerpoint", "slides", "design", "presentation", "deck"],
       "exclusive": true,
       "bundled": true
@@ -39,7 +39,7 @@
       "host": "word",
       "icon": "📄",
       "requiredOfficeApi": "WordApi 1.4",
-      "path": "surfaces/allternit-platform/src/plugins/vendor/office-word",
+      "path": "surfaces/ai.allternit.com/src/plugins/vendor/office-word",
       "tags": ["word", "document", "writing", "editing", "redline", "contracts"],
       "exclusive": true,
       "bundled": true

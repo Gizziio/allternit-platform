@@ -56,7 +56,7 @@ export const Discovery = {
    *
    * Example (Allternit platform plugin):
    *   Discovery.register(async () => [{
-   *     id: "allternit-platform",
+   *     id: "ai-allternit",
    *     name: "Allternit Platform LLM",
    *     auth_type: "bearer",
    *     base_url: "https://api.allternit.io/v1",

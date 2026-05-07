@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'surfaces/allternit-platform/**'
+      - 'surfaces/ai.allternit.com/**'
       - 'packages/@allternit/**'
       - 'services/runtime/**'
       - '.github/workflows/deploy-cloudflare-pages.yml'
@@ -32,13 +32,13 @@ jobs:
           cache: 'pnpm'
 
       # Install from monorepo root so all workspace:* packages resolve correctly.
-      # build-cloudflare.sh must run from surfaces/allternit-platform but pnpm
+      # build-cloudflare.sh must run from surfaces/ai.allternit.com but pnpm
       # needs the workspace root context.
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Generate Prisma client
-        working-directory: surfaces/allternit-platform
+        working-directory: surfaces/ai.allternit.com
         run: pnpm prisma generate
 
       - name: Copy discovery feed to public
@@ -46,15 +46,15 @@ jobs:
         # so the desktop app can fetch fresh briefings from platform.allternit.com without
         # a full app rebuild. The _headers file already adds CORS for this path.
         run: |
-          if [ -f surfaces/allternit-platform/src/data/discovery-pipeline.json ]; then
-            cp surfaces/allternit-platform/src/data/discovery-pipeline.json surfaces/allternit-platform/public/discovery-feed.json
+          if [ -f surfaces/ai.allternit.com/src/data/discovery-pipeline.json ]; then
+            cp surfaces/ai.allternit.com/src/data/discovery-pipeline.json surfaces/ai.allternit.com/public/discovery-feed.json
             echo "Copied discovery-pipeline.json to public/discovery-feed.json"
           else
             echo "No discovery-pipeline.json found, skipping"
           fi
 
       - name: Build static export
-        working-directory: surfaces/allternit-platform
+        working-directory: surfaces/ai.allternit.com
         # build-cloudflare.sh temporarily hides src/app/api, runs next build
         # with CLOUDFLARE_PAGES=1, then restores it — API routes are never
         # permanently deleted from the working tree.
@@ -68,4 +68,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy surfaces/allternit-platform/out --project-name=allternit-platform --branch=main
+          command: pages deploy surfaces/ai.allternit.com/out --project-name=ai-allternit --branch=main

@@ -1,0 +1,146 @@
+{
+  "syncedAt": "2026-04-30T18:39:07.571Z",
+  "outputRoot": "/Users/macbook/.allternit/plugins",
+  "plugins": [
+    {
+      "pluginId": "frontend",
+      "pluginName": "Frontend",
+      "pluginDir": "/Users/macbook/.allternit/plugins/frontend",
+      "importedSkills": [
+        {
+          "id": "frontend-design",
+          "source": "anthropics/skills",
+          "repoUrl": "https://github.com/anthropics/skills",
+          "sourceSubpath": "skills/frontend-design",
+          "installedPath": "/Users/macbook/.allternit/plugins/frontend/skills/frontend-design"
+        },
+        {
+          "id": "baseline-ui",
+          "source": "ibelick/ui-skills",
+          "repoUrl": "https://github.com/ibelick/ui-skills",
+          "sourceSubpath": "skills/baseline-ui",
+          "installedPath": "/Users/macbook/.allternit/plugins/frontend/skills/baseline-ui"
+        },
+        {
+          "id": "fixing-accessibility",
+          "source": "ibelick/ui-skills",
+          "repoUrl": "https://github.com/ibelick/ui-skills",
+          "sourceSubpath": "skills/fixing-accessibility",
+          "installedPath": "/Users/macbook/.allternit/plugins/frontend/skills/fixing-accessibility"
+        },
+        {
+          "id": "fixing-metadata",
+          "source": "ibelick/ui-skills",
+          "repoUrl": "https://github.com/ibelick/ui-skills",
+          "sourceSubpath": "skills/fixing-metadata",
+          "installedPath": "/Users/macbook/.allternit/plugins/frontend/skills/fixing-metadata"
+        },
+        {
+          "id": "ui-ux-pro-max",
+          "source": "nextlevelbuilder/ui-ux-pro-max-skill",
+          "repoUrl": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+          "sourceSubpath": ".claude/skills/ui-ux-pro-max",
+          "installedPath": "/Users/macbook/.allternit/plugins/frontend/skills/ui-ux-pro-max"
+        },
+        {
+          "id": "design",
+          "source": "nextlevelbuilder/ui-ux-pro-max-skill",
+          "repoUrl": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+          "sourceSubpath": ".claude/skills/design",
+          "installedPath": "/Users/macbook/.allternit/plugins/frontend/skills/design"
+        },
+        {
+          "id": "impeccable",
+          "source": "pbakaus/impeccable",
+          "repoUrl": "https://github.com/pbakaus/impeccable",
+          "sourceSubpath": "plugin/skills/impeccable",
+          "installedPath": "/Users/macbook/.allternit/plugins/frontend/skills/impeccable"
+        }
+      ]
+    },
+    {
+      "pluginId": "brand",
+      "pluginName": "Brand",
+      "pluginDir": "/Users/macbook/.allternit/plugins/brand",
+      "importedSkills": [
+        {
+          "id": "canvas-design",
+          "source": "anthropics/skills",
+          "repoUrl": "https://github.com/anthropics/skills",
+          "sourceSubpath": "skills/canvas-design",
+          "installedPath": "/Users/macbook/.allternit/plugins/brand/skills/canvas-design"
+        },
+        {
+          "id": "brand-guidelines",
+          "source": "anthropics/skills",
+          "repoUrl": "https://github.com/anthropics/skills",
+          "sourceSubpath": "skills/brand-guidelines",
+          "installedPath": "/Users/macbook/.allternit/plugins/brand/skills/brand-guidelines"
+        },
+        {
+          "id": "theme-factory",
+          "source": "anthropics/skills",
+          "repoUrl": "https://github.com/anthropics/skills",
+          "sourceSubpath": "skills/theme-factory",
+          "installedPath": "/Users/macbook/.allternit/plugins/brand/skills/theme-factory"
+        },
+        {
+          "id": "algorithmic-art",
+          "source": "anthropics/skills",
+          "repoUrl": "https://github.com/anthropics/skills",
+          "sourceSubpath": "skills/algorithmic-art",
+          "installedPath": "/Users/macbook/.allternit/plugins/brand/skills/algorithmic-art"
+        },
+        {
+          "id": "brand",
+          "source": "nextlevelbuilder/ui-ux-pro-max-skill",
+          "repoUrl": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+          "sourceSubpath": ".claude/skills/brand",
+          "installedPath": "/Users/macbook/.allternit/plugins/brand/skills/brand"
+        },
+        {
+          "id": "banner-design",
+          "source": "nextlevelbuilder/ui-ux-pro-max-skill",
+          "repoUrl": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+          "sourceSubpath": ".claude/skills/banner-design",
+          "installedPath": "/Users/macbook/.allternit/plugins/brand/skills/banner-design"
+        }
+      ]
+    },
+    {
+      "pluginId": "motion",
+      "pluginName": "Motion",
+      "pluginDir": "/Users/macbook/.allternit/plugins/motion",
+      "importedSkills": [
+        {
+          "id": "fixing-motion-performance",
+          "source": "ibelick/ui-skills",
+          "repoUrl": "https://github.com/ibelick/ui-skills",
+          "sourceSubpath": "skills/fixing-motion-performance",
+          "installedPath": "/Users/macbook/.allternit/plugins/motion/skills/fixing-motion-performance"
+        },
+        {
+          "id": "slides",
+          "source": "nextlevelbuilder/ui-ux-pro-max-skill",
+          "repoUrl": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+          "sourceSubpath": ".claude/skills/slides",
+          "installedPath": "/Users/macbook/.allternit/plugins/motion/skills/slides"
+        },
+        {
+          "id": "pptx",
+          "source": "anthropics/skills",
+          "repoUrl": "https://github.com/anthropics/skills",
+          "sourceSubpath": "skills/pptx",
+          "installedPath": "/Users/macbook/.allternit/plugins/motion/skills/pptx"
+        },
+        {
+          "id": "slack-gif-creator",
+          "source": "anthropics/skills",
+          "repoUrl": "https://github.com/anthropics/skills",
+          "sourceSubpath": "skills/slack-gif-creator",
+          "installedPath": "/Users/macbook/.allternit/plugins/motion/skills/slack-gif-creator"
+        }
+      ]
+    }
+  ]
+}

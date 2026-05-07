@@ -1,5 +1,7 @@
 // AI Runtime SDK - Harness, Providers, and ACP
 export { AllternitHarness } from './harness/index.js';
+export { AllternitAgent, AgentRun } from './agents/index.js';
+export { ToolRegistry } from './tools/registry.js';
 export { ALLTERNIT_SYSTEM_PROMPT, injectSystemPrompt } from './harness/prompts.js';
 export { AllternitAI } from './providers/anthropic/index.js';
 export { AllternitOpenAI } from './providers/openai/index.js';

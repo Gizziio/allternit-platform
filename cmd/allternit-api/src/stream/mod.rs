@@ -263,6 +263,9 @@ async fn handle_ledger_socket(
         }
     });
     
+    // Active DAG filter set by Subscribe messages (None = all events)
+    let mut dag_filter: Option<String> = None;
+
     // Handle incoming messages from client
     while let Some(Ok(msg)) = receiver.next().await {
         match msg {
@@ -271,7 +274,6 @@ async fn handle_ledger_socket(
                     Ok(client_msg) => {
                         match client_msg {
                             ClientMessage::Ping => {
-                                // Heartbeat response
                                 let pong = ServerMessage::Heartbeat {
                                     timestamp: chrono::Utc::now().timestamp_millis(),
                                 };
@@ -280,15 +282,75 @@ async fn handle_ledger_socket(
                                 }
                             }
                             ClientMessage::Seek { cursor } => {
-                                debug!(client_id, cursor, "Client seeking to cursor");
-                                // TODO: Implement seek - replay from new cursor
+                                debug!(client_id, cursor, "Client seeking to cursor — replaying from new position");
+                                let query = LedgerQuery {
+                                    r#type: None,
+                                    types: None,
+                                    scope: None,
+                                    since: Some(cursor.clone()),
+                                    until: None,
+                                    limit: Some(100),
+                                };
+                                match state.rails.ledger.query(query).await {
+                                    Ok(events) => {
+                                        let events_replayed = events.len();
+                                        for event in &events {
+                                            // Honour active DAG filter during replay
+                                            if let Some(ref filter_dag) = dag_filter {
+                                                if event.scope.as_ref()
+                                                    .and_then(|s| s.dag_id.as_ref())
+                                                    .map(|id| id != filter_dag)
+                                                    .unwrap_or(true)
+                                                {
+                                                    continue;
+                                                }
+                                            }
+                                            let msg = ServerMessage::Event {
+                                                event_id: event.event_id.clone(),
+                                                event_type: event.r#type.clone(),
+                                                timestamp: event.ts.clone(),
+                                                payload: event.payload.clone(),
+                                                scope: event.scope.as_ref().map(|s| EventScopeResponse {
+                                                    dag_id: s.dag_id.clone(),
+                                                    wih_id: s.wih_id.clone(),
+                                                    run_id: s.run_id.clone(),
+                                                }),
+                                            };
+                                            if let Ok(json) = serde_json::to_string(&msg) {
+                                                if tx.send(Message::Text(json)).await.is_err() {
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        let last_cursor = events.last()
+                                            .map(|e| e.event_id.clone())
+                                            .unwrap_or(cursor);
+                                        let complete_msg = ServerMessage::ReplayComplete {
+                                            events_replayed,
+                                            cursor: last_cursor,
+                                        };
+                                        if let Ok(json) = serde_json::to_string(&complete_msg) {
+                                            let _ = tx.send(Message::Text(json)).await;
+                                        }
+                                    }
+                                    Err(e) => {
+                                        error!(error = %e, "Seek ledger query failed");
+                                        let error_msg = ServerMessage::Error {
+                                            message: format!("Seek failed: {}", e),
+                                        };
+                                        if let Ok(json) = serde_json::to_string(&error_msg) {
+                                            let _ = tx.send(Message::Text(json)).await;
+                                        }
+                                    }
+                                }
                             }
                             ClientMessage::Subscribe { dag_id } => {
-                                debug!(client_id, ?dag_id, "Client subscribing to DAG");
-                                // TODO: Filter events by DAG
+                                debug!(client_id, ?dag_id, "Client subscribing to DAG filter");
+                                dag_filter = dag_id;
                             }
                             ClientMessage::Unsubscribe => {
-                                debug!(client_id, "Client unsubscribing");
+                                debug!(client_id, "Client unsubscribing from DAG filter");
+                                dag_filter = None;
                             }
                         }
                     }

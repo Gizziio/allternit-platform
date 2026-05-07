@@ -65,7 +65,7 @@ async function getModuleProgress(courseId: string, userId: string): Promise<Modu
 }
 
 function getDb() {
-  return new Database('surfaces/allternit-platform/data/sqlite.db');
+  return new Database('surfaces/ai.allternit.com/data/sqlite.db');
 }
 
 function updateProgress(db: Database, userId: string, courseCode: string, progress: ModuleProgress[]) {

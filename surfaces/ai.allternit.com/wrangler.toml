@@ -1,0 +1,10 @@
+name = "allternit-platform"
+pages_build_output_dir = "out"
+compatibility_date = "2025-01-01"
+
+[vars]
+NEXT_PUBLIC_APP_URL = "https://platform.allternit.com"
+
+# Secrets (set via `wrangler pages secret put` or Cloudflare dashboard):
+# NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+# ENCRYPTION_KEY

@@ -450,7 +450,7 @@ contextBridge.exposeInMainWorld('allternit', allternitDesktopAPI);
 // ─── allternitSidecar bridge ──────────────────────────────────────────────────
 // The platform renderer calls window.allternitSidecar to detect Electron and
 // discover the gizzi-code AI runtime URL + credentials. This is the well-known
-// interface defined in surfaces/allternit-platform/src/lib/globals.d.ts.
+// interface defined in surfaces/ai.allternit.com/src/lib/globals.d.ts.
 contextBridge.exposeInMainWorld('allternitSidecar', {
   getStatus: (): Promise<'stopped' | 'starting' | 'running' | 'error' | 'crashed'> =>
     ipcRenderer.invoke('sidecar:get-status'),

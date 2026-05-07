@@ -1,6 +1,4 @@
-//! Terminal API routes for handling terminal messages from IDE extensions
-//!
-//! Handles requests from the Kimi For Coding extension and other IDE plugins
+//! Terminal API routes — forwards IDE extension input to Gizzi session message API.
 
 use axum::{
     extract::{Json, State},
@@ -11,27 +9,21 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tracing::{debug, warn};
+use tracing::{debug, error, warn};
 
 use crate::AppState;
 
-/// Terminal message request from IDE extension
 #[derive(Debug, Deserialize)]
 pub struct TerminalMessageRequest {
-    /// Message type (e.g., "input", "resize", "close")
     pub message_type: String,
-    /// Message content - made optional with default to fix 422 errors
     #[serde(default)]
     pub content: Option<String>,
-    /// Session identifier
     #[serde(default)]
     pub session_id: Option<String>,
-    /// Additional metadata
     #[serde(default)]
     pub metadata: Option<serde_json::Value>,
 }
 
-/// Terminal message response
 #[derive(Debug, Serialize)]
 pub struct TerminalMessageResponse {
     pub success: bool,
@@ -40,81 +32,123 @@ pub struct TerminalMessageResponse {
     pub data: Option<serde_json::Value>,
 }
 
-/// Terminal input message request (backward compatibility)
 #[derive(Debug, Deserialize)]
 pub struct TerminalInputRequest {
-    /// The input content - made optional with default
     #[serde(default)]
     pub content: Option<String>,
-    /// Session identifier
     #[serde(default)]
     pub session_id: Option<String>,
 }
 
-/// Create terminal router
 pub fn terminal_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/message", post(handle_terminal_message))
         .route("/input", post(handle_terminal_input))
 }
 
-/// Handle terminal message from IDE extension
+fn gizzi_base_url() -> String {
+    let port = std::env::var("GIZZI_PORT").unwrap_or_else(|_| "4096".to_string());
+    format!("http://127.0.0.1:{}", port)
+}
+
+async fn forward_to_gizzi(
+    session_id: &str,
+    part_type: &str,
+    content: Option<&str>,
+    extra: Option<serde_json::Value>,
+) -> Result<(), String> {
+    let url = format!(
+        "{}/v1/session/{}/message",
+        gizzi_base_url(),
+        urlencoding::encode(session_id)
+    );
+
+    let mut part = serde_json::json!({ "type": part_type });
+    if let Some(text) = content {
+        part["text"] = serde_json::Value::String(text.to_string());
+    }
+    if let Some(ext) = extra {
+        if let (Some(obj), Some(ext_obj)) = (part.as_object_mut(), ext.as_object()) {
+            for (k, v) in ext_obj {
+                obj.insert(k.clone(), v.clone());
+            }
+        }
+    }
+
+    let body = serde_json::json!({
+        "sessionID": session_id,
+        "parts": [part],
+    });
+
+    let client = reqwest::Client::new();
+    let res = client
+        .post(&url)
+        .json(&body)
+        .timeout(std::time::Duration::from_secs(10))
+        .send()
+        .await
+        .map_err(|e| format!("Gizzi unreachable: {}", e))?;
+
+    if !res.status().is_success() {
+        return Err(format!("Gizzi returned {}", res.status()));
+    }
+    Ok(())
+}
+
 async fn handle_terminal_message(
     State(_state): State<Arc<AppState>>,
     Json(request): Json<TerminalMessageRequest>,
 ) -> impl IntoResponse {
+    let session_id = match &request.session_id {
+        Some(id) if !id.is_empty() => id.clone(),
+        _ => {
+            warn!("Terminal message missing session_id");
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(TerminalMessageResponse {
+                    success: false,
+                    message: "session_id is required".to_string(),
+                    data: None,
+                }),
+            );
+        }
+    };
+
     debug!(
         message_type = %request.message_type,
-        has_content = request.content.is_some(),
-        "Received terminal message"
+        session_id = %session_id,
+        "Forwarding terminal message to Gizzi"
     );
 
-    // Handle the message based on type
-    match request.message_type.as_str() {
-        "input" => {
-            let content = request.content.unwrap_or_default();
-            debug!(content_len = content.len(), "Processing terminal input");
-            // TODO: Forward to actual terminal/session handler
-            (
-                StatusCode::OK,
-                Json(TerminalMessageResponse {
-                    success: true,
-                    message: "Input received".to_string(),
-                    data: Some(serde_json::json!({
-                        "bytes_received": content.len(),
-                    })),
-                }),
-            )
-        }
+    let (part_type, extra) = match request.message_type.as_str() {
+        "input" => ("terminal_input", None),
         "resize" => {
-            debug!("Processing terminal resize");
-            (
-                StatusCode::OK,
-                Json(TerminalMessageResponse {
-                    success: true,
-                    message: "Resize acknowledged".to_string(),
-                    data: None,
-                }),
-            )
+            let dims = request.metadata.clone().unwrap_or(serde_json::json!({}));
+            ("terminal_resize", Some(dims))
         }
-        "close" => {
-            debug!("Processing terminal close");
-            (
-                StatusCode::OK,
-                Json(TerminalMessageResponse {
-                    success: true,
-                    message: "Close acknowledged".to_string(),
-                    data: None,
-                }),
-            )
-        }
+        "close" => ("terminal_close", None),
         unknown => {
             warn!(message_type = %unknown, "Unknown terminal message type");
+            ("terminal_unknown", None)
+        }
+    };
+
+    match forward_to_gizzi(&session_id, part_type, request.content.as_deref(), extra).await {
+        Ok(()) => (
+            StatusCode::OK,
+            Json(TerminalMessageResponse {
+                success: true,
+                message: format!("{} forwarded to session {}", request.message_type, session_id),
+                data: None,
+            }),
+        ),
+        Err(e) => {
+            error!(error = %e, session_id = %session_id, "Failed to forward to Gizzi");
             (
-                StatusCode::OK,
+                StatusCode::BAD_GATEWAY,
                 Json(TerminalMessageResponse {
-                    success: true,
-                    message: format!("Unknown message type '{}' accepted", unknown),
+                    success: false,
+                    message: e,
                     data: None,
                 }),
             )
@@ -122,29 +156,51 @@ async fn handle_terminal_message(
     }
 }
 
-/// Handle terminal input (backward compatibility endpoint)
 async fn handle_terminal_input(
     State(_state): State<Arc<AppState>>,
     Json(request): Json<TerminalInputRequest>,
 ) -> impl IntoResponse {
-    let content = request.content.unwrap_or_default();
-    
+    let session_id = match &request.session_id {
+        Some(id) if !id.is_empty() => id.clone(),
+        _ => {
+            warn!("Terminal input missing session_id");
+            return (
+                StatusCode::BAD_REQUEST,
+                Json(TerminalMessageResponse {
+                    success: false,
+                    message: "session_id is required".to_string(),
+                    data: None,
+                }),
+            );
+        }
+    };
+
+    let content = request.content.as_deref();
     debug!(
-        content_len = content.len(),
-        session_id = ?request.session_id,
-        "Received terminal input"
+        content_len = content.map(|c| c.len()).unwrap_or(0),
+        session_id = %session_id,
+        "Forwarding terminal input to Gizzi"
     );
 
-    // TODO: Forward to actual terminal/session handler
-    (
-        StatusCode::OK,
-        Json(TerminalMessageResponse {
-            success: true,
-            message: "Input received".to_string(),
-            data: Some(serde_json::json!({
-                "bytes_received": content.len(),
-                "session_id": request.session_id,
-            })),
-        }),
-    )
+    match forward_to_gizzi(&session_id, "terminal_input", content, None).await {
+        Ok(()) => (
+            StatusCode::OK,
+            Json(TerminalMessageResponse {
+                success: true,
+                message: format!("Input forwarded to session {}", session_id),
+                data: None,
+            }),
+        ),
+        Err(e) => {
+            error!(error = %e, session_id = %session_id, "Failed to forward terminal input to Gizzi");
+            (
+                StatusCode::BAD_GATEWAY,
+                Json(TerminalMessageResponse {
+                    success: false,
+                    message: e,
+                    data: None,
+                }),
+            )
+        }
+    }
 }

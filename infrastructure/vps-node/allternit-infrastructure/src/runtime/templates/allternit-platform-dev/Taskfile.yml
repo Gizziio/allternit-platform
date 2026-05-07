@@ -63,7 +63,7 @@ tasks:
   # ===========================================================================
   deps:ui:
     desc: Install UI dependencies
-    dir: 6-ui/allternit-platform
+    dir: 6-ui/ai-allternit
     cmds:
       - pnpm install
 
@@ -90,7 +90,7 @@ tasks:
 
   dev:ui:
     desc: Start UI development server only
-    dir: 6-ui/allternit-platform
+    dir: 6-ui/ai-allternit
     cmds:
       - pnpm dev
 
@@ -124,11 +124,11 @@ tasks:
 
   build:ui:
     desc: Build UI for production
-    dir: 6-ui/allternit-platform
+    dir: 6-ui/ai-allternit
     cmds:
       - pnpm build
     generates:
-      - 6-ui/allternit-platform/dist/**/*
+      - 6-ui/ai-allternit/dist/**/*
 
   build:go:
     desc: Build Go services
@@ -171,13 +171,13 @@ tasks:
 
   test:ui:
     desc: Run UI tests
-    dir: 6-ui/allternit-platform
+    dir: 6-ui/ai-allternit
     cmds:
       - pnpm test
 
   test:e2e:
     desc: Run end-to-end tests
-    dir: 6-ui/allternit-platform
+    dir: 6-ui/ai-allternit
     cmds:
       - pnpm test:e2e
 
@@ -205,7 +205,7 @@ tasks:
 
   lint:ui:
     desc: Run UI linter
-    dir: 6-ui/allternit-platform
+    dir: 6-ui/ai-allternit
     cmds:
       - pnpm lint
 
@@ -231,7 +231,7 @@ tasks:
 
   lint:ui:fix:
     desc: Fix UI linting issues
-    dir: 6-ui/allternit-platform
+    dir: 6-ui/ai-allternit
     cmds:
       - pnpm lint:fix
       - pnpm format
@@ -262,7 +262,7 @@ tasks:
 
   db:migrate:prisma:
     desc: Run Prisma migrations
-    dir: 6-ui/allternit-platform
+    dir: 6-ui/ai-allternit
     cmds:
       - pnpm prisma migrate deploy
     ignore_error: true
@@ -307,7 +307,7 @@ tasks:
 
   db:studio:
     desc: Open Prisma Studio
-    dir: 6-ui/allternit-platform
+    dir: 6-ui/ai-allternit
     cmds:
       - pnpm prisma studio
 
@@ -347,7 +347,7 @@ tasks:
 
   generate:prisma:
     desc: Generate Prisma client
-    dir: 6-ui/allternit-platform
+    dir: 6-ui/ai-allternit
     cmds:
       - pnpm prisma generate
 
@@ -373,15 +373,15 @@ tasks:
     cmds:
       - rm -rf {{.BUILD_DIR}}
       - rm -rf {{.DIST_DIR}}
-      - rm -rf 6-ui/allternit-platform/.next
-      - rm -rf 6-ui/allternit-platform/dist
+      - rm -rf 6-ui/ai-allternit/.next
+      - rm -rf 6-ui/ai-allternit/dist
       - rm -rf 1-kernel/allternit-infrastructure/target
 
   clean:all:
     desc: Deep clean (including dependencies)
     cmds:
       - task: clean
-      - rm -rf 6-ui/allternit-platform/node_modules
+      - rm -rf 6-ui/ai-allternit/node_modules
       - rm -rf 1-kernel/allternit-infrastructure/target
 
   # ===========================================================================
@@ -410,7 +410,7 @@ tasks:
 
   format:ui:
     desc: Format UI code
-    dir: 6-ui/allternit-platform
+    dir: 6-ui/ai-allternit
     cmds:
       - pnpm format
 
@@ -443,7 +443,7 @@ tasks:
 
   update:ui:
     desc: Update UI dependencies
-    dir: 6-ui/allternit-platform
+    dir: 6-ui/ai-allternit
     cmds:
       - pnpm update
 

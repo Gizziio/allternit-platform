@@ -1,0 +1,59 @@
+config_version: 8
+
+log_level: info
+
+token_usage:
+  enabled: false
+
+models:
+  - name: claude-sonnet-4-6
+    display_name: Claude Sonnet 4.6
+    use: langchain_anthropic:ChatAnthropic
+    model: claude-sonnet-4-6
+    api_key: $ANTHROPIC_API_KEY
+    default_request_timeout: 600.0
+    max_retries: 2
+    max_tokens: 8192
+    supports_vision: true
+
+  - name: claude-opus-4-7
+    display_name: Claude Opus 4.7
+    use: langchain_anthropic:ChatAnthropic
+    model: claude-opus-4-7
+    api_key: $ANTHROPIC_API_KEY
+    default_request_timeout: 600.0
+    max_retries: 2
+    max_tokens: 8192
+    supports_vision: true
+
+basic_model:
+  name: claude-sonnet-4-6
+
+reasoning_model:
+  name: claude-sonnet-4-6
+
+tools: []
+
+tool_groups: []
+
+sandbox:
+  use: deerflow.sandbox.local.provider:LocalSandboxProvider
+
+memory:
+  enabled: false
+  injection_enabled: false
+
+subagents:
+  enabled: false
+
+summarization:
+  enabled: false
+
+title:
+  enabled: true
+  max_words: 10
+  max_chars: 80
+
+skills:
+  path: /app/skills
+  container_path: /app/skills

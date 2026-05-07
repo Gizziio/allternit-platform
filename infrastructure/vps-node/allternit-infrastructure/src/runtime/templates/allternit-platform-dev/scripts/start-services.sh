@@ -172,9 +172,9 @@ if command -v sqlx &> /dev/null && [ -d "$WORKSPACE_DIR/1-kernel/allternit-kerne
 fi
 
 # Run Prisma migrations if present
-if [ -d "$WORKSPACE_DIR/6-ui/allternit-platform/prisma" ]; then
+if [ -d "$WORKSPACE_DIR/6-ui/ai-allternit/prisma" ]; then
     log_info "Running Prisma migrations..."
-    cd "$WORKSPACE_DIR/6-ui/allternit-platform"
+    cd "$WORKSPACE_DIR/6-ui/ai-allternit"
     pnpm prisma migrate dev --name init --skip-generate --skip-seed 2>/dev/null || \
         pnpm prisma migrate deploy 2>/dev/null || \
         log_warning "Prisma migrations skipped (may already be applied)"
@@ -274,9 +274,9 @@ start_infrastructure_services() {
 
 # Start UI development server
 start_ui() {
-    if [ -d "$WORKSPACE_DIR/6-ui/allternit-platform" ]; then
+    if [ -d "$WORKSPACE_DIR/6-ui/ai-allternit" ]; then
         log_info "Starting Allternit Platform UI (Next.js)..."
-        cd "$WORKSPACE_DIR/6-ui/allternit-platform"
+        cd "$WORKSPACE_DIR/6-ui/ai-allternit"
         
         # Check for package.json
         if [ -f "package.json" ]; then

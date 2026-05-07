@@ -92,7 +92,7 @@ export class PlatformServerManager {
     const bundledPlatformDir = this.resolveBundledPlatformDir();
     const repoPlatformDir = app.isPackaged
       ? null
-      : path.join(app.getAppPath(), '..', '..', 'surfaces', 'allternit-platform');
+      : path.join(app.getAppPath(), '..', '..', 'surfaces', 'ai.allternit.com');
     const envSourceDir = bundledPlatformDir ?? repoPlatformDir;
     const productionEnv = envSourceDir ? loadEnvFile(path.join(envSourceDir, '.env.production')) : {};
     const localEnv = envSourceDir ? loadEnvFile(path.join(envSourceDir, '.env.local')) : {};
@@ -229,18 +229,18 @@ export class PlatformServerManager {
     const candidates = app.isPackaged
       ? [
           path.join(process.resourcesPath, 'platform-server', 'server.js'),
-          path.join(process.resourcesPath, 'platform-server', 'surfaces', 'allternit-platform', 'server.js'),
-          path.join(process.resourcesPath, 'platform-server', 'standalone', 'surfaces', 'allternit-platform', 'server.js'),
+          path.join(process.resourcesPath, 'platform-server', 'surfaces', 'ai.allternit.com', 'server.js'),
+          path.join(process.resourcesPath, 'platform-server', 'standalone', 'surfaces', 'ai.allternit.com', 'server.js'),
         ]
       : [
           path.join(process.resourcesPath, 'platform-server', 'server.js'),
-          path.join(process.resourcesPath, 'platform-server', 'surfaces', 'allternit-platform', 'server.js'),
-          path.join(process.resourcesPath, 'platform-server', 'standalone', 'surfaces', 'allternit-platform', 'server.js'),
-          path.join(app.getAppPath(), '..', '..', 'surfaces', 'allternit-platform', '.next', 'standalone', 'server.js'),
-          path.join(app.getAppPath(), '..', '..', 'surfaces', 'allternit-platform', '.next', 'standalone', 'surfaces', 'allternit-platform', 'server.js'),
+          path.join(process.resourcesPath, 'platform-server', 'surfaces', 'ai.allternit.com', 'server.js'),
+          path.join(process.resourcesPath, 'platform-server', 'standalone', 'surfaces', 'ai.allternit.com', 'server.js'),
+          path.join(app.getAppPath(), '..', '..', 'surfaces', 'ai.allternit.com', '.next', 'standalone', 'server.js'),
+          path.join(app.getAppPath(), '..', '..', 'surfaces', 'ai.allternit.com', '.next', 'standalone', 'surfaces', 'ai.allternit.com', 'server.js'),
           path.join(__dirname, '..', '..', 'resources', 'platform-server', 'server.js'),
-          path.join(__dirname, '..', '..', 'resources', 'platform-server', 'surfaces', 'allternit-platform', 'server.js'),
-          path.join(__dirname, '..', '..', 'resources', 'platform-server', 'standalone', 'surfaces', 'allternit-platform', 'server.js'),
+          path.join(__dirname, '..', '..', 'resources', 'platform-server', 'surfaces', 'ai.allternit.com', 'server.js'),
+          path.join(__dirname, '..', '..', 'resources', 'platform-server', 'standalone', 'surfaces', 'ai.allternit.com', 'server.js'),
         ];
 
     for (const p of candidates) {
@@ -287,7 +287,7 @@ export class PlatformServerManager {
             'platform-server',
             'standalone',
             'surfaces',
-            'allternit-platform',
+            'ai.allternit.com',
             'prisma',
             'data',
             'allternit.db',
@@ -300,12 +300,12 @@ export class PlatformServerManager {
             'platform-server',
             'standalone',
             'surfaces',
-            'allternit-platform',
+            'ai.allternit.com',
             'prisma',
             'data',
             'allternit.db',
           ),
-          path.join(app.getAppPath(), '..', '..', 'surfaces', 'allternit-platform', 'prisma', 'data', 'allternit.db'),
+          path.join(app.getAppPath(), '..', '..', 'surfaces', 'ai.allternit.com', 'prisma', 'data', 'allternit.db'),
           path.join(__dirname, '..', '..', 'resources', 'platform-server', 'prisma', 'data', 'allternit.db'),
           path.join(
             __dirname,
@@ -315,7 +315,7 @@ export class PlatformServerManager {
             'platform-server',
             'standalone',
             'surfaces',
-            'allternit-platform',
+            'ai.allternit.com',
             'prisma',
             'data',
             'allternit.db',
@@ -333,7 +333,7 @@ export class PlatformServerManager {
 
   private resolveBundledPlatformDir(): string | null {
     const candidates = [
-      path.join(process.resourcesPath, 'platform-server', 'surfaces', 'allternit-platform'),
+      path.join(process.resourcesPath, 'platform-server', 'surfaces', 'ai.allternit.com'),
       path.join(process.resourcesPath, 'platform-server'),
     ];
 

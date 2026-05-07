@@ -11,7 +11,7 @@ set -e
 # Detect directories
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-PLATFORM_DIR="$WORKSPACE_ROOT/surfaces/allternit-platform"
+PLATFORM_DIR="$WORKSPACE_ROOT/surfaces/ai.allternit.com"
 API_DIR="$WORKSPACE_ROOT/cmd/allternit-api"
 GIZZI_DIR="$WORKSPACE_ROOT/cmd/gizzi-code"
 DESKTOP_DIR="$WORKSPACE_ROOT/surfaces/allternit-desktop"

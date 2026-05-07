@@ -1,0 +1,42 @@
+services:
+  memory-store:
+    image: qdrant/qdrant:latest
+    ports:
+      - "${QDRANT_PORT:-6333}:6333"
+    volumes:
+      - memory_store_data:/qdrant/storage
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  memory-api:
+    build:
+      context: ../../../../tools/cowork-integration/sources/mem0/openmemory/api
+      dockerfile: Dockerfile
+    ports:
+      - "${MEMORY_API_PORT:-8765}:8765"
+    volumes:
+      - ../../../../tools/cowork-integration/sources/mem0/openmemory/api:/usr/src/openmemory
+    environment:
+      - USER=${COWORK_MEMORY_USER_ID:-allternit}
+      - API_KEY=${COWORK_MEMORY_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - QDRANT_HOST=memory-store
+      - QDRANT_PORT=6333
+    depends_on:
+      memory-store:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8765/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  memory_store_data:

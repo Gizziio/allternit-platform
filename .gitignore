@@ -49,3 +49,10 @@ __pycache__/
 
 # Trace output
 cmd/gizzi-code/trace_output/
+.references/
+infrastructure/allternit-cloud-providers/vendor-integration/vendor/beads
+infrastructure/allternit-cloud-providers/vendor-integration/vendor/mcp_agent_mail
+tools/mcp-servers/superpowers
+
+.cache/
+.tmp-*

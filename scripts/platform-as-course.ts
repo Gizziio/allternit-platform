@@ -12,7 +12,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
-const PLATFORM_DIR = 'surfaces/allternit-platform';
+const PLATFORM_DIR = 'surfaces/ai.allternit.com';
 
 interface PlatformTopic {
   name: string;

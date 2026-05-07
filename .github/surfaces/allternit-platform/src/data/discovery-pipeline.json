@@ -1,0 +1,48 @@
+[
+  {
+    "id": "bookmark-twitter-0",
+    "slug": "bookmark-0",
+    "type": "blog",
+    "contentType": "signal",
+    "status": "published",
+    "title": "Example: Add your real Twitter bookmarks here",
+    "subtitle": "twitter · Curated Bookmark",
+    "abstract": "Replace this file with your actual curated bookmarks. Curated from twitter.",
+    "authors": [
+      "@example"
+    ],
+    "teams": [
+      "research"
+    ],
+    "tags": [
+      "example"
+    ],
+    "keywords": [
+      "example"
+    ],
+    "createdAt": "2026-04-27T18:29:25.260Z",
+    "updatedAt": "2026-04-27T18:29:25.260Z",
+    "publishedAt": "2026-04-27T18:29:25.260Z",
+    "content": {
+      "markdown": "**Example: Add your real Twitter bookmarks here**\n\nBy @example\n\nhttps://x.com/karpathy/status/1850000000000000000",
+      "sources": [
+        {
+          "source": "twitter",
+          "title": "Example: Add your real Twitter bookmarks here",
+          "url": "https://x.com/karpathy/status/1850000000000000000"
+        }
+      ]
+    },
+    "readingTime": 1,
+    "featured": false,
+    "series": "Curated Bookmarks",
+    "metrics": {
+      "views": 0,
+      "uniqueVisitors": 0,
+      "downloads": 0,
+      "citationCount": 0
+    },
+    "license": "CC BY 4.0",
+    "accessLevel": "public"
+  }
+]

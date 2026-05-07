@@ -6,7 +6,7 @@
 #   ./scripts/build-cloudflare-platform.sh [--no-zip]
 #
 # Outputs:
-#   surfaces/allternit-platform/dist/        (static export)
+#   surfaces/ai.allternit.com/dist/        (static export)
 #   allternit-websites/projects/platform-allternit/deploy.zip
 #
 # Notes:
@@ -18,8 +18,8 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PLATFORM_DIR="$REPO_ROOT/surfaces/allternit-platform"
-WEBSITES_DIR="$HOME/Desktop/allternit-websites/projects/platform-allternit"
+PLATFORM_DIR="$REPO_ROOT/surfaces/ai.allternit.com"
+WEBSITES_DIR="$HOME/Desktop/allternit-websites/projects/platform.allternit.com"
 
 CREATE_ZIP=true
 for arg in "$@"; do

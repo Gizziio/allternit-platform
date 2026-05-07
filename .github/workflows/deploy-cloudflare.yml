@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'surfaces/allternit-platform/**'
+      - 'surfaces/ai.allternit.com/**'
       - '.github/workflows/deploy-cloudflare.yml'
 
 jobs:
@@ -27,15 +27,15 @@ jobs:
           version: 8
           
       - name: Install dependencies
-        working-directory: surfaces/allternit-platform
+        working-directory: surfaces/ai.allternit.com
         run: pnpm install --ignore-scripts
         
       - name: Generate Prisma Client
-        working-directory: surfaces/allternit-platform
+        working-directory: surfaces/ai.allternit.com
         run: pnpm prisma generate
         
       - name: Build
-        working-directory: surfaces/allternit-platform
+        working-directory: surfaces/ai.allternit.com
         run: pnpm next build
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
@@ -46,6 +46,6 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: allternit-platform
-          directory: surfaces/allternit-platform/.next
+          projectName: ai-allternit
+          directory: surfaces/ai.allternit.com/.next
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}

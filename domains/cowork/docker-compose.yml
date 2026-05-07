@@ -1,0 +1,48 @@
+services:
+  # Semantic memory with MCP transport — port 8761
+  memory-mcp:
+    extends:
+      file: services/memory-mcp/docker-compose.yml
+      service: memory-mcp
+
+  # Qdrant vector store for memory-api
+  memory-store:
+    extends:
+      file: services/memory/docker-compose.yml
+      service: memory-store
+
+  # OpenMemory REST/MCP API — port 8765
+  memory-api:
+    extends:
+      file: services/memory/docker-compose.yml
+      service: memory-api
+    depends_on:
+      memory-store:
+        condition: service_healthy
+
+  # Docker-based code execution sandbox — port 8762
+  sandbox:
+    extends:
+      file: services/sandbox/docker-compose.yml
+      service: sandbox
+
+  # Browser automation MCP agent — port 8763
+  browser-agent:
+    extends:
+      file: services/browser-agent/docker-compose.yml
+      service: browser-agent
+
+  # Research agent gateway (LangGraph super-agent) — port 8764
+  research:
+    extends:
+      file: services/research/docker-compose.yml
+      service: research
+
+volumes:
+  memory_mcp_data:
+  memory_store_data:
+  research_data:
+
+networks:
+  default:
+    name: allternit-cowork

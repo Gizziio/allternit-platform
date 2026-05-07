@@ -1,6 +1,6 @@
 /**
  * Mode Switcher - Pill variant for TUI
- * Based on allternit-platform ModeSwitcher.tsx
+ * Based on ai-allternit ModeSwitcher.tsx
  * 
  * Placement: Top right corner (during onboarding and main screen)
  * Modes: Code | Cowork

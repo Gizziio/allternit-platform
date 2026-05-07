@@ -3,14 +3,18 @@
 //! Replaces Docker-based sandboxing with VM-based execution
 
 use axum::{
+    body::Body,
     extract::{Json, State},
-    http::StatusCode,
+    http::{header, StatusCode},
+    response::Response,
     routing::{get, post},
     Router,
 };
+use futures::stream;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tracing::debug;
+use tokio::io::AsyncBufReadExt;
+use tracing::{debug, error};
 
 use allternit_driver_interface::{
     CommandSpec, ExecutionId,
@@ -137,13 +141,103 @@ async fn execute_handler(
     }))
 }
 
-/// Execute code with streaming output
+/// Execute code with streaming output (SSE)
 async fn execute_stream_handler(
     State(_state): State<Arc<AppState>>,
-    Json(_request): Json<SandboxExecuteRequest>,
-) -> Result<Json<SandboxExecuteResponse>, (StatusCode, String)> {
-    // TODO: Implement streaming execution
-    Err((StatusCode::NOT_IMPLEMENTED, "Streaming not yet implemented".to_string()))
+    Json(request): Json<SandboxExecuteRequest>,
+) -> Response {
+    let (cmd, args): (&str, Vec<&str>) = match request.language.as_str() {
+        "python" | "python3" => ("python3", vec!["-c", &request.code]),
+        "node" | "javascript" => ("node", vec!["-e", &request.code]),
+        "bash" | "sh" => ("bash", vec!["-c", &request.code]),
+        _ => {
+            let body = format!("data: {{\"type\":\"error\",\"message\":\"Unsupported language: {}\"}}\n\n", request.language);
+            return Response::builder()
+                .status(200)
+                .header(header::CONTENT_TYPE, "text/event-stream")
+                .header(header::CACHE_CONTROL, "no-cache")
+                .body(Body::from(body))
+                .unwrap_or_default();
+        }
+    };
+
+    let timeout = std::time::Duration::from_secs(request.timeout_secs.min(300));
+    let code = request.code.clone();
+    let args: Vec<String> = args.iter().map(|s| s.to_string()).collect();
+
+    let stream_body = async_stream::stream! {
+        let mut child = match tokio::process::Command::new(cmd)
+            .args(&args)
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .kill_on_drop(true)
+            .spawn()
+        {
+            Ok(c) => c,
+            Err(e) => {
+                let msg = format!("data: {{\"type\":\"error\",\"message\":\"{}\"}}\n\n", e);
+                yield Ok::<_, std::convert::Infallible>(bytes::Bytes::from(msg));
+                return;
+            }
+        };
+
+        let stdout = child.stdout.take().unwrap();
+        let stderr = child.stderr.take().unwrap();
+        let mut stdout_lines = tokio::io::BufReader::new(stdout).lines();
+        let mut stderr_lines = tokio::io::BufReader::new(stderr).lines();
+
+        let deadline = tokio::time::Instant::now() + timeout;
+
+        loop {
+            tokio::select! {
+                line = stdout_lines.next_line() => {
+                    match line {
+                        Ok(Some(text)) => {
+                            let escaped = text.replace('"', "\\\"");
+                            let msg = format!("data: {{\"type\":\"stdout\",\"line\":\"{escaped}\"}}\n\n");
+                            yield Ok::<_, std::convert::Infallible>(bytes::Bytes::from(msg));
+                        }
+                        Ok(None) => break,
+                        Err(e) => {
+                            error!(error=%e, "stdout read error");
+                            break;
+                        }
+                    }
+                }
+                line = stderr_lines.next_line() => {
+                    match line {
+                        Ok(Some(text)) => {
+                            let escaped = text.replace('"', "\\\"");
+                            let msg = format!("data: {{\"type\":\"stderr\",\"line\":\"{escaped}\"}}\n\n");
+                            yield Ok::<_, std::convert::Infallible>(bytes::Bytes::from(msg));
+                        }
+                        Ok(None) => {}
+                        Err(e) => {
+                            error!(error=%e, "stderr read error");
+                        }
+                    }
+                }
+                _ = tokio::time::sleep_until(deadline) => {
+                    let _ = child.kill().await;
+                    let msg = "data: {\"type\":\"error\",\"message\":\"Execution timed out\"}\n\n".to_string();
+                    yield Ok::<_, std::convert::Infallible>(bytes::Bytes::from(msg));
+                    return;
+                }
+            }
+        }
+
+        let exit_code = child.wait().await.map(|s| s.code().unwrap_or(-1)).unwrap_or(-1);
+        let done = format!("data: {{\"type\":\"done\",\"exit_code\":{exit_code}}}\n\n");
+        yield Ok::<_, std::convert::Infallible>(bytes::Bytes::from(done));
+    };
+
+    Response::builder()
+        .status(200)
+        .header(header::CONTENT_TYPE, "text/event-stream")
+        .header(header::CACHE_CONTROL, "no-cache")
+        .header(header::CONNECTION, "keep-alive")
+        .body(Body::from_stream(stream_body))
+        .unwrap_or_default()
 }
 
 /// Get sandbox capabilities
@@ -175,7 +269,7 @@ async fn capabilities_handler(
         ],
         max_concurrent_sessions: 10, // Default or obtain from elsewhere
         supports_snapshots: caps.features.snapshot,
-        supports_streaming: false, // TODO
+        supports_streaming: true,
     }))
 }
 

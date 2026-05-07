@@ -18,12 +18,17 @@ use tracing::warn;
 // Import from library
 use allternit_api::AppState;
 use allternit_api::chat_routes::chat_router;
+use allternit_api::cowork::background_service::CoworkBackgroundService;
+use allternit_api::cowork::routes::{background_router, CoworkBgState};
 use allternit_api::rails::{rails_router, RailsState};
 use allternit_api::sandbox_routes::sandbox_router;
 use allternit_api::stream::stream_router;
 use allternit_api::terminal_routes::terminal_router;
 use allternit_api::viz_routes::viz_router;
 use allternit_api::vm_session_routes::{new_vm_session_store, vm_session_router};
+use allternit_cowork_scheduler::{Scheduler, api::ApiState};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 #[tokio::main]
 async fn main() {
@@ -45,15 +50,26 @@ async fn main() {
         .await
         .expect("Failed to initialize Rails service state");
 
+    // Initialize cowork scheduler (optional — no-op if DB path is unset)
+    let cowork_scheduler = initialize_cowork_scheduler(&data_dir).await;
+    let scheduler_state = cowork_scheduler.clone().map(|s| {
+        Arc::new(ApiState { scheduler: s })
+    });
+
+    // Initialize cowork background service
+    let (cowork_background, bg_state) = initialize_cowork_background(&data_dir).await;
+
     // Create application state
     let state = Arc::new(AppState {
         vm_driver,
         rails,
         vm_sessions: new_vm_session_store(),
+        cowork_scheduler,
+        cowork_background,
     });
 
     // Build router
-    let app = Router::new()
+    let mut app = Router::new()
         // Core API routes
         .nest("/api", chat_router())
         .nest("/viz", viz_router())
@@ -69,6 +85,18 @@ async fn main() {
         // Health check
         .route("/health", axum::routing::get(health_check))
         .with_state(state);
+
+    // Mount cowork scheduler routes if scheduler is active
+    if let Some(sstate) = scheduler_state {
+        app = app.nest("/cowork/scheduler", allternit_cowork_scheduler::api::api_router(sstate));
+    }
+
+    // Mount cowork background service routes if service is active
+    if let Some(bstate) = bg_state {
+        app = app.merge(background_router(Arc::new(bstate)));
+    }
+
+    let app = app;
 
     // Start server — port from ALLTERNIT_API_PORT env var, default 8013
     let port: u16 = std::env::var("ALLTERNIT_API_PORT")
@@ -87,6 +115,56 @@ async fn main() {
     info!("  - Health:         GET /health");
 
     axum::serve(listener, app).await.unwrap();
+}
+
+/// Initialize the cowork background service (autonomous loop) backed by SQLite.
+async fn initialize_cowork_background(
+    data_dir: &std::path::Path,
+) -> (
+    Option<allternit_api::cowork::background_service::BackgroundServiceHandle>,
+    Option<CoworkBgState>,
+) {
+    let db_path = data_dir.join("cowork-background.db");
+    match CoworkBackgroundService::new(&db_path) {
+        Ok(svc) => {
+            let handle = svc.handle();
+            let shared = Arc::new(svc);
+            CoworkBackgroundService::start(shared);
+            info!("Cowork background service started (db: {})", db_path.display());
+            let bg_state = CoworkBgState { handle: handle.clone() };
+            (Some(handle), Some(bg_state))
+        }
+        Err(e) => {
+            tracing::warn!("Cowork background service init failed: {e}");
+            (None, None)
+        }
+    }
+}
+
+/// Initialize the cowork task scheduler backed by SQLite.
+async fn initialize_cowork_scheduler(data_dir: &std::path::Path) -> Option<Arc<RwLock<Scheduler>>> {
+    let db_path = data_dir.join("cowork-schedules.db");
+    let api_url = format!(
+        "http://localhost:{}",
+        std::env::var("ALLTERNIT_API_PORT").unwrap_or_else(|_| "8013".to_string())
+    );
+
+    match Scheduler::new(&db_path, api_url).await {
+        Ok(scheduler) => {
+            let shared = Arc::new(RwLock::new(scheduler));
+            let s = shared.clone();
+            if let Err(e) = s.read().await.start().await {
+                tracing::warn!("Cowork scheduler start failed: {e}");
+                return None;
+            }
+            info!("Cowork scheduler started (db: {})", db_path.display());
+            Some(shared)
+        }
+        Err(e) => {
+            tracing::warn!("Cowork scheduler init failed: {e}");
+            None
+        }
+    }
 }
 
 /// Health check endpoint

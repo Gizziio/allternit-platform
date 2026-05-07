@@ -39,6 +39,9 @@ allternit-apple-vf-driver = { path = "../../domains/kernel/service/allternit-app
 tokio-tungstenite = "0.21"
 futures = "0.3"
 
+# SQLite (cowork background service)
+rusqlite = { version = "0.31", features = ["bundled"] }
+
 # Utilities
 uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }

@@ -1,4 +1,9 @@
 export { AllternitHarness } from './harness/index.js';
+export type { HarnessConfig, StreamRequest, Message, HarnessResponse, HarnessStreamChunk, HarnessMode } from './harness/types.js';
+export { AllternitAgent, AgentRun } from './agents/index.js';
+export type { AgentProfile, AgentProfileCapability, ReplyRequest, ReplyOutcome } from './agents/types.js';
+export { ToolRegistry } from './tools/registry.js';
+export type { ToolDefinition } from './tools/types.js';
 export { ALLTERNIT_SYSTEM_PROMPT, injectSystemPrompt } from './harness/prompts.js';
 export { AllternitAI } from './providers/anthropic/index.js';
 export { AllternitOpenAI } from './providers/openai/index.js';
