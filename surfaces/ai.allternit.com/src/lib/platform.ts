@@ -21,10 +21,10 @@ export function isElectronShell(): boolean {
 }
 
 /**
- * Return a `/web-proxy`-prefixed URL that the Terminal Server (or Vite dev
- * proxy) will fetch server-side, stripping frame-blocking headers so the
- * content can be safely embedded in an iframe.
+ * Return an `/api/web-proxy`-prefixed URL that the server will fetch
+ * server-side, stripping frame-blocking headers so the content can be
+ * safely embedded in an iframe. Not available in static Cloudflare builds.
  */
 export function getWebProxyUrl(url: string): string {
-  return `/web-proxy?url=${encodeURIComponent(url)}`;
+  return `/api/web-proxy?url=${encodeURIComponent(url)}`;
 }
