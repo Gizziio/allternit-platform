@@ -25,12 +25,12 @@ const { loadPipeline, savePipeline, buildPublication } = require('./lib/pipeline
 
 const BOOKMARKS_FILE = path.resolve(
   __dirname,
-  '../../surfaces/allternit-platform/src/data/bookmarks.json',
+  '../../surfaces/ai.allternit.com/src/data/bookmarks.json',
 );
 
 const DATA_FILE = path.resolve(
   __dirname,
-  '../../surfaces/allternit-platform/src/data/discovery-pipeline.json',
+  '../../surfaces/ai.allternit.com/src/data/discovery-pipeline.json',
 );
 
 function loadBookmarks() {
