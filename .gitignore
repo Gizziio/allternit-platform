@@ -59,3 +59,4 @@ tools/mcp-servers/superpowers
 .tmp-*
 services/allternit-ai
 services/docmost/node_modules
+services/docmost
