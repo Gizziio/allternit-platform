@@ -63,7 +63,7 @@ let mainWindow: BrowserWindow | null = null;
 let splashWindow: BrowserWindow | null = null;
 let miniWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
-let activePlatformUrl: string = isDev ? 'http://localhost:3013' : 'http://127.0.0.1:3100';
+let activePlatformUrl: string = isDev ? 'http://localhost:3013' : 'https://ai.allternit.com';
 
 const QUICK_CHAT_HOTKEY = 'CommandOrControl+Shift+A';
 const MINI_WINDOW_WIDTH = 520;
@@ -376,8 +376,8 @@ function createSplashWindow(): BrowserWindow {
       <div class="stack-value" id="svc-gizzi">Starting…</div>
     </div>
     <div class="stack-row">
-      <div class="stack-name">Platform UI</div>
-      <div class="stack-value" id="svc-platform">Waiting…</div>
+      <div class="stack-name">Platform</div>
+      <div class="stack-value" id="svc-platform">ai.allternit.com</div>
     </div>
   </div>
   
@@ -710,16 +710,15 @@ async function initializeBundledMode(): Promise<void> {
     pushServiceState();
     store.set('backend.lastLocalVersion', PLATFORM_MANIFEST.backend.version);
 
-    updateSplash('Starting platform UI…', 60);
+    updateSplash('Connecting to platform…', 60);
 
-    // Step 3 — Next.js standalone platform server
-    // In dev, the Next.js dev server runs separately on port 3013.
-    // In production, the standalone server is bundled in resources/platform-server/.
-    let platformUrl: string;
+    // Step 3 — Platform URL
+    // Dev:        local Next.js dev server on port 3013
+    // Production: ai.allternit.com hosted on Cloudflare Pages (remote)
+    const platformUrl: string = isDev ? 'http://localhost:3013' : 'https://ai.allternit.com';
+
     if (isDev) {
-      platformUrl = 'http://localhost:3013';
       // Write gizzi credentials to a session file so the external dev server can read them.
-      // The dev server can't receive env injection from Electron, so this file bridges the gap.
       const sessionFile = join(os.homedir(), '.allternit', 'gizzi-dev-session.json');
       try {
         await fs.promises.mkdir(dirname(sessionFile), { recursive: true });
@@ -732,33 +731,15 @@ async function initializeBundledMode(): Promise<void> {
       } catch (err) {
         log.warn('[Main] Failed to write gizzi dev session file:', err);
       }
-      serviceState.platform = { status: 'up', detail: `Connected on ${platformUrl}` };
-      pushServiceState();
-    } else {
-      platformUrl = await platformServerManager.start({
-        apiUrl,
-        // API key generated per-session by backendManager
-        apiKey: backendManager.getApiKey() ?? '',
-        // gizzi-code credentials — password generated per-session by gizziManager
-        gizziUrl: gizziUrl || undefined,
-        gizziPassword: gizziManager.getPassword() || undefined,
-      });
-      log.info(`[Main] Platform server returned URL: ${platformUrl}`);
-      serviceState.platform = { status: 'up', detail: `Connected on ${platformUrl}` };
-      pushServiceState();
     }
+
+    serviceState.platform = { status: 'up', detail: isDev ? 'Dev on port 3013' : 'ai.allternit.com' };
+    pushServiceState();
 
     activePlatformUrl = platformUrl;
     process.env.ALLTERNIT_OAUTH_BASE_URL = platformUrl;
-    log.info(`[Main] Desktop OAuth authority set to ${platformUrl}`);
-
-    if (process.env.ALLTERNIT_PLATFORM_DISABLE_CLERK !== '1') {
-      console.log('[Main] Ensuring user is authenticated...');
-      updateSplash('Authenticating…', 75);
-      await authManager.ensureAuthenticated(splashWindow);
-    } else {
-      log.info('[Main] Auth bypassed via ALLTERNIT_PLATFORM_DISABLE_CLERK=1');
-    }
+    log.info(`[Main] Platform URL: ${platformUrl}`);
+    // Auth is handled by the web app's Clerk integration at ai.allternit.com
 
     // Complete
     splashWindow?.webContents.send('complete');
