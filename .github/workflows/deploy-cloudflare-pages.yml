@@ -35,7 +35,7 @@ jobs:
       # build-cloudflare.sh must run from surfaces/ai.allternit.com but pnpm
       # needs the workspace root context.
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm install --no-frozen-lockfile --ignore-scripts
 
       - name: Generate Prisma client
         working-directory: surfaces/ai.allternit.com
@@ -68,4 +68,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy surfaces/ai.allternit.com/out --project-name=ai-allternit --branch=main
+          command: pages deploy surfaces/ai.allternit.com/dist --project-name=ai-allternit --branch=main
