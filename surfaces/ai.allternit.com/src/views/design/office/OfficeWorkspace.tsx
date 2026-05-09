@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
-import dynamic from 'next/dynamic';
 import { FilePpt, FileXls, FileDoc, DownloadSimple, ShareNetwork, MagicWand, Table, TextT, Calculator, Broom, Pencil, Pen, List, ChartBar, Layout, Palette } from '@phosphor-icons/react';
 import { GlassCard } from '../../../design/GlassCard';
 import { OFFICE_HOSTS } from '../../../lib/design/office-bridge';
 import { UniverDocEditor } from './UniverDocEditor';
 import { UniverSheetEditor } from './UniverSheetEditor';
-
-const SlidesEditor = dynamic(() => import('./SlidesEditor').then(m => ({ default: m.SlidesEditor })), { ssr: false });
+import { SlidesEditor } from './SlidesEditor';
 
 type OfficeDocType = 'slides' | 'spreadsheet' | 'document';
 

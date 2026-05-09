@@ -92,7 +92,7 @@ export function SlidesEditor({ projectName }: { projectName: string }) {
   async function exportPptx() {
     setExportState('working');
     try {
-      const PptxGenJS = (await import('pptxgenjs')).default;
+      const PptxGenJS = (await import(/* webpackIgnore: true */ 'pptxgenjs')).default;
       const pptx = new PptxGenJS();
       pptx.title = projectName;
       pptx.author = 'Allternit Design';
