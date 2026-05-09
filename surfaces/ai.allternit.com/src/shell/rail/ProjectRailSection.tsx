@@ -737,7 +737,7 @@ function GhostRailNotice({ icon: Icon, title, description, actionLabel, onClick 
     <button
       onClick={onClick}
       style={{
-        width: '100%', border: '1px dashed var(--border-default)', background: 'var(--bg-secondary)',
+        width: '100%', border: '1px dashed var(--border-default)', background: 'transparent',
         borderRadius: 14, padding: '12px', textAlign: 'left', cursor: 'pointer'
       }}
     >

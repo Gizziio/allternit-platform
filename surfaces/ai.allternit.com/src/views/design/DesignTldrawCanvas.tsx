@@ -1,5 +1,5 @@
 "use client";
-import React, { Suspense, useCallback, useRef, useState, useEffect } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   Tldraw,
   createShapeId,
@@ -32,7 +32,7 @@ import {
   type DesignUIBlockShape as IUIBlockShape,
 } from '@/lib/tldraw/custom-shapes';
 
-const SYNC_SERVER_URL = process.env.NEXT_PUBLIC_TLDRAW_SYNC_URL ?? 'ws://localhost:5858';
+
 
 // ─── FrameShapeUtil ───────────────────────────────────────────────────────────
 
@@ -347,11 +347,9 @@ interface DesignToolbarProps {
   onExportSVG: () => void;
   onImportPenpot: () => void;
   onExportPenpot: () => void;
-  roomId?: string;
-  syncServerUrl?: string;
 }
 
-function DesignToolbar({ onAddFrame, onAddComponent, onAddUIBlock, onExportSVG, onImportPenpot, onExportPenpot, roomId, syncServerUrl }: DesignToolbarProps) {
+function DesignToolbar({ onAddFrame, onAddComponent, onAddUIBlock, onExportSVG, onImportPenpot, onExportPenpot }: DesignToolbarProps) {
   const [openPanel, setOpenPanel] = useState<'frame' | 'component' | 'block' | null>(null);
 
   const toggle = (panel: typeof openPanel) =>
@@ -378,16 +376,7 @@ function DesignToolbar({ onAddFrame, onAddComponent, onAddUIBlock, onExportSVG, 
         <div style={{ width: 1, height: 16, background: 'var(--border-subtle)' }} />
         <button style={{ ...btnStyle(false) }} onClick={onImportPenpot} title="Import .penpot file">⇩ Penpot</button>
         <button style={{ ...btnStyle(false) }} onClick={onExportPenpot} title="Export as .penpot file">⇧ Penpot</button>
-        {roomId && (
-          <>
-            <div style={{ width: 1, height: 16, background: 'var(--border-subtle)' }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 9px', borderRadius: 7, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)' }}
-              title={`Sync: ${syncServerUrl}`}>
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', animation: 'pulse 2s infinite' }} />
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#22c55e' }}>Live</span>
-            </div>
-          </>
-        )}
+
       </div>
 
       {/* Frame presets panel */}
@@ -430,28 +419,14 @@ function DesignToolbar({ onAddFrame, onAddComponent, onAddUIBlock, onExportSVG, 
   );
 }
 
-// ─── Types exported for the sync variant ─────────────────────────────────────
-
-export interface DesignTldrawCanvasInnerProps {
-  projectName?: string;
-  onSVGExport?: (svg: string) => void;
-  onMount?: (editor: Editor) => void;
-}
-
-// ─── Lazy sync variant ────────────────────────────────────────────────────────
-
-const SyncedCanvas = React.lazy(() =>
-  import('./DesignTldrawCanvasSync').then(m => ({ default: m.DesignTldrawCanvasSync }))
-);
-
 // ─── Main component ───────────────────────────────────────────────────────────
 
-interface DesignTldrawCanvasProps extends DesignTldrawCanvasInnerProps {
-  /** When provided, canvas uses @tldraw/sync for real-time multiplayer */
-  roomId?: string;
+interface DesignTldrawCanvasProps {
+  projectName?: string;
+  onSVGExport?: (svg: string) => void;
 }
 
-export function DesignTldrawCanvas({ projectName = 'Untitled', onSVGExport, roomId }: DesignTldrawCanvasProps) {
+export function DesignTldrawCanvas({ projectName = 'Untitled', onSVGExport }: DesignTldrawCanvasProps) {
   const editorRef = useRef<Editor | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const setSelectedShape = useDesignInspectStore(s => s.setSelectedShape);
@@ -615,26 +590,11 @@ export function DesignTldrawCanvas({ projectName = 'Untitled', onSVGExport, room
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      {roomId ? (
-        <Suspense fallback={
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)', fontSize: 13 }}>
-            Connecting to live session…
-          </div>
-        }>
-          <SyncedCanvas
-            roomId={roomId}
-            projectName={projectName}
-            customShapeUtils={customShapeUtils}
-            onMount={handleMount}
-          />
-        </Suspense>
-      ) : (
-        <Tldraw
-          shapeUtils={customShapeUtils}
-          onMount={handleMount}
-          inferDarkMode
-        />
-      )}
+      <Tldraw
+        shapeUtils={customShapeUtils}
+        onMount={handleMount}
+        inferDarkMode
+      />
       <DesignToolbar
         onAddFrame={addFrame}
         onAddComponent={addComponent}
@@ -642,8 +602,6 @@ export function DesignTldrawCanvas({ projectName = 'Untitled', onSVGExport, room
         onExportSVG={exportSVG}
         onImportPenpot={() => fileInputRef.current?.click()}
         onExportPenpot={handlePenpotExport}
-        roomId={roomId}
-        syncServerUrl={SYNC_SERVER_URL}
       />
       <DesignLayersPanel
         editorRef={editorRef}

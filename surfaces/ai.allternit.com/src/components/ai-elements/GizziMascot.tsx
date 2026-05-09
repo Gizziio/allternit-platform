@@ -95,8 +95,7 @@ function getLocomotionBodyAnimation(locomotion: GizziLocomotion | null | undefin
   const reverse = isReverseLocomotion(locomotion);
 
   return {
-    animation: `${animationName} ${durationMs}ms linear infinite`,
-    animationDirection: reverse ? 'reverse' as const : 'normal' as const,
+    animation: `${animationName} ${durationMs}ms linear 0ms infinite ${reverse ? 'reverse' : 'normal'}`,
   };
 }
 
@@ -113,15 +112,11 @@ function getLocomotionHandAnimation(
   const durationMs = family === 'cowork' ? 620 : 680;
   const reverse = isReverseLocomotion(locomotion);
 
+  const direction = reverse
+    ? side === 'left' ? 'reverse' : 'alternate-reverse'
+    : side === 'left' ? 'normal' : 'alternate';
   return {
-    animation: `${animationName} ${durationMs}ms cubic-bezier(0.3, 0.9, 0.36, 1) infinite`,
-    animationDirection: reverse
-      ? side === 'left'
-        ? 'reverse' as const
-        : 'alternate-reverse' as const
-      : side === 'left'
-        ? 'normal' as const
-        : 'alternate' as const,
+    animation: `${animationName} ${durationMs}ms cubic-bezier(0.3, 0.9, 0.36, 1) 0ms infinite ${direction}`,
   };
 }
 
@@ -149,11 +144,10 @@ function getLocomotionLegAnimation(
     const durationMs = family === 'cowork' ? 480 : 520;
     
     return {
-      animation: `${animationName} ${durationMs}ms linear infinite`,
-      animationDirection: reverse ? 'reverse' as const : 'normal' as const,
+      animation: `${animationName} ${durationMs}ms linear 0ms infinite ${reverse ? 'reverse' : 'normal'}`,
     };
   }
-  
+
   // Crawl/skim has lateral leg motion for surface movement - faster for responsiveness
   const animationName = family === 'cowork'
     ? index % 2 === 0
@@ -165,8 +159,7 @@ function getLocomotionLegAnimation(
   const durationMs = family === 'cowork' ? 400 : 450;
 
   return {
-    animation: `${animationName} ${durationMs}ms linear infinite`,
-    animationDirection: reverse ? 'reverse' as const : 'normal' as const,
+    animation: `${animationName} ${durationMs}ms linear 0ms infinite ${reverse ? 'reverse' : 'normal'}`,
   };
 }
 
@@ -1202,7 +1195,6 @@ export function GizziMascot({
           style={{
             transformOrigin: '48px 48px',
             animation: locomotionBodyStyle?.animation ?? profile.bodyAnimation,
-            animationDirection: locomotionBodyStyle?.animationDirection,
             transform: `translate(${bodyTranslateX}px, ${bodyTranslateY}px) rotate(${bodyRotate}deg) scale(${hoverScale})`,
             transition: 'transform 90ms cubic-bezier(0.22, 1, 0.36, 1)',
           }}
@@ -1234,7 +1226,6 @@ export function GizziMascot({
             style={{
               transformOrigin: '18px 49px',
               animation: leftHandLocomotionStyle?.animation ?? profile.handAnimation,
-              animationDirection: leftHandLocomotionStyle?.animationDirection,
             }}
           >
             <path d="M18 40H14V44H10V48H14V52H18V56H22V40H18Z" fill="#D4B08C" />
@@ -1243,7 +1234,6 @@ export function GizziMascot({
             style={{
               transformOrigin: '78px 49px',
               animation: rightHandLocomotionStyle?.animation ?? profile.handAnimation,
-              animationDirection: rightHandLocomotionStyle?.animationDirection,
             }}
           >
             <path d="M78 40H82V44H86V48H82V52H78V56H74V40H78Z" fill="#D4B08C" />
@@ -1286,7 +1276,6 @@ export function GizziMascot({
             style={{
               transformOrigin: '28px 74px',
               animation: legLocomotionStyles[0]?.animation,
-              animationDirection: legLocomotionStyles[0]?.animationDirection,
             }}
           >
             <rect x="24" y="74" width="8" height="12" fill="#D4B08C" />
@@ -1295,7 +1284,6 @@ export function GizziMascot({
             style={{
               transformOrigin: '40px 74px',
               animation: legLocomotionStyles[1]?.animation,
-              animationDirection: legLocomotionStyles[1]?.animationDirection,
             }}
           >
             <rect x="36" y="74" width="8" height="12" fill="#D4B08C" />
@@ -1304,7 +1292,6 @@ export function GizziMascot({
             style={{
               transformOrigin: '56px 74px',
               animation: legLocomotionStyles[2]?.animation,
-              animationDirection: legLocomotionStyles[2]?.animationDirection,
             }}
           >
             <rect x="52" y="74" width="8" height="12" fill="#D4B08C" />
@@ -1313,7 +1300,6 @@ export function GizziMascot({
             style={{
               transformOrigin: '68px 74px',
               animation: legLocomotionStyles[3]?.animation,
-              animationDirection: legLocomotionStyles[3]?.animationDirection,
             }}
           >
             <rect x="64" y="74" width="8" height="12" fill="#D4B08C" />

@@ -182,10 +182,10 @@ function VideoPlayer() {
           <div style={{ height: "100%", width: `${progress}%`, background: "#e27c59", borderRadius: 2, transition: "width 0.1s" }} />
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 10, fontWeight: 700, color: "rgba(255,255,255,0.5)", fontVariantNumeric: "tabular-nums" }}>{fmt(elapsed)} / 3:03</span>
+          <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)", fontVariantNumeric: "tabular-nums" }}>{fmt(elapsed)} / 3:03</span>
           <div style={{ display: "flex", gap: 10 }}>
             {VIDEO_CHAPTERS.map((ch) => (
-              <button key={ch.label} style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 4, border: "1px solid rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)", cursor: "pointer" }}>{ch.label}</button>
+              <button key={ch.label} style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 4, border: "1px solid rgba(255,255,255,0.1)", background: "var(--surface-hover)", color: "var(--text-secondary)", cursor: "pointer" }}>{ch.label}</button>
             ))}
           </div>
         </div>
@@ -276,9 +276,9 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
           width: "100%",
           maxWidth: 720,
           maxHeight: "90vh",
-          background: "#111113",
+          background: "var(--surface-panel)",
           borderRadius: 24,
-          border: "1px solid rgba(255,255,255,0.06)",
+          border: "1px solid var(--border-subtle)",
           boxShadow: "0 40px 80px rgba(0,0,0,0.6)",
           display: "flex",
           flexDirection: "column",
@@ -296,17 +296,17 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <MagicWand size={18} color="#e27c59" weight="duotone" />
+            <MagicWand size={18} color="var(--accent-primary)" weight="duotone" />
             <span
               style={{
                 fontSize: 11,
                 fontWeight: 800,
                 letterSpacing: "0.1em",
-                color: "rgba(255,255,255,0.5)",
+                color: "var(--text-secondary)",
                 textTransform: "uppercase",
               }}
             >
-              Allternit Studio
+              Allternit Design
             </span>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -314,7 +314,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
               style={{
                 fontSize: 11,
                 fontWeight: 700,
-                color: "rgba(255,255,255,0.3)",
+                color: "var(--text-tertiary)",
                 fontVariantNumeric: "tabular-nums",
               }}
             >
@@ -325,7 +325,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
               style={{
                 background: "none",
                 border: "none",
-                color: "rgba(255,255,255,0.4)",
+                color: "var(--text-tertiary)",
                 cursor: "pointer",
                 padding: 4,
                 display: "flex",
@@ -344,7 +344,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
           <div
             style={{
               height: 2,
-              background: "rgba(255,255,255,0.06)",
+              background: "var(--border-default)",
               borderRadius: 2,
               overflow: "hidden",
             }}
@@ -354,7 +354,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
               transition={{ duration: 0.4, ease: "easeInOut" }}
               style={{
                 height: "100%",
-                background: "#e27c59",
+                background: "var(--accent-primary)",
                 borderRadius: 2,
               }}
             />
@@ -377,7 +377,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                     fontSize: 10,
                     fontWeight: 800,
                     letterSpacing: "0.15em",
-                    color: "rgba(255,255,255,0.35)",
+                    color: "var(--text-tertiary)",
                     textTransform: "uppercase",
                     marginBottom: 12,
                   }}
@@ -388,20 +388,20 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                   style={{
                     fontSize: 32,
                     fontWeight: 700,
-                    color: "#fff",
+                    color: "var(--text-primary)",
                     lineHeight: 1.15,
                     marginBottom: 8,
                     letterSpacing: "-0.02em",
                   }}
                 >
                   Let's shape your first{" "}
-                  <span style={{ color: "#e27c59", fontStyle: "italic" }}>Allternit</span>{" "}
+                  <span style={{ color: "var(--accent-primary)", fontStyle: "italic" }}>Allternit</span>{" "}
                   session.
                 </h2>
                 <p
                   style={{
                     fontSize: 14,
-                    color: "rgba(255,255,255,0.45)",
+                    color: "var(--text-secondary)",
                     marginBottom: 32,
                     lineHeight: 1.5,
                   }}
@@ -418,7 +418,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                       fontSize: 10,
                       fontWeight: 800,
                       letterSpacing: "0.15em",
-                      color: "rgba(255,255,255,0.35)",
+                      color: "var(--text-tertiary)",
                       textTransform: "uppercase",
                       marginBottom: 12,
                     }}
@@ -438,9 +438,9 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                             gap: 6,
                             padding: "8px 14px",
                             borderRadius: 10,
-                            border: `1px solid ${active ? "#e27c59" : "rgba(255,255,255,0.08)"}`,
-                            background: active ? "rgba(226,124,89,0.12)" : "rgba(255,255,255,0.03)",
-                            color: active ? "#e27c59" : "rgba(255,255,255,0.6)",
+                            border: `1px solid ${active ? "var(--accent-primary)" : "var(--border-subtle)"}`,
+                            background: active ? "color-mix(in srgb, var(--accent-primary) 12%, transparent)" : "var(--bg-primary)",
+                            color: active ? "var(--accent-primary)" : "var(--text-secondary)",
                             fontSize: 13,
                             fontWeight: 600,
                             cursor: "pointer",
@@ -463,7 +463,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                       fontSize: 10,
                       fontWeight: 800,
                       letterSpacing: "0.15em",
-                      color: "rgba(255,255,255,0.35)",
+                      color: "var(--text-tertiary)",
                       textTransform: "uppercase",
                       marginBottom: 12,
                     }}
@@ -483,9 +483,9 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                             gap: 6,
                             padding: "8px 14px",
                             borderRadius: 10,
-                            border: `1px solid ${active ? "#e27c59" : "rgba(255,255,255,0.08)"}`,
-                            background: active ? "rgba(226,124,89,0.12)" : "rgba(255,255,255,0.03)",
-                            color: active ? "#e27c59" : "rgba(255,255,255,0.6)",
+                            border: `1px solid ${active ? "var(--accent-primary)" : "var(--border-subtle)"}`,
+                            background: active ? "color-mix(in srgb, var(--accent-primary) 12%, transparent)" : "var(--bg-primary)",
+                            color: active ? "var(--accent-primary)" : "var(--text-secondary)",
                             fontSize: 13,
                             fontWeight: 600,
                             cursor: "pointer",
@@ -508,7 +508,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                       fontSize: 10,
                       fontWeight: 800,
                       letterSpacing: "0.15em",
-                      color: "rgba(255,255,255,0.35)",
+                      color: "var(--text-tertiary)",
                       textTransform: "uppercase",
                       marginBottom: 12,
                     }}
@@ -528,9 +528,9 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                             gap: 6,
                             padding: "8px 14px",
                             borderRadius: 10,
-                            border: `1px solid ${active ? "#e27c59" : "rgba(255,255,255,0.08)"}`,
-                            background: active ? "rgba(226,124,89,0.12)" : "rgba(255,255,255,0.03)",
-                            color: active ? "#e27c59" : "rgba(255,255,255,0.6)",
+                            border: `1px solid ${active ? "var(--accent-primary)" : "var(--border-subtle)"}`,
+                            background: active ? "color-mix(in srgb, var(--accent-primary) 12%, transparent)" : "var(--bg-primary)",
+                            color: active ? "var(--accent-primary)" : "var(--text-secondary)",
                             fontSize: 13,
                             fontWeight: 600,
                             cursor: "pointer",
@@ -560,7 +560,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                     fontSize: 10,
                     fontWeight: 800,
                     letterSpacing: "0.15em",
-                    color: "rgba(255,255,255,0.35)",
+                    color: "var(--text-tertiary)",
                     textTransform: "uppercase",
                     marginBottom: 12,
                   }}
@@ -571,7 +571,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                   style={{
                     fontSize: 32,
                     fontWeight: 700,
-                    color: "#fff",
+                    color: "var(--text-primary)",
                     lineHeight: 1.15,
                     marginBottom: 8,
                     letterSpacing: "-0.02em",
@@ -582,7 +582,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                 <p
                   style={{
                     fontSize: 14,
-                    color: "rgba(255,255,255,0.45)",
+                    color: "var(--text-secondary)",
                     marginBottom: 32,
                     lineHeight: 1.5,
                   }}
@@ -593,8 +593,8 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
 
                 <div
                   style={{
-                    background: "rgba(255,255,255,0.03)",
-                    border: "1px solid rgba(255,255,255,0.06)",
+                    background: "var(--bg-primary)",
+                    border: "1px solid var(--border-subtle)",
                     borderRadius: 16,
                     padding: 24,
                     marginBottom: 24,
@@ -606,7 +606,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                       fontSize: 10,
                       fontWeight: 800,
                       letterSpacing: "0.15em",
-                      color: "rgba(255,255,255,0.35)",
+                      color: "var(--text-tertiary)",
                       textTransform: "uppercase",
                       marginBottom: 16,
                     }}
@@ -616,7 +616,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                   <p
                     style={{
                       fontSize: 14,
-                      color: "rgba(255,255,255,0.6)",
+                      color: "var(--text-secondary)",
                       lineHeight: 1.6,
                       marginBottom: 20,
                     }}
@@ -633,7 +633,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                           left: 14,
                           top: "50%",
                           transform: "translateY(-50%)",
-                          color: "rgba(255,255,255,0.25)",
+                          color: "var(--text-tertiary)",
                         }}
                       />
                       <input
@@ -648,9 +648,9 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                           width: "100%",
                           padding: "12px 14px 12px 40px",
                           borderRadius: 10,
-                          border: `1px solid ${emailError ? "#ef4444" : "rgba(255,255,255,0.1)"}`,
-                          background: "rgba(255,255,255,0.05)",
-                          color: "#fff",
+                          border: `1px solid ${emailError ? "#ef4444" : "var(--border-subtle)"}`,
+                          background: "var(--bg-primary)",
+                          color: "var(--text-primary)",
                           fontSize: 14,
                           outline: "none",
                           fontFamily: "inherit",
@@ -671,7 +671,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                         gap: 6,
                         padding: "0 20px",
                         borderRadius: 10,
-                        background: data.subscribed ? "#22c55e" : "#e27c59",
+                        background: data.subscribed ? "#22c55e" : "var(--accent-primary)",
                         border: "none",
                         color: "#fff",
                         fontSize: 13,
@@ -693,7 +693,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                 <div
                   style={{
                     background: "linear-gradient(135deg, rgba(226,124,89,0.1), rgba(59,130,246,0.1))",
-                    border: "1px solid rgba(255,255,255,0.06)",
+                    border: "1px solid var(--border-subtle)",
                     borderRadius: 16,
                     padding: 20,
                     display: "flex",
@@ -713,20 +713,20 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                       flexShrink: 0,
                     }}
                   >
-                    <MagicWand size={24} color="#e27c59" weight="duotone" />
+                    <MagicWand size={24} color="var(--accent-primary)" weight="duotone" />
                   </div>
                   <div>
                     <div
                       style={{
                         fontSize: 14,
                         fontWeight: 700,
-                        color: "#fff",
+                        color: "var(--text-primary)",
                         marginBottom: 4,
                       }}
                     >
                       Weekly Design Drops
                     </div>
-                    <div style={{ fontSize: 13, color: "rgba(255,255,255,0.45)", lineHeight: 1.5 }}>
+                    <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>
                       Prompts, templates, and system updates curated for your design workflow.
                     </div>
                   </div>
@@ -747,7 +747,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                     fontSize: 10,
                     fontWeight: 800,
                     letterSpacing: "0.15em",
-                    color: "rgba(255,255,255,0.35)",
+                    color: "var(--text-tertiary)",
                     textTransform: "uppercase",
                     marginBottom: 12,
                   }}
@@ -758,7 +758,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                   style={{
                     fontSize: 32,
                     fontWeight: 700,
-                    color: "#fff",
+                    color: "var(--text-primary)",
                     lineHeight: 1.15,
                     marginBottom: 8,
                     letterSpacing: "-0.02em",
@@ -769,7 +769,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                 <p
                   style={{
                     fontSize: 14,
-                    color: "rgba(255,255,255,0.45)",
+                    color: "var(--text-secondary)",
                     marginBottom: 24,
                     lineHeight: 1.5,
                   }}
@@ -793,8 +793,8 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                     <div
                       key={idx}
                       style={{
-                        background: "rgba(255,255,255,0.03)",
-                        border: "1px solid rgba(255,255,255,0.06)",
+                        background: "var(--bg-primary)",
+                        border: "1px solid var(--border-subtle)",
                         borderRadius: 14,
                         padding: 18,
                         display: "flex",
@@ -812,21 +812,21 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            color: "#e27c59",
+                            color: "var(--accent-primary)",
                             fontSize: 10,
                             fontWeight: 800,
                           }}
                         >
                           {feat.step}
                         </div>
-                        <div style={{ color: "rgba(255,255,255,0.5)" }}>{feat.icon}</div>
+                        <div style={{ color: "var(--text-secondary)" }}>{feat.icon}</div>
                       </div>
                       <div
                         style={{
                           fontSize: 10,
                           fontWeight: 800,
                           letterSpacing: "0.08em",
-                          color: "rgba(255,255,255,0.35)",
+                          color: "var(--text-tertiary)",
                           textTransform: "uppercase",
                         }}
                       >
@@ -835,7 +835,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                       <p
                         style={{
                           fontSize: 12,
-                          color: "rgba(255,255,255,0.45)",
+                          color: "var(--text-secondary)",
                           lineHeight: 1.5,
                           margin: 0,
                         }}
@@ -854,7 +854,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
         <div
           style={{
             padding: "16px 24px 20px",
-            borderTop: "1px solid rgba(255,255,255,0.04)",
+            borderTop: "1px solid var(--border-subtle)",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -865,7 +865,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
             style={{
               background: "none",
               border: "none",
-              color: "rgba(255,255,255,0.35)",
+              color: "var(--text-tertiary)",
               fontSize: 13,
               fontWeight: 500,
               cursor: "pointer",
@@ -882,9 +882,9 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                 style={{
                   padding: "10px 18px",
                   borderRadius: 10,
-                  background: "rgba(255,255,255,0.05)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  color: "rgba(255,255,255,0.7)",
+                  background: "var(--surface-hover)",
+                  border: "1px solid var(--border-subtle)",
+                  color: "var(--text-secondary)",
                   fontSize: 13,
                   fontWeight: 600,
                   cursor: "pointer",
@@ -902,9 +902,9 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                 gap: 6,
                 padding: "10px 20px",
                 borderRadius: 10,
-                background: canProceed() ? "#fff" : "rgba(255,255,255,0.1)",
+                background: canProceed() ? "var(--accent-primary)" : "var(--surface-hover)",
                 border: "none",
-                color: canProceed() ? "#111" : "rgba(255,255,255,0.3)",
+                color: canProceed() ? "#fff" : "var(--text-tertiary)",
                 fontSize: 13,
                 fontWeight: 700,
                 cursor: canProceed() ? "pointer" : "not-allowed",

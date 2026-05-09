@@ -345,7 +345,7 @@ export function MobilePreviewView({ projectName = 'My App' }: { projectName?: st
             </a>
           </div>
           <iframe
-            src={`https://snack.expo.dev?name=${encodeURIComponent(projectName)}&platform=ios&theme=dark&preview=true`}
+            src={`https://snack.expo.dev/embedded?name=${encodeURIComponent(projectName)}&platform=ios&theme=dark&preview=true`}
             style={{ flex: 1, border: 'none', display: 'block' }}
             allow="geolocation; microphone; camera"
             title="Expo Snack IDE"

@@ -16,7 +16,7 @@ export type CodeSessionState =
   | 'FAILED'
   | 'TERMINATED';
 export type CodeIsolation = 'worktree' | 'sandbox';
-export type CodeLayoutMode = 'thread' | 'canvas' | 'tldraw';
+export type CodeLayoutMode = 'thread' | 'canvas';
 
 export interface CodeCanvasTile {
   tileId: string;
@@ -31,6 +31,7 @@ export interface CodeCanvasTile {
   url?: string;
   diffText?: string;
   filePath?: string;
+  content?: string;
 }
 
 export interface CodeCanvasViewport {
@@ -52,6 +53,11 @@ export interface RepoStatusSnapshot {
   snapshot_at: string;
 }
 
+export interface CodeCanvasHistory {
+  past: CodeCanvasTile[][];
+  future: CodeCanvasTile[][];
+}
+
 export interface CodeWorkspaceRecord {
   workspace_id: string;
   root_path: string;
@@ -63,6 +69,8 @@ export interface CodeWorkspaceRecord {
   canvasTiles?: CodeCanvasTile[];
   canvasViewport?: CodeCanvasViewport;
   canvasFocusTileId?: string | null;
+  canvasSelectedIds?: string[];
+  canvasHistory?: CodeCanvasHistory;
 }
 
 export interface CodeSessionRecord {
@@ -108,6 +116,11 @@ interface CodeModeState extends CodeModeStateShape {
   setCanvasViewport: (workspaceId: string, viewport: CodeCanvasViewport) => void;
   setCanvasFocusTile: (workspaceId: string, tileId: string | null) => void;
   autoArrangeCanvasTiles: (workspaceId: string) => void;
+  importCanvasState: (workspaceId: string, tiles: CodeCanvasTile[], viewport?: CodeCanvasViewport) => void;
+  undoCanvas: (workspaceId: string) => void;
+  redoCanvas: (workspaceId: string) => void;
+  selectCanvasTiles: (workspaceId: string, tileIds: string[]) => void;
+  clearCanvasSelection: (workspaceId: string) => void;
   updateSessionFilesTouched: (sessionId: string, files: string[]) => void;
 }
 
@@ -421,41 +434,62 @@ export const useCodeModeStore = create<CodeModeState>()(
 
   addCanvasTile: (workspaceId, tile) => {
     const tileId = `tile-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    set((state) => ({
-      workspaces: state.workspaces.map((w) =>
-        w.workspace_id === workspaceId
-          ? {
-              ...w,
-              canvasTiles: [...(w.canvasTiles ?? []), { ...tile, tileId }],
-            }
-          : w,
-      ),
-    }));
+    set((state) => {
+      const workspace = state.workspaces.find((w) => w.workspace_id === workspaceId);
+      const history = workspace?.canvasHistory;
+      const past = history ? [...history.past, workspace.canvasTiles ?? []] : [workspace?.canvasTiles ?? []];
+      return {
+        workspaces: state.workspaces.map((w) =>
+          w.workspace_id === workspaceId
+            ? {
+                ...w,
+                canvasTiles: [...(w.canvasTiles ?? []), { ...tile, tileId }],
+                canvasHistory: { past, future: [] },
+              }
+            : w,
+        ),
+      };
+    });
     return tileId;
   },
 
   removeCanvasTile: (workspaceId, tileId) =>
-    set((state) => ({
-      workspaces: state.workspaces.map((w) =>
-        w.workspace_id === workspaceId
-          ? { ...w, canvasTiles: (w.canvasTiles ?? []).filter((t) => t.tileId !== tileId) }
-          : w,
-      ),
-    })),
+    set((state) => {
+      const workspace = state.workspaces.find((w) => w.workspace_id === workspaceId);
+      const history = workspace?.canvasHistory;
+      const past = history ? [...history.past, workspace.canvasTiles ?? []] : [workspace?.canvasTiles ?? []];
+      return {
+        workspaces: state.workspaces.map((w) =>
+          w.workspace_id === workspaceId
+            ? {
+                ...w,
+                canvasTiles: (w.canvasTiles ?? []).filter((t) => t.tileId !== tileId),
+                canvasHistory: { past, future: [] },
+              }
+            : w,
+        ),
+      };
+    }),
 
   updateCanvasTile: (workspaceId, tileId, updates) =>
-    set((state) => ({
-      workspaces: state.workspaces.map((w) =>
-        w.workspace_id === workspaceId
-          ? {
-              ...w,
-              canvasTiles: (w.canvasTiles ?? []).map((t) =>
-                t.tileId === tileId ? { ...t, ...updates } : t,
-              ),
-            }
-          : w,
-      ),
-    })),
+    set((state) => {
+      const workspace = state.workspaces.find((w) => w.workspace_id === workspaceId);
+      const history = workspace?.canvasHistory;
+      const past = history ? [...history.past, workspace.canvasTiles ?? []] : [workspace?.canvasTiles ?? []];
+      return {
+        workspaces: state.workspaces.map((w) =>
+          w.workspace_id === workspaceId
+            ? {
+                ...w,
+                canvasTiles: (w.canvasTiles ?? []).map((t) =>
+                  t.tileId === tileId ? { ...t, ...updates } : t,
+                ),
+                canvasHistory: { past, future: [] },
+              }
+            : w,
+        ),
+      };
+    }),
 
   setCanvasViewport: (workspaceId, viewport) =>
     set((state) => ({
@@ -479,6 +513,8 @@ export const useCodeModeStore = create<CodeModeState>()(
       const gap = 24;
       const tileW = 480;
       const tileH = 360;
+      const history = workspace?.canvasHistory;
+      const past = history ? [...history.past, workspace.canvasTiles ?? []] : [workspace?.canvasTiles ?? []];
       return {
         workspaces: state.workspaces.map((w) =>
           w.workspace_id === workspaceId
@@ -492,11 +528,74 @@ export const useCodeModeStore = create<CodeModeState>()(
                   height: tileH,
                   zIndex: i + 1,
                 })),
+                canvasHistory: { past, future: [] },
               }
             : w,
         ),
       };
     }),
+
+  importCanvasState: (workspaceId, tiles, viewport) =>
+    set((state) => {
+      const workspace = state.workspaces.find((w) => w.workspace_id === workspaceId);
+      const history = workspace?.canvasHistory;
+      const past = history ? [...history.past, workspace.canvasTiles ?? []] : [workspace?.canvasTiles ?? []];
+      return {
+        workspaces: state.workspaces.map((w) =>
+          w.workspace_id === workspaceId
+            ? { ...w, canvasTiles: tiles, canvasViewport: viewport ?? w.canvasViewport, canvasHistory: { past, future: [] } }
+            : w,
+        ),
+      };
+    }),
+
+  undoCanvas: (workspaceId) =>
+    set((state) => {
+      const workspace = state.workspaces.find((w) => w.workspace_id === workspaceId);
+      const history = workspace?.canvasHistory;
+      if (!history || history.past.length === 0) return state;
+      const previous = history.past[history.past.length - 1];
+      const newPast = history.past.slice(0, -1);
+      const newFuture = [workspace?.canvasTiles ?? [], ...history.future];
+      return {
+        workspaces: state.workspaces.map((w) =>
+          w.workspace_id === workspaceId
+            ? { ...w, canvasTiles: previous, canvasHistory: { past: newPast, future: newFuture } }
+            : w,
+        ),
+      };
+    }),
+
+  redoCanvas: (workspaceId) =>
+    set((state) => {
+      const workspace = state.workspaces.find((w) => w.workspace_id === workspaceId);
+      const history = workspace?.canvasHistory;
+      if (!history || history.future.length === 0) return state;
+      const next = history.future[0];
+      const newFuture = history.future.slice(1);
+      const newPast = [...history.past, workspace?.canvasTiles ?? []];
+      return {
+        workspaces: state.workspaces.map((w) =>
+          w.workspace_id === workspaceId
+            ? { ...w, canvasTiles: next, canvasHistory: { past: newPast, future: newFuture } }
+            : w,
+        ),
+      };
+    }),
+
+  selectCanvasTiles: (workspaceId, tileIds) =>
+    set((state) => ({
+      workspaces: state.workspaces.map((w) =>
+        w.workspace_id === workspaceId ? { ...w, canvasSelectedIds: tileIds } : w,
+      ),
+    })),
+
+  clearCanvasSelection: (workspaceId) =>
+    set((state) => ({
+      workspaces: state.workspaces.map((w) =>
+        w.workspace_id === workspaceId ? { ...w, canvasSelectedIds: [] } : w,
+      ),
+    })),
 
   updateSessionFilesTouched: (sessionId, files) =>
     set((state) => ({

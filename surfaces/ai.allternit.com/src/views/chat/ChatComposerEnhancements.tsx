@@ -220,7 +220,6 @@ export function ComposerStatusInfoBar({
       <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0, flexWrap: "wrap" }}>
         <ContextWindowCard>
           <button style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <InfoPill icon={<StackSimple size={12} />} label={`Mode ${modeLabel}`} />
             {modelLabel ? (
               <InfoPill icon={<Sparkle size={12} />} label={modelLabel} />
             ) : null}

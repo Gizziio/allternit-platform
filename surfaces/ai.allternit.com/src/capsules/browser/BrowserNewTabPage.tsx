@@ -7,6 +7,8 @@ import {
   RADIUS,
   TYPOGRAPHY,
 } from "@/design/allternit.tokens";
+import { useBrowserStore } from './browser.store';
+import { useBrowserShortcutsStore, getFaviconUrl } from './browserShortcuts.store';
 
 // Theme-aware tokens for browser chrome
 const BACKGROUND = {

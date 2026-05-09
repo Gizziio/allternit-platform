@@ -59,6 +59,7 @@ async function getGatewayCandidates(): Promise<ProxyCandidate[]> {
 function buildHeaders(
   request: NextRequest,
   candidate: ProxyCandidate,
+  authState: { userId: string | null; email?: string | null; name?: string | null },
   options?: { accept?: string; contentType?: string | null },
 ): Headers {
   const headers = new Headers();
@@ -77,6 +78,28 @@ function buildHeaders(
     headers.set("Authorization", authorization);
   } else if (candidate.authorization) {
     headers.set("Authorization", candidate.authorization);
+  }
+
+  // Forward user context to Rust backend for auth
+  // Priority: authState from Clerk/desktop > incoming request headers (dev fallback)
+  const devUserId = request.headers.get("x-allternit-user-id");
+  const devEmail = request.headers.get("x-allternit-user-email");
+  const devName = request.headers.get("x-allternit-user-name");
+
+  if (authState.userId) {
+    headers.set("x-allternit-user-id", authState.userId);
+  } else if (devUserId) {
+    headers.set("x-allternit-user-id", devUserId);
+  }
+  if (authState.email) {
+    headers.set("x-allternit-user-email", authState.email);
+  } else if (devEmail) {
+    headers.set("x-allternit-user-email", devEmail);
+  }
+  if (authState.name) {
+    headers.set("x-allternit-user-name", authState.name);
+  } else if (devName) {
+    headers.set("x-allternit-user-name", devName);
   }
 
   return headers;
@@ -108,6 +131,7 @@ export async function proxyGatewayRequest(
     retryOnStatuses?: number[];
   },
 ): Promise<Response> {
+  const authState = await getAuth();
   const candidates = await getGatewayCandidates();
   const allowStatusesUnder500 = options?.allowStatusesUnder500 ?? true;
   const retryOnStatuses = new Set(options?.retryOnStatuses ?? []);
@@ -117,12 +141,18 @@ export async function proxyGatewayRequest(
       ? null
       : Buffer.from(await request.arrayBuffer());
 
+  // Forward original query string if upstreamPath doesn't already have one
+  const originalUrl = new URL(request.url);
+  const upstreamHasQuery = upstreamPath.includes("?");
+  const queryString = upstreamHasQuery ? "" : originalUrl.search;
+  const upstreamPathWithQuery = upstreamPath + queryString;
+
   for (const candidate of candidates) {
-    const targetUrl = `${candidate.base}${upstreamPath}`;
+    const targetUrl = `${candidate.base}${upstreamPathWithQuery}`;
     try {
       const upstream = await fetch(targetUrl, {
         method,
-        headers: buildHeaders(request, candidate, options),
+        headers: buildHeaders(request, candidate, authState, options),
         body: bodyBuffer && bodyBuffer.byteLength > 0 ? bodyBuffer : undefined,
         signal: AbortSignal.timeout(15_000),
         // @ts-expect-error duplex required for streamed request bodies

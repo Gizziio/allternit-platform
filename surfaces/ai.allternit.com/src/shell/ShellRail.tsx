@@ -13,6 +13,7 @@ import {
   Cpu,
   CheckSquare,
   GraduationCap,
+  BookOpen,
 } from '@phosphor-icons/react';
 import { useChatStore } from '../views/chat/ChatStore';
 
@@ -292,6 +293,7 @@ export function ShellRail({
 
   const isCodeMode = mode === 'code';
   const isDesignMode = mode === 'design';
+  const useBlendedRail = isDesignMode || ['chat', 'cowork', 'code'].includes(mode) || isBrowser;
 
   if (isCollapsed) return null;
 
@@ -301,7 +303,7 @@ export function ShellRail({
       height: '100%',
       display: 'flex',
       flexDirection: 'column',
-      background: 'var(--shell-panel-bg)',
+      background: useBlendedRail ? '#ffffff' : 'var(--shell-panel-bg)',
       borderRadius: 0,
       border: 'none',
       boxShadow: 'none',
@@ -312,8 +314,8 @@ export function ShellRail({
       ['--shell-item-active-bg' as string]: `color-mix(in srgb, ${surfaceTheme?.accent ?? 'var(--accent-primary)'} 16%, var(--surface-panel))`,
       ['--shell-item-active-fg' as string]: surfaceTheme?.accent ?? 'var(--accent-primary)',
       ['--accent-primary' as string]: surfaceTheme?.accent ?? 'var(--accent-primary)',
-      /* Design mode: light-theme rail overrides so it blends with the light canvas */
-      ...(isDesignMode ? {
+      /* Blended rail for chat, cowork, code, browser, and design modes */
+      ...(useBlendedRail ? {
         ['--shell-panel-bg' as string]: 'var(--bg-primary)',
         ['--shell-item-fg' as string]: 'var(--text-primary)',
         ['--shell-item-muted' as string]: 'var(--text-tertiary)',
@@ -563,7 +565,7 @@ export function ShellRail({
         display: 'flex', 
         alignItems: 'center', 
         gap: 12,
-        background: 'var(--shell-panel-bg)'
+        background: useBlendedRail ? '#ffffff' : 'var(--shell-panel-bg)'
       }}>
         <div style={{ 
           width: 32, 
@@ -609,6 +611,37 @@ export function ShellRail({
             title="A://Labs - Learning Portal"
           >
             <GraduationCap size={18} weight="bold" />
+          </button>
+          <button
+            onClick={() => {
+              onOpen?.('labs');
+              // Dispatch event to switch to research tab inside Labs
+              window.dispatchEvent(new CustomEvent('allternit:open-labs-research', { detail: {} }));
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = 'var(--accent-primary)';
+              e.currentTarget.style.background = 'var(--shell-item-hover)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = 'var(--shell-item-muted)';
+              e.currentTarget.style.background = 'transparent';
+            }}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              border: 'none',
+              background: 'transparent',
+              color: 'var(--shell-item-muted)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s',
+            }}
+            title="Open Notebook"
+          >
+            <BookOpen size={18} weight="bold" />
           </button>
           <button
             onClick={() => onOpen?.('products')}

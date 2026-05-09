@@ -1,32 +1,9 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import { getAuth } from '@/lib/server-auth';
+import { NextRequest } from 'next/server';
+import { proxyGatewayRequest } from '@/lib/runtime-gateway-proxy';
 
-export async function GET() {
-  const { userId } = await getAuth();
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-  try {
-    const [memories, insights, connections, vectors] = await Promise.all([
-      prisma.memoryEvent.count({ where: { userId } }),
-      prisma.memoryEntity.count({ where: { userId } }),
-      prisma.memoryEdge.count({ where: { userId } }),
-      prisma.memoryEntity.count({ where: { userId, vectorId: { not: null } } }),
-    ]);
-
-    return NextResponse.json({
-      memories: { total: memories },
-      insights,
-      connections,
-      vectors,
-    });
-  } catch (error) {
-    console.error('[Memory Stats] Error:', error);
-    return NextResponse.json({
-      memories: { total: 0 },
-      insights: 0,
-      connections: 0,
-      vectors: 0,
-    });
-  }
+export async function GET(request: NextRequest): Promise<Response> {
+  return proxyGatewayRequest(request, '/api/v1/memory/stats');
 }

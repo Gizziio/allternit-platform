@@ -1,36 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import { getAuth } from '@/lib/server-auth';
+import { NextRequest } from 'next/server';
+import { proxyGatewayRequest } from '@/lib/runtime-gateway-proxy';
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 interface Params {
   params: Promise<{ id: string }>;
 }
 
-export async function POST(request: NextRequest, { params }: Params) {
-  const { userId: authUserId } = await getAuth();
-  if (!authUserId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+export async function POST(request: NextRequest, { params }: Params): Promise<Response> {
   const { id } = await params;
-  const body = await request.json().catch(() => ({}));
-
-  const assigneeType = body.assigneeType === 'agent' ? 'agent' : 'human';
-  const assigneeId = typeof body.assigneeId === 'string' ? body.assigneeId : null;
-
-  const existing = await prisma.boardItem.findFirst({ where: { id } });
-  if (!existing) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  }
-
-  const item = await prisma.boardItem.update({
-    where: { id },
-    data: {
-      assigneeType,
-      assigneeId,
-    },
-    include: { comments: true },
-  });
-
-  return NextResponse.json({ item });
+  return proxyGatewayRequest(request, `/api/v1/board-items/${encodeURIComponent(id)}/assign`);
 }

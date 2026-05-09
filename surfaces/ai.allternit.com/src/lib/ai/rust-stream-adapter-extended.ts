@@ -392,11 +392,181 @@ export interface OpenUIPart {
   title?: string;
 }
 
+/**
+ * JSX Preview part - Inline React component preview
+ */
+export interface JSXPreviewUIPart {
+  type: "jsx-preview";
+  previewId: string;
+  jsx: string;
+  title?: string;
+}
+
+/**
+ * Email draft part - AI-composed email with send actions
+ */
+export interface EmailDraftUIPart {
+  type: "email-draft";
+  emailId: string;
+  to: string;
+  from?: string;
+  cc?: string;
+  subject: string;
+  body: string;
+}
+
+/**
+ * SMS draft part - AI-composed text message
+ */
+export interface SMSMessage {
+  role: "sender" | "recipient";
+  text: string;
+}
+
+export interface SMSDraftUIPart {
+  type: "sms-draft";
+  smsId: string;
+  to: string;
+  messages: SMSMessage[];
+}
+
+/**
+ * Recipe part - Structured recipe card
+ */
+export interface RecipeIngredient {
+  name: string;
+  amount: string;
+  unit?: string;
+}
+
+export interface RecipeStep {
+  description: string;
+  durationMinutes?: number;
+}
+
+export interface RecipeUIPart {
+  type: "recipe";
+  recipeId: string;
+  name: string;
+  description?: string;
+  servings?: number;
+  prepTimeMinutes?: number;
+  cookTimeMinutes?: number;
+  ingredients: RecipeIngredient[];
+  steps: RecipeStep[];
+  imageUrl?: string;
+}
+
+/**
+ * Image search part - Image search result grid
+ */
+export interface ImageSearchResult {
+  url: string;
+  thumbnailUrl: string;
+  title: string;
+  source?: string;
+}
+
+export interface ImageSearchUIPart {
+  type: "image-search";
+  searchId: string;
+  query: string;
+  results: ImageSearchResult[];
+}
+
+/**
+ * App recommendations part - Curated app install cards
+ */
+export interface AppRecommendation {
+  name: string;
+  description: string;
+  iconUrl?: string;
+  category?: string;
+  rating?: number;
+  installUrl?: string;
+  badge?: string;
+}
+
+export interface AppRecommendationsUIPart {
+  type: "app-recommendations";
+  recommendationsId: string;
+  title?: string;
+  apps: AppRecommendation[];
+}
+
+/**
+ * Model comparison part - Side-by-side model feature table
+ */
+export interface ModelComparisonModel {
+  id: string;
+  name: string;
+  provider?: string;
+  badge?: string;
+  highlighted?: boolean;
+}
+
+export interface ModelComparisonFeature {
+  name: string;
+  description?: string;
+  values: Record<string, boolean | string | null>;
+}
+
+export interface ModelComparisonUIPart {
+  type: "model-comparison";
+  comparisonId: string;
+  title?: string;
+  models: ModelComparisonModel[];
+  features: ModelComparisonFeature[];
+  variant?: "default" | "compact" | "hover";
+}
+
+/**
+ * Mock chat part - Simulated conversation in a specific AI style
+ */
+export interface MockChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  thinking?: string;
+}
+
+export interface MockChatUIPart {
+  type: "mock-chat";
+  chatId: string;
+  style?: "claude" | "gpt" | "grok" | "gemini";
+  messages: MockChatMessage[];
+}
+
+/**
+ * Levee wizard part - Multi-step adaptive interview/form
+ */
+export interface LeveeWizardStepOption {
+  id: string;
+  label: string;
+  description?: string;
+}
+
+export interface LeveeWizardStep {
+  id: string;
+  title: string;
+  description?: string;
+  type: "text" | "choice" | "multi-choice" | "rating" | "confirm";
+  options?: LeveeWizardStepOption[];
+  placeholder?: string;
+}
+
+export interface LeveeWizardUIPart {
+  type: "levee-wizard";
+  wizardId: string;
+  title?: string;
+  subtitle?: string;
+  steps: LeveeWizardStep[];
+}
+
 // ============================================================================
 // Extended Union Type
 // ============================================================================
 
-export type ExtendedUIPart = 
+export type ExtendedUIPart =
   | TextUIPart
   | ToolUIPart
   | DynamicToolUIPart
@@ -434,7 +604,17 @@ export type ExtendedUIPart =
   | SchemaUIPart
   | StackTraceUIPart
   | SnippetUIPart
-  | OpenUIPart;
+  | OpenUIPart
+  // Showcase tool parts
+  | JSXPreviewUIPart
+  | EmailDraftUIPart
+  | SMSDraftUIPart
+  | RecipeUIPart
+  | ImageSearchUIPart
+  | AppRecommendationsUIPart
+  | ModelComparisonUIPart
+  | MockChatUIPart
+  | LeveeWizardUIPart;
 
 // ============================================================================
 // Extended Rust Event Types
@@ -672,6 +852,210 @@ export function parseStructuredContent(text: string): ExtendedUIPart[] {
           title,
           content: match[3].trim(),
         };
+      },
+    },
+    {
+      type: "structured-json",
+      // JSON fences with typed structured parts — placed before the generic code pattern.
+      // Two trigger forms:
+      //   ```json type="email-draft"   (explicit annotation)
+      //   ```json\n{ "type": "email-draft", ...  (auto-detect from type field)
+      regex: /```json(?:\s+type="([^"]*)")?\n([\s\S]*?)(?:```|$)/g,
+      parse: (match: RegExpExecArray): ExtendedUIPart => {
+        const annotatedType = match[1];
+        const jsonStr = match[2].trim();
+        const id = () => `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+        let parsed: Record<string, unknown>;
+        try {
+          parsed = JSON.parse(jsonStr);
+        } catch {
+          return { type: "code", language: "json", code: jsonStr };
+        }
+
+        const partType = annotatedType ?? (typeof parsed.type === "string" ? parsed.type : null);
+        if (!partType) return { type: "code", language: "json", code: jsonStr };
+
+        switch (partType) {
+          case "email-draft":
+            return {
+              type: "email-draft",
+              emailId: id(),
+              to: String(parsed.to ?? ""),
+              from: typeof parsed.from === "string" ? parsed.from : undefined,
+              cc: typeof parsed.cc === "string" ? parsed.cc : undefined,
+              subject: String(parsed.subject ?? ""),
+              body: String(parsed.body ?? ""),
+            };
+          case "sms-draft":
+            return {
+              type: "sms-draft",
+              smsId: id(),
+              to: String(parsed.to ?? ""),
+              messages: Array.isArray(parsed.messages) ? (parsed.messages as SMSMessage[]) : [],
+            };
+          case "recipe":
+            return {
+              type: "recipe",
+              recipeId: id(),
+              name: String(parsed.name ?? "Recipe"),
+              description: typeof parsed.description === "string" ? parsed.description : undefined,
+              servings: typeof parsed.servings === "number" ? parsed.servings : undefined,
+              prepTimeMinutes: typeof parsed.prepTimeMinutes === "number" ? parsed.prepTimeMinutes : undefined,
+              cookTimeMinutes: typeof parsed.cookTimeMinutes === "number" ? parsed.cookTimeMinutes : undefined,
+              ingredients: Array.isArray(parsed.ingredients) ? (parsed.ingredients as RecipeIngredient[]) : [],
+              steps: Array.isArray(parsed.steps) ? (parsed.steps as RecipeStep[]) : [],
+              imageUrl: typeof parsed.imageUrl === "string" ? parsed.imageUrl : undefined,
+            };
+          case "image-search":
+            return {
+              type: "image-search",
+              searchId: id(),
+              query: String(parsed.query ?? ""),
+              results: Array.isArray(parsed.results) ? (parsed.results as ImageSearchResult[]) : [],
+            };
+          case "app-recommendations":
+            return {
+              type: "app-recommendations",
+              recommendationsId: id(),
+              title: typeof parsed.title === "string" ? parsed.title : undefined,
+              apps: Array.isArray(parsed.apps) ? (parsed.apps as AppRecommendation[]) : [],
+            };
+          case "model-comparison":
+            return {
+              type: "model-comparison",
+              comparisonId: id(),
+              title: typeof parsed.title === "string" ? parsed.title : undefined,
+              models: Array.isArray(parsed.models) ? (parsed.models as ModelComparisonModel[]) : [],
+              features: Array.isArray(parsed.features) ? (parsed.features as ModelComparisonFeature[]) : [],
+              variant: (parsed.variant as ModelComparisonUIPart["variant"]) ?? "default",
+            };
+          case "mock-chat":
+            return {
+              type: "mock-chat",
+              chatId: id(),
+              style: (parsed.style as MockChatUIPart["style"]) ?? "claude",
+              messages: Array.isArray(parsed.messages) ? (parsed.messages as MockChatMessage[]) : [],
+            };
+          case "levee-wizard":
+            return {
+              type: "levee-wizard",
+              wizardId: id(),
+              title: typeof parsed.title === "string" ? parsed.title : undefined,
+              subtitle: typeof parsed.subtitle === "string" ? parsed.subtitle : undefined,
+              steps: Array.isArray(parsed.steps) ? (parsed.steps as LeveeWizardStep[]) : [],
+            };
+          case "jsx-preview":
+            return {
+              type: "jsx-preview",
+              previewId: id(),
+              jsx: String(parsed.jsx ?? ""),
+              title: typeof parsed.title === "string" ? parsed.title : undefined,
+            };
+          case "plan":
+            return {
+              type: "plan",
+              planId: id(),
+              title: String(parsed.title ?? "Plan"),
+              steps: Array.isArray(parsed.steps) ? (parsed.steps as PlanStep[]) : [],
+            };
+          case "test-results":
+            return {
+              type: "test-results",
+              summary: (parsed.summary as TestResultsUIPart["summary"]) ?? { total: 0, passed: 0, failed: 0, skipped: 0 },
+              tests: Array.isArray(parsed.tests) ? (parsed.tests as TestResult[]) : [],
+            };
+          case "checkpoint":
+            return {
+              type: "checkpoint",
+              checkpointId: id(),
+              description: String(parsed.description ?? ""),
+            };
+          case "commit":
+            return {
+              type: "commit",
+              commitId: id(),
+              hash: String(parsed.hash ?? ""),
+              message: String(parsed.message ?? ""),
+              author: typeof parsed.author === "string" ? parsed.author : undefined,
+            };
+          case "task":
+            return {
+              type: "task",
+              taskId: id(),
+              title: String(parsed.title ?? ""),
+              description: typeof parsed.description === "string" ? parsed.description : undefined,
+              status: (parsed.status as TaskUIPart["status"]) ?? "pending",
+            };
+          case "queue":
+            return {
+              type: "queue",
+              queueId: id(),
+              items: Array.isArray(parsed.items) ? (parsed.items as QueueItem[]) : [],
+            };
+          case "environment-variables":
+            return {
+              type: "environment-variables",
+              envId: id(),
+              variables: (typeof parsed.variables === "object" && parsed.variables !== null
+                ? parsed.variables
+                : {}) as Record<string, string>,
+            };
+          case "chain-of-thought":
+            return {
+              type: "chain-of-thought",
+              thoughtId: id(),
+              steps: Array.isArray(parsed.steps) ? parsed.steps.map(String) : [],
+            };
+          case "snippet":
+            return {
+              type: "snippet",
+              snippetId: id(),
+              code: String(parsed.code ?? ""),
+              language: typeof parsed.language === "string" ? parsed.language : undefined,
+            };
+          case "stack-trace":
+            return {
+              type: "stack-trace",
+              traceId: id(),
+              message: String(parsed.message ?? ""),
+              errorType: typeof parsed.errorType === "string" ? parsed.errorType : undefined,
+              frames: Array.isArray(parsed.frames) ? (parsed.frames as StackTraceUIPart["frames"]) : undefined,
+            };
+          case "package-info":
+            return {
+              type: "package-info",
+              packageId: id(),
+              name: String(parsed.name ?? ""),
+              version: typeof parsed.version === "string" ? parsed.version : undefined,
+              dependencies: (typeof parsed.dependencies === "object" && parsed.dependencies !== null
+                ? parsed.dependencies
+                : undefined) as Record<string, string> | undefined,
+            };
+          case "schema":
+            return {
+              type: "schema",
+              schemaId: id(),
+              schema: parsed.schema ?? parsed,
+            };
+          case "context":
+            return {
+              type: "context",
+              contextId: id(),
+              content: typeof parsed.content === "string" ? parsed.content : undefined,
+              tokens: typeof parsed.tokens === "object" ? (parsed.tokens as ContextUIPart["tokens"]) : undefined,
+            };
+          case "agent":
+            return {
+              type: "agent",
+              agentId: id(),
+              name: String(parsed.name ?? ""),
+              description: typeof parsed.description === "string" ? parsed.description : undefined,
+            };
+          default:
+            // Unknown type — render as code so it stays visible
+            return { type: "code", language: "json", code: jsonStr };
+        }
       },
     },
     {

@@ -11,6 +11,7 @@ import {
   Terminal as TerminalIcon,
   NotePencil,
   BookBookmark,
+  Graph,
 } from '@phosphor-icons/react';
 import type { CodeCanvasTile } from '@/views/code/CodeModeStore';
 
@@ -137,6 +138,15 @@ export function CanvasContextMenu({
             onClose();
           },
         },
+        {
+          id: 'knowledge-graph',
+          label: 'Knowledge Graph',
+          icon: <Graph size={14} />,
+          onClick: () => {
+            onSpawnTile('knowledge-graph');
+            onClose();
+          },
+        },
       ],
     },
     {
@@ -179,6 +189,8 @@ export function CanvasContextMenu({
         top: posY,
         zIndex: 165,
         width: menuWidth,
+        maxHeight: 'calc(100dvh - 32px)',
+        overflowY: 'auto',
         padding: '6px',
         borderRadius: 12,
         border: '1px solid var(--glass-border)',

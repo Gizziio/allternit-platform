@@ -46,21 +46,30 @@ const FEED_OPTIONS: { id: FeedFilter; label: string; icon: React.ReactNode }[] =
 
 const TAG_CATEGORIES = [
   { id: "all", label: "All", count: DESIGN_MARKETPLACE.length },
-  { id: "minimalist", label: "Minimalist", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("minimalist")).length },
-  { id: "dark", label: "Dark", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("dark")).length },
-  { id: "clean", label: "Clean", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("clean")).length },
-  { id: "saas", label: "SaaS", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("saas")).length },
+  { id: "ai", label: "AI", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("ai")).length },
+  { id: "llm", label: "LLM", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("llm")).length },
+  { id: "ecommerce", label: "Ecommerce", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("ecommerce")).length },
+  { id: "retail", label: "Retail", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("retail")).length },
+  { id: "enterprise", label: "Enterprise", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("enterprise")).length },
+  { id: "b2b", label: "B2B", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("b2b")).length },
+  { id: "consumer", label: "Consumer", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("consumer")).length },
+  { id: "media", label: "Media", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("media")).length },
+  { id: "design", label: "Design", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("design")).length },
+  { id: "creative", label: "Creative", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("creative")).length },
+  { id: "themed", label: "Themed", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("themed")).length },
+  { id: "unique", label: "Unique", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("unique")).length },
+  { id: "finance", label: "Finance", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("finance")).length },
   { id: "fintech", label: "Fintech", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("fintech")).length },
-  { id: "purple", label: "Purple", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("purple")).length },
-  { id: "animation", label: "Animation", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("animation")).length },
-  { id: "developer", label: "Developer", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("developer")).length },
+  { id: "health", label: "Health", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("health")).length },
+  { id: "medical", label: "Medical", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("medical")).length },
+  { id: "edu", label: "Edu", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("edu")).length },
+  { id: "learning", label: "Learning", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("learning")).length },
+  { id: "starter", label: "Starter", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("starter")).length },
+  { id: "template", label: "Template", count: DESIGN_MARKETPLACE.filter((d) => d.tags.includes("template")).length },
 ];
 
 const TOP_CREATORS = [
-  { handle: "@allternit", name: "Allternit", designs: 8, verified: true },
-  { handle: "@vercel", name: "Vercel", designs: 1, verified: true },
-  { handle: "@linear", name: "Linear", designs: 2, verified: true },
-  { handle: "@stripe", name: "Stripe", designs: 1, verified: true },
+  { handle: "@nexu-io", name: "nexu-io", designs: 148, verified: true },
 ];
 
 // ─── Helper: Preview Gradient ────────────────────────────────────────────────
@@ -106,8 +115,8 @@ function PreviewGradient({ colors }: { colors: string[] }) {
       />
       {/* Mock UI lines */}
       <div style={{ position: "absolute", top: 20, left: 20, right: 20 }}>
-        <div style={{ height: 8, width: "60%", background: "rgba(255,255,255,0.08)", borderRadius: 4 }} />
-        <div style={{ height: 6, width: "40%", background: "rgba(255,255,255,0.05)", borderRadius: 3, marginTop: 10 }} />
+        <div style={{ height: 8, width: "60%", background: "var(--surface-hover)", borderRadius: 4 }} />
+        <div style={{ height: 6, width: "40%", background: "var(--surface-hover)", borderRadius: 3, marginTop: 10 }} />
       </div>
       <div
         style={{
@@ -119,8 +128,8 @@ function PreviewGradient({ colors }: { colors: string[] }) {
           gap: 8,
         }}
       >
-        <div style={{ flex: 1, height: 24, background: "rgba(255,255,255,0.06)", borderRadius: 6 }} />
-        <div style={{ width: 24, height: 24, background: "rgba(255,255,255,0.06)", borderRadius: 6 }} />
+        <div style={{ flex: 1, height: 24, background: "var(--surface-hover)", borderRadius: 6 }} />
+        <div style={{ width: 24, height: 24, background: "var(--surface-hover)", borderRadius: 6 }} />
       </div>
     </div>
   );
@@ -228,8 +237,8 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
         display: "flex",
         height: "100%",
         width: "100%",
-        background: "#0a0a0c",
-        color: "#fff",
+        background: "var(--bg-primary)",
+        color: "var(--text-primary)",
         fontFamily: "var(--font-sans)",
         overflow: "hidden",
       }}
@@ -238,7 +247,7 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
       <aside
         style={{
           width: 240,
-          borderRight: "1px solid rgba(255,255,255,0.04)",
+          borderRight: "1px solid var(--border-subtle)",
           display: "flex",
           flexDirection: "column",
           padding: "20px 16px",
@@ -264,7 +273,7 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
               left: 10,
               top: "50%",
               transform: "translateY(-50%)",
-              color: "rgba(255,255,255,0.25)",
+              color: "var(--text-tertiary)",
             }}
           />
           <input
@@ -276,9 +285,9 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
               width: "100%",
               padding: "9px 10px 9px 32px",
               borderRadius: 10,
-              border: "1px solid rgba(255,255,255,0.06)",
-              background: "rgba(255,255,255,0.03)",
-              color: "#fff",
+              border: "1px solid var(--border-subtle)",
+              background: "var(--bg-secondary)",
+              color: "var(--text-primary)",
               fontSize: 12,
               outline: "none",
               fontFamily: "inherit",
@@ -293,7 +302,7 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
               fontSize: 10,
               fontWeight: 800,
               letterSpacing: "0.1em",
-              color: "rgba(255,255,255,0.3)",
+              color: "var(--text-tertiary)",
               textTransform: "uppercase",
               marginBottom: 4,
             }}
@@ -311,8 +320,8 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
                 padding: "7px 10px",
                 borderRadius: 8,
                 border: "none",
-                background: activeFeed === opt.id ? "rgba(255,255,255,0.08)" : "transparent",
-                color: activeFeed === opt.id ? "#fff" : "rgba(255,255,255,0.45)",
+                background: activeFeed === opt.id ? "var(--surface-hover)" : "transparent",
+                color: activeFeed === opt.id ? "var(--text-primary)" : "var(--text-secondary)",
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: "pointer",
@@ -333,7 +342,7 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
               fontSize: 10,
               fontWeight: 800,
               letterSpacing: "0.1em",
-              color: "rgba(255,255,255,0.3)",
+              color: "var(--text-tertiary)",
               textTransform: "uppercase",
               marginBottom: 4,
             }}
@@ -352,7 +361,7 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
                 borderRadius: 8,
                 border: "none",
                 background: activeTag === tag.id ? "rgba(226,124,89,0.12)" : "transparent",
-                color: activeTag === tag.id ? "var(--accent-primary)" : "rgba(255,255,255,0.45)",
+                color: activeTag === tag.id ? "var(--accent-primary)" : "var(--text-secondary)",
                 fontSize: 12,
                 fontWeight: 600,
                 cursor: "pointer",
@@ -364,7 +373,7 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
               <span
                 style={{
                   fontSize: 10,
-                  color: "rgba(255,255,255,0.25)",
+                  color: "var(--text-tertiary)",
                   fontWeight: 700,
                 }}
               >
@@ -381,7 +390,7 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
               fontSize: 10,
               fontWeight: 800,
               letterSpacing: "0.1em",
-              color: "rgba(255,255,255,0.3)",
+              color: "var(--text-tertiary)",
               textTransform: "uppercase",
             }}
           >
@@ -402,13 +411,13 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
                   width: 24,
                   height: 24,
                   borderRadius: "50%",
-                  background: "rgba(255,255,255,0.08)",
+                  background: "var(--surface-hover)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   fontSize: 10,
                   fontWeight: 800,
-                  color: "rgba(255,255,255,0.5)",
+                  color: "var(--text-secondary)",
                 }}
               >
                 {creator.name[0]}
@@ -418,7 +427,7 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
                   style={{
                     fontSize: 12,
                     fontWeight: 600,
-                    color: "rgba(255,255,255,0.7)",
+                    color: "var(--text-secondary)",
                     display: "flex",
                     alignItems: "center",
                     gap: 4,
@@ -429,7 +438,7 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
                     <Check size={10} weight="bold" color="#3b82f6" />
                   )}
                 </div>
-                <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)" }}>
+                <div style={{ fontSize: 10, color: "var(--text-tertiary)" }}>
                   {creator.designs} designs
                 </div>
               </div>
@@ -444,7 +453,7 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
         <div
           style={{
             padding: "24px 28px",
-            borderBottom: "1px solid rgba(255,255,255,0.04)",
+            borderBottom: "1px solid var(--border-subtle)",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
@@ -456,14 +465,14 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
               style={{
                 fontSize: 28,
                 fontWeight: 700,
-                color: "#fff",
+                color: "var(--text-primary)",
                 letterSpacing: "-0.02em",
                 marginBottom: 4,
               }}
             >
               Browse the Hyperdesign marketplace.
             </h1>
-            <p style={{ fontSize: 13, color: "rgba(255,255,255,0.4)", maxWidth: 520 }}>
+            <p style={{ fontSize: 13, color: "var(--text-tertiary)", maxWidth: 520 }}>
               Browse and install Design.md specifications for your agents. Search by tag, compare
               the most-used entries, and study the building blocks behind the library.
             </p>
@@ -518,7 +527,7 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
                 alignItems: "center",
                 justifyContent: "center",
                 padding: "80px 0",
-                color: "rgba(255,255,255,0.3)",
+                color: "var(--text-tertiary)",
                 gap: 12,
               }}
             >
@@ -533,9 +542,9 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
                 style={{
                   padding: "8px 16px",
                   borderRadius: 8,
-                  background: "rgba(255,255,255,0.06)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  color: "#fff",
+                  background: "var(--surface-hover)",
+                  border: "1px solid var(--border-subtle)",
+                  color: "var(--text-primary)",
                   fontSize: 13,
                   fontWeight: 600,
                   cursor: "pointer",
@@ -563,8 +572,8 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
                     whileHover={{ y: -4 }}
                     transition={{ duration: 0.2 }}
                     style={{
-                      background: "rgba(255,255,255,0.02)",
-                      border: "1px solid rgba(255,255,255,0.05)",
+                      background: "var(--bg-secondary)",
+                      border: "1px solid var(--border-subtle)",
                       borderRadius: 16,
                       overflow: "hidden",
                       cursor: "pointer",
@@ -671,7 +680,7 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
                             style={{
                               fontSize: 15,
                               fontWeight: 700,
-                              color: "#fff",
+                              color: "var(--text-primary)",
                               margin: 0,
                               lineHeight: 1.3,
                             }}
@@ -684,7 +693,7 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
                       <p
                         style={{
                           fontSize: 12,
-                          color: "rgba(255,255,255,0.4)",
+                          color: "var(--text-tertiary)",
                           lineHeight: 1.5,
                           margin: 0,
                           display: "-webkit-box",
@@ -704,11 +713,11 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
                             style={{
                               padding: "3px 8px",
                               borderRadius: 6,
-                              background: "rgba(255,255,255,0.04)",
-                              border: "1px solid rgba(255,255,255,0.05)",
+                              background: "var(--surface-hover)",
+                              border: "1px solid var(--border-subtle)",
                               fontSize: 10,
                               fontWeight: 700,
-                              color: "rgba(255,255,255,0.4)",
+                              color: "var(--text-tertiary)",
                               textTransform: "uppercase",
                               letterSpacing: "0.05em",
                             }}
@@ -723,7 +732,7 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
                         style={{
                           marginTop: "auto",
                           paddingTop: 12,
-                          borderTop: "1px solid rgba(255,255,255,0.04)",
+                          borderTop: "1px solid var(--border-subtle)",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "space-between",
@@ -735,18 +744,18 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
                               width: 20,
                               height: 20,
                               borderRadius: "50%",
-                              background: "rgba(255,255,255,0.08)",
+                              background: "var(--surface-hover)",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
                               fontSize: 9,
                               fontWeight: 800,
-                              color: "rgba(255,255,255,0.5)",
+                              color: "var(--text-secondary)",
                             }}
                           >
                             {(design.author || "A")[0]}
                           </div>
-                          <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", fontWeight: 500 }}>
+                          <span style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 500 }}>
                             {design.creatorHandle || "@allternit"}
                           </span>
                         </div>
@@ -768,8 +777,8 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
         <div
           style={{
             padding: "12px 20px",
-            borderTop: "1px solid rgba(255,255,255,0.04)",
-            background: "rgba(0,0,0,0.6)",
+            borderTop: "1px solid var(--border-subtle)",
+            background: "var(--bg-secondary)",
             backdropFilter: "blur(12px)",
             display: "flex",
             alignItems: "center",
@@ -783,11 +792,11 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
               gap: 6,
               padding: "6px 12px",
               borderRadius: 8,
-              background: "rgba(255,255,255,0.05)",
-              border: "1px solid rgba(255,255,255,0.06)",
+              background: "var(--surface-hover)",
+              border: "1px solid var(--border-subtle)",
               fontSize: 11,
               fontWeight: 700,
-              color: "rgba(255,255,255,0.6)",
+              color: "var(--text-secondary)",
               whiteSpace: "nowrap",
             }}
           >
@@ -815,9 +824,9 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
                 width: "100%",
                 padding: "10px 16px",
                 borderRadius: 10,
-                border: "1px solid rgba(255,255,255,0.08)",
-                background: "rgba(255,255,255,0.04)",
-                color: "#fff",
+                border: "1px solid var(--border-subtle)",
+                background: "var(--bg-secondary)",
+                color: "var(--text-primary)",
                 fontSize: 13,
                 outline: "none",
                 fontFamily: "inherit",
@@ -831,9 +840,9 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
                 width: 32,
                 height: 32,
                 borderRadius: 8,
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.06)",
-                color: "rgba(255,255,255,0.5)",
+                background: "var(--surface-hover)",
+                border: "1px solid var(--border-subtle)",
+                color: "var(--text-secondary)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -847,9 +856,9 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
                 width: 32,
                 height: 32,
                 borderRadius: 8,
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.06)",
-                color: "rgba(255,255,255,0.5)",
+                background: "var(--surface-hover)",
+                border: "1px solid var(--border-subtle)",
+                color: "var(--text-secondary)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -899,20 +908,20 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
 function StatBox({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 100 }}>
-      <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", color: "rgba(255,255,255,0.3)", textTransform: "uppercase" }}>
+      <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", color: "var(--text-tertiary)", textTransform: "uppercase" }}>
         {label}
       </span>
-      <span style={{ fontSize: 20, fontWeight: 800, color: "#fff", letterSpacing: "-0.02em" }}>
+      <span style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>
         {value}
       </span>
-      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontWeight: 500 }}>{sub}</span>
+      <span style={{ fontSize: 10, color: "var(--text-tertiary)", fontWeight: 500 }}>{sub}</span>
     </div>
   );
 }
 
 function StatBadge({ icon, value }: { icon: React.ReactNode; value: string }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 3, color: "rgba(255,255,255,0.35)", fontSize: 10, fontWeight: 700 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 3, color: "var(--text-tertiary)", fontSize: 10, fontWeight: 700 }}>
       {icon}
       {value}
     </div>
@@ -939,9 +948,9 @@ function FilterPill({
         gap: 6,
         padding: "6px 12px",
         borderRadius: 8,
-        border: `1px solid ${active ? "rgba(226,124,89,0.3)" : "rgba(255,255,255,0.06)"}`,
+        border: `1px solid ${active ? "color-mix(in srgb, var(--accent-primary) 30%, transparent)" : "var(--border-subtle)"}`,
         background: active ? "rgba(226,124,89,0.1)" : "transparent",
-        color: active ? "var(--accent-primary)" : "rgba(255,255,255,0.5)",
+        color: active ? "var(--accent-primary)" : "var(--text-secondary)",
         fontSize: 12,
         fontWeight: 700,
         cursor: "pointer",
@@ -974,7 +983,7 @@ function ActionBtn({
         gap: 6,
         padding: "8px 16px",
         borderRadius: 8,
-        background: primary ? "#fff" : "rgba(255,255,255,0.1)",
+        background: primary ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.15)",
         border: "none",
         color: primary ? "#111" : "#fff",
         fontSize: 12,

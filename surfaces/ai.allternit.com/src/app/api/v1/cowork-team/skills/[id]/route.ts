@@ -1,64 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import { getAuth } from '@/lib/server-auth';
+import { NextRequest } from 'next/server';
+import { proxyGatewayRequest } from '@/lib/runtime-gateway-proxy';
 
-type Params = { params: Promise<{ id: string }> };
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-export async function GET(_req: NextRequest, { params }: Params): Promise<NextResponse> {
-  const { userId } = await getAuth();
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+): Promise<Response> {
   const { id } = await params;
-  const skill = await prisma.teamSkill.findUnique({ where: { id } });
-  if (!skill) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-
-  const member = await prisma.workspaceMember.findFirst({
-    where: { workspaceId: skill.workspaceId, userId },
-  });
-  if (!member) return NextResponse.json({ error: 'Not a workspace member' }, { status: 403 });
-
-  return NextResponse.json({ skill });
+  return proxyGatewayRequest(request, `/api/v1/cowork-team/skills/${encodeURIComponent(id)}`);
 }
 
-export async function PUT(request: NextRequest, { params }: Params): Promise<NextResponse> {
-  const { userId } = await getAuth();
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+): Promise<Response> {
   const { id } = await params;
-  const skill = await prisma.teamSkill.findUnique({ where: { id } });
-  if (!skill) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-
-  const member = await prisma.workspaceMember.findFirst({
-    where: { workspaceId: skill.workspaceId, userId, role: { in: ['owner', 'admin'] } },
-  });
-  if (!member) return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-
-  const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-  const updated = await prisma.teamSkill.update({
-    where: { id },
-    data: {
-      ...(typeof body.name === 'string' && { name: body.name }),
-      ...(typeof body.description === 'string' && { description: body.description }),
-      ...(typeof body.version === 'string' && { version: body.version }),
-    },
-  });
-
-  return NextResponse.json({ skill: updated });
+  return proxyGatewayRequest(request, `/api/v1/cowork-team/skills/${encodeURIComponent(id)}`);
 }
 
-export async function DELETE(_req: NextRequest, { params }: Params): Promise<NextResponse> {
-  const { userId } = await getAuth();
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+): Promise<Response> {
   const { id } = await params;
-  const skill = await prisma.teamSkill.findUnique({ where: { id } });
-  if (!skill) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-
-  const member = await prisma.workspaceMember.findFirst({
-    where: { workspaceId: skill.workspaceId, userId, role: { in: ['owner', 'admin'] } },
-  });
-  if (!member) return NextResponse.json({ error: 'Insufficient permissions' }, { status: 403 });
-
-  await prisma.teamSkill.delete({ where: { id } });
-  return NextResponse.json({ ok: true });
+  return proxyGatewayRequest(request, `/api/v1/cowork-team/skills/${encodeURIComponent(id)}`);
 }

@@ -1,0 +1,40 @@
+<svg viewBox="0 0 96 96" width="96" height="96" xmlns="http://www.w3.org/2000/svg" shape-rendering="geometricPrecision">
+  <!-- Shadow -->
+  <ellipse cx="48" cy="86" rx="21" ry="4" fill="rgba(9, 11, 14, 0.14)"/>
+  
+  <!-- Beacon -->
+  <rect x="44" y="8" width="8" height="5" rx="2" fill="#D97757"/>
+  
+  <!-- Antennae -->
+  <rect x="24" y="15" width="17" height="7" rx="3" fill="#D4B08C"/>
+  <rect x="55" y="15" width="17" height="7" rx="3" fill="#D4B08C"/>
+  
+  <!-- Body -->
+  <path d="M25 23H71L78 30V56L72 63V69L64 76H32L24 69V63L18 56V30L25 23Z" fill="#D4B08C"/>
+  
+  <!-- Left Hand -->
+  <path d="M18 40H14V44H10V48H14V52H18V56H22V40H18Z" fill="#D4B08C"/>
+  
+  <!-- Right Hand -->
+  <path d="M78 40H82V44H86V48H82V52H78V56H74V40H78Z" fill="#D4B08C"/>
+  
+  <!-- Face Panel -->
+  <rect x="24" y="29" width="48" height="31" rx="9" fill="rgba(17, 19, 24, 0.16)"/>
+  
+  <!-- Eyes (wide/default) -->
+  <rect x="33" y="36" width="8" height="10" rx="2" fill="#111318"/>
+  <rect x="59" y="36" width="8" height="10" rx="2" fill="#111318"/>
+  
+  <!-- Nose/Mark -->
+  <path d="M44.5 52L48 42L51.5 52H49.6L48.8 49.5H47.2L46.4 52H44.5ZM47.75 47.7H48.25L48 46.65L47.75 47.7Z" fill="#D97757"/>
+  <rect x="46" y="47.2" width="4" height="1.4" rx="0.7" fill="#D97757"/>
+  
+  <!-- Mouth (:// default) -->
+  <text x="48" y="57.5" text-anchor="middle" fill="#D97757" font-size="8.2" font-weight="700" font-family='"SFMono-Regular", "SF Mono", Consolas, "Liberation Mono", Menlo, monospace' letter-spacing="-0.4">://</text>
+  
+  <!-- Legs -->
+  <rect x="24" y="74" width="8" height="12" fill="#D4B08C"/>
+  <rect x="36" y="74" width="8" height="12" fill="#D4B08C"/>
+  <rect x="52" y="74" width="8" height="12" fill="#D4B08C"/>
+  <rect x="64" y="74" width="8" height="12" fill="#D4B08C"/>
+</svg>

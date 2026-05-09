@@ -1,20 +1,6 @@
-/**
- * Chat Mode Agent Session
- * 
- * Conversation-focused agent experience for chat mode.
- * Features:
- * - Streaming message interface
- * - Suggested prompts
- * - Message history
- * - Tool call visualization
- * - File attachments
- * 
- * Uses Allternit chat mode accent colors (warm terracotta)
- * 
- * @module ChatModeAgentSession
- */
+'use client';
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
   PaperPlaneTilt,
@@ -39,14 +25,18 @@ import {
 } from '@/components/agents';
 
 import { AgentSessionLayout, CanvasPanel } from './AgentSessionLayout';
-import type { ChatModeAgentSessionProps, AgentSessionMessage, AgentSessionCanvas } from './types';
+import type { ChatModeAgentSessionProps, AgentSessionCanvas } from './types';
+import type { ModeSessionMessage } from '@/lib/agents/mode-session-store';
+import { useChatSessionStore } from '@/views/chat/ChatSessionStore';
+import { UnifiedMessageRenderer } from '@/components/ai-elements/UnifiedMessageRenderer';
+import { parseStructuredContent } from '@/lib/ai/rust-stream-adapter-extended';
 
 // ============================================================================
 // Component
 // ============================================================================
 
 export function ChatModeAgentSession({
-  sessionId,
+  sessionId: sessionIdProp,
   agentId,
   enableStreaming = true,
   showSuggestions = true,
@@ -56,48 +46,53 @@ export function ChatModeAgentSession({
   const mode = 'chat';
   const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.chat;
   const accentColor = useToolCallAccent(mode);
-  
-  // State
-  const [messages, setMessages] = useState<AgentSessionMessage[]>([]);
+
+  // ── Store wiring ──────────────────────────────────────────────────────────
+  const activeSessionId = useChatSessionStore((s) => s.activeSessionId);
+  const sessionId = sessionIdProp ?? activeSessionId;
+
+  const sessions = useChatSessionStore((s) => s.sessions);
+  const session = useMemo(
+    () => sessions.find((s) => s.id === sessionId) ?? null,
+    [sessions, sessionId]
+  );
+  const messages = session?.messages ?? [];
+
+  const streamingState = useChatSessionStore((s) =>
+    sessionId ? s.streamingBySession?.[sessionId] : null
+  );
+  const isStreaming = streamingState?.isStreaming ?? false;
+
+  const sendMessageStream = useChatSessionStore((s) => s.sendMessageStream);
+  const createSession = useChatSessionStore((s) => s.createSession);
+  const setActiveSession = useChatSessionStore((s) => s.setActiveSession);
+
+  // ── Local UI state ────────────────────────────────────────────────────────
   const [input, setInput] = useState('');
-  const [isStreaming, setIsStreaming] = useState(false);
   const [canvases] = useState<AgentSessionCanvas[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
+
   // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-  
-  // Send message handler
+  }, [messages.length, isStreaming]);
+
+  // ── Send handler ──────────────────────────────────────────────────────────
   const handleSend = useCallback(async () => {
     if (!input.trim() || isStreaming) return;
-    
-    const userMessage: AgentSessionMessage = {
-      id: `msg-${Date.now()}`,
-      role: 'user',
-      content: input.trim(),
-      timestamp: new Date(),
-    };
-    
-    setMessages((prev) => [...prev, userMessage]);
+    const text = input.trim();
     setInput('');
-    setIsStreaming(true);
-    
-    // Simulate agent response (replace with actual API)
-    setTimeout(() => {
-      const agentMessage: AgentSessionMessage = {
-        id: `msg-${Date.now() + 1}`,
-        role: 'agent',
-        content: 'This is a simulated response. In production, this would stream from the agent.',
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, agentMessage]);
-      setIsStreaming(false);
-    }, 1500);
-  }, [input, isStreaming]);
-  
-  // Suggested prompts
+
+    let sid = sessionId;
+    if (!sid) {
+      sid = await createSession({ name: 'Agent Chat', sessionMode: 'agent', agentId });
+      setActiveSession(sid);
+    }
+
+    await sendMessageStream(sid, { text });
+  }, [input, isStreaming, sessionId, createSession, agentId, setActiveSession, sendMessageStream]);
+
+  // ── Suggested prompts ─────────────────────────────────────────────────────
   const suggestions = [
     'Help me understand this codebase',
     'Create a new React component',
@@ -125,24 +120,24 @@ export function ChatModeAgentSession({
         </>
       }
     >
-      {/* Chat Interface - Background matches regular chat */}
-      <div 
+      {/* Chat Interface */}
+      <div
         className="flex flex-col h-full relative"
         style={{ background: '#0D0B09' }}
       >
-        {/* Regular Mode Wash Background (Subtle) */}
-        <div 
+        {/* Mode wash */}
+        <div
           className="absolute inset-0 pointer-events-none opacity-20"
-          style={{ 
-            background: `radial-gradient(120% 88% at 50% 0%, ${modeColors.fog} 0%, transparent 58%)` 
+          style={{
+            background: `radial-gradient(120% 88% at 50% 0%, ${modeColors.fog} 0%, transparent 58%)`,
           }}
         />
 
-        {/* Messages Area */}
+        {/* Messages */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6 relative z-1">
           {messages.length === 0 && showSuggestions && (
             <div className="flex flex-col items-center justify-center h-full space-y-6">
-              <div 
+              <div
                 className="w-16 h-16 rounded-2xl flex items-center justify-center"
                 style={{ background: modeColors.soft }}
               >
@@ -156,8 +151,6 @@ export function ChatModeAgentSession({
                   Start a conversation or try one of these suggestions
                 </p>
               </div>
-              
-              {/* Suggested Prompts */}
               <div className="grid grid-cols-2 gap-3 max-w-lg">
                 {suggestions.map((suggestion, idx) => (
                   <button
@@ -176,16 +169,16 @@ export function ChatModeAgentSession({
               </div>
             </div>
           )}
-          
+
           {messages.map((message) => (
-            <ChatMessage 
-              key={message.id} 
-              message={message} 
+            <ChatMessage
+              key={message.id}
+              message={message}
               mode={mode}
               accentColor={accentColor}
             />
           ))}
-          
+
           {isStreaming && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -198,27 +191,24 @@ export function ChatModeAgentSession({
               </span>
             </motion.div>
           )}
-          
+
           <div ref={messagesEndRef} />
         </div>
-        
-        {/* Input Area */}
-        <div 
+
+        {/* Input */}
+        <div
           className="p-4 border-t"
           style={{ borderColor: modeColors.border, background: 'var(--surface-panel)' }}
         >
           <div className="flex items-end gap-2">
             <button
               className="p-3 rounded-xl transition-colors shrink-0"
-              style={{ 
-                background: 'var(--surface-hover)',
-                color: TEXT.tertiary,
-              }}
+              style={{ background: 'var(--surface-hover)', color: TEXT.tertiary }}
               title="Attach file"
             >
               <Paperclip size={20} />
             </button>
-            
+
             <div className="flex-1 relative">
               <textarea
                 value={input}
@@ -226,7 +216,7 @@ export function ChatModeAgentSession({
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    handleSend();
+                    void handleSend();
                   }
                 }}
                 placeholder="Type your message..."
@@ -241,15 +231,12 @@ export function ChatModeAgentSession({
                 }}
               />
             </div>
-            
+
             <button
-              onClick={handleSend}
+              onClick={() => void handleSend()}
               disabled={!input.trim() || isStreaming}
               className="p-3 rounded-xl transition-all disabled:opacity-50 shrink-0"
-              style={{ 
-                background: modeColors.accent,
-                color: '#0D0B09',
-              }}
+              style={{ background: modeColors.accent, color: '#0D0B09' }}
               title="Send message"
             >
               <PaperPlaneTilt size={20} />
@@ -265,18 +252,18 @@ export function ChatModeAgentSession({
 // Sub-Components
 // ============================================================================
 
-function ChatMessage({ 
-  message, 
+function ChatMessage({
+  message,
   mode,
   accentColor,
-}: { 
-  message: AgentSessionMessage; 
+}: {
+  message: ModeSessionMessage;
   mode: 'chat';
   accentColor: string;
 }) {
   const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.chat;
   const isUser = message.role === 'user';
-  
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -284,11 +271,9 @@ function ChatMessage({
       className={`flex gap-3 ${isUser ? 'flex-row-reverse' : ''}`}
     >
       {/* Avatar */}
-      <div 
+      <div
         className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-        style={{ 
-          background: isUser ? modeColors.soft : `${accentColor}20`,
-        }}
+        style={{ background: isUser ? modeColors.soft : `${accentColor}20` }}
       >
         {isUser ? (
           <User size={16} style={{ color: modeColors.accent }} />
@@ -296,10 +281,10 @@ function ChatMessage({
           <Robot size={16} style={{ color: accentColor }} />
         )}
       </div>
-      
+
       {/* Content */}
       <div className={`flex-1 max-w-[80%] ${isUser ? 'text-right' : ''}`}>
-        <div 
+        <div
           className="inline-block px-4 py-3 rounded-2xl text-left"
           style={{
             background: isUser ? modeColors.soft : 'var(--surface-hover)',
@@ -308,25 +293,29 @@ function ChatMessage({
             borderRadius: isUser ? '20px 20px 4px 20px' : '20px 20px 20px 4px',
           }}
         >
-          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-        </div>
-        
-        {/* Tool Calls */}
-        {message.toolCalls && message.toolCalls.length > 0 && (
-          <div className="mt-2 space-y-2">
-            <ToolCallVisualization
-              toolCalls={message.toolCalls}
-              isLoading={true}
-              accentColor={accentColor}
+          {isUser ? (
+            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+          ) : (
+            <UnifiedMessageRenderer
+              parts={parseStructuredContent(message.content)}
+              className="text-sm"
             />
-          </div>
-        )}
-        
+          )}
+        </div>
+
         {/* Timestamp */}
         <div className="mt-1 flex items-center gap-2 text-xs" style={{ color: TEXT.tertiary }}>
-          <span>{message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          <span>
+            {new Date(message.timestamp).toLocaleTimeString([], {
+              hour: '2-digit',
+              minute: '2-digit',
+            })}
+          </span>
           {!isUser && (
-            <button className="hover:text-white transition-colors">
+            <button
+              className="hover:text-white transition-colors"
+              onClick={() => void navigator.clipboard.writeText(message.content)}
+            >
               <Copy size={12} />
             </button>
           )}
@@ -338,12 +327,12 @@ function ChatMessage({
 
 function ChatCanvasPanel({ mode, canvases }: { mode: 'chat'; canvases: AgentSessionCanvas[] }) {
   const modeColors = MODE_COLORS[mode] as typeof MODE_COLORS.chat;
-  
+
   if (canvases.length === 0) {
     return (
       <CanvasPanel title="Canvas" mode={mode}>
         <div className="flex flex-col items-center justify-center h-full text-center">
-          <div 
+          <div
             className="w-12 h-12 rounded-xl flex items-center justify-center mb-3"
             style={{ background: modeColors.soft }}
           >
@@ -359,10 +348,10 @@ function ChatCanvasPanel({ mode, canvases }: { mode: 'chat'; canvases: AgentSess
       </CanvasPanel>
     );
   }
-  
+
   return (
-    <CanvasPanel 
-      title="Canvas" 
+    <CanvasPanel
+      title="Canvas"
       mode={mode}
       actions={
         <button style={{ color: TEXT.tertiary }}>
@@ -372,7 +361,7 @@ function ChatCanvasPanel({ mode, canvases }: { mode: 'chat'; canvases: AgentSess
     >
       <div className="space-y-4">
         {canvases.map((canvas) => (
-          <div 
+          <div
             key={canvas.id}
             className="p-3 rounded-xl"
             style={{
@@ -388,9 +377,9 @@ function ChatCanvasPanel({ mode, canvases }: { mode: 'chat'; canvases: AgentSess
                 <Sparkle size={12} style={{ color: modeColors.accent }} />
               )}
             </div>
-            <pre 
+            <pre
               className="text-xs overflow-auto p-2 rounded"
-              style={{ 
+              style={{
                 background: 'var(--surface-panel)',
                 color: TEXT.secondary,
                 maxHeight: 200,

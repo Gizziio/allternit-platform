@@ -17,8 +17,6 @@ export function CanvasHUD({ tiles }: CanvasHUDProps) {
   ).length;
   const idleCount = sessionTiles.length - streamingCount;
 
-  if (sessionTiles.length === 0) return null;
-
   return (
     <div
       style={{
@@ -48,14 +46,19 @@ export function CanvasHUD({ tiles }: CanvasHUDProps) {
         }}
       />
       <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.04em' }}>
-        {sessionTiles.length} SESSION{sessionTiles.length !== 1 ? 'S' : ''}
+        {tiles.length} TILE{tiles.length !== 1 ? 'S' : ''}
       </span>
+      {sessionTiles.length > 0 && (
+        <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>
+          {sessionTiles.length} SESSION{sessionTiles.length !== 1 ? 'S' : ''}
+        </span>
+      )}
       {streamingCount > 0 && (
         <span style={{ fontSize: 10, color: 'var(--accent-agent, #f97316)', fontWeight: 500 }}>
           {streamingCount} WORKING
         </span>
       )}
-      {idleCount > 0 && streamingCount === 0 && (
+      {idleCount > 0 && streamingCount === 0 && sessionTiles.length > 0 && (
         <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>
           {idleCount} IDLE
         </span>

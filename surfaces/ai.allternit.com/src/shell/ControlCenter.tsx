@@ -10,8 +10,7 @@
  * - SSH Connections
  * - Browser Pairing (ExtensionMV3 pairing flow)
  * - Policies (Policy tiers + confirmations)
- * - Dev Tools (Agentation toggle - dev mode only)
- * 
+ *
  * For MVP, only Browser Pairing and Policy sections are fully implemented.
  * Other sections are placeholders that route to existing CloudDeploy wizard.
  */
@@ -23,7 +22,6 @@ import {
   X,
   GearSix,
   Shield,
-  PuzzlePiece as Puzzle,
   Cpu,
   WifiHigh,
   Lock,
@@ -73,10 +71,6 @@ export interface ControlCenterProps {
   // Dev mode flag
   isDevMode?: boolean;
   
-  // Agentation state
-  agentationEnabled?: boolean;
-  onToggleAgentation?: (enabled: boolean) => void;
-  
   // View navigation
   onOpenView?: (viewType: string) => void;
 }
@@ -108,8 +102,6 @@ export function ControlCenter({
   onAddAllowedHost,
   onRemoveAllowedHost,
   isDevMode = false,
-  agentationEnabled = false,
-  onToggleAgentation,
   onOpenView,
 }: ControlCenterProps): JSX.Element | null {
   const [activeSection, setActiveSection] = useState<string>('browser-pairing');
@@ -385,12 +377,6 @@ export function ControlCenter({
                   description="Manage SSH hosts, tunnels, and known fingerprints"
                   icon={Terminal}
                   linkTo="/cloud-deploy"
-                />
-              )}
-              {activeSection === 'dev-tools' && isDevMode && (
-                <DevToolsSection
-                  agentationEnabled={agentationEnabled}
-                  onToggleAgentation={onToggleAgentation}
                 />
               )}
             </div>
@@ -739,9 +725,6 @@ function SectionNav({ activeSection, onSectionChange, isDevMode }: SectionNavPro
     { id: 'ssh', label: 'SSH Connections', icon: Terminal },
   ];
 
-  if (isDevMode) {
-    sections.push({ id: 'dev-tools', label: 'Dev Tools', icon: Puzzle });
-  }
 
   return (
     <div className="p-4 space-y-1">
@@ -1042,75 +1025,6 @@ function PolicySection({
             <p className="text-muted-foreground">
               By default, all hosts are denied. Add hosts to this allowlist to enable
               browser automation. Tier 3+ actions always require human confirmation.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// Dev Tools Section
-// ============================================================================
-
-interface DevToolsSectionProps {
-  agentationEnabled: boolean;
-  onToggleAgentation?: (enabled: boolean) => void;
-}
-
-function DevToolsSection({
-  agentationEnabled,
-  onToggleAgentation,
-}: DevToolsSectionProps): JSX.Element {
-  return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div>
-        <h3 className="text-lg font-semibold mb-1">Developer Tools</h3>
-        <p className="text-sm text-muted-foreground">
-          Enable dev-only features and debugging tools
-        </p>
-      </div>
-
-      {/* Agentation Toggle */}
-      <div className="p-4 rounded-lg bg-secondary/30 border border-border">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Puzzle className="w-5 h-5 text-purple-500" />
-            <div>
-              <p className="text-sm font-medium">Agentation</p>
-              <p className="text-xs text-muted-foreground">
-                UI annotation tool for AI agents (dev-only)
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => onToggleAgentation?.(!agentationEnabled)}
-            className={`
-              relative w-12 h-6 rounded-full transition-colors
-              ${agentationEnabled ? 'bg-accent' : 'bg-secondary'}
-            `}
-          >
-            <div
-              className={`
-                absolute top-1 w-4 h-4 rounded-full bg-white transition-transform
-                ${agentationEnabled ? 'left-7' : 'left-1'}
-              `}
-            />
-          </button>
-        </div>
-      </div>
-
-      {/* Info */}
-      <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
-        <div className="flex items-start gap-3">
-          <Warning className="w-5 h-5 text-blue-500 mt-0.5" />
-          <div className="text-sm">
-            <p className="font-medium text-blue-500 mb-1">Dev Mode Only</p>
-            <p className="text-muted-foreground">
-              These tools are only available in development mode (NODE_ENV=development).
-              They are never included in production builds.
             </p>
           </div>
         </div>

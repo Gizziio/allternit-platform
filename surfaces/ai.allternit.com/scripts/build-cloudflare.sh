@@ -43,6 +43,7 @@ mv "$API_DIR" "$API_TEMP"
 
 echo "[build-cloudflare] Running static export build (CLOUDFLARE_PAGES=1)..."
 export CLOUDFLARE_PAGES=1
+export NODE_OPTIONS="--max-old-space-size=4096"
 node_modules/.bin/next build
 
-echo "[build-cloudflare] Build complete. Output is in $PACKAGE_ROOT/out"
+echo "[build-cloudflare] Build complete. Output is in $PACKAGE_ROOT/dist"

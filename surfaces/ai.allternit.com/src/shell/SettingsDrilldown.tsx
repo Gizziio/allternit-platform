@@ -16,7 +16,6 @@ import {
   Gift,
   Info,
   CaretRight,
-  PuzzlePiece as Puzzle,
   ArrowCounterClockwise,
 } from '@phosphor-icons/react';
 
@@ -220,22 +219,6 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }):
       icon: isDark ? <Sun size={18} weight="regular" /> : <Moon size={18} weight="regular" />,
       onClick: toggleTheme 
     },
-    ...(process.env.NODE_ENV === 'development' ? [
-      { 
-        id: 'agentation', 
-        label: 'Agentation', 
-        icon: <Puzzle size={18} weight="regular" />,
-        onClick: () => {
-          const enabled = localStorage.getItem('allternit-agentation-enabled') === 'true';
-          localStorage.setItem('allternit-agentation-enabled', enabled ? 'false' : 'true');
-          window.dispatchEvent(new StorageEvent('storage', {
-            key: 'allternit-agentation-enabled',
-            newValue: enabled ? 'false' : 'true'
-          }));
-          location.reload();
-        }
-      } as MenuItem
-    ] : []),
     { 
       id: 'language', 
       label: 'Language', 

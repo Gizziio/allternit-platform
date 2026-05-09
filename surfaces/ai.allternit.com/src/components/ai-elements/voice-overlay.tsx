@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,7 +20,6 @@ import {
   UserCircle,
 } from '@phosphor-icons/react';
 import { useVoice } from '@/providers/voice-provider';
-import { speechToText } from '@/services/voice';
 import { Persona } from './persona';
 import {
   MicSelector,
@@ -46,12 +45,6 @@ export interface VoiceOverlayProps {
   className?: string;
 }
 
-/**
- * Voice Overlay with Integrated Persona
- * 
- * Click the Persona avatar to record voice input
- * Settings popover for voice configuration
- */
 export function VoiceOverlay({ className }: VoiceOverlayProps) {
   const {
     isRecording,
@@ -62,56 +55,69 @@ export function VoiceOverlay({ className }: VoiceOverlayProps) {
     setVoice,
     setAutoPlay,
     checkHealth,
+    isCheckingHealth,
     personaState,
     startRecording,
     stopRecording,
+    error,
   } = useVoice();
 
-  // Handle persona click for recording
-  const handlePersonaClick = useCallback(async () => {
+  const [localError, setLocalError] = useState<string | null>(null);
+  const [voiceSelectorOpen, setVoiceSelectorOpen] = useState(false);
+
+  const handlePersonaClick = useCallback(() => {
+    setLocalError(null);
     if (!serviceAvailable) {
-      await checkHealth();
+      checkHealth().catch(() => {});
       return;
     }
-    
     if (isRecording) {
       stopRecording();
     } else {
-      await startRecording();
+      startRecording().catch((err: unknown) => {
+        setLocalError(err instanceof Error ? err.message : 'Failed to start recording');
+      });
     }
   }, [isRecording, serviceAvailable, startRecording, stopRecording, checkHealth]);
+
+  const handleRetry = useCallback(() => {
+    setLocalError(null);
+    checkHealth().catch(() => {});
+  }, [checkHealth]);
+
+  const displayError = localError ?? error;
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
       {/* Voice Presence - Clickable Persona Avatar */}
       <button
         onClick={handlePersonaClick}
-        disabled={!serviceAvailable && personaState === 'idle'}
+        disabled={serviceAvailable === false && !isRecording}
         className={cn(
           "relative rounded-full transition-all duration-200",
           "hover:scale-105 active:scale-95",
           isRecording && "ring-2 ring-primary ring-offset-2 ring-offset-background",
-          !serviceAvailable && "opacity-50 cursor-not-allowed"
+          serviceAvailable === false && "opacity-50 cursor-not-allowed"
         )}
-        title={isRecording ? "Stop recording" : "Click to speak"}
+        title={isRecording ? "Stop recording" : serviceAvailable ? "Click to speak" : "Voice service offline"}
       >
-        <Persona 
+        <Persona
           state={isRecording ? "listening" : "auto"}
-          variant="obsidian" 
+          variant="obsidian"
           className="size-9"
           animateWithEnergy
         />
-        
+
         {/* Status indicator dot */}
         <span className={cn(
           "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background",
-          !serviceAvailable && "bg-red-500",
-          serviceAvailable && personaState === 'idle' && !isRecording && "bg-muted-foreground",
+          serviceAvailable === false && "bg-red-500",
+          serviceAvailable === true && personaState === 'idle' && !isRecording && "bg-muted-foreground",
           isRecording && "bg-blue-500 animate-pulse",
           personaState === 'thinking' && "bg-amber-500 animate-pulse",
           personaState === 'speaking' && "bg-green-500 animate-pulse"
         )} />
-        
+
         {/* Recording overlay icon */}
         {isRecording && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/30 rounded-full">
@@ -129,16 +135,16 @@ export function VoiceOverlay({ className }: VoiceOverlayProps) {
             className={cn(
               "h-7 w-7 relative",
               isRecording && "text-primary",
-              !serviceAvailable && "text-muted-foreground"
+              serviceAvailable === false && "text-muted-foreground"
             )}
           >
             <GearSix className="h-3.5 w-3.5" />
-            {!serviceAvailable && (
+            {serviceAvailable === false && (
               <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-amber-500 rounded-full" />
             )}
           </Button>
         </PopoverTrigger>
-        
+
         <PopoverContent align="end" className="w-64 p-3" sideOffset={4}>
           {/* Header */}
           <div className="flex items-center justify-between mb-3 pb-3 border-b">
@@ -165,9 +171,19 @@ export function VoiceOverlay({ className }: VoiceOverlayProps) {
               </Badge>
             </div>
           </div>
-          
+
+          {/* Error display */}
+          {displayError && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-md p-2 mb-3">
+              <div className="flex items-start gap-2">
+                <Warning className="h-3.5 w-3.5 text-red-500 shrink-0 mt-0.5" />
+                <p className="text-[10px] text-red-400 break-words">{displayError}</p>
+              </div>
+            </div>
+          )}
+
           {/* Service Offline Message */}
-          {!serviceAvailable && (
+          {serviceAvailable === false && (
             <div className="bg-amber-500/10 border border-amber-500/20 rounded-md p-2 mb-3">
               <div className="flex items-start gap-2">
                 <Warning className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
@@ -176,20 +192,21 @@ export function VoiceOverlay({ className }: VoiceOverlayProps) {
                   <code className="block bg-background px-1.5 py-0.5 rounded text-[9px]">
                     python3 launch.py
                   </code>
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
+                  <Button
+                    size="sm"
+                    variant="ghost"
                     className="w-full h-6 text-[10px] mt-1"
-                    onClick={checkHealth}
+                    onClick={handleRetry}
+                    disabled={isCheckingHealth}
                   >
                     <Play className="h-3 w-3 mr-1" />
-                    Retry
+                    {isCheckingHealth ? 'Checking...' : 'Retry'}
                   </Button>
                 </div>
               </div>
             </div>
           )}
-          
+
           {/* Mic Selector */}
           <div className="space-y-1.5 mb-3">
             <label className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
@@ -215,14 +232,19 @@ export function VoiceOverlay({ className }: VoiceOverlayProps) {
               </MicSelectorContent>
             </MicSelector>
           </div>
-          
+
           {/* Voice Selector */}
           <div className="space-y-1.5 mb-3">
             <label className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
               <GearSix size={12} />
               Voice
             </label>
-            <VoiceSelector>
+            <VoiceSelector
+              value={currentVoice}
+              open={voiceSelectorOpen}
+              onOpenChange={setVoiceSelectorOpen}
+              onValueChange={(v) => { if (v) { setVoice(v); setVoiceSelectorOpen(false); } }}
+            >
               <VoiceSelectorTrigger className="w-full h-7 text-xs">
                 {currentVoice === 'default' ? 'Select Voice' : currentVoice}
               </VoiceSelectorTrigger>
@@ -230,13 +252,20 @@ export function VoiceOverlay({ className }: VoiceOverlayProps) {
                 <VoiceSelectorList>
                   {availableVoices.length > 0 ? (
                     availableVoices.map((voice) => (
-                      <VoiceSelectorItem key={voice.id} value={voice.id}>
+                      <VoiceSelectorItem
+                        key={voice.id}
+                        value={voice.id}
+                        onSelect={() => { setVoice(voice.id); setVoiceSelectorOpen(false); }}
+                      >
                         <VoiceSelectorPreview />
                         <VoiceSelectorName>{voice.label}</VoiceSelectorName>
                       </VoiceSelectorItem>
                     ))
                   ) : (
-                    <VoiceSelectorItem value="default">
+                    <VoiceSelectorItem
+                      value="default"
+                      onSelect={() => { setVoice('default'); setVoiceSelectorOpen(false); }}
+                    >
                       <VoiceSelectorName>Default</VoiceSelectorName>
                     </VoiceSelectorItem>
                   )}
@@ -244,7 +273,7 @@ export function VoiceOverlay({ className }: VoiceOverlayProps) {
               </VoiceSelectorContent>
             </VoiceSelector>
           </div>
-          
+
           {/* Auto-play Toggle */}
           <div className="flex items-center justify-between pt-2 border-t">
             <label className="text-[10px] text-muted-foreground">Auto-play TTS</label>
@@ -253,7 +282,7 @@ export function VoiceOverlay({ className }: VoiceOverlayProps) {
               size="sm"
               className="h-6 text-[10px] px-2"
               onClick={() => setAutoPlay(!autoPlay)}
-              disabled={!serviceAvailable}
+              disabled={serviceAvailable === false}
             >
               {autoPlay ? (
                 <><SpeakerHigh className="h-3 w-3 mr-1" /> On</>

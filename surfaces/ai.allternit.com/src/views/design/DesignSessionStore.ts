@@ -7,7 +7,7 @@ import {
 } from '@/lib/agents/mode-session-store';
 
 /**
- * DesignSessionStore - Dedicated session management for Allternit Studio.
+ * DesignSessionStore - Dedicated session management for Allternit Design.
  * Completely independent from Chat, Code, and Cowork modes.
  */
 

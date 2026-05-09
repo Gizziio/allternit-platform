@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useRef } from 'react';
 import {
   useCodeModeStore,
   type CodeWorkspaceRecord,
@@ -33,6 +33,8 @@ interface CodeCanvasViewProps {
   workspace: CodeWorkspaceRecord | undefined;
 }
 
+const DASHBOARD_URL = process.env.NEXT_PUBLIC_DASHBOARD_URL || 'http://localhost:7150';
+
 export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
   const updateCanvasTile = useCodeModeStore((s) => s.updateCanvasTile);
   const setCanvasViewport = useCodeModeStore((s) => s.setCanvasViewport);
@@ -40,6 +42,11 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
   const removeCanvasTile = useCodeModeStore((s) => s.removeCanvasTile);
   const addCanvasTile = useCodeModeStore((s) => s.addCanvasTile);
   const autoArrange = useCodeModeStore((s) => s.autoArrangeCanvasTiles);
+  const importCanvasState = useCodeModeStore((s) => s.importCanvasState);
+  const undoCanvas = useCodeModeStore((s) => s.undoCanvas);
+  const redoCanvas = useCodeModeStore((s) => s.redoCanvas);
+  const selectCanvasTiles = useCodeModeStore((s) => s.selectCanvasTiles);
+  const clearCanvasSelection = useCodeModeStore((s) => s.clearCanvasSelection);
   const activeSessionId = useCodeModeStore((s) => s.activeSessionId);
 
   const [contextMenu, setContextMenu] = React.useState<{ x: number; y: number } | null>(null);
@@ -50,6 +57,11 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
   const [mcpOpen, setMcpOpen] = React.useState(false);
   const codeSessions = useCodeSessionStore((s) => s.sessions);
 
+  // Multi-select / marquee
+  const [marquee, setMarquee] = React.useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const marqueeRef = useRef({ active: false, startX: 0, startY: 0 });
+  const dragOffsetsRef = useRef<Record<string, { dx: number; dy: number }>>({});
+
   // h5i Tier 1: Track files touched for the active session (SSE)
   useFilesTouched(workspace?.root_path, activeSessionId);
 
@@ -57,6 +69,7 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
   const viewport = workspace?.canvasViewport ?? { x: 0, y: 0, zoom: 1 };
   const focusTileId = workspace?.canvasFocusTileId ?? null;
   const workspaceId = workspace?.workspace_id ?? '';
+  const selectedIds = workspace?.canvasSelectedIds ?? [];
 
   const existingSessions = React.useMemo(() => {
     return codeSessions
@@ -65,9 +78,13 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
   }, [codeSessions, workspaceId]);
 
   // Auto-create a tile for the active session when canvas is empty
+  // Only runs once per workspace per page load so users can intentionally clear tiles
+  const autoInitRef = React.useRef<Set<string>>(new Set());
   React.useEffect(() => {
     if (!workspaceId || tiles.length > 0) return;
-    const sessionToShow = activeSessionId || workspace?.sessions[0];
+    if (autoInitRef.current.has(workspaceId)) return;
+    autoInitRef.current.add(workspaceId);
+    const sessionToShow = activeSessionId || workspace?.sessions?.[0];
     if (sessionToShow) {
       addCanvasTile(workspaceId, {
         type: 'session',
@@ -93,15 +110,28 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
   const handleMove = useCallback(
     (tileId: string, pos: { x: number; y: number }) => {
       if (!workspaceId) return;
-      updateCanvasTile(workspaceId, tileId, pos);
+      if (selectedIds.length > 1 && selectedIds.includes(tileId)) {
+        // Bulk move: compute delta from the dragged tile's original position
+        const draggedTile = tiles.find((t) => t.tileId === tileId);
+        if (!draggedTile) return;
+        const dx = pos.x - draggedTile.x;
+        const dy = pos.y - draggedTile.y;
+        selectedIds.forEach((id) => {
+          const t = tiles.find((tt) => tt.tileId === id);
+          if (!t) return;
+          updateCanvasTile(workspaceId, id, { x: t.x + dx, y: t.y + dy });
+        });
+      } else {
+        updateCanvasTile(workspaceId, tileId, pos);
+      }
     },
-    [workspaceId, updateCanvasTile],
+    [workspaceId, tiles, selectedIds, updateCanvasTile],
   );
 
   const handleResize = useCallback(
-    (tileId: string, size: { width: number; height: number }) => {
+    (tileId: string, updates: { x?: number; y?: number; width: number; height: number }) => {
       if (!workspaceId) return;
-      updateCanvasTile(workspaceId, tileId, size);
+      updateCanvasTile(workspaceId, tileId, updates);
     },
     [workspaceId, updateCanvasTile],
   );
@@ -126,14 +156,89 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
   const handleClose = useCallback(
     (tileId: string) => {
       if (!workspaceId) return;
-      removeCanvasTile(workspaceId, tileId);
+      if (selectedIds.length > 1 && selectedIds.includes(tileId)) {
+        selectedIds.forEach((id) => removeCanvasTile(workspaceId, id));
+        clearCanvasSelection(workspaceId);
+      } else {
+        removeCanvasTile(workspaceId, tileId);
+      }
     },
-    [workspaceId, removeCanvasTile],
+    [workspaceId, selectedIds, removeCanvasTile, clearCanvasSelection],
   );
+
+  const handleTileSelect = useCallback(
+    (tileId: string, additive: boolean) => {
+      if (!workspaceId) return;
+      if (additive) {
+        if (selectedIds.includes(tileId)) {
+          selectCanvasTiles(workspaceId, selectedIds.filter((id) => id !== tileId));
+        } else {
+          selectCanvasTiles(workspaceId, [...selectedIds, tileId]);
+        }
+      } else {
+        selectCanvasTiles(workspaceId, [tileId]);
+      }
+    },
+    [workspaceId, selectedIds, selectCanvasTiles],
+  );
+
+  const handleCanvasPointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      if (e.button !== 0) return;
+      // Start marquee if clicking empty canvas (not on a tile)
+      if ((e.target as HTMLElement).closest('[data-canvas-tile]')) return;
+      if (e.shiftKey) {
+        marqueeRef.current = { active: true, startX: e.clientX, startY: e.clientY };
+        setMarquee({ x: e.clientX, y: e.clientY, w: 0, h: 0 });
+      } else {
+        clearCanvasSelection(workspaceId);
+      }
+    },
+    [workspaceId, clearCanvasSelection],
+  );
+
+  const handleCanvasPointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!marqueeRef.current.active) return;
+      const x = Math.min(marqueeRef.current.startX, e.clientX);
+      const y = Math.min(marqueeRef.current.startY, e.clientY);
+      const w = Math.abs(e.clientX - marqueeRef.current.startX);
+      const h = Math.abs(e.clientY - marqueeRef.current.startY);
+      setMarquee({ x, y, w, h });
+    },
+    [],
+  );
+
+  const handleCanvasPointerUp = useCallback(() => {
+    if (!marqueeRef.current.active) return;
+    marqueeRef.current.active = false;
+    const m = marquee;
+    setMarquee(null);
+    if (!m || !workspaceId) return;
+
+    // Convert screen marquee to world coordinates
+    const worldX1 = (m.x - viewport.x) / viewport.zoom;
+    const worldY1 = (m.y - viewport.y) / viewport.zoom;
+    const worldX2 = (m.x + m.w - viewport.x) / viewport.zoom;
+    const worldY2 = (m.y + m.h - viewport.y) / viewport.zoom;
+
+    const selected = tiles
+      .filter((t) => {
+        const tx1 = t.x;
+        const ty1 = t.y;
+        const tx2 = t.x + t.width;
+        const ty2 = t.y + t.height;
+        return tx1 < worldX2 && tx2 > worldX1 && ty1 < worldY2 && ty2 > worldY1;
+      })
+      .map((t) => t.tileId);
+
+    if (selected.length > 0) {
+      selectCanvasTiles(workspaceId, selected);
+    }
+  }, [marquee, viewport, workspaceId, tiles, selectCanvasTiles]);
 
   const handleContextMenu = useCallback(
     (e: React.MouseEvent) => {
-      // Don't show context menu if clicking on a tile
       if ((e.target as HTMLElement).closest('[data-canvas-tile]')) return;
       e.preventDefault();
       setContextMenu({ x: e.clientX, y: e.clientY });
@@ -225,23 +330,48 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
         const text = await file.text();
         const data = JSON.parse(text) as { tiles?: CodeCanvasTile[]; viewport?: CodeCanvasViewport };
         if (data.tiles) {
-          const store = useCodeModeStore.getState();
-          const workspaces = store.workspaces as unknown as Record<string, CodeWorkspaceRecord>;
-          const ws = workspaces[workspaceId];
-          if (ws) {
-            workspaces[workspaceId] = {
-              ...ws,
-              canvasTiles: data.tiles,
-              canvasViewport: data.viewport ?? ws.canvasViewport,
-            };
-          }
+          importCanvasState(workspaceId, data.tiles, data.viewport);
         }
       } catch (err) {
         console.error('[Canvas] Import failed:', err);
       }
     };
     input.click();
-  }, [workspaceId]);
+  }, [workspaceId, importCanvasState]);
+
+  // Keyboard shortcuts
+  React.useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const isMod = e.ctrlKey || e.metaKey;
+      if (isMod && e.key === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          redoCanvas(workspaceId);
+        } else {
+          undoCanvas(workspaceId);
+        }
+        return;
+      }
+      if (isMod && (e.key === '0' || e.key === 'º')) {
+        e.preventDefault();
+        handleViewportChange({ ...viewport, zoom: 1 });
+      } else if (isMod && (e.key === '=' || e.key === '+' || e.key === 'Equal')) {
+        e.preventDefault();
+        handleViewportChange({ ...viewport, zoom: Math.min(3, viewport.zoom + 0.1) });
+      } else if (isMod && (e.key === '-' || e.key === 'Minus')) {
+        e.preventDefault();
+        handleViewportChange({ ...viewport, zoom: Math.max(0.25, viewport.zoom - 0.1) });
+      } else if (e.key === 'Escape' && focusTileId) {
+        setCanvasFocusTile(workspaceId, null);
+      } else if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.length > 0 && !focusTileId) {
+        e.preventDefault();
+        selectedIds.forEach((id) => removeCanvasTile(workspaceId, id));
+        clearCanvasSelection(workspaceId);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [viewport, focusTileId, workspaceId, selectedIds, handleViewportChange, setCanvasFocusTile, undoCanvas, redoCanvas, removeCanvasTile, clearCanvasSelection]);
 
   // Focus mode: render only the focused tile
   if (focusTileId && workspace) {
@@ -261,14 +391,14 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
     <div
       data-testid="code-canvas-view"
       onContextMenu={handleContextMenu}
+      onPointerDown={handleCanvasPointerDown}
+      onPointerMove={handleCanvasPointerMove}
+      onPointerUp={handleCanvasPointerUp}
       style={{
         position: 'relative',
         height: '100%',
         overflow: 'hidden',
-        background: 'var(--view-code-bg, var(--surface-canvas))',
-        backgroundImage: 'radial-gradient(circle, color-mix(in srgb, var(--ui-text-muted) 22%, transparent) 1px, transparent 1px)',
-        backgroundSize: '20px 20px',
-        backgroundPosition: '10px 10px',
+        background: '#ffffff',
       }}
     >
       <CanvasToolbar
@@ -288,7 +418,7 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
         onDashboard={
           workspace?.root_path
             ? () =>
-                void handleSpawnTile('preview', undefined, 'http://localhost:7150')
+                void handleSpawnTile('preview', undefined, DASHBOARD_URL)
             : undefined
         }
         onHooks={workspace?.root_path ? () => setHooksOpen(true) : undefined}
@@ -305,16 +435,35 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
           <CanvasTile
             key={tile.tileId}
             tile={tile}
+            selected={selectedIds.includes(tile.tileId)}
             onMove={(pos) => handleMove(tile.tileId, pos)}
             onResize={(size) => handleResize(tile.tileId, size)}
             onFocus={() => handleFocus(tile.tileId)}
             onClose={() => handleClose(tile.tileId)}
             onBringToFront={() => handleBringToFront(tile.tileId)}
+            onSelect={(e) => handleTileSelect(tile.tileId, e?.shiftKey ?? false)}
           >
             <TileContent tile={tile} workspacePath={workspace?.root_path} />
           </CanvasTile>
         ))}
       </InfiniteCanvas>
+
+      {/* Marquee selection overlay */}
+      {marquee && (
+        <div
+          style={{
+            position: 'fixed',
+            left: marquee.x,
+            top: marquee.y,
+            width: marquee.w,
+            height: marquee.h,
+            border: '1px solid var(--accent-primary)',
+            background: 'rgba(176, 141, 110, 0.1)',
+            zIndex: 200,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
 
       {contextMenu && (
         <CanvasContextMenu
@@ -369,6 +518,9 @@ export function CodeCanvasView({ workspace }: CodeCanvasViewProps) {
 }
 
 function TileContent({ tile, workspacePath }: { tile: CodeCanvasTile; workspacePath?: string }) {
+  const workspaceId = useCodeModeStore.getState().activeWorkspaceId;
+  const updateTile = useCodeModeStore.getState().updateCanvasTile;
+
   switch (tile.type) {
     case 'session':
       if (!tile.sessionId) {
@@ -393,13 +545,18 @@ function TileContent({ tile, workspacePath }: { tile: CodeCanvasTile; workspaceP
     case 'diff':
       return <CodeCanvasTileDiff diffText={tile.diffText} filePath={tile.filePath} />;
     case 'terminal':
-      return <CodeCanvasTileTerminal />;
+      return <CodeCanvasTileTerminal sessionId={tile.sessionId} workspacePath={workspacePath} />;
     case 'notes':
-      return <CodeCanvasTileNotes />;
+      return (
+        <CodeCanvasTileNotes
+          initialContent={tile.content || ''}
+          onChange={(content) => updateTile(workspaceId, tile.tileId, { content })}
+        />
+      );
     case 'knowledge':
       return workspacePath ? <CodeCanvasTileKnowledge workspacePath={workspacePath} /> : null;
     case 'knowledge-graph':
-      return <CodeCanvasTileKnowledgeGraph />;
+      return <CodeCanvasTileKnowledgeGraph workspacePath={workspacePath} />;
     default:
       return (
         <div

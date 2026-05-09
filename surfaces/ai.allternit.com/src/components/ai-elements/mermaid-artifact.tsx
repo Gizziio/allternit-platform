@@ -6,6 +6,8 @@ import { cn } from "@/lib/utils";
 
 export type MermaidArtifactProps = {
   content: string;
+  /** When true, debounces rendering so partial token streams don't cause parse errors */
+  isStreaming?: boolean;
   className?: string;
 };
 
@@ -25,6 +27,7 @@ async function initMermaid() {
 
 export const MermaidArtifact = memo(function MermaidArtifact({
   content,
+  isStreaming = false,
   className,
 }: MermaidArtifactProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -32,24 +35,36 @@ export const MermaidArtifact = memo(function MermaidArtifact({
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const renderDiagram = useCallback(async () => {
-    if (!content.trim()) return;
+  const renderDiagram = useCallback(async (source: string) => {
+    if (!source.trim()) return;
     try {
       const m = await initMermaid();
       const id = `mermaid-${Math.random().toString(36).slice(2, 9)}`;
-      const { svg: renderedSvg } = await m.default.render(id, content.trim());
+      const { svg: renderedSvg } = await m.default.render(id, source.trim());
       setSvg(renderedSvg);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to render diagram");
-      setSvg("");
+      // Suppress errors during streaming — partial syntax always fails
+      if (!isStreaming) {
+        setError(err instanceof Error ? err.message : "Failed to render diagram");
+        setSvg("");
+      }
     }
-  }, [content]);
+  }, [isStreaming]);
 
   useEffect(() => {
-    renderDiagram();
-  }, [renderDiagram]);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (isStreaming) {
+      debounceRef.current = setTimeout(() => renderDiagram(content), 500);
+    } else {
+      renderDiagram(content);
+    }
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [content, isStreaming, renderDiagram]);
 
   const handleCopy = useCallback(async () => {
     await navigator.clipboard.writeText(content);
@@ -133,7 +148,7 @@ export const MermaidArtifact = memo(function MermaidArtifact({
         ) : (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <div className="w-4 h-4 border-2 border-muted-foreground/20 border-t-muted-foreground/60 rounded-full animate-spin" />
-            Rendering diagram...
+            {isStreaming ? "Waiting for complete diagram..." : "Rendering diagram..."}
           </div>
         )}
       </div>

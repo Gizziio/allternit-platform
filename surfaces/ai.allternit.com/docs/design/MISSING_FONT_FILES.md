@@ -1,28 +1,35 @@
 # Missing Allternit Font Files
 
-The typography token chain is fully wired — `--font-allternit-sans/serif/mono` → `--font-ui/research/code` → `--font-sans/serif/mono` → Tailwind `font-sans/ui/research/code`.
+Production Allternit font binaries are missing.
 
-**Font binaries are not yet present in `public/fonts/`.** Until they exist, the runtime falls back to Inter, Georgia, and system monospace fonts.
+The v0.1 source pack (`allternit_sans_v0_1_source_pack.zip`) is a prototype and must not be loaded as production UI typography.
 
-## Required files
+## Required Future Files
 
-Place these in `surfaces/allternit-platform/public/fonts/`:
+| File | Weight | Style |
+|------|--------|-------|
+| `AllternitSans-Regular.woff2` | 400 | normal |
+| `AllternitSans-Medium.woff2` | 500 | normal |
+| `AllternitSans-Semibold.woff2` | 600 | normal |
+| `AllternitSans-Bold.woff2` | 700 | normal |
+| `AllternitSerif-Regular.woff2` | 400 | normal |
+| `AllternitSerif-Medium.woff2` | 500 | normal |
+| `AllternitMono-Regular.woff2` | 400 | normal |
+| `AllternitMono-Medium.woff2` | 500 | normal |
 
+## Current Fallback Behavior
+
+Until production binaries are available, the typography token system falls back to:
+- **Sans:** Inter → ui-sans-serif → system-ui → sans-serif
+- **Serif:** Georgia → ui-serif → Cambria → serif
+- **Mono:** SFMono-Regular → Menlo → Monaco → Consolas → monospace
+
+## Prototype File
+
+A prototype v0.1 WOFF2 was generated from the source pack for exploration only.
+It is stored at:
 ```
-AllternitSans-Regular.woff2
-AllternitSans-Medium.woff2
-AllternitSans-Semibold.woff2
-AllternitSans-Bold.woff2
-AllternitSerif-Regular.woff2
-AllternitSerif-Medium.woff2
-AllternitSerif-Semibold.woff2
-AllternitSerif-Bold.woff2
-AllternitMono-Regular.woff2
-AllternitMono-Medium.woff2
+public/fonts/prototypes/AllternitSans-Regular.woff2
 ```
 
-## Next step
-
-Once font files are placed, create `src/styles/fonts.css` with `@font-face` declarations and add `import "@/styles/fonts.css"` to `src/app/layout.tsx` (after `theme.css`, before `typography.css`).
-
-The `allternit_sans_v0_1_source_pack.zip` in `Desktop/allternit-assets/` may contain the source files — check if `.woff2` files can be extracted from it.
+This file must NOT be loaded in production UI.

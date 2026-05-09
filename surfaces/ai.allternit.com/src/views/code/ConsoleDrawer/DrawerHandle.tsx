@@ -13,9 +13,9 @@ export function DrawerHandle({ isOpen, onToggle, onMouseDown, onTouchStart }: Dr
   return (
     <div 
       style={{
-        width: '100%',
+        width: 'fit-content',
+        marginLeft: 'auto',
         display: 'flex',
-        justifyContent: 'flex-end',
         paddingRight: 'max(16px, calc(env(safe-area-inset-right, 0px) + 16px))',
         pointerEvents: 'auto',
         cursor: isOpen ? 'row-resize' : 'pointer',
@@ -28,10 +28,10 @@ export function DrawerHandle({ isOpen, onToggle, onMouseDown, onTouchStart }: Dr
       <GlassSurface
         intensity="thick"
         style={{
-          height: 24,
-          width: 60,
-          borderTopLeftRadius: 12,
-          borderTopRightRadius: 12,
+          height: 18,
+          width: 40,
+          borderTopLeftRadius: 8,
+          borderTopRightRadius: 8,
           borderBottomLeftRadius: isOpen ? 0 : 999,
           borderBottomRightRadius: isOpen ? 0 : 999,
           display: 'flex',
@@ -40,12 +40,12 @@ export function DrawerHandle({ isOpen, onToggle, onMouseDown, onTouchStart }: Dr
           border: '1px solid var(--border-subtle)',
           borderBottom: isOpen ? 'none' : '1px solid var(--border-subtle)',
           background: 'var(--glass-bg-thick)',
-          boxShadow: isOpen ? '0 -4px 20px rgba(0,0,0,0.1)' : '0 10px 24px rgba(0,0,0,0.22)',
+          boxShadow: isOpen ? '0 -2px 12px rgba(0,0,0,0.08)' : '0 4px 12px rgba(0,0,0,0.14)',
           transition: 'transform 0.2s',
           transform: isOpen ? 'translateY(1px)' : 'translateY(0)',
         }}
       >
-        {isOpen ? <CaretDoubleDown size={14} color="var(--text-tertiary)" /> : <CaretDoubleUp size={14} color="var(--text-tertiary)" />}
+        {isOpen ? <CaretDoubleDown size={10} color="var(--text-tertiary)" /> : <CaretDoubleUp size={10} color="var(--text-tertiary)" />}
       </GlassSurface>
     </div>
   );

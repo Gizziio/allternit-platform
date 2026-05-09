@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { splitOnArtifacts, MessageSegment } from "../../lib/openui/artifact-parser";
 import { splitOnQuestionForms, FormSegment } from "../../lib/openui/question-form-parser";
 import { ArtifactPreviewPane } from "./ArtifactPreviewPane";
 import { QuestionFormView } from "./QuestionFormView";
+import { lintGeneratedHtml, type LintResult } from "../../lib/design/html-linter";
 
 interface ChatMessage {
   role: string;
@@ -70,6 +72,39 @@ function ProseBlock({ text }: { text: string }) {
   );
 }
 
+function LintBadge({ result }: { result: LintResult }) {
+  const [expanded, setExpanded] = useState(false);
+  const errors = result.violations.filter(v => v.severity === 'error');
+  const warnings = result.violations.filter(v => v.severity === 'warning');
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <button
+        onClick={() => setExpanded(e => !e)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer',
+          background: errors.length > 0 ? 'rgba(239,68,68,0.1)' : 'rgba(234,179,8,0.1)',
+          color: errors.length > 0 ? '#ef4444' : '#ca8a04',
+          fontSize: 11, fontWeight: 700,
+        }}
+      >
+        Quality: {result.score}/100
+        {errors.length > 0 && ` · ${errors.length} error${errors.length !== 1 ? 's' : ''}`}
+        {warnings.length > 0 && ` · ${warnings.length} warning${warnings.length !== 1 ? 's' : ''}`}
+      </button>
+      {expanded && (
+        <div style={{ marginTop: 4, padding: '8px 12px', background: 'var(--bg-secondary)', borderRadius: 8, border: '1px solid var(--border-subtle)' }}>
+          {result.violations.map((v, i) => (
+            <div key={i} style={{ fontSize: 11, color: v.severity === 'error' ? '#ef4444' : '#ca8a04', lineHeight: 1.5, marginBottom: 4 }}>
+              <strong>{v.severity.toUpperCase()}</strong> [{v.rule}]: {v.message}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function renderFormSegments(
   segments: FormSegment[],
   isLast: boolean,
@@ -107,14 +142,19 @@ export function StudioMessageRenderer({ message, isLast, onSubmitForm }: Props) 
     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
       {artifactSegments.map((seg, i) => {
         if (seg.kind === "artifact") {
+          const lintResult = lintGeneratedHtml(seg.artifact.content);
           return (
-            <ArtifactPreviewPane
-              key={seg.artifact.identifier + i}
-              html={seg.artifact.content}
-              title={seg.artifact.title}
-              identifier={seg.artifact.identifier}
-              height={seg.artifact.type === "text/html" ? 520 : 320}
-            />
+            <div key={seg.artifact.identifier + i}>
+              {lintResult.violations.length > 0 && (
+                <LintBadge result={lintResult} />
+              )}
+              <ArtifactPreviewPane
+                html={seg.artifact.content}
+                title={seg.artifact.title}
+                identifier={seg.artifact.identifier}
+                height={seg.artifact.type === "text/html" ? 520 : 320}
+              />
+            </div>
           );
         }
 

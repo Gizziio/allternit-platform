@@ -387,23 +387,27 @@ function Zap({ className }: IconProps) {
 }
 
 function usePrefersDarkMode() {
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(true);
 
   useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    if (typeof window === "undefined") return;
 
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    const syncTheme = () => setIsDark(mediaQuery.matches);
+    const sync = () => {
+      const html = document.documentElement;
+      // Read from the app's theme first (next-themes sets data-theme or class)
+      const appTheme = html.getAttribute("data-theme") || html.getAttribute("class") || "";
+      if (appTheme.includes("dark")) { setIsDark(true); return; }
+      if (appTheme.includes("light")) { setIsDark(false); return; }
+      // Fall back to OS preference
+      if (typeof window.matchMedia === "function") {
+        setIsDark(window.matchMedia("(prefers-color-scheme: dark)").matches);
+      }
+    };
 
-    syncTheme();
-
-    if (typeof mediaQuery.addEventListener === "function") {
-      mediaQuery.addEventListener("change", syncTheme);
-      return () => mediaQuery.removeEventListener("change", syncTheme);
-    }
-
-    mediaQuery.addListener(syncTheme);
-    return () => mediaQuery.removeListener(syncTheme);
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "data-theme"] });
+    return () => observer.disconnect();
   }, []);
 
   return isDark;

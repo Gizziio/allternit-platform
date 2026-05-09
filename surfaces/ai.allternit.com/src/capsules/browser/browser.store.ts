@@ -229,21 +229,19 @@ interface BrowserStore {
 // Store Implementation
 // ============================================================================
 
-const initialTab = createWebTab('about:blank', 'New Tab');
-
 export const useBrowserStore = create<BrowserStore>()(
   devtools(
     (set, get) => ({
       // Initial State
-      tabs: [initialTab],
-      activeTabId: initialTab.id,
+      tabs: [],
+      activeTabId: null,
       consoleOpen: false,
       consoleHeight: 200,
       chatPaneOpen: true,
       chatPaneWidth: BROWSER_CHAT_PANE_DEFAULT_WIDTH,
       recentVisits: [],
-      tabHistory: { [initialTab.id]: ['about:blank'] },
-      tabHistoryIndex: { [initialTab.id]: 0 },
+      tabHistory: {},
+      tabHistoryIndex: {},
       tabLoading: {},
 
       // Tab Management

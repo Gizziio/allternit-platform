@@ -37,6 +37,8 @@ interface ExcalidrawSceneData {
 export interface ExcalidrawCanvasProps {
   /** Initial drawing data (Excalidraw scene JSON) */
   initialData?: ExcalidrawSceneData;
+  /** When true, defers mounting Excalidraw until scene data is complete */
+  isStreaming?: boolean;
   /** Callback when drawing changes */
   onChange?: (
     elements: readonly ExcalidrawElement[],
@@ -66,6 +68,7 @@ const ExcalidrawLazy = lazy<React.ComponentType<Record<string, unknown>>>(async 
 
 export function ExcalidrawCanvas({
   initialData,
+  isStreaming = false,
   onChange,
   onExport,
   readOnly = false,
@@ -152,20 +155,24 @@ export function ExcalidrawCanvas({
 
       {/* Canvas */}
       <div className="relative flex-1">
-        <Suspense fallback={<ExcalidrawLoading />}>
-          <ExcalidrawLazy
-            initialData={sceneData}
-            onChange={handleChange}
-            viewModeEnabled={readOnly}
-            theme="dark"
-            UIOptions={{
-              canvasActions: {
-                saveToActiveFile: false,
-                export: { saveFileToDisk: true },
-              },
-            }}
-          />
-        </Suspense>
+        {isStreaming ? (
+          <ExcalidrawStreaming />
+        ) : (
+          <Suspense fallback={<ExcalidrawLoading />}>
+            <ExcalidrawLazy
+              initialData={sceneData}
+              onChange={handleChange}
+              viewModeEnabled={readOnly}
+              theme="dark"
+              UIOptions={{
+                canvasActions: {
+                  saveToActiveFile: false,
+                  export: { saveFileToDisk: true },
+                },
+              }}
+            />
+          </Suspense>
+        )}
 
         {/* Error overlay */}
         <AnimatePresence>
@@ -200,6 +207,17 @@ function ExcalidrawLoading() {
       <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
         <IconLoader2 className="h-4 w-4 animate-spin" />
         Loading whiteboard…
+      </div>
+    </div>
+  );
+}
+
+function ExcalidrawStreaming() {
+  return (
+    <div className="flex h-full items-center justify-center">
+      <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+        <IconLoader2 className="h-4 w-4 animate-spin" />
+        Receiving drawing data…
       </div>
     </div>
   );

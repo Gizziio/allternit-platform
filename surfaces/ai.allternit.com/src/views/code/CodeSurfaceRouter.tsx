@@ -8,7 +8,6 @@ import {
 } from './CodeModeStore';
 import { CodeThreadView } from './CodeThreadView';
 import { CodeCanvasView } from './CodeCanvasView';
-import { CodeTldrawCanvas } from './CodeTldrawCanvas';
 
 export function CodeSurfaceRouter() {
   const state = useCodeModeStore();
@@ -17,10 +16,6 @@ export function CodeSurfaceRouter() {
 
   if (layoutMode === 'canvas') {
     return <CodeCanvasView workspace={activeWorkspace} />;
-  }
-
-  if (layoutMode === 'tldraw') {
-    return <CodeTldrawCanvas workspace={activeWorkspace} />;
   }
 
   return <CodeThreadView workspace={activeWorkspace} />;

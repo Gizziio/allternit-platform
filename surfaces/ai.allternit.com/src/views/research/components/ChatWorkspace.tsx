@@ -4,6 +4,8 @@ import React, { useRef, useEffect } from 'react';
 import { User, Bot, Loader2 } from 'lucide-react';
 import type { ChatMessage } from '../hooks/useNotebookApi';
 import { CitationMarker } from './CitationMarker';
+import { UnifiedMessageRenderer } from '@/components/ai-elements/UnifiedMessageRenderer';
+import { parseStructuredContent } from '@/lib/ai/rust-stream-adapter-extended';
 
 interface ChatWorkspaceProps {
   messages: ChatMessage[];
@@ -11,34 +13,71 @@ interface ChatWorkspaceProps {
   onCitationClick?: (sourceId: string) => void;
 }
 
-function parseContentWithCitations(content: string, citations?: any[], onCitationClick?: (sourceId: string) => void) {
-  if (!citations || citations.length === 0) return <span>{content}</span>;
+/**
+ * Renders assistant content with two layers:
+ * 1. parseStructuredContent splits the raw string into typed parts (code blocks, tool calls, etc.)
+ * 2. For plain text parts, [N] citation markers are replaced with CitationMarker components
+ * 3. All other parts are rendered by UnifiedMessageRenderer as a single-part list
+ */
+function AssistantContent({
+  content,
+  citations,
+  onCitationClick,
+}: {
+  content: string;
+  citations?: ChatMessage['citations'];
+  onCitationClick?: (sourceId: string) => void;
+}) {
+  const parts = parseStructuredContent(content);
 
-  const parts: React.ReactNode[] = [];
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (part.type === 'text') {
+          return (
+            <span key={i}>
+              {renderTextWithCitations(part.text, citations, onCitationClick)}
+            </span>
+          );
+        }
+        return (
+          <UnifiedMessageRenderer key={i} parts={[part]} />
+        );
+      })}
+    </>
+  );
+}
+
+function renderTextWithCitations(
+  text: string,
+  citations: ChatMessage['citations'],
+  onCitationClick?: (sourceId: string) => void
+): React.ReactNode {
+  if (!citations || citations.length === 0) return text;
+
+  const nodes: React.ReactNode[] = [];
   let lastIndex = 0;
-
   const regex = /\[(\d+)\]/g;
-  let match;
+  let match: RegExpExecArray | null;
 
-  while ((match = regex.exec(content)) !== null) {
+  while ((match = regex.exec(text)) !== null) {
     const citationIndex = parseInt(match[1], 10);
-    const citation = citations.find(c => c.index === citationIndex);
+    const citation = citations.find((c) => c.index === citationIndex);
+    if (!citation) continue;
 
-    if (citation) {
-      parts.push(<span key={`text-${lastIndex}`}>{content.slice(lastIndex, match.index)}</span>);
-      parts.push(
-        <CitationMarker
-          key={`cite-${citationIndex}`}
-          citation={citation}
-          onClick={onCitationClick}
-        />
-      );
-      lastIndex = match.index + match[0].length;
-    }
+    nodes.push(text.slice(lastIndex, match.index));
+    nodes.push(
+      <CitationMarker
+        key={`cite-${match.index}`}
+        citation={citation}
+        onClick={onCitationClick}
+      />
+    );
+    lastIndex = match.index + match[0].length;
   }
 
-  parts.push(<span key={`text-end`}>{content.slice(lastIndex)}</span>);
-  return <>{parts}</>;
+  nodes.push(text.slice(lastIndex));
+  return nodes;
 }
 
 export function ChatWorkspace({ messages, isLoading, onCitationClick }: ChatWorkspaceProps) {
@@ -51,10 +90,7 @@ export function ChatWorkspace({ messages, isLoading, onCitationClick }: ChatWork
   }, [messages, isLoading]);
 
   return (
-    <div
-      ref={scrollRef}
-      className="research-chat-area"
-    >
+    <div ref={scrollRef} className="research-chat-area">
       {messages.length === 0 && (
         <div className="research-empty-state">
           <div className="w-12 h-12 rounded-xl bg-purple-400/10 flex items-center justify-center">
@@ -65,21 +101,17 @@ export function ChatWorkspace({ messages, isLoading, onCitationClick }: ChatWork
               Start researching
             </p>
             <p className="text-xs max-w-xs">
-              Add sources to your notebook, then ask questions. I&apos;ll ground every answer in your documents.
+              Add sources to your notebook, then ask questions. I&apos;ll ground every answer in
+              your documents.
             </p>
           </div>
         </div>
       )}
 
       {messages.map((msg, idx) => (
-        <div
-          key={idx}
-          className="flex gap-2.5 items-start"
-        >
+        <div key={idx} className="flex gap-2.5 items-start">
           {/* Avatar */}
-          <div
-            className={msg.role === 'user' ? 'research-message-user' : 'research-message-assistant'}
-          >
+          <div className={msg.role === 'user' ? 'research-message-user' : 'research-message-assistant'}>
             {msg.role === 'user' ? (
               <User size={14} color="#fff" />
             ) : (
@@ -89,16 +121,22 @@ export function ChatWorkspace({ messages, isLoading, onCitationClick }: ChatWork
 
           {/* Message */}
           <div className="flex-1 min-w-0">
-            <div className="text-sm leading-relaxed text-[var(--text-primary,#e5e5e5)] whitespace-pre-wrap">
-              {msg.role === 'assistant' && msg.citations
-                ? parseContentWithCitations(msg.content, msg.citations, onCitationClick)
-                : msg.content}
+            <div className="text-sm leading-relaxed text-[var(--text-primary,#e5e5e5)]">
+              {msg.role === 'assistant' ? (
+                <AssistantContent
+                  content={msg.content}
+                  citations={msg.citations}
+                  onCitationClick={onCitationClick}
+                />
+              ) : (
+                <span className="whitespace-pre-wrap">{msg.content}</span>
+              )}
             </div>
 
-            {/* Citation footer for assistant messages */}
+            {/* Citation footer */}
             {msg.role === 'assistant' && msg.citations && msg.citations.length > 0 && (
               <div className="flex flex-wrap gap-1.5 mt-2.5 pt-2 border-t border-[var(--border-subtle,#27272a)]">
-                {msg.citations.map(cite => (
+                {msg.citations.map((cite) => (
                   <span
                     key={cite.index}
                     onClick={() => onCitationClick?.(cite.source_id)}
@@ -116,7 +154,9 @@ export function ChatWorkspace({ messages, isLoading, onCitationClick }: ChatWork
       {isLoading && (
         <div className="flex items-center gap-2.5 pl-[38px]">
           <Loader2 size={16} className="animate-spin text-purple-400" />
-          <span className="text-[13px] text-[var(--text-muted,#a1a1aa)]">Researching your sources...</span>
+          <span className="text-[13px] text-[var(--text-muted,#a1a1aa)]">
+            Researching your sources...
+          </span>
         </div>
       )}
     </div>

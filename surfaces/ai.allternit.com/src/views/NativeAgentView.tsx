@@ -29,6 +29,8 @@ import type { Reply, TextReplyItem } from "@/lib/agents/replies-stream";
 import { useWorkspace } from "@/agent-workspace/useWorkspace";
 import { MilestoneProgress } from "@/components/AllternitNative/MilestoneProgress";
 import { ToolCallVisualization } from "@/components/agents";
+import { UnifiedMessageRenderer } from "@/components/ai-elements/UnifiedMessageRenderer";
+import { parseStructuredContent, type ExtendedUIPart } from "@/lib/ai/rust-stream-adapter-extended";
 
 // UI Components
 import { Button } from "@/components/ui/button";
@@ -608,11 +610,49 @@ function StreamingReplyTail({ reply }: { reply: Reply }) {
   );
 }
 
+function buildAssistantParts(message: NativeMessage): ExtendedUIPart[] {
+  const parts: ExtendedUIPart[] = [];
+
+  // Thinking blocks from extended reasoning
+  if (message.thinking?.trim()) {
+    parts.push({
+      type: "reasoning",
+      reasoningId: `thinking-${message.id}`,
+      text: message.thinking,
+    } as ExtendedUIPart);
+  }
+
+  // Tool call parts — stored as {type:"tool-bash", toolCallId, input, state, output}
+  // Normalize to dynamic-tool format that UnifiedMessageRenderer understands
+  const rawToolParts = Array.isArray(message.metadata?.agentElementsParts)
+    ? (message.metadata!.agentElementsParts as Array<Record<string, unknown>>)
+    : [];
+  for (const raw of rawToolParts) {
+    const toolName = String(raw.type ?? "").replace(/^tool-/, "") || "Tool";
+    // Cast allows result (non-SDK field) that humanizeToolCall reads via (part as any).result
+    parts.push({
+      type: "dynamic-tool",
+      toolName,
+      toolCallId: String(raw.toolCallId ?? ""),
+      input: raw.input ?? {},
+      state: (raw.state as string) ?? "output-available",
+      output: raw.output ?? raw.result,
+      result: raw.result,
+    } as unknown as ExtendedUIPart);
+  }
+
+  // Text content — may contain embedded structured JSON blocks
+  parts.push(...parseStructuredContent(message.content));
+
+  return parts;
+}
+
 function ChatMessage({ message, isStreaming }: { message: NativeMessage; isStreaming?: boolean }) {
   const isAssistant = message.role === "assistant";
-  
+  const parts = isAssistant ? buildAssistantParts(message) : null;
+
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
@@ -626,29 +666,29 @@ function ChatMessage({ message, isStreaming }: { message: NativeMessage; isStrea
       )}>
         {isAssistant ? <Robot size={16} /> : <User size={16} />}
       </div>
-      
+
       <div className={cn(
         "flex flex-col gap-2 max-w-[85%]",
         isAssistant ? "items-start" : "items-end"
       )}>
         <div className={cn(
           "px-4 py-3 rounded-3xl text-sm leading-relaxed",
-          isAssistant 
-            ? "bg-white/[0.03] border border-white/5 text-white/90" 
+          isAssistant
+            ? "bg-white/[0.03] border border-white/5 text-white/90"
             : "bg-accent-primary/10 border border-accent-primary/20 text-accent-primary"
         )}>
-          {message.content}
-          {isStreaming && <span className="inline-block w-1 h-4 ml-1 bg-accent-primary animate-pulse align-middle" />}
+          {isAssistant ? (
+            <UnifiedMessageRenderer
+              parts={parts!}
+              isStreaming={isStreaming}
+              className="text-sm leading-relaxed"
+            />
+          ) : (
+            message.content
+          )}
+          {isStreaming && !isAssistant && <span className="inline-block w-1 h-4 ml-1 bg-accent-primary animate-pulse align-middle" />}
         </div>
-        
-        {(message as any).toolCalls && (message as any).toolCalls.length > 0 && (
-          <div className="space-y-2 w-full">
-            {(message as any).toolCalls.map((tc: any) => (
-              <ToolCallVisualization key={tc.id} toolCalls={[tc]} />
-            ))}
-          </div>
-        )}
-        
+
         <span className="text-[10px] text-white/20 uppercase tracking-tighter px-2">
           {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </span>

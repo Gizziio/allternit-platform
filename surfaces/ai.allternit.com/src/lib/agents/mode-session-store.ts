@@ -98,6 +98,7 @@ export interface CreateModeSessionOptions {
   taskId?: string;
   workspaceId?: string;
   workspaceFiles?: string[];
+  systemPrompt?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -493,6 +494,11 @@ async function streamMessageWithContext(
           workspaceFiles: contextPack.workspaceFiles,
         },
       };
+    } else if (session.metadata.systemPrompt) {
+      // Session has a custom system prompt but no agent workspace (e.g. Studio mode)
+      agentContext = {
+        systemPrompt: session.metadata.systemPrompt as string,
+      };
     }
   }
   
@@ -674,7 +680,7 @@ export function createModeSessionStore(config: StoreConfig) {
                   taskId: options.taskId,
                   workspaceId: options.workspaceId,
                   workspaceFiles: workspace?.files.map(f => f.path) || options.workspaceFiles,
-                  systemPrompt,
+                  systemPrompt: systemPrompt ?? options.systemPrompt,
                   contextRefreshedAt: now,
                 },
               });

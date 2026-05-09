@@ -15,7 +15,6 @@ import type {
 export const DESIGN_FRAME_TYPE = 'design-frame';
 export const DESIGN_COMPONENT_TYPE = 'design-component';
 export const DESIGN_UIBLOCK_TYPE = 'design-uiblock';
-export const CODE_TILE_TYPE = 'code-tile';
 
 export interface DesignFrameShapeProps {
   w: number;
@@ -57,28 +56,18 @@ export interface DesignUIBlockShapeProps {
   variant: 'button-primary' | 'button-secondary' | 'input' | 'card' | 'nav-bar' | 'badge' | 'avatar' | 'divider';
 }
 
-export interface CodeTileShapeProps {
-  w: number;
-  h: number;
-  tileId: string;
-  label: string;
-}
-
 declare module '@tldraw/tlschema' {
   interface TLGlobalShapePropsMap {
     [DESIGN_FRAME_TYPE]: DesignFrameShapeProps;
     [DESIGN_COMPONENT_TYPE]: DesignComponentShapeProps;
     [DESIGN_UIBLOCK_TYPE]: DesignUIBlockShapeProps;
-    [CODE_TILE_TYPE]: CodeTileShapeProps;
   }
 }
 
 export type DesignFrameShape = TLShape<typeof DESIGN_FRAME_TYPE>;
 export type DesignComponentShape = TLShape<typeof DESIGN_COMPONENT_TYPE>;
 export type DesignUIBlockShape = TLShape<typeof DESIGN_UIBLOCK_TYPE>;
-export type CodeTileShape = TLShape<typeof CODE_TILE_TYPE>;
 export type AllternitCanvasShape =
   | DesignFrameShape
   | DesignComponentShape
-  | DesignUIBlockShape
-  | CodeTileShape;
+  | DesignUIBlockShape;

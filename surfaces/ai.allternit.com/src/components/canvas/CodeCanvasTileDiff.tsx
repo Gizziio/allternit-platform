@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { FileCode } from '@phosphor-icons/react';
 
 interface DiffLine {
@@ -23,14 +23,12 @@ function parseUnifiedDiff(diffText: string): { filePath: string; lines: DiffLine
   let newLine = 0;
 
   for (const rawLine of lines) {
-    // Detect file header
     if (rawLine.startsWith('diff --git')) {
       if (currentFile) files.push(currentFile);
       const match = rawLine.match(/diff --git a\/(.+?) b\//);
       currentFile = { filePath: match?.[1] || 'unknown', lines: [] };
       continue;
     }
-    // Detect hunk header
     if (rawLine.startsWith('@@')) {
       const match = rawLine.match(/@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
       if (match) {
@@ -73,7 +71,10 @@ function parseUnifiedDiff(diffText: string): { filePath: string; lines: DiffLine
 }
 
 export function CodeCanvasTileDiff({ diffText, filePath }: CodeCanvasTileDiffProps) {
-  if (!diffText) {
+  const [pastedDiff, setPastedDiff] = useState('');
+  const activeDiff = diffText || pastedDiff;
+
+  if (!activeDiff) {
     return (
       <div
         style={{
@@ -82,18 +83,38 @@ export function CodeCanvasTileDiff({ diffText, filePath }: CodeCanvasTileDiffPro
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          color: 'var(--text-muted)',
+          color: 'var(--ui-text-muted)',
           fontSize: 13,
-          gap: 8,
+          gap: 12,
+          padding: 24,
         }}
       >
         <FileCode size={24} opacity={0.3} />
         <span>No diff content</span>
+        <textarea
+          value={pastedDiff}
+          onChange={(e) => setPastedDiff(e.target.value)}
+          placeholder="Paste unified diff here..."
+          style={{
+            width: '100%',
+            maxWidth: 400,
+            height: 120,
+            background: 'var(--surface-panel)',
+            border: '1px solid var(--ui-border-default)',
+            borderRadius: 8,
+            padding: 10,
+            color: 'var(--ui-text-secondary)',
+            fontSize: 12,
+            fontFamily: 'var(--font-mono)',
+            resize: 'none',
+            outline: 'none',
+          }}
+        />
       </div>
     );
   }
 
-  const files = parseUnifiedDiff(diffText);
+  const files = parseUnifiedDiff(activeDiff);
 
   return (
     <div
@@ -114,7 +135,7 @@ export function CodeCanvasTileDiff({ diffText, filePath }: CodeCanvasTileDiffPro
               borderBottom: '1px solid var(--ui-border-muted)',
               fontSize: 11,
               fontWeight: 600,
-              color: 'var(--text-secondary)',
+              color: 'var(--ui-text-secondary)',
               display: 'flex',
               alignItems: 'center',
               gap: 6,

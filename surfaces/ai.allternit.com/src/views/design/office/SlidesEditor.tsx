@@ -95,7 +95,7 @@ export function SlidesEditor({ projectName }: { projectName: string }) {
       const PptxGenJS = (await import('pptxgenjs')).default;
       const pptx = new PptxGenJS();
       pptx.title = projectName;
-      pptx.author = 'Allternit Studio';
+      pptx.author = 'Allternit Design';
 
       for (const slide of slides) {
         const pSlide = pptx.addSlide();
@@ -199,12 +199,12 @@ export function SlidesEditor({ projectName }: { projectName: string }) {
           <button
             onClick={exportPptx}
             disabled={exportState === 'working'}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, border: 'none', background: exportState === 'done' ? '#22c55e' : 'var(--accent-primary)', color: '#fff', fontSize: 11, fontWeight: 700, cursor: exportState === 'working' ? 'default' : 'pointer', opacity: exportState === 'working' ? 0.7 : 1 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, border: 'none', background: exportState === 'done' ? '#22c55e' : exportState === 'error' ? 'var(--surface-hover)' : 'var(--accent-primary)', color: exportState === 'error' ? 'var(--text-secondary)' : '#fff', fontSize: 11, fontWeight: 700, cursor: exportState === 'working' ? 'default' : 'pointer', opacity: exportState === 'working' ? 0.7 : 1 }}
           >
             {exportState === 'working' && <CircleNotch size={12} style={{ animation: 'spin 1s linear infinite' }} />}
             {exportState === 'done' && <CheckCircle size={12} weight="fill" />}
-            {exportState === 'idle' && <DownloadSimple size={12} weight="bold" />}
-            {exportState === 'working' ? 'Exporting…' : exportState === 'done' ? 'Saved!' : 'Export .pptx'}
+            {(exportState === 'idle' || exportState === 'error') && <DownloadSimple size={12} weight="bold" />}
+            {exportState === 'working' ? 'Exporting…' : exportState === 'done' ? 'Saved!' : exportState === 'error' ? 'Export failed' : 'Export .pptx'}
           </button>
         </div>
 

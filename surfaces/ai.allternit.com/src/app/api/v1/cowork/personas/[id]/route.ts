@@ -1,41 +1,29 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import { createCoworkPersonaStore } from '@allternit/cowork-engine';
+import { NextRequest } from 'next/server';
+import { proxyGatewayRequest } from '@/lib/runtime-gateway-proxy';
 
-export const runtime = 'nodejs';
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-const store = createCoworkPersonaStore(prisma);
-
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+): Promise<Response> {
   const { id } = await params;
-  try {
-    const persona = await store.get(id);
-    if (!persona) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-    return NextResponse.json({ persona });
-  } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
-  }
+  return proxyGatewayRequest(request, `/api/v1/cowork/personas/${encodeURIComponent(id)}`);
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+): Promise<Response> {
   const { id } = await params;
-  let body: { name?: string; description?: string; systemPrompt?: string; tools?: string[]; isDefault?: boolean };
-  try { body = await req.json(); } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
-
-  try {
-    const persona = await store.update(id, body);
-    return NextResponse.json({ persona });
-  } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
-  }
+  return proxyGatewayRequest(request, `/api/v1/cowork/personas/${encodeURIComponent(id)}`);
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+): Promise<Response> {
   const { id } = await params;
-  try {
-    await store.delete(id);
-    return NextResponse.json({ ok: true });
-  } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
-  }
+  return proxyGatewayRequest(request, `/api/v1/cowork/personas/${encodeURIComponent(id)}`);
 }

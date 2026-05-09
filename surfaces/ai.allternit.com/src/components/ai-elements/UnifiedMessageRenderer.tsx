@@ -8,7 +8,7 @@
  * All modes share the same rendering surface.
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React from 'react';
 import { cn } from '@/lib/utils';
 import type { ExtendedUIPart } from '@/lib/ai/rust-stream-adapter-extended';
 import { parseStructuredContent } from '@/lib/ai/rust-stream-adapter-extended';
@@ -28,17 +28,111 @@ import { Markdown } from './markdown';
 import { Shimmer } from './shimmer';
 import { CodeBlock } from './code-block';
 import {
+  AudioPlayer,
+  AudioPlayerElement,
+  AudioPlayerControlBar,
+  AudioPlayerPlayButton,
+  AudioPlayerSeekBackwardButton,
+  AudioPlayerSeekForwardButton,
+  AudioPlayerTimeDisplay,
+  AudioPlayerTimeRange,
+  AudioPlayerDurationDisplay,
+  AudioPlayerMuteButton,
+} from './audio-player';
+import {
+  InlineCitation,
+  InlineCitationText,
+  InlineCitationCard,
+  InlineCitationCardTrigger,
+  InlineCitationCardBody,
+  InlineCitationCarousel,
+  InlineCitationCarouselContent,
+  InlineCitationCarouselItem,
+  InlineCitationCarouselHeader,
+  InlineCitationCarouselPrev,
+  InlineCitationCarouselNext,
+  InlineCitationCarouselIndex,
+  InlineCitationSource,
+} from './inline-citation';
+import {
   Warning,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Check,
-  X,
   Globe,
-  Link,
   ArrowSquareOut,
-  CaretRight,
 } from '@phosphor-icons/react';
+import { Reasoning, ReasoningTrigger, ReasoningContent } from './reasoning';
+import {
+  ChainOfThought,
+  ChainOfThoughtHeader,
+  ChainOfThoughtContent,
+  ChainOfThoughtStep,
+} from './chain-of-thought';
+import { Plan, PlanHeader, PlanTitle, PlanContent, PlanTrigger } from './plan';
+import {
+  Queue,
+  QueueList,
+  QueueItem,
+  QueueItemIndicator,
+  QueueItemContent,
+} from './queue';
+import { Task, TaskTrigger, TaskContent, TaskItem } from './task';
+import { Checkpoint, CheckpointIcon, CheckpointDescription } from './checkpoint';
+import {
+  Commit,
+  CommitHeader,
+  CommitHash,
+  CommitMessage,
+  CommitInfo,
+  CommitActions,
+  CommitCopyButton,
+} from './commit';
+import {
+  TestResults,
+  TestResultsHeader,
+  TestResultsSummary,
+  TestResultsContent,
+  Test,
+} from './test-results';
+import { FileTree, FileTreeFolder, FileTreeFile } from './file-tree';
+import {
+  EnvironmentVariables,
+  EnvironmentVariablesHeader,
+  EnvironmentVariablesTitle,
+  EnvironmentVariablesToggle,
+  EnvironmentVariablesContent,
+  EnvironmentVariable,
+} from './environment-variables';
+import { Snippet, SnippetInput, SnippetCopyButton } from './snippet';
+import {
+  StackTrace,
+  StackTraceHeader,
+  StackTraceError,
+  StackTraceErrorType,
+  StackTraceErrorMessage,
+  StackTraceActions,
+  StackTraceCopyButton,
+  StackTraceExpandButton,
+  StackTraceContent,
+  StackTraceFrames,
+} from './stack-trace';
+import {
+  PackageInfo,
+  PackageInfoHeader,
+  PackageInfoName,
+  PackageInfoVersion,
+  PackageInfoContent,
+  PackageInfoDependencies,
+  PackageInfoDependency,
+} from './package-info';
+import { JSXPreview, JSXPreviewContent, JSXPreviewError } from './jsx-preview';
+import { EmailDraft } from './email-tool';
+import { SMSDraft } from './sms-tool';
+import { RecipeDraft } from './recipe-tool';
+import { ImageSearchTool } from './image-search-tool';
+import { AppRecommendations } from './app-recommendations';
+import { LeveeWizard } from './levee-wizard';
+import { ModelComparison } from './model-comparison';
+import { MockChat } from './mock-chat';
+import { SchemaDisplay } from './schema-display';
 
 interface UnifiedMessageRendererProps {
   parts: ExtendedUIPart[];
@@ -104,6 +198,7 @@ export function UnifiedMessageRenderer({
           onSelectArtifact={onSelectArtifact}
           selectedArtifactTitle={selectedArtifactTitle}
           viewMode={viewMode}
+          sourceParts={sourceParts}
         />
       ))}
       {/* Sources footer — compact citation strip when web results are present */}
@@ -500,91 +595,6 @@ function renderToolResult(result: unknown): React.ReactNode {
   return <span>{String(result)}</span>;
 }
 
-// ============================================================================
-// Thought Process Header — P1
-// Collapsible "Thought process >" header replacing raw italic reasoning block.
-// Auto-opens while streaming, auto-collapses 1s after streaming ends.
-// ============================================================================
-
-function ThoughtProcessHeader({ text, isStreaming }: { text: string; isStreaming?: boolean }) {
-  const [isOpen, setIsOpen] = useState(!!isStreaming);
-  const [hasAutoClosed, setHasAutoClosed] = useState(false);
-
-  useEffect(() => {
-    if (isStreaming && !isOpen) setIsOpen(true);
-  }, [isStreaming, isOpen]);
-
-  useEffect(() => {
-    if (!isStreaming && isOpen && !hasAutoClosed) {
-      const t = setTimeout(() => {
-        setIsOpen(false);
-        setHasAutoClosed(true);
-      }, 1000);
-      return () => clearTimeout(t);
-    }
-  }, [isStreaming, isOpen, hasAutoClosed]);
-
-  // Extract a readable summary from the first meaningful line of reasoning text
-  const summary = useMemo(() => {
-    if (!text) return 'Thought process';
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 15 && !l.startsWith('<') && !l.startsWith('{'));
-    const first = lines[0] ?? '';
-    return first.length > 80 ? first.slice(0, 80) + '…' : first || 'Thought process';
-  }, [text]);
-
-  return (
-    <div style={{ margin: '4px 0 10px' }}>
-      <button
-        onClick={() => setIsOpen(v => !v)}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '5px',
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          padding: '0',
-        }}
-      >
-        <CaretRight
-          size={10}
-          style={{
-            color: 'rgba(236,236,236,0.28)',
-            transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
-            transition: 'transform 0.18s ease',
-            flexShrink: 0,
-          }}
-        />
-        <span style={{
-          fontSize: '12px',
-          color: 'rgba(236,236,236,0.3)',
-          fontStyle: 'italic',
-          letterSpacing: '0.01em',
-        }}>
-          {summary}
-        </span>
-      </button>
-
-      {isOpen && text && (
-        <div style={{
-          marginTop: '6px',
-          paddingLeft: '14px',
-          borderLeft: '1px solid color-mix(in srgb, var(--accent-primary) 14%, transparent)',
-          color: 'rgba(236,236,236,0.22)',
-          fontSize: '12px',
-          lineHeight: '1.6',
-          fontStyle: 'italic',
-          maxHeight: '180px',
-          overflowY: 'auto',
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-word',
-        }}>
-          {text}{isStreaming ? ' █' : ''}
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ============================================================================
 // Humanize tool calls — P2
@@ -662,9 +672,10 @@ interface PartRendererProps {
   onSelectArtifact?: (artifact: SelectedArtifact) => void;
   selectedArtifactTitle?: string;
   viewMode?: ViewMode;
+  sourceParts?: Array<Extract<ExtendedUIPart, { type: 'source-document' }>>;
 }
 
-function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArtifactTitle, viewMode = 'normal' }: PartRendererProps) {
+function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArtifactTitle, viewMode = 'normal', sourceParts }: PartRendererProps) {
   switch (part.type) {
     // ==================== OPENUI (Generative UI) ====================
     case 'openui': {
@@ -699,46 +710,32 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
       );
 
     // ==================== REASONING (Thought Trace - Smaller, Structured) ====================
-    case 'reasoning':
-      {
-      // summary mode: skip entirely (already filtered out by visibleParts)
-      // normal mode: always collapsed (ThoughtProcessHeader handles this)
-      // verbose mode: full ThoughtTrace, starts open
+    case 'reasoning': {
       const isReasoningStreaming = isStreaming && isLast;
       const structuredSteps = coerceThoughtSteps(
         (part as typeof part & { trace?: { steps?: unknown } }).trace?.steps,
       );
       const steps = structuredSteps.length > 0 ? structuredSteps : parseThoughtSteps(part.text);
 
-      if (viewMode === 'verbose') {
-        // Full expanded ThoughtTrace or raw block
-        if (steps.length > 0) {
-          return (
-            <div className="my-2">
-              <ThoughtTrace
-                steps={steps}
-                isStreaming={isReasoningStreaming}
-                isComplete={!isStreaming}
-              />
-            </div>
-          );
-        }
+      if (viewMode === 'verbose' && steps.length > 0) {
         return (
-          <ThoughtProcessHeader
-            text={part.text || ''}
-            isStreaming={isReasoningStreaming}
-          />
+          <div className="my-2">
+            <ThoughtTrace
+              steps={steps}
+              isStreaming={isReasoningStreaming}
+              isComplete={!isStreaming}
+            />
+          </div>
         );
       }
 
-      // normal mode: compact collapsible header only (no full ThoughtTrace)
       return (
-        <ThoughtProcessHeader
-          text={part.text || ''}
-          isStreaming={isReasoningStreaming}
-        />
+        <Reasoning isStreaming={isReasoningStreaming} className="my-2">
+          <ReasoningTrigger />
+          <ReasoningContent text={part.text || ''} isStreaming={isReasoningStreaming} />
+        </Reasoning>
       );
-      }
+    }
 
     // ==================== CODE ====================
     case 'code': {
@@ -889,93 +886,75 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
     // ==================== TEST RESULTS ====================
     case 'test-results':
       return (
-        <div className="border rounded-lg p-4">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">Test Results</span>
-              <span className={cn(
-                "text-xs px-2 py-0.5 rounded-full",
-                part.summary.failed === 0 ? "bg-green-500/20 text-green-600" : "bg-red-500/20 text-red-600"
-              )}>
-                {part.summary.passed}/{part.summary.total} passed
-              </span>
-            </div>
-          </div>
-          <div className="space-y-1">
+        <TestResults summary={{ ...part.summary, skipped: 0 }}>
+          <TestResultsHeader>
+            <TestResultsSummary />
+          </TestResultsHeader>
+          <TestResultsContent>
             {part.tests.map((test, i) => (
-              <div 
-                key={i} 
-                className={cn(
-                  "flex items-center gap-2 p-2 rounded text-sm",
-                  test.status === 'passed' && "bg-green-500/10",
-                  test.status === 'failed' && "bg-red-500/10",
-                  test.status === 'skipped' && "bg-muted"
-                )}
-              >
-                {test.status === 'passed' && <CheckCircle className="w-4 h-4 text-green-500" />}
-                {test.status === 'failed' && <XCircle className="w-4 h-4 text-red-500" />}
-                {test.status === 'skipped' && <Clock className="w-4 h-4 text-muted-foreground" />}
-                <span className="flex-1">{test.name}</span>
-                <span className="text-xs text-muted-foreground">{test.durationMs}ms</span>
-              </div>
+              <Test key={i} name={test.name} status={test.status} duration={test.durationMs} />
             ))}
-          </div>
-        </div>
+          </TestResultsContent>
+        </TestResults>
       );
 
     // ==================== PLAN ====================
     case 'plan':
       return (
-        <div className="border rounded-lg p-4">
-          <div className="text-sm font-medium mb-3">{part.title}</div>
-          <div className="space-y-2">
-            {part.steps.map((step) => (
-              <div 
-                key={step.id} 
-                className={cn(
-                  "flex items-center gap-3 p-2 rounded transition-colors",
-                  step.status === 'complete' && "bg-green-500/10",
-                  step.status === 'in-progress' && "bg-blue-500/10",
-                  step.status === 'error' && "bg-red-500/10",
-                  step.status === 'pending' && "bg-muted/50"
-                )}
-              >
-                {step.status === 'complete' && <Check className="w-4 h-4 text-green-500" />}
-                {step.status === 'in-progress' && <Clock className="w-4 h-4 text-blue-500 animate-pulse" />}
-                {step.status === 'error' && <X className="w-4 h-4 text-red-500" />}
-                {step.status === 'pending' && <div className="w-4 h-4 rounded-full border-2 border-muted-foreground" />}
-                <span className={cn(
-                  "text-sm",
-                  step.status === 'pending' && "text-muted-foreground"
+        <Plan defaultOpen isStreaming={isStreaming && isLast}>
+          <PlanHeader>
+            <PlanTitle>{part.title}</PlanTitle>
+            <PlanTrigger />
+          </PlanHeader>
+          <PlanContent>
+            <div className="space-y-1">
+              {part.steps.map((step) => (
+                <div key={step.id} className={cn(
+                  "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm",
+                  step.status === 'complete' && "text-muted-foreground",
+                  step.status === 'in-progress' && "text-foreground font-medium",
+                  step.status === 'error' && "text-destructive",
+                  step.status === 'pending' && "text-muted-foreground/50",
                 )}>
+                  <span className={cn(
+                    "size-2 rounded-full shrink-0",
+                    step.status === 'complete' && "bg-green-500",
+                    step.status === 'in-progress' && "bg-primary animate-pulse",
+                    step.status === 'error' && "bg-destructive",
+                    step.status === 'pending' && "bg-muted-foreground/30",
+                  )} />
                   {step.description}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+                </div>
+              ))}
+            </div>
+          </PlanContent>
+        </Plan>
       );
 
     // ==================== CHECKPOINT ====================
     case 'checkpoint':
       return (
-        <div className="flex items-center gap-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
-          <CheckCircle className="w-5 h-5 text-blue-500" />
-          <div className="flex-1">
-            <div className="text-sm font-medium">Checkpoint</div>
-            <div className="text-xs text-muted-foreground">{part.description}</div>
-          </div>
-        </div>
+        <Checkpoint>
+          <CheckpointIcon />
+          <CheckpointDescription>{part.description}</CheckpointDescription>
+        </Checkpoint>
       );
 
     // ==================== AUDIO ====================
     case 'audio':
       return (
-        <audio 
-          controls 
-          src={part.audioUrl}
-          className="w-full"
-        />
+        <AudioPlayer className="w-full rounded-xl border border-white/8 bg-white/[0.03] px-2 py-1">
+          <AudioPlayerElement src={part.audioUrl} />
+          <AudioPlayerControlBar>
+            <AudioPlayerPlayButton />
+            <AudioPlayerSeekBackwardButton seekOffset={10} />
+            <AudioPlayerTimeDisplay />
+            <AudioPlayerTimeRange />
+            <AudioPlayerDurationDisplay />
+            <AudioPlayerSeekForwardButton seekOffset={10} />
+            <AudioPlayerMuteButton />
+          </AudioPlayerControlBar>
+        </AudioPlayer>
       );
 
     // ==================== ARTIFACT (clickable card → side panel) ====================
@@ -1000,96 +979,87 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
       return <McpAppFrame part={part} />;
 
     // ==================== CITATION ====================
-    case 'citation':
+    case 'citation': {
+      const source = sourceParts?.find((s) => s.sourceId === part.sourceId);
+      const sourceUrl = source && 'url' in source && typeof source.url === 'string' ? source.url : undefined;
+
       return (
-        <a
-          href={`#source-${part.sourceId}`}
-          className="flex w-full max-w-full items-start gap-3 rounded-2xl border border-sky-400/16 bg-sky-500/[0.06] px-4 py-3 text-left transition-colors hover:bg-sky-500/[0.1]"
-        >
-          <span className="mt-0.5 inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-sky-300/20 bg-sky-500/10">
-            <Link className="h-4 w-4 text-sky-200" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-100/70">Citation</span>
-              <span className="rounded-full border border-sky-300/14 bg-white/[0.03] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-sky-100/55">
-                {part.sourceId}
-              </span>
-            </span>
-            <span className="mt-1 block whitespace-pre-wrap break-words text-sm leading-6 text-foreground/84">
-              {part.text}
-            </span>
-          </span>
-        </a>
+        <InlineCitation className="block my-1">
+          <InlineCitationText className="text-sm leading-6 text-foreground/84 whitespace-pre-wrap break-words">
+            {part.text}
+          </InlineCitationText>
+          <InlineCitationCard>
+            <InlineCitationCardTrigger sources={sourceUrl ? [sourceUrl] : []} />
+            <InlineCitationCardBody>
+              <InlineCitationCarousel>
+                <InlineCitationCarouselHeader>
+                  <InlineCitationCarouselPrev />
+                  <InlineCitationCarouselIndex />
+                  <InlineCitationCarouselNext />
+                </InlineCitationCarouselHeader>
+                <InlineCitationCarouselContent>
+                  <InlineCitationCarouselItem>
+                    <InlineCitationSource
+                      title={source?.title}
+                      url={sourceUrl}
+                    />
+                  </InlineCitationCarouselItem>
+                </InlineCitationCarouselContent>
+              </InlineCitationCarousel>
+            </InlineCitationCardBody>
+          </InlineCitationCard>
+        </InlineCitation>
       );
+    }
 
     // ==================== QUEUE ====================
     case 'queue':
       return (
-        <div className="border rounded-lg p-4">
-          <div className="text-sm font-medium mb-3">Processing Queue</div>
-          <div className="space-y-1">
+        <Queue>
+          <QueueList>
             {part.items.map((item) => (
-              <div 
-                key={item.id}
-                className={cn(
-                  "flex items-center gap-2 p-2 rounded text-sm",
-                  item.status === 'complete' && "bg-green-500/10",
-                  item.status === 'processing' && "bg-blue-500/10",
-                  item.status === 'error' && "bg-red-500/10",
-                  item.status === 'pending' && "bg-muted"
-                )}
-              >
-                {item.status === 'complete' && <Check className="w-4 h-4 text-green-500" />}
-                {item.status === 'processing' && <Clock className="w-4 h-4 text-blue-500 animate-spin" />}
-                {item.status === 'error' && <X className="w-4 h-4 text-red-500" />}
-                {item.status === 'pending' && <div className="w-4 h-4 rounded-full border-2 border-muted-foreground" />}
-                <span>{item.label}</span>
-              </div>
+              <QueueItem key={item.id}>
+                <div className="flex items-center gap-2">
+                  <QueueItemIndicator completed={item.status === 'complete'} />
+                  <QueueItemContent completed={item.status === 'complete'}>
+                    {item.label}
+                  </QueueItemContent>
+                </div>
+              </QueueItem>
             ))}
-          </div>
-        </div>
+          </QueueList>
+        </Queue>
       );
 
     // ==================== TASK ====================
     case 'task':
       return (
-        <div className={cn(
-          "flex items-center gap-3 p-3 border rounded-lg",
-          part.status === 'running' && "bg-blue-500/10 border-blue-500/20",
-          part.status === 'complete' && "bg-green-500/10 border-green-500/20",
-          part.status === 'error' && "bg-red-500/10 border-red-500/20",
-        )}>
-          {part.status === 'running' && <Clock className="w-5 h-5 text-blue-500 animate-pulse" />}
-          {part.status === 'complete' && <CheckCircle className="w-5 h-5 text-green-500" />}
-          {part.status === 'error' && <XCircle className="w-5 h-5 text-red-500" />}
-          {part.status === 'pending' && <div className="w-5 h-5 rounded-full border-2 border-muted-foreground" />}
-          <div className="flex-1">
-            <div className="text-sm font-medium">{part.title}</div>
-            {part.description && (
-              <div className="text-xs text-muted-foreground">{part.description}</div>
-            )}
-          </div>
-          {part.progress !== undefined && (
-            <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-primary transition-all"
-                style={{ width: `${part.progress}%` }}
-              />
-            </div>
+        <Task defaultOpen={part.status === 'running'}>
+          <TaskTrigger
+            title={`${part.title}${part.status === 'running' ? ' — running' : part.status === 'complete' ? ' — done' : part.status === 'error' ? ' — error' : ''}`}
+          />
+          {part.description && (
+            <TaskContent>
+              <TaskItem>{part.description}</TaskItem>
+            </TaskContent>
           )}
-        </div>
+        </Task>
       );
 
     // ==================== COMMIT ====================
     case 'commit':
       return (
-        <div className="flex items-center gap-3 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
-          <div className="px-2 py-1 bg-green-500/20 rounded text-xs font-mono text-green-600">
-            {part.hash.slice(0, 7)}
-          </div>
-          <div className="flex-1 text-sm">{part.message}</div>
-        </div>
+        <Commit>
+          <CommitHeader>
+            <CommitInfo>
+              <CommitHash>{part.hash.slice(0, 7)}</CommitHash>
+              <CommitMessage>{part.message}</CommitMessage>
+            </CommitInfo>
+            <CommitActions>
+              <CommitCopyButton hash={part.hash} />
+            </CommitActions>
+          </CommitHeader>
+        </Commit>
       );
 
     // ==================== CONFIRMATION ====================
@@ -1119,21 +1089,40 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
     // ==================== FILE TREE ====================
     case 'file-tree':
       return (
-        <div className="border rounded-lg p-4 font-mono text-sm">
-          <FileTreeNode node={part.root} level={0} />
-        </div>
+        <FileTree>
+          {renderFileTreeNodes([part.root])}
+        </FileTree>
       );
 
     // ==================== SANDBOX ====================
-    case 'sandbox':
+    case 'sandbox': {
+      // Detect JSX — starts with an uppercase component or fragment after optional whitespace
+      const looksLikeJSX = part.html ? /^\s*<[A-Z<]/.test(part.html) : false;
+      if (looksLikeJSX) {
+        return (
+          <div className="border rounded-lg overflow-hidden">
+            {part.title && (
+              <div className="px-4 py-2 bg-muted border-b flex items-center gap-2">
+                <span className="text-xs font-medium">{part.title}</span>
+              </div>
+            )}
+            <div className="p-4">
+              <JSXPreview jsx={part.html!} isStreaming={isStreaming && isLast}>
+                <JSXPreviewContent />
+                <JSXPreviewError />
+              </JSXPreview>
+            </div>
+          </div>
+        );
+      }
       return (
         <div className="border rounded-lg overflow-hidden">
           <div className="px-4 py-2 bg-muted border-b flex items-center gap-2">
             <span className="text-xs font-medium">{part.title || 'Preview'}</span>
           </div>
-          <div className="p-4 bg-white">
+          <div className="bg-white">
             {part.html && (
-              <iframe 
+              <iframe
                 srcDoc={part.html}
                 className="w-full h-64 border-0"
                 sandbox="allow-scripts"
@@ -1142,6 +1131,7 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
           </div>
         </div>
       );
+    }
 
     // ==================== WEB PREVIEW ====================
     case 'web-preview':
@@ -1225,6 +1215,282 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
         />
       );
     }
+
+    // ==================== ENVIRONMENT VARIABLES ====================
+    case 'environment-variables':
+      return (
+        <EnvironmentVariables>
+          <EnvironmentVariablesHeader>
+            <EnvironmentVariablesTitle />
+            <EnvironmentVariablesToggle />
+          </EnvironmentVariablesHeader>
+          <EnvironmentVariablesContent>
+            {Object.entries(part.variables).map(([name, value]) => (
+              <EnvironmentVariable key={name} name={name} value={value} />
+            ))}
+          </EnvironmentVariablesContent>
+        </EnvironmentVariables>
+      );
+
+    // ==================== SNIPPET ====================
+    case 'snippet':
+      return (
+        <Snippet code={part.code} className="my-1">
+          <SnippetInput />
+          <SnippetCopyButton />
+        </Snippet>
+      );
+
+    // ==================== STACK TRACE ====================
+    case 'stack-trace': {
+      const traceLines: string[] = [
+        part.errorType ? `${part.errorType}: ${part.message}` : part.message,
+      ];
+      if (part.frames) {
+        for (const f of part.frames) {
+          if (f.function) {
+            traceLines.push(`    at ${f.function} (${f.file}:${f.line}:${f.column})`);
+          } else {
+            traceLines.push(`    at ${f.file}:${f.line}:${f.column}`);
+          }
+        }
+      }
+      return (
+        <StackTrace trace={traceLines.join('\n')}>
+          <StackTraceHeader>
+            <StackTraceError>
+              {part.errorType && <StackTraceErrorType />}
+              <StackTraceErrorMessage />
+            </StackTraceError>
+            <StackTraceActions>
+              <StackTraceCopyButton />
+              <StackTraceExpandButton />
+            </StackTraceActions>
+          </StackTraceHeader>
+          <StackTraceContent>
+            <StackTraceFrames />
+          </StackTraceContent>
+        </StackTrace>
+      );
+    }
+
+    // ==================== PACKAGE INFO ====================
+    case 'package-info': {
+      const deps = part.dependencies ? Object.entries(part.dependencies) : [];
+      return (
+        <PackageInfo name={part.name} currentVersion={part.version}>
+          <PackageInfoHeader>
+            <PackageInfoName />
+          </PackageInfoHeader>
+          {part.version && <PackageInfoVersion />}
+          {deps.length > 0 && (
+            <PackageInfoContent>
+              <PackageInfoDependencies>
+                {deps.map(([dname, dver]) => (
+                  <PackageInfoDependency key={dname} name={dname} version={dver} />
+                ))}
+              </PackageInfoDependencies>
+            </PackageInfoContent>
+          )}
+        </PackageInfo>
+      );
+    }
+
+    // ==================== SCHEMA ====================
+    case 'schema': {
+      // Use SchemaDisplay library compound when schema data is an HTTP API schema shape
+      const s = part.schema as Record<string, unknown> | null;
+      const isHttpApiSchema =
+        s != null &&
+        typeof s === 'object' &&
+        typeof s.method === 'string' &&
+        typeof s.path === 'string';
+
+      if (isHttpApiSchema) {
+        return (
+          <SchemaDisplay
+            method={s!.method as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'}
+            path={s!.path as string}
+            description={typeof s!.description === 'string' ? s!.description : undefined}
+            parameters={Array.isArray(s!.parameters) ? s!.parameters as any : undefined}
+            requestBody={Array.isArray(s!.requestBody) ? s!.requestBody as any : undefined}
+            responseBody={Array.isArray(s!.responseBody) ? s!.responseBody as any : undefined}
+          />
+        );
+      }
+
+      const schemaStr = JSON.stringify(part.schema, null, 2);
+      return (
+        <div className="rounded-lg border bg-background overflow-hidden">
+          <div className="px-4 py-2 border-b bg-muted/30">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Schema</span>
+          </div>
+          <pre className="p-4 text-xs font-mono overflow-auto max-h-64 text-foreground/80 leading-relaxed">
+            {schemaStr}
+          </pre>
+        </div>
+      );
+    }
+
+    // ==================== CHAIN OF THOUGHT ====================
+    case 'chain-of-thought':
+      return (
+        <ChainOfThought>
+          <ChainOfThoughtHeader />
+          <ChainOfThoughtContent>
+            {part.steps.map((step, i) => (
+              <ChainOfThoughtStep key={i} label={step} status="complete" />
+            ))}
+          </ChainOfThoughtContent>
+        </ChainOfThought>
+      );
+
+    // ==================== CONTEXT ====================
+    case 'context':
+      return (
+        <div className="rounded-lg border border-sky-500/20 bg-sky-500/[0.04] px-4 py-3">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-xs font-semibold uppercase tracking-wider text-sky-400/60">Context</span>
+            {part.tokens && (
+              <span className="text-[11px] text-muted-foreground tabular-nums">
+                {(part.tokens.input ?? 0) + (part.tokens.output ?? 0)} tokens
+              </span>
+            )}
+          </div>
+          {part.content && (
+            <p className="text-sm text-foreground/75 leading-relaxed">{part.content}</p>
+          )}
+        </div>
+      );
+
+    // ==================== AGENT ====================
+    case 'agent':
+      return (
+        <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.04] px-4 py-3">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-semibold uppercase tracking-wider text-amber-400/60">Agent</span>
+            <span className="font-medium text-sm text-foreground/88">{part.name}</span>
+          </div>
+          {part.description && (
+            <p className="text-sm text-muted-foreground">{part.description}</p>
+          )}
+        </div>
+      );
+
+    // ==================== OPEN IN ====================
+    case 'open-in':
+      return (
+        <button
+          type="button"
+          className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-sm text-primary hover:bg-primary/15 transition-colors"
+          onClick={() => window.open(part.openInId, '_blank')}
+        >
+          <ArrowSquareOut className="h-3.5 w-3.5" />
+          {part.text}
+        </button>
+      );
+
+    // ==================== JSX PREVIEW ====================
+    case 'jsx-preview':
+      return (
+        <div className="border rounded-lg overflow-hidden">
+          {part.title && (
+            <div className="px-4 py-2 bg-muted border-b flex items-center gap-2">
+              <span className="text-xs font-medium">{part.title}</span>
+            </div>
+          )}
+          <div className="p-4">
+            <JSXPreview jsx={part.jsx} isStreaming={isStreaming && isLast}>
+              <JSXPreviewContent />
+              <JSXPreviewError />
+            </JSXPreview>
+          </div>
+        </div>
+      );
+
+    // ==================== EMAIL DRAFT ====================
+    case 'email-draft':
+      return (
+        <EmailDraft
+          to={part.to}
+          from={part.from}
+          cc={part.cc}
+          subject={part.subject}
+          body={part.body}
+        />
+      );
+
+    // ==================== SMS DRAFT ====================
+    case 'sms-draft':
+      return (
+        <SMSDraft
+          to={part.to}
+          messages={part.messages}
+        />
+      );
+
+    // ==================== RECIPE ====================
+    case 'recipe':
+      return (
+        <RecipeDraft
+          name={part.name}
+          description={part.description}
+          servings={part.servings}
+          prepTimeMinutes={part.prepTimeMinutes}
+          cookTimeMinutes={part.cookTimeMinutes}
+          ingredients={part.ingredients}
+          steps={part.steps}
+          imageUrl={part.imageUrl}
+        />
+      );
+
+    // ==================== IMAGE SEARCH ====================
+    case 'image-search':
+      return (
+        <ImageSearchTool
+          query={part.query}
+          results={part.results}
+        />
+      );
+
+    // ==================== APP RECOMMENDATIONS ====================
+    case 'app-recommendations':
+      return (
+        <AppRecommendations
+          title={part.title}
+          apps={part.apps}
+        />
+      );
+
+    // ==================== MODEL COMPARISON ====================
+    case 'model-comparison':
+      return (
+        <ModelComparison
+          title={part.title}
+          models={part.models}
+          features={part.features}
+          variant={part.variant}
+        />
+      );
+
+    // ==================== MOCK CHAT ====================
+    case 'mock-chat':
+      return (
+        <MockChat
+          style={part.style}
+          messages={part.messages}
+        />
+      );
+
+    // ==================== LEVEE WIZARD ====================
+    case 'levee-wizard':
+      return (
+        <LeveeWizard
+          title={part.title}
+          subtitle={part.subtitle}
+          steps={part.steps}
+        />
+      );
 
     // ==================== DEFAULT ====================
     default:
@@ -1345,28 +1611,21 @@ function FileChangeCard({
   );
 }
 
-// Helper for file tree rendering
-function FileTreeNode({ node, level }: { node: import('@/lib/ai/rust-stream-adapter-extended').FileTreeNode; level: number }) {
-  return (
-    <div style={{ marginLeft: level * 16 }}>
-      <div className="flex items-center gap-2 py-1">
-        {node.type === 'directory' ? (
-          <>
-            <span className="text-muted-foreground">📁</span>
-            <span className="font-medium">{node.name}</span>
-          </>
-        ) : (
-          <>
-            <span className="text-muted-foreground">📄</span>
-            <span>{node.name}</span>
-          </>
-        )}
-      </div>
-      {node.children?.map((child, i) => (
-        <FileTreeNode key={i} node={child} level={level + 1} />
-      ))}
-    </div>
-  );
+// Recursive renderer for file-tree nodes using library FileTree components
+type FileTreeNodeShape = Extract<ExtendedUIPart, { type: 'file-tree' }>['root'];
+
+function renderFileTreeNodes(nodes: FileTreeNodeShape[], basePath = ''): React.ReactNode {
+  return nodes.map((node) => {
+    const path = `${basePath}/${node.name}`;
+    if (node.type === 'directory') {
+      return (
+        <FileTreeFolder key={path} path={path} name={node.name}>
+          {node.children && renderFileTreeNodes(node.children, path)}
+        </FileTreeFolder>
+      );
+    }
+    return <FileTreeFile key={path} path={path} name={node.name} />;
+  });
 }
 
 export default UnifiedMessageRenderer;

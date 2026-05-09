@@ -1,0 +1,45 @@
+{
+  "brand": "Allternit",
+  "protocol": "A://TERNIT",
+  "version": "v1.0",
+  "fonts": {
+    "sans": {
+      "family": "Allternit Sans",
+      "fallback": "Inter, ui-sans-serif, system-ui, sans-serif",
+      "role": "UI and platform"
+    },
+    "serif": {
+      "family": "Allternit Serif",
+      "fallback": "Georgia, ui-serif, serif",
+      "role": "research and institutional long-form"
+    },
+    "mono": {
+      "family": "Allternit Mono",
+      "fallback": "SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+      "role": "code, logs, protocol"
+    }
+  },
+  "surfaceMapping": {
+    "platform": "sans",
+    "dashboard": "sans",
+    "navigation": "sans",
+    "research": "serif",
+    "whitepaper": "serif",
+    "essay": "serif",
+    "code": "mono",
+    "logs": "mono",
+    "terminal": "mono",
+    "agent_traces": "mono",
+    "protocol": "mono"
+  },
+  "rules": [
+    "Never assign font-family directly inside components.",
+    "Always use design tokens, typography components, or approved utility classes.",
+    "Sans is default for platform UI.",
+    "Serif is reserved for research, whitepapers, essays, and institutional long-form content.",
+    "Mono is reserved for code, logs, traces, terminal, protocol, and agent execution text.",
+    "Never import unauthorized fonts.",
+    "Never randomly mix serif and sans in one context.",
+    "A:// prefix must remain visually consistent."
+  ]
+}

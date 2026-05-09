@@ -265,8 +265,8 @@
 
   /* ── View-specific backgrounds (light) ──────────────────────────── */
   --view-chat-bg:         #ffffff;
-  --view-code-bg:         #faf9f7;
-  --view-browser-bg:      #f6f8fc;
+  --view-code-bg:         #ffffff;
+  --view-browser-bg:      #ffffff;
   --view-settings-bg:     #ffffff;
 }
 

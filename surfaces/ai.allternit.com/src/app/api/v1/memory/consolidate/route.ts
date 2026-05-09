@@ -1,15 +1,9 @@
-import { NextResponse } from 'next/server';
-import { getAuth } from '@/lib/server-auth';
+import { NextRequest } from 'next/server';
+import { proxyGatewayRequest } from '@/lib/runtime-gateway-proxy';
 
-export async function POST() {
-  const { userId } = await getAuth();
-  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-  // In production, this would trigger background consolidation
-  // For now, return success to satisfy the UI
-  return NextResponse.json({
-    success: true,
-    message: 'Consolidation queued',
-    jobId: `consolidate_${Date.now()}`,
-  });
+export async function POST(request: NextRequest): Promise<Response> {
+  return proxyGatewayRequest(request, '/api/v1/memory/consolidate');
 }

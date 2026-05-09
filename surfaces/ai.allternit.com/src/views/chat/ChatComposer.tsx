@@ -27,11 +27,12 @@ import {
   PlugsConnected,
   CircleNotch,
   Warning,
-  Compass,
-  Hammer,
   Image as ImageIcon,
+  Link as LinkIcon,
 } from '@phosphor-icons/react';
 import { AttachmentButton } from '@/components/agent-elements/input/attachment-button';
+import { SpeechInput } from '@/components/ai-elements/speech-input';
+import { useVoice } from '@/providers/voice-provider';
 import { FileAttachment } from '@/components/agent-elements/input/file-attachment';
 import { TextShimmer } from '@/components/agent-elements/text-shimmer';
 import { useAgentStreamingStatus } from '@/hooks/useAgentStreamingStatus';
@@ -614,6 +615,7 @@ export function ChatComposer({
   bottomInfoBarContent,
 }: ChatComposerProps) {
   const [input, setInput] = useState(inputValue);
+  const { isRecording: isVoiceRecording, interimTranscript } = useVoice();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [composerFocused, setComposerFocused] = useState(false);
   const lastAgentFetchPulseRef = useRef<number | null>(null);
@@ -623,6 +625,11 @@ export function ChatComposer({
   );
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [showPlusMenu, setShowPlusMenu] = useState(false);
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false);
+  const [activeStyle, setActiveStyle] = useState<'formal' | 'creative' | 'technical' | null>(null);
+  const [showGitHubInput, setShowGitHubInput] = useState(false);
+  const [githubUrl, setGithubUrl] = useState('');
+  const [githubLoading, setGithubLoading] = useState(false);
   const [showAgentMenu, setShowAgentMenu] = useState(false);
   const [showModelMenu, setShowModelMenu] = useState(false);
   const [showBrowseAllModels, setShowBrowseAllModels] = useState(false);
@@ -1311,17 +1318,23 @@ export function ChatComposer({
   const handleSubmit = () => {
     if (!canSubmit) return;
 
+    // Build context-enriched message text
+    const stylePrefix = activeStyle
+      ? { formal: 'Respond in a formal, professional tone. ', creative: 'Respond in a creative, imaginative style. ', technical: 'Respond in a precise, technical manner. ' }[activeStyle]
+      : '';
+    const webSearchPrefix = webSearchEnabled ? '[web_search_enabled] ' : '';
+    const enrichedInput = `${webSearchPrefix}${stylePrefix}${input}`.trim();
+
     // Computer-use mode: dispatch directly to ACU planning loop.
-    // The task appears in chat via onSend; the sidecar shows live screenshots.
     if (selectedModeId === 'computer-use') {
-      useBrowserAgentStore.getState().runAcuTask(input);
+      useBrowserAgentStore.getState().runAcuTask(enrichedInput);
     }
 
     // If agent mode is enabled and onAgentSend is provided, use it to open full agent session view
     if (agentModeEnabled && onAgentSend && agentModeSurface) {
-      onAgentSend(input);
+      onAgentSend(enrichedInput);
     } else {
-      onSend(input);
+      onSend(enrichedInput);
     }
     
     setInput('');
@@ -1364,6 +1377,40 @@ export function ChatComposer({
     );
   }, [agentCommandFilter, agentCommandMenuVisible]);
   const isAgentCommandMode = input.trimStart().startsWith('A://');
+
+  // ── GitHub URL fetch ─────────────────────────────────────────────────────
+  const handleGitHubFetch = useCallback(async () => {
+    if (!githubUrl.trim()) return;
+    setGithubLoading(true);
+    try {
+      // Convert github.com URL to raw.githubusercontent.com
+      const raw = githubUrl
+        .replace('https://github.com/', 'https://raw.githubusercontent.com/')
+        .replace('/blob/', '/');
+      const resp = await fetch(raw);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const text = await resp.text();
+      const filename = githubUrl.split('/').pop() || 'github-file';
+      const blob = new Blob([text], { type: 'text/plain' });
+      const file = new File([blob], filename, { type: 'text/plain' });
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const dataUrl = e.target?.result as string;
+        const newAttachment = { id: `gh-${Date.now()}`, filename, size: file.size, isImage: false, url: dataUrl };
+        if (externalAttachments === undefined) {
+          setInternalAttachments((prev) => [...prev, newAttachment]);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      // silently fail — URL was invalid
+    } finally {
+      setGithubLoading(false);
+      setGithubUrl('');
+      setShowGitHubInput(false);
+      setShowPlusMenu(false);
+    }
+  }, [githubUrl, externalAttachments]);
 
   // ── Screenshot capture ──────────────────────────────────────────────────
   const handleCaptureScreenshot = useCallback(async () => {
@@ -2096,6 +2143,35 @@ export function ChatComposer({
             }}
           />
         </div>
+        {/* Live interim transcript while voice recording */}
+        {isVoiceRecording && interimTranscript && (
+          <div style={{
+            padding: '2px 16px 6px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+          }}>
+            <span style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: 'rgba(239,68,68,0.8)',
+              flexShrink: 0,
+              animation: 'pulse 1s infinite',
+            }} />
+            <span style={{
+              fontSize: 12,
+              color: THEME.textMuted,
+              fontStyle: 'italic',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              flex: 1,
+            }}>
+              {interimTranscript}
+            </span>
+          </div>
+        )}
         {agentCommandMenuVisible && filteredAgentCommands.length > 0 ? (
           <div
             style={{
@@ -2200,25 +2276,7 @@ export function ChatComposer({
           </div>
         ) : null}
 
-        {hasBottomInfoBar ? (
-          <div
-            style={{
-              padding: '0 14px 8px 14px',
-            }}
-          >
-            <div
-              style={{
-                minHeight: 34,
-                borderRadius: 14,
-                border: `1px solid ${THEME.inputBorder}`,
-                background: 'var(--chat-composer-soft)',
-                overflow: 'hidden',
-              }}
-            >
-              {bottomInfoBarContent}
-            </div>
-          </div>
-        ) : null}
+        {null /* bottomInfoBar removed */}
 
         {/* Bottom Toolbar */}
         <div style={{
@@ -2231,10 +2289,8 @@ export function ChatComposer({
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', position: 'relative' }}>
             <AttachmentButton
               onClick={() => { setShowPlusMenu(!showPlusMenu); setActiveSubMenu(null); }}
-              className={cn(
-                'size-8 transition-colors',
-                showPlusMenu && 'bg-[var(--chat-composer-soft)]',
-              )}
+              className="size-8 transition-colors"
+              style={{ background: 'transparent', boxShadow: 'none', border: 'none' }}
               icon={
                 <Plus
                   size={20}
@@ -2353,73 +2409,120 @@ export function ChatComposer({
                     <div style={{ height: 1, background: THEME.menuBorder, margin: '4px 8px' }} />
                   </>
                 )}
-                {PLUS_MENU_ITEMS.map((item) => (
+                {/* GitHub URL inline input */}
+                {showGitHubInput && (
+                  <div style={{ padding: '6px 8px 4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: THEME.hoverBg, borderRadius: 8, padding: '4px 8px', border: `1px solid ${THEME.menuBorder}` }}>
+                      <LinkIcon size={13} style={{ color: THEME.textSecondary, flexShrink: 0 }} />
+                      <input
+                        autoFocus
+                        value={githubUrl}
+                        onChange={(e) => setGithubUrl(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleGitHubFetch(); if (e.key === 'Escape') { setShowGitHubInput(false); setGithubUrl(''); } }}
+                        placeholder="github.com/user/repo/blob/main/file"
+                        style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 12, color: THEME.textPrimary }}
+                      />
+                      {githubLoading
+                        ? <CircleNotch size={13} style={{ color: THEME.textSecondary, animation: 'spin 1s linear infinite' }} />
+                        : <button type="button" onClick={handleGitHubFetch} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: THEME.accent, fontSize: 12, fontWeight: 600, padding: 0 }}>Add</button>
+                      }
+                    </div>
+                  </div>
+                )}
+                {/* Section: Attach */}
+                <div style={{ padding: '2px 8px 2px', fontSize: 10, fontWeight: 600, color: THEME.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Attach</div>
+                {PLUS_MENU_ITEMS.filter(i => ['files', 'github'].includes(i.id)).map((item) => (
                   <div key={item.id} style={{ position: 'relative' }}>
                     <button
+                      type="button"
+                      onClick={() => {
+                        if (item.id === 'files') { fileInputRef.current?.click(); setShowPlusMenu(false); }
+                        if (item.id === 'github') { setShowGitHubInput((v) => !v); setActiveSubMenu(null); }
+                      }}
+                      onMouseEnter={() => { setActiveSubMenu(null); setTrackingAttention(-0.48, 0.5, 'locked-on'); }}
+                      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', background: item.id === 'github' && showGitHubInput ? THEME.hoverBg : 'transparent', border: 'none', color: THEME.textPrimary, fontSize: '14px', cursor: 'pointer', transition: 'background 0.2s' }}
+                      onMouseLeave={(e) => { if (!(item.id === 'github' && showGitHubInput)) e.currentTarget.style.background = 'transparent'; }}
+                    >
+                      <span style={{ color: THEME.textSecondary }}>{item.icon}</span>
+                      <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>
+                    </button>
+                  </div>
+                ))}
+                <div style={{ height: 1, background: THEME.menuBorder, margin: '4px 8px' }} />
+                {/* Section: Context */}
+                <div style={{ padding: '2px 8px 2px', fontSize: 10, fontWeight: 600, color: THEME.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Context</div>
+                {PLUS_MENU_ITEMS.filter(i => ['project', 'web'].includes(i.id)).map((item) => (
+                  <div key={item.id} style={{ position: 'relative' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (item.id === 'web') { setWebSearchEnabled((v) => !v); setShowPlusMenu(false); }
+                      }}
                       onMouseEnter={() => {
                         if (item.hasSubmenu) setActiveSubMenu(item.id); else setActiveSubMenu(null);
                         setTrackingAttention(-0.48, 0.5, 'locked-on');
                       }}
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        padding: '8px 12px',
-                        borderRadius: '8px',
-                        background: activeSubMenu === item.id ? THEME.hoverBg : 'transparent',
-                        border: 'none',
-                        color: THEME.textPrimary,
-                        fontSize: '14px',
-                        cursor: 'pointer',
-                        transition: 'background 0.2s'
-                      }}
+                      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', background: (item.id === 'web' && webSearchEnabled) ? `color-mix(in srgb, ${THEME.accent} 12%, transparent)` : activeSubMenu === item.id ? THEME.hoverBg : 'transparent', border: 'none', color: item.id === 'web' && webSearchEnabled ? THEME.accent : THEME.textPrimary, fontSize: '14px', cursor: 'pointer', transition: 'background 0.2s' }}
                     >
-                      <span style={{ color: THEME.textSecondary }}>{item.icon}</span>
+                      <span style={{ color: item.id === 'web' && webSearchEnabled ? THEME.accent : THEME.textSecondary }}>{item.icon}</span>
                       <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>
                       {item.hasSubmenu && <CaretRight size={14} style={{ opacity: 0.5 }} />}
-                      {item.isActive && !item.hasSubmenu && <Check size={14} style={{ color: THEME.accent }} />}
+                      {item.id === 'web' && webSearchEnabled && <Check size={14} style={{ color: THEME.accent }} />}
                     </button>
-
                     {activeSubMenu === item.id && item.submenuItems && (
-                      <div style={{
-                        position: 'absolute',
-                        left: 'calc(100% + 10px)',
-                        bottom: 0,
-                        width: '200px',
-                        background: THEME.menuBg,
-                        borderRadius: '12px',
-                        border: `1px solid ${THEME.menuBorder}`,
-                        boxShadow: 'var(--shadow-xl)',
-                        padding: '6px',
-                        zIndex: 210
-                      }}
-                      onMouseEnter={() => setTrackingAttention(-0.26, 0.46, 'locked-on')}
-                      onMouseLeave={() => setTrackingAttention(-0.48, 0.5, 'locked-on')}
+                      <div style={{ position: 'absolute', left: 'calc(100% + 10px)', bottom: 0, width: '200px', background: THEME.menuBg, borderRadius: '12px', border: `1px solid ${THEME.menuBorder}`, boxShadow: 'var(--shadow-xl)', padding: '6px', zIndex: 210 }}
+                        onMouseEnter={() => setTrackingAttention(-0.26, 0.46, 'locked-on')}
+                        onMouseLeave={() => setTrackingAttention(-0.48, 0.5, 'locked-on')}
                       >
                         {item.submenuItems.map((sub) => (
-                          <button
-                            key={sub.id}
-                            style={{
-                              width: '100%',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '8px',
-                              padding: '8px 12px',
-                              borderRadius: '8px',
-                              background: 'transparent',
-                              border: 'none',
-                              color: THEME.textPrimary,
-                              fontSize: '13px',
-                              cursor: 'pointer'
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = THEME.hoverBg;
-                              setTrackingAttention(-0.24, 0.46, 'locked-on');
-                            }}
-                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                          <button key={sub.id} type="button"
+                            onClick={() => { if (item.id === 'project' && sub.id === 'new-project') { import('@/views/chat/ChatStore').then(m => m.useChatStore.getState().createProject('New Project')); setShowPlusMenu(false); } }}
+                            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '8px', background: 'transparent', border: 'none', color: THEME.textPrimary, fontSize: '13px', cursor: 'pointer' }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = THEME.hoverBg; setTrackingAttention(-0.24, 0.46, 'locked-on'); }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                           >
                             {sub.icon && <span style={{ color: THEME.textSecondary }}>{sub.icon}</span>}
+                            <span>{sub.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                <div style={{ height: 1, background: THEME.menuBorder, margin: '4px 8px' }} />
+                {/* Section: Style */}
+                <div style={{ padding: '2px 8px 2px', fontSize: 10, fontWeight: 600, color: THEME.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Style</div>
+                {PLUS_MENU_ITEMS.filter(i => ['style', 'connectors'].includes(i.id)).map((item) => (
+                  <div key={item.id} style={{ position: 'relative' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (item.id === 'connectors') { setShowProviderConnect(true); setShowPlusMenu(false); }
+                      }}
+                      onMouseEnter={() => {
+                        if (item.hasSubmenu) setActiveSubMenu(item.id); else setActiveSubMenu(null);
+                        setTrackingAttention(-0.48, 0.5, 'locked-on');
+                      }}
+                      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', background: (item.id === 'style' && activeStyle) ? `color-mix(in srgb, ${THEME.accent} 12%, transparent)` : activeSubMenu === item.id ? THEME.hoverBg : 'transparent', border: 'none', color: item.id === 'style' && activeStyle ? THEME.accent : THEME.textPrimary, fontSize: '14px', cursor: 'pointer', transition: 'background 0.2s' }}
+                    >
+                      <span style={{ color: item.id === 'style' && activeStyle ? THEME.accent : THEME.textSecondary }}>{item.icon}</span>
+                      <span style={{ flex: 1, textAlign: 'left' }}>{item.id === 'style' && activeStyle ? `Style: ${activeStyle.charAt(0).toUpperCase() + activeStyle.slice(1)}` : item.label}</span>
+                      {item.hasSubmenu && <CaretRight size={14} style={{ opacity: 0.5 }} />}
+                      {item.id === 'style' && activeStyle && <Check size={14} style={{ color: THEME.accent }} />}
+                    </button>
+                    {activeSubMenu === item.id && item.submenuItems && (
+                      <div style={{ position: 'absolute', left: 'calc(100% + 10px)', bottom: 0, width: '200px', background: THEME.menuBg, borderRadius: '12px', border: `1px solid ${THEME.menuBorder}`, boxShadow: 'var(--shadow-xl)', padding: '6px', zIndex: 210 }}
+                        onMouseEnter={() => setTrackingAttention(-0.26, 0.46, 'locked-on')}
+                        onMouseLeave={() => setTrackingAttention(-0.48, 0.5, 'locked-on')}
+                      >
+                        {item.submenuItems.map((sub) => (
+                          <button key={sub.id} type="button"
+                            onClick={() => { if (item.id === 'style') { setActiveStyle(activeStyle === sub.id ? null : sub.id as 'formal' | 'creative' | 'technical'); setShowPlusMenu(false); } }}
+                            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '8px', background: activeStyle === sub.id ? `color-mix(in srgb, ${THEME.accent} 12%, transparent)` : 'transparent', border: 'none', color: activeStyle === sub.id ? THEME.accent : THEME.textPrimary, fontSize: '13px', cursor: 'pointer' }}
+                            onMouseEnter={(e) => { if (activeStyle !== sub.id) e.currentTarget.style.background = THEME.hoverBg; }}
+                            onMouseLeave={(e) => { if (activeStyle !== sub.id) e.currentTarget.style.background = 'transparent'; }}
+                          >
+                            {activeStyle === sub.id && <Check size={12} style={{ color: THEME.accent }} />}
                             <span>{sub.label}</span>
                           </button>
                         ))}
@@ -2431,8 +2534,34 @@ export function ChatComposer({
             )}
           </div>
 
+          {/* Context badge chips — web search + style active indicators */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, paddingLeft: 4, overflow: 'hidden' }}>
+            {webSearchEnabled && (
+              <button type="button" onClick={() => setWebSearchEnabled(false)} title="Web search on — click to remove" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 999, background: `color-mix(in srgb, ${THEME.accent} 12%, transparent)`, border: `1px solid color-mix(in srgb, ${THEME.accent} 35%, transparent)`, color: THEME.accent, fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.15s' }}>
+                <Globe size={11} />
+                Web
+                <X size={10} style={{ opacity: 0.6 }} />
+              </button>
+            )}
+            {activeStyle && (
+              <button type="button" onClick={() => setActiveStyle(null)} title="Style active — click to remove" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 999, background: `color-mix(in srgb, ${THEME.accent} 12%, transparent)`, border: `1px solid color-mix(in srgb, ${THEME.accent} 35%, transparent)`, color: THEME.accent, fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.15s' }}>
+                <PenTool size={11} />
+                {activeStyle.charAt(0).toUpperCase() + activeStyle.slice(1)}
+                <X size={10} style={{ opacity: 0.6 }} />
+              </button>
+            )}
+          </div>
+
           {/* Right side: Model selector + Send button */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative' }}>
+            {/* Voice mic button */}
+            <SpeechInput
+              size="icon"
+              variant="ghost"
+              className="size-7 rounded-full text-[var(--chat-composer-muted)] hover:text-[var(--ui-text-primary)] hover:bg-transparent transition-colors"
+              onTranscriptionChange={(text) => setInput((prev) => prev ? `${prev} ${text}` : text)}
+              title="Voice input"
+            />
             {agentModeSurface ? (
               <AgentModeButton
                 agentModeEnabled={agentModeEnabled}
@@ -2492,11 +2621,11 @@ export function ChatComposer({
                   {/* Provider Logo */}
                   <div
                     style={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: 5,
-                      background: `${selectedProviderMeta.color}15`,
-                      border: `1px solid ${selectedProviderMeta.color}30`,
+                      width: 22,
+                      height: 22,
+                      borderRadius: 6,
+                      background: `${selectedProviderMeta.color}18`,
+                      border: `1px solid ${selectedProviderMeta.color}40`,
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -2507,7 +2636,7 @@ export function ChatComposer({
                     <img
                       src={`/assets/runtime-logos/${selectedProviderMeta.icon}`}
                       alt={selectedProviderMeta.name}
-                      style={{ width: 12, height: 12, objectFit: 'contain' }}
+                      style={{ width: 14, height: 14, objectFit: 'contain' }}
                       onError={(e) => {
                         const img = e.target as HTMLImageElement;
                         img.style.display = 'none';
@@ -2517,7 +2646,7 @@ export function ChatComposer({
                   <span style={{ fontWeight: 500 }}>{displayModelName}</span>
                 </>
               )}
-              <CaretDown size={12} style={{ transform: showModelMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', opacity: 0.6 }} />
+              <CaretDown size={12} style={{ transform: showModelMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', opacity: 0.8 }} />
             </button>
 
             {/* Model Menu Popover */}
@@ -2596,8 +2725,8 @@ export function ChatComposer({
                   height: '32px',
                   borderRadius: '50%',
                   background: canSubmit ? THEME.accent : 'var(--chat-composer-soft)',
-                  border: 'none',
-                  color: canSubmit ? 'var(--shell-control-active-fg)' : 'var(--chat-composer-disabled)',
+                  border: canSubmit ? 'none' : `1px solid ${THEME.inputBorder}`,
+                  color: canSubmit ? 'var(--shell-control-active-fg)' : THEME.textSecondary,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -3472,7 +3601,8 @@ function BottomDock({
         </div>
       ) : (
         <button
-          onClick={() => setShowAgentMenu(!showAgentMenu)}
+          onClick={() => agentModeEnabled && setShowAgentMenu(!showAgentMenu)}
+          title={agentModeEnabled ? undefined : 'Enable Agent mode to choose an agent'}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -3481,14 +3611,15 @@ function BottomDock({
             borderRadius: '8px',
             background: 'transparent',
             border: 'none',
-            color: agentModeEnabled && modeColor ? modeColor : THEME.textSecondary,
+            color: agentModeEnabled ? (modeColor || THEME.textSecondary) : THEME.textMuted,
             fontSize: '13px',
             fontWeight: 500,
-            cursor: 'pointer',
+            cursor: agentModeEnabled ? 'pointer' : 'default',
+            opacity: agentModeEnabled ? 1 : 0.45,
             transition: 'all 0.15s',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = THEME.hoverBg;
+            if (agentModeEnabled) e.currentTarget.style.background = THEME.hoverBg;
           }}
           onMouseLeave={(e) => {
             e.currentTarget.style.background = 'transparent';
@@ -3496,49 +3627,13 @@ function BottomDock({
         >
           <Robot size={16} />
           <span>{selectedSurfaceAgent ? selectedSurfaceAgent.name : 'Choose Agent'}</span>
-          <CaretDown size={14} style={{ opacity: 0.5, transform: showAgentMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+          {agentModeEnabled && <CaretDown size={14} style={{ opacity: 0.6, transform: showAgentMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />}
         </button>
       )}
       
-      {/* Right: View Mode toggle + Build/Plan Toggle */}
+      {/* Right: View Mode toggle */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <ViewModeToggle />
-        <button
-        type="button"
-        onClick={handleToggleMode}
-        disabled={isLoadingExecMode || isSavingExecMode}
-        title={uiMode === 'plan' ? 'Switch to Build mode' : 'Switch to Plan mode'}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          padding: '6px 10px',
-          borderRadius: '8px',
-          background: 'var(--chat-composer-soft)',
-          border: `1px solid ${uiMode === 'plan' ? 'color-mix(in srgb, var(--accent-primary) 40%, transparent)' : THEME.inputBorder}`,
-          color: uiMode === 'plan' ? THEME.accent : THEME.textSecondary,
-          fontSize: '12px',
-          fontWeight: 500,
-          cursor: isLoadingExecMode || isSavingExecMode ? 'wait' : 'pointer',
-          transition: 'all 0.2s',
-          opacity: isLoadingExecMode || isSavingExecMode ? 0.7 : 1,
-        }}
-        onMouseEnter={(e) => {
-          if (!isLoadingExecMode && !isSavingExecMode) {
-            e.currentTarget.style.background = THEME.hoverBg;
-            e.currentTarget.style.borderColor = 'color-mix(in srgb, var(--accent-primary) 55%, transparent)';
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (!isLoadingExecMode && !isSavingExecMode) {
-            e.currentTarget.style.background = 'var(--chat-composer-soft)';
-            e.currentTarget.style.borderColor = uiMode === 'plan' ? 'color-mix(in srgb, var(--accent-primary) 40%, transparent)' : THEME.inputBorder;
-          }
-        }}
-      >
-        {uiMode === 'plan' ? <Compass size={14} /> : <Hammer size={14} />}
-        <span>{uiMode === 'plan' ? 'Plan' : 'Build'}</span>
-      </button>
       </div>
     </div>
   );
@@ -3695,6 +3790,9 @@ function ModeDock({ selectedMode, onSelectMode, agentModeSurface, onSelectTempla
           flexDirection: 'column',
           gap: '10px',
           marginTop: '8px',
+          maxHeight: '320px',
+          overflowY: 'auto',
+          paddingRight: '4px',
         }}>
           {/* Header */}
           <div style={{
@@ -3702,6 +3800,7 @@ function ModeDock({ selectedMode, onSelectMode, agentModeSurface, onSelectTempla
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '0 4px',
+            flexShrink: 0,
           }}>
             <span style={{
               fontSize: '12px',
@@ -3725,6 +3824,7 @@ function ModeDock({ selectedMode, onSelectMode, agentModeSurface, onSelectTempla
             display: 'grid',
             gridTemplateColumns: 'repeat(3, 1fr)',
             gap: '10px',
+            flexShrink: 0,
           }}>
             {modeData.map((template, index) => (
               <TemplateCard

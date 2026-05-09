@@ -1,13 +1,27 @@
-import { SkillsRegistryView } from '../views/code/SkillsRegistryView';
-import { DesignRegistryView } from '../views/design/DesignRegistryView';
-import { OpenClawControlUI } from '../views/openclaw/OpenClawControlUI';
+import dynamic from 'next/dynamic';
 import React, { useMemo, useReducer, useEffect, useCallback, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePlatformUser, isPlatformAuthDisabled } from '../lib/platform-auth-client';
-// Agent Session Views
-import { ChatModeAgentSession } from '../views/agent-sessions/ChatModeAgentSession';
-import { CoworkModeAgentTasks } from '../views/agent-sessions/CoworkModeAgentTasks';
-import { SwarmADE } from '../views/swarm';
+
+// ── Lazy-loaded view components ────────────────────────────────────────────────
+// Each view only loads its JS when first navigated to, keeping the initial
+// bundle small and the shell fast to paint.
+const lazy = <T extends React.ComponentType<any>>(
+  factory: () => Promise<{ default: T } | { [key: string]: T }>,
+  key?: string
+) => dynamic(
+  key
+    ? () => (factory() as Promise<Record<string, T>>).then(m => ({ default: m[key] }))
+    : factory as () => Promise<{ default: T }>,
+  { ssr: false, loading: () => null }
+);
+
+const SkillsRegistryView   = lazy(() => import('../views/code/SkillsRegistryView'), 'SkillsRegistryView');
+const DesignRegistryView   = lazy(() => import('../views/design/DesignRegistryView'), 'DesignRegistryView');
+const OpenClawControlUI    = lazy(() => import('../views/openclaw/OpenClawControlUI'), 'OpenClawControlUI');
+const ChatModeAgentSession = lazy(() => import('../views/agent-sessions/ChatModeAgentSession'), 'ChatModeAgentSession');
+const CoworkModeAgentTasks = lazy(() => import('../views/agent-sessions/CoworkModeAgentTasks'), 'CoworkModeAgentTasks');
+const SwarmADE             = lazy(() => import('../views/swarm'), 'SwarmADE');
 import { ShellFrame } from './ShellFrame';
 import { ShellRail } from './ShellRail';
 import { type AppMode } from './ShellHeader';
@@ -26,28 +40,28 @@ import { useAllternitHotkeys, PLATFORM_SHORTCUTS } from '../vendor/hotkeys';
 import { createInitialNavState, navReducer } from '../nav/nav.store';
 import { selectActiveView } from '../nav/nav.selectors';
 import { createViewRegistry } from '../views/registry';
-import { AllternitCanvasView } from '../views/AllternitCanvasView';
+const AllternitCanvasView  = lazy(() => import('../views/AllternitCanvasView'), 'AllternitCanvasView');
 import { ViewHost } from '../views/ViewHost';
 import type { ViewContext, ViewType } from '../nav/nav.types';
 import { ConsoleDrawer } from '../drawers/ConsoleDrawer';
 import { useRunnerStore } from '../runner/runner.store';
 import { useSidecarStore } from '../stores/sidecar-store';
-import { ChatView } from '../views/ChatView';
-import { CoworkRoot } from '../views/cowork/CoworkRoot';
-import { PluginRegistryView } from '../views/cowork/PluginRegistryView';
-import { TerminalView } from '../views/TerminalView';
-import { CodeRoot } from '../views/code/CodeRoot';
-import { AgentSystemView } from '../views/AgentSystemView';
-import { AgentView } from '../views/AgentView';
-import { AgentHub } from '../views/AgentHub';
-import { NativeAgentView } from '../views/NativeAgentView';
+const ChatView             = lazy(() => import('../views/ChatView'), 'ChatView');
+const CoworkRoot           = lazy(() => import('../views/cowork/CoworkRoot'), 'CoworkRoot');
+const PluginRegistryView   = lazy(() => import('../views/cowork/PluginRegistryView'), 'PluginRegistryView');
+const TerminalView         = lazy(() => import('../views/TerminalView'), 'TerminalView');
+const CodeRoot             = lazy(() => import('../views/code/CodeRoot'), 'CodeRoot');
+const AgentSystemView      = lazy(() => import('../views/AgentSystemView'), 'AgentSystemView');
+const AgentView            = lazy(() => import('../views/AgentView'), 'AgentView');
+const AgentHub             = lazy(() => import('../views/AgentHub'), 'AgentHub');
+const NativeAgentView      = lazy(() => import('../views/NativeAgentView'), 'NativeAgentView');
 import { useAgentStore } from '../lib/agents';
 import { useChatSessionStore } from '../views/chat/ChatSessionStore';
 import { useCodeSessionStore } from '../views/code/CodeSessionStore';
 import { useCoworkSessionStore } from '../views/cowork/CoworkSessionStore';
 import { useDesignSessionStore } from '../views/design/DesignSessionStore';
 import { useBrowserStore } from '../capsules/browser';
-import { BrowserCapsuleEnhanced } from '../capsules/browser/BrowserCapsuleEnhanced';
+const BrowserCapsuleEnhanced = lazy(() => import('../capsules/browser/BrowserCapsuleEnhanced'), 'BrowserCapsuleEnhanced');
 import { useBrowserAgentStore } from '../capsules/browser/browserAgent.store';
 import { useBrowserShortcutsStore, getFaviconUrl } from '../capsules/browser/browserShortcuts.store';
 import {
@@ -113,105 +127,88 @@ import {
 } from '@phosphor-icons/react';
 
 import { useChatStore } from '../views/chat/ChatStore';
-import { ProjectView } from '../views/ProjectView';
-import { ToolsView } from "../views/code/ToolsView";
-import { RunReplayView } from "../views/code/RunReplayView";
-import { PromotionDashboardView } from "../views/code/PromotionDashboardView";
-import { PlaygroundView } from "../views/PlaygroundView";
-import { IntegrationsPanel } from "./IntegrationsPanel";
-import { DagIntegrationPage } from "../views/DagIntegrationPage";
-import { ControlCenter } from './ControlCenter';
-// Agentation - UI iteration tool
-import { Agentation } from 'agentation';
-// Cloud Deploy View
-import { CloudDeployView } from '../views/cloud-deploy/CloudDeployView';
+const ProjectView          = lazy(() => import('../views/ProjectView'), 'ProjectView');
+const ToolsView            = lazy(() => import('../views/code/ToolsView'), 'ToolsView');
+const RunReplayView        = lazy(() => import('../views/code/RunReplayView'), 'RunReplayView');
+const PromotionDashboardView = lazy(() => import('../views/code/PromotionDashboardView'), 'PromotionDashboardView');
+const PlaygroundView       = lazy(() => import('../views/PlaygroundView'), 'PlaygroundView');
+const IntegrationsPanel    = lazy(() => import('./IntegrationsPanel'), 'IntegrationsPanel');
+const DagIntegrationPage   = lazy(() => import('../views/DagIntegrationPage'), 'DagIntegrationPage');
+const ControlCenter        = lazy(() => import('./ControlCenter'), 'ControlCenter');
+const CloudDeployView      = lazy(() => import('../views/cloud-deploy/CloudDeployView'), 'CloudDeployView');
 import { usePermissionGuide } from '../lib/usePermissionGuide';
-// Design Mode surface
-import DesignModeView from '../views/design/DesignModeView';
-// Node Management View
-import { NodesView } from '../views/nodes';
-// Capsule Management View (P3.9 MCP Apps)
-import { CapsuleManagerView } from '../views/CapsuleManagerView';
-// Operator Browser Control View (P3.10/P3.12)
-import { OperatorBrowserView } from '../views/OperatorBrowserView';
-// P3 UI Views (JSON Render, Form Surfaces, Canvas, Hooks)
-import { FormSurfacesView } from '../views/FormSurfacesView';
-import { CanvasProtocolView } from '../views/CanvasProtocolView';
-import { HooksSystemView } from '../views/HooksSystemView';
-// P4 UI Views (Evolution, Context, Memory, ACF)
-import { EvolutionLayerView } from '../views/EvolutionLayerView';
-import { ContextControlPlaneView } from '../views/ContextControlPlaneView';
-import { MemoryKernelView } from '../views/MemoryKernelView';
-import { AutonomousCodeFactoryView } from '../views/AutonomousCodeFactoryView';
-// DAG Task Views - P4/P5 Integration
-import {
-  PolicyManager,
-  TaskExecutor,
-  OntologyViewer,
-  DirectiveCompiler,
-  EvaluationHarness,
-  GCAgents,
-  ReceiptsViewer,
-  PolicyGating,
-  SecurityDashboard,
-  PurposeBinding,
-  DAGWIH,
-  Checkpointing,
-  ObservabilityDashboard,
-  // Standalone views from DagIntegrationPage
-  IVKGEPanel,
-  MultimodalInput,
-  UIForge,
-} from "../views/dag";
-// Runtime Management Views
-import { BudgetDashboardView } from '../views/runtime/BudgetDashboardView';
-import { ReplayManagerView } from '../views/runtime/ReplayManagerView';
-import { PrewarmManagerView } from '../views/runtime/PrewarmManagerView';
-import { RuntimeOperationsView } from '../views/runtime/RuntimeOperationsView';
-// Meta-Swarm Views
-// Sprint 1 - History & Search views
-import { HistoryView } from '../views/HistoryView';
-import { ArchivedView } from '../views/ArchivedView';
-import { SearchView } from '../views/SearchView';
-import { DebugView } from '../views/code/DebugView';
-// Sprint 1 - Cowork Analytics views
-import { InsightsView } from '../views/cowork/InsightsView';
-import { ActivityView } from '../views/cowork/ActivityView';
-import { GoalsView } from '../views/cowork/GoalsView';
-// Sprint 2 - Replace placeholder views
-import { MarketplaceView } from '../views/MarketplaceView';
-import { SettingsView } from '../views/settings/SettingsView';
+const DesignModeView         = dynamic(() => import('../views/design/DesignModeView'), { ssr: false, loading: () => null });
+const NodesView              = lazy(() => import('../views/nodes'), 'NodesView');
+const CapsuleManagerView     = lazy(() => import('../views/CapsuleManagerView'), 'CapsuleManagerView');
+const OperatorBrowserView    = lazy(() => import('../views/OperatorBrowserView'), 'OperatorBrowserView');
+const FormSurfacesView       = lazy(() => import('../views/FormSurfacesView'), 'FormSurfacesView');
+const CanvasProtocolView     = lazy(() => import('../views/CanvasProtocolView'), 'CanvasProtocolView');
+const HooksSystemView        = lazy(() => import('../views/HooksSystemView'), 'HooksSystemView');
+const EvolutionLayerView     = lazy(() => import('../views/EvolutionLayerView'), 'EvolutionLayerView');
+const ContextControlPlaneView = lazy(() => import('../views/ContextControlPlaneView'), 'ContextControlPlaneView');
+const MemoryKernelView       = lazy(() => import('../views/MemoryKernelView'), 'MemoryKernelView');
+const AutonomousCodeFactoryView = lazy(() => import('../views/AutonomousCodeFactoryView'), 'AutonomousCodeFactoryView');
+// DAG views — all lazy
+const PolicyManager          = lazy(() => import('../views/dag'), 'PolicyManager');
+const TaskExecutor           = lazy(() => import('../views/dag'), 'TaskExecutor');
+const OntologyViewer         = lazy(() => import('../views/dag'), 'OntologyViewer');
+const DirectiveCompiler      = lazy(() => import('../views/dag'), 'DirectiveCompiler');
+const EvaluationHarness      = lazy(() => import('../views/dag'), 'EvaluationHarness');
+const GCAgents               = lazy(() => import('../views/dag'), 'GCAgents');
+const ReceiptsViewer         = lazy(() => import('../views/dag'), 'ReceiptsViewer');
+const PolicyGating           = lazy(() => import('../views/dag'), 'PolicyGating');
+const SecurityDashboard      = lazy(() => import('../views/dag'), 'SecurityDashboard');
+const PurposeBinding         = lazy(() => import('../views/dag'), 'PurposeBinding');
+const DAGWIH                 = lazy(() => import('../views/dag'), 'DAGWIH');
+const Checkpointing          = lazy(() => import('../views/dag'), 'Checkpointing');
+const ObservabilityDashboard = lazy(() => import('../views/dag'), 'ObservabilityDashboard');
+const IVKGEPanel             = lazy(() => import('../views/dag'), 'IVKGEPanel');
+const MultimodalInput        = lazy(() => import('../views/dag'), 'MultimodalInput');
+const UIForge                = lazy(() => import('../views/dag'), 'UIForge');
+// Runtime views
+const BudgetDashboardView    = lazy(() => import('../views/runtime/BudgetDashboardView'), 'BudgetDashboardView');
+const ReplayManagerView      = lazy(() => import('../views/runtime/ReplayManagerView'), 'ReplayManagerView');
+const PrewarmManagerView     = lazy(() => import('../views/runtime/PrewarmManagerView'), 'PrewarmManagerView');
+const RuntimeOperationsView  = lazy(() => import('../views/runtime/RuntimeOperationsView'), 'RuntimeOperationsView');
+const HistoryView            = lazy(() => import('../views/HistoryView'), 'HistoryView');
+const ArchivedView           = lazy(() => import('../views/ArchivedView'), 'ArchivedView');
+const SearchView             = lazy(() => import('../views/SearchView'), 'SearchView');
+const DebugView              = lazy(() => import('../views/code/DebugView'), 'DebugView');
+const InsightsView           = lazy(() => import('../views/cowork/InsightsView'), 'InsightsView');
+const ActivityView           = lazy(() => import('../views/cowork/ActivityView'), 'ActivityView');
+const GoalsView              = lazy(() => import('../views/cowork/GoalsView'), 'GoalsView');
+const MarketplaceView        = lazy(() => import('../views/MarketplaceView'), 'MarketplaceView');
+const SettingsView           = lazy(() => import('../views/settings/SettingsView'), 'SettingsView');
 import { useResolvedTheme, useThemeStore } from '../design/ThemeStore';
 import { usePanelLayout } from '../hooks/usePanelLayout';
-import { ModelManagementView } from '../views/settings/ModelManagementView';
-import { MonitorView } from '../views/MonitorView';
-// Sprint 4 - Cowork content views
-import { RunsView as CoworkRunsView } from '../views/cowork/RunsView';
-import { DraftsView } from '../views/cowork/DraftsView';
-import { TasksView } from '../views/cowork/TasksView';
-import { CronView } from '../views/cowork/CronView';
-import { CoworkProjectView } from '../views/cowork/CoworkProjectView';
-import { DocumentsView } from '../views/cowork/DocumentsView';
-import { TablesView } from '../views/cowork/TablesView';
-import { FilesView } from '../views/cowork/FilesView';
-import { ExportsView } from '../views/cowork/ExportsView';
-import ProductsDiscoveryView from '../views/products/ProductsDiscoveryView';
-// A://Labs - Course Management
-import { LabsView } from '../views/LabsView';
-import { CatalogView } from '../views/CatalogView';
-// Sprint 5 - Code sub-views
-import { ExplorerView } from '../views/code/ExplorerView';
-import { GitView } from '../views/code/GitView';
-import { ThreadsView } from '../views/code/ThreadsView';
-import { SkillsView } from '../views/code/SkillsView';
-import { CodeProjectView } from '../views/code/CodeProjectView';
-import { AllternitOSView } from '../views/AllternitOSView';
-// Cowork Team views (Multica absorption)
-import { CoworkTeamDashboard, CoworkBoardView, CoworkTeamAgentsView, CoworkWorkspacesView } from '../views/cowork-team';
+const ModelManagementView    = lazy(() => import('../views/settings/ModelManagementView'), 'ModelManagementView');
+const MonitorView            = lazy(() => import('../views/MonitorView'), 'MonitorView');
+const CoworkRunsView         = lazy(() => import('../views/cowork/RunsView'), 'RunsView');
+const DraftsView             = lazy(() => import('../views/cowork/DraftsView'), 'DraftsView');
+const TasksView              = lazy(() => import('../views/cowork/TasksView'), 'TasksView');
+const CronView               = lazy(() => import('../views/cowork/CronView'), 'CronView');
+const CoworkProjectView      = lazy(() => import('../views/cowork/CoworkProjectView'), 'CoworkProjectView');
+const DocumentsView          = lazy(() => import('../views/cowork/DocumentsView'), 'DocumentsView');
+const TablesView             = lazy(() => import('../views/cowork/TablesView'), 'TablesView');
+const FilesView              = lazy(() => import('../views/cowork/FilesView'), 'FilesView');
+const ExportsView            = lazy(() => import('../views/cowork/ExportsView'), 'ExportsView');
+const ProductsDiscoveryView  = dynamic(() => import('../views/products/ProductsDiscoveryView'), { ssr: false, loading: () => null });
+const LabsView               = lazy(() => import('../views/LabsView'), 'LabsView');
+const CatalogView            = lazy(() => import('../views/CatalogView'), 'CatalogView');
+const ExplorerView           = lazy(() => import('../views/code/ExplorerView'), 'ExplorerView');
+const GitView                = lazy(() => import('../views/code/GitView'), 'GitView');
+const ThreadsView            = lazy(() => import('../views/code/ThreadsView'), 'ThreadsView');
+const SkillsView             = lazy(() => import('../views/code/SkillsView'), 'SkillsView');
+const CodeProjectView        = lazy(() => import('../views/code/CodeProjectView'), 'CodeProjectView');
+const AllternitOSView        = lazy(() => import('../views/AllternitOSView'), 'AllternitOSView');
+const CoworkTeamDashboard    = lazy(() => import('../views/cowork-team'), 'CoworkTeamDashboard');
+const CoworkBoardView        = lazy(() => import('../views/cowork-team'), 'CoworkBoardView');
+const CoworkTeamAgentsView   = lazy(() => import('../views/cowork-team'), 'CoworkTeamAgentsView');
+const CoworkWorkspacesView   = lazy(() => import('../views/cowork-team'), 'CoworkWorkspacesView');
 import { ErrorBoundary } from '../components/error-boundary';
 import { TooltipProvider } from '../components/ui/tooltip';
-import { VerificationView } from '../views/VerificationView';
-import { BrowserExtensionsView } from '../views/BrowserExtensionsView';
+const VerificationView       = lazy(() => import('../views/VerificationView'), 'VerificationView');
+const BrowserExtensionsView  = lazy(() => import('../views/BrowserExtensionsView'), 'BrowserExtensionsView');
 import { RailControls } from './FloatingWidgets';
 import { SearchOverlay } from './SearchOverlay';
 
@@ -987,6 +984,7 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
       <div ref={wrapperRef} style={{
         width: '100%', height: '100%',
         display: hasTabs ? 'flex' : 'none', flexDirection: 'column',
+        background: 'var(--view-browser-bg, #f6f8fc)',
         animation: hasTabs ? 'browserCardSlideUp 0.3s ease-out' : undefined,
       }}>
         {/* Drag handle — top edge of the card */}
@@ -1187,26 +1185,30 @@ function ShellAppInner(): JSX.Element {
       </ErrorBoundary>
     ),
     browser: ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary
-        fallback={<ErrorFallbackWrapper viewName="Browser" />}
-        onError={(error, errorInfo) => {
-          console.error('[Browser] Error:', error);
-          console.error('[Browser] Component Stack:', errorInfo.componentStack);
-        }}
-      >
-        <BrowserPaneWrapper><BrowserCapsuleEnhanced /></BrowserPaneWrapper>
-      </ErrorBoundary>
+      <BrowserPaneWrapper>
+        <ErrorBoundary
+          fallback={<ErrorFallbackWrapper viewName="Browser" />}
+          onError={(error, errorInfo) => {
+            console.error('[Browser] Error:', error);
+            console.error('[Browser] Component Stack:', errorInfo.componentStack);
+          }}
+        >
+          <BrowserCapsuleEnhanced />
+        </ErrorBoundary>
+      </BrowserPaneWrapper>
     ),
     browserview: ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary
-        fallback={<ErrorFallbackWrapper viewName="Browser" />}
-        onError={(error, errorInfo) => {
-          console.error('[Browser] Error:', error);
-          console.error('[Browser] Component Stack:', errorInfo.componentStack);
-        }}
-      >
-        <BrowserPaneWrapper><BrowserCapsuleEnhanced /></BrowserPaneWrapper>
-      </ErrorBoundary>
+      <BrowserPaneWrapper>
+        <ErrorBoundary
+          fallback={<ErrorFallbackWrapper viewName="Browser" />}
+          onError={(error, errorInfo) => {
+            console.error('[Browser] Error:', error);
+            console.error('[Browser] Component Stack:', errorInfo.componentStack);
+          }}
+        >
+          <BrowserCapsuleEnhanced />
+        </ErrorBoundary>
+      </BrowserPaneWrapper>
     ),
     studio: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
@@ -1463,11 +1465,17 @@ function ShellAppInner(): JSX.Element {
       </ErrorBoundary>
     ),
     // P3 UI Views
-    "allternit-ix": ({ context }: { context?: ViewContext }) => (
-      <ErrorBoundary fallback={<div>Failed to load Design Workspace</div>}>
-        <DesignModeView />
-      </ErrorBoundary>
-    ),
+    "allternit-ix": ({ context }: { context?: ViewContext }) => {
+      const ctx = context?.context as { stream?: string; designMd?: string } | undefined;
+      return (
+        <ErrorBoundary fallback={<div>Failed to load Design Workspace</div>}>
+          <DesignModeView
+            initialDesignMd={ctx?.designMd}
+            initialStream={ctx?.stream}
+          />
+        </ErrorBoundary>
+      );
+    },
     design: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary fallback={<div>Failed to load Design Workspace</div>}>
         <DesignModeView />
@@ -2259,9 +2267,10 @@ function ShellAppInner(): JSX.Element {
 
   const [monitorOverlayOpen, setMonitorOverlayOpen] = useState(false);
   const [isControlCenterOpen, setIsControlCenterOpen] = useState(false);
-  const [agentationEnabled, setAgentationEnabled] = useState(false);
   const [pluginPanelOpen, setPluginPanelOpen] = useState(false);
   const permissions = usePermissionGuide();
+
+  const shouldHideRail = active.viewType === 'labs';
 
   return (
     <TooltipProvider>
@@ -2313,7 +2322,7 @@ function ShellAppInner(): JSX.Element {
         )}
         
         <ShellFrame
-          isRailCollapsed={isRailCollapsed}
+          isRailCollapsed={isRailCollapsed || shouldHideRail}
           railWidth={railWidth}
           onRailWidthChange={setRailWidth}
           rail={
@@ -2423,7 +2432,7 @@ function ShellAppInner(): JSX.Element {
                   onSearchOpen={() => setIsSearchOpen(true)}
                 />}
                 <SearchOverlay open={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
-        <ConsoleDrawer />
+        {active.viewType === 'code' && <ConsoleDrawer />}
         <ConversationMonitorOverlay
           open={monitorOverlayOpen}
           onClose={() => setMonitorOverlayOpen(false)}
@@ -2432,8 +2441,6 @@ function ShellAppInner(): JSX.Element {
           isOpen={isControlCenterOpen}
           onClose={() => setIsControlCenterOpen(false)}
           isDevMode={process.env.NODE_ENV === 'development'}
-          agentationEnabled={agentationEnabled}
-          onToggleAgentation={setAgentationEnabled}
           onOpenView={open as (viewType: string) => void}
         />
         <IntegrationsPanel
@@ -2447,15 +2454,6 @@ function ShellAppInner(): JSX.Element {
           }}
         />
         
-        {/* Agentation - UI iteration tool (dev only) */}
-        {process.env.NODE_ENV === 'development' && (
-          <Agentation 
-            endpoint="http://localhost:4747"
-            onSessionCreated={(sessionId) => {
-              // Agentation session started
-            }}
-          />
-        )}
 
         {/* Floating Agent Companion */}
         <FloatingAvatar />

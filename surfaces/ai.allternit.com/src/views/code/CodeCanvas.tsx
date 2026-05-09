@@ -832,7 +832,7 @@ function LaunchpadStage({
   const [brandingAttention, setBrandingAttention] = useState<GizziAttention | null>(null);
 
   return (
-    <div data-testid="code-canvas-shell" style={{ padding: '120px 24px 60px', minHeight: '100%', boxSizing: 'border-box' }}>
+    <div data-testid="code-canvas-shell" style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', padding: '0 24px 32px', boxSizing: 'border-box', overflow: 'auto', minHeight: 0 }}>
       {agentContextStrip ? (
         <div style={{ width: '100%', textAlign: 'left', marginBottom: 18 }}>
           {agentContextStrip}
@@ -1372,26 +1372,6 @@ function CompactUtilityBar({
           }}
         >
           Canvas
-        </button>
-        <button
-          type="button"
-          onClick={() => activeWorkspaceId && setWorkspaceLayoutMode(activeWorkspaceId, 'tldraw')}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 4,
-            padding: '6px 10px',
-            borderRadius: '0 8px 8px 0',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            borderLeft: 'none',
-            background: layoutMode === 'tldraw' ? 'var(--ui-border-muted)' : 'transparent',
-            color: layoutMode === 'tldraw' ? 'var(--text-primary)' : 'var(--text-secondary)',
-            fontSize: 11,
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          tldraw
         </button>
       </div>
     </div>

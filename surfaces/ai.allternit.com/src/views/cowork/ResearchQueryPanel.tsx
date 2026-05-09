@@ -3,6 +3,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { MagnifyingGlass, ArrowClockwise, Spinner, WarningCircle } from '@phosphor-icons/react';
 import { useResearchThread } from '@/lib/cowork/useResearchThread';
+import { UnifiedMessageRenderer } from '@/components/ai-elements/UnifiedMessageRenderer';
+import { parseStructuredContent } from '@/lib/ai/rust-stream-adapter-extended';
 
 export function ResearchQueryPanel() {
   const { messages, isStreaming, streamBuffer, error, isHealthy, query, reset, checkHealth } = useResearchThread();
@@ -85,10 +87,15 @@ export function ResearchQueryPanel() {
                 lineHeight: 1.6,
                 background: msg.role === 'user' ? 'var(--accent-primary, #7c6af7)' : 'rgba(255,255,255,0.05)',
                 color: msg.role === 'user' ? '#fff' : 'var(--ui-text-primary)',
-                whiteSpace: 'pre-wrap',
+                whiteSpace: msg.role === 'user' ? 'pre-wrap' : undefined,
                 wordBreak: 'break-word',
               }}>
-                {msg.content}
+                {msg.role === 'user' ? msg.content : (
+                  <UnifiedMessageRenderer
+                    parts={parseStructuredContent(msg.content)}
+                    className="text-[13px]"
+                  />
+                )}
               </div>
             </div>
           ))}
@@ -105,11 +112,13 @@ export function ResearchQueryPanel() {
                 lineHeight: 1.6,
                 background: 'rgba(255,255,255,0.05)',
                 color: 'var(--ui-text-primary)',
-                whiteSpace: 'pre-wrap',
                 wordBreak: 'break-word',
               }}>
-                {streamBuffer}
-                <span style={{ display: 'inline-block', width: 8, height: 14, background: 'var(--accent-primary)', marginLeft: 2, verticalAlign: 'middle', animation: 'blink 1s step-end infinite' }} />
+                <UnifiedMessageRenderer
+                  parts={parseStructuredContent(streamBuffer)}
+                  isStreaming
+                  className="text-[13px]"
+                />
               </div>
             </div>
           )}

@@ -40,6 +40,7 @@ export type RustEventType =
   | "task"
   | "citation"
   | "artifact"
+  | "ui"
   | "error"
   | "finish";
 
@@ -101,6 +102,8 @@ export interface RustStreamEvent {
   role?: "user" | "assistant";
   parts?: unknown[];
   context?: Record<string, unknown>;
+  // UI part event — carries a typed showcase component payload
+  payload?: Record<string, unknown>;
 }
 
 // ============================================================================
@@ -574,6 +577,119 @@ function upsertMcpAppPartAfterTool(
   ctx.assistantParts.push(nextPart);
 }
 
+// ─── ui event handler (also called from tool_result for showcase tools) ──────
+function handleUiEvent(event: RustStreamEvent, ctx: AdapterContext): void {
+  if (!ctx.assistantMessageId || !event.kind) return;
+  const p = event.payload ?? event.metadata ?? {};
+  const uid = () => `${event.kind}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+  let part: Record<string, unknown> | null = null;
+
+  switch (event.kind) {
+    case "email-draft":
+      part = {
+        type: "email-draft",
+        emailId: uid(),
+        to: String(p.to ?? ""),
+        from: p.from != null ? String(p.from) : undefined,
+        cc: p.cc != null ? String(p.cc) : undefined,
+        subject: String(p.subject ?? ""),
+        body: String(p.body ?? ""),
+      };
+      break;
+
+    case "sms-draft":
+      part = {
+        type: "sms-draft",
+        smsId: uid(),
+        to: String(p.to ?? ""),
+        messages: Array.isArray(p.messages) ? p.messages : [],
+      };
+      break;
+
+    case "recipe":
+      part = {
+        type: "recipe",
+        recipeId: uid(),
+        name: String(p.name ?? ""),
+        description: p.description != null ? String(p.description) : undefined,
+        servings: typeof p.servings === "number" ? p.servings : undefined,
+        prepTimeMinutes: typeof p.prepTimeMinutes === "number" ? p.prepTimeMinutes : undefined,
+        cookTimeMinutes: typeof p.cookTimeMinutes === "number" ? p.cookTimeMinutes : undefined,
+        ingredients: Array.isArray(p.ingredients) ? p.ingredients : [],
+        steps: Array.isArray(p.steps) ? p.steps : [],
+        imageUrl: p.imageUrl != null ? String(p.imageUrl) : undefined,
+      };
+      break;
+
+    case "image-search":
+      part = {
+        type: "image-search",
+        searchId: uid(),
+        query: String(p.query ?? ""),
+        results: Array.isArray(p.results) ? p.results : [],
+      };
+      break;
+
+    case "app-recommendations":
+      part = {
+        type: "app-recommendations",
+        recommendationsId: uid(),
+        title: p.title != null ? String(p.title) : undefined,
+        apps: Array.isArray(p.apps) ? p.apps : [],
+      };
+      break;
+
+    case "model-comparison":
+      part = {
+        type: "model-comparison",
+        comparisonId: uid(),
+        title: p.title != null ? String(p.title) : undefined,
+        models: Array.isArray(p.models) ? p.models : [],
+        features: Array.isArray(p.features) ? p.features : [],
+        variant: typeof p.variant === "string" ? p.variant : undefined,
+      };
+      break;
+
+    case "mock-chat":
+      part = {
+        type: "mock-chat",
+        chatId: uid(),
+        style: typeof p.style === "string" ? p.style : undefined,
+        messages: Array.isArray(p.messages) ? p.messages : [],
+      };
+      break;
+
+    case "levee-wizard":
+      part = {
+        type: "levee-wizard",
+        wizardId: uid(),
+        title: p.title != null ? String(p.title) : undefined,
+        subtitle: p.subtitle != null ? String(p.subtitle) : undefined,
+        steps: Array.isArray(p.steps) ? p.steps : [],
+      };
+      break;
+
+    case "mermaid":
+      part = {
+        type: "artifact",
+        artifactId: uid(),
+        kind: "mermaid",
+        title: p.title != null ? String(p.title) : "Diagram",
+        content: String(p.content ?? p.source ?? ""),
+      };
+      break;
+
+    default:
+      return;
+  }
+
+  if (part) {
+    ctx.assistantParts.push(part as unknown as UIPart);
+    updateMessageParts(ctx, true);
+  }
+}
+
 const RUST_EVENT_MAP: Record<RustEventType, RustEventHandler> = {
   message_start: (event, ctx) => {
     if (!event.messageId) return;
@@ -823,6 +939,29 @@ const RUST_EVENT_MAP: Record<RustEventType, RustEventHandler> = {
           };
           ctx.assistantParts.push(artifactPart);
         }
+      }
+
+      // Showcase tool results — backend calls a named tool, result carries the payload.
+      // Tool names are snake_case from Rust; strip "generate_" prefix and normalize.
+      const showcaseToolMap: Record<string, string> = {
+        generate_email_draft: "email-draft",
+        generate_sms_draft: "sms-draft",
+        generate_recipe: "recipe",
+        generate_image_search: "image-search",
+        generate_app_recommendations: "app-recommendations",
+        generate_model_comparison: "model-comparison",
+        generate_mock_chat: "mock-chat",
+        generate_levee_wizard: "levee-wizard",
+      };
+      const showcaseKind = showcaseToolMap[toolPart.toolName] ?? showcaseToolMap[toolPart.toolName.replace(/-/g, "_")];
+      if (showcaseKind && event.result && typeof event.result === "object") {
+        const syntheticEvent: RustStreamEvent = {
+          type: "ui",
+          kind: showcaseKind,
+          payload: event.result as Record<string, unknown>,
+          messageId: event.messageId,
+        };
+        handleUiEvent(syntheticEvent, ctx);
       }
 
       const pendingMcpAppPart = ctx.pendingMcpAppPartsByToolCallId.get(
@@ -1082,6 +1221,11 @@ const RUST_EVENT_MAP: Record<RustEventType, RustEventHandler> = {
     ctx.assistantParts.push(artifactPart);
     updateMessageParts(ctx, true);
   },
+
+  // ── ui: inject any showcase / structured-output part directly ──────────────
+  // Backend emits: { type: "ui", kind: "email-draft", payload: { to, subject, body, ... } }
+  // Supported kinds match the ExtendedUIPart type names in rust-stream-adapter-extended.ts.
+  ui: handleUiEvent,
 
   error: (event, ctx) => {
     if (!ctx.assistantMessageId) return;

@@ -35,10 +35,6 @@ const meta: Meta<typeof ControlCenter> = {
       control: 'boolean',
       description: 'Enable dev tools section',
     },
-    agentationEnabled: {
-      control: 'boolean',
-      description: 'Agentation toggle state',
-    },
   },
 };
 
@@ -112,17 +108,6 @@ export const PolicySection: Story = {
 };
 
 /**
- * With Dev Tools
- */
-export const WithDevTools: Story = {
-  args: {
-    isOpen: true,
-    isDevMode: true,
-    agentationEnabled: false,
-  },
-};
-
-/**
  * Interactive Control Center
  */
 export const Interactive: Story = {
@@ -130,8 +115,6 @@ export const Interactive: Story = {
     const [isOpen, setIsOpen] = useState(true);
     const [endpoints, setEndpoints] = useState<PairedEndpoint[]>(mockEndpoints);
     const [hosts, setHosts] = useState<string[]>(['example.com']);
-    const [agentation, setAgentation] = useState(false);
-    
     return (
       <div>
         <button 
@@ -158,8 +141,6 @@ export const Interactive: Story = {
           onAddAllowedHost={(host) => setHosts([...hosts, host])}
           onRemoveAllowedHost={(host) => setHosts(hosts.filter(h => h !== host))}
           isDevMode={true}
-          agentationEnabled={agentation}
-          onToggleAgentation={setAgentation}
         />
       </div>
     );
@@ -186,7 +167,7 @@ export const SectionNavigation: Story = {
       <div style={{ padding: '24px' }}>
         <h3 style={{ marginBottom: '16px' }}>Available Sections</h3>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '24px' }}>
-          {['browser-pairing', 'policies', 'runtime', 'compute', 'secrets', 'ssh', 'dev-tools'].map(section => (
+          {['browser-pairing', 'policies', 'runtime', 'compute', 'secrets', 'ssh'].map(section => (
             <button
               key={section}
               onClick={() => setActiveSection(section)}
@@ -225,7 +206,6 @@ export const FullDemo: Story = {
           pairedEndpoints={mockEndpoints}
           allowedHosts={['example.com', 'github.com', 'api.example.com']}
           isDevMode={true}
-          agentationEnabled={true}
         />
         {!isOpen && (
           <button 

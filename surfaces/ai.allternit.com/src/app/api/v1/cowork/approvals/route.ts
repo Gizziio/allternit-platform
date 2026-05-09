@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getApprovalGate } from "@/lib/cowork/approval-gate-instance";
-import type { PendingApproval } from "@allternit/cowork-engine";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
+
+type PendingApproval = {
+  actionId: string;
+  sessionId: string;
+  riskLevel: "low" | "medium" | "high" | "critical";
+  summary: string;
+  details: string;
+  timeoutMs?: number;
+  requestedAt: Date;
+};
 
 /** List all pending approval requests (client polls this). */
 export async function GET() {

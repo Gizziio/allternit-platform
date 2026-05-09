@@ -28,6 +28,22 @@ const NODE_COLORS: Record<string, string> = {
   summary: 'var(--status-warning)',
 };
 
+function hashString(str: string): number {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = ((h << 5) - h + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+function seededX(id: string): number {
+  return 100 + (hashString(id) % 300);
+}
+
+function seededY(id: string): number {
+  return 100 + (hashString(id + 'y') % 200);
+}
+
 function buildGraph(claims: H5iClaim[], summaries: H5iSummary[]): { nodes: GraphNode[]; edges: GraphEdge[] } {
   const nodes: GraphNode[] = [];
   const edges: GraphEdge[] = [];
@@ -40,8 +56,8 @@ function buildGraph(claims: H5iClaim[], summaries: H5iSummary[]): { nodes: Graph
       id,
       label: claim.text.slice(0, 60),
       status: claim.status,
-      x: 100 + Math.random() * 300,
-      y: 100 + Math.random() * 200,
+      x: seededX(id),
+      y: seededY(id),
     });
 
     claim.paths.forEach((path) => {
@@ -54,8 +70,8 @@ function buildGraph(claims: H5iClaim[], summaries: H5iSummary[]): { nodes: Graph
           label: path.split('/').pop() || path,
           sublabel: path,
           status: 'file',
-          x: 100 + Math.random() * 300,
-          y: 100 + Math.random() * 200,
+          x: seededX(fileId),
+          y: seededY(fileId),
         });
       }
       edges.push({ source: id, target: fileId });
@@ -70,8 +86,8 @@ function buildGraph(claims: H5iClaim[], summaries: H5iSummary[]): { nodes: Graph
       label: fileName,
       sublabel: summary.text.slice(0, 80),
       status: 'summary',
-      x: 100 + Math.random() * 300,
-      y: 100 + Math.random() * 200,
+      x: seededX(id),
+      y: seededY(id),
     });
 
     const fileId = fileNodeMap.get(summary.path);

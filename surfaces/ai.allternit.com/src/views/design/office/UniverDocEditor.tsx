@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface Props {
   projectName: string;
@@ -8,6 +8,7 @@ interface Props {
 export function UniverDocEditor({ projectName }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const univerRef = useRef<any>(null);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
 
   useEffect(() => {
     if (!containerRef.current || univerRef.current) return;
@@ -43,7 +44,6 @@ export function UniverDocEditor({ projectName }: Props) {
 
         univerRef.current = univerAPI;
 
-        // Seed with a starter document
         univerAPI.createUniverDoc({
           id: 'doc-1',
           body: {
@@ -58,8 +58,11 @@ export function UniverDocEditor({ projectName }: Props) {
             ],
           },
         });
+
+        if (!cancelled) setStatus('ready');
       } catch (err) {
         console.warn('[UniverDocEditor] init failed', err);
+        if (!cancelled) setStatus('error');
       }
     }
 
@@ -74,9 +77,21 @@ export function UniverDocEditor({ projectName }: Props) {
   }, []);
 
   return (
-    <div
-      ref={containerRef}
-      style={{ width: '100%', height: '100%', minHeight: 400 }}
-    />
+    <div style={{ width: '100%', height: '100%', minHeight: 400, position: 'relative' }}>
+      {status === 'loading' && (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 10, background: 'var(--bg-primary)', color: 'var(--text-tertiary)', fontSize: 13, fontWeight: 600 }}>
+          <div style={{ width: 24, height: 24, border: '2px solid var(--border-default)', borderTopColor: 'var(--accent-primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+          Loading document editor…
+        </div>
+      )}
+      {status === 'error' && (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8, background: 'var(--bg-primary)', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600 }}>
+          <span style={{ fontSize: 28 }}>📝</span>
+          <span>Document editor unavailable</span>
+          <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)' }}>Run <code style={{ background: 'var(--surface-hover)', padding: '2px 6px', borderRadius: 4 }}>pnpm install</code> to enable Univer</span>
+        </div>
+      )}
+      <div ref={containerRef} style={{ width: '100%', height: '100%', visibility: status === 'ready' ? 'visible' : 'hidden' }} />
+    </div>
   );
 }

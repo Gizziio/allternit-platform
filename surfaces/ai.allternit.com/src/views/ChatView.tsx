@@ -1097,6 +1097,8 @@ export function ChatView({
               topInfoBarContent={composerTopInfoBar}
               questionBarContent={composerQuestionBar}
               bottomInfoBarContent={composerBottomInfoBar}
+              onInteractionSignal={useMonolithLogo ? undefined : pulseMascot}
+              onAttentionChange={useMonolithLogo ? undefined : setLaunchMascotAttention}
             />
           </div>
           {/* Disclaimer */}

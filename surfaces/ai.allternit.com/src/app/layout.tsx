@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import "@/design/theme.css"
+import "@/styles/fonts.css"
 import "@/styles/typography.css"
 import "./globals.css"
 import { PlatformAuthProvider } from "@/lib/platform-auth-client"

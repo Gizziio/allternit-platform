@@ -1,89 +1,32 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db';
-import { getAuth } from '@/lib/server-auth';
-import crypto from 'crypto';
+import { NextRequest } from 'next/server';
+import { proxyGatewayRequest } from '@/lib/runtime-gateway-proxy';
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 interface Params {
   params: Promise<{ id: string }>;
 }
 
-export async function POST(request: NextRequest, { params }: Params) {
-  const { userId: authUserId } = await getAuth();
-  if (!authUserId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+export async function GET(request: NextRequest, { params }: Params): Promise<Response> {
   const { id } = await params;
-  const body = await request.json().catch(() => ({}));
-
-  const workspace = await prisma.workspace.findFirst({
-    where: {
-      id,
-      OR: [
-        { ownerId: authUserId },
-        { members: { some: { userId: authUserId, role: { in: ['owner', 'admin'] } } } },
-      ],
-    },
-  });
-
-  if (!workspace) {
-    return NextResponse.json({ error: 'Not found or insufficient permissions' }, { status: 404 });
-  }
-
-  const email = typeof body.email === 'string' ? body.email.trim() : '';
-  const role = typeof body.role === 'string' ? body.role : 'member';
-
-  if (!email) {
-    return NextResponse.json({ error: 'Email is required' }, { status: 400 });
-  }
-
-  const token = crypto.randomUUID();
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-
-  const invitation = await prisma.workspaceInvitation.create({
-    data: {
-      workspaceId: id,
-      email,
-      role,
-      token,
-      expiresAt,
-    },
-  });
-
-  return NextResponse.json({ invitation }, { status: 201 });
+  return proxyGatewayRequest(request, `/api/workspaces/${encodeURIComponent(id)}/invites`);
 }
 
-export async function DELETE(request: NextRequest, { params }: Params) {
-  const { userId: authUserId } = await getAuth();
-  if (!authUserId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+export async function POST(request: NextRequest, { params }: Params): Promise<Response> {
+  const { id } = await params;
+  return proxyGatewayRequest(request, `/api/workspaces/${encodeURIComponent(id)}/invites`);
+}
 
+export async function DELETE(request: NextRequest, { params }: Params): Promise<Response> {
   const { id } = await params;
   const { searchParams } = new URL(request.url);
   const inviteId = searchParams.get('id');
-
   if (!inviteId) {
-    return NextResponse.json({ error: 'Invitation id required' }, { status: 400 });
+    return new Response(
+      JSON.stringify({ error: 'Invitation id required' }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
   }
-
-  const workspace = await prisma.workspace.findFirst({
-    where: {
-      id,
-      OR: [
-        { ownerId: authUserId },
-        { members: { some: { userId: authUserId, role: { in: ['owner', 'admin'] } } } },
-      ],
-    },
-  });
-
-  if (!workspace) {
-    return NextResponse.json({ error: 'Not found or insufficient permissions' }, { status: 404 });
-  }
-
-  await prisma.workspaceInvitation.deleteMany({
-    where: { id: inviteId, workspaceId: id },
-  });
-
-  return NextResponse.json({ success: true });
+  return proxyGatewayRequest(request, `/api/workspaces/${encodeURIComponent(id)}/invites/${encodeURIComponent(inviteId)}`);
 }

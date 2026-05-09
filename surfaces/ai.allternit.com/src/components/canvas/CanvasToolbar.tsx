@@ -5,7 +5,6 @@ import {
   Minus,
   Plus,
   ArrowsOutSimple,
-  GridFour,
   ChatTeardropText,
   Browser,
   GitDiff,
@@ -14,10 +13,10 @@ import {
   NotePencil,
   Shield,
   BookBookmark,
+  Graph,
   GitCommit,
   Monitor,
   Plugs,
-  Graph,
   DownloadSimple,
   UploadSimple,
 } from '@phosphor-icons/react';
@@ -131,6 +130,9 @@ export function CanvasToolbar({
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
         boxShadow: 'var(--shadow-md)',
+        flexWrap: 'wrap',
+        justifyContent: 'center',
+        maxWidth: 'calc(100% - 32px)',
       }}
     >
       {/* Zoom controls */}
@@ -175,6 +177,10 @@ export function CanvasToolbar({
       <button onClick={() => void spawnTile('knowledge')} style={buttonStyle}>
         <BookBookmark size={14} />
         Knowledge
+      </button>
+      <button onClick={() => void spawnTile('knowledge-graph')} style={buttonStyle}>
+        <Graph size={14} />
+        Graph
       </button>
 
       <div style={{ width: 1, height: 20, background: 'var(--border-subtle)', margin: '0 4px' }} />

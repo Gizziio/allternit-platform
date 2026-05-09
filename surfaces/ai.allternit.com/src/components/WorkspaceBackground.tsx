@@ -105,44 +105,58 @@ export function WorkspaceBackground() {
         pointerEvents: 'none',
         overflow: 'hidden',
         transition: 'all 0.5s ease',
-        background: 'var(--shell-frame-bg)',
+        background: mode === 'code'
+          ? 'var(--view-code-bg)'
+          : mode === 'chat'
+          ? 'var(--view-chat-bg)'
+          : mode === 'browser'
+          ? 'var(--view-browser-bg)'
+          : 'var(--shell-frame-bg)',
       }}
     >
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: `
-            radial-gradient(120% 90% at 50% -10%, color-mix(in srgb, var(--surface-floating) 52%, transparent) 0%, transparent 58%),
-            linear-gradient(180deg, color-mix(in srgb, var(--surface-panel) 38%, transparent) 0%, transparent 32%, color-mix(in srgb, var(--surface-overlay) 24%, transparent) 100%)
-          `,
-        }}
-      />
+      {mode !== 'code' && mode !== 'chat' && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: `
+              radial-gradient(120% 90% at 50% -10%, color-mix(in srgb, var(--surface-floating) 52%, transparent) 0%, transparent 58%),
+              linear-gradient(180deg, color-mix(in srgb, var(--surface-panel) 38%, transparent) 0%, transparent 32%, color-mix(in srgb, var(--surface-overlay) 24%, transparent) 100%)
+            `,
+          }}
+        />
+      )}
 
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          opacity: 0.32,
-          backgroundImage: `
-            linear-gradient(to right, color-mix(in srgb, var(--ui-border-muted) 38%, transparent) 1px, transparent 1px),
-            linear-gradient(to bottom, color-mix(in srgb, var(--ui-border-muted) 32%, transparent) 1px, transparent 1px)
-          `,
-          backgroundSize: '24px 24px',
-          maskImage: 'linear-gradient(180deg, rgba(0,0,0,0.9), var(--surface-panel) 55%, transparent 100%)',
-        }}
-      />
+      {mode !== 'chat' && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            opacity: mode === 'code' ? 0.18 : 0.32,
+            backgroundImage: `
+              linear-gradient(to right, color-mix(in srgb, var(--ui-border-muted) 38%, transparent) 1px, transparent 1px),
+              linear-gradient(to bottom, color-mix(in srgb, var(--ui-border-muted) 32%, transparent) 1px, transparent 1px)
+            `,
+            backgroundSize: mode === 'code' ? '32px 32px' : '24px 24px',
+            maskImage: mode === 'code'
+              ? 'linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.3) 60%, transparent 100%)'
+              : 'linear-gradient(180deg, rgba(0,0,0,0.9), var(--surface-panel) 55%, transparent 100%)',
+          }}
+        />
+      )}
 
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          opacity: 0.08,
-          backgroundImage: 'radial-gradient(color-mix(in srgb, var(--ui-text-primary) 90%, transparent) 0.7px, transparent 0.7px)',
-          backgroundSize: '8px 8px',
-          mixBlendMode: 'multiply',
-        }}
-      />
+      {mode !== 'code' && mode !== 'chat' && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            opacity: 0.08,
+            backgroundImage: 'radial-gradient(color-mix(in srgb, var(--ui-text-primary) 90%, transparent) 0.7px, transparent 0.7px)',
+            backgroundSize: '8px 8px',
+            mixBlendMode: 'multiply',
+          }}
+        />
+      )}
 
       {mode === 'cowork' && (
         <>
@@ -175,73 +189,6 @@ export function WorkspaceBackground() {
                 radial-gradient(70% 60% at 50% 35%, color-mix(in srgb, var(--accent-cowork) 12%, transparent) 0%, transparent 75%),
                 linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--accent-cowork) 6%, transparent) 100%)
               `,
-            }}
-          />
-        </>
-      )}
-
-      {mode === 'code' && (
-        <>
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              backgroundImage: `
-                linear-gradient(to right, color-mix(in srgb, var(--accent-code) 18%, transparent) 1px, transparent 1px),
-                linear-gradient(to bottom, color-mix(in srgb, var(--accent-code) 14%, transparent) 1px, transparent 1px)
-              `,
-              backgroundSize: '72px 72px',
-              opacity: 0.55,
-            }}
-          />
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              backgroundImage: `
-                radial-gradient(circle, color-mix(in srgb, var(--accent-code) 34%, transparent) 1.2px, transparent 1.2px)
-              `,
-              backgroundSize: '72px 72px',
-              backgroundPosition: '36px 36px',
-              opacity: 0.42,
-            }}
-          />
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background: `
-                radial-gradient(80% 65% at 50% 22%, color-mix(in srgb, var(--accent-code) 12%, transparent) 0%, transparent 72%),
-                linear-gradient(180deg, color-mix(in srgb, var(--surface-floating) 12%, transparent) 0%, transparent 26%)
-              `,
-            }}
-          />
-        </>
-      )}
-
-      {mode === 'chat' && (
-        <>
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              background: `
-                radial-gradient(72% 62% at 50% 28%, color-mix(in srgb, var(--accent-chat) 12%, transparent) 0%, transparent 72%),
-                radial-gradient(42% 36% at 50% 18%, color-mix(in srgb, var(--accent-primary) 14%, transparent) 0%, transparent 70%)
-              `,
-            }}
-          />
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              opacity: 0.2,
-              backgroundImage: `
-                linear-gradient(to right, color-mix(in srgb, var(--accent-chat) 8%, transparent) 1px, transparent 1px),
-                linear-gradient(to bottom, color-mix(in srgb, var(--accent-chat) 6%, transparent) 1px, transparent 1px)
-              `,
-              backgroundSize: '48px 48px',
-              maskImage: 'radial-gradient(70% 60% at 50% 35%, rgba(0,0,0,0.92), transparent 82%)',
             }}
           />
         </>

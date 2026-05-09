@@ -1703,7 +1703,7 @@ export function BrowserCapsuleEnhanced({
         minWidth: 0,
         position: 'relative',
         overflow: 'hidden',
-        background: BACKGROUND.primary,
+        background: 'var(--view-browser-bg, #f6f8fc)',
         color: TEXT.primary,
         fontFamily: 'var(--font-sans)',
         userSelect: 'none',
@@ -2202,7 +2202,7 @@ export function BrowserCapsuleEnhanced({
           <PageAgentTakeoverOverlay active={showPageAgentTakeover} task={pageAgentGoal} />
         </div>
 
-        {/* ━━━ CHAT PANE (Kimi-style right sidecar) ━━━ */}
+        {/* ━━━ CHAT PANE (right sidecar) ━━━ */}
         {chatPaneOpen && (
           <>
             <div
@@ -2235,11 +2235,11 @@ export function BrowserCapsuleEnhanced({
               flexShrink: 0,
               borderLeft: `1px solid ${BORDER.subtle}`,
               overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              background: BACKGROUND.primary,
+              position: 'relative',
             }}>
-              <BrowserChatPane />
+              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
+                <BrowserChatPane />
+              </div>
             </div>
           </>
         )}

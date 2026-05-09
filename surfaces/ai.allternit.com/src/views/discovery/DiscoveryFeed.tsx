@@ -24,23 +24,23 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { openInBrowser } from '@/lib/openInBrowser';
 
+import { GlassCardInteractive } from '@/design/glass/GlassCard';
+import { GlassSurface, GlassSurfaceThin, GlassSurfaceBase, GlassSurfaceElevated } from '@/design/glass/GlassSurface';
+import { Fade } from '@/design/animation/Fade';
+import { Stagger } from '@/design/animation/Stagger';
+import { Text } from '@/components/typography/Text';
+
 const ROTATION_INTERVAL = 8000;
 
-// ─── Allternit Design Tokens (inline fallbacks) ─────────────────────────────
+// ─── Design Tokens ───────────────────────────────────────────────────────────
 const ACCENT = 'var(--accent-primary)';
 const ACCENT_SOFT = 'color-mix(in srgb, var(--accent-primary) 15%, transparent)';
 const ACCENT_GLOW = 'color-mix(in srgb, var(--accent-primary) 25%, transparent)';
-const BG_PRIMARY = 'var(--surface-canvas)';
-const BG_SECONDARY = 'var(--surface-panel)';
-const BG_TERTIARY = 'var(--surface-active)';
 const TEXT_PRIMARY = 'var(--ui-text-primary)';
 const TEXT_SECONDARY = 'var(--ui-text-secondary)';
 const TEXT_MUTED = 'var(--ui-text-muted)';
 const BORDER_SUBTLE = 'var(--ui-border-muted)';
 const BORDER_DEFAULT = 'var(--ui-border-default)';
-const BORDER_STRONG = 'var(--ui-border-strong)';
-const GLASS_BG = 'var(--surface-floating)';
-const GLASS_BORDER = 'var(--ui-border-default)';
 const STATUS_SUCCESS = 'var(--status-success)';
 const STATUS_WARNING = 'var(--status-warning)';
 const STATUS_ERROR = 'var(--status-error)';
@@ -56,42 +56,23 @@ function TypeIcon({ type, color }: { type: DiscoveryItem['type']; color: string 
 
 function LoadingState() {
   return (
-    <div style={{
-      height: 420,
-      borderRadius: 'var(--radius-lg, 16px)',
-      background: BG_SECONDARY,
-      border: `1px solid ${BORDER_SUBTLE}`,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 12,
-    }}>
-      <Loader2 size={24} color={ACCENT} style={{ animation: 'spin 1s linear infinite' }} />
-      <p style={{ fontSize: 14, color: TEXT_MUTED, margin: 0 }}>
-        Research pipeline connecting...
-      </p>
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
-    </div>
+    <GlassSurfaceBase
+      style={{ height: 420, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}
+    >
+      <Loader2 size={24} color={ACCENT} className="animate-spin" />
+      <Text variant="body" style={{ fontSize: 14, color: TEXT_MUTED }}>Research pipeline connecting...</Text>
+    </GlassSurfaceBase>
   );
 }
 
 function ErrorState({ message }: { message: string }) {
   return (
-    <div style={{
-      height: 420,
-      borderRadius: 'var(--radius-lg, 16px)',
-      background: BG_SECONDARY,
-      border: `1px solid ${BORDER_SUBTLE}`,
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-    }}>
-      <p style={{ fontSize: 14, color: STATUS_ERROR, margin: 0 }}>Research pipeline connecting...</p>
-      <p style={{ fontSize: 12, color: TEXT_MUTED, margin: 0 }}>{message}</p>
-    </div>
+    <GlassSurfaceBase
+      style={{ height: 420, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+    >
+      <Text variant="body" style={{ fontSize: 14, color: STATUS_ERROR }}>Research pipeline connecting...</Text>
+      <Text variant="caption" style={{ fontSize: 12, color: TEXT_MUTED }}>{message}</Text>
+    </GlassSurfaceBase>
   );
 }
 
@@ -142,40 +123,31 @@ function BriefingReader({ briefing, onClose }: { briefing: BriefingData; onClose
       background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
     }} onClick={onClose}>
-      <div style={{
-        background: GLASS_BG,
-        border: `1px solid ${GLASS_BORDER}`,
-        borderRadius: 'var(--radius-xl, 20px)',
-        maxWidth: 760, width: '100%', maxHeight: '85vh',
-        overflow: 'auto', padding: 32,
-        boxShadow: '0 16px 48px var(--shell-overlay-backdrop)',
-      }} onClick={e => e.stopPropagation()}>
+      <GlassSurfaceElevated
+        style={{ maxWidth: 760, width: '100%', maxHeight: '85vh', overflow: 'auto', padding: 32, borderRadius: 20 }}
+        onClick={e => e.stopPropagation()}
+      >
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-              <span style={{
-                fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
-                color: STATUS_SUCCESS, background: 'var(--status-success-bg)', padding: '4px 10px', borderRadius: 4,
-                border: '1px solid var(--status-success-bg)',
-              }}>Daily Brief</span>
+              <GlassSurfaceThin style={{ padding: '4px 10px', borderRadius: 4, background: 'var(--status-success-bg)', border: '1px solid var(--status-success-bg)' }}>
+                <Text variant="label" style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: STATUS_SUCCESS }}>Daily Brief</Text>
+              </GlassSurfaceThin>
               {briefing.issueNumber && (
-                <span style={{
-                  fontSize: 11, fontWeight: 600, letterSpacing: '0.03em',
-                  color: TEXT_MUTED, background: 'var(--surface-hover)', padding: '4px 10px', borderRadius: 4,
-                  border: `1px solid ${BORDER_SUBTLE}`,
-                }}>{briefing.issueNumber}</span>
+                <GlassSurfaceThin style={{ padding: '4px 10px', borderRadius: 4 }}>
+                  <Text variant="label" style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.03em', color: TEXT_MUTED }}>{briefing.issueNumber}</Text>
+                </GlassSurfaceThin>
               )}
             </div>
-            <h2 style={{ fontSize: 24, fontWeight: 700, margin: '12px 0 4px', color: TEXT_PRIMARY, letterSpacing: '-0.02em' }}>
+            <Text variant="heading" as="h2" style={{ fontSize: 24, fontWeight: 700, margin: '12px 0 4px', color: TEXT_PRIMARY, letterSpacing: '-0.02em' }}>
               {briefing.title}
-            </h2>
-            <p style={{ fontSize: 13, color: ACCENT, margin: 0, fontWeight: 500 }}>{briefing.subtitle}</p>
+            </Text>
+            <Text variant="subheading" style={{ fontSize: 13, color: ACCENT, margin: 0, fontWeight: 500 }}>{briefing.subtitle}</Text>
           </div>
           <button onClick={onClose} style={{
             background: 'transparent', border: 'none', color: TEXT_MUTED,
-            cursor: 'pointer', padding: 4,
-            transition: 'color 150ms ease',
+            cursor: 'pointer', padding: 4, transition: 'color 150ms ease',
           }} onMouseEnter={e => (e.currentTarget.style.color = TEXT_SECONDARY)}
             onMouseLeave={e => (e.currentTarget.style.color = TEXT_MUTED)}>
             <X size={20} />
@@ -183,25 +155,17 @@ function BriefingReader({ briefing, onClose }: { briefing: BriefingData; onClose
         </div>
 
         {/* Abstract */}
-        <p style={{
-          fontSize: 14, lineHeight: 1.6, color: TEXT_SECONDARY, marginBottom: 12,
-          padding: '12px 16px', background: 'color-mix(in srgb, var(--accent-primary) 5%, transparent)', borderRadius: 8,
-          borderLeft: `3px solid ${ACCENT}`,
-        }}>
-          {briefing.abstract}
-        </p>
+        <GlassSurfaceThin style={{ padding: '12px 16px', marginBottom: 12, background: 'color-mix(in srgb, var(--accent-primary) 5%, transparent)', borderLeft: `3px solid ${ACCENT}`, borderRadius: 8 }}>
+          <Text variant="body" style={{ fontSize: 14, lineHeight: 1.6, color: TEXT_SECONDARY }}>{briefing.abstract}</Text>
+        </GlassSurfaceThin>
 
         {/* Tags */}
         {briefing.tags && briefing.tags.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 20 }}>
             {briefing.tags.map(tag => (
-              <span key={tag} style={{
-                fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em',
-                color: ACCENT, background: 'color-mix(in srgb, var(--accent-primary) 6%, transparent)', padding: '3px 10px', borderRadius: 4,
-                border: `1px solid color-mix(in srgb, var(--accent-primary) 12%, transparent)`,
-              }}>
-                {tag}
-              </span>
+              <GlassSurfaceThin key={tag} style={{ padding: '3px 10px', borderRadius: 4, background: 'color-mix(in srgb, var(--accent-primary) 6%, transparent)', border: `1px solid color-mix(in srgb, var(--accent-primary) 12%, transparent)` }}>
+                <Text variant="label" style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em', color: ACCENT }}>{tag}</Text>
+              </GlassSurfaceThin>
             ))}
           </div>
         )}
@@ -212,17 +176,17 @@ function BriefingReader({ briefing, onClose }: { briefing: BriefingData; onClose
             remarkPlugins={[remarkGfm]}
             components={{
               h2: ({ children }) => (
-                <h2 style={{
+                <Text variant="heading" as="h2" style={{
                   fontSize: 18, fontWeight: 600, margin: '28px 0 12px',
                   color: ACCENT, letterSpacing: '-0.01em',
                   borderBottom: `1px solid ${BORDER_SUBTLE}`, paddingBottom: 8,
-                }}>{children}</h2>
+                }}>{children}</Text>
               ),
               h3: ({ children }) => (
-                <h3 style={{ fontSize: 15, fontWeight: 600, margin: '20px 0 8px', color: 'rgba(212,176,140,0.8)' }}>{children}</h3>
+                <Text variant="subheading" as="h3" style={{ fontSize: 15, fontWeight: 600, margin: '20px 0 8px', color: 'rgba(212,176,140,0.8)' }}>{children}</Text>
               ),
               p: ({ children }) => (
-                <p style={{ fontSize: 14, lineHeight: 1.7, color: TEXT_PRIMARY, margin: '8px 0' }}>{children}</p>
+                <Text variant="body" as="p" style={{ fontSize: 14, lineHeight: 1.7, color: TEXT_PRIMARY, margin: '8px 0' }}>{children}</Text>
               ),
               a: ({ href, children }) => (
                 <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: ACCENT, textDecoration: 'none', fontWeight: 500 }}>{children}</a>
@@ -258,12 +222,9 @@ function BriefingReader({ briefing, onClose }: { briefing: BriefingData; onClose
         {/* Source Provenance */}
         {briefing.content.sources && briefing.content.sources.length > 0 && (
           <div style={{ marginTop: 24, paddingTop: 16, borderTop: `1px solid ${BORDER_SUBTLE}` }}>
-            <p style={{
-              fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
-              color: TEXT_MUTED, margin: '0 0 10px',
-            }}>
+            <Text variant="label" style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: TEXT_MUTED, margin: '0 0 10px', display: 'block' }}>
               Sources
-            </p>
+            </Text>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {briefing.content.sources.slice(0, 8).map((src, idx) => (
                 <a
@@ -271,35 +232,28 @@ function BriefingReader({ briefing, onClose }: { briefing: BriefingData; onClose
                   href={src.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    fontSize: 12, color: TEXT_SECONDARY,
-                    textDecoration: 'none', padding: '6px 10px', borderRadius: 6,
-                    background: 'var(--surface-hover)',
-                    border: `1px solid transparent`,
-                    transition: 'all 150ms ease',
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = 'var(--ui-border-muted)';
-                    e.currentTarget.style.borderColor = BORDER_SUBTLE;
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = 'var(--surface-hover)';
-                    e.currentTarget.style.borderColor = 'transparent';
-                  }}
+                  style={{ textDecoration: 'none' }}
                 >
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80%' }}>
-                    <span style={{
-                      color: ACCENT, fontWeight: 600, textTransform: 'uppercase', fontSize: 10, marginRight: 8,
-                    }}>
-                      {src.source}
+                  <GlassSurfaceThin
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      fontSize: 12, color: TEXT_SECONDARY,
+                      padding: '6px 10px', borderRadius: 6,
+                      cursor: 'pointer',
+                    }}
+                    hover="glow"
+                  >
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80%' }}>
+                      <Text variant="label" style={{ color: ACCENT, fontWeight: 600, textTransform: 'uppercase', fontSize: 10, marginRight: 8 }}>
+                        {src.source}
+                      </Text>
+                      {src.title}
                     </span>
-                    {src.title}
-                  </span>
-                  <span style={{ color: TEXT_MUTED, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
-                    {src.engagement?.stars ? `★ ${src.engagement.stars}` : ''}
-                    {src.engagement?.score ? `▲ ${src.engagement.score}` : ''}
-                  </span>
+                    <span style={{ color: TEXT_MUTED, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
+                      {src.engagement?.stars ? `★ ${src.engagement.stars}` : ''}
+                      {src.engagement?.score ? `▲ ${src.engagement.score}` : ''}
+                    </span>
+                  </GlassSurfaceThin>
                 </a>
               ))}
             </div>
@@ -315,7 +269,7 @@ function BriefingReader({ briefing, onClose }: { briefing: BriefingData; onClose
           <span>{briefing.reading_time} min read</span>
           <span>{briefing.created_at ? briefing.created_at.slice(0, 10) : ''}</span>
         </div>
-      </div>
+      </GlassSurfaceElevated>
     </div>
   );
 }
@@ -451,11 +405,7 @@ export function DiscoveryFeed() {
       style={{ display: 'flex', flexDirection: 'column', gap: 24, padding: '0 0 32px' }}
     >
       {/* ── Tabs ──────────────────────────────────────────────────────── */}
-      <div style={{
-        display: 'flex', gap: 4, padding: '4px',
-        background: BG_SECONDARY, borderRadius: 10,
-        border: `1px solid ${BORDER_SUBTLE}`, width: 'fit-content',
-      }}>
+      <GlassSurfaceThin style={{ display: 'inline-flex', gap: 4, padding: 4, borderRadius: 10, width: 'fit-content' }}>
         {[
           { key: 'curated' as const, label: 'Curated', icon: BookOpen },
           { key: 'live' as const, label: 'Live', icon: Zap },
@@ -480,7 +430,7 @@ export function DiscoveryFeed() {
             </button>
           );
         })}
-      </div>
+      </GlassSurfaceThin>
 
       {activeTab === 'live' ? (
         <LiveFeed />
@@ -492,15 +442,12 @@ export function DiscoveryFeed() {
           ) : error ? (
             <ErrorState message={error} />
           ) : currentItem ? (
-            <div style={{
-              position: 'relative',
-              width: '100%',
-              height: 420,
-              borderRadius: 'var(--radius-lg, 16px)',
-              overflow: 'hidden',
-              background: BG_SECONDARY,
-              border: `1px solid ${BORDER_SUBTLE}`,
-            }}>
+            <GlassSurface
+              elevation="floating"
+              blur="lg"
+              border="subtle"
+              style={{ position: 'relative', width: '100%', height: 420, borderRadius: 16, overflow: 'hidden' }}
+            >
               {/* Background */}
               {currentItem.imageUrl ? (
                 <div style={{
@@ -525,41 +472,27 @@ export function DiscoveryFeed() {
                 maxWidth: 720,
               }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 16 }}>
-                  <span style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    color: currentItem.badgeColor,
-                    background: `${currentItem.badgeColor}15`,
-                    padding: '4px 10px',
-                    borderRadius: 4,
-                  }}>
-                    {currentItem.badge}
-                  </span>
-                  <span style={{ fontSize: 12, color: TEXT_MUTED }}>
-                    {currentItem.date}
-                  </span>
-                  <span style={{ fontSize: 12, color: TEXT_MUTED, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <GlassSurfaceThin style={{ padding: '4px 10px', borderRadius: 4, background: `${currentItem.badgeColor}15` }}>
+                    <Text variant="label" style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: currentItem.badgeColor }}>
+                      {currentItem.badge}
+                    </Text>
+                  </GlassSurfaceThin>
+                  <Text variant="caption" style={{ fontSize: 12, color: TEXT_MUTED }}>{currentItem.date}</Text>
+                  <Text variant="caption" style={{ fontSize: 12, color: TEXT_MUTED, display: 'flex', alignItems: 'center', gap: 4 }}>
                     <Clock size={12} />
                     {currentItem.readTime}
-                  </span>
+                  </Text>
                 </div>
 
-                <h2 style={{
-                  fontSize: 32, fontWeight: 700, lineHeight: 1.15, margin: '0 0 8px',
-                  color: 'var(--ui-text-primary)', letterSpacing: '-0.02em',
-                }}>
+                <Text variant="heading" as="h2" style={{ fontSize: 32, fontWeight: 700, lineHeight: 1.15, margin: '0 0 8px', color: TEXT_PRIMARY, letterSpacing: '-0.02em' }}>
                   {currentItem.title}
-                </h2>
-                <p style={{ fontSize: 15, fontWeight: 500, color: ACCENT, margin: '0 0 12px' }}>
+                </Text>
+                <Text variant="subheading" style={{ fontSize: 15, fontWeight: 500, color: ACCENT, margin: '0 0 12px' }}>
                   {currentItem.subtitle}
-                </p>
-                <p style={{
-                  fontSize: 14, lineHeight: 1.6, color: TEXT_SECONDARY, margin: '0 0 24px', maxWidth: 520,
-                }}>
+                </Text>
+                <Text variant="body" style={{ fontSize: 14, lineHeight: 1.6, color: TEXT_SECONDARY, margin: '0 0 24px', maxWidth: 520 }}>
                   {currentItem.excerpt}
-                </p>
+                </Text>
 
                 <div style={{ display: 'flex', gap: 12 }}>
                   <button
@@ -571,8 +504,8 @@ export function DiscoveryFeed() {
                       padding: '10px 20px',
                       background: ACCENT,
                       border: 'none',
-                      borderRadius: 'var(--radius-md, 12px)',
-                      color: BG_PRIMARY,
+                      borderRadius: 12,
+                      color: 'var(--surface-canvas)',
                       fontWeight: 600,
                       fontSize: 14,
                       cursor: 'pointer',
@@ -595,48 +528,30 @@ export function DiscoveryFeed() {
               </div>
 
               {/* Navigation Arrows */}
-              <button
+              <GlassSurfaceThin
                 onClick={goPrev}
                 style={{
                   position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)',
                   width: 40, height: 40, borderRadius: '50%',
-                  background: 'rgba(0,0,0,0.4)', border: `1px solid ${BORDER_SUBTLE}`,
-                  color: 'var(--ui-text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', zIndex: 3, backdropFilter: 'blur(8px)',
-                  transition: 'all 200ms ease',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  zIndex: 3, cursor: 'pointer', background: 'rgba(0,0,0,0.4)',
                 }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.background = 'var(--shell-overlay-backdrop)';
-                  e.currentTarget.style.borderColor = BORDER_DEFAULT;
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.background = 'rgba(0,0,0,0.4)';
-                  e.currentTarget.style.borderColor = BORDER_SUBTLE;
-                }}
+                hover="glow"
               >
-                <ChevronLeft size={20} />
-              </button>
-              <button
+                <ChevronLeft size={20} color={TEXT_PRIMARY} />
+              </GlassSurfaceThin>
+              <GlassSurfaceThin
                 onClick={goNext}
                 style={{
                   position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)',
                   width: 40, height: 40, borderRadius: '50%',
-                  background: 'rgba(0,0,0,0.4)', border: `1px solid ${BORDER_SUBTLE}`,
-                  color: 'var(--ui-text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center',
-                  justifyContent: 'center', zIndex: 3, backdropFilter: 'blur(8px)',
-                  transition: 'all 200ms ease',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  zIndex: 3, cursor: 'pointer', background: 'rgba(0,0,0,0.4)',
                 }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.background = 'var(--shell-overlay-backdrop)';
-                  e.currentTarget.style.borderColor = BORDER_DEFAULT;
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.background = 'rgba(0,0,0,0.4)';
-                  e.currentTarget.style.borderColor = BORDER_SUBTLE;
-                }}
+                hover="glow"
               >
-                <ChevronRight size={20} />
-              </button>
+                <ChevronRight size={20} color={TEXT_PRIMARY} />
+              </GlassSurfaceThin>
 
               {/* Progress + Dots */}
               <div style={{
@@ -664,127 +579,94 @@ export function DiscoveryFeed() {
                     />
                   ))}
                 </div>
-                <span style={{
-                  fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.5)',
-                  fontVariantNumeric: 'tabular-nums', minWidth: 40, textAlign: 'right',
-                }}>
+                <Text variant="caption" style={{ fontSize: 12, fontWeight: 500, color: 'rgba(255,255,255,0.5)', fontVariantNumeric: 'tabular-nums', minWidth: 40, textAlign: 'right' }}>
                   {currentIndex + 1} / {itemCount}
-                </span>
+                </Text>
               </div>
-            </div>
+            </GlassSurface>
           ) : null}
 
           {/* ── Latest from the Pipeline ───────────────────────────────────── */}
           {allItems.length > 0 && (
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                <h3 style={{
-                  fontSize: 16, fontWeight: 600, margin: 0,
-                  color: TEXT_PRIMARY, display: 'flex', alignItems: 'center', gap: 8,
-                }}>
-                  <Newspaper size={18} color={ACCENT} />
-                  Latest from the Pipeline
-                </h3>
-                <span style={{ fontSize: 12, color: TEXT_MUTED }}>
-                  Updated {new Date().toLocaleDateString()}
-                </span>
+            <Fade in direction="up" distance={20}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <Text variant="subheading" as="h3" style={{ fontSize: 16, fontWeight: 600, margin: 0, color: TEXT_PRIMARY, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <Newspaper size={18} color={ACCENT} />
+                    Latest from the Pipeline
+                  </Text>
+                  <Text variant="caption" style={{ fontSize: 12, color: TEXT_MUTED }}>
+                    Updated {new Date().toLocaleDateString()}
+                  </Text>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+                  <Stagger staggerDelay={0.06} direction="up" distance={16}>
+                    {allItems.map(item => {
+                      const heroIdx = heroItems.findIndex(h => h.id === item.id);
+                      const isActive = heroIdx === currentIndex && heroIdx !== -1;
+                      return (
+                        <GlassCardInteractive
+                          key={item.id}
+                          hover="lift"
+                          elevation="raised"
+                          border={isActive ? 'glow' : 'subtle'}
+                          blur="md"
+                          onClick={() => heroIdx !== -1 ? goTo(heroIdx) : handleCta(item)}
+                          style={{ padding: 20, cursor: 'pointer', opacity: isActive ? 1 : 0.85, transition: 'opacity 200ms ease' }}
+                          onMouseEnter={e => { e.currentTarget.style.opacity = '1'; }}
+                          onMouseLeave={e => { e.currentTarget.style.opacity = isActive ? '1' : '0.85'; }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                            <Text variant="label" style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: item.badgeColor }}>
+                              {item.badge}
+                            </Text>
+                            <TypeIcon type={item.type} color={item.badgeColor} />
+                          </div>
+
+                          <Text variant="subheading" as="h4" style={{ fontSize: 14, fontWeight: 600, margin: '0 0 6px', color: TEXT_PRIMARY, lineHeight: 1.4 }}>
+                            {item.title}
+                          </Text>
+
+                          <Text variant="body" style={{ fontSize: 12, lineHeight: 1.5, color: TEXT_MUTED, margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                            {item.excerpt}
+                          </Text>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, fontSize: 11, color: TEXT_MUTED }}>
+                            <Text variant="caption">{item.date}</Text>
+                            <span style={{ color: BORDER_DEFAULT }}>•</span>
+                            <Text variant="caption">{item.readTime}</Text>
+                          </div>
+                        </GlassCardInteractive>
+                      );
+                    })}
+                  </Stagger>
+                </div>
               </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
-                {allItems.map(item => {
-                  const heroIdx = heroItems.findIndex(h => h.id === item.id);
-                  const isActive = heroIdx === currentIndex && heroIdx !== -1;
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => heroIdx !== -1 ? goTo(heroIdx) : handleCta(item)}
-                      style={{
-                        background: BG_SECONDARY,
-                        border: `1px solid ${isActive ? ACCENT : BORDER_SUBTLE}`,
-                        borderRadius: 'var(--radius-lg, 16px)', padding: 20, cursor: 'pointer',
-                        transition: 'all 200ms cubic-bezier(0.4, 0, 0.2, 1)',
-                        opacity: isActive ? 1 : 0.7,
-                      }}
-                      onMouseEnter={e => {
-                        e.currentTarget.style.opacity = '1';
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.4)';
-                        e.currentTarget.style.borderColor = BORDER_DEFAULT;
-                      }}
-                      onMouseLeave={e => {
-                        e.currentTarget.style.opacity = isActive ? '1' : '0.7';
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = 'none';
-                        e.currentTarget.style.borderColor = isActive ? ACCENT : BORDER_SUBTLE;
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                        <span style={{
-                          fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
-                          color: item.badgeColor,
-                        }}>
-                          {item.badge}
-                        </span>
-                        <TypeIcon type={item.type} color={item.badgeColor} />
-                      </div>
-
-                      <h4 style={{
-                        fontSize: 14, fontWeight: 600, margin: '0 0 6px',
-                        color: TEXT_PRIMARY, lineHeight: 1.4,
-                      }}>
-                        {item.title}
-                      </h4>
-
-                      <p style={{
-                        fontSize: 12, lineHeight: 1.5, color: TEXT_MUTED, margin: 0,
-                        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
-                      }}>
-                        {item.excerpt}
-                      </p>
-
-                      <div style={{
-                        display: 'flex', alignItems: 'center', gap: 8, marginTop: 12,
-                        fontSize: 11, color: TEXT_MUTED,
-                      }}>
-                        <span>{item.date}</span>
-                        <span style={{ color: BORDER_DEFAULT }}>•</span>
-                        <span>{item.readTime}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+            </Fade>
           )}
 
           {/* ── Pipeline Stats ─────────────────────────────────────────────── */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
-            {pipelineStats.map(cat => (
-              <div key={cat.label} style={{
-                background: BG_SECONDARY,
-                border: `1px solid ${BORDER_SUBTLE}`,
-                borderRadius: 'var(--radius-lg, 16px)', padding: 24,
-                transition: 'all 200ms ease',
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.borderColor = BORDER_DEFAULT;
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.35)';
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.borderColor = BORDER_SUBTLE;
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = 'none';
-              }}
-              >
-                <div style={{ width: 8, height: 8, borderRadius: '50%', background: cat.color, marginBottom: 12 }} />
-                <h4 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px', color: TEXT_PRIMARY }}>
-                  {cat.count}
-                </h4>
-                <p style={{ fontSize: 13, fontWeight: 600, margin: '0 0 6px', color: cat.color }}>{cat.label}</p>
-                <p style={{ fontSize: 12, color: TEXT_MUTED, margin: 0 }}>{cat.desc}</p>
-              </div>
-            ))}
+            <Stagger staggerDelay={0.08} direction="up" distance={12}>
+              {pipelineStats.map(cat => (
+                <GlassCardInteractive
+                  key={cat.label}
+                  hover="lift"
+                  elevation="raised"
+                  border="subtle"
+                  blur="md"
+                  style={{ padding: 24 }}
+                >
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: cat.color, marginBottom: 12 }} />
+                  <Text variant="heading" style={{ fontSize: 18, fontWeight: 700, margin: '0 0 4px', color: TEXT_PRIMARY }}>
+                    {cat.count}
+                  </Text>
+                  <Text variant="label" style={{ fontSize: 13, fontWeight: 600, margin: '0 0 6px', color: cat.color }}>{cat.label}</Text>
+                  <Text variant="caption" style={{ fontSize: 12, color: TEXT_MUTED, margin: 0 }}>{cat.desc}</Text>
+                </GlassCardInteractive>
+              ))}
+            </Stagger>
           </div>
 
         </>

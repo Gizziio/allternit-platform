@@ -4,11 +4,13 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { CaretLeft, CaretRight } from '@phosphor-icons/react';
 import { CodeCanvas } from './CodeCanvas';
 import { CodePreviewPane } from './CodePreviewPane';
+import { CodeUsageDashboard } from './CodeUsageDashboard';
 import { useSurfaceAgentModeEnabled } from '@/lib/agents/surface-agent-context';
 import { AgentModeBackdrop } from '../chat/agentModeSurfaceTheme';
 import { ChatIdProvider } from '@/providers/chat-id-provider';
 import { DataStreamProvider } from '@/providers/data-stream-provider';
 import { MessageTreeProvider } from '@/providers/message-tree-provider';
+import { useCodeModeStore, getActiveWorkspace } from './CodeModeStore';
 import type { CodeWorkspaceRecord } from './CodeModeStore';
 
 const BASE_ROOT_INSET = 12;
@@ -21,11 +23,14 @@ interface CodeThreadViewProps {
 }
 
 export function CodeThreadView({ workspace }: CodeThreadViewProps) {
-  const [isPreviewCollapsed, setIsPreviewCollapsed] = useState(false);
+  const [isPreviewCollapsed, setIsPreviewCollapsed] = useState(true);
   const [previewWidth, setPreviewWidth] = useState(PREVIEW_DEFAULT_WIDTH);
+  const [showDashboard, setShowDashboard] = useState(true);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{ startX: number; startW: number } | null>(null);
   const codeAgentModeEnabled = useSurfaceAgentModeEnabled('code');
+  const activeSessionId = useCodeModeStore((s) => s.activeSessionId);
+  const hasSession = Boolean(activeSessionId);
 
   const togglePreview = useCallback(() => {
     setIsPreviewCollapsed((prev) => !prev);
@@ -69,7 +74,7 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
         isolation: 'isolate',
         display: 'flex',
         flexDirection: 'column',
-        background: 'transparent',
+        background: '#ffffff',
       }}
     >
       <AgentModeBackdrop
@@ -78,45 +83,47 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
         dataTestId="agent-mode-code-backdrop"
       />
 
-      {/* Preview toggle button */}
-      <div
-        style={{
-          position: 'absolute',
-          top: 3,
-          right: 18,
-          zIndex: 4,
-          pointerEvents: 'none',
-        }}
-      >
-        <button
-          data-testid="code-preview-toggle"
-          onClick={togglePreview}
+      {/* Preview toggle button — only shown during an active session */}
+      {hasSession && (
+        <div
           style={{
-            pointerEvents: 'auto',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 5,
-            height: 34,
-            padding: '0 10px',
-            borderRadius: 12,
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            background: 'rgba(11, 14, 16, 0.54)',
-            color: 'var(--text-secondary)',
-            fontSize: 10,
-            fontWeight: 700,
-            cursor: 'pointer',
-            backdropFilter: 'blur(14px)',
-            WebkitBackdropFilter: 'blur(14px)',
+            position: 'absolute',
+            top: 3,
+            right: 18,
+            zIndex: 4,
+            pointerEvents: 'none',
           }}
         >
-          {isPreviewCollapsed ? <CaretLeft size={12} /> : <CaretRight size={12} />}
-          {isPreviewCollapsed ? 'Show Preview' : 'Hide Preview'}
-        </button>
-      </div>
+          <button
+            data-testid="code-preview-toggle"
+            onClick={togglePreview}
+            style={{
+              pointerEvents: 'auto',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              height: 34,
+              padding: '0 10px',
+              borderRadius: 12,
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              background: 'rgba(11, 14, 16, 0.54)',
+              color: 'var(--text-secondary)',
+              fontSize: 10,
+              fontWeight: 700,
+              cursor: 'pointer',
+              backdropFilter: 'blur(14px)',
+              WebkitBackdropFilter: 'blur(14px)',
+            }}
+          >
+            {isPreviewCollapsed ? <CaretLeft size={12} /> : <CaretRight size={12} />}
+            {isPreviewCollapsed ? 'Show Preview' : 'Hide Preview'}
+          </button>
+        </div>
+      )}
 
-      {/* Main layout: canvas fills space, preview pane on right */}
-      <div style={{ display: 'flex', flex: 1, minHeight: 0, gap: 0, overflow: 'hidden' }}>
-        {/* Canvas */}
+      {/* Main layout: canvas fills all space */}
+      <div style={{ display: 'flex', flex: 1, minHeight: 0, gap: 0, overflow: 'hidden', position: 'relative' }}>
+        {/* Canvas — always full width */}
         <div
           data-testid="code-pane-canvas"
           style={{
@@ -140,8 +147,27 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
           </ChatIdProvider>
         </div>
 
-        {/* Resize handle + Preview pane */}
-        {!isPreviewCollapsed && (
+        {/* Heatmap dashboard — floating centered overlay on landing (no session) */}
+        {!hasSession && showDashboard && (
+          <div style={{
+            position: 'absolute',
+            top: 12,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '100%',
+            maxWidth: 540,
+            padding: '0 12px',
+            boxSizing: 'border-box',
+            zIndex: 10,
+            pointerEvents: 'auto',
+            borderRadius: 14,
+          }}>
+            <CodeUsageDashboard onClose={() => setShowDashboard(false)} />
+          </div>
+        )}
+
+        {/* Resize handle + Preview pane — session only */}
+        {hasSession && !isPreviewCollapsed && (
           <>
             <div
               onMouseDown={onResizeStart}

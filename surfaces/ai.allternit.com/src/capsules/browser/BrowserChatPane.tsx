@@ -32,6 +32,7 @@ export function BrowserChatPane() {
       <ExtensionSidepanelShell
         adapter={adapter}
         copy={PLATFORM_SIDEPANEL_COPY}
+        containerClassName="h-full"
         testId="browser-extension-sidepanel-shell"
         renderConfigView={({ onBack }) => (
           <BrowserExtensionConfigPanel

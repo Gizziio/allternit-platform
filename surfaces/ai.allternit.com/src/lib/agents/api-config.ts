@@ -55,7 +55,10 @@ function resolveGatewayBaseUrl(): string {
 
 function resolveApiBaseUrl(): string {
   const win = typeof window !== 'undefined' ? (window as any) : {};
-  const explicitApiUrl = win.___ALLTERNIT_API_URL || (import.meta as any).env?.VITE_ALLTERNIT_API_URL;
+  const explicitApiUrl =
+    win.___ALLTERNIT_API_URL ||
+    win.__ALLTERNIT_API_URL ||
+    (import.meta as any).env?.VITE_ALLTERNIT_API_URL;
 
   if (explicitApiUrl) {
     return ensureApiV1Suffix(String(explicitApiUrl));

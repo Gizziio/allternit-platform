@@ -44,7 +44,47 @@ function getHeroPriority(item: DiscoveryItem): number {
 }
 
 async function loadPublications(): Promise<Publication[]> {
-  // Try API route first (works in dev / standalone server mode)
+  // Try new articles API first (DB-backed)
+  try {
+    const articlesRes = await fetch('/api/v1/articles?status=published');
+    if (articlesRes.ok) {
+      const raw = await articlesRes.json();
+      if (Array.isArray(raw) && raw.length > 0) {
+        // Map DB article shape to Publication shape
+        return raw.map((a: any) => ({
+          id: a.id,
+          slug: a.slug,
+          type: a.type,
+          contentType: a.contentType,
+          status: a.status,
+          title: a.title,
+          subtitle: a.subtitle,
+          abstract: a.abstract,
+          authors: JSON.parse(a.authors ?? '[]'),
+          teams: JSON.parse(a.teams ?? '[]'),
+          tags: JSON.parse(a.tags ?? '[]'),
+          keywords: JSON.parse(a.keywords ?? '[]'),
+          createdAt: a.createdAt,
+          updatedAt: a.updatedAt,
+          publishedAt: a.publishedAt,
+          content: {
+            markdown: a.contentMarkdown,
+            html: a.contentHtml,
+          },
+          readingTime: a.readingTime,
+          featured: a.featured,
+          series: a.series,
+          issueNumber: a.issueNumber,
+          license: a.license,
+          accessLevel: a.accessLevel,
+        }));
+      }
+    }
+  } catch {
+    // Articles API unavailable — fall through
+  }
+
+  // Fallback 1: legacy discovery feed API
   try {
     const apiRes = await fetch('/api/v1/discovery/feed');
     if (apiRes.ok) {

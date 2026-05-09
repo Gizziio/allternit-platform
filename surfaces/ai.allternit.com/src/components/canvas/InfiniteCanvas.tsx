@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useCallback, useState } from 'react';
+import React, { useRef, useCallback, useState, useEffect } from 'react';
 import type { CodeCanvasViewport } from '@/views/code/CodeModeStore';
 import { CanvasGrid } from './CanvasGrid';
 
@@ -13,6 +13,8 @@ interface InfiniteCanvasProps {
 const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 3.0;
 const ZOOM_STEP = 0.1;
+const INERTIA_DECAY = 0.92;
+const INERTIA_THRESHOLD = 0.5;
 
 export function InfiniteCanvas({ viewport, onViewportChange, children }: InfiniteCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -26,6 +28,11 @@ export function InfiniteCanvas({ viewport, onViewportChange, children }: Infinit
   const touchStartZoom = useRef(1);
   const touchCenter = useRef({ x: 0, y: 0 });
 
+  // Momentum / inertia
+  const velocity = useRef({ x: 0, y: 0 });
+  const lastPos = useRef({ x: 0, y: 0, t: 0 });
+  const rafId = useRef<number>(0);
+
   const clampZoom = (z: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
 
   const updateViewport = useCallback(
@@ -35,6 +42,36 @@ export function InfiniteCanvas({ viewport, onViewportChange, children }: Infinit
     [onViewportChange, viewport],
   );
 
+  const stopInertia = useCallback(() => {
+    if (rafId.current) {
+      cancelAnimationFrame(rafId.current);
+      rafId.current = 0;
+    }
+    velocity.current = { x: 0, y: 0 };
+  }, []);
+
+  const startInertia = useCallback(() => {
+    if (rafId.current) cancelAnimationFrame(rafId.current);
+    const step = () => {
+      velocity.current.x *= INERTIA_DECAY;
+      velocity.current.y *= INERTIA_DECAY;
+      if (
+        Math.abs(velocity.current.x) < INERTIA_THRESHOLD &&
+        Math.abs(velocity.current.y) < INERTIA_THRESHOLD
+      ) {
+        rafId.current = 0;
+        return;
+      }
+      onViewportChange({
+        ...viewport,
+        x: viewport.x + velocity.current.x,
+        y: viewport.y + velocity.current.y,
+      });
+      rafId.current = requestAnimationFrame(step);
+    };
+    rafId.current = requestAnimationFrame(step);
+  }, [onViewportChange, viewport]);
+
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
       // Only pan on middle mouse or when not clicking a tile
@@ -42,13 +79,16 @@ export function InfiniteCanvas({ viewport, onViewportChange, children }: Infinit
         return;
       }
       e.preventDefault();
+      stopInertia();
       isPanning.current = true;
       panStart.current = { x: e.clientX, y: e.clientY };
       viewportStart.current = { x: viewport.x, y: viewport.y };
+      lastPos.current = { x: e.clientX, y: e.clientY, t: performance.now() };
+      velocity.current = { x: 0, y: 0 };
       setCursor('grabbing');
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     },
-    [viewport.x, viewport.y],
+    [viewport.x, viewport.y, stopInertia],
   );
 
   const handlePointerMove = useCallback(
@@ -61,6 +101,15 @@ export function InfiniteCanvas({ viewport, onViewportChange, children }: Infinit
         x: viewportStart.current.x + dx,
         y: viewportStart.current.y + dy,
       });
+      const now = performance.now();
+      const dt = now - lastPos.current.t;
+      if (dt > 0) {
+        velocity.current = {
+          x: (e.clientX - lastPos.current.x) / dt * 16,
+          y: (e.clientY - lastPos.current.y) / dt * 16,
+        };
+      }
+      lastPos.current = { x: e.clientX, y: e.clientY, t: now };
     },
     [onViewportChange, viewport],
   );
@@ -68,7 +117,11 @@ export function InfiniteCanvas({ viewport, onViewportChange, children }: Infinit
   const handlePointerUp = useCallback(() => {
     isPanning.current = false;
     setCursor('grab');
-  }, []);
+    const speed = Math.hypot(velocity.current.x, velocity.current.y);
+    if (speed > INERTIA_THRESHOLD) {
+      startInertia();
+    }
+  }, [startInertia]);
 
   const handleWheel = useCallback(
     (e: React.WheelEvent) => {
@@ -140,6 +193,16 @@ export function InfiniteCanvas({ viewport, onViewportChange, children }: Infinit
     [onViewportChange, viewport],
   );
 
+  const handleTouchEnd = useCallback(() => {
+    touchStartDist.current = 0;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (rafId.current) cancelAnimationFrame(rafId.current);
+    };
+  }, []);
+
   return (
     <div
       ref={containerRef}
@@ -151,6 +214,7 @@ export function InfiniteCanvas({ viewport, onViewportChange, children }: Infinit
       onWheel={handleWheel}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       style={{
         position: 'absolute',
         inset: 0,

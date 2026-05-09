@@ -276,6 +276,95 @@ export const a2uiSession = sqliteTable("A2UISession", {
 });
 
 // ============================================================================
+// A://Labs - Course, Article, and Certification Tables
+// ============================================================================
+export const alabsCourse = sqliteTable("ALABSCourse", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  code: text("code").notNull().unique(),
+  title: text("title").notNull(),
+  description: text("description").notNull().default(""),
+  tier: text("tier", { enum: ["CORE", "OPS", "AGENTS", "ADV"] }).notNull(),
+  canvasUrl: text("canvasUrl"),
+  modules: integer("modules").notNull().default(0),
+  capstone: text("capstone").notNull().default(""),
+  coverImage: text("coverImage").notNull().default(""),
+  demosUrl: text("demosUrl"),
+  sortOrder: integer("sortOrder").notNull().default(0),
+  published: integer("published", { mode: "boolean" }).notNull().default(false),
+  createdAt: integer("createdAt", { mode: "timestamp" }).default(sql`(unixepoch())`).notNull(),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).default(sql`(unixepoch())`).notNull(),
+});
+
+export const alabsArticle = sqliteTable("ALABSArticle", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  slug: text("slug").notNull().unique(),
+  type: text("type", { enum: ["report", "blog", "course", "lesson"] }).notNull().default("blog"),
+  contentType: text("contentType", { enum: ["signal", "feature", "index", "annual", "course", "lesson"] }).notNull().default("feature"),
+  status: text("status", { enum: ["draft", "published", "archived"] }).notNull().default("draft"),
+  title: text("title").notNull(),
+  subtitle: text("subtitle").notNull().default(""),
+  abstract: text("abstract").notNull().default(""),
+  authors: text("authors").notNull().default("[]"),
+  teams: text("teams").notNull().default("[]"),
+  tags: text("tags").notNull().default("[]"),
+  keywords: text("keywords").notNull().default("[]"),
+  contentMarkdown: text("contentMarkdown"),
+  contentHtml: text("contentHtml"),
+  readingTime: integer("readingTime").notNull().default(0),
+  featured: integer("featured", { mode: "boolean" }).notNull().default(false),
+  series: text("series"),
+  issueNumber: text("issueNumber"),
+  license: text("license").notNull().default("CC BY 4.0"),
+  accessLevel: text("accessLevel", { enum: ["public", "registered", "restricted"] }).notNull().default("public"),
+  publishedAt: integer("publishedAt", { mode: "timestamp" }),
+  createdAt: integer("createdAt", { mode: "timestamp" }).default(sql`(unixepoch())`).notNull(),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).default(sql`(unixepoch())`).notNull(),
+});
+
+export const alabsCertification = sqliteTable("ALABSCertification", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("userId").notNull().references(() => user.id, { onDelete: "cascade" }),
+  courseCode: text("courseCode").notNull(),
+  courseTitle: text("courseTitle").notNull(),
+  tier: text("tier", { enum: ["CORE", "OPS", "AGENTS", "ADV", "OTHER"] }).notNull(),
+  completedAt: integer("completedAt", { mode: "timestamp" }),
+  capstoneUrl: text("capstoneUrl"),
+  score: integer("score"),
+  verified: integer("verified", { mode: "boolean" }).notNull().default(false),
+  createdAt: integer("createdAt", { mode: "timestamp" }).default(sql`(unixepoch())`).notNull(),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).default(sql`(unixepoch())`).notNull(),
+});
+
+export const alabsLesson = sqliteTable("ALABSLesson", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  courseId: text("courseId").notNull().references(() => alabsCourse.id, { onDelete: "cascade" }),
+  moduleNumber: integer("moduleNumber").notNull().default(1),
+  lessonNumber: integer("lessonNumber").notNull().default(1),
+  title: text("title").notNull(),
+  description: text("description").notNull().default(""),
+  contentMarkdown: text("contentMarkdown"),
+  contentHtml: text("contentHtml"),
+  sceneJson: text("sceneJson"), // Structured scene array for lesson player
+  videoUrl: text("videoUrl"),
+  durationMinutes: integer("durationMinutes").notNull().default(0),
+  status: text("status", { enum: ["draft", "published", "archived"] }).notNull().default("draft"),
+  publishedAt: integer("publishedAt", { mode: "timestamp" }),
+  createdAt: integer("createdAt", { mode: "timestamp" }).default(sql`(unixepoch())`).notNull(),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).default(sql`(unixepoch())`).notNull(),
+});
+
+export const alabsEnrollment = sqliteTable("ALABSEnrollment", {
+  id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId: text("userId").notNull().references(() => user.id, { onDelete: "cascade" }),
+  courseId: text("courseId").notNull().references(() => alabsCourse.id, { onDelete: "cascade" }),
+  lessonId: text("lessonId").references(() => alabsLesson.id, { onDelete: "set null" }),
+  progress: integer("progress").notNull().default(0),
+  status: text("status", { enum: ["in_progress", "completed", "dropped"] }).notNull().default("in_progress"),
+  createdAt: integer("createdAt", { mode: "timestamp" }).default(sql`(unixepoch())`).notNull(),
+  updatedAt: integer("updatedAt", { mode: "timestamp" }).default(sql`(unixepoch())`).notNull(),
+});
+
+// ============================================================================
 // A2UI Capsules - Registry of available miniapps
 // ============================================================================
 export const a2uiCapsule = sqliteTable("A2UICapsule", {

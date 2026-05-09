@@ -4,26 +4,39 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Palette, Layout, PresentationChart, Paperclip, Sliders, Monitor, DeviceMobile, TreeStructure, Megaphone, MagicWand, ShieldCheck, Target, WifiHigh, Cpu, UsersThree, Sun, Moon, Scissors
+  Palette, Paperclip, Sliders, MagicWand, Sun, Moon, Scissors, ArrowRight,
+  UsersThree, TreeStructure, Target, Megaphone, ShieldCheck, UploadSimple, Plus
 } from "@phosphor-icons/react";
 import { DesignClipboardSidebar } from "./DesignClipboardSidebar";
 import { useNav } from "../../nav/useNav";
 import { useDesignSessionStore, useDesignSessionActions } from "./DesignSessionStore";
+import { NewProjectScreen } from './NewProjectScreen';
 
 // Imports for built features
 import { DesignMdRenderer } from "../../lib/openui/DesignMdRenderer";
-
 import { VideoEditorView } from "./video/VideoEditorView";
 import { OfficeWorkspace } from "./office/OfficeWorkspace";
-import { componentRegistry } from "../../lib/openui/registry";
-
 import { StudioOnboardingWizard } from "./StudioOnboardingWizard";
 import { DesignTeamWorkspace } from "./DesignTeamWorkspace";
+import { DesignSystemView } from "./DesignSystemView";
+import { DesignHandoffView } from "./DesignHandoffView";
+import { MobilePreviewView } from "./mobile/MobilePreviewView";
+import { DesignRegistryView } from "./DesignRegistryView";
+import type { DesignSystem } from "../../lib/design/design-registry";
+import { BrandKitEditor } from "./office/BrandKitEditor";
+import { DesignImportModal } from "./DesignImportModal";
+import { ContentSkillGraphView } from "./graph/ContentSkillGraphView";
+import { ContentPipelineView } from "./ContentPipelineView";
+import { StudioMessageRenderer } from "../../components/design/StudioMessageRenderer";
+import { composeStudioSystemPrompt } from "../../lib/design/studio-system-prompt";
+import { DesignTldrawCanvas } from "./DesignTldrawCanvas";
+import { LiveArtifactEditor } from "./LiveArtifactEditor";
+import { OrbitView } from "./OrbitView";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 type ProjectType = 'prototype' | 'slides' | 'content-engine' | 'template' | 'other';
-type CanvasTab = 'system' | 'files' | 'questions' | 'sketch' | 'mobile' | 'video' | 'docs' | 'handoff' | 'graph' | 'pipeline' | 'team';
+type CanvasTab = 'system' | 'files' | 'questions' | 'sketch' | 'mobile' | 'video' | 'docs' | 'handoff' | 'graph' | 'pipeline' | 'team' | 'market' | 'brand' | 'live' | 'orbit';
 type Specialist = 'architect' | 'growth' | 'purist' | 'creative';
 
 interface Project {
@@ -38,6 +51,8 @@ interface Project {
 
 interface DesignModeViewProps {
   initialTab?: CanvasTab;
+  initialDesignMd?: string;
+  initialStream?: string;
 }
 
 function buildDirectProject(initialTab: CanvasTab): Project {
@@ -162,14 +177,14 @@ function StudioOnboarding({ onComplete }: { onComplete: () => void }) {
     <div style={{ position: "fixed", inset: 0, zIndex: 1100, background: "var(--bg-primary)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-sans)" }}>
        <button
           onClick={onComplete}
-          style={{ position: "absolute", bottom: "48px", right: "32px", padding: "8px 16px", borderRadius: "20px", background: "rgba(0,0,0,0.05)", border: "none", fontSize: "12px", fontWeight: 700, color: "rgba(0,0,0,0.4)", cursor: "pointer", zIndex: 1101 }}
+          style={{ position: "absolute", bottom: "48px", right: "32px", padding: "8px 16px", borderRadius: "20px", background: "var(--surface-hover)", border: "none", fontSize: "12px", fontWeight: 700, color: "var(--text-tertiary)", cursor: "pointer", zIndex: 1101 }}
        >
           Skip intro
        </button>
        <AnimatePresence mode="wait">
           <motion.div key={step} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.8, ease: [0.2, 0, 0, 1] }} style={{ textAlign: "center", width: "100%", maxWidth: "800px" }}>
              <h1 style={{ fontSize: "42px", fontWeight: 900, letterSpacing: "-0.04em", color: "var(--text-primary)", marginBottom: "16px" }}>{sequence[step]?.title}</h1>
-             <p style={{ fontSize: "18px", color: "rgba(0,0,0,0.4)", fontWeight: 500 }}>{sequence[step]?.sub}</p>
+             <p style={{ fontSize: "18px", color: "var(--text-secondary)", fontWeight: 500 }}>{sequence[step]?.sub}</p>
              <div style={{ marginTop: "64px", position: "relative", height: "400px", display: "flex", justifyContent: "center" }}>
                 {step === 0 && (
                    <div style={{ display: "flex", gap: "24px" }}>
@@ -207,124 +222,34 @@ function StudioOnboarding({ onComplete }: { onComplete: () => void }) {
   );
 }
 
-// ─── Discovery Hub ──────────────────────────────────────────────────────────
-
-function DiscoveryHub({ onStart }: { onStart: (config: any) => void }) {
-  const [activeType, setActiveType] = useState<ProjectType>('prototype');
-  const [specialist, setSpecialist] = useState<Specialist>('architect');
-  const [name, setName] = useState("");
-
-  const types = [
-    { id: 'prototype',      label: 'Prototype',      icon: <Layout size={16} /> },
-    { id: 'content-engine', label: 'Content engine', icon: <Megaphone size={16} /> },
-    { id: 'slides',         label: 'Slide deck',     icon: <PresentationChart size={16} /> },
-  ];
-
-  const specialists = [
-    { id: 'architect', label: 'Systems Architect', icon: <TreeStructure size={20} />, desc: 'Focus on structure & hierarchy' },
-    { id: 'growth',    label: 'Growth Hacker',     icon: <Target size={20} />, desc: 'Optimize for conversion & impact' },
-    { id: 'purist',    label: 'UI Purist',         icon: <Palette size={20} />, desc: 'Pixel-perfect aesthetic focus' },
-  ];
-
-  return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: "flex", height: "100%", width: "100%", background: "var(--bg-primary)", color: "var(--text-primary)", fontFamily: "var(--font-sans)" }}>
-      <aside style={{ width: "360px", borderRight: "1px solid var(--border-subtle)", display: "flex", flexDirection: "column", padding: "32px", background: "#fdfcf9" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "40px" }}>
-           <Palette size={24} weight="fill" color="var(--accent-primary)" />
-           <div style={{ fontSize: "17px", fontWeight: 700, letterSpacing: "-0.02em" }}>Allternit Studio</div>
-        </div>
-        <div style={{ display: "flex", gap: "16px", borderBottom: "1px solid var(--border-subtle)", marginBottom: "24px" }}>
-           {types.map(t => (
-             <button key={t.id} onClick={() => setActiveType(t.id as any)} style={{ paddingBottom: "8px", fontSize: "13px", fontWeight: 600, background: "none", border: "none", color: activeType === t.id ? "var(--text-primary)" : "rgba(0,0,0,0.4)", borderBottom: `2px solid ${activeType === t.id ? "var(--accent-primary)" : "transparent"}`, cursor: "pointer" }}>{t.label}</button>
-           ))}
-        </div>
-        <div style={{ flex: 1, overflowY: "auto" }}>
-           <div style={{ background: "#fff", border: "1px solid var(--border-subtle)", borderRadius: "12px", padding: "16px", marginBottom: "24px" }}>
-              <h3 style={{ fontSize: "12px", fontWeight: 800, color: "var(--surface-panel)", textTransform: "uppercase", marginBottom: "16px" }}>Project Name</h3>
-              <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Apollo Hub" style={{ width: "100%", padding: "12px", borderRadius: "8px", border: "1px solid var(--border-default)", marginBottom: "8px", outline: "none", fontSize: "14px" }} />
-           </div>
-           <h3 style={{ fontSize: "12px", fontWeight: 800, color: "var(--surface-panel)", textTransform: "uppercase", marginBottom: "12px", marginLeft: "4px" }}>Select Specialist</h3>
-           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {specialists.map(s => (
-                <button key={s.id} onClick={() => setSpecialist(s.id as any)} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px", borderRadius: "12px", border: specialist === s.id ? "2px solid var(--accent-primary)" : "1px solid var(--border-subtle)", background: "#fff", textAlign: "left", cursor: "pointer", transition: "all 0.2s" }}>
-                   <div style={{ width: "40px", height: "40px", borderRadius: "10px", background: specialist === s.id ? "var(--accent-primary)" : "rgba(0,0,0,0.04)", color: specialist === s.id ? "#fff" : "var(--text-primary)", display: "flex", alignItems: "center", justifyContent: "center" }}>{s.icon}</div>
-                   <div><div style={{ fontSize: "13px", fontWeight: 700 }}>{s.label}</div><div style={{ fontSize: "11px", opacity: 0.4 }}>{s.desc}</div></div>
-                </button>
-              ))}
-           </div>
-           <button onClick={() => onStart({ name, type: activeType, specialist })} disabled={!name} style={{ width: "100%", marginTop: "32px", padding: "14px", borderRadius: "12px", background: "var(--text-primary)", color: "#fff", fontWeight: 700, fontSize: "14px", border: "none", opacity: !name ? 0.5 : 1, cursor: "pointer" }}>Initialize Studio</button>
-        </div>
-      </aside>
-      <main style={{ flex: 1, padding: "64px", background: "var(--bg-primary)", overflowY: "auto" }}>
-         <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "48px" }}>
-               <h2 style={{ fontSize: "32px", fontWeight: 900, letterSpacing: "-0.04em" }}>Recent Work</h2>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "32px" }}>
-               <ProjectCard title="Canopy Onboarding" sub="UI Purist • Updated 2m ago" color="#f4f7ff" icon={<Monitor size={56} color="var(--status-info)" weight="duotone" />} badges={['Web', 'Mobile']} />
-               <ProjectCard title="Social Engine v1" sub="Growth Hacker • Active" color="#fff5f2" icon={<Megaphone size={56} color="var(--accent-primary)" weight="duotone" />} badges={['Campaign', 'Drafts']} />
-               <ProjectCard title="Apollo Financial" sub="Systems Architect • 1h ago" color="#f1fdf5" icon={<ShieldCheck size={56} color="var(--status-success)" weight="duotone" />} badges={['Secure', 'API']} />
-            </div>
-         </div>
-      </main>
-    </motion.div>
-  );
-}
-
-function ProjectCard({ title, sub, color, icon, badges }: any) {
-  const [hovered, setHovered] = useState(false);
-  return (
-    <motion.div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} whileHover={{ y: -6 }} style={{ background: "#fff", border: "1px solid var(--border-subtle)", borderRadius: "28px", overflow: "hidden", cursor: "pointer", boxShadow: hovered ? "0 20px 40px rgba(0,0,0,0.04)" : "0 2px 4px rgba(0,0,0,0.01)", transition: "all 0.3s cubic-bezier(0.2, 0, 0, 1)" }}>
-       <div style={{ height: "200px", background: color, display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
-          {icon}
-          {badges && <div style={{ position: "absolute", bottom: "16px", left: "16px", display: "flex", gap: "6px" }}>{badges.map((b: string) => <span key={b} style={{ padding: "4px 10px", borderRadius: "12px", background: "rgba(255,255,255,0.8)", backdropFilter: "blur(4px)", fontSize: "10px", fontWeight: 800, color: "var(--shell-overlay-backdrop)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{b}</span>)}</div>}
-       </div>
-       <div style={{ padding: "24px" }}>
-          <div style={{ fontSize: "17px", fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.01em" }}>{title}</div>
-          <div style={{ fontSize: "13px", color: "rgba(0,0,0,0.4)", marginTop: "6px", fontWeight: 500 }}>{sub}</div>
-       </div>
-    </motion.div>
-  );
-}
-
-// ─── Mobile Simulator ────────────────────────────────────────────────────────
-
-function MobileSimulator({ designMd }: { designMd: string | null }) {
-  return (
-    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#f1f1f1", borderRadius: "32px", overflow: "hidden" }}>
-       <div style={{ width: "320px", height: "640px", background: "#000", borderRadius: "48px", border: "8px solid #333", position: "relative", boxShadow: "0 40px 100px var(--surface-hover)", display: "flex", flexDirection: "column" }}>
-          <div style={{ height: "30px", width: "100%", display: "flex", justifyContent: "space-between", padding: "10px 30px 0" }}>
-             <div style={{ fontSize: "10px", color: "#fff", fontWeight: 700, marginLeft: "30px" }}>9:41</div>
-             <div style={{ display: "flex", gap: "6px", marginRight: "30px" }}><WifiHigh size={12} color="var(--ui-text-primary)" /><Cpu size={12} color="var(--ui-text-primary)" /></div>
-          </div>
-          <div style={{ flex: 1, background: "#fff", margin: "4px", borderRadius: "36px", overflowY: "auto", padding: "20px" }}>
-             {designMd ? <DesignMdRenderer designMd={designMd} uiStream='[v:stack [v:card title="Mobile View" [v:metric label="Active" val="Simulated"]]]' /> : <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", opacity: 0.2 }}><DeviceMobile size={64} /></div>}
-          </div>
-          <div style={{ position: "absolute", bottom: "10px", left: "50%", transform: "translateX(-50%)", width: "100px", height: "4px", background: "rgba(255,255,255,0.2)", borderRadius: "2px" }} />
-       </div>
-    </div>
-  );
-}
-
 // ─── Main Studio Component ───────────────────────────────────────────────────
 
-export default function DesignModeView({ initialTab }: DesignModeViewProps) {
+export default function DesignModeView({ initialTab, initialDesignMd, initialStream }: DesignModeViewProps) {
   useNav();
-  const [showWizard, setShowWizard] = useState(!initialTab);
+  const hasInstallContext = Boolean(initialDesignMd || initialStream);
+  const [showWizard, setShowWizard] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    if (hasInstallContext) return false;
+    return !localStorage.getItem('allternit-design-onboarded');
+  });
   const [showCutscene, setShowCutscene] = useState(false);
   const [activeProject, setActiveProject] = useState<Project | null>(
-    initialTab ? buildDirectProject(initialTab) : null,
+    initialTab ? buildDirectProject(initialTab)
+    : initialDesignMd ? buildDirectProject('system')
+    : null,
   );
-  const [activeTab, setActiveTab] = useState<CanvasTab>(initialTab ?? "questions");
+  const [activeTab, setActiveTab] = useState<CanvasTab>(
+    initialTab ?? (initialDesignMd ? 'system' : 'questions')
+  );
   const [showTweaks, setShowTweaks] = useState(true);
   const [chatInput, setChatInput] = useState("");
-  const [designMd, setDesignMd] = useState<string | null>(null);
-  const [uiStream, setUiStream] = useState<string | null>(null);
+  const [designMd, setDesignMd] = useState<string | null>(initialDesignMd ?? null);
+  const [uiStream, setUiStream] = useState<string | null>(initialStream ?? null);
   const [tokens, setTokens] = useState({ radius: 12, spacing: 4, primary: 'var(--accent-primary)', font: 'Allternit Sans' });
-  const [, _setIsManifesting] = useState(false);
-  const [graphData] = useState({ nodes: [], links: [] });
   const [darkMode, setDarkMode] = useState(true);
   const [showClipboard, setShowClipboard] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [installedDesignId, setInstalledDesignId] = useState<string | null>(null);
 
   const { createSession, sendMessageStream, loadSessions } = useDesignSessionActions();
   const activeSessionId = useDesignSessionStore(s => s.activeSessionId);
@@ -351,13 +276,6 @@ export default function DesignModeView({ initialTab }: DesignModeViewProps) {
     setActiveProject((current) => current ?? buildDirectProject(initialTab));
   }, [initialTab]);
 
-  // Sync real graph data
-  useEffect(() => {
-     if (activeTab === 'graph' && activeSessionId) {
-        sendMessageStream(activeSessionId, { text: "[Trigger: Graph Data] Please execute skill_graph_ops action='get_graph_data' to update the visual map." });
-     }
-  }, [activeTab, activeSessionId, sendMessageStream]);
-
   useEffect(() => {
     if (!backendMessages.length) return;
     const lastAsstMsg = [...backendMessages].reverse().find(m => m.role === 'assistant');
@@ -370,31 +288,67 @@ export default function DesignModeView({ initialTab }: DesignModeViewProps) {
     }
   }, [backendMessages]);
 
-  async function startProject(config: any) {
-    const isContent = config.type === 'content-engine';
-    setActiveProject({
-      id: Date.now().toString(), name: config.name, type: config.type, specialist: config.specialist, fidelity: config.fidelity, activeTabId: isContent ? 'graph' : 'questions',
-      tabs: [
-        { id: 'questions', label: 'Discovery', type: 'questions' as CanvasTab },
-        { id: 'mobile', label: 'Mobile View', type: 'mobile' as CanvasTab },
-        { id: 'video', label: 'Video Editor', type: 'video' as CanvasTab },
-        { id: 'docs', label: 'Documents', type: 'docs' as CanvasTab },
-        ...(isContent ? [{ id: 'graph', label: 'Skill Graph', type: 'graph' as CanvasTab }, { id: 'pipeline', label: 'Pipeline', type: 'pipeline' as CanvasTab }] : []),
-        { id: 'team', label: 'Team', type: 'team' as CanvasTab },
-        { id: 'handoff', label: 'Handoff', type: 'handoff' as CanvasTab }
-      ]
-    });
-    const sessionId = await createSession({ name: config.name, sessionMode: 'agent' });
-    if (isContent) {
-       await sendMessageStream(sessionId, { text: `[Trigger: Context Sync] I am starting a Content Engine project. Please run skill_graph_ops action="sync" to read /content-skill-graph/index.md.` });
-    } else {
-       await sendMessageStream(sessionId, { text: `I am the user starting a ${config.type} project. You are the ${config.specialist} agent. Ping the "Growth Hacker" for review.` });
+  function handleInstallDesign(design: DesignSystem) {
+    setInstalledDesignId(design.id);
+    setDesignMd(design.designMd);
+    setActiveTab('questions');
+    if (activeSessionId) {
+      sendMessageStream(activeSessionId, {
+        text: `[Design System Installed: ${design.name}]\n\nPlease adopt the following design specification for this project. Use its color palette, typography, spacing, and component patterns as the ground truth for all future generations.\n\n${design.designMd}`,
+      });
     }
   }
 
-  if (showWizard) return <StudioOnboardingWizard onComplete={() => { setShowWizard(false); setShowCutscene(true); }} onSkip={() => { setShowWizard(false); setShowCutscene(true); }} />;
+  async function startProject(config: { name: string; type: string; direction?: import('../../lib/design/directions').DesignDirection }) {
+    const isContent = config.type === 'content-engine';
+    setActiveProject({
+      id: Date.now().toString(), name: config.name, type: config.type as ProjectType,
+      specialist: 'architect', fidelity: 'high', activeTabId: isContent ? 'graph' : 'questions',
+      tabs: [
+        { id: 'questions', label: 'Discovery',     type: 'questions' as CanvasTab },
+        { id: 'sketch',    label: 'Canvas',         type: 'sketch'    as CanvasTab },
+        { id: 'system',    label: 'Design System',  type: 'system'    as CanvasTab },
+        { id: 'mobile',    label: 'Mobile',         type: 'mobile'    as CanvasTab },
+        { id: 'video',     label: 'Video',          type: 'video'     as CanvasTab },
+        { id: 'docs',      label: 'Documents',      type: 'docs'      as CanvasTab },
+        ...(isContent ? [
+          { id: 'graph',    label: 'Skill Graph', type: 'graph'    as CanvasTab },
+          { id: 'pipeline', label: 'Pipeline',    type: 'pipeline' as CanvasTab },
+        ] : []),
+        { id: 'brand',   label: 'Brand',       type: 'brand'   as CanvasTab },
+        { id: 'team',    label: 'Team',         type: 'team'    as CanvasTab },
+        { id: 'handoff', label: 'Handoff',      type: 'handoff' as CanvasTab },
+        { id: 'market',  label: 'Marketplace',  type: 'market'  as CanvasTab },
+        { id: 'live',    label: 'Live',         type: 'live'    as CanvasTab },
+        { id: 'orbit',   label: 'Orbit',        type: 'orbit'   as CanvasTab },
+      ]
+    });
+    const dir = config.direction;
+    const directionMd = dir
+      ? `## Visual Direction: ${dir.label}\n${dir.mood}\n\nDisplay font: ${dir.displayFont}\nBody font: ${dir.bodyFont}${dir.monoFont ? `\nMono font: ${dir.monoFont}` : ''}\n\nPalette:\n- Background: ${dir.palette.bg}\n- Surface: ${dir.palette.surface}\n- Foreground: ${dir.palette.fg}\n- Accent: ${dir.palette.accent}\n\nReferences: ${dir.references.join(', ')}\n\nPosture:\n${dir.posture.map(p => `- ${p}`).join('\n')}`
+      : undefined;
+    const systemPrompt = composeStudioSystemPrompt({
+      designSystemBody: directionMd,
+      designSystemTitle: dir?.label,
+      isDeckSession: config.type === 'slides',
+    });
+    const sessionId = await createSession({ name: config.name, sessionMode: 'agent', systemPrompt });
+    if (isContent) {
+      await sendMessageStream(sessionId, { text: `[Trigger: Context Sync] I am starting a Content Engine project called "${config.name}". Please run skill_graph_ops action="sync" to read /content-skill-graph/index.md.` });
+    } else {
+      const dirContext = dir ? ` The visual direction is "${dir.label}" — ${dir.mood}. Key references: ${dir.references.join(', ')}.` : '';
+      await sendMessageStream(sessionId, { text: `I am starting a ${config.type} project called "${config.name}".${dirContext} Please begin with a discovery brief.` });
+    }
+  }
+
+  const completeWizard = () => {
+    localStorage.setItem('allternit-design-onboarded', '1');
+    setShowWizard(false);
+    setShowCutscene(true);
+  };
+  if (showWizard) return <StudioOnboardingWizard onComplete={completeWizard} onSkip={completeWizard} />;
   if (showCutscene) return <StudioOnboarding onComplete={() => setShowCutscene(false)} />;
-  if (!activeProject) return <DiscoveryHub onStart={startProject} />;
+  if (!activeProject) return <NewProjectScreen onStart={startProject} />;
 
   const themeOverride = darkMode ? {} : {
     '--bg-primary': '#fdfcf9',
@@ -410,28 +364,6 @@ export default function DesignModeView({ initialTab }: DesignModeViewProps) {
   return (
     <div style={{ ...tokenStyles, ...themeOverride, display: "flex", height: "100%", width: "100%", background: "var(--bg-primary)", fontFamily: "var(--font-sans)", color: "var(--text-primary)", transition: "background 0.3s, color 0.3s" }}>
       <PanelGroup direction="horizontal">
-        <Panel defaultSize={25} minSize={20}>
-          <div style={{ display: "flex", flexDirection: "column", height: "100%", borderRight: "1px solid var(--border-subtle)", background: "var(--surface-panel)" }}>
-            <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}><MagicWand size={16} color="var(--accent-primary)" weight="fill" /><span style={{ fontSize: "13px", fontWeight: 700 }}>{activeProject.specialist} agent</span></div>
-               <div style={{ width: "8px", height: "8px", borderRadius: "4px", background: isStreaming ? "var(--accent-primary)" : "#22c55e", animation: isStreaming ? "pulse 1.5s infinite" : "none" }} />
-            </div>
-            <div style={{ flex: 1, padding: "24px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "24px" }}>
-               <SwarmInspect logs={[
-                  { agent: 'Architect', action: 'Constructing Layout', status: 'OK' },
-                  { agent: 'Growth', action: 'Auditing CTAs', status: 'Ready' }
-               ]} />
-               {backendMessages.map(m => (
-                 <div key={m.id} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                    <div style={{ fontSize: "11px", fontWeight: 800, opacity: 0.3 }}>{m.role.toUpperCase()}</div>
-                    <div style={{ fontSize: "13px", color: "var(--text-secondary)", lineHeight: 1.5, whiteSpace: "pre-wrap" }}>{m.content?.replace(/\\?\[v:[\s\S]*/, '[Visual Interface Generated]')}</div>
-                 </div>
-               ))}
-            </div>
-            <div style={{ padding: "24px" }}><div style={{ background: "var(--surface-panel)", border: "1px solid var(--border-default)", borderRadius: "16px", padding: "8px" }}><textarea value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Message studio agent..." style={{ width: "100%", border: "none", outline: "none", resize: "none", fontSize: "13px", minHeight: "60px", fontFamily: "inherit" }} /><div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}><button style={{ background: "none", border: "none", color: "var(--surface-panel)" }}><Paperclip size={18} /></button><button onClick={() => sendMessageStream(activeSessionId!, { text: chatInput })} style={{ padding: "8px 20px", borderRadius: "10px", background: "var(--text-primary)", color: "var(--bg-primary)", fontWeight: 700, border: "none", fontSize: "12px", cursor: "pointer" }}>Send</button></div></div></div>
-          </div>
-        </Panel>
-        <PanelResizeHandle />
         <Panel>
           <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "var(--bg-secondary)" }}>
             <header style={{ height: "56px", borderBottom: "1px solid var(--border-subtle)", background: "var(--surface-panel)", display: "flex", alignItems: "center", padding: "0 16px", gap: "8px" }}>
@@ -439,35 +371,121 @@ export default function DesignModeView({ initialTab }: DesignModeViewProps) {
                  <button key={tab.id} onClick={() => setActiveTab(tab.id as CanvasTab)} style={{ border: "none", background: activeTab === tab.id ? "var(--bg-secondary)" : "transparent", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", padding: "8px 16px", borderRadius: "8px 8px 0 0", cursor: "pointer", borderTop: activeTab === tab.id ? "1px solid var(--border-subtle)" : "1px solid transparent" }}>{tab.label}</button>
                ))}
                <div style={{ flex: 1 }} />
+               <button onClick={() => { setActiveProject(null); setActiveTab('questions'); }} title="New Project" style={{ display: "flex", alignItems: "center", gap: 5, padding: "0 12px", height: "30px", borderRadius: "8px", background: "var(--surface-hover)", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)", fontSize: "11px", fontWeight: 700, cursor: "pointer" }}><Plus size={12} weight="bold" /> New Project</button>
+               <button onClick={() => setShowImport(true)} title="Import design system" style={{ width: "36px", height: "36px", borderRadius: "18px", background: "var(--surface-panel)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><UploadSimple size={16} /></button>
                <button onClick={() => setDarkMode(!darkMode)} title={darkMode ? "Light mode" : "Dark mode"} style={{ width: "36px", height: "36px", borderRadius: "18px", background: "var(--surface-panel)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>{darkMode ? <Sun size={16} /> : <Moon size={16} />}</button>
                <button onClick={() => { setShowClipboard(!showClipboard); setShowTweaks(false); }} title="Design Clipboard" style={{ width: "36px", height: "36px", borderRadius: "18px", background: showClipboard ? "var(--accent-primary)" : "var(--surface-panel)", color: showClipboard ? "var(--bg-primary)" : "var(--text-primary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><Scissors size={16} /></button>
                <button onClick={() => { setShowTweaks(!showTweaks); setShowClipboard(false); }} title="Live Tokens" style={{ width: "36px", height: "36px", borderRadius: "18px", background: showTweaks ? "var(--accent-primary)" : "var(--surface-panel)", color: showTweaks ? "var(--bg-primary)" : "var(--text-primary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><Sliders size={18} /></button>
             </header>
             <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
-               <div style={{ flex: 1, overflowY: "auto", position: "relative" }}>
-                  <div style={{ padding: "40px", height: "100%" }}>
-                     {isStreaming && <GenerativeLoader title="Manifesting high-fidelity UI..." />}
-                     {!isStreaming && (
-                       <>
-                        {activeTab === 'mobile' && <MobileSimulator designMd={designMd} />}
-                        {activeTab === 'video' && <VideoEditorView />}
-                        {activeTab === 'docs' && <OfficeWorkspace />}
-                        {activeTab === 'team' && <DesignTeamWorkspace projectName={activeProject?.name} />}
-                        {activeTab === 'graph' && <div className="w-full h-full p-12 bg-zinc-950 rounded-3xl border border-white/5 relative">{React.createElement(componentRegistry['v:skill-graph'], { nodes: graphData.nodes.length ? graphData.nodes : [{ id: 'idx', label: 'Command Center', x: 400, y: 50 }, { id: 'x', label: 'X', x: 200, y: 200 }, { id: 'li', label: 'LinkedIn', x: 400, y: 200 }, { id: 'tt', label: 'TikTok', x: 600, y: 200 }], links: graphData.links.length ? graphData.links : [{ from: 'idx', to: 'x' }, { from: 'idx', to: 'li' }, { from: 'idx', to: 'tt' }] })}</div>}
-                        {activeTab === 'pipeline' && <div className="max-w-3xl mx-auto flex flex-col gap-6"><h1 className="text-2xl font-black">Ship content nodes</h1>{React.createElement(componentRegistry['v:pipeline'], { items: [{ platform: 'X / Twitter', status: 'Ready' }, { platform: 'LinkedIn', status: 'Ready' }, { platform: 'TikTok', status: 'Generating' }] })}</div>}
-                        {(activeTab === 'questions' || activeTab === 'handoff' || !designMd) && (
-                           <div className="w-full h-full bg-white rounded-[var(--design-radius-card)] shadow-2xl border border-zinc-100 p-8">
-                              {designMd && uiStream ? <DesignMdRenderer designMd={designMd} uiStream={uiStream} /> : <div className="w-full h-full flex flex-col items-center justify-center text-center"><div className="w-24 h-24 bg-zinc-50 rounded-full flex items-center justify-center mb-6"><MagicWand size={48} weight="duotone" color="var(--accent-primary)" /></div><h3 className="text-lg font-bold">Awaiting manifestation</h3></div>}
-                           </div>
-                        )}
-                       </>
-                     )}
-                  </div>
+               <div style={{ flex: 1, overflow: "hidden", position: "relative", display: "flex", flexDirection: "column" }}>
+                  {isStreaming && (
+                    <div style={{ position: 'absolute', inset: 0, zIndex: 10, background: 'var(--bg-primary)' }}>
+                      <GenerativeLoader title="Manifesting high-fidelity UI..." />
+                    </div>
+                  )}
+                  {/* Full-bleed tabs — no padding wrapper */}
+                  {activeTab === 'sketch' && (
+                    <div style={{ flex: 1, height: '100%', overflow: 'hidden' }}>
+                      <DesignTldrawCanvas projectName={activeProject?.name} />
+                    </div>
+                  )}
+                  {activeTab === 'system' && (
+                    <div style={{ flex: 1, overflowY: 'auto', height: '100%' }}>
+                      <DesignSystemView projectName={activeProject.name} />
+                    </div>
+                  )}
+                  {activeTab === 'handoff' && (
+                    <div style={{ flex: 1, overflowY: 'auto', height: '100%' }}>
+                      <DesignHandoffView projectName={activeProject.name} />
+                    </div>
+                  )}
+                  {activeTab === 'mobile' && (
+                    <div style={{ flex: 1, height: '100%', overflow: 'hidden' }}>
+                      <MobilePreviewView projectName={activeProject.name} />
+                    </div>
+                  )}
+                  {activeTab === 'video' && (
+                    <div style={{ flex: 1, height: '100%', overflow: 'hidden' }}>
+                      <VideoEditorView />
+                    </div>
+                  )}
+                  {activeTab === 'docs' && (
+                    <div style={{ flex: 1, height: '100%', overflow: 'hidden' }}>
+                      <OfficeWorkspace projectName={activeProject.name} />
+                    </div>
+                  )}
+                  {activeTab === 'market' && (
+                    <div style={{ flex: 1, height: '100%', overflowY: 'auto' }}>
+                      <DesignRegistryView onInstall={handleInstallDesign} installedId={installedDesignId ?? undefined} />
+                    </div>
+                  )}
+                  {activeTab === 'brand' && (
+                    <div style={{ flex: 1, height: '100%', overflowY: 'auto' }}>
+                      <BrandKitEditor projectName={activeProject.name} />
+                    </div>
+                  )}
+                  {activeTab === 'graph' && (
+                    <div style={{ flex: 1, height: '100%', overflow: 'hidden' }}>
+                      <ContentSkillGraphView />
+                    </div>
+                  )}
+                  {activeTab === 'pipeline' && (
+                    <div style={{ flex: 1, height: '100%', overflow: 'hidden' }}>
+                      <ContentPipelineView projectName={activeProject?.name} />
+                    </div>
+                  )}
+                  {activeTab === 'live' && (
+                    <div style={{ flex: 1, height: '100%', overflow: 'hidden' }}>
+                      <LiveArtifactEditor />
+                    </div>
+                  )}
+                  {activeTab === 'orbit' && (
+                    <div style={{ flex: 1, height: '100%', overflowY: 'auto' }}>
+                      <OrbitView projectName={activeProject?.name} sessionSendMessage={activeSessionId ? (text) => sendMessageStream(activeSessionId, { text }) : undefined} />
+                    </div>
+                  )}
+                  {/* Padded tabs */}
+                  {!['sketch', 'system', 'handoff', 'mobile', 'video', 'docs', 'market', 'brand', 'graph', 'pipeline', 'live', 'orbit'].includes(activeTab) && (
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '40px' }}>
+                      {activeTab === 'team' && <DesignTeamWorkspace projectName={activeProject?.name} />}
+                      {activeTab === 'questions' && (
+                        <div style={{ width: '100%', height: '100%', borderRadius: 'var(--design-radius-card)', background: 'var(--surface-panel)', border: '1px solid var(--border-subtle)', padding: 32, boxSizing: 'border-box', overflowY: 'auto' }}>
+                          {designMd && uiStream ? (
+                            <DesignMdRenderer designMd={designMd} uiStream={uiStream} />
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', textAlign: 'center', gap: 16 }}>
+                              <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <MagicWand size={36} weight="duotone" color="var(--accent-primary)" />
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>Ready to design</div>
+                                <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, maxWidth: 320 }}>
+                                  Describe your project in the chat — the agent will ask discovery questions and build your design system.
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', maxWidth: 400, marginTop: 8 }}>
+                                {['Wireframe a landing page', 'Build a dashboard UI', 'Design a mobile app', 'Create a brand system'].map(prompt => (
+                                  <button
+                                    key={prompt}
+                                    onClick={() => { setChatInput(prompt); }}
+                                    style={{ padding: '7px 14px', borderRadius: 20, border: '1px solid var(--border-default)', background: 'var(--bg-primary)', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                                  >
+                                    {prompt}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                </div>
                <AnimatePresence>
                  {showTweaks && (
-                   <motion.aside initial={{ x: 300 }} animate={{ x: 0 }} exit={{ x: 300 }} style={{ width: "300px", background: "#16161a", color: "#fff", padding: "24px", display: "flex", flexDirection: "column", gap: "32px", margin: "16px", borderRadius: "16px", border: "1px solid var(--surface-hover)", boxShadow: "0 32px 64px rgba(0,0,0,0.4)" }}>
-                     <div><div style={{ fontSize: "10px", fontWeight: 800, color: "rgba(255,255,255,0.4)", letterSpacing: "0.2em", marginBottom: "20px" }}>LIVE TOKENS</div><div style={{ display: "flex", flexDirection: "column", gap: "24px" }}><TokenSlider label="Corner Radius" value={tokens.radius} unit="px" onChange={(v: any) => setTokens({...tokens, radius: v})} /><TokenSlider label="Grid Spacing" value={tokens.spacing} unit="px" min={2} max={12} onChange={(v: any) => setTokens({...tokens, spacing: v})} /></div></div>
+                   <motion.aside initial={{ x: 300 }} animate={{ x: 0 }} exit={{ x: 300 }} style={{ width: "300px", background: "var(--surface-panel)", color: "var(--text-primary)", padding: "24px", display: "flex", flexDirection: "column", gap: "32px", margin: "16px", borderRadius: "16px", border: "1px solid var(--border-subtle)", boxShadow: "0 32px 64px rgba(0,0,0,0.15)" }}>
+                     <div><div style={{ fontSize: "10px", fontWeight: 800, color: "var(--text-tertiary)", letterSpacing: "0.2em", marginBottom: "20px" }}>LIVE TOKENS</div><div style={{ display: "flex", flexDirection: "column", gap: "24px" }}><TokenSlider label="Corner Radius" value={tokens.radius} unit="px" onChange={(v: any) => setTokens({...tokens, radius: v})} /><TokenSlider label="Grid Spacing" value={tokens.spacing} unit="px" min={2} max={12} onChange={(v: any) => setTokens({...tokens, spacing: v})} /></div></div>
                      <div style={{ marginTop: "auto", padding: "16px", background: "var(--surface-hover)", borderRadius: "12px", border: "1px solid var(--surface-hover)" }}><div style={{ fontSize: "11px", fontWeight: 700, marginBottom: "8px", display: "flex", alignItems: "center", gap: "8px" }}><ShieldCheck size={14} color="var(--status-success)" /> Agent Link Active</div><div style={{ fontSize: "10px", opacity: 0.4 }}>Changes propagate in real-time.</div></div>
                    </motion.aside>
                  )}
@@ -483,7 +501,60 @@ export default function DesignModeView({ initialTab }: DesignModeViewProps) {
             </div>
           </div>
         </Panel>
+        <PanelResizeHandle />
+        <Panel defaultSize={25} minSize={20}>
+          <div style={{ display: "flex", flexDirection: "column", height: "100%", borderLeft: "1px solid var(--border-subtle)", background: "var(--surface-panel)" }}>
+            <div style={{ padding: "16px 24px", borderBottom: "1px solid var(--border-subtle)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}><MagicWand size={16} color="var(--accent-primary)" weight="fill" /><span style={{ fontSize: "13px", fontWeight: 700 }}>{activeProject.specialist} agent</span></div>
+               <div style={{ width: "8px", height: "8px", borderRadius: "4px", background: isStreaming ? "var(--accent-primary)" : "#22c55e", animation: isStreaming ? "pulse 1.5s infinite" : "none" }} />
+            </div>
+            <div style={{ flex: 1, padding: "24px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "24px" }}>
+               {backendMessages.length === 0 && !isStreaming ? null : (
+                 <SwarmInspect logs={[
+                   { agent: activeProject.specialist, action: isStreaming ? 'Generating response…' : `${backendMessages.length} message${backendMessages.length !== 1 ? 's' : ''}`, status: isStreaming ? '…' : 'OK' },
+                 ]} />
+               )}
+               {backendMessages.map((m, idx) => (
+                 <div key={m.id} style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    <div style={{ fontSize: "10px", fontWeight: 800, opacity: 0.3, letterSpacing: '0.08em' }}>{m.role.toUpperCase()}</div>
+                    <StudioMessageRenderer
+                      message={m}
+                      isLast={idx === backendMessages.length - 1}
+                      onSubmitForm={(text) => {
+                        if (activeSessionId) {
+                          sendMessageStream(activeSessionId, { text });
+                        }
+                      }}
+                    />
+                 </div>
+               ))}
+            </div>
+            <div style={{ padding: "24px" }}>
+              <div style={{ background: "var(--surface-panel)", border: "1px solid var(--border-default)", borderRadius: "16px", padding: "8px" }}>
+                <textarea value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Message studio agent..." style={{ width: "100%", border: "none", outline: "none", resize: "none", fontSize: "13px", minHeight: "60px", fontFamily: "inherit", background: "transparent", color: "var(--text-primary)" }} />
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <button style={{ background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer" }}><Paperclip size={18} /></button>
+                  <button onClick={() => { if (chatInput.trim() && activeSessionId) { sendMessageStream(activeSessionId, { text: chatInput }); setChatInput(''); } }} style={{ padding: "8px 20px", borderRadius: "10px", background: "var(--text-primary)", color: "var(--bg-primary)", fontWeight: 700, border: "none", fontSize: "12px", cursor: "pointer" }}>Send</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Panel>
       </PanelGroup>
+
+      {showImport && (
+        <DesignImportModal
+          onClose={() => setShowImport(false)}
+          onImport={(design) => {
+            setShowImport(false);
+            if (activeSessionId) {
+              sendMessageStream(activeSessionId, {
+                text: `[Design Import] Apply the imported design system: "${design.name}". ${design.designMd}`,
+              });
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -491,7 +562,7 @@ export default function DesignModeView({ initialTab }: DesignModeViewProps) {
 function TokenSlider({ label, value, unit, onChange, min = 0, max = 32 }: any) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><span style={{ fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.6)" }}>{label}</span><span style={{ fontSize: "10px", color: "rgba(255,255,255,0.4)" }}>{value}{unit}</span></div>
+       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><span style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)" }}>{label}</span><span style={{ fontSize: "10px", color: "var(--text-tertiary)" }}>{value}{unit}</span></div>
        <input type="range" min={min} max={max} value={value} onChange={e => onChange(parseInt(e.target.value))} style={{ width: "100%", accentColor: "var(--accent-primary)", height: "2px" }} />
     </div>
   );

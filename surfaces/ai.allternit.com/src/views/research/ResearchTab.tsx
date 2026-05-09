@@ -21,6 +21,8 @@ export function ResearchTab() {
   const [highlightedSourceId, setHighlightedSourceId] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [showToolsOnMobile, setShowToolsOnMobile] = useState(false);
+  const [showNotebookDropdown, setShowNotebookDropdown] = useState(false);
+  const streamingMessageIdRef = React.useRef<string | null>(null);
 
   const activeNotebook = notebooks.find(n => n.id === activeNotebookId);
 
@@ -59,6 +61,19 @@ export function ResearchTab() {
     window.addEventListener('allternit:research-open-notebook' as any, handler);
     return () => window.removeEventListener('allternit:research-open-notebook' as any, handler);
   }, []);
+
+  // Close notebook dropdown on click outside
+  useEffect(() => {
+    if (!showNotebookDropdown) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-notebook-selector]')) {
+        setShowNotebookDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showNotebookDropdown]);
 
   // Load notebooks on mount
   useEffect(() => {
@@ -138,10 +153,14 @@ export function ResearchTab() {
     if (!inputValue.trim() || !activeNotebookId || isLoading) return;
 
     const userMessage: ChatMessage = {
+      id: `user-${Date.now()}`,
       role: 'user',
       content: inputValue.trim(),
       timestamp: new Date().toISOString(),
     };
+
+    const streamId = `assistant-${Date.now()}`;
+    streamingMessageIdRef.current = streamId;
 
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
@@ -153,9 +172,14 @@ export function ResearchTab() {
     try {
       await notebookApi.sendMessage(activeNotebookId, userMessage.content, (chunk) => {
         if (chunk.done) {
+          streamingMessageIdRef.current = null;
           setMessages(prev => {
-            const filtered = prev.filter(m => !(m.role === 'assistant' && m.content === ''));
-            return [...filtered, {
+            const existing = prev.find(m => m.id === streamId);
+            if (existing) {
+              return prev.map(m => m.id === streamId ? { ...m, content: assistantContent, citations: assistantCitations } : m);
+            }
+            return [...prev, {
+              id: streamId,
               role: 'assistant',
               content: assistantContent,
               citations: assistantCitations,
@@ -169,16 +193,15 @@ export function ResearchTab() {
         if (chunk.text) {
           assistantContent += chunk.text;
           setMessages(prev => {
-            const others = prev.filter(m => !(m.role === 'assistant' && m.content === assistantContent.slice(0, -chunk.text!.length)));
-            const existingIdx = others.findIndex(m => m.role === 'assistant' && m.content.startsWith(assistantContent.slice(0, assistantContent.length - 1)));
-            if (existingIdx >= 0) {
-              const next = [...others];
-              next[existingIdx] = { ...next[existingIdx], content: assistantContent };
-              return next;
+            const existing = prev.find(m => m.id === streamId);
+            if (existing) {
+              return prev.map(m => m.id === streamId ? { ...m, content: assistantContent } : m);
             }
-            return [...others, {
+            return [...prev, {
+              id: streamId,
               role: 'assistant',
               content: assistantContent,
+              citations: assistantCitations,
               timestamp: new Date().toISOString(),
             }];
           });
@@ -190,6 +213,7 @@ export function ResearchTab() {
       });
     } catch (e) {
       console.error('Chat failed:', e);
+      streamingMessageIdRef.current = null;
       setIsLoading(false);
     }
   }, [inputValue, activeNotebookId, isLoading]);
@@ -312,8 +336,10 @@ export function ResearchTab() {
           }}
         >
           <div className="flex items-center gap-2.5">
-            <div className="relative">
-              <button className="research-btn-secondary text-[13px] font-medium"
+            <div className="relative" data-notebook-selector>
+              <button
+                onClick={() => setShowNotebookDropdown(v => !v)}
+                className="research-btn-secondary text-[13px] font-medium"
                 style={{
                   backgroundColor: 'var(--bg-tertiary, #18181b)',
                   color: 'var(--text-primary, #e5e5e5)',
@@ -321,8 +347,50 @@ export function ResearchTab() {
               >
                 <BookOpen size={14} color="#a78bfa" />
                 {activeNotebook?.title || 'Select Notebook'}
-                <ChevronDown size={12} color="var(--text-muted, #a1a1aa)" />
+                <ChevronDown size={12} color="var(--text-muted, #a1a1aa)" style={{ transform: showNotebookDropdown ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />
               </button>
+              {showNotebookDropdown && (
+                <div
+                  className="absolute top-full left-0 mt-1 z-50"
+                  style={{
+                    minWidth: 220,
+                    maxHeight: 300,
+                    overflowY: 'auto',
+                    background: 'var(--bg-secondary, #111113)',
+                    border: '1px solid var(--border-subtle, #27272a)',
+                    borderRadius: 10,
+                    boxShadow: '0 8px 32px rgba(0,0,0,.5)',
+                    padding: '6px 0',
+                  }}
+                >
+                  {notebooks.length === 0 && (
+                    <div className="px-3 py-2 text-[12px] text-[var(--text-muted,#a1a1aa)]">
+                      No notebooks
+                    </div>
+                  )}
+                  {notebooks.map(nb => (
+                    <button
+                      key={nb.id}
+                      onClick={() => {
+                        setActiveNotebookId(nb.id);
+                        setShowNotebookDropdown(false);
+                      }}
+                      className="w-full text-left px-3 py-2 text-[13px]"
+                      style={{
+                        color: nb.id === activeNotebookId ? '#a78bfa' : 'var(--text-primary, #e5e5e5)',
+                        background: nb.id === activeNotebookId ? 'rgba(167,139,250,.1)' : 'transparent',
+                        border: 'none',
+                        cursor: 'pointer',
+                        transition: 'background .12s',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,.06)'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = nb.id === activeNotebookId ? 'rgba(167,139,250,.1)' : 'transparent'; }}
+                    >
+                      {nb.title}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <button onClick={handleCreateNotebook} className="research-btn-secondary">
               <Plus size={12} />
