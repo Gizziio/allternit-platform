@@ -115,8 +115,8 @@ export function LiveArtifactEditor() {
         {/* Right: Preview */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           <div style={{ padding: '6px 12px', fontSize: 10, fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em', background: 'var(--bg-secondary)' }}>Live Preview</div>
-          <div style={{ flex: 1, padding: 12 }}>
-            <ArtifactPreviewPane html={renderedHtml} title="Live Preview" identifier="live-preview" />
+          <div style={{ flex: 1, padding: 12, display: 'flex', flexDirection: 'column' }}>
+            <ArtifactPreviewPane html={renderedHtml} title="Live Preview" identifier="live-preview" height="100%" />
           </div>
         </div>
       </div>

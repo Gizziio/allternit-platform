@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -32,6 +32,7 @@ import { composeStudioSystemPrompt } from "../../lib/design/studio-system-prompt
 import { DesignTldrawCanvas } from "./DesignTldrawCanvas";
 import { LiveArtifactEditor } from "./LiveArtifactEditor";
 import { OrbitView } from "./OrbitView";
+import { ErrorBoundary } from "../../components/design/ErrorBoundary";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -77,6 +78,8 @@ function buildDirectProject(initialTab: CanvasTab): Project {
         : []),
       { id: 'team', label: 'Team', type: 'team' },
       { id: 'handoff', label: 'Handoff', type: 'handoff' },
+      { id: 'live', label: 'Live', type: 'live' as CanvasTab },
+      { id: 'orbit', label: 'Orbit', type: 'orbit' as CanvasTab },
     ],
   };
 }
@@ -114,7 +117,13 @@ function GenerativeLoader({ title }: { title: string }) {
 
 // ─── Swarm Inspect UI ────────────────────────────────────────────────────────
 
-function SwarmInspect({ logs }: { logs: any[] }) {
+interface SwarmLog {
+  agent: string;
+  action: string;
+  status: string;
+}
+
+function SwarmInspect({ logs }: { logs: SwarmLog[] }) {
   return (
     <div style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.05)", borderRadius: "16px", overflow: "hidden", marginBottom: "20px" }}>
        <div style={{ padding: "12px 16px", background: "rgba(0,0,0,0.03)", borderBottom: "1px solid rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: "8px" }}>
@@ -145,12 +154,12 @@ function StudioOnboarding({ onComplete }: { onComplete: () => void }) {
   const [step, setStep] = useState(0);
   const [typedText, setTypedText] = useState("");
 
-  const sequence = [
+  const sequence = useMemo(() => [
     { title: "Manifest your vision", sub: "Import your team's design DNA" },
     { title: "Design to Code", sub: "Build prototypes from a single prompt", prompt: "Mock up a glass-morphism banking dashboard" },
     { title: "Design to Content", sub: "Manifest 10 native social campaigns instantly", prompt: "Turn this design into a social campaign" },
     { title: "One Studio. All Surfaces.", sub: "Web, Mobile, Video, and Docs in one loop." }
-  ];
+  ], []);
 
   useEffect(() => {
     if (step === 0) setTimeout(() => setStep(1), 3000);
@@ -281,10 +290,12 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
     const lastAsstMsg = [...backendMessages].reverse().find(m => m.role === 'assistant');
     if (lastAsstMsg) {
       const content = lastAsstMsg.content || '';
-      const mdMatch = content.match(/# Brand:[\s\S]*?## Radii[\s\S]*?px/);
-      if (mdMatch) setDesignMd(mdMatch[0]);
-      const uiMatch = content.match(/\\?\[v:[\s\S]*/);
-      if (uiMatch) setUiStream(uiMatch[0]);
+      // Extract design system markdown: look for # Brand or # Design System sections
+      const mdMatch = content.match(/#\s*(?:Brand|Design System|Tokens)[\s\S]*?(?=\n#\s|\n<artifact|<\/?artifact|\z)/i);
+      if (mdMatch) setDesignMd(mdMatch[0].trim());
+      // Extract UI stream: look for v:card, v:metric, or similar stream syntax
+      const uiMatch = content.match(/(?:\?\[v:|\[v:)[\s\S]*/);
+      if (uiMatch) setUiStream(uiMatch[0].trim());
     }
   }, [backendMessages]);
 
@@ -355,10 +366,13 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
     '--bg-secondary': '#f4f4f0',
     '--text-primary': '#111',
     '--text-secondary': '#444',
+    '--text-tertiary': '#888',
     '--border-subtle': 'rgba(0,0,0,0.07)',
     '--border-default': 'rgba(0,0,0,0.12)',
     '--surface-panel': '#fff',
     '--surface-hover': 'rgba(0,0,0,0.04)',
+    '--accent-primary': '#e27c59',
+    '--status-success': '#22c55e',
   } as React.CSSProperties;
 
   return (
@@ -366,7 +380,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
       <PanelGroup direction="horizontal">
         <Panel>
           <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "var(--bg-secondary)" }}>
-            <header style={{ height: "56px", borderBottom: "1px solid var(--border-subtle)", background: "var(--surface-panel)", display: "flex", alignItems: "center", padding: "0 16px", gap: "8px" }}>
+            <header style={{ height: "56px", borderBottom: "1px solid var(--border-subtle)", background: "var(--surface-panel)", display: "flex", alignItems: "center", padding: "0 16px", gap: "8px", overflowX: "auto", scrollbarWidth: "none" }}>
                {activeProject.tabs.map(tab => (
                  <button key={tab.id} onClick={() => setActiveTab(tab.id as CanvasTab)} style={{ border: "none", background: activeTab === tab.id ? "var(--bg-secondary)" : "transparent", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", padding: "8px 16px", borderRadius: "8px 8px 0 0", cursor: "pointer", borderTop: activeTab === tab.id ? "1px solid var(--border-subtle)" : "1px solid transparent" }}>{tab.label}</button>
                ))}
@@ -384,6 +398,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
                       <GenerativeLoader title="Manifesting high-fidelity UI..." />
                     </div>
                   )}
+                  <ErrorBoundary>
                   {/* Full-bleed tabs — no padding wrapper */}
                   {activeTab === 'sketch' && (
                     <div style={{ flex: 1, height: '100%', overflow: 'hidden' }}>
@@ -445,10 +460,11 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
                       <OrbitView
                         projectName={activeProject?.name}
                         sessionSendMessage={activeSessionId ? (text) => sendMessageStream(activeSessionId, { text }) : undefined}
-                        activeSessionId={activeSessionId}
+                        messages={backendMessages}
                       />
                     </div>
                   )}
+                  </ErrorBoundary>
                   {/* Padded tabs */}
                   {!['sketch', 'system', 'handoff', 'mobile', 'video', 'docs', 'market', 'brand', 'graph', 'pipeline', 'live', 'orbit'].includes(activeTab) && (
                     <div style={{ flex: 1, overflowY: 'auto', padding: '40px' }}>
@@ -551,6 +567,8 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
           onClose={() => setShowImport(false)}
           onImport={(design) => {
             setShowImport(false);
+            setDesignMd(design.designMd);
+            setInstalledDesignId(design.id);
             if (activeSessionId) {
               sendMessageStream(activeSessionId, {
                 text: `[Design Import] Apply the imported design system: "${design.name}". ${design.designMd}`,
@@ -563,7 +581,16 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
   );
 }
 
-function TokenSlider({ label, value, unit, onChange, min = 0, max = 32 }: any) {
+interface TokenSliderProps {
+  label: string;
+  value: number;
+  unit: string;
+  onChange: (value: number) => void;
+  min?: number;
+  max?: number;
+}
+
+function TokenSlider({ label, value, unit, onChange, min = 0, max = 32 }: TokenSliderProps) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}><span style={{ fontSize: "11px", fontWeight: 700, color: "var(--text-secondary)" }}>{label}</span><span style={{ fontSize: "10px", color: "var(--text-tertiary)" }}>{value}{unit}</span></div>

@@ -20,7 +20,7 @@ interface Props {
 }
 
 function ProseBlock({ text }: { text: string }) {
-  const clean = text.replace(/\\\?\[v:[\s\S]*/, "").trim();
+  const clean = text.replace(/\??\[v:[\s\S]*/, "").trim();
   if (!clean) return null;
   return (
     <div
@@ -126,6 +126,7 @@ function renderFormSegments(
 
 export function StudioMessageRenderer({ message, isLast, onSubmitForm }: Props) {
   const content = message.content ?? "";
+  const [htmlOverrides, setHtmlOverrides] = useState<Record<string, string>>({});
 
   if (message.role !== "assistant") {
     return (
@@ -142,17 +143,21 @@ export function StudioMessageRenderer({ message, isLast, onSubmitForm }: Props) 
     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
       {artifactSegments.map((seg, i) => {
         if (seg.kind === "artifact") {
-          const lintResult = lintGeneratedHtml(seg.artifact.content);
+          const artifactHtml = htmlOverrides[seg.artifact.identifier] ?? seg.artifact.content;
+          const lintResult = lintGeneratedHtml(artifactHtml);
           return (
             <div key={seg.artifact.identifier + i}>
               {lintResult.violations.length > 0 && (
                 <LintBadge result={lintResult} />
               )}
               <ArtifactPreviewPane
-                html={seg.artifact.content}
+                html={artifactHtml}
                 title={seg.artifact.title}
                 identifier={seg.artifact.identifier}
                 height={seg.artifact.type === "text/html" ? 520 : 320}
+                onHtmlChange={(updatedHtml) => {
+                  setHtmlOverrides(prev => ({ ...prev, [seg.artifact.identifier]: updatedHtml }));
+                }}
               />
             </div>
           );

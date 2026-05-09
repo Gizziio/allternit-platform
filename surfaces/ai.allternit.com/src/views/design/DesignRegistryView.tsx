@@ -606,8 +606,8 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
                             }}
                           >
                             <ActionBtn
-                              icon={<PlayCircle size={16} />}
-                              label="Preview"
+                              icon={<DownloadSimple size={16} />}
+                              label="Install"
                               primary
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -801,7 +801,7 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
             }}
           >
             <Sparkle size={12} color="var(--accent-primary)" />
-            Gemini 2.5 Pro
+            Allternit AI
           </div>
 
           <div style={{ flex: 1, position: "relative" }}>
