@@ -234,6 +234,15 @@ const nextConfig: NextConfig = {
       }
     }
 
+    // pptxgenjs uses node:fs/node:https which can't be bundled for Cloudflare Pages
+    // (static export). The dynamic import in SlidesEditor.tsx falls back gracefully.
+    if (process.env.CLOUDFLARE_PAGES === '1') {
+      config.externals = config.externals || [];
+      if (Array.isArray(config.externals)) {
+        config.externals.push('pptxgenjs');
+      }
+    }
+
     // FIXME: These fallbacks are needed because MCP client code imports server-only
     // modules (postgres, net, tls, etc.) into client components.
     // Proper fix: Move all MCP operations to API routes, client should only use fetch()

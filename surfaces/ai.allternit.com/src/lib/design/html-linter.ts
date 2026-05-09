@@ -34,8 +34,10 @@ export function lintGeneratedHtml(html: string): LintResult {
     violations.push({ rule: 'no-scroll-into-view', severity: 'warning', message: 'scrollIntoView detected — avoid in preview artifacts.' });
   }
 
-  const capsMatches = html.match(/text-transform:\s*uppercase[^}]*(?!letter-spacing)/gi) ?? [];
-  if (capsMatches.length > 2) {
+  // Find uppercase blocks that lack letter-spacing — check each CSS block separately
+  const styleBlocks = html.match(/text-transform:\s*uppercase[\s\S]*?(?:;|\})/gi) ?? [];
+  const badCaps = styleBlocks.filter(block => !/letter-spacing/.test(block));
+  if (badCaps.length > 2) {
     violations.push({ rule: 'caps-letter-spacing', severity: 'warning', message: 'ALL-CAPS text should include letter-spacing (0.05em+) for readability.' });
   }
 

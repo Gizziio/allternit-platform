@@ -381,13 +381,35 @@ export function DesignImportModal({ onClose, onImport }: Props) {
 }
 
 function isLightColor(color: string): boolean {
+  let r = 128, g = 128, b = 128;
+
   if (color.startsWith('#')) {
     const hex = color.replace('#', '');
-    const r = parseInt(hex.slice(0, 2), 16);
-    const g = parseInt(hex.slice(2, 4), 16);
-    const b = parseInt(hex.slice(4, 6), 16);
-    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-    return brightness > 180;
+    r = parseInt(hex.slice(0, 2), 16) || 0;
+    g = parseInt(hex.slice(2, 4), 16) || 0;
+    b = parseInt(hex.slice(4, 6), 16) || 0;
+  } else if (color.startsWith('rgb')) {
+    const m = color.match(/(\d+(?:\.\d+)?)[,\s]+(\d+(?:\.\d+)?)[,\s]+(\d+(?:\.\d+)?)/);
+    if (m) { r = +m[1]; g = +m[2]; b = +m[3]; }
+  } else if (color.startsWith('hsl')) {
+    const m = color.match(/(\d+(?:\.\d+)?)[,\s]+(\d+(?:\.\d+)?)%[,\s]+(\d+(?:\.\d+)?)%/);
+    if (m) {
+      const h = +m[1], s = +m[2] / 100, l = +m[3] / 100;
+      const a = s * Math.min(l, 1 - l);
+      const f = (n: number) => {
+        const k = (n + h / 30) % 12;
+        return l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+      };
+      r = Math.round(f(0) * 255);
+      g = Math.round(f(8) * 255);
+      b = Math.round(f(4) * 255);
+    }
+  } else if (color.startsWith('oklch')) {
+    // Approximation: oklch lightness > 0.7 is light
+    const m = color.match(/oklch\(\s*(\d+(?:\.\d+)?)%?/);
+    if (m) return parseFloat(m[1]) > 0.7;
   }
-  return false;
+
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return brightness > 180;
 }

@@ -442,7 +442,11 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
                   )}
                   {activeTab === 'orbit' && (
                     <div style={{ flex: 1, height: '100%', overflowY: 'auto' }}>
-                      <OrbitView projectName={activeProject?.name} sessionSendMessage={activeSessionId ? (text) => sendMessageStream(activeSessionId, { text }) : undefined} />
+                      <OrbitView
+                        projectName={activeProject?.name}
+                        sessionSendMessage={activeSessionId ? (text) => sendMessageStream(activeSessionId, { text }) : undefined}
+                        activeSessionId={activeSessionId}
+                      />
                     </div>
                   )}
                   {/* Padded tabs */}

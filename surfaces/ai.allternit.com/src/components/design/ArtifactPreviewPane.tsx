@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { ArrowSquareOut, DownloadSimple, DeviceMobile, DeviceTablet, Monitor, MagnifyingGlassMinus, MagnifyingGlassPlus, ArrowsOut, Sliders } from "@phosphor-icons/react";
-import { parseEditModeConfig, type EditModeToken, type EditModeConfig } from "../../lib/design/editmode-parser";
+import { parseEditModeConfig, updateEditModeTokensInHtml, type EditModeToken, type EditModeConfig } from "../../lib/design/editmode-parser";
 
 // ── Viewport presets ───────────────────────────────────────────────────────────
 
@@ -41,11 +41,12 @@ interface Props {
   identifier: string;
   className?: string;
   height?: number | string;
+  onHtmlChange?: (updatedHtml: string) => void;
 }
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
-export function ArtifactPreviewPane({ html, title, identifier, className, height = '100%' }: Props) {
+export function ArtifactPreviewPane({ html, title, identifier, className, height = '100%', onHtmlChange }: Props) {
   const [viewport, setViewport] = useState<ViewportId>('desktop');
   const [zoom, setZoom] = useState<number | 'fit'>('fit');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -87,6 +88,10 @@ export function ArtifactPreviewPane({ html, title, identifier, className, height
       { type: 'EDITMODE_UPDATE', tokens: Object.fromEntries(updated.map(t => [`--${t.id}`, String(t.value)])) },
       '*'
     );
+    if (onHtmlChange) {
+      const updatedHtml = updateEditModeTokensInHtml(html, updated);
+      onHtmlChange(updatedHtml);
+    }
   }
 
   const scale = zoom === 'fit' ? fitScale : zoom / 100;

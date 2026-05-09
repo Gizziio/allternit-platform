@@ -32,17 +32,32 @@ export function ComposioSetupModal({ onClose }: Props) {
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  useEffect(() => {
+    // Clean up any stray popup timers on unmount
+    return () => { /* any global timers would go here */ };
+  }, []);
+
   async function handleConnect(app: ComposioApp) {
     setLoading(app);
-    const { authUrl } = await initiateComposioConnect(app);
-    const popup = window.open(authUrl, '_blank', 'width=600,height=700');
-    const timer = setInterval(() => {
-      if (popup?.closed) {
-        clearInterval(timer);
-        refresh();
+    try {
+      const { authUrl } = await initiateComposioConnect(app);
+      const popup = window.open(authUrl, '_blank', 'width=600,height=700');
+      if (!popup) {
         setLoading(null);
+        return;
       }
-    }, 500);
+      const timer = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(timer);
+          refresh();
+          setLoading(null);
+        }
+      }, 500);
+      // Safety cleanup after 5 minutes
+      setTimeout(() => { clearInterval(timer); setLoading(null); }, 300_000);
+    } catch {
+      setLoading(null);
+    }
   }
 
   function handleSkip() {
