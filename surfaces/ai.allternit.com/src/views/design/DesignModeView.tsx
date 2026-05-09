@@ -10,6 +10,7 @@ import {
 import { DesignClipboardSidebar } from "./DesignClipboardSidebar";
 import { useNav } from "../../nav/useNav";
 import { useDesignSessionStore, useDesignSessionActions } from "./DesignSessionStore";
+import { useDesignTabStore } from "../../stores/design-tab.store";
 import { NewProjectScreen } from './NewProjectScreen';
 
 // Imports for built features
@@ -162,23 +163,31 @@ function StudioOnboarding({ onComplete }: { onComplete: () => void }) {
   ], []);
 
   useEffect(() => {
-    if (step === 0) setTimeout(() => setStep(1), 3000);
+    let nextStepTimeout: ReturnType<typeof setTimeout> | null = null;
+    if (step === 0) nextStepTimeout = setTimeout(() => setStep(1), 3000);
     if (step === 4) onComplete();
+    return () => {
+      if (nextStepTimeout) clearTimeout(nextStepTimeout);
+    };
   }, [step, onComplete]);
 
   useEffect(() => {
     if (sequence[step]?.prompt) {
        setTypedText("");
        let i = 0;
+       let advanceTimeout: ReturnType<typeof setTimeout> | null = null;
        const interval = setInterval(() => {
           setTypedText(sequence[step].prompt!.slice(0, i + 1));
           i++;
           if (i >= sequence[step].prompt!.length) {
              clearInterval(interval);
-             setTimeout(() => setStep(s => s + 1), 2500);
+             advanceTimeout = setTimeout(() => setStep(s => s + 1), 2500);
           }
        }, 50);
-       return () => clearInterval(interval);
+       return () => {
+         clearInterval(interval);
+         if (advanceTimeout) clearTimeout(advanceTimeout);
+       };
     }
   }, [step, sequence]);
 
@@ -250,7 +259,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
   const [activeTab, setActiveTab] = useState<CanvasTab>(
     initialTab ?? (initialDesignMd ? 'system' : 'questions')
   );
-  const [showTweaks, setShowTweaks] = useState(true);
+  const [showTweaks, setShowTweaks] = useState(false);
   const [chatInput, setChatInput] = useState("");
   const [designMd, setDesignMd] = useState<string | null>(initialDesignMd ?? null);
   const [uiStream, setUiStream] = useState<string | null>(initialStream ?? null);
@@ -259,6 +268,9 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
   const [showClipboard, setShowClipboard] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [installedDesignId, setInstalledDesignId] = useState<string | null>(null);
+
+  const pendingProject = useDesignTabStore(s => s.pendingProject);
+  const clearPendingProject = useDesignTabStore(s => s.clearPendingProject);
 
   const { createSession, sendMessageStream, loadSessions } = useDesignSessionActions();
   const activeSessionId = useDesignSessionStore(s => s.activeSessionId);
@@ -276,6 +288,14 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
   } as React.CSSProperties), [tokens]);
 
   useEffect(() => { loadSessions(); }, [loadSessions]);
+
+  // Bridge: DesignRailPanel → DesignModeView project creation
+  useEffect(() => {
+    if (!pendingProject) return;
+    clearPendingProject();
+    startProject({ name: pendingProject.name, type: pendingProject.type ?? 'prototype' });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingProject]);
 
   useEffect(() => {
     if (!initialTab) return;
@@ -380,16 +400,21 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
       <PanelGroup direction="horizontal">
         <Panel>
           <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "var(--bg-secondary)" }}>
-            <header style={{ height: "56px", borderBottom: "1px solid var(--border-subtle)", background: "var(--surface-panel)", display: "flex", alignItems: "center", padding: "0 16px", gap: "8px", overflowX: "auto", scrollbarWidth: "none" }}>
-               {activeProject.tabs.map(tab => (
-                 <button key={tab.id} onClick={() => setActiveTab(tab.id as CanvasTab)} style={{ border: "none", background: activeTab === tab.id ? "var(--bg-secondary)" : "transparent", fontSize: "12px", fontWeight: 600, color: "var(--text-secondary)", padding: "8px 16px", borderRadius: "8px 8px 0 0", cursor: "pointer", borderTop: activeTab === tab.id ? "1px solid var(--border-subtle)" : "1px solid transparent" }}>{tab.label}</button>
-               ))}
-               <div style={{ flex: 1 }} />
-               <button onClick={() => { setActiveProject(null); setActiveTab('questions'); }} title="New Project" style={{ display: "flex", alignItems: "center", gap: 5, padding: "0 12px", height: "30px", borderRadius: "8px", background: "var(--surface-hover)", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)", fontSize: "11px", fontWeight: 700, cursor: "pointer" }}><Plus size={12} weight="bold" /> New Project</button>
-               <button onClick={() => setShowImport(true)} title="Import design system" style={{ width: "36px", height: "36px", borderRadius: "18px", background: "var(--surface-panel)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><UploadSimple size={16} /></button>
-               <button onClick={() => setDarkMode(!darkMode)} title={darkMode ? "Light mode" : "Dark mode"} style={{ width: "36px", height: "36px", borderRadius: "18px", background: "var(--surface-panel)", color: "var(--text-primary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>{darkMode ? <Sun size={16} /> : <Moon size={16} />}</button>
-               <button onClick={() => { setShowClipboard(!showClipboard); setShowTweaks(false); }} title="Design Clipboard" style={{ width: "36px", height: "36px", borderRadius: "18px", background: showClipboard ? "var(--accent-primary)" : "var(--surface-panel)", color: showClipboard ? "var(--bg-primary)" : "var(--text-primary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><Scissors size={16} /></button>
-               <button onClick={() => { setShowTweaks(!showTweaks); setShowClipboard(false); }} title="Live Tokens" style={{ width: "36px", height: "36px", borderRadius: "18px", background: showTweaks ? "var(--accent-primary)" : "var(--surface-panel)", color: showTweaks ? "var(--bg-primary)" : "var(--text-primary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><Sliders size={18} /></button>
+            <header style={{ height: "56px", borderBottom: "1px solid var(--border-subtle)", background: "var(--surface-panel)", display: "flex", alignItems: "center", padding: "0 16px", flexShrink: 0 }}>
+               {/* Scrollable tab strip */}
+               <div style={{ flex: 1, display: "flex", alignItems: "center", gap: "4px", overflowX: "auto", scrollbarWidth: "none", minWidth: 0 }}>
+                 {activeProject.tabs.map(tab => (
+                   <button key={tab.id} onClick={() => setActiveTab(tab.id as CanvasTab)} style={{ flexShrink: 0, border: "none", background: activeTab === tab.id ? "var(--bg-secondary)" : "transparent", fontSize: "12px", fontWeight: 600, color: activeTab === tab.id ? "var(--text-primary)" : "var(--text-secondary)", padding: "8px 14px", borderRadius: "8px 8px 0 0", cursor: "pointer", borderTop: activeTab === tab.id ? "1px solid var(--border-subtle)" : "1px solid transparent", whiteSpace: "nowrap" }}>{tab.label}</button>
+                 ))}
+               </div>
+               {/* Fixed action buttons */}
+               <div style={{ display: "flex", alignItems: "center", gap: "6px", flexShrink: 0, paddingLeft: "12px", borderLeft: "1px solid var(--border-subtle)", marginLeft: "8px" }}>
+                 <button onClick={() => { setActiveProject(null); setActiveTab('questions'); }} title="New Project" style={{ display: "flex", alignItems: "center", gap: 5, padding: "0 10px", height: "28px", borderRadius: "8px", background: "var(--surface-hover)", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)", fontSize: "11px", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}><Plus size={12} weight="bold" /> New</button>
+                 <button onClick={() => setShowImport(true)} title="Import design system" style={{ width: "30px", height: "30px", borderRadius: "8px", background: "transparent", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><UploadSimple size={14} /></button>
+                 <button onClick={() => setDarkMode(!darkMode)} title={darkMode ? "Light mode" : "Dark mode"} style={{ width: "30px", height: "30px", borderRadius: "8px", background: "transparent", color: "var(--text-secondary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>{darkMode ? <Sun size={14} /> : <Moon size={14} />}</button>
+                 <button onClick={() => { setShowClipboard(!showClipboard); setShowTweaks(false); }} title="Design Clipboard" style={{ width: "30px", height: "30px", borderRadius: "8px", background: showClipboard ? "var(--accent-primary)" : "transparent", color: showClipboard ? "#fff" : "var(--text-secondary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><Scissors size={14} /></button>
+                 <button onClick={() => { setShowTweaks(!showTweaks); setShowClipboard(false); }} title="Live Tokens" style={{ width: "30px", height: "30px", borderRadius: "8px", background: showTweaks ? "var(--accent-primary)" : "transparent", color: showTweaks ? "#fff" : "var(--text-secondary)", border: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}><Sliders size={14} /></button>
+               </div>
             </header>
             <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
                <div style={{ flex: 1, overflow: "hidden", position: "relative", display: "flex", flexDirection: "column" }}>

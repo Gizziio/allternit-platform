@@ -169,7 +169,7 @@ export function DesignTeamWorkspace({ projectName }: { projectName?: string }) {
       style={{
         width: "100%",
         height: "100%",
-        background: "#0a0a0c",
+        background: "#ffffff",
         color: "#fff",
         fontFamily: "var(--font-sans)",
         display: "flex",
