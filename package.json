@@ -11,6 +11,9 @@
       "@reduxjs/toolkit": "^2.2.7",
       "react-redux": "^9.1.2",
       "redux": "^5.0.1"
+    },
+    "patches": {
+      "@blocksuite/icons@2.2.17": "patches/@blocksuite__icons@2.2.17.patch"
     }
   },
   "workspaces": [
