@@ -1,4 +1,4 @@
-import React, { useMemo, useReducer, useEffect, useCallback, useRef, useReducer } from 'react';
+import React, { useMemo, useReducer, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { usePlatformUser, isPlatformAuthDisabled } from '../lib/platform-auth-client';
 
