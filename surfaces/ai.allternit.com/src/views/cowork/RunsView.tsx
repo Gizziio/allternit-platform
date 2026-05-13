@@ -166,7 +166,7 @@ export const RunsView: React.FC = () => {
                     </h3>
                     <span
                       style={{
-                        fontSize: '11px',
+                        fontSize: '12px',
                         padding: '2px 8px',
                         borderRadius: '4px',
                         backgroundColor: 'var(--bg-secondary)',
@@ -178,7 +178,7 @@ export const RunsView: React.FC = () => {
                     {run.runtime && (
                       <span
                         style={{
-                          fontSize: '11px',
+                          fontSize: '12px',
                           padding: '2px 8px',
                           borderRadius: '4px',
                           backgroundColor: run.runtime === 'Cloud' ? 'var(--status-info-bg)' : 'var(--surface-active)',
@@ -206,7 +206,7 @@ export const RunsView: React.FC = () => {
                             borderRadius: '50%',
                             backgroundColor: run.assignedTo.type === 'agent' ? 'var(--status-info)' : 'var(--accent-cowork)',
                             color: 'var(--ui-text-inverse)',
-                            fontSize: '10px',
+                            fontSize: '12px',
                           }}
                         >
                           {run.assignedTo.avatar ? (

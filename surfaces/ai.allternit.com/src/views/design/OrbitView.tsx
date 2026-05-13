@@ -290,7 +290,7 @@ export function OrbitView({ projectName = "Untitled Project", sessionSendMessage
             <button
               onClick={() => toggleSchedule(!schedule.enabled)}
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 700,
                 color: schedule.enabled ? "var(--accent-primary)" : "var(--text-tertiary)",
                 background: "none",
@@ -303,7 +303,7 @@ export function OrbitView({ projectName = "Untitled Project", sessionSendMessage
             </button>
             {schedule.enabled && (
               <>
-                <span style={{ color: "var(--border-subtle)", fontSize: 10 }}>|</span>
+                <span style={{ color: "var(--border-subtle)", fontSize: 12 }}>|</span>
                 <input
                   type="time"
                   value={`${String(schedule.hour).padStart(2, "0")}:${String(schedule.minute).padStart(2, "0")}`}
@@ -315,7 +315,7 @@ export function OrbitView({ projectName = "Untitled Project", sessionSendMessage
                     background: "transparent",
                     border: "none",
                     color: "var(--text-secondary)",
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: 700,
                     padding: 0,
                     width: 52,
@@ -335,7 +335,7 @@ export function OrbitView({ projectName = "Untitled Project", sessionSendMessage
               borderRadius: 6,
               border: "1px solid var(--border-subtle)",
               background: "transparent",
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 700,
               color: "var(--text-secondary)",
               cursor: "pointer",
@@ -355,7 +355,7 @@ export function OrbitView({ projectName = "Untitled Project", sessionSendMessage
               border: "none",
               background: "var(--accent-primary)",
               color: "#fff",
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 700,
               cursor: "pointer",
               opacity:
@@ -406,7 +406,7 @@ export function OrbitView({ projectName = "Untitled Project", sessionSendMessage
                   config.sources.includes(s) && connected
                     ? "rgba(226,124,89,0.08)"
                     : "transparent",
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 700,
                 color: !connected
                   ? "var(--border-subtle)"
@@ -471,7 +471,7 @@ export function OrbitView({ projectName = "Untitled Project", sessionSendMessage
               borderRadius: 6,
               border: "1px solid var(--border-subtle)",
               background: "transparent",
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 700,
               color: "var(--text-secondary)",
               cursor: "pointer",
@@ -524,11 +524,11 @@ export function OrbitView({ projectName = "Untitled Project", sessionSendMessage
                   >
                     {new Date(d.generatedAt).toLocaleString()}
                   </span>
-                  <span style={{ fontSize: 10, color: "var(--text-tertiary)" }}>
+                  <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
                     {d.sources.join(", ")}
                   </span>
                 </div>
-                <div style={{ fontSize: 11, color: "var(--text-tertiary)", marginTop: 4 }}>
+                <div style={{ fontSize: 12, color: "var(--text-tertiary)", marginTop: 4 }}>
                   {d.summary}
                 </div>
               </button>

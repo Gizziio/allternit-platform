@@ -3,7 +3,7 @@ import { useMode } from '../providers/mode-provider';
 
 const BACKGROUND_TREATMENT: 'classic' | 'sharp-v1' = 'sharp-v1';
 
-export function WorkspaceBackground() {
+export function WorkspaceBackground(): JSX.Element {
   const { mode } = useMode();
 
   if (BACKGROUND_TREATMENT === 'classic') {

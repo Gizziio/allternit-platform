@@ -245,7 +245,7 @@ function TraceEntryItem({ entry }: { entry: TraceEntry }) {
         {/* Timestamp */}
         <div style={{ 
           color: THEME.textMuted, 
-          fontSize: 10,
+          fontSize: 12,
           flexShrink: 0,
           fontVariantNumeric: 'tabular-nums',
         }}>
@@ -267,7 +267,7 @@ function TraceEntryItem({ entry }: { entry: TraceEntry }) {
               background: 'var(--surface-hover)',
               borderRadius: '6px',
               color: THEME.textMuted,
-              fontSize: 11,
+              fontSize: 12,
               lineHeight: 1.5,
               fontFamily: 'var(--font-mono)',
               whiteSpace: 'pre-wrap',
@@ -308,7 +308,7 @@ function PlanPreview({ plan, onApprove, onReject }: {
           <span style={{ fontSize: 13, fontWeight: 600, color: THEME.textPrimary }}>Proposed Operator Plan</span>
         </div>
         <div style={{ 
-          fontSize: 10, 
+          fontSize: 12, 
           padding: '2px 8px', 
           borderRadius: '99px', 
           background: plan.risk === 'high' ? 'var(--status-error-bg)' : 'var(--status-success-bg)',
@@ -331,7 +331,7 @@ function PlanPreview({ plan, onApprove, onReject }: {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 700,
               color: step.status === 'completed' ? 'var(--ui-text-inverse)' : THEME.textMuted,
               flexShrink: 0
@@ -340,9 +340,9 @@ function PlanPreview({ plan, onApprove, onReject }: {
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 12, fontWeight: 500, color: THEME.textPrimary }}>{step.title}</div>
-              {step.description && <div style={{ fontSize: 11, color: THEME.textMuted, marginTop: 2 }}>{step.description}</div>}
+              {step.description && <div style={{ fontSize: 12, color: THEME.textMuted, marginTop: 2 }}>{step.description}</div>}
               {step.backend && (
-                <div style={{ fontSize: 9, color: THEME.textMuted, marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+                <div style={{ fontSize: 12, color: THEME.textMuted, marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
                   via {step.backend.replace('_', ' ')}
                 </div>
               )}
@@ -416,6 +416,11 @@ export function AgentRunner() {
     context
   } = useRunnerStore();
   const [input, setInput] = useState("");
+  const [prevDraft, setPrevDraft] = useState(draft);
+  if (draft !== prevDraft) {
+    setInput(draft);
+    setPrevDraft(draft);
+  }
   const [showModelMenu, setShowModelMenu] = useState(false);
   const [selectedModel, setSelectedModel] = useState({ id: 'kimi/kimi-for-coding', name: 'Kimi K2.5' });
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -425,10 +430,6 @@ export function AgentRunner() {
   useEffect(() => {
     loadSession();
   }, [loadSession]);
-  
-  useEffect(() => {
-    setInput(draft);
-  }, [draft]);
   
   useEffect(() => {
     if (textareaRef.current) {
@@ -492,7 +493,7 @@ export function AgentRunner() {
           borderBottom: `1px solid ${THEME.border}`,
           ...({'WebkitAppRegion': 'drag'} as React.CSSProperties),
         }}>
-          <span style={{ color: THEME.textMuted, fontSize: 11 }}>Agent Runner</span>
+          <span style={{ color: THEME.textMuted, fontSize: 12 }}>Agent Runner</span>
           <button 
             onClick={close}
             style={{ 
@@ -779,7 +780,7 @@ export function AgentRunner() {
             
             <div style={{ 
               color: agentEnabled ? AGENT_THEME.accent : THEME.textMuted, 
-              fontSize: 11,
+              fontSize: 12,
             }}>
               {agentEnabled ? 'Agent will use tools' : 'Direct chat mode'}
             </div>
@@ -872,7 +873,7 @@ export function AgentRunner() {
               U
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ color: THEME.textMuted, fontSize: 11, marginBottom: 4 }}>You</div>
+              <div style={{ color: THEME.textMuted, fontSize: 12, marginBottom: 4 }}>You</div>
               <div style={{
                 padding: '10px 14px',
                 background: THEME.inputBg,
@@ -905,7 +906,7 @@ export function AgentRunner() {
               <div className={isLoading ? "gizzi-focused" : "gizzi-pleased"}><GizziMascot size={20} emotion={isLoading ? "focused" : "pleased"} /></div>
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ color: THEME.textMuted, fontSize: 11, marginBottom: 4 }}>Assistant</div>
+              <div style={{ color: THEME.textMuted, fontSize: 12, marginBottom: 4 }}>Assistant</div>
               <div style={{
                 padding: '10px 14px',
                 background: THEME.inputBg,
@@ -953,7 +954,7 @@ export function AgentRunner() {
               borderRadius: '50%',
               animation: 'spin 1s linear infinite',
             }} />
-            <span style={{ fontSize: 11, color: THEME.textMuted, fontWeight: 500 }}>
+            <span style={{ fontSize: 12, color: THEME.textMuted, fontWeight: 500 }}>
               Operator is working...
             </span>
           </div>
@@ -1229,7 +1230,7 @@ export function AgentRunner() {
           
           <div style={{ 
             color: agentEnabled ? AGENT_THEME.accent : THEME.textMuted, 
-            fontSize: 11,
+            fontSize: 12,
           }}>
             {agentEnabled ? 'Agent will use tools and execute tasks' : 'Direct chat mode'}
           </div>

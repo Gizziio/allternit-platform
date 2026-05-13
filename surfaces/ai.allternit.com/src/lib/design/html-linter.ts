@@ -14,7 +14,7 @@ export interface LintResult {
 export function lintGeneratedHtml(html: string): LintResult {
   const violations: LintViolation[] = [];
 
-  if (/indigo-\d00|#6366f1|#818cf8/i.test(html)) {
+  if (/blue-\d00|#6366f1|#818cf8/i.test(html)) {
     violations.push({ rule: 'no-tailwind-indigo', severity: 'warning', message: 'Tailwind indigo detected — use design system accent color instead.' });
   }
 

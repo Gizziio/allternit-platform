@@ -143,7 +143,7 @@ export function WorkingCardBucket({ toolCalls, className }: WorkingCardBucketPro
 
         <span
           style={{
-            fontSize: 11,
+            fontSize: 12,
             color: 'var(--text-tertiary)',
             fontVariantNumeric: 'tabular-nums',
           }}
@@ -216,7 +216,7 @@ export function WorkingCardBucket({ toolCalls, className }: WorkingCardBucketPro
                     {tc.editCount > 1 && (
                       <span
                         style={{
-                          fontSize: 10,
+                          fontSize: 12,
                           fontWeight: 600,
                           color: 'var(--text-tertiary)',
                           background: 'var(--surface-panel-muted)',

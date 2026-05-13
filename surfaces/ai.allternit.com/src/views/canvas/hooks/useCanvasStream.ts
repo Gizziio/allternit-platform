@@ -91,7 +91,7 @@ export function useCanvasStream({
     
     // For now, we'll simulate stream events
     // In production, this would connect to Rust SSE stream
-    console.log('[useCanvasStream] Would connect to:', streamUrl);
+    console.debug('[useCanvasStream] Would connect to:', streamUrl);
 
     // Simulate stream status
     setStreamStatus('idle');

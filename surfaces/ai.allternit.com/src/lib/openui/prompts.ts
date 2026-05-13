@@ -34,12 +34,12 @@ Generate a valid Markdown block following this strict format BEFORE your UI stre
 
 ## 1. COMPACT UI GENERATION (OpenUI Lang)
 Wrap your UI in [v:tag ...] blocks.
-Use: [v:stack], [v:grid], [v:card title="..."], [v:metric label="..." val="..."], [v:table], [v:button label="..." action="..."].
+Use: [v:stack], [v:grid], [v:card title="…"], [v:metric label="…" val="…"], [v:table], [v:button label="…" action="…"].
 
 ### Premium Agentic Blocks:
 - [v:orchestrator steps=[...] currentStep=N] - Visual timeline of complex agent tasks.
-- [v:evaluator title="..." optionA={...} optionB={...} onSelect="..."] - Comparison UI.
-- [v:video-use title="..." transcript=[...]] - Synchronized reasoning walkthrough.
+- [v:evaluator title="…" optionA={...} optionB={...} onSelect="…"] - Comparison UI.
+- [v:video-use title="…" transcript=[...]] - Synchronized reasoning walkthrough.
 
 ## 2. CONTENT SKILL GRAPH PROTOCOL
 When working with /content-skill-graph:

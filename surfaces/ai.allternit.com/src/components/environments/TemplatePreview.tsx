@@ -242,7 +242,7 @@ ${volumes ? `\nvolumes:\n${volumes}` : ''}
     <div className={cn("space-y-4", className)}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Code className="w-4 h-4 text-muted-foreground" />
+          <Code className="size-4  text-muted-foreground" />
           <h4 className="text-sm font-medium">Configuration Preview</h4>
         </div>
         <div className="flex items-center gap-2">
@@ -300,10 +300,10 @@ ${volumes ? `\nvolumes:\n${volumes}` : ''}
                         size="sm"
                         variant="ghost"
                         onClick={copyToClipboard}
-                        className="h-7 w-7 p-0"
+                        className="size-7  p-0"
                       >
                         {copied ? (
-                          <Check className="w-3 h-3 text-green-500" />
+                          <Check className="size-3  text-green-500" />
                         ) : (
                           <Copy size={12} />
                         )}
@@ -312,7 +312,7 @@ ${volumes ? `\nvolumes:\n${volumes}` : ''}
                         size="sm"
                         variant="ghost"
                         onClick={downloadFile}
-                        className="h-7 w-7 p-0"
+                        className="size-7  p-0"
                       >
                         <DownloadSimple size={12} />
                       </Button>

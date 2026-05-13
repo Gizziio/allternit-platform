@@ -33,7 +33,7 @@ export function DocumentRenderer({
   // Handle document changes
   const handleChange = useCallback((content: unknown[]) => {
     // TODO: Save to backend
-    console.log('[Allternit Document] Content changed:', content.length, 'blocks');
+    console.debug('[Allternit Document] Content changed:', content.length, 'blocks');
   }, []);
 
   return (

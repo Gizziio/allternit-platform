@@ -187,7 +187,7 @@ const SkillInstaller: React.FC<SkillInstallerProps> = ({
               options={categories.map(cat => ({ label: cat.charAt(0).toUpperCase() + cat.slice(1), value: cat }))}
             />
             <Input
-              placeholder="Search skills..."
+              placeholder="Search skills…"
               prefix={<SearchOutlined />}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}

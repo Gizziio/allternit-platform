@@ -604,7 +604,7 @@ export function CatalogView() {
                             <div style={{ fontSize: 12, color: 'var(--text-muted, #a1a1aa)', marginBottom: 8 }}>
                               {cat.description}
                             </div>
-                            <div style={{ fontSize: 11, color: 'var(--text-muted, #a1a1aa)' }}>
+                            <div style={{ fontSize: 12, color: 'var(--text-muted, #a1a1aa)' }}>
                               Search terms: {cat.searchQueries.slice(0, 3).join(', ')}...
                             </div>
                           </button>
@@ -652,7 +652,7 @@ export function CatalogView() {
                 />
                 <input
                   type="text"
-                  placeholder="Search Udemy courses..."
+                  placeholder="Search Udemy courses…"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && searchCourses(searchQuery)}
@@ -694,7 +694,7 @@ export function CatalogView() {
             {loading ? (
               <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted, #a1a1aa)' }}>
                 <div className="animate-spin" style={{ display: 'inline-block' }}>⏳</div>
-                <p>Searching Udemy...</p>
+                <p>Searching Udemy…</p>
               </div>
             ) : filteredCourses.length === 0 ? (
               <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-muted, #a1a1aa)' }}>
@@ -744,7 +744,7 @@ export function CatalogView() {
                             padding: '2px 6px',
                             background: getLevelColor(course.level),
                             borderRadius: 4,
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: 600,
                           }}>
                             {course.level}
@@ -1053,7 +1053,7 @@ export function CatalogView() {
                           background: 'var(--bg-secondary, #111113)',
                           border: '1px solid var(--border-subtle, #27272a)',
                           borderRadius: 12,
-                          fontSize: 11,
+                          fontSize: 12,
                           color: 'var(--text-secondary, #d4d4d8)',
                         }}
                       >

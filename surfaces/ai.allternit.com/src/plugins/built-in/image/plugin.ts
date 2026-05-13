@@ -78,7 +78,7 @@ class ImagePlugin implements ModePlugin {
     
     this.isInitialized = true;
     this.emit({ type: 'initialized', timestamp: Date.now() });
-    console.log('[ImagePlugin] Initialized with Pollinations.ai (FREE)');
+    console.debug('[ImagePlugin] Initialized with Pollinations.ai (FREE)');
   }
 
   async destroy(): Promise<void> {

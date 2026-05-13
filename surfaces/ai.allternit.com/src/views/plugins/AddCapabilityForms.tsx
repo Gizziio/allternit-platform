@@ -230,7 +230,7 @@ function FormField({
         {required && <span style={{ color: THEME.accent, marginLeft: 4 }}>*</span>}
       </label>
       {children}
-      {hint && <p style={{ fontSize: 11, color: THEME.textTertiary, margin: '6px 0 0 0' }}>{hint}</p>}
+      {hint && <p style={{ fontSize: 12, color: THEME.textTertiary, margin: '6px 0 0 0' }}>{hint}</p>}
     </div>
   );
 }
@@ -364,7 +364,7 @@ function TagInput({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
-          placeholder="Add tag..."
+          placeholder="Add tag…"
           style={{
             flex: 1,
             padding: '8px 12px',
@@ -464,7 +464,7 @@ function AddSkillForm({
         <TextArea
           value={description}
           onChange={setDescription}
-          placeholder="Describe what this skill does..."
+          placeholder="Describe what this skill does…"
           rows={2}
         />
       </FormField>
@@ -597,7 +597,7 @@ function AddConnectorForm({
       </FormField>
 
       <FormField label="App URL">
-        <TextInput value={appUrl} onChange={setAppUrl} placeholder="https://..." />
+        <TextInput value={appUrl} onChange={setAppUrl} placeholder="https://…" />
       </FormField>
 
       <FormField label="Authentication Type">
@@ -1095,7 +1095,7 @@ function AddPluginWizardForm({
               border: `1px solid ${THEME.border}`,
               background: step === index ? THEME.accentMuted : 'transparent',
               color: step === index ? THEME.textPrimary : THEME.textSecondary,
-              fontSize: 11,
+              fontSize: 12,
               cursor: 'pointer',
             }}
           >

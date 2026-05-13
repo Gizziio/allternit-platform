@@ -49,7 +49,7 @@ export function BrowserExtensionConfigPanel({
           </svg>
         </button>
         <div className="flex-1">
-          <p className="text-[11px] uppercase tracking-wider opacity-60">{copy.settingsEyebrow}</p>
+          <p className="text-[12px] uppercase tracking-wider opacity-60">{copy.settingsEyebrow}</p>
           <h2 className="text-sm font-medium">{copy.settingsTitle}</h2>
         </div>
       </header>
@@ -63,7 +63,7 @@ export function BrowserExtensionConfigPanel({
             type="password"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
-            placeholder="sk-..."
+            placeholder="sk-…"
             className="w-full rounded-md px-2.5 py-1.5 text-sm outline-none border"
             style={{ background: "var(--secondary)", color: "var(--foreground)", borderColor: "var(--border)" }}
           />
@@ -123,7 +123,7 @@ export function BrowserExtensionConfigPanel({
           <textarea
             value={systemInstruction}
             onChange={(e) => setSystemInstruction(e.target.value)}
-            placeholder="Optional system prompt..."
+            placeholder="Optional system prompt…"
             rows={3}
             className="w-full rounded-md px-2.5 py-1.5 text-sm outline-none border resize-none"
             style={{ background: "var(--secondary)", color: "var(--foreground)", borderColor: "var(--border)" }}

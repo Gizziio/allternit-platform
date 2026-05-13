@@ -97,7 +97,7 @@ export function OpenInBrowserButton({
             onClick={handleOpen}
             className={className}
           >
-            <ArrowSquareOut className="w-4 h-4 mr-1" />
+            <ArrowSquareOut className="size-4  mr-1" />
             {showLabel && "Open in Browser"}
           </Button>
         </TooltipTrigger>
@@ -176,11 +176,11 @@ export function MessageA2UIActions({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={handleOpenInBrowser}>
-          <ArrowSquareOut className="w-4 h-4 mr-2" />
+          <ArrowSquareOut className="size-4  mr-2" />
           Open in Browser
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleDuplicate}>
-          <Copy className="w-4 h-4 mr-2" />
+          <Copy className="size-4  mr-2" />
           Duplicate
         </DropdownMenuItem>
       </DropdownMenuContent>
@@ -226,13 +226,13 @@ export function ChatBrowserBridge({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="secondary" size="sm">
-              <ArrowSquareOut className="w-4 h-4 mr-1" />
+              <ArrowSquareOut className="size-4  mr-1" />
               Open Apps ({payloads.length})
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem onClick={openAllInBrowser}>
-              <SquaresFour className="w-4 h-4 mr-2" />
+              <SquaresFour className="size-4  mr-2" />
               Open All in Browser
             </DropdownMenuItem>
             <div className="h-px bg-border my-1" />
@@ -243,7 +243,7 @@ export function ChatBrowserBridge({
                   addA2UITab(payload, title || `App ${idx + 1}`, `chat-${chatId}`)
                 }
               >
-                <SquaresFour className="w-4 h-4 mr-2" />
+                <SquaresFour className="size-4  mr-2" />
                 {title || `App ${idx + 1}`}
               </DropdownMenuItem>
             ))}
@@ -256,7 +256,7 @@ export function ChatBrowserBridge({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button variant="ghost" size="sm" className="text-muted-foreground">
-                <Globe className="w-4 h-4 mr-1" />
+                <Globe className="size-4  mr-1" />
                 {chatTabs.length} tab{chatTabs.length !== 1 ? "s" : ""} open
               </Button>
             </TooltipTrigger>
@@ -290,7 +290,7 @@ export function QuickBrowserLink({ url, title, icon }: QuickLinkProps) {
       onClick={() => addTab(url, title)}
       className="text-muted-foreground"
     >
-      {icon || <Globe className="w-4 h-4 mr-1" />}
+      {icon || <Globe className="size-4  mr-1" />}
       {title || "Open Link"}
     </Button>
   );

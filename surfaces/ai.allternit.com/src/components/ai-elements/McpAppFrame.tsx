@@ -674,7 +674,7 @@ export function McpAppFrame({ part }: { part: McpAppUIPart }) {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="shrink-0 rounded-full border border-[#D4B08C]/20 bg-[#D4B08C]/10 px-2.5 py-1 text-[11px] font-medium text-[#F7D9BA]">
+          <span className="shrink-0 rounded-full border border-[#D4B08C]/20 bg-[#D4B08C]/10 px-2.5 py-1 text-[12px] font-medium text-[#F7D9BA]">
             {isFullscreen ? "Fullscreen MCP App" : "MCP App"}
           </span>
           {isFullscreen ? (
@@ -699,7 +699,7 @@ export function McpAppFrame({ part }: { part: McpAppUIPart }) {
       >
         {!isLoaded && !hasError ? (
           <div className="absolute inset-0 z-10 flex items-center justify-center bg-[#F6F1E8]/90">
-            <div className="flex items-center gap-2 text-sm text-slate-700">
+            <div className="flex items-center gap-2 text-sm text-zinc-700">
               <CircleNotch className="size-4 animate-spin" />
               <span>Loading app…</span>
             </div>

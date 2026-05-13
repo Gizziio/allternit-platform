@@ -507,7 +507,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
                   value={newTag}
                   onChange={(e) => setNewTag(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && addTag()}
-                  placeholder="Add tag..."
+                  placeholder="Add tag…"
                   style={{ background: theme.bg, border: `1px solid ${theme.borderSubtle}`, color: theme.textPrimary, flex: 1 }}
                 />
                 <Button variant="outline" size="sm" onClick={addTag}>
@@ -844,7 +844,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                     <div>
-                      <label style={{ fontSize: '11px', color: theme.textMuted, marginBottom: '4px', display: 'block' }}>
+                      <label style={{ fontSize: '12px', color: theme.textMuted, marginBottom: '4px', display: 'block' }}>
                         Input (JSON)
                       </label>
                       <Textarea
@@ -862,7 +862,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
                       />
                     </div>
                     <div>
-                      <label style={{ fontSize: '11px', color: theme.textMuted, marginBottom: '4px', display: 'block' }}>
+                      <label style={{ fontSize: '12px', color: theme.textMuted, marginBottom: '4px', display: 'block' }}>
                         Output (JSON)
                       </label>
                       <Textarea
@@ -947,7 +947,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
                   padding: '12px', 
                   background: theme.bgCard, 
                   borderRadius: '4px',
-                  fontSize: '11px',
+                  fontSize: '12px',
                   color: theme.textSecondary,
                   overflow: 'auto',
                   maxHeight: '150px',
@@ -968,7 +968,7 @@ export function SkillBuilderWizard({ agentId, onClose, onSkillCreated, theme = S
                   padding: '12px', 
                   background: theme.bgCard, 
                   borderRadius: '4px',
-                  fontSize: '11px',
+                  fontSize: '12px',
                   color: theme.textSecondary,
                   overflow: 'auto',
                   maxHeight: '150px',

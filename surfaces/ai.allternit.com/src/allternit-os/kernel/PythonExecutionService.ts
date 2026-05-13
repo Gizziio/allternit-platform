@@ -329,7 +329,7 @@ export class PythonExecutionService {
 
   private log(...args: unknown[]): void {
     if (this.config.debug) {
-      console.log('[PythonExecutionService]', ...args);
+      console.debug('[PythonExecutionService]', ...args);
     }
   }
 

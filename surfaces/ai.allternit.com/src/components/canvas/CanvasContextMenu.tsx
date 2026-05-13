@@ -216,7 +216,7 @@ export function CanvasContextMenu({
             <div
               style={{
                 padding: '4px 8px 2px',
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: 700,
                 color: 'var(--text-muted)',
                 textTransform: 'uppercase',
@@ -257,7 +257,7 @@ export function CanvasContextMenu({
               {item.icon && <span style={{ opacity: 0.7 }}>{item.icon}</span>}
               <span style={{ flex: 1 }}>{item.label}</span>
               {item.shortcut && (
-                <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
                   {item.shortcut}
                 </span>
               )}

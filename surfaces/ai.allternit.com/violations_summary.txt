@@ -1,0 +1,10 @@
+   1   ⚠ UseReducer ×165
+   1   ⚠ Types ×1505
+   1   ⚠ Static element interactions ×269
+   1   ✗ Rules of hooks ×85
+   1   ⚠ Rendering hydration mismatch time ×385
+   1   ⚠ Label has associated control ×284
+   1   ⚠ Files ×1895
+   1   ⚠ Exports ×1579
+   1   ✗ Eval ×2
+   1   ✗ Effect needs cleanup ×10

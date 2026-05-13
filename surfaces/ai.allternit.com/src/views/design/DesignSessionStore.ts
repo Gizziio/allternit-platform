@@ -31,7 +31,7 @@ export const useDesignSessionStore = createModeSessionStore({
 // Actions
 // ---------------------------------------------------------------------------
 
-export function useDesignSessionActions() {
+export function useDesignSessionActions(): void {
   return useDesignSessionStore((state) => ({
     createSession: state.createSession,
     deleteSession: state.deleteSession,

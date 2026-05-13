@@ -5,6 +5,7 @@
  * Shows preview with "Open Full" option to expand to sidecar.
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -88,8 +89,8 @@ export function DocumentCard({
       {/* Header */}
       <div className="px-4 py-3 border-b border-[#333] bg-[#1e1e1e] flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#D4956A]/10 flex items-center justify-center">
-            <FileText className="w-4 h-4 text-[#D4956A]" />
+          <div className="size-8  rounded-lg bg-[#D4956A]/10 flex items-center justify-center">
+            <FileText className="size-4  text-[#D4956A]" />
           </div>
           <div>
             <h3 className="text-sm font-semibold text-[#ECECEC]">
@@ -120,7 +121,7 @@ export function DocumentCard({
             onClick={onOpenFull}
             className="h-7 text-[#888] hover:text-[#ECECEC] hover:bg-[#333]"
           >
-            <ArrowsOut className="w-3.5 h-3.5 mr-1" />
+            <ArrowsOut className="size-3.5  mr-1" />
             <span className="text-xs">Open Full</span>
           </Button>
         )}
@@ -147,7 +148,7 @@ export function DocumentCard({
               )}
             </div>
           ) : (
-            <p>{previewContent}{hasMoreContent && '...'}</p>
+            <p>{previewContent}{hasMoreContent && '…'}</p>
           )}
         </div>
 
@@ -225,12 +226,12 @@ export function DocumentCard({
             >
               {isExpanded ? (
                 <>
-                  <CaretUp className="w-3.5 h-3.5" />
+                  <CaretUp className="size-3.5 " />
                   Show Less
                 </>
               ) : (
                 <>
-                  <CaretDown className="w-3.5 h-3.5" />
+                  <CaretDown className="size-3.5 " />
                   Show More
                 </>
               )}
@@ -242,13 +243,13 @@ export function DocumentCard({
   );
 }
 
-function formatTime(date: Date): string {
+function formatTime(date: Date): string {isClient ? 
   const now = new Date();
   const diff = now.getTime() - new Date(date).getTime();
   const minutes = Math.floor(diff / 60000);
   
   if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) return `${minutes : "..."}m ago`;
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours}h ago`;
   return `${Math.floor(hours / 24)}d ago`;

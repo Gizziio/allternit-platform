@@ -168,7 +168,7 @@ export function CodeCanvasTileTerminal({ sessionId: linkedSessionId, workspacePa
           <span
             title={`Linked to session: ${linkedSessionId}`}
             style={{
-              fontSize: 10,
+              fontSize: 12,
               color: 'var(--accent-primary)',
               background: 'rgba(176, 141, 110, 0.15)',
               padding: '1px 6px',
@@ -228,7 +228,7 @@ export function CodeCanvasTileTerminal({ sessionId: linkedSessionId, workspacePa
             }}
           />
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-          <span>Starting terminal...</span>
+          <span>Starting terminal…</span>
         </div>
       )}
 

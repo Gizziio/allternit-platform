@@ -15,7 +15,7 @@ import { useRunnerStore } from '../runner/runner.store';
 import { useDrawerStore } from '../drawers/drawer.store';
 
 export function smokeReport() {
-  console.log("[allternit-platform] smokeReport OK");
+  console.debug("[allternit-platform] smokeReport OK");
 }
 
 /**
@@ -30,7 +30,7 @@ export function smokeHotkeys(): boolean {
       throw new Error('HOTKEY_SCOPES.GLOBAL not exported');
     }
     
-    console.log('[smoke] hotkeys:', {
+    console.debug('[smoke] hotkeys:', {
       AGENT_RUNNER: PLATFORM_SHORTCUTS.AGENT_RUNNER,
       NAV_BACK: PLATFORM_SHORTCUTS.NAV_BACK,
       scopes: Object.keys(HOTKEY_SCOPES),
@@ -58,7 +58,7 @@ export function smokeCommand(): boolean {
       throw new Error('AllternitCommandPalette not exported');
     }
     
-    console.log('[smoke] command: exports verified');
+    console.debug('[smoke] command: exports verified');
     return true;
   } catch (err) {
     console.error('[smoke] command failed:', err);
@@ -81,7 +81,7 @@ export function smokePanels(): boolean {
       throw new Error('AllternitResizeHandle not exported');
     }
     
-    console.log('[smoke] panels: exports verified');
+    console.debug('[smoke] panels: exports verified');
     return true;
   } catch (err) {
     console.error('[smoke] panels failed:', err);
@@ -104,7 +104,7 @@ export function smokeFlexLayout(): boolean {
       throw new Error('ensureSingletonTab not exported');
     }
     
-    console.log('[smoke] flexlayout: exports verified');
+    console.debug('[smoke] flexlayout: exports verified');
     return true;
   } catch (err) {
     console.error('[smoke] flexlayout failed:', err);
@@ -128,7 +128,7 @@ export function smokeRadix(): boolean {
       throw new Error('Radix.Tabs not exported');
     }
     
-    console.log('[smoke] radix: exports verified');
+    console.debug('[smoke] radix: exports verified');
     return true;
   } catch (err) {
     console.error('[smoke] radix failed:', err);
@@ -158,7 +158,7 @@ export async function runAllSmokeTests(): Promise<boolean> {
   const allPassed = Object.values(results).every(r => r);
   
   if (allPassed) {
-    console.log('[smoke] All Phase 0 vendor tests passed ✓');
+    console.debug('[smoke] All Phase 0 vendor tests passed ✓');
   } else {
     console.error('[smoke] Some tests failed:', results);
   }
@@ -173,7 +173,7 @@ export async function runAllSmokeTests(): Promise<boolean> {
 export function smokeNavigation(): boolean {
   try {
     let state = createInitialNavState();
-    console.log('[smoke] nav: initial state', state.activeViewId);
+    console.debug('[smoke] nav: initial state', state.activeViewId);
 
     // 1. OPEN_VIEW Browser (Singleton)
     state = navReducer(state, { type: 'OPEN_VIEW', viewType: 'browser' });
@@ -184,7 +184,7 @@ export function smokeNavigation(): boolean {
       state = navReducer(state, { type: 'OPEN_VIEW', viewType: 'browser' });
     }
     if (Object.keys(state.openViews).length !== 2) throw new Error('20 clicks created multiple browser instances');
-    console.log('[smoke] nav: singleton proof passed (20 clicks = 1 instance)');
+    console.debug('[smoke] nav: singleton proof passed (20 clicks = 1 instance)');
 
     // 3. OPEN_VIEW Chat (Non-singleton)
     state = navReducer(state, { type: 'OPEN_VIEW', viewType: 'chat' });
@@ -216,7 +216,7 @@ export function smokeNavigation(): boolean {
     // history becomes [home], active becomes home.
     if (state.activeViewId !== 'home') throw new Error('Back failed');
 
-    console.log('[smoke] nav: back/forward and focus-side-step passed');
+    console.debug('[smoke] nav: back/forward and focus-side-step passed');
     return true;
   } catch (err) {
     console.error('[smoke] navigation failed:', err);
@@ -242,7 +242,7 @@ export function smokeDocking(): boolean {
     if (!FlexLayoutHost) throw new Error('FlexLayoutHost not exported');
     if (!useFlexLayoutModel) throw new Error('useFlexLayoutModel not exported');
     
-    console.log('[smoke] docking: FlexLayout exports verified (Browser-only usage enforced)');
+    console.debug('[smoke] docking: FlexLayout exports verified (Browser-only usage enforced)');
     return true;
   } catch (err) {
     console.error('[smoke] docking failed:', err);
@@ -274,7 +274,7 @@ export function smokeRunner(): boolean {
     if (useRunnerStore.getState().open) throw new Error('Failed to close runner');
     if (useRunnerStore.getState().draft !== '') throw new Error('Draft not cleared');
 
-    console.log('[smoke] runner: compact/expand/submit flow passed');
+    console.debug('[smoke] runner: compact/expand/submit flow passed');
     return true;
   } catch (err) {
     console.error('[smoke] runner failed:', err);
@@ -291,7 +291,7 @@ export function smokeConsole(): boolean {
     
     // 1. Initial state
     if (!drawers.console.open) throw new Error('Console should be open by default');
-    console.log("verified console global portal");
+    console.debug("verified console global portal");
     
     // 2. Close drawer
     closeDrawer('console');
@@ -301,7 +301,7 @@ export function smokeConsole(): boolean {
     openDrawer('console');
     if (!useDrawerStore.getState().drawers.console.open) throw new Error('Failed to open console');
 
-    console.log('[smoke] console: global drawer state flow passed');
+    console.debug('[smoke] console: global drawer state flow passed');
     return true;
   } catch (err) {
     console.error('[smoke] console failed:', err);
@@ -315,7 +315,7 @@ export function smokeConsole(): boolean {
 export function smokeGlass(): boolean {
   try {
     // Verified via typecheck
-    console.log('[smoke] glass: GlassSurface and GlassCard verified');
+    console.debug('[smoke] glass: GlassSurface and GlassCard verified');
     return true;
   } catch (err) {
     console.error('[smoke] glass failed:', err);
@@ -332,7 +332,7 @@ export function smokeGlass(): boolean {
  */
 export async function smokeExecutionBridge(): Promise<boolean> {
   try {
-    console.log("[smoke] Testing Execution Bridge...");
+    console.debug("[smoke] Testing Execution Bridge...");
     
     // We cannot reliably test runtime bridge without a running runtime instance or full build
     // So we just verify the Facade exists and can be called.
@@ -346,11 +346,11 @@ export async function smokeExecutionBridge(): Promise<boolean> {
     
     if (!runId.startsWith('run-')) throw new Error("Invalid run ID returned");
     
-    console.log("[smoke] Started run:", runId);
+    console.debug("[smoke] Started run:", runId);
     
     // Wait for simulation to finish
     await new Promise(resolve => setTimeout(resolve, 1500));
-    console.log("[smoke] Execution Bridge verified ✓");
+    console.debug("[smoke] Execution Bridge verified ✓");
     return true;
   } catch (err) {
     console.error("[smoke] Execution Bridge failed:", err);
@@ -369,7 +369,7 @@ export function smokeBridge(): boolean {
     initLegacyBridge({ gateway: { type: 'mock' } });
     if (legacyBridge.gateway.type !== 'mock') throw new Error('Failed to initialize bridge');
 
-    console.log('[smoke] bridge: legacy services wiring verified');
+    console.debug('[smoke] bridge: legacy services wiring verified');
     return true;
   } catch (err) {
     console.error('[smoke] bridge failed:', err);

@@ -1,0 +1,1083 @@
+function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial<WizardData>) => void }) {
+  // Discovery state
+  const [discovery, setDiscovery] = useState<DiscoveryResult | null>(null);
+  const [scanning, setScanning] = useState(true);
+
+  // Cloud key state
+  const [expandedProvider, setExpandedProvider] = useState<CloudProviderId | null>(null);
+  const [keyDraft, setKeyDraft] = useState<Partial<Record<CloudProviderId, string>>>({});
+  const [keyStatus, setKeyStatus] = useState<Partial<Record<CloudProviderId, KeyStatus>>>({});
+  const [keyModels, setKeyModels] = useState<Partial<Record<CloudProviderId, Array<{ id: string; name: string }>>>>({});
+  const [keyError, setKeyError] = useState<Partial<Record<CloudProviderId, string>>>({});
+  const [showKey, setShowKey] = useState<Partial<Record<CloudProviderId, boolean>>>({});
+
+  const selected = data.defaultProvider;
+
+  // Local Brain download state
+  const [lbPullState, setLbPullState] = useState<'idle' | 'pulling' | 'done' | 'error'>('idle');
+  const [lbPullProgress, setLbPullProgress] = useState<{ status: string; total?: number; completed?: number } | null>(null);
+
+  const localBrainAlreadyPulled = discovery?.ollama.models.some(
+    (m) => m.modelId === 'llama3.2:3b' || m.modelId.startsWith('llama3.2:3b') || m.modelId === 'llama3.2:3b:latest'
+  ) ?? false;
+
+  const lbPullPct =
+    lbPullProgress?.total && lbPullProgress.completed
+      ? Math.round((lbPullProgress.completed / lbPullProgress.total) * 100)
+      : null;
+
+  async function startLocalBrainDownload() {
+    setLbPullState('pulling');
+    setLbPullProgress(null);
+    try {
+      const res = await fetch('/api/local-brain', { method: 'POST' });
+      if (!res.ok) { setLbPullState('error'); return; }
+      const reader = res.body!.getReader();
+      const dec = new TextDecoder();
+      let buf = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += dec.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop() ?? '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const ev = JSON.parse(line.slice(6)) as { status: string; total?: number; completed?: number };
+            setLbPullProgress(ev);
+            if (ev.status === 'success' || ev.status === 'done') {
+              setLbPullState('done');
+              onUpdate({ defaultProvider: 'ollama', defaultModelId: 'llama3.2:3b' });
+            } else if (ev.status === 'error') {
+              setLbPullState('error');
+            }
+          } catch {}
+        }
+      }
+    } catch {
+      setLbPullState('error');
+    }
+  }
+
+  // Run discovery on mount
+  useEffect(() => {
+    setScanning(true);
+    fetch('/api/onboarding/discover')
+      .then((r) => r.json())
+      .then((d) => setDiscovery(d as DiscoveryResult))
+      .catch(() => setDiscovery({ ollama: { running: false, models: [] }, lmstudio: { running: false, models: [] }, cli: [] }))
+      .finally(() => setScanning(false));
+  }, []);
+
+  // Validate an API key against the backend
+  async function validateKey(provider: CloudProviderId) {
+    const key = (keyDraft[provider] ?? '').trim();
+    if (key.length < 10) return;
+
+    setKeyStatus((s) => ({ ...s, [provider]: 'checking' }));
+    setKeyError((s) => ({ ...s, [provider]: undefined }));
+
+    try {
+      const res = await fetch('/api/onboarding/validate-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider, key }),
+      });
+      const json = await res.json() as { valid: boolean; models?: Array<{ id: string; name: string }>; error?: string };
+
+      if (json.valid) {
+        setKeyStatus((s) => ({ ...s, [provider]: 'valid' }));
+        setKeyModels((s) => ({ ...s, [provider]: json.models ?? [] }));
+        // Store the key + mark provider active
+        const keys = { ...(data.configuredKeys ?? {}), [provider]: key };
+        onUpdate({ configuredKeys: keys, apiKeysConfigured: true, defaultProvider: provider });
+      } else {
+        setKeyStatus((s) => ({ ...s, [provider]: 'invalid' }));
+        setKeyError((s) => ({ ...s, [provider]: json.error ?? 'Key rejected' }));
+      }
+    } catch {
+      setKeyStatus((s) => ({ ...s, [provider]: 'invalid' }));
+      setKeyError((s) => ({ ...s, [provider]: 'Could not reach validation server' }));
+    }
+  }
+
+  // Select a discovered local/CLI model
+  function selectDiscovered(m: DiscoveredModel) {
+    onUpdate({ defaultProvider: m.source, defaultModelId: m.modelId });
+  }
+
+  const allLocalModels: DiscoveredModel[] = [
+    ...(discovery?.ollama.models ?? []),
+    ...(discovery?.lmstudio.models ?? []),
+    ...(discovery?.cli ?? []),
+  ];
+
+  const hasLocalModels = allLocalModels.length > 0;
+
+  return (
+    <div className="flex flex-col gap-3">
+      <HintBox>
+        Connect the AI "brain" you want to use. If you have Ollama or other tools installed, we found them automatically. Or paste an API key from a cloud provider.
+      </HintBox>
+
+      {/* ── Local / CLI section ── */}
+      <div>
+        <div className="text-xs font-bold tracking-widest uppercase text-[var(--ui-text-muted)] mb-[7px] flex items-center gap-[7px]">
+          Found on this machine
+          {scanning && (
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+              className="flex"
+            >
+              <ArrowClockwise size={12} className="text-[var(--accent-primary)]" />
+            </motion.div>
+          )}
+        </div>
+
+        {scanning && (
+          <div className="p-3 px-3.5 rounded-xl text-xs text-[var(--ui-text-muted)] bg-[var(--surface-panel)] border border-[var(--ui-border-subtle)]">
+            Scanning for Ollama, LM Studio and AI CLI tools…
+          </div>
+        )}
+
+        {!scanning && !hasLocalModels && (
+          <div className="p-3 px-3.5 rounded-xl text-xs text-[var(--ui-text-muted)] bg-[var(--surface-panel)] border border-[var(--ui-border-subtle)]">
+            Nothing found — no Ollama, LM Studio or CLI agents detected. Use a cloud key below.
+          </div>
+        )}
+
+        {!scanning && allLocalModels.map((m) => {
+          const sel = selected === m.source && data.defaultModelId === m.modelId;
+          return (
+            <motion.button
+              key={m.id}
+              onClick={() => selectDiscovered(m)}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+              aria-label={`Select ${m.name} (${m.modelId})`}
+              className={`flex items-center gap-3 w-full mb-1.5 p-[11px] px-3.5 rounded-xl border-none cursor-pointer text-left transition-[outline-color,background] duration-150 ${
+                sel
+                  ? 'bg-[color-mix(in_srgb,var(--accent-primary)_8%,var(--surface-panel))] outline-2 outline-[var(--accent-primary)] outline-offset-0'
+                  : 'bg-[var(--surface-panel)] outline-2 outline-[var(--ui-border-subtle)] outline-offset-0'
+              }`}
+            >
+              <div className={`w-[34px] h-[34px] rounded-[9px] flex-shrink-0 flex items-center justify-center text-xs font-bold tracking-tight font-mono ${
+                sel ? 'bg-[color-mix(in_srgb,var(--accent-primary)_18%,var(--surface-panel))] text-[var(--accent-primary)]' : 'bg-[var(--surface-panel-muted)] text-[var(--ui-text-muted)]'
+              }`}>
+                {m.source === 'ollama' ? 'OL' : m.source === 'lmstudio' ? 'LM' : 'AI'}
+              </div>
+
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[13px] font-semibold text-[var(--ui-text-primary)]">
+                    {m.name}
+                  </span>
+                  {m.size && (
+                    <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-[color-mix(in_srgb,var(--ui-text-muted)_12%,transparent)] text-[var(--ui-text-muted)]">
+                      {m.size}
+                    </span>
+                  )}
+                  {m.badge && (
+                    <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-[color-mix(in_srgb,#10b981_15%,transparent)] text-[var(--status-success)] tracking-wider">
+                      {m.badge}
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-[var(--ui-text-muted)] mt-px">
+                  {m.modelId}
+                </div>
+              </div>
+
+              <motion.div
+                animate={{
+                  backgroundColor: sel ? 'var(--accent-primary)' : 'transparent',
+                  borderColor: sel ? 'var(--accent-primary)' : 'var(--ui-border-default)',
+                }}
+                className="w-[17px] h-[17px] rounded-full border-2 flex items-center justify-center flex-shrink-0"
+              >
+                {sel && <Check weight="bold" size={9} className="text-[var(--text-inverse)]" />}
+              </motion.div>
+            </motion.button>
+          );
+        })}
+      </div>
+
+      {/* ── Local Brain section ── */}
+      {!scanning && !localBrainAlreadyPulled && (
+        <div>
+          <div className="text-xs font-bold tracking-widest uppercase text-[var(--ui-text-muted)] mb-[7px]">
+            Local Brain
+          </div>
+
+          {!discovery?.ollama.running ? (
+            <div className="p-3 px-3.5 rounded-xl text-xs text-[var(--ui-text-muted)] bg-[var(--surface-panel)] border border-[var(--ui-border-subtle)] flex items-center gap-2.5">
+              <HardDrive size={16} className="flex-shrink-0" />
+              <span>
+                Install{' '}
+                <strong className="text-[var(--ui-text-primary)]">Ollama</strong>
+                {' '}to run AI offline — no API key needed.{' '}
+                <a
+                  href="https://ollama.com/download"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-[var(--accent-primary)] underline"
+                >
+                  Get Ollama →
+                </a>
+              </span>
+            </div>
+          ) : lbPullState === 'pulling' ? (
+            <div className="p-3 px-3.5 rounded-xl bg-[color-mix(in_srgb,var(--accent-primary)_5%,var(--surface-panel))] border-2 border-[var(--accent-primary)]">
+              <div className="flex items-center gap-2 mb-2">
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
+                  className="flex text-[var(--accent-primary)]"
+                >
+                  <ArrowClockwise size={13} />
+                </motion.div>
+                <span className="text-[13px] font-semibold text-[var(--ui-text-primary)]">
+                  Downloading Local Brain
+                </span>
+                {lbPullPct !== null && (
+                  <span className="text-xs text-[var(--accent-primary)] ml-auto">
+                    {lbPullPct}%
+                  </span>
+                )}
+              </div>
+              <div className="h-1 rounded-sm bg-[var(--ui-border-subtle)] overflow-hidden">
+                <div 
+                  className="h-full rounded-sm bg-[var(--accent-primary)] transition-[width] duration-300 ease-out"
+                  style={{ width: lbPullPct !== null ? `${lbPullPct}%` : '5%' }}
+                />
+              </div>
+              <div className="text-xs text-[var(--ui-text-muted)] mt-1.5">
+                {lbPullProgress?.status ?? 'Preparing…'} · llama3.2:3b (~2 GB)
+              </div>
+            </div>
+          ) : lbPullState === 'done' ? (
+            <motion.div
+              initial={{ scale: 0.97, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="p-[11px] px-3.5 rounded-xl bg-[color-mix(in_srgb,#10b981_8%,var(--surface-panel))] border-2 border-[#10b981] flex items-center gap-2.5"
+            >
+              <CheckCircle size={20} weight="fill" className="text-[var(--status-success)] flex-shrink-0" />
+              <div>
+                <div className="text-[13px] font-semibold text-[var(--ui-text-primary)]">
+                  Local Brain ready
+                </div>
+                <div className="text-xs text-[var(--ui-text-muted)]">
+                  llama3.2:3b · offline · selected as your brain
+                </div>
+              </div>
+            </motion.div>
+          ) : lbPullState === 'error' ? (
+            <div className="p-[11px] px-3.5 rounded-xl text-xs bg-[var(--surface-panel)] border border-[var(--ui-border-subtle)] flex items-center gap-2.5">
+              <Warning size={15} className="text-[var(--status-error)] flex-shrink-0" />
+              <span className="text-[var(--ui-text-muted)]">Download failed — </span>
+              <button
+                onClick={startLocalBrainDownload}
+                className="bg-transparent border-none cursor-pointer text-[var(--accent-primary)] text-xs font-semibold p-0"
+              >
+                try again
+              </button>
+            </div>
+          ) : (
+            <motion.button
+              onClick={startLocalBrainDownload}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.99 }}
+              aria-label="Download Local Brain"
+              className="flex items-center gap-3 w-full p-[11px] px-3.5 rounded-xl border-none cursor-pointer text-left bg-[var(--surface-panel)] outline-2 outline-[var(--ui-border-subtle)] outline-offset-0 transition-[outline-color] duration-150"
+            >
+              <div className="w-[34px] h-[34px] rounded-[9px] flex-shrink-0 flex items-center justify-center bg-[color-mix(in_srgb,var(--accent-primary)_12%,transparent)] text-[var(--accent-primary)]">
+                <CloudArrowDown size={18} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[13px] font-semibold text-[var(--ui-text-primary)]">
+                    Local Brain
+                  </span>
+                  <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-[color-mix(in_srgb,var(--accent-primary)_12%,transparent)] text-[var(--accent-primary)]">
+                    ~2 GB
+                  </span>
+                  <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-[color-mix(in_srgb,#10b981_15%,transparent)] text-[var(--status-success)] tracking-wider">
+                    Offline · private
+                  </span>
+                </div>
+                <div className="text-xs text-[var(--ui-text-muted)] mt-px">
+                  llama3.2:3b — works on any machine, no API key needed
+                </div>
+              </div>
+              <div className="text-xs font-bold px-2.5 py-[5px] rounded-[7px] bg-[var(--accent-primary)] text-[var(--text-inverse)] flex-shrink-0">
+                Download
+              </div>
+            </motion.button>
+          )}
+        </div>
+      )}
+
+      {/* ── Cloud providers section ── */}
+      <div>
+        <div className="text-xs font-bold tracking-widest uppercase text-[var(--ui-text-muted)] mb-[7px]">
+          Cloud AI (paste your API key)
+        </div>
+
+        {CLOUD_PROVIDERS.map((p) => {
+          const isExpanded = expandedProvider === p.id;
+          const status = keyStatus[p.id] ?? 'idle';
+          const isValid = status === 'valid';
+          const isChecking = status === 'checking';
+          const models = keyModels[p.id] ?? [];
+          const selectedModel = data.defaultModelId && data.defaultProvider === p.id
+            ? data.defaultModelId : null;
+          const sel = data.defaultProvider === p.id && isValid;
+
+          return (
+            <div key={p.id} className="mb-1.5">
+              {/* Provider row */}
+              <motion.button
+                onClick={() => setExpandedProvider(isExpanded ? null : p.id)}
+                whileHover={{ scale: 1.005 }}
+                aria-expanded={isExpanded}
+                aria-label={`Configure ${p.name}`}
+                className={`flex items-center gap-3 w-full p-[11px] px-3.5 border-none cursor-pointer text-left transition-[outline-color,background,border-radius] duration-150 ${
+                  isExpanded ? 'rounded-t-xl rounded-b-none' : 'rounded-xl'
+                } ${
+                  sel
+                    ? 'bg-[color-mix(in_srgb,var(--accent-primary)_8%,var(--surface-panel))] outline-2 outline-[var(--accent-primary)] outline-offset-0'
+                    : isExpanded ? 'bg-[var(--surface-panel)] outline-2 outline-[var(--ui-border-default)] outline-offset-0' : 'bg-[var(--surface-panel)] outline-2 outline-[var(--ui-border-subtle)] outline-offset-0'
+                }`}
+              >
+                <div 
+                  className="w-[34px] h-[34px] rounded-[9px] flex-shrink-0 flex items-center justify-center text-[var(--ui-text-primary)]"
+                  style={{ background: p.logoBg }}
+                >
+                  <p.Logo size={18} />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-[7px]">
+                    <span className="text-[13px] font-semibold text-[var(--ui-text-primary)]">
+                      {p.name}
+                    </span>
+                    {p.badge && !isValid && (
+                      <span 
+                        className="text-xs font-bold px-1.5 py-0.5 rounded tracking-wider"
+                        style={{ background: `color-mix(in srgb, ${p.badgeColor} 15%, transparent)`, color: p.badgeColor }}
+                      >
+                        {p.badge}
+                      </span>
+                    )}
+                    {isValid && (
+                      <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-[color-mix(in_srgb,#10b981_15%,transparent)] text-[var(--status-success)] tracking-wider">
+                        <Check weight="bold" size={9} className="mr-0.5 inline-block" /> Connected
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-[var(--ui-text-muted)] mt-px">
+                    {p.tagline}
+                  </div>
+                </div>
+
+                <CaretRight
+                  size={13}
+                  className={`text-[var(--ui-text-muted)] flex-shrink-0 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
+                />
+              </motion.button>
+
+              {/* Expandable key entry */}
+              <AnimatePresence initial={false}>
+                {isExpanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
+                    className="overflow-hidden bg-[var(--surface-panel)] border-2 border-t-0 border-[var(--ui-border-default)] rounded-b-xl"
+                  >
+                    <div className="p-3 px-3.5 flex flex-col gap-2">
+                      {/* Key input */}
+                      <div className="relative">
+                        <input
+                          type={showKey[p.id] ? 'text' : 'password'}
+                          value={keyDraft[p.id] ?? ''}
+                          onChange={(e) => {
+                            setKeyDraft((d) => ({ ...d, [p.id]: e.target.value }));
+                            if (keyStatus[p.id] !== 'idle') setKeyStatus((s) => ({ ...s, [p.id]: 'idle' }));
+                          }}
+                          onKeyDown={(e) => { if (e.key === 'Enter') validateKey(p.id); }}
+                          placeholder={p.keyPlaceholder}
+                          className="flex-1 w-full px-3 py-[9px] pr-20 rounded-[10px] text-[13px] bg-[var(--surface-canvas)] border border-[var(--ui-border-default)] text-[var(--ui-text-primary)] outline-none font-mono placeholder:text-[var(--ui-text-muted)]"
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => setShowKey((s) => ({ ...s, [p.id]: !s[p.id] }))}
+                          aria-label={showKey[p.id] ? "Hide API Key" : "Show API Key"}
+                          className="absolute right-10 top-1/2 -translate-y-1/2 bg-transparent border-none cursor-pointer text-[var(--ui-text-muted)] flex p-1"
+                        >
+                          {showKey[p.id] ? <EyeSlash size={13} /> : <Eye size={13} />}
+                        </button>
+                        <button
+                          onClick={() => validateKey(p.id)}
+                          disabled={isChecking || (keyDraft[p.id] ?? '').trim().length < 10}
+                          className={`absolute right-1.5 top-1/2 -translate-y-1/2 px-2 py-1 rounded-[7px] text-xs font-bold border-none cursor-pointer flex items-center gap-[3px] transition-[opacity,background] duration-150 ${
+                            isChecking ? 'bg-[var(--surface-panel-muted)] text-[var(--ui-text-muted)]' : 'bg-[var(--accent-primary)] text-[var(--text-inverse)]'
+                          } ${ (keyDraft[p.id] ?? '').trim().length < 10 ? 'opacity-40' : 'opacity-100' }`}
+                        >
+                          {isChecking ? (
+                            <motion.div
+                              animate={{ rotate: 360 }}
+                              transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
+                              className="flex"
+                            >
+                              <ArrowClockwise size={11} />
+                            </motion.div>
+                          ) : 'Test'}
+                        </button>
+                      </div>
+
+                      {/* Error / hint */}
+                      {keyError[p.id] && status === 'invalid' && (
+                        <div className="text-xs p-1.5 px-2.5 rounded-lg bg-[var(--status-error-bg)] text-[var(--status-error)]">
+                          {keyError[p.id]}
+                        </div>
+                      )}
+
+                      {!keyError[p.id] && (
+                        <div className="text-xs text-[var(--ui-text-muted)]">
+                          {p.keyHint}
+                        </div>
+                      )}
+
+                      {/* Model picker once key is valid */}
+                      {isValid && models.length > 0 && (
+                        <div className="flex flex-col gap-1.5 pt-1">
+                          <div className="text-[12px] font-bold tracking-wider uppercase text-[var(--ui-text-muted)]">
+                            Choose default model
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            {models.map((m) => {
+                              const mSel = selectedModel === m.id;
+                              return (
+                                <button
+                                  key={m.id}
+                                  onClick={() => onUpdate({ defaultModelId: m.id, defaultProvider: p.id })}
+                                  className={`flex items-center gap-[9px] p-2 px-2.5 rounded-[9px] border cursor-pointer text-left transition-[border-color,background] duration-150 ${
+                                    mSel
+                                      ? 'border-[var(--accent-primary)] bg-[color-mix(in_srgb,var(--accent-primary)_8%,var(--surface-panel))]'
+                                      : 'border-[var(--ui-border-subtle)] bg-[var(--surface-panel-muted)]'
+                                  }`}
+                                >
+                                  {mSel && <Check weight="bold" size={10} className="text-[var(--accent-primary)] flex-shrink-0" />}
+                                  <span className={`text-xs text-[var(--ui-text-primary)] ${mSel ? 'font-semibold' : 'font-normal'}`}>
+                                    {m.name}
+                                  </span>
+                                  <span className="text-[12px] text-[var(--ui-text-muted)] ml-auto font-mono">
+                                    {m.id}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          );
+        })}
+      </div>
+
+      {!selected && !scanning && (
+        <div className="text-xs text-[var(--ui-text-muted)] text-center mt-0.5">
+          Select a brain above to continue — you can add more in Settings anytime.
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Done screen — mode showcase ─────────────────────────────────────────────
+
+type ModeKey = 'chat' | 'code' | 'browser' | 'agents' | 'private';
+
+const MODE_TABS: Array<{
+  key: ModeKey;
+  label: string;
+  Icon: UIIcon;
+  color: string;
+  bg: string;
+}> = [
+  { key: 'chat',    label: 'A:// Chat',    Icon: ChatCircle,  color: '#6366f1', bg: 'rgba(99,102,241,0.1)'  },
+  { key: 'code',    label: 'A:// Code',    Icon: Code,        color: 'var(--status-success)', bg: 'rgba(16,185,129,0.1)'  },
+  { key: 'browser', label: 'A:// Browser', Icon: Globe,       color: '#ec4899', bg: 'rgba(236,72,153,0.1)'  },
+  { key: 'agents',  label: 'A:// Agents',  Icon: Robot,       color: 'var(--status-warning)', bg: 'var(--status-warning-bg)'  },
+  { key: 'private', label: 'Private',      Icon: ShieldCheck, color: 'var(--status-info)', bg: 'rgba(6,182,212,0.1)'   },
+];
+
+function ModePreviewChat() {
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex justify-end">
+        <div className="max-w-[72%] p-2 px-3 rounded-[14px_14px_4px_14px] bg-[rgba(99,102,241,0.15)] border border-[rgba(99,102,241,0.2)] text-xs text-[var(--ui-text-primary)] leading-relaxed">
+          Explain quantum computing simply
+        </div>
+      </div>
+      <div className="flex gap-2 items-start">
+        <div className="w-[22px] h-[22px] rounded-full flex-shrink-0 mt-0.5 bg-[rgba(99,102,241,0.15)] border border-[rgba(99,102,241,0.2)] flex items-center justify-center">
+          <MatrixLogo state="idle" size={13} />
+        </div>
+        <div className="flex-1 p-2 px-3 rounded-[4px_14px_14px_14px] bg-[var(--surface-panel)] border border-[var(--ui-border-subtle)] text-xs text-[var(--ui-text-secondary)] leading-relaxed">
+          Quantum computers use qubits that can exist as both 0 and 1 simultaneously — unlike classical bits. This lets them solve certain problems exponentially faster.
+        </div>
+      </div>
+      <div className="flex gap-1 pl-[30px] items-center">
+        {[0, 1, 2].map(i => (
+          <motion.div
+            key={i}
+            className="w-1.25 h-1.25 rounded-full bg-[rgba(99,102,241,0.5)]"
+            animate={{ opacity: [0.3, 1, 0.3], scale: [0.7, 1, 0.7] }}
+            transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.22, ease: 'easeInOut' }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ModePreviewCode() {
+  const lines = [
+    { text: '$ allternit code --fix auth.ts', color: 'rgba(255,255,255,0.55)' },
+    { text: '',                                color: '' },
+    { text: '✓ Scanning workspace…',           color: 'var(--status-success)' },
+    { text: '✓ Found issue in auth.ts:42',     color: 'var(--status-success)' },
+    { text: '~ Applying null-check fix…',      color: 'var(--status-warning)' },
+    { text: '',                                color: '' },
+    { text: '1 file patched — 0 errors remain', color: 'rgba(255,255,255,0.4)' },
+  ];
+  return (
+    <div className="bg-[rgba(0,0,0,0.35)] rounded-[10px] p-3 px-3.5 font-mono text-xs border border-[var(--ui-border-muted)]">
+      {lines.map((l, i) => (
+        <motion.div
+          key={i}
+          initial={{ opacity: 0, x: -6 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.08 + i * 0.07, duration: 0.22 }}
+          className="leading-relaxed"
+          style={{ height: l.text ? 'auto' : 6, color: l.color || 'transparent' }}
+        >
+          {l.text}
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+function ModePreviewBrowser() {
+  const steps = [
+    'Navigating to competitor.com/pricing…',
+    'Page loaded — extracting content',
+    'Found 3 pricing tiers',
+    'Starter $9/mo · Pro $29/mo · Enterprise',
+  ];
+  return (
+    <div className="flex flex-col gap-2">
+      {/* Browser chrome bar */}
+      <div className="flex items-center gap-1.5 p-1.5 px-2.5 bg-[rgba(0,0,0,0.25)] rounded-lg border border-[var(--ui-border-muted)]">
+        <div className="flex gap-1">
+          {['#ff5f57','#febc2e','#28c840'].map(c => (
+            <div key={c} className="w-2 h-2 rounded-full opacity-70" style={{ background: c }} />
+          ))}
+        </div>
+        <div className="flex-1 p-[3px] px-2 rounded-md bg-[var(--surface-hover)] border border-[var(--ui-border-muted)] text-[12px] text-[rgba(255,255,255,0.35)] font-mono">
+          competitor.com/pricing
+        </div>
+      </div>
+      {/* Steps */}
+      <div className="flex flex-col gap-1.25 pl-1">
+        {steps.map((s, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 + i * 0.12, duration: 0.25 }}
+            className="flex items-center gap-[7px] text-xs"
+          >
+            <div 
+              className={`w-1.25 h-1.25 rounded-full flex-shrink-0 ${i < 2 ? 'bg-[#ec4899]' : 'bg-[rgba(255,255,255,0.2)]'}`}
+            />
+            <span className={`leading-relaxed ${i < 2 ? 'text-[var(--ui-text-primary)]' : 'text-[var(--ui-text-secondary)]'}`}>
+              {s}
+            </span>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ModePreviewAgents() {
+  const tasks = [
+    { label: 'Search for relevant papers',  done: true  },
+    { label: 'Extract key findings',         done: true  },
+    { label: 'Writing summary report…',      done: false, active: true },
+    { label: 'Send to your inbox',           done: false, active: false },
+  ];
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="p-[7px] px-2.5 rounded-lg bg-[rgba(245,158,11,0.08)] border border-[rgba(245,158,11,0.15)] text-xs text-[rgba(245,158,11,0.9)] font-semibold">
+        Task: Research AI landscape + compile report
+      </div>
+      <div className="flex flex-col gap-1.5 pl-0.5">
+        {tasks.map((t, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.08 + i * 0.1, duration: 0.22 }}
+            className="flex items-center gap-2 text-xs"
+          >
+            <div 
+              className={`w-4 h-4 rounded-full flex-shrink-0 flex items-center justify-center border transition-colors ${
+                t.done ? 'bg-[rgba(245,158,11,0.2)] border-[rgba(245,158,11,0.4)]' : t.active ? 'bg-transparent border-[rgba(245,158,11,0.3)]' : 'bg-[var(--surface-hover)] border-[var(--ui-border-default)]'
+              }`}
+            >
+              {t.done ? (
+                <Check size={9} weight="bold" className="text-[var(--status-warning)]" />
+              ) : t.active ? (
+                <motion.div
+                  className="w-1.5 h-1.5 rounded-full bg-[var(--status-warning)]"
+                  animate={{ opacity: [1, 0.3, 1] }}
+                  transition={{ duration: 1.1, repeat: Infinity }}
+                />
+              ) : null}
+            </div>
+            <span className={`leading-relaxed ${
+              t.done ? 'text-[var(--ui-text-muted)] line-through opacity-55' : t.active ? 'text-[var(--ui-text-primary)]' : 'text-[var(--ui-text-muted)]'
+            }`}>
+              {t.label}
+            </span>
+          </motion.div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ModePreviewPrivate() {
+  return (
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-center gap-2 p-2 px-3 rounded-[9px] bg-[rgba(6,182,212,0.08)] border border-[rgba(6,182,212,0.18)]">
+        <motion.div
+          className="w-1.75 h-1.75 rounded-full bg-[var(--status-info)] flex-shrink-0"
+          animate={{ opacity: [1, 0.4, 1] }}
+          transition={{ duration: 1.8, repeat: Infinity }}
+        />
+        <span className="text-xs font-semibold text-[rgba(6,182,212,0.9)]">
+          Running entirely on your machine
+        </span>
+      </div>
+      {[
+        { label: 'Model',   value: 'llama3.2 · Ollama' },
+        { label: 'Device',  value: 'Your computer' },
+        { label: 'Network', value: 'None — fully offline' },
+      ].map(({ label, value }) => (
+        <div key={label} className="flex justify-between items-center text-xs">
+          <span className="text-[var(--ui-text-muted)]">{label}</span>
+          <span className="text-[var(--ui-text-primary)] font-medium">{value}</span>
+        </div>
+      ))}
+      <div className="pt-1">
+        <div className="flex justify-between text-xs text-[var(--ui-text-muted)] mb-1.25">
+          <span>Inference load</span><span>72%</span>
+        </div>
+        <div className="h-1.25 rounded-[3px] bg-[var(--surface-active)] overflow-hidden">
+          <motion.div
+            className="h-full rounded-[3px] bg-gradient-to-r from-[#06b6d4] to-[#0891b2]"
+            initial={{ width: '0%' }}
+            animate={{ width: '72%' }}
+            transition={{ delay: 0.3, duration: 0.9, ease: [0.25, 0.1, 0.25, 1] }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const MODE_PREVIEW_MAP: Record<ModeKey, React.ComponentType> = {
+  chat:    ModePreviewChat,
+  code:    ModePreviewCode,
+  browser: ModePreviewBrowser,
+  agents:  ModePreviewAgents,
+  private: ModePreviewPrivate,
+};
+
+function ModeShowcase() {
+  const [active, setActive] = useState<ModeKey>('chat');
+  const [userPicked, setUserPicked] = useState(false);
+  const CYCLE_MS = 3400;
+
+  useEffect(() => {
+    if (userPicked) return;
+    const keys: ModeKey[] = ['chat', 'code', 'browser', 'agents', 'private'];
+    const id = setInterval(() => {
+      setActive(curr => keys[(keys.indexOf(curr) + 1) % keys.length]);
+    }, CYCLE_MS);
+    return () => clearInterval(id);
+  }, [userPicked]);
+
+  const activeTab = MODE_TABS.find(t => t.key === active)!;
+  const PreviewComponent = MODE_PREVIEW_MAP[active];
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/* Preview card */}
+      <div 
+        className="rounded-2xl overflow-hidden border transition-[border-color] duration-[350ms] bg-[var(--surface-panel)]"
+        style={{ borderColor: `color-mix(in srgb, ${activeTab.color} 22%, var(--ui-border-subtle))` }}
+      >
+        {/* Colored top bar */}
+        <div 
+          className="p-3 px-3.5 border-b border-[var(--ui-border-subtle)] flex items-center gap-2 transition-[background] duration-[350ms]"
+          style={{ background: `color-mix(in srgb, ${activeTab.color} 6%, var(--surface-panel))` }}
+        >
+          <div 
+            className="w-[26px] h-[26px] rounded-lg flex items-center justify-center transition-[background] duration-[350ms]"
+            style={{ background: activeTab.bg }}
+          >
+            <activeTab.Icon size={14} weight="bold" style={{ color: activeTab.color }} />
+          </div>
+          <span 
+            className="text-[12.5px] font-bold tracking-tight transition-[color] duration-[350ms]"
+            style={{ color: activeTab.color }}
+          >
+            {activeTab.label}
+          </span>
+        </div>
+        {/* Animated preview */}
+        <div className="p-3.5 px-4 min-height-[148px]">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={active}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -6 }}
+              transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
+            >
+              <PreviewComponent />
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* Tab strip */}
+      <div className="flex gap-1.25 flex-wrap">
+        {MODE_TABS.map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => { setActive(tab.key); setUserPicked(true); }}
+            aria-selected={active === tab.key}
+            className={`flex items-center gap-1.25 p-1.25 px-2.5 rounded-[20px] border-none cursor-pointer text-xs transition-all duration-150 ${
+              active === tab.key ? 'font-bold' : 'font-medium'
+            }`}
+            style={{
+              background: active === tab.key ? tab.bg : 'transparent',
+              color: active === tab.key ? tab.color : 'var(--ui-text-muted)',
+              outline: active === tab.key ? `1px solid color-mix(in srgb, ${tab.color} 30%, transparent)` : '1px solid transparent',
+            }}
+          >
+            <tab.Icon size={12} weight={active === tab.key ? 'bold' : 'regular'} />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Auto-cycle progress dots */}
+      {!userPicked && (
+        <div className="flex gap-1 justify-center">
+          {MODE_TABS.map(tab => (
+            <div
+              key={tab.key}
+              className={`h-0.75 rounded-sm transition-all duration-300 ease-out ${
+                active === tab.key ? 'w-[18px]' : 'w-1.5 bg-[var(--ui-border-default)]'
+              }`}
+              style={{ background: active === tab.key ? tab.color : undefined }}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DoneScreen({ data, onFinish }: { data: WizardData; onFinish: () => void }) {
+  const infraLabel = data.infraType === 'local' ? 'This machine' : data.infraType === 'connect' ? 'Remote server' : data.infraType === 'purchase' ? 'New VPS' : 'Remote';
+  const modelLabel = data.defaultModelId ?? data.defaultProvider ?? null;
+  const keyCount = Object.keys(data.configuredKeys ?? {}).length;
+
+  return (
+    <div className="flex items-stretch gap-0 h-full min-h-0">
+      {/* Left — celebration + summary + CTA */}
+      <div className="w-[320px] flex-shrink-0 flex flex-col items-center justify-center text-center p-10 px-8 pb-9 border-r border-[var(--ui-border-subtle)]">
+        {/* MatrixLogo with success ring */}
+        <motion.div
+          initial={{ scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 340, damping: 24 }}
+          className="relative mb-6 inline-flex"
+        >
+          <motion.div
+            animate={{ scale: [1, 1.12, 1], opacity: [0.5, 0.15, 0.5] }}
+            transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+            className="absolute -inset-3.5 rounded-full border border-[color-mix(in_srgb,var(--accent-primary)_35%,transparent)] pointer-events-none"
+          />
+          <MatrixLogo state="idle" size={52} />
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.45, type: 'spring', stiffness: 320, damping: 18 }}
+            className="absolute -bottom-1 -right-1 w-[22px] h-[22px] rounded-full bg-gradient-to-br from-[#34d399] to-[#10b981] flex items-center justify-center shadow-[0_2px_8px_rgba(16,185,129,0.45)]"
+          >
+            <Check weight="bold" size={11} className="text-[var(--ui-text-primary)]" />
+          </motion.div>
+        </motion.div>
+
+        <motion.h2
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.3 }}
+          className="text-[21px] font-bold tracking-tight text-[var(--ui-text-primary)] mb-1.5"
+        >
+          Allternit is ready.
+        </motion.h2>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.18, duration: 0.3 }}
+          className="text-xs text-[var(--ui-text-muted)] mb-6 leading-relaxed max-w-[220px]"
+        >
+          Everything is configured. Here's what you set up —
+        </motion.p>
+
+        {/* Setup summary */}
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.26, duration: 0.28 }}
+          className="w-full flex flex-col gap-1.75 mb-7 p-3 px-3.5 rounded-xl bg-[var(--surface-panel)] border border-[var(--ui-border-subtle)]"
+        >
+          {[
+            { label: 'Runs on',  value: infraLabel },
+            ...(modelLabel ? [{ label: 'AI model', value: modelLabel }] : []),
+            { label: 'API keys', value: keyCount > 0 ? `${keyCount} configured` : 'None — use local models' },
+            { label: 'Modes',    value: `${data.selectedModes.length} enabled` },
+          ].map(({ label, value }) => (
+            <div key={label} className="flex justify-between items-center text-xs">
+              <span className="text-[var(--ui-text-muted)]">{label}</span>
+              <span className="text-[var(--ui-text-primary)] font-semibold text-right max-w-[140px] overflow-hidden text-ellipsis whitespace-nowrap">{value}</span>
+            </div>
+          ))}
+        </motion.div>
+
+        <motion.button
+          onClick={onFinish}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4, duration: 0.26 }}
+          whileHover={{ scale: 1.03, boxShadow: '0 8px 28px color-mix(in srgb, var(--accent-primary) 35%, transparent)' }}
+          whileTap={{ scale: 0.97 }}
+          className="w-full flex items-center justify-center gap-2.5 p-3 rounded-full bg-[var(--accent-primary)] text-[var(--text-inverse)] text-sm font-bold border-none cursor-pointer shadow-[var(--shadow-md)]"
+        >
+          Open Allternit
+          <ArrowRight weight="bold" size={16} />
+        </motion.button>
+      </div>
+
+      {/* Right — mode showcase */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3, duration: 0.4 }}
+        className="flex-1 min-w-0 flex flex-col justify-center p-8 px-9"
+      >
+        <p className="text-[12px] font-semibold tracking-widest uppercase text-[var(--ui-text-muted)] mb-4">
+          What you can do now
+        </p>
+        <ModeShowcase />
+      </motion.div>
+    </div>
+  );
+}
+
+// ─── Step header ──────────────────────────────────────────────────────────────
+
+const STEP_META: Record<Screen, { title: string; sub: string }> = {
+  welcome:    { title: '',              sub: '' },
+  infra:      { title: 'Where should Allternit run?', sub: 'This is like choosing where to plug in the engine — don\'t worry, any option works great' },
+  appearance: { title: 'Pick your style',             sub: 'Dark or light — just how the app looks, you can change this anytime' },
+  modes:      { title: 'Connect your brain',            sub: 'Pick an AI model to power Allternit — we scanned your machine for anything already installed' },
+  done:       { title: '',              sub: '' },
+};
+
+// ─── Main export ──────────────────────────────────────────────────────────────
+
+export function OnboardingFlow() {
+  const { theme: storedTheme } = useThemeStore();
+  const [screen, setScreen] = useState<Screen>('welcome');
+  const [data, setData] = useState<WizardData>({
+    theme: storedTheme,
+    infraType: 'local',
+    selectedModes: ['chat', 'cowork', 'code', 'browser'],
+    workspacePath: '~/allternit-workspace',
+    defaultProvider: undefined,
+    defaultModelId: undefined,
+    configuredKeys: {},
+    sshConfig: { host: '', port: 22, username: 'root', authType: 'password', privateKey: '~/.ssh/id_rsa', password: '' },
+  });
+
+  const direction = useRef(1);
+  const { completeOnboarding } = useOnboardingStore();
+  const update = useCallback((d: Partial<WizardData>) => setData(p => ({ ...p, ...d })), []);
+
+
+  const goNext = () => {
+    direction.current = 1;
+    const idx = screenIdx(screen);
+    if (idx < SCREEN_ORDER.length - 1) setScreen(SCREEN_ORDER[idx + 1]);
+  };
+  const goBack = () => {
+    direction.current = -1;
+    const idx = screenIdx(screen);
+    if (idx > 0) setScreen(SCREEN_ORDER[idx - 1]);
+  };
+
+  const finish = () => {
+    // Persist configured API keys to sessionStorage so the runtime can pick them up.
+    // Keys are ephemeral — they are not stored in the onboarding Zustand store.
+    if (data.configuredKeys) {
+      Object.entries(data.configuredKeys).forEach(([provider, key]) => {
+        sessionStorage.setItem(`allternit_key_${provider}`, key);
+      });
+    }
+    completeOnboarding({
+      theme: data.theme,
+      defaultProvider: data.defaultModelId
+        ? `${data.defaultProvider}::${data.defaultModelId}`
+        : data.defaultProvider,
+      apiKeysConfigured: data.apiKeysConfigured || Object.keys(data.configuredKeys ?? {}).length > 0,
+      defaultWorkspacePath: data.workspacePath,
+      preferredModes: data.selectedModes,
+    });
+    // Notify the desktop shell that onboarding is complete so it can update its own store.
+    if (typeof window !== 'undefined' && (window as any).allternit?.app?.completeOnboarding) {
+      (window as any).allternit.app.completeOnboarding().catch(() => {});
+    }
+  };
+
+  const isFullWidth = screen === 'welcome' || screen === 'done';
+  const meta = STEP_META[screen] ?? { title: '', sub: '' };
+
+  return (
+    <motion.div
+      variants={CARD_ENTRANCE}
+      initial="hidden"
+      animate="visible"
+      className="w-[calc(100vw-48px)] h-[calc(100vh-48px)] max-w-[1100px] max-h-[800px] rounded-[20px] border border-[var(--shell-dialog-border)] bg-[var(--shell-dialog-bg)] shadow-[var(--shadow-xl)] flex flex-col overflow-hidden"
+    >
+      {/* Inner layout: sidebar + content OR full-width */}
+      <div className="flex flex-1 overflow-hidden min-h-0">
+        {/* Left sidebar — only visible for inner steps */}
+        <AnimatePresence initial={false}>
+          {!isFullWidth && (
+            <motion.div
+              key="sidebar"
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 196, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
+              className="overflow-hidden flex-shrink-0"
+            >
+              <div className="w-[196px]">
+                <StepSidebar screen={screen} />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Right content area */}
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+          {/* Step header (inner steps only) */}
+          {!isFullWidth && (
+            <div className="p-6 px-7 pb-0 flex-shrink-0">
+              <h2 className="text-lg font-bold tracking-tight text-[var(--ui-text-primary)] m-0 leading-tight">
+                {meta.title}
+              </h2>
+              <p className="text-xs text-[var(--ui-text-muted)] mt-1 mb-0">
+                {meta.sub}
+              </p>
+            </div>
+          )}
+
+          {/* Animated step content */}
+          <div className="flex-1 overflow-y-auto [scrollbar-width:none]">
+            <AnimatePresence custom={direction.current} mode="wait">
+              <motion.div
+                key={screen}
+                custom={direction.current}
+                variants={stepVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                className={isFullWidth ? 'p-0' : 'p-5 px-7 pb-6'}
+              >
+                {screen === 'welcome' && <WelcomeScreen onNext={goNext} />}
+                {screen === 'infra'   && <InfraStep data={data} onUpdate={update} />}
+                {screen === 'appearance' && <AppearanceStep theme={data.theme} onChange={(t) => update({ theme: t })} />}
+                {screen === 'modes'   && <ModesStep data={data} onUpdate={update} />}
+                {screen === 'done'    && <DoneScreen data={data} onFinish={finish} />}
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          {/* Footer nav — inner steps only */}
+          {!isFullWidth && (
+            <div className="flex items-center justify-between p-3.5 px-7 border-t border-[var(--ui-border-subtle)] flex-shrink-0">
+              <motion.button
+                onClick={goBack}
+                whileHover={{ color: 'var(--ui-text-primary)' }}
+                className="flex items-center gap-1.5 p-2 px-3.5 rounded-[10px] bg-transparent border-none cursor-pointer text-xs font-semibold text-[var(--ui-text-muted)] hover:text-[var(--ui-text-primary)] transition-colors"
+              >
+                <CaretLeft size={13} />
+                Back
+              </motion.button>
+
+              <div className="flex flex-col items-end gap-1">
+                <motion.button
+                  onClick={goNext}
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  className={`flex items-center gap-[7px] p-[9px] px-5 rounded-full text-xs font-bold cursor-pointer shadow-[var(--shadow-sm)] transition-[background,color] duration-200 ${
+                    screen === 'modes' && !data.defaultProvider
+                      ? 'bg-[var(--surface-panel-muted)] text-[var(--ui-text-muted)] border border-[var(--ui-border-default)]'
+                      : 'bg-[var(--accent-primary)] text-[var(--text-inverse)] border-none'
+                  }`}
+                >
+                  {screen === 'modes'
+                    ? data.defaultProvider ? 'Finish' : 'Skip for now'
+                    : 'Continue'}
+                  <CaretRight size={13} />
+                </motion.button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}

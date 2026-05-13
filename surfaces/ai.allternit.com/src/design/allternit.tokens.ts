@@ -239,7 +239,7 @@ export const TYPOGRAPHY = {
     mono: '"Allternit Mono", "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", monospace',
   },
   size: {
-    xs: '11px',
+    xs: '12px',
     sm: '13px',
     base: '14px',
     md: '15px',

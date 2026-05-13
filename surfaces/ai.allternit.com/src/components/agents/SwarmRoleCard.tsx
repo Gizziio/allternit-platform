@@ -187,7 +187,7 @@ export function SwarmRoleCard({
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
-          className="absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center"
+          className="absolute top-3 right-3 size-6  rounded-full flex items-center justify-center"
           style={{
             background: config.color,
             boxShadow: `0 0 20px ${config.color}66`,
@@ -203,7 +203,7 @@ export function SwarmRoleCard({
         <div className="flex items-start gap-3 mb-3">
           {/* Icon */}
           <div
-            className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0"
+            className="size-12  rounded-lg flex items-center justify-center flex-shrink-0"
             style={{
               background: config.bgColor,
               border: `1px solid ${config.borderColor}`,
@@ -234,7 +234,7 @@ export function SwarmRoleCard({
           <div className="space-y-3">
             {/* Responsibilities */}
             <div>
-              <h4 className="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-white/40 mb-2">
                 Responsibilities
               </h4>
               <ul className="space-y-1">
@@ -244,7 +244,7 @@ export function SwarmRoleCard({
                     className="text-xs text-white/70 flex items-start gap-2"
                   >
                     <span
-                      className="w-1 h-1 rounded-full mt-1.5 flex-shrink-0"
+                      className="size-1  rounded-full mt-1.5 flex-shrink-0"
                       style={{ background: config.color }}
                     />
                     <span>{resp}</span>
@@ -255,14 +255,14 @@ export function SwarmRoleCard({
 
             {/* Best For */}
             <div>
-              <h4 className="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-2">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-white/40 mb-2">
                 Best For
               </h4>
               <div className="flex flex-wrap gap-1.5">
                 {config.bestFor.map((use, idx) => (
                   <span
                     key={idx}
-                    className="text-[10px] px-2 py-1 rounded-full font-medium"
+                    className="text-xs px-2 py-1 rounded-full font-medium"
                     style={{
                       background: config.bgColor,
                       color: config.color,

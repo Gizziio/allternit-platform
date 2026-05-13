@@ -37,8 +37,8 @@ export function SMSDraft({ to, messages, className, onEdit, onReset }: SMSDraftP
     <div className={cn("rounded-xl border border-border bg-card overflow-hidden max-w-sm", className)}>
       {/* Header */}
       <div className="flex flex-col items-center gap-0.5 border-b border-border px-4 py-3 bg-muted/30 text-center">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 mb-1">
-          <DeviceMobile className="h-4 w-4 text-primary" />
+        <div className="flex size-8  items-center justify-center rounded-full bg-primary/10 mb-1">
+          <DeviceMobile className="size-4  text-primary" />
         </div>
         <span className="text-xs text-muted-foreground">{to}</span>
       </div>
@@ -69,7 +69,7 @@ export function SMSDraft({ to, messages, className, onEdit, onReset }: SMSDraftP
           onClick={handleOpenMessages}
           className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/20 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/15 transition-colors"
         >
-          <ArrowSquareOut className="h-3 w-3" />
+          <ArrowSquareOut className="size-3 " />
           Open in Messages
         </button>
         <button
@@ -77,7 +77,7 @@ export function SMSDraft({ to, messages, className, onEdit, onReset }: SMSDraftP
           onClick={handleCopy}
           className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
         >
-          <Copy className="h-3 w-3" />
+          <Copy className="size-3 " />
           {copied ? 'Copied!' : 'Copy'}
         </button>
         {onEdit && (
@@ -86,7 +86,7 @@ export function SMSDraft({ to, messages, className, onEdit, onReset }: SMSDraftP
             onClick={() => onEdit(lastMessage?.text ?? '')}
             className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
           >
-            <PencilSimple className="h-3 w-3" />
+            <PencilSimple className="size-3 " />
             Edit
           </button>
         )}
@@ -96,7 +96,7 @@ export function SMSDraft({ to, messages, className, onEdit, onReset }: SMSDraftP
             onClick={onReset}
             className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors ml-auto"
           >
-            <ArrowCounterClockwise className="h-3 w-3" />
+            <ArrowCounterClockwise className="size-3 " />
             Reset
           </button>
         )}

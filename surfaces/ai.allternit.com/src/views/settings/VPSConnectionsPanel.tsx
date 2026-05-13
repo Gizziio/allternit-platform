@@ -6,8 +6,9 @@
 
 "use client";
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useCallback, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import { Plus, ArrowClockwise, Warning } from '@phosphor-icons/react';
 import { BACKGROUND, SAND, STATUS, TEXT } from '@/design/allternit.tokens';
 import { VPSConnectionModal } from '@/components/vps';
@@ -17,7 +18,7 @@ import { sshApi } from '@/api/infrastructure/ssh';
 import { runtimeBackendApi } from '@/api/infrastructure/runtime-backend';
 
 export function VPSConnectionsPanel() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [connections, setConnections] = useState<SSHConnection[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -260,7 +261,7 @@ export function VPSConnectionsPanel() {
 
   // Handle provider selection - navigate to cloud deploy wizard
   const handleSelectProvider = useCallback((providerId: string) => {
-    router.push(`/cloud-deploy?provider=${providerId}`);
+    navigate(`/cloud-deploy?provider=${providerId}`);
   }, [router]);
 
   return (

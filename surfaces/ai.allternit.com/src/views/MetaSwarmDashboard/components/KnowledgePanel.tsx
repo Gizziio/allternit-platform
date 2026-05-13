@@ -48,7 +48,7 @@ function PatternCard({ pattern }: PatternCardProps) {
     fix: 'bg-green-100 text-green-800',
     prevention: 'bg-yellow-100 text-yellow-800',
     root_cause: 'bg-red-100 text-red-800',
-    process: 'bg-gray-100 text-gray-800',
+    process: 'bg-zinc-100 text-zinc-800',
   };
 
   const effectiveness = pattern.effectiveness.success_rate * 100;
@@ -60,7 +60,7 @@ function PatternCard({ pattern }: PatternCardProps) {
           <h4 className="font-medium">{pattern.name}</h4>
           <p className="text-xs text-muted-foreground">{pattern.domain}</p>
         </div>
-        <Badge className={typeColors[pattern.pattern_type] || 'bg-gray-100'}>
+        <Badge className={typeColors[pattern.pattern_type] || 'bg-zinc-100'}>
           {pattern.pattern_type}
         </Badge>
       </div>
@@ -72,7 +72,7 @@ function PatternCard({ pattern }: PatternCardProps) {
       <div className="flex items-center justify-between text-xs">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1">
-            <Star className="h-3 w-3 text-yellow-500" />
+            <Star className="size-3  text-yellow-500" />
             <span className={effectiveness >= 80 ? 'text-green-600' : effectiveness >= 50 ? 'text-yellow-600' : 'text-red-600'}>
               {effectiveness.toFixed(0)}% success
             </span>
@@ -184,9 +184,9 @@ export function KnowledgePanel({ className }: KnowledgePanelProps) {
         {/* Search and Filter */}
         <div className="flex gap-2">
           <div className="flex-1 relative">
-            <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <MagnifyingGlass className="absolute left-3 top-1/2 -tranzinc-y-1/2 size-4  text-muted-foreground" />
             <Input
-              placeholder="Search patterns..."
+              placeholder="Search patterns…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
@@ -194,7 +194,7 @@ export function KnowledgePanel({ className }: KnowledgePanelProps) {
           </div>
           <Select value={selectedType} onValueChange={setSelectedType}>
             <SelectTrigger className="w-40">
-              <Funnel className="h-4 w-4 mr-2" />
+              <Funnel className="size-4  mr-2" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -223,7 +223,7 @@ export function KnowledgePanel({ className }: KnowledgePanelProps) {
               </div>
             ) : filteredPatterns.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                <Sparkle className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                <Sparkle className="size-12  mx-auto mb-2 opacity-50" />
                 <p>No patterns found</p>
               </div>
             ) : (

@@ -39,16 +39,16 @@ function getActionIcon(action: string): React.ReactNode {
   const lower = action.toLowerCase();
   
   if (lower.includes('delete') || lower.includes('remove')) {
-    return <XCircle className="h-5 w-5 text-red-500" />;
+    return <XCircle className="size-5  text-red-500" />;
   }
   if (lower.includes('shell') || lower.includes('exec') || lower.includes('run')) {
-    return <AlertTriangle className="h-5 w-5 text-orange-500" />;
+    return <AlertTriangle className="size-5  text-orange-500" />;
   }
   if (lower.includes('write') || lower.includes('create')) {
-    return <Shield className="h-5 w-5 text-yellow-500" />;
+    return <Shield className="size-5  text-yellow-500" />;
   }
   
-  return <Shield className="h-5 w-5 text-blue-500" />;
+  return <Shield className="size-5  text-blue-500" />;
 }
 
 /**
@@ -109,7 +109,7 @@ function formatArgs(args: Record<string, unknown>): string {
  */
 function truncate(str: string, maxLength: number): string {
   if (str.length <= maxLength) return str;
-  return str.slice(0, maxLength - 3) + '...';
+  return str.slice(0, maxLength - 3) + '…';
 }
 
 export const PermissionRequestDialog: React.FC<PermissionRequestDialogProps> = ({
@@ -198,7 +198,7 @@ export const PermissionRequestDialog: React.FC<PermissionRequestDialogProps> = (
             {/* Risk warning */}
             {riskLevel === 'high' && (
               <div className="flex items-center gap-2 text-sm text-red-600">
-                <AlertTriangle className="h-4 w-4" />
+                <AlertTriangle className="size-4 " />
                 <span>This is a high-risk action that cannot be undone.</span>
               </div>
             )}
@@ -230,7 +230,7 @@ export const PermissionRequestDialog: React.FC<PermissionRequestDialogProps> = (
               onClick={onCancel}
               className="border-red-200 hover:bg-red-50"
             >
-              <XCircle className="h-4 w-4 mr-2" />
+              <XCircle className="size-4  mr-2" />
               Deny
             </AlertDialogCancel>
             
@@ -240,7 +240,7 @@ export const PermissionRequestDialog: React.FC<PermissionRequestDialogProps> = (
                 riskLevel === 'high' && "bg-red-600 hover:bg-red-700",
               )}
             >
-              <CheckCircle className="h-4 w-4 mr-2" />
+              <CheckCircle className="size-4  mr-2" />
               Allow
             </AlertDialogAction>
           </div>

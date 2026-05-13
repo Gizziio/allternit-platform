@@ -254,7 +254,7 @@ function TreeNode({
         >
           <span
             style={{
-              fontSize: 11,
+              fontSize: 12,
               color: statusColor,
               fontWeight: 500,
             }}
@@ -263,7 +263,7 @@ function TreeNode({
           </span>
           <span
             style={{
-              fontSize: 10,
+              fontSize: 12,
               color: THEME.textTertiary,
             }}
           >
@@ -291,22 +291,22 @@ function TreeNode({
           <div style={{ fontSize: 12, fontWeight: 600, color: THEME.textPrimary, marginBottom: 4 }}>
             {node.pluginId}
           </div>
-          <div style={{ fontSize: 11, color: THEME.textSecondary, marginBottom: 2 }}>
+          <div style={{ fontSize: 12, color: THEME.textSecondary, marginBottom: 2 }}>
             Status: <span style={{ color: statusColor }}>{getStatusLabel(node.status)}</span>
           </div>
-          <div style={{ fontSize: 11, color: THEME.textSecondary, marginBottom: 2 }}>
+          <div style={{ fontSize: 12, color: THEME.textSecondary, marginBottom: 2 }}>
             Required: {formatVersionRange(node.versionRange)}
           </div>
-          <div style={{ fontSize: 11, color: THEME.textSecondary, marginBottom: 2 }}>
+          <div style={{ fontSize: 12, color: THEME.textSecondary, marginBottom: 2 }}>
             Installed: {node.version}
           </div>
           {node.optional && (
-            <div style={{ fontSize: 11, color: THEME.info, marginTop: 4 }}>
+            <div style={{ fontSize: 12, color: THEME.info, marginTop: 4 }}>
               Optional dependency
             </div>
           )}
           {node.children.length > 0 && (
-            <div style={{ fontSize: 11, color: THEME.textTertiary, marginTop: 4 }}>
+            <div style={{ fontSize: 12, color: THEME.textTertiary, marginTop: 4 }}>
               {node.children.length} sub-dependency{node.children.length !== 1 ? 'ies' : 'y'}
             </div>
           )}
@@ -560,19 +560,19 @@ export function DependencyTree({
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <CheckCircle size={12} color={THEME.success} />
-          <span style={{ fontSize: 11, color: THEME.textSecondary }}>Installed</span>
+          <span style={{ fontSize: 12, color: THEME.textSecondary }}>Installed</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <Warning size={12} color={THEME.danger} />
-          <span style={{ fontSize: 11, color: THEME.textSecondary }}>Missing</span>
+          <span style={{ fontSize: 12, color: THEME.textSecondary }}>Missing</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <Warning size={12} color={THEME.warning} />
-          <span style={{ fontSize: 11, color: THEME.textSecondary }}>Conflict</span>
+          <span style={{ fontSize: 12, color: THEME.textSecondary }}>Conflict</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <HelpCircle size={12} color={THEME.info} />
-          <span style={{ fontSize: 11, color: THEME.textSecondary }}>Optional</span>
+          <span style={{ fontSize: 12, color: THEME.textSecondary }}>Optional</span>
         </div>
       </div>
     </div>
@@ -665,28 +665,28 @@ export function CompactDependencyTree({
       {stats.installed > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <CheckCircle size={12} color={THEME.success} />
-          <span style={{ fontSize: 11, color: THEME.success }}>{stats.installed}</span>
+          <span style={{ fontSize: 12, color: THEME.success }}>{stats.installed}</span>
         </div>
       )}
       {stats.missing > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <Warning size={12} color={THEME.danger} />
-          <span style={{ fontSize: 11, color: THEME.danger }}>{stats.missing}</span>
+          <span style={{ fontSize: 12, color: THEME.danger }}>{stats.missing}</span>
         </div>
       )}
       {stats.conflict > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <Warning size={12} color={THEME.warning} />
-          <span style={{ fontSize: 11, color: THEME.warning }}>{stats.conflict}</span>
+          <span style={{ fontSize: 12, color: THEME.warning }}>{stats.conflict}</span>
         </div>
       )}
       {showOptional && stats.optional > 0 && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <HelpCircle size={12} color={THEME.info} />
-          <span style={{ fontSize: 11, color: THEME.info }}>{stats.optional}</span>
+          <span style={{ fontSize: 12, color: THEME.info }}>{stats.optional}</span>
         </div>
       )}
-      <span style={{ fontSize: 11, color: THEME.textTertiary, marginLeft: 4 }}>
+      <span style={{ fontSize: 12, color: THEME.textTertiary, marginLeft: 4 }}>
         dependencies
       </span>
     </div>

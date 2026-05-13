@@ -32,11 +32,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     terminalSessions.set(sessionId, ptyProcess);
 
     ptyProcess.onExit(({ exitCode }) => {
-      console.log(`[Terminal API] Session ${sessionId} exited with code ${exitCode}`);
+      console.debug(`[Terminal API] Session ${sessionId} exited with code ${exitCode}`);
       terminalSessions.delete(sessionId);
     });
 
-    console.log(`[Terminal API] Created session ${sessionId}`);
+    console.debug(`[Terminal API] Created session ${sessionId}`);
     return NextResponse.json({ sessionId, shell: actualShell });
   } catch (error) {
     console.error('[Terminal API] Error creating terminal:', error);

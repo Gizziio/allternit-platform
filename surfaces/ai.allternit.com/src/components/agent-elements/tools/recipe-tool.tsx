@@ -128,7 +128,7 @@ export const RecipeTool = memo(function RecipeTool({
         {/* Header */}
         <div className="px-3 py-2 border-b border-an-tool-border-color bg-background/50">
           <div className="flex items-center gap-2">
-            <IconChefHat className="w-4 h-4 text-muted-foreground" />
+            <IconChefHat className="size-4  text-muted-foreground" />
             <span className="text-sm font-medium text-foreground">
               {recipe.name || "Recipe"}
             </span>
@@ -139,24 +139,24 @@ export const RecipeTool = memo(function RecipeTool({
           <div className="flex flex-wrap items-center gap-3 mt-2">
             {recipe.prepTime && (
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <IconClock className="w-3 h-3" />
+                <IconClock className="size-3 " />
                 <span>Prep: {recipe.prepTime}</span>
               </div>
             )}
             {recipe.cookTime && (
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <IconFlame className="w-3 h-3" />
+                <IconFlame className="size-3 " />
                 <span>Cook: {recipe.cookTime}</span>
               </div>
             )}
             {recipe.servings && (
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <IconUsers className="w-3 h-3" />
+                <IconUsers className="size-3 " />
                 <span>Serves {recipe.servings}</span>
               </div>
             )}
             {recipe.difficulty && (
-              <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
+              <span className="text-xs uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium">
                 {recipe.difficulty}
               </span>
             )}
@@ -172,7 +172,7 @@ export const RecipeTool = memo(function RecipeTool({
             <ul className="space-y-1">
               {recipe.ingredients.map((ing, i) => (
                 <li key={i} className="flex items-baseline gap-2 text-sm">
-                  <span className="w-1 h-1 rounded-full bg-primary/60 shrink-0 mt-2" />
+                  <span className="size-1  rounded-full bg-primary/60 shrink-0 mt-2" />
                   <span className="text-foreground">
                     {ing.amount && <span className="font-medium">{ing.amount}</span>}{" "}
                     {ing.unit && <span className="text-muted-foreground">{ing.unit}</span>}{" "}
@@ -193,14 +193,14 @@ export const RecipeTool = memo(function RecipeTool({
             <ol className="space-y-2">
               {recipe.steps.map((s) => (
                 <li key={s.step} className="flex gap-2.5 text-sm">
-                  <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold shrink-0 mt-0.5">
+                  <span className="flex items-center justify-center size-5  rounded-full bg-primary/10 text-primary text-[12px] font-semibold shrink-0 mt-0.5">
                     {s.step}
                   </span>
                   <div className="flex-1">
                     <p className="text-foreground leading-relaxed">{s.instruction}</p>
                     {s.duration && (
-                      <span className="text-[11px] text-muted-foreground flex items-center gap-1 mt-0.5">
-                        <IconClock className="w-3 h-3" />
+                      <span className="text-[12px] text-muted-foreground flex items-center gap-1 mt-0.5">
+                        <IconClock className="size-3 " />
                         {s.duration}
                       </span>
                     )}
@@ -217,7 +217,7 @@ export const RecipeTool = memo(function RecipeTool({
             {recipe.tags.map((tag, i) => (
               <span
                 key={i}
-                className="text-[10px] px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground"
+                className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground"
               >
                 {tag}
               </span>

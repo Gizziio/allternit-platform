@@ -111,7 +111,7 @@ export function CoworkAgentProfileCard({ agent }: Props): JSX.Element {
                 background: 'color-mix(in srgb, var(--accent-cowork) 13%, transparent)',
                 border: '1px solid #af52de55',
                 color: 'var(--accent-cowork)',
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 500,
               }}
             >

@@ -34,12 +34,12 @@ export function CodeCanvasTileNotes({ initialContent = '', onChange }: CodeCanva
         }}
       >
         <NotePencil size={12} color="var(--text-tertiary)" />
-        <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Notes</span>
+        <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Notes</span>
       </div>
       <textarea
         value={content}
         onChange={handleChange}
-        placeholder="Type notes here..."
+        placeholder="Type notes here…"
         spellCheck={false}
         style={{
           flex: 1,

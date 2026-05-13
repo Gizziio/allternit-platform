@@ -270,12 +270,12 @@ export function BrowserExtensionComposer({
       {isCapturing && (
         <div style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{ width: 14, height: 14, borderRadius: "50%", border: `2px solid ${browser.accent}`, borderTopColor: "transparent", animation: "spin 0.8s linear infinite" }} />
-          <span style={{ fontSize: TYPOGRAPHY.size.xs, color: TEXT.secondary }}>Capturing page...</span>
+          <span style={{ fontSize: TYPOGRAPHY.size.xs, color: TEXT.secondary }}>Capturing page…</span>
         </div>
       )}
       <div
         style={{
-          fontSize: 10,
+          fontSize: 12,
           color: TEXT.tertiary,
           marginTop: 6,
           marginLeft: 4,

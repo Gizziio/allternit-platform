@@ -73,7 +73,7 @@ let pollTimer: ReturnType<typeof setInterval> | null = null;
  */
 export function startJobRunner(userConfig?: Partial<JobRunnerConfig>): void {
   if (runnerState.isRunning) {
-    console.log("[JobRunner] Already running");
+    console.debug("[JobRunner] Already running");
     return;
   }
 
@@ -86,7 +86,7 @@ export function startJobRunner(userConfig?: Partial<JobRunnerConfig>): void {
   }
 
   runnerState.isRunning = true;
-  console.log("[JobRunner] Started with config:", {
+  console.debug("[JobRunner] Started with config:", {
     pollInterval: runnerState.pollInterval,
     maxConcurrentJobs: runnerState.maxConcurrentJobs,
     defaultTimeout: runnerState.defaultTimeout,
@@ -117,7 +117,7 @@ export function stopJobRunner(): void {
     pollTimer = null;
   }
 
-  console.log("[JobRunner] Stopped");
+  console.debug("[JobRunner] Stopped");
 }
 
 /**
@@ -168,7 +168,7 @@ async function pollJobs(): Promise<void> {
     }
 
     if (jobsToRun.length > 0) {
-      console.log(`[JobRunner] Executed ${jobsToRun.length} scheduled jobs`);
+      console.debug(`[JobRunner] Executed ${jobsToRun.length} scheduled jobs`);
     }
   } catch (error) {
     console.error("[JobRunner] Poll failed:", error);
@@ -201,7 +201,7 @@ async function executeJob(job: ScheduledJobConfig): Promise<void> {
   runnerState.activeExecutions.set(jobId, execution);
 
   try {
-    console.log(`[JobRunner] Executing job: ${job.name}`);
+    console.debug(`[JobRunner] Executing job: ${job.name}`);
 
     // Execute the job via the service
     const result = await executeScheduledJob(job);
@@ -239,7 +239,7 @@ async function executeJob(job: ScheduledJobConfig): Promise<void> {
 // ============================================================================
 
 function handleJobSuccess(job: ScheduledJobConfig, result: JobExecution): void {
-  console.log(`[JobRunner] Job succeeded: ${job.name}`);
+  console.debug(`[JobRunner] Job succeeded: ${job.name}`);
 
   if (runnerState.enableNotifications && job.notifyOnSuccess) {
     sendNotification(`✅ ${job.name}`, `Scheduled job completed successfully`, "success");

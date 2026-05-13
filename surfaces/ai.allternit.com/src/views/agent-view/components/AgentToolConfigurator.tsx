@@ -161,7 +161,7 @@ export function AgentToolConfigurator({
         <Input
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search tools..."
+          placeholder="Search tools…"
           className="bg-white/5 border-white/10 text-white text-sm"
         />
       </div>

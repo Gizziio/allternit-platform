@@ -335,7 +335,7 @@ export const MarketplaceView: React.FC = () => {
             />
             <input
               type="text"
-              placeholder="Search extensions, models, and integrations..."
+              placeholder="Search extensions, models, and integrations…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
@@ -445,7 +445,7 @@ export const MarketplaceView: React.FC = () => {
                       paddingBottom: '2px',
                       backgroundColor: 'var(--bg-secondary)',
                       borderRadius: '4px',
-                      fontSize: '11px',
+                      fontSize: '12px',
                       color: 'var(--text-tertiary)',
                       width: 'fit-content',
                       padding: '4px 8px',

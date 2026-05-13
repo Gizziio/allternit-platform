@@ -33,6 +33,7 @@ pub struct ChatRequest {
 pub fn chat_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/agent-chat", post(handle_agent_chat))
+        .route("/chat/action", post(handle_chat_action))
 }
 
 /// Handle agent chat request by proxying to Gizzi terminal server
@@ -126,4 +127,18 @@ async fn handle_agent_chat(
             }
         }
     }
+}
+
+
+/// Handle chat action requests (e.g. regenerate, stop, etc.)
+async fn handle_chat_action(
+    State(_state): State<Arc<AppState>>,
+    Json(body): Json<serde_json::Value>,
+) -> Response {
+    info!("Received chat action: {:?}", body);
+    Response::builder()
+        .status(StatusCode::OK)
+        .header(header::CONTENT_TYPE, "application/json")
+        .body(Body::from(r#"{"status":"ok"}"#))
+        .unwrap()
 }

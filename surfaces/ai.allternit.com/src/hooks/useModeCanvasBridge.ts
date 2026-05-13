@@ -134,7 +134,7 @@ interface UseModeCanvasBridgeOptions {
 export function useModeCanvasBridge({
   surface,
   onOpenCanvas,
-  autoOpen = true,
+  autoOpen = false,
 }: UseModeCanvasBridgeOptions) {
   const { selectedModeBySurface } = useAgentSurfaceModeStore();
   const { setOpen, setActivePanel, setActiveArtifact } = useSidecarStore();

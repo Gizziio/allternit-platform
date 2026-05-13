@@ -222,7 +222,7 @@ function CapabilityItem({ icon: Icon, label, available, sublabel }: CapabilityIt
           {label}
         </span>
         {sublabel && (
-          <span className="text-[10px] capitalize" style={{ color: 'var(--text-tertiary)' }}>
+          <span className="text-xs capitalize" style={{ color: 'var(--text-tertiary)' }}>
             {sublabel}
           </span>
         )}

@@ -21,7 +21,7 @@ import {
   CaretRight,
   DotsThreeOutline,
 } from '@phosphor-icons/react';
-import { GlassCard } from '../../design/GlassCard';
+import { GlassCard } from '../../design/glass/GlassCard';
 
 interface DagNode {
   id: string;
@@ -205,14 +205,14 @@ export function KanbanDAG() {
                 }}>
                   {dag.metadata?.title || dag.dagId}
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>
+                <div style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>
                   {dag.nodes?.length || 0} nodes • v{dag.version}
                 </div>
                 <div style={{ 
                   display: 'flex', 
                   gap: 8, 
                   marginTop: 8,
-                  fontSize: 10,
+                  fontSize: 12,
                   color: 'var(--ui-text-muted)'
                 }}>
                   <span>{new Date(dag.createdAt).toLocaleDateString()}</span>
@@ -304,7 +304,7 @@ export function KanbanDAG() {
             {isLoading ? (
               <>
                 <ArrowsClockwise size={48} className="animate-spin" style={{ marginBottom: 16 }} />
-                <p>Loading DAG structure...</p>
+                <p>Loading DAG structure…</p>
               </>
             ) : (
               <>
@@ -323,7 +323,7 @@ export function KanbanDAG() {
                 minWidth: 220
               }}>
                 <div style={{ 
-                  fontSize: 11, 
+                  fontSize: 12, 
                   fontWeight: 700, 
                   color: 'var(--ui-text-muted)',
                   textTransform: 'uppercase',
@@ -365,20 +365,20 @@ export function KanbanDAG() {
             return (
               <>
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: 11, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>ID</label>
+                  <label style={{ fontSize: 12, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>ID</label>
                   <div style={{ fontSize: 13, fontFamily: 'var(--font-mono)' }}>{node.id}</div>
                 </div>
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: 11, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>Title</label>
+                  <label style={{ fontSize: 12, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>Title</label>
                   <div style={{ fontSize: 14, fontWeight: 600 }}>{node.title}</div>
                 </div>
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: 11, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>Status</label>
+                  <label style={{ fontSize: 12, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>Status</label>
                   <NodeStatusBadge status={node.status} />
                 </div>
                 {node.dependencies.length > 0 && (
                   <div style={{ marginBottom: 16 }}>
-                    <label style={{ fontSize: 11, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>Dependencies</label>
+                    <label style={{ fontSize: 12, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>Dependencies</label>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                       {node.dependencies.map(depId => (
                         <div key={depId} style={{ 
@@ -395,7 +395,7 @@ export function KanbanDAG() {
                 )}
                 {node.wih_id && (
                   <div style={{ marginBottom: 16 }}>
-                    <label style={{ fontSize: 11, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>WIH ID</label>
+                    <label style={{ fontSize: 12, color: 'var(--ui-text-muted)', display: 'block', marginBottom: 4 }}>WIH ID</label>
                     <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)' }}>{node.wih_id}</div>
                   </div>
                 )}
@@ -443,7 +443,7 @@ function DagNodeCard({
           {node.title}
         </span>
       </div>
-      <div style={{ fontSize: 10, color: 'var(--ui-text-muted)' }}>
+      <div style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>
         {node.dependencies.length} dependencies
       </div>
     </GlassCard>
@@ -485,7 +485,7 @@ function NodeStatusBadge({ status }: { status: string }) {
       padding: '4px 10px',
       background: `${colors[status] || 'var(--ui-text-muted)'}20`,
       borderRadius: 4,
-      fontSize: 11,
+      fontSize: 12,
       fontWeight: 600,
       color: colors[status] || 'var(--ui-text-muted)',
       textTransform: 'uppercase'

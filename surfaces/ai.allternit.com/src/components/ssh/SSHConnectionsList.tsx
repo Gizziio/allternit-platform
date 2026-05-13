@@ -85,7 +85,7 @@ export function SSHConnectionsList({
       case 'disconnected':
         return <Power size={16} style={{ color: TEXT.secondary }} />;
       case 'connecting':
-        return <ArrowsClockwise className="w-4 h-4 animate-spin" style={{ color: STATUS.info }} />;
+        return <ArrowsClockwise className="size-4  animate-spin" style={{ color: STATUS.info }} />;
       case 'error':
         return <XCircle size={16} style={{ color: STATUS.error }} />;
       default:
@@ -128,8 +128,8 @@ export function SSHConnectionsList({
       <div className="space-y-3">
         {/* Skeleton Header */}
         <div className="flex items-center gap-4 p-4 rounded-xl" style={{ background: 'var(--surface-hover)' }}>
-          <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: 'color-mix(in srgb, var(--accent-primary) 30%, transparent)' }} />
-          <div className="w-10 h-10 rounded-lg animate-pulse" style={{ background: 'var(--surface-hover)' }} />
+          <div className="size-3  rounded-full animate-pulse" style={{ background: 'color-mix(in srgb, var(--accent-primary) 30%, transparent)' }} />
+          <div className="size-10  rounded-lg animate-pulse" style={{ background: 'var(--surface-hover)' }} />
           <div className="flex-1 space-y-2">
             <div className="h-4 w-32 rounded animate-pulse" style={{ background: 'var(--surface-active)' }} />
             <div className="h-3 w-48 rounded animate-pulse" style={{ background: 'var(--surface-hover)' }} />
@@ -139,10 +139,10 @@ export function SSHConnectionsList({
         {/* Skeleton Items */}
         {[1, 2].map((i) => (
           <div key={i} className="flex items-center gap-4 p-4 rounded-xl" style={{ background: 'var(--surface-hover)' }}>
-            <div className="w-3 h-3 rounded-full animate-pulse" style={{ background: 'var(--surface-hover)' }} />
-            <div className="w-10 h-10 rounded-lg animate-pulse" style={{ background: 'var(--surface-hover)' }} />
+            <div className="size-3  rounded-full animate-pulse" style={{ background: 'var(--surface-hover)' }} />
+            <div className="size-10  rounded-lg animate-pulse" style={{ background: 'var(--surface-hover)' }} />
             <div className="flex-1 space-y-2">
-              <div className="h-4 w-40 rounded animate-pulse" style={{ background: 'var(--surface-active)' }} />
+              <div className="size-40 rounded animate-pulse" style={{ background: 'var(--surface-active)' }} />
               <div className="h-3 w-56 rounded animate-pulse" style={{ background: 'var(--surface-hover)' }} />
             </div>
             <div className="h-6 w-24 rounded-full animate-pulse" style={{ background: 'var(--surface-hover)' }} />
@@ -175,14 +175,14 @@ export function SSHConnectionsList({
             {/* Status Indicator */}
             <div className="flex-shrink-0">
               <div
-                className="w-3 h-3 rounded-full transition-colors"
+                className="size-3  rounded-full transition-colors"
                 style={{ backgroundColor: getStatusColor(connection.status) }}
               />
             </div>
 
             {/* Icon */}
             <div 
-              className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center"
+              className="flex-shrink-0 size-10  rounded-lg flex items-center justify-center"
               style={{ background: 'var(--surface-panel)' }}
             >
               <HardDrives size={20} style={{ color: TEXT.secondary }} />
@@ -289,7 +289,7 @@ export function SSHConnectionsList({
                         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                       >
                         {testingId === connection.id ? (
-                          <ArrowsClockwise className="w-4 h-4 animate-spin" style={{ color: TEXT.secondary }} />
+                          <ArrowsClockwise className="size-4  animate-spin" style={{ color: TEXT.secondary }} />
                         ) : (
                           <ArrowsClockwise size={16} style={{ color: TEXT.secondary }} />
                         )}
@@ -330,7 +330,7 @@ export function SSHConnectionsList({
               </div>
 
               <CaretRight
-                className="w-5 h-5 transition-transform"
+                className="size-5  transition-transform"
                 style={{ 
                   color: TEXT.secondary,
                   transform: expandedId === connection.id ? 'rotate(90deg)' : 'rotate(0deg)',
@@ -419,7 +419,7 @@ export function SSHConnectionsList({
                     style={{ background: 'var(--status-error-bg)', borderColor: 'color-mix(in srgb, var(--status-error) 30%, transparent)' }}
                   >
                     <div className="flex items-start gap-2">
-                      <Warning className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: STATUS.error }} />
+                      <Warning className="size-4  flex-shrink-0 mt-0.5" style={{ color: STATUS.error }} />
                       <p className="text-sm" style={{ color: STATUS.error }}>{connection.errorMessage}</p>
                     </div>
                   </div>
@@ -458,7 +458,7 @@ export function SSHConnectionsList({
                       onMouseLeave={(e) => e.currentTarget.style.background = 'var(--surface-panel)'}
                     >
                       {testingId === connection.id ? (
-                        <ArrowsClockwise className="w-4 h-4 animate-spin" />
+                        <ArrowsClockwise className="size-4  animate-spin" />
                       ) : (
                         <ArrowsClockwise size={16} />
                       )}
@@ -513,7 +513,7 @@ function EmptyState({ onAddConnection }: { onAddConnection: () => void }) {
     >
       {/* Icon with glow */}
       <div 
-        className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 relative"
+        className="size-20  rounded-2xl flex items-center justify-center mx-auto mb-6 relative"
         style={{ 
           background: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)',
           border: '1px solid color-mix(in srgb, var(--accent-primary) 20%, transparent)',
@@ -565,7 +565,7 @@ function EmptyState({ onAddConnection }: { onAddConnection: () => void }) {
       >
         <h4 className="text-sm font-semibold mb-4 flex items-center gap-2 text-white">
           <div 
-            className="w-6 h-6 rounded-lg flex items-center justify-center"
+            className="size-6  rounded-lg flex items-center justify-center"
             style={{ background: 'var(--status-info-bg)' }}
           >
             <Warning size={14} style={{ color: 'var(--status-info)' }} weight="fill" />
@@ -581,7 +581,7 @@ function EmptyState({ onAddConnection }: { onAddConnection: () => void }) {
           ].map((step, i) => (
             <div key={i} className="flex items-start gap-3">
               <span 
-                className="w-5 h-5 rounded-md flex items-center justify-center text-xs font-medium flex-shrink-0 mt-0.5"
+                className="size-5  rounded-md flex items-center justify-center text-xs font-medium flex-shrink-0 mt-0.5"
                 style={{ 
                   background: 'color-mix(in srgb, var(--accent-primary) 15%, transparent)',
                   color: SAND[500],

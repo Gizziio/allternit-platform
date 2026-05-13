@@ -436,7 +436,7 @@ export function TreeViewRenderer({
       {props.searchable && (
         <div className="p-2 border-b">
           <div className="relative">
-            <MagnifyingGlass className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <MagnifyingGlass className="absolute left-2 top-1/2 -tranzinc-y-1/2 size-4  text-muted-foreground" />
             <Input
               placeholder={props.searchPlaceholder || "Search..."}
               value={searchQuery}
@@ -566,11 +566,11 @@ export function SplitPaneRenderer({
 // ============================================================================
 
 const statusIcons: Record<string, React.ReactNode> = {
-  pending: <div className="w-3 h-3 rounded-full border-2 border-muted-foreground" />,
-  active: <CircleNotch className="w-4 h-4 animate-spin text-primary" />,
-  completed: <CheckCircle className="w-4 h-4 text-green-500" />,
-  error: <Warning className="w-4 h-4 text-destructive" />,
-  warning: <Warning className="w-4 h-4 text-yellow-500" />,
+  pending: <div className="size-3  rounded-full border-2 border-muted-foreground" />,
+  active: <CircleNotch className="size-4  animate-spin text-primary" />,
+  completed: <CheckCircle className="size-4  text-green-500" />,
+  error: <Warning className="size-4  text-destructive" />,
+  warning: <Warning className="size-4  text-yellow-500" />,
 };
 
 const statusColors: Record<string, string> = {
@@ -646,7 +646,7 @@ export function TimelineRenderer({
           {/* Icon/Marker */}
           <div
             className={cn(
-              "relative z-10 flex items-center justify-center w-8 h-8 rounded-full bg-background border-2",
+              "relative z-10 flex items-center justify-center size-8  rounded-full bg-background border-2",
               isVertical ? "mr-4" : "mb-2"
             )}
             style={{ borderColor: statusColors[item.status || "pending"] }}
@@ -704,8 +704,8 @@ export function TimelineRenderer({
 
       {isLoading && (
         <div className="flex items-center gap-2 text-muted-foreground">
-          <CircleNotch className="w-4 h-4 animate-spin" />
-          <span className="text-sm">Loading more...</span>
+          <CircleNotch className="size-4  animate-spin" />
+          <span className="text-sm">Loading more…</span>
         </div>
       )}
     </div>

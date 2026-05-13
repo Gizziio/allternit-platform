@@ -131,11 +131,11 @@ export function ConversationTree({
                 }}
               >
                 {node.content.slice(0, 60)}
-                {node.content.length > 60 ? '...' : ''}
+                {node.content.length > 60 ? '…' : ''}
               </p>
               <p
                 style={{
-                  fontSize: 10,
+                  fontSize: 12,
                   color: THEME.textMuted,
                   margin: '4px 0 0',
                 }}

@@ -3,6 +3,7 @@
  * Checkpoint and recovery management with git integration
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -194,7 +195,7 @@ export function Checkpointing() {
           <p className="text-muted-foreground">Git-based checkpoint and recovery management</p>
         </div>
         <div className="flex items-center gap-2">
-          <GitBranch className="w-4 h-4 text-muted-foreground" />
+          <GitBranch className="size-4  text-muted-foreground" />
           <Badge variant="secondary">{state.currentBranch}</Badge>
         </div>
       </div>
@@ -210,7 +211,7 @@ export function Checkpointing() {
         <CardContent>
           <div className="flex gap-2">
             <Input
-              placeholder="Checkpoint message (e.g., 'Working baseline before experiment')..."
+              placeholder="Checkpoint message (e.g., 'Working baseline before experiment')…"
               value={commitMessage}
               onChange={(e) => setCommitMessage(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && createCommit()}
@@ -221,9 +222,9 @@ export function Checkpointing() {
               disabled={!commitMessage.trim() || isCreating}
             >
               {isCreating ? (
-                <CircleNotch className="w-4 h-4 mr-2 animate-spin" />
+                <CircleNotch className="size-4  mr-2 animate-spin" />
               ) : (
-                <Plus className="w-4 h-4 mr-2" />
+                <Plus className="size-4  mr-2" />
               )}
               Commit
             </Button>
@@ -242,11 +243,11 @@ export function Checkpointing() {
         <CardContent>
           {state.isLoading ? (
             <div className="flex items-center justify-center py-8">
-              <CircleNotch className="w-6 h-6 animate-spin text-muted-foreground" />
+              <CircleNotch className="size-6  animate-spin text-muted-foreground" />
             </div>
           ) : state.checkpoints.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              <GitCommit className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <GitCommit className="size-12  mx-auto mb-4 opacity-50" />
               <p>No checkpoints yet</p>
               <p className="text-sm">Create your first checkpoint above</p>
             </div>
@@ -258,7 +259,7 @@ export function Checkpointing() {
                   className="flex items-start gap-4 p-4 rounded-lg border hover:bg-muted/50 transition-colors"
                 >
                   <div className="mt-1">
-                    <GitCommit className="w-5 h-5 text-primary" />
+                    <GitCommit className="size-5  text-primary" />
                   </div>
                   
                   <div className="flex-1 min-w-0">
@@ -272,7 +273,7 @@ export function Checkpointing() {
                       </span>
                       {checkpoint.tags.map(tag => (
                         <Badge key={tag} variant="outline" className="text-xs">
-                          <Tag className="w-3 h-3 mr-1" />
+                          <Tag className="size-3  mr-1" />
                           {tag}
                         </Badge>
                       ))}
@@ -290,7 +291,7 @@ export function Checkpointing() {
                     {selectedCheckpoint === checkpoint.id ? (
                       <div className="flex items-center gap-2">
                         <Input
-                          placeholder="Tag name..."
+                          placeholder="Tag name…"
                           value={tagName}
                           onChange={(e) => setTagName(e.target.value)}
                           size={128}
@@ -316,7 +317,7 @@ export function Checkpointing() {
                           variant="ghost"
                           onClick={() => setSelectedCheckpoint(checkpoint.id)}
                         >
-                          <Tag className="w-4 h-4 mr-1" />
+                          <Tag className="size-4  mr-1" />
                           Tag
                         </Button>
                         <Button 
@@ -324,7 +325,7 @@ export function Checkpointing() {
                           variant="ghost"
                           onClick={() => restoreCheckpoint(checkpoint.id)}
                         >
-                          <ArrowCounterClockwise className="w-4 h-4 mr-1" />
+                          <ArrowCounterClockwise className="size-4  mr-1" />
                           Restore
                         </Button>
                       </>

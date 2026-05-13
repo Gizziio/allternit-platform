@@ -104,7 +104,7 @@ export const ExaTool = memo(function ExaTool({
       <div className="rounded-an-tool-border-radius border border-border bg-an-tool-background overflow-hidden">
         {/* Header */}
         <div className="flex items-center gap-2 px-3 py-1.5 border-b border-an-tool-border-color bg-background/50">
-          <IconSparkles className="w-3.5 h-3.5 text-muted-foreground" />
+          <IconSparkles className="size-3.5  text-muted-foreground" />
           <span className="text-xs font-medium text-muted-foreground">
             Exa Search
           </span>
@@ -144,10 +144,10 @@ export const ExaTool = memo(function ExaTool({
                       <span className="text-sm font-medium text-foreground group-hover:underline truncate">
                         {result.title}
                       </span>
-                      <IconExternalLink className="w-3 h-3 shrink-0 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <IconExternalLink className="size-3  shrink-0 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[11px] text-muted-foreground truncate">
+                      <span className="text-[12px] text-muted-foreground truncate">
                         {(() => {
                           try {
                             return new URL(result.url).hostname.replace("www.", "");
@@ -157,12 +157,12 @@ export const ExaTool = memo(function ExaTool({
                         })()}
                       </span>
                       {result.score > 0 && (
-                        <span className="text-[10px] px-1.5 py-0 rounded-full bg-primary/10 text-primary font-medium">
+                        <span className="text-xs px-1.5 py-0 rounded-full bg-primary/10 text-primary font-medium">
                           {result.score.toFixed(2)}
                         </span>
                       )}
                       {result.publishedDate && (
-                        <span className="text-[11px] text-muted-foreground/60">
+                        <span className="text-[12px] text-muted-foreground/60">
                           {result.publishedDate}
                         </span>
                       )}

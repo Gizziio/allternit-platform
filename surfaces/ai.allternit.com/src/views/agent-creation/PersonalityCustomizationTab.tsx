@@ -67,7 +67,7 @@ export const PersonalityCustomizationTab: React.FC = () => {
           </div>
           <p
             style={{
-              fontSize: '11px',
+              fontSize: '12px',
               color: STUDIO_THEME.textSecondary,
             }}
           >
@@ -96,7 +96,7 @@ export const PersonalityCustomizationTab: React.FC = () => {
           style={{
             display: 'flex',
             justifyContent: 'space-between',
-            fontSize: '11px',
+            fontSize: '12px',
             color: STUDIO_THEME.textSecondary,
             marginTop: '6px',
           }}
@@ -169,7 +169,7 @@ export const PersonalityCustomizationTab: React.FC = () => {
           </div>
           <p
             style={{
-              fontSize: '11px',
+              fontSize: '12px',
               color: STUDIO_THEME.textSecondary,
             }}
           >
@@ -198,7 +198,7 @@ export const PersonalityCustomizationTab: React.FC = () => {
           style={{
             display: 'flex',
             justifyContent: 'space-between',
-            fontSize: '11px',
+            fontSize: '12px',
             color: STUDIO_THEME.textSecondary,
             marginTop: '6px',
           }}
@@ -254,7 +254,7 @@ export const PersonalityCustomizationTab: React.FC = () => {
           </h4>
           <p
             style={{
-              fontSize: '11px',
+              fontSize: '12px',
               color: STUDIO_THEME.textSecondary,
               marginTop: '4px',
             }}
@@ -402,7 +402,7 @@ export const PersonalityCustomizationTab: React.FC = () => {
             }}
           >
             🤖 Robotic
-            <span style={{ display: 'block', fontSize: '10px', color: STUDIO_THEME.textSecondary, marginTop: '2px' }}>
+            <span style={{ display: 'block', fontSize: '12px', color: STUDIO_THEME.textSecondary, marginTop: '2px' }}>
               Minimal movement
             </span>
           </button>
@@ -426,7 +426,7 @@ export const PersonalityCustomizationTab: React.FC = () => {
             }}
           >
             😊 Natural
-            <span style={{ display: 'block', fontSize: '10px', color: STUDIO_THEME.textSecondary, marginTop: '2px' }}>
+            <span style={{ display: 'block', fontSize: '12px', color: STUDIO_THEME.textSecondary, marginTop: '2px' }}>
               Balanced movement
             </span>
           </button>
@@ -450,7 +450,7 @@ export const PersonalityCustomizationTab: React.FC = () => {
             }}
           >
             ⚡ Energetic
-            <span style={{ display: 'block', fontSize: '10px', color: STUDIO_THEME.textSecondary, marginTop: '2px' }}>
+            <span style={{ display: 'block', fontSize: '12px', color: STUDIO_THEME.textSecondary, marginTop: '2px' }}>
               High movement
             </span>
           </button>
@@ -474,7 +474,7 @@ export const PersonalityCustomizationTab: React.FC = () => {
             }}
           >
             ⏸️ Static
-            <span style={{ display: 'block', fontSize: '10px', color: STUDIO_THEME.textSecondary, marginTop: '2px' }}>
+            <span style={{ display: 'block', fontSize: '12px', color: STUDIO_THEME.textSecondary, marginTop: '2px' }}>
               No animation
             </span>
           </button>

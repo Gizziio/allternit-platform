@@ -241,13 +241,13 @@ export function NodeTerminal({
         const isCurrentlyConnected = nodeTerminalService.isConnected(session.id);
         
         if (!isCurrentlyConnected) {
-          console.log('[NodeTerminal] Page visible but disconnected, attempting reconnection');
+          console.debug('[NodeTerminal] Page visible but disconnected, attempting reconnection');
           setIsReconnecting(true);
           
           // Try to reconnect
           nodeTerminalService.reconnectSession(session.id, session.nodeId).then((reconnectedSession) => {
             if (reconnectedSession) {
-              console.log('[NodeTerminal] Reconnected successfully');
+              console.debug('[NodeTerminal] Reconnected successfully');
               setIsConnected(true);
               setIsReconnecting(false);
               setReconnectionAttempt(0);
@@ -256,7 +256,7 @@ export function NodeTerminal({
                 termRef.current.writeln('\x1b[1;32m[Reconnected]\x1b[0m');
               }
             } else {
-              console.log('[NodeTerminal] Reconnection failed');
+              console.debug('[NodeTerminal] Reconnection failed');
               setIsReconnecting(false);
               
               // Call the parent's reconnection handler if provided
@@ -484,7 +484,7 @@ export function NodeTerminal({
         <div className="flex items-center gap-2">
           <div 
             className={cn(
-              "w-2 h-2 rounded-full",
+              "size-2  rounded-full",
               isConnected 
                 ? 'bg-green-500' 
                 : isReconnecting 
@@ -536,7 +536,7 @@ export function NodeTerminal({
         <div className="bg-yellow-500/10 border-b border-yellow-500/30 px-3 py-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <svg 
-              className="w-4 h-4 text-yellow-500" 
+              className="size-4  text-yellow-500" 
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"
@@ -564,7 +564,7 @@ export function NodeTerminal({
       {/* Reconnection Status */}
       {isReconnecting && (
         <div className="bg-blue-500/10 border-b border-blue-500/30 px-3 py-2 flex items-center justify-center gap-2">
-          <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <div className="size-3  border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
           <span className="text-sm text-blue-700 dark:text-blue-400">
             Reconnecting... {reconnectionAttempt > 0 && `(attempt ${reconnectionAttempt})`}
           </span>
@@ -591,7 +591,7 @@ export function NodeTerminal({
           {isDragging && (
             <div className="absolute inset-0 bg-primary/10 flex items-center justify-center pointer-events-none">
               <div className="bg-background/90 px-6 py-4 rounded-lg shadow-lg text-center">
-                <UploadSimple className="h-8 w-8 mx-auto mb-2 text-primary" />
+                <UploadSimple className="size-8  mx-auto mb-2 text-primary" />
                 <p className="font-medium">Drop files to upload</p>
               </div>
             </div>
@@ -626,9 +626,9 @@ export function NodeTerminal({
           {!isConnected && !isReconnecting && !error && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/80 pointer-events-none">
               <div className="text-center pointer-events-auto">
-                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-red-500/10 flex items-center justify-center">
+                <div className="size-12  mx-auto mb-3 rounded-full bg-red-500/10 flex items-center justify-center">
                   <svg 
-                    className="w-6 h-6 text-red-500" 
+                    className="size-6  text-red-500" 
                     fill="none" 
                     stroke="currentColor" 
                     viewBox="0 0 24 24"
@@ -666,16 +666,16 @@ export function NodeTerminal({
                 >
                   <div className="flex items-center gap-2">
                     {transfer.type === 'upload' ? (
-                      <UploadSimple className="h-4 w-4 text-muted-foreground" />
+                      <UploadSimple className="size-4  text-muted-foreground" />
                     ) : (
-                      <DownloadSimple className="h-4 w-4 text-muted-foreground" />
+                      <DownloadSimple className="size-4  text-muted-foreground" />
                     )}
                     <span className="flex-1 text-sm truncate">{transfer.filename}</span>
                     {transfer.status === 'completed' && (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <CheckCircle className="size-4  text-green-500" />
                     )}
                     {transfer.status === 'error' && (
-                      <Warning className="h-4 w-4 text-destructive" />
+                      <Warning className="size-4  text-destructive" />
                     )}
                     <button
                       onClick={() => setTransfers(prev => prev.filter(t => t.id !== transfer.id))}

@@ -42,33 +42,38 @@ function TerminalClerkContent() {
   }, [searchParams])
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn || posted.current) return
-    const callbackUrl = sessionStorage.getItem("allternit_callback_url")
-    if (!callbackUrl) return
+    if (!isLoaded || !isSignedIn || posted.current) return;
+    const callbackUrl = sessionStorage.getItem("allternit_callback_url");
+    if (!callbackUrl) return;
 
-    posted.current = true
-    setStatus("connecting")
+    let timer: NodeJS.Timeout | undefined;
+    posted.current = true;
+    setStatus("connecting");
 
     getToken()
       .then((token) => {
-        if (!token) throw new Error("No token from Clerk")
+        if (!token) throw new Error("No token from Clerk");
         return fetch(callbackUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token }),
-        })
+        });
       })
       .then((response) => {
-        if (!response.ok) throw new Error(`Callback error (${response.status})`)
-        sessionStorage.removeItem("allternit_callback_url")
-        setStatus("done")
-        setTimeout(() => window.close(), 1800)
+        if (!response.ok) throw new Error(`Callback error (${response.status})`);
+        sessionStorage.removeItem("allternit_callback_url");
+        setStatus("done");
+        timer = setTimeout(() => window.close(), 1800);
       })
       .catch((error: Error) => {
-        setErrorMsg(error.message)
-        setStatus("error")
-      })
-  }, [getToken, isLoaded, isSignedIn])
+        setErrorMsg(error.message);
+        setStatus("error");
+      });
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [getToken, isLoaded, isSignedIn]);
 
   const callbackUrl = searchParams.get("callback_url")
   const hasDesktopCallback = Boolean(callbackUrl || sessionStorage.getItem("allternit_callback_url"))

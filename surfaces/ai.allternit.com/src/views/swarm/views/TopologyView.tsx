@@ -191,7 +191,7 @@ export function TopologyView({
             {orchestrator && (
               <div className="flex items-center gap-2">
                 <div 
-                  className="w-3 h-3 rounded-full"
+                  className="size-3  rounded-full"
                   style={{ background: orchestrator.color }}
                 />
                 <span className="text-xs" style={{ color: TEXT.secondary }}>
@@ -202,7 +202,7 @@ export function TopologyView({
             {workers.slice(0, 2).map(worker => (
               <div key={worker.id} className="flex items-center gap-2">
                 <div 
-                  className="w-2.5 h-2.5 rounded-full"
+                  className="size-2.5  rounded-full"
                   style={{ background: worker.color }}
                 />
                 <span className="text-xs" style={{ color: TEXT.secondary }}>
@@ -241,7 +241,7 @@ export function TopologyView({
             >
               <div className="flex items-center gap-2">
                 <div 
-                  className="w-2 h-2 rounded-full animate-pulse"
+                  className="size-2  rounded-full animate-pulse"
                   style={{ background: orchestrator.color }}
                 />
                 <span className="text-sm font-medium">{orchestrator.name}</span>
@@ -266,7 +266,7 @@ export function TopologyView({
               >
                 <div className="flex items-center gap-2">
                   <div 
-                    className={`w-2 h-2 rounded-full ${isWorking ? 'animate-pulse' : ''}`}
+                    className={`size-2  rounded-full ${isWorking ? 'animate-pulse' : ''}`}
                     style={{ background: isWorking ? worker.color : TEXT.tertiary }}
                   />
                   <span className="text-sm">{worker.name}</span>

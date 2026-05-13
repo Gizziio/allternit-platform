@@ -100,16 +100,16 @@ const AgentTerminal: React.FC = () => {
   // Use the REAL TerminalTabs component for multi-session terminal support
   // This connects to actual PTY via WebSocket - not a simulation
   return (
-    <div className="flex flex-col h-full bg-gray-900 text-gray-100">
+    <div className="flex flex-col h-full bg-zinc-900 text-zinc-100">
       {/* Terminal Header */}
-      <div className="flex items-center justify-between px-4 py-2 bg-gray-800 border-b border-gray-700">
+      <div className="flex items-center justify-between px-4 py-2 bg-zinc-800 border-b border-zinc-700">
         <div className="flex items-center gap-2">
           <span className="text-green-400">●</span>
           <span>Multi-Session Terminal</span>
         </div>
-        <div className="flex items-center gap-2 text-xs text-gray-400">
-          <span className="px-2 py-0.5 bg-gray-700 rounded">Sidecar PTY</span>
-          <span className="px-2 py-0.5 bg-gray-700 rounded">Snapshot Restore</span>
+        <div className="flex items-center gap-2 text-xs text-zinc-400">
+          <span className="px-2 py-0.5 bg-zinc-700 rounded">Sidecar PTY</span>
+          <span className="px-2 py-0.5 bg-zinc-700 rounded">Snapshot Restore</span>
           <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-300 rounded">
             attached {summary.attached}
           </span>
@@ -147,7 +147,7 @@ const KanbanBoard: React.FC = () => {
   useSidecarStore();
   
   const columns: KanbanColumn[] = [
-    { id: 'pending', title: '📋 Pending', status: 'pending', color: 'bg-gray-500' },
+    { id: 'pending', title: '📋 Pending', status: 'pending', color: 'bg-zinc-500' },
     { id: 'running', title: '🔄 In Progress', status: 'running', color: 'bg-blue-500' },
     { id: 'completed', title: '✅ Completed', status: 'completed', color: 'bg-green-500' },
     { id: 'error', title: '❌ Error', status: 'error', color: 'bg-red-500' },
@@ -238,7 +238,7 @@ const KanbanBoard: React.FC = () => {
       case 'high': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
       case 'medium': return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
       case 'low': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
-      default: return 'bg-gray-100 text-gray-700';
+      default: return 'bg-zinc-100 text-zinc-700';
     }
   };
 
@@ -247,13 +247,13 @@ const KanbanBoard: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900">
+    <div className="flex flex-col h-full bg-zinc-50 dark:bg-zinc-900">
       {/* Board Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
         <div className="flex items-center gap-2">
           <span className="text-xl">📊</span>
           <h2 className="font-semibold">Kanban Board</h2>
-          <span className="text-sm text-gray-500">({tasks.length} tasks)</span>
+          <span className="text-sm text-zinc-500">({tasks.length} tasks)</span>
         </div>
         <button
           onClick={() => setShowAddTask(true)}
@@ -269,7 +269,7 @@ const KanbanBoard: React.FC = () => {
           {columns.map(column => (
             <div
               key={column.id}
-              className="w-72 flex flex-col bg-gray-100 dark:bg-gray-800 rounded-lg"
+              className="w-72 flex flex-col bg-zinc-100 dark:bg-zinc-800 rounded-lg"
               onDragOver={handleDragOver}
               onDrop={e => handleDrop(e, column.status)}
             >
@@ -290,11 +290,11 @@ const KanbanBoard: React.FC = () => {
                     key={task.id}
                     draggable
                     onDragStart={() => handleDragStart(task)}
-                    className="bg-white dark:bg-gray-700 p-3 rounded-lg shadow-sm cursor-move hover:shadow-md transition-shadow group"
+                    className="bg-white dark:bg-zinc-700 p-3 rounded-lg shadow-sm cursor-move hover:shadow-md transition-shadow group"
                   >
                     <div className="flex items-start justify-between mb-2">
                       <span className="font-medium text-sm">{task.name}</span>
-                      <button className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600">
+                      <button className="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-zinc-600">
                         ⋮
                       </button>
                     </div>
@@ -302,7 +302,7 @@ const KanbanBoard: React.FC = () => {
                     <div className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
                         {task.assignee && (
-                          <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-600 rounded">
+                          <span className="px-2 py-0.5 bg-zinc-100 dark:bg-zinc-600 rounded">
                             @{task.assignee}
                           </span>
                         )}
@@ -313,7 +313,7 @@ const KanbanBoard: React.FC = () => {
                         )}
                       </div>
                       {task.dueDate && (
-                        <span className="text-gray-400">
+                        <span className="text-zinc-400">
                           📅 {new Date(task.dueDate).toLocaleDateString()}
                         </span>
                       )}
@@ -329,21 +329,21 @@ const KanbanBoard: React.FC = () => {
       {/* Add Task Modal */}
       {showAddTask && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96">
+          <div className="bg-white dark:bg-zinc-800 rounded-lg p-6 w-96">
             <h3 className="text-lg font-semibold mb-4">Add New Task</h3>
             <input
               type="text"
               value={newTaskName}
               onChange={e => setNewTaskName(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAddTask()}
-              placeholder="Task name..."
-              className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg mb-4 bg-white dark:bg-gray-700"
+              placeholder="Task name…"
+              className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg mb-4 bg-white dark:bg-zinc-700"
               autoFocus
             />
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setShowAddTask(false)}
-                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                className="px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-lg"
               >
                 Cancel
               </button>
@@ -416,7 +416,7 @@ const AutomationHub: React.FC = () => {
       case 'completed': return 'bg-green-500';
       case 'error': return 'bg-red-500';
       case 'paused': return 'bg-yellow-500';
-      default: return 'bg-gray-400';
+      default: return 'bg-zinc-400';
     }
   };
 
@@ -476,9 +476,9 @@ const AutomationHub: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900">
+    <div className="flex flex-col h-full bg-zinc-50 dark:bg-zinc-900">
       {/* Hub Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between px-4 py-3 bg-white dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
         <div className="flex items-center gap-2">
           <span className="text-xl">🤖</span>
           <h2 className="font-semibold">Automation Hub</h2>
@@ -496,14 +496,14 @@ const AutomationHub: React.FC = () => {
         {sequences.map(seq => (
           <div
             key={seq.id}
-            className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4"
+            className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 p-4"
           >
             <div className="flex items-start justify-between mb-3">
               <div className="flex items-center gap-3">
                 <span className="text-2xl">{getStatusIcon(seq.status)}</span>
                 <div>
                   <h3 className="font-medium">{seq.name}</h3>
-                  <p className="text-sm text-gray-500">{seq.description}</p>
+                  <p className="text-sm text-zinc-500">{seq.description}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -516,7 +516,7 @@ const AutomationHub: React.FC = () => {
                 </button>
                 <button
                   onClick={() => handleToggleSequence(seq.id)}
-                  className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                  className="p-1.5 hover:bg-zinc-100 dark:hover:bg-zinc-700 rounded"
                 >
                   {seq.status === 'paused' ? '▶️' : '⏸️'}
                 </button>
@@ -526,18 +526,18 @@ const AutomationHub: React.FC = () => {
             {/* Progress Bar */}
             {seq.status === 'running' && (
               <div className="mb-3">
-                <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div className="w-full h-2 bg-zinc-200 rounded-full overflow-hidden">
                   <div
                     className={`h-full ${getStatusColor(seq.status)} transition-all duration-300`}
                     style={{ width: `${seq.progress}%` }}
                   />
                 </div>
-                <div className="text-xs text-gray-500 mt-1">{seq.progress}% complete</div>
+                <div className="text-xs text-zinc-500 mt-1">{seq.progress}% complete</div>
               </div>
             )}
 
             {/* Sequence Details */}
-            <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
+            <div className="flex flex-wrap items-center gap-4 text-sm text-zinc-500">
               <div className="flex items-center gap-1">
                 <span>🔄</span>
                 <span>{seq.runCount} runs</span>
@@ -558,7 +558,7 @@ const AutomationHub: React.FC = () => {
                 <span>⚡</span>
                 <span className="flex gap-1">
                   {seq.triggers.map((t, i) => (
-                    <span key={i} className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs">
+                    <span key={i} className="px-2 py-0.5 bg-zinc-100 dark:bg-zinc-700 rounded text-xs">
                       {t}
                     </span>
                   ))}
@@ -572,15 +572,15 @@ const AutomationHub: React.FC = () => {
       {/* Create Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-96">
+          <div className="bg-white dark:bg-zinc-800 rounded-lg p-6 w-96">
             <h3 className="text-lg font-semibold mb-4">Create Automation Sequence</h3>
-            <p className="text-gray-500 mb-4">
+            <p className="text-zinc-500 mb-4">
               Automation sequences can be created via the WorkflowBuilder or by writing a workflow file.
             </p>
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                className="px-4 py-2 text-zinc-600 hover:bg-zinc-100 rounded-lg"
               >
                 Cancel
               </button>
@@ -608,9 +608,9 @@ export const AllternitConsole: React.FC<AllternitConsoleProps> = ({ isOpen, onCl
   if (!isOpen) return null;
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-gray-900">
+    <div className="h-full flex flex-col bg-white dark:bg-zinc-900">
       {/* Drawer Header with Tabs */}
-      <div className="flex items-center justify-between px-4 py-3 bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between px-4 py-3 bg-zinc-100 dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
         <div className="flex items-center gap-4">
           <span className="text-xl">🤖</span>
           <span className="font-semibold">Allternit Console</span>
@@ -628,7 +628,7 @@ export const AllternitConsole: React.FC<AllternitConsoleProps> = ({ isOpen, onCl
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm transition-colors ${
                   activeTab === tab.id
                     ? 'bg-blue-600 text-white'
-                    : 'hover:bg-gray-200 dark:hover:bg-gray-700'
+                    : 'hover:bg-zinc-200 dark:hover:bg-zinc-700'
                 }`}
               >
                 <span>{tab.icon}</span>
@@ -640,7 +640,7 @@ export const AllternitConsole: React.FC<AllternitConsoleProps> = ({ isOpen, onCl
         
         <button
           onClick={onClose}
-          className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg"
+          className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg"
         >
           ✕
         </button>

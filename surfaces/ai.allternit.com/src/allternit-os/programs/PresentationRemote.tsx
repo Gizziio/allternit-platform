@@ -73,18 +73,18 @@ const Timer: React.FC = () => {
 
   return (
     <div className="flex items-center gap-3">
-      <div className={`text-2xl font-mono font-bold ${seconds > 1800 ? 'text-red-600' : 'text-gray-700 dark:text-gray-300'}`}>
+      <div className={`text-2xl font-mono font-bold ${seconds > 1800 ? 'text-red-600' : 'text-zinc-700 dark:text-zinc-300'}`}>
         {formatTime(seconds)}
       </div>
       <button
         onClick={() => setIsRunning(!isRunning)}
-        className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200"
+        className="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200"
       >
         {isRunning ? '⏸️' : '▶️'}
       </button>
       <button
         onClick={() => setSeconds(0)}
-        className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200"
+        className="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200"
       >
         🔄
       </button>
@@ -105,28 +105,28 @@ export const PresentationRemote: React.FC<PresentationRemoteProps> = ({
   const [activeTab, setActiveTab] = useState<'controls' | 'notes' | 'settings'>('controls');
   const [showQR, setShowQR] = useState(false);
 
-  if (!state) return null;
-
-  const currentSlide = state.slides[state.currentSlideIndex];
-  const totalSlides = state.slides.length;
-  const progress = totalSlides > 0 ? ((state.currentSlideIndex + 1) / totalSlides) * 100 : 0;
-
   const goToSlide = useCallback((index: number) => {
-    if (index < 0 || index >= totalSlides) return;
+    if (!state || index < 0 || index >= state.slides.length) return;
     
     store.updateProgramState<PresentationState>(programId, (prev) => ({
       ...prev,
       currentSlideIndex: index,
     }));
-  }, [programId, store, totalSlides]);
+  }, [programId, store, state]);
 
   const nextSlide = useCallback(() => {
-    goToSlide(state.currentSlideIndex + 1);
-  }, [goToSlide, state.currentSlideIndex]);
+    if (state) goToSlide(state.currentSlideIndex + 1);
+  }, [goToSlide, state]);
 
   const prevSlide = useCallback(() => {
-    goToSlide(state.currentSlideIndex - 1);
-  }, [goToSlide, state.currentSlideIndex]);
+    if (state) goToSlide(state.currentSlideIndex - 1);
+  }, [goToSlide, state]);
+
+  if (!state) return null;
+
+  const currentSlide = state.slides[state.currentSlideIndex];
+  const totalSlides = state.slides.length;
+  const progress = totalSlides > 0 ? ((state.currentSlideIndex + 1) / totalSlides) * 100 : 0;
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -164,12 +164,12 @@ export const PresentationRemote: React.FC<PresentationRemoteProps> = ({
   const remoteUrl = `https://allternit.remote/s/${programId}`;
 
   return (
-    <div className="fixed inset-0 z-50 bg-gray-900 text-white">
+    <div className="fixed inset-0 z-50 bg-zinc-900 text-white">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-700">
         <div className="flex items-center gap-4">
           <h2 className="text-lg font-semibold">Presenter Remote</h2>
-          <span className="text-sm text-gray-400">
+          <span className="text-sm text-zinc-400">
             {state.title}
           </span>
         </div>
@@ -184,7 +184,7 @@ export const PresentationRemote: React.FC<PresentationRemoteProps> = ({
           </button>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg bg-gray-700 hover:bg-gray-600"
+            className="p-2 rounded-lg bg-zinc-700 hover:bg-zinc-600"
           >
             ✕
           </button>
@@ -192,7 +192,7 @@ export const PresentationRemote: React.FC<PresentationRemoteProps> = ({
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-700">
+      <div className="flex border-b border-zinc-700">
         {(['controls', 'notes', 'settings'] as const).map(tab => (
           <button
             key={tab}
@@ -200,7 +200,7 @@ export const PresentationRemote: React.FC<PresentationRemoteProps> = ({
             className={`px-6 py-3 text-sm font-medium ${
               activeTab === tab 
                 ? 'text-blue-400 border-b-2 border-blue-400' 
-                : 'text-gray-400 hover:text-white'
+                : 'text-zinc-400 hover:text-white'
             }`}
           >
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -211,35 +211,35 @@ export const PresentationRemote: React.FC<PresentationRemoteProps> = ({
       {/* Content */}
       <div className="flex h-[calc(100vh-140px)]">
         {/* Left: Slide Preview */}
-        <div className="w-1/2 p-6 border-r border-gray-700 flex flex-col">
-          <div className="flex-1 bg-gray-800 rounded-lg flex items-center justify-center p-8 overflow-hidden">
+        <div className="w-1/2 p-6 border-r border-zinc-700 flex flex-col">
+          <div className="flex-1 bg-zinc-800 rounded-lg flex items-center justify-center p-8 overflow-hidden">
             {currentSlide ? (
               <div className="text-center">
-                <div className="text-sm text-gray-500 mb-2">
+                <div className="text-sm text-zinc-500 mb-2">
                   Slide {state.currentSlideIndex + 1} of {totalSlides}
                 </div>
                 <div className="text-2xl font-bold mb-4">
                   {currentSlide.type === 'title' ? currentSlide.content : currentSlide.type}
                 </div>
                 {currentSlide.type !== 'title' && (
-                  <div className="text-gray-300 max-h-64 overflow-hidden">
+                  <div className="text-zinc-300 max-h-64 overflow-hidden">
                     {currentSlide.content.substring(0, 200)}
-                    {currentSlide.content.length > 200 && '...'}
+                    {currentSlide.content.length > 200 && '…'}
                   </div>
                 )}
               </div>
             ) : (
-              <div className="text-gray-500">No slides</div>
+              <div className="text-zinc-500">No slides</div>
             )}
           </div>
 
           {/* Progress bar */}
           <div className="mt-4">
-            <div className="flex justify-between text-xs text-gray-400 mb-1">
+            <div className="flex justify-between text-xs text-zinc-400 mb-1">
               <span>Progress</span>
               <span>{Math.round(progress)}%</span>
             </div>
-            <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+            <div className="h-2 bg-zinc-700 rounded-full overflow-hidden">
               <div 
                 className="h-full bg-blue-500 transition-all duration-300"
                 style={{ width: `${progress}%` }}
@@ -257,7 +257,7 @@ export const PresentationRemote: React.FC<PresentationRemoteProps> = ({
                 <button
                   onClick={prevSlide}
                   disabled={state.currentSlideIndex === 0}
-                  className="w-20 h-20 rounded-full bg-gray-700 hover:bg-gray-600 disabled:opacity-30 flex items-center justify-center text-3xl"
+                  className="size-20  rounded-full bg-zinc-700 hover:bg-zinc-600 disabled:opacity-30 flex items-center justify-center text-3xl"
                 >
                   ←
                 </button>
@@ -266,13 +266,13 @@ export const PresentationRemote: React.FC<PresentationRemoteProps> = ({
                   <div className="text-5xl font-bold mb-2">
                     {state.currentSlideIndex + 1}
                   </div>
-                  <div className="text-gray-400">/ {totalSlides}</div>
+                  <div className="text-zinc-400">/ {totalSlides}</div>
                 </div>
                 
                 <button
                   onClick={nextSlide}
                   disabled={state.currentSlideIndex === totalSlides - 1}
-                  className="w-20 h-20 rounded-full bg-blue-600 hover:bg-blue-500 disabled:opacity-30 flex items-center justify-center text-3xl"
+                  className="size-20  rounded-full bg-blue-600 hover:bg-blue-500 disabled:opacity-30 flex items-center justify-center text-3xl"
                 >
                   →
                 </button>
@@ -280,16 +280,16 @@ export const PresentationRemote: React.FC<PresentationRemoteProps> = ({
 
               {/* Quick jump */}
               <div className="mt-8">
-                <div className="text-sm text-gray-400 mb-2">Quick Jump</div>
+                <div className="text-sm text-zinc-400 mb-2">Quick Jump</div>
                 <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
                   {state.slides.map((slide, idx) => (
                     <button
                       key={slide.id}
                       onClick={() => goToSlide(idx)}
-                      className={`w-10 h-10 rounded-lg text-sm font-medium ${
+                      className={`size-10  rounded-lg text-sm font-medium ${
                         idx === state.currentSlideIndex
                           ? 'bg-blue-600 text-white'
-                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'
                       }`}
                     >
                       {idx + 1}
@@ -303,15 +303,15 @@ export const PresentationRemote: React.FC<PresentationRemoteProps> = ({
                 <div className="mt-8 p-4 bg-white rounded-lg text-center">
                   <img
                     alt="Presentation remote QR code"
-                    className="w-32 h-32 mx-auto"
+                    className="size-32  mx-auto"
                     src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(
                       generateQRCodeSVG(remoteUrl)
                     )}`}
                   />
-                  <p className="text-xs text-gray-600 mt-2">
+                  <p className="text-xs text-zinc-600 mt-2">
                     Scan to use phone as remote
                   </p>
-                  <p className="text-xs text-gray-400">{remoteUrl}</p>
+                  <p className="text-xs text-zinc-400">{remoteUrl}</p>
                 </div>
               )}
             </div>
@@ -321,22 +321,22 @@ export const PresentationRemote: React.FC<PresentationRemoteProps> = ({
             <div className="h-full">
               <h3 className="text-lg font-medium mb-4">Speaker Notes</h3>
               {currentSlide?.notes ? (
-                <div className="bg-gray-800 rounded-lg p-4 text-gray-300">
+                <div className="bg-zinc-800 rounded-lg p-4 text-zinc-300">
                   {currentSlide.notes}
                 </div>
               ) : (
-                <div className="text-gray-500 italic">No notes for this slide</div>
+                <div className="text-zinc-500 italic">No notes for this slide</div>
               )}
 
               {/* Upcoming slides */}
               {state.currentSlideIndex < totalSlides - 1 && (
                 <div className="mt-6">
-                  <h4 className="text-sm font-medium text-gray-400 mb-2">Up Next</h4>
-                  <div className="bg-gray-800 rounded-lg p-4">
-                    <div className="text-sm text-gray-500">
+                  <h4 className="text-sm font-medium text-zinc-400 mb-2">Up Next</h4>
+                  <div className="bg-zinc-800 rounded-lg p-4">
+                    <div className="text-sm text-zinc-500">
                       Slide {state.currentSlideIndex + 2}
                     </div>
-                    <div className="text-gray-300">
+                    <div className="text-zinc-300">
                       {state.slides[state.currentSlideIndex + 1].content.substring(0, 100)}...
                     </div>
                   </div>
@@ -350,30 +350,30 @@ export const PresentationRemote: React.FC<PresentationRemoteProps> = ({
               <h3 className="text-lg font-medium">Settings</h3>
               
               <div className="space-y-3">
-                <label className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                <label className="flex items-center justify-between p-3 bg-zinc-800 rounded-lg">
                   <span>Show timer</span>
                   <input type="checkbox" defaultChecked className="rounded" />
                 </label>
                 
-                <label className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                <label className="flex items-center justify-between p-3 bg-zinc-800 rounded-lg">
                   <span>Show progress bar</span>
                   <input type="checkbox" defaultChecked className="rounded" />
                 </label>
                 
-                <label className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                <label className="flex items-center justify-between p-3 bg-zinc-800 rounded-lg">
                   <span>Enable laser pointer</span>
                   <input type="checkbox" className="rounded" />
                 </label>
                 
-                <label className="flex items-center justify-between p-3 bg-gray-800 rounded-lg">
+                <label className="flex items-center justify-between p-3 bg-zinc-800 rounded-lg">
                   <span>Auto-advance (5s)</span>
                   <input type="checkbox" className="rounded" />
                 </label>
               </div>
 
-              <div className="pt-4 border-t border-gray-700">
-                <h4 className="text-sm font-medium text-gray-400 mb-2">Keyboard Shortcuts</h4>
-                <div className="text-sm text-gray-500 space-y-1">
+              <div className="pt-4 border-t border-zinc-700">
+                <h4 className="text-sm font-medium text-zinc-400 mb-2">Keyboard Shortcuts</h4>
+                <div className="text-sm text-zinc-500 space-y-1">
                   <div className="flex justify-between">
                     <span>Next slide</span>
                     <span className="font-mono">→ ↓ Space</span>

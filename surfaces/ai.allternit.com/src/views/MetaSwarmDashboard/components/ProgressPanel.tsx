@@ -46,7 +46,7 @@ function WaveVisualization({ waves }: WaveVisualizationProps) {
       {waves.map((wave) => (
         <div key={wave.waveNumber} className="border rounded-lg p-4">
           <div className="flex items-center gap-2 mb-3">
-            <Stack className="h-4 w-4 text-blue-500" />
+            <Stack className="size-4  text-blue-500" />
             <span className="font-medium">Wave {wave.waveNumber}</span>
             <Badge variant="secondary" className="ml-auto">
               {wave.tasks.filter((t) => t.status === 'completed').length} / {wave.tasks.length}
@@ -55,7 +55,7 @@ function WaveVisualization({ waves }: WaveVisualizationProps) {
           <div className="flex gap-2 flex-wrap">
             {wave.tasks.map((task) => {
               const statusColors = {
-                pending: 'bg-gray-200',
+                pending: 'bg-zinc-200',
                 in_progress: 'bg-blue-400 animate-pulse',
                 completed: 'bg-green-500',
                 failed: 'bg-red-500',
@@ -64,7 +64,7 @@ function WaveVisualization({ waves }: WaveVisualizationProps) {
               return (
                 <div
                   key={task.id}
-                  className={`w-8 h-8 rounded-full ${statusColors[task.status]} flex items-center justify-center text-white text-xs font-medium`}
+                  className={`size-8  rounded-full ${statusColors[task.status]} flex items-center justify-center text-white text-xs font-medium`}
                   title={task.name}
                 >
                   {task.name.charAt(0)}
@@ -129,7 +129,7 @@ function DAGVisualization({
       
       {nodes.map((node) => {
         const statusColors = {
-          pending: 'bg-gray-300',
+          pending: 'bg-zinc-300',
           in_progress: 'bg-blue-500 animate-pulse',
           completed: 'bg-green-500',
           failed: 'bg-red-500',
@@ -137,7 +137,7 @@ function DAGVisualization({
         
         const statusIcons = {
           pending: <Circle size={12} />,
-          in_progress: <CircleNotch className="h-3 w-3 animate-spin" />,
+          in_progress: <CircleNotch className="size-3  animate-spin" />,
           completed: <CheckCircle size={12} />,
           failed: <XCircle size={12} />,
         };
@@ -145,7 +145,7 @@ function DAGVisualization({
         return (
           <div
             key={node.id}
-            className={`absolute transform -translate-x-1/2 -translate-y-1/2 ${statusColors[node.status]} text-white px-3 py-2 rounded-lg shadow-md text-sm font-medium flex items-center gap-2`}
+            className={`absolute transform -tranzinc-x-1/2 -tranzinc-y-1/2 ${statusColors[node.status]} text-white px-3 py-2 rounded-lg shadow-md text-sm font-medium flex items-center gap-2`}
             style={{ left: node.x, top: node.y }}
           >
             {statusIcons[node.status]}
@@ -261,16 +261,16 @@ export function ProgressPanel({ className }: ProgressPanelProps) {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     {task.status === 'in_progress' && (
-                      <CircleNotch className="h-4 w-4 animate-spin text-blue-500" />
+                      <CircleNotch className="size-4  animate-spin text-blue-500" />
                     )}
                     {task.status === 'completed' && (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <CheckCircle className="size-4  text-green-500" />
                     )}
                     {task.status === 'failed' && (
-                      <XCircle className="h-4 w-4 text-red-500" />
+                      <XCircle className="size-4  text-red-500" />
                     )}
                     {task.status === 'pending' && (
-                      <Clock className="h-4 w-4 text-gray-400" />
+                      <Clock className="size-4  text-zinc-400" />
                     )}
                     <span className="font-medium truncate max-w-md">
                       {task.description}

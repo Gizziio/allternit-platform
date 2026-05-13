@@ -1,3 +1,4 @@
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState } from 'react';
 
 interface AutomationSequence {
@@ -13,6 +14,7 @@ interface AutomationSequence {
 }
 
 export const AutomationHub: React.FC = () => {
+  const isClient = useIsClient();
   const [sequences, setSequences] = useState<AutomationSequence[]>([
     {
       id: 'auto-1',
@@ -281,7 +283,7 @@ export const AutomationHub: React.FC = () => {
                     />
                   </div>
                   <div style={{
-                    fontSize: '11px',
+                    fontSize: '12px',
                     color: 'var(--text-tertiary, #6b7280)',
                     marginTop: '4px',
                   }}>{seq.progress}% complete</div>
@@ -323,7 +325,7 @@ export const AutomationHub: React.FC = () => {
                           padding: '2px 8px',
                           background: 'var(--bg-tertiary, #374151)',
                           borderRadius: '4px',
-                          fontSize: '11px',
+                          fontSize: '12px',
                         }}
                       >
                         {t}

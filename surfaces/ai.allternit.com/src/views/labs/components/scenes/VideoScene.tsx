@@ -182,7 +182,7 @@ export function VideoScene({ title, videoUrl, description, onComplete }: VideoSc
             {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
           </button>
 
-          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', fontVariantNumeric: 'tabular-nums', minWidth: 60 }}>
+          <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.8)', fontVariantNumeric: 'tabular-nums', minWidth: 60 }}>
             {formatTime(progress)} / {formatTime(duration)}
           </span>
 

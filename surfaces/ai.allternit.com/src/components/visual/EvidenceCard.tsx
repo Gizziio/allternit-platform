@@ -157,12 +157,12 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({
     padding: '4px 10px',
     background: 'var(--surface-hover)',
     borderRadius: '6px',
-    fontSize: '11px',
+    fontSize: '12px',
     color: 'var(--ui-text-muted)',
   };
 
   const timestampStyle: React.CSSProperties = {
-    fontSize: '11px',
+    fontSize: '12px',
     color: 'var(--ui-text-muted)',
     marginTop: '8px',
   };

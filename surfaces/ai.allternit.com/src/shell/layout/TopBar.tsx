@@ -186,7 +186,7 @@ function Breadcrumbs({ items }: BreadcrumbsProps) {
         return (
           <React.Fragment key={index}>
             {index > 0 && (
-              <CaretRight className="w-4 h-4 text-muted-foreground" />
+              <CaretRight className="size-4  text-muted-foreground" />
             )}
             {item.href ? (
               <a href={item.href} className="no-underline">
@@ -227,7 +227,7 @@ function TopBarActionButton({ action }: TopBarActionButtonProps) {
     >
       <Icon size={20} />
       {action.badge !== undefined && action.badge > 0 && (
-        <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
+        <span className="absolute top-1 right-1 size-2  bg-primary rounded-full" />
       )}
     </button>
   );
@@ -249,7 +249,8 @@ function GlobalSearch({ isOpen, onOpenChange }: GlobalSearchProps) {
   // Focus input when opened
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 100);
+      const timer = setTimeout(() => inputRef.current?.focus(), 100);
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
 
@@ -280,7 +281,7 @@ function GlobalSearch({ isOpen, onOpenChange }: GlobalSearchProps) {
         )}
       >
         <MagnifyingGlass size={16} />
-        <span className="hidden sm:inline">Search...</span>
+        <span className="hidden sm:inline">Search…</span>
         <kbd className="hidden md:inline-flex items-center gap-1 px-1.5 py-0.5 text-xs bg-background rounded border">
           <Command size={12} />
           <span>K</span>
@@ -298,17 +299,17 @@ function GlobalSearch({ isOpen, onOpenChange }: GlobalSearchProps) {
       />
 
       {/* Search Modal */}
-      <div className="fixed top-20 left-1/2 -translate-x-1/2 w-full max-w-xl z-50 px-4">
+      <div className="fixed top-20 left-1/2 -tranzinc-x-1/2 w-full max-w-xl z-50 px-4">
         <div className="bg-background border border-border rounded-lg shadow-2xl overflow-hidden">
           {/* Search Input */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
-            <MagnifyingGlass className="w-5 h-5 text-muted-foreground" />
+            <MagnifyingGlass className="size-5  text-muted-foreground" />
             <input
               ref={inputRef}
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search commands, files, or agents..."
+              placeholder="Search commands, files, or agents…"
               className="flex-1 bg-transparent border-none outline-none text-foreground placeholder:text-muted-foreground"
             />
             <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs bg-muted rounded">
@@ -320,8 +321,8 @@ function GlobalSearch({ isOpen, onOpenChange }: GlobalSearchProps) {
           <div className="max-h-96 overflow-y-auto py-2">
             {query ? (
               <div className="px-4 py-8 text-center text-muted-foreground">
-                <MagnifyingGlass className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p>Searching for &quot;{query}&quot;...</p>
+                <MagnifyingGlass className="size-8  mx-auto mb-2 opacity-50" />
+                <p>Searching for &quot;{query}&quot;…</p>
               </div>
             ) : (
               <>
@@ -371,7 +372,7 @@ function SearchResultItem({ icon: Icon, label, description, shortcut, onClick }:
         'hover:bg-accent transition-colors text-left'
       )}
     >
-      <Icon className="w-4 h-4 text-muted-foreground" />
+      <Icon className="size-4  text-muted-foreground" />
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium">{label}</div>
         {description && (
@@ -492,7 +493,7 @@ function NotificationItem({ title, description, time, unread }: NotificationItem
     )}>
       <div className="flex items-start gap-3">
         {unread && (
-          <span className="w-2 h-2 mt-2 bg-primary rounded-full shrink-0" />
+          <span className="size-2  mt-2 bg-primary rounded-full shrink-0" />
         )}
         <div className={cn('flex-1 min-w-0', !unread && 'pl-5')}>
           <div className="font-medium text-sm">{title}</div>
@@ -542,8 +543,8 @@ function ProfileMenu({ isOpen, onOpenChange }: ProfileMenuProps) {
         )}
         aria-label="Profile menu"
       >
-        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-          <User className="w-4 h-4 text-primary-foreground" />
+        <div className="size-7  rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+          <User className="size-4  text-primary-foreground" />
         </div>
       </button>
 
@@ -584,7 +585,7 @@ function ProfileMenuItem({ icon: Icon, label, shortcut, onClick }: ProfileMenuIt
       )}
     >
       <div className="flex items-center gap-3">
-        <Icon className="w-4 h-4 text-muted-foreground" />
+        <Icon className="size-4  text-muted-foreground" />
         <span className="text-sm">{label}</span>
       </div>
       {shortcut && (

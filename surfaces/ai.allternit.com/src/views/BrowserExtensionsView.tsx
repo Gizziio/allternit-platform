@@ -127,7 +127,7 @@ export function BrowserExtensionsView() {
       {/* Microsoft Office Add-ins */}
       <div style={{ marginBottom: 32 }}>
         <div style={{
-          fontSize: 11, fontWeight: 600, letterSpacing: '0.08em',
+          fontSize: 12, fontWeight: 600, letterSpacing: '0.08em',
           textTransform: 'uppercase', color: 'var(--ui-text-muted)',
           marginBottom: 14,
         }}>
@@ -164,7 +164,7 @@ export function BrowserExtensionsView() {
       {/* Open Source Alternatives */}
       <div style={{ marginBottom: 32 }}>
         <div style={{
-          fontSize: 11, fontWeight: 600, letterSpacing: '0.08em',
+          fontSize: 12, fontWeight: 600, letterSpacing: '0.08em',
           textTransform: 'uppercase', color: 'var(--ui-text-muted)',
           marginBottom: 14,
         }}>

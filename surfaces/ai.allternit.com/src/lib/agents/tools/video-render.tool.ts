@@ -11,7 +11,7 @@ export const videoRenderTool: any = {
     required: ["engine", "manifest"],
   },
   execute: async ({ engine, manifest, outputName }: any) => {
-    console.log(`[VideoRender Tool] Starting ${engine} render for ${outputName || 'project.mp4'}`);
+    console.debug(`[VideoRender Tool] Starting ${engine} render for ${outputName || 'project.mp4'}`);
     
     // Simulate long-running render process
     return new Promise((resolve) => {

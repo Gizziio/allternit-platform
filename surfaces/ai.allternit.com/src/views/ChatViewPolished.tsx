@@ -86,10 +86,10 @@ function ChatViewError({ error, onReset }: { error?: Error; onReset?: () => void
       aria-live="assertive"
     >
       <div 
-        className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+        className="size-16  rounded-full flex items-center justify-center mb-4"
         style={{ background: 'var(--status-error-bg)' }}
       >
-        <Warning className="w-8 h-8 text-[var(--status-error)]" />
+        <Warning className="size-8  text-[var(--status-error)]" />
       </div>
       
       <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
@@ -144,10 +144,10 @@ function NoConnectionState() {
       role="alert"
     >
       <div 
-        className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+        className="size-16  rounded-full flex items-center justify-center mb-4"
         style={{ background: 'var(--status-warning-bg)' }}
       >
-        <WifiSlash className="w-8 h-8 text-[var(--status-warning)]" />
+        <WifiSlash className="size-8  text-[var(--status-warning)]" />
       </div>
       
       <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-2">
@@ -180,13 +180,13 @@ function EmptyChatState({ onStart }: { onStart?: () => void }) {
     >
       {/* Logo/Icon */}
       <div 
-        className="w-20 h-20 rounded-3xl flex items-center justify-center mb-6"
+        className="size-20  rounded-3xl flex items-center justify-center mb-6"
         style={{ 
           background: 'linear-gradient(135deg, var(--sand-300) 0%, var(--sand-500) 100%)',
           boxShadow: 'var(--shadow-md)'
         }}
       >
-        <Chat className="w-10 h-10 text-white" />
+        <Chat className="size-10  text-white" />
       </div>
       
       {/* Title */}
@@ -231,7 +231,7 @@ function EmptyChatState({ onStart }: { onStart?: () => void }) {
       <div className="mt-8 flex items-center gap-2 text-xs text-[var(--text-tertiary)]">
         <span>Press</span>
         <kbd 
-          className="px-1.5 py-0.5 rounded font-mono text-[10px]"
+          className="px-1.5 py-0.5 rounded font-mono text-xs"
           style={{ background: 'var(--bg-secondary)' }}
         >
           /
@@ -401,7 +401,7 @@ export function TypingIndicator() {
   return (
     <div className="flex items-center gap-3 p-4">
       <div 
-        className="w-8 h-8 rounded-full flex items-center justify-center"
+        className="size-8  rounded-full flex items-center justify-center"
         style={{ background: 'var(--bg-secondary)' }}
       >
         <SparkleIcon />

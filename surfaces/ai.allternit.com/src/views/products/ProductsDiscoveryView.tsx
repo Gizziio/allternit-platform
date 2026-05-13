@@ -693,7 +693,7 @@ function SpotlightCarousel() {
           {/* Tagline chip */}
           <span style={{
             display: 'inline-flex', alignItems: 'center', gap: 5,
-            fontSize: 10.5, fontWeight: 700, letterSpacing: '.1em',
+            fontSize: 12.5, fontWeight: 700, letterSpacing: '.1em',
             textTransform: 'uppercase',
             color: item.accent,
             marginBottom: 10,
@@ -714,7 +714,7 @@ function SpotlightCarousel() {
               <span key={b} style={{
                 padding: '3px 9px', borderRadius: 20,
                 background: `${item.accent}14`, border: `1px solid ${item.accent}28`,
-                fontSize: 10.5, fontWeight: 700, color: item.accent, letterSpacing: '.04em',
+                fontSize: 12.5, fontWeight: 700, color: item.accent, letterSpacing: '.04em',
               }}>{b}</span>
             ))}
           </div>
@@ -811,7 +811,7 @@ function SpotlightCarousel() {
               padding: '5px 14px', borderRadius: 20,
               background: 'rgba(0,0,0,.6)',
               border: `1px solid ${T.border}`,
-              fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,.5)',
+              fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,.5)',
               letterSpacing: '.04em',
               backdropFilter: 'blur(12px)',
             }}>{item.title}</div>
@@ -951,7 +951,7 @@ function ProductMiniCard({ p }: { p: MiniProduct }) {
           color: p.accent, transition: 'all .2s', flexShrink: 0,
         }}>{p.icon}</div>
         <span style={{
-          fontSize: 9.5, fontWeight: 700, letterSpacing: '.04em',
+          fontSize: 12.5, fontWeight: 700, letterSpacing: '.04em',
           color: ss.color, background: ss.bg, border: `1px solid ${ss.border}`,
           padding: '2px 8px', borderRadius: 20,
         }}>{ss.label}</span>
@@ -963,7 +963,7 @@ function ProductMiniCard({ p }: { p: MiniProduct }) {
         <div style={{ fontSize:12, color:T.textSec, lineHeight:1.55 }}>{p.description}</div>
       </div>
       {onClick && (
-        <div style={{ display:'flex', alignItems:'center', gap:4, fontSize:11.5, color: hov ? p.accent : T.textTer, marginTop:'auto', transition:'color .2s', fontWeight:500 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:4, fontSize: 12.5, color: hov ? p.accent : T.textTer, marginTop:'auto', transition:'color .2s', fontWeight:500 }}>
           Open <ArrowRight size={11} weight="bold"/>
         </div>
       )}
@@ -998,7 +998,7 @@ function InfraSection() {
             onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.background='rgba(255,255,255,.02)';}}>
             <div style={{ display:'flex', alignItems:'center', gap:9, marginBottom:10 }}>
               <div style={{ width:34, height:34, borderRadius:9, background:o.ibg, display:'flex', alignItems:'center', justifyContent:'center' }}>{o.icon}</div>
-              {o.badge && <span style={{ fontSize:10, color:o.accent, fontWeight:700 }}>{o.badge}</span>}
+              {o.badge && <span style={{ fontSize: 12, color:o.accent, fontWeight:700 }}>{o.badge}</span>}
             </div>
             <h4 style={{ fontSize:14.5, fontWeight:600, color:T.textPrimary, margin:'0 0 5px 0' }}>{o.title}</h4>
             <p style={{ fontSize:12, color:T.textSec, margin:'0 0 12px 0', lineHeight:1.5 }}>{o.desc}</p>
@@ -1008,7 +1008,7 @@ function InfraSection() {
       </div>
       <div style={{ display:'flex', gap:18, padding:'14px 0 0', borderTop:`1px solid ${T.border}`, flexWrap:'wrap', alignItems:'center' }}>
         {[{i:<Shield size={12} color={T.textTer}/>,l:'End-to-end encrypted'},{i:<Key size={12} color={T.textTer}/>,l:'SSH key management'},{i:<Globe size={12} color={T.textTer}/>,l:'5 cloud providers'}].map(f=>(
-          <div key={f.l} style={{display:'flex',alignItems:'center',gap:6}}>{f.i}<span style={{fontSize:11.5,color:T.textTer}}>{f.l}</span></div>
+          <div key={f.l} style={{display:'flex',alignItems:'center',gap:6}}>{f.i}<span style={{fontSize: 12.5,color:T.textTer}}>{f.l}</span></div>
         ))}
         <div style={{flex:1}}/>
         <button onClick={()=>window.dispatchEvent(new CustomEvent('allternit:open-settings',{detail:{section:'infrastructure'}}))}
@@ -1080,7 +1080,7 @@ function ExtensionDetail({ onClose }: { onClose:()=>void }) {
                 <button key={l.href} onClick={() => openInBrowser(l.href)} style={{padding:'16px 18px',borderRadius:12,background:`${l.accent}0e`,border:`1px solid ${l.accent}25`,textDecoration:'none',display:'flex',alignItems:'center',gap:12,transition:'all .2s',cursor:'pointer'}}
                   onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-2px)';}} onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';}}>
                   <div style={{color:l.accent}}>{l.icon}</div>
-                  <div><div style={{fontSize:13.5,fontWeight:600,color:T.textPrimary,marginBottom:2}}>{l.label}</div><div style={{fontSize:11.5,color:T.textSec}}>{l.sub}</div></div>
+                  <div><div style={{fontSize:13.5,fontWeight:600,color:T.textPrimary,marginBottom:2}}>{l.label}</div><div style={{fontSize: 12.5,color:T.textSec}}>{l.sub}</div></div>
                   <ArrowSquareOut size={14} color={l.accent} style={{marginLeft:'auto'}}/>
                 </button>
               ))}
@@ -1097,8 +1097,8 @@ function ExtensionDetail({ onClose }: { onClose:()=>void }) {
             <div style={{display:'flex',flexDirection:'column',gap:8}}>
               {cmds.map((c,i)=>(
                 <div key={i} style={{padding:'13px 16px',background:'rgba(0,0,0,.25)',borderRadius:10,border:`1px solid ${T.border}`,display:'flex',alignItems:'center',gap:12}}>
-                  <div style={{width:22,height:22,borderRadius:'50%',background:'var(--status-info-bg)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,color:'var(--status-info)',fontWeight:700,flexShrink:0}}>{i+1}</div>
-                  <div style={{flex:1}}><div style={{fontSize:10.5,color:T.textTer,marginBottom:3}}>{c.l}</div><code style={{fontSize:12.5,color:'var(--accent-primary)',fontFamily: 'var(--font-mono)'}}>{c.c}</code></div>
+                  <div style={{width:22,height:22,borderRadius:'50%',background:'var(--status-info-bg)',display:'flex',alignItems:'center',justifyContent:'center',fontSize: 12,color:'var(--status-info)',fontWeight:700,flexShrink:0}}>{i+1}</div>
+                  <div style={{flex:1}}><div style={{fontSize: 12.5,color:T.textTer,marginBottom:3}}>{c.l}</div><code style={{fontSize:12.5,color:'var(--accent-primary)',fontFamily: 'var(--font-mono)'}}>{c.c}</code></div>
                   <button onClick={()=>copy(c.c)} style={{padding:6,borderRadius:7,background:copied===c.c?'rgba(34,197,94,.14)':'rgba(255,255,255,.04)',border:'none',cursor:'pointer',color:copied===c.c?'var(--status-success)':T.textSec,transition:'all .2s'}}>
                     {copied===c.c?<CheckCircle size={13}/>:<Copy size={13}/>}
                   </button>
@@ -1117,8 +1117,8 @@ function ExtensionDetail({ onClose }: { onClose:()=>void }) {
             onMouseLeave={e=>{e.currentTarget.style.borderColor=T.border;e.currentTarget.style.background='rgba(255,255,255,.02)';}}>
             <div style={{marginBottom:9}}>{f.i}</div>
             <h5 style={{fontSize:12.5,fontWeight:600,color:T.textPrimary,margin:'0 0 5px 0'}}>{f.t}</h5>
-            <p style={{fontSize:11.5,color:T.textSec,margin:'0 0 10px 0',lineHeight:1.5}}>{f.d}</p>
-            <div style={{display:'inline-flex',alignItems:'center',gap:3,padding:'2px 7px',background:'var(--surface-hover)',borderRadius:5,fontSize:10.5,color:T.textTer,fontFamily: 'var(--font-mono)'}}>
+            <p style={{fontSize: 12.5,color:T.textSec,margin:'0 0 10px 0',lineHeight:1.5}}>{f.d}</p>
+            <div style={{display:'inline-flex',alignItems:'center',gap:3,padding:'2px 7px',background:'var(--surface-hover)',borderRadius:5,fontSize: 12.5,color:T.textTer,fontFamily: 'var(--font-mono)'}}>
               <Command size={9}/> {f.sc}
             </div>
           </div>
@@ -1129,7 +1129,7 @@ function ExtensionDetail({ onClose }: { onClose:()=>void }) {
         <p style={{fontSize:12,fontWeight:600,color:T.textPrimary,margin:'0 0 12px 0'}}>Supported Browsers</p>
         <div style={{display:'flex',gap:18,flexWrap:'wrap'}}>
           {[{i:<ChromeIcon size={16}/>,n:'Chrome',v:'88+'},{i:<FirefoxIcon size={16}/>,n:'Firefox',v:'109+'},{i:<EdgeIcon size={16}/>,n:'Edge',v:'88+'},{i:<span style={{color:'#FBBC04'}}><ArrowSquareOut size={16}/></span>,n:'Brave',v:'1.20+'},{i:<span style={{color:'#FF1B2D'}}><ArrowSquareOut size={16}/></span>,n:'Opera',v:'74+'}].map((b,i)=>(
-            <div key={i} style={{display:'flex',alignItems:'center',gap:7}}>{b.i}<div><div style={{fontSize:12,color:T.textPrimary}}>{b.n}</div><div style={{fontSize:10,color:T.textTer}}>{b.v}</div></div></div>
+            <div key={i} style={{display:'flex',alignItems:'center',gap:7}}>{b.i}<div><div style={{fontSize:12,color:T.textPrimary}}>{b.n}</div><div style={{fontSize: 12,color:T.textTer}}>{b.v}</div></div></div>
           ))}
         </div>
       </div>
@@ -1223,7 +1223,7 @@ function VideoShowcaseSection() {
     <div style={{ marginBottom: 80 }}>
       <div ref={headRef} style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 32 }}>
         <h2 className="pdv-display" style={{ fontSize: 22, fontWeight: 800, color: T.textPrimary, margin: 0, letterSpacing: '-.01em' }}>Product Highlights</h2>
-        <span style={{ fontSize: 11, color: T.textTer, letterSpacing: '.06em', textTransform: 'uppercase', fontWeight: 600 }}>New releases</span>
+        <span style={{ fontSize: 12, color: T.textTer, letterSpacing: '.06em', textTransform: 'uppercase', fontWeight: 600 }}>New releases</span>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
         {cards.map(card => {
@@ -1252,7 +1252,7 @@ function VideoShowcaseSection() {
               </div>
               {/* Info panel */}
               <div style={{ padding: '22px 26px 26px', display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
-                <span className="pdv-display" style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: card.badgeColor }}>
+                <span className="pdv-display" style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: card.badgeColor }}>
                   {card.badge}
                 </span>
                 <h3 className="pdv-serif" style={{ fontSize: 22, fontWeight: 900, fontStyle: 'italic', color: T.textPrimary, margin: 0, letterSpacing: '-.02em', lineHeight: 1.15 }}>{card.title}</h3>
@@ -1349,7 +1349,7 @@ function TestimonialCard({ t, featured = false }: { t: typeof TESTIMONIALS[0]; f
 
       {/* Category + X icon */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
-        <span className="pdv-display" style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: t.catColor }}>
+        <span className="pdv-display" style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase', color: t.catColor }}>
           {t.category}
         </span>
         <svg width="13" height="13" viewBox="0 0 24 24" fill={T.textTer}><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
@@ -1371,8 +1371,8 @@ function TestimonialCard({ t, featured = false }: { t: typeof TESTIMONIALS[0]; f
           {t.name[0]}
         </div>
         <div>
-          <div className="pdv-display" style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--ui-text-secondary)' }}>{t.name}</div>
-          <div style={{ fontSize: 10.5, color: T.textTer }}>{t.handle}</div>
+          <div className="pdv-display" style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--ui-text-secondary)' }}>{t.name}</div>
+          <div style={{ fontSize: 12.5, color: T.textTer }}>{t.handle}</div>
         </div>
       </div>
     </div>
@@ -1387,7 +1387,7 @@ function SocialProofSection() {
       <div ref={headRef} style={{ marginBottom: 44 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 16 }}>
           <div style={{ flex: 1, height: 1, background: `linear-gradient(to right, ${T.border}, transparent)` }}/>
-          <span className="pdv-display" style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase', color: T.textTer }}>Builder stories</span>
+          <span className="pdv-display" style={{ fontSize: 12.5, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase', color: T.textTer }}>Builder stories</span>
           <div style={{ flex: 1, height: 1, background: `linear-gradient(to left, ${T.border}, transparent)` }}/>
         </div>
         <h2 className="pdv-serif" style={{ fontSize: 48, fontWeight: 900, fontStyle: 'italic', color: T.textPrimary, margin: '0 0 10px 0', letterSpacing: '-.03em', lineHeight: 1.05 }}>
@@ -1440,7 +1440,7 @@ function WebsiteLinksSection() {
       <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: 48 }}>
         {/* Left: Featured CTA */}
         <div style={{ flexShrink: 0 }}>
-          <span className="pdv-display" style={{ display: 'block', fontSize: 9.5, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: T.textTer, marginBottom: 10 }}>
+          <span className="pdv-display" style={{ display: 'block', fontSize: 12.5, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: T.textTer, marginBottom: 10 }}>
             Official website
           </span>
           <button
@@ -1460,7 +1460,7 @@ function WebsiteLinksSection() {
 
         {/* Right: Link strip */}
         <div style={{ flex: 1 }}>
-          <span className="pdv-display" style={{ display: 'block', fontSize: 9.5, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: T.textTer, marginBottom: 14 }}>
+          <span className="pdv-display" style={{ display: 'block', fontSize: 12.5, fontWeight: 700, letterSpacing: '.16em', textTransform: 'uppercase', color: T.textTer, marginBottom: 14 }}>
             Resources & community
           </span>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 0' }}>
@@ -1517,7 +1517,7 @@ export const ProductsDiscoveryView: React.FC = () => {
             {/* Eyebrow */}
             <div style={{ display:'inline-flex', alignItems:'center', gap:8, marginBottom:28 }}>
               <div style={{ width:24, height:1, background:T.brand, opacity:.5 }}/>
-              <span className="pdv-display" style={{ fontSize:10, fontWeight:700, letterSpacing:'.2em', textTransform:'uppercase', color:T.brand }}>Allternit Platform</span>
+              <span className="pdv-display" style={{ fontSize: 12, fontWeight:700, letterSpacing:'.2em', textTransform:'uppercase', color:T.brand }}>Allternit Platform</span>
               <div style={{ width:24, height:1, background:T.brand, opacity:.5 }}/>
             </div>
 
@@ -1570,7 +1570,7 @@ export const ProductsDiscoveryView: React.FC = () => {
             return (
               <div key={cat} style={{ marginBottom:32 }}>
                 <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
-                  <span style={{ fontSize:10, fontWeight:700, letterSpacing:'.1em', textTransform:'uppercase', color:T.textTer }}>{cat}</span>
+                  <span style={{ fontSize: 12, fontWeight:700, letterSpacing:'.1em', textTransform:'uppercase', color:T.textTer }}>{cat}</span>
                   <div style={{ flex:1, height:1, background:T.border }}/>
                 </div>
                 <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:10 }}>

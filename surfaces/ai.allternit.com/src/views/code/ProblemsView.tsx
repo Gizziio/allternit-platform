@@ -1,8 +1,8 @@
 import React from 'react';
-import { GlassCard } from '../../design/GlassCard';
+import { GlassCard } from '../../design/glass/GlassCard';
 import { Warning, XCircle } from '@phosphor-icons/react';
 
-export function ProblemsView() {
+export function ProblemsView(): JSX.Element {
   return (
     <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <GlassCard style={{ padding: 12, display: 'flex', alignItems: 'flex-start', gap: 12, borderLeft: '4px solid #ff3b30' }}>

@@ -118,7 +118,7 @@ function Stat({ label, value }: { label: string; value: number }): JSX.Element {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 18 }}>{value}</span>
-      <span style={{ color: 'var(--text-secondary)', fontSize: 11 }}>{label}</span>
+      <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{label}</span>
     </div>
   );
 }
@@ -127,7 +127,7 @@ function MiniStat({ label, value }: { label: string; value: number }): JSX.Eleme
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 16 }}>{value}</span>
-      <span style={{ color: 'var(--text-secondary)', fontSize: 10 }}>{label}</span>
+      <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{label}</span>
     </div>
   );
 }

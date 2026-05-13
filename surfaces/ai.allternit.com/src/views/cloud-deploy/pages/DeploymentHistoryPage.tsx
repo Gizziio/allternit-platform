@@ -269,7 +269,7 @@ export const DeploymentHistoryPage: React.FC = () => {
     return (
       <div className="deployment-history-page loading">
         <div className="spinner" />
-        <p>Loading deployment history...</p>
+        <p>Loading deployment history…</p>
       </div>
     );
   }
@@ -316,7 +316,7 @@ export const DeploymentHistoryPage: React.FC = () => {
         <div className="search-box">
           <input
             type="text"
-            placeholder="Search deployments..."
+            placeholder="Search deployments…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />

@@ -184,7 +184,7 @@ export const AvatarPreview: React.FC<AvatarPreviewProps> = ({ className = '' }) 
           <label
             style={{
               display: 'block',
-              fontSize: '11px',
+              fontSize: '12px',
               fontWeight: 600,
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
@@ -313,7 +313,7 @@ export const AvatarPreview: React.FC<AvatarPreviewProps> = ({ className = '' }) 
           <textarea
             value={importJson}
             onChange={(e) => setImportJson(e.target.value)}
-            placeholder="Paste avatar config JSON here..."
+            placeholder="Paste avatar config JSON here…"
             style={{
               width: '100%',
               height: '100px',

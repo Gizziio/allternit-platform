@@ -187,7 +187,7 @@ export function CostEstimator({
     <div className={cn("space-y-4", className)}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Calculator className="w-4 h-4 text-muted-foreground" />
+          <Calculator className="size-4  text-muted-foreground" />
           <h4 className="text-sm font-medium">Cost Estimate</h4>
         </div>
         <div className="flex items-center gap-1">
@@ -290,7 +290,7 @@ export function CostEstimator({
 
       {/* Info Note */}
       <div className="flex items-start gap-2 p-3 rounded-lg bg-muted text-xs text-muted-foreground">
-        <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+        <Info className="size-4  mt-0.5 flex-shrink-0" />
         <div className="space-y-1">
           <p>
             Costs are estimates based on typical usage patterns. Actual costs may vary 

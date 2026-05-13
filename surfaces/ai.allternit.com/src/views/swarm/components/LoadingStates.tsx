@@ -33,7 +33,7 @@ export function CardSkeleton({ isLarge = false }: CardSkeletonProps) {
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div 
-            className="w-10 h-10 rounded-xl"
+            className="size-10  rounded-xl"
             style={{ background: 'var(--surface-hover)' }}
           />
           <div>
@@ -151,7 +151,7 @@ export function DetailLoading() {
         >
           <div className="flex items-center justify-center mb-4">
             <div 
-              className="w-24 h-24 rounded-3xl"
+              className="size-24  rounded-3xl"
               style={{ background: 'var(--surface-hover)' }}
             />
           </div>
@@ -207,11 +207,11 @@ export function InitialLoading() {
       {/* Spinner */}
       <div className="relative">
         <div 
-          className="w-12 h-12 rounded-full border-2 border-t-transparent animate-spin"
+          className="size-12  rounded-full border-2 border-t-transparent animate-spin"
           style={{ borderColor: `${modeColors.accent}40`, borderTopColor: 'transparent' }}
         />
         <div 
-          className="absolute inset-0 w-12 h-12 rounded-full border-2 border-b-transparent animate-spin"
+          className="absolute inset-0 size-12  rounded-full border-2 border-b-transparent animate-spin"
           style={{ 
             borderColor: modeColors.accent, 
             borderBottomColor: 'transparent',
@@ -274,7 +274,7 @@ export function EmptyState({ type = 'no-agents', onRefresh, onClearFilters }: Em
       style={{ background: BACKGROUND.primary }}
     >
       <div
-        className="w-16 h-16 rounded-2xl flex items-center justify-center"
+        className="size-16  rounded-2xl flex items-center justify-center"
         style={{ background: BACKGROUND.tertiary, border: `1px solid ${BORDER.subtle}` }}
       >
         <Icon size={28} color={TEXT.tertiary} weight="duotone" />
@@ -320,7 +320,7 @@ export function RefreshIndicator() {
       }}
     >
       <ArrowsClockwise size={12} color={TEXT.secondary} weight="regular" style={{ animation: 'spin 1s linear infinite' }} />
-      <span>Refreshing...</span>
+      <span>Refreshing…</span>
     </div>
   );
 }

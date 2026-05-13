@@ -7,6 +7,11 @@ export type ViewType =
   | "playground"
   | "workspace"
   | "browser"
+  | "mini-apps-store"
+  | "mini-app"
+  | "addin-word"
+  | "addin-excel"
+  | "addin-ppt"
   // Agent views
   | "studio"
   | "agent"

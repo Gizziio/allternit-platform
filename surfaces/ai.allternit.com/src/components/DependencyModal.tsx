@@ -189,7 +189,7 @@ function DependencyItem({
           {node.optional && (
             <span
               style={{
-                fontSize: 10,
+                fontSize: 12,
                 padding: '1px 6px',
                 backgroundColor: 'rgba(59, 130, 246, 0.15)',
                 color: THEME.info,
@@ -201,7 +201,7 @@ function DependencyItem({
             </span>
           )}
         </div>
-        <div style={{ fontSize: 11, color: THEME.textTertiary, marginTop: 2 }}>
+        <div style={{ fontSize: 12, color: THEME.textTertiary, marginTop: 2 }}>
           {node.status === 'installed' ? (
             <span style={{ color: THEME.success }}>
               Installed (v{node.version})
@@ -503,7 +503,7 @@ export function DependencyModal({
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
               <CircleNotch size={16} color={THEME.accent} style={{ animation: 'spin 1s linear infinite' }} />
               <span style={{ fontSize: 13, color: THEME.textSecondary }}>
-                Installing{installingPluginName ? ` ${installingPluginName}` : '...'}
+                Installing{installingPluginName ? ` ${installingPluginName}` : '…'}
               </span>
             </div>
             <div

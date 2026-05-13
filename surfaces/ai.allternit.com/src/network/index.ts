@@ -58,7 +58,7 @@ export const ALLTERNIT_BASE_URL = resolveBaseURL();
  */
 export const API_VERSION = '/v1';
 
-console.log(`[Allternit Network] Using base URL: ${ALLTERNIT_BASE_URL}`);
+console.debug(`[Allternit Network] Using base URL: ${ALLTERNIT_BASE_URL}`);
 
 // =============================================================================
 // Types
@@ -378,7 +378,7 @@ export function createSSEConnection(): SSEConnection {
       eventSource.onopen = () => {
         state = 'open';
         reconnectAttempts = 0;
-        console.log('[Allternit SSE] Connection established');
+        console.debug('[Allternit SSE] Connection established');
       };
       
       eventSource.onmessage = (event) => {
@@ -405,7 +405,7 @@ export function createSSEConnection(): SSEConnection {
         if (reconnectAttempts < maxReconnectAttempts) {
           reconnectAttempts++;
           const delay = baseReconnectDelay * Math.pow(2, reconnectAttempts - 1);
-          console.log(`[Allternit SSE] Reconnecting in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
+          console.debug(`[Allternit SSE] Reconnecting in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})`);
           
           reconnectTimeout = setTimeout(() => {
             eventSource?.close();

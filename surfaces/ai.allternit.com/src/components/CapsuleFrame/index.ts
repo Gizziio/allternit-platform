@@ -12,8 +12,8 @@
  *     html: '<div>Hello World</div>',
  *     permissions: [{ permission_type: 'invoke_tools', resource: '*' }]
  *   }}
- *   onEvent={(e) => console.log('Event:', e)}
- *   onToolInvoke={(tool, params) => console.log('Invoke:', tool, params)}
+ *   onEvent={(e) => console.debug('Event:', e)}
+ *   onToolInvoke={(tool, params) => console.debug('Invoke:', tool, params)}
  * />
  * ```
  */

@@ -106,8 +106,8 @@ export function LeveeWizard({
 
         {complete ? (
           <div className="px-6 pb-8 flex flex-col items-center gap-3 text-center">
-            <div className="h-12 w-12 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center">
-              <Check className="h-6 w-6 text-green-500" />
+            <div className="size-12  rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center">
+              <Check className="size-6  text-green-500" />
             </div>
             <h4 className="text-sm font-semibold">Interview Complete</h4>
             <p className="text-xs text-muted-foreground">Thank you for your responses.</p>
@@ -193,7 +193,7 @@ function LeveeStepRenderer({ step, stepIndex }: { step: LeveeWizardStep; stepInd
               type="button"
               onClick={() => setAnswer(stepIndex, n)}
               className={cn(
-                "h-10 w-10 rounded-lg border text-sm font-medium transition-all",
+                "size-10  rounded-lg border text-sm font-medium transition-all",
                 current === n
                   ? "border-primary bg-primary text-primary-foreground"
                   : "border-border bg-background text-foreground hover:border-primary/40"
@@ -243,7 +243,7 @@ function LeveeNavigation({ onComplete }: { onComplete: () => void }) {
         onClick={() => setStep(step - 1)}
         className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted disabled:opacity-30 transition-colors"
       >
-        <CaretLeft className="h-3 w-3" />
+        <CaretLeft className="size-3 " />
         Back
       </button>
       <button
@@ -252,9 +252,9 @@ function LeveeNavigation({ onComplete }: { onComplete: () => void }) {
         className="inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
       >
         {isLast ? (
-          <>Submit <Check className="h-3 w-3" /></>
+          <>Submit <Check className="size-3 " /></>
         ) : (
-          <>Next <CaretRight className="h-3 w-3" /></>
+          <>Next <CaretRight className="size-3 " /></>
         )}
       </button>
     </div>

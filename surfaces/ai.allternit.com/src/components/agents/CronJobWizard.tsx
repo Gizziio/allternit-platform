@@ -1297,7 +1297,7 @@ function TemplateSelectionStep({
               <div style={{ fontSize: 13, fontWeight: 600, color: "#f6eee7" }}>
                 {template.name}
               </div>
-              <div style={{ fontSize: 11, color: "#7a6b5d", marginTop: 2 }}>
+              <div style={{ fontSize: 12, color: "#7a6b5d", marginTop: 2 }}>
                 {template.description}
               </div>
             </div>
@@ -1352,7 +1352,7 @@ function ConfigureStep({
       <div>
         <label style={{
           display: "block",
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: 800,
           color: accentColor,
           textTransform: "uppercase",
@@ -1512,7 +1512,7 @@ function ParameterField({
     <div>
       <label style={{
         display: "block",
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: 700,
         color: param.required ? accentColor : "#9f8a78",
         textTransform: "uppercase",
@@ -1610,7 +1610,7 @@ function ParameterField({
       )}
       
       {param.description && (
-        <div style={{ fontSize: 11, color: "#7a6b5d", marginTop: 4 }}>
+        <div style={{ fontSize: 12, color: "#7a6b5d", marginTop: 4 }}>
           {param.description}
         </div>
       )}
@@ -1731,7 +1731,7 @@ function ScheduleStep({
                 <div style={{ fontSize: 13, fontWeight: 600, color: "#f6eee7" }}>
                   {preset.label}
                 </div>
-                <div style={{ fontSize: 11, color: "#7a6b5d" }}>{preset.description}</div>
+                <div style={{ fontSize: 12, color: "#7a6b5d" }}>{preset.description}</div>
               </div>
               {config.schedule === preset.value && preset.value !== "custom" && (
                 <Check size={16} style={{ color: accentColor }} />
@@ -1744,7 +1744,7 @@ function ScheduleStep({
           <div>
             <label style={{
               display: "block",
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 800,
               color: accentColor,
               textTransform: "uppercase",
@@ -1771,7 +1771,7 @@ function ScheduleStep({
               }}
             />
             {!isValid && config.schedule && (
-              <div style={{ fontSize: 11, color: "#ef4444", marginTop: 6 }}>
+              <div style={{ fontSize: 12, color: "#ef4444", marginTop: 6 }}>
                 Invalid cron expression
               </div>
             )}
@@ -1819,7 +1819,7 @@ function ScheduleStep({
         
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <div>
-            <label style={{ fontSize: 11, color: "#9f8a78" }}>Max Retries</label>
+            <label style={{ fontSize: 12, color: "#9f8a78" }}>Max Retries</label>
             <input
               type="number"
               min={0}
@@ -1839,7 +1839,7 @@ function ScheduleStep({
             />
           </div>
           <div>
-            <label style={{ fontSize: 11, color: "#9f8a78" }}>Timeout (min)</label>
+            <label style={{ fontSize: 12, color: "#9f8a78" }}>Timeout (min)</label>
             <input
               type="number"
               min={1}
@@ -1928,7 +1928,7 @@ function ReviewStep({
         
         <div style={{ marginTop: 12 }}>
           <div style={{
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 800,
             color: accentColor,
             textTransform: "uppercase",
@@ -1947,7 +1947,7 @@ function ReviewStep({
             overflow: "auto",
             fontFamily: "var(--font-mono)",
           }}>
-            {config.prompt.slice(0, 200)}{config.prompt.length > 200 ? "..." : ""}
+            {config.prompt.slice(0, 200)}{config.prompt.length > 200 ? "…" : ""}
           </div>
         </div>
       </div>
@@ -1969,7 +1969,7 @@ function ReviewItem({
   return (
     <div style={{ marginBottom: 10 }}>
       <div style={{
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: 800,
         color: accentColor,
         textTransform: "uppercase",
@@ -1979,7 +1979,7 @@ function ReviewItem({
         {label}
       </div>
       <div style={{ fontSize: 13, color: "#f6eee7" }}>{value}</div>
-      {subValue && <div style={{ fontSize: 11, color: "#7a6b5d" }}>{subValue}</div>}
+      {subValue && <div style={{ fontSize: 12, color: "#7a6b5d" }}>{subValue}</div>}
     </div>
   );
 }

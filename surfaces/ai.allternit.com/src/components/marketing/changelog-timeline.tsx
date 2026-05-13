@@ -71,7 +71,7 @@ export function ChangelogTimeline({
         <div className="relative">
           {/* Center connector line - desktop only */}
           <div
-            className="absolute left-1/2 top-0 hidden h-full w-px -translate-x-1/2 md:block"
+            className="absolute left-1/2 top-0 hidden h-full w-px -tranzinc-x-1/2 md:block"
             style={{
               background:
                 'linear-gradient(to bottom, transparent, var(--ui-border-muted) 10%, var(--ui-border-muted) 90%, transparent)',
@@ -116,7 +116,7 @@ export function ChangelogTimeline({
                     )}
                   >
                     <div
-                      className="group relative inline-block rounded-2xl border p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-[var(--accent-primary)]/30 hover:shadow-lg"
+                      className="group relative inline-block rounded-2xl border p-5 transition-all duration-300 hover:-tranzinc-y-0.5 hover:border-[var(--accent-primary)]/30 hover:shadow-lg"
                       style={{
                         background: 'var(--surface-panel)',
                         borderColor: 'var(--ui-border-muted)',
@@ -142,7 +142,7 @@ export function ChangelogTimeline({
                           {entry.date}
                         </span>
                         <span
-                          className="rounded-full px-2 py-0.5 text-[11px] font-medium"
+                          className="rounded-full px-2 py-0.5 text-[12px] font-medium"
                           style={{
                             background: typeStyle.bg,
                             color: typeStyle.fg,
@@ -169,9 +169,9 @@ export function ChangelogTimeline({
                   </div>
 
                   {/* Center dot */}
-                  <div className="absolute left-4 top-5 z-10 md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2">
+                  <div className="absolute left-4 top-5 z-10 md:left-1/2 md:top-1/2 md:-tranzinc-x-1/2 md:-tranzinc-y-1/2">
                     <div
-                      className="h-4 w-4 rounded-full border-2"
+                      className="size-4  rounded-full border-2"
                       style={{
                         background: 'var(--surface-canvas)',
                         borderColor: typeStyle.dot,

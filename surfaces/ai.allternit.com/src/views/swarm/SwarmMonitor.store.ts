@@ -138,7 +138,7 @@ function mapSessionToAgent(
       if (msg.role === 'assistant' && msg.content) {
         tasks.push({
           id: `task-${session.id}-${i}`,
-          name: msg.content.slice(0, 40) + (msg.content.length > 40 ? '...' : ''),
+          name: msg.content.slice(0, 40) + (msg.content.length > 40 ? '…' : ''),
           status: i === lastMessages.length - 1 && status === 'working' ? 'active' : 'completed',
           progress: i === lastMessages.length - 1 && status === 'working' ? 65 : 100,
           tokensUsed: (msg.content?.length || 0) * 0.25,
@@ -203,7 +203,7 @@ function generateActivityEvents(agents: SwarmAgent[], messages: Record<string, U
           agentId: agent.id,
           agentRole: agent.role,
           type: i === 0 ? 'task_start' : i === recentMessages.length - 1 ? 'task_complete' : 'message',
-          message: msg.content?.slice(0, 60) + (msg.content && msg.content.length > 60 ? '...' : '') || 'Processing...',
+          message: msg.content?.slice(0, 60) + (msg.content && msg.content.length > 60 ? '…' : '') || 'Processing...',
           metadata: {
             tokens: Math.round((msg.content?.length || 0) * 0.25),
             cost: ((msg.content?.length || 0) * 0.25) * 0.00001,
@@ -380,7 +380,7 @@ export const useSwarmMonitorStore = create<SwarmMonitorFullState>((set, get) => 
         }
       });
       
-      console.log(`[SwarmMonitor] Agent restarted`);
+      console.debug(`[SwarmMonitor] Agent restarted`);
       
       // Refresh to get updated state
       await get().refreshAgents();
@@ -399,7 +399,7 @@ export const useSwarmMonitorStore = create<SwarmMonitorFullState>((set, get) => 
       const store = chatSession ? useChatSessionStore.getState() : useCodeSessionStore.getState();
       await store.abortGeneration(agentId);
       
-      console.log(`[SwarmMonitor] Agent stopped`);
+      console.debug(`[SwarmMonitor] Agent stopped`);
       
       await get().refreshAgents();
     } catch (err) {
@@ -415,7 +415,7 @@ export const useSwarmMonitorStore = create<SwarmMonitorFullState>((set, get) => 
     const store = chatSession ? useChatSessionStore.getState() : useCodeSessionStore.getState();
     store.fetchMessages(agentId);
     
-    console.log('[SwarmMonitor] Logs opened for agent', agentId);
+    console.debug('[SwarmMonitor] Logs opened for agent', agentId);
   },
   
   // Thread Management
@@ -435,7 +435,7 @@ export const useSwarmMonitorStore = create<SwarmMonitorFullState>((set, get) => 
         sessionMode: (options?.sessionMode as 'regular' | 'agent') || 'agent',
       });
       
-      console.log('[SwarmMonitor] Thread created:', sessionId);
+      console.debug('[SwarmMonitor] Thread created:', sessionId);
       
       // Refresh agents to include the new session
       await get().refreshAgents();
@@ -453,7 +453,7 @@ export const useSwarmMonitorStore = create<SwarmMonitorFullState>((set, get) => 
       const store = chatSession ? useChatSessionStore.getState() : useCodeSessionStore.getState();
       await store.abortGeneration(sessionId);
       
-      console.log('[SwarmMonitor] Thread stopped:', sessionId);
+      console.debug('[SwarmMonitor] Thread stopped:', sessionId);
       
       // Refresh to get updated state
       await get().refreshAgents();

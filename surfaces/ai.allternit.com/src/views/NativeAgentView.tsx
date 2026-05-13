@@ -350,16 +350,16 @@ function WorkspaceHeader({
       <div className="relative flex flex-col gap-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex min-w-0 items-start gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[24px] border border-[color:rgba(217,119,87,0.18)] bg-[linear-gradient(135deg,rgba(217,119,87,0.16),rgba(176,141,110,0.08))] shadow-[0_10px_32px_rgba(42,31,22,0.14)]">
-              <Robot className="h-5 w-5 text-[color:var(--accent-primary)]" />
+            <div className="flex size-12  shrink-0 items-center justify-center rounded-[24px] border border-[color:rgba(217,119,87,0.18)] bg-[linear-gradient(135deg,rgba(217,119,87,0.16),rgba(176,141,110,0.08))] shadow-[0_10px_32px_rgba(42,31,22,0.14)]">
+              <Robot className="size-5  text-[color:var(--accent-primary)]" />
             </div>
             <div className="min-w-0 space-y-1">
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="h-5 bg-accent-primary/10 text-accent-primary border-accent-primary/20 text-[10px] uppercase tracking-wider">
+                <Badge variant="outline" className="h-5 bg-accent-primary/10 text-accent-primary border-accent-primary/20 text-xs uppercase tracking-wider">
                   Agent Workspace
                 </Badge>
                 {isStreaming && (
-                  <Badge className="h-5 animate-pulse bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[9px] uppercase">
+                  <Badge className="h-5 animate-pulse bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-xs uppercase">
                     Streaming
                   </Badge>
                 )}
@@ -436,13 +436,13 @@ function SessionWorkbenchRail({
 
       <div className="flex-1 min-h-0 flex flex-col rounded-[28px] border border-white/5 bg-black/20 backdrop-blur-md overflow-hidden">
         <div className="p-4 border-b border-white/5 bg-white/5">
-          <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40">Recent Threads</span>
+          <span className="text-xs font-bold uppercase tracking-[0.2em] text-white/40">Recent Threads</span>
         </div>
         <ScrollArea className="flex-1">
           <div className="p-2 space-y-1">
             {isLoadingSessions && sessions.length === 0 ? (
               <div className="flex items-center justify-center py-12">
-                <CircleNotch className="h-5 w-5 animate-spin text-white/20" />
+                <CircleNotch className="size-5  animate-spin text-white/20" />
               </div>
             ) : (
               sessions.map((session) => (
@@ -462,7 +462,7 @@ function SessionWorkbenchRail({
                   )}>
                     {session.name || "Untitled Session"}
                   </span>
-                  <span className="text-[10px] text-white/30">
+                  <span className="text-xs text-white/30">
                     {formatSessionTimestamp(session.updatedAt)}
                   </span>
                 </button>
@@ -531,7 +531,7 @@ function ChatPanel({ sessionId }: { sessionId: string | null }) {
 
           {messages.length === 0 && !isStreaming && (
             <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 opacity-40">
-              <div className="h-16 w-16 rounded-3xl bg-white/5 flex items-center justify-center">
+              <div className="size-16  rounded-3xl bg-white/5 flex items-center justify-center">
                 <Sparkle size={32} />
               </div>
               <h3 className="text-xl font-medium">How can I assist you?</h3>
@@ -578,7 +578,7 @@ function StreamingReplyTail({ reply }: { reply: Reply }) {
       animate={{ opacity: 1, y: 0 }}
       className="flex gap-4 items-start"
     >
-      <div className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 mt-1 bg-accent-primary text-black">
+      <div className="size-8  rounded-full flex items-center justify-center shrink-0 mt-1 bg-accent-primary text-black">
         <Robot size={16} />
       </div>
       <div className="flex flex-col gap-2 max-w-[85%] items-start">
@@ -661,7 +661,7 @@ function ChatMessage({ message, isStreaming }: { message: NativeMessage; isStrea
       )}
     >
       <div className={cn(
-        "h-8 w-8 rounded-full flex items-center justify-center shrink-0 mt-1",
+        "size-8  rounded-full flex items-center justify-center shrink-0 mt-1",
         isAssistant ? "bg-accent-primary text-black" : "bg-white/10 text-white/60"
       )}>
         {isAssistant ? <Robot size={16} /> : <User size={16} />}
@@ -689,7 +689,7 @@ function ChatMessage({ message, isStreaming }: { message: NativeMessage; isStrea
           {isStreaming && !isAssistant && <span className="inline-block w-1 h-4 ml-1 bg-accent-primary animate-pulse align-middle" />}
         </div>
 
-        <span className="text-[10px] text-white/20 uppercase tracking-tighter px-2">
+        <span className="text-xs text-white/20 uppercase tracking-tighter px-2">
           {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </span>
       </div>
@@ -720,13 +720,13 @@ function CanvasPanel({ sessionId }: { sessionId: string | null }) {
     return (
       <div className="flex h-full items-center justify-center p-12 text-center">
         <div className="max-w-sm space-y-4">
-          <StackSimple className="h-12 w-12 mx-auto text-amber-200/70" />
+          <StackSimple className="size-12  mx-auto text-amber-200/70" />
           <h3 className="text-lg font-medium text-amber-50">Canvas Panel Unavailable</h3>
           <p className="text-xs leading-relaxed text-amber-100/70">
             {NATIVE_AGENT_UNAVAILABLE.canvases}
           </p>
           {sessionId && (
-            <p className="text-[11px] uppercase tracking-[0.16em] text-amber-200/50">
+            <p className="text-[12px] uppercase tracking-[0.16em] text-amber-200/50">
               Session {sessionId}
             </p>
           )}
@@ -753,7 +753,7 @@ function CanvasPanel({ sessionId }: { sessionId: string | null }) {
                 isActive ? "bg-white/10 text-white shadow-sm" : "text-white/40 hover:text-white/60 hover:bg-white/5"
               )}
             >
-              <Icon className="h-3.5 w-3.5" />
+              <Icon className="size-3.5 " />
               {canvas?.title || "Untitled"}
             </button>
           );
@@ -771,15 +771,15 @@ function CanvasPanel({ sessionId }: { sessionId: string | null }) {
                 <span className="text-sm font-medium text-white/80">{activeCanvas.title}</span>
               </div>
               <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg"><Copy className="h-3.5 w-3.5" /></Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg"><DownloadSimple className="h-3.5 w-3.5" /></Button>
+                <Button variant="ghost" size="icon" className="size-7  rounded-lg"><Copy className="size-3.5 " /></Button>
+                <Button variant="ghost" size="icon" className="size-7  rounded-lg"><DownloadSimple className="size-3.5 " /></Button>
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="h-7 w-7 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-400/10"
+                  className="size-7  rounded-lg text-red-400 hover:text-red-300 hover:bg-red-400/10"
                   onClick={() => activeCanvasId && deleteCanvas(activeCanvasId)}
                 >
-                  <Trash className="h-3.5 w-3.5" />
+                  <Trash className="size-3.5 " />
                 </Button>
               </div>
             </div>
@@ -791,7 +791,7 @@ function CanvasPanel({ sessionId }: { sessionId: string | null }) {
           </div>
         ) : (
           <div className="flex h-full items-center justify-center">
-            <CircleNotch className="h-6 w-6 animate-spin text-white/10" />
+            <CircleNotch className="size-6  animate-spin text-white/10" />
           </div>
         )}
       </div>

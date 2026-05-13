@@ -231,7 +231,6 @@ export function Sidebar({
       ref={sidebarRef}
       className={cn(
         'sidebar relative flex flex-col h-full shrink-0 transition-all duration-200 ease-out',
-        'border-r border-white/10',
         isResizing && 'transition-none',
         className
       )}
@@ -240,12 +239,13 @@ export function Sidebar({
         background: 'var(--glass-bg)',
         backdropFilter: 'blur(24px)',
         WebkitBackdropFilter: 'blur(24px)',
+        boxShadow: isOpen ? '4px 0 24px rgba(0,0,0,0.1)' : 'none',
       }}
     >
       {/* Header */}
       {(showLogo || header) && (
         <div className={cn(
-          'flex items-center border-b border-white/10',
+          'flex items-center',
           isOpen ? 'h-14 px-4' : 'h-14 px-2 justify-center'
         )}>
           {showLogo && (logo || (
@@ -253,7 +253,7 @@ export function Sidebar({
               'flex items-center gap-3 font-semibold text-lg',
               !isOpen && 'hidden'
             )}>
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+              <div className="size-8  rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
                 <span className="text-white text-sm font-bold">A2</span>
               </div>
               <span className="text-foreground">allternit</span>
@@ -285,7 +285,6 @@ export function Sidebar({
       {/* Footer */}
       {footer && (
         <div className={cn(
-          'border-t border-white/10',
           isOpen ? 'p-4' : 'p-2'
         )}>
           {footer}
@@ -298,7 +297,7 @@ export function Sidebar({
           onClick={toggle}
           className={cn(
             'absolute -right-3 top-1/2 -translate-y-1/2',
-            'w-6 h-12 rounded-full',
+            'size-6 h-12 rounded-full',
             'bg-background border border-border',
             'flex items-center justify-center',
             'hover:bg-accent transition-colors',
@@ -370,11 +369,11 @@ function SidebarNavItem({
       {/* Icon */}
       <div className={cn(
         'flex items-center justify-center shrink-0',
-        isOpen ? 'w-8 h-8' : 'w-10 h-10'
+        isOpen ? 'size-8 ' : 'size-10 '
       )}>
         {Icon ? (
           <Icon className={cn(
-            'w-5 h-5',
+            'size-5 ',
             isActive ? 'text-primary' : 'text-muted-foreground'
           )} />
         ) : (
@@ -407,7 +406,7 @@ function SidebarNavItem({
           {/* Expand chevron */}
           {hasChildren && (
             <CaretDown className={cn(
-              'w-4 h-4 transition-transform duration-200',
+              'size-4  transition-transform duration-200',
               isExpanded && 'rotate-180'
             )} />
           )}
@@ -416,7 +415,7 @@ function SidebarNavItem({
 
       {/* Badge indicator for collapsed state */}
       {!isOpen && item.badge !== undefined && (
-        <span className="absolute top-1 right-1 w-2 h-2 bg-primary rounded-full" />
+        <span className="absolute top-1 right-1 size-2  bg-primary rounded-full" />
       )}
     </>
   );
@@ -551,7 +550,7 @@ function MobileSidebar({
         className={cn(
           'fixed left-0 top-0 bottom-0 z-50 w-72',
           'flex flex-col',
-          'bg-background border-r border-border',
+          'bg-background shadow-2xl',
           'transform transition-transform duration-300 ease-out',
           isOpen ? 'translate-x-0' : '-translate-x-full'
         )}
@@ -560,7 +559,7 @@ function MobileSidebar({
         <div className="flex items-center justify-between h-14 px-4 border-b border-border">
           {showLogo && (logo || (
             <div className="flex items-center gap-3 font-semibold text-lg">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
+              <div className="size-8  rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
                 <span className="text-white text-sm font-bold">A2</span>
               </div>
               <span>allternit</span>
@@ -647,7 +646,7 @@ function MobileNavItem({
       >
         {Icon && (
           <Icon className={cn(
-            'w-5 h-5 shrink-0',
+            'size-5  shrink-0',
             isActive ? 'text-primary' : 'text-muted-foreground'
           )} />
         )}
@@ -669,7 +668,7 @@ function MobileNavItem({
         )}
         {hasChildren && (
           <CaretDown className={cn(
-            'w-4 h-4 transition-transform duration-200',
+            'size-4  transition-transform duration-200',
             isExpanded && 'rotate-180'
           )} />
         )}

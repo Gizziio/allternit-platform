@@ -110,7 +110,7 @@ export class FileSystemWatcher {
       this.performScan();
     }, this.options.pollInterval);
     
-    console.log(`[FileSystemWatcher] Started watching: ${this.options.folderPath}`);
+    console.debug(`[FileSystemWatcher] Started watching: ${this.options.folderPath}`);
   }
 
   /**
@@ -122,7 +122,7 @@ export class FileSystemWatcher {
       clearInterval(this.intervalId);
       this.intervalId = null;
     }
-    console.log(`[FileSystemWatcher] Stopped watching: ${this.options.folderPath}`);
+    console.debug(`[FileSystemWatcher] Stopped watching: ${this.options.folderPath}`);
   }
 
   /**
@@ -185,7 +185,7 @@ export class FileSystemWatcher {
   private scanWithFallback(): void {
     // In Electron or Node environment, use fs module
     // For browser-only, we rely on kernel notifications
-    console.log('[FileSystemWatcher] Using fallback scan mode');
+    console.debug('[FileSystemWatcher] Using fallback scan mode');
   }
 
   private checkForChanges(path: string, name: string, size: number, mtime: number): void {

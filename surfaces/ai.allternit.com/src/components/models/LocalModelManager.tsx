@@ -131,7 +131,7 @@ export function LocalModelManager() {
   if (loading) {
     return (
       <div className="p-8 flex justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent-primary)]" />
+        <div className="animate-spin rounded-full size-8  border-b-2 border-[var(--accent-primary)]" />
       </div>
     );
   }
@@ -159,13 +159,13 @@ export function LocalModelManager() {
       {!brainStatus?.ollamaRunning ? (
         <div className="p-5 rounded-2xl border border-dashed border-[var(--border-subtle)] bg-secondary/10">
           <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-xl bg-[var(--accent-primary)]/10 flex items-center justify-center text-[var(--accent-primary)] shrink-0">
+            <div className="size-10  rounded-xl bg-[var(--accent-primary)]/10 flex items-center justify-center text-[var(--accent-primary)] shrink-0">
               <Brain size={22} />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
                 <span className="font-semibold text-[var(--text-primary)]">Local Brain</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 uppercase font-bold">
+                <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 uppercase font-bold">
                   Ollama required
                 </span>
               </div>
@@ -185,13 +185,13 @@ export function LocalModelManager() {
         </div>
       ) : brainStatus.modelReady || pullState === 'done' ? (
         <div className="p-4 rounded-xl border border-green-500/30 bg-green-500/5 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-500 shrink-0">
+          <div className="size-10  rounded-xl bg-green-500/10 flex items-center justify-center text-green-500 shrink-0">
             <Brain size={22} />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-0.5">
               <span className="font-semibold text-[var(--text-primary)]">Local Brain</span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-500/10 text-green-500 uppercase font-bold">
+              <span className="text-xs px-1.5 py-0.5 rounded bg-green-500/10 text-green-500 uppercase font-bold">
                 Ready
               </span>
             </div>
@@ -202,7 +202,7 @@ export function LocalModelManager() {
       ) : pullState === 'pulling' ? (
         <div className="p-4 rounded-xl border border-[var(--accent-primary)]/30 bg-[var(--accent-primary)]/5">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-[var(--accent-primary)]/10 flex items-center justify-center text-[var(--accent-primary)] shrink-0">
+            <div className="size-8  rounded-lg bg-[var(--accent-primary)]/10 flex items-center justify-center text-[var(--accent-primary)] shrink-0">
               <Brain size={18} />
             </div>
             <div className="flex-1 min-w-0">
@@ -239,13 +239,13 @@ export function LocalModelManager() {
       ) : (
         <div className="p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-[var(--accent-primary)]/10 flex items-center justify-center text-[var(--accent-primary)] shrink-0">
+            <div className="size-10  rounded-xl bg-[var(--accent-primary)]/10 flex items-center justify-center text-[var(--accent-primary)] shrink-0">
               <Brain size={22} />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-0.5">
                 <span className="font-semibold text-[var(--text-primary)]">Local Brain</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] uppercase font-bold">
+                <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] uppercase font-bold">
                   ~2 GB
                 </span>
               </div>
@@ -276,13 +276,13 @@ export function LocalModelManager() {
                 className="p-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] flex items-center justify-between group hover:border-[var(--accent-primary)] transition-colors"
               >
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center text-accent">
+                  <div className="size-10  rounded-lg bg-accent/10 flex items-center justify-center text-accent">
                     <Cpu size={22} />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-[var(--text-primary)]">{model.name}</span>
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 uppercase font-bold">
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 uppercase font-bold">
                         {model.details.quantization_level}
                       </span>
                     </div>

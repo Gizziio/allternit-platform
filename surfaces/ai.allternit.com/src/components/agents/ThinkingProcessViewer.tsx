@@ -6,6 +6,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
+import { useIsClient } from "@/lib/hooks/use-is-client";
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Brain,
@@ -101,7 +102,7 @@ function ThoughtItem({
     >
       {/* Timeline Dot */}
       <div
-        className="absolute left-0 top-0 -translate-x-1/2 w-4 h-4 rounded-full border-2 flex items-center justify-center"
+        className="absolute left-0 top-0 -tranzinc-x-1/2 size-4  rounded-full border-2 flex items-center justify-center"
         style={{
           background: config.bg,
           borderColor: config.color,
@@ -112,7 +113,7 @@ function ThoughtItem({
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className="w-2 h-2 rounded-full"
+            className="size-2  rounded-full"
             style={{ background: config.color }}
           />
         )}
@@ -132,7 +133,7 @@ function ThoughtItem({
           onClick={() => setIsExpanded(!isExpanded)}
         >
           <div
-            className="w-8 h-8 rounded flex items-center justify-center flex-shrink-0"
+            className="size-8  rounded flex items-center justify-center flex-shrink-0"
             style={{ background: config.bg }}
           >
             <TypeIcon size={16} style={{ color: config.color }} />
@@ -263,7 +264,7 @@ export function ThinkingProcessViewer({
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `thinking-process-${new Date().toISOString()}.json`;
+      a.download = `thinking-process-${isClient ? new Date().toISOString() : "..."}.json`;
       a.click();
       URL.revokeObjectURL(url);
     }
@@ -289,7 +290,7 @@ export function ThinkingProcessViewer({
       <div className="p-4 border-b border-white/5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-500/20 to-orange-500/20 flex items-center justify-center border border-yellow-500/30">
+            <div className="size-10  rounded-lg bg-gradient-to-br from-yellow-500/20 to-orange-500/20 flex items-center justify-center border border-yellow-500/30">
               <Brain size={20} className="text-yellow-400" />
             </div>
             <div>
@@ -355,7 +356,7 @@ export function ThinkingProcessViewer({
         {thoughts.length === 0 ? (
           isThinking ? (
             <div className="flex flex-col items-center justify-center h-full text-center">
-              <div className="w-16 h-16 rounded-full bg-yellow-500/20 flex items-center justify-center mb-4">
+              <div className="size-16  rounded-full bg-yellow-500/20 flex items-center justify-center mb-4">
                 <Brain size={32} className="text-yellow-400 animate-pulse" />
               </div>
               <p className="text-sm font-medium text-white/60 mb-1">
@@ -368,7 +369,7 @@ export function ThinkingProcessViewer({
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-center">
               <div
-                className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+                className="size-16  rounded-full flex items-center justify-center mb-4"
                 style={{
                   background: 'var(--surface-hover)',
                   border: '1px solid var(--ui-border-default)',
@@ -403,7 +404,7 @@ export function ThinkingProcessViewer({
                 className="flex items-center gap-2 text-xs text-yellow-400 mt-4 pl-6"
               >
                 <Clock size={12} className="animate-pulse" />
-                <span>Agent is thinking...</span>
+                <span>Agent is thinking…</span>
               </motion.div>
             )}
           </div>

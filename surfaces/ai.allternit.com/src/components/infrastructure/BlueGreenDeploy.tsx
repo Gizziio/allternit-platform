@@ -8,7 +8,7 @@
  * - Automatic rollback capability
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   GitBranch,
   ArrowsLeftRight as ArrowRightLeft,
@@ -35,6 +35,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import type { Environment } from '@/api/infrastructure';
 
 export interface BlueGreenDeployProps {
@@ -62,7 +63,7 @@ interface EnvironmentInfo {
   traffic: number; // percentage
   health: 'healthy' | 'unhealthy' | 'checking' | 'unknown';
   url: string;
-  lastDeployed: Date;
+  lastDeployed: string | Date;
 }
 
 export function BlueGreenDeploy({
@@ -72,6 +73,7 @@ export function BlueGreenDeploy({
   onRollback,
   className,
 }: BlueGreenDeployProps) {
+  const isClient = useIsClient();
   const [phase, setPhase] = useState<DeploymentPhase>('idle');
   const [progress, setProgress] = useState(0);
   const [showDialog, setShowDialog] = useState(false);
@@ -83,14 +85,15 @@ export function BlueGreenDeploy({
     traffic: 100,
     health: 'healthy',
     url: currentEnvironment.url || '#',
-    lastDeployed: currentEnvironment.createdAt ? new Date(currentEnvironment.createdAt) : new Date(),
+    lastDeployed: currentEnvironment.createdAt || new Date().toISOString(),
   });
   const [greenEnv, setGreenEnv] = useState<EnvironmentInfo | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
 
-  const addLog = (message: string) => {
-    setLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${message}`]);
-  };
+  const addLog = useCallback((message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    setLogs(prev => [...prev, `[${timestamp}] ${message}`]);
+  }, []);
 
   const startDeployment = async () => {
     setPhase('deploying-green');
@@ -116,7 +119,7 @@ export function BlueGreenDeploy({
             traffic: 0,
             health: 'unknown',
             url: `${currentEnvironment.url?.replace(/\.com$/, '-green.com') || '#'}`,
-            lastDeployed: new Date(),
+            lastDeployed: new Date().toISOString(),
           });
         }
         
@@ -202,6 +205,12 @@ export function BlueGreenDeploy({
     return labels[p];
   };
 
+  const formatDate = (dateInput: string | Date) => {
+    if (!isClient) return '...';
+    const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+    return date.toLocaleDateString();
+  };
+
   return (
     <div className={cn("space-y-4", className)}>
       <div className="flex items-center justify-between">
@@ -226,7 +235,7 @@ export function BlueGreenDeploy({
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-blue-500" />
+                <div className="size-3  rounded-full bg-blue-500" />
                 Blue (Current)
               </CardTitle>
               <Badge variant={blueEnv.traffic > 0 ? 'default' : 'secondary'}>
@@ -236,19 +245,19 @@ export function BlueGreenDeploy({
           </CardHeader>
           <CardContent className="space-y-2">
             <div className="flex items-center gap-2 text-sm">
-              <HardDrives className="w-4 h-4 text-muted-foreground" />
+              <HardDrives className="size-4  text-muted-foreground" />
               <span>{blueEnv.name}</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <Activity className="w-4 h-4 text-muted-foreground" />
+              <Activity className="size-4  text-muted-foreground" />
               <span>Version: {blueEnv.version}</span>
             </div>
             <div className="flex items-center gap-2 text-sm">
-              <Shield className="w-4 h-4 text-green-500" />
+              <Shield className="size-4  text-green-500" />
               <span>Status: {blueEnv.status}</span>
             </div>
             <p className="text-xs text-muted-foreground">
-              Last deployed: {blueEnv.lastDeployed.toLocaleDateString()}
+              Last deployed: {formatDate(blueEnv.lastDeployed)}
             </p>
           </CardContent>
         </Card>
@@ -263,7 +272,7 @@ export function BlueGreenDeploy({
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <div className={cn(
-                  "w-3 h-3 rounded-full",
+                  "size-3  rounded-full",
                   greenEnv ? "bg-green-500" : "bg-muted"
                 )} />
                 Green (New)
@@ -277,16 +286,16 @@ export function BlueGreenDeploy({
             {greenEnv ? (
               <>
                 <div className="flex items-center gap-2 text-sm">
-                  <HardDrives className="w-4 h-4 text-muted-foreground" />
+                  <HardDrives className="size-4  text-muted-foreground" />
                   <span>{greenEnv.name}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
-                  <Activity className="w-4 h-4 text-muted-foreground" />
+                  <Activity className="size-4  text-muted-foreground" />
                   <span>Version: {greenEnv.version}</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm">
                   <Shield className={cn(
-                    "w-4 h-4",
+                    "size-4 ",
                     greenEnv.health === 'healthy' ? 'text-green-500' : 
                     greenEnv.health === 'unhealthy' ? 'text-red-500' : 'text-yellow-500'
                   )} />
@@ -307,7 +316,7 @@ export function BlueGreenDeploy({
       <div className="flex items-center justify-center gap-4 py-4">
         <div className="text-center">
           <div className={cn(
-            "w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold transition-all",
+            "size-16  rounded-full flex items-center justify-center text-2xl font-bold transition-all",
             blueEnv.traffic > 0 ? "bg-blue-500 text-white scale-110" : "bg-muted text-muted-foreground"
           )}>
             {blueEnv.traffic}%
@@ -323,13 +332,13 @@ export function BlueGreenDeploy({
             />
           </div>
           <div className="flex justify-between text-xs text-muted-foreground mt-1">
-            <ArrowRightLeft className="w-4 h-4 mx-auto" />
+            <ArrowRightLeft className="size-4  mx-auto" />
           </div>
         </div>
 
         <div className="text-center">
           <div className={cn(
-            "w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold transition-all",
+            "size-16  rounded-full flex items-center justify-center text-2xl font-bold transition-all",
             greenEnv?.traffic && greenEnv.traffic > 0 ? "bg-green-500 text-white scale-110" : "bg-muted text-muted-foreground"
           )}>
             {greenEnv?.traffic || 0}%
@@ -391,24 +400,24 @@ export function BlueGreenDeploy({
             <div className="flex items-center gap-4 text-sm">
               <div className="flex items-center gap-2">
                 <div className={cn(
-                  "w-2 h-2 rounded-full",
+                  "size-2  rounded-full",
                   phase !== 'idle' && phase !== 'rolling-back' ? "bg-green-500" : "bg-muted"
                 )} />
                 <span>Deploy Green</span>
               </div>
-              <ArrowRight className="w-4 h-4 text-muted-foreground" />
+              <ArrowRight className="size-4  text-muted-foreground" />
               <div className="flex items-center gap-2">
                 <div className={cn(
-                  "w-2 h-2 rounded-full",
+                  "size-2  rounded-full",
                   phase === 'health-check' || phase === 'ready-to-switch' || phase === 'switching' || phase === 'completed' 
                     ? "bg-green-500" : "bg-muted"
                 )} />
                 <span>Health Check</span>
               </div>
-              <ArrowRight className="w-4 h-4 text-muted-foreground" />
+              <ArrowRight className="size-4  text-muted-foreground" />
               <div className="flex items-center gap-2">
                 <div className={cn(
-                  "w-2 h-2 rounded-full",
+                  "size-2  rounded-full",
                   phase === 'switching' || phase === 'completed' ? "bg-green-500" : "bg-muted"
                 )} />
                 <span>Switch</span>
@@ -440,22 +449,22 @@ export function BlueGreenDeploy({
             {phase === 'ready-to-switch' ? (
               <>
                 <Button variant="outline" onClick={rollback}>
-                  <X className="w-4 h-4 mr-2" />
+                  <X className="size-4  mr-2" />
                   Cancel
                 </Button>
                 <Button onClick={switchTraffic}>
-                  <ArrowRight className="w-4 h-4 mr-2" />
+                  <ArrowRight className="size-4  mr-2" />
                   Switch Traffic
                 </Button>
               </>
             ) : phase === 'completed' ? (
               <Button onClick={() => setShowDialog(false)}>
-                <Check className="w-4 h-4 mr-2" />
+                <Check className="size-4  mr-2" />
                 Done
               </Button>
             ) : (
               <Button disabled>
-                <CircleNotch className="w-4 h-4 mr-2 animate-spin" />
+                <CircleNotch className="size-4  mr-2 animate-spin" />
                 {getPhaseLabel(phase)}...
               </Button>
             )}

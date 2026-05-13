@@ -74,16 +74,16 @@ export function LeaseMonitorPanel() {
       {/* Filter */}
       <div className="p-4 border-b flex items-center gap-4">
         <div className="flex-1 relative">
-          <MagnifyingGlass className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <MagnifyingGlass className="size-4  absolute left-3 top-1/2 -tranzinc-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Filter by agent ID..."
+            placeholder="Filter by agent ID…"
             value={filterAgentId}
             onChange={(e) => setFilterAgentId(e.target.value)}
             className="pl-10"
           />
         </div>
         <Button variant="outline" onClick={fetchLeases}>
-          <ArrowsClockwise className="w-4 h-4 mr-2" /> Refresh
+          <ArrowsClockwise className="size-4  mr-2" /> Refresh
         </Button>
       </div>
       
@@ -102,7 +102,7 @@ export function LeaseMonitorPanel() {
               <div className="space-y-2">
                 {filteredLeases.length === 0 ? (
                   <div className="text-center text-muted-foreground py-8">
-                    <Key className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <Key className="size-8  mx-auto mb-2 opacity-50" />
                     <p>No active leases</p>
                   </div>
                 ) : (
@@ -136,7 +136,7 @@ export function LeaseMonitorPanel() {
               />
             ) : (
               <div className="text-center text-muted-foreground py-8">
-                <Key className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <Key className="size-8  mx-auto mb-2 opacity-50" />
                 <p className="text-sm">Select a lease to view details</p>
               </div>
             )}
@@ -194,7 +194,7 @@ function LeaseListItem({
     active: { icon: Key, color: "text-green-500", badge: "default" },
     expiring: { icon: Warning, color: "text-yellow-500", badge: "secondary" },
     expired: { icon: Clock, color: "text-red-500", badge: "destructive" },
-    released: { icon: LockOpen, color: "text-gray-500", badge: "outline" },
+    released: { icon: LockOpen, color: "text-zinc-500", badge: "outline" },
   };
   
   const config = statusConfig[lease.status];
@@ -208,8 +208,8 @@ function LeaseListItem({
       onClick={onClick}
     >
       <div className="flex items-center gap-2">
-        <Icon className={`w-4 h-4 ${config.color}`} />
-        <span className="font-mono text-sm truncate flex-1">{lease.leaseId.slice(0, 16)}...</span>
+        <Icon className={`size-4  ${config.color}`} />
+        <span className="font-mono text-sm truncate flex-1">{lease.leaseId.slice(0, 16)}…</span>
         <Badge variant={config.badge as any} className="text-xs">{lease.status}</Badge>
       </div>
       
@@ -241,10 +241,10 @@ function LeaseListItem({
       {!isExpired && lease.status !== "released" && (
         <div className="mt-2 flex gap-2">
           <Button size="sm" variant="outline" className="flex-1" onClick={(e) => { e.stopPropagation(); onRenew(); }}>
-            <ArrowsClockwise className="w-3 h-3 mr-1" /> Renew
+            <ArrowsClockwise className="size-3  mr-1" /> Renew
           </Button>
           <Button size="sm" variant="outline" className="flex-1" onClick={(e) => { e.stopPropagation(); onRelease(); }}>
-            <LockOpen className="w-3 h-3 mr-1" /> Release
+            <LockOpen className="size-3  mr-1" /> Release
           </Button>
         </div>
       )}
@@ -346,10 +346,10 @@ function LeaseDetails({ lease, onRenew, onRelease }: { lease: ManagedLease; onRe
       {lease.status === "active" && (
         <div className="flex gap-2 pt-4 border-t">
           <Button className="flex-1" onClick={onRenew}>
-            <ArrowsClockwise className="w-4 h-4 mr-2" /> Renew
+            <ArrowsClockwise className="size-4  mr-2" /> Renew
           </Button>
           <Button variant="outline" className="flex-1" onClick={onRelease}>
-            <LockOpen className="w-4 h-4 mr-2" /> Release
+            <LockOpen className="size-4  mr-2" /> Release
           </Button>
         </div>
       )}

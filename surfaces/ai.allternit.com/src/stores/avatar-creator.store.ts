@@ -424,7 +424,7 @@ export const useAvatarCreatorStore = create<AvatarCreatorState & AvatarCreatorAc
       setBodySize: (size) => {
         // Body size affects overall scale, stored in personality or we could add a new field
         // For now, we'll keep it simple and just log this would affect the SVG viewBox
-        console.log('Body size adjustment:', size);
+        console.debug('Body size adjustment:', size);
       },
 
       // ============================================================================

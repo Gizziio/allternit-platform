@@ -1,5 +1,6 @@
 'use client';
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useEffect } from 'react';
 import { Zap, ExternalLink, MessageSquare, ArrowUpCircle } from 'lucide-react';
 
@@ -95,7 +96,7 @@ export function LiveFeed() {
         height: 300, gap: 12, color: TEXT_MUTED,
       }}>
         <Zap size={20} color={ACCENT} style={{ animation: 'pulse 1.5s infinite' }} />
-        <span style={{ fontSize: 14 }}>Connecting to live sources...</span>
+        <span style={{ fontSize: 14 }}>Connecting to live sources…</span>
         <style>{`@keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:.4 } }`}</style>
       </div>
     );
@@ -139,7 +140,7 @@ export function LiveFeed() {
             Live Feed
           </span>
           <span style={{
-            fontSize: 11, color: STATUS_SUCCESS, background: 'rgba(74,222,128,0.08)',
+            fontSize: 12, color: STATUS_SUCCESS, background: 'rgba(74,222,128,0.08)',
             padding: '2px 8px', borderRadius: 4, border: '1px solid rgba(74,222,128,0.12)',
           }}>
             {items.length} items
@@ -204,7 +205,7 @@ export function LiveFeed() {
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <span style={{
-                fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
                 color: SOURCE_COLORS[item.source], background: `${SOURCE_COLORS[item.source]}15`,
                 padding: '3px 8px', borderRadius: 4,
               }}>
@@ -230,7 +231,7 @@ export function LiveFeed() {
               </p>
             )}
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 11, color: TEXT_MUTED }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, color: TEXT_MUTED }}>
               <span>{item.author}</span>
               {item.score !== undefined && (
                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -335,7 +336,7 @@ async function fetchArxiv(): Promise<LiveItem[]> {
           author: authors[0] || 'Unknown',
           source: 'arxiv' as const,
           publishedAt: publishedMatch ? publishedMatch[1] : new Date().toISOString(),
-          excerpt: summaryMatch ? summaryMatch[1].trim().slice(0, 200) + '...' : undefined,
+          excerpt: summaryMatch ? summaryMatch[1].trim().slice(0, 200) + '…' : undefined,
         };
       })
       .filter(i => i.title && i.url);

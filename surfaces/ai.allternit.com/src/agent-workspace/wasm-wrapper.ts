@@ -99,14 +99,14 @@ async function loadWasm(): Promise<WasmModule> {
  * @returns WorkspaceAPI instance with full functionality
  */
 export async function createWasmWorkspace(path: string): Promise<WasmWorkspaceAPI> {
-  console.log('[WASM] Creating workspace at path:', path);
+  console.debug('[WASM] Creating workspace at path:', path);
   
   const wasm = await loadWasm();
   const instance = new wasm.WorkspaceApi(path);
   
   // Boot the workspace
   const bootResult = await instance.boot();
-  console.log('[WASM] Workspace boot result:', bootResult);
+  console.debug('[WASM] Workspace boot result:', bootResult);
   
   if (!instance.isValid()) {
     throw new Error(`Failed to initialize WASM workspace at path: ${path}`);
@@ -241,7 +241,7 @@ export async function createWasmWorkspace(path: string): Promise<WasmWorkspaceAP
     
     sync: async () => {
       // Sync is no-op for WASM - data is local
-      console.log('[WASM] Sync called (no-op for local WASM backend)');
+      console.debug('[WASM] Sync called (no-op for local WASM backend)');
     },
 
     // Brain (Task Graph) - FULLY IMPLEMENTED

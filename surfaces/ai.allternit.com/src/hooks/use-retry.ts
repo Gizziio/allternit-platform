@@ -32,7 +32,7 @@ const DEFAULT_CONFIG: Required<RetryConfig> = {
   backoffMultiplier: 2,
   showToast: true,
   toastTitle: 'Operation Failed',
-  toastRetryMessage: 'Retrying in {delay}s... (Attempt {attempt}/{max})',
+  toastRetryMessage: 'Retrying in {delay}s… (Attempt {attempt}/{max})',
   toastFailureMessage: 'Operation failed after {max} attempts.',
 };
 

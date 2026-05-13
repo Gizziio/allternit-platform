@@ -272,7 +272,7 @@ export function PurposeBinding() {
               padding: '2px 8px',
               background: activeTab === tab.id ? 'color-mix(in srgb, var(--accent-primary) 12%, transparent)' : 'var(--surface-hover)',
               borderRadius: 10,
-              fontSize: 11,
+              fontSize: 12,
             }}>
               {tab.count}
             </span>
@@ -454,7 +454,7 @@ function PurposeCard({
                 background: 'var(--status-success-bg)',
                 color: 'var(--status-success)',
                 borderRadius: 4,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 600,
               }}>
                 Active
@@ -465,7 +465,7 @@ function PurposeCard({
                 background: 'var(--surface-active)',
                 color: 'var(--ui-text-secondary)',
                 borderRadius: 4,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 600,
               }}>
                 Inactive
@@ -556,7 +556,7 @@ function BindingCard({
             background: statusColor.bg,
             color: statusColor.text,
             borderRadius: 4,
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 600,
           }}>
             {binding.status}
@@ -576,7 +576,7 @@ function BindingCard({
               background: 'var(--status-error-bg)',
               color: 'var(--status-error)',
               borderRadius: 4,
-              fontSize: 11,
+              fontSize: 12,
             }}>
               {binding.violations} violations
             </span>
@@ -660,7 +660,7 @@ function ViolationCard({ violation }: { violation: PurposeViolation }) {
               background: `${getSeverityColor()}20`,
               color: getSeverityColor(),
               borderRadius: 4,
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 600,
             }}>
               {violation.severity}
@@ -671,7 +671,7 @@ function ViolationCard({ violation }: { violation: PurposeViolation }) {
                 background: 'var(--status-error-bg)',
                 color: 'var(--status-error)',
                 borderRadius: 4,
-                fontSize: 11,
+                fontSize: 12,
               }}>
                 Open
               </span>
@@ -796,7 +796,7 @@ function BindAgentModal({
                 fontSize: 14,
               }}
             >
-              <option value="">Select a purpose...</option>
+              <option value="">Select a purpose…</option>
               {activePurposes.map(purpose => (
                 <option key={purpose.id} value={purpose.id}>
                   {purpose.name}
@@ -825,7 +825,7 @@ function BindAgentModal({
                 accentColor: 'var(--accent-primary)',
               }}
             />
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 11, color: 'var(--ui-text-muted)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 12, color: 'var(--ui-text-muted)' }}>
               <span>Low</span>
               <span>High</span>
             </div>
@@ -908,7 +908,7 @@ function LoadingState() {
   return (
     <div style={{ textAlign: 'center', padding: 60, color: 'var(--ui-text-muted)' }}>
       <ArrowsClockwise size={32} style={{ animation: 'spin 1s linear infinite' }} />
-      <p>Loading...</p>
+      <p>Loading…</p>
     </div>
   );
 }

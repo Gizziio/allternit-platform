@@ -80,21 +80,21 @@ function AgentNode({ data }: { data: NodeData }) {
           {agent.screenshotUrl && onTakeover && (
             <button
               onClick={() => onTakeover(agent.agent_id)}
-              style={{ fontSize: 11, padding: "2px 8px", borderRadius: 6, border: `1px solid ${colors.border}`, background: "white", color: colors.text, cursor: "pointer" }}
+              style={{ fontSize: 12, padding: "2px 8px", borderRadius: 6, border: `1px solid ${colors.border}`, background: "white", color: colors.text, cursor: "pointer" }}
             >
               Take Control
             </button>
           )}
           <button
             onClick={() => onExpandChange?.(agent.agent_id, !isExpanded)}
-            style={{ fontSize: 11, padding: "2px 8px", borderRadius: 6, border: `1px solid ${colors.border}`, background: "white", color: colors.text, cursor: "pointer" }}
+            style={{ fontSize: 12, padding: "2px 8px", borderRadius: 6, border: `1px solid ${colors.border}`, background: "white", color: colors.text, cursor: "pointer" }}
           >
             {isExpanded ? "Collapse" : "Expand"}
           </button>
         </div>
       </div>
 
-      <div style={{ display: "flex", gap: 8, fontSize: 11, color: "#64748b" }}>
+      <div style={{ display: "flex", gap: 8, fontSize: 12, color: "#64748b" }}>
         {done > 0 && <span style={{ color: "#10b981" }}>{done} done</span>}
         {running > 0 && <span style={{ color: "#3b82f6" }}>{running} running</span>}
         {failed > 0 && <span style={{ color: "#ef4444" }}>{failed} failed</span>}
@@ -140,7 +140,7 @@ function AgentNode({ data }: { data: NodeData }) {
               </div>
             ))}
           </div>
-          <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 4 }}>
+          <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 4 }}>
             Tools: {agent.tools.join(" · ")}
           </div>
         </>

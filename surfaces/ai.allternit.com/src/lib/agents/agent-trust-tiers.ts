@@ -228,7 +228,7 @@ export class AgentTrustTiers {
       // Check if we should notify
       if (this.shouldNotify(tool, args)) {
         // TODO: Send notification
-        console.log(`[TrustTiers] Action completed: ${tool}`);
+        console.debug(`[TrustTiers] Action completed: ${tool}`);
       }
 
       return { success: true, result };

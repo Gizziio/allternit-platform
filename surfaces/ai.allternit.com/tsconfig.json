@@ -54,15 +54,11 @@
     "tsBuildInfoFile": ".tsbuildinfo",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ]
+    "plugins": []
   },
   "include": [
     "src/**/*",
-    ".next/types/**/*.ts"
+    "index.html"
   ],
   "exclude": [
     "node_modules",

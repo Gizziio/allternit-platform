@@ -439,7 +439,7 @@ export function SessionAnalyticsDashboard({
                 <div key={model.model} className="flex items-center justify-between text-sm">
                   <div className="flex items-center gap-2">
                     <div 
-                      className="w-3 h-3 rounded-full"
+                      className="size-3  rounded-full"
                       style={{ 
                         background: [
                           modeColors.accent,
@@ -693,7 +693,7 @@ function MetricCard({
     >
       <div className="flex items-start justify-between">
         <div 
-          className="w-10 h-10 rounded-lg flex items-center justify-center"
+          className="size-10  rounded-lg flex items-center justify-center"
           style={{
             background: modeColors.soft,
           }}

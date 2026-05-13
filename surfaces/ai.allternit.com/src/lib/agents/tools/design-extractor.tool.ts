@@ -18,7 +18,7 @@ export const designExtractorTool = {
     required: ['source']
   },
   execute: async ({ source, style = 'modern' }: { source: string, style?: string }) => {
-    console.log(`[DesignExtractor] Analyzing: ${source}...`);
+    console.debug(`[DesignExtractor] Analyzing: ${source}...`);
 
     // In a real implementation, this would use a headless browser to compute styles.
     // For Allternit, we return a deterministic high-quality Design.md.

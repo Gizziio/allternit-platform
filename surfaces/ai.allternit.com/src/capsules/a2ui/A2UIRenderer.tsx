@@ -355,7 +355,7 @@ function ButtonRenderer({ node, context }: ComponentRendererProps) {
       }}
       style={props.style}
     >
-      {isLoading && <CircleNotch className="w-4 h-4 animate-spin" />}
+      {isLoading && <CircleNotch className="size-4  animate-spin" />}
       {props.icon && props.iconPosition !== 'right' && <span>{props.icon}</span>}
       {label}
       {props.icon && props.iconPosition === 'right' && <span>{props.icon}</span>}
@@ -479,9 +479,9 @@ function SpinnerRenderer({ node, context }: ComponentRendererProps) {
   if (!isVisible(props, context.dataModel)) return null;
 
   const sizeClasses: Record<string, string> = {
-    sm: 'w-4 h-4',
-    md: 'w-6 h-6',
-    lg: 'w-8 h-8',
+    sm: 'size-4 ',
+    md: 'size-6 ',
+    lg: 'size-8 ',
   };
 
   return (
@@ -767,7 +767,7 @@ export interface A2UIRendererProps {
  * ```tsx
  * <A2UIRenderer
  *   payload={payload}
- *   onAction={(actionId, payload) => console.log('Action:', actionId, payload)}
+ *   onAction={(actionId, payload) => console.debug('Action:', actionId, payload)}
  * />
  * ```
  */
@@ -811,7 +811,7 @@ export function A2UIRenderer({
       dataModel,
       updateDataModel,
       onAction: (actionId: string, payload?: Record<string, unknown>) => {
-        console.log('[A2UI] Action triggered:', actionId, payload);
+        console.debug('[A2UI] Action triggered:', actionId, payload);
         onAction?.(actionId, payload);
       },
       whitelist,

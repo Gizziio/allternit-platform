@@ -109,8 +109,8 @@ export function ReceiptsView({
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <Scroll className="w-8 h-8 mx-auto mb-2 text-muted-foreground animate-pulse" />
-          <p className="text-sm text-muted-foreground">Loading receipts...</p>
+          <Scroll className="size-8  mx-auto mb-2 text-muted-foreground animate-pulse" />
+          <p className="text-sm text-muted-foreground">Loading receipts…</p>
         </div>
       </div>
     );
@@ -120,7 +120,7 @@ export function ReceiptsView({
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <Scroll className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+          <Scroll className="size-8  mx-auto mb-2 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">No receipts yet</p>
           <p className="text-xs text-muted-foreground mt-1">
             Receipts will appear here as the agent executes actions
@@ -135,7 +135,7 @@ export function ReceiptsView({
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2">
-          <Scroll className="w-4 h-4 text-muted-foreground" />
+          <Scroll className="size-4  text-muted-foreground" />
           <h3 className="text-sm font-medium">Evidence Receipts</h3>
           <span className="text-xs text-muted-foreground">
             ({filteredReceipts.length} of {receipts.length})
@@ -184,19 +184,19 @@ export function ReceiptsView({
       {/* Summary Bar */}
       <div className="flex items-center gap-4 px-4 py-2 bg-secondary/30 border-b border-border text-xs">
         <span className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-green-500" />
+          <span className="size-2  rounded-full bg-green-500" />
           Success: {receiptsByStatus.success.length}
         </span>
         <span className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-red-500" />
+          <span className="size-2  rounded-full bg-red-500" />
           Failed: {receiptsByStatus.fail.length}
         </span>
         <span className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-yellow-500" />
+          <span className="size-2  rounded-full bg-yellow-500" />
           Pending: {receiptsByStatus.needs_confirm.length}
         </span>
         <span className="flex items-center gap-1">
-          <span className="w-2 h-2 rounded-full bg-gray-500" />
+          <span className="size-2  rounded-full bg-zinc-500" />
           Blocked: {receiptsByStatus.blocked.length}
         </span>
       </div>
@@ -234,7 +234,7 @@ function ReceiptItem({ receipt, isExpanded, onToggle }: ReceiptItemProps) {
   const statusColors: Record<string, string> = {
     success: 'bg-green-500/20 text-green-500 border-green-500/50',
     fail: 'bg-red-500/20 text-red-500 border-red-500/50',
-    blocked: 'bg-gray-500/20 text-gray-500 border-gray-500/50',
+    blocked: 'bg-zinc-500/20 text-zinc-500 border-zinc-500/50',
     needs_confirm: 'bg-yellow-500/20 text-yellow-500 border-yellow-500/50',
     skipped: 'bg-blue-500/20 text-blue-500 border-blue-500/50',
   };
@@ -242,7 +242,7 @@ function ReceiptItem({ receipt, isExpanded, onToggle }: ReceiptItemProps) {
   const statusBorderColors: Record<string, string> = {
     success: 'border-l-green-500',
     fail: 'border-l-red-500',
-    blocked: 'border-l-gray-500',
+    blocked: 'border-l-zinc-500',
     needs_confirm: 'border-l-yellow-500',
     skipped: 'border-l-blue-500',
   };
@@ -276,7 +276,7 @@ function ReceiptItem({ receipt, isExpanded, onToggle }: ReceiptItemProps) {
           <span className="text-xs opacity-60">{duration}ms</span>
           <span className="text-xs font-medium">{receipt.status.replace('_', ' ')}</span>
           <svg
-            className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+            className={`size-4  transition-transform ${isExpanded ? 'rotate-180' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -366,7 +366,7 @@ function ArtifactBadge({ artifact }: ArtifactBadgeProps) {
     form_json: 'bg-purple-500/20 text-purple-500 border-purple-500/50',
     download: 'bg-orange-500/20 text-orange-500 border-orange-500/50',
     selection_text: 'bg-cyan-500/20 text-cyan-500 border-cyan-500/50',
-    note: 'bg-gray-500/20 text-gray-500 border-gray-500/50',
+    note: 'bg-zinc-500/20 text-zinc-500 border-zinc-500/50',
   };
 
   return (

@@ -103,14 +103,14 @@ export function CreativeCockpit({
   const getStatusIcon = (taskStatus: MoATask['status']) => {
     switch (taskStatus) {
       case 'complete':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
+        return <CheckCircle className="size-4  text-green-500" />;
       case 'running':
-        return <CircleNotch className="w-4 h-4 text-orange-500 animate-spin" />;
+        return <CircleNotch className="size-4  text-orange-500 animate-spin" />;
       case 'error':
-        return <Warning className="w-4 h-4 text-red-500" />;
+        return <Warning className="size-4  text-red-500" />;
       case 'pending':
       default:
-        return <Circle className="w-4 h-4 text-[var(--text-tertiary)]" />;
+        return <Circle className="size-4  text-[var(--text-tertiary)]" />;
     }
   };
 
@@ -118,14 +118,14 @@ export function CreativeCockpit({
     return (
       <div className="h-8 flex items-center gap-3 px-3 text-xs">
         <div className="flex items-center gap-2">
-          <Cpu className="w-3 h-3 text-[var(--accent-primary)]" />
+          <Cpu className="size-3  text-[var(--accent-primary)]" />
           <span className="font-medium text-[var(--text-secondary)]">
             {completedTasks}/{totalTasks} complete
           </span>
         </div>
         {runningTasks > 0 && (
           <div className="flex items-center gap-1">
-            <CircleNotch className="w-3 h-3 text-orange-500 animate-spin" />
+            <CircleNotch className="size-3  text-orange-500 animate-spin" />
             <span className="text-[var(--text-tertiary)]">{runningTasks} running</span>
           </div>
         )}
@@ -138,7 +138,7 @@ export function CreativeCockpit({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Lightning className="w-4 h-4 text-[var(--accent-primary)]" />
+          <Lightning className="size-4  text-[var(--accent-primary)]" />
           <span className="text-sm font-medium text-[var(--text-primary)]">
             Creative Cockpit
           </span>
@@ -158,7 +158,7 @@ export function CreativeCockpit({
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="h-6 w-6 p-0 text-[var(--text-tertiary)]"
+            className="size-6  p-0 text-[var(--text-tertiary)]"
           >
             <X size={12} />
           </Button>

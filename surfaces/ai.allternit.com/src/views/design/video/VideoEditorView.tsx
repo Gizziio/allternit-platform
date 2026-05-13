@@ -91,7 +91,7 @@ export function VideoEditorView() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <VideoCamera size={20} color="var(--accent-primary)" weight="fill" />
           <span style={{ fontWeight: 700, fontSize: 14, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-primary)' }}>Cutscene Studio</span>
-          <span style={{ padding: '2px 8px', borderRadius: 4, background: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)', fontSize: 10, fontWeight: 700, color: 'var(--accent-primary)', marginLeft: 8, textTransform: 'uppercase', letterSpacing: '0.12em', border: '1px solid color-mix(in srgb, var(--accent-primary) 20%, transparent)' }}>
+          <span style={{ padding: '2px 8px', borderRadius: 4, background: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)', fontSize: 12, fontWeight: 700, color: 'var(--accent-primary)', marginLeft: 8, textTransform: 'uppercase', letterSpacing: '0.12em', border: '1px solid color-mix(in srgb, var(--accent-primary) 20%, transparent)' }}>
             Programmatic Engine
           </span>
         </div>
@@ -116,7 +116,7 @@ export function VideoEditorView() {
         {/* Left Asset Panel */}
         <div style={{ width: 256, borderRight: '1px solid var(--border-subtle)', background: 'var(--bg-secondary)', padding: 16, display: 'flex', flexDirection: 'column', gap: 24, overflowY: 'auto', flexShrink: 0 }}>
           <div>
-            <h3 style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 12, margin: '0 0 12px' }}>Project Assets</h3>
+            <h3 style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 12, margin: '0 0 12px' }}>Project Assets</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <AssetItem icon={<Code size={16} />} title="Design.md Tokens" type="Data" />
               <AssetItem icon={<MonitorPlay size={16} />} title="Banking Dashboard" type="UI Block" />
@@ -125,7 +125,7 @@ export function VideoEditorView() {
           </div>
 
           <div>
-            <h3 style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 12, margin: '0 0 12px' }}>Generative Effects</h3>
+            <h3 style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 12, margin: '0 0 12px' }}>Generative Effects</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <AssetItem icon={<TextT size={16} />} title="Auto-Type Prompt" type="Animation" color="var(--accent-primary)" />
               <AssetItem icon={<Cursor size={16} />} title="Smooth Cursor" type="Animation" color="#10b981" />
@@ -174,7 +174,7 @@ export function VideoEditorView() {
                 </motion.div>
               )}
 
-              <div style={{ position: 'absolute', bottom: 16, right: 16, fontSize: 10, fontFamily: 'monospace', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em' }}>
+              <div style={{ position: 'absolute', bottom: 16, right: 16, fontSize: 12, fontFamily: 'monospace', color: 'rgba(255,255,255,0.3)', letterSpacing: '0.1em' }}>
                 [ REMOTION_ENGINE : {currentTime.toFixed(2)}s ]
               </div>
             </div>
@@ -196,7 +196,7 @@ export function VideoEditorView() {
             </button>
 
             <div style={{ width: 1, height: 16, background: 'var(--border-default)', margin: '0 16px' }} />
-            <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--text-secondary)', width: 96 }}>
+            <span style={{ fontFamily: 'monospace', fontSize: 12, color: 'var(--text-secondary)', width: 96 }}>
               00:{(currentTime < 10 ? '0' : '') + currentTime.toFixed(1)} / 00:{totalDuration}
             </span>
           </div>
@@ -214,7 +214,7 @@ export function VideoEditorView() {
                 key={i}
                 style={{ position: 'absolute', top: 0, bottom: 0, borderLeft: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', paddingBottom: 4, left: `${(i / totalDuration) * 100}%` }}
               >
-                {i % 5 === 0 && <span style={{ fontSize: 9, color: 'var(--text-tertiary)', marginLeft: 4 }}>{i}s</span>}
+                {i % 5 === 0 && <span style={{ fontSize: 12, color: 'var(--text-tertiary)', marginLeft: 4 }}>{i}s</span>}
               </div>
             ))}
             {/* Playhead */}
@@ -230,7 +230,7 @@ export function VideoEditorView() {
             <div key={track.id} style={{ height: 56, borderBottom: '1px solid var(--border-subtle)', display: 'flex' }}>
               <div style={{ width: 192, background: 'var(--bg-secondary)', borderRight: '1px solid var(--border-subtle)', padding: '0 16px', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
                 <div style={{ color: 'var(--text-tertiary)' }}>{track.icon}</div>
-                <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{track.name}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{track.name}</span>
               </div>
               <div style={{ flex: 1, position: 'relative', background: 'var(--bg-primary)' }}>
                 {track.items.map((item) => (
@@ -253,7 +253,7 @@ export function VideoEditorView() {
                       backgroundColor: `${item.color}25`,
                     }}
                   >
-                    <span style={{ fontSize: 9, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: item.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
+                    <span style={{ fontSize: 12, fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: item.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
                   </div>
                 ))}
               </div>
@@ -272,8 +272,8 @@ function AssetItem({ icon, title, type, color = 'var(--text-primary)' }: any) {
         {icon}
       </div>
       <div>
-        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>{title}</div>
-        <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 2 }}>{type}</div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>{title}</div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 2 }}>{type}</div>
       </div>
     </div>
   );

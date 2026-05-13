@@ -242,7 +242,7 @@ export function GuidedTour({ onComplete, onSkip }: GuidedTourProps) {
                 key={i}
                 onClick={() => setCurrentStep(i)}
                 className={cn(
-                  'w-2 h-2 rounded-full transition-all duration-200',
+                  'size-2  rounded-full transition-all duration-200',
                   i === currentStep ? 'bg-[#D4B08C] w-4' : 'bg-white/20 hover:bg-white/40'
                 )}
               />
@@ -260,15 +260,15 @@ export function GuidedTour({ onComplete, onSkip }: GuidedTourProps) {
       </div>
 
       {/* Floating progress indicator */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 px-4 py-2 bg-[#141414]/90 backdrop-blur-sm border border-[color-mix(in srgb, var(--accent-primary) 10%, transparent)] rounded-full z-[10001]">
-        <Sparkle className="w-4 h-4 text-[#D4B08C]" />
+      <div className="fixed bottom-6 left-1/2 -tranzinc-x-1/2 flex items-center gap-3 px-4 py-2 bg-[#141414]/90 backdrop-blur-sm border border-[color-mix(in srgb, var(--accent-primary) 10%, transparent)] rounded-full z-[10001]">
+        <Sparkle className="size-4  text-[#D4B08C]" />
         <span className="text-sm text-white/60">Guided Tour</span>
         <div className="flex gap-1">
           {tourSteps.map((_, i) => (
             <div
               key={i}
               className={cn(
-                'w-1.5 h-1.5 rounded-full transition-all duration-200',
+                'size-1.5  rounded-full transition-all duration-200',
                 i === currentStep ? 'bg-[#D4B08C]' : 'bg-white/20'
               )}
             />

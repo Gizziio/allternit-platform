@@ -119,7 +119,7 @@ export function DetailView({
               >
                 <div className="flex items-center gap-3">
                   <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center"
+                    className="size-8  rounded-lg flex items-center justify-center"
                     style={{ background: `${agent.color}20` }}
                   >
                     <AgentIcon icon={agent.icon} color={agent.color} size={13} />
@@ -131,7 +131,7 @@ export function DetailView({
                     </div>
                   </div>
                   <div
-                    className={`w-2 h-2 rounded-full ${agentWorking ? 'animate-pulse' : ''}`}
+                    className={`size-2  rounded-full ${agentWorking ? 'animate-pulse' : ''}`}
                     style={{
                       background: agentWorking ? agent.color : TEXT.tertiary,
                       boxShadow: agentWorking ? `0 0 8px ${agent.color}` : 'none',
@@ -158,7 +158,7 @@ export function DetailView({
           >
             <div className="flex items-center justify-center mb-4">
               <div
-                className="w-24 h-24 rounded-3xl flex items-center justify-center"
+                className="size-24  rounded-3xl flex items-center justify-center"
                 style={{ background: `${selectedAgent.color}20` }}
               >
                 <AgentIcon icon={selectedAgent.icon} color={selectedAgent.color} size={40} />
@@ -183,7 +183,7 @@ export function DetailView({
                     style={{ color: isWorking ? selectedAgent.color : TEXT.secondary }}
                   >
                     <div
-                      className={`w-2 h-2 rounded-full ${isWorking ? 'animate-pulse' : ''}`}
+                      className={`size-2  rounded-full ${isWorking ? 'animate-pulse' : ''}`}
                       style={{
                         background: isWorking ? selectedAgent.color : TEXT.tertiary,
                         boxShadow: isWorking ? `0 0 8px ${selectedAgent.color}` : 'none',
@@ -248,7 +248,7 @@ export function DetailView({
                   >
                     {value}
                   </div>
-                  <div className="text-[10px] uppercase tracking-wider" style={{ color: TEXT.tertiary }}>
+                  <div className="text-xs uppercase tracking-wider" style={{ color: TEXT.tertiary }}>
                     {label}
                   </div>
                 </div>

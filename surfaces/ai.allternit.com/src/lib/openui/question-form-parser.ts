@@ -1,7 +1,7 @@
 /**
  * Question-Form Parser
  *
- * Parses <question-form id="...">JSON body</question-form> blocks emitted
+ * Parses <question-form id="…">JSON body</question-form> blocks emitted
  * by the Studio design agent. Splits a raw message string into interleaved
  * text and form segments.
  *

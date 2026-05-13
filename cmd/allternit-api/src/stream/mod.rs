@@ -10,9 +10,10 @@ use axum::{
     },
     response::IntoResponse,
     routing::get,
-    Router,
+    Json, Router,
 };
 use futures::{sink::SinkExt, stream::StreamExt};
+use serde_json::json;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::mpsc;
@@ -27,9 +28,18 @@ use allternit_agent_system_rails::{project_dag, LedgerQuery};
 
 pub fn stream_router() -> Router<Arc<AppState>> {
     Router::new()
+        .route("/", get(stream_status))
         .route("/ws/ledger", get(ledger_stream_handler))
         .route("/ws/workspace/:workspace_id/ledger", get(workspace_ledger_stream))
         .route("/ws/dag/:dag_id/events", get(dag_event_stream))
+}
+
+async fn stream_status() -> Json<serde_json::Value> {
+    Json(json!({
+        "status": "ok",
+        "service": "stream",
+        "streams": ["ws/ledger", "ws/workspace/:id/ledger", "ws/dag/:id/events"],
+    }))
 }
 
 // ============================================================================

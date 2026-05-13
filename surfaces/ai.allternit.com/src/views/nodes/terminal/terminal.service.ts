@@ -291,7 +291,7 @@ class NodeTerminalService {
       const status = await this.checkSessionStatus(sessionId);
       
       if (!status || !status.exists || !status.can_reconnect) {
-        console.log('[Terminal] Session cannot be reconnected:', status);
+        console.debug('[Terminal] Session cannot be reconnected:', status);
         return null;
       }
 
@@ -317,7 +317,7 @@ class NodeTerminalService {
       const data = await response.json();
       
       if (!data.reconnected) {
-        console.log('[Terminal] Server created new session instead of reconnecting');
+        console.debug('[Terminal] Server created new session instead of reconnecting');
         return null;
       }
 
@@ -338,7 +338,7 @@ class NodeTerminalService {
       // Connect WebSocket for this session
       await this.connectWebSocket(sessionId);
 
-      console.log('[Terminal] Successfully reconnected to session:', sessionId);
+      console.debug('[Terminal] Successfully reconnected to session:', sessionId);
       return session;
     } catch (error) {
       console.error('[Terminal] Error reconnecting session:', error);
@@ -378,7 +378,7 @@ class NodeTerminalService {
       if (reconnected) {
         return reconnected;
       }
-      console.log('[Terminal] Reconnect failed, creating new session');
+      console.debug('[Terminal] Reconnect failed, creating new session');
     }
 
     try {
@@ -442,7 +442,7 @@ class NodeTerminalService {
       this.sockets.set(sessionId, socket);
 
       socket.onopen = () => {
-        console.log(`[Terminal] Connected to session ${sessionId}`);
+        console.debug(`[Terminal] Connected to session ${sessionId}`);
         session.connected = true;
         session.lastActivity = new Date();
         this.statusHandlers.get(sessionId)?.(true);
@@ -492,7 +492,7 @@ class NodeTerminalService {
       };
 
       socket.onclose = (event) => {
-        console.log(`[Terminal] Disconnected from session ${sessionId}`, event.code, event.reason);
+        console.debug(`[Terminal] Disconnected from session ${sessionId}`, event.code, event.reason);
         session.connected = false;
         this.statusHandlers.get(sessionId)?.(false);
         this.sockets.delete(sessionId);
@@ -535,7 +535,7 @@ class NodeTerminalService {
     }
 
     if (attemptState.attempt >= attemptState.maxAttempts) {
-      console.log(`[Terminal] Max reconnection attempts reached for session ${sessionId}`);
+      console.debug(`[Terminal] Max reconnection attempts reached for session ${sessionId}`);
       this.statusHandlers.get(sessionId)?.(false);
       return;
     }
@@ -548,14 +548,14 @@ class NodeTerminalService {
       attemptState.maxDelay
     );
 
-    console.log(`[Terminal] Reconnection attempt ${attemptState.attempt}/${attemptState.maxAttempts} for session ${sessionId} in ${delay}ms`);
+    console.debug(`[Terminal] Reconnection attempt ${attemptState.attempt}/${attemptState.maxAttempts} for session ${sessionId} in ${delay}ms`);
 
     // Wait before attempting reconnection
     await new Promise(resolve => setTimeout(resolve, delay));
 
     // Check if session is already connected (maybe another reconnection succeeded)
     if (this.sockets.has(sessionId)) {
-      console.log(`[Terminal] Session ${sessionId} already reconnected`);
+      console.debug(`[Terminal] Session ${sessionId} already reconnected`);
       return;
     }
 
@@ -564,7 +564,7 @@ class NodeTerminalService {
       const reconnected = await this.reconnectSession(sessionId, session.nodeId);
       
       if (reconnected) {
-        console.log(`[Terminal] Successfully reconnected session ${sessionId}`);
+        console.debug(`[Terminal] Successfully reconnected session ${sessionId}`);
       } else {
         // Schedule next attempt
         this.attemptReconnection(sessionId);
@@ -655,7 +655,7 @@ class NodeTerminalService {
         session.lastActivity = new Date();
       }
       
-      console.log(`[Terminal] Keepalive sent for session ${sessionId}`);
+      console.debug(`[Terminal] Keepalive sent for session ${sessionId}`);
     }
   }
 

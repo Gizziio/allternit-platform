@@ -12,6 +12,7 @@
  * @module AgentTestingPlayground
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -319,7 +320,7 @@ function PlaygroundHeader({
     >
       <div className="flex items-center gap-4">
         <div 
-          className="w-10 h-10 rounded-xl flex items-center justify-center"
+          className="size-10  rounded-xl flex items-center justify-center"
           style={{
             background: modeColors.soft,
             border: `1px solid ${modeColors.border}`,
@@ -388,7 +389,7 @@ function EmptyState({
   return (
     <div className="flex flex-col items-center justify-center h-full py-12">
       <div 
-        className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
+        className="size-16  rounded-2xl flex items-center justify-center mb-4"
         style={{
           background: modeColors.soft,
           border: `1px solid ${modeColors.border}`,
@@ -595,7 +596,7 @@ function TypingIndicator({
         {[0, 1, 2].map((i) => (
           <motion.div
             key={i}
-            className="w-2 h-2 rounded-full"
+            className="size-2  rounded-full"
             style={{ background: modeColors.accent }}
             animate={{
               scale: [1, 1.2, 1],
@@ -644,7 +645,7 @@ function InputArea({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder="Type a message to test your agent..."
+          placeholder="Type a message to test your agent…"
           rows={1}
           className="flex-1 bg-transparent outline-none resize-none text-sm"
           style={{ color: TEXT.primary, minHeight: '20px', maxHeight: '120px' }}
@@ -652,7 +653,7 @@ function InputArea({
         <button
           onClick={onSend}
           disabled={!input.trim() || isRunning}
-          className="w-9 h-9 rounded-lg flex items-center justify-center transition-all disabled:opacity-40"
+          className="size-9  rounded-lg flex items-center justify-center transition-all disabled:opacity-40"
           style={{
             background: input.trim() && !isRunning ? modeColors.accent : 'var(--ui-border-default)',
             color: input.trim() && !isRunning ? 'var(--ui-text-inverse)' : TEXT.tertiary,

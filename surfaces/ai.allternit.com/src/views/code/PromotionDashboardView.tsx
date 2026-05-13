@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { GlassCard } from '../../design/GlassCard';
+import { GlassCard } from '../../design/glass/GlassCard';
 import {
   ShieldCheck,
   CheckCircle,
@@ -11,10 +11,13 @@ import {
   GearSix,
 } from '@phosphor-icons/react';
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 type ProposalStatus = 'pending' | 'approved' | 'rejected';
+type RiskLevel = 'Low' | 'Medium' | 'High';
 type SortBy = 'date' | 'risk' | 'author';
 
-interface ProposalFile {
+interface AffectedFile {
   path: string;
   additions: number;
   deletions: number;
@@ -27,38 +30,59 @@ interface Proposal {
   author: string;
   timestamp: string;
   status: ProposalStatus;
-  ciChecks: 'passed' | 'failed' | 'running';
-  riskLevel: 'Low' | 'Medium' | 'High';
-  affectedFiles: ProposalFile[];
-  reviewers?: string[];
+  riskLevel: RiskLevel;
+  affectedFiles: AffectedFile[];
+  ciChecks: 'passing' | 'failing' | 'running';
 }
 
-const getRiskColor = (risk: string): string => {
-  switch (risk) {
-    case 'Low': return 'var(--status-success)';
-    case 'Medium': return 'var(--status-warning)';
-    case 'High': return 'var(--status-error)';
-    default: return 'var(--ui-text-muted)';
-  }
-};
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const getCheckIcon = (status: string): React.ComponentType<any> | null => {
+function getRiskColor(level: RiskLevel): string {
+  switch (level) {
+    case 'High': return 'var(--status-error)';
+    case 'Medium': return 'var(--status-warning)';
+    case 'Low': return 'var(--status-success)';
+    default: return 'var(--text-tertiary)';
+  }
+}
+
+function getCheckColor(status: Proposal['ciChecks']): string {
   switch (status) {
-    case 'passed': return CheckCircle;
-    case 'failed': return XCircle;
+    case 'passing': return 'var(--status-success)';
+    case 'failing': return 'var(--status-error)';
+    case 'running': return 'var(--accent-primary)';
+    default: return 'var(--text-tertiary)';
+  }
+}
+
+function getCheckIcon(status: Proposal['ciChecks']) {
+  switch (status) {
+    case 'passing': return CheckCircle;
+    case 'failing': return XCircle;
     case 'running': return GearSix;
     default: return null;
   }
-};
+}
 
-const getCheckColor = (status: string): string => {
-  switch (status) {
-    case 'passed': return 'var(--status-success)';
-    case 'failed': return 'var(--status-error)';
-    case 'running': return 'var(--status-warning)';
-    default: return 'var(--ui-text-muted)';
-  }
-};
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
+  return (
+    <GlassCard className="p-3 text-center">
+      <div className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wider mb-1">
+        {label}
+      </div>
+      <div 
+        className="text-[20px] font-extrabold tabular-nums"
+        style={{ color }}
+      >
+        {value}
+      </div>
+    </GlassCard>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export function PromotionDashboardView() {
   const [filterStatus, setFilterStatus] = useState<'All' | ProposalStatus>('All');
@@ -97,9 +121,9 @@ export function PromotionDashboardView() {
   });
 
   const stats = {
-    pending: proposalStates ? Object.values(proposalStates).filter(s => s === 'pending').length : 0,
-    approved: proposalStates ? Object.values(proposalStates).filter(s => s === 'approved').length : 0,
-    rejected: proposalStates ? Object.values(proposalStates).filter(s => s === 'rejected').length : 0
+    pending: Object.values(proposalStates).filter(s => s === 'pending').length,
+    approved: Object.values(proposalStates).filter(s => s === 'approved').length,
+    rejected: Object.values(proposalStates).filter(s => s === 'rejected').length
   };
 
   const handleApply = (id: string) => {
@@ -111,21 +135,21 @@ export function PromotionDashboardView() {
   };
 
   return (
-    <div style={{ padding: 24, height: '100%', display: 'flex', flexDirection: 'column', gap: 20, overflow: 'hidden' }}>
+    <div className="p-6 h-full flex flex-col gap-5 overflow-hidden">
       {/* Header with Summary Stats */}
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-          <ShieldCheck size={28} color="var(--accent-primary)" />
+        <div className="flex items-center gap-3 mb-3">
+          <ShieldCheck size={28} className="text-[var(--accent-primary)]" />
           <div>
-            <h1 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>Promotion Dashboard</h1>
-            <p style={{ fontSize: 13, color: 'var(--text-tertiary)', margin: '4px 0 0 0' }}>
+            <h1 className="text-xl font-extrabold m-0">Promotion Dashboard</h1>
+            <p className="text-[13px] text-[var(--text-tertiary)] mt-1 mb-0">
               Review and manage code promotion proposals
             </p>
           </div>
         </div>
 
         {/* Summary Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 12 }}>
+        <div className="grid grid-cols-3 gap-3 mt-3">
           <StatCard label="Pending" value={stats.pending} color="#ffa500" />
           <StatCard label="Approved" value={stats.approved} color="#34c759" />
           <StatCard label="Rejected" value={stats.rejected} color="#ff3b30" />
@@ -133,24 +157,17 @@ export function PromotionDashboardView() {
       </div>
 
       {/* Filter Tabs and Sort */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-        <div style={{ display: 'flex', gap: 8 }}>
+      <div className="flex justify-between items-center gap-3">
+        <div className="flex gap-2">
           {(['All', 'pending', 'approved', 'rejected'] as const).map(status => (
             <button
               key={status}
               onClick={() => setFilterStatus(status === 'All' ? 'All' : status)}
-              style={{
-                padding: '6px 14px',
-                borderRadius: 6,
-                border: 'none',
-                background: filterStatus === status ? 'var(--accent-chat)' : 'var(--bg-secondary)',
-                color: filterStatus === status ? 'white' : 'var(--text-secondary)',
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                textTransform: 'capitalize'
-              }}
+              className={`px-3.5 py-1.5 rounded-md border-none text-[12px] font-semibold cursor-pointer transition-all duration-200 capitalize ${
+                filterStatus === status 
+                  ? 'bg-[var(--accent-chat)] text-white' 
+                  : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--surface-hover)]'
+              }`}
             >
               {status}
             </button>
@@ -161,16 +178,7 @@ export function PromotionDashboardView() {
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as SortBy)}
-          style={{
-            padding: '6px 10px',
-            borderRadius: 6,
-            border: '1px solid var(--border-subtle)',
-            background: 'var(--bg-secondary)',
-            color: 'var(--text-secondary)',
-            fontSize: 12,
-            fontWeight: 600,
-            cursor: 'pointer'
-          }}
+          className="p-1.5 px-2.5 rounded-md border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--text-secondary)] text-[12px] font-semibold cursor-pointer outline-none"
         >
           <option value="date">Sort by: Date</option>
           <option value="risk">Sort by: Risk</option>
@@ -179,8 +187,8 @@ export function PromotionDashboardView() {
       </div>
 
       {/* Proposals List */}
-      <div style={{ flex: 1, overflow: 'auto' }}>
-        <div style={{ display: 'grid', gap: 12 }}>
+      <div className="flex-1 overflow-auto">
+        <div className="grid gap-3">
           {sortedProposals.map(proposal => {
             const currentStatus = proposalStates[proposal.id];
             const isExpanded = expandedId === proposal.id;
@@ -189,71 +197,50 @@ export function PromotionDashboardView() {
             return (
               <GlassCard
                 key={proposal.id}
+                className="p-4 transition-all duration-200 border border-solid border-transparent"
                 style={{
-                  padding: 16,
-                  transition: 'all 0.2s ease'
+                   borderColor: isExpanded ? 'var(--border-subtle)' : undefined
                 }}
               >
                 {/* Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                      <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-tertiary)' }}>
+                <div className="flex justify-between items-start gap-3 mb-3">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className="text-[12px] font-extrabold text-[var(--text-tertiary)]">
                         {proposal.id}
                       </div>
-                      <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>•</span>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-tertiary)' }}>
+                      <span className="text-[12px] text-[var(--text-tertiary)]">•</span>
+                      <div className="text-[12px] font-semibold text-[var(--text-tertiary)]">
                         {proposal.author}
                       </div>
-                      <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>•</span>
-                      <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+                      <span className="text-[12px] text-[var(--text-tertiary)]">•</span>
+                      <div className="text-[12px] text-[var(--text-tertiary)]">
                         {proposal.timestamp}
                       </div>
                     </div>
-                    <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>
+                    <h3 className="m-0 text-[15px] font-bold text-[var(--text-primary)] mb-1">
                       {proposal.title}
                     </h3>
-                    <p style={{ margin: 0, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                    <p className="m-0 text-[12px] text-[var(--text-secondary)] leading-relaxed">
                       {proposal.description}
                     </p>
                   </div>
 
                   {/* Status Badge */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+                  <div className="flex flex-col items-end gap-2">
                     <div>
                       {currentStatus === 'approved' && (
-                        <div style={{
-                          padding: '4px 10px',
-                          borderRadius: 4,
-                          background: 'var(--status-success-bg)',
-                          color: 'var(--status-success)',
-                          fontSize: 10,
-                          fontWeight: 700
-                        }}>
+                        <div className="px-2.5 py-1 rounded bg-[var(--status-success-bg)] text-[var(--status-success)] text-[10px] font-bold">
                           DEPLOYED
                         </div>
                       )}
                       {currentStatus === 'rejected' && (
-                        <div style={{
-                          padding: '4px 10px',
-                          borderRadius: 4,
-                          background: 'var(--status-error-bg)',
-                          color: 'var(--status-error)',
-                          fontSize: 10,
-                          fontWeight: 700
-                        }}>
+                        <div className="px-2.5 py-1 rounded bg-[var(--status-error-bg)] text-[var(--status-error)] text-[10px] font-bold">
                           REJECTED
                         </div>
                       )}
                       {currentStatus === 'pending' && (
-                        <div style={{
-                          padding: '4px 10px',
-                          borderRadius: 4,
-                          background: 'var(--status-warning-bg)',
-                          color: 'var(--status-warning)',
-                          fontSize: 10,
-                          fontWeight: 700
-                        }}>
+                        <div className="px-2.5 py-1 rounded bg-[var(--status-warning-bg)] text-[var(--status-warning)] text-[10px] font-bold">
                           PENDING
                         </div>
                       )}
@@ -262,34 +249,30 @@ export function PromotionDashboardView() {
                 </div>
 
                 {/* Metadata Row */}
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12, paddingTop: 12, borderTop: '1px solid var(--border-subtle)' }}>
+                <div className="flex gap-3 items-center mb-3 pt-3 border-t border-solid border-[var(--border-subtle)]">
                   {/* CI Checks */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    {CheckIconComponent && <CheckIconComponent size={14} color={getCheckColor(proposal.ciChecks)} />}
-                    <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600, textTransform: 'uppercase' }}>
+                  <div className="flex items-center gap-1.5">
+                    {CheckIconComponent && <CheckIconComponent size={14} style={{ color: getCheckColor(proposal.ciChecks) }} />}
+                    <span className="text-[12px] text-[var(--text-secondary)] font-semibold uppercase">
                       CI: {proposal.ciChecks}
                     </span>
                   </div>
 
                   {/* Risk Level */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Warning size={14} color={getRiskColor(proposal.riskLevel)} />
+                  <div className="flex items-center gap-1.5">
+                    <Warning size={14} style={{ color: getRiskColor(proposal.riskLevel) }} />
                     <span
-                      style={{
-                        fontSize: 11,
-                        color: getRiskColor(proposal.riskLevel),
-                        fontWeight: 600,
-                        textTransform: 'uppercase'
-                      }}
+                      className="text-[12px] font-semibold uppercase"
+                      style={{ color: getRiskColor(proposal.riskLevel) }}
                     >
                       Risk: {proposal.riskLevel}
                     </span>
                   </div>
 
                   {/* Affected Files Count */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <FolderOpen size={14} color="var(--text-tertiary)" />
-                    <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 600 }}>
+                  <div className="flex items-center gap-1.5">
+                    <FolderOpen size={14} className="text-[var(--text-tertiary)]" />
+                    <span className="text-[12px] text-[var(--text-secondary)] font-semibold">
                       {proposal.affectedFiles.length} files
                     </span>
                   </div>
@@ -297,14 +280,7 @@ export function PromotionDashboardView() {
                   {/* Expand Button */}
                   <button
                     onClick={() => setExpandedId(isExpanded ? null : proposal.id)}
-                    style={{
-                      marginLeft: 'auto',
-                      padding: 4,
-                      border: 'none',
-                      background: 'transparent',
-                      color: 'var(--text-tertiary)',
-                      cursor: 'pointer'
-                    }}
+                    className="ml-auto p-1 border-none bg-transparent text-[var(--text-tertiary)] cursor-pointer"
                   >
                     {isExpanded ? <CaretUp size={16} /> : <CaretDown size={16} />}
                   </button>
@@ -312,26 +288,18 @@ export function PromotionDashboardView() {
 
                 {/* Expanded Content - Affected Files */}
                 {isExpanded && (
-                  <div style={{ paddingTop: 12, borderTop: '1px solid var(--border-subtle)' }}>
-                    <h4 style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', marginBottom: 8, margin: 0 }}>
+                  <div className="pt-3 border-t border-solid border-[var(--border-subtle)]">
+                    <h4 className="text-[12px] font-bold text-[var(--text-tertiary)] uppercase mb-2 m-0">
                       Affected Files
                     </h4>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+                    <div className="flex flex-col gap-1.5 mb-3">
                       {proposal.affectedFiles.map((file, idx) => (
-                        <div key={idx} style={{
-                          padding: 8,
-                          background: 'rgba(255, 255, 255, 0.02)',
-                          borderRadius: 4,
-                          fontSize: 11,
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center'
-                        }}>
-                          <span style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-code)' }}>
+                        <div key={idx} className="p-2 bg-white/5 rounded text-[12px] flex justify-between items-center">
+                          <span className="text-[var(--text-secondary)] font-mono">
                             {file.path}
                           </span>
-                          <span style={{ color: 'var(--text-tertiary)', fontSize: 10, fontVariantNumeric: 'tabular-nums' }}>
-                            <span style={{ color: 'var(--status-success)' }}>+{file.additions}</span> <span style={{ color: 'var(--status-error)' }}>-{file.deletions}</span>
+                          <span className="text-[var(--text-tertiary)] text-[11px] tabular-nums">
+                            <span className="text-[var(--status-success)]">+{file.additions}</span> <span className="text-[var(--status-error)]">-{file.deletions}</span>
                           </span>
                         </div>
                       ))}
@@ -341,38 +309,16 @@ export function PromotionDashboardView() {
 
                 {/* Action Buttons */}
                 {currentStatus === 'pending' && (
-                  <div style={{ display: 'flex', gap: 8, paddingTop: 12, borderTop: '1px solid var(--border-subtle)' }}>
+                  <div className="flex gap-2 pt-3 border-t border-solid border-[var(--border-subtle)]">
                     <button
                       onClick={() => handleApply(proposal.id)}
-                      style={{
-                        flex: 1,
-                        padding: '8px 12px',
-                        borderRadius: 6,
-                        border: 'none',
-                        background: 'var(--status-success)',
-                        color: 'white',
-                        fontSize: 12,
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
+                      className="flex-1 py-2 px-3 rounded-md border-none bg-[var(--status-success)] text-white text-[12px] font-bold cursor-pointer transition-all duration-200 hover:brightness-110 active:scale-95"
                     >
                       Apply Proposal
                     </button>
                     <button
                       onClick={() => handleReject(proposal.id)}
-                      style={{
-                        flex: 1,
-                        padding: '8px 12px',
-                        borderRadius: 6,
-                        border: '1px solid var(--border-subtle)',
-                        background: 'transparent',
-                        color: 'var(--status-error)',
-                        fontSize: 12,
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
+                      className="flex-1 py-2 px-3 rounded-md border border-solid border-[var(--border-subtle)] bg-transparent text-[var(--status-error)] text-[12px] font-bold cursor-pointer transition-all duration-200 hover:bg-[var(--status-error-bg)]"
                     >
                       Reject
                     </button>
@@ -384,18 +330,5 @@ export function PromotionDashboardView() {
         </div>
       </div>
     </div>
-  );
-}
-
-function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
-  return (
-    <GlassCard style={{ padding: 12, textAlign: 'center' }}>
-      <div style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
-        {label}
-      </div>
-      <div style={{ fontSize: 20, fontWeight: 800, color, fontVariantNumeric: 'tabular-nums' }}>
-        {value}
-      </div>
-    </GlassCard>
   );
 }

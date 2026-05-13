@@ -98,7 +98,7 @@ export function VPSConnectionModal({
             >
               <div className="flex items-center gap-3">
                 <div 
-                  className="w-10 h-10 rounded-xl flex items-center justify-center"
+                  className="size-10  rounded-xl flex items-center justify-center"
                   style={{
                     background: `linear-gradient(135deg, ${STATUS.info}33, rgba(147,51,234,0.2))`,
                     border: `1px solid ${STATUS.info}4c`,
@@ -115,7 +115,7 @@ export function VPSConnectionModal({
               </div>
               <button
                 onClick={handleClose}
-                className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
+                className="size-8  rounded-lg flex items-center justify-center transition-colors"
                 style={{ background: 'transparent', color: TEXT.secondary }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.background = 'var(--surface-panel)';
@@ -153,7 +153,7 @@ export function VPSConnectionModal({
                 >
                   <div className="flex items-start gap-4">
                     <div 
-                      className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                      className="size-12  rounded-xl flex items-center justify-center flex-shrink-0"
                       style={{
                         background: `linear-gradient(135deg, ${STATUS.success}33, rgba(16,185,129,0.2))`,
                         border: `1px solid ${STATUS.success}4c`,
@@ -170,12 +170,12 @@ export function VPSConnectionModal({
                         Provision a new VPS from Hetzner, DigitalOcean, AWS, or other providers with our guided setup.
                       </p>
                       <div className="flex items-center gap-2 text-xs" style={{ color: TEXT.tertiary }}>
-                        <Cloud className="w-3.5 h-3.5" />
+                        <Cloud className="size-3.5 " />
                         <span>5+ providers supported</span>
                       </div>
                     </div>
                     <CaretRight 
-                      className="w-5 h-5 absolute right-4 top-1/2 -translate-y-1/2 transition-opacity" 
+                      className="size-5  absolute right-4 top-1/2 -tranzinc-y-1/2 transition-opacity" 
                       style={{ color: TEXT.secondary, opacity: 0 }}
                     />
                   </div>
@@ -205,7 +205,7 @@ export function VPSConnectionModal({
                 >
                   <div className="flex items-start gap-4">
                     <div 
-                      className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+                      className="size-12  rounded-xl flex items-center justify-center flex-shrink-0"
                       style={{
                         background: `linear-gradient(135deg, ${STATUS.info}33, rgba(147,51,234,0.2))`,
                         border: `1px solid ${STATUS.info}4c`,
@@ -219,12 +219,12 @@ export function VPSConnectionModal({
                         Already have a VPS? Connect it directly via SSH. Just like Claude Code - simple and fast.
                       </p>
                       <div className="flex items-center gap-2 text-xs" style={{ color: TEXT.tertiary }}>
-                        <Terminal className="w-3.5 h-3.5" />
+                        <Terminal className="size-3.5 " />
                         <span>SSH key or password auth</span>
                       </div>
                     </div>
                     <CaretRight 
-                      className="w-5 h-5 absolute right-4 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity" 
+                      className="size-5  absolute right-4 top-1/2 -tranzinc-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity" 
                       style={{ color: TEXT.secondary }}
                     />
                   </div>
@@ -240,7 +240,7 @@ export function VPSConnectionModal({
                 }}
               >
                 <div 
-                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                  className="size-8  rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{ background: `${STATUS.info}1a` }}
                 >
                   <HardDrives size={16} style={{ color: STATUS.info }} />

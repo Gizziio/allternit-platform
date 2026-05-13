@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { GlassCard } from '../design/GlassCard';
+import { GlassCard } from '../design/glass/GlassCard';
+import { tokens } from '../design/tokens';
 import {
   Robot,
   Clock,
@@ -13,7 +14,6 @@ import {
   Circle,
   Play,
   Pause,
-  X,
   ChartLine,
   Gear,
   Pulse as Activity,
@@ -71,32 +71,37 @@ const LOG_LEVEL_CONFIG: Record<LogEntry['level'], { color: string; bg: string }>
 function StatusDot({ status }: { status: AgentMetric['status'] }) {
   const cfg = STATUS_CONFIG[status];
   return (
-    <span style={{
-      display: 'inline-block',
-      width: 8,
-      height: 8,
-      borderRadius: '50%',
-      background: cfg.dotColor,
-      boxShadow: status === 'active' ? `0 0 6px ${cfg.dotColor}` : 'none',
-      flexShrink: 0,
-    }} />
+    <span 
+      className="inline-block size-2 rounded-full shrink-0"
+      style={{
+        background: cfg.dotColor,
+        boxShadow: status === 'active' ? `0 0 6px ${cfg.dotColor}` : 'none',
+      }} 
+    />
   );
 }
 
 function MetricCard({ metric }: { metric: SystemMetric }) {
   const TrendIcon = metric.trend === 'up' ? ArrowUp : metric.trend === 'down' ? ArrowDown : Circle;
   return (
-    <GlassCard style={{ padding: '20px 24px', flex: 1, minWidth: 160 }}>
-      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+    <GlassCard className="p-5 px-6 flex-1 min-w-[160px]">
+      <div className="text-[12px] font-semibold text-[var(--text-tertiary)] mb-2 uppercase tracking-[0.06em]">
         {metric.label}
       </div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 4 }}>
-        <span style={{ fontSize: 32, fontWeight: 800, color: metric.color, fontVariantNumeric: 'tabular-nums' }}>
+      <div className="flex items-baseline gap-1.5 mb-1">
+        <span 
+          className="text-[32px] font-extrabold tabular-nums"
+          style={{ color: metric.color }}
+        >
           {metric.value}
         </span>
-        <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>{metric.unit}</span>
+        <span className="text-[13px] text-[var(--text-tertiary)]">{metric.unit}</span>
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: metric.trend === 'up' ? 'var(--status-warning)' : metric.trend === 'down' ? 'var(--status-success)' : 'var(--text-tertiary)' }}>
+      <div className={`flex items-center gap-1 text-[12px] ${
+        metric.trend === 'up' ? 'text-[var(--status-warning)]' : 
+        metric.trend === 'down' ? 'text-[var(--status-success)]' : 
+        'text-[var(--text-tertiary)]'
+      }`}>
         <TrendIcon size={12} weight="bold" />
         {metric.trendValue} vs yesterday
       </div>
@@ -132,7 +137,7 @@ export function MonitorView() {
   const activeCount  = agents.filter(a => a.status === 'active').length;
   const errorCount   = agents.filter(a => a.status === 'error').length;
   const totalTokens  = agents.reduce((s, a) => s + a.tokensUsed, 0);
-  const avgLatency   = Math.round(agents.filter(a => a.latencyMs > 0).reduce((s, a) => s + a.latencyMs, 0) / agents.filter(a => a.latencyMs > 0).length);
+  const avgLatency   = agents.length > 0 ? Math.round(agents.filter(a => a.latencyMs > 0).reduce((s, a) => s + a.latencyMs, 0) / (agents.filter(a => a.latencyMs > 0).length || 1)) : 0;
 
   const filteredLogs = logFilter === 'all' ? logs : logs.filter(l => l.level === logFilter);
 
@@ -142,39 +147,38 @@ export function MonitorView() {
   ];
 
   return (
-    <div style={{ padding: 32, height: '100%', overflow: 'auto', boxSizing: 'border-box' }}>
+    <div className="p-8 h-full overflow-auto box-border">
 
       {/* ── Header ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 32 }}>
+      <div className="flex justify-between items-start mb-8">
         <div>
-          <h1 style={{ fontSize: 32, fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
+          <h1 className="text-3xl font-extrabold m-0 tracking-tight">
             Agent Monitor
           </h1>
-          <p style={{ margin: '6px 0 0', fontSize: 14, color: 'var(--text-tertiary)' }}>
+          <p className="m-0 mt-1.5 text-sm text-[var(--text-tertiary)]">
             Live view of all running agents and system activity
           </p>
         </div>
         <button
           onClick={handleRefresh}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '10px 18px', borderRadius: 10,
-            background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)',
-            color: 'var(--text-primary)', fontWeight: 600, fontSize: 13, cursor: 'pointer',
-          }}
+          className="flex items-center gap-2 p-2.5 px-[18px] rounded-[10px] bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] font-semibold text-[13px] cursor-pointer transition-all hover:bg-[var(--surface-hover)] active:scale-95"
         >
-          <ArrowClockwise size={16} weight="bold" style={{ animation: refreshing ? 'spin 0.6s linear' : 'none' }} />
+          <ArrowClockwise 
+            size={16} 
+            weight="bold" 
+            className={refreshing ? 'animate-spin' : ''} 
+          />
           Refresh
         </button>
       </div>
 
       {/* ── System Metrics Row ── */}
-      <div style={{ display: 'flex', gap: 16, marginBottom: 32, flexWrap: 'wrap' }}>
+      <div className="flex gap-4 mb-8 flex-wrap">
         {systemMetrics.map(m => <MetricCard key={m.label} metric={m} />)}
       </div>
 
       {/* ── Quick Stats Chips ── */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 28, flexWrap: 'wrap' }}>
+      <div className="flex gap-3 mb-7 flex-wrap">
         {[
           { icon: Robot,      label: `${agents.length} total agents`,    color: 'var(--text-secondary)' },
           { icon: CheckCircle,label: `${activeCount} active`,            color: 'var(--status-success)' },
@@ -182,12 +186,7 @@ export function MonitorView() {
           { icon: Cpu,        label: `Avg ${avgLatency}ms latency`,      color: 'var(--accent-chat)' },
           { icon: ChartLine,  label: `${(totalTokens/1000).toFixed(0)}K tokens today`, color: 'var(--accent-primary)' },
         ].map(({ icon: Icon, label, color }) => (
-          <div key={label} style={{
-            display: 'flex', alignItems: 'center', gap: 7,
-            padding: '6px 14px', borderRadius: 20,
-            background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)',
-            fontSize: 13, fontWeight: 500, color,
-          }}>
+          <div key={label} className="flex items-center gap-1.5 p-1.5 px-3.5 rounded-full bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[13px] font-medium" style={{ color }}>
             <Icon size={14} weight="bold" />
             {label}
           </div>
@@ -195,18 +194,16 @@ export function MonitorView() {
       </div>
 
       {/* ── Tab Bar ── */}
-      <div style={{ display: 'flex', gap: 0, marginBottom: 20, borderBottom: '1px solid var(--border-subtle)' }}>
+      <div className="flex gap-0 mb-5 border-b border-[var(--border-subtle)]">
         {TABS.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            style={{
-              padding: '10px 20px', background: 'none', border: 'none',
-              borderBottom: activeTab === tab.id ? '2px solid var(--accent-chat)' : '2px solid transparent',
-              color: activeTab === tab.id ? 'var(--text-primary)' : 'var(--text-tertiary)',
-              fontWeight: activeTab === tab.id ? 700 : 400,
-              fontSize: 14, cursor: 'pointer', transition: 'all 0.15s',
-            }}
+            className={`p-2.5 px-5 bg-transparent border-none cursor-pointer transition-all text-sm ${
+              activeTab === tab.id 
+                ? 'border-b-2 border-solid border-[var(--accent-chat)] text-[var(--text-primary)] font-bold' 
+                : 'border-b-2 border-solid border-transparent text-[var(--text-tertiary)] font-normal hover:text-[var(--text-secondary)]'
+            }`}
           >
             {tab.label}
           </button>
@@ -215,48 +212,42 @@ export function MonitorView() {
 
       {/* ── Agents Tab ── */}
       {activeTab === 'agents' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="flex flex-col gap-2.5">
           {agents.map(agent => {
             const cfg = STATUS_CONFIG[agent.status];
             const isSelected = selectedAgent === agent.id;
             return (
               <GlassCard
                 key={agent.id}
+                className={`p-4 px-5 cursor-pointer transition-[border-color] duration-150 ${
+                  isSelected ? 'border-solid' : ''
+                }`}
                 style={{
-                  padding: '16px 20px',
-                  cursor: 'pointer',
-                  border: isSelected ? `1px solid ${cfg.color}40` : undefined,
-                  transition: 'border-color 0.15s',
+                  borderColor: isSelected ? `${cfg.color}40` : undefined,
                 }}
                 onClick={() => setSelectedAgent(isSelected ? null : agent.id)}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div className="flex items-center gap-4">
                   {/* Status + Name */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 200 }}>
+                  <div className="flex items-center gap-2.5 min-w-[200px]">
                     <StatusDot status={agent.status} />
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: 14, fontFamily: 'var(--font-code)', color: 'var(--text-primary)' }}>
+                      <div className="font-bold text-sm font-mono text-[var(--text-primary)]">
                         {agent.name}
                       </div>
-                      <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                      <div className="text-[12px] text-[var(--text-tertiary)] mt-0.5">
                         {agent.type} · {agent.model}
                       </div>
                     </div>
                   </div>
 
                   {/* Status Badge */}
-                  <span style={{
-                    padding: '3px 10px', borderRadius: 20,
-                    background: `${cfg.color}18`,
-                    color: cfg.color,
-                    fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
-                    textTransform: 'uppercase',
-                  }}>
+                  <span className="p-1 px-2.5 rounded-full text-[12px] font-bold tracking-wider uppercase" style={{ background: `${cfg.color}18`, color: cfg.color }}>
                     {cfg.label}
                   </span>
 
                   {/* Stats */}
-                  <div style={{ display: 'flex', gap: 24, marginLeft: 'auto' }}>
+                  <div className="flex gap-6 ml-auto">
                     {[
                       { label: 'Tasks', value: agent.taskCount.toString() },
                       { label: 'Tokens', value: agent.tokensUsed >= 1000 ? `${(agent.tokensUsed/1000).toFixed(1)}K` : agent.tokensUsed.toString() },
@@ -264,15 +255,15 @@ export function MonitorView() {
                       { label: 'Uptime', value: agent.uptime },
                       { label: 'Last Active', value: agent.lastActivity },
                     ].map(({ label, value }) => (
-                      <div key={label} style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 2 }}>{label}</div>
-                        <div style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{value}</div>
+                      <div key={label} className="text-right">
+                        <div className="text-[12px] text-[var(--text-tertiary)] mb-0.5">{label}</div>
+                        <div className="text-[13px] font-semibold tabular-nums">{value}</div>
                       </div>
                     ))}
                   </div>
 
                   {/* Actions */}
-                  <div style={{ display: 'flex', gap: 6, marginLeft: 16 }}>
+                  <div className="flex gap-1.5 ml-4">
                     {agent.status === 'active' && (
                       <ActionBtn icon={Pause} title="Pause" onClick={e => { e.stopPropagation(); }} />
                     )}
@@ -288,25 +279,18 @@ export function MonitorView() {
 
                 {/* Expanded Detail Row */}
                 {isSelected && (
-                  <div style={{
-                    marginTop: 16, paddingTop: 16,
-                    borderTop: '1px solid var(--border-subtle)',
-                    display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16,
-                  }}>
+                  <div className="mt-4 pt-4 border-t border-[var(--border-subtle)] grid grid-cols-4 gap-4">
                     {[
                       { icon: HardDrive, label: 'Memory', value: `${agent.memMb} MB` },
                       { icon: Cpu,       label: 'Model',   value: agent.model },
                       { icon: Clock,     label: 'Uptime',  value: agent.uptime },
                       { icon: Activity,  label: 'Status',  value: cfg.label },
                     ].map(({ icon: Icon, label, value }) => (
-                      <div key={label} style={{
-                        background: 'var(--bg-primary)', borderRadius: 10,
-                        padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12,
-                      }}>
-                        <Icon size={20} weight="duotone" style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />
+                      <div key={label} className="bg-[var(--bg-primary)] rounded-[10px] p-3 px-4 flex items-center gap-3">
+                        <Icon size={20} weight="duotone" className="text-[var(--accent-primary)] shrink-0" />
                         <div>
-                          <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 2 }}>{label}</div>
-                          <div style={{ fontSize: 13, fontWeight: 700 }}>{value}</div>
+                          <div className="text-[12px] text-[var(--text-tertiary)] mb-0.5">{label}</div>
+                          <div className="text-[13px] font-bold">{value}</div>
                         </div>
                       </div>
                     ))}
@@ -322,58 +306,47 @@ export function MonitorView() {
       {activeTab === 'logs' && (
         <div>
           {/* Log Level Filter */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+          <div className="flex gap-2 mb-4">
             {(['all', 'info', 'warn', 'error'] as const).map(level => (
               <button
                 key={level}
                 onClick={() => setLogFilter(level)}
-                style={{
-                  padding: '6px 16px', borderRadius: 20,
-                  background: logFilter === level ? 'var(--accent-chat)' : 'var(--bg-secondary)',
-                  border: '1px solid var(--border-subtle)',
-                  color: logFilter === level ? 'var(--ui-text-inverse)' : 'var(--ui-text-secondary)',
-                  fontWeight: 600, fontSize: 12, cursor: 'pointer',
-                  textTransform: 'uppercase', letterSpacing: '0.05em',
-                }}
+                className={`p-1.5 px-4 rounded-full border border-solid text-[12px] font-semibold cursor-pointer uppercase tracking-wider transition-all ${
+                  logFilter === level 
+                    ? 'bg-[var(--accent-chat)] border-transparent text-[var(--ui-text-inverse)]' 
+                    : 'bg-[var(--bg-secondary)] border-[var(--border-subtle)] text-[var(--ui-text-secondary)] hover:bg-[var(--surface-hover)]'
+                }`}
               >
                 {level}
               </button>
             ))}
-            <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-tertiary)', alignSelf: 'center' }}>
+            <span className="ml-auto text-[12px] text-[var(--text-tertiary)] self-center">
               {filteredLogs.length} entries
             </span>
           </div>
 
           {/* Log Entries */}
-          <GlassCard style={{ padding: 0, overflow: 'hidden' }}>
+          <GlassCard className="p-0 overflow-hidden">
             {filteredLogs.map((entry, idx) => {
               const cfg = LOG_LEVEL_CONFIG[entry.level];
               return (
                 <div
                   key={entry.id}
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '80px 50px 140px 1fr',
-                    gap: 16,
-                    padding: '10px 16px',
-                    background: cfg.bg,
-                    borderBottom: idx < filteredLogs.length - 1 ? '1px solid var(--border-subtle)' : 'none',
-                    alignItems: 'center',
-                  }}
+                  className={`grid grid-cols-[80px_50px_140px_1fr] gap-4 p-2.5 px-4 items-center ${
+                    idx < filteredLogs.length - 1 ? 'border-b border-solid border-[var(--border-subtle)]' : ''
+                  }`}
+                  style={{ background: cfg.bg }}
                 >
-                  <span style={{ fontSize: 11, fontFamily: 'var(--font-code)', color: 'var(--text-tertiary)' }}>
+                  <span className="text-[12px] font-mono text-[var(--text-tertiary)]">
                     {entry.time}
                   </span>
-                  <span style={{
-                    fontSize: 10, fontWeight: 700, color: cfg.color,
-                    textTransform: 'uppercase', letterSpacing: '0.06em',
-                  }}>
+                  <span className="text-[12px] font-bold uppercase tracking-widest" style={{ color: cfg.color }}>
                     {entry.level}
                   </span>
-                  <span style={{ fontSize: 12, fontFamily: 'var(--font-code)', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span className="text-[12px] font-mono text-[var(--text-secondary)] truncate">
                     {entry.agent}
                   </span>
-                  <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>
+                  <span className="text-[13px] text-[var(--text-primary)]">
                     {entry.message}
                   </span>
                 </div>
@@ -403,14 +376,8 @@ function ActionBtn({
     <button
       title={title}
       onClick={onClick}
-      style={{
-        width: 32, height: 32, borderRadius: 8, border: 'none',
-        background: 'var(--bg-primary)', color,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        cursor: 'pointer', transition: 'background 0.15s',
-      }}
-      onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-secondary)')}
-      onMouseLeave={e => (e.currentTarget.style.background = 'var(--bg-primary)')}
+      className="size-8 rounded-lg border-none bg-[var(--bg-primary)] flex items-center justify-center cursor-pointer transition-colors duration-150 hover:bg-[var(--bg-secondary)]"
+      style={{ color }}
     >
       <Icon size={15} weight="bold" />
     </button>

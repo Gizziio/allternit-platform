@@ -97,23 +97,28 @@ export function AllternitDeckPlayer({
       margin: 0.04,
     });
 
-    deck.initialize().then(() => {
+    const initDeck = async () => {
+      await deck.initialize();
       revealRef.current = deck;
 
       // Listen for slide changes
-      deck.on('slidechanged', (event: any) => {
-        const newIndex = event.indexh;
-        setCurrentIndex(newIndex);
-        onSlideChange?.(newIndex);
-      });
+      deck.on('slidechanged', handleSlideChange);
 
-      // Sync with controlled prop
       if (controlledSlide !== undefined) {
         deck.slide(controlledSlide);
       }
-    });
+    };
+
+    const handleSlideChange = (event: any) => {
+      const newIndex = event.indexh;
+      setCurrentIndex(newIndex);
+      onSlideChange?.(newIndex);
+    };
+
+    initDeck();
 
     return () => {
+      deck.off('slidechanged', handleSlideChange);
       deck.destroy();
     };
   }, []);
@@ -212,7 +217,7 @@ export function AllternitDeckPlayer({
       {showToolbar && (
         <div className="h-12 border-b border-[#333] flex items-center justify-between px-4 bg-[#1e1e1e] z-10">
           <div className="flex items-center gap-3">
-            <Presentation className="w-4 h-4 text-[#f59e0b]" />
+            <Presentation className="size-4  text-[#f59e0b]" />
             <span className="text-sm font-medium text-[#ECECEC] truncate max-w-[200px]">
               {title}
             </span>
@@ -323,7 +328,7 @@ export function AllternitDeckPlayer({
           disabled={currentIndex === 0}
           className="text-[#888] hover:text-[#ECECEC] disabled:opacity-30"
         >
-          <CaretLeft className="w-4 h-4 mr-1" />
+          <CaretLeft className="size-4  mr-1" />
           <span className="text-xs">Previous</span>
         </Button>
 
@@ -334,7 +339,7 @@ export function AllternitDeckPlayer({
               key={index}
               onClick={() => goToSlide(index)}
               className={cn(
-                "w-2 h-2 rounded-full transition-all duration-200",
+                "size-2  rounded-full transition-all duration-200",
                 index === currentIndex
                   ? "bg-[#D4956A] w-4"
                   : "bg-[#333] hover:bg-[#444]"
@@ -443,7 +448,7 @@ function renderSlideContent(slide: Slide) {
             <ul className="space-y-3">
               {slide.content?.map((item, i) => (
                 <li key={i} className="text-[#b8b8b8] flex items-start gap-2">
-                  <span className="w-2 h-2 rounded-full bg-[#D4956A] mt-2 flex-shrink-0" />
+                  <span className="size-2  rounded-full bg-[#D4956A] mt-2 flex-shrink-0" />
                   <span>{item}</span>
                 </li>
               ))}
@@ -488,7 +493,7 @@ function renderSlideContent(slide: Slide) {
             <ul className="space-y-4">
               {slide.content?.map((item, i) => (
                 <li key={i} className="text-[#b8b8b8] text-lg flex items-start gap-3">
-                  <span className="w-2 h-2 rounded-full bg-[#D4956A] mt-2.5 flex-shrink-0" />
+                  <span className="size-2  rounded-full bg-[#D4956A] mt-2.5 flex-shrink-0" />
                   <span>{item}</span>
                 </li>
               ))}

@@ -145,13 +145,13 @@ export function MultiRegionDeploy({
     switch (status) {
       case 'running':
       case 'healthy':
-        return <Check className="w-5 h-5 text-green-500" />;
+        return <Check className="size-5  text-green-500" />;
       case 'failed':
-        return <X className="w-5 h-5 text-red-500" />;
+        return <X className="size-5  text-red-500" />;
       case 'provisioning':
-        return <CircleNotch className="w-5 h-5 text-primary animate-spin" />;
+        return <CircleNotch className="size-5  text-primary animate-spin" />;
       default:
-        return <Clock className="w-5 h-5 text-muted-foreground" />;
+        return <Clock className="size-5  text-muted-foreground" />;
     }
   };
 
@@ -206,10 +206,10 @@ export function MultiRegionDeploy({
               />
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                  <MapPin className="size-4  text-muted-foreground" />
                   <span className="font-medium">{region.name}</span>
                   {!region.available && (
-                    <Badge variant="secondary" className="text-[10px]">Unavailable</Badge>
+                    <Badge variant="secondary" className="text-xs">Unavailable</Badge>
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -298,7 +298,7 @@ export function MultiRegionDeploy({
       >
         {isDeploying ? (
           <>
-            <CircleNotch className="w-4 h-4 animate-spin" />
+            <CircleNotch className="size-4  animate-spin" />
             Deploying to {selectedRegions.size} regions...
           </>
         ) : (
@@ -354,7 +354,7 @@ export function MultiRegionDeploy({
                             status.status === 'running' ? 'default' :
                             status.status === 'failed' ? 'destructive' :
                             'secondary'
-                          } className="text-[10px]">
+                          } className="text-xs">
                             {status.status}
                           </Badge>
                         </div>

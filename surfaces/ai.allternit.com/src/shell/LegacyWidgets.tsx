@@ -42,7 +42,7 @@ function VoiceOrbWidget() {
       }} />
       <div style={{
         padding: "4px 10px",
-        fontSize: 11,
+        fontSize: 12,
         borderRadius: 999,
         background: "var(--shell-vision-label-bg)",
         color: "var(--shell-vision-label-fg)",
@@ -85,13 +85,13 @@ function VisionWidget() {
       boxShadow: "var(--shadow-lg)",
       minWidth: 220,
     }}>
-      <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.6, textTransform: "uppercase" }}>
+      <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.6, textTransform: "uppercase" }}>
         Allternit Vision
       </div>
       {lastTool ? (
         <div style={{ marginTop: 6 }}>
           <div style={{ fontSize: 12, fontWeight: 600 }}>{lastTool.toolName}</div>
-          <div style={{ fontSize: 11, opacity: 0.7, marginTop: 2 }}>{lastTool.status.toUpperCase()}</div>
+          <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2 }}>{lastTool.status.toUpperCase()}</div>
         </div>
       ) : (
         <div style={{ fontSize: 12, opacity: 0.6, marginTop: 6 }}>No tool calls yet.</div>
@@ -100,7 +100,7 @@ function VisionWidget() {
   );
 }
 
-export function LegacyWidgetsLayer() {
+export function LegacyWidgetsLayer(): JSX.Element {
   // Voice presence and vision widgets removed - now handled by VoicePresence component
   return null;
 }

@@ -111,7 +111,7 @@ export function useBrainChat(options: UseBrainChatOptions): UseBrainChatReturn {
           switch (event.type) {
             case 'session.started':
               // Session started, begin streaming
-              console.log('[useBrainChat] Session started:', event.payload);
+              console.debug('[useBrainChat] Session started:', event.payload);
               break;
               
             case 'content_block_delta':

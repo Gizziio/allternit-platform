@@ -269,7 +269,7 @@ export function LessonPlayer({ lesson, onClose, onProgressUpdate }: LessonPlayer
         background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(16px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
-        <Text variant="body" style={{ color: TEXT_MUTED }}>Loading lesson...</Text>
+        <Text variant="body" style={{ color: TEXT_MUTED }}>Loading lesson…</Text>
       </div>
     );
   }
@@ -317,7 +317,7 @@ export function LessonPlayer({ lesson, onClose, onProgressUpdate }: LessonPlayer
             <Text variant="subheading" style={{ fontSize: 14, fontWeight: 700, color: TEXT_PRIMARY, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {lesson.title}
             </Text>
-            <Text variant="caption" style={{ fontSize: 11, color: TEXT_MUTED }}>
+            <Text variant="caption" style={{ fontSize: 12, color: TEXT_MUTED }}>
               {lesson.courseCode} · M{lesson.moduleNumber}·L{lesson.lessonNumber}
             </Text>
           </div>
@@ -335,14 +335,14 @@ export function LessonPlayer({ lesson, onClose, onProgressUpdate }: LessonPlayer
                 transition: 'width 0.4s ease',
               }} />
             </div>
-            <Text variant="caption" style={{ fontSize: 11, color: TEXT_MUTED, fontVariantNumeric: 'tabular-nums', minWidth: 32 }}>
+            <Text variant="caption" style={{ fontSize: 12, color: TEXT_MUTED, fontVariantNumeric: 'tabular-nums', minWidth: 32 }}>
               {progress}%
             </Text>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <Clock size={13} color={TEXT_MUTED} />
-            <Text variant="caption" style={{ fontSize: 11, color: TEXT_MUTED }}>{lesson.durationMinutes} min</Text>
+            <Text variant="caption" style={{ fontSize: 12, color: TEXT_MUTED }}>{lesson.durationMinutes} min</Text>
           </div>
 
           {/* Sync indicator */}
@@ -371,7 +371,7 @@ export function LessonPlayer({ lesson, onClose, onProgressUpdate }: LessonPlayer
           {/* Transient sync error */}
           {syncError && (
             <Text variant="caption" style={{
-              fontSize: 11,
+              fontSize: 12,
               color: 'var(--status-error, #f87171)',
               maxWidth: 200,
               whiteSpace: 'nowrap',

@@ -262,7 +262,7 @@ function AgentMessageBubble({
           </span>
           <span
             style={{
-              fontSize: 11,
+              fontSize: 12,
               color: "#7a6b5d",
               background: "var(--surface-hover)",
               padding: "2px 6px",
@@ -274,7 +274,7 @@ function AgentMessageBubble({
           {message.to.channel && (
             <span
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 color: accentColor,
                 background: `${accentColor}15`,
                 padding: "2px 6px",
@@ -286,7 +286,7 @@ function AgentMessageBubble({
           )}
           <span
             style={{
-              fontSize: 11,
+              fontSize: 12,
               color: "#5a4d3f",
               marginLeft: "auto",
             }}
@@ -322,7 +322,7 @@ function AgentMessageBubble({
               display: "flex",
               alignItems: "center",
               gap: 4,
-              fontSize: 11,
+              fontSize: 12,
               color: message.read ? "#7a6b5d" : accentColor,
             }}
           >
@@ -349,7 +349,7 @@ function AgentMessageBubble({
                 border: `1px solid ${accentColor}30`,
                 borderRadius: 4,
                 color: accentColor,
-                fontSize: 11,
+                fontSize: 12,
                 cursor: "pointer",
               }}
             >
@@ -361,7 +361,7 @@ function AgentMessageBubble({
           {message.correlationId && (
             <span
               style={{
-                fontSize: 10,
+                fontSize: 12,
                 color: "#5a4d3f",
                 fontFamily: "var(--font-mono)",
                 marginLeft: "auto",

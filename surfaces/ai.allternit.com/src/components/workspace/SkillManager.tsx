@@ -69,7 +69,7 @@ export function SkillManager({ api }: SkillManagerProps) {
           <div className="skill-manager__search">
             <input
               type="text"
-              placeholder="Search skills..."
+              placeholder="Search skills…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />

@@ -261,7 +261,7 @@ export function FloatingAvatar({ className }: FloatingAvatarProps) {
             }}
           >
             <div className="flex items-center gap-2 mb-3">
-              <Sparkles className="h-4 w-4" style={{ color: STUDIO_THEME.accent }} />
+              <Sparkles className="size-4 " style={{ color: STUDIO_THEME.accent }} />
               <span className="text-sm font-semibold" style={{ color: STUDIO_THEME.textPrimary }}>
                 {activeAgent?.name || "Agent Companion"}
               </span>
@@ -272,7 +272,7 @@ export function FloatingAvatar({ className }: FloatingAvatarProps) {
                 onMouseEnter={(e) => ((e.currentTarget as HTMLButtonElement).style.color = STUDIO_THEME.textPrimary)}
                 onMouseLeave={(e) => ((e.currentTarget as HTMLButtonElement).style.color = STUDIO_THEME.textMuted)}
               >
-                <X className="h-3.5 w-3.5" />
+                <X className="size-3.5 " />
               </button>
             </div>
             <div className="space-y-2">
@@ -303,7 +303,7 @@ export function FloatingAvatar({ className }: FloatingAvatarProps) {
               </div>
               {unreadCount > 0 && (
                 <div className="flex items-center gap-2 text-xs mt-2" style={{ color: "#fbbf24" }}>
-                  <Zap className="h-3 w-3" />
+                  <Zap className="size-3 " />
                   {unreadCount} new notification{unreadCount > 1 ? "s" : ""}
                 </div>
               )}
@@ -322,7 +322,7 @@ export function FloatingAvatar({ className }: FloatingAvatarProps) {
         title="Drag to move • Alt + Arrow keys"
         aria-label={`${activeAgent?.name || 'Agent'} companion. Drag to move or use Alt + Arrow keys.`}
         className={cn(
-          "relative w-14 h-14 rounded-full flex items-center justify-center shadow-xl"
+          "relative size-14  rounded-full flex items-center justify-center shadow-xl"
         )}
         style={{
           background: STUDIO_THEME.bgCard,
@@ -336,12 +336,12 @@ export function FloatingAvatar({ className }: FloatingAvatarProps) {
       >
         {/* Drag handle indicator */}
         <div
-          className="absolute top-1 left-1/2 -translate-x-1/2 flex gap-0.5 opacity-40"
+          className="absolute top-1 left-1/2 -tranzinc-x-1/2 flex gap-0.5 opacity-40"
           style={{ pointerEvents: "none" }}
         >
-          <div className="w-1 h-1 rounded-full" style={{ background: STUDIO_THEME.textMuted }} />
-          <div className="w-1 h-1 rounded-full" style={{ background: STUDIO_THEME.textMuted }} />
-          <div className="w-1 h-1 rounded-full" style={{ background: STUDIO_THEME.textMuted }} />
+          <div className="size-1  rounded-full" style={{ background: STUDIO_THEME.textMuted }} />
+          <div className="size-1  rounded-full" style={{ background: STUDIO_THEME.textMuted }} />
+          <div className="size-1  rounded-full" style={{ background: STUDIO_THEME.textMuted }} />
         </div>
         {/* Glow effect */}
         {pulse && (
@@ -368,11 +368,11 @@ export function FloatingAvatar({ className }: FloatingAvatarProps) {
             <img
               src={activeAgent.teammateProfile.avatar}
               alt={activeAgent.name}
-              className="w-10 h-10 rounded-full object-cover"
+              className="size-10  rounded-full object-cover"
             />
           ) : (
             <div
-              className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold"
+              className="size-10  rounded-full flex items-center justify-center text-lg font-bold"
               style={{
                 background: STUDIO_THEME.accent,
                 color: "#fff",
@@ -385,7 +385,7 @@ export function FloatingAvatar({ className }: FloatingAvatarProps) {
 
         {/* Status dot */}
         <div
-          className="absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 animate-pulse"
+          className="absolute bottom-0 right-0 size-4  rounded-full border-2 animate-pulse"
           style={{
             borderColor: STUDIO_THEME.bg,
             background: statusColors[status].bg,
@@ -395,7 +395,7 @@ export function FloatingAvatar({ className }: FloatingAvatarProps) {
 
         {/* Unread badge */}
         {unreadCount > 0 && !isOpen && (
-          <div className="absolute -top-1 -right-1 w-5 h-5 bg-rose-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white">
+          <div className="absolute -top-1 -right-1 size-5  bg-rose-500 rounded-full flex items-center justify-center text-xs font-bold text-white">
             {unreadCount > 9 ? "9+" : unreadCount}
           </div>
         )}

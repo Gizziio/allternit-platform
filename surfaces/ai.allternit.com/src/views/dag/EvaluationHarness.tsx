@@ -1,6 +1,6 @@
 import { EvaluationHarnessSurface } from "./DagRuntimeWorkspace";
 
-export function EvaluationHarness() {
+export function EvaluationHarness(): JSX.Element {
   return <EvaluationHarnessSurface />;
 }
 

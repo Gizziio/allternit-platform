@@ -32,7 +32,7 @@ describe('Blueprint Studio: Core Pipeline Verification', () => {
     expect(reactCode).toContain('style={{ color: \'#635bff\' }}'); // Color token applied to code
     expect(reactCode).toContain('rounded-[8px]'); // Radius token applied to code
     
-    console.log('✓ Pipeline Verified: All layers synchronized successfully.');
+    console.debug('✓ Pipeline Verified: All layers synchronized successfully.');
   });
 
   it('Layer 5: Mobile Projection Integrity', () => {

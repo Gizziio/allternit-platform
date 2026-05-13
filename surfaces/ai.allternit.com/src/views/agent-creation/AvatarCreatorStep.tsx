@@ -159,7 +159,7 @@ export const AvatarCreatorStep: React.FC<AvatarCreatorStepProps> = ({
                 <span style={{ fontSize: '24px' }}>{template.preview}</span>
                 <span
                   style={{
-                    fontSize: '11px',
+                    fontSize: '12px',
                     fontWeight: 500,
                     color: STUDIO_THEME.textPrimary,
                     textAlign: 'center',

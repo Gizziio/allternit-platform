@@ -33,7 +33,7 @@ const selectStyle: React.CSSProperties = {
 };
 
 const helperTextStyle: React.CSSProperties = {
-  fontSize: 10,
+  fontSize: 12,
   fontWeight: 500,
   color: 'var(--text-tertiary)',
   letterSpacing: 0.2,
@@ -52,7 +52,7 @@ function pillStyle(color: string): React.CSSProperties {
     background: `${color}18`,
     border: `1px solid ${color}40`,
     color,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 700,
     letterSpacing: 0.2,
     whiteSpace: 'nowrap',
@@ -69,7 +69,7 @@ function statChipStyle(): React.CSSProperties {
     background: 'rgba(255, 255, 255, 0.05)',
     border: '1px solid rgba(255, 255, 255, 0.06)',
     color: 'var(--text-tertiary)',
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 600,
   };
 }
@@ -107,7 +107,7 @@ export function CodeSessionBar() {
       <div style={fieldShellStyle}>
         <span
           style={{
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 700,
             color: 'var(--text-tertiary)',
             textTransform: 'uppercase',
@@ -135,7 +135,7 @@ export function CodeSessionBar() {
       <div style={fieldShellStyle}>
         <span
           style={{
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 700,
             color: 'var(--text-tertiary)',
             textTransform: 'uppercase',

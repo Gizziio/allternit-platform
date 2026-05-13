@@ -67,20 +67,20 @@ export const EmailDraftTool = memo(function EmailDraftTool({
     >
       <div className="rounded-an-tool-border-radius border border-border bg-an-tool-background overflow-hidden">
         <div className="flex items-center gap-2 px-3 py-1.5 border-b border-an-tool-border-color bg-background/50">
-          <IconSend className="w-3.5 h-3.5 text-muted-foreground" />
+          <IconSend className="size-3.5  text-muted-foreground" />
           <span className="text-xs font-medium text-muted-foreground">Email Draft</span>
         </div>
         <div className="p-3 space-y-2">
           {draft.to && (
             <div className="flex items-center gap-2 text-sm">
-              <IconUser className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              <IconUser className="size-3.5  text-muted-foreground shrink-0" />
               <span className="text-muted-foreground text-xs uppercase tracking-wide w-12">To</span>
               <span className="text-foreground truncate">{draft.to}</span>
             </div>
           )}
           {draft.from && (
             <div className="flex items-center gap-2 text-sm">
-              <IconAt className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              <IconAt className="size-3.5  text-muted-foreground shrink-0" />
               <span className="text-muted-foreground text-xs uppercase tracking-wide w-12">From</span>
               <span className="text-foreground truncate">{draft.from}</span>
             </div>

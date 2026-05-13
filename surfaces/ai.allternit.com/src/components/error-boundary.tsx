@@ -1,5 +1,6 @@
 "use client";
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { Component, ErrorInfo, ReactNode } from "react";
 import {
   Warning,
@@ -140,8 +141,8 @@ function ErrorFallback({
       aria-live="assertive"
     >
       {/* Icon */}
-      <div className="w-12 h-12 rounded-full bg-[var(--status-error)]/20 flex items-center justify-center mb-4">
-        <Warning className="w-6 h-6 text-[var(--status-error)]" />
+      <div className="size-12  rounded-full bg-[var(--status-error)]/20 flex items-center justify-center mb-4">
+        <Warning className="size-6  text-[var(--status-error)]" />
       </div>
 
       {/* Title */}
@@ -216,7 +217,7 @@ function ErrorFallback({
             onClick={() => setShowStack(!showStack)}
             className="flex items-center gap-1 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
           >
-            <CaretRight className={cn("w-3 h-3 transition-transform", showStack && "rotate-90")} />
+            <CaretRight className={cn("size-3  transition-transform", showStack && "rotate-90")} />
             {showStack ? "Hide" : "Show"} Component Stack
           </button>
           
@@ -237,7 +238,7 @@ function ErrorFallback({
 
       {/* Component Name Badge */}
       {componentName && (
-        <div className="mt-4 px-2 py-1 rounded text-[10px] font-mono text-[var(--text-tertiary)] bg-[var(--bg-secondary)]">
+        <div className="mt-4 px-2 py-1 rounded text-xs font-mono text-[var(--text-tertiary)] bg-[var(--bg-secondary)]">
           {componentName}
         </div>
       )}
@@ -284,7 +285,7 @@ export function ShellRailErrorBoundary({ children }: { children: ReactNode }) {
           }}
         >
           <div className="text-center">
-            <Warning className="w-8 h-8 text-[var(--text-tertiary)] mx-auto mb-2" />
+            <Warning className="size-8  text-[var(--text-tertiary)] mx-auto mb-2" />
             <p className="text-sm text-[var(--text-secondary)]">Navigation unavailable</p>
           </div>
         </div>

@@ -117,7 +117,7 @@ function CircuitBreakerCard({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div
-            className="w-10 h-10 rounded-lg flex items-center justify-center"
+            className="size-10  rounded-lg flex items-center justify-center"
             style={{ background: `${config.color}22`, border: `1px solid ${config.color}44` }}
           >
             <Lightning size={20} style={{ color: config.color }} />
@@ -126,7 +126,7 @@ function CircuitBreakerCard({
             <div className="text-sm font-bold text-white/90">
               {breaker.agent_name || breaker.agent_id}
             </div>
-            <div className="text-xs text-white/40">Agent ID: {breaker.agent_id.slice(0, 8)}...</div>
+            <div className="text-xs text-white/40">Agent ID: {breaker.agent_id.slice(0, 8)}…</div>
           </div>
         </div>
 
@@ -222,7 +222,7 @@ function QuarantineCard({
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
           <div
-            className="w-10 h-10 rounded-lg flex items-center justify-center"
+            className="size-10  rounded-lg flex items-center justify-center"
             style={{ background: config.bg, border: `1px solid ${config.color}44` }}
           >
             <Lock size={20} style={{ color: config.color }} />
@@ -311,7 +311,7 @@ function ActivityFeedItem({ entry }: { entry: ActivityFeedEntry }) {
     >
       {/* Icon */}
       <div
-        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+        className="size-8  rounded-lg flex items-center justify-center flex-shrink-0"
         style={{ background: `${config.color}22`, border: `1px solid ${config.color}44` }}
       >
         <TypeIcon size={16} style={{ color: config.color }} />
@@ -398,7 +398,7 @@ export function SwarmMonitor({
       <div className="p-4 border-b border-white/5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-500/20 to-red-500/20 flex items-center justify-center border border-yellow-500/30">
+            <div className="size-10  rounded-lg bg-gradient-to-br from-yellow-500/20 to-red-500/20 flex items-center justify-center border border-yellow-500/30">
               <Shield size={20} className="text-yellow-400" />
             </div>
             <div>
@@ -434,12 +434,12 @@ export function SwarmMonitor({
             >
               {tab}
               {tab === 'breakers' && (
-                <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-white/20 text-[10px]">
+                <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-white/20 text-xs">
                   {totalBreakers}
                 </span>
               )}
               {tab === 'quarantine' && (
-                <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-white/20 text-[10px]">
+                <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-white/20 text-xs">
                   {quarantinedAgents.length}
                 </span>
               )}

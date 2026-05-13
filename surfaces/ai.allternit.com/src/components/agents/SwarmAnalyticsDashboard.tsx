@@ -119,7 +119,7 @@ function MetricCard({
     >
       <div className="flex items-start justify-between mb-3">
         <div
-          className="w-10 h-10 rounded-lg flex items-center justify-center"
+          className="size-10  rounded-lg flex items-center justify-center"
           style={{ background: `${color}22`, border: `1px solid ${color}44` }}
         >
           <div style={{ color }}><Icon size={20} /></div>
@@ -171,7 +171,7 @@ function HealthStatusCard({ health }: { health: SwarmHealthStatus }) {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <div
-            className="w-12 h-12 rounded-full flex items-center justify-center"
+            className="size-12  rounded-full flex items-center justify-center"
             style={{ background: `${config.color}22`, border: `2px solid ${config.color}66` }}
           >
             <StatusIcon size={24} color={config.color} />
@@ -273,7 +273,7 @@ function ExecutionTimeline({ timeline }: { timeline: ExecutionTimelineEntry[] })
               className="flex items-center gap-3"
             >
               <div
-                className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                className="size-8  rounded-full flex items-center justify-center flex-shrink-0"
                 style={{ background: `${config.color}22`, border: `1px solid ${config.color}44` }}
               >
                 <EventIcon size={14} style={{ color: config.color }} />
@@ -329,7 +329,7 @@ export function SwarmAnalyticsDashboard({
       <div className="p-4 border-b border-white/5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500/20 to-blue-500/20 flex items-center justify-center border border-green-500/30">
+            <div className="size-10  rounded-lg bg-gradient-to-br from-green-500/20 to-blue-500/20 flex items-center justify-center border border-green-500/30">
               <Activity size={20} className="text-green-400" />
             </div>
             <div>
@@ -408,7 +408,7 @@ export function SwarmAnalyticsDashboard({
         {/* Status Indicator */}
         {isRunning && (
           <div className="flex items-center gap-2 text-xs text-green-400">
-            <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+            <div className="size-2  rounded-full bg-green-400 animate-pulse" />
             Live metrics updating...
           </div>
         )}
@@ -568,7 +568,7 @@ export function SwarmAnalyticsDashboard({
                   <div className="text-lg font-bold text-blue-400">
                     ${(metrics.totalCostCents * 0.6 / 100).toFixed(2)}
                   </div>
-                  <div className="text-[10px] uppercase tracking-wider text-white/40">
+                  <div className="text-xs uppercase tracking-wider text-white/40">
                     LLM Costs
                   </div>
                 </div>
@@ -576,7 +576,7 @@ export function SwarmAnalyticsDashboard({
                   <div className="text-lg font-bold text-green-400">
                     ${(metrics.totalCostCents * 0.3 / 100).toFixed(2)}
                   </div>
-                  <div className="text-[10px] uppercase tracking-wider text-white/40">
+                  <div className="text-xs uppercase tracking-wider text-white/40">
                     Tool Costs
                   </div>
                 </div>
@@ -584,7 +584,7 @@ export function SwarmAnalyticsDashboard({
                   <div className="text-lg font-bold text-purple-400">
                     ${(metrics.totalCostCents * 0.1 / 100).toFixed(2)}
                   </div>
-                  <div className="text-[10px] uppercase tracking-wider text-white/40">
+                  <div className="text-xs uppercase tracking-wider text-white/40">
                     Overhead
                   </div>
                 </div>

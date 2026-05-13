@@ -57,7 +57,7 @@ async function discoverFromElectron(): Promise<DiscoveredServer | null> {
 
   const sidecar = window.allternitSidecar;
   if (!hasSidecarMethods(sidecar, ['getStatus', 'getApiUrl', 'getBasicAuth'])) {
-    console.log('[Discovery] Electron sidecar API unavailable in this shell');
+    console.debug('[Discovery] Electron sidecar API unavailable in this shell');
     return null;
   }
 
@@ -65,7 +65,7 @@ async function discoverFromElectron(): Promise<DiscoveredServer | null> {
     // Check if sidecar is running
     const status = await sidecar.getStatus!();
     if (status !== 'running') {
-      console.log('[Discovery] Electron sidecar not running');
+      console.debug('[Discovery] Electron sidecar not running');
       return null;
     }
 
@@ -76,18 +76,18 @@ async function discoverFromElectron(): Promise<DiscoveredServer | null> {
     ]);
 
     if (!apiUrl) {
-      console.log('[Discovery] Electron sidecar has no API URL');
+      console.debug('[Discovery] Electron sidecar has no API URL');
       return null;
     }
 
     // Verify health
     const isHealthy = await healthCheck(apiUrl, basicAuth?.header);
     if (!isHealthy) {
-      console.log('[Discovery] Electron sidecar unhealthy');
+      console.debug('[Discovery] Electron sidecar unhealthy');
       return null;
     }
 
-    console.log('[Discovery] Found server via Electron sidecar:', apiUrl);
+    console.debug('[Discovery] Found server via Electron sidecar:', apiUrl);
     return {
       url: apiUrl,
       source: 'electron',
@@ -110,7 +110,7 @@ async function discoverFromPersisted(): Promise<DiscoveredServer | null> {
 
   const sidecar = window.allternitSidecar;
   if (!hasSidecarMethods(sidecar, ['getPersistedConfig'])) {
-    console.log('[Discovery] Persisted sidecar config API unavailable in this shell');
+    console.debug('[Discovery] Persisted sidecar config API unavailable in this shell');
     return null;
   }
 
@@ -123,11 +123,11 @@ async function discoverFromPersisted(): Promise<DiscoveredServer | null> {
     // Verify the persisted server is still running
     const isHealthy = await healthCheck(config.apiUrl);
     if (!isHealthy) {
-      console.log('[Discovery] Persisted server no longer available');
+      console.debug('[Discovery] Persisted server no longer available');
       return null;
     }
 
-    console.log('[Discovery] Found server via persisted config:', config.apiUrl);
+    console.debug('[Discovery] Found server via persisted config:', config.apiUrl);
     return {
       url: config.apiUrl,
       source: 'persisted',
@@ -149,7 +149,7 @@ async function discoverFromPortScan(): Promise<DiscoveredServer | null> {
     try {
       const isHealthy = await healthCheck(url, undefined, 500); // Short timeout for scan
       if (isHealthy) {
-        console.log('[Discovery] Found server via port scan:', url);
+        console.debug('[Discovery] Found server via port scan:', url);
         return {
           url,
           source: 'port-scan',
@@ -160,7 +160,7 @@ async function discoverFromPortScan(): Promise<DiscoveredServer | null> {
     }
   }
 
-  console.log('[Discovery] No server found in port scan');
+  console.debug('[Discovery] No server found in port scan');
   return null;
 }
 
@@ -183,7 +183,7 @@ export async function discoverServer(
     timeout = 10000 
   } = options;
 
-  console.log('[Discovery] Starting server discovery...');
+  console.debug('[Discovery] Starting server discovery...');
 
   // Strategy 1: Electron sidecar (preferred for desktop app)
   if (preferElectron && isElectron()) {
@@ -209,7 +209,7 @@ export async function discoverServer(
     }
   }
 
-  console.log('[Discovery] No server found, will use WASM fallback');
+  console.debug('[Discovery] No server found, will use WASM fallback');
   return null;
 }
 

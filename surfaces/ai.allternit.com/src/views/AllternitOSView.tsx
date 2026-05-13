@@ -47,7 +47,7 @@ const programsList = [
   { id: 'assetmanager', name: 'AssetManager', desc: 'Image & file management', icon: FolderOpen, color: 'bg-pink-500' },
   { id: 'orchestrator', name: 'Orchestrator', desc: 'MoA execution dashboard', icon: Cpu, color: 'bg-red-500' },
   { id: 'workflowbuilder', name: 'WorkflowBuilder', desc: 'Visual DAG builder', icon: Graph, color: 'bg-cyan-500' },
-  { id: 'browser', name: 'Browser', desc: 'Web citations with screenshots', icon: Globe, color: 'bg-indigo-500' },
+  { id: 'browser', name: 'Browser', desc: 'Web citations with screenshots', icon: Globe, color: 'bg-blue-500' },
   { id: 'labs', name: 'A://Labs', desc: '7 live AI learning tracks', icon: GraduationCap, color: 'bg-violet-500' },
 ];
 
@@ -84,8 +84,8 @@ export function AllternitOSView({ context }: AllternitOSViewProps) {
         {/* Header */}
         <header className="h-14 border-b bg-card flex items-center justify-between px-4 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-              <SquaresFour className="w-4 h-4 text-white" />
+            <div className="size-8  bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+              <SquaresFour className="size-4  text-white" />
             </div>
             <div>
               <h1 className="font-semibold text-sm">AllternitOS</h1>
@@ -146,7 +146,7 @@ export function AllternitOSView({ context }: AllternitOSViewProps) {
               <button
                 key={program.id}
                 onClick={() => launchProgram(program.id)}
-                className={`w-10 h-10 rounded-lg flex items-center justify-center text-white hover:scale-105 transition-transform ${program.color}`}
+                className={`size-10  rounded-lg flex items-center justify-center text-white hover:scale-105 transition-transform ${program.color}`}
                 title={program.name}
               >
                 <program.icon size={16} />
@@ -212,7 +212,7 @@ function ProgramLauncher({ onLaunch }: { onLaunch: (id: string) => void }) {
               onClick={() => onLaunch(program.id)}
               className="flex items-start gap-4 p-4 rounded-xl border bg-card hover:border-primary hover:shadow-md transition-all text-left"
             >
-              <div className={`w-12 h-12 rounded-xl ${program.color} flex items-center justify-center text-white shrink-0`}>
+              <div className={`size-12  rounded-xl ${program.color} flex items-center justify-center text-white shrink-0`}>
                 <program.icon size={20} />
               </div>
               <div>
@@ -245,7 +245,7 @@ function ActivePrograms({ programs }: { programs: Array<{ id: string; type: stri
   if (programs.length === 0) {
     return (
       <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
-        <SquaresFour className="w-12 h-12 mb-4 opacity-50" />
+        <SquaresFour className="size-12  mb-4 opacity-50" />
         <h3 className="text-lg font-medium mb-2">No Active Programs</h3>
         <p className="text-sm">Launch a program from the Launcher tab</p>
       </div>
@@ -265,7 +265,7 @@ function ActivePrograms({ programs }: { programs: Array<{ id: string; type: stri
                 key={activeProgram.id}
                 className="flex items-center gap-4 p-4 rounded-xl border bg-card"
               >
-                <div className={`w-10 h-10 rounded-lg ${programDef?.color || 'bg-blue-500'} flex items-center justify-center text-white`}>
+                <div className={`size-10  rounded-lg ${programDef?.color || 'bg-blue-500'} flex items-center justify-center text-white`}>
                   <Icon size={20} />
                 </div>
                 <div className="flex-1">
@@ -316,7 +316,7 @@ function ChatIntegration() {
           <div className="flex gap-2">
             <input 
               type="text" 
-              placeholder="Type @ to launch a program..."
+              placeholder="Type @ to launch a program…"
               className="flex-1 px-4 py-2 rounded-lg border bg-background"
             />
             <Button>Send</Button>
@@ -330,7 +330,7 @@ function ChatIntegration() {
         <div className="space-y-3">
           <div className="p-3 rounded-lg bg-card border">
             <div className="flex items-center gap-2 mb-2">
-              <FileText className="w-4 h-4 text-blue-500" />
+              <FileText className="size-4  text-blue-500" />
               <span className="font-medium text-sm">ResearchDoc</span>
             </div>
             <p className="text-xs text-muted-foreground">AI Agent Survey</p>
@@ -348,7 +348,7 @@ function ChatIntegration() {
 function ChatMessage({ sender, content, isUser }: { sender: string; content: string; isUser?: boolean }) {
   return (
     <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
-      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium ${
+      <div className={`size-8  rounded-full flex items-center justify-center text-xs font-medium ${
         isUser ? 'bg-primary text-primary-foreground' : 'bg-muted'
       }`}>
         {sender[0]}
@@ -368,7 +368,7 @@ function ProgramPreviewCard({ type, title, status }: { type: string; title: stri
   return (
     <div className="ml-11 p-4 rounded-xl border bg-card max-w-md">
       <div className="flex items-center gap-3 mb-3">
-        <div className="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center text-white">
+        <div className="size-10  rounded-lg bg-blue-500 flex items-center justify-center text-white">
           <FileText size={20} />
         </div>
         <div>
@@ -377,7 +377,7 @@ function ProgramPreviewCard({ type, title, status }: { type: string; title: stri
         </div>
       </div>
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+        <span className="size-1.5  rounded-full bg-green-500 animate-pulse" />
         {status}
       </div>
     </div>

@@ -27,7 +27,7 @@ Use this tool to:
 
 Examples:
 - Check status: path="/workspace/project"
-- Check with short format: path="...", short=true`,
+- Check with short format: path="…", short=true`,
   parameters: {
     type: "object",
     properties: {
@@ -99,8 +99,8 @@ Use this tool to:
 
 Examples:
 - Recent commits: path="/workspace/project", limit=10
-- Specific branch: path="...", branch="feature-branch"
-- Since date: path="...", since="2024-01-01"`,
+- Specific branch: path="…", branch="feature-branch"
+- Since date: path="…", since="2024-01-01"`,
   parameters: {
     type: "object",
     properties: {
@@ -180,9 +180,9 @@ Use this tool to:
 
 Examples:
 - Unstaged changes: path="/workspace/project"
-- Staged changes: path="...", staged=true
-- Between commits: path="...", from="abc123", to="def456"
-- Specific file: path="...", file="src/index.ts"`,
+- Staged changes: path="…", staged=true
+- Between commits: path="…", from="abc123", to="def456"
+- Specific file: path="…", file="src/index.ts"`,
   parameters: {
     type: "object",
     properties: {
@@ -259,7 +259,7 @@ Use this tool to:
 
 Examples:
 - List branches: path="/workspace/project"
-- List remote branches: path="...", remote=true`,
+- List remote branches: path="…", remote=true`,
   parameters: {
     type: "object",
     properties: {
@@ -323,7 +323,7 @@ Use this tool to:
 
 Examples:
 - Show commit: path="/workspace/project", commit="abc123"
-- Show with stats: path="...", commit="abc123", stat=true`,
+- Show with stats: path="…", commit="abc123", stat=true`,
   parameters: {
     type: "object",
     properties: {

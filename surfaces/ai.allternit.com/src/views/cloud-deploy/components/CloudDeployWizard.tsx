@@ -43,56 +43,6 @@ export const CloudDeployWizard: React.FC<CloudDeployWizardProps> = ({ onStartDep
     onStartDeployment(finalConfig);
   };
 
-  const renderStep = () => {
-    switch (currentStep) {
-      case 1:
-        return (
-          <Step1DeploymentType
-            onNext={(type) => handleNext({ deploymentType: type })}
-          />
-        );
-      case 2:
-        return (
-          <Step2ProviderSelection
-            selectedProvider={config.providerId || ''}
-            onNext={(providerId) => handleNext({ providerId })}
-            onBack={handleBack}
-            onWizardStart={onWizardStart}
-          />
-        );
-      case 3:
-        return (
-          <Step3Configuration
-            config={config}
-            onNext={(stepConfig) => handleNext(stepConfig)}
-            onBack={handleBack}
-          />
-        );
-      case 4:
-        return (
-          <Step4Credentials
-            providerId={config.providerId || ''}
-            onNext={(credentials) => {
-              // Store credentials securely (in production, use secure storage)
-              console.log('Credentials entered');
-              handleNext({});
-            }}
-            onBack={handleBack}
-          />
-        );
-      case 5:
-        return (
-          <Step5Review
-            config={config as DeploymentConfig}
-            onStart={handleStart}
-            onBack={handleBack}
-          />
-        );
-      default:
-        return null;
-    }
-  };
-
   return (
     <div className="cloud-deploy-wizard">
       {/* Progress Bar */}
@@ -124,10 +74,84 @@ export const CloudDeployWizard: React.FC<CloudDeployWizardProps> = ({ onStartDep
 
       {/* Step Content */}
       <div className="wizard-content">
-        {renderStep()}
+        <WizardStep
+          currentStep={currentStep}
+          config={config}
+          handleNext={handleNext}
+          handleBack={handleBack}
+          handleStart={handleStart}
+          onWizardStart={onWizardStart}
+        />
       </div>
     </div>
   );
+};
+
+interface WizardStepProps {
+  currentStep: number;
+  config: Partial<DeploymentConfig>;
+  handleNext: (stepConfig: Partial<DeploymentConfig>) => void;
+  handleBack: () => void;
+  handleStart: (finalConfig: DeploymentConfig) => void;
+  onWizardStart?: (providerId: string) => void;
+}
+
+const WizardStep: React.FC<WizardStepProps> = ({
+  currentStep,
+  config,
+  handleNext,
+  handleBack,
+  handleStart,
+  onWizardStart
+}) => {
+  switch (currentStep) {
+    case 1:
+      return (
+        <Step1DeploymentType
+          onNext={(type) => handleNext({ deploymentType: type })}
+        />
+      );
+    case 2:
+      return (
+        <Step2ProviderSelection
+          selectedProvider={config.providerId || ''}
+          onNext={(providerId) => handleNext({ providerId })}
+          onBack={handleBack}
+          onWizardStart={onWizardStart}
+        />
+      );
+    case 3:
+      return (
+        <Step3Configuration
+          config={config}
+          onNext={(stepConfig) => handleNext(stepConfig)}
+          onBack={handleBack}
+        />
+      );
+    case 4:
+      return (
+        <Step4Credentials
+          key={config.providerId}
+          providerId={config.providerId || ''}
+          onNext={() => {
+            // Store credentials securely (in production, use secure storage)
+            console.debug('Credentials entered');
+            handleNext({});
+          }}
+          onBack={handleBack}
+        />
+      );
+    case 5:
+      return (
+        <Step5Review
+          config={config as DeploymentConfig}
+          onStart={handleStart}
+          onBack={handleBack}
+        />
+      );
+    default:
+      return null;
+  }
 };
 
 export default CloudDeployWizard;

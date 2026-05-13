@@ -45,18 +45,18 @@ export function ContextPackBrowser() {
       <div className="p-4 border-b flex items-center gap-4">
         <div className="flex-1 flex gap-2">
           <div className="flex-1 relative">
-            <GitBranch className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <GitBranch className="size-4  absolute left-3 top-1/2 -tranzinc-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Filter by DAG ID..."
+              placeholder="Filter by DAG ID…"
               value={filterDagId}
               onChange={(e) => setFilterDagId(e.target.value)}
               className="pl-10"
             />
           </div>
           <div className="flex-1 relative">
-            <Hash className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Hash className="size-4  absolute left-3 top-1/2 -tranzinc-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Filter by Node ID..."
+              placeholder="Filter by Node ID…"
               value={filterNodeId}
               onChange={(e) => setFilterNodeId(e.target.value)}
               className="pl-10"
@@ -64,7 +64,7 @@ export function ContextPackBrowser() {
           </div>
         </div>
         <Button variant="outline" onClick={() => fetchContextPacks()}>
-          <ArrowsClockwise className="w-4 h-4 mr-2" /> Refresh
+          <ArrowsClockwise className="size-4  mr-2" /> Refresh
         </Button>
       </div>
       
@@ -85,7 +85,7 @@ export function ContextPackBrowser() {
               <div className="space-y-2">
                 {filteredPacks.length === 0 ? (
                   <div className="text-center text-muted-foreground py-8">
-                    <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <Package className="size-8  mx-auto mb-2 opacity-50" />
                     <p>No context packs found</p>
                   </div>
                 ) : (
@@ -113,7 +113,7 @@ export function ContextPackBrowser() {
               <PackDetails pack={selectedPack} />
             ) : (
               <div className="text-center text-muted-foreground py-8">
-                <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <Package className="size-8  mx-auto mb-2 opacity-50" />
                 <p className="text-sm">Select a context pack to view details</p>
               </div>
             )}
@@ -141,8 +141,8 @@ function PackListItem({
       onClick={onClick}
     >
       <div className="flex items-center gap-2">
-        <Package className="w-4 h-4 text-primary" />
-        <span className="font-mono text-sm truncate flex-1">{pack.contextPackId.slice(0, 20)}...</span>
+        <Package className="size-4  text-primary" />
+        <span className="font-mono text-sm truncate flex-1">{pack.contextPackId.slice(0, 20)}…</span>
         <Badge variant="outline" className="text-xs">v{pack.version}</Badge>
       </div>
       <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
@@ -226,7 +226,7 @@ function PackDetails({ pack }: { pack: ContextPack }) {
             <label className="text-sm text-muted-foreground">Receipt References</label>
             <div className="flex flex-wrap gap-1 mt-1">
               {pack.inputs.receiptRefs?.map((ref) => (
-                <Badge key={ref} variant="outline" className="text-xs font-mono">{ref.slice(0, 12)}...</Badge>
+                <Badge key={ref} variant="outline" className="text-xs font-mono">{ref.slice(0, 12)}…</Badge>
               )) || <span className="text-sm text-muted-foreground">None</span>}
             </div>
           </div>
@@ -271,7 +271,7 @@ function PackDetails({ pack }: { pack: ContextPack }) {
             {Object.entries(pack.inputs.planHashes).map(([name, hash]) => (
               <div key={name} className="flex items-center justify-between p-2 bg-muted rounded">
                 <span className="text-sm">{name}</span>
-                <span className="text-xs font-mono text-muted-foreground">{hash.slice(0, 16)}...</span>
+                <span className="text-xs font-mono text-muted-foreground">{hash.slice(0, 16)}…</span>
               </div>
             ))}
           </div>
@@ -280,7 +280,7 @@ function PackDetails({ pack }: { pack: ContextPack }) {
       
       <div className="border-t pt-4 flex gap-2">
         <Button className="flex-1">
-          <DownloadSimple className="w-4 h-4 mr-2" /> Download Pack
+          <DownloadSimple className="size-4  mr-2" /> Download Pack
         </Button>
         <Button variant="outline" onClick={() => setShowRaw(!showRaw)}>
           {showRaw ? "Hide" : "View"} Raw

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useIsClient } from "@/lib/hooks/use-is-client";
 import { Copy, Trash, MagnifyingGlass, Scissors, Selection } from '@phosphor-icons/react';
-import { GlassCard } from '../../design/GlassCard';
+import { GlassCard } from '../../design/glass/GlassCard';
 
 interface ClipboardItem {
   id: string;
@@ -44,7 +45,7 @@ export function DesignClipboardSidebar({
 
     const newItem: ClipboardItem = {
       id: Date.now().toString(),
-      title: `${type === 'design' ? 'Design Spec' : 'UI Block'} ${new Date().toLocaleTimeString()}`,
+      title: `${type === 'design' ? 'Design Spec' : 'UI Block'} ${isClient ? new Date().toLocaleTimeString() : "..."}`,
       content,
       type: type === 'design' ? 'design' : 'ui',
       timestamp: Date.now()
@@ -106,7 +107,7 @@ export function DesignClipboardSidebar({
            <input 
              value={searchTerm}
              onChange={e => setSearchTerm(e.target.value)}
-             placeholder="Search snippets..." 
+             placeholder="Search snippets…" 
              style={{ width: "100%", background: "var(--surface-hover)", border: "1px solid var(--ui-border-muted)", borderRadius: "8px", padding: "8px 8px 8px 32px", fontSize: "11px", color: "#fff", outline: "none" }} 
            />
          </div>

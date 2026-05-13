@@ -344,7 +344,7 @@ const ShadowsSection: React.FC<{ isDark: boolean }> = ({ isDark }) => (
     {Object.entries(elevation).map(([key, value]) => (
       <div key={key} style={{ ...styles.shadowBox, boxShadow: value, color: isDark ? neutral[900] : 'inherit' }}>
         <span style={{ fontWeight: fontWeight.medium }}>{key}</span>
-        <span style={{ fontSize: fontSize.xs, color: neutral[500] }}>{value.slice(0, 50)}...</span>
+        <span style={{ fontSize: fontSize.xs, color: neutral[500] }}>{value.slice(0, 50)}…</span>
       </div>
     ))}
 
@@ -363,7 +363,7 @@ const ShadowsSection: React.FC<{ isDark: boolean }> = ({ isDark }) => (
         }}
       >
         <span style={{ fontWeight: fontWeight.medium }}>glass-{key}</span>
-        <span style={{ fontSize: fontSize.xs, color: neutral[500] }}>{value.slice(0, 50)}...</span>
+        <span style={{ fontSize: fontSize.xs, color: neutral[500] }}>{value.slice(0, 50)}…</span>
       </div>
     ))}
 

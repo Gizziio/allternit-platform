@@ -119,7 +119,7 @@ function TaskItem({
 
         {/* Status Icon */}
         <div
-          className="w-6 h-6 rounded flex items-center justify-center flex-shrink-0"
+          className="size-6  rounded flex items-center justify-center flex-shrink-0"
           style={{
             background: `${statusColor}22`,
             border: `1px solid ${statusColor}44`,
@@ -269,7 +269,7 @@ export function TaskDecompositionViewer({
       {/* Header */}
       <div className="p-4 border-b border-white/5">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center border border-purple-500/30">
+          <div className="size-10  rounded-lg bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center border border-purple-500/30">
             <ListChecks size={20} className="text-purple-400" />
           </div>
           <div className="flex-1">
@@ -306,7 +306,7 @@ export function TaskDecompositionViewer({
       <div className="flex-1 overflow-y-auto p-4">
         {isDecomposing ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
-            <div className="w-16 h-16 rounded-full bg-blue-500/20 flex items-center justify-center mb-4">
+            <div className="size-16  rounded-full bg-blue-500/20 flex items-center justify-center mb-4">
               <Clock size={32} className="text-blue-400 animate-pulse" />
             </div>
             <p className="text-sm font-medium text-white/60 mb-1">
@@ -319,7 +319,7 @@ export function TaskDecompositionViewer({
         ) : tasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center">
             <div
-              className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+              className="size-16  rounded-full flex items-center justify-center mb-4"
               style={{
                 background: 'var(--surface-hover)',
                 border: '1px solid var(--ui-border-default)',
@@ -358,7 +358,7 @@ export function TaskDecompositionViewer({
             <div className="text-lg font-bold text-green-400">
               {tasks.filter((t) => t.status === 'completed').length}
             </div>
-            <div className="text-[10px] uppercase tracking-wider text-white/40">
+            <div className="text-xs uppercase tracking-wider text-white/40">
               Completed
             </div>
           </div>
@@ -366,15 +366,15 @@ export function TaskDecompositionViewer({
             <div className="text-lg font-bold text-blue-400">
               {tasks.filter((t) => t.status === 'in_progress').length}
             </div>
-            <div className="text-[10px] uppercase tracking-wider text-white/40">
+            <div className="text-xs uppercase tracking-wider text-white/40">
               In Progress
             </div>
           </div>
           <div className="text-center">
-            <div className="text-lg font-bold text-gray-400">
+            <div className="text-lg font-bold text-zinc-400">
               {tasks.filter((t) => t.status === 'pending').length}
             </div>
-            <div className="text-[10px] uppercase tracking-wider text-white/40">
+            <div className="text-xs uppercase tracking-wider text-white/40">
               Pending
             </div>
           </div>

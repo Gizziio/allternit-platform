@@ -248,7 +248,7 @@ export function BrowserAttachStrip() {
                   ? `1px solid ${STATUS.success}38`
                   : '1px solid rgba(148,163,184,0.18)',
                 color: endpoint ? 'var(--status-success)' : 'var(--ui-text-secondary)',
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 600,
               }}
             >
@@ -266,7 +266,7 @@ export function BrowserAttachStrip() {
                 background: `${SAND[500]}14`,
                 border: `1px solid ${SAND[500]}2e`,
                 color: 'var(--ui-text-secondary)',
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 600,
               }}
             >
@@ -285,7 +285,7 @@ export function BrowserAttachStrip() {
                   background: `${STATUS.info}1f`,
                   border: `1px solid ${STATUS.info}33`,
                   color: 'var(--status-info)',
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: 600,
                 }}
               >
@@ -317,7 +317,7 @@ export function BrowserAttachStrip() {
               marginTop: 4,
               flexWrap: 'wrap',
               color: 'var(--ui-text-muted)',
-              fontSize: 11,
+              fontSize: 12,
             }}
           >
             <span>{currentRunId ? `Run ${currentRunId.slice(-8)}` : 'No active run'}</span>

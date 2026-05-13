@@ -65,7 +65,7 @@ export const CoworkBoardColumn: React.FC<Props> = ({
         </div>
         <span
           style={{
-            fontSize: '11px',
+            fontSize: '12px',
             fontWeight: 700,
             color: accent,
             background: `${accent}22`,

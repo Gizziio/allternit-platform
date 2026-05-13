@@ -38,7 +38,7 @@ function Column({ title, children, width, isCollapsed, onToggle }: ColumnProps) 
           style={{
             writingMode: 'vertical-rl',
             textOrientation: 'mixed',
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 600,
             color: 'var(--ui-text-muted)',
             transform: 'rotate(180deg)',

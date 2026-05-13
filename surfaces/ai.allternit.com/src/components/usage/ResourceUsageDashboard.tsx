@@ -13,6 +13,8 @@ import {
   TerminalWindow,
   DownloadSimple,
 } from '@phosphor-icons/react';
+import { useIsClient } from '@/lib/hooks/use-is-client';
+import { cn } from '@/lib/utils';
 
 interface UsageData {
   total_requests: number;
@@ -27,6 +29,7 @@ interface UsageData {
 }
 
 export function ResourceUsageDashboard() {
+  const isClient = useIsClient();
   const [data, setData] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [, setRefreshing] = useState(false);
@@ -63,11 +66,13 @@ export function ResourceUsageDashboard() {
       if (res.ok) {
         const usageData = await res.json();
         setData(usageData);
-        setLogs(prev => [
-          `[${new Date().toLocaleTimeString()}] System Sync: ${usageData.total_requests} requests captured`,
-          `[${new Date().toLocaleTimeString()}] Memory Vault: ${usageData.total_tokens} total tokens indexed`,
-          ...prev
-        ].slice(0, 50));
+        if (isClient) {
+          setLogs(prev => [
+            `[${new Date().toLocaleTimeString()}] System Sync: ${usageData.total_requests} requests captured`,
+            `[${new Date().toLocaleTimeString()}] Memory Vault: ${usageData.total_tokens} total tokens indexed`,
+            ...prev
+          ].slice(0, 50));
+        }
       }
     } catch (err) {
       console.error('Failed to fetch usage data', err);
@@ -81,7 +86,7 @@ export function ResourceUsageDashboard() {
     fetchUsage();
     const interval = setInterval(fetchUsage, 10000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isClient]);
 
   const toolChartData = useMemo(() => {
     if (!data) return [];
@@ -105,7 +110,7 @@ export function ResourceUsageDashboard() {
   if (loading || !data) {
     return (
       <div className="p-12 flex justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent-primary)]"></div>
+        <div className="animate-spin rounded-full size-8  border-b-2 border-[var(--accent-primary)]"></div>
       </div>
     );
   }
@@ -191,7 +196,7 @@ export function ResourceUsageDashboard() {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={toolChartData} layout="vertical" margin={{ left: -20, right: 0, top: 0, bottom: 0 }}>
                 <XAxis type="number" hide />
-                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fill: 'var(--text-tertiary)', fontSize: 11}} width={100} />
+                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fill: 'var(--text-tertiary)', fontSize: 12}} width={100} />
                 <Tooltip cursor={{fill: 'var(--surface-hover)'}} contentStyle={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '8px' }} />
                 <Bar dataKey="success" stackId="a" fill="var(--accent-primary)" radius={[0, 4, 4, 0]} barSize={12} />
               </BarChart>
@@ -203,9 +208,9 @@ export function ResourceUsageDashboard() {
         <div className="bg-black p-4 rounded-xl border border-[var(--border-subtle)] font-mono flex flex-col">
           <div className="flex items-center justify-between mb-3 text-[var(--text-tertiary)] text-xs">
              <span className="flex items-center gap-2"><TerminalWindow size={14}/> Live Kernel</span>
-             <span className="flex gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500/50"></span><span className="w-2 h-2 rounded-full bg-yellow-500/50"></span><span className="w-2 h-2 rounded-full bg-green-500/50"></span></span>
+             <span className="flex gap-1.5"><span className="size-2  rounded-full bg-red-500/50"></span><span className="size-2  rounded-full bg-yellow-500/50"></span><span className="size-2  rounded-full bg-green-500/50"></span></span>
           </div>
-          <div className="flex-1 overflow-y-auto text-[11px] space-y-1 text-[#666]">
+          <div className="flex-1 overflow-y-auto text-xs space-y-1 text-[#666]">
             {logs.map((log, i) => (
               <div key={i} className={i === 0 ? "text-[var(--accent-primary)]" : ""}>
                 <span className="opacity-30">❯</span> {log}

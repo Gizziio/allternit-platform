@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { GlassCard } from '../../design/GlassCard';
+import { GlassCard } from '../../design/glass/GlassCard';
 import { Command, Brain, Globe } from '@phosphor-icons/react';
 import { useTelemetryProviders } from '@/lib/telemetry/useTelemetryProviders';
 
@@ -151,7 +151,7 @@ function ProviderCard({
           style={{
             padding: '6px 12px',
             borderRadius: 8,
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 700,
             background: active ? 'var(--status-success-bg)' : 'var(--surface-panel)',
             color: active ? 'var(--status-success)' : 'var(--ui-text-muted)',

@@ -5,7 +5,7 @@ import { useRunnerStore } from "../runner/runner.store";
 import { AgentRunner } from "../runner/AgentRunner";
 import { ACIComputerUseSidecar } from "../capsules/browser/ACIComputerUseSidecar";
 
-export function ShellOverlayLayer() {
+export function ShellOverlayLayer(): JSX.Element {
   const { open } = useRunnerStore();
 
   return (

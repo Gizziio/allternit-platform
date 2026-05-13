@@ -278,7 +278,7 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
           />
           <input
             type="text"
-            placeholder="Search designs..."
+            placeholder="Search designs…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{
@@ -299,7 +299,7 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <label
             style={{
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 800,
               letterSpacing: "0.1em",
               color: "var(--text-tertiary)",
@@ -339,7 +339,7 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <label
             style={{
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 800,
               letterSpacing: "0.1em",
               color: "var(--text-tertiary)",
@@ -372,7 +372,7 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
               <span>{tag.label}</span>
               <span
                 style={{
-                  fontSize: 10,
+                  fontSize: 12,
                   color: "var(--text-tertiary)",
                   fontWeight: 700,
                 }}
@@ -387,7 +387,7 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <label
             style={{
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 800,
               letterSpacing: "0.1em",
               color: "var(--text-tertiary)",
@@ -415,7 +415,7 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontSize: 10,
+                  fontSize: 12,
                   fontWeight: 800,
                   color: "var(--text-secondary)",
                 }}
@@ -438,7 +438,7 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
                     <Check size={10} weight="bold" color="#3b82f6" />
                   )}
                 </div>
-                <div style={{ fontSize: 10, color: "var(--text-tertiary)" }}>
+                <div style={{ fontSize: 12, color: "var(--text-tertiary)" }}>
                   {creator.designs} designs
                 </div>
               </div>
@@ -666,7 +666,7 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
                         <div>
                           <div
                             style={{
-                              fontSize: 10,
+                              fontSize: 12,
                               fontWeight: 800,
                               letterSpacing: "0.08em",
                               color: "var(--accent-primary)",
@@ -715,7 +715,7 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
                               borderRadius: 6,
                               background: "var(--surface-hover)",
                               border: "1px solid var(--border-subtle)",
-                              fontSize: 10,
+                              fontSize: 12,
                               fontWeight: 700,
                               color: "var(--text-tertiary)",
                               textTransform: "uppercase",
@@ -748,14 +748,14 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              fontSize: 9,
+                              fontSize: 12,
                               fontWeight: 800,
                               color: "var(--text-secondary)",
                             }}
                           >
                             {(design.author || "A")[0]}
                           </div>
-                          <span style={{ fontSize: 11, color: "var(--text-secondary)", fontWeight: 500 }}>
+                          <span style={{ fontSize: 12, color: "var(--text-secondary)", fontWeight: 500 }}>
                             {design.creatorHandle || "@allternit"}
                           </span>
                         </div>
@@ -794,7 +794,7 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
               borderRadius: 8,
               background: "var(--surface-hover)",
               border: "1px solid var(--border-subtle)",
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 700,
               color: "var(--text-secondary)",
               whiteSpace: "nowrap",
@@ -807,7 +807,7 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
           <div style={{ flex: 1, position: "relative" }}>
             <input
               type="text"
-              placeholder="Describe a design system you want to generate..."
+              placeholder="Describe a design system you want to generate…"
               value={promptInput}
               onChange={(e) => setPromptInput(e.target.value)}
               onKeyDown={(e) => {
@@ -908,20 +908,20 @@ export function DesignRegistryView({ onInstall, installedId }: DesignRegistryVie
 function StatBox({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 100 }}>
-      <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.1em", color: "var(--text-tertiary)", textTransform: "uppercase" }}>
+      <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.1em", color: "var(--text-tertiary)", textTransform: "uppercase" }}>
         {label}
       </span>
       <span style={{ fontSize: 20, fontWeight: 800, color: "var(--text-primary)", letterSpacing: "-0.02em" }}>
         {value}
       </span>
-      <span style={{ fontSize: 10, color: "var(--text-tertiary)", fontWeight: 500 }}>{sub}</span>
+      <span style={{ fontSize: 12, color: "var(--text-tertiary)", fontWeight: 500 }}>{sub}</span>
     </div>
   );
 }
 
 function StatBadge({ icon, value }: { icon: React.ReactNode; value: string }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 3, color: "var(--text-tertiary)", fontSize: 10, fontWeight: 700 }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 3, color: "var(--text-tertiary)", fontSize: 12, fontWeight: 700 }}>
       {icon}
       {value}
     </div>

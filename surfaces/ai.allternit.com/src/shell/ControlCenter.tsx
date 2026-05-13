@@ -297,7 +297,7 @@ export function ControlCenter({
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-border">
             <div className="flex items-center gap-3">
-              <GearSix className="w-5 h-5 text-muted-foreground" />
+              <GearSix className="size-5  text-muted-foreground" />
               <h2 className="text-lg font-semibold">Control Center</h2>
               <span className="text-xs text-muted-foreground px-2 py-0.5 rounded bg-secondary">
                 Platform Wiring
@@ -441,7 +441,7 @@ function GeneralSection(): JSX.Element {
 
         <div className="p-4 rounded-xl bg-secondary/30 border border-border flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center text-accent">
+            <div className="size-10  rounded-full bg-accent/20 flex items-center justify-center text-accent">
               <UsersThree size={24} />
             </div>
             <div>
@@ -476,7 +476,7 @@ function GeneralSection(): JSX.Element {
           )}
         </div>
         {isSignedIn && user && (
-          <p className="text-[10px] text-muted-foreground px-1">
+          <p className="text-xs text-muted-foreground px-1">
             Sign Out will clear all local session data, stop backend services, and relaunch the application.
           </p>
         )}
@@ -494,7 +494,7 @@ function GeneralSection(): JSX.Element {
 
           <div className="p-4 rounded-xl bg-secondary/30 border border-border flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500">
+              <div className="size-10  rounded-full bg-blue-500/20 flex items-center justify-center text-blue-500">
                 <Cpu size={24} />
               </div>
               <div>
@@ -583,7 +583,7 @@ function WebAccessSection(): JSX.Element {
 
         <div className="p-4 rounded-lg bg-secondary/30 border border-border space-y-4">
           <div className="flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-yellow-500" />
+            <div className="size-2  rounded-full bg-yellow-500" />
             <span className="text-sm font-medium text-yellow-500">Desktop Not Connected</span>
           </div>
           <p className="text-sm text-muted-foreground">
@@ -595,7 +595,7 @@ function WebAccessSection(): JSX.Element {
 
         <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
           <div className="flex items-start gap-3">
-            <GlobeHemisphereWest className="w-5 h-5 text-blue-500 mt-0.5" />
+            <GlobeHemisphereWest className="size-5  text-blue-500 mt-0.5" />
             <div className="text-sm">
               <p className="font-medium text-blue-500 mb-1">How Web Access Works</p>
               <p className="text-muted-foreground">
@@ -610,7 +610,7 @@ function WebAccessSection(): JSX.Element {
   }
 
   const statusConfig: Record<TunnelStatus, { dot: string; label: string; labelClass: string }> = {
-    stopped:  { dot: 'bg-slate-500',  label: 'Off',      labelClass: 'text-muted-foreground' },
+    stopped:  { dot: 'bg-zinc-500',  label: 'Off',      labelClass: 'text-muted-foreground' },
     starting: { dot: 'bg-yellow-500 animate-pulse', label: 'Starting…', labelClass: 'text-yellow-500' },
     running:  { dot: 'bg-green-500',  label: 'Running',  labelClass: 'text-green-500' },
     error:    { dot: 'bg-red-500',    label: 'Error',    labelClass: 'text-red-500' },
@@ -631,7 +631,7 @@ function WebAccessSection(): JSX.Element {
       <div className="p-4 rounded-lg bg-secondary/30 border border-border space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${cfg.dot}`} />
+            <div className={`size-2  rounded-full ${cfg.dot}`} />
             <span className={`text-sm font-medium ${cfg.labelClass}`}>{cfg.label}</span>
           </div>
 
@@ -687,7 +687,7 @@ function WebAccessSection(): JSX.Element {
       {/* Info */}
       <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
         <div className="flex items-start gap-3">
-          <Warning className="w-5 h-5 text-blue-500 mt-0.5" />
+          <Warning className="size-5  text-blue-500 mt-0.5" />
           <div className="text-sm">
             <p className="font-medium text-blue-500 mb-1">How it works</p>
             <p className="text-muted-foreground">
@@ -850,7 +850,7 @@ function BrowserPairingSection({
         <h4 className="text-sm font-medium mb-3">Paired Endpoints</h4>
         {pairedEndpoints.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            <WifiHigh className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <WifiHigh className="size-8  mx-auto mb-2 opacity-50" />
             <p className="text-sm">No paired endpoints</p>
             <p className="text-xs mt-1">Pair an extension to get started</p>
           </div>
@@ -863,10 +863,10 @@ function BrowserPairingSection({
               >
                 <div className="flex items-center gap-3">
                   <div
-                    className={`w-2 h-2 rounded-full ${
+                    className={`size-2  rounded-full ${
                       endpoint.status === 'connected'
                         ? 'bg-green-500 animate-pulse'
-                        : 'bg-gray-500'
+                        : 'bg-zinc-500'
                     }`}
                   />
                   <div>
@@ -892,7 +892,7 @@ function BrowserPairingSection({
       {/* Info */}
       <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/30">
         <div className="flex items-start gap-3">
-          <Warning className="w-5 h-5 text-blue-500 mt-0.5" />
+          <Warning className="size-5  text-blue-500 mt-0.5" />
           <div className="text-sm">
             <p className="font-medium text-blue-500 mb-1">Extension Setup</p>
             <p className="text-muted-foreground">
@@ -961,7 +961,7 @@ function PolicySection({
             key={t.tier}
             className="p-3 rounded-lg bg-secondary/30 border border-border text-center"
           >
-            <div className={`w-8 h-8 rounded-full ${t.color} mx-auto mb-2 flex items-center justify-center text-white text-sm font-bold`}>
+            <div className={`size-8  rounded-full ${t.color} mx-auto mb-2 flex items-center justify-center text-white text-sm font-bold`}>
               {t.tier}
             </div>
             <p className="text-xs font-medium">{t.label}</p>
@@ -991,7 +991,7 @@ function PolicySection({
         </div>
         {allowedHosts.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            <Shield className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <Shield className="size-8  mx-auto mb-2 opacity-50" />
             <p className="text-sm">No allowed hosts</p>
             <p className="text-xs mt-1">Add hosts to enable browser automation</p>
           </div>
@@ -1002,7 +1002,7 @@ function PolicySection({
                 key={host}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary/50 border border-border"
               >
-                <CheckCircle className="w-3 h-3 text-green-500" />
+                <CheckCircle className="size-3  text-green-500" />
                 <span className="text-sm">{host}</span>
                 <button
                   onClick={() => onRemoveAllowedHost?.(host)}
@@ -1019,7 +1019,7 @@ function PolicySection({
       {/* Info */}
       <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
         <div className="flex items-start gap-3">
-          <Warning className="w-5 h-5 text-yellow-500 mt-0.5" />
+          <Warning className="size-5  text-yellow-500 mt-0.5" />
           <div className="text-sm">
             <p className="font-medium text-yellow-500 mb-1">Default Deny Policy</p>
             <p className="text-muted-foreground">
@@ -1062,7 +1062,7 @@ function RuntimeEnvironmentSection({ onOpenView }: RuntimeEnvironmentSectionProp
 
       <div className="rounded-2xl border border-blue-500/30 bg-blue-500/10 p-4">
         <div className="flex items-start gap-3">
-          <Warning className="w-5 h-5 text-blue-500 mt-0.5" />
+          <Warning className="size-5  text-blue-500 mt-0.5" />
           <div className="text-sm">
             <p className="font-medium text-blue-500 mb-1">Agent Mode Placement</p>
             <p className="text-muted-foreground">
@@ -1098,7 +1098,7 @@ function PlaceholderSection({
   return (
     <div className="p-6 flex items-center justify-center h-full">
       <div className="text-center max-w-md">
-        <Icon className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+        <Icon className="size-12  mx-auto mb-4 text-muted-foreground opacity-50" />
         <h3 className="text-lg font-semibold mb-2">{title}</h3>
         <p className="text-sm text-muted-foreground mb-4">{description}</p>
         <a

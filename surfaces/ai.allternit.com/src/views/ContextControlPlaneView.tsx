@@ -134,7 +134,7 @@ function BranchItem({ branch }: { branch: Branch }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 flex-1">
           {branch.isActive && (
-            <div className="w-2 h-2 rounded-full bg-[var(--accent-primary)] animate-pulse" />
+            <div className="size-2  rounded-full bg-[var(--accent-primary)] animate-pulse" />
           )}
           <span className="font-mono text-sm font-medium text-[var(--text-primary)]">
             {branch.name}
@@ -200,7 +200,7 @@ function CommitRow({ commit }: { commit: Commit }) {
             </span>
           </div>
         </div>
-        <CaretRight className="w-5 h-5 text-[var(--text-tertiary)] group-hover:text-[var(--accent-primary)] transition-colors flex-shrink-0 mt-1" />
+        <CaretRight className="size-5  text-[var(--text-tertiary)] group-hover:text-[var(--accent-primary)] transition-colors flex-shrink-0 mt-1" />
       </div>
     </div>
   );
@@ -215,7 +215,7 @@ export function ContextControlPlaneView() {
       <div className="p-6 border-b border-[var(--border-subtle)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <GitBranch className="w-7 h-7 text-[var(--accent-primary)]" />
+            <GitBranch className="size-7  text-[var(--accent-primary)]" />
             <div>
               <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
                 Context Control Plane
@@ -264,7 +264,7 @@ export function ContextControlPlaneView() {
 
           <div className="p-4 border-t border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
             <button className="w-full px-3 py-2 rounded-lg text-xs font-medium text-[var(--accent-primary)] border border-[var(--border-subtle)] hover:bg-[var(--bg-primary)] transition-colors">
-              <Plus className="w-3 h-3 inline mr-2" />
+              <Plus className="size-3  inline mr-2" />
               Add Branch
             </button>
           </div>

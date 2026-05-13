@@ -92,7 +92,7 @@ class CodePlugin implements ModePlugin {
     
     this.isInitialized = true;
     this.emit({ type: 'initialized', timestamp: Date.now() });
-    console.log('[CodePlugin] Initialized');
+    console.debug('[CodePlugin] Initialized');
   }
 
   async destroy(): Promise<void> {

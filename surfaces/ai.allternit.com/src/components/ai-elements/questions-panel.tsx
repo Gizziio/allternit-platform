@@ -42,7 +42,7 @@ export const QuestionsPanel = memo(function QuestionsPanel({
   return (
     <div className={cn("w-full", className)}>
       <div className="flex items-center gap-2 mb-2">
-        <IconHelpCircle className="w-3.5 h-3.5 text-muted-foreground" />
+        <IconHelpCircle className="size-3.5  text-muted-foreground" />
         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
           {title}
         </span>
@@ -76,14 +76,14 @@ export const QuestionsPanel = memo(function QuestionsPanel({
               <span className="line-clamp-2 leading-snug">{item.question}</span>
               <IconArrowRight
                 className={cn(
-                  "shrink-0 w-4 h-4 text-muted-foreground/50 transition-all duration-150",
-                  "group-hover:text-muted-foreground group-hover:translate-x-0.5",
+                  "shrink-0 size-4  text-muted-foreground/50 transition-all duration-150",
+                  "group-hover:text-muted-foreground group-hover:tranzinc-x-0.5",
                   isVertical ? "mt-0.5" : "mt-0.5"
                 )}
               />
             </div>
             {item.context && (
-              <span className="block mt-1 text-[11px] text-muted-foreground line-clamp-1">
+              <span className="block mt-1 text-[12px] text-muted-foreground line-clamp-1">
                 {item.context}
               </span>
             )}
@@ -127,7 +127,7 @@ export const InlineQuestions = memo(function InlineQuestions({
           )}
         >
           <span className="truncate max-w-[240px]">{item.question}</span>
-          <IconArrowRight className="w-3 h-3 shrink-0 opacity-50" />
+          <IconArrowRight className="size-3  shrink-0 opacity-50" />
         </motion.button>
       ))}
     </div>

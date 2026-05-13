@@ -138,7 +138,7 @@ export function PlanTab() {
                   handleCreateDag();
                 }
               }}
-              placeholder="Describe what you want to accomplish..."
+              placeholder="Describe what you want to accomplish…"
               disabled={isLoading}
               style={{
                 flex: 1,
@@ -422,7 +422,7 @@ function TemplateCard({
               <label
                 style={{
                   display: "block",
-                  fontSize: 11,
+                  fontSize: 12,
                   color: "#888",
                   marginBottom: 4,
                 }}

@@ -149,6 +149,10 @@ function SubmenuFlyout({
   );
 }
 
+const SectionDivider = (): JSX.Element => (
+  <div className="h-px bg-[var(--shell-divider)] my-1.5 mx-3" />
+);
+
 export function SettingsDrilldown({ children }: { children?: React.ReactNode }): JSX.Element {
   const { user, isSignedIn } = usePlatformUser();
   const signOut = usePlatformSignOut()
@@ -161,6 +165,7 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }):
   const setThemePreference = useThemeStore((state) => state.setTheme);
   const resolvedTheme = useResolvedTheme(themePreference);
   const isDark = resolvedTheme === 'dark';
+  
   const handleOpenSettings = (section?: string): void => {
     setOpen(false);
     setActiveSubmenuId(null);
@@ -291,14 +296,6 @@ export function SettingsDrilldown({ children }: { children?: React.ReactNode }):
       }, 50);
     }
   };
-
-  const SectionDivider = (): JSX.Element => (
-    <div style={{ 
-      height: '1px', 
-      backgroundColor: 'var(--shell-divider)',
-      margin: '6px 12px'
-    }} />
-  );
 
   return (
     <>

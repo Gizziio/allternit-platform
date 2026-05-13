@@ -141,7 +141,7 @@ export function MailTab() {
                 style={{
                   background: "#ff3b30",
                   color: "#fff",
-                  fontSize: 10,
+                  fontSize: 12,
                   fontWeight: 700,
                   padding: "2px 8px",
                   borderRadius: 10,
@@ -351,7 +351,7 @@ export function MailTab() {
                     handleSendMessage();
                   }
                 }}
-                placeholder="Type a message..."
+                placeholder="Type a message…"
                 disabled={isLoading}
                 style={{
                   flex: 1,
@@ -600,7 +600,7 @@ function ThreadItem({
         </div>
         <div
           style={{
-            fontSize: 11,
+            fontSize: 12,
             color: "#888",
           }}
         >
@@ -674,7 +674,7 @@ function MessageBubble({
         </div>
         <div
           style={{
-            fontSize: 11,
+            fontSize: 12,
             color: isMe ? "rgba(255,255,255,0.6)" : "#666",
             marginTop: 4,
             display: "flex",
@@ -694,7 +694,7 @@ function MessageBubble({
                 border: "none",
                 borderRadius: 4,
                 color: "#fff",
-                fontSize: 10,
+                fontSize: 12,
                 cursor: "pointer",
               }}
             >

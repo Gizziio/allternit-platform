@@ -99,7 +99,7 @@ export function ParsePRDModal({ workspaceId, onClose, onCreated }: Props): JSX.E
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="e.g. Build a user authentication system with email/password and OAuth. Include password reset, email verification, and session management..."
+                placeholder="e.g. Build a user authentication system with email/password and OAuth. Include password reset, email verification, and session management…"
                 rows={6}
                 disabled={phase === 'loading'}
                 style={{
@@ -111,7 +111,7 @@ export function ParsePRDModal({ workspaceId, onClose, onCreated }: Props): JSX.E
                   boxSizing: 'border-box',
                 }}
               />
-              <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                 Paste a PRD, feature brief, or plain description. The AI will generate atomic tasks with dependencies.
               </span>
             </div>
@@ -178,21 +178,21 @@ export function ParsePRDModal({ workspaceId, onClose, onCreated }: Props): JSX.E
                         <span style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>{item.description}</span>
                       )}
                       <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '4px' }}>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: pc.color, background: `${pc.color}18`, padding: '1px 7px', borderRadius: 4 }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, color: pc.color, background: `${pc.color}18`, padding: '1px 7px', borderRadius: 4 }}>
                           {pc.label}
                         </span>
                         {item.estimatedMinutes && (
-                          <span style={{ fontSize: 11, color: 'var(--text-secondary)', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', padding: '1px 7px', borderRadius: 4 }}>
+                          <span style={{ fontSize: 12, color: 'var(--text-secondary)', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', padding: '1px 7px', borderRadius: 4 }}>
                             ~{item.estimatedMinutes}m
                           </span>
                         )}
                         {item.dependencyTempIds.length > 0 && (
-                          <span style={{ fontSize: 11, color: 'var(--status-info)', background: '#06b6d418', border: '1px solid #06b6d433', padding: '1px 7px', borderRadius: 4 }}>
+                          <span style={{ fontSize: 12, color: 'var(--status-info)', background: '#06b6d418', border: '1px solid #06b6d433', padding: '1px 7px', borderRadius: 4 }}>
                             {item.dependencyTempIds.length} dep{item.dependencyTempIds.length !== 1 ? 's' : ''}
                           </span>
                         )}
                         {item.labels?.map((lbl) => (
-                          <span key={lbl} style={{ fontSize: 11, color: 'var(--text-secondary)', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', padding: '1px 7px', borderRadius: 4 }}>
+                          <span key={lbl} style={{ fontSize: 12, color: 'var(--text-secondary)', background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', padding: '1px 7px', borderRadius: 4 }}>
                             {lbl}
                           </span>
                         ))}

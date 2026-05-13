@@ -190,7 +190,7 @@ const SELECT_STYLE: React.CSSProperties = {
   paddingTop: 6,
   paddingBottom: 6,
   borderRadius: 6,
-  fontSize: 11,
+  fontSize: 12,
   outline: 'none',
   cursor: 'pointer',
   background: BG_INPUT,
@@ -371,11 +371,11 @@ export function SwarmSetup({ onLaunched }: SwarmSetupProps) {
 
         {/* ── Goal input ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <label style={{ fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: TEXT.tertiary }}>Goal</label>
+          <label style={{ fontSize: 12, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: TEXT.tertiary }}>Goal</label>
           <textarea
             value={goal}
             onChange={e => setGoal(e.target.value)}
-            placeholder="Describe what the swarm should accomplish..."
+            placeholder="Describe what the swarm should accomplish…"
             rows={3}
             style={{
               width: '100%',
@@ -398,7 +398,7 @@ export function SwarmSetup({ onLaunched }: SwarmSetupProps) {
 
         {/* ── Template selector ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <label style={{ fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: TEXT.tertiary }}>Template</label>
+          <label style={{ fontSize: 12, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: TEXT.tertiary }}>Template</label>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
             {TEMPLATES.map(tpl => {
               const isSelected = selectedTemplate === tpl.id;
@@ -417,7 +417,7 @@ export function SwarmSetup({ onLaunched }: SwarmSetupProps) {
                   }}
                 >
                   <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, color: isSelected ? ACCENT : TEXT.primary }}>{tpl.label}</div>
-                  <div style={{ fontSize: 11, lineHeight: 1.5, color: TEXT.tertiary }}>{tpl.description}</div>
+                  <div style={{ fontSize: 12, lineHeight: 1.5, color: TEXT.tertiary }}>{tpl.description}</div>
                 </button>
               );
             })}
@@ -427,11 +427,11 @@ export function SwarmSetup({ onLaunched }: SwarmSetupProps) {
         {/* ── Role assignment ── */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <label style={{ fontSize: 11, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: TEXT.tertiary }}>Roles</label>
+            <label style={{ fontSize: 12, fontWeight: 500, textTransform: 'uppercase', letterSpacing: '0.08em', color: TEXT.tertiary }}>Roles</label>
             {selectedTemplate === 'custom' && (
               <button
                 onClick={addCustomRole}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, padding: '4px 10px', borderRadius: 8, background: ACCENT_DIM, color: ACCENT, border: `1px solid ${ACCENT_BORDER}`, cursor: 'pointer' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, padding: '4px 10px', borderRadius: 8, background: ACCENT_DIM, color: ACCENT, border: `1px solid ${ACCENT_BORDER}`, cursor: 'pointer' }}
               >
                 <Plus size={10} weight="bold" />
                 Add role
@@ -451,7 +451,7 @@ export function SwarmSetup({ onLaunched }: SwarmSetupProps) {
                     </div>
                     <div style={{ width: 96, flexShrink: 0 }}>
                       <div style={{ fontSize: 12, fontWeight: 500, color: TEXT.primary }}>{role.label}</div>
-                      <div style={{ fontSize: 10, marginTop: 2, color: TEXT.tertiary }}>{role.description}</div>
+                      <div style={{ fontSize: 12, marginTop: 2, color: TEXT.tertiary }}>{role.description}</div>
                     </div>
                     <div style={{ flex: 1 }}>
                       <ModelSelect

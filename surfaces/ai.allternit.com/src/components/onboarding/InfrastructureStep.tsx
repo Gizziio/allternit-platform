@@ -365,7 +365,7 @@ export function InfrastructureStep({ data, onUpdate, onStatusChange }: Props) {
                 : 'border-white/10 bg-white/[0.02] hover:border-white/20'
             )}
           >
-            <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+            <div className="size-11  rounded-xl flex items-center justify-center flex-shrink-0"
               style={{ background: `${color}20`, color }}>
               <Icon size={20} />
             </div>
@@ -373,9 +373,9 @@ export function InfrastructureStep({ data, onUpdate, onStatusChange }: Props) {
               <div className="font-medium text-white">{label}</div>
               <div className="text-sm text-white/50">{desc}</div>
             </div>
-            <div className={cn('w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all',
+            <div className={cn('size-6  rounded-full border-2 flex items-center justify-center transition-all',
               data.infraType === id ? 'bg-[#D4B08C] border-[#D4B08C]' : 'border-white/20')}>
-              {data.infraType === id && <Check className="w-3.5 h-3.5 text-[#0D0B09]" />}
+              {data.infraType === id && <Check className="size-3.5  text-[#0D0B09]" />}
             </div>
           </button>
         ))}
@@ -449,8 +449,8 @@ export function InfrastructureStep({ data, onUpdate, onStatusChange }: Props) {
                 onClick={() => { savePurchaseIntent(provider.id, {}); openInBrowser(provider.url); }}
                 className="group p-4 rounded-2xl bg-white/[0.02] border border-white/10 hover:border-[#D4B08C] transition-all text-center"
               >
-                <div className="w-14 h-14 mx-auto mb-3 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden">
-                  <img src={provider.logo} alt={provider.name} className="w-10 h-10 object-contain"
+                <div className="size-14  mx-auto mb-3 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden">
+                  <img src={provider.logo} alt={provider.name} className="size-10  object-contain"
                     onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                 </div>
                 <h4 className="font-semibold text-white text-sm">{provider.name}</h4>
@@ -503,7 +503,7 @@ function LocalPanel({
         {tunnelRunning ? (
           <div className="space-y-2">
             <div className="flex items-center gap-3 p-3 rounded-xl bg-green-500/10 border border-green-500/20">
-              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <div className="size-2  rounded-full bg-green-500 animate-pulse" />
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-white">Web Access Active</div>
                 <div className="text-xs text-white/50 truncate">{tunnelState?.url}</div>
@@ -531,7 +531,7 @@ function LocalPanel({
               disabled={tunnelStarting}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-[#5B8DEF] hover:bg-[#4a7ddf] text-white text-sm font-medium transition-colors disabled:opacity-70"
             >
-              {tunnelStarting ? <CircleNotch className="w-4 h-4 animate-spin" /> : <Globe size={16} />}
+              {tunnelStarting ? <CircleNotch className="size-4  animate-spin" /> : <Globe size={16} />}
               {tunnelStarting ? 'Starting tunnel…' : 'Enable Web Access'}
             </button>
           </div>
@@ -545,7 +545,7 @@ function LocalPanel({
     return (
       <div className="mt-3 p-4 rounded-2xl bg-green-500/5 border border-green-500/20 space-y-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-500">
+          <div className="size-10  rounded-xl bg-green-500/10 flex items-center justify-center text-green-500">
             <CheckCircle size={20} />
           </div>
           <div className="flex-1 min-w-0">
@@ -571,7 +571,7 @@ function LocalPanel({
   if (localBackendStatus === 'checking') {
     return (
       <div className="mt-3 p-4 rounded-2xl bg-[#5B8DEF]/5 border border-[#5B8DEF]/20 flex items-center gap-3">
-        <CircleNotch className="w-5 h-5 animate-spin text-[#5B8DEF] flex-shrink-0" />
+        <CircleNotch className="size-5  animate-spin text-[#5B8DEF] flex-shrink-0" />
         <div>
           <div className="font-medium text-white text-sm">Checking for local backend…</div>
           <div className="text-xs text-white/40 mt-0.5">Probing ports 8013, 4096, 3001, 8080</div>
@@ -607,7 +607,7 @@ function LocalPanel({
             'This page connects to your desktop automatically',
           ].map((step, i) => (
             <div key={i} className="flex items-start gap-2 text-xs text-white/60">
-              <span className="w-4 h-4 rounded-full bg-[#5B8DEF]/20 text-[#5B8DEF] flex items-center justify-center text-[10px] font-bold flex-shrink-0 mt-0.5">
+              <span className="size-4  rounded-full bg-[#5B8DEF]/20 text-[#5B8DEF] flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
                 {i + 1}
               </span>
               {step}
@@ -724,8 +724,8 @@ function ManualBackendPanel({
             inputBorderColor
           )}
         />
-        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-          {urlTestStatus === 'checking' && <CircleNotch className="w-4 h-4 animate-spin text-white/40" />}
+        <div className="absolute right-3 top-1/2 -tranzinc-y-1/2">
+          {urlTestStatus === 'checking' && <CircleNotch className="size-4  animate-spin text-white/40" />}
           {urlTestStatus === 'ok'       && <CheckCircle size={16} className="text-green-500" />}
           {urlTestStatus === 'fail'     && (
             <button onClick={onRetryTest} title="Retry">
@@ -787,7 +787,7 @@ function ManualBackendPanel({
           (submitStatus === 'connecting' || submitStatus === 'ready') && 'opacity-60'
         )}
       >
-        {submitStatus === 'connecting' ? <CircleNotch className="w-4 h-4 animate-spin" />
+        {submitStatus === 'connecting' ? <CircleNotch className="size-4  animate-spin" />
           : submitStatus === 'ready' ? <CheckCircle size={16} />
           : <Globe size={16} />}
         {submitStatus === 'connecting' ? 'Connecting…'
@@ -804,7 +804,7 @@ function ManualBackendPanel({
       {/* Help */}
       <div className="text-xs text-white/30 bg-black/20 rounded-lg p-3 space-y-1">
         <p>Running a Cloudflare tunnel locally?</p>
-        <code className="text-[#9C6ADE] text-[10px] block bg-black/30 p-2 rounded">
+        <code className="text-[#9C6ADE] text-xs block bg-black/30 p-2 rounded">
           cloudflared tunnel --url http://localhost:8013
         </code>
         <p className="mt-1">Then paste the generated URL above.</p>
@@ -884,7 +884,7 @@ function SSHPanel({
             onChange={(e) => onUpdate({ sshConfig: { ...sshConfig, password: e.target.value } })}
             placeholder="Password"
             className="w-full px-3 py-2.5 bg-white/[0.03] border border-white/10 rounded-xl text-white text-sm placeholder:text-white/30 focus:outline-none focus:border-[#D4B08C]" />
-          <button onClick={onTogglePassword} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30">
+          <button onClick={onTogglePassword} className="absolute right-3 top-1/2 -tranzinc-y-1/2 text-white/30">
             <Eye size={16} />
           </button>
         </div>
@@ -893,12 +893,12 @@ function SSHPanel({
       <div className="flex gap-2 pt-1">
         <button onClick={onTestConnection} disabled={isBusy}
           className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 border border-white/20 rounded-xl text-sm text-[#D4B08C] hover:bg-[color-mix(in srgb, var(--accent-primary) 10%, transparent)] disabled:opacity-50">
-          {status === 'testing' ? <CircleNotch className="w-4 h-4 animate-spin" /> : <Lightning size={16} />}
+          {status === 'testing' ? <CircleNotch className="size-4  animate-spin" /> : <Lightning size={16} />}
           Test Connection
         </button>
         <button onClick={onConnectAndInstall} disabled={isBusy}
           className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-[#D4B08C] rounded-xl text-sm text-[#0D0B09] font-medium hover:bg-[#c4a07c] disabled:opacity-50">
-          {isBusy ? <CircleNotch className="w-4 h-4 animate-spin" /> : <HardDrives size={16} />}
+          {isBusy ? <CircleNotch className="size-4  animate-spin" /> : <HardDrives size={16} />}
           {status === 'installing' ? 'Installing…' : 'Connect & Install'}
         </button>
       </div>
@@ -908,7 +908,7 @@ function SSHPanel({
           status === 'error' ? 'bg-red-500/10 text-red-400' :
           status === 'ready' ? 'bg-green-500/10 text-green-400' :
           'bg-[color-mix(in srgb, var(--accent-primary) 10%, transparent)] text-[#D4B08C]')}>
-          {status === 'error' ? <Warning size={16} /> : status === 'ready' ? <CheckCircle size={16} /> : <CircleNotch className="w-4 h-4 animate-spin" />}
+          {status === 'error' ? <Warning size={16} /> : status === 'ready' ? <CheckCircle size={16} /> : <CircleNotch className="size-4  animate-spin" />}
           {statusMessage}
         </div>
       )}
@@ -928,11 +928,11 @@ function SSHPanel({
 
           {installLog.length > 0 && (
             <div className="bg-black/30 rounded-xl p-3 font-mono text-xs">
-              <div className="text-white/40 mb-1 text-[10px] uppercase tracking-wider">Live log</div>
+              <div className="text-white/40 mb-1 text-xs uppercase tracking-wider">Live log</div>
               <div className="space-y-1 max-h-28 overflow-y-auto">
                 {installLog.map((log, i) => (
                   <div key={i} className={cn('flex items-start gap-2', i === installLog.length - 1 ? 'text-[#D4B08C]' : 'text-white/50')}>
-                    <CaretRight className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                    <CaretRight className="size-3  mt-0.5 flex-shrink-0" />
                     <span>{log}</span>
                   </div>
                 ))}

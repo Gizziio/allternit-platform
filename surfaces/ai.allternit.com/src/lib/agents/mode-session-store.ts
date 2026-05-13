@@ -266,7 +266,7 @@ async function buildContextPackForSession(
       if (workspace) {
         const currentHash = generateContextHash(workspace);
         if (currentHash === cached.hash) {
-          console.log(`[ModeSessionStore] Using cached context pack for agent ${agentId}`);
+          console.debug(`[ModeSessionStore] Using cached context pack for agent ${agentId}`);
           return cached;
         }
         // Hash mismatch — invalidate and rebuild
@@ -376,7 +376,7 @@ async function executeStartupTasks(
 ): Promise<void> {
   if (!contextPack || !session.metadata.agentId) return;
   
-  console.log(`[ModeSessionStore] Executing startup tasks for session ${session.id}`);
+  console.debug(`[ModeSessionStore] Executing startup tasks for session ${session.id}`);
   
   try {
     const taskManager = getHeartbeatTaskManager(
@@ -397,7 +397,7 @@ async function executeStartupTasks(
         checkIntervalMs: 60000, // Check every minute
         onPermissionRequest: async (action, agentId) => {
           // This would show a UI prompt to the user
-          console.log(`[CronScheduler] Permission request for ${agentId}: ${action}`);
+          console.debug(`[CronScheduler] Permission request for ${agentId}: ${action}`);
           // For now, auto-approve - UI will be shown by PermissionProvider
           return true;
         },
@@ -413,7 +413,7 @@ async function executeStartupTasks(
       sessionId: session.id,
       onPermissionRequest: async (action) => {
         // This would show a UI prompt to the user via PermissionProvider
-        console.log(`[ModeSessionStore] Permission request for: ${action}`);
+        console.debug(`[ModeSessionStore] Permission request for: ${action}`);
         // For now, auto-approve - in production this would show the dialog
         return true;
       },
@@ -426,7 +426,7 @@ async function executeStartupTasks(
     
     // Log results
     const succeeded = results.filter(r => r.success).length;
-    console.log(`[ModeSessionStore] Startup tasks completed: ${succeeded}/${results.length} succeeded`);
+    console.debug(`[ModeSessionStore] Startup tasks completed: ${succeeded}/${results.length} succeeded`);
     
   } catch (error) {
     console.error(`[ModeSessionStore] Failed to execute startup tasks:`, error);
@@ -657,7 +657,7 @@ export function createModeSessionStore(config: StoreConfig) {
               if (options.sessionMode === 'agent' && options.agentId) {
                 try {
                   workspace = await agentWorkspaceFS.loadWorkspace(options.agentId);
-                  console.log(`[${config.name}] Loaded workspace for agent ${options.agentId}: ${workspace?.files.length || 0} files`);
+                  console.debug(`[${config.name}] Loaded workspace for agent ${options.agentId}: ${workspace?.files.length || 0} files`);
                 } catch (err) {
                   console.error(`[${config.name}] Failed to load workspace:`, err);
                 }
@@ -710,7 +710,7 @@ export function createModeSessionStore(config: StoreConfig) {
                   cleanupAutoRefresh = setupSessionAutoRefresh(session, {
                     debounceMs: 2000,
                     onRefreshNeeded: (s, changes) => {
-                      console.log(`[ModeSessionStore] Auto-refreshing context for session ${s.id}`);
+                      console.debug(`[ModeSessionStore] Auto-refreshing context for session ${s.id}`);
                       // Trigger context refresh
                       get().refreshContext(s.id);
                     },

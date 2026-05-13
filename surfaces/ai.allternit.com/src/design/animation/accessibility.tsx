@@ -162,13 +162,13 @@ export function AccessiblePresence({
 }
 
 /**
- * getAccessibleTransition - Helper to get transition config based on motion preference.
+ * useAccessibleTransition - Hook to get transition config based on motion preference.
  * 
  * @example
- * const transition = getAccessibleTransition({ duration: 0.3 });
+ * const transition = useAccessibleTransition({ duration: 0.3 });
  * <motion.div transition={transition} />
  */
-export function getAccessibleTransition(
+export function useAccessibleTransition(
   normalTransition: object,
   reducedTransition?: object
 ): object {

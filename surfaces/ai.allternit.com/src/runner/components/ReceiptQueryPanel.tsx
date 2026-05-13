@@ -63,21 +63,21 @@ export function ReceiptQueryPanel() {
         <div className="flex gap-2">
           <div className="flex-1">
             <Input
-              placeholder="Filter by DAG ID..."
+              placeholder="Filter by DAG ID…"
               value={filterDagId}
               onChange={(e) => setFilterDagId(e.target.value)}
             />
           </div>
           <div className="flex-1">
             <Input
-              placeholder="Filter by Node ID..."
+              placeholder="Filter by Node ID…"
               value={filterNodeId}
               onChange={(e) => setFilterNodeId(e.target.value)}
             />
           </div>
           <div className="flex-1">
             <Input
-              placeholder="Filter by WIH ID..."
+              placeholder="Filter by WIH ID…"
               value={filterWihId}
               onChange={(e) => setFilterWihId(e.target.value)}
             />
@@ -109,7 +109,7 @@ export function ReceiptQueryPanel() {
             {filteredReceipts.length} receipts found
           </div>
           <Button variant="outline" size="sm" onClick={() => fetchReceipts()}>
-            <ArrowsClockwise className="w-4 h-4 mr-2" /> Refresh
+            <ArrowsClockwise className="size-4  mr-2" /> Refresh
           </Button>
         </div>
       </div>
@@ -120,7 +120,7 @@ export function ReceiptQueryPanel() {
           <div className="space-y-2">
             {filteredReceipts.length === 0 ? (
               <div className="text-center text-muted-foreground py-8">
-                <ReceiptIcon className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <ReceiptIcon className="size-8  mx-auto mb-2 opacity-50" />
                 <p>No receipts found</p>
                 <p className="text-sm">Adjust filters or fetch receipts</p>
               </div>
@@ -162,7 +162,7 @@ function ReceiptListItem({
     green: "bg-green-500/10 text-green-500 border-green-500/20",
     purple: "bg-purple-500/10 text-purple-500 border-purple-500/20",
     yellow: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
-    gray: "bg-gray-500/10 text-gray-500 border-gray-500/20",
+    gray: "bg-zinc-500/10 text-zinc-500 border-zinc-500/20",
     cyan: "bg-cyan-500/10 text-cyan-500 border-cyan-500/20",
   };
   
@@ -175,11 +175,11 @@ function ReceiptListItem({
         onClick={onToggle}
       >
         <div className="flex items-center gap-3">
-          <ReceiptIcon className={`w-4 h-4 ${colorClasses[kindConfig.color].split(' ')[1]}`} />
+          <ReceiptIcon className={`size-4  ${colorClasses[kindConfig.color].split(' ')[1]}`} />
           <Badge variant="outline" className={`text-xs ${colorClasses[kindConfig.color]}`}>
             {kindConfig.label}
           </Badge>
-          <span className="font-mono text-sm truncate flex-1">{receipt.receiptId.slice(0, 20)}...</span>
+          <span className="font-mono text-sm truncate flex-1">{receipt.receiptId.slice(0, 20)}…</span>
           {isExpanded ? <CaretUp size={16} /> : <CaretDown size={16} />}
         </div>
         <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
@@ -233,10 +233,10 @@ function ReceiptListItem({
             )}
             <div className="flex gap-2 pt-2">
               <Button size="sm" variant="outline">
-                <DownloadSimple className="w-4 h-4 mr-2" /> Export
+                <DownloadSimple className="size-4  mr-2" /> Export
               </Button>
               <Button size="sm" variant="outline">
-                <FileCode className="w-4 h-4 mr-2" /> Copy JSON
+                <FileCode className="size-4  mr-2" /> Copy JSON
               </Button>
             </div>
           </div>

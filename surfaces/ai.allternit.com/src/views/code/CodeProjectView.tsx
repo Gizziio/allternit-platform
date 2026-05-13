@@ -4,6 +4,7 @@
  * Shows threads list with real ChatComposer, tabs, and wired functionality
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useMemo } from 'react';
 import { InputModal } from '@/components/InputModal';
 import { ConfirmModal } from '@/components/ConfirmModal';
@@ -86,7 +87,7 @@ export function CodeProjectView({ workspaceId }: CodeProjectViewProps) {
 
   const handleSend = (text: string): void => {
     if (!text.trim() || !currentWorkspaceId) return;
-    console.log('Creating new thread in workspace:', currentWorkspaceId, 'with text:', text);
+    console.debug('Creating new thread in workspace:', currentWorkspaceId, 'with text:', text);
     setComposerInput('');
     // Navigation to new thread would happen here via store action
     dispatch({ type: 'OPEN_VIEW', viewType: 'code' });
@@ -488,7 +489,7 @@ function AddInstructionModal({
         <textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="Specific rules for this workspace..."
+          placeholder="Specific rules for this workspace…"
           style={{
             width: '100%',
             minHeight: 120,

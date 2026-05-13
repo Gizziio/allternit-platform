@@ -55,7 +55,7 @@ export function BashToolTerminalCard({
         </div>
         {isPending && (
           <svg
-            className="w-3 h-3 text-muted-foreground animate-spin shrink-0"
+            className="size-3  text-muted-foreground animate-spin shrink-0"
             viewBox="0 0 16 16"
             fill="none"
           >

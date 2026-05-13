@@ -6,7 +6,7 @@ export class RunEngine {
 
   async startRun(run: Run) {
     this.activeRun = run;
-    console.log('[RunEngine] Starting run:', run.id);
+    console.debug('[RunEngine] Starting run:', run.id);
     
     // Mock execution flow
     for (const node of run.nodes) {
@@ -19,14 +19,14 @@ export class RunEngine {
   private async executeNode(node: DagNode) {
     const { updateNodeStatus } = useDagState.getState();
     
-    console.log('[RunEngine] Executing node:', node.title);
+    console.debug('[RunEngine] Executing node:', node.title);
     updateNodeStatus(node.id, 'running');
     
     // Simulate work
     await new Promise(resolve => setTimeout(resolve, 1500));
     
     updateNodeStatus(node.id, 'completed');
-    console.log('[RunEngine] Node completed:', node.title);
+    console.debug('[RunEngine] Node completed:', node.title);
   }
 
   stopRun() {

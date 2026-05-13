@@ -1,0 +1,11 @@
+[package]
+name = "allternit-vm-executor"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "allternit_vm_executor"
+path = "src/lib.rs"
+
+[dependencies]
+allternit-driver-interface = { path = "../../drivers/allternit-driver-interface" }

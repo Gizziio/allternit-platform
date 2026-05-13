@@ -274,7 +274,7 @@ export function DesignTeamWorkspace({ projectName }: { projectName?: string }) {
                   }}
                 >
                   <Link size={14} color="rgba(255,255,255,0.4)" />
-                  <span style={{ fontSize: 11, color: "rgba(255,255,255,0.5)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <span style={{ fontSize: 12, color: "rgba(255,255,255,0.5)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {reviewToken}
                   </span>
                   <button
@@ -288,7 +288,7 @@ export function DesignTeamWorkspace({ projectName }: { projectName?: string }) {
                       background: linkCopied ? "#22c55e" : "rgba(255,255,255,0.06)",
                       border: "none",
                       color: "#fff",
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: 700,
                       cursor: "pointer",
                     }}
@@ -410,11 +410,11 @@ export function DesignTeamWorkspace({ projectName }: { projectName?: string }) {
                       <Star size={10} weight="fill" color="#e27c59" style={{ marginLeft: 4, display: "inline" }} />
                     )}
                   </div>
-                  <div style={{ fontSize: 11, color: "rgba(255,255,255,0.4)" }}>{member.handle}</div>
+                  <div style={{ fontSize: 12, color: "rgba(255,255,255,0.4)" }}>{member.handle}</div>
                 </div>
                 <span
                   style={{
-                    fontSize: 9,
+                    fontSize: 12,
                     fontWeight: 800,
                     textTransform: "uppercase",
                     letterSpacing: "0.05em",
@@ -469,14 +469,14 @@ export function DesignTeamWorkspace({ projectName }: { projectName?: string }) {
             >
               <div style={{ display: "flex", alignItems: "flex-end", gap: 4 }}>
                 <svg width="14" height="18" viewBox="0 0 14 18" fill="none"><path d="M0 0L14 8L7 10L4 18L0 0Z" fill={cursor.color} /></svg>
-                <span style={{ fontSize: 9, fontWeight: 800, background: cursor.color, color: "#fff", padding: "2px 5px", borderRadius: 4, whiteSpace: "nowrap" }}>{cursor.name}</span>
+                <span style={{ fontSize: 12, fontWeight: 800, background: cursor.color, color: "#fff", padding: "2px 5px", borderRadius: 4, whiteSpace: "nowrap" }}>{cursor.name}</span>
               </div>
             </motion.div>
           ))}
 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
             <SectionTitle icon={<Globe size={14} />} label="Shared Workspaces" />
-            <button onClick={() => setShowPresence(!showPresence)} style={{ fontSize: 9, fontWeight: 800, padding: "3px 8px", borderRadius: 5, background: showPresence ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.04)", border: `1px solid ${showPresence ? "rgba(34,197,94,0.3)" : "rgba(255,255,255,0.08)"}`, color: showPresence ? "#22c55e" : "rgba(255,255,255,0.3)", cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <button onClick={() => setShowPresence(!showPresence)} style={{ fontSize: 12, fontWeight: 800, padding: "3px 8px", borderRadius: 5, background: showPresence ? "rgba(34,197,94,0.15)" : "rgba(255,255,255,0.04)", border: `1px solid ${showPresence ? "rgba(34,197,94,0.3)" : "rgba(255,255,255,0.08)"}`, color: showPresence ? "#22c55e" : "rgba(255,255,255,0.3)", cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.05em" }}>
               {showPresence ? "● Live" : "○ Offline"}
             </button>
           </div>
@@ -536,7 +536,7 @@ export function DesignTeamWorkspace({ projectName }: { projectName?: string }) {
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            fontSize: 9,
+                            fontSize: 12,
                             fontWeight: 800,
                             color: "#fff",
                             border: "2px solid #0a0a0c",
@@ -591,7 +591,7 @@ export function DesignTeamWorkspace({ projectName }: { projectName?: string }) {
                     background: reviewFilter === f ? "rgba(255,255,255,0.08)" : "transparent",
                     border: "none",
                     color: reviewFilter === f ? "#fff" : "rgba(255,255,255,0.4)",
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: 700,
                     cursor: "pointer",
                     textTransform: "capitalize",
@@ -628,7 +628,7 @@ export function DesignTeamWorkspace({ projectName }: { projectName?: string }) {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: 800,
                       color: "#fff",
                       flexShrink: 0,
@@ -645,7 +645,7 @@ export function DesignTeamWorkspace({ projectName }: { projectName?: string }) {
                     </div>
                     <div
                       style={{
-                        fontSize: 11,
+                        fontSize: 12,
                         color: "rgba(255,255,255,0.5)",
                         marginBottom: 4,
                         overflow: "hidden",
@@ -655,7 +655,7 @@ export function DesignTeamWorkspace({ projectName }: { projectName?: string }) {
                     >
                       {review.projectName}
                     </div>
-                    <div style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontWeight: 500 }}>
+                    <div style={{ fontSize: 12, color: "rgba(255,255,255,0.3)", fontWeight: 500 }}>
                       {review.time}
                     </div>
                   </div>
@@ -696,7 +696,7 @@ function SectionTitle({ icon, label }: { icon: React.ReactNode; label: string })
       <span style={{ color: "rgba(255,255,255,0.4)" }}>{icon}</span>
       <span
         style={{
-          fontSize: 10,
+          fontSize: 12,
           fontWeight: 800,
           letterSpacing: "0.1em",
           color: "rgba(255,255,255,0.35)",
@@ -724,7 +724,7 @@ function StatusBadge({ status }: { status: SharedProject["status"] }) {
         borderRadius: 6,
         background: c.bg,
         color: c.text,
-        fontSize: 9,
+        fontSize: 12,
         fontWeight: 800,
         textTransform: "uppercase",
         letterSpacing: "0.05em",

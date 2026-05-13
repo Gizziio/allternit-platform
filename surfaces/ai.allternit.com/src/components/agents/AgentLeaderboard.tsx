@@ -98,19 +98,19 @@ export function AgentLeaderboard({ agents, benchmarkId, onSelectAgent }: AgentLe
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 2, flexWrap: "wrap" }}>
                 {entry.avgScore > 0 && (
-                  <span style={{ fontSize: 11, color: "var(--ui-text-muted)", display: "flex", alignItems: "center", gap: 3 }}>
+                  <span style={{ fontSize: 12, color: "var(--ui-text-muted)", display: "flex", alignItems: "center", gap: 3 }}>
                     <TrendingUp size={10} />
                     {entry.avgScore} benchmark
                   </span>
                 )}
                 {entry.avgRating > 0 && (
-                  <span style={{ fontSize: 11, color: "#f59e0b", display: "flex", alignItems: "center", gap: 3 }}>
+                  <span style={{ fontSize: 12, color: "#f59e0b", display: "flex", alignItems: "center", gap: 3 }}>
                     <Star size={10} />
                     {entry.avgRating} ({entry.reviewCount})
                   </span>
                 )}
                 {entry.totalRuns > 0 && (
-                  <span style={{ fontSize: 11, color: "var(--ui-text-muted)", display: "flex", alignItems: "center", gap: 3 }}>
+                  <span style={{ fontSize: 12, color: "var(--ui-text-muted)", display: "flex", alignItems: "center", gap: 3 }}>
                     <Zap size={10} />
                     {entry.totalRuns} runs
                   </span>

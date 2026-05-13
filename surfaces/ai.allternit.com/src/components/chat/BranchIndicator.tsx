@@ -44,7 +44,7 @@ export function BranchIndicator({
       
       <span
         style={{
-          fontSize: 11,
+          fontSize: 12,
           color: THEME.textSecondary,
           marginLeft: 4,
           marginRight: 8,
@@ -89,7 +89,7 @@ export function BranchIndicator({
 
         <span
           style={{
-            fontSize: 11,
+            fontSize: 12,
             color: THEME.textMuted,
             minWidth: 30,
             textAlign: 'center',

@@ -77,7 +77,7 @@ function EventRow({ event, onToggle }: { event: MemoryEvent; onToggle: (id: stri
             </div>
           </div>
         </div>
-        <CaretDown className={`w-4 h-4 text-[var(--text-tertiary)] transition-transform flex-shrink-0 ${event.expanded ? 'rotate-180' : ''}`} />
+        <CaretDown className={`size-4  text-[var(--text-tertiary)] transition-transform flex-shrink-0 ${event.expanded ? 'rotate-180' : ''}`} />
       </div>
       {event.expanded && (
         <div className="px-4 py-3 bg-[var(--bg-secondary)] border-t border-[var(--border-subtle)]">
@@ -197,7 +197,7 @@ export function MemoryKernelView() {
       <div className="p-6 border-b border-[var(--border-subtle)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Database className="w-7 h-7 text-[var(--accent-primary)]" />
+            <Database className="size-7  text-[var(--accent-primary)]" />
             <div>
               <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
                 Memory Kernel
@@ -272,10 +272,10 @@ export function MemoryKernelView() {
           <div className="p-6">
             <div className="mb-4 flex gap-3">
               <div className="flex-1 relative">
-                <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-tertiary)]" />
+                <MagnifyingGlass className="absolute left-3 top-1/2 -tranzinc-y-1/2 size-4  text-[var(--text-tertiary)]" />
                 <input
                   type="text"
-                  placeholder="Search events..."
+                  placeholder="Search events…"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-[var(--text-primary)] placeholder-[var(--text-tertiary)] outline-none focus:border-[var(--accent-primary)]"

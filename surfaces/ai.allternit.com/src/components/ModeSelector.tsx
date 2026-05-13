@@ -62,7 +62,7 @@ export function ModeSelector() {
   return (
     <div className="mode-selector">
       <div className="mode-selector-header">
-        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+        <h3 className="text-sm font-semibold text-zinc-700 uppercase tracking-wide">
           Mode
         </h3>
       </div>
@@ -75,7 +75,7 @@ export function ModeSelector() {
             className={`
               mode-button
               ${currentMode === mode.id ? 'active' : ''}
-              ${currentMode === mode.id ? mode.color : 'bg-gray-100'}
+              ${currentMode === mode.id ? mode.color : 'bg-zinc-100'}
             `}
             title={mode.description}
           >
@@ -89,7 +89,7 @@ export function ModeSelector() {
       </div>
       
       <div className="mode-description">
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-zinc-500">
           {MODES.find((m) => m.id === currentMode)?.description}
         </p>
       </div>
@@ -103,7 +103,7 @@ export function ModeSelector() {
 
 /*
 .mode-selector {
-  @apply p-3 border-b border-gray-200;
+  @apply p-3 border-b border-zinc-200;
 }
 
 .mode-selector-header {
@@ -126,7 +126,7 @@ export function ModeSelector() {
 }
 
 .mode-button:not(.active) {
-  @apply text-gray-700 hover:bg-gray-200;
+  @apply text-zinc-700 hover:bg-zinc-200;
 }
 
 .mode-icon {
@@ -138,7 +138,7 @@ export function ModeSelector() {
 }
 
 .mode-indicator {
-  @apply absolute top-2 right-2 w-2 h-2 bg-white rounded-full animate-pulse;
+  @apply absolute top-2 right-2 size-2  bg-white rounded-full animate-pulse;
 }
 
 .mode-description {

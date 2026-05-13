@@ -286,8 +286,10 @@ export class ApiFileSystem implements FileSystemAPI {
       }
     };
 
-    await addChildren('/Users');
-    await addChildren('/home');
+    await Promise.all([
+      addChildren('/Users'),
+      addChildren('/home')
+    ]);
 
     for (const candidate of candidates) {
       const hasAllternit = await this.pathLooksLikeHome(candidate);
@@ -472,17 +474,19 @@ export class CapabilityScanner {
       }
     };
 
-    await addHomeVariants('/Users');
-    await addHomeVariants('/home');
+    await Promise.all([
+      addHomeVariants('/Users'),
+      addHomeVariants('/home')
+    ]);
 
     const existing: string[] = [];
-    for (const path of candidates) {
+    await Promise.all(Array.from(candidates).map(async (path) => {
       try {
         if (await this.fs.exists(path)) existing.push(path);
       } catch {
         // Ignore invalid candidate.
       }
-    }
+    }));
 
     return existing.length > 0 ? existing : Array.from(candidates);
   }
@@ -538,11 +542,14 @@ export class CapabilityScanner {
     const seen = new Set<string>();
     const skillsPaths = await this.resolveBasePaths(SKILL_DIR_CANDIDATES);
 
-    for (const skillsPath of skillsPaths) {
+    await Promise.all(skillsPaths.map(async (skillsPath) => {
       try {
         const skillDirectories = await this.discoverSkillDirectories(skillsPath);
-        for (const directory of skillDirectories) {
-          const skill = await this.loadSkill(directory.path, directory.name, directory.modified);
+        const loadedSkills = await Promise.all(skillDirectories.map(directory => 
+          this.loadSkill(directory.path, directory.name, directory.modified)
+        ));
+        
+        for (const skill of loadedSkills) {
           if (skill && !seen.has(skill.id)) {
             seen.add(skill.id);
             skills.push(skill);
@@ -551,7 +558,7 @@ export class CapabilityScanner {
       } catch {
         // Ignore missing skills paths.
       }
-    }
+    }));
 
     return skills;
   }
@@ -657,7 +664,7 @@ export class CapabilityScanner {
     }
 
     const existing: string[] = [];
-    for (const candidate of candidates) {
+    await Promise.all(Array.from(candidates).map(async (candidate) => {
       try {
         if (await this.fs.exists(candidate)) {
           existing.push(candidate);
@@ -665,7 +672,7 @@ export class CapabilityScanner {
       } catch {
         // Ignore invalid candidate.
       }
-    }
+    }));
 
     return existing;
   }
@@ -681,9 +688,9 @@ export class CapabilityScanner {
     }
 
     const existing: string[] = [];
-    for (const candidate of candidates) {
+    await Promise.all(Array.from(candidates).map(async (candidate) => {
       try {
-        if (!(await this.fs.exists(candidate))) continue;
+        if (!(await this.fs.exists(candidate))) return;
         const entries = await this.fs.readDir(candidate);
         if (Array.isArray(entries)) {
           existing.push(candidate);
@@ -691,7 +698,7 @@ export class CapabilityScanner {
       } catch {
         // Ignore invalid directory candidate.
       }
-    }
+    }));
 
     return existing;
   }
@@ -857,27 +864,28 @@ export class CapabilityScanner {
     };
     const commandsPaths = await this.resolveBasePaths(COMMAND_DIR_CANDIDATES);
 
-    for (const commandsPath of commandsPaths) {
+    await Promise.all(commandsPaths.map(async (commandsPath) => {
       try {
         const entries = await this.fs.readDir(commandsPath);
+        const jsonEntries = entries.filter((entry) => entry.type === 'file' && entry.name.endsWith('.json'));
         
-        for (const entry of entries) {
-          if (entry.type === 'file' && entry.name.endsWith('.json')) {
-            const command = await this.loadCommand(entry.path, entry.name, entry.modified);
-            addCommand(command);
-          }
-        }
+        const loadedCommands = await Promise.all(jsonEntries.map(entry => 
+          this.loadCommand(entry.path, entry.name, entry.modified)
+        ));
+        
+        loadedCommands.forEach(addCommand);
       } catch {
         // Ignore missing command paths.
       }
-    }
+    }));
 
     const markdownCommandPaths = await this.resolveBasePaths(COMMAND_MARKDOWN_DIR_CANDIDATES);
-    for (const markdownPath of markdownCommandPaths) {
+    await Promise.all(markdownCommandPaths.map(async (markdownPath) => {
       try {
         const entries = await this.fs.readDir(markdownPath);
-        for (const entry of entries) {
-          if (entry.type !== 'file' || !entry.name.toLowerCase().endsWith('.md')) continue;
+        const mdEntries = entries.filter(entry => entry.type === 'file' && entry.name.toLowerCase().endsWith('.md'));
+        
+        await Promise.all(mdEntries.map(async (entry) => {
           const commandName = entry.name.replace(/\.md$/i, '');
           let description = `Slash command ${commandName}`;
           try {
@@ -899,19 +907,19 @@ export class CapabilityScanner {
             updatedAt: entry.modified?.toISOString() || new Date().toISOString(),
             content: `Source: ${entry.path}`,
           });
-        }
+        }));
       } catch {
         // Ignore missing markdown command paths.
       }
-    }
+    }));
 
     const commandConfigFiles = await this.resolveCandidateFiles(COMMAND_CONFIG_FILE_CANDIDATES);
-    for (const configPath of commandConfigFiles) {
+    await Promise.all(commandConfigFiles.map(async (configPath) => {
       try {
         const raw = await this.fs.readFile(configPath);
         const parsed = safeJSONParse<unknown>(raw, {});
         const config = this.asRecord(parsed);
-        if (!config) continue;
+        if (!config) return;
         const updatedAt = new Date().toISOString();
 
         const pushCommandEntry = (
@@ -1047,10 +1055,10 @@ export class CapabilityScanner {
       } catch {
         // Ignore malformed runtime config files.
       }
-    }
+    }));
 
     const internalCommandSources = await this.resolveCandidateFiles(INTERNAL_COMMAND_SOURCE_FILE_CANDIDATES);
-    for (const sourcePath of internalCommandSources) {
+    await Promise.all(internalCommandSources.map(async (sourcePath) => {
       try {
         const content = await this.fs.readFile(sourcePath);
         const lowerPath = sourcePath.toLowerCase().replace(/\\/g, '/');
@@ -1077,7 +1085,7 @@ export class CapabilityScanner {
       } catch {
         // Ignore unreadable internal command source files.
       }
-    }
+    }));
 
     return commands;
   }
@@ -1114,23 +1122,25 @@ export class CapabilityScanner {
     const seen = new Set<string>();
     const pluginsPaths = await this.resolveBasePaths(PLUGIN_DIR_CANDIDATES);
 
-    for (const pluginsPath of pluginsPaths) {
+    await Promise.all(pluginsPaths.map(async (pluginsPath) => {
       try {
         const entries = await this.fs.readDir(pluginsPath);
+        const dirEntries = entries.filter((entry) => entry.type === 'directory');
         
-        for (const entry of entries) {
-          if (entry.type === 'directory') {
-            const plugin = await this.loadPlugin(entry.path, entry.name, entry.modified);
-            if (plugin && !seen.has(plugin.id)) {
-              seen.add(plugin.id);
-              plugins.push(plugin);
-            }
+        const loadedPlugins = await Promise.all(dirEntries.map(entry => 
+          this.loadPlugin(entry.path, entry.name, entry.modified)
+        ));
+        
+        for (const plugin of loadedPlugins) {
+          if (plugin && !seen.has(plugin.id)) {
+            seen.add(plugin.id);
+            plugins.push(plugin);
           }
         }
       } catch {
         // Ignore missing plugin paths.
       }
-    }
+    }));
 
     return plugins;
   }
@@ -1219,12 +1229,12 @@ export class CapabilityScanner {
     };
 
     const packageFiles = await this.resolveCandidateFiles(INTERNAL_CLI_PACKAGE_FILE_CANDIDATES);
-    for (const packagePath of packageFiles) {
+    await Promise.all(packageFiles.map(async (packagePath) => {
       try {
         const raw = await this.fs.readFile(packagePath);
         const parsed = safeJSONParse<unknown>(raw, {});
         const pkg = this.asRecord(parsed);
-        if (!pkg) continue;
+        if (!pkg) return;
 
         const packageName = typeof pkg.name === 'string'
           ? pkg.name
@@ -1279,67 +1289,63 @@ export class CapabilityScanner {
       } catch {
         // Ignore malformed package metadata.
       }
-    }
+    }));
 
     const internalExecutableDirs = await this.resolveCandidateDirectories(INTERNAL_EXECUTABLE_DIR_CANDIDATES);
-    for (const executableDir of internalExecutableDirs) {
-      let entries: FileEntry[] = [];
+    await Promise.all(internalExecutableDirs.map(async (executableDir) => {
       try {
-        entries = await this.fs.readDir(executableDir);
-      } catch {
-        continue;
-      }
-
-      for (const entry of entries) {
-        if (entry.type !== 'file') continue;
-        if (entry.name.startsWith('.')) continue;
-        addTool(entry.name, entry.path, {
-          description: `Internal executable from ${executableDir}`,
-          author: 'Allternit Internal CLI',
-        });
-      }
-    }
-
-    const gizziCommandDirs = await this.resolveCandidateDirectories(INTERNAL_GIZZI_COMMAND_DIR_CANDIDATES);
-    for (const commandDir of gizziCommandDirs) {
-      let entries: FileEntry[] = [];
-      try {
-        entries = await this.fs.readDir(commandDir);
-      } catch {
-        continue;
-      }
-
-      for (const entry of entries) {
-        if (entry.type !== 'file') continue;
-        if (!entry.name.endsWith('.ts')) continue;
-        const moduleName = entry.name.replace(/\.ts$/i, '').trim();
-        if (!moduleName || moduleName === 'cmd') continue;
-        const normalizedTopLevel = this.normalizeCliCommandLiteral(moduleName);
-        if (!normalizedTopLevel) continue;
-        try {
-          const content = await this.fs.readFile(entry.path);
-          const commandLiterals = this.parseCliCommandLiterals(content);
-          addTool(`gizzi:${normalizedTopLevel}`, `gizzi ${normalizedTopLevel}`, {
-            description: `Internal Gizzi command from ${entry.name}`,
+        const entries = await this.fs.readDir(executableDir);
+        for (const entry of entries) {
+          if (entry.type !== 'file') continue;
+          if (entry.name.startsWith('.')) continue;
+          addTool(entry.name, entry.path, {
+            description: `Internal executable from ${executableDir}`,
             author: 'Allternit Internal CLI',
           });
+        }
+      } catch {
+        // Ignore inaccessible directory.
+      }
+    }));
 
-          for (const subcommand of commandLiterals) {
-            if (subcommand === normalizedTopLevel) continue;
-            if (!/^[A-Za-z][A-Za-z0-9._:@+-]*$/.test(subcommand)) continue;
-            addTool(`gizzi:${normalizedTopLevel}:${subcommand}`, `gizzi ${normalizedTopLevel} ${subcommand}`, {
-              description: `Internal Gizzi subcommand from ${entry.name}`,
+    const gizziCommandDirs = await this.resolveCandidateDirectories(INTERNAL_GIZZI_COMMAND_DIR_CANDIDATES);
+    await Promise.all(gizziCommandDirs.map(async (commandDir) => {
+      try {
+        const entries = await this.fs.readDir(commandDir);
+        await Promise.all(entries.map(async (entry) => {
+          if (entry.type !== 'file') return;
+          if (!entry.name.endsWith('.ts')) return;
+          const moduleName = entry.name.replace(/\.ts$/i, '').trim();
+          if (!moduleName || moduleName === 'cmd') return;
+          const normalizedTopLevel = this.normalizeCliCommandLiteral(moduleName);
+          if (!normalizedTopLevel) return;
+          try {
+            const content = await this.fs.readFile(entry.path);
+            const commandLiterals = this.parseCliCommandLiterals(content);
+            addTool(`gizzi:${normalizedTopLevel}`, `gizzi ${normalizedTopLevel}`, {
+              description: `Internal Gizzi command from ${entry.name}`,
               author: 'Allternit Internal CLI',
             });
+
+            for (const subcommand of commandLiterals) {
+              if (subcommand === normalizedTopLevel) continue;
+              if (!/^[A-Za-z][A-Za-z0-9._:@+-]*$/.test(subcommand)) continue;
+              addTool(`gizzi:${normalizedTopLevel}:${subcommand}`, `gizzi ${normalizedTopLevel} ${subcommand}`, {
+                description: `Internal Gizzi subcommand from ${entry.name}`,
+                author: 'Allternit Internal CLI',
+              });
+            }
+          } catch {
+            // Ignore unreadable command module.
           }
-        } catch {
-          // Ignore unreadable command module.
-        }
+        }));
+      } catch {
+        // Ignore inaccessible directory.
       }
-    }
+    }));
 
     const allternitSwitchFiles = await this.resolveCandidateFiles(INTERNAL_ALLTERNIT_CLI_SWITCH_FILE_CANDIDATES);
-    for (const switchFile of allternitSwitchFiles) {
+    await Promise.all(allternitSwitchFiles.map(async (switchFile) => {
       try {
         const content = await this.fs.readFile(switchFile);
         const subcommands = this.parseAllternitSwitchSubcommands(content);
@@ -1352,7 +1358,7 @@ export class CapabilityScanner {
       } catch {
         // Ignore missing allternit switch command source.
       }
-    }
+    }));
 
     const pathDirectories = new Set<string>();
     try {
@@ -1387,32 +1393,24 @@ export class CapabilityScanner {
       }
     }
 
-    for (const pathEntry of pathDirectories) {
+    await Promise.all(Array.from(pathDirectories).map(async (pathEntry) => {
+      if (toolsByName.size >= 2600) return;
       try {
-        if (!(await this.fs.exists(pathEntry))) continue;
+        if (!(await this.fs.exists(pathEntry))) return;
+        const entries = await this.fs.readDir(pathEntry);
+        for (const entry of entries) {
+          if (entry.type !== 'file') continue;
+          if (entry.name.startsWith('.')) continue;
+          addTool(entry.name, entry.path, {
+            description: `Discovered from PATH directory ${pathEntry}`,
+            author: 'System PATH',
+          });
+          if (toolsByName.size >= 2600) break;
+        }
       } catch {
-        continue;
+        // Ignore inaccessible directory.
       }
-
-      let entries: FileEntry[] = [];
-      try {
-        entries = await this.fs.readDir(pathEntry);
-      } catch {
-        continue;
-      }
-
-      for (const entry of entries) {
-        if (entry.type !== 'file') continue;
-        if (entry.name.startsWith('.')) continue;
-        addTool(entry.name, entry.path, {
-          description: `Discovered from PATH directory ${pathEntry}`,
-          author: 'System PATH',
-        });
-        if (toolsByName.size >= 2600) break;
-      }
-
-      if (toolsByName.size >= 2600) break;
-    }
+    }));
 
     if (toolsByName.size === 0) {
       const commonTools = [
@@ -1422,7 +1420,7 @@ export class CapabilityScanner {
         'code', 'cursor', 'vim', 'nvim', 'emacs',
       ];
 
-      for (const tool of commonTools) {
+      await Promise.all(commonTools.map(async (tool) => {
         try {
           const result = await this.fs.exec(`command -v ${tool}`);
           const resolved = result.stdout.trim();
@@ -1435,7 +1433,7 @@ export class CapabilityScanner {
         } catch {
           // Tool unavailable in this environment.
         }
-      }
+      }));
     }
 
     return Array.from(toolsByName.values())
@@ -1458,23 +1456,23 @@ export class CapabilityScanner {
     };
     const mcpsPaths = await this.resolveBasePaths(MCP_DIR_CANDIDATES);
 
-    for (const mcpsPath of mcpsPaths) {
+    await Promise.all(mcpsPaths.map(async (mcpsPath) => {
       try {
         const entries = await this.fs.readDir(mcpsPath);
+        const jsonEntries = entries.filter((entry) => entry.type === 'file' && entry.name.endsWith('.json'));
         
-        for (const entry of entries) {
-          if (entry.type === 'file' && entry.name.endsWith('.json')) {
-            const mcp = await this.loadMcp(entry.path, entry.name, entry.modified);
-            addMcp(mcp);
-          }
-        }
+        const loadedMcps = await Promise.all(jsonEntries.map(entry => 
+          this.loadMcp(entry.path, entry.name, entry.modified)
+        ));
+        
+        loadedMcps.forEach(addMcp);
       } catch {
         // Ignore missing MCP paths.
       }
-    }
+    }));
 
     const configFiles = await this.resolveCandidateFiles(MCP_CONFIG_FILE_CANDIDATES);
-    for (const configPath of configFiles) {
+    await Promise.all(configFiles.map(async (configPath) => {
       try {
         if (configPath.toLowerCase().endsWith('.toml')) {
           const raw = await this.fs.readFile(configPath);
@@ -1516,13 +1514,13 @@ export class CapabilityScanner {
               language: 'json',
             });
           }
-          continue;
+          return;
         }
 
         const raw = await this.fs.readFile(configPath);
         const parsed = safeJSONParse<unknown>(raw, {});
         const config = this.asRecord(parsed);
-        if (!config) continue;
+        if (!config) return;
 
         const containers = [
           this.asRecord(config.mcp),
@@ -1583,7 +1581,7 @@ export class CapabilityScanner {
       } catch {
         // Ignore malformed runtime config files.
       }
-    }
+    }));
 
     return mcps;
   }
@@ -1627,23 +1625,23 @@ export class CapabilityScanner {
     };
     const webhooksPaths = await this.resolveBasePaths(WEBHOOK_DIR_CANDIDATES);
 
-    for (const webhooksPath of webhooksPaths) {
+    await Promise.all(webhooksPaths.map(async (webhooksPath) => {
       try {
         const entries = await this.fs.readDir(webhooksPath);
+        const jsonEntries = entries.filter((entry) => entry.type === 'file' && entry.name.endsWith('.json'));
         
-        for (const entry of entries) {
-          if (entry.type === 'file' && entry.name.endsWith('.json')) {
-            const webhook = await this.loadWebhook(entry.path, entry.name, entry.modified);
-            addWebhook(webhook);
-          }
-        }
+        const loadedWebhooks = await Promise.all(jsonEntries.map(entry => 
+          this.loadWebhook(entry.path, entry.name, entry.modified)
+        ));
+        
+        loadedWebhooks.forEach(addWebhook);
       } catch {
         // Ignore missing webhook paths.
       }
-    }
+    }));
 
     const configFiles = await this.resolveCandidateFiles(WEBHOOK_CONFIG_FILE_CANDIDATES);
-    for (const configPath of configFiles) {
+    await Promise.all(configFiles.map(async (configPath) => {
       try {
         if (configPath.toLowerCase().endsWith('.toml')) {
           const raw = await this.fs.readFile(configPath);
@@ -1675,13 +1673,13 @@ export class CapabilityScanner {
               language: 'json',
             });
           }
-          continue;
+          return;
         }
 
         const raw = await this.fs.readFile(configPath);
         const parsed = safeJSONParse<unknown>(raw, {});
         const config = this.asRecord(parsed);
-        if (!config) continue;
+        if (!config) return;
         const hookContainers = [this.asRecord(config.hooks), this.asRecord(config.webhooks)];
 
         for (const container of hookContainers) {
@@ -1736,7 +1734,7 @@ export class CapabilityScanner {
       } catch {
         // Ignore malformed runtime config files.
       }
-    }
+    }));
 
     return webhooks;
   }
@@ -1773,23 +1771,25 @@ export class CapabilityScanner {
     const seen = new Set<string>();
     const connectorsPaths = await this.resolveBasePaths(CONNECTOR_DIR_CANDIDATES);
 
-    for (const connectorsPath of connectorsPaths) {
+    await Promise.all(connectorsPaths.map(async (connectorsPath) => {
       try {
         const entries = await this.fs.readDir(connectorsPath);
+        const jsonEntries = entries.filter((entry) => entry.type === 'file' && entry.name.endsWith('.json'));
         
-        for (const entry of entries) {
-          if (entry.type === 'file' && entry.name.endsWith('.json')) {
-            const connector = await this.loadConnector(entry.path, entry.name, entry.modified);
-            if (connector && !seen.has(connector.id)) {
-              seen.add(connector.id);
-              connectors.push(connector);
-            }
+        const loadedConnectors = await Promise.all(jsonEntries.map(entry => 
+          this.loadConnector(entry.path, entry.name, entry.modified)
+        ));
+        
+        for (const connector of loadedConnectors) {
+          if (connector && !seen.has(connector.id)) {
+            seen.add(connector.id);
+            connectors.push(connector);
           }
         }
       } catch {
         // Ignore missing connector paths.
       }
-    }
+    }));
 
     return connectors;
   }
@@ -1843,7 +1843,7 @@ export class CapabilityScanner {
     try {
       const entries = await this.fs.readDir(dirPath);
       
-      for (const entry of entries) {
+      await Promise.all(entries.map(async (entry) => {
         const relativePath = entry.path.startsWith(basePath)
           ? entry.path.slice(basePath.length) || '/'
           : this.fs.join('/', entry.name);
@@ -1903,7 +1903,7 @@ export class CapabilityScanner {
           if (!parent.children) parent.children = [];
           parent.children.push(fileNode);
         }
-      }
+      }));
     } catch (e) {
       console.error('Failed to scan directory:', dirPath, e);
     }
@@ -2019,7 +2019,7 @@ export function useFileSystem(): UseFileSystemReturn {
       const fallbackTimer = setTimeout(() => {
         clearInterval(poll);
         if (!checkReady() && !cancelled) {
-          console.log('[useFileSystem] RealFileSystem not ready, falling back to ApiFileSystem');
+          console.debug('[useFileSystem] RealFileSystem not ready, falling back to ApiFileSystem');
           setFs(new ApiFileSystem());
           return;
         }
@@ -2123,7 +2123,7 @@ export function useFileSystem(): UseFileSystemReturn {
   const removeDirectoryRecursive = useCallback(async (targetPath: string): Promise<void> => {
     try {
       const entries = await fs.readDir(targetPath);
-      for (const entry of entries) {
+      await Promise.all(entries.map(async (entry) => {
         if (entry.type === 'directory') {
           await removeDirectoryRecursive(entry.path);
         } else {
@@ -2133,7 +2133,7 @@ export function useFileSystem(): UseFileSystemReturn {
             // Best-effort cleanup.
           }
         }
-      }
+      }));
     } catch {
       // Directory may not exist or may be unsupported in this backend.
     }
@@ -2176,10 +2176,10 @@ export function useFileSystem(): UseFileSystemReturn {
         await fs.mkdir(pluginDir);
         await fs.mkdir(claudePluginDir);
 
-        for (const file of installBundle.files) {
+        await Promise.all(installBundle.files.map(async (file) => {
           await ensureRelativeParentDirs(file.relativePath);
           await fs.writeFile(fs.join(pluginDir, file.relativePath), file.content);
-        }
+        }));
 
         const baseManifest = installBundle.pluginManifest || {};
         const pluginName = typeof baseManifest.name === 'string' && baseManifest.name.trim()
@@ -2225,29 +2225,26 @@ export function useFileSystem(): UseFileSystemReturn {
           };
         }
 
-        await fs.writeFile(fs.join(claudePluginDir, 'plugin.json'), JSON.stringify(pluginConfig, null, 2));
-        await fs.writeFile(fs.join(pluginDir, 'plugin.json'), JSON.stringify(pluginConfig, null, 2));
-
-        const readmeContent = installBundle.readme.trim()
-          ? installBundle.readme
-          : `# ${plugin.name}\n\n${plugin.description}\n`;
-        await fs.writeFile(fs.join(pluginDir, 'README.md'), readmeContent);
-
-        await fs.writeFile(
-          fs.join(claudePluginDir, 'install-source.json'),
-          JSON.stringify(
-            {
-              installedAt,
-              kind: installBundle.source.kind,
-              repo: installBundle.source.repo,
-              ref: installBundle.source.ref,
-              path: installBundle.source.path,
-              sourceUrl: installBundle.source.sourceUrl || plugin.sourceUrl,
-            },
-            null,
-            2,
-          ),
-        );
+        await Promise.all([
+          fs.writeFile(fs.join(claudePluginDir, 'plugin.json'), JSON.stringify(pluginConfig, null, 2)),
+          fs.writeFile(fs.join(pluginDir, 'plugin.json'), JSON.stringify(pluginConfig, null, 2)),
+          fs.writeFile(fs.join(pluginDir, 'README.md'), installBundle.readme.trim() ? installBundle.readme : `# ${plugin.name}\n\n${plugin.description}\n`),
+          fs.writeFile(
+            fs.join(claudePluginDir, 'install-source.json'),
+            JSON.stringify(
+              {
+                installedAt,
+                kind: installBundle.source.kind,
+                repo: installBundle.source.repo,
+                ref: installBundle.source.ref,
+                path: installBundle.source.path,
+                sourceUrl: installBundle.source.sourceUrl || plugin.sourceUrl,
+              },
+              null,
+              2,
+            ),
+          )
+        ]);
 
         await refresh();
         return { success: true };

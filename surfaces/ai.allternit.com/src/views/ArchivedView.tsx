@@ -7,6 +7,7 @@
 
 'use client';
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useMemo, useState, useEffect } from 'react';
 import { GlassSurface } from '@/design/GlassSurface';
 import {
@@ -223,7 +224,7 @@ export function ArchivedView() {
       {/* Header */}
       <div className="p-4 border-b border-[var(--border-subtle)]">
         <div className="flex items-center gap-3">
-          <Archive className="w-6 h-6 text-[var(--accent-primary)]" />
+          <Archive className="size-6  text-[var(--accent-primary)]" />
           <div>
             <h2 className="text-lg font-semibold text-[var(--text-primary)]">
               Archived Sessions
@@ -250,12 +251,12 @@ export function ArchivedView() {
             }}
           >
             <MagnifyingGlass
-              className="w-4 h-4 text-[var(--text-tertiary)] flex-shrink-0"
+              className="size-4  text-[var(--text-tertiary)] flex-shrink-0"
               strokeWidth={2}
             />
             <input
               type="text"
-              placeholder="Search archived sessions..."
+              placeholder="Search archived sessions…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
@@ -283,7 +284,7 @@ export function ArchivedView() {
               textAlign: 'center',
             }}
           >
-            <Archive className="w-16 h-16 text-[var(--text-tertiary)] mb-4 opacity-30" />
+            <Archive className="size-16  text-[var(--text-tertiary)] mb-4 opacity-30" />
             <h3
               style={{
                 fontSize: '16px',
@@ -306,7 +307,7 @@ export function ArchivedView() {
             <div
               style={{
                 padding: '12px 16px 8px 16px',
-                fontSize: '11px',
+                fontSize: '12px',
                 fontWeight: 700,
                 textTransform: 'uppercase',
                 letterSpacing: '0.05em',

@@ -85,7 +85,7 @@ const ProgramPreviewCard: React.FC<ProgramPreviewCardProps> = ({ programInfo, on
       case 'launching': return 'bg-yellow-100 text-yellow-700 border-yellow-300';
       case 'active': return 'bg-green-100 text-green-700 border-green-300';
       case 'error': return 'bg-red-100 text-red-700 border-red-300';
-      default: return 'bg-gray-100 text-gray-700 border-gray-300';
+      default: return 'bg-zinc-100 text-zinc-700 border-zinc-300';
     }
   };
 
@@ -100,7 +100,7 @@ const ProgramPreviewCard: React.FC<ProgramPreviewCardProps> = ({ programInfo, on
         <div className="text-xs opacity-70 capitalize">{programInfo.type.replace('-', ' ')}</div>
       </div>
       {programInfo.status === 'launching' && (
-        <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+        <span className="size-4  border-2 border-current border-t-transparent rounded-full animate-spin" />
       )}
       {programInfo.status === 'active' && (
         <span className="text-green-600">●</span>
@@ -281,7 +281,7 @@ const formatInline = (text: string): React.ReactNode => {
     }
     // Inline code
     if (part.startsWith('`') && part.endsWith('`')) {
-      return <code key={idx} className="bg-gray-100 dark:bg-gray-800 px-1 rounded text-sm">{part.slice(1, -1)}</code>;
+      return <code key={idx} className="bg-zinc-100 dark:bg-zinc-800 px-1 rounded text-sm">{part.slice(1, -1)}</code>;
     }
     return part;
   });
@@ -443,10 +443,10 @@ export const AllternitChatIntegration: React.FC<AllternitChatIntegrationProps> =
           key={message.id}
           className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
         >
-          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm ${
+          <div className={`size-8  rounded-full flex items-center justify-center text-sm ${
             message.role === 'user' 
               ? 'bg-blue-600 text-white' 
-              : 'bg-gray-200 dark:bg-gray-700'
+              : 'bg-zinc-200 dark:bg-zinc-700'
           }`}>
             {message.role === 'user' ? '👤' : '🤖'}
           </div>
@@ -454,7 +454,7 @@ export const AllternitChatIntegration: React.FC<AllternitChatIntegrationProps> =
           <div className={`max-w-[80%] rounded-2xl px-4 py-3 ${
             message.role === 'user'
               ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 dark:bg-gray-800'
+              : 'bg-zinc-100 dark:bg-zinc-800'
           }`}>
             <MessageRenderer 
               message={message} 
@@ -526,7 +526,7 @@ export const QuickLaunchButtons: React.FC<QuickLaunchButtonsProps> = ({ onLaunch
         <button
           key={type}
           onClick={() => onLaunch(type)}
-          className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg text-sm transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg text-sm transition-colors"
         >
           <span>{icon}</span>
           <span>{label}</span>

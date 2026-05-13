@@ -137,7 +137,7 @@ export function BrowserAgentOverlay({
       case 'Scroll':
         return 'bg-green-500 border-green-600 text-white';
       case 'Navigate':
-        return 'bg-indigo-500 border-indigo-600 text-white';
+        return 'bg-blue-500 border-blue-600 text-white';
       case 'Assert':
       case 'Extract':
         return 'bg-cyan-500 border-cyan-600 text-white';
@@ -150,7 +150,7 @@ export function BrowserAgentOverlay({
       case 'Select':
       case 'Wait':
       default:
-        return 'bg-gray-500 border-gray-600 text-white';
+        return 'bg-zinc-500 border-zinc-600 text-white';
     }
   }, []);
 
@@ -235,10 +235,10 @@ export function BrowserAgentOverlay({
         }}
       >
         {/* Corner accents */}
-        <div className="absolute -top-1 -left-1 w-3 h-3 border-t-2 border-l-2 border-current rounded-tl" />
-        <div className="absolute -top-1 -right-1 w-3 h-3 border-t-2 border-r-2 border-current rounded-tr" />
-        <div className="absolute -bottom-1 -left-1 w-3 h-3 border-b-2 border-l-2 border-current rounded-bl" />
-        <div className="absolute -bottom-1 -right-1 w-3 h-3 border-b-2 border-r-2 border-current rounded-br" />
+        <div className="absolute -top-1 -left-1 size-3  border-t-2 border-l-2 border-current rounded-tl" />
+        <div className="absolute -top-1 -right-1 size-3  border-t-2 border-r-2 border-current rounded-tr" />
+        <div className="absolute -bottom-1 -left-1 size-3  border-b-2 border-l-2 border-current rounded-bl" />
+        <div className="absolute -bottom-1 -right-1 size-3  border-b-2 border-r-2 border-current rounded-br" />
       </div>
 
       {/* Action Badge */}
@@ -272,7 +272,7 @@ export function BrowserAgentOverlay({
           }}
         >
           <CursorClick
-            className="w-6 h-6 text-blue-500 opacity-60"
+            className="size-6  text-blue-500 opacity-60"
             style={{
               filter: 'drop-shadow(0 2px 4px var(--surface-panel))',
             }}
@@ -283,9 +283,9 @@ export function BrowserAgentOverlay({
       {/* Waiting Approval Overlay */}
       {status === 'WaitingApproval' && (
         <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]">
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded-full bg-yellow-500/90 text-white shadow-lg animate-pulse">
+          <div className="absolute top-4 left-1/2 -tranzinc-x-1/2 flex items-center gap-2 px-4 py-2 rounded-full bg-yellow-500/90 text-white shadow-lg animate-pulse">
             <Warning size={16} />
-            <span className="text-sm font-medium">Waiting for approval...</span>
+            <span className="text-sm font-medium">Waiting for approval…</span>
           </div>
         </div>
       )}

@@ -21,8 +21,8 @@
  * );
  * 
  * if (!resolution.satisfied) {
- *   console.log('Missing:', resolution.missing);
- *   console.log('Conflicts:', resolution.conflicts);
+ *   console.debug('Missing:', resolution.missing);
+ *   console.debug('Conflicts:', resolution.conflicts);
  * }
  * ```
  */

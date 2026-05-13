@@ -122,7 +122,7 @@ export function CodeRenderer({
     setIsRunning(true);
     setConsoleOutput([]);
     
-    // Capture console.log output
+    // Capture console.debug output
     const logs: string[] = [];
     
     if (language === 'javascript' || language === 'jsx') {
@@ -134,7 +134,7 @@ export function CodeRenderer({
           if (iframeDoc) {
             const script = iframeDoc.createElement('script');
             script.textContent = `
-              console.log = function(...args) { window.parent.postMessage({type: 'console', level: 'log', args}, '*'); };
+              console.debug = function(...args) { window.parent.postMessage({type: 'console', level: 'log', args}, '*'); };
               console.error = function(...args) { window.parent.postMessage({type: 'console', level: 'error', args}, '*'); };
               ${code}
             `;
@@ -189,7 +189,7 @@ export function CodeRenderer({
       {/* Toolbar */}
       <div className="h-12 border-b border-[var(--border-subtle)] flex items-center justify-between px-4 bg-[var(--bg-secondary)]">
         <div className="flex items-center gap-3">
-          <FileCode className="w-4 h-4 text-[var(--accent-primary)]" />
+          <FileCode className="size-4  text-[var(--accent-primary)]" />
           <span className="text-sm font-medium text-[var(--text-primary)]">
             {title}
           </span>
@@ -241,7 +241,7 @@ export function CodeRenderer({
               disabled={isRunning}
               className="text-[var(--text-tertiary)] hover:text-green-500"
             >
-              {isRunning ? <ArrowsClockwise className="w-4 h-4 animate-spin" /> : <Play size={16} />}
+              {isRunning ? <ArrowsClockwise className="size-4  animate-spin" /> : <Play size={16} />}
             </Button>
           )}
           <Button
@@ -363,7 +363,7 @@ export function CodeRenderer({
         </div>
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded-full bg-green-500" />
+            <div className="size-2  rounded-full bg-green-500" />
             Ready
           </span>
         </div>

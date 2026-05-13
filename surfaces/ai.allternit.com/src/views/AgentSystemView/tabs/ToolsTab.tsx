@@ -440,7 +440,7 @@ function TemplatesSection({
                   </h4>
                   <span
                     style={{
-                      fontSize: 11,
+                      fontSize: 12,
                       color: "#888",
                       textTransform: "uppercase",
                     }}
@@ -474,7 +474,7 @@ function TemplatesSection({
                       padding: "4px 8px",
                       background: "var(--bg-primary, #0a0a0a)",
                       borderRadius: 4,
-                      fontSize: 10,
+                      fontSize: 12,
                       color: "#888",
                       textTransform: "uppercase",
                     }}
@@ -722,7 +722,7 @@ function ReceiptsSection({
             type="text"
             value={filter}
             onChange={(e) => onFilterChange(e.target.value)}
-            placeholder="Search receipts..."
+            placeholder="Search receipts…"
             style={{
               flex: 1,
               background: "transparent",
@@ -806,7 +806,7 @@ function ReceiptsSection({
                     padding: "4px 8px",
                     background: "#0a84ff20",
                     borderRadius: 4,
-                    fontSize: 11,
+                    fontSize: 12,
                     color: "#0a84ff",
                     textTransform: "uppercase",
                   }}
@@ -825,7 +825,7 @@ function ReceiptsSection({
               </div>
               <div
                 style={{
-                  fontSize: 11,
+                  fontSize: 12,
                   color: "#666",
                 }}
               >

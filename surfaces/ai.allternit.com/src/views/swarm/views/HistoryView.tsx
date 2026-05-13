@@ -176,7 +176,7 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
     return (
       <div className="h-full flex flex-col items-center justify-center" style={{ background: BACKGROUND.primary }}>
         <div
-          className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
+          className="size-16  rounded-2xl flex items-center justify-center mb-4"
           style={{ background: BACKGROUND.tertiary, border: `1px solid ${BORDER.subtle}` }}
         >
           <ChartLine size={28} color={TEXT.tertiary} weight="duotone" />
@@ -279,12 +279,12 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
                 <XAxis 
                   dataKey="time" 
                   stroke={TEXT.tertiary}
-                  tick={{ fill: TEXT.tertiary, fontSize: 11 }}
+                  tick={{ fill: TEXT.tertiary, fontSize: 12 }}
                   tickLine={false}
                 />
                 <YAxis 
                   stroke={TEXT.tertiary}
-                  tick={{ fill: TEXT.tertiary, fontSize: 11 }}
+                  tick={{ fill: TEXT.tertiary, fontSize: 12 }}
                   tickLine={false}
                   axisLine={false}
                 />
@@ -326,12 +326,12 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
                 <XAxis 
                   dataKey="time" 
                   stroke={TEXT.tertiary}
-                  tick={{ fill: TEXT.tertiary, fontSize: 11 }}
+                  tick={{ fill: TEXT.tertiary, fontSize: 12 }}
                   tickLine={false}
                 />
                 <YAxis 
                   stroke={TEXT.tertiary}
-                  tick={{ fill: TEXT.tertiary, fontSize: 11 }}
+                  tick={{ fill: TEXT.tertiary, fontSize: 12 }}
                   tickLine={false}
                   axisLine={false}
                 />
@@ -372,12 +372,12 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
                 <XAxis 
                   dataKey="time" 
                   stroke={TEXT.tertiary}
-                  tick={{ fill: TEXT.tertiary, fontSize: 11 }}
+                  tick={{ fill: TEXT.tertiary, fontSize: 12 }}
                   tickLine={false}
                 />
                 <YAxis 
                   stroke={TEXT.tertiary}
-                  tick={{ fill: TEXT.tertiary, fontSize: 11 }}
+                  tick={{ fill: TEXT.tertiary, fontSize: 12 }}
                   tickLine={false}
                   axisLine={false}
                 />
@@ -444,7 +444,7 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
                         <span 
-                          className="w-2 h-2 rounded-full"
+                          className="size-2  rounded-full"
                           style={{ background: metric.color }}
                         />
                         <span className="text-xs font-medium" style={{ color: TEXT.primary }}>
@@ -458,15 +458,15 @@ export function HistoryView({ data, modeColors }: HistoryViewProps) {
                     
                     {isVisible && stat && (
                       <div className="mt-2 pt-2 border-t space-y-1" style={{ borderColor: 'var(--surface-hover)' }}>
-                        <div className="flex justify-between text-[10px]">
+                        <div className="flex justify-between text-xs">
                           <span style={{ color: TEXT.tertiary }}>Min</span>
                           <span style={{ color: TEXT.secondary }}>{metric.formatter(stat.min)}</span>
                         </div>
-                        <div className="flex justify-between text-[10px]">
+                        <div className="flex justify-between text-xs">
                           <span style={{ color: TEXT.tertiary }}>Max</span>
                           <span style={{ color: TEXT.secondary }}>{metric.formatter(stat.max)}</span>
                         </div>
-                        <div className="flex justify-between text-[10px]">
+                        <div className="flex justify-between text-xs">
                           <span style={{ color: TEXT.tertiary }}>Avg</span>
                           <span style={{ color: TEXT.secondary }}>{metric.formatter(stat.avg)}</span>
                         </div>

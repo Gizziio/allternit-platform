@@ -227,7 +227,7 @@ function MonitorHeader({
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <div 
-            className="w-8 h-8 rounded-lg flex items-center justify-center"
+            className="size-8  rounded-lg flex items-center justify-center"
             style={{
               background: modeColors.soft,
             }}
@@ -255,7 +255,7 @@ function MonitorHeader({
           }}
         >
           <span 
-            className={`w-2 h-2 rounded-full ${isLive ? 'animate-pulse' : ''}`}
+            className={`size-2  rounded-full ${isLive ? 'animate-pulse' : ''}`}
             style={{ background: isLive ? 'var(--status-success)' : TEXT.tertiary }}
           />
           {isLive ? 'LIVE' : 'PAUSED'}
@@ -378,12 +378,12 @@ function LogsPanel({
 
         {/* Search */}
         <div className="relative">
-          <MagnifyingGlass size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2" style={{ color: TEXT.tertiary }} />
+          <MagnifyingGlass size={14} className="absolute left-2.5 top-1/2 -tranzinc-y-1/2" style={{ color: TEXT.tertiary }} />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search logs..."
+            placeholder="Search logs…"
             className="pl-9 pr-3 py-1.5 rounded-lg text-sm outline-none w-48"
             style={{
               background: 'var(--surface-panel)',
@@ -550,7 +550,7 @@ function DagPanel({
                 }}
               >
                 <div 
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  className="size-10  rounded-lg flex items-center justify-center"
                   style={{ background: `${status.border}30` }}
                 >
                   <StatusIcon size={20} style={{ color: status.border }} />
@@ -639,7 +639,7 @@ function WihsPanel({
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3">
                   <div 
-                    className="w-2 h-2 rounded-full mt-2"
+                    className="size-2  rounded-full mt-2"
                     style={{ 
                       background: status.color,
                       boxShadow: `0 0 8px ${status.color}`,

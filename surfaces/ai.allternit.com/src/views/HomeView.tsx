@@ -1,5 +1,5 @@
 import React from 'react';
-import { GlassCard } from '../design/GlassCard';
+import { GlassCard } from '../design/glass/GlassCard';
 import { tokens } from '../design/tokens';
 import { 
   ChatText, 
@@ -13,7 +13,7 @@ import {
 } from '@phosphor-icons/react';
 
 export function HomeView({ onAction, context }: any) {
-  console.log('[HomeView] Rendered with context:', context?.viewType, context?.viewId);
+  console.debug('[HomeView] Rendered with context:', context?.viewType, context?.viewId);
   const quickActions = [
     { id: 'chat', label: 'New Chat', icon: ChatText, color: tokens.colors.chat.primary, desc: 'Start a fresh conversation' },
     { id: 'workspace', label: 'Cowork', icon: UsersThree, color: tokens.colors.cowork.primary, desc: 'Launch collaborative workspace' },
@@ -28,52 +28,48 @@ export function HomeView({ onAction, context }: any) {
   ];
 
   return (
-    <div style={{ padding: '40px ' + tokens.space.xxl + 'px', height: '100%', overflowY: 'auto', background: 'radial-gradient(circle at top left, rgba(96, 165, 250, 0.05), transparent 400px)' }}>
-      <div style={{ marginBottom: 48, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+    <div className="p-10 h-full overflow-y-auto bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.05),transparent_400px)] flex flex-col gap-12">
+      <div className="flex justify-between items-end">
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: tokens.colors.chat.primary, marginBottom: 8 }}>
+          <div className="flex items-center gap-2 text-[var(--accent-chat)] mb-2">
             <Sparkle size={20} weight="fill" />
-            <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Next Gen Shell</span>
+            <span className="text-[12px] font-bold uppercase tracking-wider">Next Gen Shell</span>
           </div>
-          <h1 style={{ fontSize: 40, fontWeight: 900, letterSpacing: '-0.03em', margin: 0 }}>Good morning, User</h1>
+          <h1 className="text-4xl font-black tracking-tight m-0">Good morning, User</h1>
         </div>
-        <div style={{ padding: '12px 24px', borderRadius: 14, background: 'rgba(0,0,0,0.03)', border: '1px solid var(--surface-hover)', fontSize: 13, fontWeight: 500 }}>
-          <span style={{ opacity: 0.5 }}>Active WIH:</span> <span style={{ color: tokens.colors.chat.primary }}>P5-T0500</span>
+        <div className="px-6 py-3 rounded-2xl bg-black/5 border border-[var(--surface-hover)] text-[13px] font-medium">
+          <span className="opacity-50">Active WIH:</span> <span className="text-[var(--accent-chat)]">P5-T0500</span>
         </div>
       </div>
 
-      <section style={{ marginBottom: 48 }}>
-        <h2 style={{ fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: tokens.colors.system.textMuted, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+      <section>
+        <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--text-muted)] mb-5 flex items-center gap-2">
           <Star size={16} weight="fill" />
           Quick Launch
         </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-5">
           {quickActions.map(action => (
             <button 
               key={action.id}
               onClick={() => onAction(action.id)}
-              style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer' }}
+              className="bg-transparent border-none p-0 text-left cursor-pointer group"
             >
-              <GlassCard style={{ height: 140, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: 20 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <div style={{ 
-                    width: 44, 
-                    height: 44, 
-                    borderRadius: 12, 
-                    background: 'rgba(0,0,0,0.03)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: action.color,
-                    boxShadow: '0 4px 12px ' + action.color + '20'
-                  }}>
+              <GlassCard className="h-[140px] flex flex-col justify-between p-5 transition-all group-hover:bg-white/5 group-active:scale-95">
+                <div className="flex justify-between items-start">
+                  <div 
+                    className="size-11 rounded-xl bg-black/5 flex items-center justify-center"
+                    style={{ 
+                      color: action.color,
+                      boxShadow: `0 4px 12px ${action.color}20`
+                    }}
+                  >
                     <action.icon size={24} weight="duotone" />
                   </div>
-                  <ArrowRight size={16} color="rgba(255,255,255,0.3)" />
+                  <ArrowRight size={16} className="text-white/30 transition-transform group-hover:tranzinc-x-1" />
                 </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>{action.label}</div>
-                  <div style={{ fontSize: 12, opacity: 0.5 }}>{action.desc}</div>
+                  <div className="font-bold text-base mb-1">{action.label}</div>
+                  <div className="text-[12px] opacity-50">{action.desc}</div>
                 </div>
               </GlassCard>
             </button>
@@ -82,20 +78,22 @@ export function HomeView({ onAction, context }: any) {
       </section>
 
       <section>
-        <h2 style={{ fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: tokens.colors.system.textMuted, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--text-muted)] mb-5 flex items-center gap-2">
           <ClockClockwise size={16} weight="bold" />
           Continue Working
         </h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="flex flex-col gap-3">
           {recentSessions.map(session => (
-            <GlassCard key={session.id} style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '12px 20px' }}>
-              <div style={{ 
-                width: 8, height: 8, borderRadius: '50%', 
-                background: ((tokens.colors as any)[session.type]?.primary) || 'var(--status-info)' 
-              }} />
-              <div style={{ flex: 1, fontWeight: 600, fontSize: 14 }}>{session.title}</div>
-              <div style={{ fontSize: 12, opacity: 0.4 }}>{session.time}</div>
-              <div style={{ padding: '4px 8px', borderRadius: 6, background: 'rgba(0,0,0,0.03)', border: '1px solid var(--surface-hover)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', opacity: 0.6 }}>
+            <GlassCard key={session.id} className="flex items-center gap-4 p-3 px-5">
+              <div 
+                className="size-2 rounded-full"
+                style={{ 
+                  background: ((tokens.colors as any)[session.type]?.primary) || 'var(--status-info)' 
+                }} 
+              />
+              <div className="flex-1 font-semibold text-sm">{session.title}</div>
+              <div className="text-[12px] opacity-40">{session.time}</div>
+              <div className="px-2 py-1 rounded-md bg-black/5 border border-[var(--surface-hover)] text-[12px] font-bold uppercase opacity-60">
                 {session.type}
               </div>
             </GlassCard>

@@ -359,7 +359,7 @@ export function ContextView() {
                   <button
                     onClick={handleViewExecutions}
                     style={{
-                      fontSize: 11,
+                      fontSize: 12,
                       color: 'var(--status-info)',
                       background: 'none',
                       border: 'none',
@@ -645,7 +645,7 @@ function StatusBadge({ status }: { status: string }) {
         background: `${color}20`,
         color: color,
         borderRadius: 4,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: 600,
         textTransform: "uppercase",
       }}
@@ -678,7 +678,7 @@ function StatBox({
       }}
     >
       <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--status-info)' }}>{value}</div>
-      <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', marginTop: 4 }}>{label}</div>
+      <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', marginTop: 4 }}>{label}</div>
     </button>
   );
 }

@@ -75,13 +75,13 @@ export function useNetworkStatus(): NetworkStatus {
     const handleOnline = () => {
       setIsOnline(true);
       updateConnectionInfo();
-      console.log('[Network] Connection restored');
+      console.debug('[Network] Connection restored');
     };
 
     const handleOffline = () => {
       setIsOnline(false);
       setConnectionQuality('offline');
-      console.log('[Network] Connection lost');
+      console.debug('[Network] Connection lost');
     };
 
     window.addEventListener('online', handleOnline);

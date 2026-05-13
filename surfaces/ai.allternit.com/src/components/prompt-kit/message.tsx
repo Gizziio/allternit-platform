@@ -48,7 +48,7 @@ const Message = ({ children, role, modelName, className, onAction, ...props }: M
         {isAssistant && (
             <div className="flex items-center gap-3 mt-1 px-1">
                 {modelName && (
-                    <span className="text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-tight bg-[var(--rail-hover)] px-1.5 py-0.5 rounded border border-[var(--border-subtle)]">
+                    <span className="text-xs font-bold text-[var(--text-tertiary)] uppercase tracking-tight bg-[var(--rail-hover)] px-1.5 py-0.5 rounded border border-[var(--border-subtle)]">
                         {modelName}
                     </span>
                 )}
@@ -95,7 +95,7 @@ function MessageEllipsisMenu({ onAction }: any) {
                 <Popover.Content side="top" align="center" sideOffset={8} className="w-[200px] rounded-xl bg-[var(--glass-bg-thick)] backdrop-blur-xl border border-[var(--border-subtle)] shadow-xl p-1 z-50">
                     <MenuEntry icon={GitBranch} label="Branch Session" onClick={() => onAction?.("branch")} />
                     <div className="h-px bg-[var(--border-subtle)] my-1" />
-                    <div className="px-2 py-1 text-[10px] font-bold text-[var(--text-tertiary)] uppercase tracking-wider">Retry with Mode</div>
+                    <div className="px-2 py-1 text-xs font-bold text-[var(--text-tertiary)] uppercase tracking-wider">Retry with Mode</div>
                     <MenuEntry label="Think Hard" onClick={() => onAction?.("retry-hard")} />
                     <MenuEntry label="Think Harder" onClick={() => onAction?.("retry-harder")} />
                     <MenuEntry label="Ultra Think" onClick={() => onAction?.("retry-ultra")} />
@@ -130,9 +130,9 @@ const MessageAvatar = ({
   className,
 }: MessageAvatarProps) => {
   return (
-    <Avatar className={cn("h-8 w-8 shrink-0", className)}>
+    <Avatar className={cn("size-8  shrink-0", className)}>
       {src && <AvatarImage src={src} alt={alt} />}
-      <AvatarFallback className="text-[10px] font-bold">{fallback}</AvatarFallback>
+      <AvatarFallback className="text-xs font-bold">{fallback}</AvatarFallback>
     </Avatar>
   )
 }

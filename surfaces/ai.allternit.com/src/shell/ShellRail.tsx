@@ -61,6 +61,16 @@ interface ShellRailProps {
   sidecarOpen?: boolean;
 }
 
+const BROWSER_MODE_VIEW_TYPES = new Set<string>([
+  'browser',
+  'browserview',
+  'mini-apps-store',
+  'mini-app',
+  'addin-word',
+  'addin-excel',
+  'addin-ppt',
+]);
+
 export function ShellRail({
   activeViewType,
   onOpen,
@@ -71,7 +81,7 @@ export function ShellRail({
 }: ShellRailProps): JSX.Element | null {
   const [foldedCategories, setFoldedCategories] = useState<Set<string>>(new Set(['workspace', 'ai_vision', 'infrastructure', 'security', 'execution', 'observability', 'services']));
 
-  const isBrowser = activeViewType === 'browser';
+  const isBrowser = activeViewType ? BROWSER_MODE_VIEW_TYPES.has(activeViewType) : false;
 
   // Determine current surface for agent mode glow
   const currentSurface: AgentModeSurface = 
@@ -87,8 +97,8 @@ export function ShellRail({
   const chatProjects = useStoreWithEqualityFn(useChatStore, (s) => s.projects, shallow);
   
   // Mode-specific session stores
-  const chatSessions = useStoreWithEqualityFn(useChatSessionStore, (s) => s.sessions, shallow);
-  const codeSessions = useStoreWithEqualityFn(useCodeSessionStore, (s) => s.sessions, shallow);
+  const chatSessions = useStoreWithEqualityFn(useChatSessionStore, (s) => s.sessions ?? [], shallow);
+  const codeSessions = useStoreWithEqualityFn(useCodeSessionStore, (s) => s.sessions ?? [], shallow);
   const nativeSessions = mode === 'code' ? codeSessions : chatSessions;
   const activeChatSessionId = useStoreWithEqualityFn(useChatSessionStore, (s) => s.activeSessionId);
   const activeCodeSessionId = useStoreWithEqualityFn(useCodeSessionStore, (s) => s.activeSessionId);
@@ -113,8 +123,6 @@ export function ShellRail({
   
   const setSelectedSurfaceAgent = useStoreWithEqualityFn(useAgentSurfaceModeStore, (s) => s.setSelectedAgent);
 
-  const setSidecarOpen = useStoreWithEqualityFn(useSidecarStore, (s) => s.setOpen);
-  
   const { enabledPlugins } = useFeaturePlugins();
 
   // Unified data mapping
@@ -266,7 +274,6 @@ export function ShellRail({
     }
 
     if (originSurface === 'browser') {
-      setSidecarOpen(true);
       onOpen?.('browser');
       return;
     }
@@ -288,7 +295,6 @@ export function ShellRail({
     onOpen,
     setActiveNativeSession,
     setSelectedSurfaceAgent,
-    setSidecarOpen,
   ]);
 
   const isCodeMode = mode === 'code';
@@ -345,7 +351,7 @@ export function ShellRail({
                 <div style={{ 
                   padding: '8px 12px', 
                   color: 'var(--accent-secondary)', 
-                  fontSize: 11, 
+                  fontSize: 12, 
                   fontWeight: 800,
                   letterSpacing: '0.08em'
                 }}>
@@ -378,7 +384,7 @@ export function ShellRail({
                   }}
                 >
                   {isFolded ? <CaretRight size={10} weight="bold" /> : <CaretDown size={10} weight="bold" />}
-                  <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{category.title}</span>
+                  <span style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{category.title}</span>
                 </button>
               ) : null}
 
@@ -426,7 +432,6 @@ export function ShellRail({
                           const session = chatSessions.find(s => s.id === id);
                           if (session) {
                             setActiveChatSession(session.id);
-                            setSidecarOpen(true);
                             onOpen?.('browser');
                           }
                           return;
@@ -527,11 +532,11 @@ export function ShellRail({
                               metadata: { surface: 'browser' }
                             }).then((sessionId) => {
                               useChatSessionStore.getState().setActiveSession(sessionId);
-                              setSidecarOpen(true);
+                              onOpen?.('browser');
                             });
+                            return;
                           }
                           if (item.payload === 'browser-extensions') {
-                            setSidecarOpen(true);
                             onOpen?.('browser');
                             return;
                           }
@@ -582,7 +587,7 @@ export function ShellRail({
         }}>U</div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ color: 'var(--shell-item-fg)', fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>User Name</div>
-          <div style={{ color: 'var(--shell-item-muted)', fontSize: 11, fontWeight: 500 }}>Pro Plan</div>
+          <div style={{ color: 'var(--shell-item-muted)', fontSize: 12, fontWeight: 500 }}>Pro Plan</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button

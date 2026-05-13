@@ -70,8 +70,8 @@ const TodoStatusIcon = ({
 }) => {
   if (isPending && status === "in_progress") {
     return (
-      <div className="w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 border border-an-foreground-muted/60">
-        <IconArrowRight className="w-2 h-2 text-an-foreground-muted/70" />
+      <div className="size-3.5  rounded-full flex items-center justify-center shrink-0 border border-an-foreground-muted/60">
+        <IconArrowRight className="size-2  text-an-foreground-muted/70" />
       </div>
     );
   }
@@ -79,19 +79,19 @@ const TodoStatusIcon = ({
   switch (status) {
     case "completed":
       return (
-        <div className="w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 border border-an-foreground-muted/40">
-          <CheckIcon className="w-2 h-2 text-an-foreground-muted/70" />
+        <div className="size-3.5  rounded-full flex items-center justify-center shrink-0 border border-an-foreground-muted/40">
+          <CheckIcon className="size-2  text-an-foreground-muted/70" />
         </div>
       );
     case "in_progress":
       return (
-        <div className="w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 border border-an-foreground-muted/60">
-          <IconArrowRight className="w-2 h-2 text-an-foreground-muted/70" />
+        <div className="size-3.5  rounded-full flex items-center justify-center shrink-0 border border-an-foreground-muted/60">
+          <IconArrowRight className="size-2  text-an-foreground-muted/70" />
         </div>
       );
     default:
       return (
-        <div className="w-3.5 h-3.5 rounded-full flex items-center justify-center shrink-0 border border-an-foreground-muted/60" />
+        <div className="size-3.5  rounded-full flex items-center justify-center shrink-0 border border-an-foreground-muted/60" />
       );
   }
 };

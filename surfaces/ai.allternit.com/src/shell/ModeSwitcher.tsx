@@ -141,7 +141,7 @@ export function ModeSwitcher({
       height: 26,
       padding: '3px 6px',
       iconSize: 14,
-      fontSize: 11,
+      fontSize: 12,
       gap: 2
     },
     medium: {

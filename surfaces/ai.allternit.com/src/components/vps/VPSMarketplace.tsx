@@ -136,7 +136,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
         "transition-all duration-300 ease-out",
         "hover:border-[#3a3a3a] hover:bg-[#1a1a1a]",
         "hover:shadow-lg hover:shadow-black/20",
-        "hover:-translate-y-1",
+        "hover:-tranzinc-y-1",
         "animate-in fade-in slide-in-from-bottom-4",
       )}
       style={{
@@ -156,7 +156,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
           <div className="flex items-center gap-3">
             {/* Provider initial circle */}
             <div
-              className="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm transition-transform duration-300 group-hover:scale-110"
+              className="size-10  rounded-full flex items-center justify-center text-white font-semibold text-sm transition-transform duration-300 group-hover:scale-110"
               style={{ backgroundColor: provider.color }}
             >
               {getInitial(provider.name)}
@@ -167,7 +167,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
               </h3>
               {provider.recommended && (
                 <span className="inline-flex items-center gap-1 text-xs font-medium text-yellow-400 mt-0.5">
-                  <Star className="w-3 h-3 fill-yellow-400" />
+                  <Star className="size-3  fill-yellow-400" />
                   Recommended
                 </span>
               )}
@@ -194,7 +194,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
               className="flex items-center gap-2 text-sm text-[#b0b0b0]"
             >
               <Check
-                className="w-4 h-4 flex-shrink-0"
+                className="size-4  flex-shrink-0"
                 style={{ color: provider.color }}
               />
               <span className="line-clamp-1">{feature}</span>
@@ -223,7 +223,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
         >
           <span className="relative z-10 flex items-center justify-center gap-2">
             Get Started
-            <ArrowSquareOut className="w-4 h-4 transition-transform duration-300 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
+            <ArrowSquareOut className="size-4  transition-transform duration-300 group-hover/btn:tranzinc-x-0.5 group-hover/btn:-tranzinc-y-0.5" />
           </span>
         </Button>
       </div>
@@ -301,7 +301,7 @@ export const VPSMarketplace: React.FC<VPSMarketplaceProps> = ({
           onClick={onClose}
           className={cn(
             "absolute top-4 right-4 z-10",
-            "w-9 h-9 rounded-lg flex items-center justify-center",
+            "size-9  rounded-lg flex items-center justify-center",
             "bg-[#1a1a1a] text-[#a0a0a0]",
             "border border-[#2a2a2a]",
             "transition-all duration-200",
@@ -316,8 +316,8 @@ export const VPSMarketplace: React.FC<VPSMarketplaceProps> = ({
         {/* Header */}
         <div className="px-8 pt-8 pb-6 border-b border-[#2a2a2a]">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/30 flex items-center justify-center">
-              <HardDrives className="w-5 h-5 text-blue-400" />
+            <div className="size-10  rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/30 flex items-center justify-center">
+              <HardDrives className="size-5  text-blue-400" />
             </div>
             <div>
               <h2 className="text-2xl font-bold text-white">

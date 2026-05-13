@@ -61,7 +61,7 @@ export class SwarmErrorBoundary extends Component<Props, State> {
           >
             {/* Error Icon */}
             <div 
-              className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
+              className="size-16  rounded-2xl flex items-center justify-center mx-auto mb-4"
               style={{ background: 'rgba(239,68,68,0.18)' }}
             >
               <WarningTriangle size={28} color={STATUS.error} weight="duotone" />

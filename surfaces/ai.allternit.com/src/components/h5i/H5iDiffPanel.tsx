@@ -96,7 +96,7 @@ export function H5iDiffPanel({ workspacePath, sessions, onClose }: H5iDiffPanelP
         {/* Session selectors */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 10, marginBottom: 16, alignItems: 'end' }}>
           <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
               Session A
             </label>
             <select
@@ -113,7 +113,7 @@ export function H5iDiffPanel({ workspacePath, sessions, onClose }: H5iDiffPanelP
                 outline: 'none',
               }}
             >
-              <option value="">Select...</option>
+              <option value="">Select…</option>
               {sessions.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
@@ -127,7 +127,7 @@ export function H5iDiffPanel({ workspacePath, sessions, onClose }: H5iDiffPanelP
           </div>
 
           <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
               Session B
             </label>
             <select
@@ -144,7 +144,7 @@ export function H5iDiffPanel({ workspacePath, sessions, onClose }: H5iDiffPanelP
                 outline: 'none',
               }}
             >
-              <option value="">Select...</option>
+              <option value="">Select…</option>
               {sessions.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
@@ -224,7 +224,7 @@ export function H5iDiffPanel({ workspacePath, sessions, onClose }: H5iDiffPanelP
                 <div style={{ flexShrink: 0, marginTop: 2 }}>
                   <span
                     style={{
-                      fontSize: 9,
+                      fontSize: 12,
                       fontWeight: 700,
                       padding: '2px 6px',
                       borderRadius: 4,
@@ -238,7 +238,7 @@ export function H5iDiffPanel({ workspacePath, sessions, onClose }: H5iDiffPanelP
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <span
                     style={{
-                      fontSize: 9,
+                      fontSize: 12,
                       fontWeight: 700,
                       textTransform: 'uppercase',
                       color: typeColor,

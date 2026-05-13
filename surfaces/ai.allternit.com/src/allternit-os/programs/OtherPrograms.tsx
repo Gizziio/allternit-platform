@@ -20,20 +20,20 @@ const createPlaceholderProgram = (
 ) => {
   const ProgramComponent: React.FC<{ program: AllternitProgram }> = ({ program }) => {
     return (
-      <div className="h-full flex flex-col bg-white dark:bg-gray-900">
+      <div className="h-full flex flex-col bg-white dark:bg-zinc-900">
         {/* Header */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-zinc-200 dark:border-zinc-700">
           <span className="text-xl">{icon}</span>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h2>
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">{title}</h2>
         </div>
 
         {/* Content */}
         <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
           <div className="text-6xl mb-6">{icon}</div>
-          <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-3">
+          <h3 className="text-xl font-medium text-zinc-900 dark:text-white mb-3">
             {title}
           </h3>
-          <p className="text-gray-600 dark:text-gray-400 max-w-md mb-8">
+          <p className="text-zinc-600 dark:text-zinc-400 max-w-md mb-8">
             {description}
           </p>
 
@@ -42,9 +42,9 @@ const createPlaceholderProgram = (
             {features.map((feature, i) => (
               <div 
                 key={i}
-                className="flex items-center gap-2 px-3 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm text-gray-600 dark:text-gray-400"
+                className="flex items-center gap-2 px-3 py-2 bg-zinc-50 dark:bg-zinc-800 rounded-lg text-sm text-zinc-600 dark:text-zinc-400"
               >
-                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full" />
+                <span className="size-1.5  bg-blue-500 rounded-full" />
                 {feature}
               </div>
             ))}
@@ -52,15 +52,15 @@ const createPlaceholderProgram = (
 
           {/* Coming soon badge */}
           <div className="mt-8 inline-flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-medium">
-            <span className="relative flex h-2 w-2">
+            <span className="relative flex size-2 ">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+              <span className="relative inline-flex rounded-full size-2  bg-blue-500"></span>
             </span>
             Implementation in Progress
           </div>
 
           {/* Program ID for debugging */}
-          <div className="mt-8 text-xs text-gray-400 font-mono">
+          <div className="mt-8 text-xs text-zinc-400 font-mono">
             Program ID: {program.id}
           </div>
         </div>

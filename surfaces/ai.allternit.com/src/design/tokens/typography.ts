@@ -41,8 +41,8 @@ export const fontFamily = {
  * Based on 1rem (16px) base with type scale
  */
 export const fontSize = {
-  /** 10px - Captions, badges */
-  '2xs': '0.625rem',
+  /** 12px - Captions, badges (was 10px) */
+  '2xs': '0.75rem',
   /** 12px - Small text, labels */
   xs: '0.75rem',
   /** 14px - Body small, buttons */
@@ -76,7 +76,7 @@ export const fontSize = {
  * Mapping of size tokens to pixel values
  */
 export const fontSizePx = {
-  '2xs': 10,
+  '2xs': 12,
   xs: 12,
   sm: 14,
   base: 16,

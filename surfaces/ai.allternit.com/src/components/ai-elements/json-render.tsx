@@ -124,7 +124,7 @@ const shadcnCatalog: ComponentRegistry = {
     return (
       <span
         className={cn(
-          'inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider',
+          'inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium uppercase tracking-wider',
           props.variant === 'success' && 'bg-green-500/10 text-green-400',
           props.variant === 'error' && 'bg-red-500/10 text-red-400',
           props.variant === 'warning' && 'bg-amber-500/10 text-amber-400',
@@ -152,7 +152,7 @@ const shadcnCatalog: ComponentRegistry = {
 // ─── Mode Icon ─────────────────────────────────────────────────────
 
 function ModeIcon({ mode }: { mode: JsonRenderMode }) {
-  const props = { className: 'h-3.5 w-3.5 text-[var(--accent-primary)]' };
+  const props = { className: 'size-3.5  text-[var(--accent-primary)]' };
   switch (mode) {
     case 'table': return <IconTable {...props} />;
     case 'cards': return <IconLayoutCards {...props} />;
@@ -208,7 +208,7 @@ function buildTreeFromData(
       elements[`hdr-${col}`] = {
         key: `hdr-${col}`,
         type: 'text',
-        props: { children: col, className: 'font-semibold uppercase text-[10px] text-[var(--text-muted)]' },
+        props: { children: col, className: 'font-semibold uppercase text-xs text-[var(--text-muted)]' },
       };
     });
 
@@ -263,7 +263,7 @@ function buildTreeFromData(
         elements[`lbl-${i}-${k}`] = {
           key: `lbl-${i}-${k}`,
           type: 'text',
-          props: { children: k, className: 'text-[10px] uppercase text-[var(--text-muted)] w-24 shrink-0' },
+          props: { children: k, className: 'text-xs uppercase text-[var(--text-muted)] w-24 shrink-0' },
         };
         elements[`val-${i}-${k}`] = {
           key: `val-${i}-${k}`,
@@ -302,7 +302,7 @@ function buildTreeFromData(
       elements[`lbl-${k}`] = {
         key: `lbl-${k}`,
         type: 'text',
-        props: { children: fieldSchema?.label || k, className: 'text-[11px] font-medium text-[var(--text-secondary)]' },
+        props: { children: fieldSchema?.label || k, className: 'text-[12px] font-medium text-[var(--text-secondary)]' },
       };
       elements[`inp-${k}`] = {
         key: `inp-${k}`,
@@ -357,12 +357,12 @@ function buildTreeFromData(
       elements[`bar-name-${i}`] = {
         key: `bar-name-${i}`,
         type: 'text',
-        props: { children: String(label), className: 'text-[10px] text-[var(--text-secondary)]' },
+        props: { children: String(label), className: 'text-xs text-[var(--text-secondary)]' },
       };
       elements[`bar-value-${i}`] = {
         key: `bar-value-${i}`,
         type: 'text',
-        props: { children: String(value), className: 'text-[10px] font-medium tabular-nums text-[var(--text-primary)]' },
+        props: { children: String(value), className: 'text-xs font-medium tabular-nums text-[var(--text-primary)]' },
       };
       elements[`bar-track-${i}`] = {
         key: `bar-track-${i}`,
@@ -420,13 +420,13 @@ export function JsonRender({
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[var(--ui-border-muted)] px-4 py-3">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-[var(--accent-primary)]/10">
+          <div className="flex size-7  items-center justify-center rounded-md bg-[var(--accent-primary)]/10">
             <ModeIcon mode={resolvedMode} />
           </div>
           <span className="text-sm font-semibold text-[var(--text-primary)]">{title}</span>
         </div>
         <div className="flex items-center gap-1 rounded-lg bg-[var(--surface-elevated)] px-2 py-1">
-          <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+          <span className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
             {resolvedMode}
           </span>
         </div>

@@ -24,7 +24,7 @@ const PLATFORM_SIDEPANEL_COPY = {
   settingsContextLabel: "Platform Browser",
 } as const;
 
-export function BrowserChatPane() {
+export function BrowserChatPane(): JSX.Element {
   const { adapter } = useBrowserExtensionPaneAdapter();
 
   return (

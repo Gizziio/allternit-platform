@@ -1006,7 +1006,7 @@ function ConversationStage({
               gap: 10,
               flexWrap: 'wrap',
               padding: '10px 2px 0',
-              fontSize: 11,
+              fontSize: 12,
               color: 'var(--text-tertiary)',
             }}
           >
@@ -1041,7 +1041,7 @@ function ConversationStage({
               selectedModel={selectedModel}
               selectedModelDisplayName={selectedModelDisplayName}
               onSelectModel={onSelectModel}
-              placeholder="Reply..."
+              placeholder="Reply…"
               showTopActions={false}
               inputValue={composerSeed}
               agentModeSurface="code"
@@ -1145,7 +1145,7 @@ function ComposerUtilityBar({
                   {activeSession?.title ?? 'Select session'}
                 </span>
                 {activeSession ? (
-                  <span style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  <span style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                     {activeSession.mode} / {activeSession.state}
                   </span>
                 ) : null}
@@ -1262,10 +1262,10 @@ function CompactUtilityBar({
               padding: '8px 12px 10px',
               borderBottom: '1px solid var(--ui-border-muted)'
             }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 Workspace
               </div>
-              <div style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>{workspaces.length} repos</div>
+              <div style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>{workspaces.length} repos</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, paddingTop: 6 }}>
               {workspaces.map((workspace) => (
@@ -1299,7 +1299,7 @@ function CompactUtilityBar({
                   }}
                 >
                   <div style={{ fontSize: 12, fontWeight: 700 }}>{workspace.display_name}</div>
-                  <div style={{ marginTop: 4, fontSize: 11, color: 'var(--ui-text-secondary)', lineHeight: 1.5 }}>
+                  <div style={{ marginTop: 4, fontSize: 12, color: 'var(--ui-text-secondary)', lineHeight: 1.5 }}>
                     {workspace.root_path}
                   </div>
                 </button>
@@ -1347,7 +1347,7 @@ function CompactUtilityBar({
             borderRight: 'none',
             background: layoutMode === 'thread' ? 'var(--ui-border-muted)' : 'transparent',
             color: layoutMode === 'thread' ? 'var(--text-primary)' : 'var(--text-secondary)',
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 600,
             cursor: 'pointer',
           }}
@@ -1366,7 +1366,7 @@ function CompactUtilityBar({
             border: '1px solid rgba(255, 255, 255, 0.08)',
             background: layoutMode === 'canvas' ? 'var(--ui-border-muted)' : 'transparent',
             color: layoutMode === 'canvas' ? 'var(--text-primary)' : 'var(--text-secondary)',
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 600,
             cursor: 'pointer',
           }}

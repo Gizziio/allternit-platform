@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Allternit Platform</title>
+    <meta name="description" content="AI-powered autonomous coding platform" />
+    <link rel="icon" href="/favicon.svg" />
+    <script>
+      (function () {
+        try {
+          var s = localStorage.getItem('allternit-theme-storage');
+          var t = s && JSON.parse(s) && JSON.parse(s).state && JSON.parse(s).state.theme;
+          var r = t === 'dark' ? 'dark' : t === 'light' ? 'light' : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+          document.documentElement.setAttribute('data-theme', r);
+          document.documentElement.style.colorScheme = r;
+        } catch (e) {}
+      })();
+    </script>
+    <script>
+      (function () {
+        window.onerror = function (msg, url, line, col, err) {
+          console.error('[APP ERROR]', msg, 'at', url + ':' + line + ':' + col, err);
+        };
+        window.onunhandledrejection = function (e) {
+          console.error('[UNHANDLED REJECTION]', e.reason);
+        };
+      })();
+    </script>
+  </head>
+  <body class="m-0 font-sans">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

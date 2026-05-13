@@ -103,7 +103,7 @@ class NodeTerminalService {
       );
 
       eventSource.onopen = () => {
-        console.log(`[TerminalService] Connected to session ${sessionId}`);
+        console.debug(`[TerminalService] Connected to session ${sessionId}`);
         session.connected = true;
         this.statusHandlers.get(sessionId)?.forEach(handler => handler(true));
         this.reconnectionAttempts.delete(sessionId);
@@ -208,7 +208,7 @@ class NodeTerminalService {
       attemptState.maxDelay
     );
 
-    console.log(`[TerminalService] Reconnecting session ${sessionId} in ${delay}ms (attempt ${attemptState.attempt})`);
+    console.debug(`[TerminalService] Reconnecting session ${sessionId} in ${delay}ms (attempt ${attemptState.attempt})`);
 
     const timer = setTimeout(async () => {
       try {

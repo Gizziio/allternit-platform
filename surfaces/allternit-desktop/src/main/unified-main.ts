@@ -7,7 +7,7 @@
  * - Version-locked: Desktop 1.2.3 = Backend 1.2.3
  */
 
-import { app, BrowserWindow, ipcMain, nativeTheme, shell, Tray, Menu, dialog, globalShortcut, screen } from 'electron';
+import { app, BrowserWindow, ipcMain, nativeTheme, shell, Tray, Menu, dialog, globalShortcut, screen, protocol } from 'electron';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import * as fs from 'node:fs';
@@ -21,7 +21,7 @@ import { updateElectronApp } from 'update-electron-app';
 import fixPath from 'fix-path';
 import { backendManager } from './backend-manager.js';
 import { gizziManager } from './gizzi-manager.js';
-import { platformServerManager } from './platform-server.js';
+
 import { tunnelManager } from './tunnel-manager.js';
 import { authManager } from './auth-manager.js';
 import { notebookManager } from './notebook-manager.js';
@@ -43,6 +43,24 @@ import { isLimaInstalled, installLima, startVM, stopVM, getVMStatus } from './li
 // Fix PATH for macOS
 fixPath();
 
+// ============================================================================
+// Connectivity helpers
+// ============================================================================
+
+function isUrlReachable(url: string, timeoutMs: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const parsed = new URL(url);
+    const client = parsed.protocol === 'https:' ? require('node:https') : require('node:http');
+    const req = client.get(url, { timeout: timeoutMs }, (res: any) => {
+      resolve(res.statusCode >= 200 && res.statusCode < 500);
+      res.destroy();
+    });
+    req.on('error', () => resolve(false));
+    req.on('timeout', () => { req.destroy(); resolve(false); });
+    req.setTimeout(timeoutMs);
+  });
+}
+
 // Configure logging
 log.transports.file.resolvePath = () => join(app.getPath('userData'), 'main.log');
 log.initialize();
@@ -61,6 +79,18 @@ const isMac = process.platform === 'darwin';
 
 let mainWindow: BrowserWindow | null = null;
 let splashWindow: BrowserWindow | null = null;
+
+// Service state for splash screen progress (module-level so IPC handlers can update it)
+let serviceState = {
+  api: { status: 'pending', detail: 'Starting…' },
+  gateway: { status: 'pending', detail: 'Starting…' },
+  gizzi: { status: 'pending', detail: 'Starting…' },
+  platform: { status: 'pending', detail: 'Waiting…' },
+  research: { status: 'pending', detail: 'Waiting…' },
+};
+let pushServiceState = () => {
+  splashWindow?.webContents.send('services', serviceState);
+};
 let miniWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let activePlatformUrl: string = isDev ? 'http://localhost:3013' : 'https://ai.allternit.com';
@@ -570,7 +600,25 @@ function createMainWindow(): BrowserWindow {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      // Secure by default: API calls are routed through the allternit-api
+      // custom protocol handler (registered in app.whenReady) which proxies
+      // to localhost:8013 without mixed-content issues.
+      allowRunningInsecureContent: false,
     },
+  });
+
+  // Redirect all /api/* requests from the platform URL to the allternit-api
+  // custom protocol. The protocol handler (registered globally) proxies to
+  // http://localhost:8013 and injects auth headers. This avoids mixed-content
+  // blocking without allowRunningInsecureContent.
+  const platformOrigin = activePlatformUrl;
+  window.webContents.session.webRequest.onBeforeRequest((details, callback) => {
+    if (details.url.startsWith(`${platformOrigin}/api/`)) {
+      const redirectURL = details.url.replace(platformOrigin, 'allternit-api://localhost:8013');
+      callback({ redirectURL });
+      return;
+    }
+    callback({});
   });
 
   window.webContents.session.webRequest.onBeforeSendHeaders((details, callback) => {
@@ -591,9 +639,32 @@ function createMainWindow(): BrowserWindow {
     }
   };
 
-  window.on('resize', saveBounds);
-  window.on('move', saveBounds);
-  window.on('closed', () => mainWindow = null);
+  const emitWindowEvent = (event: string, data: unknown) => {
+    if (window && !window.isDestroyed() && window.webContents) {
+      window.webContents.send(`window:event:${event}`, data);
+    }
+  };
+
+  window.on('resize', () => {
+    saveBounds();
+    emitWindowEvent('resize', window.getBounds());
+  });
+  window.on('move', () => {
+    saveBounds();
+    emitWindowEvent('move', window.getBounds());
+  });
+  window.on('focus', () => emitWindowEvent('focus', { focused: true }));
+  window.on('blur', () => emitWindowEvent('blur', { focused: false }));
+  window.on('maximize', () => emitWindowEvent('maximize', { maximized: true }));
+  window.on('unmaximize', () => emitWindowEvent('unmaximize', { maximized: false }));
+  window.on('minimize', () => emitWindowEvent('minimize', { minimized: true }));
+  window.on('restore', () => emitWindowEvent('restore', { minimized: false }));
+  window.on('enter-full-screen', () => emitWindowEvent('enter-full-screen', { fullscreen: true }));
+  window.on('leave-full-screen', () => emitWindowEvent('leave-full-screen', { fullscreen: false }));
+  window.on('closed', () => {
+    emitWindowEvent('closed', {});
+    mainWindow = null;
+  });
   
   // Ensure window is visible and focused
   window.once('ready-to-show', () => {
@@ -653,14 +724,15 @@ async function initializeBundledMode(): Promise<void> {
       splashWindow?.webContents.send('progress', progress);
     }
   };
-  const serviceState = {
+  // Reset service state at start of bundled mode initialization
+  serviceState = {
     api: { status: 'pending', detail: 'Starting…' },
     gateway: { status: 'pending', detail: 'Starting…' },
     gizzi: { status: 'pending', detail: 'Starting…' },
     platform: { status: 'pending', detail: 'Waiting…' },
     research: { status: 'pending', detail: 'Waiting…' },
   };
-  const pushServiceState = () => {
+  pushServiceState = () => {
     splashWindow?.webContents.send('services', serviceState);
   };
   pushServiceState();
@@ -705,7 +777,7 @@ async function initializeBundledMode(): Promise<void> {
       gizziPassword: gizziManager.getPassword(),
       gizziUsername: 'gizzi',
     });
-    serviceState.api = { status: 'up', detail: 'Connected on http://127.0.0.1:3004' };
+    serviceState.api = { status: 'up', detail: 'Connected on http://127.0.0.1:8013' };
     serviceState.gateway = { status: 'up', detail: 'Connected on http://127.0.0.1:8013' };
     pushServiceState();
     store.set('backend.lastLocalVersion', PLATFORM_MANIFEST.backend.version);
@@ -715,7 +787,23 @@ async function initializeBundledMode(): Promise<void> {
     // Step 3 — Platform URL
     // Dev:        local Next.js dev server on port 3013
     // Production: ai.allternit.com hosted on Cloudflare Pages (remote)
-    const platformUrl: string = isDev ? 'http://localhost:3013' : 'https://ai.allternit.com';
+    //              We always load the remote URL (Claude Desktop model).
+    //              API calls are redirected to localhost via injected config.
+    // Offline:    If remote URL is unreachable, fall back to local static files
+    //              served by the Rust API at localhost:8013.
+    let platformUrl: string = isDev ? 'http://localhost:3013' : 'https://ai.allternit.com';
+
+    if (!isDev) {
+      const remoteReachable = await isUrlReachable(platformUrl, 5000);
+      if (!remoteReachable) {
+        log.warn(`[Main] Remote platform ${platformUrl} is unreachable — falling back to local static UI`);
+        platformUrl = 'http://localhost:8013';
+        serviceState.platform = { status: 'up', detail: 'Offline mode (local static)' };
+      } else {
+        serviceState.platform = { status: 'up', detail: 'ai.allternit.com' };
+      }
+      pushServiceState();
+    }
 
     if (isDev) {
       // Write gizzi credentials to a session file so the external dev server can read them.
@@ -1290,6 +1378,20 @@ async function handleProtocolCallback(url: string | null): Promise<void> {
   }
 }
 
+// Register allternit-api as a privileged scheme so it supports fetch() and CORS.
+// Must happen before app ready.
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'allternit-api',
+    privileges: {
+      secure: true,
+      supportFetchAPI: true,
+      corsEnabled: true,
+      standard: true,
+    },
+  },
+]);
+
 // On macOS, open-url fires during will-finish-launching (before ready).
 // Registering here is the documented correct place for this event.
 app.on('will-finish-launching', () => {
@@ -1328,6 +1430,55 @@ app.whenReady().then(async () => {
     console.log('[Main] Processing buffered/startup protocol URL...');
     void handleProtocolCallback(urlToProcess);
   }
+
+  console.log('[Main] Registering allternit-api protocol handler...');
+  protocol.handle('allternit-api', async (request) => {
+    const url = new URL(request.url);
+    const targetUrl = `http://localhost:8013${url.pathname}${url.search}`;
+
+    // CORS preflight for custom-protocol cross-origin requests
+    if (request.method === 'OPTIONS') {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+          'Access-Control-Allow-Headers': '*',
+          'Access-Control-Max-Age': '86400',
+        },
+      });
+    }
+
+    const headers = new Headers(request.headers);
+    const accessToken = authManager.getAccessToken();
+    if (accessToken) {
+      headers.set('Authorization', `Bearer ${accessToken}`);
+      headers.set('X-Allternit-Desktop-Access-Token', accessToken);
+    }
+
+    try {
+      const response = await fetch(targetUrl, {
+        method: request.method,
+        headers,
+        body: request.body,
+      });
+
+      const responseHeaders = new Headers(response.headers);
+      responseHeaders.set('Access-Control-Allow-Origin', '*');
+
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: responseHeaders,
+      });
+    } catch (error) {
+      log.error('[Protocol] Proxy error:', error);
+      return new Response(JSON.stringify({ error: 'proxy_error', message: String(error) }), {
+        status: 502,
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      });
+    }
+  });
 
   console.log('[Main] Initializing foundation systems...');
   // Initialize foundation systems before everything else
@@ -1422,7 +1573,7 @@ app.on('before-quit', async () => {
   await workerBus.shutdown();
   tunnelManager.stop();
   await backendManager.stopBackend();
-  platformServerManager.stop();
+
   gizziManager.stop();
   notebookManager.stop();
   stopVM().catch(() => {}); // best-effort Lima VM shutdown
@@ -1446,7 +1597,7 @@ ipcMain.handle('sdk:get-backend-url', () => activeBackendUrl);
 ipcMain.handle('backend:get-status', () => backendManager.getStatus());
 ipcMain.handle('backend:restart', async () => {
   await backendManager.stopBackend();
-  platformServerManager.stop();
+
   return backendManager.ensureBackend();
 });
 

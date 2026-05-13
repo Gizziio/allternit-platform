@@ -77,7 +77,7 @@ export const DocumentsView: React.FC = () => {
           <MagnifyingGlass size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
           <input
             type="text"
-            placeholder="Search documents..."
+            placeholder="Search documents…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{

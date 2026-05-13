@@ -131,7 +131,7 @@ export function NodesView({ initialTab = 'nodes' }: NodesViewProps = {}) {
             />
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-              <Terminal className="h-12 w-12 mb-4" />
+              <Terminal className="size-12  mb-4" />
               <p>Select a node to open a terminal</p>
             </div>
           )}
@@ -140,14 +140,14 @@ export function NodesView({ initialTab = 'nodes' }: NodesViewProps = {}) {
         <TabsContent value="deploy">
           <div className="rounded-lg border bg-card text-card-foreground shadow-sm p-8">
             <div className="flex flex-col items-center justify-center text-center max-w-lg mx-auto">
-              <Cloud className="h-12 w-12 text-muted-foreground mb-4" />
+              <Cloud className="size-12  text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">Deploy New Instance</h3>
               <p className="text-sm text-muted-foreground mb-4">
                 Provision a new VPS on cloud providers like Hetzner, DigitalOcean, or AWS. 
                 The instance will be automatically configured and connected to your control plane.
               </p>
               <Button onClick={handleDeployNew}>
-                <Cloud className="h-4 w-4 mr-2" />
+                <Cloud className="size-4  mr-2" />
                 Open Cloud Deploy
               </Button>
             </div>

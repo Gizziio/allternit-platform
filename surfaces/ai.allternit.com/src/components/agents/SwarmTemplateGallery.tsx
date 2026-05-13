@@ -121,7 +121,7 @@ function TemplateCard({
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
-          className="absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center"
+          className="absolute top-3 right-3 size-6  rounded-full flex items-center justify-center"
           style={{
             background: categoryConfig.color,
             boxShadow: `0 0 20px ${categoryConfig.color}66`,
@@ -137,7 +137,7 @@ function TemplateCard({
         <div className="flex items-start gap-3 mb-3">
           {/* Icon */}
           <div
-            className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+            className="size-10  rounded-lg flex items-center justify-center flex-shrink-0"
             style={{
               background: `${categoryConfig.color}22`,
               border: `1px solid ${categoryConfig.color}44`,
@@ -154,7 +154,7 @@ function TemplateCard({
             </h3>
             <div className="flex items-center gap-2">
               <span
-                className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+                className="text-xs px-1.5 py-0.5 rounded font-medium"
                 style={{
                   background: `${categoryConfig.color}22`,
                   color: categoryConfig.color,
@@ -163,7 +163,7 @@ function TemplateCard({
                 {template.category}
               </span>
               {template.tags.length > 0 && (
-                <span className="text-[10px] text-white/40">
+                <span className="text-xs text-white/40">
                   {template.tags.length} tag{template.tags.length !== 1 ? 's' : ''}
                 </span>
               )}
@@ -184,7 +184,7 @@ function TemplateCard({
             {template.tags.slice(0, 4).map((tag, idx) => (
               <span
                 key={idx}
-                className="text-[10px] px-2 py-1 rounded-full bg-white/5 text-white/40 border border-white/5"
+                className="text-xs px-2 py-1 rounded-full bg-white/5 text-white/40 border border-white/5"
               >
                 {tag}
               </span>
@@ -277,20 +277,20 @@ export function SwarmTemplateGallery({
         <div className="relative mb-3">
           <MagnifyingGlass
             size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2"
+            className="absolute left-3 top-1/2 -tranzinc-y-1/2"
             style={{ color: 'rgba(255,255,255,0.3)' }}
           />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search templates..."
+            placeholder="Search templates…"
             className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white/90 placeholder-white/30 outline-none focus:border-white/20 transition-colors"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2"
+              className="absolute right-3 top-1/2 -tranzinc-y-1/2"
             >
               <X size={14} className="text-white/30 hover:text-white/50" />
             </button>
@@ -334,7 +334,7 @@ export function SwarmTemplateGallery({
         {filteredTemplates.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center">
             <div
-              className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+              className="size-16  rounded-full flex items-center justify-center mb-4"
               style={{
                 background: 'var(--surface-hover)',
                 border: '1px solid var(--ui-border-default)',
@@ -370,7 +370,7 @@ export function SwarmTemplateGallery({
 
       {/* Footer */}
       <div className="p-3 border-t border-white/5 text-center">
-        <p className="text-[10px] text-white/30">
+        <p className="text-xs text-white/30">
           {filteredTemplates.length} of {PREDEFINED_AGENT_TEMPLATES.length} templates
         </p>
       </div>

@@ -76,7 +76,7 @@ export function ImageRenderer({
 
   // Handle draw-to-edit
   const handleDrawToEdit = (image: ImageAsset) => {
-    console.log('[ImageRenderer] Opening draw-to-edit for:', image);
+    console.debug('[ImageRenderer] Opening draw-to-edit for:', image);
     // In production, this would open the DrawToEditCanvas modal
     // For now, just log
   };
@@ -114,7 +114,7 @@ export function ImageRenderer({
                 setLightboxOpen(true);
                 setSelectedImageIndex(index);
               }}
-              className="h-9 w-9 p-0 text-white"
+              className="size-9  p-0 text-white"
             >
               <MagnifyingGlassPlus size={16} />
             </Button>
@@ -125,7 +125,7 @@ export function ImageRenderer({
                 e.stopPropagation();
                 handleDrawToEdit(image);
               }}
-              className="h-9 w-9 p-0 text-white"
+              className="size-9  p-0 text-white"
             >
               <PencilSimple size={16} />
             </Button>
@@ -136,7 +136,7 @@ export function ImageRenderer({
                 e.stopPropagation();
                 // Download logic
               }}
-              className="h-9 w-9 p-0 text-white"
+              className="size-9  p-0 text-white"
             >
               <DownloadSimple size={16} />
             </Button>
@@ -164,7 +164,7 @@ export function ImageRenderer({
           }}
         >
           {/* Thumbnail */}
-          <div className="w-20 h-20 rounded bg-[var(--bg-primary)] border border-[var(--border-subtle)] overflow-hidden flex-shrink-0">
+          <div className="size-20  rounded bg-[var(--bg-primary)] border border-[var(--border-subtle)] overflow-hidden flex-shrink-0">
             <img
               src={image.url}
               alt={image.title}
@@ -222,7 +222,7 @@ export function ImageRenderer({
       {/* Toolbar */}
       <div className="h-12 border-b border-[var(--border-subtle)] flex items-center justify-between px-4 bg-[var(--bg-primary)]">
         <div className="flex items-center gap-3">
-          <Image className="w-4 h-4 text-[var(--accent-primary)]" />
+          <Image className="size-4  text-[var(--accent-primary)]" />
           <span className="text-sm font-medium text-[var(--text-primary)]">
             {artifact.title}
           </span>
@@ -236,7 +236,7 @@ export function ImageRenderer({
             size="sm"
             onClick={() => setViewMode('grid')}
             className={cn(
-              "h-7 w-7 p-0",
+              "size-7  p-0",
               viewMode === 'grid' && "text-[var(--accent-primary)]"
             )}
           >
@@ -247,7 +247,7 @@ export function ImageRenderer({
             size="sm"
             onClick={() => setViewMode('list')}
             className={cn(
-              "h-7 w-7 p-0",
+              "size-7  p-0",
               viewMode === 'list' && "text-[var(--accent-primary)]"
             )}
           >
@@ -298,7 +298,7 @@ export function ImageRenderer({
             </div>
 
             {/* Lightbox controls */}
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 px-6 py-3 rounded-full bg-black/80 backdrop-blur">
+            <div className="absolute bottom-8 left-1/2 -tranzinc-x-1/2 flex items-center gap-4 px-6 py-3 rounded-full bg-black/80 backdrop-blur">
               <Button
                 variant="ghost"
                 size="sm"
@@ -373,7 +373,7 @@ export function ImageRenderer({
               onClick={() => setLightboxOpen(false)}
               className="absolute top-4 right-4 text-white/60 hover:text-white"
             >
-              <ArrowsOut className="w-6 h-6 rotate-45" />
+              <ArrowsOut className="size-6  rotate-45" />
             </button>
           </motion.div>
         )}

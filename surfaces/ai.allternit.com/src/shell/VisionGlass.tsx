@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { execEvents } from "../integration/execution/exec.events";
 import type { ToolCall } from "../integration/execution/exec.types";
 
@@ -43,15 +43,19 @@ function labelForCall(call: ToolCall): string {
 
 export function VisionGlass(): JSX.Element {
   const [actions, setActions] = useState<VisionAction[]>([]);
+  const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   useEffect(() => {
     const handleAction = (event: CustomEvent<{ type: string; action: VisionAction }>): void => {
       if (event.detail?.type === "vision_target") {
         const action = event.detail.action;
         setActions(prev => [...prev, action]);
-        setTimeout(() => {
+        
+        const timer = setTimeout(() => {
           setActions(prev => prev.filter(a => a.id !== action.id));
+          timersRef.current.delete(action.id);
         }, 3000);
+        timersRef.current.set(action.id, timer);
       }
     };
 
@@ -66,15 +70,21 @@ export function VisionGlass(): JSX.Element {
         label: labelForCall(call),
       };
       setActions((prev) => [...prev, action]);
-      setTimeout(() => {
+      
+      const timer = setTimeout(() => {
         setActions((prev) => prev.filter((a) => a.id !== action.id));
+        timersRef.current.delete(action.id);
       }, 3000);
+      timersRef.current.set(action.id, timer);
     });
 
     window.addEventListener("allternit:vision_action", handleAction as EventListener);
     return () => {
       window.removeEventListener("allternit:vision_action", handleAction as EventListener);
       unsubTool();
+      // Clear all pending timers
+      timersRef.current.forEach(clearTimeout);
+      timersRef.current.clear();
     };
   }, []);
 
@@ -96,7 +106,7 @@ export function VisionGlass(): JSX.Element {
             <div style={{
               position: "absolute", top: 45, left: "50%", transform: "translateX(-50%)",
               background: "var(--shell-vision-label-bg)", color: "var(--shell-vision-label-fg)", padding: "4px 8px",
-              borderRadius: 6, fontSize: 10, whiteSpace: "nowrap"
+              borderRadius: 6, fontSize: 12, whiteSpace: "nowrap"
             }}>
               {action.label}
             </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { apiRequest, API_BASE_URL } from '@/lib/agents/api-config';
 import { Wrench, Brain, User, Terminal, Play, Pause, SkipBack, SkipForward, CaretLeft, CaretRight, Clock } from '@phosphor-icons/react';
-import { GlassCard } from '../../design/GlassCard';
+import { GlassCard } from '../../design/glass/GlassCard';
 
 type StepType = 'tool_call' | 'llm_response' | 'human_message' | 'system_log';
 
@@ -140,7 +140,7 @@ export function RunReplayView() {
             onChange={(e) => setActiveStepId(parseInt(e.target.value))}
             style={{ flex: 1, cursor: 'pointer' }}
           />
-          <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontVariantNumeric: 'tabular-nums', minWidth: 40 }}>
+          <div style={{ fontSize: 12, color: 'var(--text-tertiary)', fontVariantNumeric: 'tabular-nums', minWidth: 40 }}>
             {activeStepId}/{steps.length}
           </div>
         </div>
@@ -204,15 +204,15 @@ export function RunReplayView() {
                             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
                               {step.title}
                             </div>
-                            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                            <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>
                               {step.preview}
                             </div>
                           </div>
                           <div style={{ textAlign: 'right', minWidth: 'fit-content' }}>
-                            <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>
+                            <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
                               {step.timestamp}
                             </div>
-                            <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 1, fontVariantNumeric: 'tabular-nums' }}>
+                            <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 1, fontVariantNumeric: 'tabular-nums' }}>
                               {step.duration}ms
                             </div>
                           </div>
@@ -225,7 +225,7 @@ export function RunReplayView() {
                           style={{
                             marginTop: 8,
                             padding: '4px 8px',
-                            fontSize: 10,
+                            fontSize: 12,
                             fontWeight: 600,
                             color: 'var(--accent-chat)',
                             background: 'transparent',
@@ -242,7 +242,7 @@ export function RunReplayView() {
                   {isExpanded && (
                     <GlassCard style={{ padding: 12, marginLeft: 8, marginTop: 4, background: 'rgba(255, 255, 255, 0.04)' }}>
                       <pre style={{
-                        fontSize: 10,
+                        fontSize: 12,
                         fontFamily: 'var(--font-code)',
                         color: 'var(--text-secondary)',
                         margin: 0,
@@ -285,7 +285,7 @@ export function RunReplayView() {
                     {React.createElement(getStepIcon(activeStep.type), { size: 14, color: getStepColor(activeStep.type), weight: 'fill' })}
                   </div>
                   <div>
-                    <div style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700 }}>
+                    <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700 }}>
                       {getStepLabel(activeStep.type)}
                     </div>
                     <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
@@ -295,7 +295,7 @@ export function RunReplayView() {
                 </div>
 
                 <div style={{ marginBottom: 16, paddingBottom: 16, borderBottom: '1px solid var(--border-subtle)' }}>
-                  <div style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>
                     Timing
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>
@@ -307,11 +307,11 @@ export function RunReplayView() {
                 </div>
 
                 <div>
-                  <div style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 700, marginBottom: 6 }}>
                     Content
                   </div>
                   <pre style={{
-                    fontSize: 9,
+                    fontSize: 12,
                     fontFamily: 'var(--font-code)',
                     color: 'var(--text-secondary)',
                     margin: 0,
@@ -348,7 +348,7 @@ export function RunReplayView() {
 function StatItem({ label, value }: { label: string; value: string }) {
   return (
     <GlassCard style={{ padding: 12, textAlign: 'center' }}>
-      <div style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+      <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
         {label}
       </div>
       <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--accent-primary)', fontVariantNumeric: 'tabular-nums' }}>

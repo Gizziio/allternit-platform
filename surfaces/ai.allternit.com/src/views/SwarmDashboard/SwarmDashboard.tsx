@@ -150,7 +150,7 @@ export function SwarmDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <ArrowsClockwise className="h-8 w-8 animate-spin text-blue-500" role="img" aria-label="Loading" />
+        <ArrowsClockwise className="size-8  animate-spin text-blue-500" role="img" aria-label="Loading" />
       </div>
     );
   }
@@ -159,7 +159,7 @@ export function SwarmDashboard() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
-          <Warning className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <Warning className="size-12  text-red-500 mx-auto mb-4" />
           <p className="text-red-500">{error}</p>
           <Button onClick={fetchData} className="mt-4">
             Retry
@@ -180,7 +180,7 @@ export function SwarmDashboard() {
           </p>
         </div>
         <Button onClick={fetchData} variant="outline">
-          <ArrowsClockwise className="h-4 w-4 mr-2" />
+          <ArrowsClockwise className="size-4  mr-2" />
           Refresh
         </Button>
       </div>
@@ -192,7 +192,7 @@ export function SwarmDashboard() {
             <CardTitle className="text-sm font-medium">
               Circuit Breakers
             </CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <Activity className="size-4  text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{circuitBreakers?.length ?? 0}</div>
@@ -207,7 +207,7 @@ export function SwarmDashboard() {
             <CardTitle className="text-sm font-medium">
               Quarantined Agents
             </CardTitle>
-            <ShieldWarning className="h-4 w-4 text-muted-foreground" />
+            <ShieldWarning className="size-4  text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{quarantined?.length ?? 0}</div>
@@ -222,7 +222,7 @@ export function SwarmDashboard() {
             <CardTitle className="text-sm font-medium">
               Messages Sent
             </CardTitle>
-            <Chat className="h-4 w-4 text-muted-foreground" />
+            <Chat className="size-4  text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -239,7 +239,7 @@ export function SwarmDashboard() {
             <CardTitle className="text-sm font-medium">
               Avg Latency
             </CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <Activity className="size-4  text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -275,7 +275,7 @@ export function SwarmDashboard() {
             <CardContent>
               {circuitBreakers.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-500" />
+                  <CheckCircle className="size-12  mx-auto mb-4 text-green-500" />
                   <p>No circuit breakers active</p>
                 </div>
               ) : (
@@ -335,7 +335,7 @@ export function SwarmDashboard() {
             <CardContent>
               {quarantined.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-500" />
+                  <CheckCircle className="size-12  mx-auto mb-4 text-green-500" />
                   <p>No agents in quarantine</p>
                 </div>
               ) : (

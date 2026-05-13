@@ -113,7 +113,7 @@ export function useMemoDebug<T>(
   
   if (process.env.NODE_ENV === 'development') {
     if (hasChanged) {
-      console.log(`[useMemoDebug] ${name}: dependencies changed`);
+      console.debug(`[useMemoDebug] ${name}: dependencies changed`);
     }
   }
   
@@ -200,12 +200,13 @@ export function useCallbackDebug<T extends (...args: any[]) => any>(
   deps: DependencyList,
   name: string
 ): T {
+  const depsRef = useRef<DependencyList>(deps);
+  
   if (process.env.NODE_ENV === 'development') {
-    const depsRef = useRef<DependencyList>(deps);
     const hasChanged = deps.some((dep, i) => dep !== depsRef.current[i]);
     
     if (hasChanged) {
-      console.log(`[useCallbackDebug] ${name}: dependencies changed`);
+      console.debug(`[useCallbackDebug] ${name}: dependencies changed`);
     }
     
     depsRef.current = deps;
@@ -321,7 +322,7 @@ export function useWhyDidYouUpdate(name: string, props: Record<string, unknown>)
       });
       
       if (Object.keys(changesObj).length > 0) {
-        console.log(`[why-did-you-update] ${name}`, changesObj);
+        console.debug(`[why-did-you-update] ${name}`, changesObj);
       }
     }
     

@@ -125,7 +125,7 @@ function MessageBubble({
       <div className="flex items-start gap-3 mb-3">
         {/* Avatar */}
         <div
-          className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+          className="size-8  rounded-lg flex items-center justify-center flex-shrink-0"
           style={{
             background: message.from.isHuman
               ? 'rgba(167, 139, 250, 0.2)'
@@ -149,7 +149,7 @@ function MessageBubble({
               {message.from.role}
             </span>
             <span
-              className="text-[10px] px-1.5 py-0.5 rounded font-medium uppercase tracking-wider"
+              className="text-xs px-1.5 py-0.5 rounded font-medium uppercase tracking-wider"
               style={{
                 background: `${config.color}22`,
                 color: config.color,
@@ -276,7 +276,7 @@ function MessageBubble({
               type="text"
               value={replyContent}
               onChange={(e) => setReplyContent(e.target.value)}
-              placeholder="Write a reply..."
+              placeholder="Write a reply…"
               className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white/90 placeholder-white/30 outline-none focus:border-white/20"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleReply();
@@ -324,7 +324,7 @@ function HumanReviewRequest({
   return (
     <div className="p-4 rounded-xl border border-purple-500/30 bg-purple-500/10">
       <div className="flex items-start gap-3 mb-4">
-        <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+        <div className="size-10  rounded-lg bg-purple-500/20 flex items-center justify-center flex-shrink-0">
           <User size={20} className="text-purple-400" />
         </div>
         <div className="flex-1">
@@ -357,7 +357,7 @@ function HumanReviewRequest({
               type="text"
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="Add a comment (optional)..."
+              placeholder="Add a comment (optional)…"
               className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white/90 placeholder-white/30 outline-none"
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && comment.trim()) {
@@ -470,7 +470,7 @@ export function ConversationThread({
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Type a message..."
+                placeholder="Type a message…"
                 rows={1}
                 className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-sm text-white/90 placeholder-white/30 outline-none focus:border-white/20 resize-none"
                 style={{ minHeight: '44px', maxHeight: '120px' }}

@@ -171,7 +171,7 @@ export function KubeConfigUploader({
 
       <div className="upload-content">
         {loading ? (
-          <div className="loading">Processing...</div>
+          <div className="loading">Processing…</div>
         ) : (
           <>
             <div className="upload-icon">📁</div>

@@ -42,13 +42,13 @@ export const useCoworkSessionStore = createModeSessionStore({
 // ---------------------------------------------------------------------------
 
 export function useCoworkSessions() {
-  return useCoworkSessionStore((state) => state.sessions);
+  return useCoworkSessionStore((state) => state.sessions ?? []);
 }
 
 export function useActiveCoworkSession() {
   return useCoworkSessionStore((state) => {
     if (!state.activeSessionId) return null;
-    return state.sessions.find((s) => s.id === state.activeSessionId) || null;
+    return (state.sessions ?? []).find((s) => s.id === state.activeSessionId) || null;
   });
 }
 

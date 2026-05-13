@@ -18,6 +18,7 @@ import type {
   WorkflowEngineConfig,
   NodeType,
 } from '../types';
+import { evaluateRuntimeExpression } from '../../../../src/lib/expression/safe-runtime-expression';
 
 export interface WorkflowEngine {
   /** Register a workflow */
@@ -109,7 +110,7 @@ export function createWorkflowEngine(config: WorkflowEngineConfig = {}): Workflo
         
         // Simple expression evaluation
         const data = inputs.data;
-        const result = new Function('data', 'context', `return ${expression}`)(data, context);
+        const result = evaluateRuntimeExpression(expression, { data, context });
         return { result };
       },
     });
@@ -130,8 +131,9 @@ export function createWorkflowEngine(config: WorkflowEngineConfig = {}): Workflo
         
         if (!condition) return { filtered: array };
         
-        const filterFn = new Function('item', 'index', `return ${condition}`);
-        const filtered = array.filter((item, index) => filterFn(item, index));
+        const filtered = array.filter((item, index) =>
+          Boolean(evaluateRuntimeExpression(condition, { item, index })),
+        );
         return { filtered };
       },
     });
@@ -154,7 +156,7 @@ export function createWorkflowEngine(config: WorkflowEngineConfig = {}): Workflo
         const condition = node.config?.condition as string;
         if (!condition) throw new Error('Condition required');
         
-        const result = new Function('data', 'context', `return ${condition}`)(inputs.data, context);
+        const result = evaluateRuntimeExpression(condition, { data: inputs.data, context });
         return result ? { true: inputs.data } : { false: inputs.data };
       },
     });
@@ -549,7 +551,7 @@ export function createWorkflowEngine(config: WorkflowEngineConfig = {}): Workflo
     context: ExecutionContext
   ): boolean {
     try {
-      return new Function('result', 'context', `return ${condition}`)(result, context);
+      return Boolean(evaluateRuntimeExpression(condition, { result, context }));
     } catch {
       return false;
     }

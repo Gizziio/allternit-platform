@@ -52,18 +52,18 @@ export const ActiveTasksBar: React.FC<ActiveTasksBarProps> = ({
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'in_progress':
-        return <CircleNotch className="w-3 h-3 text-amber-400 animate-spin" />;
+        return <CircleNotch className="size-3  text-amber-400 animate-spin" />;
       case 'ready':
       case 'open':
-        return <Play className="w-3 h-3 text-blue-400" />;
+        return <Play className="size-3  text-blue-400" />;
       case 'blocked':
-        return <Clock className="w-3 h-3 text-orange-400" />;
+        return <Clock className="size-3  text-orange-400" />;
       case 'completed':
-        return <CheckCircle className="w-3 h-3 text-green-400" />;
+        return <CheckCircle className="size-3  text-green-400" />;
       case 'failed':
-        return <Warning className="w-3 h-3 text-red-400" />;
+        return <Warning className="size-3  text-red-400" />;
       default:
-        return <CircleNotch className="w-3 h-3 text-white/40" />;
+        return <CircleNotch className="size-3  text-white/40" />;
     }
   };
 
@@ -90,7 +90,7 @@ export const ActiveTasksBar: React.FC<ActiveTasksBarProps> = ({
         className="border-b border-white/5"
       >
         <div className="px-3 py-2 flex items-center gap-2 overflow-x-auto scrollbar-hide">
-          <span className="text-[10px] font-medium text-white/30 uppercase tracking-wider shrink-0">
+          <span className="text-xs font-medium text-white/30 uppercase tracking-wider shrink-0">
             Running
           </span>
 
@@ -130,7 +130,7 @@ export const ActiveTasksBar: React.FC<ActiveTasksBarProps> = ({
                 }}
                 className="ml-1 p-0.5 hover:bg-white/10 rounded-full transition-colors"
               >
-                <X className="w-3 h-3 text-white/40 hover:text-white/60" />
+                <X className="size-3  text-white/40 hover:text-white/60" />
               </button>
             </motion.div>
           ))}

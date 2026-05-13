@@ -444,7 +444,7 @@ export function PlaygroundView() {
         <div style={{ display: 'flex', gap: 2, marginLeft: 10, padding: '2px', background: 'var(--surface-canvas)', borderRadius: 8 }}>
           {TEMPLATES.map((t) => (
             <button key={t.id} onClick={() => applyTemplate(t.id)} style={{
-              padding: '3px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600,
+              padding: '3px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600,
               background: activeTemplate === t.id ? 'color-mix(in srgb, var(--accent-primary) 15%, transparent)' : 'transparent',
               color: activeTemplate === t.id ? 'var(--accent-primary)' : 'var(--ui-text-muted)', transition: 'var(--transition-fast)',
             }}>
@@ -455,11 +455,11 @@ export function PlaygroundView() {
 
         <div style={{ flex: 1 }} />
 
-        <span style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>~{tokenCount.toLocaleString()} tokens</span>
+        <span style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>~{tokenCount.toLocaleString()} tokens</span>
 
         <select value={model} onChange={(e) => setModel(e.target.value)} style={{
           background: 'var(--surface-canvas)', border: '1px solid color-mix(in srgb, var(--accent-primary) 12%, transparent)',
-          borderRadius: 6, color: 'var(--ui-text-muted)', fontSize: 11, padding: '4px 8px', cursor: 'pointer',
+          borderRadius: 6, color: 'var(--ui-text-muted)', fontSize: 12, padding: '4px 8px', cursor: 'pointer',
         }}>
           <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
           <option value="claude-opus-4-5">claude-opus-4-5</option>
@@ -496,7 +496,7 @@ export function PlaygroundView() {
             {(['prompt', 'config', 'templates'] as LeftTab[]).map((tab) => (
               <button key={tab} onClick={() => setLeftTab(tab)} style={{
                 padding: '7px 13px', border: 'none', background: 'transparent',
-                fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                fontSize: 12, fontWeight: 600, cursor: 'pointer',
                 color: leftTab === tab ? 'var(--accent-primary)' : 'var(--ui-text-muted)',
                 borderBottom: leftTab === tab ? '2px solid #d4b08c' : '2px solid transparent',
                 textTransform: 'capitalize',
@@ -513,7 +513,7 @@ export function PlaygroundView() {
                   <button onClick={() => setSystemExpanded(v => !v)} style={{
                     width: '100%', display: 'flex', alignItems: 'center', gap: 6,
                     padding: '7px 10px', background: 'var(--surface-canvas)', border: 'none', cursor: 'pointer',
-                    color: 'var(--ui-text-muted)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em',
+                    color: 'var(--ui-text-muted)', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em',
                   }}>
                     <svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"
                       style={{ transform: systemExpanded ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}>
@@ -525,10 +525,10 @@ export function PlaygroundView() {
                     <textarea value={systemPrompt} onChange={(e) => setSystemPrompt(e.target.value)} rows={5}
                       style={{
                         width: '100%', background: 'var(--surface-canvas)', border: 'none', resize: 'vertical',
-                        color: 'var(--accent-primary)', fontSize: 11, fontFamily: 'var(--font-mono)',
+                        color: 'var(--accent-primary)', fontSize: 12, fontFamily: 'var(--font-mono)',
                         lineHeight: 1.65, padding: '9px 11px', outline: 'none',
                       }}
-                      placeholder="You are a helpful assistant..."
+                      placeholder="You are a helpful assistant…"
                     />
                   )}
                 </div>
@@ -547,7 +547,7 @@ export function PlaygroundView() {
                         onChange={(e) => setMessages(prev => prev.map(m =>
                           m.id === msg.id ? { ...m, role: e.target.value as 'user' | 'assistant' } : m
                         ))} style={{
-                          background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 10,
+                          background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 12,
                           fontWeight: 700, color: msg.role === 'user' ? 'var(--accent-primary)' : '#86efac',
                         }}>
                         <option value="user">user</option>
@@ -595,7 +595,7 @@ export function PlaygroundView() {
             {/* TEMPLATES TAB */}
             {leftTab === 'templates' && (
               <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 7 }}>
-                <p style={{ fontSize: 11, color: 'var(--ui-text-muted)', paddingBottom: 6, lineHeight: 1.5 }}>
+                <p style={{ fontSize: 12, color: 'var(--ui-text-muted)', paddingBottom: 6, lineHeight: 1.5 }}>
                   Templates pre-configure the system prompt and messages for common use cases.
                 </p>
                 {TEMPLATES.map((t) => (
@@ -611,7 +611,7 @@ export function PlaygroundView() {
                     <span style={{ fontSize: 12, fontWeight: 700, color: activeTemplate === t.id ? 'var(--accent-primary)' : 'var(--ui-text-secondary)' }}>
                       {t.label}
                     </span>
-                    <span style={{ fontSize: 11, color: 'var(--ui-text-muted)', lineHeight: 1.4 }}>{t.description}</span>
+                    <span style={{ fontSize: 12, color: 'var(--ui-text-muted)', lineHeight: 1.4 }}>{t.description}</span>
                   </button>
                 ))}
               </div>
@@ -635,7 +635,7 @@ export function PlaygroundView() {
           }}>
             {(['preview', 'source', 'console'] as RightTab[]).map((tab) => (
               <button key={tab} onClick={() => setRightTab(tab)} style={{
-                padding: '7px 11px', border: 'none', background: 'transparent', fontSize: 11,
+                padding: '7px 11px', border: 'none', background: 'transparent', fontSize: 12,
                 fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize',
                 color: rightTab === tab ? 'var(--accent-primary)' : 'var(--ui-text-muted)',
                 borderBottom: rightTab === tab ? '2px solid #d4b08c' : '2px solid transparent',
@@ -647,10 +647,10 @@ export function PlaygroundView() {
             {artifact && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingRight: 4 }}>
                 <span style={{
-                  fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
+                  fontSize: 12, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
                   background: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)', color: 'var(--accent-primary)', textTransform: 'uppercase', letterSpacing: '0.08em',
                 }}>{artifact.type}</span>
-                <span style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>{artifact.title}</span>
+                <span style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>{artifact.title}</span>
               </div>
             )}
 
@@ -662,7 +662,7 @@ export function PlaygroundView() {
                   animation: 'pgPulse 1s ease-in-out infinite',
                   display: 'inline-block',
                 }} />
-                <span style={{ fontSize: 10, color: 'var(--status-success)' }}>Streaming</span>
+                <span style={{ fontSize: 12, color: 'var(--status-success)' }}>Streaming</span>
               </div>
             )}
           </div>
@@ -675,7 +675,7 @@ export function PlaygroundView() {
               <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
                 {artifact ? (
                   <pre style={{
-                    fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--accent-primary)',
+                    fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--accent-primary)',
                     lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
                     background: 'var(--surface-canvas)', padding: 16, borderRadius: 8, margin: 0,
                   }}>{artifact.content}</pre>
@@ -688,12 +688,12 @@ export function PlaygroundView() {
             {rightTab === 'console' && (
               <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
                 <pre style={{
-                  fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--ui-text-muted)',
+                  fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--ui-text-muted)',
                   lineHeight: 1.8, whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0,
                 }}>
                   {streamText
                     ? streamText
-                    : <span style={{ color: 'var(--ui-text-muted)' }}>Output will stream here when you Run...</span>
+                    : <span style={{ color: 'var(--ui-text-muted)' }}>Output will stream here when you Run…</span>
                   }
                   {isStreaming && (
                     <span style={{ color: 'var(--accent-primary)', animation: 'pgBlink 0.6s step-end infinite' }}>▌</span>
@@ -718,7 +718,7 @@ export function PlaygroundView() {
 function addMsgBtnStyle(color: string): React.CSSProperties {
   return {
     flex: 1, padding: '6px 0', borderRadius: 6, border: `1px solid ${color}20`,
-    background: `${color}0a`, color, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+    background: `${color}0a`, color, fontSize: 12, fontWeight: 600, cursor: 'pointer',
   };
 }
 
@@ -739,8 +739,8 @@ function ConfigSlider({
         style={{ width: '100%', accentColor: 'var(--accent-primary)' }} />
       {hint && (
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 3 }}>
-          <span style={{ fontSize: 9, color: 'var(--ui-text-muted)' }}>{hint[0]}</span>
-          <span style={{ fontSize: 9, color: 'var(--ui-text-muted)' }}>{hint[1]}</span>
+          <span style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>{hint[0]}</span>
+          <span style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>{hint[1]}</span>
         </div>
       )}
     </div>
@@ -753,7 +753,7 @@ function ConfigToggleRow({ label, desc, on }: { label: string; desc: string; on:
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ui-text-muted)' }}>{label}</div>
-        <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', marginTop: 2 }}>{desc}</div>
+        <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', marginTop: 2 }}>{desc}</div>
       </div>
       <ToggleSwitch on={enabled} onChange={() => setEnabled(v => !v)} />
     </div>

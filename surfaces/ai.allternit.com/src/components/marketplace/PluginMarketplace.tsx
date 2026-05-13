@@ -65,14 +65,14 @@ function PluginCard({ plugin, installed, enabled, onInstall, onUninstall, onTogg
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-zinc-100 truncate flex items-center gap-2">
-              <span className={cn("w-2 h-2 rounded-full", dotClass)} />
+              <span className={cn("size-2  rounded-full", dotClass)} />
               {plugin.name}
             </h3>
             <div className="flex items-center gap-2 mt-1">
               <p className="text-xs text-zinc-500">by {plugin.author.name}</p>
               {plugin.author.verified && (
-                <Badge variant="outline" className="border-blue-500/50 text-blue-400 text-[10px] py-0 h-4">
-                  <Sparkles className="w-3 h-3 mr-1" />
+                <Badge variant="outline" className="border-blue-500/50 text-blue-400 text-xs py-0 h-4">
+                  <Sparkles className="size-3  mr-1" />
                   Verified
                 </Badge>
               )}
@@ -88,7 +88,7 @@ function PluginCard({ plugin, installed, enabled, onInstall, onUninstall, onTogg
                   : "border-zinc-600 text-zinc-500"
               )}
             >
-              <Check className="w-3 h-3 mr-1" /> 
+              <Check className="size-3  mr-1" /> 
               {enabled ? 'Active' : 'Installed'}
             </Badge>
           )}
@@ -110,13 +110,13 @@ function PluginCard({ plugin, installed, enabled, onInstall, onUninstall, onTogg
           {/* Source badge */}
           {isBundled && (
             <Badge variant="outline" className="text-xs border-emerald-500/50 text-emerald-400">
-              <HardDrive className="w-3 h-3 mr-1" />
+              <HardDrive className="size-3  mr-1" />
               Bundled
             </Badge>
           )}
           {isDownloadable && (
             <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-400">
-              <Wifi className="w-3 h-3 mr-1" />
+              <Wifi className="size-3  mr-1" />
               Download
             </Badge>
           )}
@@ -137,7 +137,7 @@ function PluginCard({ plugin, installed, enabled, onInstall, onUninstall, onTogg
           )}
           {plugin.downloads > 0 && (
             <span className="flex items-center gap-1">
-              <Download className="w-3 h-3" />
+              <Download className="size-3 " />
               {plugin.downloads.toLocaleString()}
             </span>
           )}
@@ -212,7 +212,7 @@ function PluginCard({ plugin, installed, enabled, onInstall, onUninstall, onTogg
             )}
             onClick={onInstall}
           >
-            <Download className="w-4 h-4 mr-2" />
+            <Download className="size-4  mr-2" />
             Install
           </Button>
         )}
@@ -248,8 +248,8 @@ function SectionHeader({
       onClick={onToggle}
     >
       <div className="flex items-center gap-3">
-        <div className={cn("w-10 h-10 rounded-lg flex items-center justify-center", color)}>
-          <Icon className="w-5 h-5 text-white" />
+        <div className={cn("size-10  rounded-lg flex items-center justify-center", color)}>
+          <Icon className="size-5  text-white" />
         </div>
         <div>
           <div className="flex items-center gap-2">
@@ -262,7 +262,7 @@ function SectionHeader({
         </div>
       </div>
       <Button variant="ghost" size="sm" className="text-zinc-500 hover:text-zinc-300">
-        {expanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+        {expanded ? <ChevronUp className="size-5 " /> : <ChevronDown className="size-5 " />}
       </Button>
     </div>
   );
@@ -276,9 +276,9 @@ function PluginGrid({ plugins }: { plugins: UnifiedMarketplacePlugin[] }) {
         <PluginCard
           key={plugin.id}
           plugin={plugin}
-          onInstall={() => console.log('Install', plugin.id)}
-          onUninstall={() => console.log('Uninstall', plugin.id)}
-          onToggle={() => console.log('Toggle', plugin.id)}
+          onInstall={() => console.debug('Install', plugin.id)}
+          onUninstall={() => console.debug('Uninstall', plugin.id)}
+          onToggle={() => console.debug('Toggle', plugin.id)}
         />
       ))}
     </div>
@@ -336,15 +336,15 @@ export function PluginMarketplace() {
     <div className="w-full max-w-7xl mx-auto p-6">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
-        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-violet-600 via-blue-600 to-emerald-600 flex items-center justify-center shadow-lg shadow-violet-900/20">
-          <Package className="w-7 h-7 text-white" />
+        <div className="size-14  rounded-xl bg-gradient-to-br from-violet-600 via-blue-600 to-emerald-600 flex items-center justify-center shadow-lg shadow-violet-900/20">
+          <Package className="size-7  text-white" />
         </div>
         <div>
           <h1 className="text-3xl font-bold text-zinc-100">Plugin Marketplace</h1>
           <p className="text-zinc-500 flex items-center gap-2">
-            <HardDrive className="w-4 h-4" />
+            <HardDrive className="size-4 " />
             {MARKETPLACE_STATS.bundled.total} bundled • 
-            <Wifi className="w-4 h-4 ml-1" />
+            <Wifi className="size-4  ml-1" />
             {MARKETPLACE_STATS.downloadable.vendored + MARKETPLACE_STATS.downloadable.external}+ available
           </p>
         </div>
@@ -354,7 +354,7 @@ export function PluginMarketplace() {
       {error && (
         <div className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400">
           <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4" />
+            <AlertCircle className="size-4 " />
             <span>{error}</span>
           </div>
         </div>
@@ -363,9 +363,9 @@ export function PluginMarketplace() {
       {/* Search and filters */}
       <div className="flex flex-col sm:flex-row gap-4 mb-8">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+          <Search className="absolute left-3 top-1/2 -tranzinc-y-1/2 size-4  text-zinc-500" />
           <Input
-            placeholder="Search all plugins..."
+            placeholder="Search all plugins…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-10 bg-zinc-900 border-zinc-800 h-11"
@@ -379,7 +379,7 @@ export function PluginMarketplace() {
             <TabsTrigger value="cowork" className="relative">
               <span className="relative">
                 Cowork
-                <span className="absolute -top-2 -right-6 flex h-4 items-center justify-center rounded-full bg-cyan-600 px-1.5 text-[9px] font-medium text-white">
+                <span className="absolute -top-2 -right-6 flex h-4 items-center justify-center rounded-full bg-cyan-600 px-1.5 text-xs font-medium text-white">
                   NEW
                 </span>
               </span>
@@ -387,7 +387,7 @@ export function PluginMarketplace() {
             <TabsTrigger value="team" className="relative">
               <span className="relative">
                 Team
-                <span className="absolute -top-2 -right-6 flex h-4 items-center justify-center rounded-full bg-violet-600 px-1.5 text-[9px] font-medium text-white">
+                <span className="absolute -top-2 -right-6 flex h-4 items-center justify-center rounded-full bg-violet-600 px-1.5 text-xs font-medium text-white">
                   NEW
                 </span>
               </span>
@@ -399,7 +399,7 @@ export function PluginMarketplace() {
       {/* Content */}
       {loading ? (
         <div className="text-center py-20 text-zinc-500">
-          <div className="w-8 h-8 border-2 border-violet-500/30 border-t-violet-500 rounded-full animate-spin mx-auto mb-4" />
+          <div className="size-8  border-2 border-violet-500/30 border-t-violet-500 rounded-full animate-spin mx-auto mb-4" />
           Loading plugins...
         </div>
       ) : (
@@ -494,7 +494,7 @@ export function PluginMarketplace() {
                                 {source.trust === 'official' ? 'Official' : 'Verified'}
                               </Badge>
                             </div>
-                            <ExternalLink className="w-5 h-5 text-zinc-600" />
+                            <ExternalLink className="size-5  text-zinc-600" />
                           </div>
                         </CardContent>
                         <CardFooter className="pt-0">
@@ -539,7 +539,7 @@ export function PluginMarketplace() {
           {/* Empty state */}
           {search && filteredBuiltIn.length === 0 && filteredVendor.length === 0 && filteredDownloadable.length === 0 && filteredCowork.length === 0 && (
             <div className="text-center py-20 text-zinc-500">
-              <Search className="w-16 h-16 mx-auto mb-4 text-zinc-700" />
+              <Search className="size-16  mx-auto mb-4 text-zinc-700" />
               <p className="text-lg font-medium text-zinc-400">No plugins found</p>
               <p className="text-sm mt-1">Try a different search term</p>
               <Button 

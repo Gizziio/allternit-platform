@@ -117,21 +117,21 @@ export default function SessionsPage() {
 
   if (!isLoaded || !isSignedIn) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <p className="text-gray-500">Loading…</p>
+      <div className="flex items-center justify-center min-h-screen bg-zinc-50">
+        <p className="text-zinc-500">Loading…</p>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-zinc-50">
       <div className="sticky top-0 bg-white border-b z-10">
         <div className="flex items-center justify-between px-4 py-3">
           <h1 className="text-lg font-semibold">Sessions</h1>
           <button
             onClick={() => { setIsRefreshing(true); fetchData() }}
             disabled={isRefreshing}
-            className="p-2 hover:bg-gray-100 rounded-full disabled:opacity-50 transition-colors"
+            className="p-2 hover:bg-zinc-100 rounded-full disabled:opacity-50 transition-colors"
           >
             <ArrowsClockwise size={20} className={isRefreshing ? 'animate-spin' : ''} />
           </button>
@@ -143,24 +143,24 @@ export default function SessionsPage() {
           <div className="p-8">
             <div className="animate-pulse space-y-3">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-16 bg-gray-200 rounded-lg" />
+                <div key={i} className="h-16 bg-zinc-200 rounded-lg" />
               ))}
             </div>
           </div>
         ) : sessions.length === 0 ? (
           <div className="text-center py-16 px-4">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gray-100 rounded-full mb-4">
-              <Terminal size={40} className="text-gray-400" />
+            <div className="inline-flex items-center justify-center size-20  bg-zinc-100 rounded-full mb-4">
+              <Terminal size={40} className="text-zinc-400" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No sessions</h3>
-            <p className="text-gray-500">Start a session in Gizzi to see it here</p>
+            <h3 className="text-lg font-medium text-zinc-900 mb-2">No sessions</h3>
+            <p className="text-zinc-500">Start a session in Gizzi to see it here</p>
           </div>
         ) : (
           sessions.map((session) => (
             <button
               key={session.id}
               onClick={() => router.push(`/shell/session/${session.id}`)}
-              className="w-full px-4 py-4 text-left hover:bg-gray-50 transition-colors"
+              className="w-full px-4 py-4 text-left hover:bg-zinc-50 transition-colors"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
@@ -168,9 +168,9 @@ export default function SessionsPage() {
                     <h3 className="font-medium truncate">{titleFor(session)}</h3>
                     {statusBadge(session.id)}
                   </div>
-                  <p className="text-sm text-gray-500 truncate">{session.directory}</p>
+                  <p className="text-sm text-zinc-500 truncate">{session.directory}</p>
                 </div>
-                <div className="flex items-center gap-1 text-xs text-gray-400 flex-shrink-0 mt-0.5">
+                <div className="flex items-center gap-1 text-xs text-zinc-400 flex-shrink-0 mt-0.5">
                   <Clock size={12} />
                   <span>{new Date(session.time.updated).toLocaleString()}</span>
                 </div>

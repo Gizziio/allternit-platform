@@ -44,6 +44,7 @@ import { Stagger } from '@/design/animation/Stagger';
 import { Text } from '@/components/typography/Text';
 import { LessonPlayer } from './labs/components/LessonPlayer';
 import { LessonPlayerErrorBoundary } from './labs/components/LessonPlayerErrorBoundary';
+import { cn } from '@/lib/utils';
 
 type Tab = 'discovery' | 'research' | 'tracks' | 'classroom' | 'certifications' | 'settings';
 
@@ -214,14 +215,17 @@ function useLabsReveal<T extends HTMLElement = HTMLDivElement>() {
 function StatPill({ value, label, icon: Icon, color }: { value: string; label: string; icon: React.ElementType; color: string }) {
   return (
     <GlassSurfaceThin
-      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', minWidth: 140 }}
+      className="flex items-center gap-3 p-2.5 px-4 min-w-[140px]"
     >
-      <div style={{ width: 32, height: 32, borderRadius: 8, background: `${color}18`, border: `1px solid ${color}30`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <div 
+        className="size-8 rounded-lg flex items-center justify-center shrink-0 border border-solid"
+        style={{ background: `${color}18`, borderColor: `${color}30` }}
+      >
         <Icon size={15} color={color} />
       </div>
       <div>
-        <Text variant="heading" style={{ fontSize: 20, fontWeight: 800, color, lineHeight: 1, display: 'block' }}>{value}</Text>
-        <Text variant="label" style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', color: L.textTer, marginTop: 3, display: 'block' }}>{label}</Text>
+        <Text variant="heading" className="text-xl font-extrabold leading-none block" style={{ color }}>{value}</Text>
+        <Text variant="label" className="text-[12px] font-bold tracking-[0.12em] uppercase text-[var(--ui-text-muted)] mt-0.5 block">{label}</Text>
       </div>
     </GlassSurfaceThin>
   );
@@ -231,16 +235,11 @@ function TierBadge({ tier, color }: { tier: string; color: string }) {
   const TierIcon = getTierIcon(tier);
   return (
     <GlassSurfaceThin
-      style={{
-        display: 'flex', alignItems: 'center', gap: 5,
-        padding: '3px 10px',
-        background: `${color}14`,
-        border: `1px solid ${color}30`,
-        borderRadius: 99,
-      }}
+      className="flex items-center gap-1.5 p-1 px-2.5 rounded-full border border-solid"
+      style={{ background: `${color}14`, borderColor: `${color}30` }}
     >
       <TierIcon size={11} color={color} />
-      <Text variant="label" style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.12em', textTransform: 'uppercase', color }}>{tier}</Text>
+      <Text variant="label" className="text-[12px] font-extrabold tracking-[0.12em] uppercase" style={{ color }}>{tier}</Text>
     </GlassSurfaceThin>
   );
 }
@@ -262,74 +261,74 @@ function CourseCard({ course, tierColor, canvasToken, onOpenNotebook, onSyncCanv
         elevation="raised"
         border="subtle"
         blur="md"
-        style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%' }}
+        className="overflow-hidden flex flex-col h-full"
       >
         {/* Cover image */}
-        <div style={{ position: 'relative', height: 160, flexShrink: 0, overflow: 'hidden' }}>
+        <div className="relative h-40 shrink-0 overflow-hidden group">
           <img
             src={course.coverImage}
             alt={course.title}
-            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform .4s cubic-bezier(.4,0,.2,1)' }}
+            className="size-full object-cover block transition-transform duration-500 ease-out group-hover:scale-110"
             onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.04)'; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = 'scale(1)'; }}
           />
-          <div style={{ position: 'absolute', inset: 0, background: `linear-gradient(to bottom, transparent 40%, rgba(14,14,14,.92) 100%)` }} />
-          <div style={{ position: 'absolute', top: 12, left: 12 }}>
+          <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent" />
+          <div className="absolute top-3 left-3">
             <TierBadge tier={course.tier} color={tierColor} />
           </div>
-          <div style={{ position: 'absolute', top: 12, right: 12 }}>
-            <Text variant="label" style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,.45)', letterSpacing: '.06em' }}>{course.modules} modules</Text>
+          <div className="absolute top-3 right-3">
+            <Text variant="label" className="text-[12px] font-bold text-white/45 tracking-wider">{course.modules} modules</Text>
           </div>
-          <div style={{ position: 'absolute', bottom: 12, left: 14 }}>
-            <Text variant="label" style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.18em', textTransform: 'uppercase', color: `${tierColor}bb` }}>{course.code}</Text>
+          <div className="absolute bottom-3 left-3.5">
+            <Text variant="label" className="text-[12px] font-extrabold tracking-widest uppercase" style={{ color: `${tierColor}bb` }}>{course.code}</Text>
           </div>
         </div>
 
         {/* Content */}
-        <div style={{ padding: '18px 20px 20px', flex: 1, display: 'flex', flexDirection: 'column', gap: 0 }}>
-          <Text variant="researchHeading" as="h3" style={{ fontSize: 17, fontWeight: 900, fontStyle: 'italic', margin: '0 0 10px', color: L.textPrimary, letterSpacing: '-.02em', lineHeight: 1.25 }}>
+        <div className="p-5 flex-1 flex flex-col">
+          <Text variant="researchHeading" as="h3" className="text-[17px] font-black italic m-0 mb-2.5 tracking-tight leading-snug text-[var(--ui-text-primary)]">
             {course.title}
           </Text>
 
-          <Text variant="body" style={{ fontSize: 12.5, color: L.textSec, margin: '0 0 16px', lineHeight: 1.6, overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>
+          <Text variant="body" className="text-[13px] text-[var(--ui-text-secondary)] m-0 mb-4 leading-relaxed line-clamp-3">
             {course.description}
           </Text>
 
           {/* Capstone box */}
-          <GlassSurfaceThin style={{ padding: '10px 14px', marginBottom: 18, background: `${tierColor}0a`, border: `1px solid ${tierColor}20`, borderRadius: 10 }}>
-            <Text variant="label" style={{ fontSize: 8.5, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase', color: tierColor, marginBottom: 5, display: 'block' }}>Capstone</Text>
-            <Text variant="body" style={{ fontSize: 12, color: L.textPrimary, lineHeight: 1.4 }}>{course.capstone}</Text>
+          <GlassSurfaceThin 
+            className="p-3 px-4 mb-4 rounded-xl border border-solid transition-colors"
+            style={{ background: `${tierColor}0a`, borderColor: `${tierColor}20` }}
+          >
+            <Text variant="label" className="text-[12px] font-black tracking-widest uppercase mb-1 block" style={{ color: tierColor }}>Capstone</Text>
+            <Text variant="body" className="text-[12px] text-[var(--ui-text-primary)] leading-relaxed">{course.capstone}</Text>
           </GlassSurfaceThin>
 
           {/* Actions */}
-          <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ display: 'flex', gap: 8 }}>
+          <div className="mt-auto flex flex-col gap-2">
+            <div className="flex gap-2">
               <button onClick={onOpenNotebook}
-                style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '9px 14px', background: `linear-gradient(135deg,${tierColor},${tierColor}bb)`, border: 'none', borderRadius: 9, color: 'var(--ui-text-primary)', fontWeight: 700, fontSize: 12.5, cursor: 'pointer', boxShadow: `0 4px 14px ${tierColor}30` }}
+                className="flex-1 flex items-center justify-center gap-1.5 p-2 px-3.5 rounded-lg border-none text-[var(--ui-text-primary)] font-bold text-[12.5px] cursor-pointer transition-all active:scale-95 shadow-lg"
+                style={{ background: `linear-gradient(135deg,${tierColor},${tierColor}bb)`, boxShadow: `0 4px 14px ${tierColor}30` }}
               >
                 <BookOpen size={13} /> Open Notebook
               </button>
               <a href={course.canvasUrl} target="_blank" rel="noopener noreferrer"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '9px 12px', background: 'rgba(255,255,255,.04)', border: `1px solid ${L.border}`, borderRadius: 9, color: L.textSec, textDecoration: 'none', transition: 'background .18s' }}
+                className="flex items-center justify-center p-2 px-3 rounded-lg bg-white/5 border border-solid border-[var(--ui-border-muted)] text-[var(--ui-text-secondary)] no-underline transition-colors hover:bg-white/10"
                 title="Open in Canvas"
               >
                 <ExternalLink size={13} />
               </a>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div className="flex gap-2">
               {canvasToken && (
                 <button onClick={onSyncCanvas}
-                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 14px', background: 'rgba(255,255,255,.04)', border: `1px solid ${L.border}`, borderRadius: 9, color: L.textSec, cursor: 'pointer', fontSize: 12, fontWeight: 600, transition: 'background .18s' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,.08)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,.04)'; }}
+                  className="flex-1 flex items-center justify-center gap-1.5 p-2 px-3.5 rounded-lg bg-white/5 border border-solid border-[var(--ui-border-muted)] text-[var(--ui-text-secondary)] cursor-pointer text-[12px] font-semibold transition-colors hover:bg-white/10"
                 >
                   <RefreshCw size={12} /> Sync Canvas
                 </button>
               )}
               {course.demosUrl && (
                 <a href={course.demosUrl} target="_blank" rel="noopener noreferrer"
-                  style={{ flex: canvasToken ? 0 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 14px', background: 'rgba(255,255,255,.04)', border: `1px solid ${L.border}`, borderRadius: 9, color: L.textSec, textDecoration: 'none', fontSize: 12, fontWeight: 600 }}
+                  className="flex-1 flex items-center justify-center gap-1.5 p-2 px-3.5 rounded-lg bg-white/5 border border-solid border-[var(--ui-border-muted)] text-[var(--ui-text-secondary)] no-underline text-[12px] font-semibold transition-colors hover:bg-white/10"
                 >
                   <Eye size={12} /> Try Demo
                 </a>
@@ -352,39 +351,36 @@ function LessonCard({ lesson, onClick }: { lesson: ALABSLesson; onClick?: () => 
         border="subtle"
         blur="md"
         onClick={onClick}
-        style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px' }}
+        className="flex items-center gap-4 p-4 px-5"
       >
-        <div style={{
-          width: 44, height: 44, borderRadius: 10,
-          background: `${L.accent}14`,
-          border: `1px solid ${L.accent}28`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0,
-        }}>
+        <div 
+          className="size-11 rounded-xl flex items-center justify-center shrink-0 border border-solid"
+          style={{ background: `${L.accent}14`, borderColor: `${L.accent}28` }}
+        >
           {lesson.videoUrl ? <MonitorPlay size={18} color={L.accent} /> : <FileText size={18} color={L.accent} />}
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <Text variant="label" style={{ fontSize: 9, fontWeight: 800, letterSpacing: '.1em', textTransform: 'uppercase', color: L.accent }}>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <Text variant="label" className="text-[12px] font-extrabold tracking-wider uppercase text-[var(--accent-primary)]">
               M{lesson.moduleNumber} · L{lesson.lessonNumber}
             </Text>
             {lesson.durationMinutes > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                <Clock size={10} color={L.textTer} />
-                <Text variant="caption" style={{ color: L.textTer }}>{lesson.durationMinutes} min</Text>
+              <div className="flex items-center gap-1">
+                <Clock size={12} className="text-[var(--ui-text-muted)]" />
+                <Text variant="caption" className="text-[12px] text-[var(--ui-text-muted)]">{lesson.durationMinutes} min</Text>
               </div>
             )}
           </div>
-          <Text variant="subheading" style={{ fontSize: 14, fontWeight: 700, color: L.textPrimary, marginBottom: 3, display: 'block' }}>
+          <Text variant="subheading" className="text-[14px] font-bold text-[var(--ui-text-primary)] mb-0.5 block">
             {lesson.title}
           </Text>
           {lesson.description && (
-            <Text variant="body" style={{ fontSize: 12, color: L.textSec, lineHeight: 1.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <Text variant="body" className="text-[12px] text-[var(--ui-text-secondary)] leading-relaxed truncate block">
               {lesson.description}
             </Text>
           )}
         </div>
-        <ChevronRight size={16} color={L.textTer} style={{ flexShrink: 0 }} />
+        <ChevronRight size={16} className="text-[var(--ui-text-muted)] shrink-0" />
       </GlassCardInteractive>
     </div>
   );
@@ -632,30 +628,17 @@ export function LabsView() {
   }, {});
 
   return (
-    <div style={{
-      height: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      background: L.bg,
-      color: L.textPrimary,
-      position: 'relative',
-      overflow: 'hidden',
-    }}>
+    <div className="h-full flex flex-col bg-[var(--surface-canvas)] text-[var(--ui-text-primary)] relative overflow-hidden">
       {/* Ambient grain overlay */}
-      <div style={{
-        position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0,
-        opacity: .032,
-        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='256' height='256'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.72' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='256' height='256' filter='url(%23g)'/%3E%3C/svg%3E")`,
-        backgroundSize: '256px',
-      }} />
+      <div className="absolute inset-0 pointer-events-none z-0 opacity-[0.032] bg-[url('data:image/svg+xml,%3Csvg_xmlns=%27http://www.w3.org/2000/svg%27_width=%27256%27_height=%27256%27%3E%3Cfilter_id=%27g%27%3E%3CfeTurbulence_type=%27fractalNoise%27_baseFrequency=%27.72%27_numOctaves=%274%27_stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect_width=%27256%27_height=%27256%27_filter=%27url(%23g)%27/%3E%3C/svg%3E')] bg-[length:256px_256px]" />
 
       {/* ── Notification Toast ─────────────────────────────────────────── */}
       {notification && (
         <Fade in direction="right" distance={30}>
-          <div style={{ position:'fixed', top:20, right:20, background:'#0d1f17', border:'1px solid rgba(52,211,153,.25)', borderRadius:12, padding:'12px 20px', zIndex:190, boxShadow:'0 8px 32px rgba(0,0,0,.4)' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:9 }}>
-              <CheckCircle size={16} color="#34d399" />
-              <Text variant="body" style={{ fontSize:13, color:'var(--ui-text-primary)' }}>{notification}</Text>
+          <div className="fixed top-5 right-5 bg-[#0d1f17] border border-solid border-emerald-500/25 rounded-xl p-3 px-5 z-[190] shadow-2xl">
+            <div className="flex items-center gap-2.5">
+              <CheckCircle size={16} className="text-emerald-400" />
+              <Text variant="body" className="text-[13px] text-[var(--ui-text-primary)]">{notification}</Text>
             </div>
           </div>
         </Fade>
@@ -666,44 +649,42 @@ export function LabsView() {
         elevation="floating"
         blur="lg"
         border="subtle"
-        style={{ flexShrink: 0, position: 'relative', zIndex: 1, borderRadius: 0, borderLeft: 'none', borderRight: 'none', borderTop: 'none' }}
+        className="shrink-0 relative z-[1] rounded-none border-x-none border-t-none"
       >
         {/* Ambient orbs */}
-        <div style={{ position:'absolute', top:-80, right:80, width:320, height:320, background:'radial-gradient(circle,rgba(167,139,250,.08),transparent 70%)', filter:'blur(50px)', pointerEvents:'none' }}/>
-        <div style={{ position:'absolute', bottom:-60, left:60, width:200, height:200, background:'radial-gradient(circle,rgba(245,158,11,.05),transparent 70%)', filter:'blur(40px)', pointerEvents:'none' }}/>
+        <div className="absolute -top-[80px] right-[80px] size-[320px] bg-[radial-gradient(circle,rgba(167,139,250,0.08),transparent_70%)] blur-[10px] pointer-events-none" />
+        <div className="absolute -bottom-[60px] left-[60px] size-[200px] bg-[radial-gradient(circle,rgba(245,158,11,0.05),transparent_70%)] blur-[10px] pointer-events-none" />
 
         {/* Title row */}
-        <div style={{ padding:'28px 36px 20px', display:'flex', alignItems:'flex-start', justifyContent:'space-between', position:'relative', flexWrap:'wrap', gap: 20 }}>
+        <div className="p-7 px-9 pb-5 flex items-start justify-between relative flex-wrap gap-5">
           <div>
-            <div style={{ display:'flex', alignItems:'center', gap:9, marginBottom:10 }}>
-              <div style={{ width:20, height:1, background:L.accent, opacity:.5 }}/>
-              <Text variant="label" style={{ fontSize:9.5, fontWeight:700, letterSpacing:'.2em', textTransform:'uppercase', color:L.accent }}>Learning Portal</Text>
+            <div className="flex items-center gap-2 mb-2.5">
+              <div className="w-5 h-px bg-[var(--accent-primary)] opacity-50" />
+              <Text variant="label" className="text-[12px] font-bold tracking-[0.2em] uppercase text-[var(--accent-primary)]">Learning Portal</Text>
             </div>
-            <Text variant="researchDisplay" as="h1" style={{ fontSize:46, fontWeight:900, fontStyle:'italic', margin:'0 0 6px', letterSpacing:'-.03em', lineHeight:1, color:L.textPrimary }}>
+            <Text variant="researchDisplay" as="h1" className="text-[46px] font-black italic m-0 mb-1.5 tracking-[-0.03em] leading-none text-[var(--ui-text-primary)]">
               A://Labs
             </Text>
-            <Text variant="body" style={{ fontSize:12.5, color:L.textSec, margin:0, letterSpacing:'.01em' }}>
+            <Text variant="body" className="text-[12.5px] text-[var(--ui-text-secondary)] m-0 tracking-[0.01em]">
               10 live courses · 65 modules · open-source demos
             </Text>
           </div>
 
           {/* Stats + CTAs */}
-          <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:16, paddingTop:4 }}>
-            <div style={{ display:'flex', gap:12, flexWrap:'wrap', justifyContent:'flex-end' }}>
+          <div className="flex flex-col items-end gap-4 pt-1">
+            <div className="flex gap-3 flex-wrap justify-end">
               <StatPill value="65" label="Modules" icon={Layers} color={L.gold} />
               <StatPill value="10" label="Live Courses" icon={GraduationCap} color="var(--status-success)" />
               <StatPill value="51" label="Assignments" icon={CheckCircle} color={L.accent} />
             </div>
-            <div style={{ display:'flex', gap:10 }}>
+            <div className="flex gap-2.5">
               <a href="https://allternit.com/demos" target="_blank" rel="noopener noreferrer"
-                style={{ display:'flex', alignItems:'center', gap:7, padding:'9px 18px', background:`linear-gradient(135deg,${L.gold},#d97706)`, border:'none', borderRadius:10, color:'var(--ui-text-inverse)', fontWeight:700, fontSize:13, textDecoration:'none', cursor:'pointer', boxShadow:`0 4px 16px rgba(245,158,11,.25)` }}
+                className="flex items-center gap-1.5 p-2 px-[18px] rounded-[10px] bg-gradient-to-br from-[var(--status-warning)] to-[#d97706] border-none text-[var(--ui-text-inverse)] font-bold text-[13px] no-underline cursor-pointer shadow-[0_4px_16px_rgba(245,158,11,0.25)]"
               >
                 <Play size={15} /> Open-Source Demos
               </a>
               <button onClick={() => dispatch({ type:'OPEN_VIEW', viewType:'catalog' })}
-                style={{ display:'flex', alignItems:'center', gap:7, padding:'9px 18px', background:'rgba(255,255,255,.05)', border:`1px solid ${L.borderMed}`, borderRadius:10, color:L.textPrimary, fontWeight:600, fontSize:13, cursor:'pointer', transition:'all .18s' }}
-                onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,.09)';}}
-                onMouseLeave={e=>{e.currentTarget.style.background='rgba(255,255,255,.05)';}}
+                className="flex items-center gap-1.5 p-2 px-[18px] rounded-[10px] bg-white/5 border border-solid border-[var(--ui-border-default)] text-[var(--ui-text-primary)] font-semibold text-[13px] cursor-pointer transition-all hover:bg-white/[0.09]"
               >
                 <Globe size={15} /> Browse Free Catalog
               </button>
@@ -712,9 +693,9 @@ export function LabsView() {
         </div>
 
         {/* Tab bar — pill segment control in GlassSurface */}
-        <div style={{ padding: '0 36px 12px' }}>
+        <div className="p-9 pt-0 pb-3">
           <GlassSurfaceThin
-            style={{ display: 'inline-flex', gap: 4, padding: 4, borderRadius: 12 }}
+            className="inline-flex gap-1 p-1 rounded-xl"
           >
             {tabs.map(tab => {
               const isActive = activeTab === tab.id;
@@ -722,27 +703,12 @@ export function LabsView() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    padding: '8px 16px',
-                    borderRadius: 10,
-                    border: 'none',
-                    background: isActive ? 'rgba(167,139,250,.15)' : 'transparent',
-                    color: isActive ? '#f0f0f0' : L.textSec,
-                    fontWeight: isActive ? 600 : 500,
-                    fontSize: 13,
-                    cursor: 'pointer',
-                    transition: 'all .18s ease',
-                    whiteSpace: 'nowrap',
-                  }}
-                  onMouseEnter={e => {
-                    if (!isActive) e.currentTarget.style.background = 'rgba(255,255,255,.04)';
-                  }}
-                  onMouseLeave={e => {
-                    if (!isActive) e.currentTarget.style.background = 'transparent';
-                  }}
+                  className={cn(
+                    "flex items-center gap-1.5 p-2 px-4 rounded-lg border-none text-[13px] font-semibold cursor-pointer transition-all whitespace-nowrap",
+                    isActive 
+                      ? "bg-[var(--accent-primary)]/15 text-[#f0f0f0]" 
+                      : "bg-transparent text-[var(--ui-text-secondary)] hover:bg-white/5"
+                  )}
                 >
                   <tab.icon size={13} /> {tab.label}
                 </button>
@@ -754,11 +720,11 @@ export function LabsView() {
 
       {/* ── Content ────────────────────────────────────────────────────── */}
       {activeTab === 'research' ? (
-        <div style={{ flex: 1, overflow: 'hidden', minHeight: 0, position: 'relative', zIndex: 1 }}>
+        <div className="flex-1 overflow-hidden min-h-0 relative z-[1]">
           <ResearchTab />
         </div>
       ) : (
-        <div style={{ flex: 1, overflowY: 'auto', padding: '32px 36px', position: 'relative', zIndex: 1 }}>
+        <div className="flex-1 overflow-y-auto p-8 px-9 relative z-[1]">
 
           {/* ── Discovery ── */}
           {activeTab === 'discovery' && (
@@ -772,9 +738,9 @@ export function LabsView() {
             <Fade in direction="up" distance={20}>
               <div>
                 {coursesLoading && (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48, gap: 12, color: L.textSec }}>
+                  <div className="flex items-center justify-center p-12 gap-3 text-[var(--ui-text-secondary)]">
                     <RefreshCw size={20} className="animate-spin" />
-                    <Text variant="body">Loading courses...</Text>
+                    <Text variant="body">Loading courses…</Text>
                   </div>
                 )}
                 <Stagger staggerDelay={0.08} direction="up" distance={20}>
@@ -784,20 +750,26 @@ export function LabsView() {
                     const tierCourses = courses.filter(c => c.tier === tier);
                     if (tierCourses.length === 0) return null;
                     return (
-                      <div key={tier} style={{ marginBottom: 52 }}>
+                      <div key={tier} className="mb-[52px]">
                         {/* Tier section header */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-                          <div style={{ width: 36, height: 36, borderRadius: 10, background: `${tierColor}14`, border: `1px solid ${tierColor}28`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <div className="flex items-center gap-3.5 mb-5">
+                          <div 
+                            className="size-9 rounded-xl flex items-center justify-center shrink-0 border border-solid"
+                            style={{ background: `${tierColor}14`, borderColor: `${tierColor}28` }}
+                          >
                             <TierIcon size={18} color={tierColor} />
                           </div>
                           <div>
-                            <Text variant="researchHeading" style={{ fontSize: 22, fontWeight: 900, fontStyle: 'italic', color: L.textPrimary, letterSpacing: '-.02em' }}>Tier {tier}</Text>
+                            <Text variant="researchHeading" className="text-[22px] font-black italic text-[var(--ui-text-primary)] tracking-tight">Tier {tier}</Text>
                           </div>
-                          <div style={{ flex: 1, height: 1, background: `linear-gradient(to right,${tierColor}25,transparent)` }}/>
-                          <Text variant="label" style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: L.textTer }}>{tierCourses.length} courses</Text>
+                          <div 
+                            className="flex-1 h-px"
+                            style={{ background: `linear-gradient(to right,${tierColor}25,transparent)` }}
+                          />
+                          <Text variant="label" className="text-[12px] font-bold tracking-wider uppercase text-[var(--ui-text-muted)]">{tierCourses.length} courses</Text>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+                        <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-4">
                           {tierCourses.map(course => (
                             <CourseCard
                               key={course.code}
@@ -820,43 +792,40 @@ export function LabsView() {
           {/* ── Classroom ── */}
           {activeTab === 'classroom' && (
             <Fade in direction="up" distance={20}>
-              <div style={{ minHeight: '60vh' }}>
-                <div style={{ marginBottom: 24 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                    <div style={{ width: 16, height: 1, background: L.accent, opacity: .5 }}/>
-                    <Text variant="label" style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase', color: L.accent }}>Lesson Catalog</Text>
+              <div className="min-h-[60vh]">
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-4 h-px bg-[var(--accent-primary)] opacity-50" />
+                    <Text variant="label" className="text-[12.5px] font-bold tracking-widest uppercase text-[var(--accent-primary)]">Lesson Catalog</Text>
                   </div>
-                  <Text variant="researchHeading" as="h2" style={{ fontSize: 30, fontWeight: 900, fontStyle: 'italic', margin: '0 0 6px', letterSpacing: '-.025em', color: L.textPrimary, lineHeight: 1 }}>
+                  <Text variant="researchHeading" as="h2" className="text-3xl font-black italic m-0 mb-1.5 tracking-tight text-[var(--ui-text-primary)] leading-none">
                     A://Labs Classroom
                   </Text>
-                  <Text variant="body" style={{ fontSize: 12, color: L.textSec, margin: 0, letterSpacing: '.01em', lineHeight: 1.6 }}>
+                  <Text variant="body" className="text-[12px] text-[var(--ui-text-secondary)] m-0 tracking-[0.01em] leading-relaxed">
                     Structured lessons across all tracks. Progress is tracked per enrollment.
                   </Text>
                 </div>
 
                 {lessonsLoading ? (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 48, gap: 12, color: L.textSec }}>
+                  <div className="flex items-center justify-center p-12 gap-3 text-[var(--ui-text-secondary)]">
                     <RefreshCw size={20} className="animate-spin" />
-                    <Text variant="body">Loading lessons...</Text>
+                    <Text variant="body">Loading lessons…</Text>
                   </div>
                 ) : lessons.length === 0 ? (
-                  <GlassSurfaceBase style={{ maxWidth: 520, margin: '0 auto', textAlign: 'center', padding: '48px 36px' }}>
-                    <div style={{
-                      width: 64, height: 64, borderRadius: 16,
-                      background: `${L.accent}14`,
-                      border: `1px solid ${L.accent}28`,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      margin: '0 auto 20px',
-                    }}>
+                  <GlassSurfaceBase className="max-w-[520px] mx-auto text-center p-12 px-9">
+                    <div 
+                      className="size-16 rounded-2xl flex items-center justify-center mx-auto mb-5 border border-solid"
+                      style={{ background: `${L.accent}14`, borderColor: `${L.accent}28` }}
+                    >
                       <School size={28} color={L.accent} />
                     </div>
-                    <Text variant="researchHeading" as="h3" style={{ fontSize: 20, fontWeight: 900, fontStyle: 'italic', margin: '0 0 10px', color: L.textPrimary }}>
+                    <Text variant="researchHeading" as="h3" className="text-xl font-black italic m-0 mb-2.5 text-[var(--ui-text-primary)]">
                       No Lessons Published
                     </Text>
-                    <Text variant="body" style={{ fontSize: 13, color: L.textSec, margin: '0 0 20px', lineHeight: 1.65 }}>
+                    <Text variant="body" className="text-[13px] text-[var(--ui-text-secondary)] m-0 mb-5 leading-relaxed">
                       The lesson catalog is empty. Generate a lesson from any course to get started.
                     </Text>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+                    <div className="flex flex-wrap gap-2 justify-center">
                       {courses.slice(0, 5).map(course => (
                         <button
                           key={course.id}
@@ -880,17 +849,11 @@ export function LabsView() {
                             }
                           }}
                           disabled={generatingLesson}
+                          className="p-2 px-3.5 rounded-lg border border-solid text-[12px] font-semibold cursor-pointer transition-all disabled:opacity-60 disabled:cursor-wait"
                           style={{
-                            padding: '8px 14px',
                             background: `${getTierColor(course.tier)}12`,
-                            border: `1px solid ${getTierColor(course.tier)}30`,
-                            borderRadius: 8,
+                            borderColor: `${getTierColor(course.tier)}30`,
                             color: getTierColor(course.tier),
-                            fontSize: 12,
-                            fontWeight: 600,
-                            cursor: generatingLesson ? 'wait' : 'pointer',
-                            opacity: generatingLesson ? 0.6 : 1,
-                            transition: 'all .18s',
                           }}
                         >
                           {generatingLesson ? 'Generating...' : course.title}
@@ -899,21 +862,27 @@ export function LabsView() {
                     </div>
                   </GlassSurfaceBase>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+                  <div className="flex flex-col gap-8">
                     {Object.entries(lessonsByCourse).map(([courseId, courseLessons]) => {
                       const course = courses.find(c => c.id === courseId);
                       const tierColor = course ? getTierColor(course.tier) : L.accent;
                       return (
                         <div key={courseId}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
-                            <div style={{ width: 32, height: 32, borderRadius: 8, background: `${tierColor}14`, border: `1px solid ${tierColor}28`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <div className="flex items-center gap-3.5 mb-4">
+                            <div 
+                              className="size-8 rounded-lg flex items-center justify-center shrink-0 border border-solid"
+                              style={{ background: `${tierColor}14`, borderColor: `${tierColor}28` }}
+                            >
                               {course ? React.createElement(getTierIcon(course.tier), { size: 15, color: tierColor }) : <School size={15} color={tierColor} />}
                             </div>
                             <div>
-                              <Text variant="subheading" style={{ fontSize: 15, fontWeight: 800, color: L.textPrimary }}>{course?.title ?? courseLessons[0]?.courseTitle ?? 'Unknown Course'}</Text>
+                              <Text variant="subheading" className="text-[15px] font-extrabold text-[var(--ui-text-primary)]">{course?.title ?? courseLessons[0]?.courseTitle ?? 'Unknown Course'}</Text>
                             </div>
-                            <div style={{ flex: 1, height: 1, background: `linear-gradient(to right,${tierColor}20,transparent)` }}/>
-                            <Text variant="label" style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: L.textTer }}>{courseLessons.length} lessons</Text>
+                            <div 
+                              className="flex-1 h-px"
+                              style={{ background: `linear-gradient(to right,${tierColor}20,transparent)` }}
+                            />
+                            <Text variant="label" className="text-[12px] font-bold tracking-wider uppercase text-[var(--ui-text-muted)]">{courseLessons.length} lessons</Text>
                           </div>
                           <Stagger staggerDelay={0.04} direction="up" distance={12}>
                             {courseLessons.map(lesson => (
@@ -939,54 +908,53 @@ export function LabsView() {
           {/* ── Settings ── */}
           {activeTab === 'settings' && (
             <Fade in direction="up" distance={20}>
-              <div style={{ maxWidth: 520 }}>
-                <div style={{ marginBottom: 36 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                    <div style={{ width: 16, height: 1, background: L.textSec, opacity: .4 }}/>
-                    <Text variant="label" style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '.18em', textTransform: 'uppercase', color: L.textSec }}>Configuration</Text>
+              <div className="max-w-[520px]">
+                <div className="mb-9">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-4 h-px bg-[var(--ui-text-secondary)] opacity-40" />
+                    <Text variant="label" className="text-[12.5px] font-bold tracking-widest uppercase text-[var(--ui-text-secondary)]">Configuration</Text>
                   </div>
-                  <Text variant="researchHeading" as="h2" style={{ fontSize: 30, fontWeight: 900, fontStyle: 'italic', margin: 0, letterSpacing: '-.025em', color: L.textPrimary, lineHeight: 1 }}>Settings</Text>
+                  <Text variant="researchHeading" as="h2" className="text-3xl font-black italic m-0 tracking-tight text-[var(--ui-text-primary)] leading-none">Settings</Text>
                 </div>
 
-                <div style={{ marginBottom: 32 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
-                    <Text variant="label" style={{ fontSize: 10, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase', color: L.accent }}>Canvas LMS</Text>
-                    <div style={{ flex: 1, height: 1, background: L.border }}/>
+                <div className="mb-8">
+                  <div className="flex items-center gap-2.5 mb-5">
+                    <Text variant="label" className="text-[12px] font-extrabold tracking-widest uppercase text-[var(--accent-primary)]">Canvas LMS</Text>
+                    <div className="flex-1 h-px bg-[var(--ui-border-muted)]" />
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                  <div className="flex flex-col gap-4.5">
                     <div>
-                      <Text variant="label" as="label" style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: L.textSec, marginBottom: 8 }}>API Token</Text>
+                      <Text variant="label" as="label" className="block text-[12px] font-bold tracking-wider uppercase text-[var(--ui-text-secondary)] mb-2">API Token</Text>
                       <input type="password" value={canvasToken}
                         onChange={e => saveConfig({ canvasToken: e.target.value })}
                         placeholder="Paste your Canvas API token here"
-                        style={{ width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 10, color: '#f0f0f0', fontSize: 14, outline: 'none', transition: 'border-color .18s', boxSizing: 'border-box' }}
-                        onFocus={e => { e.currentTarget.style.borderColor = 'rgba(167,139,250,.4)'; }}
-                        onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,.08)'; }}
+                        className="w-full p-2.5 px-3.5 rounded-lg border border-solid border-white/10 bg-white/[0.04] text-[#f0f0f0] text-sm outline-none transition-colors focus:border-[rgba(167,139,250,0.4)] box-border"
                       />
-                      <Text variant="caption" style={{ fontSize: 11, color: L.textTer, marginTop: 6, lineHeight: 1.55, display: 'block' }}>Canvas → Account → Settings → Approved Integrations → New Access Token</Text>
+                      <Text variant="caption" className="text-[12px] text-[var(--ui-text-muted)] mt-1.5 leading-relaxed block">Canvas → Account → Settings → Approved Integrations → New Access Token</Text>
                     </div>
                     <div>
-                      <Text variant="label" as="label" style={{ display: 'block', fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: L.textSec, marginBottom: 8 }}>Domain</Text>
+                      <Text variant="label" as="label" className="block text-[12px] font-bold tracking-wider uppercase text-[var(--ui-text-secondary)] mb-2">Domain</Text>
                       <input type="text" value={canvasDomain}
                         onChange={e => saveConfig({ canvasDomain: e.target.value })}
                         placeholder="https://canvas.instructure.com"
-                        style={{ width: '100%', padding: '10px 14px', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.08)', borderRadius: 10, color: '#f0f0f0', fontSize: 14, outline: 'none', transition: 'border-color .18s', boxSizing: 'border-box' }}
-                        onFocus={e => { e.currentTarget.style.borderColor = 'rgba(167,139,250,.4)'; }}
-                        onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,.08)'; }}
+                        className="w-full p-2.5 px-3.5 rounded-lg border border-solid border-white/10 bg-white/[0.04] text-[#f0f0f0] text-sm outline-none transition-colors focus:border-[rgba(167,139,250,0.4)] box-border"
                       />
                     </div>
                   </div>
                 </div>
 
-                <GlassSurfaceThin style={{ padding: '18px 20px', background: L.accentDim, border: `1px solid ${L.accentBorder}`, borderRadius: 13 }}>
-                  <Text variant="label" style={{ margin: '0 0 12px', fontWeight: 700, fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase', color: L.accent, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <GlassSurfaceThin 
+                  className="p-4.5 px-5 rounded-[13px] border border-solid"
+                  style={{ background: L.accentDim, borderColor: L.accentBorder }}
+                >
+                  <Text variant="label" className="m-0 mb-3 font-bold text-[12px] tracking-wider uppercase text-[var(--accent-primary)] flex items-center gap-1.5">
                     <Eye size={12}/> Getting Your Canvas Token
                   </Text>
-                  <ol style={{ margin: 0, paddingLeft: 18, color: L.textSec, fontSize: 12, lineHeight: 2 }}>
+                  <ol className="m-0 pl-4.5 text-[var(--ui-text-secondary)] text-[12px] leading-[2]">
                     <li>Log in to Canvas</li>
                     <li>Go to Account → Settings</li>
                     <li>Scroll to Approved Integrations</li>
-                    <li>Click <em>New Access Token</em> and copy the generated value</li>
+                    <li>Click <em className="italic">New Access Token</em> and copy the generated value</li>
                   </ol>
                 </GlassSurfaceThin>
               </div>

@@ -28,7 +28,7 @@ export function ConversationMonitorPanel({ messages, telemetry }: ConversationMo
           ) : (
             messages.map((msg) => (
               <div key={msg.message_id} className="rounded-lg border border-muted/30 p-3">
-                <div className="flex items-center justify-between text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className="flex items-center justify-between text-[12px] uppercase tracking-wide text-muted-foreground">
                   <span>{msg.from_agent}</span>
                   <span>{formatRelativeTime(msg.timestamp)}</span>
                 </div>
@@ -50,7 +50,7 @@ export function ConversationMonitorPanel({ messages, telemetry }: ConversationMo
               <div key={entry.timestamp} className="space-y-1">
                 <p className="font-semibold">{entry.label}</p>
                 <p>{entry.detail}</p>
-                <p className="text-[11px] uppercase tracking-wide">
+                <p className="text-[12px] uppercase tracking-wide">
                   {new Date(entry.timestamp).toLocaleTimeString()}
                 </p>
               </div>

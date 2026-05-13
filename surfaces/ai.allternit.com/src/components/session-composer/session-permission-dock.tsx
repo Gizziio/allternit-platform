@@ -52,7 +52,7 @@ function buildMeta(request: PermissionRequest): PermissionMeta {
       icon: <PencilSimpleLine size={15} className={iconClass} />,
       title: `Edit ${path || "file"}`,
       detail: path ? (
-        <code className="text-[11px] text-[var(--text-secondary)] bg-[var(--bg-hover)] px-1.5 py-0.5 rounded-md font-mono">
+        <code className="text-[12px] text-[var(--text-secondary)] bg-[var(--bg-hover)] px-1.5 py-0.5 rounded-md font-mono">
           {path}
         </code>
       ) : null,
@@ -65,7 +65,7 @@ function buildMeta(request: PermissionRequest): PermissionMeta {
       icon: <Eye size={15} className={iconClass} />,
       title: `Read ${path || "file"}`,
       detail: path ? (
-        <code className="text-[11px] text-[var(--text-secondary)] bg-[var(--bg-hover)] px-1.5 py-0.5 rounded-md font-mono">
+        <code className="text-[12px] text-[var(--text-secondary)] bg-[var(--bg-hover)] px-1.5 py-0.5 rounded-md font-mono">
           {path}
         </code>
       ) : null,
@@ -82,7 +82,7 @@ function buildMeta(request: PermissionRequest): PermissionMeta {
       icon: <Terminal size={15} className={iconClass} />,
       title: description,
       detail: command ? (
-        <code className="text-[11px] text-[var(--text-secondary)] bg-[var(--bg-hover)] px-1.5 py-0.5 rounded-md font-mono whitespace-pre-wrap break-all">
+        <code className="text-[12px] text-[var(--text-secondary)] bg-[var(--bg-hover)] px-1.5 py-0.5 rounded-md font-mono whitespace-pre-wrap break-all">
           $ {command}
         </code>
       ) : null,
@@ -122,7 +122,7 @@ function buildMeta(request: PermissionRequest): PermissionMeta {
       icon: <Globe size={15} className={iconClass} />,
       title: `Fetch ${url || "URL"}`,
       detail: url ? (
-        <span className="text-[11px] text-[var(--text-secondary)] font-mono break-all">{url}</span>
+        <span className="text-[12px] text-[var(--text-secondary)] font-mono break-all">{url}</span>
       ) : null,
     };
   }
@@ -168,7 +168,7 @@ function buildMeta(request: PermissionRequest): PermissionMeta {
             {patterns.map((p, i) => (
               <li
                 key={i}
-                className="text-[11px] text-[var(--text-secondary)] font-mono"
+                className="text-[12px] text-[var(--text-secondary)] font-mono"
               >
                 {p}
               </li>
@@ -183,7 +183,7 @@ function buildMeta(request: PermissionRequest): PermissionMeta {
       icon: <ArrowsClockwise size={15} className={iconClass} />,
       title: "Continue after repeated failures",
       detail: (
-        <span className="text-[11px] text-[var(--text-secondary)]">
+        <span className="text-[12px] text-[var(--text-secondary)]">
           Keeps the session running despite repeated errors.
         </span>
       ),
@@ -201,7 +201,7 @@ function buildMeta(request: PermissionRequest): PermissionMeta {
         ? `${subagentType.charAt(0).toUpperCase() + subagentType.slice(1)} task`
         : "Subagent task",
       detail: description ? (
-        <span className="text-[11px] text-[var(--text-secondary)]">{description}</span>
+        <span className="text-[12px] text-[var(--text-secondary)]">{description}</span>
       ) : null,
     };
   }
@@ -361,7 +361,7 @@ export function SessionPermissionDock({ request, onReply }: SessionPermissionDoc
                     {request.always.map((pattern, i) => (
                       <li
                         key={i}
-                        className="text-[11px] font-mono text-[var(--text-secondary)] bg-[var(--bg-hover)] px-2 py-0.5 rounded-md"
+                        className="text-[12px] font-mono text-[var(--text-secondary)] bg-[var(--bg-hover)] px-2 py-0.5 rounded-md"
                       >
                         {pattern}
                       </li>
@@ -429,7 +429,7 @@ export function SessionPermissionDock({ request, onReply }: SessionPermissionDoc
                   "transition-colors",
                 )}
               />
-              <p className="text-[11px] text-[var(--text-tertiary)]">
+              <p className="text-[12px] text-[var(--text-tertiary)]">
                 enter to confirm · esc to cancel
               </p>
             </div>

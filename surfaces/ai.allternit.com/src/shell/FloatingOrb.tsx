@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { tokens } from '../design/tokens';
 
-export function FloatingOrb() {
+export function FloatingOrb(): JSX.Element {
   const [isHovered, setIsHovered] = useState(false);
   const [pulse, setPulse] = useState(1);
 

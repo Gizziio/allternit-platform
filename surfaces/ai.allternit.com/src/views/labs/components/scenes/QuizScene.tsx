@@ -241,7 +241,7 @@ export function QuizScene({ title, questions, onComplete }: QuizSceneProps) {
                 width: 24, height: 24, borderRadius: '50%',
                 border: `1.5px solid ${isRevealed && isCorrectAnswer ? STATUS_SUCCESS : isRevealed && isSelected ? STATUS_ERROR : isSelected ? ACCENT : BORDER_SUBTLE}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 11, fontWeight: 700,
+                fontSize: 12, fontWeight: 700,
                 color: isRevealed && isCorrectAnswer ? STATUS_SUCCESS : isRevealed && isSelected ? STATUS_ERROR : isSelected ? ACCENT : TEXT_MUTED,
                 flexShrink: 0,
                 background: isRevealed && isCorrectAnswer ? `${STATUS_SUCCESS}20` : isRevealed && isSelected ? `${STATUS_ERROR}20` : isSelected ? `${ACCENT}15` : 'transparent',

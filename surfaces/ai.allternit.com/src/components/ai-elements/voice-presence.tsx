@@ -169,7 +169,7 @@ export function VoicePresence({ className, compact = true }: VoicePresenceProps)
           {/* Status indicator dot */}
           <motion.span 
             className={cn(
-              "absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-background",
+              "absolute -bottom-0.5 -right-0.5 size-3  rounded-full border-2 border-background",
               isConnecting && "bg-yellow-400",
               !isConnecting && !serviceAvailable && "bg-red-500",
               !isConnecting && serviceAvailable && personaState === 'idle' && !isRecording && "bg-muted-foreground",
@@ -196,7 +196,7 @@ export function VoicePresence({ className, compact = true }: VoicePresenceProps)
                 exit={{ opacity: 0, scale: 0.8 }}
                 className="absolute -top-1 -right-1 z-20"
               >
-                <div className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-lg border-2 border-background">
+                <div className="bg-red-500 text-white text-xs font-bold px-1.5 py-0.5 rounded-full shadow-lg border-2 border-background">
                   STOP
                 </div>
               </motion.div>
@@ -212,7 +212,7 @@ export function VoicePresence({ className, compact = true }: VoicePresenceProps)
                 exit={{ opacity: 0, scale: 0.5 }}
                 className="absolute inset-0 flex items-center justify-center bg-background/40 rounded-full backdrop-blur-sm"
               >
-                <Microphone className="w-4 h-4 text-white drop-shadow-md" />
+                <Microphone className="size-4  text-white drop-shadow-md" />
               </motion.div>
             )}
           </AnimatePresence>
@@ -236,14 +236,14 @@ export function VoicePresence({ className, compact = true }: VoicePresenceProps)
               variant="ghost"
               size="icon"
               className={cn(
-                "h-7 w-7 relative",
+                "size-7  relative",
                 isRecording && "text-primary",
                 !serviceAvailable && "text-muted-foreground"
               )}
             >
-              <GearSix className="h-3.5 w-3.5" />
+              <GearSix className="size-3.5 " />
               {!serviceAvailable && (
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-amber-500 rounded-full" />
+                <span className="absolute -top-0.5 -right-0.5 size-2  bg-amber-500 rounded-full" />
               )}
             </Button>
           </PopoverTrigger>
@@ -273,8 +273,8 @@ export function VoicePresence({ className, compact = true }: VoicePresenceProps)
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -10 }}
             >
-              <Badge variant="destructive" className="text-[10px] h-5 animate-pulse">
-                <span className="w-1.5 h-1.5 bg-white rounded-full mr-1" />
+              <Badge variant="destructive" className="text-xs h-5 animate-pulse">
+                <span className="size-1.5  bg-white rounded-full mr-1" />
                 Rec
               </Badge>
             </motion.div>
@@ -436,12 +436,12 @@ function VoiceSettingsContent({
       {/* Header */}
       <div className="flex items-center justify-between mb-3 pb-3 border-b">
         <div className="flex items-center gap-2">
-          <Headphones className="h-4 w-4 text-primary" />
+          <Headphones className="size-4  text-primary" />
           <span className="font-medium text-sm">Voice Settings</span>
         </div>
         <div className="flex items-center gap-2">
           <span className={cn(
-            "text-[10px] capitalize",
+            "text-xs capitalize",
             personaState === 'idle' && "text-muted-foreground",
             personaState === 'listening' && "text-blue-500",
             personaState === 'thinking' && "text-amber-500",
@@ -453,7 +453,7 @@ function VoiceSettingsContent({
             {personaState === 'thinking' && "Thinking..."}
             {personaState === 'speaking' && "Speaking..."}
           </span>
-          <Badge variant={serviceAvailable ? "default" : "secondary"} className="text-[10px] h-5">
+          <Badge variant={serviceAvailable ? "default" : "secondary"} className="text-xs h-5">
             {serviceAvailable ? 'Ready' : 'Offline'}
           </Badge>
         </div>
@@ -463,19 +463,19 @@ function VoiceSettingsContent({
       {!serviceAvailable && (
         <div className="bg-amber-500/10 border border-amber-500/20 rounded-md p-2 mb-3">
           <div className="flex items-start gap-2">
-            <Warning className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
+            <Warning className="size-3.5  text-amber-500 shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <p className="text-[10px] text-muted-foreground">Start voice service:</p>
-              <code className="block bg-background px-1.5 py-0.5 rounded text-[9px]">
+              <p className="text-xs text-muted-foreground">Start voice service:</p>
+              <code className="block bg-background px-1.5 py-0.5 rounded text-xs">
                 python3 launch.py
               </code>
               <Button 
                 size="sm" 
                 variant="ghost" 
-                className="w-full h-6 text-[10px] mt-1"
+                className="w-full h-6 text-xs mt-1"
                 onClick={checkHealth}
               >
-                <Play className="h-3 w-3 mr-1" />
+                <Play className="size-3  mr-1" />
                 Retry
               </Button>
             </div>
@@ -485,12 +485,12 @@ function VoiceSettingsContent({
       
       {/* Interaction Mode Toggle */}
       <div className="space-y-1.5 mb-3">
-        <label className="text-[10px] font-medium text-muted-foreground">Interaction Mode</label>
+        <label className="text-xs font-medium text-muted-foreground">Interaction Mode</label>
         <div className="flex items-center gap-2 p-1 bg-muted rounded-md">
           <button
             onClick={() => setInteractionMode('text')}
             className={cn(
-              "flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-[10px] font-medium transition-all",
+              "flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-xs font-medium transition-all",
               interactionMode === 'text' 
                 ? "bg-background text-foreground shadow-sm" 
                 : "text-muted-foreground hover:text-foreground"
@@ -502,7 +502,7 @@ function VoiceSettingsContent({
           <button
             onClick={() => setInteractionMode('voice')}
             className={cn(
-              "flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-[10px] font-medium transition-all",
+              "flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded text-xs font-medium transition-all",
               interactionMode === 'voice' 
                 ? "bg-background text-foreground shadow-sm" 
                 : "text-muted-foreground hover:text-foreground"
@@ -512,7 +512,7 @@ function VoiceSettingsContent({
             Voice
           </button>
         </div>
-        <p className="text-[9px] text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           {interactionMode === 'text' 
             ? "Records to text only, no overlay or TTS" 
             : "Full voice assistant with overlay and speech"}
@@ -521,7 +521,7 @@ function VoiceSettingsContent({
       
       {/* Mic Selector */}
       <div className="space-y-1.5 mb-3">
-        <label className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
+        <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
           <UserCircle size={12} />
           Microphone
         </label>
@@ -548,14 +548,14 @@ function VoiceSettingsContent({
       {/* Voice Selector */}
       <div className="space-y-1.5 mb-3">
         <div className="flex items-center justify-between">
-          <label className="text-[10px] font-medium text-muted-foreground flex items-center gap-1">
+          <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
             <GearSix size={12} />
             Voice ({availableVoices.length} available)
           </label>
           {availableVoices.length === 0 && serviceAvailable && (
             <button 
               onClick={() => refreshVoices()}
-              className="text-[9px] text-primary hover:underline"
+              className="text-xs text-primary hover:underline"
             >
               Refresh
             </button>
@@ -586,29 +586,29 @@ function VoiceSettingsContent({
       
       {/* Auto-play Toggle */}
       <div className="flex items-center justify-between pt-2 border-t">
-        <label className="text-[10px] text-muted-foreground">Auto-play TTS</label>
+        <label className="text-xs text-muted-foreground">Auto-play TTS</label>
         <Button
           variant={autoPlay ? "default" : "outline"}
           size="sm"
-          className="h-6 text-[10px] px-2"
+          className="h-6 text-xs px-2"
           onClick={() => setAutoPlay(!autoPlay)}
           disabled={!serviceAvailable}
         >
           {autoPlay ? (
-            <><SpeakerHigh className="h-3 w-3 mr-1" /> On</>
+            <><SpeakerHigh className="size-3  mr-1" /> On</>
           ) : (
-            <><SpeakerSlash className="h-3 w-3 mr-1" /> Off</>
+            <><SpeakerSlash className="size-3  mr-1" /> Off</>
           )}
         </Button>
       </div>
       
       {/* Auto-send Toggle */}
       <div className="flex items-center justify-between pt-2">
-        <label className="text-[10px] text-muted-foreground">Auto-send transcript</label>
+        <label className="text-xs text-muted-foreground">Auto-send transcript</label>
         <Button
           variant={autoSend ? "default" : "outline"}
           size="sm"
-          className="h-6 text-[10px] px-2"
+          className="h-6 text-xs px-2"
           onClick={() => setAutoSend(!autoSend)}
         >
           {autoSend ? 'On' : 'Off'}

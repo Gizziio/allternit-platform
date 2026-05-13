@@ -63,9 +63,9 @@ interface CommandPaletteProps {
 // Simple icon renderer - integrates with T1-A5
 function CommandIcon({ name, size = 'sm' }: { name: IconName; size?: 'xs' | 'sm' | 'md' }) {
   const sizeClasses = {
-    xs: 'w-3 h-3',
-    sm: 'w-4 h-4',
-    md: 'w-5 h-5',
+    xs: 'size-3 ',
+    sm: 'size-4 ',
+    md: 'size-5 ',
   };
 
   // Icon SVGs - can be replaced with actual Icon component from T1-A5
@@ -154,7 +154,7 @@ function CommandPalettePortal() {
           >
             <KBarSearch 
               className="w-full bg-transparent px-4 py-4 text-lg outline-none placeholder:text-[var(--text-tertiary)]"
-              placeholder="Type a command or search..."
+              placeholder="Type a command or search…"
             />
           </div>
           <CommandResults />

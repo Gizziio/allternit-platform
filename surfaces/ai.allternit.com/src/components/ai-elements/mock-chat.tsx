@@ -56,7 +56,7 @@ export function MockChat({ style = 'claude', messages, className }: MockChatProp
     <div className={cn("rounded-xl border border-border bg-card overflow-hidden", className)}>
       {/* Chrome bar */}
       <div className="flex items-center gap-2 border-b border-border px-4 py-2.5 bg-muted/30">
-        <div className={cn("h-2 w-2 rounded-full", config.accentClass)} />
+        <div className={cn("size-2  rounded-full", config.accentClass)} />
         <span className="text-xs font-medium text-muted-foreground">{config.label}</span>
       </div>
 
@@ -66,7 +66,7 @@ export function MockChat({ style = 'claude', messages, className }: MockChatProp
           <div key={i} className={cn("flex", msg.role === 'user' ? "justify-end" : "justify-start")}>
             {msg.role === 'assistant' && (
               <div className={cn(
-                "mr-2 mt-0.5 h-6 w-6 flex-shrink-0 rounded-full flex items-center justify-center text-[10px] font-bold text-white",
+                "mr-2 mt-0.5 size-6  flex-shrink-0 rounded-full flex items-center justify-center text-xs font-bold text-white",
                 config.accentClass
               )}>
                 {config.label[0]}
@@ -75,7 +75,7 @@ export function MockChat({ style = 'claude', messages, className }: MockChatProp
             <div className="max-w-[80%]">
               {msg.thinking && (
                 <div className="mb-1.5 rounded-lg border border-border/50 bg-muted/30 px-3 py-2 text-xs text-muted-foreground italic">
-                  <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60 block mb-1 not-italic">
+                  <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground/60 block mb-1 not-italic">
                     Thinking
                   </span>
                   {msg.thinking}

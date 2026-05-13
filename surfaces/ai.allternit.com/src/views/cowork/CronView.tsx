@@ -3,6 +3,7 @@
  * Shows scheduled and recurring tasks with form overlays for creation and management
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useMemo, useEffect } from 'react';
 import {
   CalendarCheck,
@@ -552,7 +553,7 @@ function TabButton({
       <Icon size={16} />
       {children}
       <span style={{ 
-        fontSize: 11, 
+        fontSize: 12, 
         opacity: 0.7,
         marginLeft: 4,
       }}>
@@ -638,7 +639,7 @@ function AutomationCard({
             borderRadius: 20,
             background: automation.isActive ? 'var(--status-success-bg)' : 'rgba(107,107,107,0.1)',
             color: automation.isActive ? 'var(--status-success)' : 'var(--ui-text-muted)',
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 600,
           }}>
             {automation.isActive ? 'Active' : 'Inactive'}
@@ -943,7 +944,7 @@ function AutomationForm({
             <textarea
               value={formData.prompt}
               onChange={(e) => setFormData({ ...formData, prompt: e.target.value })}
-              placeholder="Detailed instructions for the automation..."
+              placeholder="Detailed instructions for the automation…"
               rows={5}
               style={{
                 width: '100%',
@@ -1124,7 +1125,7 @@ function AutomationForm({
                 type="text"
                 value={formData.folder}
                 onChange={(e) => setFormData({ ...formData, folder: e.target.value })}
-                placeholder="Select folder..."
+                placeholder="Select folder…"
                 style={{
                   flex: 1,
                   padding: '12px 16px',
@@ -1403,7 +1404,7 @@ function AutomationDetailOverlay({
                   borderRadius: 20,
                   background: automation.isActive ? 'var(--status-success-bg)' : 'rgba(107,107,107,0.1)',
                   color: automation.isActive ? 'var(--status-success)' : 'var(--ui-text-muted)',
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: 600,
                 }}>
                   {automation.isActive ? 'Active' : 'Inactive'}
@@ -1696,7 +1697,7 @@ function DetailItem({ label, value, icon: Icon }: { label: string; value: string
   return (
     <div style={{ marginBottom: 16 }}>
       <div style={{
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: 600,
         color: 'var(--ui-text-muted)',
         textTransform: 'uppercase',
@@ -2073,7 +2074,7 @@ function AgentHeartbeatsTab({ selectedAgent, onSelectAgent }: AgentHeartbeatsTab
                   gap: 12,
                 }}>
                   <span style={{
-                    fontSize: 11,
+                    fontSize: 12,
                     color: 'var(--ui-text-secondary)',
                     padding: '4px 10px',
                     background: 'var(--surface-hover)',
@@ -2082,7 +2083,7 @@ function AgentHeartbeatsTab({ selectedAgent, onSelectAgent }: AgentHeartbeatsTab
                     {agent.type}
                   </span>
                   <span style={{
-                    fontSize: 11,
+                    fontSize: 12,
                     color: 'var(--accent-primary)',
                     display: 'flex',
                     alignItems: 'center',

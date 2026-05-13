@@ -8,6 +8,7 @@
  * - Alerts and notifications
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Shield,
@@ -222,7 +223,7 @@ export function SecurityDashboard() {
                 padding: '2px 8px',
                 background: activeTab === tab.id ? 'color-mix(in srgb, var(--accent-primary) 12%, transparent)' : 'var(--status-error)',
                 borderRadius: 10,
-                fontSize: 11,
+                fontSize: 12,
                 color: activeTab === tab.id ? 'var(--accent-primary)' : 'var(--ui-text-primary)',
               }}>
                 {tab.count}
@@ -597,7 +598,7 @@ function ComplianceTab({
             <span style={{ fontSize: 32, fontWeight: 700, color: getStatusColor(compliance.overall) }}>
               {compliance.score}%
             </span>
-            <span style={{ fontSize: 11, color: 'var(--ui-text-secondary)', textTransform: 'uppercase' }}>
+            <span style={{ fontSize: 12, color: 'var(--ui-text-secondary)', textTransform: 'uppercase' }}>
               {compliance.overall}
             </span>
           </div>
@@ -648,7 +649,7 @@ function ComplianceTab({
                 background: `${getStatusColor(framework.status)}20`,
                 color: getStatusColor(framework.status),
                 borderRadius: 4,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 600,
               }}>
                 {framework.status}
@@ -704,7 +705,7 @@ function ComplianceTab({
               background: control.status === 'passed' ? 'var(--status-success-bg)' : control.status === 'failed' ? 'var(--status-error-bg)' : 'var(--surface-active)',
               color: control.status === 'passed' ? 'var(--status-success)' : control.status === 'failed' ? 'var(--status-error)' : 'var(--ui-text-muted)',
               borderRadius: 4,
-              fontSize: 11,
+              fontSize: 12,
             }}>
               {control.status}
             </span>
@@ -761,7 +762,7 @@ function EventCard({ event, onClick }: { event: SecurityEvent; onClick: () => vo
             background: severityConfig.bgColor,
             color: severityConfig.color,
             borderRadius: 4,
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 600,
           }}>
             {severityConfig.label}
@@ -772,7 +773,7 @@ function EventCard({ event, onClick }: { event: SecurityEvent; onClick: () => vo
               background: 'var(--surface-active)',
               color: 'var(--ui-text-secondary)',
               borderRadius: 4,
-              fontSize: 10,
+              fontSize: 12,
             }}>
               Acknowledged
             </span>
@@ -787,7 +788,7 @@ function EventCard({ event, onClick }: { event: SecurityEvent; onClick: () => vo
         <div style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>
           {new Date(event.createdAt).toLocaleTimeString()}
         </div>
-        <div style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>
+        <div style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>
           {event.source.agentName || event.source.userId || 'System'}
         </div>
       </div>
@@ -860,7 +861,7 @@ function EventDetailModal({
                 background: severityConfig.bgColor,
                 color: severityConfig.color,
                 borderRadius: 4,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 600,
               }}>
                 {severityConfig.label}
@@ -1041,7 +1042,7 @@ function LoadingState() {
   return (
     <div style={{ textAlign: 'center', padding: 60, color: 'var(--ui-text-muted)' }}>
       <ArrowsClockwise size={32} style={{ animation: 'spin 1s linear infinite' }} />
-      <p>Loading security data...</p>
+      <p>Loading security data…</p>
     </div>
   );
 }

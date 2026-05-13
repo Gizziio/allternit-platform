@@ -4,6 +4,7 @@
  * Renders individual blocks based on their type
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useRef, useCallback } from 'react';
 import { Block, BlockType, EditorAPI } from './types';
 import { cn } from './cn';
@@ -51,7 +52,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
   onConvert,
   onAddBelow,
   placeholder,
-}) => {
+}) => {isClient ? 
   const contentRef = useRef<HTMLDivElement>(null);
   const [showMenu, setShowMenu] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -62,7 +63,7 @@ export const BlockRenderer: React.FC<BlockRendererProps> = ({
         ...block,
         content: contentRef.current.innerText,
         updatedAt: new Date().toISOString(),
-      });
+       : "..."});
     }
   }, [block, onChange]);
 

@@ -83,7 +83,7 @@ export function DesignWorkspaceDetailView({ workspaceId, onBack }: Props): JSX.E
               style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '10px 18px', borderRadius: 10, background: `${STATUS_COLORS[status]}18`, border: `1px solid ${STATUS_COLORS[status]}44` }}
             >
               <span style={{ color: STATUS_COLORS[status], fontWeight: 700, fontSize: 20 }}>{statusCounts[status] ?? 0}</span>
-              <span style={{ color: 'var(--text-secondary)', fontSize: 11, textTransform: 'capitalize' }}>{status.replace('_', ' ')}</span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: 12, textTransform: 'capitalize' }}>{status.replace('_', ' ')}</span>
             </div>
           ))}
         </div>
@@ -108,10 +108,10 @@ export function DesignWorkspaceDetailView({ workspaceId, onBack }: Props): JSX.E
                     </span>
                   </div>
                   <span style={{ color: 'var(--text-primary)', fontSize: 14, flex: 1 }}>{member.userId ?? member.agentId}</span>
-                  <span style={{ padding: '2px 10px', borderRadius: 20, background: 'color-mix(in srgb, var(--accent-primary) 13%, transparent)', border: '1px solid color-mix(in srgb, var(--accent-primary) 33%, transparent)', color: 'var(--accent-primary)', fontSize: 11, fontWeight: 600, textTransform: 'capitalize' }}>
+                  <span style={{ padding: '2px 10px', borderRadius: 20, background: 'color-mix(in srgb, var(--accent-primary) 13%, transparent)', border: '1px solid color-mix(in srgb, var(--accent-primary) 33%, transparent)', color: 'var(--accent-primary)', fontSize: 12, fontWeight: 600, textTransform: 'capitalize' }}>
                     {member.role}
                   </span>
-                  <span style={{ padding: '2px 10px', borderRadius: 20, background: isAgent ? 'var(--status-info-bg)' : 'var(--status-success-bg)', border: `1px solid ${isAgent ? 'color-mix(in srgb, var(--status-info) 33%, transparent)' : 'color-mix(in srgb, var(--status-success) 33%, transparent)'}`, color: isAgent ? 'var(--status-info)' : 'var(--status-success)', fontSize: 11, fontWeight: 600 }}>
+                  <span style={{ padding: '2px 10px', borderRadius: 20, background: isAgent ? 'var(--status-info-bg)' : 'var(--status-success-bg)', border: `1px solid ${isAgent ? 'color-mix(in srgb, var(--status-info) 33%, transparent)' : 'color-mix(in srgb, var(--status-success) 33%, transparent)'}`, color: isAgent ? 'var(--status-info)' : 'var(--status-success)', fontSize: 12, fontWeight: 600 }}>
                     {isAgent ? 'Agent' : 'Human'}
                   </span>
                   <button

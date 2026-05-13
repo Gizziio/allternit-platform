@@ -263,7 +263,7 @@ export const useVisualStateStore = create<VisualStateStoreState>()(
       get().setState(agentId, newState);
       
       // Log state transition
-      console.log(`[VisualState] Agent ${agentId}: ${previousState?.mood ?? 'init'} → ${mood} (${intensity}/10)`);
+      console.debug(`[VisualState] Agent ${agentId}: ${previousState?.mood ?? 'init'} → ${mood} (${intensity}/10)`);
     },
     
     getState: (agentId) => {

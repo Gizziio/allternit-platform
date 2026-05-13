@@ -105,7 +105,7 @@ export function AddNodeWizard({ open, onClose }: AddNodeWizardProps) {
               >
                 {loading ? (
                   <>
-                    <CircleNotch className="h-4 w-4 animate-spin" />
+                    <CircleNotch className="size-4  animate-spin" />
                     Generating...
                   </>
                 ) : (
@@ -161,7 +161,7 @@ export function AddNodeWizard({ open, onClose }: AddNodeWizardProps) {
                 Installation Command
               </Label>
               <div className="relative">
-                <pre className="text-xs bg-slate-950 text-slate-50 p-3 rounded-md overflow-x-auto font-mono">
+                <pre className="text-xs bg-zinc-950 text-zinc-50 p-3 rounded-md overflow-x-auto font-mono">
                   {tokenData.install_command}
                 </pre>
                 <Button
@@ -200,7 +200,7 @@ export function AddNodeWizard({ open, onClose }: AddNodeWizardProps) {
           {tokenData ? (
             <>
               <Button variant="outline" onClick={handleGenerate} disabled={loading}>
-                <ArrowsClockwise className="h-4 w-4 mr-2" />
+                <ArrowsClockwise className="size-4  mr-2" />
                 Generate New Token
               </Button>
               <Button onClick={handleClose}>Done</Button>

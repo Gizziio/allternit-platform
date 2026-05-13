@@ -114,7 +114,7 @@ export const MapDisplayTool = memo(function MapDisplayTool({
           />
           <div className="absolute inset-0 flex items-center justify-center bg-muted pointer-events-none">
             <div className="flex flex-col items-center gap-1 text-muted-foreground">
-              <IconNavigation className="w-6 h-6" />
+              <IconNavigation className="size-6 " />
               <span className="text-xs">Open in Google Maps</span>
             </div>
           </div>
@@ -128,7 +128,7 @@ export const MapDisplayTool = memo(function MapDisplayTool({
           <div className="p-2 space-y-1.5">
             {locations.map((loc, i) => (
               <div key={i} className="flex items-start gap-2">
-                <div className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 text-primary text-[10px] font-medium shrink-0 mt-0.5">
+                <div className="flex items-center justify-center size-5  rounded-full bg-primary/10 text-primary text-xs font-medium shrink-0 mt-0.5">
                   {i + 1}
                 </div>
                 <div className="min-w-0">

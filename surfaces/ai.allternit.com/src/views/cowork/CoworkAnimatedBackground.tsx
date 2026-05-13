@@ -8,7 +8,7 @@ import { useEffect, useRef } from 'react';
  * that is alive but never distracting. Same base color in dark and light mode,
  * only the dot opacity and background tint change.
  */
-export function CoworkAnimatedBackground() {
+export function CoworkAnimatedBackground(): JSX.Element {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {

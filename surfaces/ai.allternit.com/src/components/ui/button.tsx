@@ -14,7 +14,7 @@ export const buttonVariants = (options?: { variant?: string; size?: string }) =>
     default: 'bg-[#d4b08c] text-[#0a0a0a]',
     secondary: 'bg-white/10 text-white',
     outline: 'bg-transparent text-[#d4b08c] border border-[#d4b08c]',
-    ghost: 'bg-transparent text-gray-400',
+    ghost: 'bg-transparent text-zinc-400',
     destructive: 'bg-red-500 text-white',
   };
   
@@ -22,7 +22,7 @@ export const buttonVariants = (options?: { variant?: string; size?: string }) =>
     default: 'px-5 py-2.5 text-sm',
     sm: 'px-3 py-1.5 text-xs',
     lg: 'px-7 py-3.5 text-base',
-    icon: 'p-2 w-9 h-9',
+    icon: 'p-2 size-9 ',
   };
   
   return `inline-flex items-center justify-center gap-2 rounded-lg font-medium cursor-pointer ${variantStyles[variant] || variantStyles.default} ${sizeStyles[size] || sizeStyles.default}`;

@@ -1,6 +1,6 @@
 import { DagWihSurface } from "./DagRuntimeWorkspace";
 
-export function DAGWIH() {
+export function DAGWIH(): JSX.Element {
   return <DagWihSurface />;
 }
 

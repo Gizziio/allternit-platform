@@ -62,7 +62,7 @@ const GRAPH_NODES = {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function ContentSkillGraphView() {
+export function ContentSkillGraphView(): JSX.Element {
   const [selected, setSelected]     = useState<string | null>(null);
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
   const activeSessionId = useDesignSessionStore(s => s.activeSessionId);
@@ -99,7 +99,7 @@ export function ContentSkillGraphView() {
             </div>
             <div>
               <div style={{ fontSize: 15, fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.01em' }}>Content Skill Graph</div>
-              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 1 }}>Command Center · 10 platforms · 4 engines</div>
+              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 1 }}>Command Center · 10 platforms · 4 engines</div>
             </div>
           </div>
         </div>
@@ -148,7 +148,7 @@ export function ContentSkillGraphView() {
                     <div style={{ color: cat.color, opacity: 0.8, flexShrink: 0 }}>{child.icon}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{child.label}</div>
-                      {(child as any).freq && <div style={{ fontSize: 9, color: 'var(--text-tertiary)', marginTop: 1 }}>{(child as any).freq}</div>}
+                      {(child as any).freq && <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 1 }}>{(child as any).freq}</div>}
                     </div>
                   </button>
                 ))}
@@ -164,7 +164,7 @@ export function ContentSkillGraphView() {
           <>
             <div style={{ padding: '16px', borderBottom: '1px solid var(--border-subtle)' }}>
               <div style={{ fontSize: 13, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 6 }}>{selectedNode.label}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.65 }}>{selectedNode.desc}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.65 }}>{selectedNode.desc}</div>
             </div>
             <div style={{ flex: 1, padding: '14px' }}>
               {activeSessionId && (
@@ -176,7 +176,7 @@ export function ContentSkillGraphView() {
                 </button>
               )}
               {!activeSessionId && (
-                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', textAlign: 'center', marginTop: 8 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textAlign: 'center', marginTop: 8 }}>
                   Start a session to generate content for this node.
                 </div>
               )}
@@ -220,7 +220,7 @@ function GraphNode({ id, label, desc, color, textColor, selected, isRoot, isCate
       </div>
       <div>
         <div style={{ fontSize: isRoot ? 14 : 12, fontWeight: 700, letterSpacing: '-0.01em' }}>{label}</div>
-        {desc && <div style={{ fontSize: 10, opacity: 0.7, marginTop: 2, lineHeight: 1.4, maxWidth: 280 }}>{desc.slice(0, 80)}{desc.length > 80 ? '…' : ''}</div>}
+        {desc && <div style={{ fontSize: 12, opacity: 0.7, marginTop: 2, lineHeight: 1.4, maxWidth: 280 }}>{desc.slice(0, 80)}{desc.length > 80 ? '…' : ''}</div>}
       </div>
     </button>
   );

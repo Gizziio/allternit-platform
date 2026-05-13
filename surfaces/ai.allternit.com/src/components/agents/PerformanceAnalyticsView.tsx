@@ -34,7 +34,7 @@ export function PerformanceAnalyticsView() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold text-white flex items-center gap-2">
-            <BarChart3 className="h-5 w-5 text-cyan-400" />
+            <BarChart3 className="size-5  text-cyan-400" />
             Performance Analytics
           </h2>
           <p className="text-sm text-white/50 mt-1">
@@ -62,25 +62,25 @@ export function PerformanceAnalyticsView() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
-          icon={<Activity className="h-4 w-4 text-emerald-400" />}
+          icon={<Activity className="size-4  text-emerald-400" />}
           label="Total Runs"
           value={totalRuns.toLocaleString()}
           trend="+12%"
         />
         <MetricCard
-          icon={<Clock className="h-4 w-4 text-amber-400" />}
+          icon={<Clock className="size-4  text-amber-400" />}
           label="Avg Latency"
           value={`${Math.round(avgLatency)}ms`}
           trend="-8%"
         />
         <MetricCard
-          icon={<Zap className="h-4 w-4 text-cyan-400" />}
+          icon={<Zap className="size-4  text-cyan-400" />}
           label="Tokens Consumed"
           value={totalTokens.toLocaleString()}
           trend="+23%"
         />
         <MetricCard
-          icon={<DollarSign className="h-4 w-4 text-rose-400" />}
+          icon={<DollarSign className="size-4  text-rose-400" />}
           label="Est. Cost"
           value={`$${totalCost.toFixed(2)}`}
           trend="-3%"
@@ -91,13 +91,13 @@ export function PerformanceAnalyticsView() {
       <Card className="bg-white/5 border-white/10">
         <CardHeader>
           <CardTitle className="text-sm font-medium text-white/80 flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-cyan-400" />
+            <TrendingUp className="size-4  text-cyan-400" />
             Agent Performance Breakdown
           </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="text-center py-8 text-white/40">Loading metrics...</div>
+            <div className="text-center py-8 text-white/40">Loading metrics…</div>
           ) : summary.length === 0 ? (
             <div className="text-center py-8 text-white/40">
               No metrics available yet. Run some agents to collect data.
@@ -112,7 +112,7 @@ export function PerformanceAnalyticsView() {
                     className="flex items-center justify-between p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-400 text-xs font-bold">
+                      <div className="size-8  rounded-full bg-cyan-500/20 flex items-center justify-center text-cyan-400 text-xs font-bold">
                         {agent?.name?.charAt(0).toUpperCase() || 'A'}
                       </div>
                       <div>

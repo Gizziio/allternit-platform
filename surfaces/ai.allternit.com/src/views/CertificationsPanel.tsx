@@ -68,7 +68,7 @@ export function CertificationsPanel() {
     return (
       <GlassSurfaceBase style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200, gap: 12 }}>
         <Loader2 size={20} className="animate-spin" color="var(--accent-primary)" />
-        <Text variant="body" style={{ color: 'var(--text-muted, #a1a1aa)' }}>Loading certifications...</Text>
+        <Text variant="body" style={{ color: 'var(--text-muted, #a1a1aa)' }}>Loading certifications…</Text>
       </GlassSurfaceBase>
     );
   }
@@ -177,7 +177,7 @@ export function CertificationsPanel() {
                           <Text variant="subheading" style={{ fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block' }}>
                             {cert.courseTitle}
                           </Text>
-                          <Text variant="caption" style={{ fontSize: 11, color: 'var(--text-muted, #a1a1aa)' }}>{cert.courseCode}</Text>
+                          <Text variant="caption" style={{ fontSize: 12, color: 'var(--text-muted, #a1a1aa)' }}>{cert.courseCode}</Text>
                         </div>
                         {cert.verified && (
                           <GlassSurfaceThin style={{
@@ -186,7 +186,7 @@ export function CertificationsPanel() {
                             background: '#22c55e22',
                             border: '1px solid #22c55e44',
                           }}>
-                            <Text variant="label" style={{ fontSize: 10, fontWeight: 700, color: 'var(--status-success)', textTransform: 'uppercase' }}>Verified</Text>
+                            <Text variant="label" style={{ fontSize: 12, fontWeight: 700, color: 'var(--status-success)', textTransform: 'uppercase' }}>Verified</Text>
                           </GlassSurfaceThin>
                         )}
                       </div>

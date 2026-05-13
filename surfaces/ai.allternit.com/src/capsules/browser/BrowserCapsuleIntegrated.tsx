@@ -19,7 +19,7 @@ import {
 } from '@phosphor-icons/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { GlassCard } from '../../design/GlassCard';
+import { GlassCard } from '../../design/glass/GlassCard';
 import { A2UIRenderer } from '../a2ui/A2UIRenderer';
 import {
   useBrowserAutomation,
@@ -59,7 +59,7 @@ function BrowserControlPanel() {
     <GlassCard className="p-4 mb-4">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold flex items-center gap-2">
-          <Globe className="w-5 h-5 text-blue-400" />
+          <Globe className="size-5  text-blue-400" />
           Browser Automation
         </h3>
         <div className="flex items-center gap-2">
@@ -113,7 +113,7 @@ function BrowserControlPanel() {
         <button
           onClick={async () => {
             const result = await browserClient.savePDF();
-            console.log('PDF saved:', result.path);
+            console.debug('PDF saved:', result.path);
           }}
           disabled={!isRunning}
           className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--glass-bg-elevated)]
@@ -155,7 +155,7 @@ function BrowserControlPanel() {
             type="text"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="Enter URL..."
+            placeholder="Enter URL…"
             className="flex-1 px-3 py-2 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)]
                        text-sm focus:outline-none focus:border-[var(--accent-chat)]"
           />
@@ -192,7 +192,7 @@ function CanvasHostPanel() {
     <GlassCard className="p-4 mb-4">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold flex items-center gap-2">
-          <SquaresFour className="w-5 h-5 text-purple-400" />
+          <SquaresFour className="size-5  text-purple-400" />
           Canvas Host
         </h3>
       </div>
@@ -223,7 +223,7 @@ function CanvasHostPanel() {
           <button
             onClick={() => {
               // Push A2UI payload to canvas
-              console.log('Push A2UI to canvas');
+              console.debug('Push A2UI to canvas');
             }}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-500/20 text-purple-400
                        hover:bg-purple-500/30 transition-colors"
@@ -234,7 +234,7 @@ function CanvasHostPanel() {
           <button
             onClick={() => {
               // Present canvas
-              console.log('Present canvas');
+              console.debug('Present canvas');
             }}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--glass-bg-elevated)]
                        hover:bg-[var(--glass-bg-hover)] transition-colors"
@@ -310,7 +310,7 @@ function A2UIPanel() {
   const [, setDataModel] = useState({});
 
   const handleAction = useCallback((actionId: string, payload?: Record<string, unknown>) => {
-    console.log('[A2UI] Action:', actionId, payload);
+    console.debug('[A2UI] Action:', actionId, payload);
     
     // Route actions to browser automation
     switch (actionId) {
@@ -327,7 +327,7 @@ function A2UIPanel() {
     <GlassCard className="p-4">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold flex items-center gap-2">
-          <SquaresFour className="w-5 h-5 text-purple-400" />
+          <SquaresFour className="size-5  text-purple-400" />
           A2UI Renderer
         </h3>
       </div>
@@ -407,7 +407,7 @@ export function BrowserCapsuleIntegrated() {
             <span>Canvas Host: http://127.0.0.1:8080</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500" />
+            <span className="size-2  rounded-full bg-green-500" />
             Connected
           </div>
         </div>

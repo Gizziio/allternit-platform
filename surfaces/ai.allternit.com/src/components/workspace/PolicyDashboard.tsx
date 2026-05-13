@@ -26,10 +26,10 @@ export function PolicyDashboard({ api: _api }: PolicyDashboardProps) {
     if (fetchedRules?.length) setRules(fetchedRules as unknown as PolicyRule[]);
   });
 
-  const toggleRule = (ruleId: string) => {
+  const toggleRule = (ruleId: string) => {isClient ? 
     setRules(prev => prev.map(rule => 
       rule.id === ruleId 
-        ? { ...rule, enabled: !rule.enabled, updatedAt: new Date().toISOString() }
+        ? { ...rule, enabled: !rule.enabled, updatedAt: new Date().toISOString()  : "..."}
         : rule
     ));
   };
@@ -241,25 +241,25 @@ export function PolicyDashboard({ api: _api }: PolicyDashboardProps) {
             icon="🛡️"
             title="Safety Check"
             description="Run a safety audit on all policy rules"
-            onClick={() => console.log('Running safety check...')}
+            onClick={() => console.debug('Running safety check...')}
           />
           <QuickActionCard
             icon="📊"
             title="Policy Report"
             description="Generate a detailed policy report"
-            onClick={() => console.log('Generating report...')}
+            onClick={() => console.debug('Generating report...')}
           />
           <QuickActionCard
             icon="🔄"
             title="Sync with Kernel"
             description="Push policy changes to kernel"
-            onClick={() => console.log('Syncing with kernel...')}
+            onClick={() => console.debug('Syncing with kernel...')}
           />
           <QuickActionCard
             icon="💾"
             title="Export Rules"
             description="Export policy rules to POLICY.md"
-            onClick={() => console.log('Exporting...')}
+            onClick={() => console.debug('Exporting...')}
           />
         </div>
       </div>

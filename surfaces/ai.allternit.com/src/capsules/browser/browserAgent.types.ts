@@ -405,7 +405,7 @@ export type BrowserAgentStatus =
   | 'Done';
 
 export const STATUS_TO_RENDERER: Record<BrowserAgentStatus, string> = {
-  Idle: 'bg-gray-500',
+  Idle: 'bg-zinc-500',
   Running: 'bg-blue-500 animate-pulse',
   WaitingApproval: 'bg-yellow-500 animate-pulse',
   Blocked: 'bg-red-500',
@@ -483,7 +483,7 @@ export function getRiskTierLabel(riskTier: RiskTier): string {
  * Get the CSS class for a status pill
  */
 export function getStatusPillClass(status: BrowserAgentStatus): string {
-  return STATUS_TO_RENDERER[status] || 'bg-gray-500';
+  return STATUS_TO_RENDERER[status] || 'bg-zinc-500';
 }
 
 /**

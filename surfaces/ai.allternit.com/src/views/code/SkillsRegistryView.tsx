@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Code, MagnifyingGlass, Play, PencilSimple, Trash } from '@phosphor-icons/react';
-import { GlassCard } from '../../design/GlassCard';
+import { GlassCard } from '../../design/glass/GlassCard';
 
 type SkillMode = 'Network' | 'DOM' | 'API';
 type ModeFilter = 'All' | 'Network' | 'DOM' | 'API';
@@ -103,7 +103,7 @@ export function SkillsRegistryView() {
         />
         <input
           type="text"
-          placeholder="Search skills..."
+          placeholder="Search skills…"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           style={{
@@ -154,7 +154,7 @@ export function SkillsRegistryView() {
                       <span
                         key={mode}
                         style={{
-                          fontSize: 10,
+                          fontSize: 12,
                           fontWeight: 700,
                           padding: '2px 8px',
                           borderRadius: 4,
@@ -170,7 +170,7 @@ export function SkillsRegistryView() {
                   {/* Metadata */}
                   <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
                     <div>
-                      <div style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                         Last Used
                       </div>
                       <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, marginTop: 2 }}>
@@ -178,7 +178,7 @@ export function SkillsRegistryView() {
                       </div>
                     </div>
                     <div>
-                      <div style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                      <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                         Confidence
                       </div>
                       <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600, marginTop: 2, fontVariantNumeric: 'tabular-nums' }}>
@@ -202,7 +202,7 @@ export function SkillsRegistryView() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: 4,
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: 600
                     }}
                   >
@@ -220,7 +220,7 @@ export function SkillsRegistryView() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: 4,
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: 600
                     }}
                   >
@@ -238,7 +238,7 @@ export function SkillsRegistryView() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: 4,
-                      fontSize: 11,
+                      fontSize: 12,
                       fontWeight: 600
                     }}
                   >
@@ -257,7 +257,7 @@ export function SkillsRegistryView() {
 function StatCard({ label, value }: { label: string; value: number }) {
   return (
     <GlassCard style={{ padding: 12, textAlign: 'center' }}>
-      <div style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+      <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
         {label}
       </div>
       <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--accent-primary)', fontVariantNumeric: 'tabular-nums' }}>

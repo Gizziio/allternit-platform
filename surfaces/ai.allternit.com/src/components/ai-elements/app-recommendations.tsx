@@ -33,7 +33,7 @@ export function AppRecommendations({ title = 'Recommended Apps', apps, className
         {apps.map((app, i) => (
           <div key={i} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors">
             {/* Icon */}
-            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl border border-border bg-muted overflow-hidden">
+            <div className="flex size-10  flex-shrink-0 items-center justify-center rounded-xl border border-border bg-muted overflow-hidden">
               {app.iconUrl ? (
                 <img src={app.iconUrl} alt={app.name} className="w-full h-full object-cover" />
               ) : (
@@ -46,13 +46,13 @@ export function AppRecommendations({ title = 'Recommended Apps', apps, className
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-foreground">{app.name}</span>
                 {app.badge && (
-                  <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary">
+                  <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-primary">
                     {app.badge}
                   </span>
                 )}
               </div>
               {app.category && (
-                <span className="text-[10px] text-muted-foreground">{app.category}</span>
+                <span className="text-xs text-muted-foreground">{app.category}</span>
               )}
               <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{app.description}</p>
               {app.rating != null && (
@@ -61,13 +61,13 @@ export function AppRecommendations({ title = 'Recommended Apps', apps, className
                     <Star
                       key={idx}
                       className={cn(
-                        "h-3 w-3",
+                        "size-3 ",
                         idx < Math.floor(app.rating!) ? "text-amber-400" : "text-muted-foreground/30"
                       )}
                       weight={idx < Math.floor(app.rating!) ? "fill" : "regular"}
                     />
                   ))}
-                  <span className="text-[10px] text-muted-foreground ml-1">{app.rating.toFixed(1)}</span>
+                  <span className="text-xs text-muted-foreground ml-1">{app.rating.toFixed(1)}</span>
                 </div>
               )}
             </div>
@@ -80,7 +80,7 @@ export function AppRecommendations({ title = 'Recommended Apps', apps, className
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/15 transition-colors flex-shrink-0"
               >
-                <ArrowSquareOut className="h-3 w-3" />
+                <ArrowSquareOut className="size-3 " />
                 Install
               </a>
             )}

@@ -98,7 +98,7 @@ export function ToolConfirmation({
           <div style={{ fontSize: 14, fontWeight: 700, color: "#f6eee7" }}>
             Confirm Tool Execution
           </div>
-          <div style={{ fontSize: 11, color: "#7a6b5d", marginTop: 2 }}>
+          <div style={{ fontSize: 12, color: "#7a6b5d", marginTop: 2 }}>
             {confirmations.length > 1
               ? `${confirmations.length} tools pending confirmation`
               : "This tool requires your approval"}
@@ -125,7 +125,7 @@ export function ToolConfirmation({
               {toolInfo?.name || confirmation.toolName}
             </div>
             {toolInfo?.description && (
-              <div style={{ fontSize: 11, color: "#7a6b5d", marginTop: 2 }}>
+              <div style={{ fontSize: 12, color: "#7a6b5d", marginTop: 2 }}>
                 {toolInfo.description}
               </div>
             )}
@@ -136,7 +136,7 @@ export function ToolConfirmation({
         <div style={{ marginTop: 12 }}>
           <div
             style={{
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 700,
               color: "#9f8a78",
               textTransform: "uppercase",
@@ -153,7 +153,7 @@ export function ToolConfirmation({
               borderRadius: 8,
               background: "var(--surface-panel)",
               border: "1px solid var(--ui-border-muted)",
-              fontSize: 11,
+              fontSize: 12,
               color: "#a8998c",
               fontFamily: "var(--font-mono)",
               overflow: "auto",
@@ -292,7 +292,7 @@ export function InlineToolConfirmation({
           <div style={{ fontSize: 13, fontWeight: 600, color: "#f6eee7" }}>
             {toolInfo?.name || confirmation.toolName}
           </div>
-          <div style={{ fontSize: 11, color: "#7a6b5d" }}>
+          <div style={{ fontSize: 12, color: "#7a6b5d" }}>
             Requires confirmation
           </div>
         </div>
@@ -303,7 +303,7 @@ export function InlineToolConfirmation({
           padding: 10,
           borderRadius: 8,
           background: "var(--surface-hover)",
-          fontSize: 11,
+          fontSize: 12,
           color: "#a8998c",
           fontFamily: "var(--font-mono)",
           marginBottom: 12,

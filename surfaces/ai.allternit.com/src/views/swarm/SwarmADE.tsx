@@ -381,13 +381,13 @@ function SwarmMonitorContent({ className }: SwarmMonitorProps) {
         {/* Real-time indicator */}
         {isConnected && (
           <div
-            className="absolute top-2 right-2 flex items-center gap-1.5 px-2 py-1 rounded text-[10px] font-medium z-10"
+            className="absolute top-2 right-2 flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium z-10"
             style={{
               background: `${STATUS.success}1a`,
               color: STATUS.success,
             }}
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+            <span className="size-1.5  rounded-full bg-green-500 animate-pulse" />
             LIVE
           </div>
         )}

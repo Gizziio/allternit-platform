@@ -241,7 +241,7 @@ function SelectAccountContent() {
                     {/* Current session badge */}
                     {isActive && !isSelected && (
                       <span style={{
-                        fontSize: 10, fontWeight: 600,
+                        fontSize: 12, fontWeight: 600,
                         color: 'rgba(255,255,255,0.25)',
                         background: 'var(--ui-border-muted)',
                         padding: '2px 7px', borderRadius: 20,

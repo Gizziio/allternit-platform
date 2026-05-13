@@ -71,7 +71,7 @@ export function AgentChat({
       onStop={onStop}
       value={draft}
       onChange={setDraft}
-      placeholder="Send a message..."
+      placeholder="Send a message…"
       className={cn(classNames?.inputBar, isCenteredEmptyState && "px-0 pb-0")}
       onAttach={attachments?.onAttach}
       attachedImages={attachments?.images}

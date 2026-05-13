@@ -205,7 +205,7 @@ export const GitView: React.FC = () => {
                     {commit.branch && (
                       <span
                         style={{
-                          fontSize: '11px',
+                          fontSize: '12px',
                           fontWeight: '600',
                           padding: '2px 6px',
                           backgroundColor: 'var(--accent-primary)',
@@ -237,7 +237,7 @@ export const GitView: React.FC = () => {
                         alignItems: 'center',
                         justifyContent: 'center',
                         color: 'white',
-                        fontSize: '9px',
+                        fontSize: '12px',
                         fontWeight: '700',
                       }}
                     >
@@ -283,7 +283,7 @@ export const GitView: React.FC = () => {
                       color: badge.color,
                       borderRadius: '2px',
                       fontWeight: '600',
-                      fontSize: '10px',
+                      fontSize: '12px',
                       minWidth: '18px',
                       textAlign: 'center',
                     }}
@@ -309,7 +309,7 @@ export const GitView: React.FC = () => {
           <div style={{ display: 'flex', gap: '8px' }}>
             <input
               type="text"
-              placeholder="Write commit message..."
+              placeholder="Write commit message…"
               value={commitMessage}
               onChange={(e) => setCommitMessage(e.target.value)}
               onKeyDown={(e) => {

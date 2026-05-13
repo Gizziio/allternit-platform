@@ -62,7 +62,7 @@ export const TextMessageTool = memo(function TextMessageTool({
     >
       <div className="rounded-an-tool-border-radius border border-border bg-an-tool-background overflow-hidden">
         <div className="flex items-center gap-2 px-3 py-1.5 border-b border-an-tool-border-color bg-background/50">
-          <IconPhone className="w-3.5 h-3.5 text-muted-foreground" />
+          <IconPhone className="size-3.5  text-muted-foreground" />
           <span className="text-xs font-medium text-muted-foreground">Text Message</span>
         </div>
         <div className="p-3 space-y-2">
@@ -80,7 +80,7 @@ export const TextMessageTool = memo(function TextMessageTool({
           )}
           {msg.scheduledTime && (
             <div className="flex items-center gap-2 text-sm">
-              <IconClock className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+              <IconClock className="size-3.5  text-muted-foreground shrink-0" />
               <span className="text-muted-foreground text-xs">{msg.scheduledTime}</span>
             </div>
           )}

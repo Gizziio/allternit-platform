@@ -170,7 +170,7 @@ export function RuntimeConfigurationPanel({
   if (isLoading && !settings) {
     return (
       <div className="flex h-48 items-center justify-center">
-        <CircleNotch className="h-8 w-8 animate-spin text-accent" />
+        <CircleNotch className="size-8  animate-spin text-accent" />
       </div>
     );
   }
@@ -188,7 +188,7 @@ export function RuntimeConfigurationPanel({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="max-w-2xl">
           <div className="flex items-center gap-2">
-            <Stack className="h-5 w-5 text-amber-200" />
+            <Stack className="size-5  text-amber-200" />
             <h3 className="text-lg font-medium text-foreground">
               Active Driver Fabric
             </h3>
@@ -206,7 +206,7 @@ export function RuntimeConfigurationPanel({
             onClick={() => void onRefresh?.()}
             className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-black/15 px-4 py-3 text-sm text-foreground transition hover:bg-black/25"
           >
-            <ArrowsClockwise className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`} />
+            <ArrowsClockwise className={`size-4  ${isLoading ? "animate-spin" : ""}`} />
             Refresh
           </button>
           <button
@@ -216,7 +216,7 @@ export function RuntimeConfigurationPanel({
             className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-black/15 px-4 py-3 text-sm text-foreground transition hover:bg-black/25 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isResetting ? (
-              <ArrowsClockwise className="h-4 w-4 animate-spin" />
+              <ArrowsClockwise className="size-4  animate-spin" />
             ) : (
               <ArrowCounterClockwise size={16} />
             )}
@@ -229,7 +229,7 @@ export function RuntimeConfigurationPanel({
             className="inline-flex items-center gap-2 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-3 text-sm font-medium text-emerald-100 transition hover:bg-emerald-300/20 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSaving ? (
-              <ArrowsClockwise className="h-4 w-4 animate-spin" />
+              <ArrowsClockwise className="size-4  animate-spin" />
             ) : (
               <CheckCircle size={16} />
             )}
@@ -306,7 +306,7 @@ export function RuntimeConfigurationPanel({
       <div className={`grid gap-6 ${compact ? "xl:grid-cols-1" : "xl:grid-cols-[1.1fr_0.9fr]"}`}>
         <div className="rounded-3xl border border-white/5 bg-black/10 p-5">
           <div className="flex items-center gap-2">
-            <Cpu className="h-5 w-5 text-sky-200" />
+            <Cpu className="size-5  text-sky-200" />
             <h4 className="text-base font-medium text-foreground">
               Driver Envelope
             </h4>
@@ -358,7 +358,7 @@ export function RuntimeConfigurationPanel({
                       : current,
                   )
                 }
-                className="h-4 w-4 accent-[var(--accent)]"
+                className="size-4  accent-[var(--accent)]"
               />
             </label>
           </div>
@@ -429,7 +429,7 @@ export function RuntimeConfigurationPanel({
 
           <div className="mt-5 rounded-2xl border border-white/5 bg-black/10 px-4 py-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-2 text-foreground">
-              <Shield className="h-4 w-4 text-amber-200" />
+              <Shield className="size-4  text-amber-200" />
               <span className="font-medium">Active driver</span>
             </div>
             <p className="mt-2">
@@ -442,7 +442,7 @@ export function RuntimeConfigurationPanel({
 
         <div className="rounded-3xl border border-white/5 bg-black/10 p-5">
           <div className="flex items-center gap-2">
-            <ClockCounterClockwise className="h-5 w-5 text-amber-200" />
+            <ClockCounterClockwise className="size-5  text-amber-200" />
             <h4 className="text-base font-medium text-foreground">
               Replay, Prewarm, and Versioning
             </h4>
@@ -504,7 +504,7 @@ export function RuntimeConfigurationPanel({
                       : current,
                   )
                 }
-                className="h-4 w-4 accent-[var(--accent)]"
+                className="size-4  accent-[var(--accent)]"
               />
             </label>
 
@@ -553,7 +553,7 @@ export function RuntimeConfigurationPanel({
                       : current,
                   )
                 }
-                className="h-4 w-4 accent-[var(--accent)]"
+                className="size-4  accent-[var(--accent)]"
               />
             </label>
 
@@ -637,7 +637,7 @@ export function RuntimeConfigurationPanel({
                       : current,
                   )
                 }
-                className="h-4 w-4 accent-[var(--accent)]"
+                className="size-4  accent-[var(--accent)]"
               />
             </label>
 
@@ -670,7 +670,7 @@ export function RuntimeConfigurationPanel({
       {showManagementLinks ? (
         <div className="rounded-3xl border border-white/5 bg-black/10 p-5">
           <div className="flex items-center gap-2">
-            <Sparkle className="h-5 w-5 text-sky-200" />
+            <Sparkle className="size-5  text-sky-200" />
             <h4 className="text-base font-medium text-foreground">
               Runtime Navigation
             </h4>

@@ -4,6 +4,7 @@
  * Configure avatar appearance and behavior.
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useCallback } from 'react';
 import styles from './AvatarSettings.module.css';
 import { 
@@ -20,14 +21,14 @@ export interface AvatarSettingsProps {
   onChange?: (settings: AdapterSettings) => void;
 }
 
-const demoState: VisualState = {
+const demoState: VisualState = {isClient ? 
   mood: Mood.Thinking,
   intensity: 7,
   confidence: 0.8,
   reliability: 0.9,
   timestamp: new Date(),
   source: 'demo',
-};
+ : "..."};
 
 export const AvatarSettings: React.FC<AvatarSettingsProps> = ({ onChange }) => {
   const registry = getAdapterRegistry();
@@ -174,7 +175,7 @@ const AdapterPreview: React.FC<{ adapter: AvatarAdapter; state: VisualState }> =
   state,
 }) => {
   return (
-    <div style={{ width: 48, height: 48 }}>
+    <div className="size-12">
       {adapter.render(state, 'md')}
     </div>
   );

@@ -320,7 +320,7 @@ export function CodeLaunchBranding({
                   alignItems: 'center',
                   gap: 8,
                   color: 'rgba(236, 236, 236, 0.72)',
-                  fontSize: 10,
+                  fontSize: 12,
                   fontWeight: 700,
                   letterSpacing: '0.18em',
                   textTransform: 'uppercase',

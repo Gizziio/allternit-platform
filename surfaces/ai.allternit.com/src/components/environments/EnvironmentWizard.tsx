@@ -640,8 +640,8 @@ function WizardHeader({
     <div className="relative px-6 py-4 border-b bg-muted/50">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-            <Cube className="w-5 h-5 text-primary" />
+          <div className="size-10  rounded-xl bg-primary/10 flex items-center justify-center">
+            <Cube className="size-5  text-primary" />
           </div>
           <div>
             <h2 className="text-lg font-semibold">Create Environment</h2>
@@ -654,7 +654,7 @@ function WizardHeader({
         {!isDeploying && (
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors"
+            className="size-8  rounded-lg flex items-center justify-center hover:bg-muted transition-colors"
           >
             <X size={16} />
           </button>
@@ -685,7 +685,7 @@ function StepIndicator({ step }: { step: number }) {
               <div className="flex items-center gap-2">
                 <div
                   className={cn(
-                    "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
+                    "size-8  rounded-lg flex items-center justify-center transition-colors",
                     isActive && "bg-primary text-primary-foreground",
                     isCompleted && "bg-green-500/20 text-green-500",
                     !isActive && !isCompleted && "bg-muted text-muted-foreground"
@@ -755,8 +755,8 @@ function TemplateSelectionStep({
     return (
       <div className="h-full flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <CircleNotch className="w-8 h-8 animate-spin text-primary" />
-          <p className="text-muted-foreground">Loading templates...</p>
+          <CircleNotch className="size-8  animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading templates…</p>
         </div>
       </div>
     );
@@ -767,9 +767,9 @@ function TemplateSelectionStep({
       {/* Search and Filters */}
       <div className="p-6 border-b space-y-4">
         <div className="relative">
-          <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <MagnifyingGlass className="absolute left-3 top-1/2 -tranzinc-y-1/2 size-4  text-muted-foreground" />
           <Input
-            placeholder="Search templates..."
+            placeholder="Search templates…"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className="pl-10"
@@ -780,7 +780,7 @@ function TemplateSelectionStep({
             {categories.map(cat => (
               <TabsTrigger key={cat.id} value={cat.id} className="text-xs">
                 {cat.label}
-                <Badge variant="secondary" className="ml-2 text-[10px]">
+                <Badge variant="secondary" className="ml-2 text-xs">
                   {cat.count}
                 </Badge>
               </TabsTrigger>
@@ -803,7 +803,7 @@ function TemplateSelectionStep({
         </div>
         {templates.length === 0 && (
           <div className="text-center py-12">
-            <Funnel className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+            <Funnel className="size-12  mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground">No templates match your search</p>
           </div>
         )}
@@ -845,7 +845,7 @@ function TemplateCard({
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className={cn(
-              "w-10 h-10 rounded-lg flex items-center justify-center",
+              "size-10  rounded-lg flex items-center justify-center",
               isSelected ? "bg-primary text-primary-foreground" : "bg-muted"
             )}>
               <Icon size={20} />
@@ -854,7 +854,7 @@ function TemplateCard({
               <CardTitle className="text-base">{template.name}</CardTitle>
               <div className="flex items-center gap-2 mt-1">
                 {isOfficial && (
-                  <Badge variant="default" className="text-[10px] bg-primary/20 text-primary hover:bg-primary/30">
+                  <Badge variant="default" className="text-xs bg-primary/20 text-primary hover:bg-primary/30">
                     Allternit Official
                   </Badge>
                 )}
@@ -865,7 +865,7 @@ function TemplateCard({
               </div>
             </div>
           </div>
-          {isSelected && <CheckCircle className="w-5 h-5 text-primary" />}
+          {isSelected && <CheckCircle className="size-5  text-primary" />}
         </div>
       </CardHeader>
       <CardContent className="pt-0">
@@ -874,12 +874,12 @@ function TemplateCard({
         </CardDescription>
         <div className="flex flex-wrap gap-1">
           {template.features.slice(0, 4).map((feature, i) => (
-            <Badge key={i} variant="secondary" className="text-[10px]">
+            <Badge key={i} variant="secondary" className="text-xs">
               {feature}
             </Badge>
           ))}
           {template.features.length > 4 && (
-            <Badge variant="outline" className="text-[10px]">
+            <Badge variant="outline" className="text-xs">
               +{template.features.length - 4}
             </Badge>
           )}
@@ -905,7 +905,7 @@ function ConfigurationStep({
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Template Info */}
         <div className="flex items-center gap-4 p-4 bg-muted rounded-lg">
-          <Cube className="w-8 h-8 text-primary" />
+          <Cube className="size-8  text-primary" />
           <div>
             <h3 className="font-medium">{template.name}</h3>
             <p className="text-sm text-muted-foreground">{template.description}</p>
@@ -1117,7 +1117,7 @@ function VariableInput({
             <button
               type="button"
               onClick={() => setShowSecret(!showSecret)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute right-3 top-1/2 -tranzinc-y-1/2 text-muted-foreground hover:text-foreground"
             >
               {showSecret ? <EyeSlash size={16} /> : <Eye size={16} />}
             </button>
@@ -1183,7 +1183,7 @@ function TargetSelectionStep({
               <label className="text-sm font-medium mb-2 block">Select VPS</label>
               <Select value={selectedVpsId} onValueChange={onVpsChange}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Choose a VPS..." />
+                  <SelectValue placeholder="Choose a VPS…" />
                 </SelectTrigger>
                 <SelectContent>
                   {vpsConnections.map(vps => (
@@ -1287,7 +1287,7 @@ function TargetCard({
       <CardContent className="p-4">
         <div className="flex items-start gap-4">
           <div className={cn(
-            "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0",
+            "size-12  rounded-xl flex items-center justify-center flex-shrink-0",
             isSelected ? "bg-primary text-primary-foreground" : "bg-muted"
           )}>
             {React.createElement(Icon as any, { size: 24 })}
@@ -1295,7 +1295,7 @@ function TargetCard({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="font-medium">{name}</h3>
-              {isSelected && <CheckCircle className="w-4 h-4 text-primary" />}
+              {isSelected && <CheckCircle className="size-4  text-primary" />}
             </div>
             <p className="text-sm text-muted-foreground mt-1">{description}</p>
             
@@ -1303,7 +1303,7 @@ function TargetCard({
               <div className="flex flex-wrap gap-3 mt-3">
                 {details.map((detail, i) => (
                   <div key={i} className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <detail.icon className="w-3.5 h-3.5" />
+                    <detail.icon className="size-3.5 " />
                     {detail.label}
                   </div>
                 ))}
@@ -1352,8 +1352,8 @@ function ReviewDeployStep({
     return (
       <div className="h-full flex items-center justify-center p-6">
         <div className="text-center space-y-6 max-w-md">
-          <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mx-auto">
-            <CheckCircle className="w-10 h-10 text-green-500" />
+          <div className="size-20  rounded-full bg-green-500/20 flex items-center justify-center mx-auto">
+            <CheckCircle className="size-10  text-green-500" />
           </div>
           <div>
             <h3 className="text-xl font-semibold">Environment Ready!</h3>
@@ -1366,7 +1366,7 @@ function ReviewDeployStep({
               Close
             </Button>
             <Button onClick={() => {/* Open environment */}}>
-              <ArrowSquareOut className="w-4 h-4 mr-2" />
+              <ArrowSquareOut className="size-4  mr-2" />
               Open Environment
             </Button>
           </div>
@@ -1379,8 +1379,8 @@ function ReviewDeployStep({
     return (
       <div className="h-full flex items-center justify-center p-6">
         <div className="text-center space-y-6 max-w-md">
-          <div className="w-20 h-20 rounded-full bg-destructive/20 flex items-center justify-center mx-auto">
-            <XCircle className="w-10 h-10 text-destructive" />
+          <div className="size-20  rounded-full bg-destructive/20 flex items-center justify-center mx-auto">
+            <XCircle className="size-10  text-destructive" />
           </div>
           <div>
             <h3 className="text-xl font-semibold">Deployment Failed</h3>
@@ -1391,7 +1391,7 @@ function ReviewDeployStep({
               Close
             </Button>
             <Button onClick={onRetry} variant="outline">
-              <ArrowsClockwise className="w-4 h-4 mr-2" />
+              <ArrowsClockwise className="size-4  mr-2" />
               Try Again
             </Button>
           </div>
@@ -1470,7 +1470,7 @@ function ReviewDeployStep({
           <div className="flex-1 bg-black rounded-lg p-4 font-mono text-sm overflow-auto">
             {logs.length === 0 ? (
               <div className="text-muted-foreground flex items-center gap-2">
-                <CircleNotch className="w-4 h-4 animate-spin" />
+                <CircleNotch className="size-4  animate-spin" />
                 Waiting to start...
               </div>
             ) : (
@@ -1502,22 +1502,22 @@ function ReviewDeployStep({
         >
           {state.isDeploying ? (
             <>
-              <CircleNotch className="w-4 h-4 mr-2 animate-spin" />
+              <CircleNotch className="size-4  mr-2 animate-spin" />
               Deploying...
             </>
           ) : deployDisabledReason ? (
             <>
-              <Warning className="w-4 h-4 mr-2" />
+              <Warning className="size-4  mr-2" />
               Provisioning Unavailable
             </>
           ) : !state.preFlightPassed ? (
             <>
-              <Warning className="w-4 h-4 mr-2" />
+              <Warning className="size-4  mr-2" />
               Fix Issues to Deploy
             </>
           ) : (
             <>
-              <Cloud className="w-4 h-4 mr-2" />
+              <Cloud className="size-4  mr-2" />
               Deploy
             </>
           )}
@@ -1554,7 +1554,7 @@ function WizardFooter({
       >
         {step === 1 ? 'Cancel' : (
           <>
-            <CaretLeft className="w-4 h-4 mr-2" />
+            <CaretLeft className="size-4  mr-2" />
             Back
           </>
         )}
@@ -1565,7 +1565,7 @@ function WizardFooter({
         disabled={!canProceed || isDeploying}
       >
         Next
-        <CaretRight className="w-4 h-4 ml-2" />
+        <CaretRight className="size-4  ml-2" />
       </Button>
     </div>
   );

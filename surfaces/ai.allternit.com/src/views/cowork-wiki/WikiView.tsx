@@ -319,7 +319,7 @@ export const WikiView: React.FC<WikiViewProps> = ({ defaultEdit = false }) => {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
                 {selectedPage.sections.map((section) => (
                   <div key={section.id} style={{ padding: 'var(--spacing-md)', borderRadius: 8, background: 'var(--bg-secondary)' }}>
-                    <div style={{ color: 'var(--text-secondary)', fontSize: '11px', marginBottom: 6 }}>{section.kind}</div>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '12px', marginBottom: 6 }}>{section.kind}</div>
                     <div style={{ color: 'var(--text-primary)', fontSize: '15px', fontWeight: 600, marginBottom: 8 }}>{section.heading}</div>
                     <pre style={{ whiteSpace: 'pre-wrap', color: 'var(--text-primary)', fontSize: '13px' }}>{section.body}</pre>
                   </div>

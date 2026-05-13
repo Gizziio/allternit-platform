@@ -38,7 +38,7 @@ export const auth = betterAuth({
       // Allow anonymous users to convert to permanent accounts
       onLinkAccount: async (data: any) => {
         const email = data.user?.email || data.newUser?.user?.email;
-        console.log("Anonymous account linked to:", email);
+        console.debug("Anonymous account linked to:", email);
       },
     }),
   ],

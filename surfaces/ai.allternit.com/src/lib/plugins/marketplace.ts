@@ -348,7 +348,8 @@ class PluginMarketplace {
 
     if (!plugin.instance) {
       try {
-        const module = await import(/* webpackIgnore: true */ `/plugins/${pluginId}/index.js`);
+        const modulePath = `/plugins/${pluginId}/index.js`;
+        const module = await import(/* @vite-ignore */ modulePath);
         const instance = module.default?.() || module.plugin?.();
         
         if (!instance) {

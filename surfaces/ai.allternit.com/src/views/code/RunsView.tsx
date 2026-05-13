@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { GlassCard } from '../../design/GlassCard';
+import { GlassCard } from '../../design/glass/GlassCard';
 import {
   ClockCounterClockwise,
   CheckCircle,

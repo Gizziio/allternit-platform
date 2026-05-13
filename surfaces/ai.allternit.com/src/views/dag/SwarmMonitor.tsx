@@ -13,6 +13,7 @@
  */
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useIsClient } from "@/lib/hooks/use-is-client";
 import {
   GitBranch,
   Pulse as Activity,
@@ -183,7 +184,7 @@ export function SwarmMonitor() {
         next.set(threadId, {
           id: threadId, goal, status: 'running', parentId,
           sessionId: session.id, children: [], tactic: 'execute', 
-          progress: 0, output: [`[${new Date().toLocaleTimeString()}] Starting thread...`],
+          progress: 0, output: [`[${isClient ? new Date().toLocaleTimeString() : "..."}] Starting thread...`],
           createdAt: now, updatedAt: now,
         });
         if (parentId && next.has(parentId)) {
@@ -207,7 +208,7 @@ export function SwarmMonitor() {
       const thread = next.get(threadId);
       if (thread && thread.status === 'running') {
         thread.status = 'paused';
-        thread.output.push(`[${new Date().toLocaleTimeString()}] ⏸ Thread paused by user`);
+        thread.output.push(`[${isClient ? new Date().toLocaleTimeString() : "..."}] ⏸ Thread paused by user`);
         thread.updatedAt = Date.now();
       }
       return next;
@@ -220,7 +221,7 @@ export function SwarmMonitor() {
       const thread = next.get(threadId);
       if (thread && thread.status === 'paused') {
         thread.status = 'running';
-        thread.output.push(`[${new Date().toLocaleTimeString()}] ▶ Thread resumed`);
+        thread.output.push(`[${isClient ? new Date().toLocaleTimeString() : "..."}] ▶ Thread resumed`);
         thread.updatedAt = Date.now();
       }
       return next;
@@ -234,7 +235,7 @@ export function SwarmMonitor() {
       if (thread && (thread.status === 'running' || thread.status === 'paused')) {
         thread.status = 'completed';
         thread.progress = 100;
-        thread.output.push(`[${new Date().toLocaleTimeString()}] ■ Thread stopped by user`);
+        thread.output.push(`[${isClient ? new Date().toLocaleTimeString() : "..."}] ■ Thread stopped by user`);
         thread.updatedAt = Date.now();
         
         // Auto-collect to episode
@@ -257,7 +258,7 @@ export function SwarmMonitor() {
       const thread = next.get(threadId);
       if (thread && thread.status === 'running') {
         thread.status = 'compacting';
-        thread.output.push(`[${new Date().toLocaleTimeString()}] ⟳ Compressing context into episode...`);
+        thread.output.push(`[${isClient ? new Date().toLocaleTimeString() : "..."}] ⟳ Compressing context into episode...`);
         
         // Simulate compression delay
         setTimeout(() => {
@@ -275,7 +276,7 @@ export function SwarmMonitor() {
                 compression: Math.floor(Math.random() * 20) + 80,
                 createdAt: Date.now(),
               };
-              t.output.push(`[${new Date().toLocaleTimeString()}] ✓ Episode ${t.episode.id} created with ${t.episode.compression}% compression`);
+              t.output.push(`[${isClient ? new Date().toLocaleTimeString() : "..."}] ✓ Episode ${t.episode.id} created with ${t.episode.compression}% compression`);
             }
             return n;
           });
@@ -375,7 +376,7 @@ export function SwarmMonitor() {
     <TooltipProvider>
       <div className="h-full flex flex-col bg-[#0d0d0d]">
         {/* ─── TOP: Compact Session Strip ─── */}
-        <div className="h-16 border-b border-slate-800 flex items-center gap-2 px-3">
+        <div className="h-16 border-b border-zinc-800 flex items-center gap-2 px-3">
           {/* Left: Title + Toggle */}
           <div className="flex items-center gap-2 shrink-0">
             <Button
@@ -383,10 +384,10 @@ export function SwarmMonitor() {
               size="icon"
               onClick={() => setSidebarExpanded(!sidebarExpanded)}
             >
-              <GitBranch className="h-4 w-4 text-amber-500" />
+              <GitBranch className="size-4  text-amber-500" />
             </Button>
             <div className="hidden sm:block">
-              <span className="text-sm font-semibold text-slate-200">Swarm</span>
+              <span className="text-sm font-semibold text-zinc-200">Swarm</span>
               <Badge 
                 variant="outline" 
                 className={`ml-2 text-xs ${
@@ -403,12 +404,12 @@ export function SwarmMonitor() {
           {/* Search */}
           <div className="hidden md:flex items-center gap-2 shrink-0">
             <div className="relative">
-              <MagnifyingGlass className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
+              <MagnifyingGlass className="absolute left-2 top-1/2 -tranzinc-y-1/2 size-3.5  text-zinc-500" />
               <Input
-                placeholder="Search threads..."
+                placeholder="Search threads…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-40 h-8 pl-7 text-xs bg-slate-900 border-slate-700"
+                className="w-40 h-8 pl-7 text-xs bg-zinc-900 border-zinc-700"
               />
             </div>
           </div>
@@ -421,7 +422,7 @@ export function SwarmMonitor() {
                 <TooltipTrigger asChild>
                   <Button 
                     onClick={() => spawnThread('New task')}
-                    className="shrink-0 h-10 w-10 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/30"
+                    className="shrink-0 size-10  bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border border-amber-500/30"
                     size="icon"
                   >
                     <Plus size={16} />
@@ -480,7 +481,7 @@ export function SwarmMonitor() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className={`h-8 w-8 ${hasIssues ? 'text-red-500 animate-pulse' : 'text-emerald-500'}`}
+                  className={`size-8  ${hasIssues ? 'text-red-500 animate-pulse' : 'text-emerald-500'}`}
                   onClick={() => setShowHealthPanel(!showHealthPanel)}
                 >
                   <Activity size={16} />
@@ -495,7 +496,7 @@ export function SwarmMonitor() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className={`h-8 w-8 ${isRefreshing ? 'animate-spin' : ''}`}
+                  className={`size-8  ${isRefreshing ? 'animate-spin' : ''}`}
                   onClick={refreshHealth}
                 >
                   <ArrowsClockwise size={16} />
@@ -505,20 +506,20 @@ export function SwarmMonitor() {
             </Tooltip>
 
             {/* View Toggle */}
-            <div className="flex items-center gap-0.5 bg-slate-900 rounded-lg p-0.5">
+            <div className="flex items-center gap-0.5 bg-zinc-900 rounded-lg p-0.5">
               <Button
                 variant={viewMode === 'compact' ? 'secondary' : 'ghost'}
                 size="icon"
                 onClick={() => setViewMode('compact')}
               >
-                <ListDashes className="h-3.5 w-3.5" />
+                <ListDashes className="size-3.5 " />
               </Button>
               <Button
                 variant={viewMode === 'expanded' ? 'secondary' : 'ghost'}
                 size="icon"
                 onClick={() => setViewMode('expanded')}
               >
-                <SquaresFour className="h-3.5 w-3.5" />
+                <SquaresFour className="size-3.5 " />
               </Button>
             </div>
           </div>
@@ -538,16 +539,16 @@ export function SwarmMonitor() {
         <div className="flex-1 flex overflow-hidden">
           {/* Sidebar - Collapsible */}
           {sidebarExpanded && (
-            <div className="w-64 border-r border-slate-800 flex flex-col">
-              <div className="p-3 border-b border-slate-800 flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500 uppercase">Thread Tree</span>
+            <div className="w-64 border-r border-zinc-800 flex flex-col">
+              <div className="p-3 border-b border-zinc-800 flex items-center justify-between">
+                <span className="text-xs font-semibold text-zinc-500 uppercase">Thread Tree</span>
                 <div className="flex items-center gap-1">
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => setStatusFilter(statusFilter ? null : 'running')}
                   >
-                    <Funnel className={`h-3 w-3 ${statusFilter ? 'text-amber-500' : 'text-slate-600'}`} />
+                    <Funnel className={`size-3  ${statusFilter ? 'text-amber-500' : 'text-zinc-600'}`} />
                   </Button>
                 </div>
               </div>
@@ -569,7 +570,7 @@ export function SwarmMonitor() {
               </ScrollArea>
               
               {/* Stats Footer */}
-              <div className="p-3 border-t border-slate-800 text-xs text-slate-500">
+              <div className="p-3 border-t border-zinc-800 text-xs text-zinc-500">
                 <div className="flex justify-between">
                   <span>Running:</span>
                   <span className="text-emerald-500">{runningThreads.length}</span>
@@ -599,9 +600,9 @@ export function SwarmMonitor() {
                 onDelete={() => deleteThread(selectedThread.id)}
               />
             ) : (
-              <div className="h-full flex items-center justify-center text-slate-600">
+              <div className="h-full flex items-center justify-center text-zinc-600">
                 <div className="text-center">
-                  <Robot className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <Robot className="size-12  mx-auto mb-4 opacity-50" />
                   <p>Select a thread from the strip above</p>
                 </div>
               </div>
@@ -651,23 +652,23 @@ function CompactSessionCard({
             isSelected 
               ? 'w-40 bg-amber-500/10 border-amber-500/50' 
               : isCompact 
-                ? 'w-24 bg-slate-900 border-slate-800 hover:border-slate-700' 
-                : 'w-36 bg-slate-900 border-slate-800 hover:border-slate-700'
+                ? 'w-24 bg-zinc-900 border-zinc-800 hover:border-zinc-700' 
+                : 'w-36 bg-zinc-900 border-zinc-800 hover:border-zinc-700'
           }`}
         >
           {/* Header: Status + ID */}
-          <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-slate-800/50">
+          <div className="flex items-center gap-1.5 px-2 py-1.5 border-b border-zinc-800/50">
             <StatusDot status={thread.status} />
-            <span className="text-[10px] font-mono text-slate-500 truncate">{thread.id}</span>
-            {thread.pinned && <Pin className="h-2.5 w-2.5 text-amber-500 ml-auto" />}
+            <span className="text-xs font-mono text-zinc-500 truncate">{thread.id}</span>
+            {thread.pinned && <Pin className="size-2.5  text-amber-500 ml-auto" />}
             {!thread.pinned && thread.children.length > 0 && (
-              <span className="text-[9px] text-slate-600 ml-auto">{thread.children.length}</span>
+              <span className="text-xs text-zinc-600 ml-auto">{thread.children.length}</span>
             )}
           </div>
 
           {/* Goal */}
           <div className="px-2 py-1">
-            <p className={`text-xs text-slate-300 truncate ${isCompact ? 'text-[10px]' : ''}`}>
+            <p className={`text-xs text-zinc-300 truncate ${isCompact ? 'text-xs' : ''}`}>
               {thread.goal}
             </p>
           </div>
@@ -675,7 +676,7 @@ function CompactSessionCard({
           {/* Progress */}
           {!isCompact && thread.status !== 'completed' && thread.status !== 'failed' && (
             <div className="px-2 pb-1.5">
-              <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
+              <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
                 <div 
                   className={`h-full rounded-full transition-all ${
                     thread.status === 'running' ? 'bg-emerald-500' : 
@@ -686,9 +687,9 @@ function CompactSessionCard({
                 />
               </div>
               <div className="flex justify-between mt-0.5">
-                <span className="text-[9px] text-slate-600">{Math.round(thread.progress)}%</span>
+                <span className="text-xs text-zinc-600">{Math.round(thread.progress)}%</span>
                 {thread.tokenCount && (
-                  <span className="text-[9px] text-slate-600">{(thread.tokenCount / 1000).toFixed(1)}k</span>
+                  <span className="text-xs text-zinc-600">{(thread.tokenCount / 1000).toFixed(1)}k</span>
                 )}
               </div>
             </div>
@@ -697,39 +698,39 @@ function CompactSessionCard({
           {/* Error indicator */}
           {thread.status === 'failed' && (
             <div className="px-2 pb-1">
-              <span className="text-[9px] text-red-500 flex items-center gap-1">
-                <Warning className="h-2.5 w-2.5" /> Failed
+              <span className="text-xs text-red-500 flex items-center gap-1">
+                <Warning className="size-2.5 " /> Failed
               </span>
             </div>
           )}
         </div>
       </DropdownMenuTrigger>
       
-      <DropdownMenuContent align="start" className="w-48 bg-slate-900 border-slate-700">
+      <DropdownMenuContent align="start" className="w-48 bg-zinc-900 border-zinc-700">
         <DropdownMenuItem onClick={onClick} className="text-xs">
-          <Terminal className="h-3.5 w-3.5 mr-2" /> View Output
+          <Terminal className="size-3.5  mr-2" /> View Output
         </DropdownMenuItem>
         
         {thread.status === 'running' && (
           <DropdownMenuItem onClick={onPause} className="text-xs">
-            <Pause className="h-3.5 w-3.5 mr-2" /> Pause
+            <Pause className="size-3.5  mr-2" /> Pause
           </DropdownMenuItem>
         )}
         
         {thread.status === 'paused' && (
           <DropdownMenuItem onClick={onResume} className="text-xs">
-            <Play className="h-3.5 w-3.5 mr-2" /> Resume
+            <Play className="size-3.5  mr-2" /> Resume
           </DropdownMenuItem>
         )}
         
         {(thread.status === 'running' || thread.status === 'paused') && (
           <>
             <DropdownMenuItem onClick={onCollect} className="text-xs">
-              <Sparkle className="h-3.5 w-3.5 mr-2" /> Collect to Episode
+              <Sparkle className="size-3.5  mr-2" /> Collect to Episode
             </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-slate-700" />
+            <DropdownMenuSeparator className="bg-zinc-700" />
             <DropdownMenuItem onClick={onStop} className="text-xs text-red-500">
-              <Square className="h-3.5 w-3.5 mr-2" /> Stop
+              <Square className="size-3.5  mr-2" /> Stop
             </DropdownMenuItem>
           </>
         )}
@@ -761,24 +762,24 @@ function TreeItem({
       <div
         onClick={() => onSelect(thread.id)}
         className={`flex items-center gap-1.5 py-1.5 px-2 rounded cursor-pointer text-xs ${
-          selectedId === thread.id ? 'bg-amber-500/10 text-amber-500' : 'hover:bg-white/5 text-slate-400'
+          selectedId === thread.id ? 'bg-amber-500/10 text-amber-500' : 'hover:bg-white/5 text-zinc-400'
         }`}
         style={{ paddingLeft: `${8 + level * 12}px` }}
       >
         {hasChildren ? (
           <button 
             onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
-            className="text-slate-600 hover:text-slate-400"
+            className="text-zinc-600 hover:text-zinc-400"
           >
-            {expanded ? <CaretLeft className="h-3 w-3 -rotate-90" /> : <CaretLeft size={12} />}
+            {expanded ? <CaretLeft className="size-3  -rotate-90" /> : <CaretLeft size={12} />}
           </button>
         ) : (
           <span className="w-3" />
         )}
         <StatusDot status={thread.status} />
-        <span className="font-mono text-[10px]">{thread.id}</span>
+        <span className="font-mono text-xs">{thread.id}</span>
         <span className="truncate flex-1">{thread.goal}</span>
-        {thread.pinned && <Pin className="h-2.5 w-2.5 text-amber-500" />}
+        {thread.pinned && <Pin className="size-2.5  text-amber-500" />}
       </div>
       
       {expanded && children.map(child => (
@@ -830,10 +831,10 @@ function SessionContent({
           <StatusDot status={thread.status} size="lg" />
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-semibold text-slate-200">{thread.id}</h2>
-              {thread.pinned && <Pin className="h-3.5 w-3.5 text-amber-500" />}
+              <h2 className="text-lg font-semibold text-zinc-200">{thread.id}</h2>
+              {thread.pinned && <Pin className="size-3.5  text-amber-500" />}
             </div>
-            <p className="text-sm text-slate-500">{thread.goal}</p>
+            <p className="text-sm text-zinc-500">{thread.goal}</p>
           </div>
         </div>
         
@@ -842,7 +843,7 @@ function SessionContent({
           {thread.status === 'running' && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-amber-500 h-8 w-8" onClick={onPause}>
+                <Button variant="ghost" size="icon" className="text-amber-500 size-8 " onClick={onPause}>
                   <Pause size={16} />
                 </Button>
               </TooltipTrigger>
@@ -853,7 +854,7 @@ function SessionContent({
           {thread.status === 'paused' && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-emerald-500 h-8 w-8" onClick={onResume}>
+                <Button variant="ghost" size="icon" className="text-emerald-500 size-8 " onClick={onResume}>
                   <Play size={16} />
                 </Button>
               </TooltipTrigger>
@@ -864,7 +865,7 @@ function SessionContent({
           {(thread.status === 'running' || thread.status === 'paused') && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-purple-500 h-8 w-8" onClick={onCollect}>
+                <Button variant="ghost" size="icon" className="text-purple-500 size-8 " onClick={onCollect}>
                   <Sparkle size={16} />
                 </Button>
               </TooltipTrigger>
@@ -874,7 +875,7 @@ function SessionContent({
           
           <Tooltip>
             <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" className={`h-8 w-8 ${thread.pinned ? 'text-amber-500' : 'text-slate-500'}`} onClick={onPin}>
+              <Button variant="ghost" size="icon" className={`size-8  ${thread.pinned ? 'text-amber-500' : 'text-zinc-500'}`} onClick={onPin}>
                 {thread.pinned ? <PinOff size={16} /> : <Pin size={16} />}
               </Button>
             </TooltipTrigger>
@@ -884,7 +885,7 @@ function SessionContent({
           {(thread.status === 'running' || thread.status === 'paused') && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-red-500 h-8 w-8" onClick={onStop}>
+                <Button variant="ghost" size="icon" className="text-red-500 size-8 " onClick={onStop}>
                   <Square size={16} />
                 </Button>
               </TooltipTrigger>
@@ -894,17 +895,17 @@ function SessionContent({
           
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500">
+              <Button variant="ghost" size="icon" className="size-8  text-zinc-500">
                 <DotsThreeOutline size={16} />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-slate-900 border-slate-700">
+            <DropdownMenuContent align="end" className="bg-zinc-900 border-zinc-700">
               <DropdownMenuItem onClick={() => navigator.clipboard.writeText(thread.output.join('\n'))} className="text-xs">
-                <Copy className="h-3.5 w-3.5 mr-2" /> Copy Output
+                <Copy className="size-3.5  mr-2" /> Copy Output
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-slate-700" />
+              <DropdownMenuSeparator className="bg-zinc-700" />
               <DropdownMenuItem onClick={onDelete} className="text-xs text-red-500">
-                <Trash className="h-3.5 w-3.5 mr-2" /> Delete Thread
+                <Trash className="size-3.5  mr-2" /> Delete Thread
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -912,7 +913,7 @@ function SessionContent({
       </div>
 
       {/* Stats Row */}
-      <div className="flex items-center gap-4 mb-3 text-xs text-slate-500">
+      <div className="flex items-center gap-4 mb-3 text-xs text-zinc-500">
         {thread.tokenCount && (
           <span className="flex items-center gap-1">
             <Lightning size={12} /> {(thread.tokenCount / 1000).toFixed(1)}k tokens
@@ -931,16 +932,16 @@ function SessionContent({
       {/* Terminal Output */}
       <div 
         ref={scrollRef}
-        className="flex-1 bg-slate-950 rounded-lg border border-slate-800 p-4 font-mono text-sm overflow-auto"
+        className="flex-1 bg-zinc-950 rounded-lg border border-zinc-800 p-4 font-mono text-sm overflow-auto"
       >
-        <div className="text-slate-500 mb-2">$ swarm thread --tactic={thread.tactic} --goal="{thread.goal}"</div>
+        <div className="text-zinc-500 mb-2">$ swarm thread --tactic={thread.tactic} --goal="{thread.goal}"</div>
         {thread.output.map((line, i) => (
           <div key={i} className={
             line.startsWith('✓') ? 'text-emerald-500' :
             line.startsWith('⏸') ? 'text-amber-500' :
             line.startsWith('✗') ? 'text-red-500' :
             line.startsWith('⟳') ? 'text-purple-500' :
-            'text-slate-400'
+            'text-zinc-400'
           }>
             {line}
           </div>
@@ -949,18 +950,18 @@ function SessionContent({
           <div className="text-amber-500 animate-pulse mt-2">_</div>
         )}
         {thread.status === 'compacting' && (
-          <div className="text-purple-500 animate-pulse mt-2">⟳ Compressing...</div>
+          <div className="text-purple-500 animate-pulse mt-2">⟳ Compressing…</div>
         )}
       </div>
 
       {/* Progress */}
       {thread.status !== 'completed' && thread.status !== 'failed' && (
         <div className="mt-4">
-          <div className="flex items-center justify-between text-xs text-slate-500 mb-1">
+          <div className="flex items-center justify-between text-xs text-zinc-500 mb-1">
             <span>Progress</span>
             <span>{Math.round(thread.progress)}%</span>
           </div>
-          <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+          <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
             <div 
               className={`h-full rounded-full transition-all ${
                 thread.status === 'compacting' ? 'bg-purple-500' : 'bg-emerald-500'
@@ -987,10 +988,10 @@ function HealthPanel({
   onClose: () => void;
 }) {
   return (
-    <div className="h-48 border-b border-slate-800 bg-slate-900/50 p-4 overflow-auto">
+    <div className="h-48 border-b border-zinc-800 bg-zinc-900/50 p-4 overflow-auto">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold flex items-center gap-2">
-          <Activity className="h-4 w-4 text-emerald-500" />
+          <Activity className="size-4  text-emerald-500" />
           Swarm Health
         </h3>
         <Button variant="ghost" size="icon" onClick={onClose}>
@@ -1000,8 +1001,8 @@ function HealthPanel({
       
       {health && (
         <div className="grid grid-cols-4 gap-4 mb-4">
-          <div className="bg-slate-900 rounded p-3">
-            <div className="text-xs text-slate-500">Status</div>
+          <div className="bg-zinc-900 rounded p-3">
+            <div className="text-xs text-zinc-500">Status</div>
             <div className={`text-sm font-medium ${
               health.status === 'healthy' ? 'text-emerald-500' : 
               health.status === 'degraded' ? 'text-amber-500' : 'text-red-500'
@@ -1009,17 +1010,17 @@ function HealthPanel({
               {health.status}
             </div>
           </div>
-          <div className="bg-slate-900 rounded p-3">
-            <div className="text-xs text-slate-500">Active Agents</div>
-            <div className="text-sm font-medium text-slate-300">{health.active_agents} / {health.total_agents}</div>
+          <div className="bg-zinc-900 rounded p-3">
+            <div className="text-xs text-zinc-500">Active Agents</div>
+            <div className="text-sm font-medium text-zinc-300">{health.active_agents} / {health.total_agents}</div>
           </div>
-          <div className="bg-slate-900 rounded p-3">
-            <div className="text-xs text-slate-500">Queue Size</div>
-            <div className="text-sm font-medium text-slate-300">{health.message_queue_size}</div>
+          <div className="bg-zinc-900 rounded p-3">
+            <div className="text-xs text-zinc-500">Queue Size</div>
+            <div className="text-sm font-medium text-zinc-300">{health.message_queue_size}</div>
           </div>
-          <div className="bg-slate-900 rounded p-3">
-            <div className="text-xs text-slate-500">Avg Response</div>
-            <div className="text-sm font-medium text-slate-300">{health.avg_response_time_ms}ms</div>
+          <div className="bg-zinc-900 rounded p-3">
+            <div className="text-xs text-zinc-500">Avg Response</div>
+            <div className="text-sm font-medium text-zinc-300">{health.avg_response_time_ms}ms</div>
           </div>
         </div>
       )}
@@ -1032,7 +1033,7 @@ function HealthPanel({
           <div className="space-y-1">
             {circuitBreakers.map(cb => (
               <div key={cb.agent_id} className="flex items-center justify-between bg-red-500/10 rounded px-3 py-2 text-xs">
-                <span className="text-slate-300">{cb.agent_id}</span>
+                <span className="text-zinc-300">{cb.agent_id}</span>
                 <span className="text-red-500">{cb.failure_count} failures</span>
               </div>
             ))}
@@ -1048,7 +1049,7 @@ function HealthPanel({
           <div className="space-y-1">
             {quarantined.map(q => (
               <div key={q.agent_id} className="flex items-center justify-between bg-amber-500/10 rounded px-3 py-2 text-xs">
-                <span className="text-slate-300">{q.agent_id}</span>
+                <span className="text-zinc-300">{q.agent_id}</span>
                 <span className="text-amber-500">{q.remaining_minutes}m remaining</span>
               </div>
             ))}
@@ -1064,41 +1065,41 @@ function EpisodeBar({ episode, thread }: { episode: Episode; thread: SwarmThread
   const [expanded, setExpanded] = useState(false);
   
   return (
-    <div className="border-t border-slate-800 bg-slate-900/50">
+    <div className="border-t border-zinc-800 bg-zinc-900/50">
       <div 
         className="h-12 flex items-center px-4 gap-4 cursor-pointer hover:bg-white/5"
         onClick={() => setExpanded(!expanded)}
       >
-        <CheckCircle className="h-4 w-4 text-emerald-500" />
-        <span className="text-sm text-slate-300">Episode {episode.id}</span>
-        <span className="text-xs text-slate-500 truncate flex-1">{episode.summary}</span>
+        <CheckCircle className="size-4  text-emerald-500" />
+        <span className="text-sm text-zinc-300">Episode {episode.id}</span>
+        <span className="text-xs text-zinc-500 truncate flex-1">{episode.summary}</span>
         
         <div className="flex items-center gap-3 text-xs">
-          <span className="text-slate-500">{episode.decisions} decisions</span>
-          <span className="text-slate-500">{episode.artifacts} artifacts</span>
+          <span className="text-zinc-500">{episode.decisions} decisions</span>
+          <span className="text-zinc-500">{episode.artifacts} artifacts</span>
           <Badge className="bg-amber-500/10 text-amber-500 text-xs">
             {episode.compression}% compressed
           </Badge>
         </div>
         
         <Button size="sm" variant="ghost" className="h-7 text-xs">
-          <Copy className="h-3 w-3 mr-1" /> Use as Context
+          <Copy className="size-3  mr-1" /> Use as Context
         </Button>
       </div>
       
       {expanded && (
-        <div className="px-4 pb-4 border-t border-slate-800/50 pt-3">
-          <div className="text-xs text-slate-500 mb-2">Original Output ({thread.output.length} lines)</div>
-          <div className="bg-slate-950 rounded p-3 font-mono text-xs text-slate-400 max-h-32 overflow-auto">
+        <div className="px-4 pb-4 border-t border-zinc-800/50 pt-3">
+          <div className="text-xs text-zinc-500 mb-2">Original Output ({thread.output.length} lines)</div>
+          <div className="bg-zinc-950 rounded p-3 font-mono text-xs text-zinc-400 max-h-32 overflow-auto">
             {thread.output.slice(0, 10).map((line, i) => (
               <div key={i} className="truncate">{line}</div>
             ))}
             {thread.output.length > 10 && (
-              <div className="text-slate-600">... {thread.output.length - 10} more lines</div>
+              <div className="text-zinc-600">… {thread.output.length - 10} more lines</div>
             )}
           </div>
-          <div className="text-xs text-slate-500 mt-3 mb-2">Compressed Summary</div>
-          <div className="text-sm text-slate-300">{episode.summary}</div>
+          <div className="text-xs text-zinc-500 mt-3 mb-2">Compressed Summary</div>
+          <div className="text-sm text-zinc-300">{episode.summary}</div>
         </div>
       )}
     </div>
@@ -1112,11 +1113,11 @@ function StatusDot({ status, size = 'sm' }: { status: string; size?: 'sm' | 'lg'
     paused: 'bg-amber-500',
     completed: 'bg-blue-500',
     failed: 'bg-red-500',
-    pending: 'bg-slate-500',
+    pending: 'bg-zinc-500',
     compacting: 'bg-purple-500',
   };
   
-  const sizeClass = size === 'lg' ? 'w-3 h-3' : 'w-2 h-2';
+  const sizeClass = size === 'lg' ? 'size-3 ' : 'size-2 ';
   
   return (
     <span className={`${sizeClass} rounded-full ${colors[status as keyof typeof colors]} ${status === 'running' || status === 'compacting' ? 'animate-pulse' : ''}`} />

@@ -1,5 +1,6 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { formatRelativeTime } from "@/lib/time";
 import type { LedgerEvent, LogEntry, MailMessage, SessionAnalytics } from "@/lib/agents";
@@ -25,6 +26,7 @@ export function MailMonitorPanel({
   relevantLogs,
   telemetry,
 }: MailMonitorPanelProps) {
+  const isClient = useSyncExternalStore(() => () => {}, () => true, () => false);
   const snapshot = telemetry?.snapshot;
   const tokenUsage = snapshot?.tokenUsage;
   const timeline = snapshot?.timeline ?? [];
@@ -34,22 +36,22 @@ export function MailMonitorPanel({
       <div className="flex flex-col rounded-2xl border border-border/50 bg-background/60 p-4 shadow-sm">
         <div className="flex items-center justify-between mb-3">
           <div className="text-sm font-semibold">Conversation</div>
-          <span className="text-[11px] uppercase tracking-[0.1em] text-muted-foreground">
+          <span className="text-[12px] uppercase tracking-[0.1em] text-muted-foreground">
             {messages.length} messages
           </span>
         </div>
         <div className="flex-1 overflow-y-auto space-y-3 pr-1">
           {messages.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Waiting for new activity...</p>
+            <p className="text-xs text-muted-foreground">Waiting for new activity…</p>
           ) : (
             messages.map((msg) => (
               <div
                 key={msg.message_id}
                 className="rounded-2xl border border-muted/30 bg-muted/10 p-3 shadow-inner"
               >
-                <div className="flex items-center justify-between text-[11px] uppercase tracking-wide text-muted-foreground">
+                <div className="flex items-center justify-between text-[12px] uppercase tracking-wide text-muted-foreground">
                   <span>{msg.from_agent}</span>
-                  <span>{formatRelativeTime(msg.timestamp)}</span>
+                  <span>{isClient ? formatRelativeTime(msg.timestamp) : '—'}</span>
                 </div>
                 <p className="mt-2 text-sm leading-snug text-foreground">{msg.body}</p>
               </div>
@@ -66,22 +68,22 @@ export function MailMonitorPanel({
             {snapshot ? (
               snapshot.lines?.map((line) => (
                 <div key={`${line.label}-${line.type}`}>
-                  <p className="font-semibold text-[11px] uppercase text-muted-foreground">{line.label}</p>
+                  <p className="font-semibold text-[12px] uppercase text-muted-foreground">{line.label}</p>
                   {line.type === "progress" ? (
-                    <div className="text-[11px]">
+                    <div className="text-[12px]">
                       {(line as any).used}/{(line as any).limit} {(line as any).format}
                     </div>
                   ) : (
-                    <p className="text-[11px]">{(line as any).text || (line as any).value}</p>
+                    <p className="text-[12px]">{(line as any).text || (line as any).value}</p>
                   )}
                 </div>
               ))
             ) : (
               <p>No telemetry yet</p>
             )}
-            <p className="text-[10px] text-muted-foreground">Source: {providerLabel}</p>
+            <p className="text-xs text-muted-foreground">Source: {providerLabel}</p>
             {tokenUsage && (
-              <div className="text-[10px] text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 Tokens (in/out/total): {tokenUsage.input} / {tokenUsage.output} / {tokenUsage.total}
               </div>
             )}
@@ -98,8 +100,8 @@ export function MailMonitorPanel({
               timeline.map((entry) => (
                 <div key={entry.timestamp}>
                   <p className="font-semibold">{entry.label}</p>
-                  <p className="text-[11px] text-muted-foreground">{new Date(entry.timestamp).toLocaleTimeString()}</p>
-                  <p className="text-[10px] text-muted-foreground">{entry.detail}</p>
+                  <p className="text-[12px] text-muted-foreground">{isClient ? new Date(entry.timestamp).toLocaleTimeString() : '—'}</p>
+                  <p className="text-xs text-muted-foreground">{entry.detail}</p>
                 </div>
               ))
             )}
@@ -115,12 +117,12 @@ export function MailMonitorPanel({
             ) : (
               relevantLogs.map((log) => (
                 <div key={log.id} className="space-y-1 border-b border-muted/40 pb-2 last:border-b-0">
-                  <p className="text-[11px] font-semibold uppercase text-muted-foreground">
+                  <p className="text-[12px] font-semibold uppercase text-muted-foreground">
                     {log.level}
                   </p>
                   <p className="text-[12px]">{log.message}</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {formatRelativeTime(new Date(log.timestamp).toISOString())}
+                  <p className="text-xs text-muted-foreground">
+                    {isClient ? formatRelativeTime(new Date(log.timestamp).toISOString()) : '—'}
                   </p>
                 </div>
               ))

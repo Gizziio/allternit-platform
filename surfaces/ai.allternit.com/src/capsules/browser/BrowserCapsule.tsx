@@ -40,7 +40,7 @@ import { useExtensionBridge } from './useExtensionBridge';
 import { A2UIRenderer } from '../a2ui/A2UIRenderer';
 
 // Design System
-import { GlassCard } from '../../design/GlassCard';
+import { GlassCard } from '../../design/glass/GlassCard';
 
 // ============================================================================
 // Utility Functions
@@ -54,15 +54,15 @@ function cn(...inputs: ClassValue[]) {
 function TabIcon({ tab, className }: { tab: BrowserTab; className?: string }) {
   switch (tab.contentType) {
     case 'web':
-      return <Globe className={cn('w-4 h-4', className)} />;
+      return <Globe className={cn('size-4 ', className)} />;
     case 'a2ui':
-      return <SquaresFour className={cn('w-4 h-4', className)} />;
+      return <SquaresFour className={cn('size-4 ', className)} />;
     case 'miniapp':
-      return <Puzzle className={cn('w-4 h-4', className)} />;
+      return <Puzzle className={cn('size-4 ', className)} />;
     case 'component':
-      return <Terminal className={cn('w-4 h-4', className)} />;
+      return <Terminal className={cn('size-4 ', className)} />;
     default:
-      return <Globe className={cn('w-4 h-4', className)} />;
+      return <Globe className={cn('size-4 ', className)} />;
   }
 }
 
@@ -127,7 +127,7 @@ function TabBar() {
               }}
               className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-[var(--glass-bg-hover)] transition-opacity"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="size-3.5 " />
             </button>
           </div>
         ))}
@@ -222,7 +222,7 @@ function NavigationBar() {
 
         {/* URL/Input Bar */}
         <div className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--bg-secondary)] border border-[var(--border-subtle)]">
-          <Lock className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
+          <Lock className="size-3.5  text-[var(--text-tertiary)]" />
           <input
             type="text"
             value={inputValue}
@@ -304,7 +304,7 @@ function WebContent({ tab }: { tab: WebTab }) {
 function A2UIContent({ tab }: { tab: A2UITab }) {
   const handleAction = useCallback(
     (actionId: string, payload?: Record<string, unknown>) => {
-      console.log('[Browser:A2UI] Action triggered:', actionId, payload);
+      console.debug('[Browser:A2UI] Action triggered:', actionId, payload);
       // Here you would typically send the action to the agent or backend
       // For now, just log it
     },
@@ -314,7 +314,7 @@ function A2UIContent({ tab }: { tab: A2UITab }) {
   const handleDataModelChange = useCallback(
     (dataModel: Record<string, unknown>) => {
       // Optionally persist data model changes
-      console.log('[Browser:A2UI] Data model changed:', dataModel);
+      console.debug('[Browser:A2UI] Data model changed:', dataModel);
     },
     []
   );
@@ -373,7 +373,7 @@ function MiniappContent({ tab }: { tab: MiniappTab }) {
       return (
         <div className="w-full h-full flex items-center justify-center">
           <div className="text-center">
-            <Puzzle className="w-12 h-12 mx-auto mb-4 opacity-30" />
+            <Puzzle className="size-12  mx-auto mb-4 opacity-30" />
             <p className="text-[var(--text-secondary)]">Component miniapps not yet implemented</p>
             <p className="text-sm text-[var(--text-tertiary)] mt-1">Entry: {manifest.entry.src}</p>
           </div>
@@ -384,7 +384,7 @@ function MiniappContent({ tab }: { tab: MiniappTab }) {
   return (
     <div className="w-full h-full flex items-center justify-center">
       <div className="text-center">
-        <Warning className="w-12 h-12 mx-auto mb-4 text-yellow-500 opacity-50" />
+        <Warning className="size-12  mx-auto mb-4 text-yellow-500 opacity-50" />
         <p className="text-[var(--text-secondary)]">Unknown miniapp entry type</p>
         <p className="text-sm text-[var(--text-tertiary)] mt-1">{manifest.entry.type}</p>
       </div>
@@ -398,7 +398,7 @@ function ComponentContent({ tab }: { tab: ComponentTab }) {
   return (
     <div className="w-full h-full flex items-center justify-center">
       <div className="text-center">
-        <Terminal className="w-12 h-12 mx-auto mb-4 opacity-30" />
+        <Terminal className="size-12  mx-auto mb-4 opacity-30" />
         <p className="text-[var(--text-secondary)]">Component rendering</p>
         <p className="text-sm text-[var(--text-tertiary)] mt-1">ID: {tab.componentId}</p>
         {tab.props && (
@@ -447,7 +447,7 @@ function EmptyState() {
   return (
     <div className="h-full flex items-center justify-center">
       <div className="text-center">
-        <Globe className="w-16 h-16 mx-auto mb-6 opacity-20" />
+        <Globe className="size-16  mx-auto mb-6 opacity-20" />
         <h3 className="text-lg font-medium text-[var(--text-primary)] mb-2">No tabs open</h3>
         <p className="text-sm text-[var(--text-secondary)] mb-6">
           Open a new tab to start browsing

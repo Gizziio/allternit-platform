@@ -121,15 +121,15 @@ export function JobsView() {
   const getStatusIcon = (status: string): React.ReactNode => {
     switch (status) {
       case 'running':
-        return <Play className="h-4 w-4 text-blue-500" />;
+        return <Play className="size-4  text-blue-500" />;
       case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return <CheckCircle className="size-4  text-green-500" />;
       case 'failed':
-        return <XCircle className="h-4 w-4 text-red-500" />;
+        return <XCircle className="size-4  text-red-500" />;
       case 'scheduled':
-        return <Clock className="h-4 w-4 text-yellow-500" />;
+        return <Clock className="size-4  text-yellow-500" />;
       case 'cancelled':
-        return <Warning className="h-4 w-4 text-gray-500" />;
+        return <Warning className="size-4  text-zinc-500" />;
       default:
         return <Clock size={16} />;
     }
@@ -154,8 +154,8 @@ export function JobsView() {
     return (
       <div className="container mx-auto p-6 h-full flex items-center justify-center">
         <div className="text-center">
-          <ArrowsClockwise className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading job queue...</p>
+          <ArrowsClockwise className="size-8  animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading job queue…</p>
         </div>
       </div>
     );
@@ -172,13 +172,13 @@ export function JobsView() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleRefresh}>
-            <ArrowsClockwise className="h-4 w-4 mr-2" />
+            <ArrowsClockwise className="size-4  mr-2" />
             Refresh
           </Button>
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
               <Button size="sm">
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="size-4  mr-2" />
                 New Job
               </Button>
             </DialogTrigger>
@@ -193,7 +193,7 @@ export function JobsView() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pending</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
+              <Clock className="size-4  text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.pending}</div>
@@ -202,7 +202,7 @@ export function JobsView() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Running</CardTitle>
-              <Play className="h-4 w-4 text-muted-foreground" />
+              <Play className="size-4  text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.running}</div>
@@ -211,7 +211,7 @@ export function JobsView() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Completed</CardTitle>
-              <CheckCircle className="h-4 w-4 text-muted-foreground" />
+              <CheckCircle className="size-4  text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.completed}</div>
@@ -220,7 +220,7 @@ export function JobsView() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Failed</CardTitle>
-              <XCircle className="h-4 w-4 text-muted-foreground" />
+              <XCircle className="size-4  text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.failed}</div>
@@ -229,7 +229,7 @@ export function JobsView() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Cancelled</CardTitle>
-              <Warning className="h-4 w-4 text-muted-foreground" />
+              <Warning className="size-4  text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.cancelled}</div>
@@ -299,7 +299,7 @@ export function JobsView() {
               {jobs.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8">
-                    <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                    <Clock className="size-12  mx-auto mb-4 text-muted-foreground" />
                     <p className="text-muted-foreground">No jobs in queue</p>
                     <p className="text-sm text-muted-foreground">
                       Create a new job to get started

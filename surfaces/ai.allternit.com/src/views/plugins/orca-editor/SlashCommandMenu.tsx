@@ -150,7 +150,7 @@ export const SlashCommandMenu: React.FC<SlashCommandMenuProps> = ({
               )}
             >
               <div className={cn(
-                'w-8 h-8 rounded flex items-center justify-center',
+                'size-8  rounded flex items-center justify-center',
                 index === selectedIndex ? 'bg-zinc-700' : 'bg-zinc-800'
               )}>
                 <Icon size={18} />

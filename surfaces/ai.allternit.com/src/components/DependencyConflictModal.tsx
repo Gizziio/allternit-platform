@@ -179,7 +179,7 @@ function ResolutionCard({
             </span>
             <span
               style={{
-                fontSize: 10,
+                fontSize: 12,
                 padding: '2px 8px',
                 borderRadius: 4,
                 backgroundColor: `${riskColor}20`,
@@ -477,7 +477,7 @@ export function DependencyConflictModal({
               icon={<CheckCircle size={20} color={THEME.success} />}
               risk="medium"
               details={
-                <div style={{ fontSize: 11, color: THEME.warning }}>
+                <div style={{ fontSize: 12, color: THEME.warning }}>
                   <ShieldWarning size={12} style={{ marginRight: 6, verticalAlign: 'middle' }} />
                   {installingPlugin.name} may not work correctly
                 </div>
@@ -495,7 +495,7 @@ export function DependencyConflictModal({
               risk="low"
               details={
                 <div>
-                  <div style={{ fontSize: 11, color: THEME.textSecondary, marginBottom: 8 }}>
+                  <div style={{ fontSize: 12, color: THEME.textSecondary, marginBottom: 8 }}>
                     Will upgrade to a version compatible with:
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -503,7 +503,7 @@ export function DependencyConflictModal({
                       <span
                         key={req.requiredBy}
                         style={{
-                          fontSize: 10,
+                          fontSize: 12,
                           padding: '2px 8px',
                           backgroundColor: 'rgba(59, 130, 246, 0.15)',
                           color: THEME.info,
@@ -529,7 +529,7 @@ export function DependencyConflictModal({
                       onChange={(e) => setUpgradeAll(e.target.checked)}
                       style={{ accentColor: THEME.accent }}
                     />
-                    <span style={{ fontSize: 11, color: THEME.textSecondary }}>
+                    <span style={{ fontSize: 12, color: THEME.textSecondary }}>
                       Also upgrade other dependencies if needed
                     </span>
                   </label>
@@ -548,7 +548,7 @@ export function DependencyConflictModal({
               risk="high"
               details={
                 <div>
-                  <div style={{ fontSize: 11, color: THEME.danger, marginBottom: 8 }}>
+                  <div style={{ fontSize: 12, color: THEME.danger, marginBottom: 8 }}>
                     <ShieldWarning size={12} style={{ marginRight: 6, verticalAlign: 'middle' }} />
                     This may break: {otherReqs.map(r => r.requiredBy).join(', ')}
                   </div>
@@ -566,7 +566,7 @@ export function DependencyConflictModal({
                         fontSize: 12,
                       }}
                     >
-                      <option value="">Select version to force...</option>
+                      <option value="">Select version to force…</option>
                       {availableVersions.map(v => (
                         <option key={v} value={v}>{v}</option>
                       ))}
@@ -595,7 +595,7 @@ export function DependencyConflictModal({
               <div style={{ fontSize: 12, fontWeight: 600, color: THEME.danger, marginBottom: 2 }}>
                 Warning: Potential Breakage
               </div>
-              <div style={{ fontSize: 11, color: THEME.textSecondary, lineHeight: 1.5 }}>
+              <div style={{ fontSize: 12, color: THEME.textSecondary, lineHeight: 1.5 }}>
                 Forcing a version change may cause other plugins to malfunction. 
                 Only use this option if you understand the risks and have backups.
               </div>

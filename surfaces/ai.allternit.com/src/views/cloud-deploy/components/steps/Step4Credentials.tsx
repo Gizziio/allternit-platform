@@ -23,13 +23,6 @@ export const Step4Credentials: React.FC<Step4CredentialsProps> = ({ providerId, 
 
   const provider = getProvider(providerId);
 
-  useEffect(() => {
-    // Reset when provider changes
-    setApiKey('');
-    setApiSecret('');
-    setValidated(false);
-  }, [providerId]);
-
   if (!provider) {
     return (
       <div className="step-credentials">

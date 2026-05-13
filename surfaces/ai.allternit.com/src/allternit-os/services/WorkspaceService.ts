@@ -113,7 +113,7 @@ class WorkspaceService {
     this.ws = new WebSocket(wsUrl);
     
     this.ws.onopen = () => {
-      console.log('[WorkspaceService] Connected');
+      console.debug('[WorkspaceService] Connected');
       this.isConnected = true;
       this.reconnectAttempts = 0;
       
@@ -136,7 +136,7 @@ class WorkspaceService {
     };
 
     this.ws.onclose = () => {
-      console.log('[WorkspaceService] Disconnected');
+      console.debug('[WorkspaceService] Disconnected');
       this.isConnected = false;
       this.emit('connection', { status: 'disconnected' });
       this.attemptReconnect();
@@ -163,7 +163,7 @@ class WorkspaceService {
     this.reconnectAttempts++;
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
     
-    console.log(`[WorkspaceService] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
+    console.debug(`[WorkspaceService] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
     
     setTimeout(() => this.connect(), delay);
   }

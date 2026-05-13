@@ -115,14 +115,14 @@ export const ImageSearchTool = memo(function ImageSearchTool({
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-2">
                 {img.title && (
-                  <span className="text-[11px] text-white font-medium line-clamp-2">
+                  <span className="text-[12px] text-white font-medium line-clamp-2">
                     {img.title}
                   </span>
                 )}
                 <div className="flex items-center gap-1 mt-0.5">
-                  <IconExternalLink className="w-3 h-3 text-white/80" />
+                  <IconExternalLink className="size-3  text-white/80" />
                   {img.source && (
-                    <span className="text-[10px] text-white/70 truncate">{img.source}</span>
+                    <span className="text-xs text-white/70 truncate">{img.source}</span>
                   )}
                 </div>
               </div>

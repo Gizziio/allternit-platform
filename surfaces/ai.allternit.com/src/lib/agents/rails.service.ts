@@ -321,7 +321,7 @@ export interface VaultArchiveResponse {
 // Using Gateway is preferred as it handles auth, rate limiting, etc.
 const RAILS_BASE = `${GATEWAY_BASE_URL}/api/rails`;
 
-// console.log('[Rails Service] Using Rails base URL:', RAILS_BASE);
+// console.debug('[Rails Service] Using Rails base URL:', RAILS_BASE);
 
 export const railsApi = {
   // Health check with better error handling

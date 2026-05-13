@@ -141,7 +141,7 @@ const InsightsView: React.FC = () => {
           {heatmapData.map((intensity, idx) => (
             <div
               key={`heatmap-${idx}`}
-              className="w-4 h-4 rounded-sm"
+              className="size-4  rounded-sm"
               style={{
                 backgroundColor: 'var(--accent-cowork)',
                 opacity: Math.max(0.1, intensity),

@@ -254,10 +254,10 @@ export const InputBar = memo(function InputBar({
           <button
             type="button"
             onClick={handleInfoBarClose}
-            className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-md text-an-foreground-muted/70 hover:text-an-foreground hover:bg-an-background-secondary"
+            className="shrink-0 inline-flex items-center justify-center size-6  rounded-md text-an-foreground-muted/70 hover:text-an-foreground hover:bg-an-background-secondary"
             aria-label="Close"
           >
-            <IconX className="w-3.5 h-3.5" strokeWidth={2} />
+            <IconX className="size-3.5 " strokeWidth={2} />
           </button>
         )}
       </div>
@@ -319,7 +319,7 @@ export const InputBar = memo(function InputBar({
       >
         <div className="h-7 border-b border-border px-3 flex items-center justify-between text-xs text-an-tool-color-muted">
           <div className="inline-flex items-center gap-1.5">
-            <IconMessageCircleQuestion className="w-3.5 h-3.5" />
+            <IconMessageCircleQuestion className="size-3.5 " />
             Question
           </div>
           {showQuestionNavigation && (
@@ -331,7 +331,7 @@ export const InputBar = memo(function InputBar({
                 className="size-5 inline-flex items-center justify-center rounded-[4px] hover:bg-an-background-secondary disabled:opacity-40"
                 aria-label="Previous question"
               >
-                <IconChevronUp className="w-3.5 h-3.5" />
+                <IconChevronUp className="size-3.5 " />
               </button>
               <span>
                 {clampedQuestionIndex} of {totalQuestions}
@@ -343,7 +343,7 @@ export const InputBar = memo(function InputBar({
                 className="size-5 inline-flex items-center justify-center rounded-[4px] hover:bg-an-background-secondary disabled:opacity-40"
                 aria-label="Next question"
               >
-                <IconChevronDown className="w-3.5 h-3.5" />
+                <IconChevronDown className="size-3.5 " />
               </button>
             </div>
           )}
@@ -484,7 +484,7 @@ export const InputBar = memo(function InputBar({
             {/* Typing animation image */}
             {isTyping && typingAnimation?.image && showImage && (
               <div className="flex gap-2 flex-wrap px-3 pt-3">
-                <div className="relative overflow-hidden shrink-0 w-16 h-16 rounded-md">
+                <div className="relative overflow-hidden shrink-0 size-16  rounded-md">
                   <img
                     src={typingAnimation.image}
                     alt=""

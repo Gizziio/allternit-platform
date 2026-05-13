@@ -85,7 +85,7 @@ export function MascotPreview({ config, name }: { config: any; name: string }) {
         {getAvatarIcon()}
       </motion.div>
       <div style={{ 
-        fontSize: '10px', 
+        fontSize: '12px', 
         fontWeight: 700, 
         color: STUDIO_THEME.textMuted, 
         textTransform: 'uppercase', 

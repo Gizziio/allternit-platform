@@ -311,7 +311,7 @@ export const AI_ELEMENTS_REGISTRY: AIElementEntry[] = [
     category: "code",
     description: "Syntax-highlighted code display",
     component: CodeBlock,
-    demoFactory: () => ({ code: "console.log('hello');", language: "javascript" }),
+    demoFactory: () => ({ code: "console.debug('hello');", language: "javascript" }),
     isInteractive: false,
   },
   {

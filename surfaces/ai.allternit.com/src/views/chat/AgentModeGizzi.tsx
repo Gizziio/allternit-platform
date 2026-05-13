@@ -969,7 +969,7 @@ export function AgentModeGizzi({
                         alignItems: 'center',
                         gap: 8,
                         color: 'rgba(236,236,236,0.72)',
-                        fontSize: 10,
+                        fontSize: 12,
                         fontWeight: 700,
                         letterSpacing: '0.18em',
                         textTransform: 'uppercase',
@@ -1155,7 +1155,7 @@ export function AgentModeGizzi({
                       top: '50%',
                       left: '50%',
                       transform: 'translate(-50%, -50%)',
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: 900,
                       color: '#e0e0e0',
                       fontFamily: 'var(--font-sans)',
@@ -1468,7 +1468,7 @@ export function AgentModeGizzi({
                       position: 'absolute',
                       bottom: '110%',
                       left: `calc(50% + ${(i - 2) * 15}px)`,
-                      fontSize: 8,
+                      fontSize: 12,
                       fontFamily: 'var(--font-mono)',
                       fontWeight: 700,
                       color: '#48bb78',
@@ -1544,7 +1544,7 @@ export function AgentModeGizzi({
                     letterSpacing: '0.1em',
                   }}>
                     <span>💾</span>
-                    <span>SAVING...</span>
+                    <span>SAVING…</span>
                   </div>
                   <div style={{
                     width: 90,
@@ -1625,7 +1625,7 @@ export function AgentModeGizzi({
                     padding: '4px 10px',
                     background: theme.accent,
                     borderRadius: 10,
-                    fontSize: 10,
+                    fontSize: 12,
                     fontWeight: 800,
                     color: '#000',
                     zIndex: 50,
@@ -1746,7 +1746,7 @@ export function AgentModeGizzi({
                     }}
                   >
                     <span style={{
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: 800,
                       color: '#000',
                       fontFamily: 'var(--font-mono)',
@@ -1976,11 +1976,11 @@ export function AgentModeGizzi({
                     <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff5f56' }} />
                     <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ffbd2e' }} />
                     <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#27ca40' }} />
-                    <span style={{ marginLeft: 'auto', fontSize: 10, color: 'rgba(236,236,236,0.5)' }}>gizzi_boot.sh</span>
+                    <span style={{ marginLeft: 'auto', fontSize: 12, color: 'rgba(236,236,236,0.5)' }}>gizzi_boot.sh</span>
                   </div>
                   {/* Terminal content */}
                   <div style={{ padding: '10px 12px' }}>
-                    <div style={{ fontSize: 11, color: theme.accent, marginBottom: 4 }}>$ initializing...</div>
+                    <div style={{ fontSize: 12, color: theme.accent, marginBottom: 4 }}>$ initializing…</div>
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: '100%' }}
@@ -1999,7 +1999,7 @@ export function AgentModeGizzi({
                         initial={{ opacity: 0, x: -5 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.2, delay: 0.4 + i * 0.15 }}
-                        style={{ fontSize: 10, color: 'rgba(236,236,236,0.7)', marginTop: 3 }}
+                        style={{ fontSize: 12, color: 'rgba(236,236,236,0.7)', marginTop: 3 }}
                       >
                         <span style={{ color: '#27ca40' }}>✓</span> {text}
                       </motion.div>
@@ -2382,7 +2382,7 @@ export function AgentModeGizzi({
                     BUFFER OVERFLOW
                   </div>
                   <div style={{
-                    fontSize: 10,
+                    fontSize: 12,
                     color: '#00ff41',
                     fontFamily: 'var(--font-mono)',
                     marginTop: 2,
@@ -2428,7 +2428,7 @@ export function AgentModeGizzi({
                         justifyContent: 'center',
                         background: i % 4 === 0 ? '#fbbf24' : i % 4 === 1 ? '#60a5fa' : i % 4 === 2 ? '#a78bfa' : '#f472b6',
                         borderRadius: '50%',
-                        fontSize: 9,
+                        fontSize: 12,
                         fontWeight: 800,
                         color: '#000',
                         boxShadow: `0 3px 12px rgba(0,0,0,0.3)`,
@@ -2622,7 +2622,7 @@ export function AgentModeGizzi({
                   }}>
                     {/* Logo area */}
                     <span style={{
-                      fontSize: 8,
+                      fontSize: 12,
                       fontWeight: 900,
                       color: '#fff',
                       fontFamily: 'var(--font-sans)',
@@ -2731,7 +2731,7 @@ export function AgentModeGizzi({
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.5, delay: 0.2 }}
                     style={{
-                      fontSize: 100,
+                      fontSize: 120,
                       marginBottom: 30,
                     }}
                   >
@@ -2822,7 +2822,7 @@ export function AgentModeGizzi({
                     animate={{ opacity: 0.8 }}
                     transition={{ duration: 0.5, delay: 1.2 }}
                     style={{
-                      fontSize: 11,
+                      fontSize: 12,
                       color: '#fff',
                       marginTop: 15,
                       textAlign: 'center',

@@ -224,7 +224,7 @@ export function BrowserAgentBar({
       {guidanceMessages.length > 0 && (
         <div className="guidance-messages-bar px-4 py-2 border-b border-border/50 bg-purple-500/10">
           <div className="flex items-start gap-2">
-            <Sparkle className="w-4 h-4 text-purple-400 mt-0.5" />
+            <Sparkle className="size-4  text-purple-400 mt-0.5" />
             <div className="flex-1">
               {guidanceMessages.map((msg, idx) => (
                 <p key={idx} className="text-sm text-purple-200">{msg}</p>
@@ -248,12 +248,12 @@ export function BrowserAgentBar({
                 text-sm"
             >
               {isConnected ? (
-                <WifiHigh className="w-4 h-4 text-green-500" />
+                <WifiHigh className="size-4  text-green-500" />
               ) : (
-                <WifiSlash className="w-4 h-4 text-red-500" />
+                <WifiSlash className="size-4  text-red-500" />
               )}
               <span className="max-w-[120px] truncate">{getEndpointLabel()}</span>
-              <CaretDown className="w-3 h-3 opacity-50" />
+              <CaretDown className="size-3  opacity-50" />
             </button>
 
             {/* Endpoint Menu */}
@@ -272,7 +272,7 @@ export function BrowserAgentBar({
 
           {/* Connection Status Dot */}
           <div
-            className={`w-2 h-2 rounded-full ${
+            className={`size-2  rounded-full ${
               isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'
             }`}
           />
@@ -336,7 +336,7 @@ export function BrowserAgentBar({
                 relative"
             >
               {isPolicyCheckPending ? (
-                <Clock className="w-4 h-4 animate-spin" />
+                <Clock className="size-4  animate-spin" />
               ) : (
                 <Play size={16} />
               )}
@@ -438,8 +438,8 @@ export function BrowserAgentBar({
               bg-opacity-20
             `}
           >
-            {status === 'Running' && <Clock className="w-3 h-3 animate-pulse" />}
-            {status === 'WaitingApproval' && <ShieldWarning className="w-3 h-3 animate-pulse" />}
+            {status === 'Running' && <Clock className="size-3  animate-pulse" />}
+            {status === 'WaitingApproval' && <ShieldWarning className="size-3  animate-pulse" />}
             {status === 'Blocked' && <XCircle size={12} />}
             {status === 'Done' && <CheckCircle size={12} />}
             <span>{getStatusLabel()}</span>

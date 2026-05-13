@@ -1,3 +1,4 @@
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useMemo } from 'react';
 import { useBoardStore } from '@/stores/board.store';
 import { useWorkspaceStore } from '@/stores/workspace.store';
@@ -79,7 +80,7 @@ export function WorkloadPanel() {
           const over = day.hours > HOURS_PER_DAY;
           return (
             <div key={day.date} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 90, fontSize: 11, color: 'var(--ui-text-muted)' }}>
+              <div style={{ width: 90, fontSize: 12, color: 'var(--ui-text-muted)' }}>
                 {new Date(day.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
               </div>
               <div style={{ flex: 1, height: 20, background: 'var(--surface-panel)', borderRadius: 4, overflow: 'hidden', position: 'relative' }}>
@@ -92,12 +93,12 @@ export function WorkloadPanel() {
                     transition: 'width 0.3s',
                   }}
                 />
-                <span style={{ position: 'absolute', right: 6, top: 2, fontSize: 10, color: 'var(--ui-text-primary)' }}>
+                <span style={{ position: 'absolute', right: 6, top: 2, fontSize: 12, color: 'var(--ui-text-primary)' }}>
                   {day.hours.toFixed(1)}h
                 </span>
               </div>
               {over && (
-                <span style={{ fontSize: 10, color: 'var(--status-error)' }}>Over</span>
+                <span style={{ fontSize: 12, color: 'var(--status-error)' }}>Over</span>
               )}
             </div>
           );

@@ -153,7 +153,7 @@ function SearchResultItem({ result, i }: { result: Record<string, unknown>; i: n
         )}
         {host && (
           <div style={{
-            fontSize: 11,
+            fontSize: 12,
             color: "rgba(255,255,255,0.32)",
             fontFamily: "var(--font-mono)",
           }}>
@@ -162,7 +162,7 @@ function SearchResultItem({ result, i }: { result: Record<string, unknown>; i: n
         )}
         {snippet && (
           <div style={{
-            fontSize: 11,
+            fontSize: 12,
             color: "rgba(255,255,255,0.42)",
             lineHeight: 1.55,
             marginTop: 2,
@@ -228,7 +228,7 @@ function SearchCard({ state, input, result }: BrowserToolCardProps) {
         </span>
         {state === "running" && <StateIndicator state="running" />}
         {state === "completed" && hasResults && (
-          <span style={{ fontSize: 10, color: "rgba(74,222,128,0.55)", fontWeight: 600, letterSpacing: "0.04em" }}>
+          <span style={{ fontSize: 12, color: "rgba(74,222,128,0.55)", fontWeight: 600, letterSpacing: "0.04em" }}>
             {count} result{count !== 1 ? "s" : ""}
           </span>
         )}
@@ -246,7 +246,7 @@ function SearchCard({ state, input, result }: BrowserToolCardProps) {
             <SearchResultItem key={i} result={item} i={i} />
           ))}
           {count > 5 && (
-            <div style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", marginTop: 6 }}>
+            <div style={{ fontSize: 12, color: "rgba(255,255,255,0.25)", marginTop: 6 }}>
               +{count - 5} more results
             </div>
           )}
@@ -286,7 +286,7 @@ function NavigateCard({ state, input, error }: BrowserToolCardProps) {
         <Globe style={{ width: 10, height: 10, color: "rgba(255,255,255,0.3)", flexShrink: 0, marginLeft: 4 }} />
         <span style={{
           flex: 1,
-          fontSize: 11,
+          fontSize: 12,
           color: isBlocked ? "rgba(248,113,113,0.7)" : "rgba(255,255,255,0.5)",
           fontFamily: "var(--font-mono)",
           overflow: "hidden",
@@ -307,7 +307,7 @@ function NavigateCard({ state, input, error }: BrowserToolCardProps) {
           gap: 6,
           marginTop: 5,
           marginLeft: 2,
-          fontSize: 11,
+          fontSize: 12,
           color: "rgba(248,113,113,0.65)",
           lineHeight: 1.5,
         }}>
@@ -337,7 +337,7 @@ function ClickCard({ state, input }: BrowserToolCardProps) {
         <span style={{ fontSize: 12, color: "rgba(236,236,236,0.66)" }}>
           Click{" "}
           <code style={{
-            fontSize: 11,
+            fontSize: 12,
             background: "var(--ui-border-muted)",
             borderRadius: 4,
             padding: "1px 5px",
@@ -367,7 +367,7 @@ function TypeCard({ state, input }: BrowserToolCardProps) {
         <span style={{ fontSize: 12, color: "rgba(236,236,236,0.66)" }}>
           Type{text && (
             <>{" "}<code style={{
-              fontSize: 11,
+              fontSize: 12,
               background: "var(--ui-border-muted)",
               borderRadius: 4,
               padding: "1px 5px",

@@ -52,17 +52,25 @@ pub struct AgentApiState {
     pub canvas: Arc<RwLock<CanvasService>>,
     pub tool_registry: Arc<RwLock<ToolRegistry>>,
     pub tool_streamer: Arc<RwLock<ToolStreamerService>>,
+    pub http_client: reqwest::Client,
+    pub anthropic_api_key: String,
 }
 
 impl AgentApiState {
     /// Create new API state with default services
     pub async fn new() -> Result<Self, crate::errors::HostError> {
+        let anthropic_api_key = std::env::var("ANTHROPIC_API_KEY").unwrap_or_default();
+        if anthropic_api_key.is_empty() {
+            tracing::warn!("ANTHROPIC_API_KEY is not set — chat streaming will return errors");
+        }
         Ok(Self {
             session_manager: Arc::new(RwLock::new(SessionManagerService::new())),
             skill_executor: Arc::new(RwLock::new(SkillExecutionService::new())),
             canvas: Arc::new(RwLock::new(CanvasService::new())),
             tool_registry: Arc::new(RwLock::new(ToolRegistry::new())),
             tool_streamer: Arc::new(RwLock::new(ToolStreamerService::new())),
+            http_client: reqwest::Client::new(),
+            anthropic_api_key,
         })
     }
 }

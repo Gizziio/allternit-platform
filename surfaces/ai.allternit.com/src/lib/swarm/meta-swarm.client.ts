@@ -8,7 +8,7 @@
  * ```typescript
  * const client = new MetaSwarmClient({ wsUrl: 'ws://localhost:8010/swarm' });
  * const handle = await client.submitTask('Implement feature X', { mode: 'closed_loop' });
- * client.onProgress = (update) => console.log(update.progress);
+ * client.onProgress = (update) => console.debug(update.progress);
  * ```
  */
 

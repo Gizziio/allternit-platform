@@ -112,7 +112,7 @@ function CopyButton({ text, label = 'Copy' }: { text: string; label?: string }) 
   return (
     <button
       onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 1400); }}
-      style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'transparent', color: copied ? '#10b981' : 'var(--text-tertiary)', fontSize: 10, fontWeight: 600, cursor: 'pointer', transition: 'color 0.15s', flexShrink: 0 }}
+      style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'transparent', color: copied ? '#10b981' : 'var(--text-tertiary)', fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'color 0.15s', flexShrink: 0 }}
     >
       {copied ? <Check size={10} /> : <Clipboard size={10} />}
       {copied ? 'Copied' : label}
@@ -124,7 +124,7 @@ function ApplyButton({ onClick, applied }: { onClick: () => void; applied?: bool
   return (
     <button
       onClick={e => { e.stopPropagation(); onClick(); }}
-      style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 11px', borderRadius: 7, border: 'none', background: applied ? '#10b98120' : 'var(--accent-primary)', color: applied ? '#10b981' : '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s', flexShrink: 0 }}
+      style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 11px', borderRadius: 7, border: 'none', background: applied ? '#10b98120' : 'var(--accent-primary)', color: applied ? '#10b981' : '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s', flexShrink: 0 }}
     >
       {applied ? <><Check size={10} />Applied</> : <><Plus size={10} />Apply</>}
     </button>
@@ -170,7 +170,7 @@ function OverviewSection({ projectName, onNavigate }: { projectName: string; onN
           <Swatches size={18} color="var(--accent-primary)" />
           <div>
             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{tokens.length} canvas tokens extracted</div>
-            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>From {shapeCount} shape{shapeCount !== 1 ? 's' : ''} on the Sketch tab — colors, radii, and shadows automatically detected</div>
+            <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>From {shapeCount} shape{shapeCount !== 1 ? 's' : ''} on the Sketch tab — colors, radii, and shadows automatically detected</div>
           </div>
         </div>
       )}
@@ -189,7 +189,7 @@ function OverviewSection({ projectName, onNavigate }: { projectName: string; onN
               </div>
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 3 }}>{card.label}</div>
               <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-primary)', marginBottom: 3 }}>{card.value}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{card.hint}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{card.hint}</div>
             </button>
           );
         })}
@@ -220,20 +220,20 @@ function ColorsSection({ onApply }: { onApply: (msg: string) => void }) {
 
       {canvasColors.length > 0 && (
         <div style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-tertiary)', marginBottom: 14 }}>Canvas tokens ({canvasColors.length})</div>
+          <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-tertiary)', marginBottom: 14 }}>Canvas tokens ({canvasColors.length})</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
             {canvasColors.map((t, i) => (
               <div key={i} title={t.name} style={{ cursor: 'pointer' }} onClick={() => navigator.clipboard.writeText(t.value)}>
                 <div style={{ width: 44, height: 44, borderRadius: 10, background: t.value, border: '1px solid var(--border-subtle)', boxShadow: '0 1px 3px rgba(0,0,0,0.08)', marginBottom: 5 }} />
-                <div style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--text-tertiary)', textAlign: 'center', maxWidth: 44, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.value}</div>
-                {t.count > 1 && <div style={{ fontSize: 8, color: 'var(--accent-primary)', fontWeight: 700, textAlign: 'center' }}>×{t.count}</div>}
+                <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-tertiary)', textAlign: 'center', maxWidth: 44, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.value}</div>
+                {t.count > 1 && <div style={{ fontSize: 12, color: 'var(--accent-primary)', fontWeight: 700, textAlign: 'center' }}>×{t.count}</div>}
               </div>
             ))}
           </div>
         </div>
       )}
 
-      <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-tertiary)', marginBottom: 14 }}>Curated palettes</div>
+      <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-tertiary)', marginBottom: 14 }}>Curated palettes</div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {PALETTES.map(p => {
@@ -263,8 +263,8 @@ function ColorsSection({ onApply }: { onApply: (msg: string) => void }) {
                         onClick={() => navigator.clipboard.writeText(s)}
                         title={`Copy ${s}`}
                       />
-                      <div style={{ fontSize: 8.5, color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)', textAlign: 'center' }}>{SCALE_LABELS[i]}</div>
-                      <div style={{ fontSize: 8, color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)', textAlign: 'center' }}>{s}</div>
+                      <div style={{ fontSize: 12.5, color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)', textAlign: 'center' }}>{SCALE_LABELS[i]}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)', textAlign: 'center' }}>{s}</div>
                     </div>
                   ))}
                 </div>
@@ -290,7 +290,7 @@ function TypographySection({ onApply }: { onApply: (msg: string) => void }) {
       />
 
       {/* Font pairs */}
-      <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-tertiary)', marginBottom: 14 }}>Font pairs</div>
+      <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-tertiary)', marginBottom: 14 }}>Font pairs</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 32 }}>
         {FONT_PAIRS.map(fp => {
           const isSelected = selectedPair === fp.heading;
@@ -303,12 +303,12 @@ function TypographySection({ onApply }: { onApply: (msg: string) => void }) {
                 <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--text-primary)', lineHeight: 1.15, letterSpacing: '-0.02em', marginBottom: 4 }}>
                   {fp.specimen}
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                   {fp.heading} / {fp.body}
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--accent-primary)', background: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)', padding: '2px 7px', borderRadius: 5 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--accent-primary)', background: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)', padding: '2px 7px', borderRadius: 5 }}>
                   {fp.tag}
                 </span>
                 <ApplyButton onClick={() => onApply(`Use ${fp.heading} for headings and ${fp.body} for body text in the design system.`)} />
@@ -319,17 +319,17 @@ function TypographySection({ onApply }: { onApply: (msg: string) => void }) {
       </div>
 
       {/* Type scale */}
-      <div style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-tertiary)', marginBottom: 14 }}>Type scale</div>
+      <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-tertiary)', marginBottom: 14 }}>Type scale</div>
       <div style={{ border: '1px solid var(--border-subtle)', borderRadius: 12, overflow: 'hidden' }}>
         {TYPE_SCALE.map((t, i) => (
           <div key={t.name}
             style={{ display: 'grid', gridTemplateColumns: '80px 1fr 1fr 1fr', alignItems: 'center', gap: 16, padding: '14px 16px', borderTop: i > 0 ? '1px solid var(--border-subtle)' : 'none', background: 'var(--bg-secondary)' }}
           >
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{t.name}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>{t.name}</div>
             <div style={{ fontSize: t.size, fontWeight: t.weight, lineHeight: t.lh, letterSpacing: t.ls, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               The quick brown fox
             </div>
-            <div style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-tertiary)' }}>{t.size} / {t.weight}</div>
+            <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-tertiary)' }}>{t.size} / {t.weight}</div>
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
               <CopyButton text={`font-size: ${t.size};\nfont-weight: ${t.weight};\nline-height: ${t.lh};\nletter-spacing: ${t.ls};`} />
             </div>
@@ -354,12 +354,12 @@ function SpacingSection() {
           <div key={s.name}
             style={{ display: 'grid', gridTemplateColumns: '120px 1fr 80px 80px auto', alignItems: 'center', gap: 16, padding: '12px 16px', borderTop: i > 0 ? '1px solid var(--border-subtle)' : 'none', background: 'var(--bg-secondary)' }}
           >
-            <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-tertiary)' }}>--{s.name}</span>
+            <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-tertiary)' }}>--{s.name}</span>
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <div style={{ height: 10, width: s.value, maxWidth: 200, background: 'var(--accent-primary)', borderRadius: 2, opacity: 0.7 }} />
             </div>
-            <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', fontWeight: 600 }}>{s.value}</span>
-            <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-tertiary)' }}>{s.rem}</span>
+            <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', fontWeight: 600 }}>{s.value}</span>
+            <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-tertiary)' }}>{s.rem}</span>
             <CopyButton text={`--${s.name}: ${s.value};`} />
           </div>
         ))}
@@ -383,7 +383,7 @@ function RadiusSection() {
             style={{ display: 'grid', gridTemplateColumns: '48px 130px 80px 1fr auto', alignItems: 'center', gap: 16, padding: '14px 16px', borderTop: i > 0 ? '1px solid var(--border-subtle)' : 'none', background: 'var(--bg-secondary)' }}
           >
             <div style={{ width: 36, height: 36, borderRadius: Math.min(r.display, 18), border: '2px solid var(--accent-primary)', background: 'color-mix(in srgb, var(--accent-primary) 8%, transparent)', flexShrink: 0 }} />
-            <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-tertiary)' }}>--{r.name}</span>
+            <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-tertiary)' }}>--{r.name}</span>
             <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', fontWeight: 600 }}>{r.value}</span>
             <div />
             <CopyButton text={`--${r.name}: ${r.value};`} />
@@ -409,7 +409,7 @@ function ShadowsSection() {
             <div style={{ width: 48, height: 36, borderRadius: 8, background: 'var(--bg-primary)', boxShadow: s.demo, flexShrink: 0 }} />
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>--{s.name}</div>
-              <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text-tertiary)', lineHeight: 1.5 }}>{s.value}</div>
+              <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-tertiary)', lineHeight: 1.5 }}>{s.value}</div>
             </div>
             <CopyButton text={`--${s.name}: ${s.value};`} />
           </div>
@@ -443,7 +443,7 @@ function ComponentsSection() {
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>{ct.name}</span>
               <button
                 onClick={() => copyAll(ct.name, ct.vars)}
-                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'transparent', color: copied === ct.name ? '#10b981' : 'var(--text-tertiary)', fontSize: 10, fontWeight: 600, cursor: 'pointer', transition: 'color 0.15s' }}
+                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 9px', borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'transparent', color: copied === ct.name ? '#10b981' : 'var(--text-tertiary)', fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'color 0.15s' }}
               >
                 {copied === ct.name ? <><Check size={10} />Copied</> : <><Clipboard size={10} />Copy all</>}
               </button>
@@ -454,8 +454,8 @@ function ComponentsSection() {
                   style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--border-subtle)' }}
                 >
                   <div>
-                    <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text-tertiary)' }}>{key}:</span>
-                    <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', marginLeft: 6, fontWeight: 600 }}>{val}</span>
+                    <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-tertiary)' }}>{key}:</span>
+                    <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-primary)', marginLeft: 6, fontWeight: 600 }}>{val}</span>
                   </div>
                   <CopyButton text={`${key}: ${val};`} />
                 </div>
@@ -496,15 +496,15 @@ function CanvasExportPanel({ projectName }: { projectName: string }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Canvas tokens ({tokens.length})</div>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button onClick={copyCSS} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 11px', borderRadius: 7, border: '1px solid var(--border-subtle)', background: 'transparent', color: copiedCss ? '#10b981' : 'var(--text-secondary)', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
+          <button onClick={copyCSS} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 11px', borderRadius: 7, border: '1px solid var(--border-subtle)', background: 'transparent', color: copiedCss ? '#10b981' : 'var(--text-secondary)', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
             {copiedCss ? <Check size={11} /> : <Clipboard size={11} />} {copiedCss ? 'Copied CSS' : 'Copy CSS'}
           </button>
-          <button onClick={downloadJSON} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 11px', borderRadius: 7, border: '1px solid var(--border-subtle)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer', fontWeight: 600 }}>
+          <button onClick={downloadJSON} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 11px', borderRadius: 7, border: '1px solid var(--border-subtle)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
             <Download size={11} /> tokens.json
           </button>
         </div>
       </div>
-      <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>From {shapeCount} shape{shapeCount !== 1 ? 's' : ''} on the Sketch canvas</div>
+      <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>From {shapeCount} shape{shapeCount !== 1 ? 's' : ''} on the Sketch canvas</div>
     </div>
   );
 }
@@ -572,7 +572,7 @@ export function DesignSystemView({ projectName = 'Untitled Project' }: { project
 
       {/* Left nav */}
       <div style={{ width: 192, flexShrink: 0, borderRight: '1px solid var(--border-subtle)', background: 'var(--bg-secondary)', padding: '20px 10px', display: 'flex', flexDirection: 'column', gap: 2, overflowY: 'auto' }}>
-        <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-tertiary)', padding: '4px 8px', marginBottom: 6 }}>
+        <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--text-tertiary)', padding: '4px 8px', marginBottom: 6 }}>
           Design System
         </div>
         {NAV_ITEMS.map(item => {

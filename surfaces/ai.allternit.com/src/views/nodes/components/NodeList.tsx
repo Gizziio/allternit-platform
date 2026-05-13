@@ -46,7 +46,7 @@ export function NodeList({
   if (loading && nodes.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
-        <CircleNotch className="h-8 w-8 animate-spin text-muted-foreground" />
+        <CircleNotch className="size-8  animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -60,7 +60,7 @@ export function NodeList({
             <p>Error loading nodes: {error}</p>
           </div>
           <Button onClick={onRefresh} variant="outline" className="mt-4">
-            <ArrowsClockwise className="h-4 w-4 mr-2" />
+            <ArrowsClockwise className="size-4  mr-2" />
             Retry
           </Button>
         </CardContent>
@@ -79,13 +79,13 @@ export function NodeList({
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {loading && <CircleNotch className="h-4 w-4 animate-spin text-muted-foreground" />}
+          {loading && <CircleNotch className="size-4  animate-spin text-muted-foreground" />}
           <Button variant="outline" size="sm" onClick={onRefresh}>
-            <ArrowsClockwise className="h-4 w-4 mr-2" />
+            <ArrowsClockwise className="size-4  mr-2" />
             Refresh
           </Button>
           <Button size="sm" onClick={onAddNode}>
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="size-4  mr-2" />
             Add Node
           </Button>
         </div>
@@ -97,7 +97,7 @@ export function NodeList({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Nodes</CardTitle>
-              <HardDrives className="h-4 w-4 text-muted-foreground" />
+              <HardDrives className="size-4  text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{nodes.length}</div>
@@ -107,7 +107,7 @@ export function NodeList({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Online</CardTitle>
-              <CheckCircle className="h-4 w-4 text-green-500" />
+              <CheckCircle className="size-4  text-green-500" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-600">{onlineCount}</div>
@@ -117,10 +117,10 @@ export function NodeList({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Offline</CardTitle>
-              <XCircle className="h-4 w-4 text-gray-400" />
+              <XCircle className="size-4  text-zinc-400" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-600">{offlineCount}</div>
+              <div className="text-2xl font-bold text-zinc-600">{offlineCount}</div>
             </CardContent>
           </Card>
           
@@ -131,7 +131,7 @@ export function NodeList({
       {nodes.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <HardDrives className="h-12 w-12 text-muted-foreground mb-4" />
+            <HardDrives className="size-12  text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">No nodes connected</h3>
             <p className="text-sm text-muted-foreground text-center max-w-sm mb-6">
               Add compute nodes to run agents and workloads. You can deploy new cloud instances or connect existing machines.
@@ -139,12 +139,12 @@ export function NodeList({
             <div className="flex flex-col sm:flex-row gap-3">
               {onDeployNew && (
                 <Button variant="outline" onClick={onDeployNew}>
-                  <Cloud className="h-4 w-4 mr-2" />
+                  <Cloud className="size-4  mr-2" />
                   Deploy Cloud Instance
                 </Button>
               )}
               <Button onClick={onAddNode}>
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="size-4  mr-2" />
                 Connect Existing Node
               </Button>
             </div>

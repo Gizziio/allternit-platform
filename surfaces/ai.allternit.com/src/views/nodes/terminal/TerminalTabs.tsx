@@ -246,13 +246,13 @@ export function TerminalTabs({ initialNodeId, className = '' }: TerminalTabsProp
   if (sessions.length === 0) {
     return (
       <div className={`flex flex-col items-center justify-center h-full ${className}`}>
-        <Terminal className="h-12 w-12 text-muted-foreground mb-4" />
+        <Terminal className="size-12  text-muted-foreground mb-4" />
         <h3 className="text-lg font-semibold mb-2">No Active Terminals</h3>
         <p className="text-sm text-muted-foreground text-center max-w-sm mb-4">
           Open a terminal to connect to a node's shell.
         </p>
         <Button onClick={() => setShowNewDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
+          <Plus className="size-4  mr-2" />
           New Terminal
         </Button>
 
@@ -303,7 +303,7 @@ export function TerminalTabs({ initialNodeId, className = '' }: TerminalTabsProp
                   }`}
                 >
                   <div
-                    className={`w-2 h-2 rounded-full ${
+                    className={`size-2  rounded-full ${
                       connected ? 'bg-green-500' : degraded ? 'bg-red-500' : 'bg-amber-500'
                     }`}
                   />
@@ -340,19 +340,19 @@ export function TerminalTabs({ initialNodeId, className = '' }: TerminalTabsProp
           ))}
         </div>
 
-        <div className="hidden md:flex items-center gap-1 text-[11px]">
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-slate-700 text-slate-100">
+        <div className="hidden md:flex items-center gap-1 text-[12px]">
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-zinc-700 text-zinc-100">
             <Cube size={12} />
             sidecar
           </span>
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-slate-700 text-slate-100">
+          <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-zinc-700 text-zinc-100">
             <Shield size={12} />
             snapshots
           </span>
         </div>
 
         <button
-          className="h-7 w-7 flex items-center justify-center rounded hover:bg-white/10 transition-colors"
+          className="size-7  flex items-center justify-center rounded hover:bg-white/10 transition-colors"
           onClick={() => setShowNewDialog(true)}
         >
           <Plus size={16} />
@@ -475,7 +475,7 @@ function NewTerminalDialog({
                       <p className="text-xs text-muted-foreground">{node.id}</p>
                     </div>
                     {selectedNodeId === node.id && (
-                      <div className="w-4 h-4 rounded-full bg-primary" />
+                      <div className="size-4  rounded-full bg-primary" />
                     )}
                   </button>
                 ))}
@@ -619,7 +619,7 @@ function NewTerminalDialog({
               {/* Sandbox Mode */}
               <div className="space-y-4 pt-4 border-t">
                 <div className="flex items-center gap-2">
-                  <Cube className="h-4 w-4 text-primary" />
+                  <Cube className="size-4  text-primary" />
                   <Label className="font-medium">Sandbox Mode</Label>
                 </div>
                 
@@ -640,7 +640,7 @@ function NewTerminalDialog({
                 </div>
 
                 {options.sandbox.enabled && (
-                  <div className="space-y-4 pl-6 border-l-2 border-primary/20">
+                  <div className="space-y-4 pl-6 border-none bg-black/5 rounded-lg py-3 pr-3">
                     {/* Docker Image */}
                     <div className="space-y-2">
                       <Label htmlFor="sandbox-image">Docker Image</Label>
@@ -756,7 +756,7 @@ function NewTerminalDialog({
                     {/* Security Options */}
                     <div className="space-y-3 pt-2">
                       <div className="flex items-center gap-2">
-                        <Shield className="h-4 w-4 text-primary" />
+                        <Shield className="size-4  text-primary" />
                         <Label className="text-sm font-medium">Security Options</Label>
                       </div>
                       
@@ -823,7 +823,7 @@ function NewTerminalDialog({
             Cancel
           </Button>
           <Button onClick={onCreate} disabled={!selectedNodeId}>
-            <Terminal className="h-4 w-4 mr-2" />
+            <Terminal className="size-4  mr-2" />
             Create Terminal
           </Button>
         </div>

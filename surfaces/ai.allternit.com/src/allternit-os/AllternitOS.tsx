@@ -159,10 +159,10 @@ export const AllternitOSProvider: React.FC<{ config: AllternitOSConfig; children
 
   if (!isInitialized) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="flex items-center justify-center h-screen bg-zinc-50 dark:bg-zinc-900">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600 dark:text-gray-400">Initializing AllternitOS...</p>
+          <div className="size-12  border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-zinc-600 dark:text-zinc-400">Initializing AllternitOS…</p>
         </div>
       </div>
     );
@@ -188,10 +188,10 @@ export const AllternitOS: React.FC<AllternitOSProps> = ({
 
   return (
     <AllternitOSProvider config={config}>
-      <div className={`flex flex-col h-screen bg-white dark:bg-gray-900 ${className}`}>
+      <div className={`flex flex-col h-screen bg-white dark:bg-zinc-900 ${className}`}>
         {/* Header */}
         {header && (
-          <header className="flex-shrink-0 border-b border-gray-200 dark:border-gray-800">
+          <header className="flex-shrink-0 border-b border-zinc-200 dark:border-zinc-800">
             {header}
           </header>
         )}
@@ -222,7 +222,7 @@ export const AllternitOS: React.FC<AllternitOSProps> = ({
 
         {/* Footer */}
         {footer && (
-          <footer className="flex-shrink-0 border-t border-gray-200 dark:border-gray-800">
+          <footer className="flex-shrink-0 border-t border-zinc-200 dark:border-zinc-800">
             {footer}
           </footer>
         )}
@@ -245,10 +245,10 @@ export const AllternitOSHeader: React.FC<{
   const activeCount = Object.values(store.programs).filter(p => p.status === 'active' || p.status === 'background').length;
 
   return (
-    <div className={`flex items-center justify-between px-4 py-3 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 ${className}`}>
+    <div className={`flex items-center justify-between px-4 py-3 bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 ${className}`}>
       <div className="flex items-center gap-3">
         {logo || (
-          <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
+          <div className="size-8  bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
             A2
           </div>
         )}
@@ -302,8 +302,8 @@ const ConnectionStatusIndicator: React.FC = () => {
   const config = statusConfig[status];
 
   return (
-    <div className="flex items-center gap-2 text-sm text-gray-500">
-      <span className={`w-2 h-2 rounded-full ${config.color}`} />
+    <div className="flex items-center gap-2 text-sm text-zinc-500">
+      <span className={`size-2  rounded-full ${config.color}`} />
       <span className="hidden sm:inline">{config.label}</span>
     </div>
   );
@@ -337,7 +337,7 @@ export const AllternitQuickActions: React.FC = () => {
         <button
           key={type}
           onClick={() => handleLaunch(type)}
-          className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg text-sm transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-lg text-sm transition-colors"
           title={label}
         >
           <span>{icon}</span>
@@ -359,7 +359,7 @@ export const AllternitOSStatusBar: React.FC = () => {
   const activeCount = programsArray.filter(p => p.status === 'active').length;
 
   return (
-    <div className="flex items-center justify-between px-4 py-2 bg-gray-50 dark:bg-gray-800/50 text-xs text-gray-500">
+    <div className="flex items-center justify-between px-4 py-2 bg-zinc-50 dark:bg-zinc-800/50 text-xs text-zinc-500">
       <div className="flex items-center gap-4">
         <span>AllternitOS v1.0.0</span>
         {programCount > 0 && (
@@ -423,7 +423,7 @@ export const useAllternitCommandPalette = () => {
       icon: '🤖',
       action: () => {
         // This would open the console
-        console.log('Open console');
+        console.debug('Open console');
       },
     },
     ...Object.values(store.programs).map(p => ({

@@ -164,7 +164,7 @@ export function supportsTextExtraction(file: File): boolean {
  */
 export function getTextPreview(text: string, maxLength: number = 500): string {
   if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength) + '...';
+  return text.substring(0, maxLength) + '…';
 }
 
 /**

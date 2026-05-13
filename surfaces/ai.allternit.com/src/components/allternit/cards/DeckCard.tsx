@@ -94,8 +94,8 @@ export function DeckCard({
       {/* Header */}
       <div className="px-4 py-3 border-b border-[#333] bg-[#1e1e1e] flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#D4956A]/10 flex items-center justify-center">
-            <Presentation className="w-4 h-4 text-[#D4956A]" />
+          <div className="size-8  rounded-lg bg-[#D4956A]/10 flex items-center justify-center">
+            <Presentation className="size-4  text-[#D4956A]" />
           </div>
           <div>
             <h3 className="text-sm font-semibold text-[#ECECEC]">
@@ -137,7 +137,7 @@ export function DeckCard({
                 onClick={onPresent}
                 className="h-7 text-[#888] hover:text-[#ECECEC] hover:bg-[#333]"
               >
-                <Play className="w-3.5 h-3.5 mr-1" />
+                <Play className="size-3.5  mr-1" />
                 <span className="text-xs">Present</span>
               </Button>
             )}
@@ -147,7 +147,7 @@ export function DeckCard({
               onClick={onOpenFull}
               className="h-7 text-[#888] hover:text-[#ECECEC] hover:bg-[#333]"
             >
-              <ArrowsOut className="w-3.5 h-3.5 mr-1" />
+              <ArrowsOut className="size-3.5  mr-1" />
               <span className="text-xs">Open Full</span>
             </Button>
           </div>
@@ -202,8 +202,8 @@ export function DeckCard({
               ) : slide?.layout === 'image' ? (
                 <div className="flex items-center justify-center">
                   <div className="text-center">
-                    <div className="w-16 h-16 rounded-lg bg-[#D4956A]/20 mx-auto mb-2 flex items-center justify-center">
-                      <Eye className="w-8 h-8 text-[#D4956A]" />
+                    <div className="size-16  rounded-lg bg-[#D4956A]/20 mx-auto mb-2 flex items-center justify-center">
+                      <Eye className="size-8  text-[#D4956A]" />
                     </div>
                     <p className="text-sm text-[#888]">{slide.title}</p>
                   </div>
@@ -227,12 +227,12 @@ export function DeckCard({
           </div>
 
           {/* Navigation */}
-          <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 flex justify-between px-2 pointer-events-none">
+          <div className="absolute top-1/2 left-0 right-0 -tranzinc-y-1/2 flex justify-between px-2 pointer-events-none">
             <button
               onClick={handlePrev}
               disabled={!hasPrev}
               className={cn(
-                "w-8 h-8 rounded-full bg-[#1e1e1e]/80 border border-[#333] flex items-center justify-center pointer-events-auto transition-colors",
+                "size-8  rounded-full bg-[#1e1e1e]/80 border border-[#333] flex items-center justify-center pointer-events-auto transition-colors",
                 hasPrev 
                   ? "text-[#ECECEC] hover:bg-[#D4956A] hover:border-[#D4956A]" 
                   : "text-[#666] opacity-50 cursor-not-allowed"
@@ -244,7 +244,7 @@ export function DeckCard({
               onClick={handleNext}
               disabled={!hasNext}
               className={cn(
-                "w-8 h-8 rounded-full bg-[#1e1e1e]/80 border border-[#333] flex items-center justify-center pointer-events-auto transition-colors",
+                "size-8  rounded-full bg-[#1e1e1e]/80 border border-[#333] flex items-center justify-center pointer-events-auto transition-colors",
                 hasNext 
                   ? "text-[#ECECEC] hover:bg-[#D4956A] hover:border-[#D4956A]" 
                   : "text-[#666] opacity-50 cursor-not-allowed"

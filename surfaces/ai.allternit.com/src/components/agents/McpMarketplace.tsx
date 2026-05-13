@@ -54,11 +54,11 @@ function McpServerCard({ tool, installed, onInstall }: McpServerCardProps) {
           <div>
             <div style={{ fontSize: 14, fontWeight: 600, color: "var(--ui-text-primary)" }}>{tool.name}</div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2 }}>
-              <Badge variant="outline" className="text-[10px] py-0 h-4">
+              <Badge variant="outline" className="text-xs py-0 h-4">
                 {tool.source}
               </Badge>
               {tool.category && (
-                <span style={{ fontSize: 11, color: "var(--ui-text-muted)" }}>{tool.category}</span>
+                <span style={{ fontSize: 12, color: "var(--ui-text-muted)" }}>{tool.category}</span>
               )}
               {tool.requiresConfirmation && (
                 <Shield size={10} color="#f59e0b" />
@@ -103,7 +103,7 @@ function McpServerCard({ tool, installed, onInstall }: McpServerCardProps) {
           {tool.tags && tool.tags.length > 0 && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {tool.tags.map((tag) => (
-                <span key={tag} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 6, background: "var(--chat-composer-soft)", color: "var(--ui-text-secondary)" }}>
+                <span key={tag} style={{ fontSize: 12, padding: "2px 8px", borderRadius: 6, background: "var(--chat-composer-soft)", color: "var(--ui-text-secondary)" }}>
                   {tag}
                 </span>
               ))}
@@ -179,7 +179,7 @@ export function McpMarketplace({ onInstall }: McpMarketplaceProps) {
         <div style={{ position: "relative", flex: 1, minWidth: 200 }}>
           <Search size={16} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "var(--ui-text-muted)" }} />
           <Input
-            placeholder="Search tools..."
+            placeholder="Search tools…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             style={{ paddingLeft: 34 }}
@@ -207,7 +207,7 @@ export function McpMarketplace({ onInstall }: McpMarketplaceProps) {
         ))}
       </div>
 
-      {isLoading && <p style={{ color: "var(--ui-text-muted)" }}>Loading tools...</p>}
+      {isLoading && <p style={{ color: "var(--ui-text-muted)" }}>Loading tools…</p>}
 
       {/* MCP Servers */}
       {mcpTools.length > 0 && (

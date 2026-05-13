@@ -123,7 +123,7 @@ export const FirecrawlTool = memo(function FirecrawlTool({
       <div className="rounded-an-tool-border-radius border border-border bg-an-tool-background overflow-hidden">
         {/* Header */}
         <div className="flex items-center gap-2 px-3 py-1.5 border-b border-an-tool-border-color bg-background/50">
-          <IconFlame className="w-3.5 h-3.5 text-muted-foreground" />
+          <IconFlame className="size-3.5  text-muted-foreground" />
           <span className="text-xs font-medium text-muted-foreground">
             Firecrawl
           </span>
@@ -175,9 +175,9 @@ export const FirecrawlTool = memo(function FirecrawlTool({
                     )}
                     title={linkUrl}
                   >
-                    <IconLink className="w-3 h-3 shrink-0 text-muted-foreground" />
+                    <IconLink className="size-3  shrink-0 text-muted-foreground" />
                     <span className="truncate flex-1 min-w-0">{linkText}</span>
-                    <IconExternalLink className="w-3 h-3 shrink-0 text-muted-foreground/50" />
+                    <IconExternalLink className="size-3  shrink-0 text-muted-foreground/50" />
                   </a>
                 );
               })}

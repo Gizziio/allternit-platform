@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     // Validate session (handles Clerk and local dev fallback)
     const authState = await getAuth();
     const { userId } = authState;
-    console.info('[oauth-authorize] Auth state resolved', {
+    console.debug('[oauth-authorize] Auth state resolved', {
       userId,
       sessionId: authState.sessionId,
       orgId: authState.orgId,
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { clientId, redirectUri, state, userEmail, codeChallenge, codeChallengeMethod } = body;
-    console.info('[oauth-authorize] Request payload received', {
+    console.debug('[oauth-authorize] Request payload received', {
       clientId,
       redirectUri,
       statePresent: Boolean(state),
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
       codeChallengeMethod,
       scope: app.scopes.join(' '),
     });
-    console.info('[oauth-authorize] Authorization code issued', {
+    console.debug('[oauth-authorize] Authorization code issued', {
       clientId,
       redirectUri,
       userId,

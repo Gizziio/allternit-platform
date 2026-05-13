@@ -15,7 +15,7 @@
 
 export const dynamic = 'force-static';
 
-export function GET() {
+export function GET(): void {
   return Response.json(
     {
       auth: {

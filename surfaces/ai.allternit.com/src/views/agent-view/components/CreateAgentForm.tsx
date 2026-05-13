@@ -408,11 +408,11 @@ export function CreateAgentForm({
       return;
     }
     
-    console.log('[CreateAgentForm] Submitting from review step');
+    console.debug('[CreateAgentForm] Submitting from review step');
     
     // SAFETY: Check we're ready and not already creating
     if (!isReadyForCreate) {
-      console.log('[CreateAgentForm] Not ready for creation');
+      console.debug('[CreateAgentForm] Not ready for creation');
       return;
     }
 
@@ -834,7 +834,7 @@ export function CreateAgentForm({
   const isBusy = isCreating || isForgeQueued;
 
   return (
-    <div style={containerStyle}>
+    <div className="flex flex-col h-full max-h-screen p-6 overflow-auto bg-transparent">
       {/* Submit Status Overlay */}
       {submitStatus && (
         <div style={{
@@ -860,14 +860,14 @@ export function CreateAgentForm({
         </div>
       )}
 
-      <div style={headerStyle}>
+      <div className="relative flex items-center justify-center mb-6">
         {/* Theme Toggle — Left */}
         <ThemeToggle />
 
         {/* Centered Title */}
         <div style={{ textAlign: 'center', flex: 1 }}>
-          <h1 style={titleStyle}>Create New Agent</h1>
-          <p style={subtitleStyle}>Configure your AI agent with voice, type, and capabilities</p>
+          <h1 className="m-0 text-2xl font-medium font-research" style={{ color: STUDIO_THEME.textPrimary }}>Create New Agent</h1>
+          <p className="m-0 mt-1 text-sm" style={{ color: STUDIO_THEME.textSecondary }}>Configure your AI agent with voice, type, and capabilities</p>
         </div>
 
         {/* Spacer to balance layout */}
@@ -911,14 +911,10 @@ export function CreateAgentForm({
                   onClick={() => {
                     if (unlocked) setActiveStep(step.id);
                   }}
-                  style={{
-                    ...sectionStyle(selected, completed),
-                    opacity: unlocked ? 1 : 0.5,
-                    cursor: unlocked ? 'pointer' : 'not-allowed',
-                  }}
+                  className={`text-left transition-all ease-in-out duration-200 p-3 rounded-lg border ${selected ? 'border-accent bg-accent/10' : completed ? 'border-accent/40 bg-accent/5' : 'border-border-subtle bg-card'}`}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={stepLabelStyle(selected)}>{step.label}</span>
+                    <span className={`text-sm font-medium ${selected ? 'text-primary' : 'text-secondary'}`}>{step.label}</span>
                     {selected || completed ? (
                       <CheckCircle style={{ width: 16, height: 16, color: STUDIO_THEME.accent }} />
                     ) : (
@@ -1158,8 +1154,8 @@ export function CreateAgentForm({
                       step={1}
                     />
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px' }}>
-                      <span style={{ fontSize: '11px', color: STUDIO_THEME.textMuted }}>{trait.low}</span>
-                      <span style={{ fontSize: '11px', color: STUDIO_THEME.textMuted }}>{trait.high}</span>
+                      <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted }}>{trait.low}</span>
+                      <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted }}>{trait.high}</span>
                     </div>
                   </div>
                 ))}
@@ -1224,7 +1220,7 @@ export function CreateAgentForm({
                 <TagInput
                   value={(formData.config as any)?.personalityTraits || []}
                   onChange={(tags: string[]) => setFormData(prev => ({ ...prev, config: { ...(prev.config || {}), personalityTraits: tags } }))}
-                  placeholder="Add traits (e.g. Stoic, Sarcastic, Highly Technical)..."
+                  placeholder="Add traits (e.g. Stoic, Sarcastic, Highly Technical)…"
                 />
               </div>
 
@@ -1233,7 +1229,7 @@ export function CreateAgentForm({
                 <Textarea
                   value={(formData.config as any)?.backstory || ''}
                   onChange={(e) => setFormData(prev => ({ ...prev, config: { ...(prev.config || {}), backstory: e.target.value } }))}
-                  placeholder="Provide background context that shapes this agent's behavior..."
+                  placeholder="Provide background context that shapes this agent's behavior…"
                   rows={4}
                   style={{ background: STUDIO_THEME.bg, border: `1px solid ${STUDIO_THEME.borderSubtle}`, color: STUDIO_THEME.textPrimary }}
                 />
@@ -1270,7 +1266,7 @@ export function CreateAgentForm({
                     </div>
                     <p style={{ fontSize: '12px', color: STUDIO_THEME.textSecondary, margin: '0 0 8px 0' }}>{setup.description}</p>
                     <span style={{
-                      fontSize: '10px',
+                      fontSize: '12px',
                       padding: '2px 8px',
                       borderRadius: '4px',
                       background: `${STUDIO_THEME.accent}15`,
@@ -1322,7 +1318,7 @@ export function CreateAgentForm({
                       </div>
                       <div>
                         <div style={{ fontWeight: 500, color: isSelected ? 'var(--status-error)' : STUDIO_THEME.textPrimary, fontSize: '14px' }}>{(ban as any).label}</div>
-                        <div style={{ fontSize: '11px', color: STUDIO_THEME.textMuted, marginTop: '2px' }}>{(ban as any).description}</div>
+                        <div style={{ fontSize: '12px', color: STUDIO_THEME.textMuted, marginTop: '2px' }}>{(ban as any).description}</div>
                       </div>
                     </button>
                   );
@@ -1346,7 +1342,7 @@ export function CreateAgentForm({
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                       <Label style={{ color: STUDIO_THEME.textPrimary }}>Specialty Skills</Label>
-                      <span style={{ fontSize: '11px', color: STUDIO_THEME.textMuted }}>{(blueprint.specialtySkills ?? []).length}/4</span>
+                      <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted }}>{(blueprint.specialtySkills ?? []).length}/4</span>
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                       {getSpecialtyOptions(blueprint.setup).map((skill) => {
@@ -1376,7 +1372,7 @@ export function CreateAgentForm({
                     <TagInput
                       value={splitLines(cardSeed.escalationRules)}
                       onChange={(tags: string[]) => setCardSeed(prev => ({ ...prev, escalationRules: tags.join('\n') }))}
-                      placeholder="Add triggers..."
+                      placeholder="Add triggers…"
                     />
                   </div>
                 </div>
@@ -1389,7 +1385,7 @@ export function CreateAgentForm({
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: '13px', color: STUDIO_THEME.textSecondary }}>Class</span>
                     <span style={{
-                      fontSize: '11px',
+                      fontSize: '12px',
                       padding: '2px 8px',
                       borderRadius: '10px',
                       border: `1px solid ${STUDIO_THEME.borderSubtle}`,
@@ -1442,7 +1438,7 @@ export function CreateAgentForm({
                         <span style={{ fontWeight: 500, fontSize: '14px', color: STUDIO_THEME.textPrimary }}>{definition.label}</span>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <span style={{
-                            fontSize: '10px',
+                            fontSize: '12px',
                             padding: '2px 6px',
                             borderRadius: '4px',
                             border: `1px solid ${STUDIO_THEME.borderSubtle}`,
@@ -1469,8 +1465,8 @@ export function CreateAgentForm({
                           }}
                         />
                       </div>
-                      <p style={{ fontSize: '11px', color: STUDIO_THEME.textSecondary, margin: '8px 0 0 0' }}>{definition.description}</p>
-                      <p style={{ fontSize: '10px', color: STUDIO_THEME.textMuted, margin: '4px 0 0 0' }}>
+                      <p style={{ fontSize: '12px', color: STUDIO_THEME.textSecondary, margin: '8px 0 0 0' }}>{definition.description}</p>
+                      <p style={{ fontSize: '12px', color: STUDIO_THEME.textMuted, margin: '4px 0 0 0' }}>
                         Signals: {definition.signals.join(", ")}
                       </p>
                     </div>
@@ -1539,7 +1535,7 @@ export function CreateAgentForm({
                 <Input
                   value={cardSeed.voiceStyle}
                   onChange={(e) => setCardSeed((prev) => ({ ...prev, voiceStyle: e.target.value }))}
-                  placeholder="Technical, direct, skeptical..."
+                  placeholder="Technical, direct, skeptical…"
                   style={{
                     background: STUDIO_THEME.bg,
                     border: `1px solid ${STUDIO_THEME.borderSubtle}`,
@@ -1611,7 +1607,7 @@ export function CreateAgentForm({
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
                 <label style={inputLabelStyle}>Hard Ban Categories</label>
                 <span style={{
-                  fontSize: '11px',
+                  fontSize: '12px',
                   padding: '2px 8px',
                   borderRadius: '10px',
                   background: STUDIO_THEME.bg,
@@ -1652,7 +1648,7 @@ export function CreateAgentForm({
                         <span style={{ fontWeight: 500, fontSize: '13px', color: STUDIO_THEME.textPrimary }}>{option.label}</span>
                         {selected && <CheckCircle style={{ width: 16, height: 16, color: STUDIO_THEME.accent }} />}
                       </div>
-                      <p style={{ fontSize: '11px', color: STUDIO_THEME.textSecondary, margin: '4px 0 0 0' }}>{option.description}</p>
+                      <p style={{ fontSize: '12px', color: STUDIO_THEME.textSecondary, margin: '4px 0 0 0' }}>{option.description}</p>
                     </button>
                   );
                 })}
@@ -1768,7 +1764,7 @@ export function CreateAgentForm({
                                   }} />
                                   <span style={{ fontWeight: 600, fontSize: '13px' }}>{model.name}</span>
                                 </div>
-                                <span style={{ fontSize: '10px', color: STUDIO_THEME.textMuted, marginLeft: '16px' }}>
+                                <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted, marginLeft: '16px' }}>
                                   {model.provider.toUpperCase()} • {model.id}
                                 </span>
                               </div>
@@ -1926,7 +1922,7 @@ export function CreateAgentForm({
                                   />
                                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                                     <span style={{ fontWeight: 500 }}>{voice.label}</span>
-                                    <span style={{ fontSize: '10px', color: STUDIO_THEME.textMuted }}>
+                                    <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted }}>
                                       {voice.engine.toUpperCase()} {!voice.assetReady ? " (Download Required)" : ""}
                                     </span>
                                   </div>
@@ -1968,8 +1964,8 @@ export function CreateAgentForm({
                         ].map((tone) => (
                           <div key={tone.id}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                              <span style={{ fontSize: '11px', color: STUDIO_THEME.textMuted }}>{tone.label}</span>
-                              <span style={{ fontSize: '11px', color: STUDIO_THEME.accent }}>{((formData.config as any)?.voice?.tone?.[tone.id] ?? 0.5) * 100}%</span>
+                              <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted }}>{tone.label}</span>
+                              <span style={{ fontSize: '12px', color: STUDIO_THEME.accent }}>{((formData.config as any)?.voice?.tone?.[tone.id] ?? 0.5) * 100}%</span>
                             </div>
                             <Slider
                               value={[((formData.config as any)?.voice?.tone?.[tone.id] ?? 0.5) * 100]}
@@ -2310,7 +2306,7 @@ export function CreateAgentForm({
                           }}>
                             <FileText style={{ width: 14, height: 14, color: STUDIO_THEME.accent, flexShrink: 0 }} />
                             <span style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: STUDIO_THEME.textPrimary }}>{doc.path}</span>
-                            <span style={{ fontSize: '10px', color: STUDIO_THEME.textMuted, marginLeft: 'auto' }}>
+                            <span style={{ fontSize: '12px', color: STUDIO_THEME.textMuted, marginLeft: 'auto' }}>
                               {doc.content.length} chars
                             </span>
                           </div>
@@ -2356,7 +2352,7 @@ export function CreateAgentForm({
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
                     <span style={{
-                      fontSize: '11px',
+                      fontSize: '12px',
                       padding: '4px 10px',
                       borderRadius: '10px',
                       border: `1px solid ${STUDIO_THEME.borderSubtle}`,
@@ -2366,7 +2362,7 @@ export function CreateAgentForm({
                     </span>
                     {setupMeta && (
                       <span style={{
-                        fontSize: '11px',
+                        fontSize: '12px',
                         padding: '4px 10px',
                         borderRadius: '10px',
                         background: `${STUDIO_THEME.accent}15`,
@@ -2376,7 +2372,7 @@ export function CreateAgentForm({
                       </span>
                     )}
                     <span style={{
-                      fontSize: '11px',
+                      fontSize: '12px',
                       padding: '4px 10px',
                       borderRadius: '10px',
                       border: `1px solid ${STUDIO_THEME.borderSubtle}`,
@@ -2385,7 +2381,7 @@ export function CreateAgentForm({
                       {formData.model}
                     </span>
                     <span style={{
-                      fontSize: '11px',
+                      fontSize: '12px',
                       padding: '4px 10px',
                       borderRadius: '10px',
                       border: `1px solid ${STUDIO_THEME.borderSubtle}`,
@@ -2397,7 +2393,7 @@ export function CreateAgentForm({
 
                   <div style={{ marginBottom: '16px' }}>
                     <label style={{
-                      fontSize: '11px',
+                      fontSize: '12px',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
                       color: STUDIO_THEME.textMuted,
@@ -2430,7 +2426,7 @@ export function CreateAgentForm({
 
                   <div>
                     <label style={{
-                      fontSize: '11px',
+                      fontSize: '12px',
                       textTransform: 'uppercase',
                       letterSpacing: '0.05em',
                       color: STUDIO_THEME.textMuted,
@@ -2440,7 +2436,7 @@ export function CreateAgentForm({
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                       {((formData.config as any)?.hardBans || []).map((b: any) => (
                         <span key={b.category} style={{
-                          fontSize: '11px',
+                          fontSize: '12px',
                           padding: '4px 10px',
                           borderRadius: '10px',
                           background: 'rgba(239, 68, 68, 0.15)',
@@ -2501,7 +2497,7 @@ export function CreateAgentForm({
                     }}>
                       <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                         <h3 style={{ fontSize: '14px', fontWeight: 600, color: STUDIO_THEME.textPrimary, margin: 0 }}>Visual Identity</h3>
-                        <span style={{ fontSize: '10px', background: `${STUDIO_THEME.accent}20`, color: STUDIO_THEME.accent, padding: '2px 6px', borderRadius: '4px' }}>
+                        <span style={{ fontSize: '12px', background: `${STUDIO_THEME.accent}20`, color: STUDIO_THEME.accent, padding: '2px 6px', borderRadius: '4px' }}>
                           {(avatarConfig as any).mascotTemplate || 'Custom'}
                         </span>
                       </div>
@@ -2650,7 +2646,7 @@ export function CreationProgressAnimation({
 
   return (
     <div className="flex flex-col items-center justify-center gap-8 text-white p-12">
-      <div className="relative w-48 h-48">
+      <div className="relative size-48 ">
         <motion.div
           className="absolute inset-0 border-4 border-t-transparent border-primary rounded-full"
           animate={{ rotate: 360 }}

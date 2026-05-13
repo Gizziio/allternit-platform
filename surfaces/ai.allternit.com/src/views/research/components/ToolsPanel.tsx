@@ -166,14 +166,14 @@ export function ToolsPanel({
         <div className="rounded-lg p-2.5" style={{ backgroundColor: 'var(--bg-tertiary, #18181b)' }}>
           <div className="flex items-center gap-1.5 mb-1.5">
             <Search size={12} color="var(--text-muted, #a1a1aa)" />
-            <span className="text-[11px] font-medium text-[var(--text-muted,#a1a1aa)]">Search Sources</span>
+            <span className="text-[12px] font-medium text-[var(--text-muted,#a1a1aa)]">Search Sources</span>
           </div>
           <div className="flex gap-1">
             <input
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSearch()}
-              placeholder="Ask sources..."
+              placeholder="Ask sources…"
               className="research-input"
             />
             <button
@@ -187,7 +187,7 @@ export function ToolsPanel({
           {searchResults.length > 0 && (
             <div className="mt-2 flex flex-col gap-1">
               {searchResults.map((r, i) => (
-                <div key={i} className="text-[10px] text-[var(--text-muted,#a1a1aa)] px-1.5 py-1 rounded"
+                <div key={i} className="text-xs text-[var(--text-muted,#a1a1aa)] px-1.5 py-1 rounded"
                   style={{ backgroundColor: 'var(--bg-secondary, #111113)' }}
                 >
                   {r.excerpt?.slice(0, 80)}...
@@ -199,11 +199,11 @@ export function ToolsPanel({
 
         {/* User Notes */}
         <div className="flex-1 flex flex-col min-h-[100px]">
-          <span className="text-[11px] font-medium text-[var(--text-muted,#a1a1aa)] mb-1.5">My Notes</span>
+          <span className="text-[12px] font-medium text-[var(--text-muted,#a1a1aa)] mb-1.5">My Notes</span>
           <textarea
             value={userNotes}
             onChange={e => setUserNotes(e.target.value)}
-            placeholder="Jot down insights..."
+            placeholder="Jot down insights…"
             className="flex-1 p-2 rounded-md text-xs resize-none leading-relaxed outline-none"
             style={{
               backgroundColor: 'var(--bg-tertiary, #18181b)',

@@ -120,7 +120,7 @@ export function ConnectorSettingsPanel() {
           return (
             <section key={cat} style={{ marginBottom: 28 }}>
               <h3 style={{
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 600,
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
@@ -173,7 +173,7 @@ function ConnectorRow({ connector }: { connector: ConnectorWithStatus }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
           <span style={{ fontWeight: 600, fontSize: 14 }}>{connector.name}</span>
           <span style={{
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 600,
             letterSpacing: '0.06em',
             textTransform: 'uppercase',
@@ -192,7 +192,7 @@ function ConnectorRow({ connector }: { connector: ConnectorWithStatus }) {
           <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
             {connector.missingVars.map((key) => (
               <code key={key} style={{
-                fontSize: 10,
+                fontSize: 12,
                 padding: '1px 6px',
                 background: 'rgba(255,255,255,0.06)',
                 border: '1px solid rgba(255,255,255,0.1)',

@@ -21,7 +21,7 @@ export function DotPulse({ className, dotClassName, count = 3 }: DotPulseProps) 
         <span
           key={i}
           className={cn(
-            'block h-1.5 w-1.5 rounded-full bg-current opacity-60',
+            'block size-1.5  rounded-full bg-current opacity-60',
             dotClassName
           )}
           style={{

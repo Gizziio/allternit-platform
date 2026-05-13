@@ -40,7 +40,7 @@ export function ViewSkeleton({
       {showHeader && (
         <div className="flex items-center space-x-4">
           <div className={`${baseClasses} h-8 w-32`} />
-          <div className={`${baseClasses} h-8 w-8 ml-auto`} />
+          <div className={`${baseClasses} size-8  ml-auto`} />
         </div>
       )}
       
@@ -71,7 +71,7 @@ export function CardSkeleton({ className = '' }: { className?: string }) {
   return (
     <div className={`p-4 border rounded-lg bg-card ${className}`}>
       <div className="flex items-start space-x-4">
-        <div className="h-12 w-12 rounded-full bg-muted animate-pulse" />
+        <div className="size-12  rounded-full bg-muted animate-pulse" />
         <div className="flex-1 space-y-2">
           <div className="h-4 w-1/3 bg-muted rounded animate-pulse" />
           <div className="h-3 w-2/3 bg-muted rounded animate-pulse" />
@@ -93,7 +93,7 @@ export function ListSkeleton({ count = 5 }: { count?: number }) {
           key={i}
           className="flex items-center space-x-3 p-3 rounded-lg bg-muted/50 animate-pulse"
         >
-          <div className="h-10 w-10 rounded bg-muted" />
+          <div className="size-10  rounded bg-muted" />
           <div className="flex-1 space-y-2">
             <div className="h-4 w-1/4 bg-muted rounded" />
             <div className="h-3 w-1/2 bg-muted rounded" />
@@ -111,7 +111,7 @@ export function MessageSkeleton({ isUser = false }: { isUser?: boolean }) {
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} p-4`}>
       <div className={`flex max-w-[80%] space-x-3 ${isUser ? 'flex-row-reverse' : ''}`}>
-        <div className="h-8 w-8 rounded-full bg-muted animate-pulse flex-shrink-0" />
+        <div className="size-8  rounded-full bg-muted animate-pulse flex-shrink-0" />
         <div className={`space-y-2 ${isUser ? 'items-end' : 'items-start'} flex flex-col`}>
           <div className="h-3 w-20 bg-muted rounded animate-pulse" />
           <div className="h-20 w-64 bg-muted rounded-lg animate-pulse" />
@@ -128,9 +128,9 @@ export function CodeEditorSkeleton() {
   return (
     <div className="h-64 w-full bg-muted/30 rounded-lg border overflow-hidden">
       <div className="flex items-center px-4 py-2 bg-muted/50 border-b space-x-2">
-        <div className="h-3 w-3 rounded-full bg-muted animate-pulse" />
-        <div className="h-3 w-3 rounded-full bg-muted animate-pulse" />
-        <div className="h-3 w-3 rounded-full bg-muted animate-pulse" />
+        <div className="size-3  rounded-full bg-muted animate-pulse" />
+        <div className="size-3  rounded-full bg-muted animate-pulse" />
+        <div className="size-3  rounded-full bg-muted animate-pulse" />
         <div className="h-4 w-24 bg-muted rounded animate-pulse ml-4" />
       </div>
       <div className="p-4 space-y-2">
@@ -163,7 +163,7 @@ export function TerminalSkeleton() {
       </div>
       <div className="px-2 pb-2 flex items-center space-x-2">
         <div className="h-3 w-2 bg-green-500/50 rounded animate-pulse" />
-        <div className="h-3 w-3 bg-muted/50 rounded animate-pulse" />
+        <div className="size-3  bg-muted/50 rounded animate-pulse" />
       </div>
     </div>
   );
@@ -226,7 +226,7 @@ export function ImageSkeleton({ aspectRatio = '16/9' }: { aspectRatio?: string }
       style={{ aspectRatio }}
     >
       <svg
-        className="w-12 h-12 text-muted-foreground/30"
+        className="size-12  text-muted-foreground/30"
         fill="none"
         stroke="currentColor"
         viewBox="0 0 24 24"

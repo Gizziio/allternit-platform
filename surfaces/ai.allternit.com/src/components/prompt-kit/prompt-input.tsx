@@ -241,7 +241,7 @@ export function PromptInputTextarea({
               >
                   <span className="invisible">{value}</span>
                   <span>{suggestion.slice(value.length)}</span>
-                  <span className="ml-2 text-[10px] bg-[var(--rail-active-bg)] px-1 py-0.5 rounded border border-[var(--border-subtle)] text-[var(--text-secondary)]">TAB</span>
+                  <span className="ml-2 text-xs bg-[var(--rail-active-bg)] px-1 py-0.5 rounded border border-[var(--border-subtle)] text-[var(--text-secondary)]">TAB</span>
               </motion.div>
           )}
         </AnimatePresence>

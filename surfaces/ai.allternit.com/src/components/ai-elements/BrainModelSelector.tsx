@@ -159,7 +159,7 @@ export function BrainModelSelector({
           onValueChange={handleProviderSelect}
         >
           <SelectTrigger>
-            <SelectValue placeholder="Select a provider..." />
+            <SelectValue placeholder="Select a provider…" />
           </SelectTrigger>
           <SelectContent>
             {/* Available Providers */}
@@ -176,9 +176,9 @@ export function BrainModelSelector({
                   >
                     <div className="flex items-center gap-2">
                       {provider.isLocked ? (
-                        <Lock className="h-3 w-3 text-muted-foreground" />
+                        <Lock className="size-3  text-muted-foreground" />
                       ) : (
-                        <Check className="h-3 w-3 text-green-500" />
+                        <Check className="size-3  text-green-500" />
                       )}
                       <span>{provider.providerName}</span>
                       {provider.isLocked && (
@@ -239,7 +239,7 @@ export function BrainModelSelector({
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
-              <Lock className="h-5 w-5 text-muted-foreground" />
+              <Lock className="size-5  text-muted-foreground" />
               <div className="text-sm">
                 <p className="font-medium">Authentication Required</p>
                 <p className="text-muted-foreground">
@@ -275,9 +275,9 @@ export function BrainModelSelector({
       {/* Selected Model Display */}
       {value && (
         <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-          <Brain className="h-4 w-4 text-primary" />
+          <Brain className="size-4  text-primary" />
           <span className="text-sm font-medium truncate">{value}</span>
-          <Check className="h-4 w-4 text-green-500 ml-auto" />
+          <Check className="size-4  text-green-500 ml-auto" />
         </div>
       )}
     </div>

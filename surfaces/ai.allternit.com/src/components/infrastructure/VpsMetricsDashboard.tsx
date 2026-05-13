@@ -150,7 +150,7 @@ export function VpsMetricsDashboard({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <HardDrives className="w-5 h-5 text-primary" />
+          <HardDrives className="size-5  text-primary" />
           <div>
             <h3 className="font-semibold">{vpsConnection.name}</h3>
             <p className="text-xs text-muted-foreground">
@@ -185,7 +185,7 @@ export function VpsMetricsDashboard({
             disabled={isLoading}
             className="gap-1"
           >
-            <ArrowsClockwise className={cn("w-3 h-3", isLoading && "animate-spin")} />
+            <ArrowsClockwise className={cn("size-3 ", isLoading && "animate-spin")} />
             Refresh
           </Button>
         </div>

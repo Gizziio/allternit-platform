@@ -20,7 +20,7 @@ export function CitationMarker({ citation, onClick }: CitationMarkerProps) {
     <span className="relative inline-block">
       <sup
         onClick={handleClick}
-        className="cursor-pointer font-semibold text-[11px] ml-0.5 select-none"
+        className="cursor-pointer font-semibold text-[12px] ml-0.5 select-none"
         style={{ color: '#a78bfa' }}
         title={`Source ${citation.index}${citation.page_number ? `, Page ${citation.page_number}` : ''}`}
       >
@@ -38,7 +38,7 @@ export function CitationMarker({ citation, onClick }: CitationMarkerProps) {
                 Source {citation.index}
               </span>
               {citation.page_number && (
-                <span className="text-[11px] text-[var(--text-muted,#a1a1aa)]">
+                <span className="text-[12px] text-[var(--text-muted,#a1a1aa)]">
                   Page {citation.page_number}
                 </span>
               )}
@@ -53,7 +53,7 @@ export function CitationMarker({ citation, onClick }: CitationMarkerProps) {
                   onClick(citation.source_id);
                   setOpen(false);
                 }}
-                className="mt-2 text-[11px] text-purple-400 bg-transparent border-none cursor-pointer p-0"
+                className="mt-2 text-[12px] text-purple-400 bg-transparent border-none cursor-pointer p-0"
               >
                 Jump to source →
               </button>

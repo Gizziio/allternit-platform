@@ -193,7 +193,7 @@ export interface A2UIRendererExtendedProps {
  * ```tsx
  * <A2UIRendererExtended
  *   payload={payload}
- *   onAction={(actionId, payload) => console.log(actionId, payload)}
+ *   onAction={(actionId, payload) => console.debug(actionId, payload)}
  *   enableAnimations={true}
  * />
  * ```
@@ -239,7 +239,7 @@ export function A2UIRendererExtended({
       dataModel,
       updateDataModel,
       onAction: (actionId, payload) => {
-        console.log("[A2UI Extended] Action triggered:", actionId, payload);
+        console.debug("[A2UI Extended] Action triggered:", actionId, payload);
         onAction?.(actionId, payload);
       },
       whitelist,

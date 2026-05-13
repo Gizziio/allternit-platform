@@ -190,7 +190,7 @@ export const ProjectRailSection = memo(function ProjectRailSection({
         {rootItems.length > 0 ? (
           <>
             <div style={{
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 600,
               color: 'var(--text-tertiary)',
               textTransform: 'uppercase',
@@ -256,7 +256,7 @@ function WorkstreamSectionLabel({
           />
           <span
             style={{
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 800,
               textTransform: 'uppercase',
               letterSpacing: '0.08em',
@@ -272,7 +272,7 @@ function WorkstreamSectionLabel({
                 border: '1px solid var(--shell-divider)',
                 background: 'var(--shell-item-hover)',
                 padding: '2px 6px',
-                fontSize: 9,
+                fontSize: 12,
                 color: 'var(--shell-item-muted)',
               }}
             >
@@ -281,7 +281,7 @@ function WorkstreamSectionLabel({
           ) : null}
         </div>
         {caption ? (
-          <div style={{ fontSize: 11, color: 'var(--shell-item-muted)' }}>{caption}</div>
+          <div style={{ fontSize: 12, color: 'var(--shell-item-muted)' }}>{caption}</div>
         ) : null}
       </div>
     </div>
@@ -444,7 +444,7 @@ function ProjectRailItem({
         <span style={{ fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flex: 1 }}>{label}</span>
         {badge !== undefined && (
           <span style={{
-            fontSize: 10,
+            fontSize: 12,
             color: isActive ? 'var(--shell-item-active-fg)' : 'var(--shell-item-muted)',
             background: isActive ? 'var(--surface-hover)' : 'var(--surface-panel-muted)',
             padding: '2px 6px',
@@ -637,7 +637,7 @@ function ItemRailRow({
         <item.icon size={16} weight={item.isActive ? 'fill' : 'bold'} />
         <span style={{ fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{item.title}</span>
         {item.metaLabel && (
-          <span style={{ fontSize: 10, color: 'var(--shell-item-muted)', opacity: 0.7 }}>{item.metaLabel}</span>
+          <span style={{ fontSize: 12, color: 'var(--shell-item-muted)', opacity: 0.7 }}>{item.metaLabel}</span>
         )}
       </button>
 
@@ -682,7 +682,7 @@ function ItemRailRow({
                     <div style={{ position: 'absolute', left: '-100%', top: 0, minWidth: 140, background: 'var(--shell-menu-bg)', border: '1px solid var(--shell-menu-border)', borderRadius: 12, overflow: 'hidden' }}>
                       <button
                         onClick={() => { onMoveToProject?.(''); setShowMenu(false); }}
-                        style={{ width: '100%', padding: '8px', background: 'transparent', border: 'none', color: 'var(--shell-item-fg)', textAlign: 'left', cursor: 'pointer', fontSize: 11 }}
+                        style={{ width: '100%', padding: '8px', background: 'transparent', border: 'none', color: 'var(--shell-item-fg)', textAlign: 'left', cursor: 'pointer', fontSize: 12 }}
                       >
                         (No Project)
                       </button>
@@ -690,7 +690,7 @@ function ItemRailRow({
                         <button
                           key={p.id}
                           onClick={() => { onMoveToProject?.(p.id); setShowMenu(false); }}
-                          style={{ width: '100%', padding: '8px', background: 'transparent', border: 'none', color: 'var(--shell-item-fg)', textAlign: 'left', cursor: 'pointer', fontSize: 11 }}
+                          style={{ width: '100%', padding: '8px', background: 'transparent', border: 'none', color: 'var(--shell-item-fg)', textAlign: 'left', cursor: 'pointer', fontSize: 12 }}
                         >
                           {p.title}
                         </button>
@@ -745,10 +745,10 @@ function GhostRailNotice({ icon: Icon, title, description, actionLabel, onClick 
         <Icon size={20} color="var(--accent-primary)" />
         <div>
           <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{title}</div>
-          <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 2 }}>{description}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>{description}</div>
         </div>
       </div>
-      <div style={{ marginTop: 8, fontSize: 10, fontWeight: 700, color: 'var(--accent-primary)', textTransform: 'uppercase' }}>{actionLabel}</div>
+      <div style={{ marginTop: 8, fontSize: 12, fontWeight: 700, color: 'var(--accent-primary)', textTransform: 'uppercase' }}>{actionLabel}</div>
     </button>
   );
 }

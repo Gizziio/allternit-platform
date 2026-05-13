@@ -49,7 +49,7 @@ function ExecutePanel() {
     <div className="h-full flex flex-col p-4">
       <div className="flex-1 bg-muted rounded-lg p-4 font-mono text-sm overflow-auto mb-4">
         {output.length === 0 ? (
-          <span className="text-muted-foreground">Ready to execute tools...</span>
+          <span className="text-muted-foreground">Ready to execute tools…</span>
         ) : (
           output.map((line, i) => <div key={i}>{line}</div>)
         )}
@@ -60,12 +60,12 @@ function ExecutePanel() {
           value={command}
           onChange={(e) => setCommand(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleExecute()}
-          placeholder="Enter command..."
+          placeholder="Enter command…"
           className="flex-1 px-4 py-2 rounded-lg border bg-background"
           disabled={isRunning}
         />
         <Button onClick={handleExecute} disabled={isRunning || !command.trim()}>
-          {isRunning ? <ArrowsClockwise className="w-4 h-4 animate-spin" /> : <Play size={16} />}
+          {isRunning ? <ArrowsClockwise className="size-4  animate-spin" /> : <Play size={16} />}
         </Button>
       </div>
     </div>
@@ -83,7 +83,7 @@ function StatusBar() {
   return (
     <div className="h-10 border-t bg-muted/50 flex items-center px-4 gap-6 text-xs">
       <div className="flex items-center gap-2">
-        <div className={`w-2 h-2 rounded-full ${railsConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+        <div className={`size-2  rounded-full ${railsConnected ? 'bg-green-500' : 'bg-red-500'}`} />
         <span className="text-muted-foreground">Rails</span>
         <span className={railsConnected ? 'text-green-500' : 'text-red-500'}>
           {railsConnected ? 'Connected' : 'Disconnected'}
@@ -92,7 +92,7 @@ function StatusBar() {
       
       {activeRuns > 0 && (
         <div className="flex items-center gap-2">
-          <Activity className="w-3 h-3 text-blue-500" />
+          <Activity className="size-3  text-blue-500" />
           <span className="text-muted-foreground">Active Runs</span>
           <Badge variant="default" className="text-xs">{activeRuns}</Badge>
         </div>
@@ -100,7 +100,7 @@ function StatusBar() {
       
       {activeLeases > 0 && (
         <div className="flex items-center gap-2">
-          <Key className="w-3 h-3 text-yellow-500" />
+          <Key className="size-3  text-yellow-500" />
           <span className="text-muted-foreground">Leases</span>
           <Badge variant="secondary" className="text-xs">{activeLeases}</Badge>
         </div>
@@ -108,7 +108,7 @@ function StatusBar() {
       
       {pendingGates > 0 && (
         <div className="flex items-center gap-2">
-          <Warning className="w-3 h-3 text-orange-500" />
+          <Warning className="size-3  text-orange-500" />
           <span className="text-muted-foreground">Pending Gates</span>
           <Badge variant="destructive" className="text-xs">{pendingGates}</Badge>
         </div>
@@ -123,7 +123,7 @@ function StatusBar() {
   );
 }
 
-export function RunnerView() {
+export function RunnerView(): JSX.Element {
   const { 
     activeTab, 
     setActiveTab, 
@@ -149,8 +149,8 @@ export function RunnerView() {
       {/* Header */}
       <div className="h-14 border-b flex items-center px-4 gap-4">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Robot className="w-5 h-5 text-primary" />
+          <div className="size-8  rounded-lg bg-primary/10 flex items-center justify-center">
+            <Robot className="size-5  text-primary" />
           </div>
           <div>
             <h1 className="font-semibold">DAK Runner</h1>
@@ -163,27 +163,27 @@ export function RunnerView() {
         {/* Quick Stats */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted">
-            <div className={`w-2 h-2 rounded-full ${railsConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+            <div className={`size-2  rounded-full ${railsConnected ? 'bg-green-500' : 'bg-red-500'}`} />
             <span className="text-xs">Rails {railsConnected ? 'OK' : 'Down'}</span>
           </div>
           
           {activeRuns > 0 && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10">
-              <Activity className="w-3 h-3 text-blue-500" />
+              <Activity className="size-3  text-blue-500" />
               <span className="text-xs text-blue-500">{activeRuns} Running</span>
             </div>
           )}
           
           {activeLeases > 0 && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-500/10">
-              <Key className="w-3 h-3 text-yellow-500" />
+              <Key className="size-3  text-yellow-500" />
               <span className="text-xs text-yellow-500">{activeLeases} Leases</span>
             </div>
           )}
           
           {pendingGates > 0 && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/10">
-              <Warning className="w-3 h-3 text-red-500" />
+              <Warning className="size-3  text-red-500" />
               <span className="text-xs text-red-500">{pendingGates} Gates</span>
             </div>
           )}
@@ -200,7 +200,7 @@ export function RunnerView() {
           <TabsTrigger value="dags" className="gap-2">
             <GitBranch size={16} /> 
             DAG Plans
-            {activeRuns > 0 && <Badge variant="default" className="ml-1 text-[10px]">{activeRuns}</Badge>}
+            {activeRuns > 0 && <Badge variant="default" className="ml-1 text-xs">{activeRuns}</Badge>}
           </TabsTrigger>
           
           <TabsTrigger value="wihs" className="gap-2">
@@ -211,7 +211,7 @@ export function RunnerView() {
           <TabsTrigger value="leases" className="gap-2">
             <Key size={16} /> 
             Leases
-            {activeLeases > 0 && <Badge variant="secondary" className="ml-1 text-[10px]">{activeLeases}</Badge>}
+            {activeLeases > 0 && <Badge variant="secondary" className="ml-1 text-xs">{activeLeases}</Badge>}
           </TabsTrigger>
           
           <TabsTrigger value="context" className="gap-2">

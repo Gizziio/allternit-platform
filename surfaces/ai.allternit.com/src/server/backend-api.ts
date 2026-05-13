@@ -168,7 +168,7 @@ app.get('/api/v1/version', (req, res) => {
 app.post('/api/v1/backend-install/test', async (req, res) => {
   const body: SSHTestRequest = req.body;
   
-  console.log(`[SSH Test] Testing connection to ${body.host}:${body.port || 22}`);
+  console.debug(`[SSH Test] Testing connection to ${body.host}:${body.port || 22}`);
   
   const { NodeSSH } = await import('node-ssh');
   const ssh = new NodeSSH();
@@ -233,7 +233,7 @@ app.post('/api/v1/backend-install/test', async (req, res) => {
     
     ssh.dispose();
     
-    console.log(`[SSH Test] Success - ${info.os} (${info.architecture})`);
+    console.debug(`[SSH Test] Success - ${info.os} (${info.architecture})`);
     
     res.json({
       success: true,
@@ -261,7 +261,7 @@ const wss = new WebSocketServer({
 });
 
 wss.on('connection', (ws: WebSocket) => {
-  console.log('[WebSocket] Client connected');
+  console.debug('[WebSocket] Client connected');
   
   ws.on('message', async (data: Buffer) => {
     try {
@@ -277,7 +277,7 @@ wss.on('connection', (ws: WebSocket) => {
           installation_id: msg.installation_id
         };
         
-        console.log(`[Install] Starting installation ${installReq.installation_id} for ${installReq.host}`);
+        console.debug(`[Install] Starting installation ${installReq.installation_id} for ${installReq.host}`);
         
         // Run installation
         await performInstallation(ws, installReq);
@@ -294,7 +294,7 @@ wss.on('connection', (ws: WebSocket) => {
   });
   
   ws.on('close', () => {
-    console.log('[WebSocket] Client disconnected');
+    console.debug('[WebSocket] Client disconnected');
   });
 });
 
@@ -415,7 +415,7 @@ async function performInstallation(ws: WebSocket, req: InstallRequest) {
       apiUrl: `http://${req.host}:4096`
     });
     
-    console.log(`[Install] Complete - API at http://${req.host}:4096`);
+    console.debug(`[Install] Complete - API at http://${req.host}:4096`);
     
     ssh.dispose();
     
@@ -435,24 +435,24 @@ async function performInstallation(ws: WebSocket, req: InstallRequest) {
 
 // Start server
 server.listen(PORT, () => {
-  console.log(`Allternit Backend API v${VERSION} running on port ${PORT}`);
-  console.log(`API Key: ${API_KEY.substring(0, 8)}...`);
-  console.log('');
-  console.log('Endpoints:');
-  console.log(`  Health:  http://localhost:${PORT}/api/v1/health`);
-  console.log(`  WebSocket: ws://localhost:${PORT}/api/v1/backend-install/progress`);
+  console.debug(`Allternit Backend API v${VERSION} running on port ${PORT}`);
+  console.debug(`API Key: ${API_KEY.substring(0, 8)}...`);
+  console.debug('');
+  console.debug('Endpoints:');
+  console.debug(`  Health:  http://localhost:${PORT}/api/v1/health`);
+  console.debug(`  WebSocket: ws://localhost:${PORT}/api/v1/backend-install/progress`);
 });
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('SIGTERM received, shutting down gracefully');
+  console.debug('SIGTERM received, shutting down gracefully');
   server.close(() => {
     process.exit(0);
   });
 });
 
 process.on('SIGINT', () => {
-  console.log('\nSIGINT received, shutting down gracefully');
+  console.debug('\nSIGINT received, shutting down gracefully');
   server.close(() => {
     process.exit(0);
   });

@@ -105,9 +105,9 @@ export const MermaidArtifact = memo(function MermaidArtifact({
             title="Copy source"
           >
             {copied ? (
-              <IconCheck className="w-3.5 h-3.5 text-emerald-500" />
+              <IconCheck className="size-3.5  text-emerald-500" />
             ) : (
-              <IconCopy className="w-3.5 h-3.5 text-muted-foreground" />
+              <IconCopy className="size-3.5  text-muted-foreground" />
             )}
           </button>
           <button
@@ -116,7 +116,7 @@ export const MermaidArtifact = memo(function MermaidArtifact({
             className="p-1.5 rounded-md hover:bg-muted transition-colors disabled:opacity-30"
             title="Download SVG"
           >
-            <IconDownload className="w-3.5 h-3.5 text-muted-foreground" />
+            <IconDownload className="size-3.5  text-muted-foreground" />
           </button>
           <button
             onClick={() => setIsFullscreen((f) => !f)}
@@ -124,9 +124,9 @@ export const MermaidArtifact = memo(function MermaidArtifact({
             title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
           >
             {isFullscreen ? (
-              <IconMinimize className="w-3.5 h-3.5 text-muted-foreground" />
+              <IconMinimize className="size-3.5  text-muted-foreground" />
             ) : (
-              <IconMaximize className="w-3.5 h-3.5 text-muted-foreground" />
+              <IconMaximize className="size-3.5  text-muted-foreground" />
             )}
           </button>
         </div>
@@ -147,7 +147,7 @@ export const MermaidArtifact = memo(function MermaidArtifact({
           />
         ) : (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <div className="w-4 h-4 border-2 border-muted-foreground/20 border-t-muted-foreground/60 rounded-full animate-spin" />
+            <div className="size-4  border-2 border-muted-foreground/20 border-t-muted-foreground/60 rounded-full animate-spin" />
             {isStreaming ? "Waiting for complete diagram..." : "Rendering diagram..."}
           </div>
         )}

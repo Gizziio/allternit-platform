@@ -5,7 +5,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { GlassCard } from '../../design/GlassCard';
+import { GlassCard } from '../../design/glass/GlassCard';
 
 interface SkillStatus {
   name: string;
@@ -84,7 +84,7 @@ export function SkillsHub({ onSync }: SkillsHubProps) {
             color: 'white',
             border: 'none',
             borderRadius: 6,
-            fontSize: 11,
+            fontSize: 12,
             cursor: 'pointer',
           }}
         >
@@ -122,7 +122,7 @@ export function SkillsHub({ onSync }: SkillsHubProps) {
                 </div>
                 {skill.description && (
                   <div
-                    style={{ fontSize: 11, color: 'var(--ui-text-muted)', marginBottom: 8 }}
+                    style={{ fontSize: 12, color: 'var(--ui-text-muted)', marginBottom: 8 }}
                   >
                     {skill.description}
                   </div>
@@ -143,7 +143,7 @@ export function SkillsHub({ onSync }: SkillsHubProps) {
                 <span
                   key={inst.llm}
                   style={{
-                    fontSize: 10,
+                    fontSize: 12,
                     padding: '2px 8px',
                     borderRadius: 4,
                     background: inst.installed ? '#065f46' : 'var(--ui-border-default)',
@@ -170,7 +170,7 @@ export function SkillsHub({ onSync }: SkillsHubProps) {
                   color: 'white',
                   border: 'none',
                   borderRadius: 6,
-                  fontSize: 11,
+                  fontSize: 12,
                   cursor: 'pointer',
                 }}
               >

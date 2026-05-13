@@ -1,3 +1,4 @@
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   HardDrives,
@@ -322,7 +323,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
       const message = err.message || 'Failed to load environments';
       setErrors(prev => ({ ...prev, environments: message }));
       // Don't show toast for this - environments might just be empty
-      console.log('[InfrastructureSettings] Failed to load environments:', message);
+      console.debug('[InfrastructureSettings] Failed to load environments:', message);
     } finally {
       setIsLoadingEnvironments(false);
     }
@@ -472,7 +473,7 @@ export const InfrastructureSettings: React.FC<InfrastructureSettingsProps> = ({ 
     setIsProvisioning(true);
     try {
       const template = templates.find(t => t.id === templateId);
-      const name = `${template?.name || 'Environment'} ${new Date().toISOString().slice(0, 10)}`;
+      const name = `${template?.name || 'Environment'} ${isClient ? new Date().toISOString().slice(0, 10) : "..."}`;
       const env = await environmentApi.provision(templateId, name);
       addToast({
         title: 'Provisioning Started',
@@ -1704,7 +1705,7 @@ function ProviderCard({ provider, onDeploy, isDeploying }: any) {
                   borderRadius: '4px',
                   background: 'color-mix(in srgb, var(--accent-primary) 20%, transparent)',
                   color: 'var(--accent-primary)',
-                  fontSize: '10px',
+                  fontSize: '12px',
                   fontWeight: '600',
                   textTransform: 'uppercase',
                 }}>
@@ -1722,7 +1723,7 @@ function ProviderCard({ provider, onDeploy, isDeploying }: any) {
           borderRadius: '4px',
           background: 'var(--surface-hover)',
           color: 'var(--ui-text-muted)',
-          fontSize: '11px',
+          fontSize: '12px',
         }}>
           {provider.deploy_time}
         </span>
@@ -1890,7 +1891,7 @@ function TemplateCard({
           borderRadius: '4px',
           background: `${typeColors[template.type]}15`,
           color: typeColors[template.type],
-          fontSize: '10px',
+          fontSize: '12px',
           fontWeight: '600',
           textTransform: 'uppercase',
         }}>

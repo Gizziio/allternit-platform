@@ -23,19 +23,19 @@ export type ModelOption = {
 };
 
 const BASE_MODELS: ModelOption[] = [
-  { id: 'codex', name: 'OpenAI Codex', provider: 'Local', category: 'CLI', icon: <OpenAIIcon className="w-4 h-4" />, description: 'Local' },
-  { id: 'claude-code', name: 'Claude Code', provider: 'Anthropic', category: 'CLI', icon: <AnthropicIcon className="w-4 h-4" />, description: 'ADE' },
+  { id: 'codex', name: 'OpenAI Codex', provider: 'Local', category: 'CLI', icon: <OpenAIIcon className="size-4 " />, description: 'Local' },
+  { id: 'claude-code', name: 'Claude Code', provider: 'Anthropic', category: 'CLI', icon: <AnthropicIcon className="size-4 " />, description: 'ADE' },
   { id: 'aider', name: 'Aider AI', provider: 'Aider', category: 'CLI', icon: <TerminalWindow weight="fill" />, description: 'Agent' },
   { id: 'goose', name: 'Goose', provider: 'Block', category: 'CLI', icon: <Rocket weight="fill" />, description: 'Agent' },
   { id: 'cursor-cli', name: 'Cursor CLI', provider: 'Cursor', category: 'CLI', icon: <TerminalWindow weight="fill" />, description: 'ADE' },
-  { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', category: 'Cloud', icon: <OpenAIIcon className="w-4 h-4" />, description: 'Cloud' },
-  { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', category: 'Cloud', icon: <AnthropicIcon className="w-4 h-4" />, description: 'Cloud' },
+  { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', category: 'Cloud', icon: <OpenAIIcon className="size-4 " />, description: 'Cloud' },
+  { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', category: 'Cloud', icon: <AnthropicIcon className="size-4 " />, description: 'Cloud' },
   {
     id: 'local-brain',
     name: 'Local Brain',
     provider: 'Local',
     category: 'Local',
-    icon: <Brain weight="fill" className="w-4 h-4" />,
+    icon: <Brain weight="fill" className="size-4 " />,
     description: 'Offline · private',
     isLocalBrain: true,
   },
@@ -164,7 +164,7 @@ export function PromptModelSelector({
             <MagnifyingGlass size={14} className="text-[var(--text-tertiary)]" />
             <input
               autoFocus
-              placeholder="Search..."
+              placeholder="Search…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="flex-1 bg-transparent border-none outline-none text-xs text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)]"
@@ -187,7 +187,7 @@ export function PromptModelSelector({
                   style={{ width: pullPct !== null ? `${pullPct}%` : '5%' }}
                 />
               </div>
-              <p className="text-[10px] text-[var(--text-tertiary)]">
+              <p className="text-xs text-[var(--text-tertiary)]">
                 {pullProgress?.status ?? 'Preparing…'} · llama3.2:3b (~2 GB)
               </p>
             </div>
@@ -196,7 +196,7 @@ export function PromptModelSelector({
               <Check size={16} weight="bold" className="text-emerald-500 shrink-0" />
               <div>
                 <p className="text-xs font-semibold text-[var(--text-primary)]">Local Brain ready</p>
-                <p className="text-[10px] text-[var(--text-tertiary)]">Selecting it now…</p>
+                <p className="text-xs text-[var(--text-tertiary)]">Selecting it now…</p>
               </div>
             </div>
           ) : downloadState === 'error' ? (
@@ -204,10 +204,10 @@ export function PromptModelSelector({
               <Warning size={16} className="text-red-500 shrink-0 mt-0.5" />
               <div>
                 <p className="text-xs font-semibold text-[var(--text-primary)]">Download failed</p>
-                <p className="text-[10px] text-[var(--text-tertiary)] mb-2">{pullError}</p>
+                <p className="text-xs text-[var(--text-tertiary)] mb-2">{pullError}</p>
                 <button
                   onClick={() => setDownloadState('idle')}
-                  className="text-[10px] font-semibold text-[var(--accent-chat)] hover:underline"
+                  className="text-xs font-semibold text-[var(--accent-chat)] hover:underline"
                 >
                   Back to models
                 </button>
@@ -222,7 +222,7 @@ export function PromptModelSelector({
                   if (catModels.length === 0) return null;
                   return (
                     <div key={cat} className="mb-1">
-                      <div className="px-2 py-1 text-[9px] font-bold text-[var(--text-tertiary)] uppercase opacity-50 tracking-wider">
+                      <div className="px-2 py-1 text-xs font-bold text-[var(--text-tertiary)] uppercase opacity-50 tracking-wider">
                         {cat === 'Local' ? 'Local Brain' : cat}
                       </div>
                       {catModels.map(model => {
@@ -246,7 +246,7 @@ export function PromptModelSelector({
                             )}
                           >
                             <div className={cn(
-                              "flex items-center justify-center w-6 h-6 rounded bg-[var(--bg-secondary)] text-[var(--text-tertiary)] transition-all",
+                              "flex items-center justify-center size-6  rounded bg-[var(--bg-secondary)] text-[var(--text-tertiary)] transition-all",
                               !lbNoOllama && "group-hover:bg-white/20 group-hover:text-white",
                               isSelected && "text-[var(--accent-chat)]",
                               lbReady && "text-emerald-500"
@@ -259,7 +259,7 @@ export function PromptModelSelector({
                               </span>
                               {isLB && (
                                 <span className={cn(
-                                  "ml-1.5 text-[9px] font-bold px-1 py-0.5 rounded",
+                                  "ml-1.5 text-xs font-bold px-1 py-0.5 rounded",
                                   lbReady
                                     ? "bg-emerald-500/10 text-emerald-500"
                                     : lbNoOllama
@@ -282,7 +282,7 @@ export function PromptModelSelector({
                               </a>
                             )}
                             {isLB && lbNeedsDownload && (
-                              <span className="flex items-center gap-1 text-[9px] font-bold text-[var(--accent-chat)] group-hover:text-white">
+                              <span className="flex items-center gap-1 text-xs font-bold text-[var(--accent-chat)] group-hover:text-white">
                                 <CloudArrowDown size={11} /> Download
                               </span>
                             )}
@@ -305,8 +305,8 @@ export function PromptModelSelector({
           {/* Governance footer */}
           <div className="flex-none p-2 bg-[var(--bg-secondary)]/30 border-t border-[var(--border-subtle)] flex items-center justify-between">
             <div className="flex flex-col">
-              <span className="text-[9px] font-bold text-[var(--text-tertiary)] uppercase">Governance</span>
-              <span className={cn("text-[10px] font-bold tracking-tight", sandboxMode === "full" ? "text-red-500 animate-pulse" : "text-emerald-500")}>
+              <span className="text-xs font-bold text-[var(--text-tertiary)] uppercase">Governance</span>
+              <span className={cn("text-xs font-bold tracking-tight", sandboxMode === "full" ? "text-red-500 animate-pulse" : "text-emerald-500")}>
                 {sandboxMode === "full" ? "FULL WRITE ACCESS" : "READ ONLY (PROTECTED)"}
               </span>
             </div>
@@ -320,7 +320,7 @@ export function PromptModelSelector({
               )}
             >
               {sandboxMode === "full" ? <LockOpen size={14} weight="bold" /> : <Lock size={14} weight="bold" />}
-              <span className="text-[9px] font-bold">TOGGLE</span>
+              <span className="text-xs font-bold">TOGGLE</span>
             </button>
           </div>
 
@@ -328,7 +328,7 @@ export function PromptModelSelector({
           <div className="flex-none p-1.5 bg-[var(--bg-secondary)]/50 border-t border-[var(--border-subtle)]">
             <button
               onClick={() => { useNav.getState().dispatch({ type: 'OPEN_VIEW', viewType: 'models-manage' }); setOpen(false); }}
-              className="w-full flex items-center justify-center gap-2 py-1.5 rounded-md hover:bg-[var(--rail-hover)] text-[10px] font-bold text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-all"
+              className="w-full flex items-center justify-center gap-2 py-1.5 rounded-md hover:bg-[var(--rail-hover)] text-xs font-bold text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-all"
             >
               <Gear size={12} weight="fill" />
               MANAGE

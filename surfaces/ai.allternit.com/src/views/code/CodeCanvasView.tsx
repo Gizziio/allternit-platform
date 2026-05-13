@@ -1,5 +1,6 @@
 "use client";
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useCallback, useRef } from 'react';
 import {
   useCodeModeStore,

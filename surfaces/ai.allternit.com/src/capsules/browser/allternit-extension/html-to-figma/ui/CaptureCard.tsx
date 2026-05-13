@@ -75,13 +75,13 @@ export function CaptureCard({ url, onClose, onComplete }: CaptureCardProps) {
     return (
       <div className="rounded-xl p-4 mb-4 border border-[#667eea]/25 bg-gradient-to-br from-[#667eea]/10 to-[#764ba2]/10">
         <div className="flex items-center gap-2 mb-2">
-          <div className="w-7 h-7 rounded-md bg-gradient-to-br from-[#667eea] to-[#764ba2] flex items-center justify-center text-sm">
+          <div className="size-7  rounded-md bg-gradient-to-br from-[#667eea] to-[#764ba2] flex items-center justify-center text-sm">
             🎨
           </div>
           <span className="text-[13px] font-semibold">HTML to Figma</span>
-          <span className="ml-auto text-[11px] text-gray-400">Now</span>
+          <span className="ml-auto text-[12px] text-zinc-400">Now</span>
         </div>
-        <div className="text-[11px] text-gray-400 mb-3 px-2.5 py-1.5 bg-white/5 rounded-md truncate">
+        <div className="text-[12px] text-zinc-400 mb-3 px-2.5 py-1.5 bg-white/5 rounded-md truncate">
           {url}
         </div>
         <div className="flex gap-2">
@@ -89,7 +89,7 @@ export function CaptureCard({ url, onClose, onComplete }: CaptureCardProps) {
             onClick={() => handleCapture('quick')}
             className="flex-1 py-2 px-3 rounded-lg text-[12px] flex items-center justify-center gap-1.5
               bg-[#4CAF50]/20 border border-[#4CAF50]/30 text-[#4CAF50]
-              hover:bg-[#4CAF50]/30 transition-all hover:-translate-y-0.5"
+              hover:bg-[#4CAF50]/30 transition-all hover:-tranzinc-y-0.5"
           >
             <span>⚡</span>
             <span>Quick</span>
@@ -98,7 +98,7 @@ export function CaptureCard({ url, onClose, onComplete }: CaptureCardProps) {
             onClick={() => handleCapture('deep')}
             className="flex-1 py-2 px-3 rounded-lg text-[12px] flex items-center justify-center gap-1.5
               bg-[#9c27b0]/20 border border-[#9c27b0]/30 text-[#ba68c8]
-              hover:bg-[#9c27b0]/30 transition-all hover:-translate-y-0.5"
+              hover:bg-[#9c27b0]/30 transition-all hover:-tranzinc-y-0.5"
           >
             <span>🔍</span>
             <span>Deep</span>
@@ -113,19 +113,19 @@ export function CaptureCard({ url, onClose, onComplete }: CaptureCardProps) {
     return (
       <div className="rounded-xl p-4 mb-4 border border-[#667eea]/25 bg-gradient-to-br from-[#667eea]/10 to-[#764ba2]/10">
         <div className="flex items-center gap-2 mb-2">
-          <div className="w-7 h-7 rounded-md bg-gradient-to-br from-[#667eea] to-[#764ba2] flex items-center justify-center text-sm">
+          <div className="size-7  rounded-md bg-gradient-to-br from-[#667eea] to-[#764ba2] flex items-center justify-center text-sm">
             🎨
           </div>
-          <span className="text-[13px] font-semibold">Capturing...</span>
-          <span className="ml-auto text-[11px] text-gray-400">{formatTime()}</span>
+          <span className="text-[13px] font-semibold">Capturing…</span>
+          <span className="ml-auto text-[12px] text-zinc-400">{formatTime()}</span>
         </div>
-        <div className="text-[11px] text-gray-400 mb-3 px-2.5 py-1.5 bg-white/5 rounded-md truncate">
+        <div className="text-[12px] text-zinc-400 mb-3 px-2.5 py-1.5 bg-white/5 rounded-md truncate">
           {url}
         </div>
         <div className="mt-2">
           <div className="flex items-center gap-2.5 mb-2">
             <div className="w-[18px] h-[18px] border-2 border-[#667eea]/30 border-t-[#667eea] rounded-full animate-spin" />
-            <span className="text-[12px] text-gray-300">{state.phase}</span>
+            <span className="text-[12px] text-zinc-300">{state.phase}</span>
           </div>
           <div className="h-1 bg-white/10 rounded-sm overflow-hidden mb-1.5">
             <div 
@@ -133,7 +133,7 @@ export function CaptureCard({ url, onClose, onComplete }: CaptureCardProps) {
               style={{ width: `${state.progress}%` }}
             />
           </div>
-          <div className="text-[10px] text-gray-400">Processing with AI agents...</div>
+          <div className="text-xs text-zinc-400">Processing with AI agents…</div>
         </div>
       </div>
     )
@@ -145,33 +145,33 @@ export function CaptureCard({ url, onClose, onComplete }: CaptureCardProps) {
     return (
       <div className="rounded-xl p-4 mb-4 border border-[#4CAF50]/30 bg-gradient-to-br from-[#4CAF50]/10 to-[#4CAF50]/5">
         <div className="flex items-center gap-2 mb-2">
-          <div className="w-7 h-7 rounded-md bg-gradient-to-br from-[#4CAF50] to-[#45a049] flex items-center justify-center text-sm">
+          <div className="size-7  rounded-md bg-gradient-to-br from-[#4CAF50] to-[#45a049] flex items-center justify-center text-sm">
             ✓
           </div>
           <span className="text-[13px] font-semibold text-[#4CAF50]">Capture Complete!</span>
-          <span className="ml-auto text-[11px] text-gray-400">Just now</span>
+          <span className="ml-auto text-[12px] text-zinc-400">Just now</span>
         </div>
-        <div className="text-[11px] text-gray-400 mb-3 px-2.5 py-1.5 bg-white/5 rounded-md truncate">
+        <div className="text-[12px] text-zinc-400 mb-3 px-2.5 py-1.5 bg-white/5 rounded-md truncate">
           {url}
         </div>
         <div className="flex gap-4 mb-3">
           <div className="flex flex-col">
             <span className="text-lg font-semibold text-[#4CAF50]">{layerCount}</span>
-            <span className="text-[10px] text-gray-400">layers</span>
+            <span className="text-xs text-zinc-400">layers</span>
           </div>
           <div className="flex flex-col">
             <span className="text-lg font-semibold text-[#4CAF50]">{state.result.images?.length || 0}</span>
-            <span className="text-[10px] text-gray-400">images</span>
+            <span className="text-xs text-zinc-400">images</span>
           </div>
           <div className="flex flex-col">
             <span className="text-lg font-semibold text-[#4CAF50]">{optimizedCount || 0}</span>
-            <span className="text-[10px] text-gray-400">optimized</span>
+            <span className="text-xs text-zinc-400">optimized</span>
           </div>
         </div>
         <div className="flex gap-2">
           <button
             onClick={handleCopy}
-            className="flex-1 py-2 px-3 rounded-lg text-[11px] flex items-center justify-center gap-1
+            className="flex-1 py-2 px-3 rounded-lg text-[12px] flex items-center justify-center gap-1
               bg-[#4CAF50]/15 border border-[#4CAF50]/30 text-[#4CAF50]
               hover:bg-[#4CAF50]/25 transition-all"
           >
@@ -180,7 +180,7 @@ export function CaptureCard({ url, onClose, onComplete }: CaptureCardProps) {
           </button>
           <button
             onClick={handleOpenFigma}
-            className="flex-1 py-2 px-3 rounded-lg text-[11px] flex items-center justify-center gap-1
+            className="flex-1 py-2 px-3 rounded-lg text-[12px] flex items-center justify-center gap-1
               bg-[#4CAF50]/15 border border-[#4CAF50]/30 text-[#4CAF50]
               hover:bg-[#4CAF50]/25 transition-all"
           >
@@ -196,7 +196,7 @@ export function CaptureCard({ url, onClose, onComplete }: CaptureCardProps) {
   return (
     <div className="rounded-xl p-4 mb-4 border border-[#f44336]/30 bg-gradient-to-br from-[#f44336]/10 to-[#f44336]/5">
       <div className="flex items-center gap-2 mb-2">
-        <div className="w-7 h-7 rounded-md bg-gradient-to-br from-[#f44336] to-[#d32f2f] flex items-center justify-center text-sm">
+        <div className="size-7  rounded-md bg-gradient-to-br from-[#f44336] to-[#d32f2f] flex items-center justify-center text-sm">
           ✕
         </div>
         <span className="text-[13px] font-semibold text-[#f44336]">Capture Failed</span>
@@ -205,7 +205,7 @@ export function CaptureCard({ url, onClose, onComplete }: CaptureCardProps) {
       <div className="flex gap-2">
         <button
           onClick={() => setState({ type: 'idle' })}
-          className="px-4 py-2 rounded-lg text-[11px] bg-[#f44336]/15 border border-[#f44336]/30 text-[#f44336]
+          className="px-4 py-2 rounded-lg text-[12px] bg-[#f44336]/15 border border-[#f44336]/30 text-[#f44336]
             hover:bg-[#f44336]/25 transition-all"
         >
           Try Again
@@ -213,7 +213,7 @@ export function CaptureCard({ url, onClose, onComplete }: CaptureCardProps) {
         {onClose && (
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg text-[11px] bg-white/10 text-gray-300
+            className="px-4 py-2 rounded-lg text-[12px] bg-white/10 text-zinc-300
               hover:bg-white/15 transition-all"
           >
             Dismiss

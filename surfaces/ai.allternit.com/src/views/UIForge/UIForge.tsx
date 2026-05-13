@@ -158,9 +158,9 @@ export function UIForge() {
               </CardHeader>
               <CardContent className="p-4 space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-xs text-gray-500 uppercase font-bold">Describe your interface</Label>
+                  <Label className="text-xs text-zinc-500 uppercase font-bold">Describe your interface</Label>
                   <Textarea 
-                    placeholder="e.g. Create a deployment dashboard with a progress metric and a cancel button..."
+                    placeholder="e.g. Create a deployment dashboard with a progress metric and a cancel button…"
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                     className="min-h-[120px] bg-black/60 border-white/10"
@@ -172,14 +172,14 @@ export function UIForge() {
                   className="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold"
                 >
                   {isGenerating ? (
-                    <><SpinnerGap size={16} className="animate-spin mr-2" /> Architecting...</>
+                    <><SpinnerGap size={16} className="animate-spin mr-2" /> Architecting…</>
                   ) : (
                     <><MagicWand size={16} className="mr-2" /> Build UI</>
                   )}
                 </Button>
                 <div className="pt-4 border-t border-white/5">
-                  <Label className="text-[10px] text-gray-500 uppercase font-bold mb-2 block text-center">Engine Instructions</Label>
-                  <div className="p-3 bg-black/60 rounded-lg border border-white/5 text-[10px] font-mono text-gray-500 h-32 overflow-auto">
+                  <Label className="text-xs text-zinc-500 uppercase font-bold mb-2 block text-center">Engine Instructions</Label>
+                  <div className="p-3 bg-black/60 rounded-lg border border-white/5 text-xs font-mono text-zinc-500 h-32 overflow-auto">
                     {systemInstructions}
                   </div>
                 </div>
@@ -203,7 +203,7 @@ export function UIForge() {
                       className="flex flex-col h-auto py-3 border-white/5 bg-white/5 hover:bg-white/10"
                     >
                       <span className="text-xl mb-1">{comp.icon}</span>
-                      <span className="text-[10px] uppercase font-bold">{comp.label}</span>
+                      <span className="text-xs uppercase font-bold">{comp.label}</span>
                     </Button>
                   ))}
                 </div>
@@ -222,8 +222,8 @@ export function UIForge() {
               </CardTitle>
               {isGenerating && (
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                  <span className="text-[10px] font-bold text-green-500 uppercase">Streaming OpenUI Lang</span>
+                  <div className="size-2  bg-green-500 rounded-full animate-pulse" />
+                  <span className="text-xs font-bold text-green-500 uppercase">Streaming OpenUI Lang</span>
                 </div>
               )}
             </CardHeader>
@@ -234,7 +234,7 @@ export function UIForge() {
                     <AllternitOpenUIRenderer stream={generativeStream} />
                   </div>
                 ) : (
-                  <div className="h-full flex flex-col items-center justify-center text-gray-600 border-2 border-dashed border-white/5 rounded-2xl">
+                  <div className="h-full flex flex-col items-center justify-center text-zinc-600 border-2 border-dashed border-white/5 rounded-2xl">
                     <Sparkle size={48} className="opacity-10 mb-4" />
                     <p className="text-sm">Describe an interface to begin generation</p>
                   </div>
@@ -256,7 +256,7 @@ export function UIForge() {
               )}
             </CardContent>
             <div className="p-4 bg-white/5 border-t border-white/5 flex justify-between items-center">
-               <div className="flex items-center gap-2 text-xs text-gray-500">
+               <div className="flex items-center gap-2 text-xs text-zinc-500">
                   <Terminal size={14} />
                   <span>Output: <strong>@openuidev/react-lang</strong></span>
                </div>

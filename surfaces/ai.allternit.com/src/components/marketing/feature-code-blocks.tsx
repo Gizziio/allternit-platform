@@ -99,7 +99,7 @@ export function FeatureCodeBlocks({
                   : 'text-[var(--text-muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-secondary)]'
               )}
             >
-              {block.icon || <IconCode className="h-4 w-4" />}
+              {block.icon || <IconCode className="size-4 " />}
               {block.title}
             </button>
           ))}
@@ -119,8 +119,8 @@ export function FeatureCodeBlocks({
               {/* Feature Description */}
               <div className="flex flex-col justify-center space-y-6">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent-primary)]/10">
-                    {activeBlock.icon || <IconBolt className="h-5 w-5 text-[var(--accent-primary)]" />}
+                  <div className="flex size-10  items-center justify-center rounded-xl bg-[var(--accent-primary)]/10">
+                    {activeBlock.icon || <IconBolt className="size-5  text-[var(--accent-primary)]" />}
                   </div>
                   <h3 className="text-xl font-semibold text-[var(--text-primary)]">
                     {activeBlock.title}
@@ -138,8 +138,8 @@ export function FeatureCodeBlocks({
                       transition={{ delay: 0.1 + i * 0.06 }}
                       className="flex items-start gap-2.5"
                     >
-                      <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-green-500/10">
-                        <IconCheck className="h-3 w-3 text-green-400" />
+                      <div className="mt-0.5 flex size-5  shrink-0 items-center justify-center rounded-full bg-green-500/10">
+                        <IconCheck className="size-3  text-green-400" />
                       </div>
                       <span className="text-sm text-[var(--text-secondary)]">{feature}</span>
                     </motion.li>
@@ -152,23 +152,23 @@ export function FeatureCodeBlocks({
                 {/* Code Header */}
                 <div className="flex items-center justify-between border-b border-[var(--ui-border-muted)] px-4 py-2.5">
                   <div className="flex items-center gap-2">
-                    <IconTerminal className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-                    <span className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
+                    <IconTerminal className="size-3.5  text-[var(--text-muted)]" />
+                    <span className="text-[12px] font-medium uppercase tracking-wider text-[var(--text-muted)]">
                       {activeBlock.code.language}
                     </span>
                   </div>
                   <button
                     onClick={() => handleCopy(activeBlock.code.snippet, activeBlock.id)}
-                    className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
+                    className="flex items-center gap-1.5 rounded-md px-2 py-1 text-[12px] text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
                   >
                     {copiedId === activeBlock.id ? (
                       <>
-                        <IconCheck className="h-3 w-3 text-green-400" />
+                        <IconCheck className="size-3  text-green-400" />
                         Copied
                       </>
                     ) : (
                       <>
-                        <IconCopy className="h-3 w-3" />
+                        <IconCopy className="size-3 " />
                         Copy
                       </>
                     )}
@@ -353,14 +353,14 @@ function Chat() {
         <input
           value={input}
           onChange={handleInputChange}
-          placeholder="Say something..."
+          placeholder="Say something…"
         />
       </form>
     </div>
   );
 }`,
     },
-    icon: <IconBolt className="h-5 w-5 text-[var(--accent-primary)]" />,
+    icon: <IconBolt className="size-5  text-[var(--accent-primary)]" />,
   },
   {
     id: 'tools',
@@ -396,7 +396,7 @@ const result = streamText({
   prompt: 'What is the weather in San Francisco?',
 });`,
     },
-    icon: <IconBraces className="h-5 w-5 text-[var(--accent-primary)]" />,
+    icon: <IconBraces className="size-5  text-[var(--accent-primary)]" />,
   },
   {
     id: 'structured',
@@ -430,6 +430,6 @@ const { object } = await generateObject({
   prompt: 'Generate a pasta recipe',
 });`,
     },
-    icon: <IconCode className="h-5 w-5 text-[var(--accent-primary)]" />,
+    icon: <IconCode className="size-5  text-[var(--accent-primary)]" />,
   },
 ];

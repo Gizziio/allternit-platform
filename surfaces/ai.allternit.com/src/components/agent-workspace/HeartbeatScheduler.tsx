@@ -365,7 +365,7 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
             }}
           >
             <FloppyDisk style={{ width: 14, height: 14 }} />
-            <span>{isSaving ? 'Saving...' : 'Save'}</span>
+            <span>{isSaving ? 'Saving…' : 'Save'}</span>
           </button>
           <button
             onClick={onClose}
@@ -543,7 +543,7 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
                       style={{
                         background: task.enabled ? `${theme.accent}20` : `${theme.textMuted}20`,
                         color: task.enabled ? theme.accent : theme.textMuted,
-                        fontSize: '10px',
+                        fontSize: '12px',
                       }}
                     >
                       {task.schedule}
@@ -552,7 +552,7 @@ export function HeartbeatScheduler({ agentId, onClose, theme = STUDIO_THEME }: H
                   {task.description && (
                     <p style={{ fontSize: '12px', color: theme.textSecondary, margin: '4px 0 0 0' }}>
                       {task.description.split('\n')[0]}
-                      {task.description.split('\n').length > 1 && '...'}
+                      {task.description.split('\n').length > 1 && '…'}
                     </p>
                   )}
                 </div>

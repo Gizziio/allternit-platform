@@ -184,20 +184,20 @@ export function VideoModeView({ initialPrompt = '' }: VideoModeViewProps) {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-rose-500/20 flex items-center justify-center">
-            <Video className="w-4 h-4 text-rose-400" />
+          <div className="size-8  rounded-lg bg-rose-500/20 flex items-center justify-center">
+            <Video className="size-4  text-rose-400" />
           </div>
           <div>
             <h3 className="text-sm font-medium text-white">Video Generation</h3>
             <p className="text-xs text-white/50 flex items-center gap-1">
               {hasApiKey ? (
                 <>
-                  <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                  <CheckCircle2 className="size-3  text-emerald-400" />
                   <span className="text-emerald-400">{providerInfo.name} connected</span>
                 </>
               ) : (
                 <>
-                  <AlertCircle className="w-3 h-3 text-amber-400" />
+                  <AlertCircle className="size-3  text-amber-400" />
                   <span className="text-amber-400">API key required</span>
                 </>
               )}
@@ -234,7 +234,7 @@ export function VideoModeView({ initialPrompt = '' }: VideoModeViewProps) {
       {!hasApiKey && activeTab === 'generate' && (
         <div className="p-4 bg-amber-500/10 border-b border-amber-500/20">
           <div className="flex items-start gap-3">
-            <Key className="w-5 h-5 text-amber-400 mt-0.5" />
+            <Key className="size-5  text-amber-400 mt-0.5" />
             <div className="flex-1">
               <h4 className="text-sm font-medium text-amber-400">Bring Your Own API Key</h4>
               <p className="text-xs text-white/60 mt-1">
@@ -245,7 +245,7 @@ export function VideoModeView({ initialPrompt = '' }: VideoModeViewProps) {
                   onClick={() => setShowKeyInput(true)}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 rounded-lg text-xs text-amber-400 transition-colors"
                 >
-                  <Key className="w-3.5 h-3.5" />
+                  <Key className="size-3.5 " />
                   Add API Key
                 </button>
                 <a
@@ -255,7 +255,7 @@ export function VideoModeView({ initialPrompt = '' }: VideoModeViewProps) {
                   className="flex items-center gap-1.5 text-xs text-white/40 hover:text-white/60 transition-colors"
                 >
                   Get free credits on {providerInfo.name}
-                  <ExternalLink className="w-3 h-3" />
+                  <ExternalLink className="size-3 " />
                 </a>
               </div>
             </div>
@@ -266,7 +266,7 @@ export function VideoModeView({ initialPrompt = '' }: VideoModeViewProps) {
       {error && activeTab === 'generate' && (
         <div className="px-4 py-3 bg-red-500/10 border-b border-red-500/20">
           <div className="flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 text-red-400 mt-0.5" />
+            <AlertCircle className="size-4  text-red-400 mt-0.5" />
             <div>
               <div className="text-sm font-medium text-red-400">Video generation unavailable</div>
               <div className="text-xs text-white/60 mt-1">{error}</div>
@@ -322,7 +322,7 @@ export function VideoModeView({ initialPrompt = '' }: VideoModeViewProps) {
       {hasApiKey && activeTab === 'generate' && (
         <div className="px-4 py-2 bg-emerald-500/10 border-b border-emerald-500/20 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            <CheckCircle2 className="size-4  text-emerald-400" />
             <span className="text-xs text-emerald-400">
               {providerInfo.name}: {maskKey(apiKeys[config.provider])}
             </span>
@@ -479,12 +479,12 @@ export function VideoModeView({ initialPrompt = '' }: VideoModeViewProps) {
               >
                 {isGenerating ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <RefreshCw className="size-4  animate-spin" />
                     Generating...
                   </>
                 ) : (
                   <>
-                    <Wand2 className="w-4 h-4" />
+                    <Wand2 className="size-4 " />
                     Generate
                   </>
                 )}
@@ -499,7 +499,7 @@ export function VideoModeView({ initialPrompt = '' }: VideoModeViewProps) {
           <div className="flex-1 p-4">
             <div className="p-4 bg-white/5 rounded-lg border border-white/10">
               <h4 className="text-sm font-medium text-white mb-3 flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-rose-400" />
+                <Sparkles className="size-4  text-rose-400" />
                 Tips for great videos
               </h4>
               <ul className="space-y-2 text-xs text-white/50">
@@ -528,7 +528,7 @@ export function VideoModeView({ initialPrompt = '' }: VideoModeViewProps) {
         <div className="flex-1 overflow-y-auto p-4">
           {videos.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-white/30">
-              <MonitorPlay className="w-16 h-16 mb-4 opacity-50" />
+              <MonitorPlay className="size-16  mb-4 opacity-50" />
               <p className="text-sm">No videos generated yet</p>
               <p className="text-xs mt-2 text-white/20">
                 Generated videos will appear here
@@ -569,16 +569,16 @@ function GeneratedVideoCard({
     >
       {video.status === 'generating' ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <div className="relative w-12 h-12 mb-3">
+          <div className="relative size-12  mb-3">
             <div className="absolute inset-0 border-3 border-rose-500/20 rounded-full" />
             <div className="absolute inset-0 border-3 border-rose-500 border-t-transparent rounded-full animate-spin" />
           </div>
-          <p className="text-xs text-white/50">Generating video...</p>
+          <p className="text-xs text-white/50">Generating video…</p>
           <p className="text-xs text-white/30 mt-1">This may take 1-2 minutes</p>
         </div>
       ) : video.status === 'failed' ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center text-white/30">
-          <AlertCircle className="w-8 h-8 mb-2 text-red-400" />
+          <AlertCircle className="size-8  mb-2 text-red-400" />
           <p className="text-xs">Generation failed</p>
         </div>
       ) : (
@@ -596,8 +596,8 @@ function GeneratedVideoCard({
           
           {/* Play Button Overlay */}
           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
-            <button className="w-12 h-12 rounded-full bg-rose-500 flex items-center justify-center">
-              <Play className="w-5 h-5 text-white ml-0.5" />
+            <button className="size-12  rounded-full bg-rose-500 flex items-center justify-center">
+              <Play className="size-5  text-white ml-0.5" />
             </button>
           </div>
 
@@ -609,7 +609,7 @@ function GeneratedVideoCard({
               </p>
               <div className="flex items-center gap-3 text-xs text-white/40">
                 <span className="flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
+                  <Clock className="size-3 " />
                   {video.metadata.duration}s
                 </span>
                 <span>{video.metadata.resolution}</span>

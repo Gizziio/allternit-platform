@@ -34,17 +34,22 @@ export default function ConnectPage() {
   const [tunnelHost, setTunnelHost] = useState<string | null>(null);
 
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout | undefined;
+    let isMounted = true;
+
     async function run() {
       const params = new URLSearchParams(window.location.search);
       const tunnelParam = params.get('tunnelUrl');
       const token = params.get('token');
 
       if (!tunnelParam || !token) {
-        setError(
-          'Invalid link — missing tunnelUrl or token. ' +
-          'Open Allternit desktop and click Enable Web Access again.'
-        );
-        setPhase('error');
+        if (isMounted) {
+          setError(
+            'Invalid link — missing tunnelUrl or token. ' +
+            'Open Allternit desktop and click Enable Web Access again.'
+          );
+          setPhase('error');
+        }
         return;
       }
 
@@ -52,24 +57,33 @@ export default function ConnectPage() {
       const host = tunnelParam.replace(/^https?:\/\//, '');
       const gatewayUrl = `https://${host}`;
       const gatewayWsUrl = `wss://${host}`;
-      setTunnelHost(host);
-      setPhase('connecting');
+      
+      if (isMounted) {
+        setTunnelHost(host);
+        setPhase('connecting');
+      }
 
       // Verify the tunnel is reachable before committing it to storage.
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10_000);
+        timeoutId = setTimeout(() => controller.abort(), 10_000);
 
         const res = await fetch(`${gatewayUrl}/health`, {
           signal: controller.signal,
           mode: 'cors',
         });
-        clearTimeout(timeout);
+        
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+          timeoutId = undefined;
+        }
 
         if (!res.ok && res.status !== 401) {
           throw new Error(`Gateway responded with status ${res.status}`);
         }
       } catch (err) {
+        if (!isMounted) return;
+
         const message = (err as Error).message;
         if (message.includes('abort') || message.includes('AbortError')) {
           setError(
@@ -87,6 +101,8 @@ export default function ConnectPage() {
         setPhase('error');
         return;
       }
+
+      if (!isMounted) return;
 
       // Persist tunnel URL + token client-side — no server round-trip needed.
       applyRuntimeBackendSnapshot({
@@ -118,10 +134,19 @@ export default function ConnectPage() {
 
       // Brief pause so the user sees the success state, then enter the app
       await new Promise(r => setTimeout(r, 1200));
-      router.replace('/shell');
+      if (isMounted) {
+        router.replace('/shell');
+      }
     }
 
     run();
+
+    return () => {
+      isMounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [router]);
 
   return (
@@ -135,12 +160,12 @@ export default function ConnectPage() {
         </div>
 
         {/* Card */}
-        <div className="rounded-2xl border border-slate-700 bg-slate-800 p-8 shadow-2xl">
+        <div className="rounded-2xl border border-zinc-700 bg-zinc-800 p-8 shadow-2xl">
           {phase === 'validating' && (
             <>
               <Spinner />
               <h2 className="mt-4 text-xl font-semibold text-white">Validating link…</h2>
-              <p className="mt-2 text-slate-400 text-sm">Checking tunnel parameters</p>
+              <p className="mt-2 text-zinc-400 text-sm">Checking tunnel parameters</p>
             </>
           )}
 
@@ -148,29 +173,29 @@ export default function ConnectPage() {
             <>
               <Spinner />
               <h2 className="mt-4 text-xl font-semibold text-white">Connecting to Desktop</h2>
-              <p className="mt-2 text-slate-400 text-sm break-all">{tunnelHost}</p>
-              <p className="mt-4 text-slate-500 text-xs">Verifying tunnel is reachable…</p>
+              <p className="mt-2 text-zinc-400 text-sm break-all">{tunnelHost}</p>
+              <p className="mt-4 text-zinc-500 text-xs">Verifying tunnel is reachable…</p>
             </>
           )}
 
           {phase === 'ready' && (
             <>
-              <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center text-3xl mx-auto">
+              <div className="size-16  rounded-full bg-green-500/20 flex items-center justify-center text-3xl mx-auto">
                 ✓
               </div>
               <h2 className="mt-4 text-xl font-semibold text-white">Desktop Connected</h2>
-              <p className="mt-2 text-slate-400 text-sm">Redirecting to your workspace…</p>
+              <p className="mt-2 text-zinc-400 text-sm">Redirecting to your workspace…</p>
             </>
           )}
 
           {phase === 'error' && (
             <>
-              <div className="w-16 h-16 rounded-full bg-red-500/20 flex items-center justify-center text-3xl mx-auto">
+              <div className="size-16  rounded-full bg-red-500/20 flex items-center justify-center text-3xl mx-auto">
                 ⚠
               </div>
               <h2 className="mt-4 text-xl font-semibold text-white">Connection Failed</h2>
               <p className="mt-3 text-red-400 text-sm">{error}</p>
-              <div className="mt-6 space-y-2 text-xs text-slate-500">
+              <div className="mt-6 space-y-2 text-xs text-zinc-500">
                 <p>1. Open the Allternit desktop app</p>
                 <p>2. Go to Settings → Web Access</p>
                 <p>3. Click &ldquo;Enable Web Access&rdquo; to get a new link</p>
@@ -181,7 +206,7 @@ export default function ConnectPage() {
 
         {/* Security note */}
         {phase !== 'error' && (
-          <p className="mt-6 text-slate-600 text-xs">
+          <p className="mt-6 text-zinc-600 text-xs">
             This connection is end-to-end encrypted via Cloudflare Tunnel.
             Your data never leaves your machine.
           </p>
@@ -194,7 +219,7 @@ export default function ConnectPage() {
 function Spinner() {
   return (
     <div
-      className="w-12 h-12 rounded-full border-2 border-slate-600 border-t-blue-400 mx-auto animate-spin"
+      className="size-12  rounded-full border-2 border-zinc-600 border-t-blue-400 mx-auto animate-spin"
       style={{ animationDuration: '0.8s' }}
     />
   );

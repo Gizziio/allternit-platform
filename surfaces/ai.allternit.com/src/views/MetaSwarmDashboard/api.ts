@@ -33,7 +33,7 @@ export class MetaSwarmClient {
       this.ws = new WebSocket(`${API_BASE}/ws`);
       
       this.ws.onopen = () => {
-        console.log('Meta-Swarm WebSocket connected');
+        console.debug('Meta-Swarm WebSocket connected');
         this.reconnectAttempts = 0;
       };
 
@@ -43,7 +43,7 @@ export class MetaSwarmClient {
       };
 
       this.ws.onclose = () => {
-        console.log('Meta-Swarm WebSocket closed');
+        console.debug('Meta-Swarm WebSocket closed');
         this.attemptReconnect();
       };
 

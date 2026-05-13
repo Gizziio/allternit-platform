@@ -80,7 +80,7 @@ function sectionButtonStyle(expanded: boolean): React.CSSProperties {
     border: 'none',
     borderRadius: 8,
     color: 'var(--text-tertiary)',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 700,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
@@ -97,7 +97,7 @@ function pillStyle(color: string): React.CSSProperties {
     background: `${color}22`,
     border: `1px solid ${color}55`,
     color,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 700,
     letterSpacing: 0.2,
   };
@@ -155,7 +155,7 @@ function SessionRow({
           >
             {session.title}
           </div>
-          <div style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>
+          <div style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>
             {session.session_id}
           </div>
         </div>
@@ -171,7 +171,7 @@ function SessionRow({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 800,
               flexShrink: 0,
             }}
@@ -195,7 +195,7 @@ function SessionRow({
           gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
           gap: 6,
           color: 'var(--text-tertiary)',
-          fontSize: 11,
+          fontSize: 12,
         }}
       >
         <div>Files: {session.files_touched.length}</div>
@@ -209,7 +209,7 @@ function SessionRow({
             alignItems: 'flex-start',
             gap: 6,
             color: 'var(--status-error)',
-            fontSize: 11,
+            fontSize: 12,
             lineHeight: 1.4,
           }}
         >
@@ -270,7 +270,7 @@ export function CodeRail({ onOpen }: CodeRailProps) {
         <div>
           <div
             style={{
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 700,
               color: 'var(--text-tertiary)',
               textTransform: 'uppercase',
@@ -332,7 +332,7 @@ export function CodeRail({ onOpen }: CodeRailProps) {
             <div
               style={{
                 color: 'var(--text-tertiary)',
-                fontSize: 11,
+                fontSize: 12,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -390,7 +390,7 @@ export function CodeRail({ onOpen }: CodeRailProps) {
                   {activeSession.policy_profile_id}
                 </span>
               </div>
-              <div style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>
+              <div style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>
                 {activeWorkspace?.context_anchor ? `Anchor: ${activeWorkspace.context_anchor}` : 'No context anchor declared'}
               </div>
             </div>
@@ -482,7 +482,7 @@ export function CodeRail({ onOpen }: CodeRailProps) {
           >
             <div
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 700,
                 color: 'var(--text-tertiary)',
                 textTransform: 'uppercase',
@@ -495,7 +495,7 @@ export function CodeRail({ onOpen }: CodeRailProps) {
               <CheckCircle size={14} color={stateColors[activeSession.state]} weight="fill" />
               {activeSession.title}
             </div>
-            <div style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>
+            <div style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>
               {activeSession.files_touched.length > 0
                 ? activeSession.files_touched.join(', ')
                 : 'No files touched yet'}

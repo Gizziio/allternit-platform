@@ -87,7 +87,7 @@ export function PromptInputFooter({
       <button
         onClick={sendHandler}
         disabled={!value.trim()}
-        className="flex items-center justify-center w-9 h-9 rounded-full bg-[var(--accent-chat)] text-white disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-all shadow-sm"
+        className="flex items-center justify-center size-9  rounded-full bg-[var(--accent-chat)] text-white disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-all shadow-sm"
       >
         <ArrowUp size={18} weight="bold" />
       </button>

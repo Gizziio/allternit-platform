@@ -3,6 +3,7 @@
  * Renders the unified stream: message → work block → message → work block
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { memo, useEffect, useState } from 'react';
 import { StreamingChatComposer } from '@/components/chat/StreamingChatComposer';
 import { CoworkWorkBlock } from './CoworkWorkBlock';
@@ -185,7 +186,7 @@ export const CoworkTranscript = memo(function CoworkTranscript({
       {isTransitioning && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-sm rounded-lg">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            <div className="size-4  animate-spin rounded-full border-2 border-current border-t-transparent" />
             Switching session…
           </div>
         </div>
@@ -219,7 +220,7 @@ export const CoworkTranscript = memo(function CoworkTranscript({
 
       {timeline.length === 0 && (
         <div className="text-center py-12 text-white/20">
-          <p>Session started. Waiting for first observation...</p>
+          <p>Session started. Waiting for first observation…</p>
         </div>
       )}
     </div>

@@ -465,7 +465,7 @@ export function ChatView({
 
     // Log context if provided
     if (context) {
-      console.log('[ChatView] Received context:', context);
+      console.debug('[ChatView] Received context:', context);
     }
 
     // ── Phase 2: Per-message agent routing via @mention ─────────────────────
@@ -476,7 +476,7 @@ export function ChatView({
         if (swarmId) {
           try {
             const runId = await useAdvancedAgentStore.getState().startSwarmRun(swarmId, text.trim());
-            console.log('[ChatView] Swarm run started:', runId);
+            console.debug('[ChatView] Swarm run started:', runId);
             // Persist the mention agent for this thread
             useThreadAgentSessionsStore.getState().setLastMentionAgentId(chatId, mentionAgentId);
 
@@ -814,7 +814,7 @@ export function ChatView({
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ui-text-primary, var(--text-primary))', marginBottom: 2 }}>
                     No AI connected
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--ui-text-muted, var(--text-tertiary))' }}>
+                  <div style={{ fontSize: 12, color: 'var(--ui-text-muted, var(--text-tertiary))' }}>
                     {ollamaRunning && !modelReady
                       ? 'Ollama is running — download Local Brain to chat offline, or connect a cloud provider.'
                       : 'Connect a cloud provider, or add a Local Brain to chat offline with no API key.'}
@@ -932,7 +932,7 @@ export function ChatView({
               alignItems: 'center',
             }}>
               <span style={{
-                fontSize: '11px',
+                fontSize: '12px',
                 fontWeight: 500,
                 color: THEME.textMuted,
                 textAlign: 'center',
@@ -1091,7 +1091,7 @@ export function ChatView({
               selectedModelDisplayName={modelSelection?.modelName || modelSelection?.modelId}
               onOpenModelPicker={startSelection}
               onSelectModel={selectModel}
-              placeholder="Reply..."
+              placeholder="Reply…"
               showTopActions={false}
               agentModeSurface={agentSurface}
               topInfoBarContent={composerTopInfoBar}

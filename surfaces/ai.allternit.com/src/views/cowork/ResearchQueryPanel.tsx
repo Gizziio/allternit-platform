@@ -6,7 +6,7 @@ import { useResearchThread } from '@/lib/cowork/useResearchThread';
 import { UnifiedMessageRenderer } from '@/components/ai-elements/UnifiedMessageRenderer';
 import { parseStructuredContent } from '@/lib/ai/rust-stream-adapter-extended';
 
-export function ResearchQueryPanel() {
+export function ResearchQueryPanel(): JSX.Element {
   const { messages, isStreaming, streamBuffer, error, isHealthy, query, reset, checkHealth } = useResearchThread();
   const [input, setInput] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -47,7 +47,7 @@ export function ResearchQueryPanel() {
           <span style={{ fontWeight: 600, fontSize: 14 }}>Deep Research</span>
           {isHealthy !== null && (
             <span style={{
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 600,
               letterSpacing: '0.06em',
               textTransform: 'uppercase',
@@ -76,7 +76,7 @@ export function ResearchQueryPanel() {
         <div style={{ maxHeight: 360, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {messages.map((msg, i) => (
             <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
-              <span style={{ fontSize: 10, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <span style={{ fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 {msg.role === 'user' ? 'You' : 'Research'}
               </span>
               <div style={{
@@ -103,7 +103,7 @@ export function ResearchQueryPanel() {
           {/* Live stream buffer */}
           {isStreaming && streamBuffer && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
-              <span style={{ fontSize: 10, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Research</span>
+              <span style={{ fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Research</span>
               <div style={{
                 maxWidth: '90%',
                 padding: '8px 12px',

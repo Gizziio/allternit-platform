@@ -11,8 +11,9 @@
 import * as React from 'react';
 const { useState, useEffect, useMemo, useCallback, useRef } = React;
 import { useSidecarStore } from '../stores/useSidecarStore';
-import { useKernelBridge, KernelBackend } from '../kernel/KernelBridge';
+import { useKernelBridge } from '../kernel/KernelBridge';
 import { useRailsWebSocket } from '../kernel/AllternitRailsWebSocketBridge';
+import { useIsClient } from '../../lib/hooks/use-is-client';
 import type { AllternitProgram, OrchestratorState, OrchestratorAgent } from '../types/programs';
 
 interface OrchestratorProgramProps {
@@ -34,8 +35,7 @@ function useAgentStatus(programId: string, isRunning: boolean) {
     autoConnect: isRunning,
   });
 
-  const [lastUpdate, setLastUpdate] = useState(Date.now());
-  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<number | null>(null);
 
   // Process kernel updates
   useEffect(() => {
@@ -53,22 +53,6 @@ function useAgentStatus(programId: string, isRunning: boolean) {
     return () => clearInterval(interval);
   }, [isRunning, kernelConnected, programId, sendCommand]);
 
-  // Process Rails messages for agent updates
-  useEffect(() => {
-    if (!isRunning || !railsConnected) return;
-
-    // Look for agent-related messages from Rails
-    const agentMessages = railsMessages.filter(
-      msg => msg.kind === 'runner.status' || msg.kind === 'wih.update'
-    );
-
-    if (agentMessages.length > 0) {
-      // Update agent status from Rails messages
-      const latestMessage = agentMessages[agentMessages.length - 1];
-      updateAgentStatusFromRails(latestMessage);
-    }
-  }, [railsMessages, isRunning, railsConnected]);
-
   const updateAgentStatusFromRails = useCallback((message: { kind: string; payload: unknown }) => {
     const payload = message.payload as {
       agent_id?: string;
@@ -84,13 +68,14 @@ function useAgentStatus(programId: string, isRunning: boolean) {
       ...prev,
       agents: prev.agents.map(agent => {
         if (agent.id === payload.agent_id || agent.name === payload.agent_id) {
+          const timestamp = new Date().toLocaleTimeString();
           return {
             ...agent,
             status: (payload.status as OrchestratorAgent['status']) || agent.status,
             progress: payload.progress ?? agent.progress,
             currentTask: payload.task || agent.currentTask,
             logs: payload.log 
-              ? [...agent.logs, `[${new Date().toLocaleTimeString()}] ${payload.log}`]
+              ? [...agent.logs, `[${timestamp}] ${payload.log}`]
               : agent.logs,
           };
         }
@@ -100,6 +85,22 @@ function useAgentStatus(programId: string, isRunning: boolean) {
 
     setLastUpdate(Date.now());
   }, [programId, store]);
+
+  // Process Rails messages for agent updates
+  useEffect(() => {
+    if (!isRunning || !railsConnected) return;
+
+    // Look for agent-related messages from Rails
+    const agentMessages = railsMessages.filter(
+      msg => msg.kind === 'runner.status' || msg.kind === 'wih.update'
+    );
+
+    if (agentMessages.length > 0) {
+      // Update agent status from Rails messages
+      const latestMessage = agentMessages[agentMessages.length - 1];
+      updateAgentStatusFromRails(latestMessage);
+    }
+  }, [railsMessages, isRunning, railsConnected, updateAgentStatusFromRails]);
 
   return {
     kernelConnected,
@@ -117,8 +118,9 @@ const AgentCard: React.FC<{
   agent: OrchestratorAgent;
   isLive?: boolean;
 }> = ({ agent, isLive }) => {
+  const isClient = useIsClient();
   const statusColors = {
-    idle: 'bg-gray-100 text-gray-600',
+    idle: 'bg-zinc-100 text-zinc-600',
     working: 'bg-blue-100 text-blue-700 animate-pulse',
     completed: 'bg-green-100 text-green-700',
     error: 'bg-red-100 text-red-700',
@@ -131,23 +133,28 @@ const AgentCard: React.FC<{
     error: '❌',
   };
 
-  const duration = agent.startTime && agent.endTime 
-    ? ((agent.endTime - agent.startTime) / 1000).toFixed(1)
-    : agent.startTime 
-      ? ((Date.now() - agent.startTime) / 1000).toFixed(1)
-      : null;
+  const duration = useMemo(() => {
+    if (!isClient) return null;
+    if (agent.startTime && agent.endTime) {
+      return ((agent.endTime - agent.startTime) / 1000).toFixed(1);
+    }
+    if (agent.startTime) {
+      return ((Date.now() - agent.startTime) / 1000).toFixed(1);
+    }
+    return null;
+  }, [isClient, agent.startTime, agent.endTime]);
 
   return (
-    <div className={`p-4 rounded-lg border ${agent.status === 'working' ? 'border-blue-300 shadow-sm' : 'border-gray-200 dark:border-gray-700'} ${isLive ? 'ring-1 ring-blue-400/30' : ''}`}>
+    <div className={`p-4 rounded-lg border ${agent.status === 'working' ? 'border-blue-300 shadow-sm' : 'border-zinc-200 dark:border-zinc-700'} ${isLive ? 'ring-1 ring-blue-400/30' : ''}`}>
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <span className="text-lg">{statusIcons[agent.status]}</span>
-          <span className="font-medium text-gray-900 dark:text-white">{agent.name}</span>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+          <span className="font-medium text-zinc-900 dark:text-white">{agent.name}</span>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400">
             {agent.model}
           </span>
           {isLive && (
-            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" title="Live updates" />
+            <span className="size-2  bg-green-500 rounded-full animate-pulse" title="Live updates" />
           )}
         </div>
         <span className={`text-xs px-2 py-1 rounded-full ${statusColors[agent.status]}`}>
@@ -156,18 +163,18 @@ const AgentCard: React.FC<{
       </div>
 
       {agent.currentTask && (
-        <div className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+        <div className="text-sm text-zinc-600 dark:text-zinc-400 mb-2">
           {agent.currentTask}
         </div>
       )}
 
       {/* Progress bar */}
       <div className="mt-2">
-        <div className="flex justify-between text-xs text-gray-500 mb-1">
+        <div className="flex justify-between text-xs text-zinc-500 mb-1">
           <span>Progress</span>
           <span>{agent.progress}%</span>
         </div>
-        <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+        <div className="h-2 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
           <div 
             className={`h-full transition-all duration-500 ${
               agent.status === 'error' ? 'bg-red-500' : 
@@ -180,14 +187,14 @@ const AgentCard: React.FC<{
 
       {/* Duration */}
       {duration && (
-        <div className="mt-2 text-xs text-gray-500">
+        <div className="mt-2 text-xs text-zinc-500">
           Duration: {duration}s
         </div>
       )}
 
       {/* Token usage */}
       {agent.tokensUsed && (
-        <div className="mt-2 text-xs text-gray-500">
+        <div className="mt-2 text-xs text-zinc-500">
           Tokens: {agent.tokensUsed.input + agent.tokensUsed.output.toLocaleString()} 
           (${agent.tokensUsed.cost?.toFixed(4) || '0.0000'})
         </div>
@@ -195,9 +202,9 @@ const AgentCard: React.FC<{
 
       {/* Recent logs */}
       {agent.logs.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
-          <div className="text-xs text-gray-500 mb-1">Recent Activity:</div>
-          <div className="space-y-1 max-h-20 overflow-y-auto text-xs text-gray-600 dark:text-gray-400">
+        <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+          <div className="text-xs text-zinc-500 mb-1">Recent Activity:</div>
+          <div className="space-y-1 max-h-20 overflow-y-auto text-xs text-zinc-600 dark:text-zinc-400">
             {agent.logs.slice(-3).map((log, i) => (
               <div key={i} className="truncate">• {log}</div>
             ))}
@@ -216,7 +223,7 @@ const TaskDAG: React.FC<{
   nodes: OrchestratorState['taskGraph']['nodes'];
   edges: OrchestratorState['taskGraph']['edges'];
   onNodeClick?: (nodeId: string) => void;
-}> = ({ nodes, edges, onNodeClick }) => {
+}> = ({ nodes, onNodeClick }) => {
   const levels = useMemo(() => {
     const levelMap = new Map<string, number>();
     
@@ -247,7 +254,7 @@ const TaskDAG: React.FC<{
   }, [nodes]);
 
   const statusColors = {
-    pending: 'bg-gray-200 dark:bg-gray-700 border-gray-300',
+    pending: 'bg-zinc-200 dark:bg-zinc-700 border-zinc-300',
     running: 'bg-blue-100 dark:bg-blue-900/30 border-blue-400',
     completed: 'bg-green-100 dark:bg-green-900/30 border-green-400',
     error: 'bg-red-100 dark:bg-red-900/30 border-red-400',
@@ -261,13 +268,13 @@ const TaskDAG: React.FC<{
   };
 
   return (
-    <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
-      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Task DAG</h4>
+    <div className="p-4 bg-zinc-50 dark:bg-zinc-900 rounded-lg">
+      <h4 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-4">Task DAG</h4>
       
       <div className="space-y-4">
         {levels.map((levelNodes, levelIndex) => (
           <div key={levelIndex} className="flex items-center gap-4">
-            <span className="text-xs text-gray-400 w-8">L{levelIndex}</span>
+            <span className="text-xs text-zinc-400 w-8">L{levelIndex}</span>
             <div className="flex gap-3">
               {levelNodes.map(nodeId => {
                 const node = nodes.find(n => n.id === nodeId);
@@ -295,7 +302,7 @@ const TaskDAG: React.FC<{
       <div className="mt-4 flex gap-4 text-xs">
         {Object.entries(statusColors).map(([status, colorClass]) => (
           <div key={status} className="flex items-center gap-1">
-            <div className={`w-3 h-3 rounded ${colorClass.split(' ')[0]}`} />
+            <div className={`size-3  rounded ${colorClass.split(' ')[0]}`} />
             <span className="capitalize">{status}</span>
           </div>
         ))}
@@ -314,8 +321,8 @@ const ConnectionStatus: React.FC<{
 }> = ({ kernelConnected, railsConnected }) => {
   if (!kernelConnected && !railsConnected) {
     return (
-      <span className="flex items-center gap-1 text-xs text-gray-400" title="No real-time connection">
-        <span className="w-2 h-2 bg-gray-400 rounded-full" />
+      <span className="flex items-center gap-1 text-xs text-zinc-400" title="No real-time connection">
+        <span className="size-2  bg-zinc-400 rounded-full" />
         Simulated
       </span>
     );
@@ -325,13 +332,13 @@ const ConnectionStatus: React.FC<{
     <div className="flex items-center gap-2">
       {kernelConnected && (
         <span className="flex items-center gap-1 text-xs text-green-600" title="Kernel connected">
-          <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+          <span className="size-2  bg-green-500 rounded-full animate-pulse" />
           Kernel
         </span>
       )}
       {railsConnected && (
         <span className="flex items-center gap-1 text-xs text-blue-600" title="Rails connected">
-          <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+          <span className="size-2  bg-blue-500 rounded-full animate-pulse" />
           Rails
         </span>
       )}
@@ -348,9 +355,9 @@ const OverallProgress: React.FC<{ progress: number; isRunning: boolean }> = ({
   isRunning 
 }) => {
   return (
-    <div className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+    <div className="p-4 bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+        <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
           Overall Progress
         </span>
         <span className={`text-sm font-bold ${isRunning ? 'text-blue-600' : 'text-green-600'}`}>
@@ -358,7 +365,7 @@ const OverallProgress: React.FC<{ progress: number; isRunning: boolean }> = ({
         </span>
       </div>
       
-      <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+      <div className="h-3 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
         <div 
           className={`h-full transition-all duration-500 ${
             isRunning 
@@ -372,7 +379,7 @@ const OverallProgress: React.FC<{ progress: number; isRunning: boolean }> = ({
       {isRunning && (
         <div className="mt-2 flex items-center gap-2 text-xs text-blue-600">
           <span className="animate-pulse">●</span>
-          <span>Execution in progress...</span>
+          <span>Execution in progress…</span>
         </div>
       )}
     </div>
@@ -398,16 +405,16 @@ const CostEstimate: React.FC<{
       </h4>
       <div className="space-y-1 text-sm">
         <div className="flex justify-between">
-          <span className="text-gray-600 dark:text-gray-400">Input Tokens:</span>
+          <span className="text-zinc-600 dark:text-zinc-400">Input Tokens:</span>
           <span>{costEstimate.inputTokens.toLocaleString()}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-gray-600 dark:text-gray-400">Output Tokens:</span>
+          <span className="text-zinc-600 dark:text-zinc-400">Output Tokens:</span>
           <span>{costEstimate.outputTokens.toLocaleString()}</span>
         </div>
         {actualCost !== undefined && (
           <div className="flex justify-between">
-            <span className="text-gray-600 dark:text-gray-400">Actual Cost:</span>
+            <span className="text-zinc-600 dark:text-zinc-400">Actual Cost:</span>
             <span className={isOverBudget ? 'text-red-600 font-medium' : ''}>${actualCost.toFixed(4)}</span>
           </div>
         )}
@@ -427,6 +434,7 @@ const CostEstimate: React.FC<{
 export const OrchestratorProgram: React.FC<OrchestratorProgramProps> = ({ program }) => {
   const { updateProgramState } = useSidecarStore();
   const state = program.state as OrchestratorState;
+  const isClient = useIsClient();
   const [activeTab, setActiveTab] = useState<'agents' | 'dag' | 'logs'>('agents');
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
 
@@ -477,13 +485,14 @@ export const OrchestratorProgram: React.FC<OrchestratorProgramProps> = ({ progra
         agents: prev.agents.map(agent => {
           if (agent.status === 'working' && agent.progress < 100) {
             const newProgress = Math.min(100, agent.progress + Math.random() * 10);
+            const timestamp = new Date().toLocaleTimeString();
             return { 
               ...agent, 
               progress: newProgress,
               status: newProgress >= 100 ? 'completed' : 'working',
               endTime: newProgress >= 100 ? Date.now() : agent.endTime,
               logs: newProgress >= 100 
-                ? [...agent.logs, `[${new Date().toLocaleTimeString()}] Task completed successfully`]
+                ? [...agent.logs, `[${timestamp}] Task completed successfully`]
                 : agent.logs,
             };
           }
@@ -508,16 +517,16 @@ export const OrchestratorProgram: React.FC<OrchestratorProgramProps> = ({ progra
   }, [taskGraph.nodes, agents]);
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-gray-900">
+    <div className="h-full flex flex-col bg-white dark:bg-zinc-900">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-700">
         <div className="flex items-center gap-3">
           <span className="text-xl">🧠</span>
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
               Orchestrator
             </h2>
-            <p className="text-xs text-gray-500 truncate max-w-md">
+            <p className="text-xs text-zinc-500 truncate max-w-md">
               {originalPrompt || 'Multi-Agent Execution'}
             </p>
           </div>
@@ -528,23 +537,23 @@ export const OrchestratorProgram: React.FC<OrchestratorProgramProps> = ({ progra
           
           {isRunning && (
             <span className="flex items-center gap-1 text-xs text-blue-600">
-              <span className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
+              <span className="size-2  bg-blue-600 rounded-full animate-pulse" />
               Running
             </span>
           )}
-          <span className="text-xs text-gray-500">
+          <span className="text-xs text-zinc-500">
             Mode: {state?.executionMode?.toUpperCase()}
           </span>
         </div>
       </div>
 
       {/* Progress */}
-      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+      <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-700">
         <OverallProgress progress={overallProgress} isRunning={isRunning} />
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700">
+      <div className="flex border-b border-zinc-200 dark:border-zinc-700">
         {(['agents', 'dag', 'logs'] as const).map(tab => (
           <button
             key={tab}
@@ -552,7 +561,7 @@ export const OrchestratorProgram: React.FC<OrchestratorProgramProps> = ({ progra
             className={`px-4 py-2 text-sm font-medium ${
               activeTab === tab 
                 ? 'text-blue-600 border-b-2 border-blue-600' 
-                : 'text-gray-500 hover:text-gray-700'
+                : 'text-zinc-500 hover:text-zinc-700'
             }`}
           >
             {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -567,7 +576,7 @@ export const OrchestratorProgram: React.FC<OrchestratorProgramProps> = ({ progra
             {/* Active agents */}
             {agents.filter(a => a.status === 'working').length > 0 && (
               <div>
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
                   Active ({agents.filter(a => a.status === 'working').length})
                 </h3>
                 <div className="grid gap-3">
@@ -581,7 +590,7 @@ export const OrchestratorProgram: React.FC<OrchestratorProgramProps> = ({ progra
             {/* Completed agents */}
             {agents.filter(a => a.status === 'completed').length > 0 && (
               <div>
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
                   Completed ({agents.filter(a => a.status === 'completed').length})
                 </h3>
                 <div className="grid gap-3">
@@ -595,7 +604,7 @@ export const OrchestratorProgram: React.FC<OrchestratorProgramProps> = ({ progra
             {/* Idle/Error agents */}
             {agents.filter(a => a.status === 'idle' || a.status === 'error').length > 0 && (
               <div>
-                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                <h3 className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
                   Others
                 </h3>
                 <div className="grid gap-3">
@@ -624,7 +633,7 @@ export const OrchestratorProgram: React.FC<OrchestratorProgramProps> = ({ progra
                 <h4 className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">
                   Selected Task: {taskGraph.nodes.find(n => n.id === selectedNode)?.name}
                 </h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
                   Status: {taskGraph.nodes.find(n => n.id === selectedNode)?.status}
                 </p>
               </div>
@@ -638,24 +647,24 @@ export const OrchestratorProgram: React.FC<OrchestratorProgramProps> = ({ progra
               agent.logs.map((log, i) => (
                 <div 
                   key={`${agent.id}-${i}`}
-                  className="p-2 bg-gray-50 dark:bg-gray-800 rounded text-sm font-mono"
+                  className="p-2 bg-zinc-50 dark:bg-zinc-800 rounded text-sm font-mono"
                 >
-                  <span className="text-gray-400">[{agent.name}]</span>{' '}
-                  <span className="text-gray-600 dark:text-gray-400">{log}</span>
+                  <span className="text-zinc-400">[{agent.name}]</span>{' '}
+                  <span className="text-zinc-600 dark:text-zinc-400">{log}</span>
                 </div>
               ))
             )}
             {agents.every(a => a.logs.length === 0) && (
-              <div className="text-center text-gray-400 py-8">No logs yet</div>
+              <div className="text-center text-zinc-400 py-8">No logs yet</div>
             )}
           </div>
         )}
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 flex justify-between">
+      <div className="px-4 py-2 border-t border-zinc-200 dark:border-zinc-700 text-xs text-zinc-500 flex justify-between">
         <span>{agents.length} agents • {taskGraph.nodes.length} tasks</span>
-        <span>Last update: {new Date(lastUpdate).toLocaleTimeString()}</span>
+        <span>Last update: {isClient && lastUpdate ? new Date(lastUpdate).toLocaleTimeString() : '...'}</span>
       </div>
     </div>
   );

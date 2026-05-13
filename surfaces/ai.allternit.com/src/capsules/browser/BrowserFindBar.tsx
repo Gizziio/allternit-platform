@@ -189,7 +189,7 @@ export function BrowserFindBar({ iframeRef, onClose }: BrowserFindBarProps) {
           if (e.key === "Enter") navigateMatch(e.shiftKey ? -1 : 1);
           if (e.key === "Escape") onClose();
         }}
-        placeholder="Find in page..."
+        placeholder="Find in page…"
         style={{
           flex: 1,
           maxWidth: 320,

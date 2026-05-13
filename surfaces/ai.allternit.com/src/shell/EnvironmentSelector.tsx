@@ -8,6 +8,7 @@
 
 "use client";
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Desktop,
@@ -187,14 +188,14 @@ export function EnvironmentSelector({
         className="flex items-center gap-2 rounded-lg border border-border/50 bg-secondary/50 px-3 py-1.5 text-sm transition-colors hover:bg-secondary disabled:opacity-50"
       >
         {isLoading ? (
-          <Activity className="h-4 w-4 animate-spin text-blue-500" />
+          <Activity className="size-4  animate-spin text-blue-500" />
         ) : (
           <CurrentIcon
-            className={`h-4 w-4 ${getEnvironmentColor(selectedEnvironment)}`}
+            className={`size-4  ${getEnvironmentColor(selectedEnvironment)}`}
           />
         )}
         <span className="font-medium">{currentEnv.name}</span>
-        <CaretDown className="h-3 w-3 opacity-50" />
+        <CaretDown className="size-3  opacity-50" />
       </button>
 
       {isOpen && (
@@ -231,26 +232,26 @@ export function EnvironmentSelector({
                       } ${isLoading ? "cursor-not-allowed opacity-50" : ""}`}
                     >
                       <div className="flex-shrink-0">
-                        <Icon className={`h-5 w-5 ${getEnvironmentColor(env.type)}`} />
+                        <Icon className={`size-5  ${getEnvironmentColor(env.type)}`} />
                       </div>
                       <div className="flex-1 text-left">
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium">{env.name}</span>
-                          {isSelected && <Check className="h-4 w-4 text-green-500" />}
+                          {isSelected && <Check className="size-4  text-green-500" />}
                         </div>
                         <p className="mt-0.5 text-xs text-muted-foreground">
                           {env.description}
                         </p>
                         <div className="mt-1.5 flex items-center gap-1">
                           <div
-                            className={`h-1.5 w-1.5 rounded-full ${
+                            className={`size-1.5  rounded-full ${
                               env.status === "active"
                                 ? "bg-green-500"
                                 : env.status === "degraded"
                                   ? "bg-yellow-500"
                                   : env.status === "provisioning"
                                     ? "bg-blue-500"
-                                    : "bg-gray-500"
+                                    : "bg-zinc-500"
                             }`}
                           />
                           <span className="text-xs capitalize">{env.status}</span>
@@ -261,7 +262,7 @@ export function EnvironmentSelector({
                 })
               ) : (
                 <div className="px-4 py-8 text-center text-muted-foreground">
-                  <Cloud className="mx-auto mb-2 h-8 w-8 opacity-50" />
+                  <Cloud className="mx-auto mb-2 size-8  opacity-50" />
                   <p className="text-sm">No environments configured</p>
                 </div>
               )}
@@ -283,7 +284,7 @@ export function EnvironmentSelector({
   );
 }
 
-function getDefaultEnvironment(type: EnvironmentType): EnvironmentTarget {
+function getDefaultEnvironment(type: EnvironmentType): EnvironmentTarget {isClient ? 
   const now = new Date().toISOString();
 
   switch (type) {
@@ -296,7 +297,7 @@ function getDefaultEnvironment(type: EnvironmentType): EnvironmentTarget {
         status: "active",
         createdAt: now,
         updatedAt: now,
-      };
+       : "..."};
     case "cloud":
       return {
         id: "cloud-default",
@@ -370,7 +371,7 @@ function mapRemoteStatus(
 
 function mapRuntimeBackendToEnvironments(
   runtime: RuntimeBackendResponse,
-): EnvironmentTarget[] {
+): EnvironmentTarget[] {isClient ? 
   const now = new Date().toISOString();
   const remoteTarget = runtime.active_backend ?? runtime.available_backends?.[0] ?? null;
   const environments: EnvironmentTarget[] = [
@@ -382,7 +383,7 @@ function mapRuntimeBackendToEnvironments(
       status: runtime.mode === "local" ? "active" : "inactive",
       createdAt: now,
       updatedAt: now,
-    },
+     : "..."},
   ];
 
   if (remoteTarget || (runtime.available_backends?.length ?? 0) > 0) {

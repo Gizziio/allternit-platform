@@ -129,7 +129,7 @@ export class FileSystemService {
 
   private log(...args: unknown[]): void {
     if (this.config.debug) {
-      console.log('[FileSystemService]', ...args);
+      console.debug('[FileSystemService]', ...args);
     }
   }
 

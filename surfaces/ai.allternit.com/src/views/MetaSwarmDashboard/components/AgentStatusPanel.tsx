@@ -34,8 +34,8 @@ interface AgentStatusPanelProps {
 }
 
 const statusConfig: Record<AgentStatus, { color: string; icon: React.ReactNode; label: string }> = {
-  idle: { color: 'bg-gray-400', icon: <Pause size={12} />, label: 'Idle' },
-  working: { color: 'bg-blue-500', icon: <Cpu className="h-3 w-3 animate-pulse" />, label: 'Working' },
+  idle: { color: 'bg-zinc-400', icon: <Pause size={12} />, label: 'Idle' },
+  working: { color: 'bg-blue-500', icon: <Cpu className="size-3  animate-pulse" />, label: 'Working' },
   waiting: { color: 'bg-yellow-500', icon: <Clock size={12} />, label: 'Waiting' },
   completed: { color: 'bg-green-500', icon: <CheckCircle size={12} />, label: 'Completed' },
   failed: { color: 'bg-red-500', icon: <XCircle size={12} />, label: 'Failed' },
@@ -79,7 +79,7 @@ export function AgentStatusPanel({ className }: AgentStatusPanelProps) {
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-center h-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+            <div className="animate-spin rounded-full size-8  border-b-2 border-blue-500" />
           </div>
         </CardContent>
       </Card>

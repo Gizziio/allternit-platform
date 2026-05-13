@@ -1,16 +1,12 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import Lottie from "lottie-react";
 import type { ComponentType } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { LottieRefCurrentProps } from "lottie-react";
 import { cn } from "./utils/cn";
 import { spiralFastData, spiralSlowData } from "./spiral-loader-data";
 import { useTheme } from "next-themes";
-
-const Lottie = dynamic(() => import("lottie-react"), {
-  ssr: false,
-}) as ComponentType<any>;
 
 const FAST_REPEATS = 4;
 const SLOW_REPEATS = 2;

@@ -5,10 +5,10 @@
  * Usage:
  *   <DesignVariationGrid title="Hero exploration" columns={3}>
  *     <Variation label="Minimal" description="Restrained version">
- *       <div>...design 1...</div>
+ *       <div>…design 1…</div>
  *     </Variation>
  *     <Variation label="Editorial">
- *       <div>...design 2...</div>
+ *       <div>…design 2…</div>
  *     </Variation>
  *   </DesignVariationGrid>
  */
@@ -57,7 +57,7 @@ const s = {
     borderBottom: "1px solid var(--border-subtle, #E0E0DA)",
   } as React.CSSProperties,
   number: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: 600,
     color: "var(--text-tertiary, #999)",
     fontFamily: 'var(--font-mono)',

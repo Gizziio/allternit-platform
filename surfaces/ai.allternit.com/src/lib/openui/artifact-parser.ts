@@ -1,7 +1,7 @@
 /**
  * Artifact Parser
  *
- * Parses <artifact type="text/html" identifier="..." title="...">...</artifact>
+ * Parses <artifact type="text/html" identifier="…" title="…">…</artifact>
  * blocks emitted by the Studio design agent. Splits a raw message string into
  * interleaved text and artifact segments.
  */

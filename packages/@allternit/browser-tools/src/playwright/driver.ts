@@ -117,10 +117,12 @@ class SessionRegistry {
     const active = this.sessions.get(sessionId);
     if (!active) return;
 
-    // Close in reverse order
-    await active.page.close().catch(() => {});
-    await active.context.close().catch(() => {});
-    await active.browser.close().catch(() => {});
+    // Close resources in parallel
+    await Promise.all([
+      active.page.close().catch(() => {}),
+      active.context.close().catch(() => {}),
+      active.browser.close().catch(() => {}),
+    ]);
 
     // Clean up
     this.sessions.delete(sessionId);

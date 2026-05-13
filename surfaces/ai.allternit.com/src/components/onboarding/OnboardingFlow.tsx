@@ -112,40 +112,31 @@ const stepVariants: Variants = {
 function StepSidebar({ screen }: { screen: Screen }) {
   const cIdx = screenIdx(screen);
   return (
-    <div style={{
-      width: 196,
-      flexShrink: 0,
-      background: 'var(--surface-panel)',
-      borderRight: '1px solid var(--ui-border-subtle)',
-      display: 'flex',
-      flexDirection: 'column',
-      padding: '28px 20px',
-      gap: 0,
-    }}>
+    <div className="flex w-[196px] flex-shrink-0 flex-col gap-0 border-r border-ui-border-subtle bg-surface-panel px-5 py-7">
       {/* Logo + brand */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 32 }}>
+      <div className="mb-8 flex items-center gap-2.5">
         <MatrixLogo state="idle" size={36} />
         <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ui-text-primary)', letterSpacing: '-0.01em' }}>
+          <div className="text-[13px] font-bold tracking-[-0.01em] text-ui-text-primary">
             Allternit
           </div>
-          <div style={{ fontSize: 10, color: 'var(--ui-text-muted)', marginTop: 1 }}>
+          <div className="mt-px text-xs text-ui-text-muted">
             Setup wizard
           </div>
         </div>
       </div>
 
       {/* Step list with connecting lines */}
-      <div style={{ flex: 1 }}>
+      <div className="flex-1">
         {INNER_STEPS.map((step, i) => {
           const stepScreenIdx = i + 1;
           const isDone = cIdx > stepScreenIdx;
           const isActive = cIdx === stepScreenIdx;
 
           return (
-            <div key={step.key} style={{ display: 'flex', gap: 12 }}>
+            <div key={step.key} className="flex gap-3">
               {/* Dot + line column */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: 24 }}>
+              <div className="flex w-6 flex-col items-center">
                 <motion.div
                   animate={{
                     background: isDone ? 'var(--accent-primary)' : isActive
@@ -154,20 +145,12 @@ function StepSidebar({ screen }: { screen: Screen }) {
                     borderColor: isDone || isActive ? 'var(--accent-primary)' : 'var(--ui-border-default)',
                   }}
                   transition={{ duration: 0.2 }}
-                  style={{
-                    width: 24, height: 24, borderRadius: '50%',
-                    border: '2px solid',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
+                  className="flex size-6 flex-shrink-0 items-center justify-center rounded-full border-2"
                 >
                   {isDone ? (
-                    <Check weight="bold" size={11} style={{ color: 'var(--text-inverse)' }} />
+                    <Check weight="bold" size={12} className="text-text-inverse" />
                   ) : (
-                    <span style={{
-                      fontSize: 10, fontWeight: 700,
-                      color: isActive ? 'var(--accent-primary)' : 'var(--ui-text-muted)',
-                    }}>
+                    <span className={`text-xs font-bold ${isActive ? 'text-accent-primary' : 'text-ui-text-muted'}`}>
                       {step.num}
                     </span>
                   )}
@@ -177,28 +160,17 @@ function StepSidebar({ screen }: { screen: Screen }) {
                   <motion.div
                     animate={{ background: cIdx > stepScreenIdx + 1 ? 'var(--accent-primary)' : 'var(--ui-border-subtle)' }}
                     transition={{ duration: 0.3 }}
-                    style={{ width: 2, flex: 1, minHeight: 28, marginBlock: 4, borderRadius: 1 }}
+                    className="my-1 min-h-7 w-0.5 flex-1 rounded-px"
                   />
                 )}
               </div>
 
               {/* Text */}
-              <div style={{ paddingTop: 3, paddingBottom: i < INNER_STEPS.length - 1 ? 28 : 0 }}>
-                <div style={{
-                  fontSize: 13,
-                  fontWeight: isActive ? 600 : 500,
-                  color: isDone || isActive ? 'var(--ui-text-primary)' : 'var(--ui-text-muted)',
-                  transition: 'color 0.2s',
-                  lineHeight: 1.3,
-                }}>
+              <div className={`pb-7 pt-0.5 ${i < INNER_STEPS.length - 1 ? 'pb-7' : 'pb-0'}`}>
+                <div className={`text-[13px] leading-tight text-ui-text-primary transition-colors duration-200 ${isActive ? 'font-semibold' : 'font-medium'} ${isDone || isActive ? 'text-ui-text-primary' : 'text-ui-text-muted'}`}>
                   {step.label}
                 </div>
-                <div style={{
-                  fontSize: 11,
-                  color: 'var(--ui-text-muted)',
-                  marginTop: 2,
-                  lineHeight: 1.4,
-                }}>
+                <div className="mt-0.5 text-xs leading-snug text-ui-text-muted">
                   {step.hint}
                 </div>
               </div>
@@ -208,13 +180,9 @@ function StepSidebar({ screen }: { screen: Screen }) {
       </div>
 
       {/* Footer */}
-      <div style={{
-        fontSize: 11, color: 'var(--ui-text-muted)', lineHeight: 1.6,
-        borderTop: '1px solid var(--ui-border-subtle)',
-        paddingTop: 16,
-      }}>
+      <div className="border-t border-ui-border-subtle pt-4 text-xs leading-relaxed text-ui-text-muted">
         3 steps · takes<br />
-        <span style={{ color: 'var(--accent-primary)', fontWeight: 600 }}>~90 seconds</span>
+        <span className="font-semibold text-accent-primary">~90 seconds</span>
       </div>
     </div>
   );
@@ -259,52 +227,27 @@ const DECK_CARDS = [
 
 function WelcomeScreen({ onNext }: { onNext: () => void }) {
   return (
-    <div style={{
-      display: 'flex',
-      width: '100%',
-      height: '100%',
-      minHeight: 0,
-    }}>
+    <div className="flex h-full min-h-0 w-full">
       {/* Left — brand + copy + CTA */}
-      <div style={{
-        flex: '0 0 420px',
-        display: 'flex', flexDirection: 'column', justifyContent: 'center',
-        padding: '48px 52px',
-        borderRight: '1px solid var(--ui-border-subtle)',
-      }}>
+      <div className="flex flex-shrink-0 flex-col justify-center border-r border-ui-border-subtle px-[52px] py-12 basis-auto">
         {/* Gizzi mascot */}
-        <div style={{ marginBottom: 28 }}>
+        <div className="mb-7">
           <GizziMascot emotion="pleased" size={72} />
         </div>
 
-        <h1 style={{
-          fontSize: 32, fontWeight: 800, letterSpacing: '-0.035em',
-          lineHeight: 1.15, marginBottom: 12,
-          color: 'var(--ui-text-primary)',
-        }}>
+        <h1 className="mb-3 text-[32px] font-extrabold leading-tight tracking-[-0.035em] text-ui-text-primary">
           Welcome to{' '}
-          <span style={{ color: 'var(--accent-primary)' }}>Allternit.</span>
+          <span className="text-accent-primary">Allternit.</span>
         </h1>
 
-        <p style={{
-          fontSize: 14, lineHeight: 1.7,
-          color: 'var(--ui-text-secondary)',
-          marginBottom: 32, maxWidth: 300,
-        }}>
+        <p className="mb-8 max-w-[300px] text-sm leading-7 text-ui-text-secondary">
           Your private AI platform — any model, real agents, your own server.
           No subscriptions. No data sharing.
         </p>
 
         {/* Reassurance pill */}
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: 6,
-          padding: '6px 13px', borderRadius: 999,
-          background: 'color-mix(in srgb, var(--accent-primary) 8%, var(--surface-panel))',
-          border: '1px solid color-mix(in srgb, var(--accent-primary) 18%, transparent)',
-          fontSize: 11, color: 'var(--ui-text-secondary)',
-          marginBottom: 28, alignSelf: 'flex-start',
-        }}>
-          <Sparkle size={11} style={{ color: 'var(--accent-primary)' }} weight="fill" />
+        <div className="mb-7 inline-flex items-center gap-1.5 self-start rounded-full border border-solid border-[color-mix(in_srgb,var(--accent-primary)_18%,transparent)] bg-[color-mix(in_srgb,var(--accent-primary)_8%,var(--surface-panel))] px-3.5 py-1.5 text-xs text-ui-text-secondary">
+          <Sparkle size={12} className="text-accent-primary" weight="fill" />
           90 seconds · no technical experience needed
         </div>
 
@@ -313,38 +256,23 @@ function WelcomeScreen({ onNext }: { onNext: () => void }) {
           onClick={onNext}
           whileHover={{ scale: 1.02, boxShadow: '0 8px 32px color-mix(in srgb, var(--accent-primary) 40%, transparent)' }}
           whileTap={{ scale: 0.98 }}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '14px 28px', borderRadius: 999,
-            background: 'var(--accent-primary)',
-            color: 'var(--text-inverse)',
-            fontSize: 15, fontWeight: 700,
-            border: 'none', cursor: 'pointer',
-            boxShadow: 'var(--shadow-md)',
-            alignSelf: 'flex-start',
-          }}
+          className="self-start flex items-center gap-2.5 rounded-full border-none bg-accent-primary px-7 py-3.5 text-[15px] font-bold text-text-inverse shadow-md"
         >
           Get Started
           <ArrowRight weight="bold" size={16} />
         </motion.button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 11, color: 'var(--ui-text-muted)', marginTop: 16 }}>
+        <div className="mt-4 flex items-center gap-2 text-xs text-ui-text-muted">
           Where it runs
-          <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'currentColor', display: 'inline-block' }} />
+          <span className="inline-block size-0.5 rounded-full bg-current" />
           Style
-          <span style={{ width: 3, height: 3, borderRadius: '50%', background: 'currentColor', display: 'inline-block' }} />
+          <span className="inline-block size-0.5 rounded-full bg-current" />
           Your AI
         </div>
       </div>
 
       {/* Right — interactive A:// preview */}
-      <div style={{
-        flex: 1,
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
-        padding: '24px 32px',
-        background: 'color-mix(in srgb, var(--accent-primary) 3%, var(--surface-panel))',
-        overflow: 'hidden',
-      }}>
+      <div className="flex flex-1 items-start justify-center overflow-hidden bg-[color-mix(in_srgb,var(--accent-primary)_3%,var(--surface-panel))] px-8 py-6">
         <AuthPreview />
       </div>
     </div>
@@ -355,14 +283,9 @@ function WelcomeScreen({ onNext }: { onNext: () => void }) {
 
 function HintBox({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{
-      display: 'flex', alignItems: 'flex-start', gap: 9,
-      padding: '10px 13px', borderRadius: 12, marginBottom: 14,
-      background: 'color-mix(in srgb, var(--accent-primary) 5%, var(--surface-panel))',
-      border: '1px solid color-mix(in srgb, var(--accent-primary) 14%, transparent)',
-    }}>
-      <Sparkle size={13} weight="fill" style={{ color: 'var(--accent-primary)', flexShrink: 0, marginTop: 1 }} />
-      <p style={{ fontSize: 12, color: 'var(--ui-text-secondary)', lineHeight: 1.55, margin: 0 }}>
+    <div className="mb-3.5 flex items-start gap-2.5 rounded-xl border border-solid border-[color-mix(in_srgb,var(--accent-primary)_14%,transparent)] bg-[color-mix(in_srgb,var(--accent-primary)_5%,var(--surface-panel))] px-3.5 py-2.5">
+      <Sparkle size={13} weight="fill" className="mt-px flex-shrink-0 text-accent-primary" />
+      <p className="m-0 text-xs leading-relaxed text-ui-text-secondary">
         {children}
       </p>
     </div>
@@ -384,6 +307,9 @@ function getUserOS(): 'mac' | 'windows' | 'linux' {
   if (ua.includes('linux')) return 'linux';
   return 'mac';
 }
+
+const inputClassName = "flex-1 px-3 py-2.5 rounded-lg text-[13px] bg-surface-canvas border border-ui-border-default text-ui-text-primary outline-none";
+
 
 function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial<WizardData>) => void }) {
   const [showPw, setShowPw] = useState(false);
@@ -524,7 +450,7 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div className="flex flex-col gap-2.5">
       <HintBox>
         Think of this like choosing where to plug in Allternit's brain.
         Not sure? Pick <strong>"Use this computer"</strong> — you can always change it later.
@@ -537,39 +463,17 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
             onClick={() => onUpdate({ infraType: id })}
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 14,
-              padding: '14px 16px',
-              borderRadius: 14,
-              border: `2px solid ${sel ? 'var(--accent-primary)' : 'var(--ui-border-subtle)'}`,
-              background: sel
-                ? 'color-mix(in srgb, var(--accent-primary) 8%, var(--surface-panel))'
-                : 'var(--surface-panel)',
-              cursor: 'pointer',
-              textAlign: 'left',
-              transition: 'border-color 150ms, background 150ms',
-            }}
+            className={`flex items-center gap-3.5 rounded-2xl border-2 px-4 py-3.5 text-left transition-colors duration-150 ${sel ? 'border-accent-primary bg-[color-mix(in_srgb,var(--accent-primary)_8%,var(--surface-panel))]' : 'border-ui-border-subtle bg-surface-panel'}`}
           >
-            <div style={{
-              width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: sel
-                ? 'color-mix(in srgb, var(--accent-primary) 16%, var(--surface-panel))'
-                : 'var(--surface-panel-muted)',
-              color: sel ? 'var(--accent-primary)' : 'var(--ui-text-muted)',
-              transition: 'background 150ms, color 150ms',
-            }}>
+            <div className={`flex size-9 flex-shrink-0 items-center justify-center rounded-lg transition-colors duration-150 ${sel ? 'bg-[color-mix(in_srgb,var(--accent-primary)_16%,var(--surface-panel))] text-accent-primary' : 'bg-surface-panel-muted text-ui-text-muted'}`}>
               <Icon size={18} />
             </div>
 
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{
-                fontSize: 13, fontWeight: 600, color: 'var(--ui-text-primary)',
-                lineHeight: 1.3,
-              }}>
+            <div className="min-w-0 flex-1">
+              <div className="text-[13px] font-semibold leading-tight text-ui-text-primary">
                 {label}
               </div>
-              <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', marginTop: 2 }}>
+              <div className="mt-0.5 text-xs text-ui-text-muted">
                 {desc}
               </div>
             </div>
@@ -580,14 +484,9 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
                 background: sel ? 'var(--accent-primary)' : 'transparent',
                 borderColor: sel ? 'var(--accent-primary)' : 'var(--ui-border-default)',
               }}
-              style={{
-                width: 18, height: 18, borderRadius: '50%',
-                border: '2px solid',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0,
-              }}
+              className="flex size-4.5 flex-shrink-0 items-center justify-center rounded-full border-2"
             >
-              {sel && <Check weight="bold" size={10} style={{ color: 'var(--text-inverse)' }} />}
+              {sel && <Check weight="bold" size={12} className="text-text-inverse" />}
             </motion.div>
           </motion.button>
         );
@@ -600,73 +499,73 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
             initial={{ opacity: 0, y: -6, height: 0 }}
             animate={{ opacity: 1, y: 0, height: 'auto' }}
             exit={{ opacity: 0, y: -6, height: 0 }}
-            style={{ overflow: 'hidden', borderRadius: 14, background: 'var(--surface-panel)', border: '1px solid var(--ui-border-subtle)', padding: 16 }}
+            className="overflow-hidden rounded-2xl border border-ui-border-subtle bg-surface-panel p-4"
           >
             {/* Electron: local backend is always available at localhost */}
             {isElectron ? (
               localStatus === 'checking' ? (
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--ui-text-muted)', fontSize: 13 }}>
-                  <ArrowClockwise size={16} style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+                <div className="flex items-center gap-2.5 text-[13px] text-ui-text-muted">
+                  <ArrowClockwise size={16} className="animate-spin flex-shrink-0" />
                   Starting AI engine…
                 </div>
               ) : localStatus === 'found' ? (
                 <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: 'var(--status-success-bg)', border: '1px solid color-mix(in srgb, var(--status-success) 25%, transparent)', marginBottom: 10 }}>
-                    <CheckCircle weight="fill" size={16} style={{ color: 'var(--status-success)', flexShrink: 0 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ui-text-primary)' }}>AI engine is running</div>
-                      <div style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>Connected to this computer's local backend</div>
+                  <div className="mb-2.5 flex items-center gap-2.5 rounded-lg border border-solid border-[color-mix(in_srgb,var(--status-success)_25%,transparent)] bg-status-success-bg p-2.5">
+                    <CheckCircle weight="fill" size={16} className="flex-shrink-0 text-status-success" />
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[13px] font-semibold text-ui-text-primary">AI engine is running</div>
+                      <div className="text-xs text-ui-text-muted">Connected to this computer's local backend</div>
                     </div>
                     <button
                       onClick={activateLocal}
                       disabled={connStatus === 'testing' || connStatus === 'ok'}
-                      style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700, border: 'none', background: connStatus === 'ok' ? 'var(--status-success)' : 'var(--accent-primary)', color: 'var(--text-inverse)', cursor: connStatus === 'ok' ? 'default' : 'pointer', flexShrink: 0 }}
+                      className={`flex-shrink-0 rounded-lg border-none px-3.5 py-1.5 text-xs font-bold text-text-inverse ${connStatus === 'ok' ? 'cursor-default bg-status-success' : 'cursor-pointer bg-accent-primary'}`}
                     >
                       {connStatus === 'testing' ? 'Connecting…' : connStatus === 'ok' ? 'Connected ✓' : 'Connect'}
                     </button>
                   </div>
                   {electronTunnel?.status === 'running' && electronTunnel.url && (
-                    <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', padding: '8px 10px', borderRadius: 8, background: 'var(--surface-canvas)' }}>
+                    <div className="rounded-lg bg-surface-canvas p-2 text-xs text-ui-text-muted">
                       Web access active — your browser can also reach this at{' '}
-                      <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--ui-text-secondary)' }}>{electronTunnel.url}</span>
+                      <span className="font-mono text-ui-text-secondary">{electronTunnel.url}</span>
                     </div>
                   )}
                   {connMsg && (
-                    <div style={{ marginTop: 8, fontSize: 12, padding: '8px 12px', borderRadius: 8, background: connStatus === 'err' ? 'var(--status-error-bg)' : 'var(--status-success-bg)', color: connStatus === 'err' ? 'var(--status-error)' : 'var(--status-success)' }}>
+                    <div className={`mt-2 rounded-lg px-3 py-2 text-xs ${connStatus === 'err' ? 'bg-status-error-bg text-status-error' : 'bg-status-success-bg text-status-success'}`}>
                       {connMsg}
                     </div>
                   )}
                 </div>
               ) : (
-                <div style={{ fontSize: 12, color: 'var(--ui-text-secondary)', lineHeight: 1.5 }}>
+                <div className="text-xs leading-normal text-ui-text-secondary">
                   AI engine not detected. Make sure the backend service is running and try again.
                 </div>
               )
             ) : localStatus === 'checking' ? (
               /* Checking */
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--ui-text-muted)', fontSize: 13 }}>
-                <ArrowClockwise size={16} style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />
+              <div className="flex items-center gap-2.5 text-[13px] text-ui-text-muted">
+                <ArrowClockwise size={16} className="animate-spin flex-shrink-0" />
                 Looking for Allternit on this computer…
               </div>
             ) : localStatus === 'found' ? (
               /* Found locally */
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 10, background: 'var(--status-success-bg)', border: '1px solid color-mix(in srgb, var(--status-success) 25%, transparent)' }}>
-                <CheckCircle weight="fill" size={16} style={{ color: 'var(--status-success)', flexShrink: 0 }} />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ui-text-primary)' }}>Backend found</div>
-                  <div style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>{localUrl}</div>
+              <div className="flex items-center gap-2.5 rounded-lg border border-solid border-[color-mix(in_srgb,var(--status-success)_25%,transparent)] bg-status-success-bg p-2.5">
+                <CheckCircle weight="fill" size={16} className="flex-shrink-0 text-status-success" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[13px] font-semibold text-ui-text-primary">Backend found</div>
+                  <div className="text-xs text-ui-text-muted">{localUrl}</div>
                 </div>
-                <button onClick={activateLocal} disabled={connStatus === 'testing'} style={{ padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 700, border: 'none', background: 'var(--accent-primary)', color: 'var(--text-inverse)', cursor: 'pointer', flexShrink: 0 }}>
+                <button onClick={activateLocal} disabled={connStatus === 'testing'} className="flex-shrink-0 cursor-pointer rounded-lg border-none bg-accent-primary px-3.5 py-1.5 text-xs font-bold text-text-inverse">
                   {connStatus === 'testing' ? 'Connecting…' : connStatus === 'ok' ? 'Connected ✓' : 'Use this'}
                 </button>
               </div>
             ) : (
               /* Not found — show download */
               <div>
-                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--accent-primary)', marginBottom: 8 }}>
+                <div className="mb-2 text-xs font-bold uppercase tracking-widest text-accent-primary">
                   Get the Desktop App
                 </div>
-                <div style={{ fontSize: 12, color: 'var(--ui-text-secondary)', marginBottom: 12, lineHeight: 1.5 }}>
+                <div className="mb-3 text-xs leading-normal text-ui-text-secondary">
                   The Allternit desktop app runs on your {os === 'mac' ? 'Mac' : os === 'windows' ? 'Windows PC' : 'Linux machine'} and automatically connects your browser — no commands, no copy-pasting URLs.
                 </div>
                 {/* TODO: Update href to point to the real download page once hosting is set up.
@@ -676,20 +575,15 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
                   href="https://allternit.com/download"
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{
-                    display: 'block', width: '100%', padding: '10px 0', borderRadius: 10,
-                    fontSize: 13, fontWeight: 700, textAlign: 'center', textDecoration: 'none',
-                    background: 'var(--accent-primary)', color: 'var(--text-inverse)',
-                    boxSizing: 'border-box',
-                  }}
+                  className="box-border block w-full rounded-lg bg-accent-primary py-2.5 text-center text-[13px] font-bold text-text-inverse no-underline"
                 >
                   Download for {os === 'mac' ? 'Mac' : os === 'windows' ? 'Windows' : 'Linux'}
                 </a>
-                <div style={{ marginTop: 10, fontSize: 11, color: 'var(--ui-text-muted)' }}>
+                <div className="mt-2.5 text-xs text-ui-text-muted">
                   After installing, open the app — it automatically connects this browser. This page updates when it's ready.
                 </div>
                 {connMsg && (
-                  <div style={{ marginTop: 8, fontSize: 12, padding: '8px 12px', borderRadius: 8, background: connStatus === 'err' ? 'var(--status-error-bg)' : 'var(--status-success-bg)', color: connStatus === 'err' ? 'var(--status-error)' : 'var(--status-success)' }}>
+                  <div className={`mt-2 rounded-lg px-3 py-2 text-xs ${connStatus === 'err' ? 'bg-status-error-bg text-status-error' : 'bg-status-success-bg text-status-success'}`}>
                     {connMsg}
                   </div>
                 )}
@@ -706,30 +600,30 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            style={{ overflow: 'hidden', borderRadius: 14, background: 'var(--surface-panel)', border: '1px solid var(--ui-border-subtle)', padding: 16 }}
+            className="overflow-hidden rounded-2xl border border-ui-border-subtle bg-surface-panel p-4"
           >
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--accent-primary)', marginBottom: 12 }}>
+            <div className="mb-3 text-xs font-bold uppercase tracking-widest text-accent-primary">
               Backend URL
             </div>
 
             {/* URL input with inline status */}
-            <div style={{ position: 'relative', marginBottom: 8 }}>
+            <div className="relative mb-2">
               <input
                 type="text"
                 value={manualUrl}
                 onChange={e => handleUrlChange(e.target.value)}
                 placeholder="https://your-tunnel.trycloudflare.com"
-                style={{ ...inputStyle, width: '100%', paddingRight: 36, boxSizing: 'border-box' }}
+                className={`${inputClassName} box-border w-full pr-9`}
               />
-              <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', pointerEvents: 'none' }}>
-                {urlTestStatus === 'checking' && <ArrowClockwise size={14} style={{ color: 'var(--ui-text-muted)', animation: 'spin 1s linear infinite' }} />}
-                {urlTestStatus === 'ok'       && <CheckCircle weight="fill" size={14} style={{ color: 'var(--status-success)' }} />}
-                {urlTestStatus === 'fail'     && <Warning weight="fill" size={14} style={{ color: 'var(--status-error)' }} />}
+              <div className="pointer-events-none absolute right-2.5 top-1/2 flex -translate-y-1/2 items-center">
+                {urlTestStatus === 'checking' && <ArrowClockwise size={14} className="animate-spin text-ui-text-muted" />}
+                {urlTestStatus === 'ok'       && <CheckCircle weight="fill" size={14} className="text-status-success" />}
+                {urlTestStatus === 'fail'     && <Warning weight="fill" size={14} className="text-status-error" />}
               </div>
             </div>
 
             {urlTestStatus === 'fail' && urlTestError && (
-              <div style={{ fontSize: 11, color: 'var(--status-error)', marginBottom: 8, padding: '6px 10px', borderRadius: 8, background: 'var(--status-error-bg)' }}>
+              <div className="mb-2 rounded-lg bg-status-error-bg px-2.5 py-1.5 text-xs text-status-error">
                 {urlTestError}
               </div>
             )}
@@ -739,12 +633,12 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
               value={manualName}
               onChange={e => setManualName(e.target.value)}
               placeholder="Connection name (e.g., My MacBook)"
-              style={{ ...inputStyle, width: '100%', marginBottom: 8, boxSizing: 'border-box' }}
+              className={`${inputClassName} box-border mb-2 w-full`}
             />
 
             {/* Auth token — collapsed by default */}
-            <details style={{ marginBottom: 12 }}>
-              <summary style={{ fontSize: 12, color: 'var(--ui-text-muted)', cursor: 'pointer', userSelect: 'none', padding: '4px 0' }}>
+            <details className="mb-3">
+              <summary className="cursor-pointer select-none px-0 py-1 text-xs text-ui-text-muted">
                 Auth token (optional)
               </summary>
               <input
@@ -752,34 +646,27 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
                 value={manualToken}
                 onChange={e => setManualToken(e.target.value)}
                 placeholder="Bearer token or Basic auth"
-                style={{ ...inputStyle, width: '100%', marginTop: 8, boxSizing: 'border-box' }}
+                className={`${inputClassName} box-border mt-2 w-full`}
               />
             </details>
 
             <button
               onClick={connectManual}
               disabled={!manualUrl || urlTestStatus === 'checking' || connStatus === 'testing'}
-              style={{
-                width: '100%', padding: '9px 0', borderRadius: 10, fontSize: 13, fontWeight: 700,
-                border: 'none',
-                background: (manualUrl && urlTestStatus !== 'fail') ? 'var(--accent-primary)' : 'var(--surface-panel-muted)',
-                color: (manualUrl && urlTestStatus !== 'fail') ? 'var(--text-inverse)' : 'var(--ui-text-muted)',
-                cursor: (manualUrl && urlTestStatus !== 'fail') ? 'pointer' : 'not-allowed',
-                transition: 'background 200ms, color 200ms',
-              }}
+              className={`w-full rounded-lg border-none py-2.5 text-[13px] font-bold transition-colors duration-200 ${manualUrl && urlTestStatus !== 'fail' ? 'cursor-pointer bg-accent-primary text-text-inverse' : 'cursor-not-allowed bg-surface-panel-muted text-ui-text-muted'}`}
             >
               {connStatus === 'testing' ? 'Connecting…' : connStatus === 'ok' ? 'Connected ✓' : 'Connect Backend'}
             </button>
 
             {connMsg && (
-              <div style={{ marginTop: 8, fontSize: 12, padding: '8px 12px', borderRadius: 8, background: connStatus === 'err' ? 'var(--status-error-bg)' : 'var(--status-success-bg)', color: connStatus === 'err' ? 'var(--status-error)' : 'var(--status-success)' }}>
+              <div className={`mt-2 rounded-lg px-3 py-2 text-xs ${connStatus === 'err' ? 'bg-status-error-bg text-status-error' : 'bg-status-success-bg text-status-success'}`}>
                 {connMsg}
               </div>
             )}
 
             {urlTestStatus !== 'ok' && !manualUrl && (
-              <div style={{ marginTop: 10, fontSize: 11, color: 'var(--ui-text-muted)', background: 'var(--surface-canvas)', padding: '10px 12px', borderRadius: 8 }}>
-                <strong>Tip:</strong> If you have the desktop app, run <code style={{ background: 'var(--surface-panel)', padding: '2px 5px', borderRadius: 4 }}>cloudflared tunnel --url http://localhost:4096</code> and paste the URL above.
+              <div className="mt-2.5 rounded-lg bg-surface-canvas px-3 py-2.5 text-xs text-ui-text-muted">
+                <strong>Tip:</strong> If you have the desktop app, run <code className="rounded bg-surface-panel px-1.5 py-0.5">cloudflared tunnel --url http://localhost:4096</code> and paste the URL above.
               </div>
             )}
           </motion.div>
@@ -793,29 +680,23 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            style={{
-              overflow: 'hidden',
-              borderRadius: 14,
-              background: 'var(--surface-panel)',
-              border: '1px solid var(--ui-border-subtle)',
-              padding: 16,
-            }}
+            className="overflow-hidden rounded-2xl border border-ui-border-subtle bg-surface-panel p-4"
           >
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--accent-primary)', marginBottom: 12 }}>
+            <div className="mb-3 text-xs font-bold uppercase tracking-widest text-accent-primary">
               SSH Details
             </div>
 
-            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+            <div className="mb-2 flex gap-2">
               <input
                 type="text" value={data.sshConfig.host}
                 onChange={e => onUpdate({ sshConfig: { ...data.sshConfig, host: e.target.value } })}
                 placeholder="Hostname or IP"
-                style={inputStyle}
+                className={inputClassName}
               />
               <input
                 type="number" value={data.sshConfig.port}
                 onChange={e => onUpdate({ sshConfig: { ...data.sshConfig, port: parseInt(e.target.value) || 22 } })}
-                placeholder="22" style={{ ...inputStyle, width: 72, flexShrink: 0 }}
+                placeholder="22" className={`${inputClassName} w-18 flex-shrink-0`}
               />
             </div>
 
@@ -823,25 +704,18 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
               type="text" value={data.sshConfig.username}
               onChange={e => onUpdate({ sshConfig: { ...data.sshConfig, username: e.target.value } })}
               placeholder="Username"
-              style={{ ...inputStyle, width: '100%', marginBottom: 8 }}
+              className={`${inputClassName} mb-2 w-full`}
             />
 
             {/* Auth type toggle */}
-            <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+            <div className="mb-2 flex gap-1.5">
               {(['key', 'password'] as const).map((type) => {
                 const sel = data.sshConfig.authType === type;
                 return (
                   <button
                     key={type}
                     onClick={() => onUpdate({ sshConfig: { ...data.sshConfig, authType: type } })}
-                    style={{
-                      display: 'flex', alignItems: 'center', gap: 5,
-                      padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                      border: `1px solid ${sel ? 'var(--accent-primary)' : 'var(--ui-border-default)'}`,
-                      background: sel ? 'color-mix(in srgb, var(--accent-primary) 10%, var(--surface-panel))' : 'transparent',
-                      color: sel ? 'var(--accent-primary)' : 'var(--ui-text-muted)',
-                      cursor: 'pointer', transition: 'all 150ms',
-                    }}
+                    className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all duration-150 ${sel ? 'border-accent-primary bg-[color-mix(in_srgb,var(--accent-primary)_10%,var(--surface-panel))] text-accent-primary' : 'border-ui-border-default bg-transparent text-ui-text-muted'}`}
                   >
                     {type === 'key' ? <Key size={12} /> : <Lock size={12} />}
                     {type === 'key' ? 'SSH Key' : 'Password'}
@@ -852,21 +726,17 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
 
             {/* Auth fields */}
             {data.sshConfig.authType === 'password' ? (
-              <div style={{ position: 'relative', marginBottom: 8 }}>
+              <div className="relative mb-2">
                 <input
                   type={showPw ? 'text' : 'password'}
                   value={data.sshConfig.password || ''}
                   onChange={e => onUpdate({ sshConfig: { ...data.sshConfig, password: e.target.value } })}
                   placeholder="Password"
-                  style={{ ...inputStyle, width: '100%', paddingRight: 40 }}
+                  className={`${inputClassName} w-full pr-10`}
                 />
                 <button
                   onClick={() => setShowPw(p => !p)}
-                  style={{
-                    position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    color: 'var(--ui-text-muted)', display: 'flex', padding: 0,
-                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer border-none bg-transparent p-0 text-ui-text-muted"
                 >
                   {showPw ? <EyeSlash size={14} /> : <Eye size={14} />}
                 </button>
@@ -876,57 +746,41 @@ function InfraStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
                 type="text" value={data.sshConfig.privateKey || '~/.ssh/id_rsa'}
                 onChange={e => onUpdate({ sshConfig: { ...data.sshConfig, privateKey: e.target.value } })}
                 placeholder="~/.ssh/id_rsa"
-                style={{ ...inputStyle, width: '100%', marginBottom: 8 }}
+                className={`${inputClassName} mb-2 w-full`}
               />
             )}
 
-            <div style={{ display: 'flex', gap: 8, marginBottom: connMsg ? 8 : 0 }}>
+            <div className={`flex gap-2 ${connMsg ? 'mb-2' : 'mb-0'}`}>
               <button
                 onClick={testConn} disabled={connStatus === 'testing' || installing}
-                style={{
-                  flex: 1, padding: '9px 0', borderRadius: 10, fontSize: 13, fontWeight: 600,
-                  border: '1px solid var(--ui-border-default)',
-                  background: 'transparent', color: 'var(--accent-primary)',
-                  cursor: 'pointer', opacity: connStatus === 'testing' || installing ? 0.4 : 1,
-                }}
+                className={`flex-1 cursor-pointer rounded-lg border border-ui-border-default bg-transparent py-2.5 text-[13px] font-semibold text-accent-primary ${connStatus === 'testing' || installing ? 'opacity-40' : 'opacity-100'}`}
               >
                 {connStatus === 'testing' ? 'Testing…' : 'Test Connection'}
               </button>
               <button
                 onClick={doInstall} disabled={connStatus !== 'ok' || installing}
-                style={{
-                  flex: 1, padding: '9px 0', borderRadius: 10, fontSize: 13, fontWeight: 700,
-                  border: 'none',
-                  background: connStatus === 'ok' ? 'var(--accent-primary)' : 'var(--surface-panel-muted)',
-                  color: connStatus === 'ok' ? 'var(--text-inverse)' : 'var(--ui-text-muted)',
-                  cursor: connStatus === 'ok' ? 'pointer' : 'not-allowed',
-                  transition: 'background 200ms, color 200ms',
-                }}
+                className={`flex-1 rounded-lg border-none py-2.5 text-[13px] font-bold transition-colors duration-200 ${connStatus === 'ok' ? 'cursor-pointer bg-accent-primary text-text-inverse' : 'cursor-not-allowed bg-surface-panel-muted text-ui-text-muted'}`}
               >
                 {installing ? 'Installing…' : 'Install Backend'}
               </button>
             </div>
 
             {connMsg && (
-              <div style={{
-                fontSize: 12, padding: '9px 12px', borderRadius: 10,
-                background: connStatus === 'err' ? 'var(--status-error-bg)' : connStatus === 'ok' ? 'var(--status-success-bg)' : 'var(--surface-hover)',
-                color: connStatus === 'err' ? 'var(--status-error)' : connStatus === 'ok' ? 'var(--status-success)' : 'var(--ui-text-secondary)',
-              }}>
+              <div className={`rounded-lg px-3 py-2.5 text-xs ${connStatus === 'err' ? 'bg-status-error-bg text-status-error' : connStatus === 'ok' ? 'bg-status-success-bg text-status-success' : 'bg-surface-hover text-ui-text-secondary'}`}>
                 {connMsg}
               </div>
             )}
 
             {progress && (
-              <div style={{ marginTop: 10 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
+              <div className="mt-2.5">
+                <div className="mb-1.5 flex justify-between text-xs text-ui-text-muted">
                   <span>{progress.message}</span><span>{progress.progress}%</span>
                 </div>
-                <div style={{ height: 4, borderRadius: 2, background: 'var(--ui-border-subtle)', overflow: 'hidden' }}>
+                <div className="h-1 overflow-hidden rounded bg-ui-border-subtle">
                   <motion.div
                     animate={{ width: `${progress.progress}%` }}
                     transition={{ duration: 0.4 }}
-                    style={{ height: '100%', background: 'var(--accent-primary)', borderRadius: 2 }}
+                    className="h-full rounded bg-accent-primary"
                   />
                 </div>
               </div>
@@ -1004,70 +858,49 @@ function PurchaseVPSPanel({
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: 'auto' }}
       exit={{ opacity: 0, height: 0 }}
-      style={{ overflow: 'hidden' }}
+      className="overflow-hidden"
     >
-      <div style={{
-        borderRadius: 14,
-        background: 'var(--surface-panel)',
-        border: '1px solid var(--ui-border-subtle)',
-        padding: 16,
-        display: 'flex', flexDirection: 'column', gap: 12,
-      }}>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--accent-primary)' }}>
+      <div className="flex flex-col gap-3 rounded-2xl border border-ui-border-subtle bg-surface-panel p-4">
+        <div className="text-xs font-bold uppercase tracking-widest text-accent-primary">
           Choose a VPS Provider
         </div>
 
         {/* Provider cards */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="flex flex-col gap-2">
           {VPS_PROVIDERS.map((provider) => (
             <motion.button
               key={provider.id}
               onClick={() => openProvider(provider.url, provider.id)}
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: '12px 14px', borderRadius: 12, border: 'none', cursor: 'pointer', textAlign: 'left',
-                background: selectedProvider === provider.id
-                  ? 'color-mix(in srgb, var(--accent-primary) 8%, var(--surface-panel))'
-                  : 'var(--surface-panel-muted)',
-                outline: selectedProvider === provider.id ? '2px solid var(--accent-primary)' : '2px solid transparent',
-                outlineOffset: 0,
-                transition: 'outline-color 150ms, background 150ms',
-              }}
+              className={`flex cursor-pointer items-center gap-3 rounded-xl border-none px-3.5 py-3 text-left transition-all duration-150 ${selectedProvider === provider.id ? 'bg-[color-mix(in_srgb,var(--accent-primary)_8%,var(--surface-panel))] outline-2 outline-accent-primary' : 'bg-surface-panel-muted outline-2 outline-transparent'}`}
             >
               {/* Logo */}
-              <div style={{
-                width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-                background: 'var(--surface-panel)',
-                border: '1px solid var(--ui-border-subtle)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                overflow: 'hidden',
-              }}>
+              <div className="flex size-8 flex-shrink-0 items-center justify-center overflow-hidden rounded-lg border border-ui-border-subtle bg-surface-panel">
                 <img
                   src={provider.logo}
                   alt={provider.name}
                   width={20} height={20}
-                  style={{ objectFit: 'contain' }}
+                  className="object-contain"
                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                 />
               </div>
 
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ui-text-primary)', lineHeight: 1.3 }}>
+              <div className="min-w-0 flex-1">
+                <div className="text-[13px] font-semibold leading-tight text-ui-text-primary">
                   {provider.name}
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', marginTop: 1 }}>
+                <div className="mt-px text-xs text-ui-text-muted">
                   {provider.description}
                 </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent-primary)' }}>
+              <div className="flex flex-shrink-0 flex-col items-end gap-1">
+                <span className="text-xs font-bold text-accent-primary">
                   {provider.startingPrice}
                 </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--ui-text-muted)' }}>
-                  Open <ArrowSquareOut size={10} />
+                <div className="flex items-center gap-1 text-xs text-ui-text-muted">
+                  Open <ArrowSquareOut size={12} />
                 </div>
               </div>
             </motion.button>
@@ -1075,14 +908,9 @@ function PurchaseVPSPanel({
         </div>
 
         {/* Tip */}
-        <div style={{
-          display: 'flex', alignItems: 'flex-start', gap: 8,
-          padding: '10px 12px', borderRadius: 10,
-          background: 'color-mix(in srgb, var(--accent-primary) 6%, var(--surface-panel))',
-          border: '1px solid color-mix(in srgb, var(--accent-primary) 15%, transparent)',
-        }}>
-          <Warning size={14} style={{ color: 'var(--accent-primary)', flexShrink: 0, marginTop: 1 }} />
-          <span style={{ fontSize: 12, color: 'var(--ui-text-secondary)', lineHeight: 1.5 }}>
+        <div className="flex items-start gap-2 rounded-lg border border-solid border-[color-mix(in_srgb,var(--accent-primary)_15%,transparent)] bg-[color-mix(in_srgb,var(--accent-primary)_6%,var(--surface-panel))] px-3 py-2.5">
+          <Warning size={14} className="mt-px flex-shrink-0 text-accent-primary" />
+          <span className="text-xs leading-normal text-ui-text-secondary">
             After purchasing, come back here. Enter your VPS IP and root credentials below to install the Allternit backend automatically.
           </span>
         </div>
@@ -1090,13 +918,7 @@ function PurchaseVPSPanel({
         {/* "I already have my VPS" toggle */}
         <button
           onClick={() => setShowConnectForm(f => !f)}
-          style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-            padding: '8px 0', borderRadius: 10, fontSize: 13, fontWeight: 600,
-            border: '1px solid var(--ui-border-default)',
-            background: 'transparent', color: 'var(--accent-primary)',
-            cursor: 'pointer',
-          }}
+          className="flex cursor-pointer items-center justify-center gap-1.5 rounded-lg border border-ui-border-default bg-transparent py-2 text-[13px] font-semibold text-accent-primary"
         >
           {showConnectForm ? '▲ Hide' : '▼ I already have my VPS — connect now'}
         </button>
@@ -1108,24 +930,24 @@ function PurchaseVPSPanel({
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              style={{ overflow: 'hidden' }}
+              className="overflow-hidden"
             >
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: 4 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--ui-text-muted)' }}>
+              <div className="flex flex-col gap-2 pt-1">
+                <div className="text-xs font-bold uppercase tracking-widest text-ui-text-muted">
                   VPS Connection
                 </div>
 
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div className="flex gap-2">
                   <input
                     type="text" value={sshConfig.host}
                     onChange={e => onUpdate({ sshConfig: { ...sshConfig, host: e.target.value } })}
                     placeholder="VPS IP address"
-                    style={inputStyle}
+                    className={inputClassName}
                   />
                   <input
                     type="number" value={sshConfig.port}
                     onChange={e => onUpdate({ sshConfig: { ...sshConfig, port: parseInt(e.target.value) || 22 } })}
-                    placeholder="22" style={{ ...inputStyle, width: 72, flexShrink: 0 }}
+                    placeholder="22" className={`${inputClassName} w-18 flex-shrink-0`}
                   />
                 </div>
 
@@ -1133,25 +955,18 @@ function PurchaseVPSPanel({
                   type="text" value={sshConfig.username || 'root'}
                   onChange={e => onUpdate({ sshConfig: { ...sshConfig, username: e.target.value } })}
                   placeholder="root"
-                  style={{ ...inputStyle, width: '100%' }}
+                  className={`${inputClassName} w-full`}
                 />
 
                 {/* Auth type toggle */}
-                <div style={{ display: 'flex', gap: 6 }}>
+                <div className="flex gap-1.5">
                   {(['password', 'key'] as const).map((type) => {
                     const sel = sshConfig.authType === type;
                     return (
                       <button
                         key={type}
                         onClick={() => onUpdate({ sshConfig: { ...sshConfig, authType: type } })}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 5,
-                          padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600,
-                          border: `1px solid ${sel ? 'var(--accent-primary)' : 'var(--ui-border-default)'}`,
-                          background: sel ? 'color-mix(in srgb, var(--accent-primary) 10%, var(--surface-panel))' : 'transparent',
-                          color: sel ? 'var(--accent-primary)' : 'var(--ui-text-muted)',
-                          cursor: 'pointer', transition: 'all 150ms',
-                        }}
+                        className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all duration-150 ${sel ? 'border-accent-primary bg-[color-mix(in_srgb,var(--accent-primary)_10%,var(--surface-panel))] text-accent-primary' : 'border-ui-border-default bg-transparent text-ui-text-muted'}`}
                       >
                         {type === 'key' ? <Key size={12} /> : <Lock size={12} />}
                         {type === 'key' ? 'SSH Key' : 'Password'}
@@ -1161,21 +976,17 @@ function PurchaseVPSPanel({
                 </div>
 
                 {sshConfig.authType === 'password' ? (
-                  <div style={{ position: 'relative' }}>
+                  <div className="relative">
                     <input
                       type={showPw ? 'text' : 'password'}
                       value={sshConfig.password || ''}
                       onChange={e => onUpdate({ sshConfig: { ...sshConfig, password: e.target.value } })}
                       placeholder="Root password"
-                      style={{ ...inputStyle, width: '100%', paddingRight: 40 }}
+                      className={`${inputClassName} w-full pr-10`}
                     />
                     <button
                       onClick={() => setShowPw(p => !p)}
-                      style={{
-                        position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)',
-                        background: 'none', border: 'none', cursor: 'pointer',
-                        color: 'var(--ui-text-muted)', display: 'flex', padding: 0,
-                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer border-none bg-transparent p-0 text-ui-text-muted"
                     >
                       {showPw ? <EyeSlash size={14} /> : <Eye size={14} />}
                     </button>
@@ -1185,57 +996,41 @@ function PurchaseVPSPanel({
                     type="text" value={sshConfig.privateKey || '~/.ssh/id_rsa'}
                     onChange={e => onUpdate({ sshConfig: { ...sshConfig, privateKey: e.target.value } })}
                     placeholder="~/.ssh/id_rsa"
-                    style={{ ...inputStyle, width: '100%' }}
+                    className={`${inputClassName} w-full`}
                   />
                 )}
 
-                <div style={{ display: 'flex', gap: 8 }}>
+                <div className="flex gap-2">
                   <button
                     onClick={testConn} disabled={connStatus === 'testing' || installing}
-                    style={{
-                      flex: 1, padding: '9px 0', borderRadius: 10, fontSize: 13, fontWeight: 600,
-                      border: '1px solid var(--ui-border-default)',
-                      background: 'transparent', color: 'var(--accent-primary)',
-                      cursor: 'pointer', opacity: connStatus === 'testing' || installing ? 0.4 : 1,
-                    }}
+                    className={`flex-1 cursor-pointer rounded-lg border border-ui-border-default bg-transparent py-2.5 text-[13px] font-semibold text-accent-primary ${connStatus === 'testing' || installing ? 'opacity-40' : 'opacity-100'}`}
                   >
                     {connStatus === 'testing' ? 'Testing…' : 'Test Connection'}
                   </button>
                   <button
                     onClick={doInstall} disabled={connStatus !== 'ok' || installing}
-                    style={{
-                      flex: 1, padding: '9px 0', borderRadius: 10, fontSize: 13, fontWeight: 700,
-                      border: 'none',
-                      background: connStatus === 'ok' ? 'var(--accent-primary)' : 'var(--surface-panel-muted)',
-                      color: connStatus === 'ok' ? 'var(--text-inverse)' : 'var(--ui-text-muted)',
-                      cursor: connStatus === 'ok' ? 'pointer' : 'not-allowed',
-                      transition: 'background 200ms, color 200ms',
-                    }}
+                    className={`flex-1 rounded-lg border-none py-2.5 text-[13px] font-bold transition-colors duration-200 ${connStatus === 'ok' ? 'cursor-pointer bg-accent-primary text-text-inverse' : 'cursor-not-allowed bg-surface-panel-muted text-ui-text-muted'}`}
                   >
                     {installing ? 'Installing…' : 'Install Backend'}
                   </button>
                 </div>
 
                 {connMsg && (
-                  <div style={{
-                    fontSize: 12, padding: '9px 12px', borderRadius: 10,
-                    background: connStatus === 'err' ? 'var(--status-error-bg)' : connStatus === 'ok' ? 'var(--status-success-bg)' : 'var(--surface-hover)',
-                    color: connStatus === 'err' ? 'var(--status-error)' : connStatus === 'ok' ? 'var(--status-success)' : 'var(--ui-text-secondary)',
-                  }}>
+                  <div className={`rounded-lg px-3 py-2.5 text-xs ${connStatus === 'err' ? 'bg-status-error-bg text-status-error' : connStatus === 'ok' ? 'bg-status-success-bg text-status-success' : 'bg-surface-hover text-ui-text-secondary'}`}>
                     {connMsg}
                   </div>
                 )}
 
                 {progress && (
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--ui-text-muted)', marginBottom: 6 }}>
+                    <div className="mb-1.5 flex justify-between text-xs text-ui-text-muted">
                       <span>{progress.message}</span><span>{progress.progress}%</span>
                     </div>
-                    <div style={{ height: 4, borderRadius: 2, background: 'var(--ui-border-subtle)', overflow: 'hidden' }}>
+                    <div className="h-1 overflow-hidden rounded bg-ui-border-subtle">
                       <motion.div
                         animate={{ width: `${progress.progress}%` }}
                         transition={{ duration: 0.4 }}
-                        style={{ height: '100%', background: 'var(--accent-primary)', borderRadius: 2 }}
+                        className="h-full rounded bg-accent-primary"
                       />
                     </div>
                   </div>
@@ -1272,7 +1067,7 @@ function AppearanceStep({ theme, onChange }: { theme: WizardData['theme']; onCha
     onChange(t);
   }
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div className="flex flex-col gap-2.5">
       <HintBox>
         This only affects how the app looks — like dark mode on your phone. Your work and data are not affected. You can change this anytime in Settings.
       </HintBox>
@@ -1284,55 +1079,34 @@ function AppearanceStep({ theme, onChange }: { theme: WizardData['theme']; onCha
             onClick={() => handleThemeChange(opt.id)}
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 14,
-              padding: '14px 16px', borderRadius: 14, border: 'none', cursor: 'pointer',
-              textAlign: 'left',
-              background: sel
-                ? 'color-mix(in srgb, var(--accent-primary) 8%, var(--surface-panel))'
-                : 'var(--surface-panel)',
-              outline: sel ? '2px solid var(--accent-primary)' : '2px solid var(--ui-border-subtle)',
-              outlineOffset: 0,
-              transition: 'outline-color 150ms, background 150ms',
-            }}
+            className={`flex cursor-pointer items-center gap-3.5 rounded-2xl border-none px-4 py-3.5 text-left transition-all duration-150 ${sel ? 'bg-[color-mix(in_srgb,var(--accent-primary)_8%,var(--surface-panel))] outline-2 outline-accent-primary' : 'bg-surface-panel outline-2 outline-ui-border-subtle'}`}
           >
             {/* Swatch strip */}
-            <div style={{
-              width: 52, height: 38, borderRadius: 10, overflow: 'hidden',
-              display: 'flex', flexShrink: 0,
-              border: '1px solid var(--ui-border-subtle)',
-            }}>
+            <div className="flex h-9 w-13 flex-shrink-0 overflow-hidden rounded-lg border border-ui-border-subtle">
               {opt.swatches.map((c, i) => (
-                <div key={i} style={{ flex: 1, background: c }} />
+                <div key={i} className="flex-1" style={{ background: c }} />
               ))}
             </div>
 
-            <div style={{ flex: 1 }}>
-              <div style={{
-                fontSize: 13, fontWeight: 600,
-                color: sel ? 'var(--accent-primary)' : 'var(--ui-text-primary)',
-                transition: 'color 150ms',
-              }}>
+            <div className="flex-1">
+              <div className={`text-[13px] font-semibold transition-colors duration-150 ${sel ? 'text-accent-primary' : 'text-ui-text-primary'}`}>
                 {opt.label}
               </div>
-              <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', marginTop: 2 }}>
+              <div className="mt-0.5 text-xs text-ui-text-muted">
                 {opt.desc}
               </div>
             </div>
 
-            <opt.Icon size={16} style={{ color: sel ? 'var(--accent-primary)' : 'var(--ui-text-muted)', flexShrink: 0, transition: 'color 150ms' }} />
+            <opt.Icon size={16} className={`flex-shrink-0 transition-colors duration-150 ${sel ? 'text-accent-primary' : 'text-ui-text-muted'}`} />
 
             <motion.div
               animate={{
                 background: sel ? 'var(--accent-primary)' : 'transparent',
                 borderColor: sel ? 'var(--accent-primary)' : 'var(--ui-border-default)',
               }}
-              style={{
-                width: 18, height: 18, borderRadius: '50%', border: '2px solid',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-              }}
+              className="flex size-4.5 flex-shrink-0 items-center justify-center rounded-full border-2"
             >
-              {sel && <Check weight="bold" size={10} style={{ color: 'var(--text-inverse)' }} />}
+              {sel && <Check weight="bold" size={12} className="text-text-inverse" />}
             </motion.div>
           </motion.button>
         );
@@ -1465,7 +1239,7 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
         const { done, value } = await reader.read();
         if (done) break;
         buf += dec.decode(value, { stream: true });
-        const lines = buf.split('\n');
+        const lines = buf.split(String.fromCharCode(10));
         buf = lines.pop() ?? '';
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
@@ -1542,47 +1316,34 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
   const hasLocalModels = allLocalModels.length > 0;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="flex flex-col gap-3">
       <HintBox>
         Connect the AI "brain" you want to use. If you have Ollama or other tools installed, we found them automatically. Or paste an API key from a cloud provider.
       </HintBox>
 
       {/* ── Local / CLI section ── */}
       <div>
-        <div style={{
-          fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
-          color: 'var(--ui-text-muted)', marginBottom: 7, display: 'flex', alignItems: 'center', gap: 7,
-        }}>
+        <div className="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-ui-text-muted">
           Found on this machine
           {scanning && (
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-              style={{ display: 'flex' }}
+              className="flex"
             >
-              <ArrowClockwise size={11} style={{ color: 'var(--accent-primary)' }} />
+              <ArrowClockwise size={12} className="text-accent-primary" />
             </motion.div>
           )}
         </div>
 
         {scanning && (
-          <div style={{
-            padding: '12px 14px', borderRadius: 12, fontSize: 12,
-            color: 'var(--ui-text-muted)',
-            background: 'var(--surface-panel)',
-            border: '1px solid var(--ui-border-subtle)',
-          }}>
+          <div className="rounded-xl border border-ui-border-subtle bg-surface-panel px-3.5 py-3 text-xs text-ui-text-muted">
             Scanning for Ollama, LM Studio and AI CLI tools…
           </div>
         )}
 
         {!scanning && !hasLocalModels && (
-          <div style={{
-            padding: '12px 14px', borderRadius: 12, fontSize: 12,
-            color: 'var(--ui-text-muted)',
-            background: 'var(--surface-panel)',
-            border: '1px solid var(--ui-border-subtle)',
-          }}>
+          <div className="rounded-xl border border-ui-border-subtle bg-surface-panel px-3.5 py-3 text-xs text-ui-text-muted">
             Nothing found — no Ollama, LM Studio or CLI agents detected. Use a cloud key below.
           </div>
         )}
@@ -1595,57 +1356,29 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
               onClick={() => selectDiscovered(m)}
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                width: '100%', marginBottom: 6,
-                padding: '11px 14px', borderRadius: 12,
-                border: 'none', cursor: 'pointer', textAlign: 'left',
-                background: sel
-                  ? 'color-mix(in srgb, var(--accent-primary) 8%, var(--surface-panel))'
-                  : 'var(--surface-panel)',
-                outline: sel ? '2px solid var(--accent-primary)' : '2px solid var(--ui-border-subtle)',
-                outlineOffset: 0,
-                transition: 'outline-color 150ms, background 150ms',
-              }}
+              className={`mb-1.5 flex w-full cursor-pointer items-center gap-3 rounded-xl border-none px-3.5 py-3 text-left transition-all duration-150 ${sel ? 'bg-[color-mix(in_srgb,var(--accent-primary)_8%,var(--surface-panel))] outline-2 outline-accent-primary' : 'bg-surface-panel outline-2 outline-ui-border-subtle'}`}
             >
-              <div style={{
-                width: 34, height: 34, borderRadius: 9, flexShrink: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: sel
-                  ? 'color-mix(in srgb, var(--accent-primary) 18%, var(--surface-panel))'
-                  : 'var(--surface-panel-muted)',
-                fontSize: 11, fontWeight: 700, letterSpacing: '0.02em',
-                color: sel ? 'var(--accent-primary)' : 'var(--ui-text-muted)',
-                fontFamily: 'var(--font-mono)',
-              }}>
+              <div className={`flex size-8 flex-shrink-0 items-center justify-center rounded-lg font-mono text-xs font-bold tracking-wider ${sel ? 'bg-[color-mix(in_srgb,var(--accent-primary)_18%,var(--surface-panel))] text-accent-primary' : 'bg-surface-panel-muted text-ui-text-muted'}`}>
                 {m.source === 'ollama' ? 'OL' : m.source === 'lmstudio' ? 'LM' : 'AI'}
               </div>
 
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[13px] font-semibold text-ui-text-primary">
                     {m.name}
                   </span>
                   {m.size && (
-                    <span style={{
-                      fontSize: 9, fontWeight: 700, padding: '2px 5px', borderRadius: 4,
-                      background: 'color-mix(in srgb, var(--ui-text-muted) 12%, transparent)',
-                      color: 'var(--ui-text-muted)',
-                    }}>
+                    <span className="rounded bg-[color-mix(in_srgb,var(--ui-text-muted)_12%,transparent)] px-1 py-0.5 text-xs font-bold text-ui-text-muted">
                       {m.size}
                     </span>
                   )}
                   {m.badge && (
-                    <span style={{
-                      fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
-                      background: 'color-mix(in srgb, #10b981 15%, transparent)',
-                      color: 'var(--status-success)', letterSpacing: '0.04em',
-                    }}>
+                    <span className="rounded bg-[color-mix(in_srgb,#10b981_15%,transparent)] px-1.5 py-0.5 text-xs font-bold tracking-wider text-status-success">
                       {m.badge}
                     </span>
                   )}
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', marginTop: 1 }}>
+                <div className="mt-px text-xs text-ui-text-muted">
                   {m.modelId}
                 </div>
               </div>
@@ -1655,12 +1388,9 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
                   background: sel ? 'var(--accent-primary)' : 'transparent',
                   borderColor: sel ? 'var(--accent-primary)' : 'var(--ui-border-default)',
                 }}
-                style={{
-                  width: 17, height: 17, borderRadius: '50%', border: '2px solid',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                }}
+                className="flex size-4 flex-shrink-0 items-center justify-center rounded-full border-2"
               >
-                {sel && <Check weight="bold" size={9} style={{ color: 'var(--text-inverse)' }} />}
+                {sel && <Check weight="bold" size={12} className="text-text-inverse" />}
               </motion.div>
             </motion.button>
           );
@@ -1670,66 +1400,53 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
       {/* ── Local Brain section ── */}
       {!scanning && !localBrainAlreadyPulled && (
         <div>
-          <div style={{
-            fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
-            color: 'var(--ui-text-muted)', marginBottom: 7,
-          }}>
+          <div className="mb-2 text-xs font-bold uppercase tracking-widest text-ui-text-muted">
             Local Brain
           </div>
 
           {!discovery?.ollama.running ? (
-            <div style={{
-              padding: '12px 14px', borderRadius: 12, fontSize: 12,
-              color: 'var(--ui-text-muted)', background: 'var(--surface-panel)',
-              border: '1px solid var(--ui-border-subtle)',
-              display: 'flex', alignItems: 'center', gap: 10,
-            }}>
-              <HardDrive size={16} style={{ flexShrink: 0 }} />
+            <div className="flex items-center gap-2.5 rounded-xl border border-ui-border-subtle bg-surface-panel px-3.5 py-3 text-xs text-ui-text-muted">
+              <HardDrive size={16} className="flex-shrink-0" />
               <span>
                 Install{' '}
-                <strong style={{ color: 'var(--ui-text-primary)' }}>Ollama</strong>
+                <strong className="text-ui-text-primary">Ollama</strong>
                 {' '}to run AI offline — no API key needed.{' '}
                 <a
                   href="https://ollama.com/download"
                   target="_blank"
                   rel="noreferrer"
-                  style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}
+                  className="text-accent-primary underline"
                 >
                   Get Ollama →
                 </a>
               </span>
             </div>
           ) : lbPullState === 'pulling' ? (
-            <div style={{
-              padding: '12px 14px', borderRadius: 12,
-              background: 'color-mix(in srgb, var(--accent-primary) 5%, var(--surface-panel))',
-              border: '2px solid var(--accent-primary)',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <div className="rounded-xl border-2 border-accent-primary bg-[color-mix(in_srgb,var(--accent-primary)_5%,var(--surface-panel))] p-3">
+              <div className="mb-2 flex items-center gap-2">
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}
-                  style={{ display: 'flex', color: 'var(--accent-primary)' }}
+                  className="flex text-accent-primary"
                 >
                   <ArrowClockwise size={13} />
                 </motion.div>
-                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
+                <span className="text-[13px] font-semibold text-ui-text-primary">
                   Downloading Local Brain
                 </span>
                 {lbPullPct !== null && (
-                  <span style={{ fontSize: 11, color: 'var(--accent-primary)', marginLeft: 'auto' }}>
+                  <span className="ml-auto text-xs text-accent-primary">
                     {lbPullPct}%
                   </span>
                 )}
               </div>
-              <div style={{ height: 4, borderRadius: 2, background: 'var(--ui-border-subtle)', overflow: 'hidden' }}>
-                <div style={{
-                  height: '100%', borderRadius: 2, background: 'var(--accent-primary)',
-                  width: lbPullPct !== null ? `${lbPullPct}%` : '5%',
-                  transition: 'width 300ms ease',
-                }} />
+              <div className="h-1 overflow-hidden rounded bg-ui-border-subtle">
+                <div
+                  className="h-full rounded bg-accent-primary transition-width duration-300 ease-in-out"
+                  style={{ width: lbPullPct !== null ? `${lbPullPct}%` : '5%' }}
+                 />
               </div>
-              <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', marginTop: 6 }}>
+              <div className="mt-1.5 text-xs text-ui-text-muted">
                 {lbPullProgress?.status ?? 'Preparing…'} · llama3.2:3b (~2 GB)
               </div>
             </div>
@@ -1737,35 +1454,25 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
             <motion.div
               initial={{ scale: 0.97, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              style={{
-                padding: '11px 14px', borderRadius: 12,
-                background: 'color-mix(in srgb, #10b981 8%, var(--surface-panel))',
-                border: '2px solid #10b981',
-                display: 'flex', alignItems: 'center', gap: 10,
-              }}
+              className="flex items-center gap-2.5 rounded-xl border-2 border-[#10b981] bg-[color-mix(in_srgb,#10b981_8%,var(--surface-panel))] p-3"
             >
-              <CheckCircle size={20} weight="fill" style={{ color: 'var(--status-success)', flexShrink: 0 }} />
+              <CheckCircle size={20} weight="fill" className="flex-shrink-0 text-status-success" />
               <div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
+                <div className="text-[13px] font-semibold text-ui-text-primary">
                   Local Brain ready
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>
+                <div className="text-xs text-ui-text-muted">
                   llama3.2:3b · offline · selected as your brain
                 </div>
               </div>
             </motion.div>
           ) : lbPullState === 'error' ? (
-            <div style={{
-              padding: '11px 14px', borderRadius: 12, fontSize: 12,
-              background: 'var(--surface-panel)', border: '1px solid var(--ui-border-subtle)',
-              display: 'flex', alignItems: 'center', gap: 10,
-            }}>
-              <Warning size={15} style={{ color: 'var(--status-error)', flexShrink: 0 }} />
-              <span style={{ color: 'var(--ui-text-muted)' }}>Download failed — </span>
+            <div className="flex items-center gap-2.5 rounded-xl border border-ui-border-subtle bg-surface-panel p-3 text-xs">
+              <Warning size={15} className="flex-shrink-0 text-status-error" />
+              <span className="text-ui-text-muted">Download failed — </span>
               <button
                 onClick={startLocalBrainDownload}
-                style={{ background: 'none', border: 'none', cursor: 'pointer',
-                  color: 'var(--accent-primary)', fontSize: 12, fontWeight: 600, padding: 0 }}
+                className="cursor-pointer border-none bg-transparent p-0 text-xs font-semibold text-accent-primary"
               >
                 try again
               </button>
@@ -1775,53 +1482,28 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
               onClick={startLocalBrainDownload}
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.99 }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 12,
-                width: '100%', padding: '11px 14px', borderRadius: 12,
-                border: 'none', cursor: 'pointer', textAlign: 'left',
-                background: 'var(--surface-panel)',
-                outline: '2px solid var(--ui-border-subtle)',
-                outlineOffset: 0,
-                transition: 'outline-color 150ms',
-              }}
+              className="w-full cursor-pointer items-center gap-3 rounded-xl border-none p-3 text-left bg-surface-panel outline-2 outline-ui-border-subtle transition-all duration-150 flex"
             >
-              <div style={{
-                width: 34, height: 34, borderRadius: 9, flexShrink: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: 'color-mix(in srgb, var(--accent-primary) 12%, transparent)',
-                color: 'var(--accent-primary)',
-              }}>
+              <div className="flex size-8 flex-shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--accent-primary)_12%,transparent)] text-accent-primary">
                 <CloudArrowDown size={18} />
               </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[13px] font-semibold text-ui-text-primary">
                     Local Brain
                   </span>
-                  <span style={{
-                    fontSize: 9, fontWeight: 700, padding: '2px 5px', borderRadius: 4,
-                    background: 'color-mix(in srgb, var(--accent-primary) 12%, transparent)',
-                    color: 'var(--accent-primary)',
-                  }}>
+                  <span className="rounded bg-[color-mix(in_srgb,var(--accent-primary)_12%,transparent)] px-1 py-0.5 text-xs font-bold text-accent-primary">
                     ~2 GB
                   </span>
-                  <span style={{
-                    fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
-                    background: 'color-mix(in srgb, #10b981 15%, transparent)',
-                    color: 'var(--status-success)', letterSpacing: '0.04em',
-                  }}>
+                  <span className="rounded bg-[color-mix(in_srgb,#10b981_15%,transparent)] px-1.5 py-0.5 text-xs font-bold tracking-wider text-status-success">
                     Offline · private
                   </span>
                 </div>
-                <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', marginTop: 1 }}>
+                <div className="mt-px text-xs text-ui-text-muted">
                   llama3.2:3b — works on any machine, no API key needed
                 </div>
               </div>
-              <div style={{
-                fontSize: 11, fontWeight: 700, padding: '5px 10px', borderRadius: 7,
-                background: 'var(--accent-primary)', color: 'var(--text-inverse)',
-                flexShrink: 0,
-              }}>
+              <div className="flex-shrink-0 rounded bg-accent-primary px-2.5 py-1 text-xs font-bold text-text-inverse">
                 Download
               </div>
             </motion.button>
@@ -1831,10 +1513,7 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
 
       {/* ── Cloud providers section ── */}
       <div>
-        <div style={{
-          fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase',
-          color: 'var(--ui-text-muted)', marginBottom: 7,
-        }}>
+        <div className="mb-2 text-xs font-bold uppercase tracking-widest text-ui-text-muted">
           Cloud AI (paste your API key)
         </div>
 
@@ -1849,68 +1528,47 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
           const sel = data.defaultProvider === p.id && isValid;
 
           return (
-            <div key={p.id} style={{ marginBottom: 6 }}>
+            <div key={p.id} className="mb-1.5">
               {/* Provider row */}
               <motion.button
                 onClick={() => setExpandedProvider(isExpanded ? null : p.id)}
                 whileHover={{ scale: 1.005 }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 12, width: '100%',
-                  padding: '11px 14px', borderRadius: isExpanded ? '12px 12px 0 0' : 12,
-                  border: 'none', cursor: 'pointer', textAlign: 'left',
-                  background: sel
-                    ? 'color-mix(in srgb, var(--accent-primary) 8%, var(--surface-panel))'
-                    : 'var(--surface-panel)',
-                  outline: sel ? '2px solid var(--accent-primary)' : isExpanded ? '2px solid var(--ui-border-default)' : '2px solid var(--ui-border-subtle)',
-                  outlineOffset: 0,
-                  transition: 'outline-color 150ms, background 150ms, border-radius 100ms',
-                }}
+                className={`flex w-full cursor-pointer items-center gap-3 border-none p-3 text-left transition-all duration-150 ${isExpanded ? 'rounded-t-xl' : 'rounded-xl'} ${sel ? 'bg-[color-mix(in_srgb,var(--accent-primary)_8%,var(--surface-panel))] outline-2 outline-accent-primary' : isExpanded ? 'bg-surface-panel outline-2 outline-ui-border-default' : 'bg-surface-panel outline-2 outline-ui-border-subtle'}`}
               >
-                <div style={{
-                  width: 34, height: 34, borderRadius: 9, flexShrink: 0,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  background: p.logoBg,
-                  color: 'var(--ui-text-primary)',
-                }}>
+                <div
+                  className="flex size-8 flex-shrink-0 items-center justify-center rounded-lg text-ui-text-primary"
+                  style={{ background: p.logoBg }}
+                >
                   <p.Logo size={18} />
                 </div>
 
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] font-semibold text-ui-text-primary">
                       {p.name}
                     </span>
                     {p.badge && !isValid && (
-                      <span style={{
-                        fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
-                        background: `color-mix(in srgb, ${p.badgeColor} 15%, transparent)`,
-                        color: p.badgeColor, letterSpacing: '0.04em',
-                      }}>
+                      <span
+                        className="rounded px-1.5 py-0.5 text-xs font-bold tracking-wider"
+                        style={{ background: `color-mix(in srgb, ${p.badgeColor} 15%, transparent)`, color: p.badgeColor }}
+                      >
                         {p.badge}
                       </span>
                     )}
                     {isValid && (
-                      <span style={{
-                        fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 4,
-                        background: 'color-mix(in srgb, #10b981 15%, transparent)',
-                        color: 'var(--status-success)', letterSpacing: '0.04em',
-                      }}>
-                        <Check weight="bold" size={9} style={{ marginRight: 2 }} /> Connected
+                      <span className="flex items-center rounded bg-[color-mix(in_srgb,#10b981_15%,transparent)] px-1.5 py-0.5 text-xs font-bold tracking-wider text-status-success">
+                        <Check weight="bold" size={12} className="mr-0.5" /> Connected
                       </span>
                     )}
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', marginTop: 1 }}>
+                  <div className="mt-px text-xs text-ui-text-muted">
                     {p.tagline}
                   </div>
                 </div>
 
                 <CaretRight
                   size={13}
-                  style={{
-                    color: 'var(--ui-text-muted)', flexShrink: 0,
-                    transform: isExpanded ? 'rotate(90deg)' : 'none',
-                    transition: 'transform 200ms',
-                  }}
+                  className={`flex-shrink-0 text-ui-text-muted transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`}
                 />
               </motion.button>
 
@@ -1922,17 +1580,11 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
-                    style={{
-                      overflow: 'hidden',
-                      background: 'var(--surface-panel)',
-                      border: '2px solid var(--ui-border-default)',
-                      borderTop: 'none',
-                      borderRadius: '0 0 12px 12px',
-                    }}
+                    className="overflow-hidden rounded-b-xl border-2 border-t-0 border-ui-border-default bg-surface-panel"
                   >
-                    <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div className="flex flex-col gap-2 p-3">
                       {/* Key input */}
-                      <div style={{ position: 'relative' }}>
+                      <div className="relative">
                         <input
                           type={showKey[p.id] ? 'text' : 'password'}
                           value={keyDraft[p.id] ?? ''}
@@ -1942,40 +1594,27 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
                           }}
                           onKeyDown={(e) => { if (e.key === 'Enter') validateKey(p.id); }}
                           placeholder={p.keyPlaceholder}
-                          style={{ ...inputStyle, width: '100%', paddingRight: 80, fontFamily: 'var(--font-mono)' }}
+                          className={`${inputClassName} w-full pr-20 font-mono`}
                           autoFocus
                         />
                         <button
                           onClick={() => setShowKey((s) => ({ ...s, [p.id]: !s[p.id] }))}
-                          style={{
-                            position: 'absolute', right: 40, top: '50%', transform: 'translateY(-50%)',
-                            background: 'none', border: 'none', cursor: 'pointer',
-                            color: 'var(--ui-text-muted)', display: 'flex', padding: 4,
-                          }}
+                          className="absolute right-10 top-1/2 -translate-y-1/2 cursor-pointer border-none bg-transparent p-1 text-ui-text-muted"
                         >
                           {showKey[p.id] ? <EyeSlash size={13} /> : <Eye size={13} />}
                         </button>
                         <button
                           onClick={() => validateKey(p.id)}
                           disabled={isChecking || (keyDraft[p.id] ?? '').trim().length < 10}
-                          style={{
-                            position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
-                            padding: '4px 8px', borderRadius: 7, fontSize: 11, fontWeight: 700,
-                            border: 'none', cursor: 'pointer',
-                            background: isChecking ? 'var(--surface-panel-muted)' : 'var(--accent-primary)',
-                            color: isChecking ? 'var(--ui-text-muted)' : 'var(--text-inverse)',
-                            opacity: (keyDraft[p.id] ?? '').trim().length < 10 ? 0.4 : 1,
-                            transition: 'opacity 150ms, background 150ms',
-                            display: 'flex', alignItems: 'center', gap: 3,
-                          }}
+                          className={`absolute right-1.5 top-1/2 flex -translate-y-1/2 cursor-pointer items-center gap-1 rounded border-none px-2 py-1 text-xs font-bold transition-all duration-150 ${isChecking ? 'bg-surface-panel-muted text-ui-text-muted' : 'bg-accent-primary text-text-inverse'} ${(keyDraft[p.id] ?? '').trim().length < 10 ? 'opacity-40' : 'opacity-100'}`}
                         >
                           {isChecking ? (
                             <motion.div
                               animate={{ rotate: 360 }}
                               transition={{ repeat: Infinity, duration: 0.8, ease: 'linear' }}
-                              style={{ display: 'flex' }}
+                              className="flex"
                             >
-                              <ArrowClockwise size={11} />
+                              <ArrowClockwise size={12} />
                             </motion.div>
                           ) : 'Test'}
                         </button>
@@ -1983,52 +1622,37 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
 
                       {/* Error / hint */}
                       {keyError[p.id] && status === 'invalid' && (
-                        <div style={{
-                          fontSize: 11, padding: '7px 10px', borderRadius: 8,
-                          background: 'var(--status-error-bg)', color: 'var(--status-error)',
-                        }}>
+                        <div className="rounded-lg bg-status-error-bg px-2.5 py-2 text-xs text-status-error">
                           {keyError[p.id]}
                         </div>
                       )}
 
                       {!keyError[p.id] && (
-                        <div style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>
+                        <div className="text-xs text-ui-text-muted">
                           {p.keyHint}
                         </div>
                       )}
 
                       {/* Model picker once key is valid */}
                       {isValid && models.length > 0 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingTop: 4 }}>
-                          <div style={{
-                            fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
-                            color: 'var(--ui-text-muted)',
-                          }}>
+                        <div className="flex flex-col gap-1.5 pt-1">
+                          <div className="text-xs font-bold uppercase tracking-widest text-ui-text-muted">
                             Choose default model
                           </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <div className="flex flex-col gap-1">
                             {models.map((m) => {
                               const mSel = selectedModel === m.id;
                               return (
                                 <button
                                   key={m.id}
                                   onClick={() => onUpdate({ defaultModelId: m.id, defaultProvider: p.id })}
-                                  style={{
-                                    display: 'flex', alignItems: 'center', gap: 9,
-                                    padding: '8px 10px', borderRadius: 9,
-                                    border: `1px solid ${mSel ? 'var(--accent-primary)' : 'var(--ui-border-subtle)'}`,
-                                    background: mSel
-                                      ? 'color-mix(in srgb, var(--accent-primary) 8%, var(--surface-panel))'
-                                      : 'var(--surface-panel-muted)',
-                                    cursor: 'pointer', textAlign: 'left',
-                                    transition: 'border-color 150ms, background 150ms',
-                                  }}
+                                  className={`flex cursor-pointer items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-colors duration-150 ${mSel ? 'border-accent-primary bg-[color-mix(in_srgb,var(--accent-primary)_8%,var(--surface-panel))]' : 'border-ui-border-subtle bg-surface-panel-muted'}`}
                                 >
-                                  {mSel && <Check weight="bold" size={10} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />}
-                                  <span style={{ fontSize: 12, fontWeight: mSel ? 600 : 400, color: 'var(--ui-text-primary)' }}>
+                                  {mSel && <Check weight="bold" size={12} className="flex-shrink-0 text-accent-primary" />}
+                                  <span className={`text-xs text-ui-text-primary ${mSel ? 'font-semibold' : 'font-normal'}`}>
                                     {m.name}
                                   </span>
-                                  <span style={{ fontSize: 10, color: 'var(--ui-text-muted)', marginLeft: 'auto', fontFamily: 'var(--font-mono)' }}>
+                                  <span className="ml-auto font-mono text-xs text-ui-text-muted">
                                     {m.id}
                                   </span>
                                 </button>
@@ -2047,7 +1671,7 @@ function ModesStep({ data, onUpdate }: { data: WizardData; onUpdate: (d: Partial
       </div>
 
       {!selected && !scanning && (
-        <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', textAlign: 'center', marginTop: 2 }}>
+        <div className="mt-0.5 text-center text-xs text-ui-text-muted">
           Select a brain above to continue — you can add more in Settings anytime.
         </div>
       )}
@@ -2075,37 +1699,25 @@ const MODE_TABS: Array<{
 
 function ModePreviewChat() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <div style={{
-          maxWidth: '72%', padding: '8px 12px', borderRadius: '14px 14px 4px 14px',
-          background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.2)',
-          fontSize: 12, color: 'var(--ui-text-primary)', lineHeight: 1.5,
-        }}>
+    <div className="flex flex-col gap-2.5">
+      <div className="flex justify-end">
+        <div className="max-w-[72%] rounded-t-2xl rounded-bl-2xl rounded-br-md border border-solid border-[rgba(99,102,241,0.2)] bg-[rgba(99,102,241,0.15)] px-3 py-2 text-xs leading-normal text-ui-text-primary">
           Explain quantum computing simply
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-        <div style={{
-          width: 22, height: 22, borderRadius: '50%', flexShrink: 0, marginTop: 2,
-          background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.2)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
+      <div className="flex items-start gap-2">
+        <div className="mt-0.5 flex size-5 flex-shrink-0 items-center justify-center rounded-full border border-solid border-[rgba(99,102,241,0.2)] bg-[rgba(99,102,241,0.15)]">
           <MatrixLogo state="idle" size={13} />
         </div>
-        <div style={{
-          flex: 1, padding: '8px 12px', borderRadius: '4px 14px 14px 14px',
-          background: 'var(--surface-panel)', border: '1px solid var(--ui-border-subtle)',
-          fontSize: 12, color: 'var(--ui-text-secondary)', lineHeight: 1.6,
-        }}>
+        <div className="flex-1 rounded-tr-2xl rounded-b-2xl rounded-tl-md border border-ui-border-subtle bg-surface-panel px-3 py-2 text-xs leading-relaxed text-ui-text-secondary">
           Quantum computers use qubits that can exist as both 0 and 1 simultaneously — unlike classical bits. This lets them solve certain problems exponentially faster.
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 4, paddingLeft: 30, alignItems: 'center' }}>
+      <div className="flex items-center gap-1 pl-7">
         {[0, 1, 2].map(i => (
           <motion.div
             key={i}
-            style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(99,102,241,0.5)' }}
+            className="size-1 rounded-full bg-[rgba(99,102,241,0.5)]"
             animate={{ opacity: [0.3, 1, 0.3], scale: [0.7, 1, 0.7] }}
             transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.22, ease: 'easeInOut' }}
           />
@@ -2126,18 +1738,15 @@ function ModePreviewCode() {
     { text: '1 file patched — 0 errors remain', color: 'rgba(255,255,255,0.4)' },
   ];
   return (
-    <div style={{
-      background: 'rgba(0,0,0,0.35)', borderRadius: 10, padding: '12px 14px',
-      fontFamily: 'var(--font-mono)', fontSize: 11.5,
-      border: '1px solid var(--ui-border-muted)',
-    }}>
+    <div className="rounded-lg border border-ui-border-muted bg-[rgba(0,0,0,0.35)] px-3.5 py-3 font-mono text-xs">
       {lines.map((l, i) => (
         <motion.div
           key={i}
           initial={{ opacity: 0, x: -6 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.08 + i * 0.07, duration: 0.22 }}
-          style={{ height: l.text ? 'auto' : 6, color: l.color || 'transparent', lineHeight: 1.7 }}
+          className={`leading-[1.7] ${l.text ? 'h-auto' : 'h-[6px]'}`}
+          style={{ color: l.color || 'transparent' }}
         >
           {l.text}
         </motion.div>
@@ -2154,41 +1763,33 @@ function ModePreviewBrowser() {
     'Starter $9/mo · Pro $29/mo · Enterprise',
   ];
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+    <div className="flex flex-col gap-2">
       {/* Browser chrome bar */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px',
-        background: 'rgba(0,0,0,0.25)', borderRadius: 8,
-        border: '1px solid var(--ui-border-muted)',
-      }}>
-        <div style={{ display: 'flex', gap: 4 }}>
+      <div className="flex items-center gap-1.5 rounded-lg border border-ui-border-muted bg-[rgba(0,0,0,0.25)] px-2.5 py-1.5">
+        <div className="flex gap-1">
           {['#ff5f57','#febc2e','#28c840'].map(c => (
-            <div key={c} style={{ width: 8, height: 8, borderRadius: '50%', background: c, opacity: 0.7 }} />
+            <div key={c} className="size-2 rounded-full opacity-70" style={{ background: c }} />
           ))}
         </div>
-        <div style={{
-          flex: 1, padding: '3px 8px', borderRadius: 5,
-          background: 'var(--surface-hover)', border: '1px solid var(--ui-border-muted)',
-          fontSize: 10, color: 'rgba(255,255,255,0.35)', fontFamily: 'var(--font-mono)',
-        }}>
+        <div className="flex-1 rounded border border-ui-border-muted bg-surface-hover px-2 py-1 font-mono text-xs text-[rgba(255,255,255,0.35)]">
           competitor.com/pricing
         </div>
       </div>
       {/* Steps */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 5, paddingLeft: 4 }}>
+      <div className="flex flex-col gap-1 pl-1">
         {steps.map((s, i) => (
           <motion.div
             key={i}
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 + i * 0.12, duration: 0.25 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12 }}
+            className="flex items-center gap-2 text-xs"
           >
-            <div style={{
-              width: 5, height: 5, borderRadius: '50%', flexShrink: 0,
-              background: i < 2 ? '#ec4899' : 'rgba(255,255,255,0.2)',
-            }} />
-            <span style={{ color: i < 2 ? 'var(--ui-text-primary)' : 'var(--ui-text-secondary)', lineHeight: 1.45 }}>
+            <div
+              className="size-1 flex-shrink-0 rounded-full"
+              style={{ background: i < 2 ? '#ec4899' : 'rgba(255,255,255,0.2)' }}
+             />
+            <span className={`leading-snug ${i < 2 ? 'text-ui-text-primary' : 'text-ui-text-secondary'}`}>
               {s}
             </span>
           </motion.div>
@@ -2206,45 +1807,33 @@ function ModePreviewAgents() {
     { label: 'Send to your inbox',           done: false, active: false },
   ];
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <div style={{
-        padding: '7px 10px', borderRadius: 8,
-        background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.15)',
-        fontSize: 11.5, color: 'rgba(245,158,11,0.9)', fontWeight: 600,
-      }}>
+    <div className="flex flex-col gap-2">
+      <div className="rounded-lg border border-solid border-[rgba(245,158,11,0.15)] bg-[rgba(245,158,11,0.08)] px-2.5 py-2 text-[12.5px] font-semibold text-[rgba(245,158,11,0.9)]">
         Task: Research AI landscape + compile report
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingLeft: 2 }}>
+      <div className="flex flex-col gap-1.5 pl-0.5">
         {tasks.map((t, i) => (
           <motion.div
             key={i}
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.08 + i * 0.1, duration: 0.22 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 12 }}
+            className="flex items-center gap-2 text-xs"
           >
-            <div style={{
-              width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: t.done ? 'rgba(245,158,11,0.2)' : 'var(--surface-hover)',
-              border: `1px solid ${t.done ? 'rgba(245,158,11,0.4)' : t.active ? 'rgba(245,158,11,0.3)' : 'var(--ui-border-default)'}`,
-            }}>
+            <div
+              className={`flex size-4 flex-shrink-0 items-center justify-center rounded-full border ${t.done ? 'border-[rgba(245,158,11,0.4)] bg-[rgba(245,158,11,0.2)]' : t.active ? 'border-[rgba(245,158,11,0.3)] bg-surface-hover' : 'border-ui-border-default bg-surface-hover'}`}
+            >
               {t.done ? (
-                <Check size={9} weight="bold" style={{ color: 'var(--status-warning)' }} />
+                <Check size={12} weight="bold" className="text-status-warning" />
               ) : t.active ? (
                 <motion.div
-                  style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--status-warning)' }}
+                  className="size-1.5 rounded-full bg-status-warning"
                   animate={{ opacity: [1, 0.3, 1] }}
                   transition={{ duration: 1.1, repeat: Infinity }}
                 />
               ) : null}
             </div>
-            <span style={{
-              color: t.done ? 'var(--ui-text-muted)' : t.active ? 'var(--ui-text-primary)' : 'var(--ui-text-muted)',
-              textDecoration: t.done ? 'line-through' : 'none',
-              opacity: t.done ? 0.55 : 1,
-              lineHeight: 1.45,
-            }}>
+            <span className={`leading-snug ${t.done ? 'text-ui-text-muted line-through opacity-55' : t.active ? 'text-ui-text-primary' : 'text-ui-text-muted'}`}>
               {t.label}
             </span>
           </motion.div>
@@ -2256,17 +1845,14 @@ function ModePreviewAgents() {
 
 function ModePreviewPrivate() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px',
-        borderRadius: 9, background: 'rgba(6,182,212,0.08)', border: '1px solid rgba(6,182,212,0.18)',
-      }}>
+    <div className="flex flex-col gap-2.5">
+      <div className="flex items-center gap-2 rounded-lg border border-solid border-[rgba(6,182,212,0.18)] bg-[rgba(6,182,212,0.08)] px-3 py-2">
         <motion.div
-          style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--status-info)', flexShrink: 0 }}
+          className="size-2 flex-shrink-0 rounded-full bg-status-info"
           animate={{ opacity: [1, 0.4, 1] }}
           transition={{ duration: 1.8, repeat: Infinity }}
         />
-        <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(6,182,212,0.9)' }}>
+        <span className="text-xs font-semibold text-[rgba(6,182,212,0.9)]">
           Running entirely on your machine
         </span>
       </div>
@@ -2275,18 +1861,19 @@ function ModePreviewPrivate() {
         { label: 'Device',  value: 'Your computer' },
         { label: 'Network', value: 'None — fully offline' },
       ].map(({ label, value }) => (
-        <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
-          <span style={{ color: 'var(--ui-text-muted)' }}>{label}</span>
-          <span style={{ color: 'var(--ui-text-primary)', fontWeight: 500 }}>{value}</span>
+        <div key={label} className="flex items-center justify-between text-xs">
+          <span className="text-ui-text-muted">{label}</span>
+          <span className="font-medium text-ui-text-primary">{value}</span>
         </div>
       ))}
-      <div style={{ paddingTop: 4 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--ui-text-muted)', marginBottom: 5 }}>
+      <div className="pt-1">
+        <div className="mb-1 flex justify-between text-xs text-ui-text-muted">
           <span>Inference load</span><span>72%</span>
         </div>
-        <div style={{ height: 5, borderRadius: 3, background: 'var(--surface-active)', overflow: 'hidden' }}>
+        <div className="h-1 overflow-hidden rounded bg-surface-active">
           <motion.div
-            style={{ height: '100%', borderRadius: 3, background: 'linear-gradient(90deg, #06b6d4, #0891b2)' }}
+            className="h-full rounded"
+            style={{ background: 'linear-gradient(90deg, #06b6d4, #0891b2)' }}
             initial={{ width: '0%' }}
             animate={{ width: '72%' }}
             transition={{ delay: 0.3, duration: 0.9, ease: [0.25, 0.1, 0.25, 1] }}
@@ -2323,35 +1910,32 @@ function ModeShowcase() {
   const PreviewComponent = MODE_PREVIEW_MAP[active];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="flex flex-col gap-3">
       {/* Preview card */}
-      <div style={{
-        borderRadius: 16, overflow: 'hidden',
-        border: `1px solid color-mix(in srgb, ${activeTab.color} 22%, var(--ui-border-subtle))`,
-        background: 'var(--surface-panel)',
-        transition: 'border-color 0.35s',
-      }}>
+      <div
+        className="overflow-hidden rounded-2xl border bg-surface-panel transition-colors duration-350"
+        style={{ borderColor: `color-mix(in srgb, ${activeTab.color} 22%, var(--ui-border-subtle))` }}
+      >
         {/* Colored top bar */}
-        <div style={{
-          padding: '11px 14px',
-          borderBottom: '1px solid var(--ui-border-subtle)',
-          display: 'flex', alignItems: 'center', gap: 9,
-          background: `color-mix(in srgb, ${activeTab.color} 6%, var(--surface-panel))`,
-          transition: 'background 0.35s',
-        }}>
-          <div style={{
-            width: 26, height: 26, borderRadius: 8,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: activeTab.bg, transition: 'background 0.35s',
-          }}>
+        <div
+          className="flex items-center gap-2.5 border-b border-ui-border-subtle px-3.5 py-3 transition-colors duration-350"
+          style={{ background: `color-mix(in srgb, ${activeTab.color} 6%, var(--surface-panel))` }}
+        >
+          <div
+            className="flex size-6 items-center justify-center rounded-lg transition-colors duration-350"
+            style={{ background: activeTab.bg }}
+          >
             <activeTab.Icon size={14} weight="bold" style={{ color: activeTab.color }} />
           </div>
-          <span style={{ fontSize: 12.5, fontWeight: 700, color: activeTab.color, transition: 'color 0.35s', letterSpacing: '-0.01em' }}>
+          <span
+            className="text-xs font-bold tracking-[-0.01em] transition-colors duration-350"
+            style={{ color: activeTab.color }}
+          >
             {activeTab.label}
           </span>
         </div>
         {/* Animated preview */}
-        <div style={{ padding: '14px 16px', minHeight: 148 }}>
+        <div className="min-h-36 px-4 py-3.5">
           <AnimatePresence mode="wait">
             <motion.div
               key={active}
@@ -2367,22 +1951,19 @@ function ModeShowcase() {
       </div>
 
       {/* Tab strip */}
-      <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+      <div className="flex flex-wrap gap-1">
         {MODE_TABS.map(tab => (
           <button
             key={tab.key}
             onClick={() => { setActive(tab.key); setUserPicked(true); }}
+            className={`flex cursor-pointer items-center gap-1 rounded-full border-none px-2.5 py-1 text-xs transition-all duration-150 ${active === tab.key ? 'font-bold' : 'font-medium'}`}
             style={{
-              display: 'flex', alignItems: 'center', gap: 5,
-              padding: '5px 10px', borderRadius: 20, border: 'none', cursor: 'pointer',
-              fontSize: 11.5, fontWeight: active === tab.key ? 700 : 500,
               background: active === tab.key ? tab.bg : 'transparent',
               color: active === tab.key ? tab.color : 'var(--ui-text-muted)',
               outline: active === tab.key ? `1px solid color-mix(in srgb, ${tab.color} 30%, transparent)` : '1px solid transparent',
-              transition: 'all 0.18s',
             }}
           >
-            <tab.Icon size={11} weight={active === tab.key ? 'bold' : 'regular'} />
+            <tab.Icon size={12} weight={active === tab.key ? 'bold' : 'regular'} />
             {tab.label}
           </button>
         ))}
@@ -2390,15 +1971,14 @@ function ModeShowcase() {
 
       {/* Auto-cycle progress dots */}
       {!userPicked && (
-        <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+        <div className="flex justify-center gap-1">
           {MODE_TABS.map(tab => (
             <div
               key={tab.key}
+              className="h-0.5 rounded transition-all duration-300 ease-in-out"
               style={{
-                height: 3, borderRadius: 2,
                 width: active === tab.key ? 18 : 6,
                 background: active === tab.key ? tab.color : 'var(--ui-border-default)',
-                transition: 'all 0.3s ease',
               }}
             />
           ))}
@@ -2414,48 +1994,30 @@ function DoneScreen({ data, onFinish }: { data: WizardData; onFinish: () => void
   const keyCount = Object.keys(data.configuredKeys ?? {}).length;
 
   return (
-    <div style={{
-      display: 'flex', alignItems: 'stretch', gap: 0,
-      height: '100%', minHeight: 0,
-    }}>
+    <div className="flex h-full min-h-0 items-stretch gap-0">
       {/* Left — celebration + summary + CTA */}
-      <div style={{
-        width: 320, flexShrink: 0,
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        justifyContent: 'center', textAlign: 'center',
-        padding: '40px 32px 36px',
-        borderRight: '1px solid var(--ui-border-subtle)',
-      }}>
+      <div className="flex w-80 flex-shrink-0 flex-col items-center justify-center border-r border-ui-border-subtle px-8 pb-9 pt-10 text-center">
         {/* MatrixLogo with success ring */}
         <motion.div
           initial={{ scale: 0.5, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ type: 'spring', stiffness: 340, damping: 24 }}
-          style={{ position: 'relative', marginBottom: 24, display: 'inline-flex' }}
+          className="relative mb-6 inline-flex"
         >
           <motion.div
             animate={{ scale: [1, 1.12, 1], opacity: [0.5, 0.15, 0.5] }}
             transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-            style={{
-              position: 'absolute', inset: -14, borderRadius: '50%',
-              border: '1px solid color-mix(in srgb, var(--accent-primary) 35%, transparent)',
-              pointerEvents: 'none',
-            }}
+            className="pointer-events-none absolute inset-[-14px] rounded-full border border-solid border-[color-mix(in_srgb,var(--accent-primary)_35%,transparent)]"
           />
           <MatrixLogo state="idle" size={52} />
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.45, type: 'spring', stiffness: 320, damping: 18 }}
-            style={{
-              position: 'absolute', bottom: -4, right: -4,
-              width: 22, height: 22, borderRadius: '50%',
-              background: 'linear-gradient(135deg, #34d399, #10b981)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 2px 8px rgba(16,185,129,0.45)',
-            }}
+            className="absolute bottom-[-4px] right-[-4px] flex size-5 items-center justify-center rounded-full shadow-[0_2px_8px_rgba(16,185,129,0.45)]"
+            style={{ background: 'linear-gradient(135deg, #34d399, #10b981)'}}
           >
-            <Check weight="bold" size={11} style={{ color: 'var(--ui-text-primary)' }} />
+            <Check weight="bold" size={12} className="text-ui-text-primary" />
           </motion.div>
         </motion.div>
 
@@ -2463,7 +2025,7 @@ function DoneScreen({ data, onFinish }: { data: WizardData; onFinish: () => void
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1, duration: 0.3 }}
-          style={{ fontSize: 21, fontWeight: 700, letterSpacing: '-0.025em', color: 'var(--ui-text-primary)', marginBottom: 6 }}
+          className="mb-1.5 text-xl font-bold tracking-[-0.025em] text-ui-text-primary"
         >
           Allternit is ready.
         </motion.h2>
@@ -2472,7 +2034,7 @@ function DoneScreen({ data, onFinish }: { data: WizardData; onFinish: () => void
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.18, duration: 0.3 }}
-          style={{ fontSize: 13, color: 'var(--ui-text-muted)', marginBottom: 24, lineHeight: 1.55, maxWidth: 220 }}
+          className="mb-6 max-w-[220px] text-[13px] leading-normal text-ui-text-muted"
         >
           Everything is configured. Here's what you set up —
         </motion.p>
@@ -2482,11 +2044,7 @@ function DoneScreen({ data, onFinish }: { data: WizardData; onFinish: () => void
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.26, duration: 0.28 }}
-          style={{
-            width: '100%', display: 'flex', flexDirection: 'column', gap: 7,
-            marginBottom: 28, padding: '12px 14px', borderRadius: 12,
-            background: 'var(--surface-panel)', border: '1px solid var(--ui-border-subtle)',
-          }}
+          className="mb-7 flex w-full flex-col gap-2 rounded-xl border border-ui-border-subtle bg-surface-panel px-3.5 py-3"
         >
           {[
             { label: 'Runs on',  value: infraLabel },
@@ -2494,9 +2052,9 @@ function DoneScreen({ data, onFinish }: { data: WizardData; onFinish: () => void
             { label: 'API keys', value: keyCount > 0 ? `${keyCount} configured` : 'None — use local models' },
             { label: 'Modes',    value: `${data.selectedModes.length} enabled` },
           ].map(({ label, value }) => (
-            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
-              <span style={{ color: 'var(--ui-text-muted)' }}>{label}</span>
-              <span style={{ color: 'var(--ui-text-primary)', fontWeight: 600, textAlign: 'right', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value}</span>
+            <div key={label} className="flex items-center justify-between text-xs">
+              <span className="text-ui-text-muted">{label}</span>
+              <span className="max-w-35 truncate whitespace-nowrap text-right font-semibold text-ui-text-primary">{value}</span>
             </div>
           ))}
         </motion.div>
@@ -2508,14 +2066,7 @@ function DoneScreen({ data, onFinish }: { data: WizardData; onFinish: () => void
           transition={{ delay: 0.4, duration: 0.26 }}
           whileHover={{ scale: 1.03, boxShadow: '0 8px 28px color-mix(in srgb, var(--accent-primary) 35%, transparent)' }}
           whileTap={{ scale: 0.97 }}
-          style={{
-            width: '100%',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-            padding: '13px 0', borderRadius: 999,
-            background: 'var(--accent-primary)', color: 'var(--text-inverse)',
-            fontSize: 14, fontWeight: 700, border: 'none', cursor: 'pointer',
-            boxShadow: 'var(--shadow-md)',
-          }}
+          className="flex w-full cursor-pointer items-center justify-center gap-2.5 rounded-full border-none bg-accent-primary py-3 text-sm font-bold text-text-inverse shadow-md"
         >
           Open Allternit
           <ArrowRight weight="bold" size={16} />
@@ -2527,17 +2078,9 @@ function DoneScreen({ data, onFinish }: { data: WizardData; onFinish: () => void
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3, duration: 0.4 }}
-        style={{
-          flex: 1, minWidth: 0,
-          display: 'flex', flexDirection: 'column', justifyContent: 'center',
-          padding: '32px 36px',
-        }}
+        className="flex min-w-0 flex-1 flex-col justify-center px-9 py-8"
       >
-        <p style={{
-          fontSize: 11, fontWeight: 600, letterSpacing: '0.09em',
-          textTransform: 'uppercase', color: 'var(--ui-text-muted)',
-          marginBottom: 16,
-        }}>
+        <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-ui-text-muted">
           What you can do now
         </p>
         <ModeShowcase />
@@ -2545,16 +2088,6 @@ function DoneScreen({ data, onFinish }: { data: WizardData; onFinish: () => void
     </div>
   );
 }
-
-// ─── Input shared style ───────────────────────────────────────────────────────
-
-const inputStyle: React.CSSProperties = {
-  flex: 1, padding: '9px 12px', borderRadius: 10, fontSize: 13,
-  background: 'var(--surface-canvas)',
-  border: '1px solid var(--ui-border-default)',
-  color: 'var(--ui-text-primary)',
-  outline: 'none',
-};
 
 // ─── Step header ──────────────────────────────────────────────────────────────
 
@@ -2629,22 +2162,10 @@ export function OnboardingFlow() {
       variants={CARD_ENTRANCE}
       initial="hidden"
       animate="visible"
-      style={{
-        width: 'calc(100vw - 48px)',
-        height: 'calc(100vh - 48px)',
-        maxWidth: 1100,
-        maxHeight: 800,
-        borderRadius: 20,
-        border: '1px solid var(--shell-dialog-border)',
-        background: 'var(--shell-dialog-bg)',
-        boxShadow: 'var(--shadow-xl), 0 0 0 1px color-mix(in srgb, var(--accent-primary) 5%, transparent) inset',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }}
+      className="flex h-[calc(100vh-48px)] w-[calc(100vw-48px)] max-h-[800px] max-w-[1100px] flex-col overflow-hidden rounded-2xl border border-shell-dialog-border bg-shell-dialog-bg shadow-xl"
     >
       {/* Inner layout: sidebar + content OR full-width */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
+      <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* Left sidebar — only visible for inner steps */}
         <AnimatePresence initial={false}>
           {!isFullWidth && (
@@ -2654,9 +2175,9 @@ export function OnboardingFlow() {
               animate={{ width: 196, opacity: 1 }}
               exit={{ width: 0, opacity: 0 }}
               transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
-              style={{ overflow: 'hidden', flexShrink: 0 }}
+              className="flex-shrink-0 overflow-hidden"
             >
-              <div style={{ width: 196 }}>
+              <div className="w-[196px]">
                 <StepSidebar screen={screen} />
               </div>
             </motion.div>
@@ -2664,27 +2185,21 @@ export function OnboardingFlow() {
         </AnimatePresence>
 
         {/* Right content area */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           {/* Step header (inner steps only) */}
           {!isFullWidth && (
-            <div style={{
-              padding: '24px 28px 0',
-              flexShrink: 0,
-            }}>
-              <h2 style={{
-                fontSize: 18, fontWeight: 700, letterSpacing: '-0.02em',
-                color: 'var(--ui-text-primary)', margin: 0, lineHeight: 1.25,
-              }}>
+            <div className="flex-shrink-0 px-7 pb-0 pt-6">
+              <h2 className="m-0 text-lg font-bold leading-tight tracking-[-0.02em] text-ui-text-primary">
                 {meta.title}
               </h2>
-              <p style={{ fontSize: 13, color: 'var(--ui-text-muted)', margin: '4px 0 0' }}>
+              <p className="m-0 mt-1 text-[13px] text-ui-text-muted">
                 {meta.sub}
               </p>
             </div>
           )}
 
           {/* Animated step content */}
-          <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none' }}>
+          <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
             <AnimatePresence custom={direction.current} mode="wait">
               <motion.div
                 key={screen}
@@ -2693,7 +2208,7 @@ export function OnboardingFlow() {
                 initial="enter"
                 animate="center"
                 exit="exit"
-                style={{ padding: isFullWidth ? 0 : '20px 28px 24px' }}
+                className={isFullWidth ? '' : 'px-7 pb-6 pt-5'}
               >
                 {screen === 'welcome' && <WelcomeScreen onNext={goNext} />}
                 {screen === 'infra'   && <InfraStep data={data} onUpdate={update} />}
@@ -2706,49 +2221,22 @@ export function OnboardingFlow() {
 
           {/* Footer nav — inner steps only */}
           {!isFullWidth && (
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '14px 28px',
-              borderTop: '1px solid var(--ui-border-subtle)',
-              flexShrink: 0,
-            }}>
+            <div className="flex flex-shrink-0 items-center justify-between border-t border-ui-border-subtle px-7 py-3.5">
               <motion.button
                 onClick={goBack}
                 whileHover={{ color: 'var(--ui-text-primary)' }}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '8px 14px', borderRadius: 10,
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  fontSize: 13, fontWeight: 600,
-                  color: 'var(--ui-text-muted)',
-                }}
+                className="flex cursor-pointer items-center gap-1.5 rounded-lg border-none bg-transparent px-3.5 py-2 text-[13px] font-semibold text-ui-text-muted"
               >
                 <CaretLeft size={13} />
                 Back
               </motion.button>
 
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+              <div className="flex flex-col items-end gap-1">
                 <motion.button
                   onClick={goNext}
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 7,
-                    padding: '9px 20px', borderRadius: 999,
-                    background: screen === 'modes' && !data.defaultProvider
-                      ? 'var(--surface-panel-muted)'
-                      : 'var(--accent-primary)',
-                    color: screen === 'modes' && !data.defaultProvider
-                      ? 'var(--ui-text-muted)'
-                      : 'var(--text-inverse)',
-                    fontSize: 13, fontWeight: 700,
-                    border: screen === 'modes' && !data.defaultProvider
-                      ? '1px solid var(--ui-border-default)'
-                      : 'none',
-                    cursor: 'pointer',
-                    boxShadow: 'var(--shadow-sm)',
-                    transition: 'background 200ms, color 200ms',
-                  }}
+                  className={`flex cursor-pointer items-center gap-2 rounded-full px-5 py-2.5 text-[13px] font-bold shadow-sm transition-colors duration-200 ${screen === 'modes' && !data.defaultProvider ? 'border border-ui-border-default bg-surface-panel-muted text-ui-text-muted' : 'border-none bg-accent-primary text-text-inverse'}`}
                 >
                   {screen === 'modes'
                     ? data.defaultProvider ? 'Finish' : 'Skip for now'

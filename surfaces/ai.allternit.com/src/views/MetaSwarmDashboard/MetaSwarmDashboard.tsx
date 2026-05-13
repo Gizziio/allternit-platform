@@ -39,7 +39,7 @@ import { KnowledgePanel } from './components/KnowledgePanel';
 import type { Task, Session } from './types';
 import { metaSwarmClient } from './api';
 
-export function MetaSwarmDashboard() {
+export function MetaSwarmDashboard(): JSX.Element {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [newTaskDescription, setNewTaskDescription] = useState('');
@@ -93,7 +93,7 @@ export function MetaSwarmDashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold flex items-center gap-2">
-              <Activity className="h-8 w-8 text-blue-500" />
+              <Activity className="size-8  text-blue-500" />
               Meta-Swarm Dashboard
             </h1>
             <p className="text-muted-foreground mt-1">
@@ -102,7 +102,7 @@ export function MetaSwarmDashboard() {
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-sm">
-              <Cpu className="h-3 w-3 mr-1" />
+              <Cpu className="size-3  mr-1" />
               {activeSessions.length} Active Sessions
             </Badge>
           </div>
@@ -141,7 +141,7 @@ export function MetaSwarmDashboard() {
           <CardContent className="pt-6">
             <div className="flex gap-2">
               <Input
-                placeholder="Describe your task (e.g., 'Refactor auth module to use JWT')..."
+                placeholder="Describe your task (e.g., 'Refactor auth module to use JWT')…"
                 value={newTaskDescription}
                 onChange={(e) => setNewTaskDescription(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSubmitTask()}
@@ -152,9 +152,9 @@ export function MetaSwarmDashboard() {
                 disabled={submitting || !newTaskDescription.trim()}
               >
                 {submitting ? (
-                  <ArrowsClockwise className="h-4 w-4 mr-2 animate-spin" />
+                  <ArrowsClockwise className="size-4  mr-2 animate-spin" />
                 ) : (
-                  <Play className="h-4 w-4 mr-2" />
+                  <Play className="size-4  mr-2" />
                 )}
                 Execute
               </Button>
@@ -168,19 +168,19 @@ export function MetaSwarmDashboard() {
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="all">All Views</TabsTrigger>
           <TabsTrigger value="agents">
-            <Cpu className="h-4 w-4 mr-2" />
+            <Cpu className="size-4  mr-2" />
             Agents
           </TabsTrigger>
           <TabsTrigger value="progress">
-            <GitBranch className="h-4 w-4 mr-2" />
+            <GitBranch className="size-4  mr-2" />
             Progress
           </TabsTrigger>
           <TabsTrigger value="costs">
-            <CurrencyDollar className="h-4 w-4 mr-2" />
+            <CurrencyDollar className="size-4  mr-2" />
             Costs
           </TabsTrigger>
           <TabsTrigger value="knowledge">
-            <BookOpen className="h-4 w-4 mr-2" />
+            <BookOpen className="size-4  mr-2" />
             Knowledge
           </TabsTrigger>
         </TabsList>
@@ -270,7 +270,7 @@ export function MetaSwarmDashboard() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-purple-500" />
+                    <div className="size-3  rounded-full bg-purple-500" />
                     <span className="flex-1">SwarmAgentic (Discovery)</span>
                     <Badge variant="secondary">PSO</Badge>
                   </div>
@@ -280,7 +280,7 @@ export function MetaSwarmDashboard() {
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-blue-500" />
+                    <div className="size-3  rounded-full bg-blue-500" />
                     <span className="flex-1">Claude Swarm (Execution)</span>
                     <Badge variant="secondary">Parallel</Badge>
                   </div>
@@ -290,7 +290,7 @@ export function MetaSwarmDashboard() {
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-green-500" />
+                    <div className="size-3  rounded-full bg-green-500" />
                     <span className="flex-1">ClosedLoop (Production)</span>
                     <Badge variant="secondary">5-Step</Badge>
                   </div>

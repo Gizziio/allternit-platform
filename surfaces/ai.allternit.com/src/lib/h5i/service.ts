@@ -784,7 +784,7 @@ export function redactSecrets(text: string): { redacted: string; found: string[]
     redacted = redacted.replace(pattern.regex, (match, prefix, secret) => {
       const toRedact = secret || match;
       if (toRedact && toRedact.length > 8) {
-        found.push(`${pattern.name}: ${toRedact.slice(0, 4)}...${toRedact.slice(-4)}`);
+        found.push(`${pattern.name}: ${toRedact.slice(0, 4)}…${toRedact.slice(-4)}`);
         return prefix ? `${prefix}[REDACTED]` : '[REDACTED]';
       }
       return match;
@@ -891,7 +891,7 @@ export function getH5iMcpConfig(): McpServerConfig {
   return {
     name: 'allternit-context',
     command: 'node',
-    args: ['-e', 'console.log(JSON.stringify({name:"allternit-context",version:"1.0.0"}))'],
+    args: ['-e', 'console.debug(JSON.stringify({name:"allternit-context",version:"1.0.0"}))'],
   };
 }
 

@@ -116,8 +116,8 @@ export const ChartArtifact = memo(function ChartArtifact({
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} margin={{ top: 8, right: 8, bottom: 8, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-              <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+              <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
               <Tooltip
                 contentStyle={{
                   backgroundColor: "hsl(var(--background))",
@@ -138,8 +138,8 @@ export const ChartArtifact = memo(function ChartArtifact({
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 8, right: 8, bottom: 8, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-              <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+              <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
               <Tooltip
                 contentStyle={{
                   backgroundColor: "hsl(var(--background))",
@@ -168,8 +168,8 @@ export const ChartArtifact = memo(function ChartArtifact({
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={chartData} margin={{ top: 8, right: 8, bottom: 8, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="name" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-              <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+              <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
+              <YAxis tick={{ fontSize: 12 }} stroke="hsl(var(--muted-foreground))" />
               <Tooltip
                 contentStyle={{
                   backgroundColor: "hsl(var(--background))",
@@ -213,7 +213,7 @@ export const ChartArtifact = memo(function ChartArtifact({
                 cx="50%"
                 cy="50%"
                 outerRadius="80%"
-                label={{ fontSize: 11 }}
+                label={{ fontSize: 12 }}
               >
                 {(chartData as Array<{ name: string; value: number }>).map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
@@ -226,10 +226,10 @@ export const ChartArtifact = memo(function ChartArtifact({
   };
 
   const typeButtons: { type: ChartType; icon: React.ReactNode; label: string }[] = [
-    { type: "bar", icon: <IconChartBar className="w-3.5 h-3.5" />, label: "Bar" },
-    { type: "line", icon: <IconChartLine className="w-3.5 h-3.5" />, label: "Line" },
-    { type: "area", icon: <IconChartLine className="w-3.5 h-3.5" />, label: "Area" },
-    { type: "pie", icon: <IconChartPie className="w-3.5 h-3.5" />, label: "Pie" },
+    { type: "bar", icon: <IconChartBar className="size-3.5 " />, label: "Bar" },
+    { type: "line", icon: <IconChartLine className="size-3.5 " />, label: "Line" },
+    { type: "area", icon: <IconChartLine className="size-3.5 " />, label: "Area" },
+    { type: "pie", icon: <IconChartPie className="size-3.5 " />, label: "Pie" },
   ];
 
   return (
@@ -270,7 +270,7 @@ export const ChartArtifact = memo(function ChartArtifact({
           className="p-1.5 rounded-md hover:bg-muted transition-colors"
           title="Download SVG"
         >
-          <IconDownload className="w-3.5 h-3.5 text-muted-foreground" />
+          <IconDownload className="size-3.5  text-muted-foreground" />
         </button>
       </div>
 

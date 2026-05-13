@@ -100,7 +100,7 @@ export function AudioPlayer({ src, title = 'Audio Overview' }: AudioPlayerProps)
 
       {/* Progress */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-        <span style={{ fontSize: 10, color: 'var(--text-muted, #a1a1aa)', minWidth: 32 }}>
+        <span style={{ fontSize: 12, color: 'var(--text-muted, #a1a1aa)', minWidth: 32 }}>
           {formatTime(currentTime)}
         </span>
         <input
@@ -117,7 +117,7 @@ export function AudioPlayer({ src, title = 'Audio Overview' }: AudioPlayerProps)
             cursor: isLoaded ? 'pointer' : 'not-allowed',
           }}
         />
-        <span style={{ fontSize: 10, color: 'var(--text-muted, #a1a1aa)', minWidth: 32, textAlign: 'right' }}>
+        <span style={{ fontSize: 12, color: 'var(--text-muted, #a1a1aa)', minWidth: 32, textAlign: 'right' }}>
           {formatTime(duration)}
         </span>
       </div>

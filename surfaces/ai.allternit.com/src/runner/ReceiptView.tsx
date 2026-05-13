@@ -289,7 +289,7 @@ export function ReceiptView({ receipt, onClose }: ReceiptViewProps) {
             lineHeight: '1.5',
           }}
         >
-          <div style={{ color: THEME.textSecondary, fontSize: '11px', marginBottom: '4px' }}>Intent</div>
+          <div style={{ color: THEME.textSecondary, fontSize: '12px', marginBottom: '4px' }}>Intent</div>
           {receipt.userIntent}
         </div>
       </Section>
@@ -327,7 +327,7 @@ export function ReceiptView({ receipt, onClose }: ReceiptViewProps) {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      fontSize: '10px',
+                      fontSize: '12px',
                       fontWeight: 600,
                       color: action.status === 'success'
                         ? THEME.success
@@ -340,7 +340,7 @@ export function ReceiptView({ receipt, onClose }: ReceiptViewProps) {
                   </div>
                   <span style={{ fontSize: '13px', fontWeight: 500 }}>{action.action}</span>
                 </div>
-                <div style={{ fontSize: '11px', color: THEME.textSecondary }}>
+                <div style={{ fontSize: '12px', color: THEME.textSecondary }}>
                   {formatDuration(action.durationMs)}
                 </div>
               </div>
@@ -364,7 +364,7 @@ export function ReceiptView({ receipt, onClose }: ReceiptViewProps) {
               {action.verification && (
                 <div
                   style={{
-                    fontSize: '11px',
+                    fontSize: '12px',
                     color: action.verification.passed ? THEME.success : THEME.warning,
                     marginLeft: '26px',
                     marginTop: '4px',
@@ -415,7 +415,7 @@ export function ReceiptView({ receipt, onClose }: ReceiptViewProps) {
                     style={{
                       color: THEME.accent,
                       textDecoration: 'none',
-                      fontSize: '11px',
+                      fontSize: '12px',
                     }}
                   >
                     Open →
@@ -477,7 +477,7 @@ export function ReceiptView({ receipt, onClose }: ReceiptViewProps) {
               }
               <span>{check.name}</span>
               {check.message && (
-                <span style={{ color: THEME.textSecondary, fontSize: '11px' }}>
+                <span style={{ color: THEME.textSecondary, fontSize: '12px' }}>
                   — {check.message}
                 </span>
               )}
@@ -520,7 +520,7 @@ export function ReceiptView({ receipt, onClose }: ReceiptViewProps) {
           marginTop: '16px',
           paddingTop: '12px',
           borderTop: `1px solid ${THEME.border}`,
-          fontSize: '10px',
+          fontSize: '12px',
           color: THEME.textMuted,
           fontFamily: 'var(--font-mono)',
         }}
@@ -582,7 +582,7 @@ interface InfoRowProps {
 function InfoRow({ label, value, color }: InfoRowProps) {
   return (
     <div>
-      <div style={{ fontSize: '11px', color: THEME.textSecondary, marginBottom: '2px' }}>{label}</div>
+      <div style={{ fontSize: '12px', color: THEME.textSecondary, marginBottom: '2px' }}>{label}</div>
       <div style={{ fontSize: '13px', fontWeight: 500, color: color || THEME.textPrimary }}>{value}</div>
     </div>
   );

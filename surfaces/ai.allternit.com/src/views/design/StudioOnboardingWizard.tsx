@@ -182,10 +182,10 @@ function VideoPlayer() {
           <div style={{ height: "100%", width: `${progress}%`, background: "#e27c59", borderRadius: 2, transition: "width 0.1s" }} />
         </div>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-secondary)", fontVariantNumeric: "tabular-nums" }}>{fmt(elapsed)} / 3:03</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--text-secondary)", fontVariantNumeric: "tabular-nums" }}>{fmt(elapsed)} / 3:03</span>
           <div style={{ display: "flex", gap: 10 }}>
             {VIDEO_CHAPTERS.map((ch) => (
-              <button key={ch.label} style={{ fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 4, border: "1px solid rgba(255,255,255,0.1)", background: "var(--surface-hover)", color: "var(--text-secondary)", cursor: "pointer" }}>{ch.label}</button>
+              <button key={ch.label} style={{ fontSize: 12, fontWeight: 700, padding: "2px 7px", borderRadius: 4, border: "1px solid rgba(255,255,255,0.1)", background: "var(--surface-hover)", color: "var(--text-secondary)", cursor: "pointer" }}>{ch.label}</button>
             ))}
           </div>
         </div>
@@ -299,7 +299,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
             <MagicWand size={18} color="var(--accent-primary)" weight="duotone" />
             <span
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 800,
                 letterSpacing: "0.1em",
                 color: "var(--text-secondary)",
@@ -312,7 +312,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <span
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 700,
                 color: "var(--text-tertiary)",
                 fontVariantNumeric: "tabular-nums",
@@ -374,7 +374,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
               >
                 <div
                   style={{
-                    fontSize: 10,
+                    fontSize: 12,
                     fontWeight: 800,
                     letterSpacing: "0.15em",
                     color: "var(--text-tertiary)",
@@ -415,7 +415,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                   <label
                     style={{
                       display: "block",
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: 800,
                       letterSpacing: "0.15em",
                       color: "var(--text-tertiary)",
@@ -460,7 +460,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                   <label
                     style={{
                       display: "block",
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: 800,
                       letterSpacing: "0.15em",
                       color: "var(--text-tertiary)",
@@ -505,7 +505,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                   <label
                     style={{
                       display: "block",
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: 800,
                       letterSpacing: "0.15em",
                       color: "var(--text-tertiary)",
@@ -557,7 +557,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
               >
                 <div
                   style={{
-                    fontSize: 10,
+                    fontSize: 12,
                     fontWeight: 800,
                     letterSpacing: "0.15em",
                     color: "var(--text-tertiary)",
@@ -603,7 +603,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                   <label
                     style={{
                       display: "block",
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: 800,
                       letterSpacing: "0.15em",
                       color: "var(--text-tertiary)",
@@ -744,7 +744,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
               >
                 <div
                   style={{
-                    fontSize: 10,
+                    fontSize: 12,
                     fontWeight: 800,
                     letterSpacing: "0.15em",
                     color: "var(--text-tertiary)",
@@ -813,7 +813,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                             alignItems: "center",
                             justifyContent: "center",
                             color: "var(--accent-primary)",
-                            fontSize: 10,
+                            fontSize: 12,
                             fontWeight: 800,
                           }}
                         >
@@ -823,7 +823,7 @@ export function StudioOnboardingWizard({ onComplete, onSkip }: StudioOnboardingW
                       </div>
                       <div
                         style={{
-                          fontSize: 10,
+                          fontSize: 12,
                           fontWeight: 800,
                           letterSpacing: "0.08em",
                           color: "var(--text-tertiary)",

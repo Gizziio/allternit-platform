@@ -11,8 +11,9 @@
  * - Quick connect favorites
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import { useNavigate } from 'react-router-dom';
 import {
   Plus,
   ArrowClockwise,
@@ -198,7 +199,7 @@ function SSHKeyManagerPanel({
       {isLoading ? (
         <div style={{ padding: '40px', textAlign: 'center', color: TEXT.secondary }}>
           <ArrowClockwise size={24} className="animate-spin" style={{ marginBottom: '12px' }} />
-          <p>Loading SSH keys...</p>
+          <p>Loading SSH keys…</p>
         </div>
       ) : keys.length === 0 ? (
         <div
@@ -303,7 +304,7 @@ function SSHKeyManagerPanel({
                       padding: '10px',
                       borderRadius: '6px',
                       background: 'var(--bg-tertiary)',
-                      fontSize: '11px',
+                      fontSize: '12px',
                       color: 'var(--ui-text-muted)',
                       wordBreak: 'break-all',
                       fontFamily: 'var(--font-mono)',
@@ -312,7 +313,7 @@ function SSHKeyManagerPanel({
                     {key.public_key}
                   </code>
                   {key.last_used && (
-                    <div style={{ fontSize: '11px', color: TEXT.secondary, marginTop: '8px' }}>
+                    <div style={{ fontSize: '12px', color: TEXT.secondary, marginTop: '8px' }}>
                       Last used: {new Date(key.last_used).toLocaleDateString()}
                     </div>
                   )}
@@ -449,7 +450,7 @@ function GenerateKeyModal({
             <label style={{ display: 'block', fontSize: '13px', color: TEXT.secondary, marginBottom: '6px' }}>
               Public Key (safe to share)
             </label>
-            <code style={{ display: 'block', padding: '10px', borderRadius: '6px', background: 'var(--bg-tertiary)', fontSize: '11px', color: 'var(--ui-text-muted)', wordBreak: 'break-all', fontFamily: 'var(--font-mono)' }}>
+            <code style={{ display: 'block', padding: '10px', borderRadius: '6px', background: 'var(--bg-tertiary)', fontSize: '12px', color: 'var(--ui-text-muted)', wordBreak: 'break-all', fontFamily: 'var(--font-mono)' }}>
               {generatedKey.public_key}
             </code>
           </div>
@@ -457,7 +458,7 @@ function GenerateKeyModal({
             <label style={{ display: 'block', fontSize: '13px', color: TEXT.secondary, marginBottom: '6px' }}>
               Private Key (keep secret!)
             </label>
-            <code style={{ display: 'block', padding: '10px', borderRadius: '6px', background: 'var(--status-error-bg)', fontSize: '11px', color: '#ff6b6b', wordBreak: 'break-all', fontFamily: 'var(--font-mono)', border: '1px solid color-mix(in srgb, var(--status-error) 40%, transparent)' }}>
+            <code style={{ display: 'block', padding: '10px', borderRadius: '6px', background: 'var(--status-error-bg)', fontSize: '12px', color: '#ff6b6b', wordBreak: 'break-all', fontFamily: 'var(--font-mono)', border: '1px solid color-mix(in srgb, var(--status-error) 40%, transparent)' }}>
               {generatedKey.private_key}
             </code>
           </div>
@@ -657,7 +658,7 @@ function Modal({
 // ============================================================================
 
 export function SSHConnectionManager() {
-  const router = useRouter();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'connections' | 'keys'>('connections');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [connections, setConnections] = useState<SSHConnectionWithFavorites[]>([]);
@@ -773,7 +774,7 @@ export function SSHConnectionManager() {
       prev.map((c) => (c.id === id ? { ...c, status: 'connecting' as const } : c))
     );
 
-    try {
+    try {isClient ? 
       const result = await sshApi.connect(id);
 
       if (result.success) {
@@ -788,7 +789,7 @@ export function SSHConnectionManager() {
                   dockerInstalled: result.dockerInstalled,
                   allternitInstalled: result.allternitInstalled,
                   lastConnected: new Date().toISOString(),
-                }
+                 : "..."}
               : c
           )
         );
@@ -1077,7 +1078,7 @@ export function SSHConnectionManager() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search connections..."
+                placeholder="Search connections…"
                 style={{
                   padding: '8px 12px 8px 36px',
                   borderRadius: '6px',
@@ -1178,7 +1179,7 @@ export function SSHConnectionManager() {
         onConnectExisting={handleConnectExisting}
         onTestConnection={handleTestConnection}
         onSelectProvider={(providerId) => {
-          router.push(`/cloud-deploy?provider=${providerId}`);
+          navigate(`/cloud-deploy?provider=${providerId}`);
         }}
       />
     </div>
@@ -1258,7 +1259,7 @@ function EnhancedSSHConnectionsList({
     return (
       <div style={{ padding: '40px', textAlign: 'center', color: TEXT.secondary }}>
         <ArrowClockwise size={32} className="animate-spin" style={{ marginBottom: '16px' }} />
-        <p>Loading connections...</p>
+        <p>Loading connections…</p>
       </div>
     );
   }
@@ -1371,7 +1372,7 @@ function EnhancedSSHConnectionsList({
                     borderRadius: '4px',
                     background: 'rgba(196,154,122,0.2)',
                     color: SAND[500],
-                    fontSize: '10px',
+                    fontSize: '12px',
                   }}
                 >
                   {tag}
@@ -1384,7 +1385,7 @@ function EnhancedSSHConnectionsList({
               {connection.architecture && ` (${connection.architecture})`}
             </div>
             {connection.errorMessage && (
-              <div style={{ fontSize: '11px', color: STATUS.error, marginTop: '4px' }}>
+              <div style={{ fontSize: '12px', color: STATUS.error, marginTop: '4px' }}>
                 {connection.errorMessage}
               </div>
             )}
@@ -1408,7 +1409,7 @@ function EnhancedSSHConnectionsList({
                 Disconnect
               </button>
             ) : connection.status === 'connecting' ? (
-              <span style={{ fontSize: '12px', color: 'var(--status-warning)' }}>Connecting...</span>
+              <span style={{ fontSize: '12px', color: 'var(--status-warning)' }}>Connecting…</span>
             ) : (
               <button
                 onClick={() => onConnect(connection.id)}

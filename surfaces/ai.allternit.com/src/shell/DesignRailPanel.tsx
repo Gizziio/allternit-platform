@@ -151,7 +151,7 @@ export function DesignRailPanel({ onNewDesign, onCollapse, onSetupDesignSystem }
         ))}
       </div>
       <span style={{
-        flex: 1, fontSize: 11, fontWeight: 700,
+        flex: 1, fontSize: 12, fontWeight: 700,
         color: "var(--shell-item-muted)", letterSpacing: "0.06em", textTransform: "uppercase",
       }}>
         Studio
@@ -201,7 +201,7 @@ export function DesignRailPanel({ onNewDesign, onCollapse, onSetupDesignSystem }
                   border: "none", borderRadius: 7,
                   background: active ? "color-mix(in srgb, var(--accent-primary) 15%, var(--shell-panel-bg))" : "transparent",
                   color: active ? "var(--accent-primary)" : "var(--shell-item-muted)",
-                  cursor: "pointer", fontSize: 10, fontWeight: 700, whiteSpace: "nowrap",
+                  cursor: "pointer", fontSize: 12, fontWeight: 700, whiteSpace: "nowrap",
                   opacity: active ? 1 : 0.55,
                   transition: "all 0.22s cubic-bezier(0.22, 1, 0.36, 1)",
                 }}>
@@ -236,8 +236,8 @@ export function DesignRailPanel({ onNewDesign, onCollapse, onSetupDesignSystem }
                       <div style={{ width: "70%", height: 4, borderRadius: 2, background: val === 'wireframe' ? "rgba(0,0,0,0.1)" : "rgba(99,102,241,0.6)" }} />
                       <div style={{ width: "85%", height: 4, borderRadius: 2, background: val === 'wireframe' ? "rgba(0,0,0,0.07)" : "rgba(99,102,241,0.35)" }} />
                     </div>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: "var(--shell-item-fg)" }}>{label}</div>
-                    <div style={{ fontSize: 9, color: "var(--shell-item-muted)", marginTop: 2, lineHeight: 1.3 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "var(--shell-item-fg)" }}>{label}</div>
+                    <div style={{ fontSize: 12, color: "var(--shell-item-muted)", marginTop: 2, lineHeight: 1.3 }}>
                       {val === 'wireframe' ? 'Layout & structure only' : 'Full colors & components'}
                     </div>
                   </button>
@@ -257,7 +257,7 @@ export function DesignRailPanel({ onNewDesign, onCollapse, onSetupDesignSystem }
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "var(--shell-panel-bg)", borderRadius: 10, border: "1px solid var(--shell-floating-border)" }}>
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 600, color: "var(--shell-item-fg)" }}>Speaker notes</div>
-                  <div style={{ fontSize: 10, color: "var(--shell-item-muted)", marginTop: 1 }}>Less text on slides</div>
+                  <div style={{ fontSize: 12, color: "var(--shell-item-muted)", marginTop: 1 }}>Less text on slides</div>
                 </div>
                 <button onClick={() => setSpeakerNotes(v => !v)} style={{ width: 36, height: 20, borderRadius: 10, background: speakerNotes ? "var(--accent-primary)" : "rgba(0,0,0,0.2)", border: "none", cursor: "pointer", position: "relative", transition: "background 0.2s", flexShrink: 0 }}>
                   <div style={{ width: 14, height: 14, borderRadius: "50%", background: "#fff", position: "absolute", top: 3, left: speakerNotes ? 19 : 3, transition: "left 0.2s" }} />
@@ -288,19 +288,19 @@ export function DesignRailPanel({ onNewDesign, onCollapse, onSetupDesignSystem }
           }}>
             + Create
           </button>
-          <div style={{ fontSize: 10, color: "var(--shell-item-muted)", textAlign: "center", marginTop: -8 }}>
+          <div style={{ fontSize: 12, color: "var(--shell-item-muted)", textAlign: "center", marginTop: -8 }}>
             Only you can see your project by default.
           </div>
 
           {/* Design system promo */}
           <div style={{ padding: "14px 12px", borderRadius: 12, border: "1px solid var(--shell-floating-border)", background: "var(--shell-panel-bg)" }}>
-            <div style={{ fontSize: 11, color: "var(--shell-item-fg)", lineHeight: 1.55, marginBottom: 12, opacity: 0.72 }}>
+            <div style={{ fontSize: 12, color: "var(--shell-item-fg)", lineHeight: 1.55, marginBottom: 12, opacity: 0.72 }}>
               Create a design system so anyone can create good-looking designs and assets.
             </div>
             <button
               onClick={onSetupDesignSystem}
               disabled={!onSetupDesignSystem}
-              style={{ width: "100%", padding: "9px", borderRadius: 8, background: "var(--accent-primary)", color: "#fff", border: "none", fontSize: 11, fontWeight: 700, cursor: onSetupDesignSystem ? "pointer" : "default", opacity: onSetupDesignSystem ? 1 : 0.7 }}
+              style={{ width: "100%", padding: "9px", borderRadius: 8, background: "var(--accent-primary)", color: "#fff", border: "none", fontSize: 12, fontWeight: 700, cursor: onSetupDesignSystem ? "pointer" : "default", opacity: onSetupDesignSystem ? 1 : 0.7 }}
             >
               Set up design system
             </button>
@@ -310,7 +310,7 @@ export function DesignRailPanel({ onNewDesign, onCollapse, onSetupDesignSystem }
         {/* Recent sessions list */}
         {sessions.length > 0 && (
           <div style={{ padding: "0 14px 8px" }}>
-            <div style={{ fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--shell-item-muted)", marginBottom: 8 }}>Recent</div>
+            <div style={{ fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--shell-item-muted)", marginBottom: 8 }}>Recent</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
               {sessions.slice(0, 6).map(session => (
                 <button
@@ -325,7 +325,7 @@ export function DesignRailPanel({ onNewDesign, onCollapse, onSetupDesignSystem }
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 12, fontWeight: 600, color: "var(--shell-item-fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", lineHeight: 1.3 }}>{session.name}</div>
-                    <div style={{ fontSize: 10, color: "var(--shell-item-muted)", marginTop: 1 }}>{(session as any).messages?.length ?? 0} messages</div>
+                    <div style={{ fontSize: 12, color: "var(--shell-item-muted)", marginTop: 1 }}>{(session as any).messages?.length ?? 0} messages</div>
                   </div>
                 </button>
               ))}
@@ -358,14 +358,14 @@ export function DesignRailPanel({ onNewDesign, onCollapse, onSetupDesignSystem }
               {activeSession?.name ?? projectName ?? "Untitled"}
             </div>
             {specialist && (
-              <div style={{ fontSize: 9, color: "var(--accent-primary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", marginTop: 2 }}>
+              <div style={{ fontSize: 12, color: "var(--accent-primary)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", marginTop: 2 }}>
                 {SPECIALIST_LABELS[specialist] ?? specialist}
               </div>
             )}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
             <div style={{ width: 6, height: 6, borderRadius: "50%", background: isStreaming ? "var(--accent-primary)" : "#22c55e" }} />
-            <span style={{ fontSize: 9, fontWeight: 700, color: isStreaming ? "var(--accent-primary)" : "#22c55e", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: isStreaming ? "var(--accent-primary)" : "#22c55e", textTransform: "uppercase", letterSpacing: "0.05em" }}>
               {isStreaming ? "Working" : "Ready"}
             </span>
           </div>
@@ -376,7 +376,7 @@ export function DesignRailPanel({ onNewDesign, onCollapse, onSetupDesignSystem }
           <div style={{ display: "flex", gap: 2, padding: 3, background: "var(--shell-floating-bg)", border: "1px solid var(--shell-floating-border)", borderRadius: 10 }}>
             {(['chat', 'comments'] as const).map(t => (
               <button key={t} onClick={() => setActiveLeftTab(t)} style={{
-                flex: 1, padding: "5px 0", fontSize: 11, fontWeight: 600,
+                flex: 1, padding: "5px 0", fontSize: 12, fontWeight: 600,
                 background: activeLeftTab === t ? "var(--shell-panel-bg)" : "transparent",
                 border: activeLeftTab === t ? "1px solid var(--shell-floating-border)" : "1px solid transparent",
                 borderRadius: 8, boxShadow: activeLeftTab === t ? "0 1px 3px rgba(0,0,0,0.07)" : "none",
@@ -395,7 +395,7 @@ export function DesignRailPanel({ onNewDesign, onCollapse, onSetupDesignSystem }
             <div style={{ fontSize: 15, fontWeight: 700, color: "var(--shell-item-fg)", letterSpacing: "-0.01em", marginBottom: 5 }}>
               Start with context
             </div>
-            <div style={{ fontSize: 11, color: "var(--shell-item-muted)", lineHeight: 1.55, marginBottom: 18, maxWidth: 200 }}>
+            <div style={{ fontSize: 12, color: "var(--shell-item-muted)", lineHeight: 1.55, marginBottom: 18, maxWidth: 200 }}>
               Designs grounded in real context turn out better.
             </div>
             <input ref={fileInputRef} type="file" accept="image/*,.fig" style={{ display: "none" }} onChange={handleFileAttach} />
@@ -425,9 +425,9 @@ export function DesignRailPanel({ onNewDesign, onCollapse, onSetupDesignSystem }
                     onChange={e => setImportUrl(e.target.value)}
                     onKeyDown={e => { if (e.key === "Enter") handleImportUrl(); if (e.key === "Escape") setShowImportBar(false); }}
                     placeholder="Paste Figma / URL…"
-                    style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 11, color: "var(--shell-item-fg)", minWidth: 0 }}
+                    style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontSize: 12, color: "var(--shell-item-fg)", minWidth: 0 }}
                   />
-                  <button onClick={handleImportUrl} disabled={!importUrl.trim()} style={{ padding: "3px 9px", borderRadius: 6, background: importUrl.trim() ? "var(--accent-primary)" : "var(--shell-item-hover)", color: importUrl.trim() ? "#fff" : "var(--shell-item-muted)", border: "none", fontSize: 10, fontWeight: 700, cursor: importUrl.trim() ? "pointer" : "default" }}>
+                  <button onClick={handleImportUrl} disabled={!importUrl.trim()} style={{ padding: "3px 9px", borderRadius: 6, background: importUrl.trim() ? "var(--accent-primary)" : "var(--shell-item-hover)", color: importUrl.trim() ? "#fff" : "var(--shell-item-muted)", border: "none", fontSize: 12, fontWeight: 700, cursor: importUrl.trim() ? "pointer" : "default" }}>
                     Add
                   </button>
                 </div>
@@ -437,7 +437,7 @@ export function DesignRailPanel({ onNewDesign, onCollapse, onSetupDesignSystem }
         )}
 
         {activeLeftTab === 'comments' && (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "32px 8px", gap: 8, color: "var(--shell-item-muted)", fontSize: 11 }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "32px 8px", gap: 8, color: "var(--shell-item-muted)", fontSize: 12 }}>
             <ChatTeardropText size={24} weight="duotone" />
             <span>No comments yet</span>
           </div>
@@ -445,7 +445,7 @@ export function DesignRailPanel({ onNewDesign, onCollapse, onSetupDesignSystem }
 
         {activeLeftTab === 'chat' && messages.map((m, idx) => (
           <div key={m.id} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            <div style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: m.role === "user" ? "var(--accent-primary)" : "var(--shell-item-muted)" }}>
+            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: m.role === "user" ? "var(--accent-primary)" : "var(--shell-item-muted)" }}>
               {m.role === "user" ? "You" : "Studio Agent"}
             </div>
             <StudioMessageRenderer
@@ -485,9 +485,9 @@ export function DesignRailPanel({ onNewDesign, onCollapse, onSetupDesignSystem }
                 onChange={e => setImportUrl(e.target.value)}
                 onKeyDown={e => { if (e.key === "Enter") handleImportUrl(); if (e.key === "Escape") setShowImportBar(false); }}
                 placeholder="Paste Figma / URL…"
-                style={{ flex: 1, background: "var(--shell-panel-bg)", border: "1px solid var(--shell-floating-border)", borderRadius: 7, padding: "4px 8px", outline: "none", fontSize: 11, color: "var(--shell-item-fg)" }}
+                style={{ flex: 1, background: "var(--shell-panel-bg)", border: "1px solid var(--shell-floating-border)", borderRadius: 7, padding: "4px 8px", outline: "none", fontSize: 12, color: "var(--shell-item-fg)" }}
               />
-              <button onClick={handleImportUrl} disabled={!importUrl.trim()} style={{ padding: "4px 9px", borderRadius: 6, background: importUrl.trim() ? "var(--accent-primary)" : "var(--shell-item-hover)", color: importUrl.trim() ? "#fff" : "var(--shell-item-muted)", border: "none", fontSize: 10, fontWeight: 700, cursor: importUrl.trim() ? "pointer" : "default" }}>
+              <button onClick={handleImportUrl} disabled={!importUrl.trim()} style={{ padding: "4px 9px", borderRadius: 6, background: importUrl.trim() ? "var(--accent-primary)" : "var(--shell-item-hover)", color: importUrl.trim() ? "#fff" : "var(--shell-item-muted)", border: "none", fontSize: 12, fontWeight: 700, cursor: importUrl.trim() ? "pointer" : "default" }}>
                 Add
               </button>
             </div>
@@ -499,7 +499,7 @@ export function DesignRailPanel({ onNewDesign, onCollapse, onSetupDesignSystem }
               <input ref={fileInputRef} type="file" accept="image/*,.fig" style={{ display: "none" }} onChange={handleFileAttach} />
             </div>
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              <button onClick={() => setShowImportBar(v => !v)} style={{ padding: "4px 10px", borderRadius: 7, background: showImportBar ? "color-mix(in srgb, var(--accent-primary) 12%, transparent)" : "var(--shell-item-hover)", color: showImportBar ? "var(--accent-primary)" : "var(--shell-item-muted)", border: "none", fontSize: 11, fontWeight: 600, cursor: "pointer" }}>
+              <button onClick={() => setShowImportBar(v => !v)} style={{ padding: "4px 10px", borderRadius: 7, background: showImportBar ? "color-mix(in srgb, var(--accent-primary) 12%, transparent)" : "var(--shell-item-hover)", color: showImportBar ? "var(--accent-primary)" : "var(--shell-item-muted)", border: "none", fontSize: 12, fontWeight: 600, cursor: "pointer" }}>
                 Import
               </button>
               <button
@@ -509,7 +509,7 @@ export function DesignRailPanel({ onNewDesign, onCollapse, onSetupDesignSystem }
                   padding: "4px 12px", borderRadius: 7,
                   background: input.trim() ? "var(--accent-primary)" : "var(--shell-item-hover)",
                   color: input.trim() ? "#fff" : "var(--shell-item-muted)",
-                  border: "none", fontSize: 11, fontWeight: 700,
+                  border: "none", fontSize: 12, fontWeight: 700,
                   cursor: input.trim() ? "pointer" : "default",
                   transition: "all 0.15s",
                 }}

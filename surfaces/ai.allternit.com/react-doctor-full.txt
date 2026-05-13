@@ -1,0 +1,97 @@
+react-doctor v0.1.6
+
+✔ Select projects to scan › @allternit/ai
+Scanning /Users/macbook/Desktop/allternit-workspace/allternit/surfaces/ai.allternit.com...
+
+
+
+Accessibility 1198 issues
+  ✗ Alt text
+    Missing `alt` attribute.
+    Must have `alt` prop, either with meaningful text, or an empty string for
+    decorative images.
+    https://oxc.rs/docs/guide/usage/linter/rules/jsx_a11y/alt-text.html
+    src/views/design/office/BrandKitEditor.tsx:385
+  ⚠ Label has associated control ×315
+    A form label must be associated with a control.
+    Either give the label a `htmlFor` attribute with the id of the associated control,
+    or wrap the label around the control.
+    https://oxc.rs/docs/guide/usage/linter/rules/jsx_a11y/label-has-associated-control.html
+    src/views/settings/SettingsView.tsx:934
+  ⚠ Static element interactions ×289
+    Static HTML elements with event handlers require a role.
+    Add a role attribute to this element, or use a semantic HTML element instead.
+    https://oxc.rs/docs/guide/usage/linter/rules/jsx_a11y/no-static-element-interactions.html
+    src/components/ai-elements/streaming-context-panel.tsx:203
+
+Correctness 929 issues
+  ✗ Rules of hooks ×96
+    React Hook "useState" is called in function "Anonymous" that is neither a React
+    function component nor a custom React Hook function. React component names must
+    start with an uppercase letter. React Hook names must start with the word "use".
+    https://oxc.rs/docs/guide/usage/linter/rules/react/rules-of-hooks.html
+    src/views/settings/SettingsView.tsx:1408
+  ⚠ Rendering hydration mismatch time ×408
+    new Date() reachable from JSX renders differently on server vs client — wrap in
+    useEffect+useState (client-only) or add suppressHydrationWarning to the parent if
+    intentional
+    Wrap dynamic time/random values in useEffect+useState (client-only) or add
+    suppressHydrationWarning to the parent if intentional
+    src/views/settings/NodeManagementPanel.tsx:684
+  ⚠ Array index as key ×390
+    Array index "i" used as key — causes bugs when list is reordered or filtered
+    Use a stable unique identifier: `key={item.id}` or `key={item.slug}` — index keys
+    break on reorder/filter
+    src/views/MetaSwarmDashboard/components/ProgressPanel.tsx:106
+
+State & Effects 524 issues
+  ✗ Effect needs cleanup ×13
+    useEffect schedules `setTimeout(...)` but never returns a cleanup — leaks the
+    registration on every re-run and on unmount. Return a cleanup function that calls
+    clearTimeout(...)
+    Return a cleanup function that releases the subscription / timer: `return () =>
+    target.removeEventListener(name, handler)` for listeners, `return () =>
+    clearInterval(id)` / `clearTimeout(id)` for timers, or `return unsubscribe` if the
+    subscribe call already returned one
+    src/app/terminal/clerk/page.tsx:44
+  ⚠ UseReducer ×179
+    Component "NodeManagementPanel" has 7 useState calls — consider useReducer for
+    related state
+    Group related state: `const [state, dispatch] = useReducer(reducer, { field1,
+    field2, ... })`
+    src/views/settings/NodeManagementPanel.tsx:1285
+  ⚠ Cascading set state ×149
+    3 setState calls in a single useEffect — consider using useReducer or deriving state
+    Combine into useReducer: `const [state, dispatch] = useReducer(reducer,
+    initialState)`
+    src/views/MetaSwarmDashboard/components/ProgressPanel.tsx:164
+
+Security 5 issues
+  ✗ Eval ×5
+    eval() is a code injection risk — avoid dynamic code execution
+    Use `JSON.parse` for serialized data, `Function(...)` (still careful) for trusted
+    templates, or refactor to avoid dynamic code execution
+    src/lib/agents/tools/skill-graph.tool.ts:24
+
+Dead Code 5240 issues
+  ⚠ Files ×1909
+    Unused file
+    This file is not imported by any other file in the project.
+  ⚠ Exports ×1573
+    Unused export: FileSystemService
+  ⚠ Types ×1505
+    Unused type: DriveSearchResult
+
+  ⚠ 6016 more warnings
+    Run `npx react-doctor@latest . --verbose` to get all details
+
+  ┌─────┐  24 / 100 Critical
+  │ x x │  ████████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+  │  ▽  │  React Doctor (www.react.doctor)
+  └─────┘
+
+  12848 issues across 2887/2316 files  in 34.5s
+  Full diagnostics written to /var/folders/3m/v7y47w_53_7_n978b3lb_f040000gn/T/react-doctor-e5305161-5fbc-4c84-bf47-0b3282b4f17e
+
+  → Share your results: https://www.react.doctor/share?p=%40allternit%2Fai&s=24&e=115&w=12733&f=2887
+

@@ -27,9 +27,9 @@ Supports multiple test runners: Jest, Vitest, Mocha, pytest, cargo test, go test
 
 Examples:
 - Run all tests: path="/workspace/project"
-- Specific file: path="...", testPathPattern="Component.test.tsx"
-- With coverage: path="...", coverage=true
-- Watch mode: path="...", watch=false (disabled for automation)`,
+- Specific file: path="…", testPathPattern="Component.test.tsx"
+- With coverage: path="…", coverage=true
+- Watch mode: path="…", watch=false (disabled for automation)`,
   parameters: {
     type: "object",
     properties: {
@@ -124,7 +124,7 @@ Use this tool to:
 
 Examples:
 - Check coverage: path="/workspace/project"
-- Show uncovered files: path="...", showUncovered=true`,
+- Show uncovered files: path="…", showUncovered=true`,
   parameters: {
     type: "object",
     properties: {
@@ -202,8 +202,8 @@ Use this tool to:
 
 Examples:
 - Check all files: path="/workspace/project"
-- Specific files: path="...", files=["src/index.ts"]
-- Auto-fix: path="...", fix=true (requires confirmation)`,
+- Specific files: path="…", files=["src/index.ts"]
+- Auto-fix: path="…", fix=true (requires confirmation)`,
   parameters: {
     type: "object",
     properties: {
@@ -278,7 +278,7 @@ Use this tool to:
 
 Examples:
 - Type check project: path="/workspace/project"
-- Strict mode: path="...", strict=true`,
+- Strict mode: path="…", strict=true`,
   parameters: {
     type: "object",
     properties: {

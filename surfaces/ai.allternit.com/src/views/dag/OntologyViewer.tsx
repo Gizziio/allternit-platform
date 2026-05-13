@@ -1,6 +1,6 @@
 import { OntologyViewerSurface } from "./DagRuntimeWorkspace";
 
-export function OntologyViewer() {
+export function OntologyViewer(): JSX.Element {
   return <OntologyViewerSurface />;
 }
 

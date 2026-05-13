@@ -84,7 +84,7 @@ export function H5iCommitPanel({ workspacePath, sessionId, onClose }: H5iCommitP
       {/* Body */}
       <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <div>
-          <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+          <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
             Commit Message *
           </label>
           <input
@@ -107,7 +107,7 @@ export function H5iCommitPanel({ workspacePath, sessionId, onClose }: H5iCommitP
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
               Model
             </label>
             <input
@@ -127,7 +127,7 @@ export function H5iCommitPanel({ workspacePath, sessionId, onClose }: H5iCommitP
             />
           </div>
           <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
               Agent
             </label>
             <input
@@ -149,7 +149,7 @@ export function H5iCommitPanel({ workspacePath, sessionId, onClose }: H5iCommitP
         </div>
 
         <div>
-          <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+          <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
             Prompt / Reasoning
           </label>
           <textarea

@@ -139,7 +139,7 @@ export function EnhancedMessageItem({
           </div>
           <span
             style={{
-              fontSize: 10,
+              fontSize: 12,
               color: "#7a6b5d",
               paddingLeft: 8,
               marginTop: 4,

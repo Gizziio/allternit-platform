@@ -119,7 +119,7 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
       }
     } catch (e) {
       // Use defaults if manifest doesn't exist
-      console.log('Using default layer config');
+      console.debug('Using default layer config');
     }
   };
 
@@ -201,7 +201,7 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
                 border: `1px solid ${STUDIO_THEME.accent}40`,
                 color: STUDIO_THEME.accent,
                 cursor: 'pointer',
-                fontSize: '11px',
+                fontSize: '12px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
@@ -220,7 +220,7 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
                 border: `1px solid ${STUDIO_THEME.borderSubtle}`,
                 color: STUDIO_THEME.textSecondary,
                 cursor: 'pointer',
-                fontSize: '11px',
+                fontSize: '12px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
@@ -238,7 +238,7 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
                 border: `1px solid ${STUDIO_THEME.borderSubtle}`,
                 color: STUDIO_THEME.textSecondary,
                 cursor: 'pointer',
-                fontSize: '11px',
+                fontSize: '12px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
@@ -267,7 +267,7 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
             Object.entries(groupedFiles).map(([dir, dirFiles]) => (
               <div key={dir} style={{ marginBottom: '16px' }}>
                 <div style={{
-                  fontSize: '11px',
+                  fontSize: '12px',
                   fontWeight: 600,
                   color: STUDIO_THEME.textMuted,
                   textTransform: 'uppercase',
@@ -316,7 +316,7 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
             }}>
               <FolderOpen style={{ width: 40, height: 40, margin: '0 auto 12px', opacity: 0.4 }} />
               <p style={{ fontSize: '13px', margin: '0 0 4px 0' }}>No files in workspace</p>
-              <p style={{ fontSize: '11px', margin: 0, opacity: 0.7 }}>
+              <p style={{ fontSize: '12px', margin: 0, opacity: 0.7 }}>
                 Create skills or use the Package Manager to import
               </p>
             </div>
@@ -330,7 +330,7 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
           background: STUDIO_THEME.bg,
         }}>
           <div style={{
-            fontSize: '10px',
+            fontSize: '12px',
             color: STUDIO_THEME.textMuted,
             marginBottom: '8px',
             textTransform: 'uppercase',
@@ -351,7 +351,7 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
                   onClick={() => toggleLayer(layer)}
                   disabled={isLoadingLayers}
                   style={{
-                    fontSize: '10px',
+                    fontSize: '12px',
                     padding: '4px 8px',
                     background: isEnabled ? `${STUDIO_THEME.accent}25` : 'var(--surface-hover)',
                     color: isEnabled ? STUDIO_THEME.accent : STUDIO_THEME.textMuted,
@@ -387,7 +387,7 @@ export function WorkspaceTab({ agent }: WorkspaceTabProps) {
             })}
           </div>
           <div style={{
-            fontSize: '9px',
+            fontSize: '12px',
             color: STUDIO_THEME.textMuted,
             marginTop: '8px',
             opacity: 0.7,

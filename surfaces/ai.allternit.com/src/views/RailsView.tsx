@@ -107,10 +107,10 @@ export function RailsView() {
 
   return (
     <div className="flex h-full">
-      <div className="w-72 border-r flex flex-col bg-muted/30">
+      <div className="w-72 flex flex-col bg-muted/30 shadow-sm">
         <div className="p-4 border-b bg-background">
           <h2 className="text-lg font-semibold flex items-center gap-2">
-            <ListDashes className="w-5 h-5 text-primary" />
+            <ListDashes className="size-5  text-primary" />
             Rails System
           </h2>
           <p className="text-sm text-muted-foreground">Control Center</p>
@@ -118,11 +118,11 @@ export function RailsView() {
         <div className="p-3 border-b">
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div className="flex items-center gap-2 p-2 rounded bg-green-500/10">
-              <Activity className="w-4 h-4 text-green-500" />
+              <Activity className="size-4  text-green-500" />
               <span className="font-medium">{activeRuns.length}</span>
             </div>
             <div className="flex items-center gap-2 p-2 rounded bg-blue-500/10">
-              <Clock className="w-4 h-4 text-blue-500" />
+              <Clock className="size-4  text-blue-500" />
               <span className="font-medium">{queue.length}</span>
             </div>
           </div>
@@ -145,9 +145,9 @@ export function RailsView() {
           <Tabs defaultValue="control" className="w-full">
             <TabsList className="w-full justify-start bg-muted/50 p-1 rounded-lg border h-auto flex-wrap gap-1">
               <TabsTrigger value="control" className="flex items-center gap-1 px-3 py-1.5"><Lightning size={16} /> Control</TabsTrigger>
-              <TabsTrigger value="mail" className="flex items-center gap-1 px-3 py-1.5"><EnvelopeSimple size={16} /> Mail {Object.values(mail).flat().filter((m: any) => m.status === 'unread').length > 0 && <Badge variant="destructive" className="ml-1 text-[10px] h-4 px-1">{Object.values(mail).flat().filter((m: any) => m.status === 'unread').length}</Badge>}</TabsTrigger>
+              <TabsTrigger value="mail" className="flex items-center gap-1 px-3 py-1.5"><EnvelopeSimple size={16} /> Mail {Object.values(mail).flat().filter((m: any) => m.status === 'unread').length > 0 && <Badge variant="destructive" className="ml-1 text-xs h-4 px-1">{Object.values(mail).flat().filter((m: any) => m.status === 'unread').length}</Badge>}</TabsTrigger>
               <TabsTrigger value="checkpoints" className="flex items-center gap-1 px-3 py-1.5"><FloppyDisk size={16} /> Checkpoints</TabsTrigger>
-              <TabsTrigger value="reviews" className="flex items-center gap-1 px-3 py-1.5"><Shield size={16} /> Reviews {Object.values(reviews).flat().filter((r: any) => r.status === 'pending').length > 0 && <Badge variant="destructive" className="ml-1 text-[10px] h-4 px-1">{Object.values(reviews).flat().filter((r: any) => r.status === 'pending').length}</Badge>}</TabsTrigger>
+              <TabsTrigger value="reviews" className="flex items-center gap-1 px-3 py-1.5"><Shield size={16} /> Reviews {Object.values(reviews).flat().filter((r: any) => r.status === 'pending').length > 0 && <Badge variant="destructive" className="ml-1 text-xs h-4 px-1">{Object.values(reviews).flat().filter((r: any) => r.status === 'pending').length}</Badge>}</TabsTrigger>
               <TabsTrigger value="observability" className="flex items-center gap-1 px-3 py-1.5"><Eye size={16} /> Observability</TabsTrigger>
               <TabsTrigger value="leases" className="flex items-center gap-1 px-3 py-1.5"><Key size={16} /> Leases</TabsTrigger>
               <TabsTrigger value="dags" className="flex items-center gap-1 px-3 py-1.5"><GitBranch size={16} /> DAGs</TabsTrigger>
@@ -219,13 +219,13 @@ function AgentListItem({ id, name, count, activeCount, isSelected, onClick, icon
   return (
     <div className={`p-3 rounded-lg cursor-pointer transition-all ${isSelected ? 'bg-primary/10 border border-primary/30 shadow-sm' : 'hover:bg-muted border border-transparent'}`} onClick={onClick}>
       <div className="flex items-center gap-2">
-        <Icon className={`w-4 h-4 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+        <Icon className={`size-4  ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
         <span className="font-medium text-sm truncate flex-1">{name}</span>
-        {activeCount > 0 && <CircleNotch className="w-3 h-3 animate-spin text-green-500" />}
+        {activeCount > 0 && <CircleNotch className="size-3  animate-spin text-green-500" />}
       </div>
       <div className="flex items-center justify-between mt-2">
         <span className="text-xs text-muted-foreground">{count} runs</span>
-        {activeCount > 0 && <Badge variant="default" className="text-[10px] h-4">{activeCount} active</Badge>}
+        {activeCount > 0 && <Badge variant="default" className="text-xs h-4">{activeCount} active</Badge>}
       </div>
     </div>
   );
@@ -249,7 +249,7 @@ function AgentControlTab({ agent, runs, queue, activeRunId, activeRunOutput, onB
             {!activeRun || activeRun.status !== 'running' ? (
               <>
                 <Textarea value={executionInput} onChange={e => setExecutionInput(e.target.value)} placeholder={`Task for ${agent.name}...`} className="min-h-[100px]" />
-                <Button onClick={() => onStartRun(agent.id, executionInput).then(() => setExecutionInput(""))} disabled={!executionInput.trim()} className="w-full"><Play className="w-4 h-4 mr-2" /> Start</Button>
+                <Button onClick={() => onStartRun(agent.id, executionInput).then(() => setExecutionInput(""))} disabled={!executionInput.trim()} className="w-full"><Play className="size-4  mr-2" /> Start</Button>
               </>
             ) : (
               <div className="space-y-4">
@@ -258,7 +258,7 @@ function AgentControlTab({ agent, runs, queue, activeRunId, activeRunOutput, onB
                   <div className="text-sm text-muted-foreground">{activeRun.input}</div>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="destructive" onClick={() => onCancelRun(agent.id, activeRun.id)} className="flex-1"><Square className="w-4 h-4 mr-1" /> Stop</Button>
+                  <Button variant="destructive" onClick={() => onCancelRun(agent.id, activeRun.id)} className="flex-1"><Square className="size-4  mr-1" /> Stop</Button>
                 </div>
               </div>
             )}
@@ -268,7 +268,7 @@ function AgentControlTab({ agent, runs, queue, activeRunId, activeRunOutput, onB
           <CardHeader><CardTitle className="text-base flex items-center gap-2"><ListChecks size={16} /> Queue ({queue.filter((q: any) => q.agentId === agent.id).length})</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="flex gap-2">
-              <Input value={newQueueItem} onChange={e => setNewQueueItem(e.target.value)} placeholder="Add to queue..." onKeyDown={e => { if (e.key === 'Enter' && newQueueItem.trim()) { onEnqueue(newQueueItem, 0, agent.id); setNewQueueItem(""); } }} />
+              <Input value={newQueueItem} onChange={e => setNewQueueItem(e.target.value)} placeholder="Add to queue…" onKeyDown={e => { if (e.key === 'Enter' && newQueueItem.trim()) { onEnqueue(newQueueItem, 0, agent.id); setNewQueueItem(""); } }} />
               <Button size="icon" disabled={!newQueueItem.trim()} onClick={() => { onEnqueue(newQueueItem, 0, agent.id); setNewQueueItem(""); }}><Plus size={16} /></Button>
             </div>
             <ScrollArea className="h-[200px]">
@@ -302,13 +302,13 @@ function GlobalControlCenter({ agents, activeRuns, queue, allRuns, onSelectAgent
   if (agents.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-[400px] text-center p-8">
-        <Robot className="w-16 h-16 text-muted-foreground mb-4 opacity-30" />
+        <Robot className="size-16  text-muted-foreground mb-4 opacity-30" />
         <h3 className="text-xl font-semibold mb-2">No Agents Yet</h3>
         <p className="text-muted-foreground mb-6 max-w-md">
           Create your first agent to start using the Rails System. Agents can execute tasks, send mail, save checkpoints, and more.
         </p>
         <Button onClick={() => window.location.href = '/agent?create=true'}>
-          <Plus className="w-4 h-4 mr-2" />
+          <Plus className="size-4  mr-2" />
           Create First Agent
         </Button>
       </div>
@@ -328,7 +328,7 @@ function GlobalControlCenter({ agents, activeRuns, queue, allRuns, onSelectAgent
           <CardHeader><CardTitle className="text-base">Orchestrators</CardTitle></CardHeader>
           <CardContent>
             <div className="flex gap-2 flex-wrap">
-              {orchestrators.map((orch: Agent) => <Badge key={orch.id} variant="secondary" className="cursor-pointer px-3 py-1" onClick={() => onSelectAgent(orch.id)}><Robot className="w-3 h-3 mr-1" />{orch.name}</Badge>)}
+              {orchestrators.map((orch: Agent) => <Badge key={orch.id} variant="secondary" className="cursor-pointer px-3 py-1" onClick={() => onSelectAgent(orch.id)}><Robot className="size-3  mr-1" />{orch.name}</Badge>)}
             </div>
           </CardContent>
         </Card>
@@ -341,7 +341,7 @@ function GlobalControlCenter({ agents, activeRuns, queue, allRuns, onSelectAgent
               {activeRuns.map((run: any) => (
                 <div key={run.id} className="p-3 rounded-lg border hover:bg-muted/50 cursor-pointer" onClick={() => onSelectAgent(run.agentId)}>
                   <div className="flex items-center gap-2">
-                    <CircleNotch className="w-4 h-4 animate-spin text-green-500" />
+                    <CircleNotch className="size-4  animate-spin text-green-500" />
                     <span className="font-medium text-sm truncate">{run.input}</span>
                     <Badge variant="outline" className="ml-auto">{new Date(run.startedAt).toLocaleTimeString()}</Badge>
                   </div>
@@ -375,7 +375,7 @@ function AgentMailCenter({ agent, mail, threads, agents, selectedThreadId, onSel
             {threads.map((thread: any) => (
               <div key={thread.id} className={`p-3 rounded-lg cursor-pointer mb-2 ${selectedThreadId === thread.id ? 'bg-primary/10 border border-primary/30' : 'hover:bg-muted border border-transparent'}`} onClick={() => onSelectThread(thread.id)}>
                 <div className="font-medium text-sm truncate">{thread.subject}</div>
-                {thread.unreadCount > 0 && <Badge variant="destructive" className="text-[10px] mt-1">{thread.unreadCount} unread</Badge>}
+                {thread.unreadCount > 0 && <Badge variant="destructive" className="text-xs mt-1">{thread.unreadCount} unread</Badge>}
               </div>
             ))}
           </ScrollArea>
@@ -429,7 +429,7 @@ function GlobalMailCenter({ agents, mail, onSelectAgent }: any) {
   if (agents.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-[400px] text-center p-8">
-        <EnvelopeSimple className="w-16 h-16 text-muted-foreground mb-4 opacity-30" />
+        <EnvelopeSimple className="size-16  text-muted-foreground mb-4 opacity-30" />
         <h3 className="text-xl font-semibold mb-2">No Agents</h3>
         <p className="text-muted-foreground">Create an agent to start sending and receiving mail.</p>
       </div>
@@ -465,10 +465,10 @@ function AgentCheckpointCenter({ agent, checkpoints, runs, onCreate, onRestore, 
           <div className="flex gap-2">
             <Select value={selectedRunId} onValueChange={setSelectedRunId}>
               <SelectTrigger className="w-[200px]"><SelectValue placeholder="Select run" /></SelectTrigger>
-              <SelectContent>{runs.map((run: any) => <SelectItem key={run.id} value={run.id}>{run.input?.substring(0, 30)}...</SelectItem>)}</SelectContent>
+              <SelectContent>{runs.map((run: any) => <SelectItem key={run.id} value={run.id}>{run.input?.substring(0, 30)}…</SelectItem>)}</SelectContent>
             </Select>
             <Input value={newLabel} onChange={e => setNewLabel(e.target.value)} placeholder="Label" className="flex-1" />
-            <Button onClick={() => { onCreate(agent.id, selectedRunId, newLabel, {}); setNewLabel(""); }} disabled={!newLabel || !selectedRunId}><FloppyDisk className="w-4 h-4 mr-2" />Save</Button>
+            <Button onClick={() => { onCreate(agent.id, selectedRunId, newLabel, {}); setNewLabel(""); }} disabled={!newLabel || !selectedRunId}><FloppyDisk className="size-4  mr-2" />Save</Button>
           </div>
         </CardContent>
       </Card>
@@ -476,9 +476,9 @@ function AgentCheckpointCenter({ agent, checkpoints, runs, onCreate, onRestore, 
         {checkpoints.map((cp: any) => (
           <Card key={cp.id}>
             <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2"><FloppyDisk className="w-4 h-4 text-blue-500" /><span className="font-medium">{cp.label}</span></div>
+              <div className="flex items-center gap-2 mb-2"><FloppyDisk className="size-4  text-blue-500" /><span className="font-medium">{cp.label}</span></div>
               <p className="text-xs text-muted-foreground">{new Date(cp.createdAt).toLocaleString()}</p>
-              <Button size="sm" variant="outline" className="mt-3" onClick={() => onRestore(agent.id, cp.id)} disabled={cp.restored}><ArrowCounterClockwise className="w-3 h-3 mr-1" />Restore</Button>
+              <Button size="sm" variant="outline" className="mt-3" onClick={() => onRestore(agent.id, cp.id)} disabled={cp.restored}><ArrowCounterClockwise className="size-3  mr-1" />Restore</Button>
             </CardContent>
           </Card>
         ))}
@@ -491,7 +491,7 @@ function GlobalCheckpointCenter({ agents, checkpoints, onSelectAgent }: any) {
   if (agents.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-[400px] text-center p-8">
-        <FloppyDisk className="w-16 h-16 text-muted-foreground mb-4 opacity-30" />
+        <FloppyDisk className="size-16  text-muted-foreground mb-4 opacity-30" />
         <h3 className="text-xl font-semibold mb-2">No Agents</h3>
         <p className="text-muted-foreground">Create an agent to start saving and restoring checkpoints.</p>
       </div>
@@ -527,7 +527,7 @@ function AgentReviewCenter({ agent, reviews, onSubmitDecision, onBack }: any) {
             {pendingReviews.map((review: any) => (
               <div key={review.id} className={`p-3 rounded-lg cursor-pointer mb-2 border ${selectedReview?.id === review.id ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'}`} onClick={() => setSelectedReview(review)}>
                 <div className="font-medium text-sm">{review.title}</div>
-                <Badge variant={review.severity === 'critical' ? 'destructive' : 'secondary'} className="text-[10px] mt-1">{review.severity}</Badge>
+                <Badge variant={review.severity === 'critical' ? 'destructive' : 'secondary'} className="text-xs mt-1">{review.severity}</Badge>
               </div>
             ))}
           </ScrollArea>
@@ -544,10 +544,10 @@ function AgentReviewCenter({ agent, reviews, onSubmitDecision, onBack }: any) {
               <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground">{selectedReview.description}</p>
                 <div className="p-3 rounded bg-muted font-mono text-sm">{selectedReview.proposedAction}</div>
-                <Textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Decision note..." rows={3} />
+                <Textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Decision note…" rows={3} />
                 <div className="flex gap-2">
-                  <Button onClick={() => { onSubmitDecision(selectedReview.id, true, note); setSelectedReview(null); }} className="flex-1"><ThumbsUp className="w-4 h-4 mr-2" />Approve</Button>
-                  <Button variant="destructive" onClick={() => { onSubmitDecision(selectedReview.id, false, note); setSelectedReview(null); }} className="flex-1"><ThumbsDown className="w-4 h-4 mr-2" />Reject</Button>
+                  <Button onClick={() => { onSubmitDecision(selectedReview.id, true, note); setSelectedReview(null); }} className="flex-1"><ThumbsUp className="size-4  mr-2" />Approve</Button>
+                  <Button variant="destructive" onClick={() => { onSubmitDecision(selectedReview.id, false, note); setSelectedReview(null); }} className="flex-1"><ThumbsDown className="size-4  mr-2" />Reject</Button>
                 </div>
               </CardContent>
             </Card>
@@ -562,7 +562,7 @@ function GlobalReviewCenter({ agents, reviews, onSelectAgent }: any) {
   if (agents.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-[400px] text-center p-8">
-        <Shield className="w-16 h-16 text-muted-foreground mb-4 opacity-30" />
+        <Shield className="size-16  text-muted-foreground mb-4 opacity-30" />
         <h3 className="text-xl font-semibold mb-2">No Agents</h3>
         <p className="text-muted-foreground">Create an agent to start reviewing gate decisions.</p>
       </div>
@@ -598,9 +598,9 @@ function AgentObservabilityCenter({ agent, runs, traces, onBack }: any) {
               {runs.map((run: any) => (
                 <div key={run.id} className="p-2 rounded border mb-2">
                   <div className="flex items-center gap-2">
-                    {run.status === 'running' && <CircleNotch className="w-3 h-3 animate-spin" />}
-                    {run.status === 'completed' && <CheckCircle className="w-3 h-3 text-green-500" />}
-                    {run.status === 'failed' && <div className="w-3 h-3 rounded-full bg-red-500" />}
+                    {run.status === 'running' && <CircleNotch className="size-3  animate-spin" />}
+                    {run.status === 'completed' && <CheckCircle className="size-3  text-green-500" />}
+                    {run.status === 'failed' && <div className="size-3  rounded-full bg-red-500" />}
                     <span className="text-sm truncate">{run.input}</span>
                   </div>
                 </div>
@@ -614,7 +614,7 @@ function AgentObservabilityCenter({ agent, runs, traces, onBack }: any) {
             <ScrollArea className="h-full">
               {traces.length === 0 ? <EmptyState message="No trace data" icon={Eye} /> : traces.map((entry: any, i: number) => (
                 <div key={i} className="p-2 rounded border mb-2 text-sm">
-                  <Badge variant="outline" className="text-[10px] mr-2">{entry.kind}</Badge>
+                  <Badge variant="outline" className="text-xs mr-2">{entry.kind}</Badge>
                   {entry.title}
                 </div>
               ))}
@@ -630,7 +630,7 @@ function GlobalObservabilityCenter({ agents, runs, onSelectAgent }: any) {
   if (agents.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-[400px] text-center p-8">
-        <Eye className="w-16 h-16 text-muted-foreground mb-4 opacity-30" />
+        <Eye className="size-16  text-muted-foreground mb-4 opacity-30" />
         <h3 className="text-xl font-semibold mb-2">No Agents</h3>
         <p className="text-muted-foreground">Create an agent to start monitoring executions.</p>
       </div>
@@ -652,13 +652,13 @@ function GlobalObservabilityCenter({ agents, runs, onSelectAgent }: any) {
 }
 
 function StatCard({ title, value, icon: Icon, color }: any) {
-  const colors: Record<string, string> = { green: 'text-green-500', blue: 'text-blue-500', purple: 'text-purple-500', gray: 'text-gray-500' };
+  const colors: Record<string, string> = { green: 'text-green-500', blue: 'text-blue-500', purple: 'text-purple-500', gray: 'text-zinc-500' };
   return (
     <Card>
       <CardContent className="p-4">
         <div className="flex items-center justify-between">
           <div><p className="text-sm text-muted-foreground">{title}</p><p className="text-2xl font-bold">{value}</p></div>
-          <Icon className={`w-8 h-8 ${colors[color]}`} />
+          <Icon className={`size-8  ${colors[color]}`} />
         </div>
       </CardContent>
     </Card>
@@ -668,7 +668,7 @@ function StatCard({ title, value, icon: Icon, color }: any) {
 function EmptyState({ message, icon: Icon }: any) {
   return (
     <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
-      <Icon className="w-8 h-8 mb-2 opacity-50" />
+      <Icon className="size-8  mb-2 opacity-50" />
       <p className="text-sm">{message}</p>
     </div>
   );
@@ -704,12 +704,12 @@ function useLeases() {
   
   const refreshLease = async (leaseId: string) => {
     // Call Rails API to renew lease
-    console.log(`Refreshing lease ${leaseId}`);
+    console.debug(`Refreshing lease ${leaseId}`);
   };
   
   const releaseLease = async (leaseId: string) => {
     // Call Rails API to release lease
-    console.log(`Releasing lease ${leaseId}`);
+    console.debug(`Releasing lease ${leaseId}`);
   };
   
   useEffect(() => {
@@ -765,7 +765,7 @@ function GlobalLeaseCenter({ agents, onSelectAgent }: any) {
         <CardContent>
           {isLoading ? (
             <div className="flex items-center justify-center h-32">
-              <CircleNotch className="w-6 h-6 animate-spin" />
+              <CircleNotch className="size-6  animate-spin" />
             </div>
           ) : leases.length === 0 ? (
             <EmptyState message="No active leases" icon={Key} />
@@ -777,8 +777,8 @@ function GlobalLeaseCenter({ agents, onSelectAgent }: any) {
                   <div key={lease.leaseId} className="p-3 rounded-lg border hover:bg-muted/50">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <status.icon className={`w-4 h-4 ${status.color === 'green' ? 'text-green-500' : status.color === 'yellow' ? 'text-yellow-500' : 'text-red-500'}`} />
-                        <span className="font-medium text-sm font-mono">{lease.leaseId.slice(0, 16)}...</span>
+                        <status.icon className={`size-4  ${status.color === 'green' ? 'text-green-500' : status.color === 'yellow' ? 'text-yellow-500' : 'text-red-500'}`} />
+                        <span className="font-medium text-sm font-mono">{lease.leaseId.slice(0, 16)}…</span>
                       </div>
                       <Badge variant={status.color === 'default' ? 'default' : status.color === 'warning' ? 'secondary' : 'destructive'}>
                         {status.label}
@@ -834,7 +834,7 @@ function AgentLeaseCenter({ agent, onBack }: any) {
       
       {isLoading ? (
         <div className="flex items-center justify-center h-32">
-          <CircleNotch className="w-6 h-6 animate-spin" />
+          <CircleNotch className="size-6  animate-spin" />
         </div>
       ) : agentLeases.length === 0 ? (
         <EmptyState message="No active leases for this agent" icon={Key} />
@@ -877,10 +877,10 @@ function AgentLeaseCenter({ agent, onBack }: any) {
                   
                   <div className="flex gap-2">
                     <Button size="sm" variant="outline" onClick={() => refreshLease(lease.leaseId)}>
-                      <ArrowsClockwise className="w-3 h-3 mr-1" /> Renew
+                      <ArrowsClockwise className="size-3  mr-1" /> Renew
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => releaseLease(lease.leaseId)}>
-                      <Square className="w-3 h-3 mr-1" /> Release
+                      <Square className="size-3  mr-1" /> Release
                     </Button>
                   </div>
                 </CardContent>
@@ -937,11 +937,11 @@ function useDags() {
 
 function getNodeStatusIcon(status: string) {
   switch (status) {
-    case 'running': return <CircleNotch className="w-4 h-4 animate-spin text-blue-500" />;
-    case 'completed': return <CheckCircle className="w-4 h-4 text-green-500" />;
-    case 'failed': return <Warning className="w-4 h-4 text-red-500" />;
-    case 'blocked': return <Circle className="w-4 h-4 text-gray-400" />;
-    default: return <Circle className="w-4 h-4 text-muted-foreground" />;
+    case 'running': return <CircleNotch className="size-4  animate-spin text-blue-500" />;
+    case 'completed': return <CheckCircle className="size-4  text-green-500" />;
+    case 'failed': return <Warning className="size-4  text-red-500" />;
+    case 'blocked': return <Circle className="size-4  text-zinc-400" />;
+    default: return <Circle className="size-4  text-muted-foreground" />;
   }
 }
 
@@ -966,7 +966,7 @@ function GlobalDagCenter({ agents, onSelectAgent }: any) {
         <CardContent>
           {isLoading ? (
             <div className="flex items-center justify-center h-32">
-              <CircleNotch className="w-6 h-6 animate-spin" />
+              <CircleNotch className="size-6  animate-spin" />
             </div>
           ) : activeDags.length === 0 ? (
             <EmptyState message="No active DAG executions" icon={GitBranch} />
@@ -978,7 +978,7 @@ function GlobalDagCenter({ agents, onSelectAgent }: any) {
                   <div key={dag.dagId} className="p-3 rounded-lg border hover:bg-muted/50">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <GitBranch className="w-4 h-4 text-primary" />
+                        <GitBranch className="size-4  text-primary" />
                         <span className="font-medium text-sm">{dag.dagId}</span>
                       </div>
                       <Badge variant="default">Running</Badge>
@@ -988,7 +988,7 @@ function GlobalDagCenter({ agents, onSelectAgent }: any) {
                     </div>
                     <div className="mt-2 text-xs text-muted-foreground flex justify-between">
                       <span>{completedCount} / {dag.nodes.length} nodes completed</span>
-                      <span>Run ID: {dag.runId?.slice(0, 12)}...</span>
+                      <span>Run ID: {dag.runId?.slice(0, 12)}…</span>
                     </div>
                   </div>
                 );
@@ -1040,7 +1040,7 @@ function AgentDagCenter({ agent, onBack }: any) {
       
       {isLoading ? (
         <div className="flex items-center justify-center h-32">
-          <CircleNotch className="w-6 h-6 animate-spin" />
+          <CircleNotch className="size-6  animate-spin" />
         </div>
       ) : agentDags.length === 0 ? (
         <EmptyState message="No DAGs for this agent" icon={GitBranch} />
@@ -1066,7 +1066,7 @@ function AgentDagCenter({ agent, onBack }: any) {
                     </div>
                     {node.leaseId && (
                       <Badge variant="outline" className="text-xs">
-                        <Key className="w-3 h-3 mr-1" /> {node.leaseId.slice(0, 8)}...
+                        <Key className="size-3  mr-1" /> {node.leaseId.slice(0, 8)}...
                       </Badge>
                     )}
                     <Badge variant={
@@ -1095,7 +1095,7 @@ function AgentDagCenter({ agent, onBack }: any) {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <GitBranch className="w-4 h-4 text-primary" />
+                      <GitBranch className="size-4  text-primary" />
                       <span className="font-medium">{dag.dagId}</span>
                     </div>
                     <Badge variant={
@@ -1131,6 +1131,11 @@ function Progress({ value, className }: { value: number; className?: string }) {
       <div 
         className="h-full rounded-full bg-primary transition-all duration-300"
         style={{ width: `${Math.max(0, Math.min(100, value))}%` }}
+      />
+    </div>
+  );
+}
+
       />
     </div>
   );

@@ -169,7 +169,7 @@ const UserMessageCard = memo(function UserMessageCard({ text }: { text: string }
       }}>
         <div style={{ whiteSpace: 'pre-wrap' }}>
           {displayText}
-          {!isExpanded && isLongText && '...'}
+          {!isExpanded && isLongText && '…'}
         </div>
         
         {isLongText && (
@@ -435,7 +435,7 @@ export const StreamingChatComposer = memo(function StreamingChatComposer({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 700,
               color: '#fff',
               flexShrink: 0,
@@ -462,7 +462,7 @@ export const StreamingChatComposer = memo(function StreamingChatComposer({
             className="flex items-center gap-2 py-1.5 pb-2.5 mb-1"
             aria-label="Agent status"
           >
-            <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-chat,#D4B08C)] animate-pulse" />
+            <div className="size-1.5  rounded-full bg-[var(--accent-chat,#D4B08C)] animate-pulse" />
             <TextShimmer
               as="span"
               className="text-[13px] font-medium text-[var(--ui-text-secondary)]"
@@ -494,9 +494,9 @@ export const StreamingChatComposer = memo(function StreamingChatComposer({
 
           {/* Developer Debug Overlay (Hard-gated) */}
           {SHOW_DEBUG && (
-            <div className="absolute top-0 right-0 -mt-6 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 text-[10px] font-mono px-2 py-1 rounded" style={{ color: 'var(--ui-text-muted)', background: 'var(--surface-overlay)' }}>
+            <div className="absolute top-0 right-0 -mt-6 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 text-xs font-mono px-2 py-1 rounded" style={{ color: 'var(--ui-text-muted)', background: 'var(--surface-overlay)' }}>
               <span className="flex items-center gap-1">
-                <div className={`w-1.5 h-1.5 rounded-full ${isLoading ? 'bg-green-500 motion-safe:animate-pulse' : 'bg-gray-500'}`} />
+                <div className={`size-1.5  rounded-full ${isLoading ? 'bg-green-500 motion-safe:animate-pulse' : 'bg-zinc-500'}`} />
                 {isLoading ? 'streaming' : 'idle'}
               </span>
               <span>|</span>

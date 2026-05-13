@@ -129,14 +129,14 @@ export async function pollUntilHealthy(
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     // Check overall timeout
     if (Date.now() - startTime > timeout) {
-      console.log('[Health] Polling timeout exceeded');
+      console.debug('[Health] Polling timeout exceeded');
       return false;
     }
 
     const isHealthy = await healthCheck(baseUrl, authHeader, 2000);
     
     if (isHealthy) {
-      console.log(`[Health] Server healthy after ${attempt + 1} attempts`);
+      console.debug(`[Health] Server healthy after ${attempt + 1} attempts`);
       return true;
     }
 
@@ -144,7 +144,7 @@ export async function pollUntilHealthy(
     await new Promise(resolve => setTimeout(resolve, interval));
   }
 
-  console.log(`[Health] Server not healthy after ${maxAttempts} attempts`);
+  console.debug(`[Health] Server not healthy after ${maxAttempts} attempts`);
   return false;
 }
 

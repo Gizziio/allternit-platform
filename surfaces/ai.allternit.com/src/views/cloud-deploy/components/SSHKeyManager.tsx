@@ -5,8 +5,12 @@
  * Generate new keys, import existing keys, and associate with deployments.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useReducer, useEffect, useSyncExternalStore } from 'react';
 import './SSHKeyManager.css';
+
+// ============================================================================
+// Types
+// ============================================================================
 
 export interface SSHKey {
   id: string;
@@ -25,17 +29,81 @@ interface SSHKeyManagerProps {
   showActions?: boolean;
 }
 
+interface State {
+  keys: SSHKey[];
+  isLoading: boolean;
+  showGenerateModal: boolean;
+  showImportModal: boolean;
+  expandedKey: string | null;
+  error: string | null;
+}
+
+type Action =
+  | { type: 'SET_KEYS'; keys: SSHKey[] }
+  | { type: 'ADD_KEY'; key: SSHKey }
+  | { type: 'DELETE_KEY'; id: string }
+  | { type: 'SET_LOADING'; isLoading: boolean }
+  | { type: 'SET_MODAL'; modal: 'generate' | 'import' | null; open: boolean }
+  | { type: 'TOGGLE_EXPAND'; id: string }
+  | { type: 'SET_ERROR'; error: string | null };
+
+// ============================================================================
+// State Management
+// ============================================================================
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case 'SET_KEYS':
+      return { ...state, keys: action.keys, isLoading: false };
+    case 'ADD_KEY':
+      return { ...state, keys: [action.key, ...state.keys] };
+    case 'DELETE_KEY':
+      return { ...state, keys: state.keys.filter(k => k.id !== action.id) };
+    case 'SET_LOADING':
+      return { ...state, isLoading: action.isLoading };
+    case 'SET_MODAL':
+      if (action.modal === 'generate') return { ...state, showGenerateModal: action.open };
+      if (action.modal === 'import') return { ...state, showImportModal: action.open };
+      return { ...state, showGenerateModal: false, showImportModal: false };
+    case 'TOGGLE_EXPAND':
+      return { ...state, expandedKey: state.expandedKey === action.id ? null : action.id };
+    case 'SET_ERROR':
+      return { ...state, error: action.error };
+    default:
+      return state;
+  }
+}
+
+const initialState: State = {
+  keys: [],
+  isLoading: true,
+  showGenerateModal: false,
+  showImportModal: false,
+  expandedKey: null,
+  error: null,
+};
+
+// ============================================================================
+// Hydration Safety
+// ============================================================================
+
+const subscribe = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
+
+// ============================================================================
+// Main Component
+// ============================================================================
+
 export const SSHKeyManager: React.FC<SSHKeyManagerProps> = ({
   onSelectKey,
   selectedKeyId,
   showActions = true,
 }) => {
-  const [keys, setKeys] = useState<SSHKey[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showGenerateModal, setShowGenerateModal] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [expandedKey, setExpandedKey] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [state, dispatch] = useReducer(reducer, initialState);
+  const isClient = useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot);
+
+  const { keys, isLoading, showGenerateModal, showImportModal, expandedKey, error } = state;
 
   // Load keys on mount
   useEffect(() => {
@@ -43,13 +111,9 @@ export const SSHKeyManager: React.FC<SSHKeyManagerProps> = ({
   }, []);
 
   const loadKeys = async () => {
-    setIsLoading(true);
+    dispatch({ type: 'SET_LOADING', isLoading: true });
     try {
-      // In production, fetch from backend
-      // const response = await fetch('/api/v1/ssh-keys');
-      // const data = await response.json();
-      
-      // Demo data for now
+      // Demo data
       const demoKeys: SSHKey[] = [
         {
           id: 'key-1',
@@ -71,25 +135,16 @@ export const SSHKeyManager: React.FC<SSHKeyManagerProps> = ({
         },
       ];
       
-      // Simulate API delay
       await new Promise(r => setTimeout(r, 500));
-      setKeys(demoKeys);
+      dispatch({ type: 'SET_KEYS', keys: demoKeys });
     } catch (err) {
-      setError('Failed to load SSH keys');
-    } finally {
-      setIsLoading(false);
+      dispatch({ type: 'SET_ERROR', error: 'Failed to load SSH keys' });
+      dispatch({ type: 'SET_LOADING', isLoading: false });
     }
   };
 
   const handleGenerateKey = async (name: string, type: 'ed25519' | 'rsa' = 'ed25519') => {
     try {
-      // In production, call backend API
-      // const response = await fetch('/api/v1/ssh-keys', {
-      //   method: 'POST',
-      //   body: JSON.stringify({ name, type }),
-      // });
-      
-      // Simulate key generation
       const newKey: SSHKey = {
         id: `key-${Date.now()}`,
         name,
@@ -103,17 +158,16 @@ c3RrZXlAZXhhbXBsZS5jb20AAAAJ-----END OPENSSH PRIVATE KEY-----`,
         associatedInstances: [],
       };
 
-      setKeys(prev => [newKey, ...prev]);
-      setShowGenerateModal(false);
-      setExpandedKey(newKey.id); // Auto-expand to show download option
+      dispatch({ type: 'ADD_KEY', key: newKey });
+      dispatch({ type: 'SET_MODAL', modal: 'generate', open: false });
+      dispatch({ type: 'TOGGLE_EXPAND', id: newKey.id });
     } catch (err) {
-      setError('Failed to generate SSH key');
+      dispatch({ type: 'SET_ERROR', error: 'Failed to generate SSH key' });
     }
   };
 
   const handleImportKey = async (name: string, publicKey: string, privateKey?: string) => {
     try {
-      // In production, validate and store via backend
       const newKey: SSHKey = {
         id: `key-${Date.now()}`,
         name,
@@ -124,10 +178,10 @@ c3RrZXlAZXhhbXBsZS5jb20AAAAJ-----END OPENSSH PRIVATE KEY-----`,
         associatedInstances: [],
       };
 
-      setKeys(prev => [newKey, ...prev]);
-      setShowImportModal(false);
+      dispatch({ type: 'ADD_KEY', key: newKey });
+      dispatch({ type: 'SET_MODAL', modal: 'import', open: false });
     } catch (err) {
-      setError('Failed to import SSH key');
+      dispatch({ type: 'SET_ERROR', error: 'Failed to import SSH key' });
     }
   };
 
@@ -137,12 +191,9 @@ c3RrZXlAZXhhbXBsZS5jb20AAAAJ-----END OPENSSH PRIVATE KEY-----`,
     }
 
     try {
-      // @placeholder APPROVED - Backend API pending
-      // @ticket GAP-55
-      // Stub: await fetch(`/api/v1/ssh-keys/${keyId}`, { method: 'DELETE' });
-      setKeys(prev => prev.filter(k => k.id !== keyId));
+      dispatch({ type: 'DELETE_KEY', id: keyId });
     } catch (err) {
-      setError('Failed to delete SSH key');
+      dispatch({ type: 'SET_ERROR', error: 'Failed to delete SSH key' });
     }
   };
 
@@ -162,14 +213,13 @@ c3RrZXlAZXhhbXBsZS5jb20AAAAJ-----END OPENSSH PRIVATE KEY-----`,
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    // Could show a toast notification here
   };
 
   if (isLoading) {
     return (
       <div className="ssh-key-manager loading">
         <div className="spinner" />
-        <p>Loading SSH keys...</p>
+        <p>Loading SSH keys…</p>
       </div>
     );
   }
@@ -179,7 +229,7 @@ c3RrZXlAZXhhbXBsZS5jb20AAAAJ-----END OPENSSH PRIVATE KEY-----`,
       {error && (
         <div className="error-banner">
           <span>❌ {error}</span>
-          <button onClick={() => setError(null)}>Dismiss</button>
+          <button onClick={() => dispatch({ type: 'SET_ERROR', error: null })}>Dismiss</button>
         </div>
       )}
 
@@ -193,13 +243,13 @@ c3RrZXlAZXhhbXBsZS5jb20AAAAJ-----END OPENSSH PRIVATE KEY-----`,
           <div className="ssh-key-actions">
             <button 
               className="btn-secondary"
-              onClick={() => setShowImportModal(true)}
+              onClick={() => dispatch({ type: 'SET_MODAL', modal: 'import', open: true })}
             >
               📥 Import Key
             </button>
             <button 
               className="btn-primary"
-              onClick={() => setShowGenerateModal(true)}
+              onClick={() => dispatch({ type: 'SET_MODAL', modal: 'generate', open: true })}
             >
               ✨ Generate New Key
             </button>
@@ -215,7 +265,7 @@ c3RrZXlAZXhhbXBsZS5jb20AAAAJ-----END OPENSSH PRIVATE KEY-----`,
           <p>Generate or import an SSH key to get started with cloud deployments.</p>
           <button 
             className="btn-primary"
-            onClick={() => setShowGenerateModal(true)}
+            onClick={() => dispatch({ type: 'SET_MODAL', modal: 'generate', open: true })}
           >
             Generate Your First Key
           </button>
@@ -240,7 +290,7 @@ c3RrZXlAZXhhbXBsZS5jb20AAAAJ-----END OPENSSH PRIVATE KEY-----`,
                     {key.fingerprint}
                   </div>
                   <div className="ssh-key-meta">
-                    <span>Created {new Date(key.createdAt).toLocaleDateString()}</span>
+                    <span>Created {isClient ? new Date(key.createdAt).toLocaleDateString() : '...'}</span>
                     {key.associatedInstances.length > 0 && (
                       <span>• Used by {key.associatedInstances.length} instance(s)</span>
                     )}
@@ -264,7 +314,7 @@ c3RrZXlAZXhhbXBsZS5jb20AAAAJ-----END OPENSSH PRIVATE KEY-----`,
                     className="btn-icon"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setExpandedKey(expandedKey === key.id ? null : key.id);
+                      dispatch({ type: 'TOGGLE_EXPAND', id: key.id });
                     }}
                     title="Show public key"
                   >
@@ -305,7 +355,7 @@ c3RrZXlAZXhhbXBsZS5jb20AAAAJ-----END OPENSSH PRIVATE KEY-----`,
                     <div className="key-section warning">
                       <label>⚠️ Private Key (Keep Secret!)</label>
                       <div className="key-value private">
-                        <code>{key.privateKey.substring(0, 100)}...</code>
+                        <code>{key.privateKey.substring(0, 100)}…</code>
                         <button 
                           className="btn-download"
                           onClick={() => downloadPrivateKey(key)}
@@ -339,7 +389,7 @@ c3RrZXlAZXhhbXBsZS5jb20AAAAJ-----END OPENSSH PRIVATE KEY-----`,
       {/* Generate Key Modal */}
       {showGenerateModal && (
         <GenerateKeyModal
-          onClose={() => setShowGenerateModal(false)}
+          onClose={() => dispatch({ type: 'SET_MODAL', modal: 'generate', open: false })}
           onGenerate={handleGenerateKey}
         />
       )}
@@ -347,7 +397,7 @@ c3RrZXlAZXhhbXBsZS5jb20AAAAJ-----END OPENSSH PRIVATE KEY-----`,
       {/* Import Key Modal */}
       {showImportModal && (
         <ImportKeyModal
-          onClose={() => setShowImportModal(false)}
+          onClose={() => dispatch({ type: 'SET_MODAL', modal: 'import', open: false })}
           onImport={handleImportKey}
         />
       )}
@@ -355,13 +405,16 @@ c3RrZXlAZXhhbXBsZS5jb20AAAAJ-----END OPENSSH PRIVATE KEY-----`,
   );
 };
 
-// Generate Key Modal
+// ============================================================================
+// Helper Components
+// ============================================================================
+
 const GenerateKeyModal: React.FC<{
   onClose: () => void;
   onGenerate: (name: string, type: 'ed25519' | 'rsa') => void;
 }> = ({ onClose, onGenerate }) => {
-  const [name, setName] = useState('');
-  const [type, setType] = useState<'ed25519' | 'rsa'>('ed25519');
+  const [name, setName] = React.useReducer('');
+  const [type, setType] = React.useReducer<'ed25519' | 'rsa'>('ed25519');
 
   return (
     <div className="modal-overlay">
@@ -425,15 +478,14 @@ const GenerateKeyModal: React.FC<{
   );
 };
 
-// Import Key Modal
 const ImportKeyModal: React.FC<{
   onClose: () => void;
   onImport: (name: string, publicKey: string, privateKey?: string) => void;
 }> = ({ onClose, onImport }) => {
-  const [name, setName] = useState('');
-  const [publicKey, setPublicKey] = useState('');
-  const [privateKey, setPrivateKey] = useState('');
-  const [includePrivate, setIncludePrivate] = useState(false);
+  const [name, setName] = React.useReducer('');
+  const [publicKey, setPublicKey] = React.useReducer('');
+  const [privateKey, setPrivateKey] = React.useReducer('');
+  const [includePrivate, setIncludePrivate] = React.useReducer(false);
 
   const isValid = name.trim() && publicKey.trim().startsWith('ssh-');
 
@@ -459,7 +511,7 @@ const ImportKeyModal: React.FC<{
           <textarea
             value={publicKey}
             onChange={(e) => setPublicKey(e.target.value)}
-            placeholder="ssh-ed25519 AAAAC3NzaC..."
+            placeholder="ssh-ed25519 AAAAC3NzaC…"
             rows={3}
           />
           <small>Paste your public key starting with ssh-ed25519 or ssh-rsa</small>

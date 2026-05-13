@@ -83,22 +83,22 @@ export function SnapshotManagerPanel() {
       {/* Actions */}
       <div className="p-4 border-b flex items-center gap-4">
         <div className="flex-1 relative">
-          <MagnifyingGlass className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <MagnifyingGlass className="size-4  absolute left-3 top-1/2 -tranzinc-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search snapshots by tool name or ID..."
+            placeholder="Search snapshots by tool name or ID…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
           />
         </div>
         <Button variant="outline" onClick={fetchSnapshots}>
-          <ArrowsClockwise className="w-4 h-4 mr-2" /> Refresh
+          <ArrowsClockwise className="size-4  mr-2" /> Refresh
         </Button>
         <Button 
           variant={confirmClear ? "destructive" : "outline"} 
           onClick={handleClearAll}
         >
-          <Trash className="w-4 h-4 mr-2" />
+          <Trash className="size-4  mr-2" />
           {confirmClear ? "Confirm Clear All" : "Clear All"}
         </Button>
       </div>
@@ -119,7 +119,7 @@ export function SnapshotManagerPanel() {
               <div className="space-y-2">
                 {filteredSnapshots.length === 0 ? (
                   <div className="text-center text-muted-foreground py-8">
-                    <Database className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <Database className="size-8  mx-auto mb-2 opacity-50" />
                     <p>No snapshots found</p>
                     <p className="text-sm">Snapshots are created automatically when tools are executed</p>
                   </div>
@@ -150,7 +150,7 @@ function StatCard({ title, value, icon: Icon }: { title: string; value: string |
           <p className="text-xl font-bold">{value}</p>
         </div>
         <div className="p-2 rounded-lg bg-primary/10">
-          <Icon className="w-5 h-5 text-primary" />
+          <Icon className="size-5  text-primary" />
         </div>
       </div>
     </div>
@@ -174,7 +174,7 @@ function SnapshotListItem({
       >
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-primary/10">
-            <Play className="w-4 h-4 text-primary" />
+            <Play className="size-4  text-primary" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
@@ -232,7 +232,7 @@ function SnapshotListItem({
             
             <div className="flex justify-end gap-2 pt-2">
               <Button size="sm" variant="destructive" onClick={onDelete}>
-                <Trash className="w-4 h-4 mr-2" /> Delete
+                <Trash className="size-4  mr-2" /> Delete
               </Button>
             </div>
           </div>

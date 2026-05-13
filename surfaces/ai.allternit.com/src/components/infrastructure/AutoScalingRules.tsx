@@ -158,7 +158,7 @@ export function AutoScalingRules({
       {rules.length === 0 ? (
         <Card className="bg-muted/50">
           <CardContent className="py-8 text-center">
-            <Activity className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+            <Activity className="size-8  text-muted-foreground mx-auto mb-3" />
             <p className="text-sm text-muted-foreground">
               No auto-scaling rules configured
             </p>
@@ -190,8 +190,8 @@ export function AutoScalingRules({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className={cn(
-                        "w-2 h-2 rounded-full",
-                        rule.enabled ? "bg-green-500" : "bg-gray-400"
+                        "size-2  rounded-full",
+                        rule.enabled ? "bg-green-500" : "bg-zinc-400"
                       )} />
                       <span className={cn(
                         "font-medium",
@@ -199,7 +199,7 @@ export function AutoScalingRules({
                       )}>
                         {rule.name}
                       </span>
-                      <Badge variant={rule.enabled ? "default" : "secondary"} className="text-[10px]">
+                      <Badge variant={rule.enabled ? "default" : "secondary"} className="text-xs">
                         {rule.enabled ? 'Active' : 'Paused'}
                       </Badge>
                     </div>
@@ -234,7 +234,7 @@ export function AutoScalingRules({
                       size="sm"
                       variant="ghost"
                       onClick={() => openEditRule(rule)}
-                      className="h-8 w-8 p-0"
+                      className="size-8  p-0"
                     >
                       <PencilSimple size={16} />
                     </Button>
@@ -242,7 +242,7 @@ export function AutoScalingRules({
                       size="sm"
                       variant="ghost"
                       onClick={() => handleDelete(rule.id)}
-                      className="h-8 w-8 p-0 text-red-500 hover:text-red-600"
+                      className="size-8  p-0 text-red-500 hover:text-red-600"
                     >
                       <Trash size={16} />
                     </Button>
@@ -423,7 +423,7 @@ export function AutoScalingRules({
               Cancel
             </Button>
             <Button onClick={handleSave} disabled={!editingRule?.name.trim()}>
-              <Check className="w-4 h-4 mr-2" />
+              <Check className="size-4  mr-2" />
               Save Rule
             </Button>
           </DialogFooter>

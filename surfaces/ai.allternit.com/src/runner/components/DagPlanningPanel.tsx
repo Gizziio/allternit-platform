@@ -67,13 +67,13 @@ export function DagPlanningPanel() {
       <Tabs defaultValue="plans" className="flex-1 flex flex-col">
         <TabsList className="mx-4 mt-4">
           <TabsTrigger value="plans">
-            <ListDashes className="w-4 h-4 mr-2" /> Plans
+            <ListDashes className="size-4  mr-2" /> Plans
           </TabsTrigger>
           <TabsTrigger value="create">
-            <Plus className="w-4 h-4 mr-2" /> Create
+            <Plus className="size-4  mr-2" /> Create
           </TabsTrigger>
           <TabsTrigger value="visualize">
-            <GitBranch className="w-4 h-4 mr-2" /> Visualize
+            <GitBranch className="size-4  mr-2" /> Visualize
           </TabsTrigger>
         </TabsList>
         
@@ -91,7 +91,7 @@ export function DagPlanningPanel() {
                   <div className="space-y-2">
                     {dags.length === 0 ? (
                       <div className="text-center text-muted-foreground py-8">
-                        <GitBranch className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <GitBranch className="size-8  mx-auto mb-2 opacity-50" />
                         <p>No DAG plans yet</p>
                         <p className="text-sm">Create your first plan</p>
                       </div>
@@ -121,7 +121,7 @@ export function DagPlanningPanel() {
                   <div className="space-y-2">
                     {activeExecutions.length === 0 ? (
                       <div className="text-center text-muted-foreground py-8">
-                        <Clock className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <Clock className="size-8  mx-auto mb-2 opacity-50" />
                         <p>No active executions</p>
                       </div>
                     ) : (
@@ -163,7 +163,7 @@ export function DagPlanningPanel() {
                 <Textarea 
                   value={planInput}
                   onChange={(e) => setPlanInput(e.target.value)}
-                  placeholder="Build a new authentication system with login, signup, and password reset features..."
+                  placeholder="Build a new authentication system with login, signup, and password reset features…"
                   rows={6}
                 />
               </div>
@@ -172,7 +172,7 @@ export function DagPlanningPanel() {
                 disabled={!planInput.trim() || isLoading}
                 className="w-full"
               >
-                {isLoading ? <CircleNotch className="w-4 h-4 mr-2 animate-spin" /> : <GitBranch className="w-4 h-4 mr-2" />}
+                {isLoading ? <CircleNotch className="size-4  mr-2 animate-spin" /> : <GitBranch className="size-4  mr-2" />}
                 Generate DAG Plan
               </Button>
             </CardContent>
@@ -186,7 +186,7 @@ export function DagPlanningPanel() {
           ) : (
             <div className="flex items-center justify-center h-full text-muted-foreground">
               <div className="text-center">
-                <GitBranch className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                <GitBranch className="size-16  mx-auto mb-4 opacity-30" />
                 <p>Select a DAG plan to visualize</p>
               </div>
             </div>
@@ -206,14 +206,14 @@ export function DagPlanningPanel() {
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm">
-                <PencilSimple className="w-4 h-4 mr-1" /> Edit
+                <PencilSimple className="size-4  mr-1" /> Edit
               </Button>
               <Button 
                 size="sm" 
                 onClick={handleExecute}
                 disabled={isLoading || selectedExecution?.status === "running"}
               >
-                <Play className="w-4 h-4 mr-1" /> Execute
+                <Play className="size-4  mr-1" /> Execute
               </Button>
             </div>
           </div>
@@ -234,7 +234,7 @@ function DagListItem({ dag, isSelected, onClick }: { dag: DagDefinition; isSelec
       onClick={onClick}
     >
       <div className="flex items-center gap-2">
-        <GitBranch className="w-4 h-4 text-primary" />
+        <GitBranch className="size-4  text-primary" />
         <span className="font-medium text-sm truncate flex-1">{dag.dagId}</span>
         <Badge variant="outline" className="text-xs">{dag.version}</Badge>
       </div>
@@ -254,13 +254,13 @@ function ExecutionListItem({ execution, onCancel }: { execution: any; onCancel: 
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           {isRunning ? (
-            <CircleNotch className="w-4 h-4 animate-spin text-blue-500" />
+            <CircleNotch className="size-4  animate-spin text-blue-500" />
           ) : execution.status === "completed" ? (
-            <CheckCircle className="w-4 h-4 text-green-500" />
+            <CheckCircle className="size-4  text-green-500" />
           ) : (
-            <Warning className="w-4 h-4 text-red-500" />
+            <Warning className="size-4  text-red-500" />
           )}
-          <span className="font-medium text-sm font-mono">{execution.runId.slice(0, 12)}...</span>
+          <span className="font-medium text-sm font-mono">{execution.runId.slice(0, 12)}…</span>
         </div>
         <Badge variant={isRunning ? "default" : execution.status === "completed" ? "secondary" : "destructive"}>
           {execution.status}
@@ -280,7 +280,7 @@ function ExecutionListItem({ execution, onCancel }: { execution: any; onCancel: 
         </span>
         {isRunning && (
           <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={onCancel}>
-            <Square className="w-3 h-3 mr-1" /> Cancel
+            <Square className="size-3  mr-1" /> Cancel
           </Button>
         )}
       </div>
@@ -377,11 +377,11 @@ function NodeTree({ node, nodes, children, execution, depth }: {
   return (
     <div className="space-y-2" style={{ marginLeft: depth * 24 }}>
       <div className="flex items-center gap-2 p-2 rounded border hover:bg-muted/50">
-        {status === "running" && <CircleNotch className="w-4 h-4 animate-spin text-blue-500" />}
-        {status === "completed" && <CheckCircle className="w-4 h-4 text-green-500" />}
-        {status === "failed" && <Warning className="w-4 h-4 text-red-500" />}
-        {status === "pending" && <Clock className="w-4 h-4 text-muted-foreground" />}
-        {status === "blocked" && <Warning className="w-4 h-4 text-yellow-500" />}
+        {status === "running" && <CircleNotch className="size-4  animate-spin text-blue-500" />}
+        {status === "completed" && <CheckCircle className="size-4  text-green-500" />}
+        {status === "failed" && <Warning className="size-4  text-red-500" />}
+        {status === "pending" && <Clock className="size-4  text-muted-foreground" />}
+        {status === "blocked" && <Warning className="size-4  text-yellow-500" />}
         
         <div className="flex-1 min-w-0">
           <div className="text-sm font-medium truncate">{node.id}</div>
@@ -396,7 +396,7 @@ function NodeTree({ node, nodes, children, execution, depth }: {
         if (!child) return null;
         return (
           <div key={childId} className="flex items-start gap-2">
-            <ArrowRight className="w-4 h-4 mt-3 text-muted-foreground" />
+            <ArrowRight className="size-4  mt-3 text-muted-foreground" />
             <NodeTree node={child} nodes={nodes} children={children} execution={execution} depth={0} />
           </div>
         );

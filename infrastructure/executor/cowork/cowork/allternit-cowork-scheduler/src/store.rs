@@ -21,9 +21,15 @@ impl SqliteStore {
                 .map_err(|e| SchedulerError::Store(e.to_string()))?;
         }
         
+        let db_path_str = db_path.to_str().unwrap_or("cowork-schedules.db");
+        let db_url = if db_path.is_absolute() {
+            format!("sqlite:///{}?mode=rwc", urlencoding::encode(db_path_str))
+        } else {
+            format!("sqlite:{}?mode=rwc", urlencoding::encode(db_path_str))
+        };
         let pool = SqlitePoolOptions::new()
             .max_connections(5)
-            .connect(&format!("sqlite:{}", db_path.display()))
+            .connect(&db_url)
             .await
             .map_err(|e| SchedulerError::Store(e.to_string()))?;
         

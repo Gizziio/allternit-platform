@@ -131,7 +131,7 @@ export function VideoRenderer({
       {/* Toolbar */}
       <div className="h-12 border-b border-[var(--border-subtle)] flex items-center justify-between px-4 bg-[var(--bg-secondary)]">
         <div className="flex items-center gap-3">
-          <FilmSlate className="w-4 h-4 text-[var(--accent-primary)]" />
+          <FilmSlate className="size-4  text-[var(--accent-primary)]" />
           <span className="text-sm font-medium text-[var(--text-primary)]">
             {artifact.title}
           </span>
@@ -165,8 +165,8 @@ export function VideoRenderer({
               className="absolute inset-0 flex items-center justify-center bg-black/40 cursor-pointer"
               onClick={togglePlay}
             >
-              <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur flex items-center justify-center hover:scale-110 transition-transform">
-                <Play className="w-10 h-10 text-white ml-1" />
+              <div className="size-20  rounded-full bg-white/20 backdrop-blur flex items-center justify-center hover:scale-110 transition-transform">
+                <Play className="size-10  text-white ml-1" />
               </div>
             </div>
           )}

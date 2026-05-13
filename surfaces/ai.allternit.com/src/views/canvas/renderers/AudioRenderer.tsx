@@ -148,7 +148,7 @@ export function AudioRenderer({
       {/* Toolbar */}
       <div className="h-12 border-b border-[var(--border-subtle)] flex items-center justify-between px-4 bg-[var(--bg-secondary)]">
         <div className="flex items-center gap-3">
-          <Headphones className="w-4 h-4 text-[var(--accent-primary)]" />
+          <Headphones className="size-4  text-[var(--accent-primary)]" />
           <div>
             <span className="text-sm font-medium text-[var(--text-primary)]">
               {artifact.title}
@@ -175,7 +175,7 @@ export function AudioRenderer({
         <div className="w-full max-w-2xl space-y-6">
           {/* Album art / visualization */}
           <div className="aspect-square max-w-xs mx-auto rounded-2xl bg-gradient-to-br from-[var(--accent-primary)] to-[var(--bg-secondary)] flex items-center justify-center shadow-2xl">
-            <MusicNote className="w-24 h-24 text-white/50" />
+            <MusicNote className="size-24  text-white/50" />
           </div>
 
           {/* Title */}
@@ -229,12 +229,12 @@ export function AudioRenderer({
               variant="default"
               size="lg"
               onClick={togglePlay}
-              className="w-16 h-16 rounded-full bg-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/90"
+              className="size-16  rounded-full bg-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/90"
             >
               {isPlaying ? (
                 <Pause size={32} />
               ) : (
-                <Play className="w-8 h-8 ml-1" />
+                <Play className="size-8  ml-1" />
               )}
             </Button>
 

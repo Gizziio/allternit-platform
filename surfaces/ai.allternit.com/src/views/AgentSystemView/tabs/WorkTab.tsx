@@ -590,7 +590,7 @@ function WihCard({ wih, isSelected, onClick, onPickup, onClose }: WihCardProps) 
 
       <div
         style={{
-          fontSize: 11,
+          fontSize: 12,
           color: "#888",
           marginBottom: 8,
         }}
@@ -604,7 +604,7 @@ function WihCard({ wih, isSelected, onClick, onPickup, onClose }: WihCardProps) 
             display: "flex",
             alignItems: "center",
             gap: 4,
-            fontSize: 11,
+            fontSize: 12,
             color: "#ff3b30",
             marginBottom: 8,
           }}
@@ -665,7 +665,7 @@ function LeaseCard({ lease, onRenew, onRelease }: LeaseCardProps) {
         </div>
         <span
           style={{
-            fontSize: 11,
+            fontSize: 12,
             color: "#888",
           }}
         >
@@ -675,7 +675,7 @@ function LeaseCard({ lease, onRenew, onRelease }: LeaseCardProps) {
 
       <div
         style={{
-          fontSize: 11,
+          fontSize: 12,
           color: "#888",
           marginBottom: 8,
         }}
@@ -699,7 +699,7 @@ function LeaseCard({ lease, onRenew, onRelease }: LeaseCardProps) {
             border: "none",
             borderRadius: 6,
             color: "#fff",
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 600,
             cursor: isExpired ? "not-allowed" : "pointer",
             opacity: isExpired ? 0.5 : 1,
@@ -716,7 +716,7 @@ function LeaseCard({ lease, onRenew, onRelease }: LeaseCardProps) {
             border: "1px solid var(--border-subtle, #333)",
             borderRadius: 6,
             color: "#888",
-            fontSize: 11,
+            fontSize: 12,
             cursor: "pointer",
           }}
         >
@@ -757,7 +757,7 @@ function ContextPackCard({ pack }: { pack: ContextPack }) {
         </span>
         <span
           style={{
-            fontSize: 11,
+            fontSize: 12,
             color: "#888",
           }}
         >
@@ -766,7 +766,7 @@ function ContextPackCard({ pack }: { pack: ContextPack }) {
       </div>
       <div
         style={{
-          fontSize: 11,
+          fontSize: 12,
           color: "#888",
         }}
       >

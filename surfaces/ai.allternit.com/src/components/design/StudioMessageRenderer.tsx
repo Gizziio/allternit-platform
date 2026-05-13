@@ -85,7 +85,7 @@ function LintBadge({ result }: { result: LintResult }) {
           padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer',
           background: errors.length > 0 ? 'rgba(239,68,68,0.1)' : 'rgba(234,179,8,0.1)',
           color: errors.length > 0 ? '#ef4444' : '#ca8a04',
-          fontSize: 11, fontWeight: 700,
+          fontSize: 12, fontWeight: 700,
         }}
       >
         Quality: {result.score}/100
@@ -95,7 +95,7 @@ function LintBadge({ result }: { result: LintResult }) {
       {expanded && (
         <div style={{ marginTop: 4, padding: '8px 12px', background: 'var(--bg-secondary)', borderRadius: 8, border: '1px solid var(--border-subtle)' }}>
           {result.violations.map((v, i) => (
-            <div key={i} style={{ fontSize: 11, color: v.severity === 'error' ? '#ef4444' : '#ca8a04', lineHeight: 1.5, marginBottom: 4 }}>
+            <div key={i} style={{ fontSize: 12, color: v.severity === 'error' ? '#ef4444' : '#ca8a04', lineHeight: 1.5, marginBottom: 4 }}>
               <strong>{v.severity.toUpperCase()}</strong> [{v.rule}]: {v.message}
             </div>
           ))}

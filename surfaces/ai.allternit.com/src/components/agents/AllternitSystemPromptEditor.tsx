@@ -84,7 +84,7 @@ export function AllternitSystemPromptEditor({
           <span className="text-xs font-medium uppercase tracking-wider text-white/60">System Prompt Editor</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-white/40 font-mono">
+          <span className="text-xs text-white/40 font-mono">
             {value.length} chars | {lineCount} lines
           </span>
           <button
@@ -100,7 +100,7 @@ export function AllternitSystemPromptEditor({
       <div className="flex flex-1 min-h-[300px] relative">
         {/* Line Numbers */}
         <div 
-          className="w-10 bg-black/20 border-r border-white/5 text-right pr-2 pt-3 select-none flex flex-col font-mono text-[11px] text-white/20"
+          className="w-10 bg-black/20 border-r border-white/5 text-right pr-2 pt-3 select-none flex flex-col font-mono text-[12px] text-white/20"
           style={{ lineHeight: '1.5rem' }}
         >
           {Array.from({ length: lineCount }).map((_, i) => (
@@ -126,7 +126,7 @@ export function AllternitSystemPromptEditor({
           {variables.length > 0 && (
             <div className="flex items-center gap-2">
               <HelpCircle size={12} className="text-white/40" />
-              <span className="text-[10px] text-white/40">
+              <span className="text-xs text-white/40">
                 Variables: {variables.map(v => `{{${v.name}}}`).join(', ')}
               </span>
             </div>
@@ -140,7 +140,7 @@ export function AllternitSystemPromptEditor({
             className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:bg-blue-500/20 text-blue-400 disabled:opacity-30 border border-blue-500/30"
           >
             {isTesting ? (
-              <div className="w-3 h-3 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin" />
+              <div className="size-3  border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin" />
             ) : (
               <Play size={12} />
             )}

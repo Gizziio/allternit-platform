@@ -52,7 +52,7 @@ export function RecentSessionsStrip({ onResume, maxItems = 3 }: RecentSessionsSt
 
   return (
     <div style={{ marginTop: 32 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ui-text-muted)', marginBottom: 10 }}>
+      <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--ui-text-muted)', marginBottom: 10 }}>
         Recent Sessions
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -73,7 +73,7 @@ export function RecentSessionsStrip({ onResume, maxItems = 3 }: RecentSessionsSt
               <div style={{ fontWeight: 500, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {session.title ?? 'Untitled Session'}
               </div>
-              <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+              <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
                 <span>{formatRelative(session.startedAt ?? session.createdAt)}</span>
                 {session.checkpoint && (
                   <>

@@ -44,7 +44,7 @@ export function WorkspaceBrowser({ path, serverUrl }: WorkspaceBrowserProps) {
       <div className="workspace-browser workspace-browser--loading">
         <div className="workspace-browser__spinner">
           <div className="spinner" />
-          <p>Loading workspace...</p>
+          <p>Loading workspace…</p>
         </div>
       </div>
     );

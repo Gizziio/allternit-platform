@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
-export function useTaskRealtime(workspaceId: string) {
+export function useTaskRealtime(workspaceId: string): JSX.Element {
   const queryClient = useQueryClient();
   const eventSourceRef = useRef<EventSource | null>(null);
 

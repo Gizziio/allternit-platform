@@ -9,6 +9,7 @@
  * - Real-time updates from agent store
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useCallback, useEffect } from 'react';
 import { Plus, Brain, Robot, Cpu, ClipboardText, UserPlus, DotsThree, Tray, X } from '@phosphor-icons/react';
 import { TEXT, STATUS, BACKGROUND } from '@/design/allternit.tokens';
@@ -119,15 +120,15 @@ export function KanbanView({ modeColors }: KanbanViewProps) {
   const toast = ({ title, description, variant }: { title: string; description?: string; variant?: string }) =>
     addToast({ title, description, type: variant === 'destructive' ? 'error' : 'success' });
   const [tasks, setTasks] = useState<KanbanTask[]>(() => generateTasksFromAgents(agents));
+  const [prevAgents, setPrevAgents] = useState(agents);
+  if (agents !== prevAgents) {
+    setTasks(generateTasksFromAgents(agents));
+    setPrevAgents(agents);
+  }
   const [draggingTask, setDraggingTask] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<KanbanTask | null>(null);
-
-  // Update tasks when agents change
-  useEffect(() => {
-    setTasks(generateTasksFromAgents(agents));
-  }, [agents]);
 
   const handleDragStart = useCallback((taskId: string) => {
     setDraggingTask(taskId);
@@ -225,7 +226,7 @@ export function KanbanView({ modeColors }: KanbanViewProps) {
           <div className="flex items-center gap-2">
             {COLUMNS.map(col => (
               <div key={col.id} className="flex items-center gap-1.5 text-xs" style={{ color: TEXT.tertiary }}>
-                <span className="w-2 h-2 rounded-full" style={{ background: col.color }}></span>
+                <span className="size-2  rounded-full" style={{ background: col.color }}></span>
                 {getTasksForColumn(col.status).length}
               </div>
             ))}
@@ -265,7 +266,7 @@ export function KanbanView({ modeColors }: KanbanViewProps) {
                   }}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full" style={{ background: column.color }}></span>
+                    <span className="size-2  rounded-full" style={{ background: column.color }}></span>
                     <span className="text-xs font-medium">{column.title}</span>
                   </div>
                   <span 
@@ -308,7 +309,7 @@ export function KanbanView({ modeColors }: KanbanViewProps) {
                               {task.tags.slice(0, 2).map(tag => (
                                 <span 
                                   key={tag}
-                                  className="text-[10px] px-1.5 py-0.5 rounded"
+                                  className="text-xs px-1.5 py-0.5 rounded"
                                   style={{ background: 'var(--surface-hover)', color: TEXT.tertiary }}
                                 >
                                   {tag}
@@ -316,7 +317,7 @@ export function KanbanView({ modeColors }: KanbanViewProps) {
                               ))}
                             </div>
                             <span 
-                              className="w-1.5 h-1.5 rounded-full"
+                              className="size-1.5  rounded-full"
                               style={{ background: PRIORITY_COLORS[task.priority] }}
                               title={`Priority: ${task.priority}`}
                             ></span>
@@ -336,12 +337,12 @@ export function KanbanView({ modeColors }: KanbanViewProps) {
                             {assignedAgent ? (
                               <div className="flex items-center gap-1.5">
                                 <div 
-                                  className="w-5 h-5 rounded flex items-center justify-center"
+                                  className="size-5  rounded flex items-center justify-center"
                                   style={{ background: `${assignedAgent.color}20` }}
                                 >
                                   <AgentIconInline icon={assignedAgent.icon} color={assignedAgent.color} size={10} />
                                 </div>
-                                <span className="text-[10px] truncate max-w-[80px]" style={{ color: TEXT.secondary }}>
+                                <span className="text-xs truncate max-w-[80px]" style={{ color: TEXT.secondary }}>
                                   {assignedAgent.name}
                                 </span>
                               </div>
@@ -351,7 +352,7 @@ export function KanbanView({ modeColors }: KanbanViewProps) {
                                   e.stopPropagation();
                                   // Show agent selector
                                 }}
-                                className="text-[10px] px-2 py-1 rounded transition-colors hover:bg-white/5"
+                                className="text-xs px-2 py-1 rounded transition-colors hover:bg-white/5"
                                 style={{ color: TEXT.tertiary }}
                               >
                                 <UserPlus size={10} weight="bold" style={{ marginRight: 4 }} /> Assign
@@ -363,7 +364,7 @@ export function KanbanView({ modeColors }: KanbanViewProps) {
                                 e.stopPropagation();
                                 handleDeleteTask(task.id);
                               }}
-                              className="text-[10px] p-1 rounded hover:bg-white/5"
+                              className="text-xs p-1 rounded hover:bg-white/5"
                               style={{ color: TEXT.tertiary }}
                             >
                               <DotsThree size={12} weight="bold" />
@@ -542,13 +543,13 @@ function TaskDetailModal({ task, agents, onAssign, onClose, modeColors }: TaskDe
           <div>
             <div className="flex items-center gap-2 mb-2">
               <span 
-                className="text-[10px] px-2 py-0.5 rounded-full"
+                className="text-xs px-2 py-0.5 rounded-full"
                 style={{ background: `${column?.color}20`, color: column?.color }}
               >
                 {column?.title}
               </span>
               <span 
-                className="w-2 h-2 rounded-full"
+                className="size-2  rounded-full"
                 style={{ background: PRIORITY_COLORS[task.priority] }}
                 title={`Priority: ${task.priority}`}
               ></span>
@@ -557,7 +558,7 @@ function TaskDetailModal({ task, agents, onAssign, onClose, modeColors }: TaskDe
           </div>
           <button 
             onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-white/5"
+            className="size-8  rounded-lg flex items-center justify-center hover:bg-white/5"
             style={{ color: TEXT.tertiary }}
           >
             <X size={12} weight="bold" />
@@ -579,7 +580,7 @@ function TaskDetailModal({ task, agents, onAssign, onClose, modeColors }: TaskDe
             <div className="flex items-center justify-between p-3 rounded-lg border" style={{ background: 'var(--surface-hover)', borderColor: 'var(--surface-hover)' }}>
               <div className="flex items-center gap-3">
                 <div 
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  className="size-10  rounded-lg flex items-center justify-center"
                   style={{ background: `${assignedAgent.color}20` }}
                 >
                   <AgentIconInline icon={assignedAgent.icon} color={assignedAgent.color} size={14} />
@@ -609,14 +610,14 @@ function TaskDetailModal({ task, agents, onAssign, onClose, modeColors }: TaskDe
                     style={{ background: 'var(--surface-hover)' }}
                   >
                     <div 
-                      className="w-8 h-8 rounded flex items-center justify-center"
+                      className="size-8  rounded flex items-center justify-center"
                       style={{ background: `${agent.color}20` }}
                     >
                       <AgentIconInline icon={agent.icon} color={agent.color} size={12} />
                     </div>
                     <div>
                       <div className="text-sm">{agent.name}</div>
-                      <div className="text-[10px]" style={{ color: TEXT.tertiary }}>{agent.status}</div>
+                      <div className="text-xs" style={{ color: TEXT.tertiary }}>{agent.status}</div>
                     </div>
                   </button>
                 ))}

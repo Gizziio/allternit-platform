@@ -51,7 +51,7 @@ function BreadcrumbIcon({ name }: { name: IconName }) {
 
   return (
     <svg 
-      className="w-4 h-4" 
+      className="size-4 " 
       viewBox="0 0 24 24" 
       fill="none" 
       stroke="currentColor" 
@@ -71,7 +71,7 @@ function BreadcrumbSeparator({ type }: { type: SeparatorType }) {
     ),
     chevron: (
       <svg 
-        className="w-4 h-4 text-[var(--text-tertiary)]" 
+        className="size-4  text-[var(--text-tertiary)]" 
         viewBox="0 0 24 24" 
         fill="none" 
         stroke="currentColor" 
@@ -84,7 +84,7 @@ function BreadcrumbSeparator({ type }: { type: SeparatorType }) {
     ),
     arrow: (
       <svg 
-        className="w-4 h-4 text-[var(--text-tertiary)]" 
+        className="size-4  text-[var(--text-tertiary)]" 
         viewBox="0 0 24 24" 
         fill="none" 
         stroke="currentColor" 
@@ -119,7 +119,7 @@ export function Breadcrumbs({
     ? [
         ...items.slice(0, itemsBeforeCollapse),
         { 
-          label: '...', 
+          label: '…', 
           isCollapsed: true,
           // Store collapsed items for dropdown
           collapsedItems: items.slice(itemsBeforeCollapse, items.length - itemsAfterCollapse),
@@ -172,7 +172,7 @@ function BreadcrumbItemComponent({ item, isLast }: BreadcrumbItemComponentProps)
             )}
           >
             <BreadcrumbIcon name="more" />
-            <span>...</span>
+            <span>…</span>
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="min-w-[200px]">

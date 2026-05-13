@@ -99,75 +99,42 @@ export function BaseProjectView({
   }, []);
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div className="h-full flex flex-col overflow-hidden">
       {/* Header */}
-      <div style={{
-        padding: '20px 24px 16px',
-        borderBottom: '1px solid var(--ui-border-muted)',
-        flexShrink: 0,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-          <div style={{ width: 120 }} />
+      <div className="p-5 px-6 pb-4 border-b border-[var(--ui-border-muted)] shrink-0">
+        <div className="flex items-start justify-between">
+          <div className="w-[120px]" />
 
-          <div style={{ textAlign: 'center', flex: 1 }}>
-            <h1 style={{ margin: 0, fontSize: 28, fontWeight: 600, color: 'var(--ui-text-primary)', marginBottom: 4 }}>
+          <div className="text-center flex-1">
+            <h1 className="m-0 text-[28px] font-semibold text-[var(--ui-text-primary)] mb-1">
               {title}
             </h1>
             {description && (
-              <p style={{ margin: 0, fontSize: 14, color: 'var(--ui-text-muted)' }}>
+              <p className="m-0 text-sm text-[var(--ui-text-muted)]">
                 {description}
               </p>
             )}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: 120, justifyContent: 'flex-end' }}>
+          <div className="flex items-center gap-2 w-[120px] justify-end">
             {onNewItem && (
               <button
                 onClick={onNewItem}
-                style={{
-                  padding: '6px 12px',
-                  height: 32,
-                  background: 'var(--accent-primary)',
-                  border: 'none',
-                  borderRadius: 8,
-                  color: 'var(--ui-text-inverse)',
-                  fontSize: 13,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  transition: 'opacity var(--transition-fast)',
-                  whiteSpace: 'nowrap',
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.88'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+                className="px-3 h-8 bg-[var(--accent-primary)] border-none rounded-lg text-[var(--ui-text-inverse)] text-[13px] font-semibold cursor-pointer flex items-center gap-1.5 transition-opacity duration-150 hover:opacity-90 active:scale-95 whitespace-nowrap"
               >
                 <Plus size={16} />
                 {newButtonLabel}
               </button>
             )}
 
-            {menuContent && <div style={{ position: 'relative' }}>{menuContent}</div>}
+            {menuContent && <div className="relative">{menuContent}</div>}
 
             {onToggleStar && (
               <button
                 onClick={onToggleStar}
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 8,
-                  border: 'none',
-                  background: 'transparent',
-                  color: isStarred ? 'var(--accent-primary)' : 'var(--ui-text-muted)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'color var(--transition-fast)',
-                }}
-                onMouseEnter={(e) => { if (!isStarred) e.currentTarget.style.color = 'var(--ui-text-secondary)'; }}
-                onMouseLeave={(e) => { if (!isStarred) e.currentTarget.style.color = 'var(--ui-text-muted)'; }}
+                className={`size-8 rounded-lg border-none bg-transparent cursor-pointer flex items-center justify-center transition-colors duration-150 ${
+                  isStarred ? 'text-[var(--accent-primary)]' : 'text-[var(--ui-text-muted)] hover:text-[var(--ui-text-secondary)]'
+                }`}
               >
                 <Star size={18} fill={isStarred ? 'currentColor' : 'none'} />
               </button>
@@ -176,59 +143,34 @@ export function BaseProjectView({
         </div>
 
         {/* Tabs row */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 20 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="flex items-center justify-between mt-5">
+          <div className="flex flex-col gap-2">
             {onBack && (
               <button
                 onClick={onBack}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: 0,
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--ui-text-muted)',
-                  fontSize: 13,
-                  cursor: 'pointer',
-                  transition: 'color var(--transition-fast)',
-                  marginBottom: 4,
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--ui-text-secondary)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--ui-text-muted)'; }}
+                className="flex items-center gap-1.5 p-0 bg-transparent border-none text-[var(--ui-text-muted)] text-[13px] cursor-pointer transition-colors duration-150 mb-1 hover:text-[var(--ui-text-secondary)]"
               >
                 <ArrowLeft size={16} />
                 <span>All projects</span>
               </button>
             )}
 
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div className="flex gap-2">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => onTabChange(tab.id)}
-                  style={{
-                    padding: '8px 16px',
-                    borderRadius: 8,
-                    border: 'none',
-                    background: activeTab === tab.id ? 'var(--surface-active)' : 'transparent',
-                    color: activeTab === tab.id ? 'var(--ui-text-primary)' : 'var(--ui-text-muted)',
-                    fontSize: 13,
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 6,
-                    transition: 'all var(--transition-fast)',
-                    whiteSpace: 'nowrap',
-                  }}
+                  className={`px-4 py-2 rounded-lg border-none flex items-center gap-1.5 transition-all duration-150 whitespace-nowrap text-[13px] font-semibold cursor-pointer ${
+                    activeTab === tab.id 
+                      ? 'bg-[var(--surface-active)] text-[var(--ui-text-primary)]' 
+                      : 'bg-transparent text-[var(--ui-text-muted)] hover:bg-white/5'
+                  }`}
                 >
                   {tab.label}
                   {tab.count !== undefined && (
-                    <span style={{
-                      fontSize: 11,
-                      color: activeTab === tab.id ? 'var(--ui-text-secondary)' : 'var(--ui-text-muted)',
-                    }}>
+                    <span className={`text-[12px] ${
+                      activeTab === tab.id ? 'text-[var(--ui-text-secondary)]' : 'text-[var(--ui-text-muted)]'
+                    }`}>
                       {tab.count}
                     </span>
                   )}
@@ -240,54 +182,40 @@ export function BaseProjectView({
       </div>
 
       {/* Main content area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: isWide ? 'row' : 'column', overflow: 'hidden' }}>
+      <div className={`flex-1 flex overflow-hidden ${isWide ? 'flex-row' : 'flex-col'}`}>
         {/* Left content */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', padding: '24px', minWidth: 0 }}>
-          <div style={{ marginBottom: 24 }}>{inputBar}</div>
+        <div className="flex-1 flex flex-col overflow-hidden p-6 min-w-0">
+          <div className="mb-6 shrink-0">{inputBar}</div>
 
           {showEmptyState && emptyState ? (
-            <div style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '40px 20px',
-              border: '1px solid var(--ui-border-muted)',
-              borderRadius: 12,
-            }}>
-              <p style={{ margin: 0, fontSize: 14, color: 'var(--ui-text-muted)', textAlign: 'center' }}>
+            <div className="flex-1 flex flex-col items-center justify-center p-10 px-5 border border-[var(--ui-border-muted)] rounded-xl">
+              <p className="m-0 text-sm text-[var(--ui-text-muted)] text-center">
                 {emptyState.message}
               </p>
               {emptyState.subMessage && (
-                <p style={{ margin: '8px 0 0 0', fontSize: 13, color: 'var(--ui-text-muted)', textAlign: 'center', opacity: 0.7 }}>
+                <p className="m-0 mt-2 text-[13px] text-[var(--ui-text-muted)] text-center opacity-70">
                   {emptyState.subMessage}
                 </p>
               )}
             </div>
           ) : (
-            <div style={{ flex: 1, overflow: 'auto' }}>{children}</div>
+            <div className="flex-1 overflow-auto">{children}</div>
           )}
         </div>
 
         {/* Right sidebar */}
-        <div style={{
-          width: isWide ? 320 : '100%',
-          padding: isWide ? '24px 24px 24px 0' : '0 24px 24px',
-          display: 'flex',
-          flexDirection: isWide ? 'column' : 'row',
-          gap: 16,
-          overflow: isWide ? 'auto' : 'visible',
-          flexShrink: 0,
-          borderTop: isWide ? 'none' : '1px solid var(--ui-border-muted)',
-        }}>
+        <div className={`shrink-0 flex gap-4 ${
+          isWide 
+            ? 'w-[320px] p-6 pl-0 flex-col overflow-auto' 
+            : 'w-full p-6 pt-0 flex-row overflow-visible border-t border-[var(--ui-border-muted)]'
+        }`}>
           <SidebarSection
             title="Memory"
             isWide={isWide}
-            rightElement={<span style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>Only you</span>}
+            rightElement={<span className="text-[12px] text-[var(--ui-text-muted)]">Only you</span>}
           >
             {sidebarSections.memory || (
-              <p style={{ margin: 0, fontSize: 13, color: 'var(--ui-text-muted)' }}>
+              <p className="m-0 text-[13px] text-[var(--ui-text-muted)]">
                 Project memory will show here after a few chats.
               </p>
             )}
@@ -299,18 +227,14 @@ export function BaseProjectView({
             rightElement={
               <button
                 onClick={sidebarSections.onAddInstruction}
-                style={{
-                  width: 24, height: 24, borderRadius: 6, border: 'none',
-                  background: 'transparent', color: 'var(--ui-text-muted)',
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
+                className="size-6 rounded-md border-none bg-transparent text-[var(--ui-text-muted)] cursor-pointer flex items-center justify-center hover:bg-white/5 transition-colors"
               >
                 <Plus size={16} />
               </button>
             }
           >
             {sidebarSections.instructions || (
-              <p style={{ margin: 0, fontSize: 13, color: 'var(--ui-text-muted)' }}>
+              <p className="m-0 text-[13px] text-[var(--ui-text-muted)]">
                 Add instructions to tailor responses
               </p>
             )}
@@ -322,24 +246,20 @@ export function BaseProjectView({
             rightElement={
               <button
                 onClick={sidebarSections.onAddFile}
-                style={{
-                  width: 24, height: 24, borderRadius: 6, border: 'none',
-                  background: 'transparent', color: 'var(--ui-text-muted)',
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}
+                className="size-6 rounded-md border-none bg-transparent text-[var(--ui-text-muted)] cursor-pointer flex items-center justify-center hover:bg-white/5 transition-colors"
               >
                 <Plus size={16} />
               </button>
             }
           >
             {sidebarSections.files || (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '20px 0' }}>
-                <div style={{ display: 'flex', gap: 4, marginBottom: 12 }}>
-                  <div style={{ width: 32, height: 40, background: 'var(--surface-hover)', borderRadius: 4, border: '1px solid var(--ui-border-muted)' }} />
-                  <div style={{ width: 32, height: 40, background: 'var(--surface-hover)', borderRadius: 4, border: '1px solid var(--ui-border-muted)' }} />
-                  <div style={{ width: 32, height: 40, background: 'var(--surface-active)', borderRadius: 4, border: '1px solid var(--ui-border-default)', transform: 'translateY(-4px)' }} />
+              <div className="flex flex-col items-center py-5">
+                <div className="flex gap-1 mb-3">
+                  <div className="w-8 h-10 bg-[var(--surface-hover)] rounded border border-[var(--ui-border-muted)]" />
+                  <div className="w-8 h-10 bg-[var(--surface-hover)] rounded border border-[var(--ui-border-muted)]" />
+                  <div className="w-8 h-10 bg-[var(--surface-active)] rounded border border-[var(--ui-border-default)] -translate-y-1" />
                 </div>
-                <p style={{ margin: 0, fontSize: 12, color: 'var(--ui-text-muted)', textAlign: 'center' }}>
+                <p className="m-0 text-[12px] text-[var(--ui-text-muted)] text-center">
                   Add PDFs, documents, or other text to reference in this project.
                 </p>
               </div>
@@ -358,18 +278,34 @@ interface SidebarSectionProps {
   isWide: boolean;
 }
 
+interface ProjectItemCardProps {
+  title: string;
+  subtitle?: string;
+  onClick?: () => void;
+  isActive?: boolean;
+  icon?: ReactNode;
+  actions?: ReactNode;
+}
+
+interface FileItemProps {
+  name: string;
+  size?: string;
+  onDelete?: () => void;
+}
+
+interface InstructionItemProps {
+  text: string;
+  onEdit?: () => void;
+  onDelete?: () => void;
+}
+
 function SidebarSection({ title, rightElement, children, isWide }: SidebarSectionProps) {
   return (
-    <div style={{
-      padding: 16,
-      background: 'var(--surface-hover)',
-      borderRadius: 12,
-      border: '1px solid var(--ui-border-muted)',
-      flex: isWide ? 'none' : 1,
-      minWidth: isWide ? 'auto' : 200,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ui-text-secondary)' }}>
+    <div className={`p-4 bg-[var(--surface-hover)] rounded-xl border border-[var(--ui-border-muted)] ${
+      isWide ? 'shrink-0' : 'flex-1 min-w-[200px]'
+    }`}>
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-[13px] font-semibold text-[var(--ui-text-secondary)]">
           {title}
         </span>
         {rightElement}
@@ -386,34 +322,17 @@ export function ProjectMenuButton({ children }: { children: ReactNode }) {
     <>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        style={{
-          width: 32, height: 32, borderRadius: 8, border: 'none',
-          background: isOpen ? 'var(--surface-active)' : 'transparent',
-          color: 'var(--ui-text-muted)',
-          cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          transition: 'all var(--transition-fast)',
-        }}
+        className={`size-8 rounded-lg border-none cursor-pointer flex items-center justify-center transition-all duration-150 ${
+          isOpen ? 'bg-[var(--surface-active)] text-[var(--ui-text-primary)]' : 'bg-transparent text-[var(--ui-text-muted)] hover:text-[var(--ui-text-secondary)]'
+        }`}
       >
         <DotsThreeOutline size={18} />
       </button>
       {isOpen && (
         <>
-          <div style={{ position: 'fixed', inset: 0, zIndex: 9998 }} onClick={() => setIsOpen(false)} />
+          <div className="fixed inset-0 z-[9998]" onClick={() => setIsOpen(false)} />
           <div
-            style={{
-              position: 'absolute',
-              top: '100%',
-              right: 0,
-              marginTop: 8,
-              minWidth: 160,
-              background: 'var(--surface-floating)',
-              borderRadius: 12,
-              border: '1px solid var(--ui-border-default)',
-              boxShadow: 'var(--shadow-lg)',
-              zIndex: 9999,
-              overflow: 'hidden',
-              padding: '8px 0',
-            }}
+            className="absolute top-full right-0 mt-2 min-w-[160px] bg-[var(--surface-floating)] rounded-xl border border-[var(--ui-border-default)] shadow-lg z-[9999] overflow-hidden py-2"
             onClick={() => setIsOpen(false)}
           >
             {children}
@@ -424,110 +343,59 @@ export function ProjectMenuButton({ children }: { children: ReactNode }) {
   );
 }
 
-export interface ProjectItemCardProps {
-  title: string;
-  subtitle?: string;
-  onClick?: () => void;
-  isActive?: boolean;
-  icon?: ReactNode;
-}
-
-export function ProjectItemCard({ title, subtitle, onClick, isActive = false, icon }: ProjectItemCardProps) {
+export function ProjectItemCard({ title, subtitle, onClick, isActive = false, icon, actions }: ProjectItemCardProps) {
   return (
     <div
       onClick={onClick}
-      style={{
-        padding: '16px 20px',
-        background: isActive ? 'var(--surface-active)' : 'transparent',
-        borderRadius: 12,
-        border: `1px solid ${isActive ? 'var(--ui-border-default)' : 'var(--ui-border-muted)'}`,
-        cursor: onClick ? 'pointer' : 'default',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        transition: 'all var(--transition-fast)',
-        marginBottom: 8,
-      }}
-      onMouseEnter={(e) => {
-        if (!isActive) {
-          e.currentTarget.style.background = 'var(--surface-hover)';
-          e.currentTarget.style.borderColor = 'var(--ui-border-default)';
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!isActive) {
-          e.currentTarget.style.background = 'transparent';
-          e.currentTarget.style.borderColor = 'var(--ui-border-muted)';
-        }
-      }}
+      className={`p-4 px-5 rounded-xl border flex items-center gap-3 transition-all duration-150 mb-2 cursor-pointer ${
+        isActive 
+          ? 'bg-[var(--surface-active)] border-[var(--ui-border-default)]' 
+          : 'bg-transparent border-[var(--ui-border-muted)] hover:bg-[var(--surface-hover)] hover:border-[var(--ui-border-default)]'
+      }`}
     >
       {icon && (
-        <div style={{
-          width: 36, height: 36, borderRadius: 10,
-          background: 'var(--surface-active)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: 'var(--ui-text-secondary)',
-        }}>
+        <div className="size-9 rounded-lg bg-[var(--surface-active)] flex items-center justify-center text-[var(--ui-text-secondary)]">
           {icon}
         </div>
       )}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontSize: 14, fontWeight: 500, color: 'var(--ui-text-primary)',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>
+      <div className="flex-1 min-w-0">
+        <div className="text-sm font-medium text-[var(--ui-text-primary)] truncate">
           {title}
         </div>
         {subtitle && (
-          <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', marginTop: 2 }}>
+          <div className="text-[12px] text-[var(--ui-text-muted)] mt-0.5">
             {subtitle}
           </div>
         )}
       </div>
+      {actions && (
+        <div
+          className="shrink-0"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {actions}
+        </div>
+      )}
     </div>
   );
 }
 
-export interface FileItemProps {
-  name: string;
-  size?: string;
-  onDelete?: () => void;
-}
-
 export function FileItem({ name, size, onDelete }: FileItemProps) {
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 10,
-      padding: '10px 12px',
-      background: 'var(--surface-hover)',
-      borderRadius: 8,
-      marginBottom: 8,
-    }}>
-      <div style={{
-        width: 32, height: 32, borderRadius: 8,
-        background: 'color-mix(in srgb, var(--accent-primary) 12%, var(--surface-panel))',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        color: 'var(--accent-primary)',
-      }}>
+    <div className="flex items-center gap-2.5 p-2.5 px-3 bg-[var(--surface-hover)] rounded-lg mb-2">
+      <div className="size-8 rounded-lg bg-[color-mix(in_srgb,var(--accent-primary)_12%,var(--surface-panel))] flex items-center justify-center text-[var(--accent-primary)]">
         <FileText size={16} />
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontSize: 13, color: 'var(--ui-text-primary)',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>
+      <div className="flex-1 min-w-0">
+        <div className="text-[13px] text-[var(--ui-text-primary)] truncate">
           {name}
         </div>
-        {size && <div style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>{size}</div>}
+        {size && <div className="text-[12px] text-[var(--ui-text-muted)]">{size}</div>}
       </div>
       {onDelete && (
         <button
           onClick={onDelete}
-          style={{
-            width: 24, height: 24, borderRadius: 6, border: 'none',
-            background: 'transparent', color: 'var(--ui-text-muted)',
-            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          }}
+          className="size-6 rounded-md border-none bg-transparent text-[var(--ui-text-muted)] cursor-pointer flex items-center justify-center hover:bg-white/5 transition-colors"
         >
           <X size={14} />
         </button>
@@ -536,27 +404,17 @@ export function FileItem({ name, size, onDelete }: FileItemProps) {
   );
 }
 
-export interface InstructionItemProps {
-  text: string;
-  onEdit?: () => void;
-  onDelete?: () => void;
-}
-
 export function InstructionItem({ text, onEdit, onDelete }: InstructionItemProps) {
   return (
-    <div style={{ padding: '12px', background: 'var(--surface-hover)', borderRadius: 8, marginBottom: 8 }}>
-      <p style={{ margin: 0, fontSize: 13, color: 'var(--ui-text-secondary)', lineHeight: 1.5 }}>
+    <div className="p-3 bg-[var(--surface-hover)] rounded-lg mb-2">
+      <p className="m-0 text-[13px] text-[var(--ui-text-secondary)] leading-relaxed">
         {text}
       </p>
-      <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+      <div className="flex gap-2 mt-2">
         {onEdit && (
           <button
             onClick={onEdit}
-            style={{
-              padding: '4px 8px', background: 'transparent', border: 'none',
-              color: 'var(--ui-text-muted)', fontSize: 11, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: 4,
-            }}
+            className="p-1 px-2 bg-transparent border-none text-[var(--ui-text-muted)] text-[12px] cursor-pointer flex items-center gap-1 hover:text-[var(--ui-text-primary)] transition-colors"
           >
             <PencilSimple size={12} />
             Edit
@@ -565,11 +423,7 @@ export function InstructionItem({ text, onEdit, onDelete }: InstructionItemProps
         {onDelete && (
           <button
             onClick={onDelete}
-            style={{
-              padding: '4px 8px', background: 'transparent', border: 'none',
-              color: 'var(--status-error)', fontSize: 11, cursor: 'pointer',
-              display: 'flex', alignItems: 'center', gap: 4,
-            }}
+            className="p-1 px-2 bg-transparent border-none text-[var(--status-error)] text-[12px] cursor-pointer flex items-center gap-1 hover:brightness-110 transition-colors"
           >
             <Trash size={12} />
             Delete

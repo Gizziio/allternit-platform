@@ -118,7 +118,7 @@ function determineExecutionMethod(
 describe("Smart Sandbox Analyzer", () => {
   describe("Language detection", () => {
     it("routes JavaScript to WebVM", () => {
-      const code = `console.log("hello")`;
+      const code = `console.debug("hello")`;
       expect(determineExecutionMethod(code, "javascript")).toBe("webvm");
     });
 

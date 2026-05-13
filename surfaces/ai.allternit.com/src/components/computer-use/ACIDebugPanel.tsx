@@ -105,18 +105,18 @@ function ActionRow({ record }: { record: ActionRecord }) {
         </span>
         <StatusDot ok={record.result_success} />
         <span style={{ flex: 1, fontFamily: 'var(--font-mono)' }}>{record.action_type}</span>
-        <span style={{ color: `${SAND[500]}70`, fontSize: 10 }}>{record.duration_ms}ms</span>
+        <span style={{ color: `${SAND[500]}70`, fontSize: 12 }}>{record.duration_ms}ms</span>
       </button>
 
       {expanded && (
         <div style={{ padding: '0 10px 8px', borderTop: `1px solid var(--surface-hover)` }}>
           {record.url_after && (
-            <p style={{ margin: '4px 0', fontSize: 11, color: `${SAND[500]}90`, wordBreak: 'break-all' }}>
+            <p style={{ margin: '4px 0', fontSize: 12, color: `${SAND[500]}90`, wordBreak: 'break-all' }}>
               {record.url_after}
             </p>
           )}
           {record.result_error && (
-            <p style={{ margin: '4px 0', fontSize: 11, color: STATUS.error }}>
+            <p style={{ margin: '4px 0', fontSize: 12, color: STATUS.error }}>
               {record.result_error}
             </p>
           )}
@@ -248,13 +248,13 @@ export function ACIDebugPanel({
         <Bug size={15} color={SAND[500]} />
         <span style={{ fontWeight: 600, fontSize: 13, color: SAND[400] }}>ACI Debug</span>
         {sessionId && (
-          <code style={{ fontSize: 10, color: `${SAND[500]}70`, marginLeft: 4 }}>
+          <code style={{ fontSize: 12, color: `${SAND[500]}70`, marginLeft: 4 }}>
             {sessionId.slice(0, 8)}
           </code>
         )}
         <div style={{ flex: 1 }} />
         {loading && (
-          <span style={{ fontSize: 10, color: `${SAND[500]}60` }}>syncing...</span>
+          <span style={{ fontSize: 12, color: `${SAND[500]}60` }}>syncing…</span>
         )}
         <button
           onClick={onClose}
@@ -297,7 +297,7 @@ export function ACIDebugPanel({
                 : '2px solid transparent',
               color: activeTab === tab.id ? SAND[400] : `${SAND[500]}60`,
               cursor: 'pointer',
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: activeTab === tab.id ? 600 : 400,
               transition: 'all 0.15s',
             }}
@@ -315,7 +315,7 @@ export function ACIDebugPanel({
             padding: '6px 16px',
             background: 'var(--status-error-bg)',
             borderBottom: '1px solid rgba(239,68,68,0.2)',
-            fontSize: 11,
+            fontSize: 12,
             color: STATUS.error,
             flexShrink: 0,
           }}
@@ -336,7 +336,7 @@ export function ACIDebugPanel({
               </p>
             ) : (
               <>
-                <div style={{ marginBottom: 8, fontSize: 11, color: `${SAND[500]}70` }}>
+                <div style={{ marginBottom: 8, fontSize: 12, color: `${SAND[500]}70` }}>
                   {bundle.records.length} actions recorded
                   {bundle.started_at && ` · started ${new Date(bundle.started_at).toLocaleTimeString()}`}
                 </div>
@@ -353,7 +353,7 @@ export function ACIDebugPanel({
           <div>
             {bundle.records.filter((r) => r.after_screenshot).map((r) => (
               <div key={r.action_id} style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 11, color: `${SAND[500]}70`, marginBottom: 4 }}>
+                <div style={{ fontSize: 12, color: `${SAND[500]}70`, marginBottom: 4 }}>
                   Step {r.step} — {r.action_type}
                 </div>
                 <img
@@ -389,19 +389,19 @@ export function ACIDebugPanel({
                   }}
                 >
                   <div style={{ background: 'var(--surface-hover)', borderRadius: 8, padding: 12 }}>
-                    <div style={{ fontSize: 11, color: `${SAND[500]}70` }}>Active Sessions</div>
+                    <div style={{ fontSize: 12, color: `${SAND[500]}70` }}>Active Sessions</div>
                     <div style={{ fontSize: 22, fontWeight: 700, color: SAND[300], marginTop: 4 }}>
                       {fleet.total_sessions}
                     </div>
                   </div>
                   <div style={{ background: 'var(--surface-hover)', borderRadius: 8, padding: 12 }}>
-                    <div style={{ fontSize: 11, color: `${SAND[500]}70` }}>Capacity</div>
+                    <div style={{ fontSize: 12, color: `${SAND[500]}70` }}>Capacity</div>
                     <div style={{ fontSize: 22, fontWeight: 700, color: SAND[300], marginTop: 4 }}>
                       {fleet.total_capacity}
                     </div>
                   </div>
                 </div>
-                <div style={{ fontSize: 11, color: `${SAND[500]}70`, marginBottom: 6 }}>Workers</div>
+                <div style={{ fontSize: 12, color: `${SAND[500]}70`, marginBottom: 6 }}>Workers</div>
                 {fleet.workers.map((w) => (
                   <div
                     key={w.worker_id}
@@ -417,7 +417,7 @@ export function ACIDebugPanel({
                     }}
                   >
                     <StatusDot ok={w.is_healthy} />
-                    <code style={{ color: `${SAND[500]}90`, fontSize: 10, flex: 1 }}>
+                    <code style={{ color: `${SAND[500]}90`, fontSize: 12, flex: 1 }}>
                       {w.worker_id.slice(0, 8)}
                     </code>
                     <span style={{ color: `${SAND[500]}70` }}>
@@ -459,7 +459,7 @@ export function ACIDebugPanel({
               <pre
                 style={{
                   margin: 0,
-                  fontSize: 11,
+                  fontSize: 12,
                   fontFamily: 'var(--font-mono)',
                   color: `${SAND[400]}e0`,
                   whiteSpace: 'pre-wrap',
@@ -479,7 +479,7 @@ export function ACIDebugPanel({
         style={{
           padding: '8px 16px',
           borderTop: '1px solid var(--ui-border-muted)',
-          fontSize: 10,
+          fontSize: 12,
           color: `${SAND[500]}50`,
           display: 'flex',
           justifyContent: 'space-between',

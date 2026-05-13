@@ -21,6 +21,21 @@ export type SearchGroupRichProps = {
   defaultOpen?: boolean;
 };
 
+function CompleteTracker({
+  step,
+  stepStates,
+  onStepComplete,
+}: {
+  step: Extract<TimelineStep, { type: "tool-call" }>;
+  stepStates: Record<string, StepState>;
+  onStepComplete: (id: string) => void;
+}) {
+  useToolComplete(stepStates[step.id] === "animating", step.duration, () =>
+    onStepComplete(step.id),
+  );
+  return null;
+}
+
 export function SearchGroupRich({
   toolSteps,
   stepStates,
@@ -38,21 +53,15 @@ export function SearchGroupRich({
   // label. Once results arrive the panel becomes meaningful.
   const hasExpandableContent = totalResults > 0;
 
-  function CompleteTracker({
-    step,
-  }: {
-    step: Extract<TimelineStep, { type: "tool-call" }>;
-  }) {
-    useToolComplete(stepStates[step.id] === "animating", step.duration, () =>
-      onStepComplete(step.id),
-    );
-    return null;
-  }
-
   return (
     <>
       {toolSteps.map((step) => (
-        <CompleteTracker key={step.id} step={step} />
+        <CompleteTracker
+          key={step.id}
+          step={step}
+          stepStates={stepStates}
+          onStepComplete={onStepComplete}
+        />
       ))}
       <ToolRowBase
         shimmerLabel="Searching..."
@@ -78,8 +87,8 @@ export function SearchGroupRich({
                     "hover:bg-muted/50",
                   )}
                 >
-                  <div className="flex items-center justify-center w-4 h-4 shrink-0 text-muted-foreground">
-                    <IconFileText className="w-4 h-4" />
+                  <div className="flex items-center justify-center size-4  shrink-0 text-muted-foreground">
+                    <IconFileText className="size-4 " />
                   </div>
                   <span className="text-sm text-foreground/90 truncate flex-1 min-w-0">
                     {result.title}

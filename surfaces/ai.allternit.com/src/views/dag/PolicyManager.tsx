@@ -239,7 +239,7 @@ export function PolicyManager() {
                 background: 'var(--status-error)',
                 color: 'var(--ui-text-primary)',
                 borderRadius: 10,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 600,
               }}>
                 {violations.filter(v => v.status === 'open').length}
@@ -281,7 +281,7 @@ export function PolicyManager() {
           <MagnifyingGlass size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--ui-text-muted)' }} />
           <input
             type="text"
-            placeholder="Search policies..."
+            placeholder="Search policies…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
@@ -527,7 +527,7 @@ function PolicyCard({
                 background: 'var(--status-success-bg)',
                 color: 'var(--status-success)',
                 borderRadius: 4,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 600,
               }}>
                 Active
@@ -538,7 +538,7 @@ function PolicyCard({
                 background: 'var(--surface-active)',
                 color: 'var(--ui-text-secondary)',
                 borderRadius: 4,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 600,
               }}>
                 Disabled
@@ -550,7 +550,7 @@ function PolicyCard({
                 background: 'var(--status-error-bg)',
                 color: 'var(--status-error)',
                 borderRadius: 4,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 600,
               }}>
                 {violations.length} violations
@@ -699,7 +699,7 @@ function PolicyCard({
                       padding: '2px 8px',
                       background: 'var(--surface-hover)',
                       borderRadius: 4,
-                      fontSize: 11,
+                      fontSize: 12,
                       color: 'var(--ui-text-secondary)',
                     }}>
                       {tag}
@@ -739,7 +739,7 @@ function ViolationCard({ violation }: { violation: PolicyViolation }) {
           background: `${severity.color}20`,
           color: severity.color,
           borderRadius: 4,
-          fontSize: 10,
+          fontSize: 12,
           fontWeight: 600,
         }}>
           {severity.label}
@@ -755,7 +755,7 @@ function ViolationCard({ violation }: { violation: PolicyViolation }) {
             background: 'var(--status-error-bg)',
             color: 'var(--status-error)',
             borderRadius: 4,
-            fontSize: 11,
+            fontSize: 12,
           }}>
             Open
           </span>
@@ -1004,7 +1004,7 @@ function LoadingState() {
   return (
     <div style={{ textAlign: 'center', padding: 60, color: 'var(--ui-text-muted)' }}>
       <ArrowsClockwise size={32} style={{ animation: 'spin 1s linear infinite' }} />
-      <p>Loading policies...</p>
+      <p>Loading policies…</p>
     </div>
   );
 }

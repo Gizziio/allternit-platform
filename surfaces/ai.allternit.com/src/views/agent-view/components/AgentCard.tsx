@@ -141,7 +141,7 @@ export function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => voi
                   borderRadius: '999px',
                   background: `${STUDIO_THEME.accent}15`,
                   color: STUDIO_THEME.accent,
-                  fontSize: '11px',
+                  fontSize: '12px',
                   fontWeight: 500,
                   border: `1px solid ${STUDIO_THEME.accent}25`
                 }}>
@@ -154,7 +154,7 @@ export function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => voi
                     borderRadius: '999px',
                     background: 'var(--ui-border-muted)',
                     color: STUDIO_THEME.textSecondary,
-                    fontSize: '11px',
+                    fontSize: '12px',
                     fontWeight: 500
                   }}>
                     {setupMeta.label}
@@ -166,7 +166,7 @@ export function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => voi
                     borderRadius: '999px',
                     background: 'rgba(59, 130, 246, 0.15)',
                     color: 'var(--status-info)',
-                    fontSize: '11px',
+                    fontSize: '12px',
                     fontWeight: 500
                   }}>
                     Lv{agentCharacterStats.level}
@@ -179,7 +179,7 @@ export function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => voi
                     borderRadius: '999px',
                     background: agent.teammateProfile.status === 'busy' ? 'rgba(245, 158, 11, 0.15)' : agent.teammateProfile.status === 'offline' ? 'rgba(107, 114, 128, 0.15)' : 'rgba(16, 185, 129, 0.15)',
                     color: agent.teammateProfile.status === 'busy' ? 'var(--status-warning)' : agent.teammateProfile.status === 'offline' ? 'var(--ui-text-muted)' : 'var(--status-success)',
-                    fontSize: '11px',
+                    fontSize: '12px',
                     fontWeight: 500
                   }}>
                     {agent.teammateProfile.status === 'idle' ? 'Available' : agent.teammateProfile.status === 'busy' ? 'Busy' : 'Offline'}
@@ -192,7 +192,7 @@ export function AgentCard({ agent, onClick }: { agent: Agent; onClick: () => voi
                     borderRadius: '999px',
                     background: 'rgba(139, 92, 246, 0.15)',
                     color: '#a78bfa',
-                    fontSize: '11px',
+                    fontSize: '12px',
                     fontWeight: 500
                   }}>
                     {agent.assignedBoardItemIds?.length ?? 0} board

@@ -94,21 +94,21 @@ function TiltCard({
         {/* Gradient background */}
         {feature.gradient && (
           <div
-            className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full opacity-20 blur-3xl transition-opacity duration-500 group-hover:opacity-40"
+            className="pointer-events-none absolute -right-8 -top-8 size-32  rounded-full opacity-20 blur-3xl transition-opacity duration-500 group-hover:opacity-40"
             style={{ background: feature.gradient }}
           />
         )}
 
         {/* Icon */}
         <div
-          className="relative mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl"
+          className="relative mb-4 inline-flex size-12  items-center justify-center rounded-xl"
           style={{
             background:
               'color-mix(in srgb, var(--accent-primary) 10%, var(--surface-panel-muted))',
             color: 'var(--accent-primary)',
           }}
         >
-          <IconComponent className="h-6 w-6" />
+          <IconComponent className="size-6 " />
         </div>
 
         {/* Title */}

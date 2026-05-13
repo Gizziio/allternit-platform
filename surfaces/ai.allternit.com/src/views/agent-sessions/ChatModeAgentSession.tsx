@@ -138,7 +138,7 @@ export function ChatModeAgentSession({
           {messages.length === 0 && showSuggestions && (
             <div className="flex flex-col items-center justify-center h-full space-y-6">
               <div
-                className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                className="size-16  rounded-2xl flex items-center justify-center"
                 style={{ background: modeColors.soft }}
               >
                 <Sparkle size={32} style={{ color: modeColors.accent }} />
@@ -219,7 +219,7 @@ export function ChatModeAgentSession({
                     void handleSend();
                   }
                 }}
-                placeholder="Type your message..."
+                placeholder="Type your message…"
                 rows={1}
                 className="w-full px-4 py-3 rounded-xl outline-none resize-none"
                 style={{
@@ -272,7 +272,7 @@ function ChatMessage({
     >
       {/* Avatar */}
       <div
-        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+        className="size-8  rounded-lg flex items-center justify-center shrink-0"
         style={{ background: isUser ? modeColors.soft : `${accentColor}20` }}
       >
         {isUser ? (
@@ -333,7 +333,7 @@ function ChatCanvasPanel({ mode, canvases }: { mode: 'chat'; canvases: AgentSess
       <CanvasPanel title="Canvas" mode={mode}>
         <div className="flex flex-col items-center justify-center h-full text-center">
           <div
-            className="w-12 h-12 rounded-xl flex items-center justify-center mb-3"
+            className="size-12  rounded-xl flex items-center justify-center mb-3"
             style={{ background: modeColors.soft }}
           >
             <Sparkle size={24} style={{ color: modeColors.accent }} />

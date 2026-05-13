@@ -346,7 +346,7 @@ async function fetchMcpTools(serverIds: string[]): Promise<ToolDefinition[]> {
 
       setCachedMcpTools(serverId, serverTools);
       tools.push(...serverTools);
-      console.log(`[MCP] Loaded ${mcpTools.length} tools from ${connector.name}`);
+      console.debug(`[MCP] Loaded ${mcpTools.length} tools from ${connector.name}`);
     } catch (error) {
       console.error(`[MCP] Failed to fetch tools from server ${serverId}:`, error);
     }

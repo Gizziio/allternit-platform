@@ -62,29 +62,31 @@ export const Default: Story = {
   },
 };
 
+const InteractiveHeader = () => {
+  const [mode, setMode] = useState<AppMode>('chat');
+  const [theme, setTheme] = useState<'light' | 'dark'>('dark');
+  const [railCollapsed, setRailCollapsed] = useState(false);
+  
+  return (
+    <ShellHeader
+      activeMode={mode}
+      onModeChange={setMode}
+      theme={theme}
+      onThemeToggle={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
+      isRailCollapsed={railCollapsed}
+      onRailToggle={() => setRailCollapsed(!railCollapsed)}
+      onBack={() => console.debug('Back')}
+      onForward={() => console.debug('Forward')}
+      onOpenControlCenter={() => console.debug('Open Control Center')}
+    />
+  );
+};
+
 /**
  * Interactive ShellHeader with mode switching
  */
 export const Interactive: Story = {
-  render: () => {
-    const [mode, setMode] = useState<AppMode>('chat');
-    const [theme, setTheme] = useState<'light' | 'dark'>('dark');
-    const [railCollapsed, setRailCollapsed] = useState(false);
-    
-    return (
-      <ShellHeader
-        activeMode={mode}
-        onModeChange={setMode}
-        theme={theme}
-        onThemeToggle={() => setTheme(t => t === 'light' ? 'dark' : 'light')}
-        isRailCollapsed={railCollapsed}
-        onRailToggle={() => setRailCollapsed(!railCollapsed)}
-        onBack={() => console.log('Back')}
-        onForward={() => console.log('Forward')}
-        onOpenControlCenter={() => console.log('Open Control Center')}
-      />
-    );
-  },
+  render: () => <InteractiveHeader />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const coworkButton = canvas.getByText('Cowork');

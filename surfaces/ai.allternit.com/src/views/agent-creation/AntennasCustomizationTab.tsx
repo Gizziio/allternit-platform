@@ -146,7 +146,7 @@ export const AntennasCustomizationTab: React.FC = () => {
                   border: `1px solid ${STUDIO_THEME.border}`,
                   backgroundColor: 'transparent',
                   color: STUDIO_THEME.textSecondary,
-                  fontSize: '11px',
+                  fontSize: '12px',
                   cursor: 'pointer',
                 }}
               >
@@ -192,7 +192,7 @@ export const AntennasCustomizationTab: React.FC = () => {
                     </span>
                     <span
                       style={{
-                        fontSize: '10px',
+                        fontSize: '12px',
                         fontWeight: 500,
                         color: isSelected 
                           ? STUDIO_THEME.accent 
@@ -259,7 +259,7 @@ export const AntennasCustomizationTab: React.FC = () => {
                     </span>
                     <span
                       style={{
-                        fontSize: '10px',
+                        fontSize: '12px',
                         fontWeight: 500,
                         color: isSelected 
                           ? STUDIO_THEME.accent 
@@ -325,7 +325,7 @@ export const AntennasCustomizationTab: React.FC = () => {
                     </span>
                     <span
                       style={{
-                        fontSize: '9px',
+                        fontSize: '12px',
                         fontWeight: 500,
                         color: isSelected 
                           ? STUDIO_THEME.accent 

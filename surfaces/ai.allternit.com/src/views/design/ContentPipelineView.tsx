@@ -1,4 +1,5 @@
 "use client";
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useEffect, useRef } from 'react';
 import { useDesignSessionStore, useDesignSessionActions } from './DesignSessionStore';
 
@@ -199,7 +200,7 @@ function LinkedInPreview({ content, handle }: { content: string; handle: string 
         <div>
           <div style={{ fontSize: 14, fontWeight: 600, color: '#000' }}>Your Brand</div>
           <div style={{ fontSize: 12, color: '#666' }}>Company · {handle}</div>
-          <div style={{ fontSize: 11, color: '#888' }}>Just now · 🌍</div>
+          <div style={{ fontSize: 12, color: '#888' }}>Just now · 🌍</div>
         </div>
       </div>
       <div style={{ padding: '0 16px 12px', fontSize: 14, color: '#000', lineHeight: 1.6, whiteSpace: 'pre-wrap', minHeight: 40 }}>
@@ -251,7 +252,7 @@ function GenericPreview({ content, platform }: { content: string; platform: Plat
         </div>
         <div>
           <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>{platform.label}</div>
-          <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{platform.handle}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{platform.handle}</div>
         </div>
       </div>
       <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.6, whiteSpace: 'pre-wrap', minHeight: 40 }}>
@@ -279,15 +280,15 @@ function WeekCalendar({ posts }: { posts: Record<string, PostState> }) {
 
   return (
     <div>
-      <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-tertiary)', marginBottom: 10 }}>This Week</div>
+      <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-tertiary)', marginBottom: 10 }}>This Week</div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
         {days.map((d, i) => {
           const dayItems = byDay[i] ?? [];
           const isToday = (today === 0 ? 6 : today - 1) === i;
           return (
             <div key={d} style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'center' }}>
-              <div style={{ fontSize: 9, fontWeight: isToday ? 800 : 500, color: isToday ? 'var(--accent-primary)' : 'var(--text-tertiary)', marginBottom: 2 }}>{d}</div>
-              <div style={{ width: 28, height: 28, borderRadius: 6, background: isToday ? 'color-mix(in srgb, var(--accent-primary) 12%, transparent)' : 'var(--bg-secondary)', border: `1px solid ${isToday ? 'var(--accent-primary)' : 'var(--border-subtle)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, color: isToday ? 'var(--accent-primary)' : 'var(--text-tertiary)' }}>
+              <div style={{ fontSize: 12, fontWeight: isToday ? 800 : 500, color: isToday ? 'var(--accent-primary)' : 'var(--text-tertiary)', marginBottom: 2 }}>{d}</div>
+              <div style={{ width: 28, height: 28, borderRadius: 6, background: isToday ? 'color-mix(in srgb, var(--accent-primary) 12%, transparent)' : 'var(--bg-secondary)', border: `1px solid ${isToday ? 'var(--accent-primary)' : 'var(--border-subtle)'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: isToday ? 'var(--accent-primary)' : 'var(--text-tertiary)' }}>
                 {dayItems.length > 0 ? dayItems.length : ''}
               </div>
               {dayItems.slice(0, 3).map((item, j) => (
@@ -375,7 +376,7 @@ export function ContentPipelineView({ projectName = '' }: { projectName?: string
       <div style={{ width: 220, borderRight: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', flexShrink: 0, overflow: 'hidden' }}>
         <div style={{ padding: '14px 14px 10px', borderBottom: '1px solid var(--border-subtle)' }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)' }}>Content Pipeline</div>
-          <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>{projectName || 'All platforms'}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>{projectName || 'All platforms'}</div>
         </div>
 
         {/* Stats row */}
@@ -388,7 +389,7 @@ export function ContentPipelineView({ projectName = '' }: { projectName?: string
           ] as const).map(([key, count, color]) => (
             <div key={key} style={{ padding: '6px 8px', borderRadius: 7, background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', textAlign: 'center' }}>
               <div style={{ fontSize: 16, fontWeight: 800, color, lineHeight: 1 }}>{count}</div>
-              <div style={{ fontSize: 9, color: 'var(--text-tertiary)', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{key}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{key}</div>
             </div>
           ))}
         </div>
@@ -422,7 +423,7 @@ export function ContentPipelineView({ projectName = '' }: { projectName?: string
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.label}</div>
-                  <div style={{ fontSize: 9, color: 'var(--text-tertiary)', marginTop: 1 }}>{p.freq}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 1 }}>{p.freq}</div>
                 </div>
                 <div style={{ width: 7, height: 7, borderRadius: '50%', background: statusColor, flexShrink: 0 }} />
               </button>
@@ -445,19 +446,19 @@ export function ContentPipelineView({ projectName = '' }: { projectName?: string
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>{platform.label}</div>
-            <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{platform.contentType} · {platform.charLimit.toLocaleString()} char limit · {platform.imageSpec}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{platform.contentType} · {platform.charLimit.toLocaleString()} char limit · {platform.imageSpec}</div>
           </div>
           {/* Format pills */}
           <div style={{ display: 'flex', gap: 4 }}>
             {platform.formats.map(f => (
-              <span key={f} style={{ padding: '2px 8px', borderRadius: 20, background: 'var(--bg-tertiary, var(--bg-primary))', border: '1px solid var(--border-subtle)', fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 500 }}>{f}</span>
+              <span key={f} style={{ padding: '2px 8px', borderRadius: 20, background: 'var(--bg-tertiary, var(--bg-primary))', border: '1px solid var(--border-subtle)', fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 500 }}>{f}</span>
             ))}
           </div>
           {/* Editor / Preview toggle */}
           <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
             {(['editor', 'preview'] as const).map(t => (
               <button key={t} onClick={() => setActivePreviewTab(t)}
-                style={{ padding: '5px 12px', border: 'none', background: activePreviewTab === t ? 'var(--accent-primary)' : 'transparent', color: activePreviewTab === t ? '#fff' : 'var(--text-secondary)', fontSize: 11, fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize' }}>
+                style={{ padding: '5px 12px', border: 'none', background: activePreviewTab === t ? 'var(--accent-primary)' : 'transparent', color: activePreviewTab === t ? '#fff' : 'var(--text-secondary)', fontSize: 12, fontWeight: 600, cursor: 'pointer', textTransform: 'capitalize' }}>
                 {t}
               </button>
             ))}
@@ -495,7 +496,7 @@ export function ContentPipelineView({ projectName = '' }: { projectName?: string
                       strokeLinecap="round"
                     />
                   </svg>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: charOver ? '#ef4444' : 'var(--text-tertiary)' }}>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: charOver ? '#ef4444' : 'var(--text-tertiary)' }}>
                     {charOver ? `-${charCount - platform.charLimit}` : platform.charLimit - charCount}
                   </span>
                 </div>
@@ -546,7 +547,7 @@ export function ContentPipelineView({ projectName = '' }: { projectName?: string
                     width: 7, height: 7, borderRadius: '50%',
                     background: post.status === 'published' ? '#22c55e' : post.status === 'scheduled' ? '#6366f1' : post.status === 'generating' ? 'var(--accent-primary)' : '#f59e0b',
                   }} />
-                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'capitalize' }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'capitalize' }}>
                     {post.status === 'scheduled' ? `Scheduled · Day ${(post.scheduledDay ?? 0) + 1} at ${post.scheduledTime}` : post.status}
                   </span>
                 </div>
@@ -554,8 +555,8 @@ export function ContentPipelineView({ projectName = '' }: { projectName?: string
 
               {/* Format spec reminder */}
               <div style={{ padding: '10px 12px', borderRadius: 8, background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Format Spec</div>
-                <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Format Spec</div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                   <strong>Image:</strong> {platform.imageSpec}<br />
                   <strong>Formats:</strong> {platform.formats.join(', ')}<br />
                   <strong>Frequency:</strong> {platform.freq}
@@ -564,7 +565,7 @@ export function ContentPipelineView({ projectName = '' }: { projectName?: string
             </div>
           ) : (
             <div style={{ maxWidth: 480, margin: '0 auto' }}>
-              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-tertiary)', marginBottom: 12 }}>Platform Preview</div>
+              <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text-tertiary)', marginBottom: 12 }}>Platform Preview</div>
               {platform.id === 'twitter' && <TwitterPreview content={post.content} handle={platform.handle} />}
               {platform.id === 'linkedin' && <LinkedInPreview content={post.content} handle={platform.handle} />}
               {platform.id === 'instagram' && <InstagramPreview content={post.content} handle={platform.handle} />}
@@ -587,9 +588,9 @@ export function ContentPipelineView({ projectName = '' }: { projectName?: string
 
           {/* Scheduled posts */}
           <div>
-            <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-tertiary)', marginBottom: 8 }}>Scheduled</div>
+            <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-tertiary)', marginBottom: 8 }}>Scheduled</div>
             {PLATFORMS.filter(p => posts[p.id].status === 'scheduled').length === 0 ? (
-              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', padding: '8px 0' }}>No posts scheduled yet.</div>
+              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', padding: '8px 0' }}>No posts scheduled yet.</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {PLATFORMS.filter(p => posts[p.id].status === 'scheduled').map(p => (
@@ -598,8 +599,8 @@ export function ContentPipelineView({ projectName = '' }: { projectName?: string
                       {PLATFORM_ICON_SM[p.id]}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)' }}>{p.label}</div>
-                      <div style={{ fontSize: 9, color: 'var(--text-tertiary)' }}>Day {(posts[p.id].scheduledDay ?? 0) + 1} · {posts[p.id].scheduledTime}</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{p.label}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Day {(posts[p.id].scheduledDay ?? 0) + 1} · {posts[p.id].scheduledTime}</div>
                     </div>
                   </div>
                 ))}
@@ -609,9 +610,9 @@ export function ContentPipelineView({ projectName = '' }: { projectName?: string
 
           {/* Published */}
           <div>
-            <div style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-tertiary)', marginBottom: 8 }}>Published</div>
+            <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-tertiary)', marginBottom: 8 }}>Published</div>
             {PLATFORMS.filter(p => posts[p.id].status === 'published').length === 0 ? (
-              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', padding: '8px 0' }}>Nothing published yet.</div>
+              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', padding: '8px 0' }}>Nothing published yet.</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {PLATFORMS.filter(p => posts[p.id].status === 'published').map(p => (
@@ -620,8 +621,8 @@ export function ContentPipelineView({ projectName = '' }: { projectName?: string
                       {PLATFORM_ICON_SM[p.id]}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-primary)' }}>{p.label}</div>
-                      <div style={{ fontSize: 9, color: '#22c55e', fontWeight: 600 }}>✓ Published</div>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>{p.label}</div>
+                      <div style={{ fontSize: 12, color: '#22c55e', fontWeight: 600 }}>✓ Published</div>
                     </div>
                   </div>
                 ))}

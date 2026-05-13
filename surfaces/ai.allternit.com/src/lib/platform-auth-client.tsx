@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, type ReactNode } from "react"
-import { usePathname } from "next/navigation"
+import { useLocation } from "react-router-dom"
 import {
   ClerkProvider,
   SignIn,
@@ -69,9 +69,9 @@ function useDesktopSession() {
 }
 
 function useDesktopBrowserAuthSurface() {
-  const pathname = usePathname()
+  const location = useLocation()
   return desktopAuthEnabled &&
-    DESKTOP_BROWSER_AUTH_PATH_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
+    DESKTOP_BROWSER_AUTH_PATH_PREFIXES.some((prefix) => location.pathname === prefix || location.pathname.startsWith(`${prefix}/`))
 }
 
 export function isPlatformAuthDisabled() {

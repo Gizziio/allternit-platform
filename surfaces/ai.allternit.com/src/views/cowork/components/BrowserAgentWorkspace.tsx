@@ -18,7 +18,7 @@ function TaskBadge({ tasks }: { tasks: AgentTask[] }) {
   const total = tasks.length;
 
   return (
-    <div style={{ display: "flex", gap: 8, fontSize: 11, alignItems: "center" }}>
+    <div style={{ display: "flex", gap: 8, fontSize: 12, alignItems: "center" }}>
       <span style={{ color: "#64748b" }}>{total} tasks</span>
       {running > 0 && (
         <span style={{ color: "#3b82f6", fontWeight: 600 }}>{running} running</span>

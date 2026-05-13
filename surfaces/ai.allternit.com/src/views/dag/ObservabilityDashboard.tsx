@@ -1,6 +1,6 @@
 import { ObservabilityDashboardSurface } from "./DagRuntimeWorkspace";
 
-export function ObservabilityDashboard() {
+export function ObservabilityDashboard(): JSX.Element {
   return <ObservabilityDashboardSurface />;
 }
 

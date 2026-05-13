@@ -66,7 +66,7 @@ export const DesignTeamAgentsView: React.FC = () => {
             >
               {label}
               {key !== 'all' && (
-                <span style={{ marginLeft: '6px', fontSize: '11px', fontWeight: 700, background: isActive ? `${accent}33` : 'var(--bg-secondary)', color: isActive ? accent : 'var(--text-secondary)', padding: '1px 5px', borderRadius: '4px', border: '1px solid var(--border-subtle)' }}>
+                <span style={{ marginLeft: '6px', fontSize: '12px', fontWeight: 700, background: isActive ? `${accent}33` : 'var(--bg-secondary)', color: isActive ? accent : 'var(--text-secondary)', padding: '1px 5px', borderRadius: '4px', border: '1px solid var(--border-subtle)' }}>
                   {agents.filter((a) => a.status === key).length}
                 </span>
               )}

@@ -176,7 +176,7 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
     owner_id: input.ownerId,
   };
   
-  console.log('[AgentService] Creating agent:', input.name);
+  console.debug('[AgentService] Creating agent:', input.name);
   const startTime = Date.now();
   
   try {
@@ -185,9 +185,9 @@ export async function createAgent(input: CreateAgentInput): Promise<Agent> {
 
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
-        console.log(`[AgentService] API call attempt ${attempt + 1}/${maxRetries}...`);
+        console.debug(`[AgentService] API call attempt ${attempt + 1}/${maxRetries}...`);
         const agent = await api.createAgent(apiInput as Omit<Agent, 'id'>);
-        console.log(`[AgentService] Agent created successfully in ${Date.now() - startTime}ms`);
+        console.debug(`[AgentService] Agent created successfully in ${Date.now() - startTime}ms`);
         return transformAgentFromApi(agent);
       } catch (error: any) {
         lastError = error;
@@ -720,7 +720,7 @@ export async function dequeueTask(itemId: string): Promise<void> {
   // Pick up the WIH to remove from queue
   // This requires knowing the dag_id and node_id
   // For now, this is a no-op - real implementation would track mapping
-  console.log('[AgentService] Dequeue:', itemId);
+  console.debug('[AgentService] Dequeue:', itemId);
 }
 
 // ============================================================================
@@ -1119,9 +1119,9 @@ export function getStatusColor(status: string): string {
       return 'bg-orange-500';
     case 'idle':
     case 'pending':
-      return 'bg-gray-400';
+      return 'bg-zinc-400';
     default:
-      return 'bg-gray-300';
+      return 'bg-zinc-300';
   }
 }
 

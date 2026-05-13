@@ -113,7 +113,7 @@ function formatMcpArgs(input: any): string {
   for (const [key, value] of sorted) {
     if (parts.length >= 2) break;
     const val = typeof value === "string" ? value : JSON.stringify(value);
-    const display = val.length > 30 ? val.slice(0, 27) + "..." : val;
+    const display = val.length > 30 ? val.slice(0, 27) + "…" : val;
     parts.push(`${key}: ${display}`);
   }
   return parts.join("  ");

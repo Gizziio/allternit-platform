@@ -266,7 +266,7 @@ function ReviewCard({
                 <span
                   style={{
                     marginLeft: 8,
-                    fontSize: 10,
+                    fontSize: 12,
                     padding: '2px 6px',
                     borderRadius: 4,
                     backgroundColor: THEME.accentMuted,
@@ -277,7 +277,7 @@ function ReviewCard({
                 </span>
               )}
             </div>
-            <div style={{ fontSize: 11, color: THEME.textTertiary }}>
+            <div style={{ fontSize: 12, color: THEME.textTertiary }}>
               {formatDate(review.createdAt)}
               {review.updatedAt && ' · Edited'}
             </div>
@@ -439,7 +439,7 @@ function WriteReviewModal({
         <textarea
           value={review}
           onChange={(e) => setReview(e.target.value)}
-          placeholder="Share your experience with this plugin..."
+          placeholder="Share your experience with this plugin…"
           style={{
             width: '100%',
             minHeight: 120,
@@ -458,7 +458,7 @@ function WriteReviewModal({
         <div
           style={{
             marginTop: 6,
-            fontSize: 11,
+            fontSize: 12,
             color: review.length < 3 ? THEME.danger : THEME.textTertiary,
           }}
         >
@@ -613,7 +613,7 @@ export function PluginReviews({ pluginId, pluginName }: PluginReviewsProps) {
               <div
                 style={{
                   marginTop: 4,
-                  fontSize: 11,
+                  fontSize: 12,
                   color: THEME.textTertiary,
                 }}
               >

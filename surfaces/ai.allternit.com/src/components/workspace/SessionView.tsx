@@ -67,7 +67,7 @@ export function SessionView({ workspacePath, compact = false }: SessionViewProps
   if (workspaceLoading) {
     return (
       <GlassSurface style={{ padding: "2rem", textAlign: "center" }}>
-        <div style={{ color: "#666" }}>Loading workspace...</div>
+        <div style={{ color: "#666" }}>Loading workspace…</div>
       </GlassSurface>
     )
   }
@@ -185,7 +185,7 @@ export function SessionView({ workspacePath, compact = false }: SessionViewProps
                 cursor: isActive ? "not-allowed" : "pointer",
               }}
             >
-              {isActive ? "..." : "Send"}
+              {isActive ? "…" : "Send"}
             </button>
           </form>
         </div>

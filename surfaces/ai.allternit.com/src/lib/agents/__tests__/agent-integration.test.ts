@@ -250,12 +250,12 @@ describe('Full Agent Integration', () => {
       expect(coworkTasks.length).toBe(recurringTasks.length);
       
       // Verify all components are connected
-      console.log('\n✅ E2E Integration Test Results:');
-      console.log(`   Workspace files: ${workspace!.files.length}`);
-      console.log(`   Trust tier rules: ${trustTiers['config'].tier1.length + trustTiers['config'].tier2.length + trustTiers['config'].tier3.length}`);
-      console.log(`   Startup tasks: ${startupResults.length}`);
-      console.log(`   Cron jobs: ${cronStatus.totalJobs}`);
-      console.log(`   Cowork tasks: ${coworkTasks.length}`);
+      console.debug('\n✅ E2E Integration Test Results:');
+      console.debug(`   Workspace files: ${workspace!.files.length}`);
+      console.debug(`   Trust tier rules: ${trustTiers['config'].tier1.length + trustTiers['config'].tier2.length + trustTiers['config'].tier3.length}`);
+      console.debug(`   Startup tasks: ${startupResults.length}`);
+      console.debug(`   Cron jobs: ${cronStatus.totalJobs}`);
+      console.debug(`   Cowork tasks: ${coworkTasks.length}`);
     });
   });
 });
@@ -303,13 +303,13 @@ describe('Integration Status', () => {
       status.watcher = watcherStatus.filesWatched > 0;
       watcher.stop();
       
-      console.log('\n📊 Integration Status:');
-      console.log(`   File System: ${status.fileSystem ? '✅' : '❌'}`);
-      console.log(`   Trust Tiers: ${status.trustTiers ? '✅' : '❌'}`);
-      console.log(`   HEARTBEAT: ${status.heartbeat ? '✅' : '❌'}`);
-      console.log(`   Cron Scheduler: ${status.cron ? '✅' : '❌'}`);
-      console.log(`   Cowork Integration: ${status.cowork ? '✅' : '❌'}`);
-      console.log(`   File Watcher: ${status.watcher ? '✅' : '❌'}`);
+      console.debug('\n📊 Integration Status:');
+      console.debug(`   File System: ${status.fileSystem ? '✅' : '❌'}`);
+      console.debug(`   Trust Tiers: ${status.trustTiers ? '✅' : '❌'}`);
+      console.debug(`   HEARTBEAT: ${status.heartbeat ? '✅' : '❌'}`);
+      console.debug(`   Cron Scheduler: ${status.cron ? '✅' : '❌'}`);
+      console.debug(`   Cowork Integration: ${status.cowork ? '✅' : '❌'}`);
+      console.debug(`   File Watcher: ${status.watcher ? '✅' : '❌'}`);
       
       // All should be true
       expect(status.fileSystem).toBe(true);

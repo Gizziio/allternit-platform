@@ -231,11 +231,11 @@ function SourceDocumentCard({ part }: { part: Extract<ExtendedUIPart, { type: 's
   const content = (
     <div className="rounded-2xl border border-sky-400/15 bg-sky-500/[0.06] px-4 py-3 transition-colors hover:bg-sky-500/[0.09]">
       <div className="flex items-start gap-3">
-        <span className="mt-0.5 inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full border border-sky-300/20 bg-sky-500/10">
-          <Globe className="h-4 w-4 text-sky-200" />
+        <span className="mt-0.5 inline-flex size-8  flex-shrink-0 items-center justify-center rounded-full border border-sky-300/20 bg-sky-500/10">
+          <Globe className="size-4  text-sky-200" />
         </span>
         <div className="min-w-0 flex-1">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-sky-100/70">
+          <div className="text-[12px] font-semibold uppercase tracking-[0.18em] text-sky-100/70">
             Source
           </div>
           <div className="mt-1 text-sm font-medium leading-6 text-foreground break-words">
@@ -247,7 +247,7 @@ function SourceDocumentCard({ part }: { part: Extract<ExtendedUIPart, { type: 's
             </div>
           )}
         </div>
-        {sourceUrl && <ArrowSquareOut className="mt-1 h-4 w-4 flex-shrink-0 text-sky-200/70" />}
+        {sourceUrl && <ArrowSquareOut className="mt-1 size-4  flex-shrink-0 text-sky-200/70" />}
       </div>
     </div>
   );
@@ -276,17 +276,17 @@ function BrowserPreviewCard({ part }: { part: Extract<ExtendedUIPart, { type: 'w
   return (
     <div className="overflow-hidden rounded-[22px] border border-[#D4B08C]/20 bg-[#17110A]/45">
       <div className="flex items-center gap-2 border-b border-white/6 bg-black/20 px-4 py-2.5">
-        <span className="h-2.5 w-2.5 rounded-full bg-[#FB7185]/70" />
-        <span className="h-2.5 w-2.5 rounded-full bg-[#FBBF24]/70" />
-        <span className="h-2.5 w-2.5 rounded-full bg-[#34D399]/70" />
-        <span className="ml-2 min-w-0 flex-1 break-all text-[11px] text-white/52">
+        <span className="size-2.5  rounded-full bg-[#FB7185]/70" />
+        <span className="size-2.5  rounded-full bg-[#FBBF24]/70" />
+        <span className="size-2.5  rounded-full bg-[#34D399]/70" />
+        <span className="ml-2 min-w-0 flex-1 break-all text-[12px] text-white/52">
           {part.url}
         </span>
       </div>
       <div className="px-4 py-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#D4B08C]/78">
+            <div className="text-[12px] font-semibold uppercase tracking-[0.18em] text-[#D4B08C]/78">
               Web Preview
             </div>
             <div className="mt-1 text-sm font-medium leading-6 text-white/88 break-words">
@@ -301,7 +301,7 @@ function BrowserPreviewCard({ part }: { part: Extract<ExtendedUIPart, { type: 'w
             onClick={() => openUrlInBrowserPanel(part.url, part.title ?? host ?? part.url)}
             className="inline-flex items-center gap-2 rounded-full border border-[#D4B08C]/24 bg-[#D4B08C]/10 px-3.5 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#F7D9BA] transition-colors hover:bg-[#D4B08C]/16"
           >
-            <ArrowSquareOut className="h-3.5 w-3.5" />
+            <ArrowSquareOut className="size-3.5 " />
             Open Browser Panel
           </button>
         </div>
@@ -329,7 +329,7 @@ function SourcesFooter({ sources }: { sources: Array<Extract<ExtendedUIPart, { t
       borderTop: '1px solid var(--ui-border-muted)',
     }}>
       <div style={{
-        fontSize: '10px',
+        fontSize: '12px',
         fontWeight: 700,
         letterSpacing: '0.08em',
         textTransform: 'uppercase',
@@ -346,7 +346,7 @@ function SourcesFooter({ sources }: { sources: Array<Extract<ExtendedUIPart, { t
           return (
             <div key={src.sourceId ?? i} style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
               <span style={{
-                fontSize: '10px',
+                fontSize: '12px',
                 fontWeight: 700,
                 color: 'rgba(255,255,255,0.2)',
                 flexShrink: 0,
@@ -413,7 +413,7 @@ function ToolInputDisplay({ input }: { input: unknown }) {
               fontFamily: "var(--font-mono)",
               color: "rgba(212,176,140,0.55)",
               fontWeight: 600,
-              fontSize: "11px",
+              fontSize: '12px',
             }}>
               {k}
             </span>
@@ -462,7 +462,7 @@ function renderToolResult(result: unknown): React.ReactNode {
     );
   }
 
-  // Array of content blocks (Anthropic tool result format: [{type:"text", text:"..."}])
+  // Array of content blocks (Anthropic tool result format: [{type:"text", text:"…"}])
   if (Array.isArray(result)) {
     const textParts = (result as any[])
       .filter((item: any) => item?.type === 'text' && typeof item.text === 'string')
@@ -481,9 +481,9 @@ function renderToolResult(result: unknown): React.ReactNode {
     // Generic array — show count + preview
     return (
       <div className="space-y-1 max-h-40 overflow-y-auto">
-        <div className="text-muted-foreground text-[10px] mb-1">{result.length} items</div>
+        <div className="text-muted-foreground text-xs mb-1">{result.length} items</div>
         {(result as any[]).slice(0, 4).map((item: any, i: number) => (
-          <div key={i} className="rounded-xl bg-background/30 p-2 text-[11px] leading-5">
+          <div key={i} className="rounded-xl bg-background/30 p-2 text-[12px] leading-5">
             {typeof item === 'object' ? (
               <>
                 {item.title && <div className="font-medium break-words">{item.title}</div>}
@@ -499,7 +499,7 @@ function renderToolResult(result: unknown): React.ReactNode {
           </div>
         ))}
         {result.length > 4 && (
-          <div className="text-muted-foreground text-[10px]">+{result.length - 4} more</div>
+          <div className="text-muted-foreground text-xs">+{result.length - 4} more</div>
         )}
       </div>
     );
@@ -516,19 +516,19 @@ function renderToolResult(result: unknown): React.ReactNode {
         <div className="space-y-1.5 max-h-40 overflow-y-auto">
           {results.slice(0, 4).map((r: any, i: number) => (
             <div key={i} className="rounded-xl bg-background/30 p-2">
-              {r.title && <div className="text-[11px] font-medium leading-5 break-words">{r.title}</div>}
+              {r.title && <div className="text-[12px] font-medium leading-5 break-words">{r.title}</div>}
               {r.url && (
-                <div className="mt-0.5 break-all text-[10px] text-muted-foreground">{r.url}</div>
+                <div className="mt-0.5 break-all text-xs text-muted-foreground">{r.url}</div>
               )}
               {(r.snippet || r.content || r.description) && (
-                <div className="mt-1 break-words text-[10px] text-muted-foreground line-clamp-3">
+                <div className="mt-1 break-words text-xs text-muted-foreground line-clamp-3">
                   {r.snippet || r.content || r.description}
                 </div>
               )}
             </div>
           ))}
           {results.length > 4 && (
-            <div className="text-muted-foreground text-[10px]">+{results.length - 4} more results</div>
+            <div className="text-muted-foreground text-xs">+{results.length - 4} more results</div>
           )}
         </div>
       );
@@ -555,7 +555,7 @@ function renderToolResult(result: unknown): React.ReactNode {
             </div>
           )}
           {data && data !== obj && (
-            <div className="max-h-32 overflow-y-auto whitespace-pre-wrap break-words font-mono text-[10px]">
+            <div className="max-h-32 overflow-y-auto whitespace-pre-wrap break-words font-mono text-xs">
               {typeof data === 'string' ? data : JSON.stringify(data, null, 2).slice(0, 400)}
             </div>
           )}
@@ -567,7 +567,7 @@ function renderToolResult(result: unknown): React.ReactNode {
     const keys = Object.keys(obj);
     if (keys.length <= 6) {
       return (
-        <div className="space-y-0.5 text-[10px]">
+        <div className="space-y-0.5 text-xs">
           {keys.map(k => (
             <div key={k} className="flex gap-2">
               <span className="text-muted-foreground font-mono flex-shrink-0">{k}:</span>
@@ -585,7 +585,7 @@ function renderToolResult(result: unknown): React.ReactNode {
     // Large object — compact JSON
     const json = JSON.stringify(obj, null, 2);
     return (
-      <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap break-words text-[10px] font-mono leading-relaxed">
+      <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap break-words text-xs font-mono leading-relaxed">
         {json.length > 600 ? json.slice(0, 600) + '\n…' : json}
       </pre>
     );
@@ -868,7 +868,7 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
           </div>
           {part.stackTrace && (
             <pre style={{
-              fontSize: '11px',
+              fontSize: '12px',
               color: 'rgba(255,255,255,0.3)',
               background: 'var(--surface-panel)',
               padding: '8px 10px',
@@ -1181,7 +1181,7 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
           border: `1px solid ${part.operation === 'create' ? 'rgba(74,222,128,0.25)' : part.operation === 'delete' ? 'rgba(248,113,113,0.25)' : 'rgba(97,175,239,0.25)'}`,
           background: part.operation === 'create' ? 'rgba(74,222,128,0.06)' : part.operation === 'delete' ? 'rgba(248,113,113,0.06)' : 'rgba(97,175,239,0.06)',
         }}>
-          <span style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: part.operation === 'create' ? 'rgba(74,222,128,0.8)' : part.operation === 'delete' ? 'rgba(248,113,113,0.8)' : 'rgba(97,175,239,0.8)' }}>
+          <span style={{ fontSize: '12px', fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: part.operation === 'create' ? 'rgba(74,222,128,0.8)' : part.operation === 'delete' ? 'rgba(248,113,113,0.8)' : 'rgba(97,175,239,0.8)' }}>
             {part.operation}
           </span>
           <span style={{ fontSize: "12px", fontFamily: 'var(--font-mono)', color: "rgba(236,236,236,0.55)" }}>
@@ -1352,7 +1352,7 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-xs font-semibold uppercase tracking-wider text-sky-400/60">Context</span>
             {part.tokens && (
-              <span className="text-[11px] text-muted-foreground tabular-nums">
+              <span className="text-[12px] text-muted-foreground tabular-nums">
                 {(part.tokens.input ?? 0) + (part.tokens.output ?? 0)} tokens
               </span>
             )}
@@ -1385,7 +1385,7 @@ function PartRenderer({ part, isLast, isStreaming, onSelectArtifact, selectedArt
           className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-sm text-primary hover:bg-primary/15 transition-colors"
           onClick={() => window.open(part.openInId, '_blank')}
         >
-          <ArrowSquareOut className="h-3.5 w-3.5" />
+          <ArrowSquareOut className="size-3.5 " />
           {part.text}
         </button>
       );
@@ -1592,7 +1592,7 @@ function FileChangeCard({
         {dir && (
           <div
             style={{
-              fontSize: "10px",
+              fontSize: '12px',
               color: "rgba(255,255,255,0.28)",
               marginTop: "1px",
               overflow: "hidden",

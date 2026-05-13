@@ -185,7 +185,7 @@ export function AgentSelectorWizard({
           </div>
 
           {/* Progress Bar */}
-          <div className="relative h-1 bg-gray-800 rounded-full overflow-hidden">
+          <div className="relative h-1 bg-zinc-800 rounded-full overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
@@ -298,7 +298,7 @@ function CategoryStep({ selectedCategory, onSelect, theme }: CategoryStepProps) 
           }}
         >
           <div
-            className="w-12 h-12 rounded-lg flex items-center justify-center mb-3"
+            className="size-12  rounded-lg flex items-center justify-center mb-3"
             style={{ background: `rgba(${hexToRgb(theme.accent)}, 0.15)` }}
           >
             <span style={{ color: theme.accent }}>{cat.icon}</span>

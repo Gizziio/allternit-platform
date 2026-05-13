@@ -98,7 +98,7 @@ export function MessageA2UI({ part, messageId, onAction }: MessageA2UIProps) {
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-primary" />
+              <div className="size-2  rounded-full bg-primary" />
               <span className="text-sm text-muted-foreground">
                 {part.title || "Interactive App"} (collapsed)
               </span>
@@ -108,7 +108,7 @@ export function MessageA2UI({ part, messageId, onAction }: MessageA2UIProps) {
               size="sm"
               onClick={() => setIsExpanded(true)}
             >
-              <ArrowsOut className="w-4 h-4 mr-1" />
+              <ArrowsOut className="size-4  mr-1" />
               Expand
             </Button>
           </div>
@@ -122,7 +122,7 @@ export function MessageA2UI({ part, messageId, onAction }: MessageA2UIProps) {
       <CardHeader className="py-3 px-4 border-b bg-muted/30">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+            <div className="size-2  rounded-full bg-primary animate-pulse" />
             {part.title || "Interactive App"}
             {part.source && (
               <span className="text-xs text-muted-foreground font-normal">

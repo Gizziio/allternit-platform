@@ -82,7 +82,7 @@ export function BrainView({ api }: BrainViewProps) {
     return (
       <div className="brain-view brain-view--loading">
         <div className="spinner" />
-        <p>Loading task graph...</p>
+        <p>Loading task graph…</p>
       </div>
     );
   }

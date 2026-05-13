@@ -116,7 +116,7 @@ export function AllternitDriveSidebar({
       {/* Header */}
       <div className="h-12 border-b border-[var(--border-subtle)] flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
-          <FolderOpen className="w-4 h-4 text-[var(--accent-primary)]" />
+          <FolderOpen className="size-4  text-[var(--accent-primary)]" />
           <span className="text-sm font-medium text-[var(--text-primary)]">
             Allternit-Drive
           </span>
@@ -130,7 +130,7 @@ export function AllternitDriveSidebar({
             size="sm"
             onClick={() => setViewMode('grid')}
             className={cn(
-              "h-7 w-7 p-0",
+              "size-7  p-0",
               viewMode === 'grid' && "text-[var(--accent-primary)]"
             )}
           >
@@ -141,7 +141,7 @@ export function AllternitDriveSidebar({
             size="sm"
             onClick={() => setViewMode('list')}
             className={cn(
-              "h-7 w-7 p-0",
+              "size-7  p-0",
               viewMode === 'list' && "text-[var(--accent-primary)]"
             )}
           >
@@ -152,7 +152,7 @@ export function AllternitDriveSidebar({
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="h-7 w-7 p-0 text-[var(--text-tertiary)]"
+              className="size-7  p-0 text-[var(--text-tertiary)]"
             >
               <Trash size={12} />
             </Button>
@@ -163,9 +163,9 @@ export function AllternitDriveSidebar({
       {/* Search & Filter */}
       <div className="p-3 border-b border-[var(--border-subtle)] space-y-2">
         <div className="relative">
-          <MagnifyingGlass className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-[var(--text-tertiary)]" />
+          <MagnifyingGlass className="absolute left-2 top-1/2 -tranzinc-y-1/2 size-3  text-[var(--text-tertiary)]" />
           <Input
-            placeholder="Search assets..."
+            placeholder="Search assets…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="h-8 pl-7 text-xs bg-[var(--bg-primary)] border-[var(--border-subtle)]"
@@ -200,7 +200,7 @@ export function AllternitDriveSidebar({
       <div className="flex-1 overflow-auto p-3">
         {filteredAssets.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-[var(--text-tertiary)] text-xs text-center">
-            <FolderOpen className="w-8 h-8 mb-2 opacity-50" />
+            <FolderOpen className="size-8  mb-2 opacity-50" />
             <p>No assets yet</p>
             <p className="mt-1">Generated images, documents, and code will appear here</p>
           </div>
@@ -226,7 +226,7 @@ export function AllternitDriveSidebar({
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <TypeIcon className="w-8 h-8 text-[var(--text-tertiary)] opacity-50" />
+                      <TypeIcon className="size-8  text-[var(--text-tertiary)] opacity-50" />
                     </div>
                   )}
                   
@@ -235,21 +235,21 @@ export function AllternitDriveSidebar({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 w-8 p-0 text-white"
+                      className="size-8  p-0 text-white"
                     >
                       <Eye size={16} />
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 w-8 p-0 text-white"
+                      className="size-8  p-0 text-white"
                     >
                       <PencilSimple size={16} />
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 w-8 p-0 text-white"
+                      className="size-8  p-0 text-white"
                     >
                       <DownloadSimple size={16} />
                     </Button>
@@ -277,7 +277,7 @@ export function AllternitDriveSidebar({
                   onClick={() => onSelectArtifact(asset.id)}
                 >
                   {/* Icon */}
-                  <div className="w-10 h-10 rounded bg-[var(--bg-secondary)] flex items-center justify-center flex-shrink-0">
+                  <div className="size-10  rounded bg-[var(--bg-secondary)] flex items-center justify-center flex-shrink-0">
                     {asset.type === 'image' && asset.thumbnailUrl ? (
                       <img
                         src={asset.thumbnailUrl}
@@ -285,7 +285,7 @@ export function AllternitDriveSidebar({
                         className="w-full h-full object-cover rounded"
                       />
                     ) : (
-                      <TypeIcon className="w-5 h-5 text-[var(--text-tertiary)]" />
+                      <TypeIcon className="size-5  text-[var(--text-tertiary)]" />
                     )}
                   </div>
 
@@ -309,21 +309,21 @@ export function AllternitDriveSidebar({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 w-7 p-0 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+                      className="size-7  p-0 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
                     >
                       <Eye size={12} />
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 w-7 p-0 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+                      className="size-7  p-0 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
                     >
                       <DownloadSimple size={12} />
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-7 w-7 p-0 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
+                      className="size-7  p-0 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
                     >
                       <DotsThreeVertical size={12} />
                     </Button>

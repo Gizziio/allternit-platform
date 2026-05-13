@@ -30,7 +30,7 @@ At the end of every turn that produces a deliverable, emit a single artifact blo
 \`\`\`
 <artifact identifier="kebab-slug" type="text/html" title="Human title">
 <!doctype html>
-<html>...complete standalone document...</html>
+<html>…complete standalone document…</html>
 </artifact>
 \`\`\`
 

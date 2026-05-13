@@ -46,7 +46,7 @@ export function ChatRail() {
     createThread,
   } = useChatStore();
 
-  const sessions = useChatSessionStore((s) => s.sessions);
+  const sessions = useChatSessionStore((s) => s.sessions ?? []);
   const activeSessionId = useChatSessionStore((s) => s.activeSessionId);
   const setActiveSession = useChatSessionStore((s) => s.setActiveSession);
   const updateSession = useChatSessionStore((s) => s.updateSession);
@@ -243,7 +243,7 @@ export function ChatRail() {
         >
           <div
             style={{
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 700,
               textTransform: 'uppercase',
               color: 'var(--accent-primary)',
@@ -273,7 +273,7 @@ export function ChatRail() {
                 )}
                 <span
                   style={{
-                    fontSize: 11,
+                    fontSize: 12,
                     color: 'var(--text-secondary)',
                     flex: 1,
                     overflow: 'hidden',
@@ -283,7 +283,7 @@ export function ChatRail() {
                 >
                   {file.name}
                 </span>
-                <span style={{ fontSize: 9, color: 'var(--text-tertiary)' }}>
+                <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
                   {formatFileSize(file.size)}
                 </span>
               </div>
@@ -431,10 +431,10 @@ export function ChatRail() {
           itemType="session"
           onConfirm={async () => {
             const sessionId = sessionToDelete;
-            console.log('[ChatRail] Deleting session:', sessionId);
+            console.debug('[ChatRail] Deleting session:', sessionId);
             try {
               await deleteSession(sessionId);
-              console.log('[ChatRail] Session deleted successfully:', sessionId);
+              console.debug('[ChatRail] Session deleted successfully:', sessionId);
             } catch (err) {
               console.error('[ChatRail] Failed to delete session:', sessionId, err);
             }
@@ -455,7 +455,7 @@ function TimeGroupLabel({ label }: { label: string }) {
   return (
     <div
       style={{
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: 700,
         textTransform: 'uppercase',
         letterSpacing: '0.05em',
@@ -494,7 +494,7 @@ function SectionHeader({ title, count, onAdd }: SectionHeaderProps) {
     >
       <span
         style={{
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: 800,
           textTransform: 'uppercase',
           letterSpacing: '0.05em',
@@ -506,7 +506,7 @@ function SectionHeader({ title, count, onAdd }: SectionHeaderProps) {
           <span
             style={{
               marginLeft: tokens.space.xs,
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 700,
               color: 'var(--text-tertiary)',
               opacity: 0.7,
@@ -720,7 +720,7 @@ function ChatRailItem({
               height: 16,
               padding: '0 4px',
               borderRadius: 8,
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 700,
               background: isActive ? 'var(--accent-chat)' : 'var(--bg-tertiary)',
               color: isActive ? 'var(--bg-primary)' : 'var(--text-tertiary)',

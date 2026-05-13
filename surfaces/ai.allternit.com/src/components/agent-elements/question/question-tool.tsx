@@ -68,17 +68,12 @@ export function QuestionTool({ part }: QuestionToolProps) {
     setLocalIndex(part.input?.questionIndex ?? 1);
   }, [part.toolCallId]);
 
-  if (!question) return null;
-
-  const outputAnswer = part.output?.answer;
   const answeredCount = Object.keys(localAnswers).length;
   const isComplete =
     totalQuestions === 1
-      ? !!outputAnswer || answeredCount >= 1
+      ? !!part.output?.answer || answeredCount >= 1
       : totalQuestions > 0 && answeredCount >= totalQuestions;
-  const showNavigation = totalQuestions > 1 && !isComplete;
-  const canGoPrev = clampedIndex > 1;
-  const canGoNext = clampedIndex < totalQuestions;
+
   const summaryAnswers = useMemo(() => {
     if (!isComplete || totalQuestions <= 1) return [];
     return Array.from({ length: totalQuestions }, (_, idx) => ({
@@ -86,6 +81,7 @@ export function QuestionTool({ part }: QuestionToolProps) {
       answer: localAnswers[idx + 1],
     }));
   }, [isComplete, localAnswers, totalQuestions]);
+
   const summaryText = useMemo(() => {
     if (!isComplete) return "";
     if (summaryAnswers.length > 0) {
@@ -96,11 +92,16 @@ export function QuestionTool({ part }: QuestionToolProps) {
         )
         .join(" • ");
     }
+    const outputAnswer = part.output?.answer;
     if (outputAnswer) return formatAnswer(outputAnswer);
     if (localAnswers[clampedIndex])
       return formatAnswer(localAnswers[clampedIndex]);
     return "Pending";
-  }, [isComplete, summaryAnswers, outputAnswer, localAnswers, clampedIndex]);
+  }, [isComplete, summaryAnswers, part.output?.answer, localAnswers, clampedIndex]);
+
+  if (!question) return null;
+
+  const showNavigation = totalQuestions > 1 && !isComplete;
 
   const goPrev = () => {
     if (!canGoPrev) return;
@@ -122,7 +123,7 @@ export function QuestionTool({ part }: QuestionToolProps) {
     <div className="rounded-an-tool-border-radius border border-border bg-an-tool-background overflow-hidden">
       <div className="h-7 border-b border-border px-3 flex items-center justify-between text-xs text-an-tool-color-muted">
         <div className="inline-flex items-center gap-1.5">
-          <IconMessageCircleQuestion className="w-3.5 h-3.5" />
+          <IconMessageCircleQuestion className="size-3.5 " />
           Question
         </div>
         {showNavigation && (
@@ -134,7 +135,7 @@ export function QuestionTool({ part }: QuestionToolProps) {
               className="size-5 inline-flex items-center justify-center rounded-[4px] hover:bg-an-background-secondary disabled:opacity-40"
               aria-label="Previous question"
             >
-              <IconChevronUp className="w-3.5 h-3.5" />
+              <IconChevronUp className="size-3.5 " />
             </button>
             <span>
               {clampedIndex} of {totalQuestions}
@@ -146,7 +147,7 @@ export function QuestionTool({ part }: QuestionToolProps) {
               className="size-5 inline-flex items-center justify-center rounded-[4px] hover:bg-an-background-secondary disabled:opacity-40"
               aria-label="Next question"
             >
-              <IconChevronDown className="w-3.5 h-3.5" />
+              <IconChevronDown className="size-3.5 " />
             </button>
           </div>
         )}

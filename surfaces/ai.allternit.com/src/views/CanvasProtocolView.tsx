@@ -220,7 +220,7 @@ function ActiveCanvasPanel({ canvas }: { canvas: ActiveCanvas }) {
         </div>
         <div className="flex items-center gap-1.5">
           <div
-            className="w-2 h-2 rounded-full"
+            className="size-2  rounded-full"
             style={{ background: stateColors[canvas.state] || stateColors.idle }}
           />
           <span className="text-xs font-medium text-[var(--text-secondary)] capitalize">
@@ -242,7 +242,7 @@ function ActiveCanvasPanel({ canvas }: { canvas: ActiveCanvas }) {
         </div>
         <div className="text-right">
           <button className="text-[var(--accent-primary)] hover:underline">
-            <Eye className="w-3 h-3 inline mr-1" />
+            <Eye className="size-3  inline mr-1" />
             View
           </button>
         </div>
@@ -260,7 +260,7 @@ export function CanvasProtocolView() {
       <div className="p-6 border-b border-[var(--border-subtle)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <SquaresFour className="w-7 h-7 text-[var(--accent-primary)]" />
+            <SquaresFour className="size-7  text-[var(--accent-primary)]" />
             <div>
               <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
                 Canvas Protocol
@@ -282,7 +282,7 @@ export function CanvasProtocolView() {
       {/* Active canvases section */}
       <div className="px-6 py-4 border-b border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
         <h2 className="text-sm font-semibold text-[var(--text-secondary)] mb-3 flex items-center gap-2">
-          <CheckCircle className="w-4 h-4 text-green-500" />
+          <CheckCircle className="size-4  text-green-500" />
           Currently Mounted
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">

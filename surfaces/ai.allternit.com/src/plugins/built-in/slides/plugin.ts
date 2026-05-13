@@ -97,7 +97,7 @@ class SlidesPlugin implements ModePlugin {
     
     this.isInitialized = true;
     this.emit({ type: 'initialized', timestamp: Date.now() });
-    console.log('[SlidesPlugin] Initialized');
+    console.debug('[SlidesPlugin] Initialized');
   }
 
   async destroy(): Promise<void> {

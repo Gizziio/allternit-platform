@@ -114,7 +114,7 @@ export const useBrowserSurfaceStore = create<BrowserSurfaceStore>()(
 
         // If tab was suspended, we need to restore it
         if (currentState?.state === 'suspended') {
-          console.log(`[BrowserSurface] Restoring suspended tab: ${tabId}`);
+          console.debug(`[BrowserSurface] Restoring suspended tab: ${tabId}`);
         }
 
         set((s) => {

@@ -112,7 +112,7 @@ class FlowPlugin implements ModePlugin {
     
     this.isInitialized = true;
     this.emit({ type: 'initialized', timestamp: Date.now() });
-    console.log('[FlowPlugin] Initialized');
+    console.debug('[FlowPlugin] Initialized');
   }
 
   async destroy(): Promise<void> {

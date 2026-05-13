@@ -53,6 +53,11 @@ const backendAPI = {
       return () => ipcRenderer.removeListener('sidecar:status-changed', listener);
     },
   },
+  onDownloadProgress: (handler: (progress: { stage: string; percent: number }) => void): (() => void) => {
+    const listener = (_: IpcRendererEvent, p: { stage: string; percent: number }) => handler(p);
+    ipcRenderer.on('backend:download-progress', listener);
+    return () => ipcRenderer.removeListener('backend:download-progress', listener);
+  },
 };
 
 // ─── VM Setup (onboarding wizard) ─────────────────────────────────────────────

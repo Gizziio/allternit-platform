@@ -21,7 +21,7 @@ export const designInspirationTool = {
     required: ['category']
   },
   execute: async ({ category, query }: { category: string, query?: string }) => {
-    console.log(`[DesignInspiration] Researching ${category}: ${query || 'General'}...`);
+    console.debug(`[DesignInspiration] Researching ${category}: ${query || 'General'}...`);
 
     const directories: Record<string, string[]> = {
       layout: ['https://curations.supply', 'https://landing.love', 'https://saaspo.com'],

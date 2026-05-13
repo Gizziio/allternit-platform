@@ -57,7 +57,7 @@ export function DAGCanvas({ nodes, edges, onNodeClick }: DAGCanvasProps) {
               zIndex: 1
             }}
           >
-            <div style={{ fontSize: 11, fontWeight: 800, opacity: 0.5, marginBottom: 4 }}>{node.id}</div>
+            <div style={{ fontSize: 12, fontWeight: 800, opacity: 0.5, marginBottom: 4 }}>{node.id}</div>
             <div style={{ fontSize: 13, fontWeight: 600 }}>{node.title}</div>
           </div>
         ))}

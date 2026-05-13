@@ -73,7 +73,7 @@ export function BootSequence({ onComplete }: BootSequenceProps) {
         sceneStartTimeRef.current = performance.now();
       } else {
         // Final scene complete - call onComplete via ref
-        console.log('[BootSequence] Boot complete, calling onComplete');
+        console.debug('[BootSequence] Boot complete, calling onComplete');
         onCompleteRef.current?.();
       }
     }, currentScene.duration);
@@ -105,7 +105,7 @@ export function BootSequence({ onComplete }: BootSequenceProps) {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.scale(dpr, dpr);
     
-    console.log('Canvas initialized:', { width: canvas.width, height: canvas.height, dpr });
+    console.debug('Canvas initialized:', { width: canvas.width, height: canvas.height, dpr });
 
     const scene = SCENES[currentSceneIndex];
     const particles: Particle[] = [];
@@ -228,7 +228,7 @@ export function BootSequence({ onComplete }: BootSequenceProps) {
         transition={{ delay: 1, duration: 0.5 }}
         style={versionBadgeStyle}
       >
-        <span style={{ color: `${SAND[500]}66`, fontSize: '11px', letterSpacing: '0.1em' }}>
+        <span style={{ color: `${SAND[500]}66`, fontSize: '12px', letterSpacing: '0.1em' }}>
           Allternit PLATFORM v1.0.0
         </span>
       </motion.div>
@@ -867,7 +867,7 @@ function ProgressIndicator({ phase, sceneIndex, totalScenes }: { phase: Phase; s
           transition={{ duration: 0.8 }}
         />
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 4px', fontSize: '10px', letterSpacing: '0.15em' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 4px', fontSize: '12px', letterSpacing: '0.15em' }}>
         <span style={{ color: phase === 'matrix' ? SAND[500] : `${SAND[500]}80` }}>INIT</span>
         <span style={{ color: phase === 'gizzi' && sceneIndex < totalScenes - 1 ? SAND[500] : `${SAND[500]}80` }}>LOAD</span>
         <span style={{ color: sceneIndex >= totalScenes - 1 ? SAND[500] : `${SAND[500]}33` }}>READY</span>

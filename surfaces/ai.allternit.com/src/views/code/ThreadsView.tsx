@@ -177,7 +177,7 @@ export const ThreadsView: React.FC = () => {
                         {thread.unreadCount > 0 && (
                           <span
                             style={{
-                              fontSize: '10px',
+                              fontSize: '12px',
                               fontWeight: '700',
                               padding: '2px 6px',
                               backgroundColor: 'var(--accent-primary)',
@@ -193,7 +193,7 @@ export const ThreadsView: React.FC = () => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
                         <span
                           style={{
-                            fontSize: '11px',
+                            fontSize: '12px',
                             fontWeight: '600',
                             padding: '2px 6px',
                             backgroundColor: 'rgba(52, 199, 89, 0.15)',
@@ -224,7 +224,7 @@ export const ThreadsView: React.FC = () => {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
-                          fontSize: '11px',
+                          fontSize: '12px',
                           color: 'var(--text-tertiary)',
                         }}
                       >
@@ -267,7 +267,7 @@ export const ThreadsView: React.FC = () => {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 color: 'white',
-                                fontSize: '10px',
+                                fontSize: '12px',
                                 fontWeight: '700',
                                 flexShrink: 0,
                               }}
@@ -286,7 +286,7 @@ export const ThreadsView: React.FC = () => {
                                 <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-primary)' }}>
                                   {msg.author}
                                 </span>
-                                <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                                <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
                                   {msg.timestamp}
                                 </span>
                               </div>

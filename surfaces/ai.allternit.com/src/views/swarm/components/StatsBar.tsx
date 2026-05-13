@@ -65,7 +65,7 @@ export function StatsBar({ metrics, modeColors, isRefreshing, onRefresh }: Stats
           {stats.map(({ label, value, color, Icon }) => (
             <div key={label} className="flex items-center gap-3">
               <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                className="size-10  rounded-xl flex items-center justify-center"
                 style={{ background: `${color}20` }}
               >
                 <Icon size={14} color={color} weight="duotone" />
@@ -75,7 +75,7 @@ export function StatsBar({ metrics, modeColors, isRefreshing, onRefresh }: Stats
                   {value}
                 </div>
                 <div
-                  className="text-[10px] uppercase tracking-wider"
+                  className="text-xs uppercase tracking-wider"
                   style={{ color: TEXT.tertiary }}
                 >
                   {label}
@@ -91,7 +91,7 @@ export function StatsBar({ metrics, modeColors, isRefreshing, onRefresh }: Stats
             <div className="text-lg font-bold font-mono" style={{ color: TEXT.primary }}>
               ${metrics.totalCost.toFixed(2)}
             </div>
-            <div className="text-[10px] uppercase tracking-wider" style={{ color: TEXT.tertiary }}>
+            <div className="text-xs uppercase tracking-wider" style={{ color: TEXT.tertiary }}>
               Total Cost
             </div>
           </div>
@@ -101,7 +101,7 @@ export function StatsBar({ metrics, modeColors, isRefreshing, onRefresh }: Stats
             <div className="text-lg font-bold font-mono" style={{ color: TEXT.primary }}>
               {(metrics.totalTokens / 1000).toFixed(1)}k
             </div>
-            <div className="text-[10px] uppercase tracking-wider" style={{ color: TEXT.tertiary }}>
+            <div className="text-xs uppercase tracking-wider" style={{ color: TEXT.tertiary }}>
               Total Tokens
             </div>
           </div>
@@ -110,7 +110,7 @@ export function StatsBar({ metrics, modeColors, isRefreshing, onRefresh }: Stats
           <button
             onClick={onRefresh}
             disabled={isRefreshing}
-            className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors"
+            className="size-10  rounded-xl flex items-center justify-center transition-colors"
             style={{
               background: BACKGROUND.secondary,
               border: `1px solid ${BORDER.subtle}`,

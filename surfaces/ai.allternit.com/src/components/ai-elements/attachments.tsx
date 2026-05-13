@@ -242,23 +242,7 @@ export const AttachmentPreview = ({
   const { data, mediaCategory, variant } = useAttachmentContext();
 
   const iconSize = variant === "inline" ? "size-3" : "size-4";
-
-  const renderIcon = (Icon: typeof ImageIcon) => (
-    <Icon className={cn(iconSize, "text-muted-foreground")} />
-  );
-
-  const renderContent = () => {
-    if (mediaCategory === "image" && data.type === "file" && data.url) {
-      return renderAttachmentImage(data.url, data.filename, variant === "grid");
-    }
-
-    if (mediaCategory === "video" && data.type === "file" && data.url) {
-      return <video className="size-full object-cover" muted src={data.url} />;
-    }
-
-    const Icon = mediaCategoryIcons[mediaCategory];
-    return fallbackIcon ?? renderIcon(Icon);
-  };
+  const Icon = mediaCategoryIcons[mediaCategory];
 
   return (
     <div
@@ -271,7 +255,13 @@ export const AttachmentPreview = ({
       )}
       {...props}
     >
-      {renderContent()}
+      {mediaCategory === "image" && data.type === "file" && data.url ? (
+        renderAttachmentImage(data.url, data.filename, variant === "grid")
+      ) : mediaCategory === "video" && data.type === "file" && data.url ? (
+        <video className="size-full object-cover" muted src={data.url} />
+      ) : (
+        fallbackIcon ?? <Icon className={cn(iconSize, "text-muted-foreground")} />
+      )}
     </div>
   );
 };

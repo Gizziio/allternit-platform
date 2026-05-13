@@ -225,7 +225,7 @@ export function WorkspaceLayerConfigurator({
                   {layer.recommended && (
                     <span
                       style={{
-                        fontSize: '10px',
+                        fontSize: '12px',
                         padding: '2px 6px',
                         background: `${theme.accent}20`,
                         color: theme.accent,
@@ -252,7 +252,7 @@ export function WorkspaceLayerConfigurator({
                     <span
                       key={file}
                       style={{
-                        fontSize: '11px',
+                        fontSize: '12px',
                         padding: '2px 6px',
                         background: `${theme.textMuted}15`,
                         color: theme.textMuted,

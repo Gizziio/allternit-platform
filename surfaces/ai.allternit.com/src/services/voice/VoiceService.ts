@@ -40,7 +40,7 @@ const resolveVoiceServiceUrl = (): string => {
 };
 
 const VOICE_SERVICE_URL = resolveVoiceServiceUrl();
-console.log('[VoiceService] Using URL:', VOICE_SERVICE_URL);
+console.debug('[VoiceService] Using URL:', VOICE_SERVICE_URL);
 
 // Types
 export interface TTSRequest {
@@ -130,7 +130,7 @@ class VoiceService {
 
     // Skip initialization if voice service is disabled
     if (!isVoiceServiceEnabled()) {
-      console.log('[VoiceService] Disabled via VITE_ENABLE_VOICE_SERVICE=false');
+      console.debug('[VoiceService] Disabled via VITE_ENABLE_VOICE_SERVICE=false');
       this.isServiceAvailable = false;
       return;
     }

@@ -15,7 +15,7 @@
  *     if (!ws) return;
  *     
  *     return ws.on('task_update', (payload) => {
- *       console.log('Task updated:', payload);
+ *       console.debug('Task updated:', payload);
  *     });
  *   }, [ws]);
  *   

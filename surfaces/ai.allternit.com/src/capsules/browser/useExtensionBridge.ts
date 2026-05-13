@@ -34,11 +34,11 @@ export function useExtensionBridge() {
       }
 
       isSetup.current = true;
-      console.log('[ExtensionBridge] Setting up extension message handlers');
+      console.debug('[ExtensionBridge] Setting up extension message handlers');
 
       // Listen for extension messages
       const removeMessageListener = extension.onMessage(({ connectionId, message }) => {
-        console.log('[ExtensionBridge] Received message:', message.type, 'from', connectionId);
+        console.debug('[ExtensionBridge] Received message:', message.type, 'from', connectionId);
 
         try {
           switch (message.type) {
@@ -86,7 +86,7 @@ export function useExtensionBridge() {
               break;
 
             default:
-              console.log('[ExtensionBridge] Unknown message type:', message.type);
+              console.debug('[ExtensionBridge] Unknown message type:', message.type);
           }
         } catch (err) {
           console.error('[ExtensionBridge] Error handling message:', err);
@@ -95,7 +95,7 @@ export function useExtensionBridge() {
 
       // Listen for extension connection status
       const removeStatusListener = extension.onStatusChange(({ connected, connectionId }) => {
-        console.log('[ExtensionBridge] Extension', connected ? 'connected' : 'disconnected', connectionId);
+        console.debug('[ExtensionBridge] Extension', connected ? 'connected' : 'disconnected', connectionId);
         setIsConnected(connected);
       });
 

@@ -88,7 +88,7 @@ export function UniverDocEditor({ projectName }: Props) {
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 8, background: 'var(--bg-primary)', color: 'var(--text-secondary)', fontSize: 13, fontWeight: 600 }}>
           <span style={{ fontSize: 28 }}>📝</span>
           <span>Document editor unavailable</span>
-          <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)' }}>Run <code style={{ background: 'var(--surface-hover)', padding: '2px 6px', borderRadius: 4 }}>pnpm install</code> to enable Univer</span>
+          <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-tertiary)' }}>Run <code style={{ background: 'var(--surface-hover)', padding: '2px 6px', borderRadius: 4 }}>pnpm install</code> to enable Univer</span>
         </div>
       )}
       <div ref={containerRef} style={{ width: '100%', height: '100%', visibility: status === 'ready' ? 'visible' : 'hidden' }} />

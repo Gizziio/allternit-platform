@@ -69,7 +69,7 @@ export function AgentPill({ agent, onRemove }: AgentPillProps) {
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 700,
               color: "#fff",
             }}

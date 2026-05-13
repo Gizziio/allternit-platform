@@ -88,7 +88,7 @@ export function ComputerUseSidePanel({ onClose, agentModeSurface, onEnableAgentM
             Computer Use
           </span>
           <span style={{
-            fontSize: '10px',
+            fontSize: '12px',
             fontWeight: 600,
             padding: '2px 7px',
             borderRadius: '10px',
@@ -175,25 +175,25 @@ export function ComputerUseSidePanel({ onClose, agentModeSurface, onEnableAgentM
           border: '1px solid var(--ui-border-muted)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-            <span style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
               Engine
             </span>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
               {engineHealthy === true && <CheckCircle size={11} style={{ color: STATUS.success }} />}
               {engineHealthy === false && <Warning size={11} style={{ color: STATUS.error }} />}
               {engineHealthy === null && <Clock size={11} style={{ color: 'rgba(255,255,255,0.3)' }} />}
-              <span style={{ fontSize: '11px', color: engineHealthy ? STATUS.success : engineHealthy === false ? STATUS.error : 'rgba(255,255,255,0.3)' }}>
+              <span style={{ fontSize: '12px', color: engineHealthy ? STATUS.success : engineHealthy === false ? STATUS.error : 'rgba(255,255,255,0.3)' }}>
                 {engineHealthy === true ? 'Connected' : engineHealthy === false ? 'Unreachable' : 'Checking...'}
               </span>
             </div>
           </div>
           {currentAdapterId && (
-            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>
+            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>
               {currentAdapterId}
             </div>
           )}
           {engineStatusMessage && engineHealthy === false && (
-            <div style={{ fontSize: '11px', color: '#ef4444b2', marginTop: '4px', wordBreak: 'break-word' }}>
+            <div style={{ fontSize: '12px', color: '#ef4444b2', marginTop: '4px', wordBreak: 'break-word' }}>
               {engineStatusMessage}
             </div>
           )}
@@ -208,7 +208,7 @@ export function ComputerUseSidePanel({ onClose, agentModeSurface, onEnableAgentM
             background: 'var(--surface-hover)',
             border: '1px solid var(--ui-border-muted)',
           }}>
-            <div style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '6px' }}>
               Goal
             </div>
             <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>
@@ -226,7 +226,7 @@ export function ComputerUseSidePanel({ onClose, agentModeSurface, onEnableAgentM
             background: statusCfg.bg,
             border: `1px solid ${statusCfg.color}22`,
           }}>
-            <div style={{ fontSize: '10px', fontWeight: 600, color: statusCfg.color, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '5px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: statusCfg.color, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '5px' }}>
               {lastEventType ?? 'Last Action'}
             </div>
             <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.65)', lineHeight: 1.5 }}>
@@ -238,7 +238,7 @@ export function ComputerUseSidePanel({ onClose, agentModeSurface, onEnableAgentM
         {/* ── Event history ── */}
         {recentEvents.length > 0 && (
           <div>
-            <div style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>
               Recent Actions
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -265,11 +265,11 @@ export function ComputerUseSidePanel({ onClose, agentModeSurface, onEnableAgentM
                       flexShrink: 0,
                     }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.4, wordBreak: 'break-word' }}>
+                      <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', lineHeight: 1.4, wordBreak: 'break-word' }}>
                         {msg}
                       </div>
                       {ts && (
-                        <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.25)', marginTop: '2px' }}>
+                        <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.25)', marginTop: '2px' }}>
                           {new Date(ts).toLocaleTimeString()}
                         </div>
                       )}

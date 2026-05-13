@@ -137,7 +137,7 @@ export function HelpPanel({ isOpen, onClose, currentStepId, modeColors }: HelpPa
             >
               <div className="flex items-center gap-3">
                 <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  className="size-10  rounded-lg flex items-center justify-center"
                   style={{ background: modeColors.soft }}
                 >
                   <HelpCircle size={20} style={{ color: modeColors.accent }} />
@@ -295,9 +295,9 @@ export function HelpButton({ fieldId, stepId, modeColors, size = 'md' }: HelpBut
   }
 
   const sizeClasses = {
-    sm: 'w-4 h-4',
-    md: 'w-5 h-5',
-    lg: 'w-6 h-6',
+    sm: 'size-4 ',
+    md: 'size-5 ',
+    lg: 'size-6 ',
   };
 
   return (
@@ -560,7 +560,7 @@ export function SmartSuggestions({ suggestions, onApplySuggestion, modeColors }:
           >
             <div className="flex items-start gap-3">
               <div
-                className="w-8 h-8 rounded flex items-center justify-center flex-shrink-0"
+                className="size-8  rounded flex items-center justify-center flex-shrink-0"
                 style={{ background: 'var(--surface-hover)' }}
               >
                 <Icon size={16} style={{ color: colors.text }} />
@@ -571,7 +571,7 @@ export function SmartSuggestions({ suggestions, onApplySuggestion, modeColors }:
                     {suggestion.title}
                   </span>
                   <span
-                    className="text-[10px] px-1.5 py-0.5 rounded uppercase font-medium"
+                    className="text-xs px-1.5 py-0.5 rounded uppercase font-medium"
                     style={{ background: colors.bg, color: colors.text }}
                   >
                     {suggestion.priority}

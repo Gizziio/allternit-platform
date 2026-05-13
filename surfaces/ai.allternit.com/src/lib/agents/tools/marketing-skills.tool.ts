@@ -20,7 +20,7 @@ export const marketingSkillsTool = {
     required: ['command', 'context']
   },
   execute: async ({ command, context }: any) => {
-    console.log(`[MarketingSkills] Executing /${command} for context...`);
+    console.debug(`[MarketingSkills] Executing /${command} for context...`);
 
     const results: Record<string, any> = {
       tagline: {

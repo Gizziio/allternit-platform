@@ -101,7 +101,7 @@ class DataPlugin implements ModePlugin {
     
     this.isInitialized = true;
     this.emit({ type: 'initialized', timestamp: Date.now() });
-    console.log('[DataPlugin] Initialized');
+    console.debug('[DataPlugin] Initialized');
   }
 
   async destroy(): Promise<void> {

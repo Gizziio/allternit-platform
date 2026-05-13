@@ -118,7 +118,7 @@ function truncateRunId(runId: string): string {
     return runId;
   }
 
-  return `${runId.slice(0, 10)}...${runId.slice(-6)}`;
+  return `${runId.slice(0, 10)}…${runId.slice(-6)}`;
 }
 
 function executionModeMeta(mode: RuntimeExecutionMode | null): {
@@ -358,8 +358,8 @@ export function RuntimeOperationsPanel({
         <GlassSurface intensity="thick" className="rounded-3xl p-6">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
             <div className="max-w-3xl">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
-                <Stack className="h-3.5 w-3.5 text-amber-300" />
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[12px] uppercase tracking-[0.24em] text-muted-foreground">
+                <Stack className="size-3.5  text-amber-300" />
                 Runtime Command
               </div>
               <h2 className="text-3xl font-semibold tracking-tight text-foreground">
@@ -386,10 +386,10 @@ export function RuntimeOperationsPanel({
                 <button
                   type="button"
                   onClick={() => void onRefreshAll?.()}
-                  className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/15 px-3 py-1 text-[11px] text-foreground transition hover:bg-black/25"
+                  className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/15 px-3 py-1 text-[12px] text-foreground transition hover:bg-black/25"
                 >
                   <ArrowsClockwise
-                    className={`h-3.5 w-3.5 ${isRefreshingAll ? "animate-spin" : ""}`}
+                    className={`size-3.5  ${isRefreshingAll ? "animate-spin" : ""}`}
                   />
                   Refresh all
                 </button>
@@ -466,7 +466,7 @@ export function RuntimeOperationsPanel({
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <Shield className="h-5 w-5 text-amber-200" />
+                      <Shield className="size-5  text-amber-200" />
                       <h3 className="text-lg font-medium text-foreground">
                         Shared Agent Mode
                       </h3>
@@ -488,7 +488,7 @@ export function RuntimeOperationsPanel({
                       className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-black/15 px-3 py-2 text-sm text-foreground transition hover:bg-black/25"
                     >
                       <ArrowsClockwise
-                        className={`h-4 w-4 ${isLoadingExecutionMode ? "animate-spin" : ""}`}
+                        className={`size-4  ${isLoadingExecutionMode ? "animate-spin" : ""}`}
                       />
                       Refresh
                     </button>
@@ -556,7 +556,7 @@ export function RuntimeOperationsPanel({
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <Wallet className="h-5 w-5 text-emerald-200" />
+                      <Wallet className="size-5  text-emerald-200" />
                       <h3 className="text-lg font-medium text-foreground">
                         Budget Pressure
                       </h3>
@@ -575,7 +575,7 @@ export function RuntimeOperationsPanel({
                       className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-black/15 px-3 py-2 text-sm text-foreground transition hover:bg-black/25"
                     >
                       <ArrowsClockwise
-                        className={`h-4 w-4 ${isLoadingBudget ? "animate-spin" : ""}`}
+                        className={`size-4  ${isLoadingBudget ? "animate-spin" : ""}`}
                       />
                       Refresh
                     </button>
@@ -614,7 +614,7 @@ export function RuntimeOperationsPanel({
                       className="inline-flex items-center gap-2 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-3 text-sm font-medium text-emerald-100 transition hover:bg-emerald-300/20 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {isSavingBudget ? (
-                        <ArrowsClockwise className="h-4 w-4 animate-spin" />
+                        <ArrowsClockwise className="size-4  animate-spin" />
                       ) : (
                         <Wallet size={16} />
                       )}
@@ -649,7 +649,7 @@ export function RuntimeOperationsPanel({
                 <div className="grid gap-3 lg:grid-cols-[0.75fr_1.25fr]">
                   <div className="rounded-3xl border border-white/5 bg-black/10 p-4">
                     <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                      <Gauge className="h-4 w-4 text-amber-200" />
+                      <Gauge className="size-4  text-amber-200" />
                       Pressure ceiling
                     </div>
                     <div className="mt-3 text-3xl font-semibold text-foreground">
@@ -671,7 +671,7 @@ export function RuntimeOperationsPanel({
                           className="rounded-2xl border border-white/5 bg-black/10 px-4 py-3"
                         >
                           <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                            <Warning className="h-4 w-4 text-amber-200" />
+                            <Warning className="size-4  text-amber-200" />
                             {alert.title}
                           </div>
                           <p className="mt-1 text-sm text-muted-foreground">
@@ -698,7 +698,7 @@ export function RuntimeOperationsPanel({
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <Thermometer className="h-5 w-5 text-amber-200" />
+                      <Thermometer className="size-5  text-amber-200" />
                       <h3 className="text-lg font-medium text-foreground">
                         Prewarm Capacity
                       </h3>
@@ -720,7 +720,7 @@ export function RuntimeOperationsPanel({
                       className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-black/15 px-3 py-2 text-sm text-foreground transition hover:bg-black/25"
                     >
                       <ArrowsClockwise
-                        className={`h-4 w-4 ${isLoadingPrewarm ? "animate-spin" : ""}`}
+                        className={`size-4  ${isLoadingPrewarm ? "animate-spin" : ""}`}
                       />
                       Refresh
                     </button>
@@ -791,7 +791,7 @@ export function RuntimeOperationsPanel({
                       className="inline-flex items-center gap-2 rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm font-medium text-amber-100 transition hover:bg-amber-300/20 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {isWarmingPool ? (
-                        <ArrowsClockwise className="h-4 w-4 animate-spin" />
+                        <ArrowsClockwise className="size-4  animate-spin" />
                       ) : (
                         <Waves size={16} />
                       )}
@@ -807,7 +807,7 @@ export function RuntimeOperationsPanel({
                       className="inline-flex items-center gap-2 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-3 text-sm font-medium text-emerald-100 transition hover:bg-emerald-300/20 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {isSavingPoolSize ? (
-                        <ArrowsClockwise className="h-4 w-4 animate-spin" />
+                        <ArrowsClockwise className="size-4  animate-spin" />
                       ) : (
                         <RocketLaunch size={16} />
                       )}
@@ -877,7 +877,7 @@ export function RuntimeOperationsPanel({
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <ClockCounterClockwise className="h-5 w-5 text-sky-200" />
+                      <ClockCounterClockwise className="size-5  text-sky-200" />
                       <h3 className="text-lg font-medium text-foreground">
                         Replay Readiness
                       </h3>
@@ -899,7 +899,7 @@ export function RuntimeOperationsPanel({
                       className="inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-black/15 px-3 py-2 text-sm text-foreground transition hover:bg-black/25"
                     >
                       <ArrowsClockwise
-                        className={`h-4 w-4 ${isLoadingReplay ? "animate-spin" : ""}`}
+                        className={`size-4  ${isLoadingReplay ? "animate-spin" : ""}`}
                       />
                       Refresh
                     </button>
@@ -962,7 +962,7 @@ export function RuntimeOperationsPanel({
                           className="inline-flex items-center gap-2 rounded-2xl border border-sky-300/20 bg-sky-300/10 px-3 py-2 text-sm font-medium text-sky-100 transition hover:bg-sky-300/20 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           {replayingRunId === manifest.run_id ? (
-                            <ArrowsClockwise className="h-4 w-4 animate-spin" />
+                            <ArrowsClockwise className="size-4  animate-spin" />
                           ) : (
                             <Play size={16} />
                           )}
@@ -997,7 +997,7 @@ export function RuntimeOperationsPanel({
               controls at {formatTimestamp(lastBudgetUpdatedAt)}.
             </div>
             <div className="flex items-center gap-2">
-              <Lightning className="h-4 w-4 text-amber-200" />
+              <Lightning className="size-4  text-amber-200" />
               {latestActivity
                 ? latestActivity.details
                 : "No recent pool activity recorded."}
@@ -1082,7 +1082,7 @@ export function RuntimeOperationsView({
   ) {
     return (
       <div className="flex h-full items-center justify-center">
-        <CircleNotch className="h-8 w-8 animate-spin text-accent" />
+        <CircleNotch className="size-8  animate-spin text-accent" />
       </div>
     );
   }

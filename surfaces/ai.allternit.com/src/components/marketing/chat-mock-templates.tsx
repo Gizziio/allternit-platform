@@ -87,7 +87,7 @@ export function ChatMockTemplate({
       {/* Header */}
       <div className={cn('flex items-center justify-between border-b px-4 py-3', theme.headerClass)}>
         <div className="flex items-center gap-2.5">
-          <div className={cn('flex h-7 w-7 items-center justify-center rounded-md', theme.iconBg)}>
+          <div className={cn('flex size-7  items-center justify-center rounded-md', theme.iconBg)}>
             {theme.icon}
           </div>
           <span className={cn('text-sm font-semibold', theme.titleClass)}>{displayTitle}</span>
@@ -95,7 +95,7 @@ export function ChatMockTemplate({
         {showControls && (
           <div className="flex items-center gap-1">
             <button className={cn('rounded p-1.5 transition-colors', theme.buttonClass)}>
-              <IconRefresh className="h-3.5 w-3.5" />
+              <IconRefresh className="size-3.5 " />
             </button>
           </div>
         )}
@@ -118,7 +118,7 @@ export function ChatMockTemplate({
       <div className={cn('border-t px-4 py-3', theme.inputAreaClass)}>
         <div className={cn('flex items-end gap-2 rounded-xl border px-3 py-2', theme.inputClass)}>
           <button className={cn('rounded p-1 transition-colors', theme.buttonClass)}>
-            <IconPaperclip className="h-4 w-4" />
+            <IconPaperclip className="size-4 " />
           </button>
           <textarea
             value={inputValue}
@@ -137,21 +137,21 @@ export function ChatMockTemplate({
             rows={1}
           />
           <button className={cn('rounded p-1 transition-colors', theme.buttonClass)}>
-            <IconMicrophone className="h-4 w-4" />
+            <IconMicrophone className="size-4 " />
           </button>
           <button
             onClick={handleSend}
             className={cn(
-              'flex h-8 w-8 items-center justify-center rounded-lg transition-all',
+              'flex size-8  items-center justify-center rounded-lg transition-all',
               inputValue.trim()
                 ? theme.sendButtonActive
                 : 'bg-[var(--ui-border-muted)] text-[var(--text-muted)]'
             )}
           >
-            <IconSend className="h-3.5 w-3.5" />
+            <IconSend className="size-3.5 " />
           </button>
         </div>
-        <div className={cn('mt-1.5 text-center text-[10px]', theme.disclaimerClass)}>
+        <div className={cn('mt-1.5 text-center text-xs', theme.disclaimerClass)}>
           {theme.disclaimer}
         </div>
       </div>
@@ -182,12 +182,12 @@ function MessageBubble({
       {/* Avatar */}
       <div
         className={cn(
-          'flex h-7 w-7 shrink-0 items-center justify-center rounded-full',
+          'flex size-7  shrink-0 items-center justify-center rounded-full',
           isUser ? theme.userAvatar : theme.assistantAvatar
         )}
       >
         {isUser ? (
-          <span className="text-[10px] font-bold">U</span>
+          <span className="text-xs font-bold">U</span>
         ) : (
           theme.smallIcon
         )}
@@ -208,13 +208,13 @@ function MessageBubble({
         {!isUser && isLast && (
           <div className={cn('flex items-center gap-1 pt-0.5', theme.actionsClass)}>
             <ActionButton template={template}>
-              <IconCopy className="h-3 w-3" />
+              <IconCopy className="size-3 " />
             </ActionButton>
             <ActionButton template={template}>
-              <IconThumbUp className="h-3 w-3" />
+              <IconThumbUp className="size-3 " />
             </ActionButton>
             <ActionButton template={template}>
-              <IconThumbDown className="h-3 w-3" />
+              <IconThumbDown className="size-3 " />
             </ActionButton>
           </div>
         )}
@@ -245,7 +245,7 @@ function TypingIndicator({ template }: { template: ChatTemplate }) {
     <div className="flex gap-3">
       <div
         className={cn(
-          'flex h-7 w-7 shrink-0 items-center justify-center rounded-full',
+          'flex size-7  shrink-0 items-center justify-center rounded-full',
           theme.assistantAvatar
         )}
       >
@@ -258,7 +258,7 @@ function TypingIndicator({ template }: { template: ChatTemplate }) {
               key={i}
               animate={{ opacity: [0.3, 1, 0.3] }}
               transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.15 }}
-              className={cn('h-1.5 w-1.5 rounded-full', theme.dotClass)}
+              className={cn('size-1.5  rounded-full', theme.dotClass)}
             />
           ))}
         </div>
@@ -301,8 +301,8 @@ const TEMPLATES: Record<
     defaultTitle: 'ChatGPT',
     containerClass: 'border-neutral-800 bg-neutral-900',
     headerClass: 'border-neutral-800 bg-neutral-900',
-    icon: <IconSparkles className="h-4 w-4 text-emerald-400" />,
-    smallIcon: <IconSparkles className="h-3 w-3 text-emerald-400" />,
+    icon: <IconSparkles className="size-4  text-emerald-400" />,
+    smallIcon: <IconSparkles className="size-3  text-emerald-400" />,
     iconBg: 'bg-emerald-500/10',
     titleClass: 'text-neutral-100',
     messagesClass: 'bg-neutral-900',
@@ -326,8 +326,8 @@ const TEMPLATES: Record<
     defaultTitle: 'Claude',
     containerClass: 'border-[#e5e0d8] bg-[#faf9f7]',
     headerClass: 'border-[#e5e0d8] bg-[#faf9f7]',
-    icon: <IconBrain className="h-4 w-4 text-[#d97757]" />,
-    smallIcon: <IconBrain className="h-3 w-3 text-[#d97757]" />,
+    icon: <IconBrain className="size-4  text-[#d97757]" />,
+    smallIcon: <IconBrain className="size-3  text-[#d97757]" />,
     iconBg: 'bg-[#d97757]/10',
     titleClass: 'text-[#1a1a1a]',
     messagesClass: 'bg-[#faf9f7]',
@@ -351,8 +351,8 @@ const TEMPLATES: Record<
     defaultTitle: 'Grok',
     containerClass: 'border-neutral-800 bg-black',
     headerClass: 'border-neutral-800 bg-black',
-    icon: <IconBolt className="h-4 w-4 text-white" />,
-    smallIcon: <IconBolt className="h-3 w-3 text-white" />,
+    icon: <IconBolt className="size-4  text-white" />,
+    smallIcon: <IconBolt className="size-3  text-white" />,
     iconBg: 'bg-white/10',
     titleClass: 'text-white',
     messagesClass: 'bg-black',

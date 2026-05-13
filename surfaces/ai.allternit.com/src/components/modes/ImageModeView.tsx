@@ -95,15 +95,15 @@ export function ImageModeView({ initialPrompt = '' }: ImageModeViewProps) {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-violet-500/20 flex items-center justify-center">
-            <Image className="w-4 h-4 text-violet-400" />
+          <div className="size-8  rounded-lg bg-violet-500/20 flex items-center justify-center">
+            <Image className="size-4  text-violet-400" />
           </div>
           <div>
             <h3 className="text-sm font-medium text-white">Image Generation</h3>
             <p className="text-xs text-white/50">
               {activeProvider?.type === 'free' ? (
                 <span className="flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-amber-400" />
+                  <Sparkles className="size-3  text-amber-400" />
                   Free with {activeProvider.name}
                 </span>
               ) : (
@@ -117,7 +117,7 @@ export function ImageModeView({ initialPrompt = '' }: ImageModeViewProps) {
           className="p-2 hover:bg-white/10 rounded-lg transition-colors"
           title="Provider settings"
         >
-          <Settings className="w-4 h-4 text-white/50" />
+          <Settings className="size-4  text-white/50" />
         </button>
       </div>
 
@@ -165,7 +165,7 @@ export function ImageModeView({ initialPrompt = '' }: ImageModeViewProps) {
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Describe the image you want to generate..."
+            placeholder="Describe the image you want to generate…"
             className="w-full h-24 bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-white placeholder:text-white/30 resize-none focus:outline-none focus:border-violet-500/50"
             onKeyDown={(e) => {
               if (e.key === 'Enter' && e.metaKey) {
@@ -185,12 +185,12 @@ export function ImageModeView({ initialPrompt = '' }: ImageModeViewProps) {
           >
             {isGenerating ? (
               <>
-                <RefreshCw className="w-4 h-4 animate-spin" />
+                <RefreshCw className="size-4  animate-spin" />
                 Generating...
               </>
             ) : (
               <>
-                <Wand2 className="w-4 h-4" />
+                <Wand2 className="size-4 " />
                 Generate
               </>
             )}
@@ -223,7 +223,7 @@ export function ImageModeView({ initialPrompt = '' }: ImageModeViewProps) {
 
         {!result && !isGenerating && (
           <div className="h-full flex flex-col items-center justify-center text-white/30">
-            <Image className="w-16 h-16 mb-4 opacity-50" />
+            <Image className="size-16  mb-4 opacity-50" />
             <p className="text-sm">Enter a prompt to generate images</p>
             <p className="text-xs mt-2 text-white/20">
               Powered by {activeProvider?.name}
@@ -233,11 +233,11 @@ export function ImageModeView({ initialPrompt = '' }: ImageModeViewProps) {
 
         {isGenerating && (
           <div className="h-full flex flex-col items-center justify-center">
-            <div className="relative w-16 h-16 mb-4">
+            <div className="relative size-16  mb-4">
               <div className="absolute inset-0 border-4 border-violet-500/20 rounded-full" />
               <div className="absolute inset-0 border-4 border-violet-500 border-t-transparent rounded-full animate-spin" />
             </div>
-            <p className="text-sm text-white/50">Creating your images...</p>
+            <p className="text-sm text-white/50">Creating your images…</p>
             <p className="text-xs text-white/30 mt-2">Using {activeProvider?.name}</p>
           </div>
         )}
@@ -286,7 +286,7 @@ function GeneratedImageCard({
       {/* Loading state */}
       {!isLoaded && !hasError && (
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-violet-500/30 border-t-violet-500 rounded-full animate-spin" />
+          <div className="size-8  border-2 border-violet-500/30 border-t-violet-500 rounded-full animate-spin" />
         </div>
       )}
 
@@ -294,7 +294,7 @@ function GeneratedImageCard({
       {hasError && (
         <div className="absolute inset-0 flex items-center justify-center text-white/30">
           <div className="text-center">
-            <Image className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <Image className="size-8  mx-auto mb-2 opacity-50" />
             <p className="text-xs">Failed to load</p>
           </div>
         </div>
@@ -326,14 +326,14 @@ function GeneratedImageCard({
               onClick={onVariation}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs text-white transition-colors"
             >
-              <RefreshCw className="w-3.5 h-3.5" />
+              <RefreshCw className="size-3.5 " />
               Variations
             </button>
             <button
               onClick={onDownload}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-xs text-white transition-colors"
             >
-              <Download className="w-3.5 h-3.5" />
+              <Download className="size-3.5 " />
               Download
             </button>
           </div>

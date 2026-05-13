@@ -18,6 +18,6 @@ type Story = StoryObj<typeof SwarmSetup>;
 
 export const Default: Story = {
   args: {
-    onLaunched: (id: string) => console.log("Launched execution:", id),
+    onLaunched: (id: string) => console.debug("Launched execution:", id),
   },
 };

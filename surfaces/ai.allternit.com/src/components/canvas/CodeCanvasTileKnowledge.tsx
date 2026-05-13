@@ -60,7 +60,7 @@ export function CodeCanvasTileKnowledge({ workspacePath }: CodeCanvasTileKnowled
             border: 'none',
             background: tab === 'claims' ? 'var(--ui-border-muted)' : 'transparent',
             color: tab === 'claims' ? 'var(--text-primary)' : 'var(--text-muted)',
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 600,
             cursor: 'pointer',
             display: 'flex',
@@ -81,7 +81,7 @@ export function CodeCanvasTileKnowledge({ workspacePath }: CodeCanvasTileKnowled
             border: 'none',
             background: tab === 'summaries' ? 'var(--ui-border-muted)' : 'transparent',
             color: tab === 'summaries' ? 'var(--text-primary)' : 'var(--text-muted)',
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 600,
             cursor: 'pointer',
             display: 'flex',
@@ -111,7 +111,7 @@ export function CodeCanvasTileKnowledge({ workspacePath }: CodeCanvasTileKnowled
               borderRadius: 8,
               background: 'var(--status-error-bg)',
               border: '1px solid rgba(239,68,68,0.2)',
-              fontSize: 11,
+              fontSize: 12,
               color: 'var(--status-error)',
             }}
           >
@@ -144,7 +144,7 @@ export function CodeCanvasTileKnowledge({ workspacePath }: CodeCanvasTileKnowled
                   )}
                   <span
                     style={{
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: 700,
                       textTransform: 'uppercase',
                       color: claim.status === 'live' ? 'var(--status-success)' : 'var(--status-error)',
@@ -162,7 +162,7 @@ export function CodeCanvasTileKnowledge({ workspacePath }: CodeCanvasTileKnowled
                       <span
                         key={p}
                         style={{
-                          fontSize: 10,
+                          fontSize: 12,
                           fontFamily: 'var(--font-mono)',
                           color: 'var(--text-muted)',
                           background: 'var(--surface-hover)',
@@ -199,12 +199,12 @@ export function CodeCanvasTileKnowledge({ workspacePath }: CodeCanvasTileKnowled
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
                   <FileText size={12} color={summary.valid ? 'var(--status-info)' : 'var(--status-error)'} />
-                  <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', flex: 1 }}>
+                  <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)', flex: 1 }}>
                     {summary.path}
                   </span>
                   <span
                     style={{
-                      fontSize: 9,
+                      fontSize: 12,
                       fontWeight: 700,
                       padding: '1px 6px',
                       borderRadius: 4,
@@ -216,11 +216,11 @@ export function CodeCanvasTileKnowledge({ workspacePath }: CodeCanvasTileKnowled
                   </span>
                 </div>
                 {summary.text && (
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
                     {summary.text}
                   </div>
                 )}
-                <div style={{ fontSize: 9, color: 'var(--text-muted)', marginTop: 4, fontFamily: 'var(--font-mono)' }}>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, fontFamily: 'var(--font-mono)' }}>
                   blob:{summary.blobOid.slice(0, 8)}
                 </div>
               </div>

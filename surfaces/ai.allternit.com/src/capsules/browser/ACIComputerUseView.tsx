@@ -130,7 +130,7 @@ function TopStrip({
       {/* Label */}
       <span
         style={{
-          fontSize: 9,
+          fontSize: 12,
           fontWeight: 700,
           color: 'rgba(212,176,140,0.45)',
           textTransform: 'uppercase',
@@ -147,7 +147,7 @@ function TopStrip({
       {/* Active message */}
       <span
         style={{
-          fontSize: 11,
+          fontSize: 12,
           color: isApproval ? '#fde68a' : 'var(--ui-text-muted)',
           flex: 1,
           overflow: 'hidden',
@@ -165,7 +165,7 @@ function TopStrip({
           <div style={{ width: 1, height: 12, background: 'var(--ui-border-muted)', flexShrink: 0 }} />
           <span
             style={{
-              fontSize: 10,
+              fontSize: 12,
               color: 'rgba(212,176,140,0.65)',
               fontFamily: 'var(--font-mono)',
               fontWeight: 700,
@@ -183,7 +183,7 @@ function TopStrip({
           <div style={{ width: 1, height: 12, background: 'var(--ui-border-muted)', flexShrink: 0 }} />
           <span
             style={{
-              fontSize: 9,
+              fontSize: 12,
               color: 'rgba(255,255,255,0.25)',
               fontFamily: 'var(--font-mono)',
               letterSpacing: '0.05em',
@@ -254,7 +254,7 @@ function ElementHighlight({
             background: 'rgba(10,9,8,0.92)',
             border: `1px solid ${color.replace('0.85)', '0.4)')}`,
             borderRadius: 4,
-            fontSize: 9,
+            fontSize: 12,
             fontWeight: 700,
             color,
             fontFamily: 'var(--font-mono)',
@@ -417,7 +417,7 @@ export function ACIComputerUseView({
               />
               <div
                 style={{
-                  fontSize: 9,
+                  fontSize: 12,
                   fontFamily: 'var(--font-mono)',
                   color: '#555',
                   textTransform: 'uppercase',
@@ -440,13 +440,13 @@ export function ACIComputerUseView({
               <div style={{ fontSize: 28, opacity: 0.4 }}>⚡</div>
               <div
                 style={{
-                  fontSize: 11, fontFamily: 'var(--font-mono)',
+                  fontSize: 12, fontFamily: 'var(--font-mono)',
                   color: 'var(--status-error)', letterSpacing: '0.08em',
                 }}
               >
                 {serviceError}
               </div>
-              <div style={{ fontSize: 10, color: '#444', lineHeight: 1.5 }}>
+              <div style={{ fontSize: 12, color: '#444', lineHeight: 1.5 }}>
                 Check the agent logs for details.
               </div>
             </div>

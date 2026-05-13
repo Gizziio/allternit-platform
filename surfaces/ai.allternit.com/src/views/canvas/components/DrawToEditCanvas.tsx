@@ -349,7 +349,7 @@ export function DrawToEditCanvas({
                     mode === 'draw' && "bg-[var(--accent-primary)] text-[var(--bg-primary)]"
                   )}
                 >
-                  <PaintBrush className="w-4 h-4 mr-2" />
+                  <PaintBrush className="size-4  mr-2" />
                   Draw
                 </Button>
                 <Button
@@ -361,7 +361,7 @@ export function DrawToEditCanvas({
                     mode === 'erase' && "bg-[var(--accent-primary)] text-[var(--bg-primary)]"
                   )}
                 >
-                  <Eraser className="w-4 h-4 mr-2" />
+                  <Eraser className="size-4  mr-2" />
                   Erase
                 </Button>
               </div>
@@ -377,7 +377,7 @@ export function DrawToEditCanvas({
                     variant="ghost"
                     size="sm"
                     onClick={() => setBrushSize(Math.max(5, brushSize - 5))}
-                    className="h-8 w-8 p-0"
+                    className="size-8  p-0"
                   >
                     <Minus size={16} />
                   </Button>
@@ -393,7 +393,7 @@ export function DrawToEditCanvas({
                     variant="ghost"
                     size="sm"
                     onClick={() => setBrushSize(Math.min(100, brushSize + 5))}
-                    className="h-8 w-8 p-0"
+                    className="size-8  p-0"
                   >
                     <Plus size={16} />
                   </Button>
@@ -414,7 +414,7 @@ export function DrawToEditCanvas({
                   disabled={historyIndex <= 0}
                   className="flex-1 text-[var(--text-tertiary)] disabled:opacity-30"
                 >
-                  <ArrowCounterClockwise className="w-4 h-4 mr-2" />
+                  <ArrowCounterClockwise className="size-4  mr-2" />
                   Undo
                 </Button>
                 <Button
@@ -424,7 +424,7 @@ export function DrawToEditCanvas({
                   disabled={historyIndex >= history.length - 1}
                   className="flex-1 text-[var(--text-tertiary)] disabled:opacity-30"
                 >
-                  <ArrowClockwise className="w-4 h-4 mr-2" />
+                  <ArrowClockwise className="size-4  mr-2" />
                   Redo
                 </Button>
               </div>
@@ -434,7 +434,7 @@ export function DrawToEditCanvas({
                 onClick={handleClear}
                 className="w-full text-[var(--text-tertiary)] hover:text-red-500"
               >
-                <Trash className="w-4 h-4 mr-2" />
+                <Trash className="size-4  mr-2" />
                 Clear Mask
               </Button>
             </div>
@@ -447,7 +447,7 @@ export function DrawToEditCanvas({
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Describe what you want to change...&#10;&#10;Example: &quot;Make this a latte&quot; or &quot;Remove the background&quot;"
+                placeholder="Describe what you want to change…&#10;&#10;Example: &quot;Make this a latte&quot; or &quot;Remove the background&quot;"
                 className="w-full h-32 p-3 text-sm bg-[var(--bg-primary)] border border-[var(--border-subtle)] rounded-lg text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] resize-none focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
               />
             </div>
@@ -459,7 +459,7 @@ export function DrawToEditCanvas({
                 disabled={!prompt.trim() || isGenerating}
                 className="w-full bg-[var(--accent-primary)] text-[var(--bg-primary)] hover:opacity-90"
               >
-                <Sparkle className="w-4 h-4 mr-2" />
+                <Sparkle className="size-4  mr-2" />
                 {isGenerating ? 'Generating...' : 'Generate'}
               </Button>
               <Button
@@ -467,7 +467,7 @@ export function DrawToEditCanvas({
                 onClick={handleDownload}
                 className="w-full text-[var(--text-tertiary)]"
               >
-                <DownloadSimple className="w-4 h-4 mr-2" />
+                <DownloadSimple className="size-4  mr-2" />
                 Download Mask
               </Button>
             </div>

@@ -118,7 +118,7 @@ export function CharacterLayerPanel({ agentId }: { agentId: string }) {
   if (!draft) {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="text-sm text-muted-foreground">Loading character layer for {agentName}...</div>
+        <div className="text-sm text-muted-foreground">Loading character layer for {agentName}…</div>
       </div>
     );
   }
@@ -128,7 +128,7 @@ export function CharacterLayerPanel({ agentId }: { agentId: string }) {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-lg font-semibold flex items-center gap-2">
-            <Sparkle className="w-5 h-5 text-primary" />
+            <Sparkle className="size-5  text-primary" />
             Character Layer
           </h3>
           <p className="text-sm text-muted-foreground">
@@ -175,7 +175,7 @@ export function CharacterLayerPanel({ agentId }: { agentId: string }) {
                         <span className="font-medium">{definition.label}</span>
                         <span>{stats.stats[definition.key] ?? 0}</span>
                       </div>
-                      <p className="text-[11px] text-muted-foreground mt-1">
+                      <p className="text-[12px] text-muted-foreground mt-1">
                         Signals: {definition.signals.join(", ")}
                       </p>
                     </div>
@@ -185,7 +185,7 @@ export function CharacterLayerPanel({ agentId }: { agentId: string }) {
             {stats && Object.keys(stats.specialtyScores).length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {Object.entries(stats.specialtyScores).map(([skill, value]) => (
-                  <Badge key={skill} variant="secondary" className="text-[11px]">
+                  <Badge key={skill} variant="secondary" className="text-[12px]">
                     {skill}: {value}
                   </Badge>
                 ))}
@@ -308,7 +308,7 @@ export function CharacterLayerPanel({ agentId }: { agentId: string }) {
                     }))
                   }
                 >
-                  <Plus className="w-4 h-4 mr-1" />
+                  <Plus className="size-4  mr-1" />
                   Add Ban
                 </Button>
               </CardTitle>
@@ -557,7 +557,7 @@ export function CharacterLayerPanel({ agentId }: { agentId: string }) {
                     }))
                   }
                 >
-                  <Plus className="w-4 h-4 mr-1" />
+                  <Plus className="size-4  mr-1" />
                   Add Pair
                 </Button>
               </div>
@@ -723,7 +723,7 @@ export function CharacterLayerPanel({ agentId }: { agentId: string }) {
                       }))
                     }
                   >
-                    <Plus className="w-4 h-4 mr-1" />
+                    <Plus className="size-4  mr-1" />
                     Add Stat
                   </Button>
                 </div>
@@ -859,7 +859,7 @@ export function CharacterLayerPanel({ agentId }: { agentId: string }) {
                 <>
                   {compiled.lint.length === 0 ? (
                     <Alert className="border-green-200 bg-green-50">
-                      <CheckCircle className="w-4 h-4 text-green-600" />
+                      <CheckCircle className="size-4  text-green-600" />
                       <AlertDescription className="text-green-700">No lint issues.</AlertDescription>
                     </Alert>
                   ) : (

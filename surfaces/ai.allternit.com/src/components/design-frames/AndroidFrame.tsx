@@ -120,7 +120,7 @@ export function AndroidFrame({
             <div style={{ width: 22, height: 10, border: "1.5px solid currentColor", borderRadius: 2, padding: 1, position: "relative" as const }}>
               <div style={{ width: `${battery}%`, height: "100%", background: "currentColor", borderRadius: 1 }} />
             </div>
-            <span style={{ fontSize: 11, fontWeight: 600, marginLeft: 2 }}>{battery}%</span>
+            <span style={{ fontSize: 12, fontWeight: 600, marginLeft: 2 }}>{battery}%</span>
           </div>
         </div>
 

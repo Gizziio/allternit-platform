@@ -69,9 +69,9 @@ export const PlanTool = memo(function PlanTool({
       <div className="h-7 pl-3 pr-2.5 flex items-center justify-between">
         <div className="min-w-0 flex items-center gap-1">
           {isPending ? (
-            <IconSpinner className="w-3 h-3 text-an-tool-color-muted animate-spin shrink-0" />
+            <IconSpinner className="size-3  text-an-tool-color-muted animate-spin shrink-0" />
           ) : (
-            <IconFileDescription className="w-3.5 h-3.5 text-an-tool-color-muted shrink-0" />
+            <IconFileDescription className="size-3.5  text-an-tool-color-muted shrink-0" />
           )}
           <span className="text-xs text-an-tool-color-muted truncate">
             {fileName}
@@ -84,9 +84,9 @@ export const PlanTool = memo(function PlanTool({
           className="size-5 inline-flex items-center justify-center text-an-tool-color-muted"
         >
           {isExpanded ? (
-            <IconChevronsUp className="w-3.5 h-3.5" />
+            <IconChevronsUp className="size-3.5 " />
           ) : (
-            <IconChevronsDown className="w-3.5 h-3.5" />
+            <IconChevronsDown className="size-3.5 " />
           )}
         </button>
       </div>

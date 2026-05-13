@@ -58,7 +58,7 @@ import { BrowserChatPane } from './BrowserChatPane';
 import { ACIComputerUseView } from './ACIComputerUseView';
 import { PageAgentTakeoverOverlay } from './PageAgentTakeoverOverlay';
 import { useExtensionBridge } from './useExtensionBridge';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { BrowserIframeSkeleton } from './BrowserIframeSkeleton';
 import { BrowserNewTabPage } from './BrowserNewTabPage';
 import { BrowserFindBar } from './BrowserFindBar';
@@ -324,7 +324,7 @@ function CanvasMode({ tab }: { tab?: A2UITab }) {
       <div style={{ flex: 1, background: 'var(--surface-hover)', borderRadius: 4, border: '1px solid var(--surface-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center', opacity: 0.1 }}>
           <SquaresFour style={{ width: 64, height: 64, margin: '0 auto 16px' }} />
-          <p style={{ fontSize: 10, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.5em' }}>Waiting_for_signal...</p>
+          <p style={{ fontSize: 12, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.5em' }}>Waiting_for_signal…</p>
         </div>
       </div>
     </div>
@@ -345,7 +345,7 @@ function StudioMode() {
       <div style={{ flex: 1, background: 'var(--surface-hover)', borderRadius: 4, border: '1px solid var(--surface-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center', opacity: 0.1 }}>
           <Sparkle style={{ width: 64, height: 64, margin: '0 auto 16px' }} />
-          <p style={{ fontSize: 10, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.5em' }}>Initialize_Workspace...</p>
+          <p style={{ fontSize: 12, fontFamily: 'var(--font-mono)', textTransform: 'uppercase', letterSpacing: '0.5em' }}>Initialize_Workspace…</p>
         </div>
       </div>
     </div>
@@ -370,7 +370,7 @@ function TabOverflowDropdown({ open, onClose, tabs, activeTabId, onSelect, onClo
   if (!open) return null;
   return (
     <div ref={ref} style={{ position: 'absolute', right: 0, top: '100%', marginTop: 4, width: 224, maxHeight: 288, overflowY: 'auto', background: BACKGROUND.secondary, border: `1px solid ${BORDER.subtle}`, borderRadius: 8, boxShadow: SHADOW.md, zIndex: 50, padding: '4px 0' }}>
-      <div style={{ padding: '6px 12px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', color: TEXT.tertiary, fontWeight: 600 }}>Open Tabs ({tabs.length})</div>
+      <div style={{ padding: '6px 12px', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.1em', color: TEXT.tertiary, fontWeight: 600 }}>Open Tabs ({tabs.length})</div>
       {tabs.map((tab) => (
         <div key={tab.id} onClick={() => { onSelect(tab.id); onClose(); }}
           style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', cursor: 'pointer', background: tab.id === activeTabId ? BACKGROUND.active : 'transparent', color: tab.id === activeTabId ? TEXT.primary : TEXT.tertiary }}
@@ -592,7 +592,7 @@ function UrlAutocomplete({ query, onSelect, visible }: {
           <TabFavicon url={visit.url} size={14} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12 }}>{visit.title}</div>
-            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 10, color: TEXT.tertiary }}>{visit.url}</div>
+            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12, color: TEXT.tertiary }}>{visit.url}</div>
           </div>
         </div>
       ))}
@@ -603,6 +603,26 @@ function UrlAutocomplete({ query, onSelect, visible }: {
 // ============================================================================
 // Three-Dot Menu
 // ============================================================================
+
+interface MenuItemProps {
+  label: string;
+  icon?: React.ReactNode;
+  active?: boolean;
+  color?: string;
+  disabled?: boolean;
+  onClick: () => void;
+  onClose: () => void;
+}
+
+const MenuItem = ({ label, icon, active, color, disabled, onClick, onClose }: MenuItemProps) => (
+  <button onClick={() => { onClick(); onClose(); }} disabled={disabled}
+    style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '6px 12px', border: 'none', background: 'transparent', cursor: disabled ? 'not-allowed' : 'pointer', color: color || (active ? browserTokens.accent : TEXT.tertiary), fontSize: 12, textAlign: 'left', opacity: disabled ? 0.5 : 1 }}
+    onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.background = BACKGROUND.hover; }}
+    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+    {icon || <div style={{ width: 6, height: 6, borderRadius: '50%', background: active ? browserTokens.accent : 'transparent' }} />}
+    {label}
+  </button>
+);
 
 function ThreeDotMenu({ open, onClose, contentMode, setContentMode, agentModeControl, setAgentMode, agentStatus, onNewTab, onToggleChatPane, chatPaneOpen, onCloseAllTabs, onScreenshot, zoomLevel, onZoomIn, onZoomOut, onZoomReset }: {
   open: boolean; onClose: () => void; contentMode: ContentMode; setContentMode: (m: ContentMode) => void;
@@ -619,35 +639,25 @@ function ThreeDotMenu({ open, onClose, contentMode, setContentMode, agentModeCon
   }, [open, onClose]);
   if (!open) return null;
 
-  const Item = ({ label, icon, active, color, disabled, onClick }: { label: string; icon?: React.ReactNode; active?: boolean; color?: string; disabled?: boolean; onClick: () => void }) => (
-    <button onClick={() => { onClick(); onClose(); }} disabled={disabled}
-      style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '6px 12px', border: 'none', background: 'transparent', cursor: disabled ? 'not-allowed' : 'pointer', color: color || (active ? browserTokens.accent : TEXT.tertiary), fontSize: 12, textAlign: 'left', opacity: disabled ? 0.5 : 1 }}
-      onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.background = BACKGROUND.hover; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
-      {icon || <div style={{ width: 6, height: 6, borderRadius: '50%', background: active ? browserTokens.accent : 'transparent' }} />}
-      {label}
-    </button>
-  );
-
   return (
     <div ref={menuRef} style={{ position: 'absolute', right: 0, top: '100%', marginTop: 4, width: 208, background: BACKGROUND.secondary, border: `1px solid ${BORDER.subtle}`, borderRadius: 8, boxShadow: SHADOW.md, zIndex: 50, padding: '4px 0', fontSize: 14 }}>
-      <div style={{ padding: '6px 12px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', color: TEXT.tertiary, fontWeight: 600 }}>View Mode</div>
-      {(['web', 'canvas', 'studio'] as ContentMode[]).map((m) => <Item key={m} label={m.charAt(0).toUpperCase() + m.slice(1)} active={contentMode === m} onClick={() => setContentMode(m)} />)}
+      <div style={{ padding: '6px 12px', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.1em', color: TEXT.tertiary, fontWeight: 600 }}>View Mode</div>
+      {(['web', 'canvas', 'studio'] as ContentMode[]).map((m) => <MenuItem key={m} label={m.charAt(0).toUpperCase() + m.slice(1)} active={contentMode === m} onClick={() => setContentMode(m)} onClose={onClose} />)}
       <div style={{ height: 1, background: TEXT.tertiary, margin: '4px 0' }} />
-      <div style={{ padding: '6px 12px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', color: TEXT.tertiary, fontWeight: 600 }}>Agent Mode</div>
-      {(['Human', 'Assist', 'Agent'] as BrowserAgentMode[]).map((m) => <Item key={m} label={m} active={agentModeControl === m} disabled={agentStatus === 'Running'} onClick={() => setAgentMode(m)} />)}
+      <div style={{ padding: '6px 12px', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.1em', color: TEXT.tertiary, fontWeight: 600 }}>Agent Mode</div>
+      {(['Human', 'Assist', 'Agent'] as BrowserAgentMode[]).map((m) => <MenuItem key={m} label={m} active={agentModeControl === m} disabled={agentStatus === 'Running'} onClick={() => setAgentMode(m)} onClose={onClose} />)}
       <div style={{ height: 1, background: TEXT.tertiary, margin: '4px 0' }} />
-      <Item label={chatPaneOpen ? 'Hide Chat Pane' : 'Open Chat Pane'} icon={<Sparkle style={{ width: 14, height: 14 }} />} onClick={onToggleChatPane} />
-      <Item label="Screenshot" icon={<Camera style={{ width: 14, height: 14 }} />} onClick={onScreenshot} />
-      <Item label="New Tab" icon={<Plus style={{ width: 14, height: 14 }} />} onClick={onNewTab} />
+      <MenuItem label={chatPaneOpen ? 'Hide Chat Pane' : 'Open Chat Pane'} icon={<Sparkle style={{ width: 14, height: 14 }} />} onClick={onToggleChatPane} onClose={onClose} />
+      <MenuItem label="Screenshot" icon={<Camera style={{ width: 14, height: 14 }} />} onClick={onScreenshot} onClose={onClose} />
+      <MenuItem label="New Tab" icon={<Plus style={{ width: 14, height: 14 }} />} onClick={onNewTab} onClose={onClose} />
       <div style={{ height: 1, background: TEXT.tertiary, margin: '4px 0' }} />
       <div style={{ height: 1, background: TEXT.tertiary, margin: '4px 0' }} />
-      <div style={{ padding: '6px 12px', fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em', color: TEXT.tertiary, fontWeight: 600 }}>Zoom</div>
-      <Item label={`Zoom In (${Math.round((zoomLevel + 0.1) * 100)}%)`} icon={<Plus style={{ width: 14, height: 14 }} />} onClick={onZoomIn} />
-      <Item label={`Zoom Out (${Math.round((zoomLevel - 0.1) * 100)}%)`} icon={<Minus style={{ width: 14, height: 14 }} />} onClick={onZoomOut} />
-      <Item label="Reset Zoom" icon={<ArrowsClockwise style={{ width: 14, height: 14 }} />} onClick={onZoomReset} />
+      <div style={{ padding: '6px 12px', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.1em', color: TEXT.tertiary, fontWeight: 600 }}>Zoom</div>
+      <MenuItem label={`Zoom In (${Math.round((zoomLevel + 0.1) * 100)}%)`} icon={<Plus style={{ width: 14, height: 14 }} />} onClick={onZoomIn} onClose={onClose} />
+      <MenuItem label={`Zoom Out (${Math.round((zoomLevel - 0.1) * 100)}%)`} icon={<Minus style={{ width: 14, height: 14 }} />} onClick={onZoomOut} onClose={onClose} />
+      <MenuItem label="Reset Zoom" icon={<ArrowsClockwise style={{ width: 14, height: 14 }} />} onClick={onZoomReset} onClose={onClose} />
       <div style={{ height: 1, background: TEXT.tertiary, margin: '4px 0' }} />
-      <Item label="Close All Tabs" icon={<X style={{ width: 14, height: 14 }} />} color="rgba(248,113,113,0.7)" onClick={onCloseAllTabs} />
+      <MenuItem label="Close All Tabs" icon={<X style={{ width: 14, height: 14 }} />} color="rgba(248,113,113,0.7)" onClick={onCloseAllTabs} onClose={onClose} />
     </div>
   );
 }
@@ -660,6 +670,8 @@ const accentLineStyle = `@keyframes browserAccentSlide { from { transform: scale
 @keyframes tabLoadingSlide { 0% { transform: translateX(-100%); } 100% { transform: translateX(400%); } }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.8); } }`;
+
+
 
 function AgentPopup({ open, onClose }: { open: boolean; onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -691,26 +703,7 @@ function AgentPopup({ open, onClose }: { open: boolean; onClose: () => void }) {
   const agentActive = mode !== 'Human';
   const extensionPaired = connectedEndpoints.length > 0;
 
-  const RadioItem = ({ label, value }: { label: string; value: BrowserAgentMode }) => (
-    <div
-      onClick={() => status !== 'Running' && setMode(value)}
-      style={{
-        display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0',
-        cursor: status === 'Running' ? 'not-allowed' : 'pointer',
-        opacity: status === 'Running' ? 0.5 : 1,
-        color: mode === value ? browserTokens.accent : TEXT.tertiary, fontSize: 12,
-      }}
-    >
-      <div style={{
-        width: 12, height: 12, borderRadius: '50%',
-        border: `2px solid ${mode === value ? browserTokens.accent : TEXT.tertiary}`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        {mode === value && <div style={{ width: 6, height: 6, borderRadius: '50%', background: browserTokens.accent }} />}
-      </div>
-      {label}
-    </div>
-  );
+  
 
   return (
     <div ref={ref} style={{
@@ -729,7 +722,7 @@ function AgentPopup({ open, onClose }: { open: boolean; onClose: () => void }) {
         <button
           onClick={() => setMode(agentActive ? 'Human' : 'Assist')}
           style={{
-            padding: '2px 10px', borderRadius: 10, border: 'none', fontSize: 10, fontWeight: 700,
+            padding: '2px 10px', borderRadius: 10, border: 'none', fontSize: 12, fontWeight: 700,
             background: agentActive ? browserTokens.accent : TEXT.tertiary,
             color: agentActive ? BACKGROUND.primary : TEXT.tertiary,
             cursor: 'pointer',
@@ -751,7 +744,7 @@ function AgentPopup({ open, onClose }: { open: boolean; onClose: () => void }) {
 
       <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 4, color: TEXT.tertiary }}>
         <div>
-          Operator: {operatorOk === null ? '...' : operatorOk ? (
+          Operator: {operatorOk === null ? '…' : operatorOk ? (
             <span style={{ color: STATUS.success }}>Connected ✓</span>
           ) : (
             <span style={{ color: STATUS.error }}>Offline ✗</span>
@@ -989,7 +982,7 @@ function ExtensionManagerPopup({ open, onClose, onNavigate }: { open: boolean; o
             onClick={() => setActiveTab(tab)}
             style={{
               flex: 1, padding: '7px 0', border: 'none', background: 'transparent', cursor: 'pointer',
-              fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em',
+              fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em',
               color: activeTab === tab ? browserTokens.accent : TEXT.tertiary,
               borderBottom: activeTab === tab ? `2px solid ${browserTokens.accent}` : '2px solid transparent',
               transition: 'color 0.15s',
@@ -1021,12 +1014,12 @@ function ExtensionManagerPopup({ open, onClose, onNavigate }: { open: boolean; o
                     <span style={{ fontSize: 12, color: ext.enabled ? TEXT.secondary : TEXT.tertiary, fontWeight: 500 }}>{ext.name}</span>
                     {ext.installStatus === 'pending' && (
                       <span style={{
-                        fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                        fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
                         color: STATUS.warning, background: 'rgba(251,191,36,0.12)', borderRadius: 3, padding: '1px 4px',
                       }}>Pending</span>
                     )}
                   </div>
-                  <div style={{ fontSize: 10, color: TEXT.tertiary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: 12, color: TEXT.tertiary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {ext.description}
                     {ext.version !== 'latest' && ` · v${ext.version}`}
                   </div>
@@ -1036,7 +1029,7 @@ function ExtensionManagerPopup({ open, onClose, onNavigate }: { open: boolean; o
                       <button
                         onClick={() => handleConfirmInstalled(ext.id)}
                         style={{
-                          padding: '2px 6px', borderRadius: 4, border: 'none', fontSize: 10, fontWeight: 600,
+                          padding: '2px 6px', borderRadius: 4, border: 'none', fontSize: 12, fontWeight: 600,
                           background: 'rgba(34,197,94,0.15)', color: STATUS.success, cursor: 'pointer',
                         }}
                       >
@@ -1046,7 +1039,7 @@ function ExtensionManagerPopup({ open, onClose, onNavigate }: { open: boolean; o
                         <button
                           onClick={() => { onNavigate(ext.storeUrl!); onClose(); }}
                           style={{
-                            padding: '2px 6px', borderRadius: 4, border: 'none', fontSize: 10, fontWeight: 600,
+                            padding: '2px 6px', borderRadius: 4, border: 'none', fontSize: 12, fontWeight: 600,
                             background: 'var(--ui-border-muted)', color: TEXT.tertiary, cursor: 'pointer',
                           }}
                         >
@@ -1113,7 +1106,7 @@ function ExtensionManagerPopup({ open, onClose, onNavigate }: { open: boolean; o
                   onClick={() => setCustomInstalling(true)}
                   style={{
                     width: '100%', padding: '6px', borderRadius: 6, border: `1px dashed ${TEXT.tertiary}`,
-                    background: 'transparent', color: TEXT.tertiary, fontSize: 11, cursor: 'pointer',
+                    background: 'transparent', color: TEXT.tertiary, fontSize: 12, cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4,
                   }}
                   onMouseEnter={(e) => { e.currentTarget.style.borderColor = TEXT.secondary; e.currentTarget.style.color = TEXT.secondary; }}
@@ -1124,7 +1117,7 @@ function ExtensionManagerPopup({ open, onClose, onNavigate }: { open: boolean; o
               </div>
             ) : (
               <div style={{ padding: '8px 12px', borderTop: `1px solid ${BORDER.subtle}`, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <div style={{ fontSize: 11, color: TEXT.tertiary, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Custom Extension</div>
+                <div style={{ fontSize: 12, color: TEXT.tertiary, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Custom Extension</div>
                 <input
                   value={installName} onChange={(e) => setInstallName(e.target.value)}
                   placeholder="Extension name"
@@ -1145,13 +1138,13 @@ function ExtensionManagerPopup({ open, onClose, onNavigate }: { open: boolean; o
                 <div style={{ display: 'flex', gap: 6 }}>
                   <button onClick={handleCustomInstall} style={{
                     flex: 1, padding: '5px 10px', borderRadius: 6, border: 'none',
-                    background: browserTokens.accent, color: BACKGROUND.primary, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                    background: browserTokens.accent, color: BACKGROUND.primary, fontSize: 12, fontWeight: 600, cursor: 'pointer',
                   }}>
                     Add Extension
                   </button>
                   <button onClick={() => { setCustomInstalling(false); setInstallName(''); setInstallUrl(''); }} style={{
                     padding: '5px 10px', borderRadius: 6, border: 'none',
-                    background: 'var(--ui-border-muted)', color: TEXT.tertiary, fontSize: 11, cursor: 'pointer',
+                    background: 'var(--ui-border-muted)', color: TEXT.tertiary, fontSize: 12, cursor: 'pointer',
                   }}>
                     Cancel
                   </button>
@@ -1168,7 +1161,7 @@ function ExtensionManagerPopup({ open, onClose, onNavigate }: { open: boolean; o
             <div style={{
               margin: '8px 12px', padding: '7px 10px', borderRadius: 6,
               background: 'rgba(212,176,140,0.06)', border: '1px solid rgba(212,176,140,0.15)',
-              fontSize: 10, color: TEXT.tertiary, lineHeight: 1.5,
+              fontSize: 12, color: TEXT.tertiary, lineHeight: 1.5,
             }}>
               Clicking <strong style={{ color: browserTokens.accent }}>Add to Chrome</strong> navigates to the Chrome Web Store — install it there, then open Extensions and click <strong style={{ color: STATUS.success }}>Mark installed</strong>.
             </div>
@@ -1187,20 +1180,20 @@ function ExtensionManagerPopup({ open, onClose, onNavigate }: { open: boolean; o
                         <span style={{ fontSize: 12, color: TEXT.secondary, fontWeight: 600 }}>{item.name}</span>
                         {item.featured && (
                           <span style={{
-                            fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                            fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
                             color: browserTokens.accent, background: 'color-mix(in srgb, var(--accent-primary) 12%, transparent)', borderRadius: 3, padding: '1px 4px',
                           }}>Featured</span>
                         )}
                       </div>
                       {item.publisher && (
-                        <div style={{ fontSize: 10, color: TEXT.tertiary, marginBottom: 3 }}>by {item.publisher}</div>
+                        <div style={{ fontSize: 12, color: TEXT.tertiary, marginBottom: 3 }}>by {item.publisher}</div>
                       )}
-                      <div style={{ fontSize: 10, color: TEXT.tertiary, lineHeight: 1.4, marginBottom: 8 }}>
+                      <div style={{ fontSize: 12, color: TEXT.tertiary, lineHeight: 1.4, marginBottom: 8 }}>
                         {item.description}
                       </div>
                       {alreadyAdded ? (
                         <span style={{
-                          fontSize: 10, color: STATUS.success, fontWeight: 600,
+                          fontSize: 12, color: STATUS.success, fontWeight: 600,
                           display: 'flex', alignItems: 'center', gap: 3,
                         }}>
                           ✓ Added
@@ -1209,7 +1202,7 @@ function ExtensionManagerPopup({ open, onClose, onNavigate }: { open: boolean; o
                         <button
                           onClick={() => handleCatalogInstall(item)}
                           style={{
-                            padding: '4px 10px', borderRadius: 6, border: 'none', fontSize: 10, fontWeight: 700,
+                            padding: '4px 10px', borderRadius: 6, border: 'none', fontSize: 12, fontWeight: 700,
                             background: item.featured ? browserTokens.accent : 'var(--ui-border-muted)',
                             color: item.featured ? BACKGROUND.primary : TEXT.secondary,
                             cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
@@ -1234,7 +1227,7 @@ function ExtensionManagerPopup({ open, onClose, onNavigate }: { open: boolean; o
             <div style={{ padding: '8px 12px', textAlign: 'center' }}>
               <button
                 onClick={() => { onNavigate('https://chromewebstore.google.com'); onClose(); }}
-                style={{ background: 'transparent', border: 'none', fontSize: 10, color: TEXT.tertiary, cursor: 'pointer', padding: 0 }}
+                style={{ background: 'transparent', border: 'none', fontSize: 12, color: TEXT.tertiary, cursor: 'pointer', padding: 0 }}
                 onMouseEnter={(e) => { e.currentTarget.style.color = browserTokens.accent; }}
                 onMouseLeave={(e) => { e.currentTarget.style.color = TEXT.tertiary; }}
               >
@@ -1281,7 +1274,7 @@ function ExtensionManagerPopup({ open, onClose, onNavigate }: { open: boolean; o
             {/* Permissions section */}
             <div style={{ overflowY: 'auto', flex: 1, padding: '8px 0' }}>
               <div style={{
-                padding: '4px 12px 8px', fontSize: 10, fontWeight: 700,
+                padding: '4px 12px 8px', fontSize: 12, fontWeight: 700,
                 textTransform: 'uppercase', letterSpacing: '0.08em', color: TEXT.tertiary,
                 display: 'flex', alignItems: 'center', gap: 5,
               }}>
@@ -1297,7 +1290,7 @@ function ExtensionManagerPopup({ open, onClose, onNavigate }: { open: boolean; o
                     padding: '7px 12px', borderBottom: '1px solid var(--surface-hover)',
                   }}>
                     <span style={{ fontSize: 14, flexShrink: 0 }}>{icon}</span>
-                    <span style={{ fontSize: 11, color: TEXT.secondary, flex: 1 }}>{label}</span>
+                    <span style={{ fontSize: 12, color: TEXT.secondary, flex: 1 }}>{label}</span>
                     {/* Three-way pill: Allow / Ask / Block */}
                     <div style={{
                       display: 'flex', borderRadius: 6, overflow: 'hidden',
@@ -1315,7 +1308,7 @@ function ExtensionManagerPopup({ open, onClose, onNavigate }: { open: boolean; o
                             key={val}
                             onClick={() => setExtensionPermission(settingsExt.id, key, val)}
                             style={{
-                              padding: '2px 6px', border: 'none', cursor: 'pointer', fontSize: 9,
+                              padding: '2px 6px', border: 'none', cursor: 'pointer', fontSize: 12,
                               fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em',
                               background: active ? `${colors[val]}22` : 'transparent',
                               color: active ? colors[val] : TEXT.tertiary,
@@ -1344,7 +1337,7 @@ function ExtensionManagerPopup({ open, onClose, onNavigate }: { open: boolean; o
                   }}
                   style={{
                     width: '100%', padding: '5px', borderRadius: 6, border: `1px dashed ${BORDER.subtle}`,
-                    background: 'transparent', color: TEXT.tertiary, fontSize: 10, cursor: 'pointer',
+                    background: 'transparent', color: TEXT.tertiary, fontSize: 12, cursor: 'pointer',
                   }}
                   onMouseEnter={(e) => { e.currentTarget.style.borderColor = TEXT.tertiary; e.currentTarget.style.color = TEXT.secondary; }}
                   onMouseLeave={(e) => { e.currentTarget.style.borderColor = BORDER.subtle; e.currentTarget.style.color = TEXT.tertiary; }}
@@ -1363,6 +1356,32 @@ function ExtensionManagerPopup({ open, onClose, onNavigate }: { open: boolean; o
 // ============================================================================
 // Main Browser Component
 // ============================================================================
+
+
+const NavBtn = ({ 
+  children, 
+  title, 
+  onClick, 
+  active, 
+  disabled 
+}: { 
+  children: React.ReactNode; 
+  title: string; 
+  onClick?: () => void; 
+  active?: boolean; 
+  disabled?: boolean 
+}) => (
+  <m.button
+    onClick={onClick} title={title} disabled={disabled}
+    whileHover={disabled ? {} : { y: -1, scale: 1.05 }}
+    whileTap={disabled ? {} : { scale: 0.95 }}
+    transition={{ duration: 0.15 }}
+    style={{ padding: 6, borderRadius: '50%', border: 'none', background: 'transparent', cursor: disabled ? 'not-allowed' : 'pointer', color: active ? 'var(--accent-primary)' : TEXT.tertiary, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: disabled ? 0.5 : 1 }}
+    onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.background = 'var(--ui-border-default)'; }}
+    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
+    {children}
+  </m.button>
+);
 
 export function BrowserCapsuleEnhanced({
   initialUrl,
@@ -1610,19 +1629,7 @@ export function BrowserCapsuleEnhanced({
     addShortcut({ label: title, url, icon: '⭐' });
   }, [activeTab, isBookmarked, addShortcut]);
 
-  // Button helper
-  const NavBtn = ({ children, title, onClick, active, disabled }: { children: React.ReactNode; title: string; onClick?: () => void; active?: boolean; disabled?: boolean }) => (
-    <motion.button
-      onClick={onClick} title={title} disabled={disabled}
-      whileHover={disabled ? {} : { y: -1, scale: 1.05 }}
-      whileTap={disabled ? {} : { scale: 0.95 }}
-      transition={{ duration: 0.15 }}
-      style={{ padding: 6, borderRadius: '50%', border: 'none', background: 'transparent', cursor: disabled ? 'not-allowed' : 'pointer', color: active ? browserTokens.accent : disabled ? TEXT.tertiary : TEXT.tertiary, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: disabled ? 0.5 : 1 }}
-      onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.background = 'var(--ui-border-default)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}>
-      {children}
-    </motion.button>
-  );
+  
 
   // Compute dynamic tab width: shrink as count grows, min 60px
   // Tab bar refs
@@ -1880,7 +1887,7 @@ export function BrowserCapsuleEnhanced({
                   <TabFavicon url={tab.contentType === 'web' ? (tab as WebTab).url : undefined} size={isPinned ? 12 : 13} />
                 )}
                 {showTitle && !isPinned && (
-                  <span style={{ fontSize: 11, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
+                  <span style={{ fontSize: 12, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>
                     {tab.title || 'New Tab'}
                   </span>
                 )}
@@ -1896,7 +1903,7 @@ export function BrowserCapsuleEnhanced({
             );
           })}
           {/* + button */}
-          <motion.button onClick={() => addTab('about:blank')} title="New Tab"
+          <m.button onClick={() => addTab('about:blank')} title="New Tab"
             whileHover={{ y: -1, scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             transition={{ duration: 0.15 }}
@@ -1904,7 +1911,7 @@ export function BrowserCapsuleEnhanced({
             onMouseEnter={(e) => { e.currentTarget.style.background = BACKGROUND.hover; e.currentTarget.style.color = TEXT.primary; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = TEXT.tertiary; }}>
             <Plus style={{ width: 14, height: 14 }} />
-          </motion.button>
+          </m.button>
         </div>
         {/* Dropdown chevron + close all */}
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center', height: '100%', paddingRight: 4, gap: 2 }}>
@@ -1946,7 +1953,7 @@ export function BrowserCapsuleEnhanced({
               {tooltipTab.title || 'New Tab'}
             </div>
             {'url' in tooltipTab && (tooltipTab as WebTab).url && (
-              <div style={{ fontSize: 10, color: TEXT.tertiary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>
+              <div style={{ fontSize: 12, color: TEXT.tertiary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>
                 {(tooltipTab as WebTab).url}
               </div>
             )}
@@ -2163,8 +2170,8 @@ export function BrowserCapsuleEnhanced({
               {iframeError && (
                 <div style={{ position: 'absolute', inset: 0, background: BACKGROUND.primary, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
                   <Warning style={{ width: 48, height: 48, color: 'rgba(239,68,68,0.6)', marginBottom: 16 }} />
-                  <div style={{ fontSize: 11, fontWeight: 900, color: 'rgba(248,113,113,0.8)', textTransform: 'uppercase', letterSpacing: '0.3em', marginBottom: 8 }}>CONNECTION_FAILED</div>
-                  <div style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'rgba(155,155,155,0.4)', maxWidth: 320, textAlign: 'center' }}>Could not load {(activeTab as WebTab).url}</div>
+                  <div style={{ fontSize: 12, fontWeight: 900, color: 'rgba(248,113,113,0.8)', textTransform: 'uppercase', letterSpacing: '0.3em', marginBottom: 8 }}>CONNECTION_FAILED</div>
+                  <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'rgba(155,155,155,0.4)', maxWidth: 320, textAlign: 'center' }}>Could not load {(activeTab as WebTab).url}</div>
                 </div>
               )}
               {!iframeLoaded && !iframeError && (
@@ -2191,7 +2198,7 @@ export function BrowserCapsuleEnhanced({
           ) : (
             <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
               <div style={{ marginBottom: 80, opacity: 0.4, transform: 'scale(0.9)' }}><AllternitLogo size="lg" variant="stacked" /></div>
-              <p style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'rgba(155,155,155,0.2)', textTransform: 'uppercase', letterSpacing: '0.5em' }}>INITIALIZING_KERNEL...</p>
+              <p style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'rgba(155,155,155,0.2)', textTransform: 'uppercase', letterSpacing: '0.5em' }}>INITIALIZING_KERNEL…</p>
             </div>
           )
         ) : contentMode === 'canvas' ? (

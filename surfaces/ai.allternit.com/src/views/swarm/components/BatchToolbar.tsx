@@ -88,7 +88,7 @@ export function BatchToolbar({ modeColors }: BatchToolbarProps) {
         </button>
         <button
           onClick={toggleBatchMode}
-          className="flex items-center justify-center w-7 h-7 rounded-md transition-opacity hover:opacity-70 ml-2"
+          className="flex items-center justify-center size-7  rounded-md transition-opacity hover:opacity-70 ml-2"
           style={{ color: TEXT.tertiary }}
         >
           <X size={12} weight="bold" />

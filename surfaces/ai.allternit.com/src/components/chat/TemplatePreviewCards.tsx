@@ -58,7 +58,7 @@ export interface TemplatePreview {
 // OPEN-ENDED TEMPLATE DEFINITIONS
 // =============================================================================
 
-const MODE_TEMPLATES: Record<string, TemplatePreview[]> = {
+export const ALL_TEMPLATES: Record<string, TemplatePreview[]> = {
   // ==========================================================================
   // === CREATE GROUP - IMAGE MODE (10 templates) ===
   // ==========================================================================
@@ -130,7 +130,7 @@ const MODE_TEMPLATES: Record<string, TemplatePreview[]> = {
       prompt: `Design a logo or brand mark. Describe your brand (company name, industry, values, target audience) and style preferences (modern, classic, playful, sophisticated) and I'll create logo concepts with proper spacing and versatility.`,
       icon: Fingerprint,
       previewImage: '/images/templates/create/image-abstract.jpg',
-      fallbackGradient: 'from-indigo-600 via-purple-600 to-pink-600',
+      fallbackGradient: 'from-blue-600 via-purple-600 to-pink-600',
       category: 'image'
     },
     {
@@ -150,7 +150,7 @@ const MODE_TEMPLATES: Record<string, TemplatePreview[]> = {
       prompt: `Generate 3D mockups of your design. Describe what you need mocked up (app on phone, packaging, billboard, merchandise) and I'll create realistic 3D renders with proper lighting, shadows, and materials.`,
       icon: Box,
       previewImage: '/images/templates/create/website-dashboard.jpg',
-      fallbackGradient: 'from-slate-600 via-gray-600 to-zinc-700',
+      fallbackGradient: 'from-zinc-600 via-zinc-600 to-zinc-700',
       category: 'image'
     },
     {
@@ -196,7 +196,7 @@ const MODE_TEMPLATES: Record<string, TemplatePreview[]> = {
       prompt: `Create a product demonstration video. Describe what you're showcasing and the key features to highlight, and I'll generate smooth camera movements, proper lighting, and professional presentation that sells.`,
       icon: Video,
       previewImage: '/images/templates/create/video-product.jpg',
-      fallbackGradient: 'from-slate-700 via-gray-700 to-zinc-800',
+      fallbackGradient: 'from-zinc-700 via-zinc-700 to-zinc-800',
       category: 'video'
     },
     {
@@ -262,7 +262,7 @@ const MODE_TEMPLATES: Record<string, TemplatePreview[]> = {
       prompt: `Build a pitch deck for your startup or project. Share your business concept, target market, and traction so far, and I'll structure a compelling narrative covering Problem, Solution, Market, Model, Traction, Team, and Ask.`,
       icon: Presentation,
       previewImage: '/images/templates/create/slides-pitch.jpg',
-      fallbackGradient: 'from-blue-700 via-indigo-700 to-violet-800',
+      fallbackGradient: 'from-blue-700 via-blue-700 to-violet-800',
       category: 'slides'
     },
     {
@@ -302,7 +302,7 @@ const MODE_TEMPLATES: Record<string, TemplatePreview[]> = {
       prompt: `Create a project status update presentation. Share what's been completed, what's in progress, blockers, and next steps, and I'll format it for stakeholders with clear progress indicators and action items.`,
       icon: Clock,
       previewImage: '/images/templates/create/slides-quarterly.jpg',
-      fallbackGradient: 'from-cyan-600 via-blue-600 to-indigo-700',
+      fallbackGradient: 'from-cyan-600 via-blue-600 to-blue-700',
       category: 'slides'
     },
     {
@@ -312,7 +312,7 @@ const MODE_TEMPLATES: Record<string, TemplatePreview[]> = {
       prompt: `Build an all-hands meeting presentation. Share company updates, team wins, upcoming initiatives, and key messages, and I'll create engaging slides that inform and inspire your entire organization.`,
       icon: Users,
       previewImage: '/images/templates/create/slides-training.jpg',
-      fallbackGradient: 'from-purple-600 via-violet-600 to-indigo-700',
+      fallbackGradient: 'from-purple-600 via-violet-600 to-blue-700',
       category: 'slides'
     },
     {
@@ -368,7 +368,7 @@ const MODE_TEMPLATES: Record<string, TemplatePreview[]> = {
       prompt: `Create a dashboard interface. Describe what data you're displaying (analytics, admin tools, project management) and user types, and I'll design an intuitive UI with proper data visualization and navigation.`,
       icon: LineChart,
       previewImage: '/images/templates/create/website-dashboard.jpg',
-      fallbackGradient: 'from-slate-800 via-gray-800 to-zinc-900',
+      fallbackGradient: 'from-zinc-800 via-zinc-800 to-zinc-900',
       category: 'website'
     },
     {
@@ -398,7 +398,7 @@ const MODE_TEMPLATES: Record<string, TemplatePreview[]> = {
       prompt: `Build a documentation website. Describe your product/API and the documentation structure you need (getting started, API reference, tutorials), and I'll create searchable, navigable docs that developers love.`,
       icon: FileCode,
       previewImage: '/images/templates/create/slides-training.jpg',
-      fallbackGradient: 'from-blue-700 via-indigo-700 to-violet-800',
+      fallbackGradient: 'from-blue-700 via-blue-700 to-violet-800',
       category: 'website'
     },
     {
@@ -418,7 +418,7 @@ const MODE_TEMPLATES: Record<string, TemplatePreview[]> = {
       prompt: `Create a complete marketing website. Describe your company, offerings, and brand personality, and I'll build multi-page site with home, about, features, pricing, and contact sections.`,
       icon: Globe,
       previewImage: '/images/templates/create/website-landing.jpg',
-      fallbackGradient: 'from-cyan-600 via-blue-600 to-indigo-700',
+      fallbackGradient: 'from-cyan-600 via-blue-600 to-blue-700',
       category: 'website'
     }
   ],
@@ -434,7 +434,7 @@ const MODE_TEMPLATES: Record<string, TemplatePreview[]> = {
       prompt: `Research a market for me. Tell me the industry or product category you're exploring, and I'll analyze market size, key players, trends, growth drivers, and opportunities with sources and data.`,
       icon: Search,
       previewImage: '/images/templates/analyze/research-market.jpg',
-      fallbackGradient: 'from-blue-700 via-indigo-700 to-violet-800',
+      fallbackGradient: 'from-blue-700 via-blue-700 to-violet-800',
       category: 'research'
     },
     {
@@ -444,7 +444,7 @@ const MODE_TEMPLATES: Record<string, TemplatePreview[]> = {
       prompt: `Analyze your competition. Share who your competitors are (or the space you're entering), and I'll create a competitive landscape report covering their positioning, strengths, weaknesses, and differentiation opportunities.`,
       icon: Bot,
       previewImage: '/images/templates/analyze/research-competitor.jpg',
-      fallbackGradient: 'from-cyan-600 via-blue-700 to-indigo-800',
+      fallbackGradient: 'from-cyan-600 via-blue-700 to-blue-800',
       category: 'research'
     },
     {
@@ -494,7 +494,7 @@ const MODE_TEMPLATES: Record<string, TemplatePreview[]> = {
       prompt: `Research patent and IP landscape. Describe the technology or invention area, and I'll analyze existing patents, identify white space, freedom-to-operate issues, and filing strategies.`,
       icon: FileSearch,
       previewImage: '/images/templates/analyze/research-regulatory.jpg',
-      fallbackGradient: 'from-purple-600 via-violet-600 to-indigo-700',
+      fallbackGradient: 'from-purple-600 via-violet-600 to-blue-700',
       category: 'research'
     },
     {
@@ -530,7 +530,7 @@ const MODE_TEMPLATES: Record<string, TemplatePreview[]> = {
       prompt: `Help me write SQL queries. Describe your database schema and what analysis you need (metrics, trends, segments), and I'll write optimized queries with explanations and performance considerations.`,
       icon: Database,
       previewImage: '/images/templates/analyze/data-sql.jpg',
-      fallbackGradient: 'from-blue-800 via-indigo-800 to-violet-900',
+      fallbackGradient: 'from-blue-800 via-blue-800 to-violet-900',
       category: 'data'
     },
     {
@@ -570,7 +570,7 @@ const MODE_TEMPLATES: Record<string, TemplatePreview[]> = {
       prompt: `Find correlations in my data. Describe your variables and hypothesis, and I'll perform correlation analysis, identify significant relationships, and explain what drives your outcomes.`,
       icon: GitBranch,
       previewImage: '/images/templates/analyze/data-viz.jpg',
-      fallbackGradient: 'from-indigo-600 via-purple-600 to-pink-600',
+      fallbackGradient: 'from-blue-600 via-purple-600 to-pink-600',
       category: 'data'
     },
     {
@@ -606,7 +606,7 @@ const MODE_TEMPLATES: Record<string, TemplatePreview[]> = {
       prompt: `Build a React component for me. Describe what UI element you need (table, form, modal, card, navigation), and I'll write production-ready TypeScript code with Tailwind styling, accessibility, and best practices.`,
       icon: Code,
       previewImage: '/images/templates/build/code-react.jpg',
-      fallbackGradient: 'from-cyan-600 via-blue-700 to-indigo-800',
+      fallbackGradient: 'from-cyan-600 via-blue-700 to-blue-800',
       category: 'code'
     },
     {
@@ -636,7 +636,7 @@ const MODE_TEMPLATES: Record<string, TemplatePreview[]> = {
       prompt: `Design a database schema. Describe your application requirements and entities, and I'll create normalized tables with proper indexes, constraints, and relationships for your chosen database.`,
       icon: Database,
       previewImage: '/images/templates/build/code-schema.jpg',
-      fallbackGradient: 'from-blue-800 via-slate-800 to-gray-900',
+      fallbackGradient: 'from-blue-800 via-zinc-800 to-zinc-900',
       category: 'code'
     },
     {
@@ -656,7 +656,7 @@ const MODE_TEMPLATES: Record<string, TemplatePreview[]> = {
       prompt: `Build a CLI tool. Describe the command-line utility you need (file processor, DevOps tool, code generator), and I'll create a well-structured CLI with arguments, help text, and error handling.`,
       icon: Terminal,
       previewImage: '/images/templates/build/code-python.jpg',
-      fallbackGradient: 'from-zinc-600 via-gray-600 to-slate-700',
+      fallbackGradient: 'from-zinc-600 via-zinc-600 to-zinc-700',
       category: 'code'
     },
     {
@@ -686,7 +686,7 @@ const MODE_TEMPLATES: Record<string, TemplatePreview[]> = {
       prompt: `Write a migration script. Describe your source and target systems (database versions, schema changes, data transforms), and I'll create safe, reversible migration code with rollback procedures.`,
       icon: RefreshCw,
       previewImage: '/images/templates/build/code-schema.jpg',
-      fallbackGradient: 'from-violet-600 via-purple-600 to-indigo-700',
+      fallbackGradient: 'from-violet-600 via-purple-600 to-blue-700',
       category: 'code'
     },
     {
@@ -722,7 +722,7 @@ const MODE_TEMPLATES: Record<string, TemplatePreview[]> = {
       prompt: `Deploy a research swarm on a topic. Describe what you're researching, and I'll coordinate multiple agents to search sources, extract insights, synthesize findings, and format citations into a comprehensive report.`,
       icon: Search,
       previewImage: '/images/templates/automate/swarms-research.jpg',
-      fallbackGradient: 'from-blue-800 via-indigo-800 to-violet-900',
+      fallbackGradient: 'from-blue-800 via-blue-800 to-violet-900',
       category: 'swarms'
     },
     {
@@ -782,7 +782,7 @@ const MODE_TEMPLATES: Record<string, TemplatePreview[]> = {
       prompt: `Simulate a development team. Describe your feature or project, and I'll coordinate agents as PM, architect, frontend, backend, and QA to design and plan the implementation.`,
       icon: Users,
       previewImage: '/images/templates/build/code-react.jpg',
-      fallbackGradient: 'from-blue-700 via-indigo-700 to-violet-800',
+      fallbackGradient: 'from-blue-700 via-blue-700 to-violet-800',
       category: 'swarms'
     }
   ],
@@ -798,7 +798,7 @@ const MODE_TEMPLATES: Record<string, TemplatePreview[]> = {
       prompt: `Design an email automation workflow. Describe your trigger (signup, purchase, event) and the journey you want (onboarding, nurture, retention), and I'll create a sequence with timing, personalization, and branching logic.`,
       icon: Mail,
       previewImage: '/images/templates/automate/flow-email.jpg',
-      fallbackGradient: 'from-blue-800 via-indigo-800 to-violet-900',
+      fallbackGradient: 'from-blue-800 via-blue-800 to-violet-900',
       category: 'flow'
     },
     {
@@ -828,7 +828,7 @@ const MODE_TEMPLATES: Record<string, TemplatePreview[]> = {
       prompt: `Set up scheduled automation. Describe what task you need run regularly (reports, backups, cleanup, syncing) and the schedule, and I'll create a cron job or scheduled workflow with monitoring.`,
       icon: Clock,
       previewImage: '/images/templates/automate/flow-pipeline.jpg',
-      fallbackGradient: 'from-indigo-600 via-purple-600 to-fuchsia-700',
+      fallbackGradient: 'from-blue-600 via-purple-600 to-fuchsia-700',
       category: 'flow'
     },
     {
@@ -838,7 +838,7 @@ const MODE_TEMPLATES: Record<string, TemplatePreview[]> = {
       prompt: `Build a webhook workflow. Describe the service sending events and what you need to happen when they arrive, and I'll create event handlers with verification, retries, and downstream actions.`,
       icon: Webhook,
       previewImage: '/images/templates/automate/flow-email.jpg',
-      fallbackGradient: 'from-cyan-600 via-blue-600 to-indigo-700',
+      fallbackGradient: 'from-cyan-600 via-blue-600 to-blue-700',
       category: 'flow'
     },
     {
@@ -868,11 +868,13 @@ const MODE_TEMPLATES: Record<string, TemplatePreview[]> = {
       prompt: `Create a form processing workflow. Describe your form and what should happen to submissions (validation, storage, notifications, CRM), and I'll design the complete data flow with error handling.`,
       icon: FileText,
       previewImage: '/images/templates/automate/flow-approval.jpg',
-      fallbackGradient: 'from-violet-600 via-purple-600 to-indigo-700',
+      fallbackGradient: 'from-violet-600 via-purple-600 to-blue-700',
       category: 'flow'
     }
   ]
 };
+
+const MODE_TEMPLATES = ALL_TEMPLATES;
 
 // Default templates for modes without specific ones
 const DEFAULT_TEMPLATES: TemplatePreview[] = [
@@ -957,31 +959,31 @@ function TemplateCard({ template, onSelect, index }: TemplateCardProps) {
           {/* Loading State */}
           {!imageLoaded && !imageError && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <Loader2 className="w-6 h-6 text-white/40 animate-spin" />
+              <Loader2 className="size-6  text-white/40 animate-spin" />
             </div>
           )}
           
           {/* Icon Badge - Top Left */}
           <div className="absolute top-3 left-3 z-10">
             <div className={cn(
-              "w-10 h-10 rounded-xl flex items-center justify-center",
+              "size-10  rounded-xl flex items-center justify-center",
               "bg-black/40 backdrop-blur-md border border-white/20",
               "shadow-lg shadow-black/20"
             )}>
-              <Icon className="w-5 h-5 text-white" strokeWidth={1.5} />
+              <Icon className="size-5  text-white" strokeWidth={1.5} />
             </div>
           </div>
           
           {/* Arrow - Top Right (appears on hover) */}
           <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <div className="w-8 h-8 rounded-lg bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
-              <ArrowUpRight className="w-4 h-4 text-white" />
+            <div className="size-8  rounded-lg bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
+              <ArrowUpRight className="size-4  text-white" />
             </div>
           </div>
           
           {/* Category Badge - Bottom Left */}
           <div className="absolute bottom-3 left-3 z-10">
-            <span className="px-2.5 py-1 rounded-full text-[10px] font-medium tracking-wide uppercase bg-black/50 backdrop-blur-md text-white/80 border border-white/10">
+            <span className="px-2.5 py-1 rounded-full text-xs font-medium tracking-wide uppercase bg-black/50 backdrop-blur-md text-white/80 border border-white/10">
               {template.category}
             </span>
           </div>
@@ -1081,5 +1083,3 @@ export function getTemplatesForMode(modeId: string): TemplatePreview[] {
 export function getTotalTemplateCount(): number {
   return Object.values(MODE_TEMPLATES).reduce((sum, templates) => sum + templates.length, 0);
 }
-
-

@@ -38,7 +38,7 @@ export const videoUseTool = {
     required: ['title', 'edl', 'transcript']
   },
   execute: async (params: any) => {
-    console.log(`[VideoUse] Rendering Walkthrough: ${params.title}...`);
+    console.debug(`[VideoUse] Rendering Walkthrough: ${params.title}...`);
     
     // Simulate ffmpeg / remotion / hyperframes processing
     await new Promise(r => setTimeout(r, 2000));

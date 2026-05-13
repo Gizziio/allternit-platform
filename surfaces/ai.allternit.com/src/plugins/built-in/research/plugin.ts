@@ -102,7 +102,7 @@ class ResearchPlugin implements ModePlugin {
     
     this.isInitialized = true;
     this.emit({ type: 'initialized', timestamp: Date.now() });
-    console.log('[ResearchPlugin] Initialized');
+    console.debug('[ResearchPlugin] Initialized');
   }
 
   async destroy(): Promise<void> {
@@ -286,10 +286,10 @@ Format your response as JSON:
 {
   "summary": "detailed summary",
   "sources": [
-    { "title": "...", "url": "https://...", "snippet": "...", "credibility": "high|medium|low" }
+    { "title": "…", "url": "https://...", "snippet": "…", "credibility": "high|medium|low" }
   ],
-  "keyFindings": ["..."],
-  "relatedQuestions": ["..."]
+  "keyFindings": ["…"],
+  "relatedQuestions": ["…"]
 }`,
       temperature: 0.3,
     });

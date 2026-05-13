@@ -53,6 +53,7 @@ export interface ChatProject {
   title: string;
   threadIds: string[];
   files: ProjectFile[];
+  connectors?: string[];
   createdAt: number;
 }
 
@@ -107,6 +108,8 @@ interface ChatState {
   moveThreadToProject: (threadId: string, projectId: string | null) => void;
   addFileToProject: (projectId: string, file: Omit<ProjectFile, 'id' | 'addedAt'>) => void;
   removeFileFromProject: (projectId: string, fileId: string) => void;
+  addConnectorToProject: (projectId: string, connectorId: string) => void;
+  removeConnectorFromProject: (projectId: string, connectorId: string) => void;
 
   // Sync from ChatSessionStore
   _syncFromSessionStore: (sessions: ChatSession[], activeSessionId: string | null) => void;
@@ -176,7 +179,7 @@ export const useChatStore = create<ChatState>()(
         const localKey = `project-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         set((state) => ({
           projects: [
-            { id, localKey, title, threadIds: [], files: [], createdAt: Date.now() },
+            { id, localKey, title, threadIds: [], files: [], connectors: [], createdAt: Date.now() },
             ...state.projects,
           ],
           activeProjectId: id,
@@ -257,6 +260,24 @@ export const useChatStore = create<ChatState>()(
           projects: state.projects.map((p) =>
             p.id === projectId
               ? { ...p, files: p.files.filter((f) => f.id !== fileId) }
+              : p,
+          ),
+        })),
+
+      addConnectorToProject: (projectId, connectorId) =>
+        set((state) => ({
+          projects: state.projects.map((p) =>
+            p.id === projectId && !(p.connectors ?? []).includes(connectorId)
+              ? { ...p, connectors: [...(p.connectors ?? []), connectorId] }
+              : p,
+          ),
+        })),
+
+      removeConnectorFromProject: (projectId, connectorId) =>
+        set((state) => ({
+          projects: state.projects.map((p) =>
+            p.id === projectId
+              ? { ...p, connectors: (p.connectors ?? []).filter((id) => id !== connectorId) }
               : p,
           ),
         })),

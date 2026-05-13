@@ -204,12 +204,12 @@ export function ProviderModelSelector({
               >
                 {isCreatingSession ? (
                   <>
-                    <CircleNotch className="mr-2 h-4 w-4 animate-spin" />
+                    <CircleNotch className="mr-2 size-4  animate-spin" />
                     Opening terminal...
                   </>
                 ) : (
                   <>
-                    <Terminal className="mr-2 h-4 w-4" />
+                    <Terminal className="mr-2 size-4 " />
                     Open Auth Terminal
                   </>
                 )}
@@ -226,8 +226,8 @@ export function ProviderModelSelector({
     return (
       <div className={cn("flex items-center gap-2", className)}>
         <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted">
-          <CircleNotch className="h-4 w-4 animate-spin" />
-          <span className="text-sm text-muted-foreground">Loading models...</span>
+          <CircleNotch className="size-4  animate-spin" />
+          <span className="text-sm text-muted-foreground">Loading models…</span>
         </div>
       </div>
     );
@@ -254,7 +254,7 @@ export function ProviderModelSelector({
       <div className="flex items-center gap-2">
         <Select value={value} onValueChange={onChange}>
           <SelectTrigger className="flex-1">
-            <SelectValue placeholder="Select a model..." />
+            <SelectValue placeholder="Select a model…" />
           </SelectTrigger>
           <SelectContent>
             {state.models.length === 0 ? (
@@ -283,7 +283,7 @@ export function ProviderModelSelector({
           disabled={state.isLoadingModels}
           title="Refresh models"
         >
-          <ArrowsClockwise className={cn("h-4 w-4", state.isLoadingModels && "animate-spin")} />
+          <ArrowsClockwise className={cn("size-4 ", state.isLoadingModels && "animate-spin")} />
         </Button>
       </div>
 
@@ -319,7 +319,7 @@ export function ProviderModelSelector({
             disabled={!freeformModelId.trim() || isValidating}
           >
             {isValidating ? (
-              <CircleNotch className="h-4 w-4 animate-spin" />
+              <CircleNotch className="size-4  animate-spin" />
             ) : (
               "Validate"
             )}
@@ -358,14 +358,14 @@ export function ProviderModelSelector({
   );
 }
 
-function formatTimeAgo(date: Date): string {
+function formatTimeAgo(date: Date): string {isClient ? 
   const now = new Date();
   const diff = now.getTime() - date.getTime();
   const minutes = Math.floor(diff / 60000);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
   
-  if (days > 0) return `${days}d ago`;
+  if (days > 0) return `${days : "..."}d ago`;
   if (hours > 0) return `${hours}h ago`;
   if (minutes > 0) return `${minutes}m ago`;
   return 'just now';

@@ -68,7 +68,7 @@ const PermissionCard = memo(function PermissionCard({ request }: PermissionCardP
           disabled={busy}
           title="Deny this action"
         >
-          <Prohibit className="w-3.5 h-3.5" />
+          <Prohibit className="size-3.5 " />
           Deny
         </button>
         <button
@@ -77,7 +77,7 @@ const PermissionCard = memo(function PermissionCard({ request }: PermissionCardP
           disabled={busy}
           title="Allow this one time"
         >
-          <CheckCircle className="w-3.5 h-3.5" />
+          <CheckCircle className="size-3.5 " />
           Allow once
         </button>
         <button
@@ -86,7 +86,7 @@ const PermissionCard = memo(function PermissionCard({ request }: PermissionCardP
           disabled={busy}
           title="Always allow this permission"
         >
-          <CheckCircle className="w-3.5 h-3.5" weight="fill" />
+          <CheckCircle className="size-3.5 " weight="fill" />
           Always allow
         </button>
       </div>

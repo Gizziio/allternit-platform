@@ -26,7 +26,7 @@ async function getDesktopAuth(): Promise<AuthState | null> {
     return null
   }
 
-  console.info("[server-auth] Authenticated via desktop access token", {
+  console.debug("[server-auth] Authenticated via desktop access token", {
     userId: payload.userId,
     clientId: payload.clientId,
   })
@@ -65,7 +65,7 @@ async function getClerkBearerAuth(): Promise<AuthState | null> {
       return null
     }
 
-    console.info("[server-auth] Authenticated via Clerk bearer token", {
+    console.debug("[server-auth] Authenticated via Clerk bearer token", {
       userId,
       sessionId: typeof claims.sid === "string" ? claims.sid : null,
       orgId: typeof claims.org_id === "string" ? claims.org_id : null,
@@ -118,7 +118,7 @@ export async function getAuth(): Promise<AuthState> {
 
   try {
     const authState = await clerkModule.auth() as unknown as AuthState
-    console.info("[server-auth] Authenticated via Clerk server session", {
+    console.debug("[server-auth] Authenticated via Clerk server session", {
       userId: authState.userId,
       sessionId: authState.sessionId,
       orgId: authState.orgId,

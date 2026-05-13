@@ -70,7 +70,7 @@ export function MemoryVaultStats() {
   if (loading && !health) {
     return (
       <div className="p-8 flex justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--accent-primary)]"></div>
+        <div className="animate-spin rounded-full size-8  border-b-2 border-[var(--accent-primary)]"></div>
       </div>
     );
   }
@@ -191,7 +191,7 @@ function StatusCard({ icon, label, value, status, subValue }: {
         <span className="text-xs font-semibold uppercase tracking-tighter">{label}</span>
       </div>
       <div className={`text-lg font-bold ${colors[status]}`}>{value}</div>
-      <div className="text-[10px] text-[var(--text-tertiary)] mt-1">{subValue}</div>
+      <div className="text-xs text-[var(--text-tertiary)] mt-1">{subValue}</div>
     </div>
   );
 }

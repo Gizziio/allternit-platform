@@ -79,7 +79,7 @@ const RailCard = memo(function RailCard({ title, open, onToggle, children }: Rai
         className="w-full flex items-center justify-between px-3 py-2.5 text-left"
       >
         <span className="text-[12px] font-semibold text-white/80">{title}</span>
-        {open ? <CaretDown className="w-4 h-4 text-white/50" /> : <CaretRight className="w-4 h-4 text-white/50" />}
+        {open ? <CaretDown className="size-4  text-white/50" /> : <CaretRight className="size-4  text-white/50" />}
       </button>
       {open && <div className="px-3 pb-3">{children}</div>}
     </section>
@@ -163,13 +163,13 @@ export const CoworkRightRail = memo(function CoworkRightRail() {
               <div key={step.id} className="flex items-start gap-2.5">
                 <div className="mt-0.5">
                   {isComplete ? (
-                    <CheckCircle className="w-4 h-4 text-blue-400" />
+                    <CheckCircle className="size-4  text-blue-400" />
                   ) : isActive ? (
-                    <div className="w-4 h-4 rounded-full border border-blue-400 text-[10px] leading-[14px] text-blue-300 text-center">
+                    <div className="size-4  rounded-full border border-blue-400 text-xs leading-[14px] text-blue-300 text-center">
                       {index + 1}
                     </div>
                   ) : (
-                    <Circle className="w-4 h-4 text-white/35" />
+                    <Circle className="size-4  text-white/35" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -189,7 +189,7 @@ export const CoworkRightRail = memo(function CoworkRightRail() {
                     title="Ask a question or recommend a change"
                     className="mt-0.5 text-white/45 hover:text-white/80 transition-colors"
                   >
-                    <Chat className="w-3.5 h-3.5" />
+                    <Chat className="size-3.5 " />
                   </button>
                 )}
               </div>
@@ -202,10 +202,10 @@ export const CoworkRightRail = memo(function CoworkRightRail() {
         <div className="space-y-2.5">
           <div className="rounded-lg border border-white/10 bg-white/[0.02] px-2.5 py-2">
             <div className="flex items-start gap-2">
-              <FolderOpen className="w-4 h-4 text-white/55 mt-0.5 shrink-0" />
+              <FolderOpen className="size-4  text-white/55 mt-0.5 shrink-0" />
               <div className="min-w-0">
-                <div className="text-[11px] text-white/80 truncate">{workingFolder || 'Working folder pending'}</div>
-                <div className="text-[10px] text-white/45 mt-0.5">View and open files created during this task.</div>
+                <div className="text-[12px] text-white/80 truncate">{workingFolder || 'Working folder pending'}</div>
+                <div className="text-xs text-white/45 mt-0.5">View and open files created during this task.</div>
               </div>
             </div>
           </div>
@@ -222,22 +222,22 @@ export const CoworkRightRail = memo(function CoworkRightRail() {
                     className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md border border-white/5 bg-transparent hover:bg-white/[0.04] text-left transition-colors"
                     title={path}
                   >
-                    <FileText className="w-3.5 h-3.5 text-white/45 shrink-0" />
-                    <span className="flex-1 min-w-0 text-[11px] text-white/65 truncate">{path}</span>
-                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-white/35" />}
+                    <FileText className="size-3.5  text-white/45 shrink-0" />
+                    <span className="flex-1 min-w-0 text-[12px] text-white/65 truncate">{path}</span>
+                    {copied ? <Check className="size-3.5  text-emerald-400" /> : <Copy className="size-3.5  text-white/35" />}
                   </button>
                 );
               })}
             </div>
           ) : (
-            <p className="text-[11px] text-white/45">No files captured for this task yet.</p>
+            <p className="text-[12px] text-white/45">No files captured for this task yet.</p>
           )}
         </div>
       </RailCard>
 
       <RailCard title="Context" open={openCards.context} onToggle={() => toggleCard('context')}>
         <div className="space-y-2">
-          <div className="text-[10px] uppercase tracking-wide text-white/45">Connectors</div>
+          <div className="text-xs uppercase tracking-wide text-white/45">Connectors</div>
 
           <button
             type="button"
@@ -245,10 +245,10 @@ export const CoworkRightRail = memo(function CoworkRightRail() {
             className="w-full flex items-center justify-between px-2 py-1.5 rounded-md border border-white/5 hover:bg-white/[0.04] transition-colors"
           >
             <span className="flex items-center gap-2 text-[12px] text-white/75">
-              <Globe className="w-3.5 h-3.5 text-white/55" />
+              <Globe className="size-3.5  text-white/55" />
               Web search
             </span>
-            <span className={cn('text-[10px]', enabledConnectors.webSearch ? 'text-blue-300' : 'text-white/35')}>
+            <span className={cn('text-xs', enabledConnectors.webSearch ? 'text-blue-300' : 'text-white/35')}>
               {enabledConnectors.webSearch ? 'On' : 'Off'}
             </span>
           </button>
@@ -259,10 +259,10 @@ export const CoworkRightRail = memo(function CoworkRightRail() {
             className="w-full flex items-center justify-between px-2 py-1.5 rounded-md border border-white/5 hover:bg-white/[0.04] transition-colors"
           >
             <span className="flex items-center gap-2 text-[12px] text-white/75">
-              <HardDrive className="w-3.5 h-3.5 text-white/55" />
+              <HardDrive className="size-3.5  text-white/55" />
               Filesystem
             </span>
-            <span className={cn('text-[10px]', enabledConnectors.filesystem ? 'text-blue-300' : 'text-white/35')}>
+            <span className={cn('text-xs', enabledConnectors.filesystem ? 'text-blue-300' : 'text-white/35')}>
               {enabledConnectors.filesystem ? `${fileCount} events` : 'Off'}
             </span>
           </button>
@@ -273,10 +273,10 @@ export const CoworkRightRail = memo(function CoworkRightRail() {
             className="w-full flex items-center justify-between px-2 py-1.5 rounded-md border border-white/5 hover:bg-white/[0.04] transition-colors"
           >
             <span className="flex items-center gap-2 text-[12px] text-white/75">
-              <Terminal className="w-3.5 h-3.5 text-white/55" />
+              <Terminal className="size-3.5  text-white/55" />
               Terminal
             </span>
-            <span className={cn('text-[10px]', enabledConnectors.terminal ? 'text-blue-300' : 'text-white/35')}>
+            <span className={cn('text-xs', enabledConnectors.terminal ? 'text-blue-300' : 'text-white/35')}>
               {enabledConnectors.terminal ? `${commandCount} cmds` : 'Off'}
             </span>
           </button>
@@ -290,14 +290,14 @@ export const CoworkRightRail = memo(function CoworkRightRail() {
                   : 'Recommend the next action for this cowork task.';
                 dispatchCompose(prompt);
               }}
-              className="w-full text-[11px] rounded-md border border-white/10 bg-white/[0.03] px-2 py-1.5 text-white/70 hover:text-white/90 hover:bg-white/[0.06] transition-colors"
+              className="w-full text-[12px] rounded-md border border-white/10 bg-white/[0.03] px-2 py-1.5 text-white/70 hover:text-white/90 hover:bg-white/[0.06] transition-colors"
             >
               Ask a question or recommend a change
             </button>
           </div>
 
           {toolCalls.length > 0 && (
-            <p className="text-[10px] text-white/40">Tools used: {toolCalls.length}</p>
+            <p className="text-xs text-white/40">Tools used: {toolCalls.length}</p>
           )}
         </div>
       </RailCard>

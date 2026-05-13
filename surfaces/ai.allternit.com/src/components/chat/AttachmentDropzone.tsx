@@ -200,7 +200,7 @@ export function AttachmentDropzone({
                   >
                     {att.name}
                   </p>
-                  <p style={{ fontSize: 11, color: THEME.textMuted, margin: 0 }}>
+                  <p style={{ fontSize: 12, color: THEME.textMuted, margin: 0 }}>
                     {formatFileSize(att.size)}
                     {att.metadata?.pageCount && ` • ${att.metadata.pageCount} pages`}
                     {att.extractedText && ` • ${att.extractedText.length.toLocaleString()} chars`}
@@ -231,7 +231,7 @@ export function AttachmentDropzone({
 
                   {/* Error message */}
                   {att.status === 'error' && att.error && (
-                    <p style={{ fontSize: 11, color: THEME.error, margin: '4px 0 0' }}>
+                    <p style={{ fontSize: 12, color: THEME.error, margin: '4px 0 0' }}>
                       {att.error}
                     </p>
                   )}
@@ -249,7 +249,7 @@ export function AttachmentDropzone({
                         retryUpload(att.id);
                       }}
                       style={{
-                        fontSize: 11,
+                        fontSize: 12,
                         color: THEME.accent,
                         background: 'transparent',
                         border: 'none',

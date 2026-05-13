@@ -213,8 +213,8 @@ export function AgentCommunicationPanel({ sessionId }: { sessionId?: string }) {
         <CardContent className="p-6">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
-              <ArrowsClockwise className="w-8 h-8 animate-spin mx-auto mb-2 text-primary" />
-              <p className="text-muted-foreground">Loading agent communication...</p>
+              <ArrowsClockwise className="size-8  animate-spin mx-auto mb-2 text-primary" />
+              <p className="text-muted-foreground">Loading agent communication…</p>
             </div>
           </div>
         </CardContent>
@@ -227,7 +227,7 @@ export function AgentCommunicationPanel({ sessionId }: { sessionId?: string }) {
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <ChatCircle className="w-5 h-5 text-primary" />
+            <ChatCircle className="size-5  text-primary" />
             <CardTitle className="text-lg">Agent Communication</CardTitle>
             {unreadCount > 0 && (
               <Badge variant="secondary" className="ml-2">
@@ -241,7 +241,7 @@ export function AgentCommunicationPanel({ sessionId }: { sessionId?: string }) {
               size="sm"
               onClick={() => setActiveTab("messages")}
             >
-              <ChatCircle className="w-4 h-4 mr-1" />
+              <ChatCircle className="size-4  mr-1" />
               Messages
             </Button>
             <Button
@@ -249,7 +249,7 @@ export function AgentCommunicationPanel({ sessionId }: { sessionId?: string }) {
               size="sm"
               onClick={() => setActiveTab("agents")}
             >
-              <Users className="w-4 h-4 mr-1" />
+              <Users className="size-4  mr-1" />
               Agents
             </Button>
             <Button
@@ -257,7 +257,7 @@ export function AgentCommunicationPanel({ sessionId }: { sessionId?: string }) {
               size="sm"
               onClick={() => setActiveTab("channels")}
             >
-              <Hash className="w-4 h-4 mr-1" />
+              <Hash className="size-4  mr-1" />
               Channels
             </Button>
           </div>
@@ -283,7 +283,7 @@ export function AgentCommunicationPanel({ sessionId }: { sessionId?: string }) {
             {replyTo && (
               <div className="border-t pt-4 mt-4">
                 <div className="flex items-start gap-2 mb-2">
-                  <At className="w-4 h-4 text-primary mt-1" />
+                  <At className="size-4  text-primary mt-1" />
                   <div className="flex-1">
                     <p className="text-sm text-muted-foreground">
                       Replying to {replyTo.from.agentName}
@@ -308,7 +308,7 @@ export function AgentCommunicationPanel({ sessionId }: { sessionId?: string }) {
                     type="text"
                     value={replyContent}
                     onChange={(e) => setReplyContent(e.target.value)}
-                    placeholder="Type your reply..."
+                    placeholder="Type your reply…"
                     className="flex-1 px-3 py-2 bg-background border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && replyContent.trim()) {
@@ -342,7 +342,7 @@ export function AgentCommunicationPanel({ sessionId }: { sessionId?: string }) {
                   size="sm"
                   onClick={() => sendMessage("@builder Please provide status update", { agentRole: "builder" })}
                 >
-                  <At className="w-3 h-3 mr-1" />
+                  <At className="size-3  mr-1" />
                   Ask Builder
                 </Button>
                 <Button
@@ -350,7 +350,7 @@ export function AgentCommunicationPanel({ sessionId }: { sessionId?: string }) {
                   size="sm"
                   onClick={() => sendMessage("@validator Ready for validation", { agentRole: "validator" })}
                 >
-                  <At className="w-3 h-3 mr-1" />
+                  <At className="size-3  mr-1" />
                   Notify Validator
                 </Button>
                 <Button
@@ -361,7 +361,7 @@ export function AgentCommunicationPanel({ sessionId }: { sessionId?: string }) {
                     markAsRead()
                   }}
                 >
-                  <Hash className="w-3 h-3 mr-1" />
+                  <Hash className="size-3  mr-1" />
                   Post to #dev
                 </Button>
                 <Button
@@ -370,7 +370,7 @@ export function AgentCommunicationPanel({ sessionId }: { sessionId?: string }) {
                   onClick={markAsRead}
                   disabled={unreadCount === 0}
                 >
-                  <CheckCircle className="w-3 h-3 mr-1" />
+                  <CheckCircle className="size-3  mr-1" />
                   Mark Read
                 </Button>
               </div>
@@ -389,10 +389,10 @@ export function AgentCommunicationPanel({ sessionId }: { sessionId?: string }) {
                 <div className="flex items-center gap-3">
                   <div
                     className={cn(
-                      "w-2 h-2 rounded-full",
+                      "size-2  rounded-full",
                       agent.status === "idle" && "bg-green-500",
                       agent.status === "busy" && "bg-yellow-500",
-                      agent.status === "offline" && "bg-gray-500"
+                      agent.status === "offline" && "bg-zinc-500"
                     )}
                   />
                   <div>
@@ -417,7 +417,7 @@ export function AgentCommunicationPanel({ sessionId }: { sessionId?: string }) {
                 className="flex items-center justify-between p-3 border rounded-lg"
               >
                 <div className="flex items-center gap-3">
-                  <Hash className="w-4 h-4 text-primary" />
+                  <Hash className="size-4  text-primary" />
                   <div>
                     <p className="font-medium">#{channel.name}</p>
                     <p className="text-xs text-muted-foreground">

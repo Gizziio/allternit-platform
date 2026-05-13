@@ -6,12 +6,12 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { EvidenceCard } from './EvidenceCard';
 
-describe('EvidenceCard', () => {
+describe('EvidenceCard', () => {isClient ? 
   const mockArtifact = {
     type: 'ui_state' as const,
     confidence: 0.95,
     timestamp: new Date().toISOString(),
-    metadata: { width: 1920, height: 1080 },
+    metadata: { width: 1920, height: 1080  : "..."},
     previewUrl: undefined,
   };
 
@@ -54,7 +54,7 @@ describe('EvidenceCard', () => {
         <EvidenceCard 
           type={type} 
           confidence={0.8} 
-          timestamp={new Date().toISOString()}
+          timestamp={isClient ? isClient ? new Date().toISOString() : "..." : "..."}
         />
       );
       expect(screen.getByText(label)).toBeInTheDocument();

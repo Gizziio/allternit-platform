@@ -77,7 +77,7 @@ export function ConsoleView({
         <div className="flex items-center gap-6 text-xs mono">
           <div className="flex items-center gap-2">
             <div 
-              className="w-2 h-2 rounded-full animate-pulse"
+              className="size-2  rounded-full animate-pulse"
               style={{ background: modeColors.accent }}
             />
             <span style={{ color: TEXT.secondary }}>ONLINE</span>
@@ -120,7 +120,7 @@ export function ConsoleView({
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-bold mono">ORCH-01</span>
                   <div 
-                    className="w-1.5 h-1.5 rounded-full animate-pulse"
+                    className="size-1.5  rounded-full animate-pulse"
                     style={{ background: modeColors.accent }}
                   />
                 </div>
@@ -145,7 +145,7 @@ export function ConsoleView({
                     {getRoleAbbreviation(agent.role)}-0{idx + 1}
                   </span>
                   <div 
-                    className={`w-1.5 h-1.5 rounded-full ${agent.status === 'working' ? 'animate-pulse' : ''}`}
+                    className={`size-1.5  rounded-full ${agent.status === 'working' ? 'animate-pulse' : ''}`}
                     style={{ 
                       background: agent.status === 'working' ? agent.color : TEXT.tertiary,
                     }}
@@ -182,7 +182,7 @@ export function ConsoleView({
               >
                 <span style={{ color: TEXT.tertiary }}>{event.timestamp}</span>
                 <span 
-                  className="px-1.5 py-0.5 rounded text-[10px] font-bold"
+                  className="px-1.5 py-0.5 rounded text-xs font-bold"
                   style={{ 
                     background: `${getRoleColor(event.agentRole)}20`,
                     color: getRoleColor(event.agentRole),
@@ -193,7 +193,7 @@ export function ConsoleView({
                 {getEventTypeIconEl(event.type)}
                 <span style={{ color: TEXT.secondary }}>{event.message}</span>
                 {event.metadata && (
-                  <span className="ml-auto text-[10px]" style={{ color: TEXT.tertiary }}>
+                  <span className="ml-auto text-xs" style={{ color: TEXT.tertiary }}>
                     {event.metadata.tokens && `${(event.metadata.tokens / 1000).toFixed(1)}k tok`}
                   </span>
                 )}

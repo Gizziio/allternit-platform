@@ -161,7 +161,7 @@ export function H5iAgentHooksPanel({ workspacePath, onClose }: H5iAgentHooksPane
                   border: '1px solid rgba(16,185,129,0.2)',
                 }}
               >
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--status-success)', marginBottom: 4 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--status-success)', marginBottom: 4 }}>
                   Installed
                 </div>
                 {result.installed.map((a) => (
@@ -180,7 +180,7 @@ export function H5iAgentHooksPanel({ workspacePath, onClose }: H5iAgentHooksPane
                   border: '1px solid rgba(239,68,68,0.2)',
                 }}
               >
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--status-error)', marginBottom: 4 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--status-error)', marginBottom: 4 }}>
                   Errors
                 </div>
                 {result.errors.map((e, i) => (

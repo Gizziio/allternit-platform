@@ -52,7 +52,7 @@ export function BentoLayout({ items, title, columns = 3, className }: BentoLayou
             {/* Icon */}
             {item.icon && (
               <div
-                className="mb-3 flex h-9 w-9 items-center justify-center rounded-xl"
+                className="mb-3 flex size-9  items-center justify-center rounded-xl"
                 style={item.accent ? { background: `${item.accent}18` } : undefined}
               >
                 {item.icon}
@@ -75,7 +75,7 @@ export function BentoLayout({ items, title, columns = 3, className }: BentoLayou
             {/* Accent glow */}
             {item.accent && (
               <div
-                className="pointer-events-none absolute -bottom-8 -right-8 h-24 w-24 rounded-full opacity-20 blur-xl"
+                className="pointer-events-none absolute -bottom-8 -right-8 size-24  rounded-full opacity-20 blur-xl"
                 style={{ background: item.accent }}
               />
             )}

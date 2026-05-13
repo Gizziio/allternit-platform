@@ -1,5 +1,6 @@
 "use client";
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { createContext, useContext, useCallback, useMemo, ReactNode, useRef, useState, useEffect } from "react";
 import type { ChatMessage } from "@/lib/ai/types";
 import { useChatId } from "./chat-id-provider";

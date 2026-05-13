@@ -59,7 +59,7 @@ function MetricItem({ label, value, color }: MetricItemProps) {
   return (
     <div>
       <div 
-        className="text-[10px] font-bold tracking-wider mb-1"
+        className="text-xs font-bold tracking-wider mb-1"
         style={{ color: TEXT.tertiary }}
       >
         {label}

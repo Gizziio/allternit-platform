@@ -5,7 +5,7 @@ import GlassSurface from '@/design/GlassSurface';
 import { ArrowLeft, UserPlus, Trash } from '@phosphor-icons/react';
 import { useWorkspaceStore } from '@/stores/workspace.store';
 import { useBoardStore, type BoardItem } from '@/stores/board.store';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 
 type BoardItemStatus = BoardItem['status'];
 
@@ -101,7 +101,7 @@ export function CoworkWorkspaceDetailView({ workspaceId }: Props): JSX.Element {
               <span style={{ color: STATUS_COLORS[status], fontWeight: 700, fontSize: 20 }}>
                 {statusCounts[status] ?? 0}
               </span>
-              <span style={{ color: 'var(--text-secondary)', fontSize: 11, textTransform: 'capitalize' }}>
+              <span style={{ color: 'var(--text-secondary)', fontSize: 12, textTransform: 'capitalize' }}>
                 {status.replace('_', ' ')}
               </span>
             </div>
@@ -138,11 +138,11 @@ export function CoworkWorkspaceDetailView({ workspaceId }: Props): JSX.Element {
                     {member.userId ?? member.agentId}
                   </span>
 
-                  <span style={{ padding: '2px 10px', borderRadius: 20, background: 'color-mix(in srgb, var(--accent-cowork) 13%, transparent)', border: '1px solid #af52de55', color: 'var(--accent-cowork)', fontSize: 11, fontWeight: 600, textTransform: 'capitalize' }}>
+                  <span style={{ padding: '2px 10px', borderRadius: 20, background: 'color-mix(in srgb, var(--accent-cowork) 13%, transparent)', border: '1px solid #af52de55', color: 'var(--accent-cowork)', fontSize: 12, fontWeight: 600, textTransform: 'capitalize' }}>
                     {member.role}
                   </span>
 
-                  <span style={{ padding: '2px 10px', borderRadius: 20, background: isAgent ? 'var(--status-info-bg)' : 'var(--status-success-bg)', border: `1px solid ${isAgent ? 'color-mix(in srgb, var(--status-info) 33%, transparent)' : 'color-mix(in srgb, var(--status-success) 33%, transparent)'}`, color: isAgent ? 'var(--status-info)' : 'var(--status-success)', fontSize: 11, fontWeight: 600 }}>
+                  <span style={{ padding: '2px 10px', borderRadius: 20, background: isAgent ? 'var(--status-info-bg)' : 'var(--status-success-bg)', border: `1px solid ${isAgent ? 'color-mix(in srgb, var(--status-info) 33%, transparent)' : 'color-mix(in srgb, var(--status-success) 33%, transparent)'}`, color: isAgent ? 'var(--status-info)' : 'var(--status-success)', fontSize: 12, fontWeight: 600 }}>
                     {isAgent ? 'Agent' : 'Human'}
                   </span>
 

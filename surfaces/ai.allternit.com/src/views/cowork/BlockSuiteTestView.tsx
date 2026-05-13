@@ -91,7 +91,7 @@ export const BlockSuiteTestView: React.FC = () => {
         <GlassSurface style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ color: 'var(--text-primary)', fontSize: '15px', fontWeight: 600 }}>Editor A — Source</div>
-            <div style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>docId: blocksuite-test-doc</div>
+            <div style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>docId: blocksuite-test-doc</div>
           </div>
           <BlockSuiteEditor
             docId="blocksuite-test-doc"
@@ -134,7 +134,7 @@ export const BlockSuiteTestView: React.FC = () => {
                     background: 'transparent',
                     color: 'var(--text-secondary)',
                     cursor: 'pointer',
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: 600,
                   }}
                 >
@@ -166,7 +166,7 @@ export const BlockSuiteTestView: React.FC = () => {
         <GlassSurface style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ color: 'var(--text-primary)', fontSize: '15px', fontWeight: 600 }}>Editor B — Restore</div>
-            <div style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>docId: blocksuite-test-doc-restore</div>
+            <div style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>docId: blocksuite-test-doc-restore</div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--spacing-sm)' }}>
@@ -175,7 +175,7 @@ export const BlockSuiteTestView: React.FC = () => {
               <textarea
                 value={loadInput}
                 onChange={(e) => setLoadInput(e.target.value)}
-                placeholder="Paste base64-encoded Yjs state here..."
+                placeholder="Paste base64-encoded Yjs state here…"
                 rows={3}
                 style={{
                   flex: 1,

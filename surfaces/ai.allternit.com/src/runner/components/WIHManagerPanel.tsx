@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useSyncExternalStore } from "react";
 import { useDakStore } from "../dak.store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,8 +21,10 @@ import {
   FileText,
 } from '@phosphor-icons/react';
 import type { WihInfo } from "../dak.types";
+import { cn } from "@/lib/utils";
 
 export function WIHManagerPanel() {
+  const isClient = useSyncExternalStore(() => () => {}, () => true, () => false);
   const {
     wihs,
     myWihs,
@@ -72,19 +74,21 @@ export function WIHManagerPanel() {
       <div className="p-4 border-b flex items-center gap-4">
         <div className="flex-1">
           <Input
-            placeholder="Filter by DAG ID..."
+            id="filter-dag-id"
+            placeholder="Filter by DAG ID…"
             value={filterDagId}
             onChange={(e) => setFilterDagId(e.target.value)}
           />
         </div>
         <div className="flex items-center gap-2">
           <Input
+            id="agent-id"
             placeholder="Agent ID"
             value={agentId}
             onChange={(e) => setAgentId(e.target.value)}
             className="w-40"
           />
-          <Button variant="outline" size="icon" onClick={() => fetchWihs(filterDagId || undefined)}>
+          <Button variant="outline" size="icon" onClick={() => fetchWihs(filterDagId || undefined)} aria-label="Refresh WIH list">
             <ArrowsClockwise size={16} />
           </Button>
         </div>
@@ -93,35 +97,35 @@ export function WIHManagerPanel() {
       <Tabs defaultValue="open" className="flex-1 flex flex-col">
         <TabsList className="mx-4 mt-4">
           <TabsTrigger value="open">
-            <Clock className="w-4 h-4 mr-2" /> 
+            <Clock className="size-4 mr-2" /> 
             Open ({openWihs.length})
           </TabsTrigger>
           <TabsTrigger value="my">
-            <User className="w-4 h-4 mr-2" /> 
+            <User className="size-4 mr-2" /> 
             My Work ({myWihs.length})
           </TabsTrigger>
           <TabsTrigger value="signed">
-            <Lock className="w-4 h-4 mr-2" /> 
+            <Lock className="size-4 mr-2" /> 
             Signed ({signedWihs.length})
           </TabsTrigger>
           <TabsTrigger value="closed">
-            <Archive className="w-4 h-4 mr-2" /> 
+            <Archive className="size-4 mr-2" /> 
             History ({closedWihs.length})
           </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="open" className="flex-1 p-4 m-0">
+        <TabsContent value="open" className="flex-1 p-4 m-0 overflow-hidden">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full">
             {/* WIH List */}
-            <Card className="lg:col-span-2 flex flex-col">
+            <Card className="lg:col-span-2 flex flex-col overflow-hidden">
               <CardHeader>
                 <CardTitle className="text-base flex items-center justify-between">
                   <span>Available Work Items</span>
                   <Badge variant="secondary">{openWihs.length} ready</Badge>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="flex-1 overflow-hidden">
-                <ScrollArea className="h-[400px]">
+              <CardContent className="flex-1 overflow-hidden p-0">
+                <ScrollArea className="h-full px-4 pb-4">
                   <div className="space-y-2">
                     {openWihs.length === 0 ? (
                       <EmptyState icon={ClipboardText} message="No open work items" />
@@ -142,13 +146,13 @@ export function WIHManagerPanel() {
             </Card>
             
             {/* WIH Details */}
-            <Card className="flex flex-col">
+            <Card className="flex flex-col overflow-hidden">
               <CardHeader>
                 <CardTitle className="text-base">Details</CardTitle>
               </CardHeader>
-              <CardContent className="flex-1">
+              <CardContent className="flex-1 overflow-auto">
                 {selectedWih ? (
-                  <WIHDetails wih={selectedWih} />
+                  <WIHDetails wih={selectedWih} isClient={isClient} />
                 ) : (
                   <EmptyState icon={FileText} message="Select a WIH to view details" />
                 )}
@@ -258,31 +262,35 @@ function WIHListItem({
   showActions?: boolean;
 }) {
   const statusIcons = {
-    open: <Clock className="w-4 h-4 text-blue-500" />,
-    signed: <Lock className="w-4 h-4 text-yellow-500" />,
-    closed: <CheckCircle className="w-4 h-4 text-green-500" />,
-    archived: <Archive className="w-4 h-4 text-gray-500" />,
+    open: <Clock className="size-4 text-blue-500" />,
+    signed: <Lock className="size-4 text-yellow-500" />,
+    closed: <CheckCircle className="size-4 text-green-500" />,
+    archived: <Archive className="size-4 text-zinc-500" />,
   };
   
   return (
     <div 
-      className={`p-3 rounded-lg border cursor-pointer transition-all ${
-        isSelected ? 'bg-primary/10 border-primary' : 'hover:bg-muted'
-      }`}
+      role="button"
+      tabIndex={0}
+      className={cn(
+        "p-3 rounded-lg border border-solid transition-all cursor-pointer outline-none focus:ring-1 focus:ring-[var(--accent-primary)]",
+        isSelected ? 'bg-primary/10 border-primary shadow-sm' : 'hover:bg-muted border-transparent'
+      )}
       onClick={onClick}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); }}
     >
       <div className="flex items-center gap-2">
         {statusIcons[wih.status]}
         <span className="font-medium text-sm truncate flex-1">{wih.title || wih.nodeId}</span>
-        <Badge variant="outline" className="text-xs">{wih.status}</Badge>
+        <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider">{wih.status}</Badge>
       </div>
-      <div className="text-xs text-muted-foreground mt-1">
+      <div className="text-[12px] text-muted-foreground mt-1 font-mono">
         {wih.dagId} / {wih.nodeId}
       </div>
       {showActions && wih.status === "open" && wih.ready && (
         <div className="mt-2 flex gap-2">
-          <Button size="sm" className="w-full" onClick={(e) => { e.stopPropagation(); onPickup?.(); }}>
-            <Play className="w-3 h-3 mr-1" /> Pick Up
+          <Button size="sm" className="w-full text-[12px] font-bold h-8" onClick={(e) => { e.stopPropagation(); onPickup?.(); }}>
+            <Play className="size-3 mr-1" weight="fill" /> Pick Up
           </Button>
         </div>
       )}
@@ -300,73 +308,78 @@ function WIHActiveItem({
   onFail: () => void;
 }) {
   return (
-    <Card className="p-4">
+    <Card className="p-4 bg-muted/20">
       <div className="flex items-center gap-2 mb-2">
-        <Play className="w-4 h-4 text-blue-500" />
-        <span className="font-medium">{wih.title || wih.nodeId}</span>
-        <Badge variant="default" className="ml-auto">Active</Badge>
+        <Play className="size-4 text-blue-500" weight="fill" />
+        <span className="font-bold text-sm">{wih.title || wih.nodeId}</span>
+        <Badge variant="default" className="ml-auto text-[10px] uppercase">Active</Badge>
       </div>
-      <div className="text-xs text-muted-foreground mb-3">
+      <div className="text-[12px] text-muted-foreground mb-3 font-mono">
         {wih.dagId} / {wih.nodeId}
       </div>
       <div className="flex gap-2">
-        <Button size="sm" variant="default" className="flex-1" onClick={onComplete}>
-          <CheckCircle className="w-3 h-3 mr-1" /> Complete
+        <Button size="sm" variant="default" className="flex-1 text-[12px] font-bold" onClick={onComplete}>
+          <CheckCircle className="size-3 mr-1" weight="bold" /> Complete
         </Button>
-        <Button size="sm" variant="destructive" className="flex-1" onClick={onFail}>
-          <Warning className="w-3 h-3 mr-1" /> Fail
+        <Button size="sm" variant="destructive" className="flex-1 text-[12px] font-bold" onClick={onFail}>
+          <Warning className="size-3 mr-1" weight="bold" /> Fail
         </Button>
       </div>
     </Card>
   );
 }
 
-function WIHDetails({ wih }: { wih: WihInfo }) {
+function WIHDetails({ wih, isClient }: { wih: WihInfo; isClient: boolean }) {
   return (
-    <div className="space-y-4">
-      <div>
-        <label className="text-sm font-medium">WIH ID</label>
-        <p className="text-sm font-mono text-muted-foreground">{wih.wihId}</p>
+    <div className="space-y-5">
+      <div className="space-y-1.5">
+        <label className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground" htmlFor="detail-id">WIH ID</label>
+        <p id="detail-id" className="text-[13px] font-mono text-[var(--text-primary)] break-all">{wih.wihId}</p>
       </div>
-      <div>
-        <label className="text-sm font-medium">Node</label>
-        <p className="text-sm text-muted-foreground">{wih.nodeId}</p>
+      <div className="space-y-1.5">
+        <label className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground" htmlFor="detail-node">Node</label>
+        <p id="detail-node" className="text-[13px] text-[var(--text-primary)]">{wih.nodeId}</p>
       </div>
-      <div>
-        <label className="text-sm font-medium">DAG</label>
-        <p className="text-sm text-muted-foreground">{wih.dagId}</p>
+      <div className="space-y-1.5">
+        <label className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground" htmlFor="detail-dag">DAG</label>
+        <p id="detail-dag" className="text-[13px] text-[var(--text-primary)]">{wih.dagId}</p>
       </div>
-      <div>
-        <label className="text-sm font-medium">Status</label>
+      <div className="space-y-1.5">
+        <label className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Status</label>
         <div className="mt-1">
           <Badge variant={
             wih.status === "open" ? "default" :
             wih.status === "signed" ? "secondary" :
             wih.status === "closed" ? "outline" : "secondary"
-          }>
+          } className="text-[11px] font-bold uppercase">
             {wih.status}
           </Badge>
         </div>
       </div>
       {wih.ready !== undefined && (
-        <div>
-          <label className="text-sm font-medium">Ready</label>
-          <p className="text-sm text-muted-foreground">{wih.ready ? "Yes" : "No"}</p>
+        <div className="space-y-1.5">
+          <label className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Ready</label>
+          <div className="flex items-center gap-1.5 mt-1">
+             <div className={cn("size-2 rounded-full", wih.ready ? "bg-green-500" : "bg-zinc-600")} />
+             <span className="text-[13px] font-medium">{wih.ready ? "Processable" : "Blocked"}</span>
+          </div>
         </div>
       )}
       {wih.blockedBy && wih.blockedBy.length > 0 && (
-        <div>
-          <label className="text-sm font-medium">Blocked By</label>
+        <div className="space-y-1.5">
+          <label className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Blocked By</label>
           <div className="flex flex-wrap gap-1 mt-1">
             {wih.blockedBy.map((id) => (
-              <Badge key={id} variant="outline" className="text-xs">{id}</Badge>
+              <Badge key={id} variant="outline" className="text-[10px] font-mono">{id.slice(0, 8)}…</Badge>
             ))}
           </div>
         </div>
       )}
-      <div>
-        <label className="text-sm font-medium">Created</label>
-        <p className="text-sm text-muted-foreground">{new Date(wih.createdAt).toLocaleString()}</p>
+      <div className="space-y-1.5">
+        <label className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground" htmlFor="detail-created">Created</label>
+        <p id="detail-created" className="text-[13px] text-[var(--text-primary)] tabular-nums">
+          {isClient ? new Date(wih.createdAt).toLocaleString() : '—'}
+        </p>
       </div>
     </div>
   );
@@ -374,9 +387,9 @@ function WIHDetails({ wih }: { wih: WihInfo }) {
 
 function EmptyState({ icon: Icon, message }: { icon: any; message: string }) {
   return (
-    <div className="flex flex-col items-center justify-center h-32 text-muted-foreground">
-      <Icon className="w-8 h-8 mb-2 opacity-50" />
-      <p className="text-sm">{message}</p>
+    <div className="flex flex-col items-center justify-center h-32 text-muted-foreground gap-2">
+      <Icon className="size-8 opacity-30" />
+      <p className="text-sm italic">{message}</p>
     </div>
   );
 }

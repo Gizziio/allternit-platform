@@ -108,7 +108,7 @@ class SwarmsPlugin implements ModePlugin {
     
     this.isInitialized = true;
     this.emit({ type: 'initialized', timestamp: Date.now() });
-    console.log('[SwarmsPlugin] Initialized');
+    console.debug('[SwarmsPlugin] Initialized');
   }
 
   async destroy(): Promise<void> {
@@ -328,7 +328,7 @@ Provide your expert contribution. Be specific and actionable. If you identify is
           rounds[rounds.length - 1].consensus = consensus.summary;
           break;
         }
-        currentPrompt = `Previous Round Feedback:\n${agentResponses.map(ar => `${ar.agentId}: ${ar.response.substring(0, 500)}...`).join('\n\n')}\n\nRefined Task:\n${consensus.summary}`;
+        currentPrompt = `Previous Round Feedback:\n${agentResponses.map(ar => `${ar.agentId}: ${ar.response.substring(0, 500)}…`).join('\n\n')}\n\nRefined Task:\n${consensus.summary}`;
       }
     }
 
@@ -434,7 +434,7 @@ Provide a polished, well-structured final answer that incorporates the best insi
         `\n### Round ${round.round}`,
         ...round.agentResponses.map(ar => {
           const agent = result.agents.find(a => a.id === ar.agentId);
-          return `\n**${agent?.name || ar.agentId}**\n${ar.response.substring(0, 400)}${ar.response.length > 400 ? '...' : ''}`;
+          return `\n**${agent?.name || ar.agentId}**\n${ar.response.substring(0, 400)}${ar.response.length > 400 ? '…' : ''}`;
         })
       );
       

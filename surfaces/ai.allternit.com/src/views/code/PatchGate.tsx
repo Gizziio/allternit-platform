@@ -2,7 +2,7 @@ import React from 'react';
 import { ChangeSetReview } from '../../components/changeset-review/ChangeSetReview';
 import { useChangeSetStore } from '../../stores/changeset-store';
 
-export function PatchGate() {
+export function PatchGate(): JSX.Element {
   const activeChangeSetId = useChangeSetStore((state) => state.activeChangeSetId);
 
   if (!activeChangeSetId) {

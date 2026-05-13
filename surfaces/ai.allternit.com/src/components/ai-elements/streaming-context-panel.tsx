@@ -51,18 +51,18 @@ interface ToolStep {
 function getToolIcon(toolName: string): React.ReactNode {
   const name = toolName.toLowerCase().replace(/[_\-\s]/g, "");
   if (name.includes("bash") || name.includes("runcode") || name.includes("computer")) {
-    return <Terminal style={{ width: 12, height: 12 }} />;
+    return <Terminal className="size-3.5" />;
   }
   if (name.includes("grep") || name.includes("search") || name.includes("glob") || name.includes("find")) {
-    return <MagnifyingGlass style={{ width: 12, height: 12 }} />;
+    return <MagnifyingGlass className="size-3.5" />;
   }
   if (name.includes("web") || name.includes("fetch") || name.includes("url") || name.includes("browse")) {
-    return <Globe style={{ width: 12, height: 12 }} />;
+    return <Globe className="size-3.5" />;
   }
   if (name.includes("write") || name.includes("edit") || name.includes("str") || name.includes("create")) {
-    return <PencilSimple style={{ width: 12, height: 12 }} />;
+    return <PencilSimple className="size-3.5" />;
   }
-  return <FileText style={{ width: 12, height: 12 }} />;
+  return <FileText className="size-3.5" />;
 }
 
 function humanizeStep(toolName: string, input: Record<string, unknown>): { title: string; meta: string | null; filePath?: string } {
@@ -157,26 +157,16 @@ function extractFiles(steps: ToolStep[]): Array<{ path: string; ops: string[] }>
 function StepIndicator({ state }: { state: ToolStep["state"] }) {
   if (state === "running") {
     return (
-      <div
-        className="animate-spin"
-        style={{
-          width: 10,
-          height: 10,
-          borderRadius: "50%",
-          border: "1.5px solid rgba(212,176,140,0.15)",
-          borderTopColor: "rgba(212,176,140,0.8)",
-          flexShrink: 0,
-        }}
-      />
+      <div className="size-3 rounded-full border-2 border-[rgba(212,176,140,0.15)] border-t-[rgba(212,176,140,0.8)] animate-spin shrink-0" />
     );
   }
   if (state === "done") {
-    return <CheckCircle style={{ width: 11, height: 11, color: "rgba(74,222,128,0.6)", flexShrink: 0 }} />;
+    return <CheckCircle className="size-3.5 text-[rgba(74,222,128,0.6)] shrink-0" />;
   }
   if (state === "error") {
-    return <Warning style={{ width: 11, height: 11, color: "rgba(248,113,113,0.7)", flexShrink: 0 }} />;
+    return <Warning className="size-3.5 text-[rgba(248,113,113,0.7)] shrink-0" />;
   }
-  return <CircleDashed style={{ width: 11, height: 11, color: "rgba(255,255,255,0.2)", flexShrink: 0 }} />;
+  return <CircleDashed className="size-3.5 text-[rgba(255,255,255,0.2)] shrink-0" />;
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -211,33 +201,13 @@ export function StreamingContextPanel({ parts, isStreaming, onClose }: Streaming
   if (collapsed) {
     return (
       <div
-        style={{
-          width: 32,
-          flexShrink: 0,
-          borderLeft: "1px solid var(--ui-border-muted)",
-          background: "var(--surface-hover)",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          paddingTop: 12,
-          gap: 8,
-          cursor: "pointer",
-        }}
+        className="w-8 shrink-0 border-l border-[var(--ui-border-muted)] bg-[var(--surface-hover)] flex flex-col items-center pt-3 gap-2 cursor-pointer"
         onClick={() => setCollapsed(false)}
         title="Show activity"
       >
-        <CaretLeft style={{ width: 12, height: 12, color: "rgba(255,255,255,0.25)" }} />
-        <CheckCircle style={{ width: 13, height: 13, color: "rgba(74,222,128,0.5)" }} />
-        <span
-          style={{
-            fontSize: 10,
-            color: "rgba(255,255,255,0.3)",
-            writingMode: "vertical-rl",
-            textOrientation: "mixed",
-            letterSpacing: "0.04em",
-            fontWeight: 600,
-          }}
-        >
+        <CaretLeft className="size-3.5 text-[rgba(255,255,255,0.25)]" />
+        <CheckCircle className="size-3.5 text-[rgba(74,222,128,0.5)]" />
+        <span className="text-[12px] text-[rgba(255,255,255,0.3)] [writing-mode:vertical-rl] [text-orientation:mixed] tracking-wider font-semibold">
           {doneCount}/{totalCount}
         </span>
       </div>
@@ -246,134 +216,78 @@ export function StreamingContextPanel({ parts, isStreaming, onClose }: Streaming
 
   // ── Expanded panel ──
   return (
-    <div
-      style={{
-        width: 260,
-        flexShrink: 0,
-        borderLeft: "1px solid var(--ui-border-muted)",
-        background: "rgba(255,255,255,0.015)",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-        fontSize: 12,
-      }}
-    >
+    <div className="w-[260px] shrink-0 border-l border-[var(--ui-border-muted)] bg-white/[0.015] flex flex-col overflow-hidden text-[12px]">
       {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          padding: "10px 12px",
-          borderBottom: "1px solid var(--surface-hover)",
-          flexShrink: 0,
-        }}
-      >
+      <div className="flex items-center gap-2 p-2.5 px-3 border-b border-[var(--surface-hover)] shrink-0">
         {isStreaming ? (
-          <div
-            className="animate-spin"
-            style={{
-              width: 10,
-              height: 10,
-              borderRadius: "50%",
-              border: "1.5px solid rgba(212,176,140,0.15)",
-              borderTopColor: "rgba(212,176,140,0.8)",
-              flexShrink: 0,
-            }}
-          />
+          <div className="size-3 rounded-full border-2 border-[rgba(212,176,140,0.15)] border-t-[rgba(212,176,140,0.8)] animate-spin shrink-0" />
         ) : hasError ? (
-          <Warning style={{ width: 11, height: 11, color: "rgba(248,113,113,0.7)", flexShrink: 0 }} />
+          <Warning className="size-3.5 text-[rgba(248,113,113,0.7)] shrink-0" />
         ) : (
-          <CheckCircle style={{ width: 11, height: 11, color: "rgba(74,222,128,0.6)", flexShrink: 0 }} />
+          <CheckCircle className="size-3.5 text-[rgba(74,222,128,0.6)] shrink-0" />
         )}
-        <span
-          style={{
-            fontSize: 11,
-            fontWeight: 600,
-            color: "rgba(236,236,236,0.55)",
-            letterSpacing: "0.05em",
-            textTransform: "uppercase",
-            flex: 1,
-          }}
-        >
+        <span className="text-[12px] font-semibold text-[rgba(236,236,236,0.55)] tracking-wider uppercase flex-1">
           {isStreaming ? "Working…" : hasError ? "Stopped" : "Done"}
         </span>
         {totalCount > 0 && (
-          <span style={{ fontSize: 10, color: "rgba(255,255,255,0.25)", fontVariantNumeric: "tabular-nums" }}>
+          <span className="text-[12px] text-[rgba(255,255,255,0.25)] tabular-nums">
             {doneCount}/{totalCount}
           </span>
         )}
         <button
           onClick={() => setCollapsed(true)}
-          style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "rgba(255,255,255,0.2)", display: "flex" }}
+          className="bg-transparent border-none p-0.5 text-white/20 cursor-pointer flex"
           title="Collapse"
         >
-          <CaretRight style={{ width: 11, height: 11 }} />
+          <CaretRight className="size-3" />
         </button>
         {onClose && (
           <button
             onClick={onClose}
-            style={{ background: "none", border: "none", cursor: "pointer", padding: 2, color: "rgba(255,255,255,0.2)", display: "flex" }}
+            className="bg-transparent border-none p-0.5 text-white/20 cursor-pointer flex"
             title="Close"
           >
-            <X style={{ width: 11, height: 11 }} />
+            <X className="size-3" />
           </button>
         )}
       </div>
 
       {/* Steps list */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "8px 0" }}>
+      <div className="flex-1 overflow-y-auto py-2">
         {/* Tool steps */}
-        <div style={{ padding: "0 12px 4px", marginBottom: 4 }}>
-          <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.2)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+        <div className="p-3 py-1 mb-1">
+          <span className="text-[12px] font-semibold text-white/20 tracking-widest uppercase">
             Steps
           </span>
         </div>
-        {steps.map((step, i) => (
+        {steps.map((step) => (
           <div
             key={step.toolCallId}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 7,
-              padding: "5px 12px",
-              borderLeft: `2px solid ${
-                step.state === "running"
-                  ? "rgba(212,176,140,0.4)"
-                  : step.state === "done"
-                  ? "rgba(74,222,128,0.3)"
-                  : step.state === "error"
-                  ? "rgba(248,113,113,0.4)"
-                  : "var(--ui-border-muted)"
-              }`,
-              marginLeft: 12,
-              marginBottom: 2,
-              transition: "border-color 0.2s ease",
-            }}
+            className={`flex items-center gap-2 p-1.5 px-3 ml-3 mb-0.5 transition-[border-color] duration-200 border-l-2 ${
+              step.state === "running"
+                ? "border-[rgba(212,176,140,0.4)]"
+                : step.state === "done"
+                ? "border-[rgba(74,222,128,0.3)]"
+                : step.state === "error"
+                ? "border-[rgba(248,113,113,0.4)]"
+                : "border-[var(--ui-border-muted)]"
+            }`}
           >
             <StepIndicator state={step.state} />
-            <span style={{ color: "rgba(255,255,255,0.22)", flexShrink: 0, display: "flex", alignItems: "center" }}>
+            <span className="text-white/20 shrink-0 flex items-center">
               {getToolIcon(step.toolName)}
             </span>
-            <span
-              style={{
-                fontSize: 12,
-                color: step.state === "running"
-                  ? "rgba(236,236,236,0.85)"
-                  : step.state === "done"
-                  ? "rgba(236,236,236,0.5)"
-                  : "rgba(236,236,236,0.35)",
-                flex: 1,
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-                transition: "color 0.2s ease",
-              }}
-            >
+            <span className={`text-[12px] flex-1 truncate transition-colors duration-200 ${
+              step.state === "running"
+                ? "text-[rgba(236,236,236,0.85)]"
+                : step.state === "done"
+                ? "text-[rgba(236,236,236,0.5)]"
+                : "text-[rgba(236,236,236,0.35)]"
+            }`}>
               {step.title}
             </span>
             {step.meta && (
-              <span style={{ fontSize: 10, color: "rgba(255,255,255,0.22)", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>
+              <span className="text-[12px] text-white/20 shrink-0 tabular-nums">
                 {step.meta}
               </span>
             )}
@@ -383,8 +297,8 @@ export function StreamingContextPanel({ parts, isStreaming, onClose }: Streaming
         {/* Files section */}
         {files.length > 0 && (
           <>
-            <div style={{ padding: "12px 12px 4px", marginBottom: 2, marginTop: 4, borderTop: "1px solid var(--surface-hover)" }}>
-              <span style={{ fontSize: 10, fontWeight: 600, color: "rgba(255,255,255,0.2)", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            <div className="p-3 py-1 mb-0.5 mt-1 border-t border-[var(--surface-hover)]">
+              <span className="text-[12px] font-semibold text-white/20 tracking-widest uppercase">
                 Files touched
               </span>
             </div>
@@ -394,53 +308,28 @@ export function StreamingContextPanel({ parts, isStreaming, onClose }: Streaming
               return (
                 <div
                   key={path}
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: 7,
-                    padding: "5px 12px",
-                  }}
+                  className="flex items-start gap-2 p-1.5 px-3"
                 >
-                  <FolderOpen style={{ width: 11, height: 11, color: "rgba(212,176,140,0.4)", flexShrink: 0, marginTop: 1 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        fontSize: 12,
-                        color: "rgba(236,236,236,0.55)",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
+                  <FolderOpen className="size-3 text-[rgba(212,176,140,0.4)] shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[12px] text-[rgba(236,236,236,0.55)] truncate">
                       {fname}
                     </div>
                     {dir && (
-                      <div
-                        style={{
-                          fontSize: 10,
-                          color: "rgba(255,255,255,0.2)",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
+                      <div className="text-[12px] text-white/20 truncate">
                         {dir}
                       </div>
                     )}
                   </div>
-                  <div style={{ display: "flex", gap: 3, flexShrink: 0 }}>
+                  <div className="flex gap-1 shrink-0">
                     {ops.map((op) => (
                       <span
                         key={op}
-                        style={{
-                          fontSize: 9,
-                          fontWeight: 600,
-                          letterSpacing: "0.04em",
-                          color: op === "Write" || op === "Edit" ? "rgba(212,176,140,0.65)" : "rgba(255,255,255,0.25)",
-                          background: op === "Write" || op === "Edit" ? "rgba(212,176,140,0.08)" : "var(--surface-hover)",
-                          padding: "1px 5px",
-                          borderRadius: 3,
-                        }}
+                        className={`text-[12px] font-semibold tracking-wider p-0.5 px-1.5 rounded-[3px] ${
+                          op === "Write" || op === "Edit" 
+                            ? "text-[rgba(212,176,140,0.65)] bg-[rgba(212,176,140,0.08)]" 
+                            : "text-[rgba(255,255,255,0.25)] bg-[var(--surface-hover)]"
+                        }`}
                       >
                         {op.toUpperCase()}
                       </span>
@@ -454,35 +343,15 @@ export function StreamingContextPanel({ parts, isStreaming, onClose }: Streaming
       </div>
 
       {/* Footer — pin toggle */}
-      <div
-        style={{
-          borderTop: "1px solid var(--surface-hover)",
-          padding: "6px 12px",
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          flexShrink: 0,
-        }}
-      >
+      <div className="border-t border-[var(--surface-hover)] p-1.5 px-3 flex items-center gap-1.5 shrink-0">
         <button
           onClick={() => setPinned((v) => !v)}
-          style={{
-            background: "none",
-            border: "none",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 5,
-            color: pinned ? "rgba(212,176,140,0.7)" : "rgba(255,255,255,0.22)",
-            fontSize: 10,
-            fontWeight: 600,
-            letterSpacing: "0.04em",
-            textTransform: "uppercase",
-            padding: 0,
-          }}
+          className={`bg-transparent border-none p-0 cursor-pointer flex items-center gap-1 text-[12px] font-semibold tracking-wider uppercase transition-colors ${
+            pinned ? "text-[rgba(212,176,140,0.7)]" : "text-white/20"
+          }`}
           title={pinned ? "Unpin panel" : "Keep panel open after streaming"}
         >
-          <Clock style={{ width: 10, height: 10 }} />
+          <Clock className="size-3" />
           {pinned ? "Pinned" : "Pin"}
         </button>
       </div>

@@ -298,10 +298,10 @@ function CountChip({
         padding: "6px 10px",
       }}
     >
-      <span style={{ fontSize: 11, color: "var(--ui-text-muted)" }}>{label}</span>
+      <span style={{ fontSize: 12, color: "var(--ui-text-muted)" }}>{label}</span>
       <span
         style={{
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: 700,
           color: "var(--ui-text-primary)",
           fontVariantNumeric: "tabular-nums",
@@ -387,7 +387,7 @@ export const ReplyProvenancePanel = memo(function ReplyProvenancePanel({
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, paddingTop: 20 }}>
           <div>
-            <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--accent-secondary)" }}>
+            <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--accent-secondary)" }}>
               Evidence
             </div>
             <div style={{ fontSize: 14, fontWeight: 600, color: "var(--ui-text-primary)", marginTop: 4 }}>
@@ -446,7 +446,7 @@ export const ReplyProvenancePanel = memo(function ReplyProvenancePanel({
         >
           <div
             style={{
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 700,
               letterSpacing: "0.08em",
               textTransform: "uppercase",
@@ -497,7 +497,7 @@ export const ReplyProvenancePanel = memo(function ReplyProvenancePanel({
               cursor: "pointer",
             }}
           >
-            <div style={{ fontSize: 11, color: "var(--ui-text-muted)", marginBottom: 6 }}>
+            <div style={{ fontSize: 12, color: "var(--ui-text-muted)", marginBottom: 6 }}>
               [{index + 1}] Source
             </div>
             <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ui-text-primary)" }}>
@@ -519,7 +519,7 @@ export const ReplyProvenancePanel = memo(function ReplyProvenancePanel({
               background: "color-mix(in srgb, var(--surface-panel-muted) 84%, transparent)",
             }}
           >
-            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--accent-secondary)" }}>
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--accent-secondary)" }}>
               Inspect source
             </div>
             <div style={{ fontSize: 14, fontWeight: 600, color: "var(--ui-text-primary)", marginTop: 8 }}>
@@ -594,11 +594,11 @@ export const ReplyProvenancePanel = memo(function ReplyProvenancePanel({
               <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ui-text-primary)" }}>
                 {source.title}
               </div>
-              <div style={{ fontSize: 10, color: "var(--ui-text-muted)", textTransform: "uppercase" }}>
+              <div style={{ fontSize: 12, color: "var(--ui-text-muted)", textTransform: "uppercase" }}>
                 {source.via ?? "tool"}
               </div>
             </div>
-            <div style={{ fontSize: 11, color: "var(--ui-text-muted)", marginTop: 6 }}>
+            <div style={{ fontSize: 12, color: "var(--ui-text-muted)", marginTop: 6 }}>
               {formatUrlHost(source.url) ?? source.url ?? "Source candidate"}
             </div>
             {source.snippet ? (
@@ -627,7 +627,7 @@ export const ReplyProvenancePanel = memo(function ReplyProvenancePanel({
             <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ui-text-primary)" }}>
               {item.title || item.toolName}
             </div>
-            <div style={{ fontSize: 11, color: "var(--ui-text-muted)", marginTop: 4 }}>
+            <div style={{ fontSize: 12, color: "var(--ui-text-muted)", marginTop: 4 }}>
               {item.state === "queued" ? "Queued" : item.state === "running" ? "Running" : item.state === "error" ? "Failed" : "Done"}
             </div>
             {(item.progressLines?.length ?? 0) > 0 ? (
@@ -636,7 +636,7 @@ export const ReplyProvenancePanel = memo(function ReplyProvenancePanel({
               </div>
             ) : null}
             {typeof item.output === "string" && item.output.trim() ? (
-              <div style={{ fontSize: 11, lineHeight: 1.45, color: "var(--ui-text-muted)", marginTop: 6 }}>
+              <div style={{ fontSize: 12, lineHeight: 1.45, color: "var(--ui-text-muted)", marginTop: 6 }}>
                 {item.output.length > 180 ? `${item.output.slice(0, 180)}...` : item.output}
               </div>
             ) : null}
@@ -661,7 +661,7 @@ export const ReplyProvenancePanel = memo(function ReplyProvenancePanel({
             <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ui-text-primary)" }}>
               {item.title}
             </div>
-            <div style={{ fontSize: 11, color: "var(--ui-text-muted)", marginTop: 4 }}>
+            <div style={{ fontSize: 12, color: "var(--ui-text-muted)", marginTop: 4 }}>
               {item.artifactType}
             </div>
           </div>
@@ -701,7 +701,7 @@ export const ReplyProvenancePanel = memo(function ReplyProvenancePanel({
             <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ui-text-primary)" }}>
               {file.name}
             </div>
-            <div style={{ fontSize: 11, color: "var(--ui-text-muted)", marginTop: 4 }}>
+            <div style={{ fontSize: 12, color: "var(--ui-text-muted)", marginTop: 4 }}>
               {formatFileMeta(file.type, file.size)}
             </div>
           </div>
@@ -745,7 +745,7 @@ function Section({
         <div style={{ fontSize: 12, fontWeight: 700, color: "var(--ui-text-primary)" }}>{title}</div>
         <div
           style={{
-            fontSize: 11,
+            fontSize: 12,
             color: "var(--ui-text-muted)",
             fontVariantNumeric: "tabular-nums",
           }}

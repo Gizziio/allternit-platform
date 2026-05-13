@@ -179,7 +179,7 @@ const createCronSchedulerStore = () => create<CronSchedulerState>()(
               return { jobs };
             });
 
-            console.log(`[CronScheduler] Added job ${jobId}, next run at ${new Date(job.nextRunAt).toISOString()}`);
+            console.debug(`[CronScheduler] Added job ${jobId}, next run at ${new Date(job.nextRunAt).toISOString()}`);
             return jobId;
           },
 
@@ -189,7 +189,7 @@ const createCronSchedulerStore = () => create<CronSchedulerState>()(
               jobs.delete(jobId);
               return { jobs };
             });
-            console.log(`[CronScheduler] Removed job ${jobId}`);
+            console.debug(`[CronScheduler] Removed job ${jobId}`);
           },
 
           enableJob: (jobId) => {
@@ -297,14 +297,14 @@ class AgentCronScheduler {
     onPermissionRequest?: (action: string, agentId: string) => Promise<boolean>;
   }) {
     if (this.isRunning) {
-      console.log('[AgentCronScheduler] Already running');
+      console.debug('[AgentCronScheduler] Already running');
       return;
     }
 
     this.onPermissionRequest = options?.onPermissionRequest;
     const checkInterval = options?.checkIntervalMs || 60000;
 
-    console.log(`[AgentCronScheduler] Starting with ${checkInterval}ms interval`);
+    console.debug(`[AgentCronScheduler] Starting with ${checkInterval}ms interval`);
     this.isRunning = true;
 
     this.intervalId = setInterval(() => {
@@ -321,7 +321,7 @@ class AgentCronScheduler {
       this.intervalId = null;
     }
     this.isRunning = false;
-    console.log('[AgentCronScheduler] Stopped');
+    console.debug('[AgentCronScheduler] Stopped');
   }
 
   private async checkAndExecuteJobs() {
@@ -330,7 +330,7 @@ class AgentCronScheduler {
 
     if (dueJobs.length === 0) return;
 
-    console.log(`[AgentCronScheduler] ${dueJobs.length} jobs due for execution`);
+    console.debug(`[AgentCronScheduler] ${dueJobs.length} jobs due for execution`);
 
     for (const job of dueJobs) {
       await this.executeJob(job);
@@ -340,7 +340,7 @@ class AgentCronScheduler {
   private async executeJob(job: ScheduledJob) {
     const store = useCronScheduler.getState();
     
-    console.log(`[AgentCronScheduler] Executing job ${job.id}`);
+    console.debug(`[AgentCronScheduler] Executing job ${job.id}`);
 
     try {
       // Import dynamically to avoid circular deps
@@ -383,7 +383,7 @@ class AgentCronScheduler {
         error: result.error,
       });
 
-      console.log(`[AgentCronScheduler] Job ${job.id} completed: ${result.success ? 'success' : 'failed'}`);
+      console.debug(`[AgentCronScheduler] Job ${job.id} completed: ${result.success ? 'success' : 'failed'}`);
 
     } catch (error) {
       console.error(`[AgentCronScheduler] Job ${job.id} failed:`, error);
@@ -402,7 +402,7 @@ class AgentCronScheduler {
 
     const content = await agentWorkspaceFS.readFile(agentId, 'HEARTBEAT.md');
     if (!content) {
-      console.log(`[AgentCronScheduler] No HEARTBEAT.md found for agent ${agentId}`);
+      console.debug(`[AgentCronScheduler] No HEARTBEAT.md found for agent ${agentId}`);
       return;
     }
 
@@ -420,7 +420,7 @@ class AgentCronScheduler {
       store.addJob(task, agentId);
     }
 
-    console.log(`[AgentCronScheduler] Registered ${recurringTasks.length} recurring tasks for agent ${agentId}`);
+    console.debug(`[AgentCronScheduler] Registered ${recurringTasks.length} recurring tasks for agent ${agentId}`);
   }
 
   // Unregister all tasks for an agent
@@ -432,7 +432,7 @@ class AgentCronScheduler {
       store.removeJob(job.id);
     }
 
-    console.log(`[AgentCronScheduler] Unregistered ${jobs.length} tasks for agent ${agentId}`);
+    console.debug(`[AgentCronScheduler] Unregistered ${jobs.length} tasks for agent ${agentId}`);
   }
 
   // Get scheduler status

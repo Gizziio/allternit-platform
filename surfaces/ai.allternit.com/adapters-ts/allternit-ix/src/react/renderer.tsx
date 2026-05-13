@@ -51,6 +51,22 @@ export function createReactRenderer(config: ReactRendererConfig): ReactRenderer 
   const catalog = config.catalog ?? createDefaultCatalog();
   const customComponents = config.components ?? {};
   
+  const getRepeatItemKey = (item: unknown, index: number) => {
+    if (typeof item === "string" || typeof item === "number" || typeof item === "boolean") {
+      return String(item);
+    }
+
+    if (item && typeof item === "object") {
+      const keyedItem = item as Record<string, unknown>;
+      const candidateKey = keyedItem.id ?? keyedItem.key ?? keyedItem.slug ?? keyedItem.name;
+      if (typeof candidateKey === "string" || typeof candidateKey === "number") {
+        return String(candidateKey);
+      }
+    }
+
+    return `index-${index}`;
+  };
+  
   // Context for state store
   const StoreContext = React.createContext<StateStore | null>(null);
 
@@ -170,10 +186,11 @@ export function createReactRenderer(config: ReactRendererConfig): ReactRenderer 
             [repeat.as]: item,
             ...(repeat.indexAs ? { [repeat.indexAs]: index } : {}),
           };
+          const stableItemKey = getRepeatItemKey(item, index);
           return (
             <SingleComponent
-              key={`${component.id}-${index}`}
-              component={{ ...component, id: `${component.id}-${index}` }}
+              key={`${component.id}-${stableItemKey}`}
+              component={{ ...component, id: `${component.id}-${stableItemKey}` }}
               localContext={itemContext}
             />
           );

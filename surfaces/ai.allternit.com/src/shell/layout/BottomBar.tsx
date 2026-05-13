@@ -151,7 +151,7 @@ function ConnectionStatusIndicator({ status }: ConnectionStatusIndicatorProps): 
       className="flex items-center gap-1.5"
       title={`Connection: ${label}`}
     >
-      <Icon className={cn('w-3.5 h-3.5', className)} />
+      <Icon className={cn('size-3.5 ', className)} />
       <span className="hidden sm:inline">{label}</span>
     </div>
   );
@@ -196,7 +196,7 @@ function SyncStatusIndicator({ status }: SyncStatusIndicatorProps): JSX.Element 
       className="flex items-center gap-1.5"
       title={`Sync: ${label}`}
     >
-      <Icon className={cn('w-3.5 h-3.5', className)} />
+      <Icon className={cn('size-3.5 ', className)} />
       <span className="hidden sm:inline">{label}</span>
     </div>
   );
@@ -262,7 +262,7 @@ function BottomBarActionButton({ action }: BottomBarActionButtonProps): JSX.Elem
       )}
       title={action.label}
     >
-      <Icon className="w-3.5 h-3.5" />
+      <Icon className="size-3.5 " />
       <span className="hidden md:inline">{action.label}</span>
     </button>
   );
@@ -311,7 +311,7 @@ function TunnelStatusBadge(): JSX.Element | null {
   if (!isElectron || !tunnelState || tunnelState.status === 'stopped') return null;
 
   const config: Record<TunnelStatus, { dot: string; label: string; className: string }> = {
-    stopped:  { dot: 'bg-slate-500',  label: '',          className: '' },
+    stopped:  { dot: 'bg-zinc-500',  label: '',          className: '' },
     starting: { dot: 'bg-yellow-500 animate-pulse', label: 'Tunnel starting…', className: 'text-yellow-500' },
     running:  { dot: 'bg-green-500',  label: 'Web On',    className: 'text-green-500' },
     error:    { dot: 'bg-red-500',    label: 'Tunnel error', className: 'text-red-500' },
@@ -327,7 +327,7 @@ function TunnelStatusBadge(): JSX.Element | null {
         : label}
     >
       <GlobeHemisphereWest size={12} />
-      <div className={cn('w-1.5 h-1.5 rounded-full', dot)} />
+      <div className={cn('size-1.5  rounded-full', dot)} />
       <span className="hidden sm:inline">{label}</span>
     </div>
   );

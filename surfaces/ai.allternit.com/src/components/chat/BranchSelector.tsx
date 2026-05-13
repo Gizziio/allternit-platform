@@ -228,7 +228,7 @@ export function BranchSelector({
                     {branch.id === currentBranchId && (
                       <span
                         style={{
-                          fontSize: 10,
+                          fontSize: 12,
                           padding: '2px 6px',
                           borderRadius: 4,
                           background: 'rgba(212,149,106,0.15)',
@@ -253,7 +253,7 @@ export function BranchSelector({
                   </p>
                   <p
                     style={{
-                      fontSize: 11,
+                      fontSize: 12,
                       color: THEME.textMuted,
                       margin: '4px 0 0',
                     }}

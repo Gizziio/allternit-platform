@@ -77,7 +77,7 @@ export function AgentSessionLayout({
             <h1 className="text-xs font-bold uppercase tracking-wider" style={{ color: modeColors.accent }}>
               {mode} Session
             </h1>
-            <span className="text-[10px]" style={{ color: TEXT.tertiary }}>{agentName || title}</span>
+            <span className="text-xs" style={{ color: TEXT.tertiary }}>{agentName || title}</span>
           </div>
         </div>
 
@@ -160,7 +160,7 @@ export function AgentSessionLayout({
             </div>
             <div className="flex-1 p-4 font-mono text-sm overflow-auto text-green-400/90">
               <p className="mb-2">Welcome to Allternit Orchestration Shell v1.0.0</p>
-              <p className="mb-2 text-white/50">Session initialized for {agentName}...</p>
+              <p className="mb-2 text-white/50">Session initialized for {agentName}…</p>
               <div className="flex gap-2">
                 <span>$</span>
                 <span className="animate-pulse w-2 h-5 bg-green-500/50"></span>

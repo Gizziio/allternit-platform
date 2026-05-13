@@ -1,5 +1,5 @@
 import React from 'react';
-import { GlassCard } from '../../design/GlassCard';
+import { GlassCard } from '../../design/glass/GlassCard';
 import { Robot, Terminal, PlugsConnected, DownloadSimple } from '@phosphor-icons/react';
 
 const SKILLS = [
@@ -8,7 +8,7 @@ const SKILLS = [
   { id: 'p1', name: 'Postgres Connector', version: '2.0.1', desc: 'MCP server for PostgreSQL database access.', type: 'Plugin' },
 ];
 
-export function SkillsView() {
+export function SkillsView(): JSX.Element {
   return (
     <div style={{ padding: 32, maxWidth: 1000, margin: '0 auto' }}>
       <div style={{ marginBottom: 32, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -38,7 +38,7 @@ export function SkillsView() {
               }}>
                 {skill.type === 'Skill' ? <Robot size={24} weight="duotone" /> : <PlugsConnected size={24} weight="duotone" />}
               </div>
-              <div style={{ fontSize: 11, fontWeight: 700, padding: '4px 8px', borderRadius: 6, background: 'var(--bg-secondary)', opacity: 0.7 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, padding: '4px 8px', borderRadius: 6, background: 'var(--bg-secondary)', opacity: 0.7 }}>
                 v{skill.version}
               </div>
             </div>
@@ -47,7 +47,7 @@ export function SkillsView() {
               <div style={{ fontSize: 13, opacity: 0.6, lineHeight: 1.5 }}>{skill.desc}</div>
             </div>
             <div style={{ marginTop: 'auto', paddingTop: 16, borderTop: '1px solid var(--border-subtle)', display: 'flex', gap: 8 }}>
-               <div style={{ fontSize: 11, fontWeight: 600, opacity: 0.5, display: 'flex', alignItems: 'center', gap: 4 }}>
+               <div style={{ fontSize: 12, fontWeight: 600, opacity: 0.5, display: 'flex', alignItems: 'center', gap: 4 }}>
                  <Terminal size={14} /> 4 Commands
                </div>
             </div>

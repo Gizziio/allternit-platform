@@ -234,7 +234,7 @@ export function ModelPicker({ onSelect, onCancel, defaultProfileId, trigger, ope
           <DialogTitle className="text-white">
             {step === "profile" ? "Select Runtime" : "Select Model"}
           </DialogTitle>
-          <DialogDescription className="text-gray-400">
+          <DialogDescription className="text-zinc-400">
             {step === "profile" 
               ? "Choose an authenticated AI runtime to use"
               : `Select a model for ${PROVIDER_NAMES[resolveProviderId(selectedProfileId)] || resolveProviderId(selectedProfileId) || "this runtime"}`
@@ -255,13 +255,13 @@ export function ModelPicker({ onSelect, onCancel, defaultProfileId, trigger, ope
           <div className="space-y-4 py-4">
             {providersLoading ? (
               <div className="flex items-center justify-center py-8">
-                <CircleNotch className="h-6 w-6 animate-spin text-muted-foreground" />
+                <CircleNotch className="size-6  animate-spin text-muted-foreground" />
               </div>
             ) : availableProfiles.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
-                <Warning className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <div className="text-center py-8 text-zinc-400">
+                <Warning className="size-8  mx-auto mb-2 opacity-50" />
                 <p className="text-white">No authenticated runtimes found</p>
-                <p className="text-sm mt-1 text-gray-400">
+                <p className="text-sm mt-1 text-zinc-400">
                   Please authenticate a provider first
                 </p>
               </div>
@@ -280,12 +280,12 @@ export function ModelPicker({ onSelect, onCancel, defaultProfileId, trigger, ope
                   >
                     <div className="flex flex-col items-start gap-1">
                       <span className="font-medium">{displayName}</span>
-                      <span className="text-xs text-gray-400">
+                      <span className="text-xs text-zinc-400">
                         {profileId}
                       </span>
                     </div>
                     {selectedProfileId === profileId && (
-                      <Check className="h-4 w-4 ml-auto" />
+                      <Check className="size-4  ml-auto" />
                     )}
                   </Button>
                 ))}
@@ -296,15 +296,15 @@ export function ModelPicker({ onSelect, onCancel, defaultProfileId, trigger, ope
           <div className="space-y-4 py-4">
             {discoveryLoading ? (
               <div className="flex items-center justify-center py-8">
-                <CircleNotch className="h-6 w-6 animate-spin text-muted-foreground" />
+                <CircleNotch className="size-6  animate-spin text-muted-foreground" />
               </div>
             ) : discoveryResult?.supported && discoveryResult.models ? (
               // Discovery supported - show dropdown
               <div className="space-y-2">
-                <Label className="text-gray-300">Select Model</Label>
+                <Label className="text-zinc-300">Select Model</Label>
                 <Select value={selectedModelId} onValueChange={handleModelSelect}>
                   <SelectTrigger className="bg-[#2a2a2a] border-[#333333] text-white">
-                    <SelectValue placeholder="Choose a model..." />
+                    <SelectValue placeholder="Choose a model…" />
                   </SelectTrigger>
                   <SelectContent className="bg-[#1e1e1e] border-[#333333]">
                     {discoveryResult.models.map((model) => (
@@ -316,7 +316,7 @@ export function ModelPicker({ onSelect, onCancel, defaultProfileId, trigger, ope
                         <div className="flex flex-col items-start">
                           <span>{model.name}</span>
                           {model.description && (
-                            <span className="text-xs text-gray-400">
+                            <span className="text-xs text-zinc-400">
                               {model.description}
                             </span>
                           )}
@@ -350,7 +350,7 @@ export function ModelPicker({ onSelect, onCancel, defaultProfileId, trigger, ope
                 </Label>
                 <Input
                   id="model-input"
-                  placeholder="Enter model ID..."
+                  placeholder="Enter model ID…"
                   value={freeformInput}
                   onChange={(e) => handleFreeformChange(e.target.value)}
                   className={cn(
@@ -360,7 +360,7 @@ export function ModelPicker({ onSelect, onCancel, defaultProfileId, trigger, ope
                 />
                 {validationLoading && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <CircleNotch className="h-3 w-3 animate-spin" />
+                    <CircleNotch className="size-3  animate-spin" />
                     Validating...
                   </div>
                 )}

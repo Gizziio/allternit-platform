@@ -1,3 +1,4 @@
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Folder, CircleNotch, Check, Shield, Warning } from '@phosphor-icons/react';
 import { THEME, PLUGIN_TYPE_OPTIONS } from '../constants';
@@ -114,7 +115,8 @@ export function CreatePluginModal({ fs, onClose, showInfo, showError }: CreatePl
     const files: Array<{ path: string; content: string }> = [];
     switch (type) {
       case 'command':
-        files.push({ path: 'src/index.ts', content: `export const config = { name: '${name}', description: '${desc || `${name} command`}', trigger: '/${slug}' };\nexport async function execute(args: string[]): Promise<string> { return \`Executed ${name} with args: \${args.join(' ')}\`; }` });
+        files.push({ path: 'src/index.ts', content: `export const config = {
+  const isClient = useIsClient(); name: '${name}', description: '${desc || `${name} command`}', trigger: '/${slug}' };\nexport async function execute(args: string[]): Promise<string> { return \`Executed ${name} with args: \${args.join(' ')}\`; }` });
         break;
       case 'skill':
         files.push({ path: 'SKILL.md', content: `# ${name}\n\n## Purpose\n${desc || `${name} skill for Allternit`}\n\n## Instructions\n- Step 1\n` });
@@ -123,7 +125,7 @@ export function CreatePluginModal({ fs, onClose, showInfo, showError }: CreatePl
         files.push({ path: 'src/main.ts', content: `import { Server } from '@modelcontextprotocol/sdk/server/index.js';\nimport { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';\nconst server = new Server({ name: '${slug}', version: '1.0.0' }, { capabilities: { tools: {} } });\nasync function main() { const transport = new StdioServerTransport(); await server.connect(transport); }\nmain().catch(console.error);` });
         break;
       case 'webhook':
-        files.push({ path: 'src/main.ts', content: `export const config = { name: '${name}', description: '${desc || `${name} webhook`}', path: '/webhooks/${slug}' };\nexport async function handleWebhook(payload: unknown): Promise<{ status: number; body: unknown }> { return { status: 200, body: { received: new Date().toISOString() } }; }` });
+        files.push({ path: 'src/main.ts', content: `export const config = { name: '${name}', description: '${desc || `${name} webhook`}', path: '/webhooks/${slug}' };\nexport async function handleWebhook(payload: unknown): Promise<{ status: number; body: unknown }> {isClient ?  return { status: 200, body: { received: new Date().toISOString()  : "..."} }; }` });
         break;
       case 'full':
         files.push({ path: 'commands/hello.ts', content: `export const config = { name: 'hello', trigger: '/${slug}-hello' };\nexport async function execute(args: string[]): Promise<string> { return 'Hello!'; }` });
@@ -167,7 +169,7 @@ export function CreatePluginModal({ fs, onClose, showInfo, showError }: CreatePl
           {PLUGIN_TYPE_OPTIONS.map((option) => (
             <button key={option.value} onClick={() => setPluginType(option.value)} style={{ padding: '10px 12px', borderRadius: 8, border: `1px solid ${pluginType === option.value ? THEME.accentGlow : THEME.border}`, backgroundColor: pluginType === option.value ? THEME.accentMuted : 'var(--surface-hover)', color: pluginType === option.value ? THEME.textPrimary : THEME.textSecondary, fontSize: 13, cursor: 'pointer', textAlign: 'left' }}>
               <div style={{ fontWeight: 600, marginBottom: 2 }}>{option.label}</div>
-              <div style={{ fontSize: 11, opacity: 0.7 }}>{option.description}</div>
+              <div style={{ fontSize: 12, opacity: 0.7 }}>{option.description}</div>
             </button>
           ))}
         </div>
@@ -243,7 +245,7 @@ export function ValidatePluginModal({ onClose, showInfo, showError }: ValidatePl
           <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={(e) => { const file = e.target.files?.[0]; if (file) void handleFileContent(file); }} />
         </div>
       )}
-      {isValidating && <div style={{ textAlign: 'center', padding: '40px 0' }}><CircleNotch size={32} style={{ animation: 'spin 1s linear infinite', color: THEME.accent }} /><p style={{ margin: '12px 0 0', fontSize: 13, color: THEME.textSecondary }}>Validating...</p></div>}
+      {isValidating && <div style={{ textAlign: 'center', padding: '40px 0' }}><CircleNotch size={32} style={{ animation: 'spin 1s linear infinite', color: THEME.accent }} /><p style={{ margin: '12px 0 0', fontSize: 13, color: THEME.textSecondary }}>Validating…</p></div>}
       {validationResult && !isValidating && (
         <div>
           <div style={{ padding: 16, borderRadius: 10, border: `1px solid ${validationResult.valid ? 'rgba(34,197,94,0.35)' : 'rgba(239,68,68,0.35)'}`, backgroundColor: validationResult.valid ? 'var(--status-success-bg)' : 'var(--status-error-bg)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>

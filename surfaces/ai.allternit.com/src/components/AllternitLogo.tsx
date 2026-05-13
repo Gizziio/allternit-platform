@@ -35,7 +35,7 @@ export function AllternitLogo({ size = 'md', variant = 'horizontal', showText = 
     light: '#ECECEC',      // Primary text for dark theme
   };
 
-  const LogoIcon = () => (
+  const logoIconEl = (
     <div 
       className="relative flex items-center justify-center"
       style={{
@@ -72,7 +72,7 @@ export function AllternitLogo({ size = 'md', variant = 'horizontal', showText = 
     </div>
   );
 
-  const Text = () => (
+  const textEl = (
     <div className="flex flex-col">
       <span 
         className={`${config.text} font-bold tracking-tight`}
@@ -82,7 +82,7 @@ export function AllternitLogo({ size = 'md', variant = 'horizontal', showText = 
       </span>
       {size !== 'sm' && (
         <span 
-          className="text-[10px] font-medium uppercase tracking-wider"
+          className="text-xs font-medium uppercase tracking-wider"
           style={{ color: brandColors.primary }}
         >
           Agent Studio
@@ -92,14 +92,14 @@ export function AllternitLogo({ size = 'md', variant = 'horizontal', showText = 
   );
 
   if (variant === 'icon-only') {
-    return <LogoIcon />;
+    return logoIconEl;
   }
 
   if (variant === 'stacked') {
     return (
       <div className="flex flex-col items-center gap-2">
-        <LogoIcon />
-        {showText && <Text />}
+        {logoIconEl}
+        {showText && textEl}
       </div>
     );
   }
@@ -107,8 +107,8 @@ export function AllternitLogo({ size = 'md', variant = 'horizontal', showText = 
   // Horizontal (default)
   return (
     <div className={`flex items-center ${config.gap}`}>
-      <LogoIcon />
-      {showText && <Text />}
+      {logoIconEl}
+      {showText && textEl}
     </div>
   );
 }
@@ -217,7 +217,7 @@ export function BrandBadge({
 
   const config = variants[variant];
   const sizeConfig = {
-    sm: { padding: 'px-1.5 py-0.5', text: 'text-[10px]', height: 'h-4' },
+    sm: { padding: 'px-1.5 py-0.5', text: 'text-xs', height: 'h-4' },
     md: { padding: 'px-2 py-1', text: 'text-xs', height: 'h-5' },
   };
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { Icon as PhosphorIcon } from '@phosphor-icons/react';
-import { GlassCard } from '../../design/GlassCard';
+import { GlassCard } from '../../design/glass/GlassCard';
 import { useRunnerStore } from '../../runner/runner.store';
 import type { RunnerRun } from '../../runner/runner.types';
 import { PatchGate } from './PatchGate';
@@ -43,7 +43,7 @@ const inspectorBodyStyle: React.CSSProperties = {
 };
 
 const sectionHeadingStyle: React.CSSProperties = {
-  fontSize: 11,
+  fontSize: 12,
   fontWeight: 700,
   color: 'var(--text-tertiary)',
   textTransform: 'uppercase',
@@ -57,7 +57,7 @@ const panelButtonStyle: React.CSSProperties = {
   border: '1px solid rgba(255, 255, 255, 0.08)',
   background: 'rgba(255, 255, 255, 0.04)',
   color: 'var(--text-secondary)',
-  fontSize: 10,
+  fontSize: 12,
   fontWeight: 600,
   cursor: 'pointer',
   display: 'inline-flex',
@@ -97,7 +97,7 @@ const getFileIcon = (type: 'typescript' | 'json' | 'markdown'): React.ReactNode 
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 700,
             color: 'white',
           }}
@@ -116,7 +116,7 @@ const getFileIcon = (type: 'typescript' | 'json' | 'markdown'): React.ReactNode 
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 700,
             color: 'var(--surface-hover)',
           }}
@@ -135,7 +135,7 @@ const getFileIcon = (type: 'typescript' | 'json' | 'markdown'): React.ReactNode 
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 700,
             color: 'white',
           }}
@@ -174,7 +174,7 @@ export function InspectorStack() {
           <div>
             <div
               style={{
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: 700,
                 color: 'var(--text-tertiary)',
                 textTransform: 'uppercase',
@@ -195,7 +195,7 @@ export function InspectorStack() {
               border: '1px solid rgba(255, 255, 255, 0.08)',
               background: 'rgba(255, 255, 255, 0.06)',
               color: 'var(--text-secondary)',
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 700,
               whiteSpace: 'nowrap',
             }}
@@ -260,7 +260,7 @@ export function InspectorStack() {
                       </div>
                       <div
                         style={{
-                          fontSize: 10,
+                          fontSize: 12,
                           color: 'var(--text-tertiary)',
                           marginTop: 4,
                           display: 'flex',
@@ -352,7 +352,7 @@ export function InspectorStack() {
                       </div>
                       <div
                         style={{
-                          fontSize: 10,
+                          fontSize: 12,
                           color: 'var(--text-tertiary)',
                           marginTop: 4,
                           display: 'flex',
@@ -374,7 +374,7 @@ export function InspectorStack() {
                         border: 'none',
                         background: 'var(--accent-chat)',
                         color: 'white',
-                        fontSize: 10,
+                        fontSize: 12,
                         fontWeight: 700,
                         cursor: 'pointer',
                       }}
@@ -430,7 +430,7 @@ function Tab({
       }}
     >
       <Icon size={16} weight={active ? 'duotone' : 'regular'} />
-      <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'capitalize' }}>{id}</span>
+      <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'capitalize' }}>{id}</span>
     </button>
   );
 }

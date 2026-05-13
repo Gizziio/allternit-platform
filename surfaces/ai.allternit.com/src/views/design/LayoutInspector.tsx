@@ -1,6 +1,6 @@
 import React from 'react';
 import { Columns, Rows, ArrowsHorizontal, ArrowsVertical, GridNine, Selection } from '@phosphor-icons/react';
-import { GlassCard } from '../../design/GlassCard';
+import { GlassCard } from '../../design/glass/GlassCard';
 
 interface LayoutInspectorProps {
   onUpdate: (props: any) => void;

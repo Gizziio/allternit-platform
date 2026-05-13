@@ -59,7 +59,7 @@ export interface UseA2UIBackendReturn {
  * const a2ui = useA2UIBackend({
  *   chatId: "chat-123",
  *   initialPayload: payloadFromAgent,
- *   onActionComplete: (res) => console.log(res),
+ *   onActionComplete: (res) => console.debug(res),
  * });
  * 
  * // In component

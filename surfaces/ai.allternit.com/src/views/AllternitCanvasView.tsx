@@ -183,7 +183,7 @@ export function AllternitCanvasView({
               onClick={() => setFullscreenCanvas(false)}
               className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
             >
-              <CaretLeft className="w-4 h-4 mr-2" />
+              <CaretLeft className="size-4  mr-2" />
               Back
             </Button>
             <span className="text-sm font-medium text-[var(--text-primary)]">
@@ -286,7 +286,7 @@ export function AllternitCanvasView({
                     onClick={handleToggleChat}
                     className="h-6 text-[var(--text-tertiary)] hover:text-[var(--text-primary)]"
                   >
-                    <Columns className="w-3 h-3 mr-1" />
+                    <Columns className="size-3  mr-1" />
                     Hide
                   </Button>
                 </div>
@@ -356,7 +356,7 @@ function EmptyCanvasState({ sourceView }: { sourceView: string }) {
   return (
     <div className="h-full flex flex-col items-center justify-center text-[var(--text-tertiary)]">
       <div className="max-w-md text-center space-y-4">
-        <Sparkle className="w-12 h-12 mx-auto opacity-50" />
+        <Sparkle className="size-12  mx-auto opacity-50" />
         <h3 className="text-lg font-medium text-[var(--text-primary)]">
           Canvas Ready
         </h3>

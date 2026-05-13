@@ -911,7 +911,7 @@ export async function deleteCapability(
 async function deleteDirectoryRecursive(fs: FileSystemAPI, dirPath: string): Promise<void> {
   try {
     const entries = await fs.readDir(dirPath);
-    for (const entry of entries) {
+    await Promise.all(entries.map(async (entry) => {
       if (entry.type === 'directory') {
         await deleteDirectoryRecursive(fs, entry.path);
       } else {
@@ -921,7 +921,7 @@ async function deleteDirectoryRecursive(fs: FileSystemAPI, dirPath: string): Pro
           // Best-effort cleanup
         }
       }
-    }
+    }));
     // Try to delete the directory itself
     try {
       await fs.deleteFile(dirPath);

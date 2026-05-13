@@ -1,3 +1,8 @@
+import {
+  evaluateRuntimeExpression,
+  getValueAtPath,
+} from '../../../../src/lib/expression/safe-runtime-expression';
+
 /**
  * Allternit-IX (Allternit Interface) Types
  * 
@@ -436,28 +441,28 @@ export function evaluateExpression(
 /**
  * Get value by path
  */
-function getValueByPath(obj: Record<string, unknown>, path: string): unknown {
-  return path.split('.').reduce((acc: unknown, key) => {
-    if (acc && typeof acc === 'object') {
-      return (acc as Record<string, unknown>)[key];
-    }
-    return undefined;
-  }, obj);
-}
-
 /**
  * Evaluate simple expression
  */
 function evaluateSimpleExpr(expr: string, context: Record<string, unknown>): unknown {
-  // Replace state paths with values
-  const processed = expr.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
-    const value = getValueByPath(context, path.trim());
-    return value !== undefined ? JSON.stringify(value) : match;
+  const exactPathMatch = expr.match(/^\s*\{\{([^}]+)\}\}\s*$/);
+  if (exactPathMatch) {
+    return getValueAtPath(context, exactPathMatch[1].trim());
+  }
+
+  const placeholderContext: Record<string, unknown> = {};
+  let placeholderIndex = 0;
+  const processed = expr.replace(/\{\{([^}]+)\}\}/g, (_match, path) => {
+    const placeholderName = `__placeholder_${placeholderIndex++}`;
+    placeholderContext[placeholderName] = getValueAtPath(context, path.trim());
+    return placeholderName;
   });
 
   try {
-    // eslint-disable-next-line no-new-func
-    return new Function('context', `return ${processed}`)(context);
+    return evaluateRuntimeExpression(processed, {
+      ...context,
+      ...placeholderContext,
+    });
   } catch {
     return processed;
   }

@@ -129,12 +129,12 @@ export function ExcalidrawCanvas({
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[var(--ui-border-muted)] px-4 py-2.5">
         <div className="flex items-center gap-2">
-          <IconPencil className="h-4 w-4 text-[var(--accent-primary)]" />
+          <IconPencil className="size-4  text-[var(--accent-primary)]" />
           <span className="text-sm font-semibold text-[var(--text-primary)]">{title}</span>
         </div>
         <div className="flex items-center gap-1">
           <label className="cursor-pointer rounded-md p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]">
-            <IconUpload className="h-3.5 w-3.5" />
+            <IconUpload className="size-3.5 " />
             <input type="file" accept=".json,.excalidraw" className="hidden" onChange={handleFileUpload} />
           </label>
           {onExport && (
@@ -144,9 +144,9 @@ export function ExcalidrawCanvas({
               className="rounded-md p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)] disabled:opacity-50"
             >
               {isExporting ? (
-                <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
+                <IconLoader2 className="size-3.5  animate-spin" />
               ) : (
-                <IconDownload className="h-3.5 w-3.5" />
+                <IconDownload className="size-3.5 " />
               )}
             </button>
           )}
@@ -184,7 +184,7 @@ export function ExcalidrawCanvas({
               className="absolute inset-0 z-10 flex items-center justify-center bg-[var(--bg-primary)]/80 backdrop-blur-sm"
             >
               <div className="flex flex-col items-center gap-2 text-center">
-                <IconExclamationCircle className="h-8 w-8 text-red-400" />
+                <IconExclamationCircle className="size-8  text-red-400" />
                 <p className="text-sm text-[var(--text-secondary)]">{loadError}</p>
                 <button
                   onClick={() => setLoadError(null)}
@@ -205,7 +205,7 @@ function ExcalidrawLoading() {
   return (
     <div className="flex h-full items-center justify-center">
       <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
-        <IconLoader2 className="h-4 w-4 animate-spin" />
+        <IconLoader2 className="size-4  animate-spin" />
         Loading whiteboard…
       </div>
     </div>
@@ -216,7 +216,7 @@ function ExcalidrawStreaming() {
   return (
     <div className="flex h-full items-center justify-center">
       <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
-        <IconLoader2 className="h-4 w-4 animate-spin" />
+        <IconLoader2 className="size-4  animate-spin" />
         Receiving drawing data…
       </div>
     </div>

@@ -138,7 +138,7 @@ function ConstraintBuilder({
                 }`}
               >
                 <div
-                  className="w-8 h-8 rounded flex items-center justify-center flex-shrink-0"
+                  className="size-8  rounded flex items-center justify-center flex-shrink-0"
                   style={{
                     background: `${typeConfig?.color}22`,
                     border: `1px solid ${typeConfig?.color}44`,
@@ -218,7 +218,7 @@ function ConstraintBuilder({
                       style={{ color: newConstraint.type === type.value ? type.color : 'var(--ui-text-muted)' }}
                     />
                     <span
-                      className={`text-[10px] ${
+                      className={`text-xs ${
                         newConstraint.type === type.value ? 'text-white/90' : 'text-white/40'
                       }`}
                     >
@@ -317,7 +317,7 @@ function SuccessCriteriaBuilder({
               exit={{ opacity: 0, x: -10 }}
               className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/5"
             >
-              <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+              <div className="size-6  rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
                 <CheckCircle size={12} className="text-green-400" />
               </div>
               <span className="text-sm text-white/80 flex-1">{criterion}</span>
@@ -338,7 +338,7 @@ function SuccessCriteriaBuilder({
           type="text"
           value={newCriterion}
           onChange={(e) => setNewCriterion(e.target.value)}
-          placeholder="Define what success looks like..."
+          placeholder="Define what success looks like…"
           className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white/90 placeholder-white/30 outline-none focus:border-white/20"
           onKeyDown={(e) => {
             if (e.key === 'Enter') handleAdd();
@@ -435,7 +435,7 @@ export function GoalDefinitionInput({
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center border border-blue-500/30">
+        <div className="size-10  rounded-lg bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center border border-blue-500/30">
           <Target size={20} className="text-blue-400" />
         </div>
         <div>

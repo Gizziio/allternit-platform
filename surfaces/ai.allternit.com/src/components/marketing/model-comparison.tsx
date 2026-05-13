@@ -41,6 +41,28 @@ export interface ModelComparisonTableProps {
 type SortKey = 'name' | 'provider' | 'speed' | 'context' | 'pricing';
 type SortDir = 'asc' | 'desc';
 
+const SortIcon = ({ 
+  column, 
+  sortKey, 
+  sortDir 
+}: { 
+  column: SortKey; 
+  sortKey: SortKey; 
+  sortDir: SortDir;
+}) => {
+  if (sortKey !== column)
+    return (
+      <span className="ml-1 inline-block size-4  opacity-0 transition-opacity group-hover:opacity-40">
+        <IconArrowUp className="size-3 " />
+      </span>
+    );
+  return sortDir === 'asc' ? (
+    <IconArrowUp className="ml-1 inline-block size-3 " />
+  ) : (
+    <IconArrowDown className="ml-1 inline-block size-3 " />
+  );
+};
+
 export function ModelComparisonTable({
   models,
   className,
@@ -82,20 +104,6 @@ export function ModelComparisonTable({
     });
     return sorted;
   }, [models, sortKey, sortDir]);
-
-  const SortIcon = ({ column }: { column: SortKey }) => {
-    if (sortKey !== column)
-      return (
-        <span className="ml-1 inline-block h-4 w-4 opacity-0 transition-opacity group-hover:opacity-40">
-          <IconArrowUp className="h-3 w-3" />
-        </span>
-      );
-    return sortDir === 'asc' ? (
-      <IconArrowUp className="ml-1 inline-block h-3 w-3" />
-    ) : (
-      <IconArrowDown className="ml-1 inline-block h-3 w-3" />
-    );
-  };
 
   const headerBase =
     'cursor-pointer select-none whitespace-nowrap transition-colors hover:text-[var(--ui-text-primary)]';
@@ -142,7 +150,7 @@ export function ModelComparisonTable({
                   onClick={() => handleSort('name')}
                 >
                   Model
-                  <SortIcon column="name" />
+                  <SortIcon column="name" sortKey={sortKey} sortDir={sortDir} />
                 </TableHead>
                 <TableHead
                   className={cn(headerBase, headerText)}
@@ -150,7 +158,7 @@ export function ModelComparisonTable({
                   onClick={() => handleSort('provider')}
                 >
                   Provider
-                  <SortIcon column="provider" />
+                  <SortIcon column="provider" sortKey={sortKey} sortDir={sortDir} />
                 </TableHead>
                 <TableHead
                   className={cn(headerBase, headerText)}
@@ -158,7 +166,7 @@ export function ModelComparisonTable({
                   onClick={() => handleSort('speed')}
                 >
                   Speed
-                  <SortIcon column="speed" />
+                  <SortIcon column="speed" sortKey={sortKey} sortDir={sortDir} />
                 </TableHead>
                 <TableHead
                   className={cn(headerBase, headerText)}
@@ -166,7 +174,7 @@ export function ModelComparisonTable({
                   onClick={() => handleSort('context')}
                 >
                   Context
-                  <SortIcon column="context" />
+                  <SortIcon column="context" sortKey={sortKey} sortDir={sortDir} />
                 </TableHead>
                 <TableHead
                   className={cn(headerBase, headerText)}
@@ -174,7 +182,7 @@ export function ModelComparisonTable({
                   onClick={() => handleSort('pricing')}
                 >
                   Pricing
-                  <SortIcon column="pricing" />
+                  <SortIcon column="pricing" sortKey={sortKey} sortDir={sortDir} />
                 </TableHead>
                 {featureKeys.map((key) => (
                   <TableHead
@@ -209,14 +217,14 @@ export function ModelComparisonTable({
                       </span>
                       {model.recommended && (
                         <span
-                          className="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[11px] font-medium"
+                          className="inline-flex items-center gap-0.5 rounded-full px-2 py-0.5 text-[12px] font-medium"
                           style={{
                             background:
                               'color-mix(in srgb, var(--accent-chat) 16%, transparent)',
                             color: 'var(--accent-chat)',
                           }}
                         >
-                          <IconStar className="h-3 w-3" />
+                          <IconStar className="size-3 " />
                           Best
                         </span>
                       )}
@@ -250,12 +258,12 @@ export function ModelComparisonTable({
                     <TableCell key={key} className="text-center">
                       {model.features[key] ? (
                         <IconCheck
-                          className="mx-auto h-4 w-4"
+                          className="mx-auto size-4 "
                           style={{ color: 'var(--status-success)' }}
                         />
                       ) : (
                         <IconX
-                          className="mx-auto h-4 w-4"
+                          className="mx-auto size-4 "
                           style={{ color: 'var(--ui-text-muted)', opacity: 0.4 }}
                         />
                       )}

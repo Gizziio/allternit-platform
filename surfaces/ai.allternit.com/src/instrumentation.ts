@@ -50,7 +50,7 @@ async function runDrizzleMigrations() {
     const db = drizzle(sqlite);
 
     migrate(db, { migrationsFolder });
-    console.log('[DB] Drizzle migrations applied');
+    console.debug('[DB] Drizzle migrations applied');
     sqlite.close();
   } catch (error) {
     console.error('[DB] Drizzle migration failed (continuing):', error);
@@ -67,7 +67,7 @@ async function runPrismaSchema() {
       env: { ...process.env },
       stdio: 'pipe',
     });
-    console.log('[DB] Prisma schema applied');
+    console.debug('[DB] Prisma schema applied');
   } catch (error) {
     console.error('[DB] Prisma schema push failed (continuing):', error);
   }

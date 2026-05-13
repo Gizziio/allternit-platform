@@ -1,9 +1,9 @@
 import React from 'react';
 import { PREDEFINED_WORKFLOWS, runWorkflow } from '../../integration/kernel/workflows';
-import { GlassCard } from '../../design/GlassCard';
+import { GlassCard } from '../../design/glass/GlassCard';
 import { Play, Lightning } from '@phosphor-icons/react';
 
-export function WorkflowView() {
+export function WorkflowView(): JSX.Element {
   return (
     <div style={{ padding: 32, maxWidth: 800, margin: '0 auto' }}>
       <div style={{ marginBottom: 24 }}>

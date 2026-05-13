@@ -198,7 +198,7 @@ function PlanView({ mode }: { mode: 'cowork' }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-sm font-bold text-white/80 uppercase tracking-wider">Execution Graph (DAG)</h3>
-        <span className="text-[10px] text-white/40">v1.2.0-stable</span>
+        <span className="text-xs text-white/40">v1.2.0-stable</span>
       </div>
       <div className="space-y-2">
         <DagNode label="Initialize Workspace" status="completed" mode={mode} />
@@ -231,7 +231,7 @@ function ReceiptsView({ mode }: { mode: 'cowork' }) {
     <div className="space-y-4">
        <h3 className="text-sm font-bold text-white/80 uppercase tracking-wider mb-4">Orchestration Ledger</h3>
        <div className="p-4 rounded-xl border border-white/5 bg-white/2 space-y-4">
-          <div className="text-[10px] font-mono text-white/30 border-b border-white/5 pb-2">SESSION_ID: 8x-f29-k92</div>
+          <div className="text-xs font-mono text-white/30 border-b border-white/5 pb-2">SESSION_ID: 8x-f29-k92</div>
           <p className="text-xs text-white/50 italic text-center py-4">No receipts generated for current execution phase.</p>
        </div>
     </div>
@@ -243,10 +243,10 @@ function PolicyView({ mode }: { mode: 'cowork' }) {
     <div className="space-y-4">
        <h3 className="text-sm font-bold text-white/80 uppercase tracking-wider mb-4">Law Layer Enforcement</h3>
        <div className="space-y-3">
-          <div className="p-3 rounded-lg bg-red-500/5 border border-red-500/10 text-[11px] text-red-400/80">
+          <div className="p-3 rounded-lg bg-red-500/5 border border-red-500/10 text-[12px] text-red-400/80">
             <strong>CRITICAL:</strong> Destructive file deletions are globally restricted by Law Layer 1.
           </div>
-          <div className="p-3 rounded-lg bg-green-500/5 border border-green-500/10 text-[11px] text-green-400/80">
+          <div className="p-3 rounded-lg bg-green-500/5 border border-green-500/10 text-[12px] text-green-400/80">
             <strong>ALLOWED:</strong> Atomic file writes within tenant /outputs directory.
           </div>
        </div>

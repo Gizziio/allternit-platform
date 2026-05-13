@@ -8,6 +8,7 @@
  * - Download files
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState } from 'react';
 import { X, FileCsv, FileCode, FileText, Clipboard } from '@phosphor-icons/react';
 import { TEXT, BACKGROUND } from '@/design/allternit.tokens';
@@ -91,7 +92,7 @@ export function ExportPanel({ modeColors, onClose }: ExportPanelProps) {
         <span className="text-sm font-medium" style={{ color: TEXT.primary }}>Export Data</span>
         <button 
           onClick={onClose}
-          className="w-6 h-6 rounded flex items-center justify-center hover:bg-white/5"
+          className="size-6  rounded flex items-center justify-center hover:bg-white/5"
           style={{ color: TEXT.tertiary }}
         >
           <X size={12} weight="bold" />

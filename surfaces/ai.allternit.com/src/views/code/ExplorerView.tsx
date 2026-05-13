@@ -262,7 +262,7 @@ export const ExplorerView: React.FC = () => {
           {/* Search Input */}
           <input
             type="text"
-            placeholder="Search files..."
+            placeholder="Search files…"
             value={filterText}
             onChange={(e) => setFilterText(e.target.value)}
             style={{
@@ -290,7 +290,7 @@ export const ExplorerView: React.FC = () => {
         {/* Dropped Files Section */}
         {droppedFiles.length > 0 && (
           <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)', background: 'rgba(52,199,89,0.05)' }}>
-            <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: '8px', textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: '8px', textTransform: 'uppercase' }}>
               Uploaded Files
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -315,7 +315,7 @@ export const ExplorerView: React.FC = () => {
                 >
                   {getDroppedFileIcon(file)}
                   <span style={{ fontSize: '12px', color: 'var(--text-primary)', flex: 1 }}>{file.name}</span>
-                  <span style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>{formatFileSize(file.size)}</span>
+                  <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>{formatFileSize(file.size)}</span>
                 </div>
               ))}
             </div>

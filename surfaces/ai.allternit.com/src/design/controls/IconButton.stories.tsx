@@ -177,15 +177,15 @@ export const Sizes: Story = {
     <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
         <IconButton icon={Gear} size={16} title="Small" />
-        <span style={{ fontSize: '10px', opacity: 0.6 }}>16px</span>
+        <span style={{ fontSize: '12px', opacity: 0.6 }}>16px</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
         <IconButton icon={Gear} size={20} title="Medium" />
-        <span style={{ fontSize: '10px', opacity: 0.6 }}>20px</span>
+        <span style={{ fontSize: '12px', opacity: 0.6 }}>20px</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
         <IconButton icon={Gear} size={24} title="Large" />
-        <span style={{ fontSize: '10px', opacity: 0.6 }}>24px</span>
+        <span style={{ fontSize: '12px', opacity: 0.6 }}>24px</span>
       </div>
     </div>
   ),

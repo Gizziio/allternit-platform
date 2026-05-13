@@ -93,7 +93,7 @@ export function ChatWorkspace({ messages, isLoading, onCitationClick }: ChatWork
     <div ref={scrollRef} className="research-chat-area">
       {messages.length === 0 && (
         <div className="research-empty-state">
-          <div className="w-12 h-12 rounded-xl bg-purple-400/10 flex items-center justify-center">
+          <div className="size-12  rounded-xl bg-purple-400/10 flex items-center justify-center">
             <Bot size={24} className="text-purple-400" />
           </div>
           <div>
@@ -140,7 +140,7 @@ export function ChatWorkspace({ messages, isLoading, onCitationClick }: ChatWork
                   <span
                     key={cite.index}
                     onClick={() => onCitationClick?.(cite.source_id)}
-                    className="text-[10px] text-purple-400 bg-purple-400/8 px-1.5 py-0.5 rounded cursor-pointer"
+                    className="text-xs text-purple-400 bg-purple-400/8 px-1.5 py-0.5 rounded cursor-pointer"
                   >
                     [{cite.index}] {cite.excerpt.slice(0, 30)}...
                   </span>

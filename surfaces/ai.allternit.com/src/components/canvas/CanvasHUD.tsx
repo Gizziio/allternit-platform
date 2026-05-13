@@ -45,21 +45,21 @@ export function CanvasHUD({ tiles }: CanvasHUDProps) {
           boxShadow: streamingCount > 0 ? 'var(--shadow-glow)' : 'none',
         }}
       />
-      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.04em' }}>
+      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '0.04em' }}>
         {tiles.length} TILE{tiles.length !== 1 ? 'S' : ''}
       </span>
       {sessionTiles.length > 0 && (
-        <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>
+        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>
           {sessionTiles.length} SESSION{sessionTiles.length !== 1 ? 'S' : ''}
         </span>
       )}
       {streamingCount > 0 && (
-        <span style={{ fontSize: 10, color: 'var(--accent-agent, #f97316)', fontWeight: 500 }}>
+        <span style={{ fontSize: 12, color: 'var(--accent-agent, #f97316)', fontWeight: 500 }}>
           {streamingCount} WORKING
         </span>
       )}
       {idleCount > 0 && streamingCount === 0 && sessionTiles.length > 0 && (
-        <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>
+        <span style={{ fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>
           {idleCount} IDLE
         </span>
       )}

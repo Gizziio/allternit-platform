@@ -78,7 +78,7 @@ export const CoworkTeamDashboard: React.FC = () => {
                   key={col}
                   style={{
                     textAlign: 'left',
-                    fontSize: '11px',
+                    fontSize: '12px',
                     fontWeight: 600,
                     color: 'var(--text-secondary)',
                     textTransform: 'uppercase',
@@ -140,7 +140,7 @@ export const CoworkTeamDashboard: React.FC = () => {
 interface SummaryCardProps { label: string; value: number; accent: string; }
 const SummaryCard: React.FC<SummaryCardProps> = ({ label, value, accent }) => (
   <GlassSurface style={{ borderRadius: '12px', padding: 'var(--spacing-md)', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-    <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
       {label}
     </span>
     <span style={{ fontSize: '28px', fontWeight: 700, color: accent, lineHeight: 1 }}>
@@ -155,7 +155,7 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => (
       display: 'inline-block',
       padding: '2px 8px',
       borderRadius: '4px',
-      fontSize: '11px',
+      fontSize: '12px',
       fontWeight: 600,
       background: `${STATUS_COLORS[status] ?? 'var(--ui-text-muted)'}22`,
       color: STATUS_COLORS[status] ?? 'var(--ui-text-muted)',

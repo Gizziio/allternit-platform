@@ -136,7 +136,7 @@ function TemplateCard({
           </span>
           <span className={cn(
             "inline-flex flex-shrink-0 items-center rounded-full border px-1.5 py-0.5",
-            "text-[10px] font-semibold tracking-wide",
+            "text-xs font-semibold tracking-wide",
             badge.className
           )}>
             {badge.label}
@@ -155,7 +155,7 @@ function ThumbnailPlaceholder({ template }: { template: ArtifactTemplate }) {
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-white/20">
       <div className="text-3xl">{meta?.icon}</div>
-      <span className="text-[11px] font-medium tracking-wide">{template.title}</span>
+      <span className="text-[12px] font-medium tracking-wide">{template.title}</span>
     </div>
   );
 }
@@ -178,7 +178,7 @@ function ActionButton({
         "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold",
         "transition-all duration-100 active:scale-95",
         primary
-          ? "bg-indigo-500 text-white hover:bg-indigo-400"
+          ? "bg-blue-500 text-white hover:bg-blue-400"
           : "bg-white/10 text-white/80 hover:bg-white/20"
       )}
     >
@@ -216,7 +216,7 @@ function CategoryTabs({
           className={cn(
             "px-3 py-1 rounded-full text-xs font-medium transition-all duration-150",
             active === tab.id
-              ? "bg-indigo-500/20 text-indigo-300 ring-1 ring-indigo-500/30"
+              ? "bg-blue-500/20 text-blue-300 ring-1 ring-blue-500/30"
               : "text-white/40 hover:text-white/70 hover:bg-white/[0.05]"
           )}
         >

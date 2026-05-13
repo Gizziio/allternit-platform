@@ -349,7 +349,7 @@ export function TerminalFileBrowser({
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2 border-b">
         <div className="flex items-center gap-2">
-          <HardDrive className="h-4 w-4 text-muted-foreground" />
+          <HardDrive className="size-4  text-muted-foreground" />
           <span className="text-sm font-medium">Files</span>
         </div>
         <div className="flex items-center gap-1">
@@ -359,7 +359,7 @@ export function TerminalFileBrowser({
             onClick={() => loadDirectory(currentPath)}
             disabled={isLoading}
           >
-            <ArrowsClockwise className={cn("h-4 w-4", isLoading && "animate-spin")} />
+            <ArrowsClockwise className={cn("size-4 ", isLoading && "animate-spin")} />
           </Button>
           <Button
             variant="ghost"
@@ -384,7 +384,7 @@ export function TerminalFileBrowser({
         </Button>
         {breadcrumbs.map((crumb, index) => (
           <div key={crumb.path} className="flex items-center">
-            {index > 0 && <CaretRight className="h-3 w-3 mx-1 text-muted-foreground" />}
+            {index > 0 && <CaretRight className="size-3  mx-1 text-muted-foreground" />}
             <Button
               variant="ghost"
               size="sm"
@@ -426,7 +426,7 @@ export function TerminalFileBrowser({
           </div>
         ) : entries.length === 0 && !isLoading ? (
           <div className="flex flex-col items-center justify-center h-full p-4 text-center">
-            <Folder className="h-8 w-8 text-muted-foreground mb-2" />
+            <Folder className="size-8  text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground">Empty directory</p>
             <p className="text-xs text-muted-foreground mt-1">
               Drag and drop files here to upload
@@ -461,9 +461,9 @@ export function TerminalFileBrowser({
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
                       {entry.is_dir ? (
-                        <Folder className="h-4 w-4 text-blue-500" />
+                        <Folder className="size-4  text-blue-500" />
                       ) : (
-                        <File className="h-4 w-4 text-muted-foreground" />
+                        <File className="size-4  text-muted-foreground" />
                       )}
                       <span className="truncate max-w-[200px]">{entry.name}</span>
                     </div>
@@ -480,7 +480,7 @@ export function TerminalFileBrowser({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-7 w-7 p-0"
+                          className="size-7  p-0"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <DotsThreeVertical size={12} />
@@ -489,7 +489,7 @@ export function TerminalFileBrowser({
                       <DropdownMenuContent align="end">
                         {!entry.is_dir && (
                           <DropdownMenuItem onClick={() => downloadFile(entry)}>
-                            <DownloadSimple className="h-4 w-4 mr-2" />
+                            <DownloadSimple className="size-4  mr-2" />
                             Download
                           </DropdownMenuItem>
                         )}
@@ -497,7 +497,7 @@ export function TerminalFileBrowser({
                           onClick={() => confirmDelete(entry)}
                           className="text-destructive"
                         >
-                          <Trash className="h-4 w-4 mr-2" />
+                          <Trash className="size-4  mr-2" />
                           Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -516,9 +516,9 @@ export function TerminalFileBrowser({
           {transfers.map((transfer) => (
             <div key={transfer.id} className="flex items-center gap-2 text-xs">
               {transfer.type === 'upload' ? (
-                <UploadSimple className="h-3 w-3 text-muted-foreground" />
+                <UploadSimple className="size-3  text-muted-foreground" />
               ) : (
-                <DownloadSimple className="h-3 w-3 text-muted-foreground" />
+                <DownloadSimple className="size-3  text-muted-foreground" />
               )}
               <span className="flex-1 truncate">{transfer.filename}</span>
               {transfer.status === 'transferring' && (

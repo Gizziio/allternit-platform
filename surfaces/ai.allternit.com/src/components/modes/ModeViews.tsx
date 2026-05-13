@@ -21,7 +21,7 @@ import {
 
 // ─── Research Mode ───────────────────────────────────────────────────────────
 
-export function DeepResearchModeView() {
+export function DeepResearchModeView(): JSX.Element {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Array<{ title: string; source: string; snippet: string }>>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -42,7 +42,7 @@ export function DeepResearchModeView() {
     <div className="h-full flex flex-col p-6">
       <div className="max-w-2xl mx-auto w-full space-y-6">
         <div className="text-center">
-          <div className="w-14 h-14 rounded-2xl bg-blue-500/20 flex items-center justify-center mx-auto mb-4">
+          <div className="size-14  rounded-2xl bg-blue-500/20 flex items-center justify-center mx-auto mb-4">
             <MagnifyingGlass size={28} className="text-blue-400" />
           </div>
           <h3 className="text-lg font-semibold text-white mb-1">Deep Research</h3>
@@ -53,7 +53,7 @@ export function DeepResearchModeView() {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Enter research topic..."
+            placeholder="Enter research topic…"
             className="bg-white/5 border-white/10 text-white"
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           />
@@ -67,7 +67,7 @@ export function DeepResearchModeView() {
             {results.map((r, i) => (
               <div key={i} className="p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/[0.07] transition-colors cursor-pointer">
                 <div className="flex items-center gap-2 mb-2">
-                  <Badge variant="secondary" className="bg-white/5 text-white/60 text-[10px]">{r.source}</Badge>
+                  <Badge variant="secondary" className="bg-white/5 text-white/60 text-xs">{r.source}</Badge>
                 </div>
                 <h4 className="text-sm font-medium text-white mb-1">{r.title}</h4>
                 <p className="text-xs text-white/50">{r.snippet}</p>
@@ -82,7 +82,7 @@ export function DeepResearchModeView() {
 
 // ─── Data Studio Mode ────────────────────────────────────────────────────────
 
-export function DataStudioModeView() {
+export function DataStudioModeView(): JSX.Element {
   const [files, setFiles] = useState<Array<{ name: string; size: string; rows: number }>>([]);
 
   const handleUpload = () => {
@@ -97,7 +97,7 @@ export function DataStudioModeView() {
     <div className="h-full flex flex-col p-6">
       <div className="max-w-2xl mx-auto w-full space-y-6">
         <div className="text-center">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
+          <div className="size-14  rounded-2xl bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
             <Swatches size={28} className="text-emerald-400" />
           </div>
           <h3 className="text-lg font-semibold text-white mb-1">Data Studio</h3>
@@ -136,7 +136,7 @@ export function DataStudioModeView() {
 
 // ─── Pitch Deck Mode ─────────────────────────────────────────────────────────
 
-export function PitchDeckModeView() {
+export function PitchDeckModeView(): JSX.Element {
   const [topic, setTopic] = useState('');
   const [slides, setSlides] = useState<Array<{ title: string; content: string }>>([]);
 
@@ -156,7 +156,7 @@ export function PitchDeckModeView() {
     <div className="h-full flex flex-col p-6">
       <div className="max-w-2xl mx-auto w-full space-y-6">
         <div className="text-center">
-          <div className="w-14 h-14 rounded-2xl bg-amber-500/20 flex items-center justify-center mx-auto mb-4">
+          <div className="size-14  rounded-2xl bg-amber-500/20 flex items-center justify-center mx-auto mb-4">
             <FileText size={28} className="text-amber-400" />
           </div>
           <h3 className="text-lg font-semibold text-white mb-1">Pitch Deck</h3>
@@ -167,7 +167,7 @@ export function PitchDeckModeView() {
           <Input
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
-            placeholder="Enter presentation topic..."
+            placeholder="Enter presentation topic…"
             className="bg-white/5 border-white/10 text-white"
           />
           <Button onClick={generate} className="bg-amber-500/20 text-amber-400 hover:bg-amber-500/30">Generate</Button>
@@ -183,7 +183,7 @@ export function PitchDeckModeView() {
                 transition={{ delay: i * 0.1 }}
                 className="flex items-center gap-3 p-3 rounded-lg bg-white/5 border border-white/10"
               >
-                <div className="w-7 h-7 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 text-xs font-bold">
+                <div className="size-7  rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 text-xs font-bold">
                   {i + 1}
                 </div>
                 <div>
@@ -201,7 +201,7 @@ export function PitchDeckModeView() {
 
 // ─── File Vault Mode ─────────────────────────────────────────────────────────
 
-export function FileVaultModeView() {
+export function FileVaultModeView(): JSX.Element {
   const [files] = useState([
     { name: 'project-specs.pdf', type: 'PDF', size: '1.2 MB', tags: ['design', 'specs'] },
     { name: 'api-contract.yaml', type: 'YAML', size: '45 KB', tags: ['api', 'backend'] },
@@ -212,7 +212,7 @@ export function FileVaultModeView() {
     <div className="h-full flex flex-col p-6">
       <div className="max-w-2xl mx-auto w-full space-y-6">
         <div className="text-center">
-          <div className="w-14 h-14 rounded-2xl bg-pink-500/20 flex items-center justify-center mx-auto mb-4">
+          <div className="size-14  rounded-2xl bg-pink-500/20 flex items-center justify-center mx-auto mb-4">
             <Upload size={28} className="text-pink-400" />
           </div>
           <h3 className="text-lg font-semibold text-white mb-1">File Vault</h3>
@@ -223,7 +223,7 @@ export function FileVaultModeView() {
           {files.map((f, i) => (
             <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/[0.07] transition-colors">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-pink-500/20 flex items-center justify-center text-pink-400 text-xs font-bold">
+                <div className="size-9  rounded-lg bg-pink-500/20 flex items-center justify-center text-pink-400 text-xs font-bold">
                   {f.type}
                 </div>
                 <div>
@@ -233,7 +233,7 @@ export function FileVaultModeView() {
               </div>
               <div className="flex gap-1">
                 {f.tags.map((t) => (
-                  <Badge key={t} variant="secondary" className="bg-white/5 text-white/50 text-[10px]">{t}</Badge>
+                  <Badge key={t} variant="secondary" className="bg-white/5 text-white/50 text-xs">{t}</Badge>
                 ))}
               </div>
             </div>
@@ -246,7 +246,7 @@ export function FileVaultModeView() {
 
 // ─── Swarms Mode ─────────────────────────────────────────────────────────────
 
-export function SwarmsModeView() {
+export function SwarmsModeView(): JSX.Element {
   const [swarm] = useState([
     { name: 'Research Agent', role: 'orchestrator', status: 'active', tasks: 3 },
     { name: 'Code Agent', role: 'worker', status: 'idle', tasks: 0 },
@@ -258,7 +258,7 @@ export function SwarmsModeView() {
     <div className="h-full flex flex-col p-6">
       <div className="max-w-2xl mx-auto w-full space-y-6">
         <div className="text-center">
-          <div className="w-14 h-14 rounded-2xl bg-red-500/20 flex items-center justify-center mx-auto mb-4">
+          <div className="size-14  rounded-2xl bg-red-500/20 flex items-center justify-center mx-auto mb-4">
             <GitBranch size={28} className="text-red-400" />
           </div>
           <h3 className="text-lg font-semibold text-white mb-1">Agent Swarms</h3>
@@ -270,7 +270,7 @@ export function SwarmsModeView() {
             <div key={i} className="p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/[0.07] transition-colors">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-white">{agent.name}</span>
-                <div className={`w-2 h-2 rounded-full ${
+                <div className={`size-2  rounded-full ${
                   agent.status === 'active' ? 'bg-emerald-400 animate-pulse' :
                   agent.status === 'idle' ? 'bg-white/30' : 'bg-amber-400'
                 }`} />
@@ -287,7 +287,7 @@ export function SwarmsModeView() {
 
 // ─── Auto Flow Mode ──────────────────────────────────────────────────────────
 
-export function AutoFlowModeView() {
+export function AutoFlowModeView(): JSX.Element {
   const [nodes] = useState([
     { id: 1, type: 'trigger', label: 'New PR Opened', x: 100, y: 100 },
     { id: 2, type: 'action', label: 'Run Tests', x: 300, y: 100 },
@@ -300,7 +300,7 @@ export function AutoFlowModeView() {
     <div className="h-full flex flex-col p-6">
       <div className="max-w-3xl mx-auto w-full space-y-6">
         <div className="text-center">
-          <div className="w-14 h-14 rounded-2xl bg-cyan-500/20 flex items-center justify-center mx-auto mb-4">
+          <div className="size-14  rounded-2xl bg-cyan-500/20 flex items-center justify-center mx-auto mb-4">
             <Lightning size={28} className="text-cyan-400" />
           </div>
           <h3 className="text-lg font-semibold text-white mb-1">Auto Flow</h3>
@@ -352,7 +352,7 @@ export function AutoFlowModeView() {
 
 // ─── Site Builder Mode ───────────────────────────────────────────────────────
 
-export function SiteBuilderModeView() {
+export function SiteBuilderModeView(): JSX.Element {
   const [templates] = useState([
     { name: 'SaaS Landing', description: 'Modern SaaS landing page with pricing', preview: 'saas' },
     { name: 'Portfolio', description: 'Creative portfolio with project grid', preview: 'portfolio' },
@@ -363,8 +363,8 @@ export function SiteBuilderModeView() {
     <div className="h-full flex flex-col p-6">
       <div className="max-w-2xl mx-auto w-full space-y-6">
         <div className="text-center">
-          <div className="w-14 h-14 rounded-2xl bg-indigo-500/20 flex items-center justify-center mx-auto mb-4">
-            <Globe size={28} className="text-indigo-400" />
+          <div className="size-14  rounded-2xl bg-blue-500/20 flex items-center justify-center mx-auto mb-4">
+            <Globe size={28} className="text-blue-400" />
           </div>
           <h3 className="text-lg font-semibold text-white mb-1">Site Builder</h3>
           <p className="text-sm text-white/50">Generate complete, deployable websites from text descriptions</p>
@@ -373,7 +373,7 @@ export function SiteBuilderModeView() {
         <div className="space-y-3">
           {templates.map((t, i) => (
             <div key={i} className="flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/[0.07] transition-colors cursor-pointer">
-              <div className="w-16 h-12 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400 text-xs font-bold">
+              <div className="w-16 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 text-xs font-bold">
                 {t.preview.toUpperCase()}
               </div>
               <div>

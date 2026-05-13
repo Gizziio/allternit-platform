@@ -42,13 +42,13 @@ export interface UpdateBadgeProps {
 const SIZE_CONFIG = {
   sm: {
     badge: 18,
-    fontSize: 10,
+    fontSize: 12,
     icon: 12,
     button: 28,
   },
   md: {
     badge: 20,
-    fontSize: 11,
+    fontSize: 12,
     icon: 14,
     button: 32,
   },
@@ -326,7 +326,7 @@ export function InlineUpdateBadge({ count }: InlineUpdateBadgeProps) {
         padding: '0 5px',
         backgroundColor: THEME.accent,
         borderRadius: 9,
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: 700,
         color: 'var(--surface-canvas)',
         marginLeft: 6,

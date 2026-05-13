@@ -117,9 +117,9 @@ const MODES: ModeDef[] = [
     description: 'Browse web with screenshots',
     icon: Globe,
     color: '#6366f1',
-    bgColor: 'bg-indigo-500/20',
-    borderColor: 'border-indigo-500/30',
-    textColor: 'text-indigo-400',
+    bgColor: 'bg-blue-500/20',
+    borderColor: 'border-blue-500/30',
+    textColor: 'text-blue-400',
   },
 ] as const;
 
@@ -155,7 +155,7 @@ const ModePill: React.FC<{
         hover:brightness-110 transition-colors cursor-default
       `}
     >
-      <Icon className="w-3.5 h-3.5" aria-hidden="true" />
+      <Icon className="size-3.5 " aria-hidden="true" />
       <span>{mode.name}</span>
       <button
         onClick={onRemove}
@@ -247,11 +247,11 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
           ${isOpen ? 'bg-white/10' : ''}
         `}
       >
-        <Sparkles className="w-4 h-4 text-amber-400" aria-hidden="true" />
+        <Sparkles className="size-4  text-amber-400" aria-hidden="true" />
         <span className="text-white/70">
           {selectedModes.length > 0 ? 'Add mode' : 'Select mode'}
         </span>
-        <ChevronDown className={`w-4 h-4 text-white/40 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+        <ChevronDown className={`size-4  text-white/40 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
       </button>
 
       {/* Dropdown Menu */}
@@ -293,7 +293,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
                   "
                 >
                   <div
-                    className="w-8 h-8 rounded-lg flex items-center justify-center"
+                    className="size-8  rounded-lg flex items-center justify-center"
                     style={{ backgroundColor: `${mode.color}20` }}
                     aria-hidden="true"
                   >
@@ -309,7 +309,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
                     </div>
                   </div>
 
-                  <Zap className="w-4 h-4 text-white/20 group-hover:text-white/40" aria-hidden="true" />
+                  <Zap className="size-4  text-white/20 group-hover:text-white/40" aria-hidden="true" />
                 </button>
               );
             })}

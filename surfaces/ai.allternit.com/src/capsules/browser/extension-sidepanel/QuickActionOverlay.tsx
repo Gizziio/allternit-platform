@@ -81,7 +81,7 @@ export function QuickActionOverlay({
       >
         <span
           style={{
-            fontSize: 11,
+            fontSize: 12,
             color: TEXT.tertiary,
             fontFamily: TYPOGRAPHY.fontFamily.mono,
           }}

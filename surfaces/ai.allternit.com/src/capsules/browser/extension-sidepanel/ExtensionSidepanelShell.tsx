@@ -435,7 +435,7 @@ function Logo({ className }: { className?: string }) {
         borderRadius: "8px",
         background: "var(--primary)",
         color: "var(--primary-foreground)",
-        fontSize: "10px",
+        fontSize: '12px',
         fontWeight: 700,
         letterSpacing: "0.05em",
       }}
@@ -709,7 +709,7 @@ function ResultCard({
           Result: {success ? "Success" : "Failed"}
         </span>
       </div>
-      <p className="pl-5 text-[11px] text-muted-foreground whitespace-pre-wrap"><TypewriterText text={text} speed={8} /></p>
+      <p className="pl-5 text-[12px] text-muted-foreground whitespace-pre-wrap"><TypewriterText text={text} speed={8} /></p>
     </div>
   );
 }
@@ -724,7 +724,7 @@ function ReflectionItem({ icon, value }: { icon: string; value: string }) {
         type="button"
         onClick={() => setExpanded((value) => !value)}
         className={cn(
-          "cursor-pointer text-left text-[11px] text-muted-foreground transition-colors hover:text-foreground",
+          "cursor-pointer text-left text-[12px] text-muted-foreground transition-colors hover:text-foreground",
           !expanded && "line-clamp-1",
         )}
       >
@@ -786,7 +786,7 @@ function CopyButton({ text, label }: { text: string; label: string }) {
         setCopied(true);
         window.setTimeout(() => setCopied(false), 1500);
       }}
-      className="shrink-0 rounded border px-1 text-[9px] text-muted-foreground backdrop-blur-xs transition-colors hover:text-foreground"
+      className="shrink-0 rounded border px-1 text-xs text-muted-foreground backdrop-blur-xs transition-colors hover:text-foreground"
     >
       {copied ? "Copied!" : label}
     </button>
@@ -824,7 +824,7 @@ function RawSection({ rawRequest, rawResponse }: { rawRequest?: unknown; rawResp
             type="button"
             onClick={() => setActiveTab((tab) => (tab === "request" ? null : "request"))}
             className={cn(
-              "cursor-pointer border-b text-[10px] transition-colors",
+              "cursor-pointer border-b text-xs transition-colors",
               activeTab === "request"
                 ? "border-foreground text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground",
@@ -838,7 +838,7 @@ function RawSection({ rawRequest, rawResponse }: { rawRequest?: unknown; rawResp
             type="button"
             onClick={() => setActiveTab((tab) => (tab === "response" ? null : "response"))}
             className={cn(
-              "cursor-pointer border-b text-[10px] transition-colors",
+              "cursor-pointer border-b text-xs transition-colors",
               activeTab === "response"
                 ? "border-foreground text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground",
@@ -856,7 +856,7 @@ function RawSection({ rawRequest, rawResponse }: { rawRequest?: unknown; rawResp
             {userPrompt && <CopyButton text={userPrompt} label="Copy User" />}
             <CopyButton text={JSON.stringify(content, null, 4)} label="Copy" />
           </div>
-          <pre className="max-h-60 overflow-x-auto overflow-y-auto rounded bg-muted p-2 pt-5 text-[10px] text-foreground/70">
+          <pre className="max-h-60 overflow-x-auto overflow-y-auto rounded bg-muted p-2 pt-5 text-xs text-foreground/70">
             {JSON.stringify(content, null, 4)}
           </pre>
         </div>
@@ -868,7 +868,7 @@ function RawSection({ rawRequest, rawResponse }: { rawRequest?: unknown; rawResp
 function StepCard({ event }: { event: Extract<ExtensionSidepanelHistoricalEvent, { type: "step" }> }) {
   return (
     <div className="rounded-lg border border-border bg-muted/40 p-2.5 border-l-2" style={{ borderLeftColor: 'rgba(105,168,200,0.5)' }}>
-      <div className="mb-2 text-[11px] font-semibold tracking-wide text-foreground">
+      <div className="mb-2 text-[12px] font-semibold tracking-wide text-foreground">
         Step #{(event.stepIndex ?? 0) + 1}
       </div>
 
@@ -876,7 +876,7 @@ function StepCard({ event }: { event: Extract<ExtensionSidepanelHistoricalEvent,
 
       {event.action && (
         <div>
-          <div className="mb-1 text-[11px] font-semibold tracking-wide text-foreground">Actions</div>
+          <div className="mb-1 text-[12px] font-semibold tracking-wide text-foreground">Actions</div>
           <div className="flex items-start gap-2">
             <span style={{ color: '#69A8C8' }}>
               <ActionIcon
@@ -893,7 +893,7 @@ function StepCard({ event }: { event: Extract<ExtensionSidepanelHistoricalEvent,
                   </span>
                 )}
               </p>
-              <p className="grid grid-cols-[auto_1fr] gap-1.5 text-[11px] text-muted-foreground/70">
+              <p className="grid grid-cols-[auto_1fr] gap-1.5 text-[12px] text-muted-foreground/70">
                 <span>└</span>
                 <span className="line-clamp-1 break-all hover:line-clamp-3">
                   {event.action.output}
@@ -920,7 +920,7 @@ function ObservationCard({
         <span style={{ color: 'var(--status-success)' }}>
           <Eye className="mt-0.5 size-3.5 shrink-0" />
         </span>
-        <TypewriterText text={event.content} className="text-[11px] text-muted-foreground" />
+        <TypewriterText text={event.content} className="text-[12px] text-muted-foreground" />
       </div>
     </div>
   );
@@ -1036,7 +1036,7 @@ function DefaultHistoryListView({
             onClick={() => {
               void onClearSessions();
             }}
-            className="flex h-6 items-center gap-1 rounded-md px-2 text-[10px] text-muted-foreground transition-colors hover:bg-muted hover:text-destructive"
+            className="flex h-6 items-center gap-1 rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-destructive"
           >
             <Trash2 className="size-3" />
             Clear All
@@ -1067,7 +1067,7 @@ function DefaultHistoryListView({
 
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs font-medium">{session.task}</p>
-                <p className="mt-0.5 text-[10px] text-muted-foreground">
+                <p className="mt-0.5 text-xs text-muted-foreground">
                   {timeAgo(session.createdAt)} · {session.history.length} steps
                 </p>
               </div>
@@ -1117,7 +1117,7 @@ function DefaultHistoryDetailView({ session, onBack }: ExtensionSidepanelHistory
       </header>
 
       <div className="border-b bg-muted/30 px-3 py-2">
-        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Task</div>
+        <div className="text-xs uppercase tracking-wide text-muted-foreground">Task</div>
         <div className="text-xs font-medium" title={session.task}>
           {session.task}
         </div>
@@ -1163,7 +1163,7 @@ function DefaultConfigView({
 
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
         <div className="rounded-md border bg-muted/30 p-3">
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+          <div className="text-xs uppercase tracking-wide text-muted-foreground">
             {copy.settingsEyebrow}
           </div>
           <p className="mt-1 text-sm font-medium text-foreground">{copy.settingsTitle}</p>
@@ -1443,7 +1443,7 @@ export function ExtensionSidepanelShell({
               <motion.div key="chat" variants={getViewVariants("chat")} initial="hidden" animate="visible" exit="exit" className="flex min-h-0 flex-1 flex-col">
                 {adapter.currentTask && (
                   <div className="border-b bg-muted/20 px-4 py-2.5">
-                    <div className="text-[10px] text-muted-foreground">Task</div>
+                    <div className="text-xs text-muted-foreground">Task</div>
                     <div className="truncate text-xs font-medium" title={adapter.currentTask}>
                       {adapter.currentTask}
                     </div>

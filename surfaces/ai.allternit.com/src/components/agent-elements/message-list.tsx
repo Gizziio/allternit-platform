@@ -1,3 +1,4 @@
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, {
   memo,
   useRef,
@@ -149,7 +150,7 @@ function getTextFromParts(parts: unknown[], joiner: string): string {
     .join(joiner);
 }
 
-function formatTimestamp(date: Date): string {
+function formatTimestamp(date: Date): string {isClient ? 
   const now = new Date();
   const isSameDay =
     date.getFullYear() === now.getFullYear() &&
@@ -157,7 +158,7 @@ function formatTimestamp(date: Date): string {
     date.getDate() === now.getDate();
   if (isSameDay) {
     return timeFormatter.format(date);
-  }
+   : "..."}
   return dateFormatter.format(date);
 }
 
@@ -197,16 +198,16 @@ function CopyButton({
         "opacity-50 bg-transparent hover:opacity-100 hover:bg-an-foreground/10",
       )}
     >
-      <div className="relative w-3.5 h-3.5">
+      <div className="relative size-3.5 ">
         <IconCopy
           className={cn(
-            "absolute inset-0 w-3.5 h-3.5 text-an-foreground-muted transition-[opacity,transform] duration-150 ease-out",
+            "absolute inset-0 size-3.5  text-an-foreground-muted transition-[opacity,transform] duration-150 ease-out",
             copied ? "opacity-0 scale-50" : "opacity-100 scale-100",
           )}
         />
         <IconCheck
           className={cn(
-            "absolute inset-0 w-3.5 h-3.5 text-an-foreground-muted transition-[opacity,transform] duration-150 ease-out",
+            "absolute inset-0 size-3.5  text-an-foreground-muted transition-[opacity,transform] duration-150 ease-out",
             copied ? "opacity-100 scale-100" : "opacity-0 scale-50",
           )}
         />

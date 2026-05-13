@@ -94,7 +94,7 @@ export function CodeCanvasTileDiff({ diffText, filePath }: CodeCanvasTileDiffPro
         <textarea
           value={pastedDiff}
           onChange={(e) => setPastedDiff(e.target.value)}
-          placeholder="Paste unified diff here..."
+          placeholder="Paste unified diff here…"
           style={{
             width: '100%',
             maxWidth: 400,
@@ -133,7 +133,7 @@ export function CodeCanvasTileDiff({ diffText, filePath }: CodeCanvasTileDiffPro
               padding: '6px 12px',
               background: 'var(--surface-hover)',
               borderBottom: '1px solid var(--ui-border-muted)',
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 600,
               color: 'var(--ui-text-secondary)',
               display: 'flex',

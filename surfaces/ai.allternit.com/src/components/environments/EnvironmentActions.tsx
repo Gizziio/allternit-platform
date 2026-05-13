@@ -9,6 +9,7 @@
  */
 
 import React, { useState } from 'react';
+import { useIsClient } from "@/lib/hooks/use-is-client";
 import {
   Copy,
   DownloadSimple,
@@ -142,7 +143,7 @@ ${Object.entries(environment.envVars || {}).map(([k, v]) => `  ${k}: ${v}`).join
 
 # Environment: ${environment.name}
 # Template: ${dcTemplateId}
-# Exported: ${new Date().toISOString()}
+# Exported: ${isClient ? new Date().toISOString() : "..."}
 
 services:
   ${dcServiceName}:
@@ -303,12 +304,12 @@ volumes:
             <Button onClick={handleClone} disabled={isCloning || !cloneName.trim()}>
               {isCloning ? (
                 <>
-                  <CircleNotch className="w-4 h-4 mr-2 animate-spin" />
+                  <CircleNotch className="size-4  mr-2 animate-spin" />
                   Cloning...
                 </>
               ) : (
                 <>
-                  <Copy className="w-4 h-4 mr-2" />
+                  <Copy className="size-4  mr-2" />
                   Clone Environment
                 </>
               )}
@@ -342,10 +343,10 @@ volumes:
                   onClick={() => setExportFormat(format)}
                   className="flex-1 text-xs capitalize"
                 >
-                  {format === 'json' && <FileCode className="w-3 h-3 mr-1" />}
-                  {format === 'yaml' && <FileCode className="w-3 h-3 mr-1" />}
-                  {format === 'docker-compose' && <Cube className="w-3 h-3 mr-1" />}
-                  {format === 'devcontainer' && <FileCode className="w-3 h-3 mr-1" />}
+                  {format === 'json' && <FileCode className="size-3  mr-1" />}
+                  {format === 'yaml' && <FileCode className="size-3  mr-1" />}
+                  {format === 'docker-compose' && <Cube className="size-3  mr-1" />}
+                  {format === 'devcontainer' && <FileCode className="size-3  mr-1" />}
                   {format.replace('-', ' ')}
                 </Button>
               ))}
@@ -359,10 +360,10 @@ volumes:
                     size="sm"
                     variant="ghost"
                     onClick={copyToClipboard}
-                    className="h-7 w-7 p-0"
+                    className="size-7  p-0"
                   >
                     {copied ? (
-                      <Check className="w-3 h-3 text-green-500" />
+                      <Check className="size-3  text-green-500" />
                     ) : (
                       <Copy size={12} />
                     )}
@@ -386,7 +387,7 @@ volumes:
               Close
             </Button>
             <Button onClick={handleExport}>
-              <DownloadSimple className="w-4 h-4 mr-2" />
+              <DownloadSimple className="size-4  mr-2" />
               Download
             </Button>
           </div>
@@ -405,7 +406,7 @@ volumes:
             onClick={() => environment.url && openInBrowser(environment.url)}
             disabled={!environment.url}
           >
-            <ArrowSquareOut className="w-4 h-4 mr-2" />
+            <ArrowSquareOut className="size-4  mr-2" />
             Open in Browser
           </DropdownMenuItem>
           <DropdownMenuSeparator />
@@ -414,7 +415,7 @@ volumes:
               // Trigger sync dialog
             }}
           >
-            <UploadSimple className="w-4 h-4 mr-2" />
+            <UploadSimple className="size-4  mr-2" />
             Sync Files...
           </DropdownMenuItem>
           <DropdownMenuItem
@@ -422,7 +423,7 @@ volumes:
               // Trigger backup dialog
             }}
           >
-            <Archive className="w-4 h-4 mr-2" />
+            <Archive className="size-4  mr-2" />
             Create Backup...
           </DropdownMenuItem>
         </DropdownMenuContent>

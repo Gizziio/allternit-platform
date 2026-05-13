@@ -15,13 +15,20 @@ export const skillGraphTool: any = {
     required: ["action"],
   },
   execute: async ({ action, nodeId, content }: any) => {
-    console.log(`[SkillGraph Tool] Executing ${action}`);
+    console.debug(`[SkillGraph Tool] Executing ${action}`);
     
     const graphDir = '/Users/macbook/Desktop/content-skill-graph';
     
     try {
-      // Use eval to hide require from client bundlers (server-only execution)
-      const req = eval('require');
+      const req =
+        (globalThis as any)?.require ??
+        (globalThis as any)?.window?.require ??
+        (globalThis as any)?.process?.mainModule?.require;
+
+      if (typeof req !== 'function') {
+        return { error: "Node.js require is unavailable in this environment." };
+      }
+
       const fs = req('fs');
       const path = req('path');
       

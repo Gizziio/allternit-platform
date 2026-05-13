@@ -129,7 +129,7 @@ function Tab({ id, label, icon: Icon, active, onClick, disabled = false, tooltip
       {label}
       {disabled && (
         <span style={{
-          fontSize: 9,
+          fontSize: 12,
           marginLeft: 4,
           padding: '1px 4px',
           background: 'var(--border-subtle)',

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useUnifiedStore } from '@/lib/agents/unified.store';
-import { GlassCard } from '../../design/GlassCard';
+import { GlassCard } from '../../design/glass/GlassCard';
 import {
   Circle,
   Pulse as Activity,
@@ -8,7 +8,7 @@ import {
   Robot,
 } from '@phosphor-icons/react';
 
-export function OrchestrationView() {
+export function OrchestrationView(): JSX.Element {
   const { 
     agents,
     wihs,
@@ -84,7 +84,7 @@ export function OrchestrationView() {
                 display: 'flex', 
                 alignItems: 'center', 
                 gap: 6, 
-                fontSize: 11, 
+                fontSize: 12, 
                 fontWeight: 600,
                 padding: '4px 10px',
                 background: `${getStatusColor(agent.status)}20`,
@@ -104,7 +104,7 @@ export function OrchestrationView() {
                 border: '1px solid var(--border-subtle)'
               }}>
                 <div style={{ 
-                  fontSize: 10, 
+                  fontSize: 12, 
                   fontWeight: 700, 
                   opacity: 0.5, 
                   marginBottom: 6,
@@ -117,7 +117,7 @@ export function OrchestrationView() {
                   {wihs.find(w => w.wih_id === agent.currentWihId)?.title || agent.currentWihId}
                 </div>
                 <div style={{ 
-                  fontSize: 11, 
+                  fontSize: 12, 
                   color: 'var(--ui-text-muted)',
                   marginTop: 4,
                   display: 'flex',

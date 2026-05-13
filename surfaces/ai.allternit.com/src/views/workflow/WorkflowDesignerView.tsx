@@ -181,9 +181,9 @@ export function WorkflowDesignerView() {
           <div className="p-4 border-t border-border">
             <div className="flex items-center gap-2 mb-2">
               {validationResult.valid ? (
-                <CheckCircle className="w-4 h-4 text-green-500" />
+                <CheckCircle className="size-4  text-green-500" />
               ) : (
-                <Warning className="w-4 h-4 text-red-500" />
+                <Warning className="size-4  text-red-500" />
               )}
               <span className="text-sm font-medium">
                 {validationResult.valid ? 'Valid' : 'Invalid'}
@@ -208,7 +208,7 @@ export function WorkflowDesignerView() {
         {/* Toolbar */}
         <div className="h-14 border-b border-border flex items-center justify-between px-4">
           <div className="flex items-center gap-3">
-            <GitBranch className="w-5 h-5 text-accent" />
+            <GitBranch className="size-5  text-accent" />
             <div>
               <h2 className="font-medium">CI/CD Pipeline</h2>
               <p className="text-xs text-muted-foreground">v1.2.0 • Draft</p>
@@ -238,7 +238,7 @@ export function WorkflowDesignerView() {
               }`}
             >
               {isValidating ? (
-                <SquaresFour className="w-4 h-4 animate-spin" />
+                <SquaresFour className="size-4  animate-spin" />
               ) : validationResult?.valid ? (
                 <CheckCircle size={16} />
               ) : validationResult?.errors.length ? (
@@ -321,10 +321,10 @@ export function WorkflowDesignerView() {
                     <span className="text-sm font-medium truncate">{node.name}</span>
                   </div>
                   {hasErrors && (
-                    <Warning className="absolute -top-2 -right-2 w-4 h-4 text-red-500" />
+                    <Warning className="absolute -top-2 -right-2 size-4  text-red-500" />
                   )}
                   {hasWarnings && !hasErrors && (
-                    <Warning className="absolute -top-2 -right-2 w-4 h-4 text-yellow-500" />
+                    <Warning className="absolute -top-2 -right-2 size-4  text-yellow-500" />
                   )}
                   <button
                     onClick={(e) => {
@@ -439,7 +439,7 @@ export function WorkflowDesignerView() {
               </div>
             ) : (
               <div className="text-center text-muted-foreground py-8">
-                <CursorClick className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <CursorClick className="size-8  mx-auto mb-2 opacity-50" />
                 <p className="text-sm">Select a node to edit properties</p>
               </div>
             )}
@@ -451,7 +451,7 @@ export function WorkflowDesignerView() {
           <div className="p-4 flex-1 overflow-y-auto">
             {!validationResult ? (
               <div className="text-center text-muted-foreground py-8">
-                <CheckCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <CheckCircle className="size-8  mx-auto mb-2 opacity-50" />
                 <p className="text-sm">Click Validate to check workflow</p>
                 <button
                   onClick={handleValidate}
@@ -468,9 +468,9 @@ export function WorkflowDesignerView() {
                 }`}>
                   <div className="flex items-center gap-2">
                     {validationResult.valid ? (
-                      <CheckCircle className="w-5 h-5 text-green-500" />
+                      <CheckCircle className="size-5  text-green-500" />
                     ) : (
-                      <Warning className="w-5 h-5 text-red-500" />
+                      <Warning className="size-5  text-red-500" />
                     )}
                     <span className={validationResult.valid ? 'text-green-500' : 'text-red-500'}>
                       {validationResult.valid ? 'Valid workflow' : 'Validation failed'}
@@ -482,7 +482,7 @@ export function WorkflowDesignerView() {
                 {validationResult.errors.length > 0 && (
                   <div>
                     <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                      <X className="w-4 h-4 text-red-500" />
+                      <X className="size-4  text-red-500" />
                       Errors ({validationResult.errors.length})
                     </h4>
                     <div className="space-y-2">
@@ -511,7 +511,7 @@ export function WorkflowDesignerView() {
                 {validationResult.warnings.length > 0 && (
                   <div>
                     <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                      <Warning className="w-4 h-4 text-yellow-500" />
+                      <Warning className="size-4  text-yellow-500" />
                       Warnings ({validationResult.warnings.length})
                     </h4>
                     <div className="space-y-2">

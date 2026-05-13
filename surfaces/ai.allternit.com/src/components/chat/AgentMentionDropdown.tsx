@@ -111,7 +111,7 @@ export function AgentMentionDropdown({
         style={{
           padding: "8px 12px",
           borderBottom: `1px solid ${THEME.border}`,
-          fontSize: 11,
+          fontSize: 12,
           fontWeight: 700,
           color: THEME.textMuted,
           letterSpacing: "0.05em",

@@ -142,11 +142,11 @@ export function SessionReplayViewer({
       >
         <Camera size={15} color={SAND[500]} />
         <span style={{ fontWeight: 600, color: SAND[400] }}>Session Replay</span>
-        <code style={{ fontSize: 10, color: `${SAND[500]}60`, marginLeft: 2 }}>
+        <code style={{ fontSize: 12, color: `${SAND[500]}60`, marginLeft: 2 }}>
           {sessionId.slice(0, 8)}
         </code>
         <div style={{ flex: 1 }} />
-        <span style={{ fontSize: 11, color: `${SAND[500]}60` }}>
+        <span style={{ fontSize: 12, color: `${SAND[500]}60` }}>
           {currentStep + 1} / {totalSteps}
         </span>
         {onClose && (
@@ -159,7 +159,7 @@ export function SessionReplayViewer({
               color: `${SAND[500]}80`,
               cursor: 'pointer',
               padding: '4px 8px',
-              fontSize: 11,
+              fontSize: 12,
             }}
           >
             Close
@@ -201,7 +201,7 @@ export function SessionReplayViewer({
                   transition: 'all 0.1s',
                 }}
               >
-                <span style={{ color: `${SAND[500]}60`, width: 20, fontSize: 10 }}>
+                <span style={{ color: `${SAND[500]}60`, width: 20, fontSize: 12 }}>
                   {r.step}
                 </span>
                 <span
@@ -271,7 +271,7 @@ export function SessionReplayViewer({
                     onClick={() => setShowBefore(label === 'before')}
                     style={{
                       padding: '3px 8px',
-                      fontSize: 10,
+                      fontSize: 12,
                       borderRadius: 4,
                       border: 'none',
                       cursor: 'pointer',
@@ -302,7 +302,7 @@ export function SessionReplayViewer({
                 alignItems: 'center',
                 flexShrink: 0,
                 flexWrap: 'wrap',
-                fontSize: 11,
+                fontSize: 12,
               }}
             >
               <span

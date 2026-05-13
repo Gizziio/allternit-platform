@@ -111,7 +111,7 @@ function ShellCapsuleRenderer({
           </button>
           <button
             onClick={onClose}
-            className="px-3 py-1 bg-gray-500 text-white rounded text-sm hover:bg-gray-600"
+            className="px-3 py-1 bg-zinc-500 text-white rounded text-sm hover:bg-zinc-600"
           >
             Close
           </button>

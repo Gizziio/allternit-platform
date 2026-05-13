@@ -71,7 +71,7 @@ export function CloudCostPanel({
   };
 
   if (loading) {
-    return <div>Loading cost data...</div>;
+    return <div>Loading cost data…</div>;
   }
 
   return (

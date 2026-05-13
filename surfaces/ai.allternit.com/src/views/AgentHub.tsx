@@ -276,7 +276,7 @@ export function AgentHub() {
                 setActiveTab('registry');
               }}
               onShowForge={(name) => {
-                console.log('[AgentHub] Forge animation shown for:', name);
+                console.debug('[AgentHub] Forge animation shown for:', name);
               }}
               onComplete={(agent, workspaceCreated) => {
                 // Auto-switch to registry so user sees their new agent
@@ -306,7 +306,7 @@ export function AgentHub() {
             <div className="max-w-5xl mx-auto space-y-4">
               {sessions.length === 0 ? (
                 <div className="text-center py-12">
-                  <ChatText className="mx-auto h-12 w-12 text-white/20 mb-4" />
+                  <ChatText className="mx-auto size-12  text-white/20 mb-4" />
                   <h3 className="text-lg font-medium text-white/60 mb-2">No active sessions</h3>
                   <p className="text-sm text-white/40">Start a conversation with an agent to see sessions here.</p>
                 </div>
@@ -319,7 +319,7 @@ export function AgentHub() {
                     className="p-4 rounded-lg border border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04] transition-colors cursor-pointer"
                   >
                     <div className="flex items-center gap-3">
-                      <Robot className="h-10 w-10 text-[#D4956A]/60" />
+                      <Robot className="size-10  text-[#D4956A]/60" />
                       <div className="flex-1 min-w-0">
                         <h4 className="text-sm font-medium text-white/80 truncate">{session.name || 'Untitled Session'}</h4>
                         <p className="text-xs text-white/40 truncate">{session.messageCount} messages</p>

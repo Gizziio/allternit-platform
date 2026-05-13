@@ -1,7 +1,9 @@
+
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useViewMode, type ViewMode } from '@/hooks/useViewMode';
+import { useIsClient } from "@/lib/hooks/use-is-client";
+import { useViewMode } from '@/hooks/useViewMode';
 import { useDropTarget, type FileWithData } from '@/components/GlobalDropzone';
 import {
   Plus,
@@ -35,7 +37,6 @@ import { SpeechInput } from '@/components/ai-elements/speech-input';
 import { useVoice } from '@/providers/voice-provider';
 import { FileAttachment } from '@/components/agent-elements/input/file-attachment';
 import { TextShimmer } from '@/components/agent-elements/text-shimmer';
-import { useAgentStreamingStatus } from '@/hooks/useAgentStreamingStatus';
 import { AgentMentionDropdown } from '@/components/chat/AgentMentionDropdown';
 import { AgentPill } from '@/components/chat/AgentPill';
 
@@ -55,7 +56,6 @@ import {
 } from "@/components/ui/dialog";
 import { useModelDiscovery } from '@/integration/api-client';
 import { useAgentSurfaceModeStore, type AgentModeSurface, type AgentModeId } from '@/stores/agent-surface-mode.store';
-import { MODE_TEMPLATES as ALL_TEMPLATES } from '@/components/chat/TemplatePreviewCards';
 import { getProviderMeta } from '@/lib/providers/provider-registry';
 import { useRuntimeExecutionMode } from '@/hooks/useRuntimeExecutionMode';
 import type { RuntimeExecutionMode } from '@/lib/agents/native-agent-api';
@@ -77,6 +77,14 @@ import { getAgentModeSurfaceTheme } from './agentModeSurfaceTheme';
 import { useRecordingStore } from '@/stores/recording.store';
 import { useBrowserAgentStore } from '@/capsules/browser/browserAgent.store';
 import { useUnifiedStore } from '@/lib/agents/unified.store';
+import { getProviderLogo } from './components/ProviderLogos';
+import { TaskBar } from './components/TaskBar';
+import { AgentModeButton } from './components/AgentModeButton';
+import { ModeDock } from './components/ModeDock';
+import { BottomDock } from './components/BottomDock';
+import { AgentSelectorDropdown } from './components/AgentSelectorDropdown';
+import { PromptModelSelector } from '@/components/prompt-kit/prompt-model-selector';
+import { ProviderGallery } from '@/components/chat/ProviderGallery';
 
 // Terminal Server URL for fetching real models
 declare const __TERMINAL_SERVER_URL__: string | undefined;
@@ -93,9 +101,6 @@ function getProviderDiscoveryUrl(): string {
   return '/api/v1/providers';
 }
 
-// ============================================================================
-// Theme
-// ============================================================================
 const THEME = {
   bg: 'var(--surface-canvas)',
   inputBg: 'var(--chat-composer-bg)',
@@ -295,238 +300,11 @@ const PLUS_MENU_ITEMS: ComposerMenuItem[] = [
   { id: 'connectors', label: 'Add connectors', icon: <Lightning size={16} /> },
 ];
 
-// ============================================================================
-// Provider Logo Components - Official brand logos with colors
-// ============================================================================
-
-const ProviderLogos: Record<string, React.FC<{ size?: number }>> = {
-  'anthropic': ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M17.304 3.541h-3.672l6.696 16.918h3.672zm-10.608 0L0 20.459h3.744l1.368-3.6h6.696l1.368 3.6h3.744L10.416 3.541H6.696zm-.264 10.656 2.088-5.472 2.088 5.472z" fill="#D97757"/>
-    </svg>
-  ),
-  'openai': ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <defs>
-        <linearGradient id="openaiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#10a37f"/>
-          <stop offset="100%" stopColor="#0d8c6d"/>
-        </linearGradient>
-      </defs>
-      <path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.985 5.985 0 0 0-3.998 2.9 6.046 6.046 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073zM13.26 22.43a4.476 4.476 0 0 1-2.876-1.04l.141-.081 4.779-2.758a.795.795 0 0 0 .392-.681v-6.737l2.02 1.168a.071.071 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.494 4.494z" fill="url(#openaiGrad)"/>
-    </svg>
-  ),
-  'gemini': ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <defs>
-        <linearGradient id="geminiGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#4285F4"/>
-          <stop offset="50%" stopColor="#9B72CB"/>
-          <stop offset="100%" stopColor="#EA4335"/>
-        </linearGradient>
-        <linearGradient id="geminiGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#FBBC05"/>
-          <stop offset="100%" stopColor="#34A853"/>
-        </linearGradient>
-      </defs>
-      <path d="M12 2L14.5 9.5H22.5L16 14.5L18.5 22L12 17L5.5 22L8 14.5L1.5 9.5H9.5L12 2Z" fill="url(#geminiGrad1)"/>
-      <path d="M12 6L13.5 10.5H18L14.5 13.5L16 18L12 15L8 18L9.5 13.5L6 10.5H10.5L12 6Z" fill="url(#geminiGrad2)"/>
-    </svg>
-  ),
-  'xai': ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" fill="#FFFFFF"/>
-    </svg>
-  ),
-  'github': ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" fill="#FFFFFF"/>
-    </svg>
-  ),
-  'azure': ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <defs>
-        <linearGradient id="azureGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#0078D4"/>
-          <stop offset="50%" stopColor="#005A9E"/>
-          <stop offset="100%" stopColor="#003A5E"/>
-        </linearGradient>
-      </defs>
-      <path d="M5.483 21.3H24L14.025 4.013l-3.038 8.347 5.836 6.938L5.483 21.3zM13.23 2.7L6.105 8.677 0 19.253h5.505l7.848-13.735z" fill="url(#azureGrad)"/>
-    </svg>
-  ),
-  'aws': ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <defs>
-        <linearGradient id="awsGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#FF9900"/>
-          <stop offset="100%" stopColor="#EC7211"/>
-        </linearGradient>
-      </defs>
-      <path d="M6.763 10.036c0 .296.032.535.088.71.064.176.144.368.256.576.04.063.056.127.056.183 0 .08-.048.16-.152.24l-.503.335a.383.383 0 0 1-.208.072c-.08 0-.16-.04-.239-.112a2.47 2.47 0 0 1-.287-.375 6.18 6.18 0 0 1-.248-.471c-.622.734-1.405 1.101-2.347 1.101-.67 0-1.205-.191-1.596-.574-.391-.384-.59-.894-.59-1.533 0-.678.239-1.23.726-1.644.487-.415 1.133-.623 1.955-.623.272 0 .551.024.846.064.296.04.6.104.918.176v-.583c0-.607-.127-1.03-.375-1.277-.255-.248-.686-.367-1.3-.367-.28 0-.568.031-.863.103-.295.072-.583.16-.863.279a2.01 2.01 0 0 1-.28.103.49.49 0 0 1-.127.023c-.112 0-.168-.08-.168-.247v-.391c0-.128.016-.224.056-.28a.597.597 0 0 1 .224-.167c.28-.144.617-.264 1.013-.36.4-.096.823-.143 1.274-.143.97 0 1.677.223 2.13.662.447.44.67 1.104.67 1.996v2.638zm-3.063.96c.263 0 .534-.048.822-.144.287-.096.543-.271.758-.51.128-.152.224-.32.272-.512.048-.191.08-.423.08-.694v-.335c-.232-.056-.479-.104-.743-.136a6.54 6.54 0 0 0-.766-.048c-.55 0-.95.104-1.22.32-.271.215-.4.518-.4.919 0 .375.095.655.295.846.191.2.47.296.842.296z" fill="url(#awsGrad)"/>
-    </svg>
-  ),
-  'mistral': ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <defs>
-        <linearGradient id="mistralGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#FF7000"/>
-          <stop offset="100%" stopColor="#FFB800"/>
-        </linearGradient>
-      </defs>
-      <path d="M2 3h3.5l3.5 8.5L12.5 3H17l-3 18h-3L11 13l-2.5 8H5.5L2 3z" fill="url(#mistralGrad)"/>
-      <path d="M13 3h3l3 18h-3l-1.5-9-1.5 9h-3L13 3z" fill="url(#mistralGrad)" opacity="0.7"/>
-    </svg>
-  ),
-  'cohere': ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <defs>
-        <linearGradient id="cohereGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#FF6B6B"/>
-          <stop offset="100%" stopColor="#FF4757"/>
-        </linearGradient>
-      </defs>
-      <circle cx="12" cy="12" r="10" stroke="url(#cohereGrad)" strokeWidth="2" fill="none"/>
-      <circle cx="12" cy="12" r="6" stroke="url(#cohereGrad)" strokeWidth="2" fill="none"/>
-      <circle cx="12" cy="12" r="2" fill="url(#cohereGrad)"/>
-    </svg>
-  ),
-  'deepseek': ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <defs>
-        <linearGradient id="deepseekGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#4F46E5"/>
-          <stop offset="100%" stopColor="#7C3AED"/>
-        </linearGradient>
-      </defs>
-      <circle cx="12" cy="12" r="9" stroke="url(#deepseekGrad)" strokeWidth="2" fill="none"/>
-      <path d="M11 7h2v6h-2zm0 8h2v2h-2z" fill="url(#deepseekGrad)"/>
-    </svg>
-  ),
-  'perplexity': ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <defs>
-        <linearGradient id="perplexityGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#00D4AA"/>
-          <stop offset="100%" stopColor="#00A8E8"/>
-        </linearGradient>
-      </defs>
-      <circle cx="10" cy="10" r="7" stroke="url(#perplexityGrad)" strokeWidth="2" fill="none"/>
-      <path d="M15.5 15.5L21 21" stroke="url(#perplexityGrad)" strokeWidth="2" strokeLinecap="round"/>
-      <circle cx="10" cy="10" r="3" fill="url(#perplexityGrad)"/>
-    </svg>
-  ),
-  'openrouter': ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <defs>
-        <linearGradient id="routerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#EF4444"/>
-          <stop offset="100%" stopColor="#DC2626"/>
-        </linearGradient>
-      </defs>
-      <circle cx="12" cy="5" r="3" fill="url(#routerGrad)"/>
-      <circle cx="5" cy="19" r="3" fill="url(#routerGrad)"/>
-      <circle cx="19" cy="19" r="3" fill="url(#routerGrad)"/>
-      <path d="M12 8L5 19M12 8L19 19" stroke="url(#routerGrad)" strokeWidth="2"/>
-    </svg>
-  ),
-  'qwen': ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <defs>
-        <linearGradient id="qwenGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#FF6A00"/>
-          <stop offset="100%" stopColor="#FF4500"/>
-        </linearGradient>
-      </defs>
-      <circle cx="12" cy="12" r="9" stroke="url(#qwenGrad)" strokeWidth="2.5" fill="none"/>
-      <path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5c.9 0 1.74-.24 2.47-.66l2.12 2.12 1.41-1.41-2.12-2.12A4.98 4.98 0 0 0 17 12c0-2.76-2.24-5-5-5z" fill="url(#qwenGrad)"/>
-    </svg>
-  ),
-  'kimi': ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <defs>
-        <linearGradient id="kimiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#8B5CF6"/>
-          <stop offset="50%" stopColor="#A855F7"/>
-          <stop offset="100%" stopColor="#C084FC"/>
-        </linearGradient>
-      </defs>
-      <circle cx="12" cy="12" r="10" stroke="url(#kimiGrad)" strokeWidth="2" fill="none"/>
-      <path d="M8 7v10l4-5 4 5V7" stroke="white" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  ),
-  'glm': ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <defs>
-        <linearGradient id="glmGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#1E40AF"/>
-          <stop offset="100%" stopColor="#3B82F6"/>
-        </linearGradient>
-      </defs>
-      <rect x="3" y="3" width="18" height="18" rx="4" stroke="url(#glmGrad)" strokeWidth="2" fill="none"/>
-      <path d="M8 12h4c1.1 0 2-.9 2-2s-.9-2-2-2H8v8h2v-4z" fill="url(#glmGrad)"/>
-    </svg>
-  ),
-  'local': ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <defs>
-        <linearGradient id="localGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#10B981"/>
-          <stop offset="100%" stopColor="#059669"/>
-        </linearGradient>
-      </defs>
-      <rect x="4" y="4" width="16" height="16" rx="2" stroke="url(#localGrad)" strokeWidth="2" fill="none"/>
-      <rect x="9" y="9" width="6" height="6" fill="url(#localGrad)"/>
-      <path d="M2 9h2M2 15h2M20 9h2M20 15h2M9 2v2M15 2v2M9 20v2M15 20v2" stroke="url(#localGrad)" strokeWidth="1.5" strokeLinecap="round"/>
-    </svg>
-  ),
-  "allternit": ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <circle cx="12" cy="12" r="4" stroke="#d4966a" strokeWidth="2" fill="none"/>
-      <circle cx="12" cy="12" r="8" stroke="#d4966a" strokeWidth="2" strokeDasharray="4 2" fill="none"/>
-    </svg>
-  ),
-  'gizzi': ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5" stroke="#d4966a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-      <path d="M2 12l10 5 10-5" stroke="#d4966a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-    </svg>
-  ),
-  'terminal': ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <rect x="2" y="4" width="20" height="16" rx="2" stroke="#9CA3AF" strokeWidth="2" fill="none"/>
-      <path d="M6 8l4 4-4 4M10 16h8" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  ),
-  'opencode': ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <defs>
-        <linearGradient id="opencodeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#6366F1"/>
-          <stop offset="100%" stopColor="#8B5CF6"/>
-        </linearGradient>
-      </defs>
-      <path d="M8 7l-5 5 5 5M16 7l5 5-5 5" stroke="url(#opencodeGrad)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-      <circle cx="12" cy="12" r="2" fill="url(#opencodeGrad)"/>
-    </svg>
-  ),
-};
-
-function getProviderLogo(providerId: string): React.FC<{ size?: number }> {
-  const normalized = providerId.toLowerCase();
-  return ProviderLogos[normalized] || ProviderLogos['allternit'];
-}
-
-// ============================================================================
-// Caret position helper for @mention dropdown positioning
-// ============================================================================
-
 function getTextareaCaretPosition(
   textarea: HTMLTextAreaElement,
   text: string,
   index: number
 ): { x: number; y: number } {
-  // Create a hidden mirror element with the same text layout
   const div = document.createElement('div');
   const style = getComputedStyle(textarea);
 
@@ -544,7 +322,6 @@ function getTextareaCaretPosition(
   div.style.textIndent = style.textIndent;
   div.style.textTransform = style.textTransform;
 
-  // Text before the caret, then a marker span
   const textBefore = text.slice(0, index);
   div.textContent = textBefore;
   const marker = document.createElement('span');
@@ -561,31 +338,6 @@ function getTextareaCaretPosition(
     y: markerRect.top - textareaRect.top,
   };
 }
-
-// ============================================================================
-// Available Providers Configuration
-// ============================================================================
-
-const AVAILABLE_PROVIDERS = [
-  { id: 'openai', name: 'OpenAI', color: '#10a37f', description: 'GPT 5.4, 5.3, 5.2', requiresKey: true },
-  { id: 'anthropic', name: 'Anthropic', color: '#d97757', description: 'Claude 4.6, 4.5 Opus', requiresKey: true },
-  { id: 'gemini', name: 'Google Gemini', color: '#4285f4', description: 'Gemini 3.1, 3.0 Pro', requiresKey: true },
-  { id: 'xai', name: 'xAI', color: '#000000', description: 'Grok 3, Grok 2', requiresKey: true },
-  { id: 'azure', name: 'Azure OpenAI', color: '#0078d4', description: 'Microsoft Azure AI models', requiresKey: true },
-  { id: 'aws', name: 'AWS Bedrock', color: '#ff9900', description: 'Amazon Bedrock models', requiresKey: true },
-  { id: 'github', name: 'GitHub Copilot', color: '#6e40c9', description: 'GitHub AI models', requiresKey: false },
-  { id: 'mistral', name: 'Mistral AI', color: '#ff7000', description: 'Mistral Large, Medium, Small', requiresKey: true },
-  { id: 'openrouter', name: 'OpenRouter', color: 'var(--status-error)', description: '100+ models unified API', requiresKey: true },
-  { id: 'perplexity', name: 'Perplexity', color: '#20b8cd', description: 'Sonar search + LLM', requiresKey: true },
-  { id: 'deepseek', name: 'DeepSeek', color: '#4f46e5', description: 'V3, R1, Coder', requiresKey: true },
-  { id: 'cohere', name: 'Cohere', color: '#d4a574', description: 'Command R+, Embed', requiresKey: true },
-  { id: 'qwen', name: 'Alibaba Qwen', color: '#ff6a00', description: 'Qwen 3.5 (397B MoE)', requiresKey: true },
-  { id: 'kimi', name: 'Moonshot Kimi', color: '#6b4c9a', description: 'Kimi 2.5 Agent Swarm', requiresKey: true },
-  { id: 'glm', name: 'Zhipu GLM', color: 'var(--ui-text-inverse)', description: 'GLM-5 (745B MoE)', requiresKey: true },
-  { id: 'opencode', name: 'OpenCode', color: '#6366f1', description: 'Zen models via ACP', requiresKey: false },
-  { id: 'gizzi', name: 'Gizzi Runtime', color: 'var(--accent-primary)', description: 'Managed model runtime', requiresKey: false },
-  { id: 'local', name: 'Local Models', color: 'var(--status-success)', description: 'Ollama, LM Studio, llama.cpp', requiresKey: false },
-];
 
 export function ChatComposer({
   onSend,
@@ -612,7 +364,6 @@ export function ChatComposer({
   bottomDockContent,
   topInfoBarContent,
   questionBarContent,
-  bottomInfoBarContent,
 }: ChatComposerProps) {
   const [input, setInput] = useState(inputValue);
   const { isRecording: isVoiceRecording, interimTranscript } = useVoice();
@@ -632,7 +383,6 @@ export function ChatComposer({
   const [githubLoading, setGithubLoading] = useState(false);
   const [showAgentMenu, setShowAgentMenu] = useState(false);
   const [showModelMenu, setShowModelMenu] = useState(false);
-  const [showBrowseAllModels, setShowBrowseAllModels] = useState(false);
   const [showProviderConnect, setShowProviderConnect] = useState(false);
   const [showOpenClawImportDialog, setShowOpenClawImportDialog] = useState(false);
   const [activeSubMenu, setActiveSubMenu] = useState<string | null>(null);
@@ -654,7 +404,6 @@ export function ChatComposer({
     if (agentModeEnabled) setAgentModePulse((p) => p + 1);
   }
   
-  // Plan/Build mode toggle
   const {
     executionMode,
     isLoading: isLoadingExecMode,
@@ -662,10 +411,8 @@ export function ChatComposer({
     setMode: setExecutionMode,
   } = useRuntimeExecutionMode();
   
-  // Local optimistic state for immediate UI feedback
   const [optimisticMode, setOptimisticMode] = useState<'plan' | 'build'>('build');
   
-  // Sync optimistic mode with executionMode when it loads
   useEffect(() => {
     if (executionMode?.mode) {
       setOptimisticMode(executionMode.mode === 'plan' ? 'plan' : 'build');
@@ -676,39 +423,32 @@ export function ChatComposer({
   
   const handleToggleMode = useCallback(async () => {
     if (isSavingExecMode) {
-      // Mode toggle blocked - currently saving
       return;
     }
     
     const newMode: RuntimeExecutionMode = optimisticMode === 'plan' ? 'auto' : 'plan';
     const newUiMode = newMode === 'plan' ? 'plan' : 'build';
     
-    // Optimistically update UI immediately
     setOptimisticMode(newUiMode);
     
-    // Fire-and-forget API call - UI already updated
     setExecutionMode(newMode).catch((err) => {
       console.error('[ChatComposer] Failed to persist mode change:', err);
-      // Don't revert - keep the UI state the user selected
     });
   }, [isSavingExecMode, optimisticMode, setExecutionMode]);
   
   const [showAgentGuidePadding, setShowAgentGuidePadding] = useState(
     Boolean(agentModeEnabled && showAgentRailGuide),
   );
-  // ── Slash command state ───────────────────────────────────────────────────
   const [slashMenuVisible, setSlashMenuVisible] = useState(false);
   const [slashFilter, setSlashFilter] = useState('');
   const [agentCommandMenuVisible, setAgentCommandMenuVisible] = useState(false);
   const [agentCommandFilter, setAgentCommandFilter] = useState('');
 
-  // ── Agent @mention state ────────────────────────────────────────────────
   const [mentionOpen, setMentionOpen] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
   const [mentionIndex, setMentionIndex] = useState(0);
   const [selectedMentionAgentId, setSelectedMentionAgentId] = useState<string | null>(externalMentionAgentId ?? null);
 
-  // Sync local mention agent with external prop (for persistent pill restoration)
   useEffect(() => {
     if (externalMentionAgentId !== undefined) {
       setSelectedMentionAgentId(externalMentionAgentId);
@@ -718,7 +458,6 @@ export function ChatComposer({
     }
   }, [externalMentionAgentId]);
 
-  // ── Attachment state (internal when external not provided) ───────────────
   const [internalAttachments, setInternalAttachments] = useState<ChatAttachment[]>([]);
   const attachments = externalAttachments ?? internalAttachments;
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -739,13 +478,11 @@ export function ChatComposer({
     }
   }, [externalRemoveAttachment]);
 
-  // ── Recording store (for GIF screen recording) ──────────────────────────
   const isGifRecording = useRecordingStore((s) => s.isRecording);
   const gifDuration = useRecordingStore((s) => s.duration);
   const startGifRecording = useRecordingStore((s) => s.startRecording);
   const stopGifRecording = useRecordingStore((s) => s.stopRecording);
 
-  // ── Browser-specific plus menu items ────────────────────────────────────
   const isBrowserSurface = agentModeSurface === 'browser';
 
   const toggleAgentMode = () => {
@@ -765,22 +502,18 @@ export function ChatComposer({
   const setSelectedMode = useAgentSurfaceModeStore((state) => state.setSelectedMode);
   const agents = useAgentsWithSwarms();
 
-  // Look up the agent selected via @mention
   const selectedMentionAgent = useMemo(() => {
     if (!selectedMentionAgentId) return null;
     return agents.find((a) => a.id === selectedMentionAgentId) || null;
   }, [selectedMentionAgentId, agents]);
 
-  // Filtered agents for @mention dropdown
   const filteredMentionAgents = useMemo(() => {
     if (!mentionOpen) return [];
     const q = mentionQuery.toLowerCase();
     return agents.filter((a) => a.name.toLowerCase().includes(q));
   }, [mentionOpen, mentionQuery, agents]);
 
-  // Handle selecting an agent from @mention dropdown
   const handleSelectMentionAgent = useCallback((agent: Agent) => {
-    // Remove the @query from input
     const lastAtIndex = input.lastIndexOf('@');
     if (lastAtIndex !== -1) {
       const before = input.slice(0, lastAtIndex);
@@ -789,26 +522,21 @@ export function ChatComposer({
     }
     setSelectedMentionAgentId(agent.id);
     onMentionAgentChange?.(agent.id);
-    // Enable local agent mode so the composer shows agent UI (glow, Gizzi, etc.)
     setLocallyEnabled(true);
     setMentionOpen(false);
     setMentionQuery('');
     setMentionIndex(0);
-    // Focus textarea after selection
     window.requestAnimationFrame(() => {
       textareaRef.current?.focus();
     });
-  }, [input, mentionQuery, agentModeSurface, setSelectedSurfaceAgent]);
+  }, [input, mentionQuery, onMentionAgentChange]);
 
-  // Handle removing the agent pill
   const handleRemoveMentionAgent = useCallback(() => {
     setSelectedMentionAgentId(null);
     onMentionAgentChange?.(null);
-    // Disable local agent mode unless there's an embedded session
     setLocallyEnabled(false);
   }, [onMentionAgentChange]);
 
-  // Parse @mention from input on change
   const parseMention = useCallback((val: string) => {
     const lastAtIndex = val.lastIndexOf('@');
     if (lastAtIndex === -1) {
@@ -816,17 +544,14 @@ export function ChatComposer({
       setMentionQuery('');
       return;
     }
-    // Make sure @ is not followed by a space and is the most recent token
     const afterAt = val.slice(lastAtIndex + 1);
     const beforeAt = val.slice(0, lastAtIndex);
-    // @ must be at start or after whitespace
     const charBeforeAt = beforeAt.slice(-1);
     if (beforeAt.length > 0 && !/\s/.test(charBeforeAt)) {
       setMentionOpen(false);
       setMentionQuery('');
       return;
     }
-    // Don't open if there's a space in the query (user moved on)
     if (afterAt.includes(' ') || afterAt.includes('\n')) {
       setMentionOpen(false);
       setMentionQuery('');
@@ -837,7 +562,6 @@ export function ChatComposer({
     setMentionIndex(0);
   }, []);
   
-  // ── WIH / TaskBar state ─────────────────────────────────────────────────
   const [taskBarExpanded, setTaskBarExpanded] = useState(false);
   const wihs = useUnifiedStore((state) => state.wihs);
   const myWihs = useUnifiedStore((state) => state.myWihs);
@@ -845,18 +569,16 @@ export function ChatComposer({
   const selectWih = useUnifiedStore((state) => state.selectWih);
   const selectedWihId = useUnifiedStore((state) => state.selectedWihId);
 
-  // Fetch WIHs on mount - silent fail, no retry on error
   useEffect(() => {
     let cancelled = false;
     const loadWihs = async () => {
       try {
         await fetchWihs();
       } catch {
-        // Silent fail - Rails API may not be running
+        // Silent fail
       }
     };
     loadWihs();
-    // Only continue polling if initial load succeeded
     const interval = setInterval(() => {
       if (!cancelled) {
         loadWihs();
@@ -914,7 +636,6 @@ export function ChatComposer({
   const [terminalModels, setTerminalModels] = useState<any[]>([]);
   const [terminalModelsLoading, setTerminalModelsLoading] = useState(true);
 
-  // Fetch models through the platform route so desktop auth stays server-side.
   useEffect(() => {
     let cancelled = false;
     async function fetchTerminalModels() {
@@ -938,7 +659,6 @@ export function ChatComposer({
         }
         if (!cancelled && allModels.length > 0) setTerminalModels(allModels);
       } catch {
-        // Terminal Server not running — fall back to platform models
       } finally {
         if (!cancelled) setTerminalModelsLoading(false);
       }
@@ -954,15 +674,12 @@ export function ChatComposer({
       return;
     }
 
-    // Always fetch agents when in agent mode to ensure we have latest data
-    // Don't block on existing agents - refresh to ensure accuracy
     if (agentError && lastAgentFetchPulseRef.current === agentModePulse) {
       return;
     }
 
     lastAgentFetchPulseRef.current = agentModePulse;
     void fetchAgents().catch((err) => {
-      // eslint-disable-next-line no-console
       console.warn('[ChatComposer] Failed to fetch agents:', err);
     });
   }, [
@@ -975,22 +692,17 @@ export function ChatComposer({
     isLoadingAgents,
   ]);
 
-  // Re-resolve OpenClaw candidates when agents change (to update registered_agent_id)
   useEffect(() => {
     if (!agentModeSurface || !agentModeEnabled || openClawCandidates.length === 0) {
       return;
     }
 
-    // Re-resolve registration status when agents list changes
     const resolved = resolveOpenClawRegistration(openClawCandidates, agents);
     const unregistered = resolved.filter(
       (candidate) => !candidate.registered_agent_id,
     );
 
-    // Only update if changed to avoid loops
     if (unregistered.length !== openClawCandidates.length) {
-      // eslint-disable-next-line no-console
-      // Re-resolved OpenClaw candidates
       setOpenClawCandidates(unregistered);
     }
   }, [agents, agentModeEnabled, agentModeSurface, openClawCandidates]);
@@ -1004,7 +716,6 @@ export function ChatComposer({
       return;
     }
 
-    // Skip if already loading
     if (isLoadingOpenClawCandidates) {
       return;
     }
@@ -1036,7 +747,6 @@ export function ChatComposer({
           return;
         }
 
-        // Auto-open dialog only if no agents are registered and none selected
         if (!hasSelectedAgent && !hasRegistryAgents && !dismissed) {
           setShowOpenClawImportDialog(true);
         }
@@ -1055,7 +765,6 @@ export function ChatComposer({
   }, [
     agentModeEnabled,
     agentModeSurface,
-    // Note: agents is intentionally omitted here to avoid loops - we handle re-resolution in the effect above
     selectedSurfaceAgentId,
   ]);
 
@@ -1084,20 +793,16 @@ export function ChatComposer({
     }
   }, [agentModeEnabled, showAgentMenu]);
 
-  // Feature 6: Listen for quick re-mention clicks from message history
   useEffect(() => {
     const handler = (e: Event) => {
       const { agentId, agentName } = (e as CustomEvent).detail;
       if (!agentId) return;
-      // Simulate @mention selection
       setSelectedMentionAgentId(agentId);
       onMentionAgentChange?.(agentId);
       setLocallyEnabled(true);
-      // Focus textarea
       window.requestAnimationFrame(() => {
         textareaRef.current?.focus();
       });
-      // Dispatch floating avatar pulse (Feature 3)
       window.dispatchEvent(new CustomEvent('allternit:agent-pulse', {
         detail: { agentId, agentName },
       }));
@@ -1142,7 +847,6 @@ export function ChatComposer({
       models = terminalModels;
     } else if (realModels && realModels.length > 0) {
       const flattened = realModels.flatMap(provider => {
-        // Handle both array and object formats for models
         const modelsList = Array.isArray(provider.models) 
           ? provider.models 
           : (provider.models ? Object.entries(provider.models).map(([id, data]: [string, any]) => ({ id, ...data })) : []);
@@ -1189,9 +893,8 @@ export function ChatComposer({
       allModels[0];
       handleModelSelect(defaultModel);
     }
-  }, [allModels, selectedModel]);
+  }, [allModels, selectedModel, handleModelSelect]);
 
-  // Auto-focus on mount (active reply bar gains focus after ChatView remounts on first message)
   useEffect(() => {
     if (variant !== 'large') {
       const raf = window.requestAnimationFrame(() => {
@@ -1199,10 +902,8 @@ export function ChatComposer({
       });
       return () => window.cancelAnimationFrame(raf);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [variant]);
 
-  // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -1215,7 +916,6 @@ export function ChatComposer({
   const canSubmit = Boolean(input.trim()) && !isLoading && (!requiresAgentSelection || Boolean(selectedSurfaceAgent));
   const hasTopInfoBar = Boolean(topInfoBarContent);
   const hasQuestionBar = Boolean(questionBarContent);
-  const hasBottomInfoBar = Boolean(bottomInfoBarContent);
   const agentWorkspaceSummary = selectedWorkspacePreview.artifactCount > 0
     ? `${selectedWorkspacePreview.artifactCount} workspace files ready`
     : selectedWorkspacePreview.source === 'openclaw'
@@ -1253,7 +953,6 @@ export function ChatComposer({
       return;
     }
 
-    // Starting OpenClaw agent import
     const importStart = Date.now();
     
     setImportingOpenClawAgentId(candidate.agent_id);
@@ -1261,9 +960,7 @@ export function ChatComposer({
 
     try {
       const input = buildOpenClawImportInput(candidate);
-      // Creating agent
       const created = await createAgent(input);
-      // Agent created successfully
       setSelectedSurfaceAgent(agentModeSurface, created.id);
       void loadCharacterLayer(created.id)
         .then(() => compileCharacterLayer(created.id))
@@ -1273,7 +970,6 @@ export function ChatComposer({
           (item) => getRegisteredOpenClawAgentId(item, [created]) !== created.id,
         ),
       );
-      // Import completed
       closeOpenClawPrompt();
       setShowAgentMenu(false);
     } catch (error) {
@@ -1283,7 +979,6 @@ export function ChatComposer({
       if (error instanceof Error) {
         const msg = error.message;
         
-        // Handle JSON parse errors (API returning HTML instead of JSON)
         if (msg.includes('is not valid JSON') || msg.includes('Unexpected token')) {
           errorMessage = 'Agent Studio API is not available. Please ensure the backend services are running and try again.';
         } else if (msg.includes('API_OFFLINE') || msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
@@ -1303,7 +998,6 @@ export function ChatComposer({
       
       setOpenClawError(errorMessage);
     } finally {
-      // Import handler finished
       setImportingOpenClawAgentId(null);
     }
   }, [
@@ -1318,19 +1012,16 @@ export function ChatComposer({
   const handleSubmit = () => {
     if (!canSubmit) return;
 
-    // Build context-enriched message text
     const stylePrefix = activeStyle
       ? { formal: 'Respond in a formal, professional tone. ', creative: 'Respond in a creative, imaginative style. ', technical: 'Respond in a precise, technical manner. ' }[activeStyle]
       : '';
     const webSearchPrefix = webSearchEnabled ? '[web_search_enabled] ' : '';
     const enrichedInput = `${webSearchPrefix}${stylePrefix}${input}`.trim();
 
-    // Computer-use mode: dispatch directly to ACU planning loop.
     if (selectedModeId === 'computer-use') {
       useBrowserAgentStore.getState().runAcuTask(enrichedInput);
     }
 
-    // If agent mode is enabled and onAgentSend is provided, use it to open full agent session view
     if (agentModeEnabled && onAgentSend && agentModeSurface) {
       onAgentSend(enrichedInput);
     } else {
@@ -1347,7 +1038,6 @@ export function ChatComposer({
     setMentionOpen(false);
     setMentionQuery('');
     setMentionIndex(0);
-    // Persistent pill — keep mention agent for follow-up turns
     if (!externalAttachments) {
       setInternalAttachments([]);
     }
@@ -1356,7 +1046,6 @@ export function ChatComposer({
     });
   };
 
-  // ── Slash command filtering ─────────────────────────────────────────────
   const filteredSlashCommands = useMemo(() => {
     if (!slashCommands || !slashMenuVisible) return [];
     if (!slashFilter) return slashCommands;
@@ -1378,12 +1067,10 @@ export function ChatComposer({
   }, [agentCommandFilter, agentCommandMenuVisible]);
   const isAgentCommandMode = input.trimStart().startsWith('A://');
 
-  // ── GitHub URL fetch ─────────────────────────────────────────────────────
   const handleGitHubFetch = useCallback(async () => {
     if (!githubUrl.trim()) return;
     setGithubLoading(true);
     try {
-      // Convert github.com URL to raw.githubusercontent.com
       const raw = githubUrl
         .replace('https://github.com/', 'https://raw.githubusercontent.com/')
         .replace('/blob/', '/');
@@ -1396,30 +1083,23 @@ export function ChatComposer({
       const reader = new FileReader();
       reader.onload = (e) => {
         const dataUrl = e.target?.result as string;
-        const newAttachment = { id: `gh-${Date.now()}`, filename, size: file.size, isImage: false, url: dataUrl };
-        if (externalAttachments === undefined) {
-          setInternalAttachments((prev) => [...prev, newAttachment]);
-        }
+        addAttachment({ id: `gh-${Date.now()}`, name: filename, dataUrl, type: 'code' });
       };
       reader.readAsDataURL(file);
     } catch {
-      // silently fail — URL was invalid
     } finally {
       setGithubLoading(false);
       setGithubUrl('');
       setShowGitHubInput(false);
       setShowPlusMenu(false);
     }
-  }, [githubUrl, externalAttachments]);
+  }, [githubUrl, addAttachment]);
 
-  // ── Screenshot capture ──────────────────────────────────────────────────
   const handleCaptureScreenshot = useCallback(async () => {
     setShowPlusMenu(false);
     try {
-      // Notify the browser agent store
       useBrowserAgentStore.getState().captureScreenshot();
 
-      // Use MediaDevices getDisplayMedia to capture the screen/tab
       const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
       const video = document.createElement('video');
       video.srcObject = stream;
@@ -1441,14 +1121,12 @@ export function ChatComposer({
     }
   }, [addAttachment]);
 
-  // ── GIF screen recording ────────────────────────────────────────────────
   const handleToggleGifRecording = useCallback(async () => {
     setShowPlusMenu(false);
     if (isGifRecording) {
       try {
         const result = await stopGifRecording();
         if (result.filePath) {
-          // Fetch the file and convert to data URL for attachment
           try {
             const resp = await fetch(result.filePath);
             const blob = await resp.blob();
@@ -1463,7 +1141,6 @@ export function ChatComposer({
             };
             reader.readAsDataURL(blob);
           } catch {
-            // If fetch fails, add a placeholder attachment with the path
             addAttachment({
               id: `gif-${Date.now()}`,
               name: `Recording ${result.duration || 0}s — ${result.filePath}`,
@@ -1484,7 +1161,6 @@ export function ChatComposer({
     }
   }, [addAttachment, isGifRecording, startGifRecording, stopGifRecording]);
 
-  // ── Image file picker ───────────────────────────────────────────────────
   const handleImageFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
@@ -1500,17 +1176,14 @@ export function ChatComposer({
       };
       reader.readAsDataURL(file);
     });
-    // Reset input so the same file can be re-selected
     e.target.value = '';
   }, [addAttachment]);
 
-  // ── Drag & Drop file handling (Global Dropzone) ──────────────────────────
   const handleDroppedFiles = useCallback(async (files: FileWithData[]) => {
     for (const { file, dataUrl } of files) {
       const isImage = file.type.startsWith('image/');
       const ext = file.name.split('.').pop()?.toLowerCase() || '';
       
-      // Determine file type for preview
       let fileType: ChatAttachment['type'] = 'other';
       if (file.type === 'image/gif' || ext === 'gif') fileType = 'gif';
       else if (isImage) fileType = 'image';
@@ -1523,15 +1196,13 @@ export function ChatComposer({
         id: `${fileType}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         name: file.name,
         dataUrl: dataUrl,
-        type: fileType === 'other' ? 'document' : fileType, // Default to document for unknown
+        type: fileType === 'other' ? 'document' : fileType,
       });
     }
   }, [addAttachment]);
 
-  // Register as drop target for chat
   useDropTarget('chat', handleDroppedFiles);
 
-  // ── Slash command execution ─────────────────────────────────────────────
   const handleSlashCommand = useCallback((cmd: SlashCommand) => {
     setSlashMenuVisible(false);
     setSlashFilter('');
@@ -1549,7 +1220,6 @@ export function ChatComposer({
         setInput('');
         break;
       case '/workflow':
-        // Trigger workflow recording via store
         onSend('/workflow');
         setInput('');
         break;
@@ -1578,7 +1248,7 @@ export function ChatComposer({
     }
   };
 
-  const handleModelSelect = (model: any) => {
+  function handleModelSelect(model: any) {
     if (onSelectModel) {
       const providerId = model.providerId || 'allternit';
       onSelectModel({
@@ -1589,22 +1259,24 @@ export function ChatComposer({
       });
     }
     setShowModelMenu(false);
-  };
+  }
+
+  const handleBrowseAllModels = useCallback(() => {
+    setShowModelMenu(false);
+    onOpenModelPicker?.();
+  }, [onOpenModelPicker]);
 
   const displayModelName = selectedModelDisplayName || (allModels.find(m => m.id === selectedModel)?.name || allModels[0]?.name || "Select Model");
   
-  // Get provider info for branding
   const selectedProviderMeta = useMemo(() => {
     if (!selectedModel) return getProviderMeta('allternit');
     
-    // Try to find model in allModels to get provider info
     const model = allModels.find(m => m.id === selectedModel);
     if (model && 'providerId' in model) {
       const providerId = (model as any).providerId || (model as any).provider;
       if (providerId) return getProviderMeta(providerId);
     }
     
-    // Extract provider from model ID format: "provider/model-name"
     const parts = selectedModel.split('/');
     if (parts.length > 1) return getProviderMeta(parts[0]);
     
@@ -1617,70 +1289,44 @@ export function ChatComposer({
       target: { x, y },
     });
   }, [onAttentionChange]);
+
   const clearAttention = useCallback(() => {
     onAttentionChange?.(null);
   }, [onAttentionChange]);
 
   return (
-    <div 
-      style={{
-        width: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        boxSizing: 'border-box',
-        position: 'relative',
-        paddingTop: 0,
-        animation: agentModeSurface && agentModeEnabled && agentModePulse ? 'allternit-agent-mode-flash 560ms ease' : undefined,
-      }}
+    <div
+      className={cn(
+        'w-full flex flex-col items-center box-border relative pt-0',
+        agentModeSurface && agentModeEnabled && agentModePulse && 'animate-agent-mode-flash'
+      )}
       onMouseLeave={() => {
         clearAttention();
         onInteractionSignal?.('steady');
-      }}>
-      <style>{`
-        @keyframes allternit-agent-mode-sweep {
-          0% { background-position: 0% 50%; }
-          100% { background-position: 200% 50%; }
-        }
-        @keyframes allternit-agent-mode-flash {
-          0% { transform: scale(0.996); }
-          45% { transform: scale(1); }
-          100% { transform: scale(1); }
-        }
-      `}</style>
-      
-      {/* TaskBar - Shows active WIHs */}
-      <TaskBar 
+      }}
+    >
+      <TaskBar
         wihs={[...(wihs ?? []), ...(myWihs ?? [])]}
         selectedWihId={selectedWihId}
         onSelectWih={selectWih}
         expanded={taskBarExpanded}
         onToggleExpand={() => setTaskBarExpanded(!taskBarExpanded)}
-        agentModeSurface={agentModeSurface}
       />
-      
-      {/* Top Action Buttons - Hidden when Agent Mode is ON */}
+
       {showTopActions && !agentModeEnabled && (
-        <div style={{
-          display: 'flex',
-          gap: '8px',
-          marginBottom: '12px',
-          width: '720px',
-          maxWidth: '100%',
-          justifyContent: 'center',
-          flexWrap: 'wrap'
-        }}
-        onMouseEnter={() => setTrackingAttention(0, 0.18, 'locked-on')}
-        onMouseLeave={() => {
-          if (!activeCategory) {
-            clearAttention();
-          }
-        }}>
+        <div
+          className="flex gap-2 mb-3 w-[720px] max-w-full justify-center flex-wrap"
+          onMouseEnter={() => setTrackingAttention(0, 0.18, 'locked-on')}
+          onMouseLeave={() => {
+            if (!activeCategory) {
+              clearAttention();
+            }
+          }}
+        >
           {ACTION_CATEGORIES.map((cat, index) => (
             <button
               key={cat.id}
               onClick={() => {
-                // Map top pill to agent mode and select corresponding mode
                 if (agentModeSurface) {
                   const modeMapping: Record<string, AgentModeId> = {
                     'code': 'web',
@@ -1691,11 +1337,8 @@ export function ChatComposer({
                   };
                   const targetMode = modeMapping[cat.id];
                   if (targetMode) {
-                    // Enable agent mode
                     setLocallyEnabled(true);
-                    // Select the corresponding mode
                     setSelectedMode(agentModeSurface, targetMode);
-                    // Clear the active category overlay
                     setActiveCategory(null);
                     onInteractionSignal?.('proud');
                     return;
@@ -1704,20 +1347,12 @@ export function ChatComposer({
                 setActiveCategory(activeCategory === cat.id ? null : cat.id);
                 onInteractionSignal?.(CATEGORY_EMOTIONS[cat.id]?.select ?? 'focused');
               }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 14px',
-                borderRadius: '10px',
-                background: activeCategory === cat.id ? 'var(--chat-mode-pill-active-bg)' : 'var(--chat-mode-pill-bg)',
-                border: `1px solid ${activeCategory === cat.id ? 'color-mix(in srgb, var(--accent-chat) 30%, transparent)' : THEME.inputBorder}`,
-                color: activeCategory === cat.id ? 'var(--chat-mode-pill-active-fg)' : 'var(--chat-mode-pill-fg)',
-                fontSize: '13px',
-                fontWeight: activeCategory === cat.id ? 600 : 550,
-                cursor: 'pointer',
-                transition: 'all 0.2s'
-              }}
+              className={cn(
+                'flex items-center gap-1.5 py-1.5 px-3.5 rounded-lg text-sm transition-all',
+                activeCategory === cat.id
+                  ? 'bg-chat-mode-pill-active-bg border-accent-chat/30 text-chat-mode-pill-active-fg font-semibold'
+                  : 'bg-chat-mode-pill-bg border-input-border text-chat-mode-pill-fg font-medium'
+              )}
               onMouseEnter={(e) => {
                 onInteractionSignal?.(CATEGORY_EMOTIONS[cat.id]?.hover ?? 'curious');
                 setTrackingAttention((index - (ACTION_CATEGORIES.length - 1) / 2) * 0.24, 0.18, 'locked-on');
@@ -1740,45 +1375,23 @@ export function ChatComposer({
         </div>
       )}
 
-      {/* Overlay for Options - Hidden when Agent Mode is ON */}
       {showTopActions && !agentModeEnabled && activeCategory && (
         <div
-          style={{
-            position: 'absolute',
-            bottom: 'calc(100% - 30px)',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: '100%',
-            maxWidth: variant === 'large' ? '760px' : '600px',
-            background: THEME.menuBg,
-            borderRadius: '16px',
-            border: `1px solid ${THEME.menuBorder}`,
-            boxShadow: 'var(--shadow-xl)',
-            zIndex: 100,
-            padding: '8px 0',
-            marginBottom: '40px'
-          }}
+          className="absolute bottom-[calc(100%-30px)] left-1/2 -translate-x-1/2 w-full max-w-[600px] lg:max-w-[760px] bg-menu-bg rounded-2xl border border-menu-border shadow-xl z-100 p-2 mb-10"
           onMouseEnter={() => setTrackingAttention(0, 0.26, 'locked-on')}
           onMouseLeave={() => {
             setActiveCategory(null);
             clearAttention();
           }}
         >
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '8px 16px',
-            borderBottom: `1px solid ${THEME.inputBorder}`,
-            marginBottom: '4px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: THEME.textSecondary, fontSize: '12px', fontWeight: 600, textTransform: 'uppercase' }}>
+          <div className="flex items-center justify-between p-2 border-b border-input-border mb-1">
+            <div className="flex items-center gap-2 text-secondary text-xs font-semibold uppercase">
               {ACTION_CATEGORIES.find(c => c.id === activeCategory)?.icon}
               {ACTION_CATEGORIES.find(c => c.id === activeCategory)?.label}
             </div>
             <button
               onClick={() => setActiveCategory(null)}
-              style={{ background: 'none', border: 'none', color: THEME.textMuted, cursor: 'pointer' }}
+              className="bg-transparent border-none text-muted cursor-pointer"
             >
               <X size={14} />
             </button>
@@ -1789,10 +1402,10 @@ export function ChatComposer({
               onMouseEnter={(e) => {
                 handleOptionHover(option);
                 setTrackingAttention(0, 0.28, 'locked-on');
-                e.currentTarget.style.background = THEME.hoverBg;
+                e.currentTarget.classList.add('bg-hover');
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.classList.remove('bg-hover');
               }}
               onClick={() => {
                 setInput(option);
@@ -1800,34 +1413,20 @@ export function ChatComposer({
                 onInteractionSignal?.(activeCategory ? CATEGORY_EMOTIONS[activeCategory]?.select ?? 'pleased' : 'pleased');
                 textareaRef.current?.focus();
               }}
-              style={{
-                padding: '12px 16px',
-                color: THEME.textPrimary,
-                fontSize: '14px',
-                cursor: 'pointer',
-                transition: 'background 0.2s',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                borderBottom: idx === (ACTION_CATEGORIES.find(c => c.id === activeCategory)?.options.length || 0) - 1 ? 'none' : `1px solid ${THEME.inputBorder}`
-              }}
+              className="py-3 px-4 text-primary text-sm cursor-pointer transition-colors flex items-center justify-between border-b border-input-border last:border-b-0"
             >
               <span>{option}</span>
-              <CursorClick size={12} style={{ opacity: 0.3 }} />
+              <CursorClick size={12} className="opacity-30" />
             </div>
           ))}
         </div>
       )}
 
-      {/* ── Main Composer Box ── */}
       <div
-        style={{
-          width: variant === 'large' ? '760px' : '600px',
-          maxWidth: '100%',
-          position: 'relative',
-          overflow: 'visible',
-          zIndex: 14,
-        }}
+        className={cn(
+          'w-full max-w-[600px] lg:max-w-[760px] relative overflow-visible z-14',
+          variant === 'large' && 'lg:max-w-[760px]'
+        )}
       >
         {showAgentRailGuide ? (
           <AgentModeGizzi
@@ -1840,27 +1439,11 @@ export function ChatComposer({
           />
         ) : null}
         <div
-          style={{
-            width: '100%',
-            background: THEME.inputBg,
-            borderRadius: '24px 24px 0 0',
-            borderTop: `1px solid ${agentModeEnabled ? agentModeTheme.glow : THEME.inputBorder}`,
-            borderRight: `1px solid ${agentModeEnabled ? agentModeTheme.glow : THEME.inputBorder}`,
-            borderLeft: `1px solid ${agentModeEnabled ? agentModeTheme.glow : THEME.inputBorder}`,
-            borderBottom: 'none',
-            boxShadow: agentModeEnabled
-              ? `0 0 0 1px ${agentModeTheme.soft}, 0 12px 36px ${agentModeTheme.glow}`
-              : composerFocused
-                ? '0 0 0 1px color-mix(in srgb, var(--accent-chat) 34%, transparent), 0 12px 36px color-mix(in srgb, var(--accent-chat) 14%, transparent)'
-                : 'var(--shadow-lg)',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'visible',
-            transition: 'box-shadow 0.2s ease',
-            position: 'relative',
-            zIndex: 10
-          }}
-          onMouseEnter={() => setTrackingAttention(0, 0.44)}
+          className={cn(
+            'w-full bg-input-bg rounded-t-2xl border-t border-r border-l border-input-border flex flex-col overflow-visible transition-shadow z-10 relative',
+            agentModeEnabled && 'border-glow shadow-glow',
+            composerFocused && !agentModeEnabled && 'shadow-glow-accent'
+          )}
           onFocusCapture={() => setComposerFocused(true)}
           onBlurCapture={(event) => {
             const nextFocused = event.relatedTarget;
@@ -1869,900 +1452,608 @@ export function ChatComposer({
             }
           }}
         >
-        {agentModeSurface && agentModeEnabled ? (
-          <div
-            style={{
-              position: 'absolute',
-              inset: 0,
-              borderRadius: 24,
-              pointerEvents: 'none',
-              background: `linear-gradient(120deg, transparent 0%, ${agentModeTheme.soft} 20%, ${agentModeTheme.glow} 50%, ${agentModeTheme.soft} 80%, transparent 100%)`,
-              backgroundSize: '200% 200%',
-              animation: 'allternit-agent-mode-sweep 3.2s linear infinite',
-              mixBlendMode: 'screen',
-              opacity: 0.36,
-            }}
-          />
-        ) : null}
-        {/* Hidden file input for image attachments */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          style={{ display: 'none' }}
-          onChange={handleImageFileSelect}
-        />
-
-        {/* Slash Command Dropdown */}
-        {slashMenuVisible && filteredSlashCommands.length > 0 && (
-          <div
-            style={{
-              position: 'absolute',
-              bottom: 'calc(100% + 8px)',
-              left: 0,
-              right: 0,
-              maxWidth: '100%',
-              background: THEME.menuBg,
-              borderRadius: 12,
-              border: `1px solid ${THEME.menuBorder}`,
-              boxShadow: 'var(--shadow-xl)',
-              padding: 6,
-              zIndex: 250,
-            }}
-          >
-            <div style={{ padding: '6px 12px 4px', fontSize: 11, color: THEME.textMuted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Commands
-            </div>
-            {filteredSlashCommands.map((cmd) => (
-              <button
-                key={cmd.command}
-                type="button"
-                onClick={() => handleSlashCommand(cmd)}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '8px 12px',
-                  borderRadius: 8,
-                  background: 'transparent',
-                  border: 'none',
-                  color: THEME.textPrimary,
-                  fontSize: 13,
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = THEME.hoverBg; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-              >
-                <span style={{ color: THEME.accent, fontFamily: 'var(--font-mono)', fontWeight: 700, fontSize: 12 }}>{cmd.command}</span>
-                <span style={{ color: THEME.textSecondary }}>{cmd.label}</span>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {attachments.length > 0 ? (
-          <div
-            style={{
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: 8,
-              padding: '12px 14px 0 14px',
-            }}
-          >
-            {attachments.map((attachment) => (
-              <FileAttachment
-                key={attachment.id}
-                id={attachment.id}
-                filename={attachment.name}
-                isImage={attachment.type === 'image' || attachment.type === 'screenshot' || attachment.type === 'gif'}
-                url={attachment.dataUrl}
-                onRemove={() => removeAttachment(attachment.id)}
-                className="border border-[var(--chat-composer-border)] bg-[var(--chat-composer-soft)]"
-              />
-            ))}
-          </div>
-        ) : null}
-
-        {hasTopInfoBar && (
-          <div
-            style={{
-              padding: '10px 14px 0 14px',
-            }}
-          >
-            <div
-              style={{
-                minHeight: 36,
-                borderRadius: 14,
-                border: `1px solid ${THEME.inputBorder}`,
-                background: 'var(--chat-composer-soft)',
-                overflow: 'hidden',
-              }}
-            >
-              {topInfoBarContent}
-            </div>
-          </div>
-        )}
-
-        {hasQuestionBar && (
-          <div
-            style={{
-              padding: hasTopInfoBar ? '10px 14px 0 14px' : '14px 14px 0 14px',
-            }}
-          >
-            <div
-              style={{
-                borderRadius: 16,
-                border: `1px solid ${THEME.inputBorder}`,
-                background: 'var(--chat-composer-soft)',
-                overflow: 'hidden',
-              }}
-            >
-              {questionBarContent}
-            </div>
-          </div>
-        )}
-        
-        {/* Input Area */}
-        <div style={{ padding: '16px 20px 8px 20px' }}>
-          {isAgentCommandMode ? (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 12,
-                marginBottom: 10,
-                padding: '8px 10px',
-                borderRadius: 12,
-                border: `1px solid ${THEME.inputBorder}`,
-                background: 'var(--chat-composer-soft)',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                <TextShimmer as="span" className="text-[12px] font-medium text-[var(--accent-chat)]">
-                  A:// command mode
-                </TextShimmer>
-                <span style={{ color: THEME.textSecondary, fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  Tab autocompletes. Enter submits after the first space.
-                </span>
-              </div>
-            </div>
+          {agentModeSurface && agentModeEnabled ? (
+            <div className="absolute inset-0 rounded-2xl pointer-events-none bg-agent-mode-sweep mix-blend-screen opacity-30" />
           ) : null}
-          {/* Agent pill from @mention */}
-          {selectedMentionAgent && (
-            <div style={{ marginBottom: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-              <AgentPill
-                agent={selectedMentionAgent}
-                onRemove={handleRemoveMentionAgent}
-              />
-            </div>
-          )}
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => {
-              const val = e.target.value;
-              setInput(val);
-              // Slash command detection
-              if (slashCommands && slashCommands.length > 0) {
-                if (val.startsWith('/')) {
-                  setSlashMenuVisible(true);
-                  setSlashFilter(val);
-                } else {
-                  setSlashMenuVisible(false);
-                  setSlashFilter('');
-                }
-              }
-              if (val.trimStart().startsWith('A://')) {
-                setAgentCommandMenuVisible(true);
-                setAgentCommandFilter(val.trimStart());
-              } else {
-                setAgentCommandMenuVisible(false);
-                setAgentCommandFilter('');
-              }
-              // @mention detection
-              parseMention(val);
-            }}
-            onKeyDown={(e) => {
-              // @mention keyboard navigation
-              if (mentionOpen && filteredMentionAgents.length > 0) {
-                if (e.key === 'Escape') {
-                  e.preventDefault();
-                  setMentionOpen(false);
-                  setMentionQuery('');
-                  return;
-                }
-                if (e.key === 'ArrowDown') {
-                  e.preventDefault();
-                  setMentionIndex((prev) =>
-                    Math.min(prev + 1, filteredMentionAgents.length - 1)
-                  );
-                  return;
-                }
-                if (e.key === 'ArrowUp') {
-                  e.preventDefault();
-                  setMentionIndex((prev) => Math.max(prev - 1, 0));
-                  return;
-                }
-                if (e.key === 'Enter' || e.key === 'Tab') {
-                  e.preventDefault();
-                  handleSelectMentionAgent(filteredMentionAgents[mentionIndex]);
-                  return;
-                }
-              }
-              if (slashMenuVisible && filteredSlashCommands.length > 0) {
-                if (e.key === 'Escape') {
-                  e.preventDefault();
-                  setSlashMenuVisible(false);
-                  setSlashFilter('');
-                  return;
-                }
-                if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
-                  e.preventDefault();
-                  handleSlashCommand(filteredSlashCommands[0]);
-                  return;
-                }
-              }
-              if (agentCommandMenuVisible && filteredAgentCommands.length > 0) {
-                if (e.key === 'Escape') {
-                  e.preventDefault();
-                  setAgentCommandMenuVisible(false);
-                  setAgentCommandFilter('');
-                  return;
-                }
-                if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey && !input.trim().includes(' '))) {
-                  e.preventDefault();
-                  handleAgentCommand(filteredAgentCommands[0]);
-                  return;
-                }
-              }
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit();
-              }
-            }}
-            placeholder={placeholder}
-            rows={1}
-            onFocus={() => setTrackingAttention(0, 0.34, 'locked-on')}
-            style={{
-              width: '100%',
-              background: 'transparent',
-              border: 'none',
-              outline: 'none',
-              color: THEME.textPrimary,
-              fontSize: '16px',
-              lineHeight: '1.5',
-              resize: 'none',
-              fontFamily: 'inherit',
-              padding: 0,
-              margin: 0,
-              display: 'block',
-            }}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={handleImageFileSelect}
           />
-        </div>
-        {/* Live interim transcript while voice recording */}
-        {isVoiceRecording && interimTranscript && (
-          <div style={{
-            padding: '2px 16px 6px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 6,
-          }}>
-            <span style={{
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              background: 'rgba(239,68,68,0.8)',
-              flexShrink: 0,
-              animation: 'pulse 1s infinite',
-            }} />
-            <span style={{
-              fontSize: 12,
-              color: THEME.textMuted,
-              fontStyle: 'italic',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              flex: 1,
-            }}>
-              {interimTranscript}
-            </span>
-          </div>
-        )}
-        {agentCommandMenuVisible && filteredAgentCommands.length > 0 ? (
-          <div
-            style={{
-              padding: '0 14px 10px 14px',
-            }}
-          >
-            <div style={{ display: 'grid', gap: 6 }}>
-              {filteredAgentCommands.map((cmd) => (
+
+          {slashMenuVisible && filteredSlashCommands.length > 0 && (
+            <div className="absolute bottom-[calc(100%+8px)] left-0 right-0 max-w-full bg-menu-bg rounded-xl border border-menu-border shadow-xl p-1.5 z-250">
+              <div className="py-1.5 px-3 text-xs text-muted font-semibold uppercase tracking-wider">
+                Commands
+              </div>
+              {filteredSlashCommands.map((cmd) => (
                 <button
                   key={cmd.command}
                   type="button"
-                  onClick={() => handleAgentCommand(cmd)}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: 12,
-                    padding: '10px 12px',
-                    borderRadius: 12,
-                    border: `1px solid ${THEME.inputBorder}`,
-                    background: 'var(--chat-composer-soft)',
-                    color: THEME.textPrimary,
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = THEME.hoverBg; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--chat-composer-soft)'; }}
+                  onClick={() => handleSlashCommand(cmd)}
+                  className="w-full flex items-center gap-2.5 py-2 px-3 rounded-lg bg-transparent border-none text-primary text-sm cursor-pointer text-left hover:bg-hover"
                 >
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ color: THEME.accent, fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700 }}>
-                      {cmd.command}
-                    </div>
-                    <div style={{ color: THEME.textSecondary, fontSize: 12 }}>
-                      {cmd.detail}
-                    </div>
-                  </div>
-                  <span style={{ color: THEME.textMuted, fontSize: 11, flexShrink: 0 }}>
-                    {cmd.label}
-                  </span>
+                  <span className="text-accent font-mono font-bold text-xs">{cmd.command}</span>
+                  <span className="text-secondary">{cmd.label}</span>
                 </button>
               ))}
             </div>
-          </div>
-        ) : null}
+          )}
 
-        {requiresAgentSelection ? (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: 12,
-              padding: '0 20px 8px 20px',
-              color: selectedSurfaceAgent ? agentModeTheme.accent : THEME.textSecondary,
-              fontSize: 12,
-            }}
-          >
-            <div style={{ display: 'flex', minWidth: 0, alignItems: 'center', gap: 8 }}>
-              <Robot size={14} />
-              <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {agentHelperText}
+          {attachments.length > 0 ? (
+            <div className="flex flex-wrap gap-2 p-3">
+              {attachments.map((attachment) => (
+                <FileAttachment
+                  key={attachment.id}
+                  id={attachment.id}
+                  filename={attachment.name}
+                  isImage={attachment.type === 'image' || attachment.type === 'screenshot' || attachment.type === 'gif'}
+                  url={attachment.dataUrl}
+                  onRemove={() => removeAttachment(attachment.id)}
+                  className="border border-composer-border bg-composer-soft"
+                />
+              ))}
+            </div>
+          ) : null}
+
+          {hasTopInfoBar && (
+            <div className="p-2.5 pb-0">
+              <div className="min-h-[36px] rounded-xl border border-input-border bg-composer-soft overflow-hidden">
+                {topInfoBarContent}
+              </div>
+            </div>
+          )}
+
+          {hasQuestionBar && (
+            <div className={cn('p-2.5', hasTopInfoBar ? 'pt-2.5' : 'pt-3.5')}>
+              <div className="rounded-2xl border border-input-border bg-composer-soft overflow-hidden">
+                {questionBarContent}
+              </div>
+            </div>
+          )}
+          
+          <div className="p-4">
+            {isAgentCommandMode ? (
+              <div className="flex items-center justify-between gap-3 mb-2.5 py-2 px-2.5 rounded-xl border border-input-border bg-composer-soft">
+                <div className="flex items-center gap-2 min-w-0">
+                  <TextShimmer as="span" className="text-xs font-medium text-accent">
+                    A:// command mode
+                  </TextShimmer>
+                  <span className="text-secondary text-xs truncate">
+                    Tab autocompletes. Enter submits after the first space.
+                  </span>
+                </div>
+              </div>
+            ) : null}
+            {selectedMentionAgent && (
+              <div className="mb-2 flex gap-1.5 flex-wrap">
+                <AgentPill
+                  agent={selectedMentionAgent}
+                  onRemove={handleRemoveMentionAgent}
+                />
+              </div>
+            )}
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => {
+                const val = e.target.value;
+                setInput(val);
+                if (slashCommands && slashCommands.length > 0) {
+                  if (val.startsWith('/')) {
+                    setSlashMenuVisible(true);
+                    setSlashFilter(val);
+                  } else {
+                    setSlashMenuVisible(false);
+                    setSlashFilter('');
+                  }
+                }
+                if (val.trimStart().startsWith('A://')) {
+                  setAgentCommandMenuVisible(true);
+                  setAgentCommandFilter(val.trimStart());
+                } else {
+                  setAgentCommandMenuVisible(false);
+                  setAgentCommandFilter('');
+                }
+                parseMention(val);
+              }}
+              onKeyDown={(e) => {
+                if (mentionOpen && filteredMentionAgents.length > 0) {
+                  if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setMentionOpen(false);
+                    setMentionQuery('');
+                    return;
+                  }
+                  if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    setMentionIndex((prev) =>
+                      Math.min(prev + 1, filteredMentionAgents.length - 1)
+                    );
+                    return;
+                  }
+                  if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    setMentionIndex((prev) => Math.max(prev - 1, 0));
+                    return;
+                  }
+                  if (e.key === 'Enter' || e.key === 'Tab') {
+                    e.preventDefault();
+                    handleSelectMentionAgent(filteredMentionAgents[mentionIndex]);
+                    return;
+                  }
+                }
+                if (slashMenuVisible && filteredSlashCommands.length > 0) {
+                  if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setSlashMenuVisible(false);
+                    setSlashFilter('');
+                    return;
+                  }
+                  if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey)) {
+                    e.preventDefault();
+                    handleSlashCommand(filteredSlashCommands[0]);
+                    return;
+                  }
+                }
+                if (agentCommandMenuVisible && filteredAgentCommands.length > 0) {
+                  if (e.key === 'Escape') {
+                    e.preventDefault();
+                    setAgentCommandMenuVisible(false);
+                    setAgentCommandFilter('');
+                    return;
+                  }
+                  if (e.key === 'Tab' || (e.key === 'Enter' && !e.shiftKey && !input.trim().includes(' '))) {
+                    e.preventDefault();
+                    handleAgentCommand(filteredAgentCommands[0]);
+                    return;
+                  }
+                }
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit();
+                }
+              }}
+              placeholder={placeholder}
+              rows={1}
+              onFocus={() => setTrackingAttention(0, 0.34, 'locked-on')}
+              className="w-full bg-transparent border-none outline-none text-primary text-base resize-none font-inherit p-0 m-0 block"
+            />
+          </div>
+          {isVoiceRecording && interimTranscript && (
+            <div className="py-0.5 px-4 pb-1.5 flex items-center gap-1.5">
+              <span className="size-1.5 rounded-full bg-red-500/80 flex-shrink-0 animate-pulse" />
+              <span className="text-xs text-muted italic truncate flex-1">
+                {interimTranscript}
               </span>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-              {!selectedSurfaceAgent && openClawCandidates.length > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => setShowOpenClawImportDialog(true)}
-                  style={{
-                    flexShrink: 0,
-                    border: `1px solid ${agentModeTheme.glow}`,
-                    borderRadius: 999,
-                    background: agentModeTheme.soft,
-                    color: agentModeTheme.accent,
-                    fontSize: 11,
-                    fontWeight: 700,
-                    padding: '5px 9px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Import OpenClaw
-                </button>
-              ) : null}
-              {selectedSurfaceAgent && selectedWorkspacePreview.workspacePath ? (
-                <span
-                  style={{
-                    flexShrink: 0,
-                    color: THEME.textMuted,
-                    fontSize: 11,
-                    maxWidth: 180,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                  title={selectedWorkspacePreview.workspacePath}
-                >
-                  {selectedWorkspacePreview.workspacePath}
-                </span>
-              ) : null}
+          )}
+          {agentCommandMenuVisible && filteredAgentCommands.length > 0 ? (
+            <div className="p-3.5 pt-0">
+              <div className="grid gap-1.5">
+                {filteredAgentCommands.map((cmd) => (
+                  <button
+                    key={cmd.command}
+                    type="button"
+                    onClick={() => handleAgentCommand(cmd)}
+                    className="w-full flex items-center justify-between gap-3 p-2.5 rounded-xl border border-input-border bg-composer-soft text-primary cursor-pointer text-left hover:bg-hover"
+                  >
+                    <div className="min-w-0">
+                      <div className="text-accent font-mono text-xs font-bold">
+                        {cmd.command}
+                      </div>
+                      <div className="text-secondary text-xs">
+                        {cmd.detail}
+                      </div>
+                    </div>
+                    <span className="text-muted text-xs flex-shrink-0">
+                      {cmd.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        ) : null}
+          ) : null}
 
-        {null /* bottomInfoBar removed */}
+          {requiresAgentSelection ? (
+            <div
+              className="flex items-center justify-between gap-3 py-2 px-5 text-xs"
+              style={{ color: selectedSurfaceAgent ? agentModeTheme.accent : THEME.textSecondary }}
+            >
+              <div className="flex min-w-0 items-center gap-2">
+                <Robot size={14} />
+                <span className="min-w-0 truncate">
+                  {agentHelperText}
+                </span>
+              </div>
+              <div className="flex items-center gap-2.5 min-w-0">
+                {!selectedSurfaceAgent && openClawCandidates.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowOpenClawImportDialog(true)}
+                    className="flex-shrink-0 border border-glow rounded-full bg-soft text-accent text-xs font-bold py-1 px-2.5 cursor-pointer"
+                    style={{
+                      borderColor: agentModeTheme.glow,
+                      background: agentModeTheme.soft,
+                      color: agentModeTheme.accent,
+                    }}
+                  >
+                    Import OpenClaw
+                  </button>
+                ) : null}
+                {selectedSurfaceAgent && selectedWorkspacePreview.workspacePath ? (
+                  <span
+                    className="flex-shrink-0 text-muted text-xs max-w-[180px] truncate"
+                    title={selectedWorkspacePreview.workspacePath}
+                  >
+                    {selectedWorkspacePreview.workspacePath}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
 
-        {/* Bottom Toolbar */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '6px 12px 12px 12px',
-        }}>
-          {/* Left side: Plus button */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', position: 'relative' }}>
-            <AttachmentButton
-              onClick={() => { setShowPlusMenu(!showPlusMenu); setActiveSubMenu(null); }}
-              className="size-8 transition-colors"
-              style={{ background: 'transparent', boxShadow: 'none', border: 'none' }}
-              icon={
-                <Plus
-                  size={20}
-                  strokeWidth={2.5}
-                  style={{
-                    color: 'var(--chat-composer-muted)',
-                    transform: showPlusMenu ? 'rotate(45deg)' : 'none',
-                    transition: 'transform 0.2s',
-                  }}
-                />
-              }
-              onMouseEnter={() => {
-                onInteractionSignal?.('alert');
-                setTrackingAttention(-0.44, 0.56, 'locked-on');
-              }}
-              onMouseLeave={() => {
-                setTrackingAttention(0, 0.44);
-              }}
-            />
-
-            {/* Plus Menu Popover */}
-            {showPlusMenu && (
-              <div
-                style={{
-                  position: 'absolute',
-                  bottom: 'calc(100% + 12px)',
-                  left: 0,
-                  width: '240px',
-                  background: THEME.menuBg,
-                  borderRadius: '12px',
-                  border: `1px solid ${THEME.menuBorder}`,
-                  boxShadow: 'var(--shadow-xl)',
-                  padding: '6px',
-                  zIndex: 200,
+          <div className="flex items-center justify-between p-3">
+            <div className="flex items-center gap-1 relative">
+              <AttachmentButton
+                onClick={() => { setShowPlusMenu(!showPlusMenu); setActiveSubMenu(null); }}
+                className="size-8 transition-colors bg-transparent shadow-none border-none"
+                icon={
+                  <Plus
+                    size={20}
+                    strokeWidth={2.5}
+                    className={cn(
+                      'text-composer-muted transition-transform',
+                      showPlusMenu && 'rotate-45'
+                    )}
+                  />
+                }
+                onMouseEnter={() => {
+                  onInteractionSignal?.('alert');
+                  setTrackingAttention(-0.44, 0.56, 'locked-on');
                 }}
-                onMouseEnter={() => setTrackingAttention(-0.48, 0.5, 'locked-on')}
                 onMouseLeave={() => {
-                  if (!activeSubMenu) setShowPlusMenu(false);
+                  setTrackingAttention(0, 0.44);
+                }}
+              />
+
+              {showPlusMenu && (
+                <div
+                  className="absolute bottom-[calc(100%+12px)] left-0 w-60 bg-menu-bg rounded-xl border border-menu-border shadow-xl p-1.5 z-200"
+                  onMouseEnter={() => setTrackingAttention(-0.48, 0.5, 'locked-on')}
+                  onMouseLeave={() => {
+                    if (!activeSubMenu) setShowPlusMenu(false);
+                    setTrackingAttention(0, 0.44);
+                  }}
+                >
+                  {isBrowserSurface && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={handleCaptureScreenshot}
+                        className="w-full flex items-center gap-2.5 py-2 px-3 rounded-lg bg-transparent border-none text-primary text-sm cursor-pointer transition-colors hover:bg-hover"
+                      >
+                        <span className="text-secondary"><Camera size={16} /></span>
+                        <span>Take a screenshot</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleToggleGifRecording}
+                        className={cn(
+                          'w-full flex items-center gap-2.5 py-2 px-3 rounded-lg border-none text-sm cursor-pointer transition-colors',
+                          isGifRecording ? 'bg-status-error-bg text-status-error hover:bg-status-error/18' : 'bg-transparent text-primary hover:bg-hover'
+                        )}
+                      >
+                        <span className={cn(isGifRecording ? 'text-status-error' : 'text-secondary')}>
+                          {isGifRecording ? <Square size={16} fill="currentColor" /> : <Video size={16} />}
+                        </span>
+                        <span>{isGifRecording ? `Stop recording (${gifDuration}s)` : 'Record screen (GIF)'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { fileInputRef.current?.click(); setShowPlusMenu(false); }}
+                        className="w-full flex items-center gap-2.5 py-2 px-3 rounded-lg bg-transparent border-none text-primary text-sm cursor-pointer transition-colors hover:bg-hover"
+                      >
+                        <span className="text-secondary"><ImageIcon size={16} /></span>
+                        <span>Add an image</span>
+                      </button>
+                      <div className="h-px bg-menu-border my-1 mx-2" />
+                    </>
+                  )}
+                  {showGitHubInput && (
+                    <div className="p-2">
+                      <div className="flex items-center gap-1.5 bg-hover rounded-lg p-2 border border-menu-border">
+                        <LinkIcon size={13} className="text-secondary flex-shrink-0" />
+                        <input
+                          autoFocus
+                          value={githubUrl}
+                          onChange={(e) => setGithubUrl(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleGitHubFetch(); if (e.key === 'Escape') { setShowGitHubInput(false); setGithubUrl(''); } }}
+                          placeholder="github.com/user/repo/blob/main/file"
+                          className="flex-1 bg-transparent border-none outline-none text-xs text-primary"
+                        />
+                        {githubLoading
+                          ? <CircleNotch size={13} className="text-secondary animate-spin" />
+                          : <button type="button" onClick={handleGitHubFetch} className="bg-transparent border-none cursor-pointer text-accent text-xs font-semibold p-0">Add</button>
+                        }
+                      </div>
+                    </div>
+                  )}
+                  <div className="py-0.5 px-2 text-xs font-semibold text-muted tracking-widest uppercase">Attach</div>
+                  {PLUS_MENU_ITEMS.filter(i => ['files', 'github'].includes(i.id)).map((item) => (
+                    <div key={item.id} className="relative">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (item.id === 'files') { fileInputRef.current?.click(); setShowPlusMenu(false); }
+                          if (item.id === 'github') { setShowGitHubInput((v) => !v); setActiveSubMenu(null); }
+                        }}
+                        onMouseEnter={() => { setActiveSubMenu(null); setTrackingAttention(-0.48, 0.5, 'locked-on'); }}
+                        className={cn(
+                          'w-full flex items-center gap-2.5 py-2 px-3 rounded-lg border-none text-primary text-sm cursor-pointer transition-colors',
+                          item.id === 'github' && showGitHubInput ? 'bg-hover' : 'bg-transparent'
+                        )}
+                      >
+                        <span className="text-secondary">{item.icon}</span>
+                        <span className="flex-1 text-left">{item.label}</span>
+                      </button>
+                    </div>
+                  ))}
+                  <div className="h-px bg-menu-border my-1 mx-2" />
+                  <div className="py-0.5 px-2 text-xs font-semibold text-muted tracking-widest uppercase">Context</div>
+                  {PLUS_MENU_ITEMS.filter(i => ['project', 'web'].includes(i.id)).map((item) => (
+                    <div key={item.id} className="relative">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (item.id === 'web') { setWebSearchEnabled((v) => !v); setShowPlusMenu(false); }
+                        }}
+                        onMouseEnter={() => {
+                          if (item.hasSubmenu) setActiveSubMenu(item.id); else setActiveSubMenu(null);
+                          setTrackingAttention(-0.48, 0.5, 'locked-on');
+                        }}
+                        className={cn(
+                          'w-full flex items-center gap-2.5 py-2 px-3 rounded-lg border-none text-sm cursor-pointer transition-colors',
+                          (item.id === 'web' && webSearchEnabled) ? 'bg-accent/12 text-accent' : activeSubMenu === item.id ? 'bg-hover text-primary' : 'bg-transparent text-primary'
+                        )}
+                      >
+                        <span className={cn((item.id === 'web' && webSearchEnabled) ? 'text-accent' : 'text-secondary')}>{item.icon}</span>
+                        <span className="flex-1 text-left">{item.label}</span>
+                        {item.hasSubmenu && <CaretRight size={14} className="opacity-50" />}
+                        {item.id === 'web' && webSearchEnabled && <Check size={14} className="text-accent" />}
+                      </button>
+                      {activeSubMenu === item.id && item.submenuItems && (
+                        <div
+                          className="absolute left-[calc(100%+10px)] bottom-0 w-52 bg-menu-bg rounded-xl border border-menu-border shadow-xl p-1.5 z-210"
+                          onMouseEnter={() => setTrackingAttention(-0.26, 0.46, 'locked-on')}
+                          onMouseLeave={() => setTrackingAttention(-0.48, 0.5, 'locked-on')}
+                        >
+                          {item.submenuItems.map((sub) => (
+                            <button
+                              key={sub.id}
+                              type="button"
+                              onClick={() => { if (item.id === 'project' && sub.id === 'new-project') { import('@/views/chat/ChatStore').then(m => m.useChatStore.getState().createProject('New Project')); setShowPlusMenu(false); } }}
+                              className="w-full flex items-center gap-2 py-2 px-3 rounded-lg bg-transparent border-none text-primary text-sm cursor-pointer hover:bg-hover"
+                              onMouseEnter={() => setTrackingAttention(-0.24, 0.46, 'locked-on')}
+                            >
+                              {sub.icon && <span className="text-secondary">{sub.icon}</span>}
+                              <span>{sub.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  <div className="h-px bg-menu-border my-1 mx-2" />
+                  <div className="py-0.5 px-2 text-xs font-semibold text-muted tracking-widest uppercase">Style</div>
+                  {PLUS_MENU_ITEMS.filter(i => ['style', 'connectors'].includes(i.id)).map((item) => (
+                    <div key={item.id} className="relative">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (item.id === 'connectors') { setShowProviderConnect(true); setShowPlusMenu(false); }
+                        }}
+                        onMouseEnter={() => {
+                          if (item.hasSubmenu) setActiveSubMenu(item.id); else setActiveSubMenu(null);
+                          setTrackingAttention(-0.48, 0.5, 'locked-on');
+                        }}
+                        className={cn(
+                          'w-full flex items-center gap-2.5 py-2 px-3 rounded-lg border-none text-sm cursor-pointer transition-colors',
+                          (item.id === 'style' && activeStyle) ? 'bg-accent/12 text-accent' : activeSubMenu === item.id ? 'bg-hover text-primary' : 'bg-transparent text-primary'
+                        )}
+                      >
+                        <span className={cn((item.id === 'style' && activeStyle) ? 'text-accent' : 'text-secondary')}>{item.icon}</span>
+                        <span className="flex-1 text-left">{item.id === 'style' && activeStyle ? `Style: ${activeStyle.charAt(0).toUpperCase() + activeStyle.slice(1)}` : item.label}</span>
+                        {item.hasSubmenu && <CaretRight size={14} className="opacity-50" />}
+                        {item.id === 'style' && activeStyle && <Check size={14} className="text-accent" />}
+                      </button>
+                      {activeSubMenu === item.id && item.submenuItems && (
+                        <div
+                          className="absolute left-[calc(100%+10px)] bottom-0 w-52 bg-menu-bg rounded-xl border border-menu-border shadow-xl p-1.5 z-210"
+                          onMouseEnter={() => setTrackingAttention(-0.26, 0.46, 'locked-on')}
+                          onMouseLeave={() => setTrackingAttention(-0.48, 0.5, 'locked-on')}
+                        >
+                          {item.submenuItems.map((sub) => (
+                            <button
+                              key={sub.id}
+                              type="button"
+                              onClick={() => { if (item.id === 'style') { setActiveStyle(activeStyle === sub.id ? null : sub.id as 'formal' | 'creative' | 'technical'); setShowPlusMenu(false); } }}
+                              className={cn(
+                                'w-full flex items-center gap-2 py-2 px-3 rounded-lg border-none text-sm cursor-pointer',
+                                activeStyle === sub.id ? 'bg-accent/12 text-accent' : 'bg-transparent text-primary hover:bg-hover'
+                              )}
+                            >
+                              {activeStyle === sub.id && <Check size={12} className="text-accent" />}
+                              <span>{sub.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1 flex-1 pl-1 overflow-hidden">
+              {webSearchEnabled && (
+                <button type="button" onClick={() => setWebSearchEnabled(false)} title="Web search on — click to remove" className="inline-flex items-center gap-1 py-1 px-2 rounded-full bg-accent/12 border border-accent/35 text-accent text-xs font-semibold cursor-pointer whitespace-nowrap transition-all">
+                  <Globe size={11} />
+                  Web
+                  <X size={10} className="opacity-60" />
+                </button>
+              )}
+              {activeStyle && (
+                <button type="button" onClick={() => setActiveStyle(null)} title="Style active — click to remove" className="inline-flex items-center gap-1 py-1 px-2 rounded-full bg-accent/12 border border-accent/35 text-accent text-xs font-semibold cursor-pointer whitespace-nowrap transition-all">
+                  <PenTool size={11} />
+                  {activeStyle.charAt(0).toUpperCase() + activeStyle.slice(1)}
+                  <X size={10} className="opacity-60" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 relative">
+              <SpeechInput
+                size="icon"
+                variant="ghost"
+                className="size-7 rounded-full text-composer-muted hover:text-primary hover:bg-transparent transition-colors"
+                onTranscriptionChange={(text) => setInput((prev) => prev ? `${prev} ${text}` : text)}
+                title="Voice input"
+              />
+              {agentModeSurface ? (
+                <AgentModeButton
+                  agentModeEnabled={agentModeEnabled}
+                  selectedModeId={selectedModeId}
+                  agentModeSurface={agentModeSurface}
+                  onToggle={toggleAgentMode}
+                  onInteractionSignal={onInteractionSignal}
+                  setTrackingAttention={setTrackingAttention}
+                />
+              ) : null}
+              <button
+                onClick={() => setShowModelMenu(!showModelMenu)}
+                type="button"
+                disabled={terminalModelsLoading}
+                className="flex items-center gap-1 py-1 px-2.5 rounded-full text-sm font-medium transition-all"
+                style={{
+                  background: showModelMenu ? THEME.hoverBg : 'transparent',
+                  color: terminalModelsLoading ? THEME.textMuted : THEME.textSecondary,
+                  cursor: terminalModelsLoading ? 'wait' : 'pointer',
+                  opacity: terminalModelsLoading ? 0.7 : 1,
+                }}
+                onMouseEnter={(e) => {
+                  if (!terminalModelsLoading) {
+                    e.currentTarget.style.color = THEME.textPrimary;
+                    onInteractionSignal?.('curious');
+                    setTrackingAttention(0.4, 0.56, 'locked-on');
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = showModelMenu ? THEME.textPrimary : THEME.textSecondary;
                   setTrackingAttention(0, 0.44);
                 }}
               >
-                {/* Browser-specific capture actions */}
-                {isBrowserSurface && (
+                {terminalModelsLoading ? (
+                  <span className="flex items-center gap-1.5">
+                    <span className="size-3 border-2 border-muted border-t-transparent rounded-full animate-spin" />
+                    Loading...
+                  </span>
+                ) : (
                   <>
-                    <button
-                      type="button"
-                      onClick={handleCaptureScreenshot}
+                    <div
+                      className="size-5 rounded-md flex items-center justify-center flex-shrink-0 overflow-hidden"
                       style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        padding: '8px 12px',
-                        borderRadius: '8px',
-                        background: 'transparent',
-                        border: 'none',
-                        color: THEME.textPrimary,
-                        fontSize: '14px',
-                        cursor: 'pointer',
-                        transition: 'background 0.2s',
+                        background: `${selectedProviderMeta.color}18`,
+                        border: `1px solid ${selectedProviderMeta.color}40`,
                       }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = THEME.hoverBg; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                     >
-                      <span style={{ color: THEME.textSecondary }}><Camera size={16} /></span>
-                      <span>Take a screenshot</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleToggleGifRecording}
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        padding: '8px 12px',
-                        borderRadius: '8px',
-                        background: isGifRecording ? 'var(--status-error-bg)' : 'transparent',
-                        border: 'none',
-                        color: isGifRecording ? 'var(--status-error)' : THEME.textPrimary,
-                        fontSize: '14px',
-                        cursor: 'pointer',
-                        transition: 'background 0.2s',
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = isGifRecording ? 'color-mix(in srgb, var(--status-error) 18%, transparent)' : THEME.hoverBg; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = isGifRecording ? 'var(--status-error-bg)' : 'transparent'; }}
-                    >
-                      <span style={{ color: isGifRecording ? 'var(--status-error)' : THEME.textSecondary }}>
-                        {isGifRecording ? <Square size={16} fill="currentColor" /> : <Video size={16} />}
-                      </span>
-                      <span>{isGifRecording ? `Stop recording (${gifDuration}s)` : 'Record screen (GIF)'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { fileInputRef.current?.click(); setShowPlusMenu(false); }}
-                      style={{
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '10px',
-                        padding: '8px 12px',
-                        borderRadius: '8px',
-                        background: 'transparent',
-                        border: 'none',
-                        color: THEME.textPrimary,
-                        fontSize: '14px',
-                        cursor: 'pointer',
-                        transition: 'background 0.2s',
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.background = THEME.hoverBg; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                    >
-                      <span style={{ color: THEME.textSecondary }}><ImageIcon size={16} /></span>
-                      <span>Add an image</span>
-                    </button>
-                    <div style={{ height: 1, background: THEME.menuBorder, margin: '4px 8px' }} />
+                      <img
+                        src={`/assets/runtime-logos/${selectedProviderMeta.icon}`}
+                        alt={selectedProviderMeta.name}
+                        className="w-3.5 h-3.5 object-contain"
+                      />
+                    </div>
+                    <span className="font-medium">{displayModelName}</span>
                   </>
                 )}
-                {/* GitHub URL inline input */}
-                {showGitHubInput && (
-                  <div style={{ padding: '6px 8px 4px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, background: THEME.hoverBg, borderRadius: 8, padding: '4px 8px', border: `1px solid ${THEME.menuBorder}` }}>
-                      <LinkIcon size={13} style={{ color: THEME.textSecondary, flexShrink: 0 }} />
-                      <input
-                        autoFocus
-                        value={githubUrl}
-                        onChange={(e) => setGithubUrl(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') handleGitHubFetch(); if (e.key === 'Escape') { setShowGitHubInput(false); setGithubUrl(''); } }}
-                        placeholder="github.com/user/repo/blob/main/file"
-                        style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', fontSize: 12, color: THEME.textPrimary }}
-                      />
-                      {githubLoading
-                        ? <CircleNotch size={13} style={{ color: THEME.textSecondary, animation: 'spin 1s linear infinite' }} />
-                        : <button type="button" onClick={handleGitHubFetch} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: THEME.accent, fontSize: 12, fontWeight: 600, padding: 0 }}>Add</button>
-                      }
-                    </div>
-                  </div>
-                )}
-                {/* Section: Attach */}
-                <div style={{ padding: '2px 8px 2px', fontSize: 10, fontWeight: 600, color: THEME.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Attach</div>
-                {PLUS_MENU_ITEMS.filter(i => ['files', 'github'].includes(i.id)).map((item) => (
-                  <div key={item.id} style={{ position: 'relative' }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (item.id === 'files') { fileInputRef.current?.click(); setShowPlusMenu(false); }
-                        if (item.id === 'github') { setShowGitHubInput((v) => !v); setActiveSubMenu(null); }
-                      }}
-                      onMouseEnter={() => { setActiveSubMenu(null); setTrackingAttention(-0.48, 0.5, 'locked-on'); }}
-                      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', background: item.id === 'github' && showGitHubInput ? THEME.hoverBg : 'transparent', border: 'none', color: THEME.textPrimary, fontSize: '14px', cursor: 'pointer', transition: 'background 0.2s' }}
-                      onMouseLeave={(e) => { if (!(item.id === 'github' && showGitHubInput)) e.currentTarget.style.background = 'transparent'; }}
-                    >
-                      <span style={{ color: THEME.textSecondary }}>{item.icon}</span>
-                      <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>
-                    </button>
-                  </div>
-                ))}
-                <div style={{ height: 1, background: THEME.menuBorder, margin: '4px 8px' }} />
-                {/* Section: Context */}
-                <div style={{ padding: '2px 8px 2px', fontSize: 10, fontWeight: 600, color: THEME.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Context</div>
-                {PLUS_MENU_ITEMS.filter(i => ['project', 'web'].includes(i.id)).map((item) => (
-                  <div key={item.id} style={{ position: 'relative' }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (item.id === 'web') { setWebSearchEnabled((v) => !v); setShowPlusMenu(false); }
-                      }}
-                      onMouseEnter={() => {
-                        if (item.hasSubmenu) setActiveSubMenu(item.id); else setActiveSubMenu(null);
-                        setTrackingAttention(-0.48, 0.5, 'locked-on');
-                      }}
-                      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', background: (item.id === 'web' && webSearchEnabled) ? `color-mix(in srgb, ${THEME.accent} 12%, transparent)` : activeSubMenu === item.id ? THEME.hoverBg : 'transparent', border: 'none', color: item.id === 'web' && webSearchEnabled ? THEME.accent : THEME.textPrimary, fontSize: '14px', cursor: 'pointer', transition: 'background 0.2s' }}
-                    >
-                      <span style={{ color: item.id === 'web' && webSearchEnabled ? THEME.accent : THEME.textSecondary }}>{item.icon}</span>
-                      <span style={{ flex: 1, textAlign: 'left' }}>{item.label}</span>
-                      {item.hasSubmenu && <CaretRight size={14} style={{ opacity: 0.5 }} />}
-                      {item.id === 'web' && webSearchEnabled && <Check size={14} style={{ color: THEME.accent }} />}
-                    </button>
-                    {activeSubMenu === item.id && item.submenuItems && (
-                      <div style={{ position: 'absolute', left: 'calc(100% + 10px)', bottom: 0, width: '200px', background: THEME.menuBg, borderRadius: '12px', border: `1px solid ${THEME.menuBorder}`, boxShadow: 'var(--shadow-xl)', padding: '6px', zIndex: 210 }}
-                        onMouseEnter={() => setTrackingAttention(-0.26, 0.46, 'locked-on')}
-                        onMouseLeave={() => setTrackingAttention(-0.48, 0.5, 'locked-on')}
-                      >
-                        {item.submenuItems.map((sub) => (
-                          <button key={sub.id} type="button"
-                            onClick={() => { if (item.id === 'project' && sub.id === 'new-project') { import('@/views/chat/ChatStore').then(m => m.useChatStore.getState().createProject('New Project')); setShowPlusMenu(false); } }}
-                            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '8px', background: 'transparent', border: 'none', color: THEME.textPrimary, fontSize: '13px', cursor: 'pointer' }}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = THEME.hoverBg; setTrackingAttention(-0.24, 0.46, 'locked-on'); }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-                          >
-                            {sub.icon && <span style={{ color: THEME.textSecondary }}>{sub.icon}</span>}
-                            <span>{sub.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-                <div style={{ height: 1, background: THEME.menuBorder, margin: '4px 8px' }} />
-                {/* Section: Style */}
-                <div style={{ padding: '2px 8px 2px', fontSize: 10, fontWeight: 600, color: THEME.textMuted, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Style</div>
-                {PLUS_MENU_ITEMS.filter(i => ['style', 'connectors'].includes(i.id)).map((item) => (
-                  <div key={item.id} style={{ position: 'relative' }}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (item.id === 'connectors') { setShowProviderConnect(true); setShowPlusMenu(false); }
-                      }}
-                      onMouseEnter={() => {
-                        if (item.hasSubmenu) setActiveSubMenu(item.id); else setActiveSubMenu(null);
-                        setTrackingAttention(-0.48, 0.5, 'locked-on');
-                      }}
-                      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 12px', borderRadius: '8px', background: (item.id === 'style' && activeStyle) ? `color-mix(in srgb, ${THEME.accent} 12%, transparent)` : activeSubMenu === item.id ? THEME.hoverBg : 'transparent', border: 'none', color: item.id === 'style' && activeStyle ? THEME.accent : THEME.textPrimary, fontSize: '14px', cursor: 'pointer', transition: 'background 0.2s' }}
-                    >
-                      <span style={{ color: item.id === 'style' && activeStyle ? THEME.accent : THEME.textSecondary }}>{item.icon}</span>
-                      <span style={{ flex: 1, textAlign: 'left' }}>{item.id === 'style' && activeStyle ? `Style: ${activeStyle.charAt(0).toUpperCase() + activeStyle.slice(1)}` : item.label}</span>
-                      {item.hasSubmenu && <CaretRight size={14} style={{ opacity: 0.5 }} />}
-                      {item.id === 'style' && activeStyle && <Check size={14} style={{ color: THEME.accent }} />}
-                    </button>
-                    {activeSubMenu === item.id && item.submenuItems && (
-                      <div style={{ position: 'absolute', left: 'calc(100% + 10px)', bottom: 0, width: '200px', background: THEME.menuBg, borderRadius: '12px', border: `1px solid ${THEME.menuBorder}`, boxShadow: 'var(--shadow-xl)', padding: '6px', zIndex: 210 }}
-                        onMouseEnter={() => setTrackingAttention(-0.26, 0.46, 'locked-on')}
-                        onMouseLeave={() => setTrackingAttention(-0.48, 0.5, 'locked-on')}
-                      >
-                        {item.submenuItems.map((sub) => (
-                          <button key={sub.id} type="button"
-                            onClick={() => { if (item.id === 'style') { setActiveStyle(activeStyle === sub.id ? null : sub.id as 'formal' | 'creative' | 'technical'); setShowPlusMenu(false); } }}
-                            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 12px', borderRadius: '8px', background: activeStyle === sub.id ? `color-mix(in srgb, ${THEME.accent} 12%, transparent)` : 'transparent', border: 'none', color: activeStyle === sub.id ? THEME.accent : THEME.textPrimary, fontSize: '13px', cursor: 'pointer' }}
-                            onMouseEnter={(e) => { if (activeStyle !== sub.id) e.currentTarget.style.background = THEME.hoverBg; }}
-                            onMouseLeave={(e) => { if (activeStyle !== sub.id) e.currentTarget.style.background = 'transparent'; }}
-                          >
-                            {activeStyle === sub.id && <Check size={12} style={{ color: THEME.accent }} />}
-                            <span>{sub.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Context badge chips — web search + style active indicators */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1, paddingLeft: 4, overflow: 'hidden' }}>
-            {webSearchEnabled && (
-              <button type="button" onClick={() => setWebSearchEnabled(false)} title="Web search on — click to remove" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 999, background: `color-mix(in srgb, ${THEME.accent} 12%, transparent)`, border: `1px solid color-mix(in srgb, ${THEME.accent} 35%, transparent)`, color: THEME.accent, fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.15s' }}>
-                <Globe size={11} />
-                Web
-                <X size={10} style={{ opacity: 0.6 }} />
+                <CaretDown size={12} className={cn('transition-transform opacity-80', showModelMenu && 'rotate-180')} />
               </button>
-            )}
-            {activeStyle && (
-              <button type="button" onClick={() => setActiveStyle(null)} title="Style active — click to remove" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 999, background: `color-mix(in srgb, ${THEME.accent} 12%, transparent)`, border: `1px solid color-mix(in srgb, ${THEME.accent} 35%, transparent)`, color: THEME.accent, fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.15s' }}>
-                <PenTool size={11} />
-                {activeStyle.charAt(0).toUpperCase() + activeStyle.slice(1)}
-                <X size={10} style={{ opacity: 0.6 }} />
-              </button>
-            )}
-          </div>
 
-          {/* Right side: Model selector + Send button */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative' }}>
-            {/* Voice mic button */}
-            <SpeechInput
-              size="icon"
-              variant="ghost"
-              className="size-7 rounded-full text-[var(--chat-composer-muted)] hover:text-[var(--ui-text-primary)] hover:bg-transparent transition-colors"
-              onTranscriptionChange={(text) => setInput((prev) => prev ? `${prev} ${text}` : text)}
-              title="Voice input"
-            />
-            {agentModeSurface ? (
-              <AgentModeButton
-                agentModeEnabled={agentModeEnabled}
-                selectedModeId={selectedModeId}
-                agentModeSurface={agentModeSurface}
-                onToggle={toggleAgentMode}
-                onInteractionSignal={onInteractionSignal}
-                setTrackingAttention={setTrackingAttention}
-              />
-            ) : null}
-            {/* Model Selector Pill */}
-            <button
-              onClick={() => setShowModelMenu(!showModelMenu)}
-              type="button"
-              disabled={terminalModelsLoading}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '4px 10px',
-                borderRadius: '999px',
-                background: showModelMenu ? THEME.hoverBg : 'transparent',
-                border: 'none',
-                color: terminalModelsLoading ? THEME.textMuted : THEME.textSecondary,
-                fontSize: '13px',
-                fontWeight: 500,
-                cursor: terminalModelsLoading ? 'wait' : 'pointer',
-                transition: 'all 0.2s',
-                opacity: terminalModelsLoading ? 0.7 : 1,
-              }}
-              onMouseEnter={(e) => {
-                if (!terminalModelsLoading) {
-                  e.currentTarget.style.color = THEME.textPrimary;
-                  onInteractionSignal?.('curious');
-                  setTrackingAttention(0.4, 0.56, 'locked-on');
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = showModelMenu ? THEME.textPrimary : THEME.textSecondary;
-                setTrackingAttention(0, 0.44);
-              }}
-            >
-              {terminalModelsLoading ? (
-                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{
-                    width: 12,
-                    height: 12,
-                    border: `2px solid ${THEME.textMuted}`,
-                    borderTopColor: 'transparent',
-                    borderRadius: '50%',
-                    animation: 'spin 1s linear infinite'
-                  }} />
-                  Loading...
-                </span>
-              ) : (
-                <>
-                  {/* Provider Logo */}
-                  <div
-                    style={{
-                      width: 22,
-                      height: 22,
-                      borderRadius: 6,
-                      background: `${selectedProviderMeta.color}18`,
-                      border: `1px solid ${selectedProviderMeta.color}40`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <img
-                      src={`/assets/runtime-logos/${selectedProviderMeta.icon}`}
-                      alt={selectedProviderMeta.name}
-                      style={{ width: 14, height: 14, objectFit: 'contain' }}
-                      onError={(e) => {
-                        const img = e.target as HTMLImageElement;
-                        img.style.display = 'none';
-                      }}
-                    />
-                  </div>
-                  <span style={{ fontWeight: 500 }}>{displayModelName}</span>
-                </>
+              {showModelMenu && (
+                <PromptModelSelector
+                  models={allModels}
+                  selectedModel={selectedModel}
+                  onSelect={handleModelSelect}
+                  onClose={() => setShowModelMenu(false)}
+                  onOpenModelPicker={onOpenModelPicker}
+                  onBrowseAllModels={handleBrowseAllModels}
+                  onOpenProviderConnect={() => setShowProviderConnect(true)}
+                  isTerminalModels={terminalModels.length > 0}
+                  onAttentionChange={onAttentionChange}
+                />
               )}
-              <CaretDown size={12} style={{ transform: showModelMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', opacity: 0.8 }} />
-            </button>
 
-            {/* Model Menu Popover */}
-            {showModelMenu && (
-              <ModelSelectorDropdown
-                models={allModels}
-                selectedModel={selectedModel}
-                onSelect={handleModelSelect}
-                onClose={() => setShowModelMenu(false)}
-                onOpenModelPicker={onOpenModelPicker}
-                onBrowseAllModels={() => setShowBrowseAllModels(true)}
-                onOpenProviderConnect={() => setShowProviderConnect(true)}
-                isTerminalModels={terminalModels.length > 0}
-                onAttentionChange={onAttentionChange}
+              <ProviderGallery
+                isOpen={showProviderConnect}
+                onClose={() => setShowProviderConnect(false)}
               />
-            )}
 
-            {/* Browse All Models Overlay */}
-            <BrowseAllModelsOverlay
-              isOpen={showBrowseAllModels}
-              onClose={() => setShowBrowseAllModels(false)}
-              currentModel={selectedModelDisplayName || selectedModel}
-            />
-
-            {/* Connect Provider Overlay */}
-            <ConnectProviderOverlay
-              isOpen={showProviderConnect}
-              onClose={() => setShowProviderConnect(false)}
-            />
-
-            {/* Waveform + Stop Button (during streaming) */}
-            {isLoading ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {/* Waveform bars — 3 animated bars showing stream activity */}
-                <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', height: '18px' }}>
-                  {[0, 1, 2].map((i) => (
-                    <div
-                      key={i}
-                      style={{
-                        width: '3px',
-                        borderRadius: '2px',
-                        background: THEME.accent,
-                        animationDelay: `${i * 0.18}s`,
-                      }}
-                      className="allternit-waveform-bar"
-                    />
-                  ))}
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="flex items-end gap-0.5 h-4">
+                    {[0, 1, 2].map((i) => (
+                      <div
+                        key={i}
+                        className="w-0.5 rounded-sm bg-accent allternit-waveform-bar"
+                        style={{ animationDelay: `${i * 0.18}s` }}
+                      />
+                    ))}
+                  </div>
+                  <button
+                    onClick={onStop}
+                    type="button"
+                    className="size-8 rounded-full bg-composer-soft border border-input-border text-accent flex items-center justify-center cursor-pointer transition-all"
+                  >
+                    <Square size={12} fill="currentColor" />
+                  </button>
                 </div>
+              ) : (
                 <button
-                  onClick={onStop}
+                  onClick={handleSubmit}
+                  disabled={!canSubmit}
                   type="button"
+                  className="size-8 rounded-full flex items-center justify-center transition-all"
                   style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    background: 'var(--chat-composer-soft)',
-                    border: `1px solid ${THEME.inputBorder}`,
-                    color: THEME.accent,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
+                    background: canSubmit ? THEME.accent : 'var(--chat-composer-soft)',
+                    border: canSubmit ? 'none' : `1px solid ${THEME.inputBorder}`,
+                    color: canSubmit ? 'var(--shell-control-active-fg)' : THEME.textSecondary,
+                    cursor: canSubmit ? 'pointer' : 'default',
+                    boxShadow: canSubmit ? 'var(--shadow-glow)' : 'none',
+                  }}
+                  onMouseEnter={() => {
+                    if (canSubmit) {
+                      setTrackingAttention(0.58, 0.6, 'locked-on');
+                      onInteractionSignal?.('proud');
+                    }
+                  }}
+                  onMouseLeave={() => {
+                    if (canSubmit) {
+                      setTrackingAttention(0, 0.44);
+                    }
                   }}
                 >
-                  <Square size={12} fill="currentColor" />
+                  <ArrowUp size={18} strokeWidth={2.5} />
                 </button>
-              </div>
-            ) : (
-              <button
-                onClick={handleSubmit}
-                disabled={!canSubmit}
-                type="button"
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  background: canSubmit ? THEME.accent : 'var(--chat-composer-soft)',
-                  border: canSubmit ? 'none' : `1px solid ${THEME.inputBorder}`,
-                  color: canSubmit ? 'var(--shell-control-active-fg)' : THEME.textSecondary,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: canSubmit ? 'pointer' : 'default',
-                  transition: 'all 0.2s',
-                  boxShadow: canSubmit ? 'var(--shadow-glow)' : 'none',
-                }}
-                onMouseEnter={() => {
-                  if (canSubmit) {
-                    setTrackingAttention(0.58, 0.6, 'locked-on');
-                    onInteractionSignal?.('proud');
-                  }
-                }}
-                onMouseLeave={() => {
-                  if (canSubmit) {
-                    setTrackingAttention(0, 0.44);
-                  }
-                }}
-              >
-                <ArrowUp size={18} strokeWidth={2.5} />
-              </button>
-            )}
+              )}
+            </div>
           </div>
-        </div>
         </div>
       </div>
       
-      {/* Bottom Dock - Status bar below input container */}
-      <div style={{
-        width: variant === 'large' ? '760px' : '600px',
-        maxWidth: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        marginTop: '-1px',
-      }}>
+      <div className="w-full max-w-[600px] lg:max-w-[760px] flex flex-col items-center -mt-px">
         <BottomDock
           selectedModeId={selectedModeId}
           agentModeSurface={agentModeSurface}
@@ -2770,17 +2061,11 @@ export function ChatComposer({
           agentModeTheme={agentModeTheme}
           setShowAgentMenu={setShowAgentMenu}
           showAgentMenu={showAgentMenu}
-          uiMode={uiMode}
-          handleToggleMode={handleToggleMode}
-          isLoadingExecMode={isLoadingExecMode}
-          isSavingExecMode={isSavingExecMode}
           selectedSurfaceAgent={selectedSurfaceAgent}
-          isLoading={isLoading}
           customLeftContent={bottomDockContent}
         />
       </div>
       
-      {/* Agent Selector Dropdown - Shows when clicking "Choose Agent" */}
       {showAgentMenu && agentModeSurface && (
         <AgentSelectorDropdown
           agents={agents}
@@ -2802,7 +2087,6 @@ export function ChatComposer({
         />
       )}
       
-      {/* @mention Agent Dropdown */}
       {mentionOpen && agentModeSurface && (
         <AgentMentionDropdown
           agents={agents}
@@ -2824,15 +2108,8 @@ export function ChatComposer({
         />
       )}
       
-      {/* Mode Dock - 8 Mode Tabs */}
       {agentModeSurface && agentModeEnabled && (
-        <div style={{
-          width: variant === 'large' ? '760px' : '600px',
-          maxWidth: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}>
+        <div className="w-full max-w-[600px] lg:max-w-[760px] flex flex-col items-center">
           <ModeDock
             selectedMode={selectedModeId}
             onSelectMode={(modeId) => {
@@ -2844,9 +2121,7 @@ export function ChatComposer({
             isLoading={isLoading}
             selectedSurfaceAgent={selectedSurfaceAgent}
             onSelectTemplate={(prompt) => {
-              // Set input value with the template prompt
               setInput(prompt);
-              // Focus the textarea
               const textarea = textareaRef.current;
               if (textarea) {
                 textarea.focus();
@@ -2862,45 +2137,22 @@ export function ChatComposer({
           dismissOpenClawPrompt();
         }
       }}>
-        <DialogContent hideCloseButton className="max-w-xl max-h-[65vh] overflow-y-auto p-0" style={{ borderRadius: 20, border: 'none', background: 'transparent', maxWidth: '580px', width: '90vw' }}>
-          <div
-            style={{
-              borderRadius: 20,
-              border: `1px solid ${THEME.menuBorder}`,
-              background: 'var(--shell-dialog-bg)',
-              boxShadow: 'var(--shadow-xl)',
-              overflow: 'hidden',
-            }}
-          >
-            <div
-              style={{
-                padding: '18px 20px 14px',
-                background:
-                  'linear-gradient(115deg, color-mix(in srgb, var(--accent-chat) 12%, transparent), color-mix(in srgb, var(--status-info) 6%, transparent) 48%, color-mix(in srgb, var(--surface-floating) 24%, transparent) 100%)',
-                borderBottom: `1px solid ${THEME.inputBorder}`,
-              }}
-            >
+        <DialogContent className="max-w-xl max-h-[65vh] overflow-y-auto p-0 rounded-2xl border-none bg-transparent">
+          <div className="rounded-2xl border border-menu-border bg-shell-dialog-bg shadow-xl overflow-hidden">
+            <div className="p-4 border-b border-input-border bg-gradient-to-r from-accent-chat/12 via-status-info/5 to-surface-floating/20">
               <DialogHeader>
-                <DialogTitle style={{ color: 'var(--shell-dialog-title)', fontSize: 18, fontWeight: 600 }}>
+                <DialogTitle className="text-shell-dialog-title text-lg font-semibold">
                   Import OpenClaw Agent
                 </DialogTitle>
-                <DialogDescription style={{ color: 'var(--shell-dialog-text)', fontSize: 13, maxWidth: 480, lineHeight: 1.5 }}>
+                <DialogDescription className="text-shell-dialog-text text-sm max-w-md leading-relaxed">
                   Import a local OpenClaw agent to bind this surface to a real agent workspace.
                 </DialogDescription>
               </DialogHeader>
             </div>
 
-            <div style={{ padding: 16, display: 'grid', gap: 12 }}>
+            <div className="p-4 grid gap-3">
               {openClawCandidates.length === 0 ? (
-                <div
-                  style={{
-                    borderRadius: 18,
-                    border: `1px solid ${THEME.inputBorder}`,
-                    padding: 18,
-                    color: THEME.textSecondary,
-                    background: 'var(--chat-composer-soft)',
-                  }}
-                >
+                <div className="rounded-2xl border border-input-border p-4 text-secondary bg-composer-soft">
                   {isLoadingOpenClawCandidates
                     ? 'Checking local OpenClaw agent directories...'
                     : openClawError || 'No importable OpenClaw agents were found.'}
@@ -2909,42 +2161,20 @@ export function ChatComposer({
                 openClawCandidates.map((candidate) => (
                   <div
                     key={candidate.agent_id}
-                    style={{
-                      display: 'grid',
-                      gap: 10,
-                      borderRadius: 14,
-                      border: `1px solid ${THEME.inputBorder}`,
-                      background: 'var(--chat-composer-soft)',
-                      padding: 14,
-                    }}
+                    className="grid gap-2.5 rounded-xl border border-input-border bg-composer-soft p-3.5"
                   >
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                          <span
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: 4,
-                              borderRadius: 999,
-                              background: 'color-mix(in srgb, var(--accent-chat) 12%, transparent)',
-                              border: '1px solid color-mix(in srgb, var(--accent-chat) 24%, transparent)',
-                              color: 'var(--accent-primary)',
-                              padding: '3px 8px',
-                              fontSize: 9,
-                              fontWeight: 700,
-                              letterSpacing: '0.06em',
-                              textTransform: 'uppercase',
-                            }}
-                          >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-accent-chat/12 border border-accent-chat/25 text-accent-primary py-1 px-2 text-xs font-bold tracking-wider uppercase">
                             <Robot size={10} />
                             OpenClaw
                           </span>
-                          <span style={{ color: THEME.textPrimary, fontSize: 15, fontWeight: 600 }}>
+                          <span className="text-primary text-base font-semibold">
                             {candidate.display_name}
                           </span>
                         </div>
-                        <div style={{ marginTop: 4, color: THEME.textSecondary, fontSize: 12 }}>
+                        <div className="mt-1 text-secondary text-xs">
                           {candidate.primary_model || 'No model'} · {candidate.session_count} session{candidate.session_count === 1 ? '' : 's'}
                         </div>
                       </div>
@@ -2952,68 +2182,34 @@ export function ChatComposer({
                         type="button"
                         onClick={() => void handleImportOpenClawAgent(candidate)}
                         disabled={importingOpenClawAgentId === candidate.agent_id}
-                        style={{
-                          flexShrink: 0,
-                          borderRadius: 999,
-                          border: '1px solid color-mix(in srgb, var(--accent-chat) 26%, transparent)',
-                          background: importingOpenClawAgentId === candidate.agent_id
-                            ? 'color-mix(in srgb, var(--accent-chat) 10%, transparent)'
-                            : 'color-mix(in srgb, var(--accent-chat) 16%, transparent)',
-                          color: 'var(--accent-primary)',
-                          fontSize: 11,
-                          fontWeight: 700,
-                          padding: '8px 12px',
-                          cursor: importingOpenClawAgentId === candidate.agent_id ? 'wait' : 'pointer',
-                          whiteSpace: 'nowrap',
-                        }}
+                        className="flex-shrink-0 rounded-full border border-accent-chat/25 bg-accent-chat/10 text-accent-primary text-xs font-bold py-2 px-3 cursor-pointer whitespace-nowrap disabled:cursor-wait"
                       >
                         {importingOpenClawAgentId === candidate.agent_id ? 'Importing...' : 'Import'}
                       </button>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
-                      <div
-                        style={{
-                          borderRadius: 10,
-                          border: `1px solid ${THEME.inputBorder}`,
-                          background: 'var(--chat-composer-soft)',
-                          padding: '10px 12px',
-                        }}
-                      >
-                        <div style={{ color: THEME.textMuted, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    <div className="grid grid-cols-auto-fit-140 gap-2">
+                      <div className="rounded-lg border border-input-border bg-composer-soft p-2.5">
+                        <div className="text-muted text-xs font-bold uppercase tracking-wider">
                           Workspace
                         </div>
-                        <div style={{ marginTop: 4, color: THEME.textPrimary, fontSize: 12, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div className="mt-1 text-primary text-xs truncate">
                           {candidate.workspace_path || 'Not declared'}
                         </div>
                       </div>
-                      <div
-                        style={{
-                          borderRadius: 10,
-                          border: `1px solid ${THEME.inputBorder}`,
-                          background: 'var(--chat-composer-soft)',
-                          padding: '10px 12px',
-                        }}
-                      >
-                        <div style={{ color: THEME.textMuted, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      <div className="rounded-lg border border-input-border bg-composer-soft p-2.5">
+                        <div className="text-muted text-xs font-bold uppercase tracking-wider">
                           Auth
                         </div>
-                        <div style={{ marginTop: 4, color: THEME.textPrimary, fontSize: 12, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div className="mt-1 text-primary text-xs truncate">
                           {candidate.auth_providers.length > 0 ? candidate.auth_providers.join(', ') : 'None'}
                         </div>
                       </div>
-                      <div
-                        style={{
-                          borderRadius: 10,
-                          border: `1px solid ${THEME.inputBorder}`,
-                          background: 'var(--chat-composer-soft)',
-                          padding: '10px 12px',
-                        }}
-                      >
-                        <div style={{ color: THEME.textMuted, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                      <div className="rounded-lg border border-input-border bg-composer-soft p-2.5">
+                        <div className="text-muted text-xs font-bold uppercase tracking-wider">
                           Files
                         </div>
-                        <div style={{ marginTop: 4, color: THEME.textPrimary, fontSize: 12, lineHeight: 1.4 }}>
+                        <div className="mt-1 text-primary text-xs">
                           {candidate.files.models ? 'models' : '—'}
                           {' · '}
                           {candidate.files.auth_profiles ? 'auth' : '—'}
@@ -3027,38 +2223,18 @@ export function ChatComposer({
               )}
 
               {openClawError ? (
-                <div style={{ 
-                  display: 'flex',
-                  alignItems: 'flex-start',
-                  gap: 8,
-                  padding: '12px 14px',
-                  borderRadius: 10,
-                  background: 'var(--shell-danger-soft-bg)',
-                  border: '1px solid color-mix(in srgb, var(--status-error) 28%, transparent)',
-                  color: 'var(--status-error)', 
-                  fontSize: 13,
-                  lineHeight: 1.5,
-                }}>
-                  <span style={{ flexShrink: 0, marginTop: 1 }}>⚠️</span>
+                <div className="flex items-start gap-2 p-3.5 rounded-lg bg-shell-danger-soft-bg border border-status-error/30 text-status-error text-sm leading-relaxed">
+                  <span className="flex-shrink-0 mt-px">⚠️</span>
                   <span>{openClawError}</span>
                 </div>
               ) : null}
             </div>
 
-            <DialogFooter style={{ padding: '0 16px 16px' }}>
+            <DialogFooter className="p-4">
               <button
                 type="button"
                 onClick={dismissOpenClawPrompt}
-                style={{
-                  border: `1px solid ${THEME.inputBorder}`,
-                  borderRadius: 999,
-                  background: 'transparent',
-                  color: THEME.textSecondary,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  padding: '8px 14px',
-                  cursor: 'pointer',
-                }}
+                className="border border-input-border rounded-full bg-transparent text-secondary text-xs font-semibold py-2 px-3.5 cursor-pointer"
               >
                 Not now
               </button>
@@ -3066,2045 +2242,6 @@ export function ChatComposer({
           </div>
         </DialogContent>
       </Dialog>
-    </div>
-  );
-}
-
-// ============================================================================
-// Agent Selector Dropdown Component
-// ============================================================================
-
-interface AgentSelectorDropdownProps {
-  agents: Agent[];
-  isLoading: boolean;
-  selectedAgent: string | null;
-  workspaceArtifacts: Record<string, Array<{ path?: string }>>;
-  error: string | null;
-  openClawCandidatesCount?: number;
-  onOpenImportWizard?: () => void;
-  onSelect: (agent: Agent) => void;
-  onClear?: () => void;
-  onClose: () => void;
-}
-
-// ============================================================================
-// TaskBar Component - Shows active WIHs as thought trace
-// ============================================================================
-
-interface TaskBarProps {
-  wihs: Array<{
-    wih_id: string;
-    node_id: string;
-    dag_id?: string;
-    status: string;
-    title?: string;
-    description?: string;
-    assignee?: string;
-    blocked_by?: string[];
-  }>;
-  selectedWihId: string | null;
-  onSelectWih: (wihId: string | null) => void;
-  expanded: boolean;
-  onToggleExpand: () => void;
-  agentModeSurface?: AgentModeSurface;
-}
-
-function TaskBar({ wihs, selectedWihId, onSelectWih, expanded, onToggleExpand, agentModeSurface }: TaskBarProps) {
-  // Filter active WIHs (not closed/archived)
-  const activeWihs = wihs.filter(w => 
-    w.status !== 'closed' && w.status !== 'archived'
-  );
-  
-  if (activeWihs.length === 0) return null;
-  
-  // Calculate progress
-  const completedCount = activeWihs.filter(w => w.status === 'completed').length;
-  const inProgressCount = activeWihs.filter(w => w.status === 'in_progress').length;
-  const blockedCount = activeWihs.filter(w => w.status === 'blocked').length;
-  const readyCount = activeWihs.filter(w => w.status === 'ready' || w.status === 'open').length;
-  
-  const progress = activeWihs.length > 0 
-    ? Math.round((completedCount / activeWihs.length) * 100) 
-    : 0;
-  
-  return (
-    <div style={{
-      width: '100%',
-      marginBottom: '-1px',
-      zIndex: 15,
-    }}>
-      {/* TaskBar Header - Always visible */}
-      <button
-        onClick={onToggleExpand}
-        style={{
-          width: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '8px 16px',
-          background: THEME.inputBg,
-          border: `1px solid ${THEME.inputBorder}`,
-          borderBottom: expanded ? `1px solid ${THEME.inputBorder}` : 'none',
-          borderRadius: expanded ? '16px 16px 0 0' : '16px',
-          color: THEME.textSecondary,
-          fontSize: '13px',
-          cursor: 'pointer',
-          transition: 'all 0.2s',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Lightning size={14} style={{ color: THEME.accent }} />
-            <span style={{ fontWeight: 500 }}>
-              {activeWihs.length} Active Task{activeWihs.length !== 1 ? 's' : ''}
-            </span>
-          </div>
-          
-          {/* Status badges */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            {inProgressCount > 0 && (
-              <span style={{
-                fontSize: '10px',
-                padding: '2px 6px',
-                borderRadius: '10px',
-                background: 'var(--status-info-bg)',
-                color: 'var(--status-info)',
-              }}>
-                {inProgressCount} running
-              </span>
-            )}
-            {blockedCount > 0 && (
-              <span style={{
-                fontSize: '10px',
-                padding: '2px 6px',
-                borderRadius: '10px',
-                background: 'var(--status-error-bg)',
-                color: 'var(--status-error)',
-              }}>
-                {blockedCount} blocked
-              </span>
-            )}
-            {readyCount > 0 && (
-              <span style={{
-                fontSize: '10px',
-                padding: '2px 6px',
-                borderRadius: '10px',
-                background: 'var(--status-success-bg)',
-                color: 'var(--status-success)',
-              }}>
-                {readyCount} ready
-              </span>
-            )}
-          </div>
-          
-          {/* Mini progress bar */}
-          <div style={{
-            width: '60px',
-            height: '4px',
-            background: 'var(--ui-border-muted)',
-            borderRadius: '2px',
-            overflow: 'hidden',
-          }}>
-            <div style={{
-              width: `${progress}%`,
-              height: '100%',
-              background: THEME.accent,
-              borderRadius: '2px',
-              transition: 'width 0.3s ease',
-            }} />
-          </div>
-        </div>
-        
-        <CaretDown 
-          size={16} 
-          style={{ 
-            transform: expanded ? 'rotate(180deg)' : 'none',
-            transition: 'transform 0.2s',
-            opacity: 0.5,
-          }} 
-        />
-      </button>
-      
-      {/* Expanded Task List */}
-      {expanded && (
-        <div style={{
-          background: THEME.inputBg,
-          border: `1px solid ${THEME.inputBorder}`,
-          marginTop: -1,
-          borderRadius: '0 0 16px 16px',
-          padding: '12px 16px 16px',
-          maxHeight: '250px',
-          overflow: 'auto',
-        }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {activeWihs.map((wih) => (
-              <WihItem 
-                key={wih.wih_id}
-                wih={wih}
-                isSelected={selectedWihId === wih.wih_id}
-                onClick={() => onSelectWih(wih.wih_id)}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function WihItem({ 
-  wih, 
-  isSelected, 
-  onClick 
-}: { 
-  wih: { 
-    wih_id: string; 
-    node_id: string; 
-    dag_id?: string; 
-    status: string; 
-    title?: string; 
-    description?: string;
-    blocked_by?: string[];
-  }; 
-  isSelected: boolean; 
-  onClick: () => void;
-}) {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed': return 'var(--status-success)';
-      case 'in_progress': return 'var(--status-info)';
-      case 'blocked': return 'var(--status-error)';
-      case 'ready': return 'var(--status-warning)';
-      case 'open': return 'var(--ui-text-muted)';
-      case 'signed': return 'var(--accent-cowork)';
-      default: return 'var(--ui-text-muted)';
-    }
-  };
-  
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'completed': return 'Done';
-      case 'in_progress': return 'Running';
-      case 'blocked': return 'Blocked';
-      case 'ready': return 'Ready';
-      case 'open': return 'Open';
-      case 'signed': return 'Signed';
-      default: return status;
-    }
-  };
-  
-  const statusColor = getStatusColor(wih.status);
-  
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-        padding: '10px 12px',
-        background: isSelected ? `${THEME.accent}15` : 'var(--surface-hover)',
-        border: `1px solid ${isSelected ? `${THEME.accent}40` : 'var(--surface-hover)'}`,
-        borderRadius: '10px',
-        cursor: 'pointer',
-        textAlign: 'left',
-        width: '100%',
-        transition: 'all 0.15s',
-      }}
-      onMouseEnter={(e) => {
-        if (!isSelected) {
-          e.currentTarget.style.background = 'var(--surface-active)';
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!isSelected) {
-          e.currentTarget.style.background = 'var(--surface-hover)';
-        }
-      }}
-    >
-      {/* Status dot */}
-      <div style={{
-        width: '8px',
-        height: '8px',
-        borderRadius: '50%',
-        background: statusColor,
-        flexShrink: 0,
-        animation: wih.status === 'in_progress' ? 'pulse 2s infinite' : undefined,
-      }} />
-      
-      {/* Content */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontSize: '13px',
-          fontWeight: 500,
-          color: isSelected ? THEME.accent : THEME.textPrimary,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }}>
-          {wih.title || wih.node_id}
-        </div>
-        {wih.description && (
-          <div style={{
-            fontSize: '11px',
-            color: THEME.textMuted,
-            marginTop: '2px',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}>
-            {wih.description}
-          </div>
-        )}
-      </div>
-      
-      {/* Status label */}
-      <span style={{
-        fontSize: '10px',
-        padding: '2px 6px',
-        borderRadius: '4px',
-        background: `${statusColor}20`,
-        color: statusColor,
-        flexShrink: 0,
-      }}>
-        {getStatusLabel(wih.status)}
-      </span>
-      
-      <style>{`
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-      `}</style>
-    </button>
-  );
-}
-
-// ============================================================================
-// Agent Mode Button - Shows "Agent | Mode" with color matching
-// ============================================================================
-
-interface AgentModeButtonProps {
-  agentModeEnabled: boolean;
-  selectedModeId: string | null;
-  agentModeSurface: AgentModeSurface;
-  onToggle: () => void;
-  onInteractionSignal?: (emotion: GizziEmotion) => void;
-  setTrackingAttention: (x: number, y: number, state?: GizziAttention['state']) => void;
-}
-
-const MODE_COLORS: Record<string, { accent: string; soft: string; glow: string; label: string }> = {
-  research: { accent: 'var(--status-info)', soft: 'rgba(59,130,246,0.15)', glow: 'rgba(59,130,246,0.4)', label: 'Research' },
-  data: { accent: 'var(--status-success)', soft: 'rgba(16,185,129,0.15)', glow: 'rgba(16,185,129,0.4)', label: 'Data' },
-  slides: { accent: 'var(--status-warning)', soft: 'rgba(245,158,11,0.15)', glow: 'rgba(245,158,11,0.4)', label: 'Slides' },
-  flow: { accent: 'var(--status-info)', soft: 'rgba(6,182,212,0.15)', glow: 'rgba(6,182,212,0.4)', label: 'Flow' },
-  web: { accent: '#6366f1', soft: 'rgba(99,102,241,0.15)', glow: 'rgba(99,102,241,0.4)', label: 'Websites' },
-  'computer-use': { accent: '#a855f7', soft: 'rgba(168,85,247,0.15)', glow: 'rgba(168,85,247,0.4)', label: 'Computer Use' },
-};
-
-function AgentModeButton({
-  agentModeEnabled,
-  selectedModeId,
-  agentModeSurface,
-  onToggle,
-  onInteractionSignal,
-  setTrackingAttention,
-}: AgentModeButtonProps) {
-  // Only use mode colors when agent mode is ENABLED
-  const modeColors = agentModeEnabled && selectedModeId ? MODE_COLORS[selectedModeId] : null;
-  const surfaceTheme = getAgentModeSurfaceTheme(agentModeSurface);
-  
-  const accentColor = modeColors?.accent || (agentModeEnabled ? surfaceTheme.accent : THEME.textSecondary);
-  const softColor = modeColors?.soft || (agentModeEnabled ? surfaceTheme.soft : 'transparent');
-  const glowColor = modeColors?.glow || (agentModeEnabled ? surfaceTheme.glow : THEME.inputBorder);
-  
-  const buttonText = agentModeEnabled
-    ? selectedModeId 
-      ? `Agent | ${modeColors?.label || 'Mode'}`
-      : 'Agent On'
-    : 'Agent Off';
-  
-  return (
-    <button
-      type="button"
-      onClick={onToggle}
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 6,
-        padding: '6px 10px',
-        borderRadius: 999,
-        border: `1px solid ${glowColor}`,
-        background: softColor,
-        color: accentColor,
-        fontSize: 12,
-        fontWeight: 700,
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-        boxShadow: agentModeEnabled ? `0 0 12px ${glowColor}` : 'none',
-      }}
-      onMouseEnter={(e) => {
-        onInteractionSignal?.('focused');
-        setTrackingAttention(0.16, 0.56, 'locked-on');
-        if (agentModeEnabled) {
-          e.currentTarget.style.boxShadow = `0 0 20px ${glowColor}`;
-        }
-      }}
-      onMouseLeave={(e) => {
-        setTrackingAttention(0, 0.44);
-        if (agentModeEnabled) {
-          e.currentTarget.style.boxShadow = `0 0 12px ${glowColor}`;
-        }
-      }}
-    >
-      <Robot size={14} />
-      {buttonText}
-    </button>
-  );
-}
-
-// ============================================================================
-// Mode Dock - Mode Tabs (Research, Data, Slides, Flow, Websites, Computer Use)
-// ============================================================================
-
-interface ModeDockProps {
-  selectedMode: string | null;
-  onSelectMode: (modeId: string) => void;
-  agentModeSurface: AgentModeSurface;
-  onSelectTemplate?: (prompt: string) => void;
-  isLoading?: boolean;
-  selectedSurfaceAgent?: { name: string } | null;
-}
-
-// ============================================================================
-// Bottom Dock - Status bar below input container
-// ============================================================================
-
-// ============================================================================
-// View Mode Toggle — compact 3-segment pill: V · N · S
-// ============================================================================
-
-const VIEW_MODE_SEGMENTS: { id: ViewMode; label: string; title: string }[] = [
-  { id: 'verbose', label: 'V', title: 'Verbose — show all thinking and tool details' },
-  { id: 'normal',  label: 'N', title: 'Normal — collapsed thinking, compact tool chips' },
-  { id: 'summary', label: 'S', title: 'Summary — final text only' },
-];
-
-function ViewModeToggle() {
-  const { viewMode, setViewMode } = useViewMode();
-  return (
-    <div
-      role="group"
-      aria-label="View mode"
-      title="View mode (⌘+Shift+V to cycle)"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        borderRadius: '7px',
-        overflow: 'hidden',
-        border: '1px solid var(--chat-composer-border)',
-        background: 'var(--chat-composer-soft)',
-        height: '28px',
-        flexShrink: 0,
-      }}
-    >
-      {VIEW_MODE_SEGMENTS.map((seg, i) => {
-        const isActive = viewMode === seg.id;
-        return (
-          <button
-            key={seg.id}
-            type="button"
-            onClick={() => setViewMode(seg.id)}
-            title={seg.title}
-            aria-pressed={isActive}
-            style={{
-              padding: '0 8px',
-              height: '100%',
-              border: 'none',
-              borderLeft: i > 0 ? '1px solid var(--chat-composer-border)' : 'none',
-              background: isActive ? 'var(--chat-composer-hover)' : 'transparent',
-              color: isActive ? 'var(--ui-text-primary)' : 'var(--chat-composer-muted)',
-              fontSize: '11px',
-              fontWeight: isActive ? 700 : 500,
-              cursor: 'pointer',
-              letterSpacing: '0.04em',
-              transition: 'all 0.12s ease',
-              lineHeight: 1,
-            }}
-          >
-            {seg.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-interface BottomDockProps {
-  selectedModeId: string | null;
-  agentModeSurface?: AgentModeSurface;
-  agentModeEnabled: boolean;
-  agentModeTheme: { glow: string; soft: string; accent: string };
-  setShowAgentMenu: (show: boolean) => void;
-  showAgentMenu: boolean;
-  uiMode: string;
-  handleToggleMode: () => void;
-  isLoadingExecMode: boolean;
-  isSavingExecMode: boolean;
-  selectedSurfaceAgent: { name: string } | null;
-  isLoading?: boolean;
-  customLeftContent?: React.ReactNode;
-}
-
-function BottomDock({
-  selectedModeId,
-  agentModeEnabled,
-  agentModeTheme,
-  setShowAgentMenu,
-  showAgentMenu,
-  uiMode,
-  handleToggleMode,
-  isLoadingExecMode,
-  isSavingExecMode,
-  selectedSurfaceAgent,
-  isLoading,
-  customLeftContent,
-}: BottomDockProps & { customLeftContent?: React.ReactNode }) {
-  // Get mode color if mode is selected
-  const modeColor = selectedModeId ? MODE_TABS.find(m => m.id === selectedModeId)?.color : null;
-  
-  // Use agent mode theme glow when enabled, otherwise use default border
-  const borderColor = agentModeEnabled ? agentModeTheme.glow : THEME.inputBorder;
-  
-  return (
-    <div style={{
-      width: '100%',
-      boxSizing: 'border-box',
-      marginTop: 0,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      padding: '9px 16px 12px',
-      background: THEME.inputBg,
-      borderTop: `1px solid ${borderColor}`,
-      borderRight: `1px solid ${borderColor}`,
-      borderBottom: `1px solid ${borderColor}`,
-      borderLeft: `1px solid ${borderColor}`,
-      borderRadius: '0 0 24px 24px',
-      zIndex: 11,
-      position: 'relative',
-    }}>
-      {/* Left: Custom content (utility pills) or Choose Agent */}
-      {customLeftContent ? (
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          {customLeftContent}
-        </div>
-      ) : (
-        <button
-          onClick={() => agentModeEnabled && setShowAgentMenu(!showAgentMenu)}
-          title={agentModeEnabled ? undefined : 'Enable Agent mode to choose an agent'}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '6px 10px',
-            borderRadius: '8px',
-            background: 'transparent',
-            border: 'none',
-            color: agentModeEnabled ? (modeColor || THEME.textSecondary) : THEME.textMuted,
-            fontSize: '13px',
-            fontWeight: 500,
-            cursor: agentModeEnabled ? 'pointer' : 'default',
-            opacity: agentModeEnabled ? 1 : 0.45,
-            transition: 'all 0.15s',
-          }}
-          onMouseEnter={(e) => {
-            if (agentModeEnabled) e.currentTarget.style.background = THEME.hoverBg;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent';
-          }}
-        >
-          <Robot size={16} />
-          <span>{selectedSurfaceAgent ? selectedSurfaceAgent.name : 'Choose Agent'}</span>
-          {agentModeEnabled && <CaretDown size={14} style={{ opacity: 0.6, transform: showAgentMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />}
-        </button>
-      )}
-      
-      {/* Right: View Mode toggle */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <ViewModeToggle />
-      </div>
-    </div>
-  );
-}
-
-// Template data mapping from TemplatePreviewCards
-// Maps ALL 76 templates to the mode dock structure
-interface ModeTemplate {
-  title: string;
-  description: string;
-  prompt: string;
-  previewImage: string;
-}
-
-const getModeTemplates = (modeId: string): ModeTemplate[] => {
-  const templates = ALL_TEMPLATES[modeId];
-  if (!templates) return [];
-  return templates.map(t => ({
-    title: t.name,
-    description: t.description,
-    prompt: t.prompt,
-    previewImage: t.previewImage
-  }));
-};
-
-// Mode tabs configuration - pill style like the reference
-// All 9 modes from TemplatePreviewCards
-const MODE_TABS = [
-  { id: 'image', label: 'Image', color: '#8b5cf6' },         // Violet
-  { id: 'video', label: 'Video', color: '#ec4899' },         // Pink
-  { id: 'slides', label: 'Slides', color: 'var(--status-warning)' },       // Amber
-  { id: 'website', label: 'Web', color: '#6366f1' },         // Indigo
-  { id: 'research', label: 'Research', color: 'var(--status-info)' },   // Blue
-  { id: 'data', label: 'Data', color: 'var(--status-success)' },           // Emerald
-  { id: 'code', label: 'Code', color: 'var(--status-warning)' },           // Orange
-  { id: 'swarms', label: 'Swarms', color: '#14b8a6' },       // Teal
-  { id: 'flow', label: 'Flow', color: 'var(--status-info)' },           // Cyan
-  { id: 'computer-use', label: 'Computer', color: '#a855f7' }, // Purple
-] as const;
-
-// Surface-specific mode filtering
-const SURFACE_MODES: Record<AgentModeSurface, string[]> = {
-  chat: ['image', 'video', 'slides', 'website', 'research', 'data', 'code', 'swarms', 'flow', 'computer-use'],
-  cowork: ['image', 'video', 'slides', 'website', 'research', 'data', 'code', 'swarms', 'flow', 'computer-use'],
-  code: ['code', 'website', 'swarms', 'flow'],
-  browser: ['website', 'research', 'data', 'computer-use'],
-  design: ['image', 'video', 'slides', 'assets'],
-};
-
-function ModeDock({ selectedMode, onSelectMode, agentModeSurface, onSelectTemplate, isLoading, selectedSurfaceAgent }: ModeDockProps) {
-  // Get surface-specific modes
-  const allowedModes = agentModeSurface ? SURFACE_MODES[agentModeSurface] : MODE_TABS.map(m => m.id);
-  const visibleTabs = MODE_TABS.filter(tab => allowedModes.includes(tab.id));
-  
-  const modeData = selectedMode ? getModeTemplates(selectedMode) : null;
-  const modeColors = selectedMode ? MODE_TABS.find(m => m.id === selectedMode) : null;
-  
-  // Agent streaming status cycles in mode dock
-  const agentStatus = useAgentStreamingStatus(
-    !!(isLoading && selectedSurfaceAgent),
-    1500
-  );
-  
-  return (
-    <div style={{
-      width: '100%',
-      marginTop: '8px',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      gap: '8px',
-      zIndex: 9,
-    }}>
-      {/* Agent streaming status — appears above mode tabs when active */}
-      {agentStatus && (
-        <div
-          className="flex items-center gap-2 py-1"
-          aria-label="Agent status"
-        >
-          <div
-            className="w-1.5 h-1.5 rounded-full animate-pulse"
-            style={{ background: 'var(--accent-chat, #D4B08C)' }}
-          />
-          <TextShimmer
-            as="span"
-            className="text-[12px] font-medium"
-          >
-            {agentStatus}
-          </TextShimmer>
-        </div>
-      )}
-      
-      {/* Mode Tabs - Individual pill tabs (not connected) */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        width: '100%',
-        gap: '8px',
-        justifyContent: 'center',
-        flexWrap: 'wrap',
-      }}>
-        {visibleTabs.map((mode) => {
-          const isSelected = selectedMode === mode.id;
-          const isActiveTab = isSelected && isLoading;
-          return (
-            <button
-              key={mode.id}
-              onClick={() => onSelectMode(mode.id)}
-              className={isActiveTab ? 'animate-pulse' : ''}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '8px 16px',
-                borderRadius: '20px',
-                background: isSelected ? `${mode.color}20` : 'var(--surface-hover)',
-                border: `1px solid ${isSelected ? mode.color : 'var(--ui-border-muted)'}`,
-                color: isSelected ? mode.color : THEME.textSecondary,
-                fontSize: '12px',
-                fontWeight: isSelected ? 600 : 500,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-                whiteSpace: 'nowrap',
-                boxShadow: isActiveTab
-                  ? `0 0 12px ${mode.color}60, 0 0 0 1px ${mode.color}40`
-                  : isSelected
-                    ? `0 0 0 1px ${mode.color}40`
-                    : 'none',
-              }}
-              onMouseEnter={(e) => {
-                if (!isSelected) {
-                  e.currentTarget.style.background = 'var(--surface-active)';
-                  e.currentTarget.style.borderColor = 'var(--ui-border-default)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isSelected) {
-                  e.currentTarget.style.background = 'var(--surface-hover)';
-                  e.currentTarget.style.borderColor = 'var(--ui-border-muted)';
-                }
-              }}
-            >
-              <span>{mode.label}</span>
-            </button>
-          );
-        })}
-      </div>
-      
-      {/* Template Cards - Show when a mode is selected */}
-      {selectedMode && modeData && (
-        <div style={{
-          width: '100%',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '10px',
-          marginTop: '8px',
-          maxHeight: '320px',
-          overflowY: 'auto',
-          paddingRight: '4px',
-        }}>
-          {/* Header */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0 4px',
-            flexShrink: 0,
-          }}>
-            <span style={{
-              fontSize: '12px',
-              fontWeight: 600,
-              color: THEME.textSecondary,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-            }}>
-              Featured {modeColors?.label} Cases
-            </span>
-            <span style={{
-              fontSize: '11px',
-              color: THEME.textMuted,
-            }}>
-              {modeData.length} templates
-            </span>
-          </div>
-          
-          {/* Cards Grid */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '10px',
-            flexShrink: 0,
-          }}>
-            {modeData.map((template, index) => (
-              <TemplateCard
-                key={index}
-                title={template.title}
-                description={template.description}
-                prompt={template.prompt}
-                previewImage={template.previewImage}
-                color={modeColors?.color || THEME.accent}
-                onClick={onSelectTemplate}
-              />
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Template Card Component
-function TemplateCard({ 
-  title, 
-  description,
-  prompt,
-  previewImage,
-  color,
-  onClick
-}: { 
-  title: string; 
-  description: string;
-  prompt: string;
-  previewImage: string;
-  color: string;
-  onClick?: (prompt: string) => void;
-}) {
-  const [imageLoaded, setImageLoaded] = useState(false);
-  
-  return (
-    <button
-      onClick={() => onClick?.(prompt)}
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '12px',
-        background: THEME.inputBg,
-        border: `1px solid ${THEME.inputBorder}`,
-        borderRadius: '12px',
-        cursor: 'pointer',
-        textAlign: 'left',
-        transition: 'all 0.15s ease',
-        overflow: 'hidden',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = color;
-        e.currentTarget.style.transform = 'translateY(-2px)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = THEME.inputBorder;
-        e.currentTarget.style.transform = 'translateY(0)';
-      }}
-    >
-      {/* Real Image Preview */}
-      <div style={{
-        height: '80px',
-        borderRadius: '8px',
-        marginBottom: '10px',
-        position: 'relative',
-        overflow: 'hidden',
-        background: `linear-gradient(135deg, ${color}20 0%, ${color}05 100%)`,
-      }}>
-        <img
-          src={previewImage}
-          alt={title}
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            opacity: imageLoaded ? 1 : 0,
-            transition: 'opacity 0.3s ease',
-          }}
-          onLoad={() => setImageLoaded(true)}
-          onError={() => setImageLoaded(false)}
-        />
-        {/* Vignette overlay */}
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 50%)',
-          pointerEvents: 'none',
-        }} />
-      </div>
-      
-      {/* Content */}
-      <div style={{
-        fontSize: '13px',
-        fontWeight: 600,
-        color: THEME.textPrimary,
-        marginBottom: '4px',
-      }}>
-        {title}
-      </div>
-      <div style={{
-        fontSize: '11px',
-        color: THEME.textMuted,
-        lineHeight: 1.4,
-      }}>
-        {description}
-      </div>
-    </button>
-  );
-}
-
-function AgentSelectorDropdown({
-  agents,
-  isLoading,
-  selectedAgent,
-  workspaceArtifacts,
-  error,
-  openClawCandidatesCount = 0,
-  onOpenImportWizard,
-  onSelect,
-  onClear,
-  onClose,
-}: AgentSelectorDropdownProps) {
-  return (
-    <>
-      <div
-        style={{ position: 'fixed', inset: 0, zIndex: 199 }}
-        onClick={onClose}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 'calc(100% + 12px)',
-          right: 148,
-          width: '300px',
-          maxHeight: '320px',
-          background: THEME.menuBg,
-          borderRadius: '12px',
-          border: `1px solid ${THEME.menuBorder}`,
-          boxShadow: '0 10px 30px var(--shell-overlay-backdrop)',
-          zIndex: 200,
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 8,
-            padding: '10px 12px',
-            borderBottom: `1px solid ${THEME.inputBorder}`,
-          }}
-        >
-          <div>
-            <div style={{ fontSize: 11, fontWeight: 800, color: THEME.textMuted, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-              Agent Workspace
-            </div>
-            <div style={{ marginTop: 2, fontSize: 13, color: THEME.textPrimary }}>
-              Choose an agent
-            </div>
-          </div>
-          {onClear ? (
-            <button
-              type="button"
-              onClick={onClear}
-              style={{
-                border: 'none',
-                background: 'transparent',
-                color: THEME.textSecondary,
-                fontSize: 12,
-                cursor: 'pointer',
-              }}
-            >
-              Clear
-            </button>
-          ) : null}
-        </div>
-
-        <div style={{ flex: 1, overflowY: 'auto', padding: 6 }}>
-          {isLoading ? (
-            <div style={{ padding: 16, color: THEME.textSecondary, fontSize: 13 }}>
-              Loading agents...
-            </div>
-          ) : agents.length === 0 ? (
-            <div style={{ padding: 16, color: THEME.textSecondary, fontSize: 13, lineHeight: 1.5 }}>
-              {error === 'API_OFFLINE'
-                ? 'The agent registry is offline right now. Bring the gateway back to bind this surface to a real agent.'
-                : openClawCandidatesCount > 0
-                  ? `No platform agents are registered yet. ${openClawCandidatesCount} OpenClaw agent${openClawCandidatesCount === 1 ? '' : 's'} can be imported.`
-                  : 'No agents are available yet. Create one in Agent Studio first.'}
-              {onOpenImportWizard && openClawCandidatesCount > 0 ? (
-                <button
-                  type="button"
-                  onClick={onOpenImportWizard}
-                  style={{
-                    marginTop: 12,
-                    borderRadius: 999,
-                    border: `1px solid ${THEME.inputBorder}`,
-                    background: 'rgba(212,149,106,0.14)',
-                    color: THEME.accent,
-                    fontSize: 12,
-                    fontWeight: 700,
-                    padding: '8px 12px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Import from OpenClaw
-                </button>
-              ) : null}
-            </div>
-          ) : (
-            agents.map((agent) => {
-              const artifactCount = workspaceArtifacts[agent.id]?.length || 0;
-              const isSelected = agent.id === selectedAgent;
-              const linkedWorkspacePath = getOpenClawWorkspacePathFromAgent(agent);
-
-              return (
-                <button
-                  key={agent.id}
-                  type="button"
-                  onClick={() => onSelect(agent)}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: 10,
-                    padding: '10px 12px',
-                    borderRadius: 10,
-                    border: 'none',
-                    background: isSelected ? 'color-mix(in srgb, var(--accent-primary) 12%, transparent)' : 'transparent',
-                    color: THEME.textPrimary,
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition: 'background 0.2s',
-                  }}
-                  onMouseEnter={(event) => {
-                    if (!isSelected) {
-                      event.currentTarget.style.background = THEME.hoverBg;
-                    }
-                  }}
-                  onMouseLeave={(event) => {
-                    event.currentTarget.style.background = isSelected ? 'color-mix(in srgb, var(--accent-primary) 12%, transparent)' : 'transparent';
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 10,
-                      background: isSelected ? 'rgba(212,149,106,0.18)' : 'var(--surface-active)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: isSelected ? THEME.accent : THEME.textSecondary,
-                      flexShrink: 0,
-                    }}
-                  >
-                    <Robot size={14} />
-                  </div>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {agent.name}
-                      </span>
-                      {isSelected ? (
-                        <span style={{ fontSize: 10, fontWeight: 700, color: THEME.accent, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                          Active
-                        </span>
-                      ) : null}
-                    </div>
-                    <div style={{ marginTop: 3, fontSize: 11, color: THEME.textSecondary }}>
-                      {agent.provider} / {agent.model}
-                    </div>
-                    <div style={{ marginTop: 4, fontSize: 11, color: THEME.textMuted, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      <span>
-                        {artifactCount > 0
-                          ? `${artifactCount} workspace files`
-                          : linkedWorkspacePath
-                            ? 'OpenClaw workspace linked'
-                            : 'Workspace pending'}
-                      </span>
-                      <span>{agent.capabilities.length} capabilities</span>
-                    </div>
-                  </div>
-                </button>
-              );
-            })
-          )}
-        </div>
-      </div>
-    </>
-  );
-}
-
-// ============================================================================
-// Model Selector Dropdown Component
-// ============================================================================
-
-interface ModelSelectorDropdownProps {
-  models: any[];
-  selectedModel?: string;
-  onSelect: (model: any) => void;
-  onClose: () => void;
-  onOpenModelPicker?: () => void;
-  onBrowseAllModels?: () => void;
-  onOpenProviderConnect?: () => void;
-  isTerminalModels?: boolean;
-  onAttentionChange?: (attention: GizziAttention | null) => void;
-}
-
-function ModelSelectorDropdown({
-  models,
-  selectedModel,
-  onSelect,
-  onClose,
-  onOpenModelPicker,
-  onBrowseAllModels,
-  onOpenProviderConnect,
-  isTerminalModels,
-  onAttentionChange,
-}: ModelSelectorDropdownProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const searchInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => { searchInputRef.current?.focus(); }, []);
-
-  const filteredModels = useMemo(() => {
-    if (!searchQuery.trim()) return models;
-    const query = searchQuery.toLowerCase();
-    return models.filter(model =>
-      model.name?.toLowerCase().includes(query) ||
-      model.id?.toLowerCase().includes(query) ||
-      model.providerName?.toLowerCase().includes(query) ||
-      model.providerId?.toLowerCase().includes(query)
-    );
-  }, [models, searchQuery]);
-
-  const groupedModels = useMemo(() => {
-    const groups: Record<string, any[]> = {};
-    filteredModels.forEach(model => {
-      const provider = model.providerName || model.providerId || 'Other';
-      if (!groups[provider]) groups[provider] = [];
-      groups[provider].push(model);
-    });
-    return groups;
-  }, [filteredModels]);
-
-  const sortedProviders = useMemo(() => {
-    return Object.keys(groupedModels).sort((a, b) => a.localeCompare(b));
-  }, [groupedModels]);
-
-  const handleSelect = (model: any) => { onSelect(model); onClose(); };
-
-  const ITEM_HEIGHT = 36;
-  const MAX_VISIBLE_ITEMS = 6;
-  const MAX_HEIGHT = 44 + (MAX_VISIBLE_ITEMS * ITEM_HEIGHT) + 40 + 20;
-
-  return (
-    <>
-      <div
-        style={{ position: 'fixed', inset: 0, zIndex: 199 }}
-        onClick={onClose}
-      />
-      <div style={{
-        position: 'absolute',
-        bottom: 'calc(100% + 12px)',
-        right: 0,
-        width: '320px',
-        maxHeight: `${MAX_HEIGHT}px`,
-        background: THEME.menuBg,
-        borderRadius: '12px',
-        border: `1px solid ${THEME.menuBorder}`,
-        boxShadow: '0 10px 30px var(--shell-overlay-backdrop)',
-        zIndex: 200,
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }}
-      onMouseEnter={() => onAttentionChange?.({ state: 'locked-on', target: { x: 0.42, y: 0.5 } })}
-      onMouseLeave={() => onAttentionChange?.({ state: 'tracking', target: { x: 0, y: 0.44 } })}
-      >
-        {/* Header with Search */}
-        <div style={{
-          padding: '10px 12px',
-          borderBottom: `1px solid ${THEME.inputBorder}`,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '8px',
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}>
-            <span style={{
-              fontSize: '11px',
-              fontWeight: 800,
-              color: THEME.textMuted,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em'
-            }}>
-              {isTerminalModels ? 'Terminal Server' : 'Models'}
-            </span>
-            <span style={{ fontSize: '11px', color: THEME.textMuted }}>
-              {filteredModels.length} / {models.length}
-            </span>
-          </div>
-
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '8px 12px',
-            background: 'var(--surface-hover)',
-            borderRadius: '8px',
-            border: `1px solid ${THEME.inputBorder}`,
-          }}>
-            <Globe size={14} color={THEME.textMuted} />
-            <input
-              ref={searchInputRef}
-              type="text"
-              placeholder="Search models..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
-              style={{
-                flex: 1,
-                background: 'transparent',
-                border: 'none',
-                outline: 'none',
-                color: THEME.textPrimary,
-                fontSize: '13px',
-                padding: 0,
-              }}
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <X size={14} color={THEME.textMuted} />
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Models List */}
-        <div style={{
-          flex: 1,
-          overflowY: 'auto',
-          maxHeight: `${MAX_VISIBLE_ITEMS * ITEM_HEIGHT + (sortedProviders.length * 28)}px`,
-          padding: '4px',
-        }}>
-          {filteredModels.length === 0 ? (
-            <div style={{ padding: '20px', textAlign: 'center', color: THEME.textMuted, fontSize: '13px' }}>
-              No models found
-            </div>
-          ) : (
-            sortedProviders.map(provider => (
-              <div key={provider}>
-                <div style={{
-                  padding: '6px 12px',
-                  fontSize: '10px',
-                  fontWeight: 700,
-                  color: THEME.accent,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  position: 'sticky',
-                  top: 0,
-                  background: THEME.menuBg,
-                  zIndex: 1,
-                }}>
-                  {provider} ({groupedModels[provider].length})
-                </div>
-                {groupedModels[provider].map((model: any) => (
-                  <button
-                    key={model.id}
-                    onClick={() => handleSelect(model)}
-                    style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '8px 12px',
-                      borderRadius: '6px',
-                      background: selectedModel === model.id ? 'color-mix(in srgb, var(--accent-primary) 12%, transparent)' : 'transparent',
-                      border: 'none',
-                      color: selectedModel === model.id ? THEME.accent : THEME.textPrimary,
-                      fontSize: '13px',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s',
-                      marginBottom: '2px',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (selectedModel !== model.id) e.currentTarget.style.background = THEME.hoverBg;
-                      onAttentionChange?.({ state: 'locked-on', target: { x: 0.44, y: 0.5 } });
-                    }}
-                    onMouseLeave={(e) => { if (selectedModel !== model.id) e.currentTarget.style.background = 'transparent'; }}
-                  >
-                    <span style={{
-                      fontWeight: selectedModel === model.id ? 600 : 400,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      flex: 1,
-                    }}>
-                      {model.name}
-                    </span>
-                    {selectedModel === model.id && (
-                      <Check size={14} style={{ color: THEME.accent, flexShrink: 0 }} />
-                    )}
-                  </button>
-                ))}
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Footer */}
-        <div style={{ borderTop: `1px solid ${THEME.inputBorder}`, padding: '8px' }}>
-          <button
-            onClick={() => { onClose(); onBrowseAllModels?.(); }}
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              borderRadius: '8px',
-              background: 'transparent',
-              border: 'none',
-              color: THEME.textSecondary,
-              fontSize: '13px',
-              textAlign: 'left',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = THEME.hoverBg;
-              onAttentionChange?.({ state: 'locked-on', target: { x: 0.42, y: 0.58 } });
-            }}
-            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-          >
-            <Sparkle size={14} />
-            Browse all models...
-          </button>
-          <button
-            onClick={() => { onClose(); onOpenProviderConnect?.(); }}
-            style={{
-              width: '100%',
-              padding: '8px 12px',
-              borderRadius: '8px',
-              background: 'transparent',
-              border: 'none',
-              color: THEME.textSecondary,
-              fontSize: '13px',
-              textAlign: 'left',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              marginTop: '4px',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = THEME.hoverBg;
-              onAttentionChange?.({ state: 'locked-on', target: { x: 0.42, y: 0.58 } });
-            }}
-            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-          >
-            <PlugsConnected size={14} />
-            Connect provider
-          </button>
-        </div>
-      </div>
-    </>
-  );
-}
-
-// ============================================================================
-// Connect Provider Overlay
-// ============================================================================
-
-interface ConnectProviderOverlayProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-function ConnectProviderOverlay({ isOpen, onClose }: ConnectProviderOverlayProps) {
-  const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
-  const [apiKey, setApiKey] = useState('');
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [connectedProviders, setConnectedProviders] = useState<string[]>(['gizzi']);
-
-  if (!isOpen) return null;
-
-  const handleConnect = async () => {
-    if (!selectedProvider) return;
-    setIsConnecting(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setConnectedProviders(prev => [...prev, selectedProvider]);
-    setIsConnecting(false);
-    setSelectedProvider(null);
-    setApiKey('');
-  };
-
-  const handleDisconnect = (providerId: string) => {
-    setConnectedProviders(prev => prev.filter(id => id !== providerId));
-  };
-
-  const selectedProviderData = AVAILABLE_PROVIDERS.find((p: {id: string; name: string}) => p.id === selectedProvider);
-
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'var(--shell-overlay-backdrop)',
-        backdropFilter: 'blur(4px)',
-        zIndex: 300,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '20px',
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '520px',
-          maxHeight: '80vh',
-          background: THEME.inputBg,
-          borderRadius: '16px',
-          border: `1px solid ${THEME.inputBorder}`,
-          boxShadow: '0 20px 60px var(--shell-overlay-backdrop)',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div style={{
-          padding: '20px 24px',
-          borderBottom: `1px solid ${THEME.inputBorder}`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
-          <div>
-            <h2 style={{
-              fontSize: '18px',
-              fontWeight: 600,
-              color: THEME.textPrimary,
-              margin: '0 0 4px 0',
-            }}>
-              Connect AI Provider
-            </h2>
-            <p style={{
-              fontSize: '13px',
-              color: THEME.textMuted,
-              margin: 0,
-            }}>
-              Add your API keys to unlock more AI models
-            </p>
-          </div>
-          <button onClick={onClose} style={{
-            background: 'transparent', border: 'none', padding: '8px', cursor: 'pointer',
-            borderRadius: '8px', color: THEME.textMuted,
-          }}>
-            <X size={20} />
-          </button>
-        </div>
-
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
-          {selectedProvider ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <button onClick={() => setSelectedProvider(null)} style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                background: 'transparent', border: 'none', color: THEME.textMuted,
-                fontSize: '13px', cursor: 'pointer', padding: 0, alignSelf: 'flex-start',
-              }}>
-                <CaretRight size={16} style={{ transform: 'rotate(180deg)' }} />
-                Back to providers
-              </button>
-
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '16px',
-                padding: '20px', background: 'var(--surface-hover)', borderRadius: '12px',
-                border: `1px solid ${THEME.inputBorder}`,
-              }}>
-                <div style={{ 
-                  width: '56px', height: '56px', display: 'flex', 
-                  alignItems: 'center', justifyContent: 'center',
-                  background: 'var(--surface-hover)', borderRadius: '12px',
-                }}>
-                  {selectedProviderData && React.createElement(getProviderLogo(selectedProviderData.id), { size: 36 })}
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '18px', fontWeight: 600, color: THEME.textPrimary, margin: '0 0 4px 0' }}>
-                    {selectedProviderData?.name}
-                  </h3>
-                  <p style={{ fontSize: '13px', color: THEME.textMuted, margin: 0 }}>
-                    {selectedProviderData?.description || 'AI models provider'}
-                  </p>
-                </div>
-              </div>
-
-              {selectedProviderData?.requiresKey ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <label style={{ fontSize: '13px', fontWeight: 600, color: THEME.textSecondary }}>API Key</label>
-                  <input
-                    type="password"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder={`Enter your ${selectedProviderData.name} API key`}
-                    style={{
-                      padding: '12px 16px', background: 'var(--surface-panel)',
-                      borderRadius: '10px', border: `1px solid ${THEME.inputBorder}`,
-                      color: THEME.textPrimary, fontSize: '14px', outline: 'none',
-                    }}
-                  />
-                </div>
-              ) : (
-                <div style={{
-                  padding: '16px', background: 'rgba(16,185,129,0.1)',
-                  borderRadius: '10px', border: '1px solid rgba(16,185,129,0.3)',
-                }}>
-                  <p style={{ fontSize: '13px', color: 'var(--status-success)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Check size={16} />
-                    This provider connects automatically. Click connect to enable.
-                  </p>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {connectedProviders.length > 0 && (
-                <div style={{ marginBottom: '16px' }}>
-                  <h4 style={{
-                    fontSize: '11px', fontWeight: 700, color: THEME.textMuted,
-                    textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 12px 0',
-                  }}>
-                    Connected
-                  </h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {connectedProviders.map(providerId => {
-                      const provider = AVAILABLE_PROVIDERS.find(p => p.id === providerId) || { id: providerId, name: providerId };
-                      const ProviderLogo = getProviderLogo(providerId);
-                      return (
-                        <div key={providerId} style={{
-                          display: 'flex', alignItems: 'center', gap: '12px',
-                          padding: '12px 16px', background: 'rgba(16,185,129,0.08)',
-                          borderRadius: '10px', border: '1px solid rgba(16,185,129,0.2)',
-                        }}>
-                          <div style={{ 
-                            width: '36px', height: '36px', display: 'flex', 
-                            alignItems: 'center', justifyContent: 'center',
-                            background: 'rgba(16,185,129,0.12)', borderRadius: '8px',
-                          }}>
-                            <ProviderLogo size={24} />
-                          </div>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--status-success)' }}>{provider.name}</div>
-                            <div style={{ fontSize: '12px', color: 'var(--status-success)' }}>Connected</div>
-                          </div>
-                          <button onClick={() => handleDisconnect(providerId)} style={{
-                            padding: '6px 12px', borderRadius: '6px', background: 'transparent',
-                            border: `1px solid ${THEME.inputBorder}`, color: THEME.textMuted, fontSize: '12px', cursor: 'pointer',
-                          }}>Disconnect</button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              <h4 style={{
-                fontSize: '11px', fontWeight: 700, color: THEME.textMuted,
-                textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 12px 0',
-              }}>
-                Available Providers
-              </h4>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
-                {AVAILABLE_PROVIDERS.filter(p => !connectedProviders.includes(p.id)).map(provider => {
-                  const ProviderLogo = getProviderLogo(provider.id);
-                  return (
-                    <button
-                      key={provider.id}
-                      onClick={() => setSelectedProvider(provider.id)}
-                      style={{
-                        display: 'flex', flexDirection: 'column', alignItems: 'flex-start',
-                        gap: '10px', padding: '16px', background: 'var(--surface-hover)',
-                        borderRadius: '12px', border: `1px solid ${THEME.inputBorder}`,
-                        cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s',
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.background = THEME.hoverBg;
-                        e.currentTarget.style.borderColor = provider.color || THEME.accent;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.background = 'var(--surface-hover)';
-                        e.currentTarget.style.borderColor = THEME.inputBorder;
-                      }}
-                    >
-                      <div style={{ 
-                        width: '40px', height: '40px', display: 'flex', 
-                        alignItems: 'center', justifyContent: 'center',
-                        background: 'var(--surface-hover)', borderRadius: '10px',
-                      }}>
-                        <ProviderLogo size={28} />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '14px', fontWeight: 600, color: THEME.textPrimary, marginBottom: '2px' }}>
-                          {provider.name}
-                        </div>
-                        <div style={{ fontSize: '11px', color: THEME.textMuted, lineHeight: 1.4 }}>
-                          {provider.description}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {selectedProvider && (
-          <div style={{
-            padding: '16px 24px', borderTop: `1px solid ${THEME.inputBorder}`,
-            display: 'flex', justifyContent: 'flex-end', gap: '12px',
-          }}>
-            <button onClick={() => setSelectedProvider(null)} style={{
-              padding: '10px 20px', borderRadius: '8px', background: 'transparent',
-              border: `1px solid ${THEME.inputBorder}`, color: THEME.textSecondary,
-              fontSize: '14px', cursor: 'pointer',
-            }}>Cancel</button>
-            <button
-              onClick={handleConnect}
-              disabled={selectedProviderData?.requiresKey && !apiKey || isConnecting}
-              style={{
-                padding: '10px 20px', borderRadius: '8px', background: THEME.accent,
-                border: 'none', color: THEME.textPrimary, fontSize: '14px', fontWeight: 500,
-                cursor: selectedProviderData?.requiresKey && !apiKey ? 'not-allowed' : 'pointer',
-                opacity: selectedProviderData?.requiresKey && !apiKey ? 0.5 : 1,
-                display: 'flex', alignItems: 'center', gap: '8px',
-              }}
-            >
-              {isConnecting ? 'Connecting...' : <><Check size={16} /> Connect</>}
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// Browse All Models Overlay - Same layout as ConnectProviderOverlay
-// ============================================================================
-
-interface BrowseAllModelsOverlayProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSelectModel?: (providerId: string, modelId: string) => void;
-  currentModel?: string;
-}
-
-function BrowseAllModelsOverlay({ isOpen, onClose, onSelectModel, currentModel }: BrowseAllModelsOverlayProps) {
-  const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
-  const [, setModels] = useState<Array<{id: string; name: string; providerId: string; providerName: string}>>([]);
-  const [providers, setProviders] = useState<Array<{id: string; name: string; modelCount: number}>>([]);
-  const [providerModels, setProviderModels] = useState<Array<{id: string; name: string}>>([]);
-  const [loading, setLoading] = useState(false);
-  const [loadingProvider, setLoadingProvider] = useState(false);
-
-  // Fetch all providers and models through the authenticated platform API.
-  useEffect(() => {
-    if (!isOpen) return;
-
-    async function fetchModels() {
-      setLoading(true);
-      try {
-        const response = await fetch(getProviderDiscoveryUrl(), { signal: AbortSignal.timeout(5000) });
-        if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
-        const data = await response.json();
-
-        const allModels: Array<{id: string; name: string; providerId: string; providerName: string}> = [];
-        const allProviders: Array<{id: string; name: string; modelCount: number}> = [];
-
-        if (data.all && Array.isArray(data.all)) {
-          data.all.forEach((provider: any) => {
-            const modelCount = provider.models ? Object.keys(provider.models).length : 0;
-            allProviders.push({
-              id: provider.id,
-              name: provider.name || provider.id,
-              modelCount,
-            });
-
-            if (provider.models && typeof provider.models === 'object') {
-              Object.entries(provider.models).forEach(([modelId, modelData]: [string, any]) => {
-                allModels.push({
-                  id: `${provider.id}/${modelId}`,
-                  name: modelData.name || modelId,
-                  providerId: provider.id,
-                  providerName: provider.name || provider.id,
-                });
-              });
-            }
-          });
-        }
-
-        // Sort providers by model count (descending)
-        allProviders.sort((a, b) => b.modelCount - a.modelCount);
-
-        setProviders(allProviders);
-        setModels(allModels);
-      } catch (err) {
-        logger.error('Failed to fetch models from Terminal Server', err instanceof Error ? err.message : String(err));
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchModels();
-  }, [isOpen]);
-
-  // Fetch models for selected provider
-  useEffect(() => {
-    if (!selectedProvider) return;
-
-    async function fetchProviderModels() {
-      setLoadingProvider(true);
-      try {
-        const response = await fetch(getProviderDiscoveryUrl(), { signal: AbortSignal.timeout(5000) });
-        if (!response.ok) throw new Error(`Failed to fetch: ${response.status}`);
-        const data = await response.json();
-
-        const provider = data.all?.find((p: any) => p.id === selectedProvider);
-        if (provider?.models) {
-          const modelsList = Object.entries(provider.models).map(([modelId, modelData]: [string, any]) => ({
-            id: modelId,
-            name: modelData.name || modelId,
-          }));
-          setProviderModels(modelsList);
-        } else {
-          setProviderModels([]);
-        }
-      } catch (err) {
-        logger.error('Failed to fetch provider models', err instanceof Error ? err.message : String(err));
-      } finally {
-        setLoadingProvider(false);
-      }
-    }
-
-    fetchProviderModels();
-  }, [selectedProvider]);
-
-  if (!isOpen) return null;
-
-  const handleProviderClick = (providerId: string) => {
-    setSelectedProvider(providerId);
-  };
-
-  const handleBack = () => {
-    setSelectedProvider(null);
-    setProviderModels([]);
-  };
-
-  const handleModelSelect = (modelId: string) => {
-    if (selectedProvider && onSelectModel) {
-      onSelectModel(selectedProvider, modelId);
-    }
-    onClose();
-  };
-
-  const selectedProviderData = AVAILABLE_PROVIDERS.find(p => p.id === selectedProvider);
-  
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        background: 'var(--shell-overlay-backdrop)',
-        backdropFilter: 'blur(4px)',
-        zIndex: 300,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '20px',
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '520px',
-          maxHeight: '80vh',
-          background: THEME.inputBg,
-          borderRadius: '16px',
-          border: `1px solid ${THEME.inputBorder}`,
-          boxShadow: '0 20px 60px var(--shell-overlay-backdrop)',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div style={{
-          padding: '20px 24px',
-          borderBottom: `1px solid ${THEME.inputBorder}`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
-          <div>
-            <h2 style={{
-              fontSize: '18px',
-              fontWeight: 600,
-              color: THEME.textPrimary,
-              margin: '0 0 4px 0',
-            }}>
-              {selectedProvider ? 'Select Model' : 'Browse All Models'}
-            </h2>
-            <p style={{
-              fontSize: '13px',
-              color: THEME.textMuted,
-              margin: 0,
-            }}>
-              {selectedProvider 
-                ? `Choose a model from ${selectedProviderData?.name}`
-                : 'Select an AI provider to browse available models'
-              }
-            </p>
-          </div>
-          <button onClick={onClose} style={{
-            background: 'transparent', border: 'none', padding: '8px', cursor: 'pointer',
-            borderRadius: '8px', color: THEME.textMuted,
-          }}>
-            <X size={20} />
-          </button>
-        </div>
-
-        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
-          {selectedProvider ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <button onClick={handleBack} style={{
-                display: 'flex', alignItems: 'center', gap: '8px',
-                background: 'transparent', border: 'none', color: THEME.textMuted,
-                fontSize: '13px', cursor: 'pointer', padding: 0, alignSelf: 'flex-start',
-              }}>
-                <CaretRight size={16} style={{ transform: 'rotate(180deg)' }} />
-                Back to providers
-              </button>
-
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: '16px',
-                padding: '20px', background: 'var(--surface-hover)', borderRadius: '12px',
-                border: `1px solid ${THEME.inputBorder}`,
-              }}>
-                <div style={{ 
-                  width: '56px', height: '56px', display: 'flex', 
-                  alignItems: 'center', justifyContent: 'center',
-                  background: 'var(--surface-hover)', borderRadius: '12px',
-                }}>
-                  {selectedProviderData && React.createElement(getProviderLogo(selectedProviderData.id), { size: 36 })}
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '18px', fontWeight: 600, color: THEME.textPrimary, margin: '0 0 4px 0' }}>
-                    {selectedProviderData?.name}
-                  </h3>
-                  <p style={{ fontSize: '13px', color: THEME.textMuted, margin: 0 }}>
-                    {selectedProviderData?.description}
-                  </p>
-                </div>
-              </div>
-
-              {loadingProvider ? (
-                <div style={{ padding: '40px', textAlign: 'center', color: THEME.textMuted }}>
-                  <CircleNotch size={32} style={{ marginBottom: '12px', animation: 'spin 1s linear infinite' }} />
-                  <p>Loading models...</p>
-                </div>
-              ) : providerModels.length === 0 ? (
-                <div style={{ padding: '40px', textAlign: 'center', color: THEME.textMuted }}>
-                  <Warning size={32} style={{ marginBottom: '12px', opacity: 0.5 }} />
-                  <p>No models available</p>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {providerModels.map((model) => {
-                    const fullModelId = `${selectedProvider}/${model.id}`;
-                    const isCurrent = currentModel === fullModelId || currentModel === model.name;
-                    return (
-                      <button
-                        key={model.id}
-                        onClick={() => handleModelSelect(model.id)}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '12px',
-                          padding: '14px 16px',
-                          background: isCurrent ? 'rgba(212,150,106,0.08)' : 'var(--surface-hover)',
-                          borderRadius: '10px',
-                          border: `1px solid ${isCurrent ? 'rgba(212,150,106,0.3)' : THEME.inputBorder}`,
-                          cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = THEME.hoverBg;
-                          e.currentTarget.style.borderColor = THEME.accent;
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = isCurrent ? 'rgba(212,150,106,0.08)' : 'var(--surface-hover)';
-                          e.currentTarget.style.borderColor = isCurrent ? 'rgba(212,150,106,0.3)' : THEME.inputBorder;
-                        }}
-                      >
-                        <div style={{ 
-                          width: '40px', height: '40px', display: 'flex', 
-                          alignItems: 'center', justifyContent: 'center',
-                          background: 'var(--surface-hover)', borderRadius: '10px', flexShrink: 0,
-                        }}>
-                          <Sparkle size={20} style={{ color: isCurrent ? 'var(--accent-primary)' : THEME.textMuted }} />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{
-                            fontSize: '15px', fontWeight: 600,
-                            color: isCurrent ? 'var(--accent-primary)' : THEME.textPrimary,
-                            marginBottom: '2px',
-                          }}>
-                            {model.name}
-                            {isCurrent && (
-                              <span style={{
-                                fontSize: '10px', fontWeight: 700, color: 'var(--accent-primary)',
-                                background: 'rgba(212,150,106,0.2)', padding: '2px 6px',
-                                borderRadius: '4px', textTransform: 'uppercase', marginLeft: '8px',
-                              }}>Active</span>
-                            )}
-                          </div>
-                          <div style={{ fontSize: '12px', color: THEME.textMuted, fontFamily: 'var(--font-mono)' }}>
-                            {model.id}
-                          </div>
-                        </div>
-                        {isCurrent && <Check size={18} style={{ color: 'var(--accent-primary)', flexShrink: 0 }} />}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {currentModel && (
-                <div style={{ marginBottom: '8px' }}>
-                  <h4 style={{
-                    fontSize: '11px', fontWeight: 700, color: THEME.textMuted,
-                    textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 10px 0',
-                  }}>
-                    Current Model
-                  </h4>
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: '12px',
-                    padding: '12px 16px', background: 'rgba(212,150,106,0.1)',
-                    borderRadius: '10px', border: '1px solid rgba(212,150,106,0.2)',
-                  }}>
-                    <div style={{ 
-                      width: '40px', height: '40px', display: 'flex', 
-                      alignItems: 'center', justifyContent: 'center',
-                      background: 'rgba(212,150,106,0.15)', borderRadius: '10px',
-                    }}>
-                      <Check size={20} style={{ color: 'var(--accent-primary)' }} />
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--accent-primary)' }}>
-                        {currentModel}
-                      </div>
-                      <div style={{ fontSize: '12px', color: THEME.textMuted }}>
-                        Currently selected
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              <h4 style={{
-                fontSize: '11px', fontWeight: 700, color: THEME.textMuted,
-                textTransform: 'uppercase', letterSpacing: '0.05em', margin: '8px 0 10px 0',
-              }}>
-                All Providers {loading && <span style={{ fontWeight: 400, textTransform: 'none' }}>(loading...)</span>}
-              </h4>
-              
-              {loading && (
-                <div style={{ padding: '40px', textAlign: 'center', color: THEME.textMuted }}>
-                  <CircleNotch size={32} style={{ marginBottom: '12px', animation: 'spin 1s linear infinite' }} />
-                  <p>Loading providers from Terminal Server...</p>
-                </div>
-              )}
-              
-              {!loading && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {providers.map(provider => {
-                    const ProviderLogo = getProviderLogo(provider.id);
-                    const isCurrent = currentModel?.toLowerCase().includes(provider.id.toLowerCase());
-                    return (
-                      <button
-                        key={provider.id}
-                        onClick={() => handleProviderClick(provider.id)}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '12px',
-                          padding: '14px 16px',
-                          background: isCurrent ? 'rgba(212,150,106,0.08)' : 'var(--surface-hover)',
-                          borderRadius: '10px',
-                          border: `1px solid ${isCurrent ? 'rgba(212,150,106,0.3)' : THEME.inputBorder}`,
-                          cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = THEME.hoverBg;
-                          e.currentTarget.style.borderColor = THEME.accent;
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = isCurrent ? 'rgba(212,150,106,0.08)' : 'var(--surface-hover)';
-                          e.currentTarget.style.borderColor = isCurrent ? 'rgba(212,150,106,0.3)' : THEME.inputBorder;
-                        }}
-                      >
-                        <div style={{ 
-                          width: '44px', height: '44px', display: 'flex', 
-                          alignItems: 'center', justifyContent: 'center',
-                          background: 'var(--surface-hover)', borderRadius: '10px', flexShrink: 0,
-                        }}>
-                          <ProviderLogo size={28} />
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{
-                            fontSize: '15px', fontWeight: 600, color: THEME.textPrimary,
-                            marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '8px',
-                          }}>
-                            {provider.name}
-                            {provider.modelCount > 0 && (
-                              <span style={{
-                                fontSize: '11px', fontWeight: 500, color: THEME.textMuted,
-                                background: 'var(--ui-border-muted)', padding: '2px 8px', borderRadius: '10px',
-                              }}>
-                                {provider.modelCount} models
-                              </span>
-                            )}
-                            {isCurrent && (
-                              <span style={{
-                                fontSize: '10px', fontWeight: 700, color: 'var(--accent-primary)',
-                                background: 'rgba(212,150,106,0.2)', padding: '2px 6px',
-                                borderRadius: '4px', textTransform: 'uppercase',
-                              }}>Active</span>
-                            )}
-                          </div>
-                          <div style={{ fontSize: '12px', color: THEME.textMuted, lineHeight: 1.4 }}>
-                            {provider.id}
-                          </div>
-                        </div>
-                        <CaretRight size={18} style={{ color: THEME.textMuted, opacity: 0.5, flexShrink: 0 }} />
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {selectedProvider && (
-          <div style={{
-            padding: '16px 24px', borderTop: `1px solid ${THEME.inputBorder}`,
-            display: 'flex', justifyContent: 'flex-end', gap: '12px',
-          }}>
-            <button onClick={handleBack} style={{
-              padding: '10px 20px', borderRadius: '8px', background: 'transparent',
-              border: `1px solid ${THEME.inputBorder}`, color: THEME.textSecondary,
-              fontSize: '14px', cursor: 'pointer',
-            }}>Back</button>
-          </div>
-        )}
-      </div>
     </div>
   );
 }

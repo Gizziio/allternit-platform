@@ -119,7 +119,7 @@ export function H5iMcpPanel({ onClose }: H5iMcpPanelProps) {
                 textAlign: 'center',
               }}
             >
-              <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>MCP Server</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>MCP Server</div>
               <div style={{ fontSize: 13, fontWeight: 700, color: config.mcpAvailable ? 'var(--status-success)' : 'var(--status-warning)' }}>
                 {config.mcpAvailable ? 'Available' : 'Not Available'}
               </div>
@@ -128,7 +128,7 @@ export function H5iMcpPanel({ onClose }: H5iMcpPanelProps) {
             {/* Config snippet */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)' }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>
                   Claude Code Settings
                 </span>
                 <button
@@ -142,7 +142,7 @@ export function H5iMcpPanel({ onClose }: H5iMcpPanelProps) {
                     border: '1px solid var(--ui-border-muted)',
                     background: 'var(--surface-hover)',
                     color: 'var(--text-secondary)',
-                    fontSize: 11,
+                    fontSize: 12,
                     cursor: 'pointer',
                   }}
                 >
@@ -155,7 +155,7 @@ export function H5iMcpPanel({ onClose }: H5iMcpPanelProps) {
                   padding: 12,
                   borderRadius: 8,
                   background: 'var(--surface-hover)',
-                  fontSize: 11,
+                  fontSize: 12,
                   fontFamily: 'var(--font-mono)',
                   color: 'var(--text-secondary)',
                   overflow: 'auto',

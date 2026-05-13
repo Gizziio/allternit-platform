@@ -103,7 +103,7 @@ class OperatorClient {
 
     eventSource.onopen = () => {
       connected = true;
-      console.log('[OperatorClient] Connected to event stream:', requestId);
+      console.debug('[OperatorClient] Connected to event stream:', requestId);
     };
 
     eventSource.onmessage = (event) => {

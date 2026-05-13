@@ -29,9 +29,9 @@ export interface ModelComparisonProps {
 }
 
 function FeatureValue({ value }: { value: boolean | string | null | undefined }) {
-  if (value === true) return <Check className="h-4 w-4 text-green-500 mx-auto" />;
-  if (value === false) return <X className="h-3.5 w-3.5 text-muted-foreground/50 mx-auto" />;
-  if (value == null) return <Minus className="h-3.5 w-3.5 text-muted-foreground/30 mx-auto" />;
+  if (value === true) return <Check className="size-4  text-green-500 mx-auto" />;
+  if (value === false) return <X className="size-3.5  text-muted-foreground/50 mx-auto" />;
+  if (value == null) return <Minus className="size-3.5  text-muted-foreground/30 mx-auto" />;
   return <span className="text-xs font-medium text-center block">{value}</span>;
 }
 
@@ -71,13 +71,13 @@ export function ModelComparison({
                 >
                   <div className="space-y-0.5">
                     {model.badge && (
-                      <div className="inline-flex rounded-full bg-primary px-1.5 py-px text-[9px] font-bold uppercase tracking-wider text-primary-foreground mb-1">
+                      <div className="inline-flex rounded-full bg-primary px-1.5 py-px text-xs font-bold uppercase tracking-wider text-primary-foreground mb-1">
                         {model.badge}
                       </div>
                     )}
                     <div className="text-xs font-semibold text-foreground">{model.name}</div>
                     {model.provider && variant !== 'compact' && (
-                      <div className="text-[10px] text-muted-foreground">{model.provider}</div>
+                      <div className="text-xs text-muted-foreground">{model.provider}</div>
                     )}
                   </div>
                 </th>
@@ -90,7 +90,7 @@ export function ModelComparison({
                 <td className="px-4 py-2.5">
                   <div className="text-xs font-medium text-foreground">{feature.name}</div>
                   {feature.description && variant !== 'compact' && (
-                    <div className="text-[10px] text-muted-foreground mt-0.5">{feature.description}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">{feature.description}</div>
                   )}
                 </td>
                 {models.map((model) => (

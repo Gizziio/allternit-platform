@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { workspaceClient, Pane } from '../../services/workspace/client';
-import { GlassCard } from '../../design/GlassCard';
+import { GlassCard } from '../../design/glass/GlassCard';
 import { SquaresFour, Square, Plus, X } from '@phosphor-icons/react';
 
 // Dynamically import xterm only on client side
@@ -60,7 +60,7 @@ function TerminalInstance({ pane, isActive }: {
       const loaded = await loadXterm();
       if (!loaded || !mounted || !containerRef.current) return;
 
-      console.log('Initializing terminal for pane:', pane.id);
+      console.debug('Initializing terminal for pane:', pane.id);
 
       const term = new Terminal!({
         cursorBlink: true,
@@ -106,13 +106,13 @@ function TerminalInstance({ pane, isActive }: {
       const encodedPaneId = encodeURIComponent(pane.id);
       const socketUrl = `${wsUrl}/panes/${encodedPaneId}/logs`;
       
-      console.log('Connecting WebSocket:', socketUrl);
+      console.debug('Connecting WebSocket:', socketUrl);
       
       const socket = new WebSocket(socketUrl);
       socketRef.current = socket;
 
       socket.onopen = () => {
-        console.log('WebSocket connected for pane:', pane.id);
+        console.debug('WebSocket connected for pane:', pane.id);
         term.writeln(`\x1b[1;32mConnected to ${pane.title || pane.id}\x1b[0m`);
       };
 
@@ -123,7 +123,7 @@ function TerminalInstance({ pane, isActive }: {
       };
 
       socket.onclose = (e) => {
-        console.log('WebSocket closed:', pane.id, 'code:', e.code);
+        console.debug('WebSocket closed:', pane.id, 'code:', e.code);
         term.writeln(`\r\n\x1b[1;31mDisconnected\x1b[0m`);
       };
 
@@ -142,7 +142,7 @@ function TerminalInstance({ pane, isActive }: {
       const fitTimeout = setTimeout(() => {
         try {
           fitAddon.fit();
-          console.log('Terminal fitted for pane:', pane.id);
+          console.debug('Terminal fitted for pane:', pane.id);
         } catch (e) {
           console.warn('Fit failed:', e);
         }
@@ -213,7 +213,7 @@ export function UnifiedTerminal({ sessionId = 'allternit-session' }: UnifiedTerm
       const exists = sessions.some(s => s.name === sessionId || s.id === sessionId);
       
       if (!exists) {
-        console.log('Creating session:', sessionId);
+        console.debug('Creating session:', sessionId);
         await workspaceClient.createSession({ name: sessionId });
       }
       return true;
@@ -233,7 +233,7 @@ export function UnifiedTerminal({ sessionId = 'allternit-session' }: UnifiedTerm
       
       // Only update state and log if pane count changed
       if (paneList.length !== lastPaneCountRef.current) {
-        console.log('Panes changed:', paneList.length, 'panes');
+        console.debug('Panes changed:', paneList.length, 'panes');
         lastPaneCountRef.current = paneList.length;
         setPanes(paneList);
         if (paneList.length > 0 && !activePaneId) {
@@ -323,7 +323,7 @@ export function UnifiedTerminal({ sessionId = 'allternit-session' }: UnifiedTerm
           </span>
           <span
             style={{
-              fontSize: 10,
+              fontSize: 12,
               color: isConnected ? '#10b981' : '#ef4444',
               display: 'flex',
               alignItems: 'center',
@@ -343,7 +343,7 @@ export function UnifiedTerminal({ sessionId = 'allternit-session' }: UnifiedTerm
                 border: 'none',
                 borderRadius: 4,
                 color: '#f3f4f6',
-                fontSize: 11,
+                fontSize: 12,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -361,7 +361,7 @@ export function UnifiedTerminal({ sessionId = 'allternit-session' }: UnifiedTerm
                 border: 'none',
                 borderRadius: 4,
                 color: '#f3f4f6',
-                fontSize: 11,
+                fontSize: 12,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -546,7 +546,7 @@ export function UnifiedTerminal({ sessionId = 'allternit-session' }: UnifiedTerm
                     flexShrink: 0,
                   }}
                 >
-                  <span style={{ fontSize: 11, color: '#f3f4f6', fontWeight: 500 }}>
+                  <span style={{ fontSize: 12, color: '#f3f4f6', fontWeight: 500 }}>
                     {pane.title || `Terminal ${pane.pane_index}`}
                   </span>
                   <button

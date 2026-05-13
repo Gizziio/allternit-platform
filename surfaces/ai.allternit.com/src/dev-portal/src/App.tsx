@@ -15,7 +15,7 @@ const SECTIONS: { id: Section; label: string; icon: string }[] = [
 const CODE = {
   apiKey: `# Set your API key in environment variables\nALLTERNIT_API_KEY=your_api_key_here`,
   sdkInstall: `npm install @allternit/sdk\n# or\npnpm add @allternit/sdk`,
-  sdkUsage: `import { AllternitClient } from '@allternit/sdk';\n\nconst client = new AllternitClient({\n  apiKey: process.env.ALLTERNIT_API_KEY,\n});\n\nconst response = await client.chat.create({\n  model: 'allternit-1',\n  messages: [{ role: 'user', content: 'Hello!' }],\n});\n\nconsole.log(response.content);`,
+  sdkUsage: `import { AllternitClient } from '@allternit/sdk';\n\nconst client = new AllternitClient({\n  apiKey: process.env.ALLTERNIT_API_KEY,\n});\n\nconst response = await client.chat.create({\n  model: 'allternit-1',\n  messages: [{ role: 'user', content: 'Hello!' }],\n});\n\nconsole.debug(response.content);`,
   curlExample: `curl -X POST https://api.allternit.com/v1/chat \\\n  -H "Authorization: Bearer $ALLTERNIT_API_KEY" \\\n  -H "Content-Type: application/json" \\\n  -d '{\n    "model": "allternit-1",\n    "messages": [{ "role": "user", "content": "Hello!" }]\n  }'`,
 };
 
@@ -32,10 +32,10 @@ function CodeBlock({ code, lang = 'bash' }: { code: string; lang?: string }) {
   return (
     <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', background: '#0d1117', border: '1px solid #30363d' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: '#161b22', borderBottom: '1px solid #30363d' }}>
-        <span style={{ fontSize: 11, color: '#8b949e', fontFamily: 'var(--font-mono)' }}>{lang}</span>
+        <span style={{ fontSize: 12, color: '#8b949e', fontFamily: 'var(--font-mono)' }}>{lang}</span>
         <button
           onClick={copy}
-          style={{ fontSize: 11, color: copied ? '#3fb950' : '#8b949e', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 8px' }}
+          style={{ fontSize: 12, color: copied ? '#3fb950' : '#8b949e', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 8px' }}
         >
           {copied ? '✓ Copied' : 'Copy'}
         </button>
@@ -182,7 +182,7 @@ function Playground() {
       <textarea
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
-        placeholder="Enter a message..."
+        placeholder="Enter a message…"
         rows={4}
         style={{
           width: '100%', padding: 12, borderRadius: 8, border: '1px solid #30363d',

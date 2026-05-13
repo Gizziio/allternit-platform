@@ -219,15 +219,15 @@ export function PreFlightCheck({
   const getStatusIcon = (status: CheckItem['status']) => {
     switch (status) {
       case 'passed':
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
+        return <CheckCircle className="size-5  text-green-500" />;
       case 'failed':
-        return <XCircle className="w-5 h-5 text-red-500" />;
+        return <XCircle className="size-5  text-red-500" />;
       case 'warning':
-        return <Warning className="w-5 h-5 text-yellow-500" />;
+        return <Warning className="size-5  text-yellow-500" />;
       case 'checking':
-        return <CircleNotch className="w-5 h-5 text-primary animate-spin" />;
+        return <CircleNotch className="size-5  text-primary animate-spin" />;
       default:
-        return <div className="w-5 h-5 rounded-full border-2 border-muted" />;
+        return <div className="size-5  rounded-full border-2 border-muted" />;
     }
   };
 
@@ -267,7 +267,7 @@ export function PreFlightCheck({
           className="gap-2"
         >
           {isRunning ? (
-            <CircleNotch className="w-4 h-4 animate-spin" />
+            <CircleNotch className="size-4  animate-spin" />
           ) : (
             <ArrowsClockwise size={16} />
           )}
@@ -316,18 +316,18 @@ export function PreFlightCheck({
       {(passedCount > 0 || failedCount > 0 || warningCount > 0) && !isRunning && (
         <div className="flex items-center gap-4 text-xs">
           <div className="flex items-center gap-1">
-            <CheckCircle className="w-3 h-3 text-green-500" />
+            <CheckCircle className="size-3  text-green-500" />
             <span>{passedCount} passed</span>
           </div>
           {failedCount > 0 && (
             <div className="flex items-center gap-1">
-              <XCircle className="w-3 h-3 text-red-500" />
+              <XCircle className="size-3  text-red-500" />
               <span>{failedCount} failed</span>
             </div>
           )}
           {warningCount > 0 && (
             <div className="flex items-center gap-1">
-              <Warning className="w-3 h-3 text-yellow-500" />
+              <Warning className="size-3  text-yellow-500" />
               <span>{warningCount} warnings</span>
             </div>
           )}

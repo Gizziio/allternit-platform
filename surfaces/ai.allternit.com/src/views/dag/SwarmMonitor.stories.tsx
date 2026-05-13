@@ -1,6 +1,27 @@
 import React from "react";
 import type { Meta, StoryObj } from "@storybook/react";
 
+const StatusDot = ({ status, size = 'sm' }: { status: string; size?: 'sm' | 'lg' }) => {
+  const colors: Record<string, string> = {
+    running: '#10b981',
+    paused: '#f59e0b',
+    completed: '#3b82f6',
+    failed: '#ef4444',
+    pending: '#64748b',
+    compacting: '#a855f7',
+  };
+  const sizePx = size === 'lg' ? 'size-3' : 'size-2';
+  return (
+    <span 
+      className={`rounded-full inline-block ${sizePx}`}
+      style={{ 
+        background: colors[status] || colors.pending,
+        animation: (status === 'running' || status === 'compacting') ? 'pulse 2s infinite' : undefined
+      }} 
+    />
+  );
+};
+
 // Complete mock component that shows all SwarmMonitor features
 const SwarmMonitorComplete = () => {
   const [selectedThreadId, setSelectedThreadId] = React.useState('T1');
@@ -21,26 +42,6 @@ const SwarmMonitorComplete = () => {
   
   const selectedThread = threads.find(t => t.id === selectedThreadId) || threads[0];
   
-  const StatusDot = ({ status, size = 'sm' }: { status: string; size?: 'sm' | 'lg' }) => {
-    const colors: Record<string, string> = {
-      running: '#10b981',
-      paused: '#f59e0b',
-      completed: '#3b82f6',
-      failed: '#ef4444',
-      pending: '#64748b',
-      compacting: '#a855f7',
-    };
-    const sizePx = size === 'lg' ? 12 : 8;
-    return (
-      <span style={{ 
-        width: sizePx, height: sizePx, borderRadius: '50%', 
-        background: colors[status] || colors.pending,
-        display: 'inline-block',
-        animation: (status === 'running' || status === 'compacting') ? 'pulse 2s infinite' : undefined
-      }} />
-    );
-  };
-  
   return (
     <div style={{ height: '100vh', width: '100vw', background: '#0d0d0d', color: '#e2e8f0', fontFamily: 'var(--font-sans)', display: 'flex', flexDirection: 'column' }}>
       {/* Top Strip */}
@@ -60,7 +61,7 @@ const SwarmMonitorComplete = () => {
           <svg style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', width: '14px', height: '14px', color: '#64748b' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
           <input 
             type="text" 
-            placeholder="Search threads..."
+            placeholder="Search threads…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{ width: '140px', height: '32px', paddingLeft: '28px', fontSize: '12px', background: '#0f172a', border: '1px solid #334155', borderRadius: '6px', color: '#e2e8f0' }}
@@ -87,11 +88,11 @@ const SwarmMonitorComplete = () => {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 8px', borderBottom: '1px solid rgba(30, 41, 59, 0.5)' }}>
                 <StatusDot status={thread.status} />
-                <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: '#64748b' }}>{thread.id}</span>
+                <span style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: '#64748b' }}>{thread.id}</span>
                 {thread.pinned && <svg width="10" height="10" viewBox="0 0 24 24" fill="#f59e0b"><path d="M12 2L12 22M2 12L22 12"/></svg>}
               </div>
               <div style={{ padding: '4px 8px' }}>
-                <p style={{ fontSize: '11px', color: '#cbd5e1', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{thread.goal}</p>
+                <p style={{ fontSize: '12px', color: '#cbd5e1', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{thread.goal}</p>
               </div>
               {thread.status !== 'completed' && thread.status !== 'failed' && (
                 <div style={{ padding: '0 8px 6px' }}>
@@ -99,14 +100,14 @@ const SwarmMonitorComplete = () => {
                     <div style={{ height: '100%', width: `${thread.progress}%`, background: thread.status === 'compacting' ? '#a855f7' : thread.status === 'running' ? '#10b981' : '#f59e0b', borderRadius: '2px' }} />
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2px' }}>
-                    <span style={{ fontSize: '9px', color: '#64748b' }}>{Math.round(thread.progress)}%</span>
-                    <span style={{ fontSize: '9px', color: '#64748b' }}>{(thread.tokenCount / 1000).toFixed(1)}k</span>
+                    <span style={{ fontSize: '12px', color: '#64748b' }}>{Math.round(thread.progress)}%</span>
+                    <span style={{ fontSize: '12px', color: '#64748b' }}>{(thread.tokenCount / 1000).toFixed(1)}k</span>
                   </div>
                 </div>
               )}
               {thread.status === 'failed' && (
                 <div style={{ padding: '0 8px 6px' }}>
-                  <span style={{ fontSize: '9px', color: 'var(--status-error)' }}>⚠ Failed</span>
+                  <span style={{ fontSize: '12px', color: 'var(--status-error)' }}>⚠ Failed</span>
                 </div>
               )}
             </div>
@@ -139,24 +140,24 @@ const SwarmMonitorComplete = () => {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '12px' }}>
             <div style={{ background: '#0f172a', borderRadius: '6px', padding: '12px' }}>
-              <div style={{ fontSize: '11px', color: '#64748b' }}>Status</div>
+              <div style={{ fontSize: '12px', color: '#64748b' }}>Status</div>
               <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--status-warning)' }}>Degraded</div>
             </div>
             <div style={{ background: '#0f172a', borderRadius: '6px', padding: '12px' }}>
-              <div style={{ fontSize: '11px', color: '#64748b' }}>Active Agents</div>
+              <div style={{ fontSize: '12px', color: '#64748b' }}>Active Agents</div>
               <div style={{ fontSize: '13px', fontWeight: 500, color: '#e2e8f0' }}>6 / 8</div>
             </div>
             <div style={{ background: '#0f172a', borderRadius: '6px', padding: '12px' }}>
-              <div style={{ fontSize: '11px', color: '#64748b' }}>Queue Size</div>
+              <div style={{ fontSize: '12px', color: '#64748b' }}>Queue Size</div>
               <div style={{ fontSize: '13px', fontWeight: 500, color: '#e2e8f0' }}>12</div>
             </div>
             <div style={{ background: '#0f172a', borderRadius: '6px', padding: '12px' }}>
-              <div style={{ fontSize: '11px', color: '#64748b' }}>Avg Response</div>
+              <div style={{ fontSize: '12px', color: '#64748b' }}>Avg Response</div>
               <div style={{ fontSize: '13px', fontWeight: 500, color: '#e2e8f0' }}>245ms</div>
             </div>
           </div>
           <div>
-            <h4 style={{ fontSize: '11px', fontWeight: 600, color: 'var(--status-error)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <h4 style={{ fontSize: '12px', fontWeight: 600, color: 'var(--status-error)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/></svg>
               Circuit Breakers Open
             </h4>
@@ -174,7 +175,7 @@ const SwarmMonitorComplete = () => {
         {sidebarExpanded && (
           <div style={{ width: '256px', borderRight: '1px solid #1e293b', display: 'flex', flexDirection: 'column' }}>
             <div style={{ padding: '12px', borderBottom: '1px solid #1e293b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '11px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Thread Tree</span>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', textTransform: 'uppercase' }}>Thread Tree</span>
               <button style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
               </button>
@@ -192,13 +193,13 @@ const SwarmMonitorComplete = () => {
                   }}
                 >
                   <StatusDot status={thread.status} />
-                  <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: '#64748b' }}>{thread.id}</span>
+                  <span style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: '#64748b' }}>{thread.id}</span>
                   <span style={{ fontSize: '12px', color: selectedThreadId === thread.id ? '#f59e0b' : '#94a3b8', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{thread.goal}</span>
                   {thread.pinned && <span style={{ color: 'var(--status-warning)' }}>📌</span>}
                 </div>
               ))}
             </div>
-            <div style={{ padding: '12px', borderTop: '1px solid #1e293b', fontSize: '11px', color: '#64748b' }}>
+            <div style={{ padding: '12px', borderTop: '1px solid #1e293b', fontSize: '12px', color: '#64748b' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                 <span>Running:</span><span style={{ color: 'var(--status-success)' }}>5</span>
               </div>
@@ -238,7 +239,7 @@ const SwarmMonitorComplete = () => {
           </div>
           
           {/* Stats */}
-          <div style={{ display: 'flex', gap: '16px', marginBottom: '12px', fontSize: '11px', color: '#64748b' }}>
+          <div style={{ display: 'flex', gap: '16px', marginBottom: '12px', fontSize: '12px', color: '#64748b' }}>
             <span>⚡ {(selectedThread.tokenCount / 1000).toFixed(1)}k tokens</span>
             <span>🕐 {Math.floor(selectedThread.elapsedSeconds! / 60)}m {selectedThread.elapsedSeconds! % 60}s</span>
             <span>📎 {selectedThread.children.length} children</span>
@@ -249,21 +250,21 @@ const SwarmMonitorComplete = () => {
             <div style={{ color: '#64748b', marginBottom: '8px' }}>$ swarm thread --tactic={selectedThread.tactic} --goal="{selectedThread.goal}"</div>
             {selectedThread.status === 'running' && (
               <>
-                <div style={{ color: '#94a3b8' }}>[14:32:01] Starting thread...</div>
+                <div style={{ color: '#94a3b8' }}>[14:32:01] Starting thread…</div>
                 <div style={{ color: '#94a3b8' }}>[14:32:02] Executing tactic: {selectedThread.tactic}</div>
-                <div style={{ color: '#94a3b8' }}>[14:32:05] Processing...</div>
-                <div style={{ color: '#94a3b8' }}>[14:32:08] Analyzing context...</div>
+                <div style={{ color: '#94a3b8' }}>[14:32:05] Processing…</div>
+                <div style={{ color: '#94a3b8' }}>[14:32:08] Analyzing context…</div>
               </>
             )}
             {selectedThread.status === 'compacting' && (
               <>
                 <div style={{ color: '#94a3b8' }}>[14:50:45] 234 tests passed</div>
-                <div style={{ color: '#a855f7' }}>[14:50:46] ⟳ Compressing context into episode...</div>
+                <div style={{ color: '#a855f7' }}>[14:50:46] ⟳ Compressing context into episode…</div>
               </>
             )}
             {selectedThread.status === 'failed' && (
               <>
-                <div style={{ color: '#94a3b8' }}>[14:55:05] Bundling with Vite...</div>
+                <div style={{ color: '#94a3b8' }}>[14:55:05] Bundling with Vite…</div>
                 <div style={{ color: 'var(--status-error)' }}>[14:55:30] ✗ Build failed: Out of memory</div>
               </>
             )}
@@ -273,7 +274,7 @@ const SwarmMonitorComplete = () => {
           {/* Progress */}
           {selectedThread.status !== 'completed' && (
             <div style={{ marginTop: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#64748b', marginBottom: '4px' }}>
                 <span>Progress</span>
                 <span>{Math.round(selectedThread.progress)}%</span>
               </div>
@@ -291,10 +292,10 @@ const SwarmMonitorComplete = () => {
           <div style={{ height: '48px', display: 'flex', alignItems: 'center', padding: '0 16px', gap: '16px' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
             <span style={{ fontSize: '13px', color: '#cbd5e1' }}>Episode E1</span>
-            <span style={{ fontSize: '11px', color: '#64748b', flex: 1 }}>Deployed to staging with zero downtime</span>
-            <span style={{ fontSize: '11px', color: '#64748b' }}>3 decisions · 2 artifacts</span>
-            <span style={{ fontSize: '11px', padding: '2px 8px', background: 'rgba(245, 158, 11, 0.1)', color: 'var(--status-warning)', borderRadius: '4px' }}>85% compressed</span>
-            <button style={{ fontSize: '11px', padding: '4px 12px', background: 'transparent', border: '1px solid #334155', borderRadius: '4px', color: '#cbd5e1', cursor: 'pointer' }}>Use as Context</button>
+            <span style={{ fontSize: '12px', color: '#64748b', flex: 1 }}>Deployed to staging with zero downtime</span>
+            <span style={{ fontSize: '12px', color: '#64748b' }}>3 decisions · 2 artifacts</span>
+            <span style={{ fontSize: '12px', padding: '2px 8px', background: 'rgba(245, 158, 11, 0.1)', color: 'var(--status-warning)', borderRadius: '4px' }}>85% compressed</span>
+            <button style={{ fontSize: '12px', padding: '4px 12px', background: 'transparent', border: '1px solid #334155', borderRadius: '4px', color: '#cbd5e1', cursor: 'pointer' }}>Use as Context</button>
           </div>
         </div>
       )}

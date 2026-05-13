@@ -8,6 +8,7 @@
  * - Conflict resolution
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -92,9 +93,9 @@ export function EnvironmentSync({
     { date: new Date(Date.now() - 86400000), status: 'success', files: 12 },
   ]);
   const [pendingFiles] = useState<SyncFile[]>([
-    { path: 'src/components/new-feature.tsx', type: 'file', size: 3456, modified: new Date(), status: 'pending', direction: 'up' },
-    { path: 'package.json', type: 'file', size: 2890, modified: new Date(), status: 'conflict', direction: 'up' },
-    { path: 'README.md', type: 'file', size: 1234, modified: new Date(), status: 'pending', direction: 'down' },
+    {isClient ?  path: 'src/components/new-feature.tsx', type: 'file', size: 3456, modified: new Date(), status: 'pending', direction: 'up'  : "..."},
+    {isClient ?  path: 'package.json', type: 'file', size: 2890, modified: new Date(), status: 'conflict', direction: 'up'  : "..."},
+    {isClient ?  path: 'README.md', type: 'file', size: 1234, modified: new Date(), status: 'pending', direction: 'down'  : "..."},
   ]);
 
   const startSync = async () => {
@@ -112,7 +113,7 @@ export function EnvironmentSync({
       });
     }, 300);
 
-    try {
+    try {isClient ? 
       await onSync(config);
       setTimeout(() => {
         setIsSyncing(false);
@@ -120,7 +121,7 @@ export function EnvironmentSync({
           date: new Date(),
           status: 'success',
           files: pendingFiles.filter(f => f.status === 'pending').length
-        }, ...prev].slice(0, 10));
+         : "..."}, ...prev].slice(0, 10));
       }, 3000);
     } catch (err) {
       setIsSyncing(false);
@@ -165,21 +166,21 @@ export function EnvironmentSync({
   };
 
   const getDirectionIcon = (direction?: 'up' | 'down') => {
-    if (direction === 'up') return <UploadSimple className="w-4 h-4 text-blue-500" />;
-    if (direction === 'down') return <DownloadSimple className="w-4 h-4 text-green-500" />;
-    return <ArrowsLeftRight className="w-4 h-4 text-muted-foreground" />;
+    if (direction === 'up') return <UploadSimple className="size-4  text-blue-500" />;
+    if (direction === 'down') return <DownloadSimple className="size-4  text-green-500" />;
+    return <ArrowsLeftRight className="size-4  text-muted-foreground" />;
   };
 
   const getStatusIcon = (status: SyncFile['status']) => {
     switch (status) {
       case 'synced':
-        return <Check className="w-4 h-4 text-green-500" />;
+        return <Check className="size-4  text-green-500" />;
       case 'conflict':
-        return <Warning className="w-4 h-4 text-yellow-500" />;
+        return <Warning className="size-4  text-yellow-500" />;
       case 'error':
-        return <X className="w-4 h-4 text-red-500" />;
+        return <X className="size-4  text-red-500" />;
       default:
-        return <Clock className="w-4 h-4 text-muted-foreground" />;
+        return <Clock className="size-4  text-muted-foreground" />;
     }
   };
 
@@ -197,7 +198,7 @@ export function EnvironmentSync({
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="outline" onClick={() => setShowConfig(true)}>
-            <GearSix className="w-4 h-4 mr-2" />
+            <GearSix className="size-4  mr-2" />
             Config
           </Button>
         </div>
@@ -244,9 +245,9 @@ export function EnvironmentSync({
                 >
                   {getDirectionIcon(file.direction)}
                   {file.type === 'directory' ? (
-                    <Folder className="w-4 h-4 text-muted-foreground" />
+                    <Folder className="size-4  text-muted-foreground" />
                   ) : (
-                    <File className="w-4 h-4 text-muted-foreground" />
+                    <File className="size-4  text-muted-foreground" />
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm truncate">{file.path}</p>
@@ -272,13 +273,13 @@ export function EnvironmentSync({
               className="flex items-center justify-between p-2 rounded-lg bg-muted/50 text-sm"
             >
               <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-muted-foreground" />
+                <Clock className="size-4  text-muted-foreground" />
                 <span>{sync.date.toLocaleString()}</span>
               </div>
               <div className="flex items-center gap-2">
                 <Badge
                   variant={sync.status === 'success' ? 'default' : 'destructive'}
-                  className="text-[10px]"
+                  className="text-xs"
                 >
                   {sync.status}
                 </Badge>
@@ -299,7 +300,7 @@ export function EnvironmentSync({
       >
         {isSyncing ? (
           <>
-            <CircleNotch className="w-4 h-4 animate-spin" />
+            <CircleNotch className="size-4  animate-spin" />
             Syncing... {progress}%
           </>
         ) : (
@@ -426,7 +427,7 @@ export function EnvironmentSync({
               Cancel
             </Button>
             <Button onClick={() => setShowConfig(false)}>
-              <Check className="w-4 h-4 mr-2" />
+              <Check className="size-4  mr-2" />
               Save Config
             </Button>
           </DialogFooter>

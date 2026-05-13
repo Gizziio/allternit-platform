@@ -17,9 +17,9 @@ import {
 import { GlassSurface } from '@/design/GlassSurface';
 import { StatusBadge } from '../components/StatusBadge';
 import { StatCard } from '../components/StatCard';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 
-export function WorkflowListView() {
+export function WorkflowListView(): JSX.Element {
   const { workflows, isLoading, executeWorkflow, deleteWorkflow } = useWorkflow();
   const [executing, setExecuting] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -58,7 +58,7 @@ export function WorkflowListView() {
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <CircleNotch className="h-8 w-8 animate-spin text-accent" />
+        <CircleNotch className="size-8  animate-spin text-accent" />
       </div>
     );
   }
@@ -69,8 +69,8 @@ export function WorkflowListView() {
         <GlassSurface intensity="thick" className="rounded-3xl p-6">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
-                <Sparkle className="h-3.5 w-3.5 text-accent" />
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[12px] uppercase tracking-[0.24em] text-muted-foreground">
+                <Sparkle className="size-3.5  text-accent" />
                 Workflow Control Plane
               </div>
               <h2 className="text-3xl font-semibold tracking-tight text-foreground">Workflows</h2>
@@ -80,10 +80,10 @@ export function WorkflowListView() {
             </div>
 
             <div className="relative w-full max-w-md">
-              <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 size-4  -tranzinc-y-1/2 text-muted-foreground" />
               <input
                 type="text"
-                placeholder="Search workflows, descriptions, and intent..."
+                placeholder="Search workflows, descriptions, and intent…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full rounded-2xl border border-white/10 bg-black/20 py-3 pl-10 pr-4 text-sm text-foreground outline-none transition focus:border-accent/50 focus:bg-black/30"
@@ -108,12 +108,12 @@ export function WorkflowListView() {
               <GlassSurface
                 key={workflowId}
                 intensity="base"
-                className="group rounded-3xl border border-white/5 p-5 transition-transform duration-200 hover:-translate-y-0.5"
+                className="group rounded-3xl border border-white/5 p-5 transition-transform duration-200 hover:-tranzinc-y-0.5"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-3">
                     <div className="rounded-2xl border border-emerald-300/15 bg-emerald-300/10 p-3">
-                      <GitBranch className="h-5 w-5 text-emerald-300" />
+                      <GitBranch className="size-5  text-emerald-300" />
                     </div>
                     <div className="min-w-0">
                       <h3 className="truncate text-lg font-medium text-foreground">{workflow.name}</h3>
@@ -124,7 +124,7 @@ export function WorkflowListView() {
                   </div>
 
                   <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:transition-opacity md:group-hover:opacity-100">
-                    <Link href={`/workflows/${workflowId}/designer`}>
+                    <Link to={`/workflows/${workflowId}/designer`}>
                       <button
                         className="rounded-xl p-2 text-muted-foreground transition hover:bg-white/5 hover:text-foreground"
                         aria-label={`Edit ${workflow.name}`}
@@ -161,7 +161,7 @@ export function WorkflowListView() {
 
                 <div className="mt-5 flex items-center justify-between border-t border-white/5 pt-4 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5" />
+                    <Clock className="size-3.5 " />
                     {lastExecuted ? new Date(lastExecuted).toLocaleDateString() : 'Never executed'}
                   </span>
                   <button
@@ -170,7 +170,7 @@ export function WorkflowListView() {
                     className="inline-flex items-center gap-2 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-3 py-2 text-sm font-medium text-emerald-100 transition hover:bg-emerald-300/20 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {executing === workflowId ? (
-                      <CircleNotch className="h-4 w-4 animate-spin" />
+                      <CircleNotch className="size-4  animate-spin" />
                     ) : (
                       <Play size={16} />
                     )}
@@ -184,7 +184,7 @@ export function WorkflowListView() {
 
         {filteredWorkflows.length === 0 && (
           <GlassSurface intensity="thin" className="rounded-3xl p-10 text-center">
-            <GitBranch className="mx-auto h-12 w-12 text-muted-foreground/50" />
+            <GitBranch className="mx-auto size-12  text-muted-foreground/50" />
             <h3 className="mt-4 text-lg font-medium text-foreground">No workflows found</h3>
             <p className="mt-2 text-sm text-muted-foreground">
               {searchQuery
@@ -193,7 +193,7 @@ export function WorkflowListView() {
             </p>
             {!searchQuery && (
               <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-2 text-sm text-muted-foreground">
-                <Sparkle className="h-4 w-4 text-accent" />
+                <Sparkle className="size-4  text-accent" />
                 Workflow designer wiring is now aligned with the live `/api/v1/workflows` surface.
               </div>
             )}

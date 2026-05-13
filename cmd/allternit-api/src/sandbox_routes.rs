@@ -6,12 +6,12 @@ use axum::{
     body::Body,
     extract::{Json, State},
     http::{header, StatusCode},
-    response::Response,
+    response::{IntoResponse, Response},
     routing::{get, post},
     Router,
 };
-use futures::stream;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::sync::Arc;
 use tokio::io::AsyncBufReadExt;
 use tracing::{debug, error};
@@ -85,10 +85,18 @@ pub struct SandboxCapabilitiesResponse {
 /// Create sandbox router
 pub fn sandbox_router() -> Router<Arc<AppState>> {
     Router::new()
+        .route("/", get(sandbox_status))
         .route("/execute", post(execute_handler))
         .route("/execute/stream", post(execute_stream_handler))
         .route("/capabilities", get(capabilities_handler))
         .route("/health", get(health_handler))
+}
+
+async fn sandbox_status() -> impl IntoResponse {
+    Json(json!({
+        "status": "ok",
+        "service": "sandbox",
+    }))
 }
 
 /// Execute code in sandbox
@@ -162,7 +170,7 @@ async fn execute_stream_handler(
     };
 
     let timeout = std::time::Duration::from_secs(request.timeout_secs.min(300));
-    let code = request.code.clone();
+    let _code = request.code.clone();
     let args: Vec<String> = args.iter().map(|s| s.to_string()).collect();
 
     let stream_body = async_stream::stream! {

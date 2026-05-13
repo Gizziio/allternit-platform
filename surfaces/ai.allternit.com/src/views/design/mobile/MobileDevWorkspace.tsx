@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { DeviceMobile as Smartphone, Play, DeviceMobileCamera, AppWindow, Cpu, WifiHigh } from '@phosphor-icons/react';
-import { GlassCard } from '../../../design/GlassCard';
+import { GlassCard } from '../../../design/glass/GlassCard';
 import { DesignMdRenderer } from '@/lib/openui/DesignMdRenderer';
 
 /**

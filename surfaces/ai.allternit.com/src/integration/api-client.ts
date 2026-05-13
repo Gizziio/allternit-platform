@@ -67,7 +67,7 @@ const API_BASE = `${gatewayUrl()}/api`;
 // Export for debugging
 export const GATEWAY_BASE_URL = gatewayUrl();
 export const GATEWAY_URL = GATEWAY_BASE_URL; // Consistent export
-console.log('[Allternit API Client] Using gateway URL:', GATEWAY_BASE_URL);
+console.debug('[Allternit API Client] Using gateway URL:', GATEWAY_BASE_URL);
 
 // Legacy alias for backward compatibility
 export const ALLTERNIT_BASE_URL = GATEWAY_BASE_URL;
@@ -222,7 +222,7 @@ class AllternitApiClient {
     // SSR-safe: only access localStorage in browser
     this.token = typeof window !== 'undefined' ? localStorage.getItem('allternit_token') : null;
     
-    console.log('[AllternitApiClient] Initialized with gateway:', this.baseUrl);
+    console.debug('[AllternitApiClient] Initialized with gateway:', this.baseUrl);
   }
 
   private candidateBaseUrls(): string[] {
@@ -1098,7 +1098,7 @@ export function useSession(sessionId: string | null) {
           
           case 'tool.call':
             // Tool was called
-            console.log('[useSession] Tool call:', data.data);
+            console.debug('[useSession] Tool call:', data.data);
             break;
           
           case 'error':

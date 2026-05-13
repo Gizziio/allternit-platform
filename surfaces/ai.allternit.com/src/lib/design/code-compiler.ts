@@ -109,7 +109,7 @@ export function compileToReact(uiStream: string, tokens: DesignTokens): string {
       const label = node.props.label || 'Metric';
       const val = node.props.val || '0';
       result += `${indent}<div className="p-4 rounded-xl bg-white/5 border border-white/5">\n`;
-      result += `${indent}  <div className="text-[10px] uppercase opacity-40 font-bold mb-1">${label}</div>\n`;
+      result += `${indent}  <div className="text-xs uppercase opacity-40 font-bold mb-1">${label}</div>\n`;
       result += `${indent}  <div className="text-2xl font-black">${val}</div>\n`;
       result += `${indent}</div>\n`;
     } else if (node.tag === 'v:button') {

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { userEvent, within } from '@storybook/testing-library';
 import { expect } from '@storybook/jest';
 import { StatusBar, StatusBarProps } from './StatusBar';
@@ -109,48 +109,50 @@ export const Compact: Story = {
   },
 };
 
+const InterruptTemplate = () => {
+  const [state, setState] = useState<StatusBarProps['state']>('executing');
+  const [interruptPending, setInterruptPending] = useState(false);
+  
+  const handleInterrupt = () => {
+    if (!interruptPending) {
+      setInterruptPending(true);
+      setTimeout(() => {
+        setInterruptPending(false);
+        setState('idle');
+      }, 1000);
+    }
+  };
+  
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <StatusBar 
+        state={state} 
+        onInterrupt={handleInterrupt}
+        interruptPending={interruptPending}
+        pendingTools={['long_running_tool']}
+      />
+      <button 
+        onClick={() => setState('executing')}
+        style={{
+          padding: '8px 16px',
+          marginLeft: '16px',
+          borderRadius: '8px',
+          border: '1px solid var(--border-default)',
+          background: 'var(--bg-secondary)',
+          cursor: 'pointer',
+        }}
+      >
+        Reset to Executing
+      </button>
+    </div>
+  );
+};
+
 /**
  * With interrupt functionality
  */
 export const WithInterrupt: Story = {
-  render: () => {
-    const [state, setState] = useState<StatusBarProps['state']>('executing');
-    const [interruptPending, setInterruptPending] = useState(false);
-    
-    const handleInterrupt = () => {
-      if (!interruptPending) {
-        setInterruptPending(true);
-        setTimeout(() => {
-          setInterruptPending(false);
-          setState('idle');
-        }, 1000);
-      }
-    };
-    
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <StatusBar 
-          state={state} 
-          onInterrupt={handleInterrupt}
-          interruptPending={interruptPending}
-          pendingTools={['long_running_tool']}
-        />
-        <button 
-          onClick={() => setState('executing')}
-          style={{
-            padding: '8px 16px',
-            marginLeft: '16px',
-            borderRadius: '8px',
-            border: '1px solid var(--border-default)',
-            background: 'var(--bg-secondary)',
-            cursor: 'pointer',
-          }}
-        >
-          Reset to Executing
-        </button>
-      </div>
-    );
-  },
+  render: () => <InterruptTemplate />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const interruptButton = canvas.getByRole('button', { name: /esc/i });
@@ -210,54 +212,56 @@ export const OverflowTools: Story = {
   },
 };
 
+const FullDemoTemplate = () => {
+  const [currentState, setCurrentState] = useState<StatusBarProps['state']>('idle');
+  const states: StatusBarProps['state'][] = [
+    'idle',
+    'connecting',
+    'hydrating',
+    'planning',
+    'web',
+    'executing',
+    'responding',
+    'compacting',
+  ];
+  
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <StatusBar 
+        state={currentState}
+        pendingTools={currentState === 'executing' ? ['tool_a', 'tool_b'] : []}
+        startedAt={currentState !== 'idle' ? Date.now() - 30000 : undefined}
+        onInterrupt={currentState !== 'idle' ? () => setCurrentState('idle') : undefined}
+      />
+      <div style={{ padding: '0 16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        {states.map((state) => (
+          <button
+            key={state}
+            onClick={() => setCurrentState(state)}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '6px',
+              border: '1px solid var(--border-default)',
+              background: currentState === state ? 'var(--accent-chat)' : 'var(--bg-secondary)',
+              color: currentState === state ? 'white' : 'inherit',
+              cursor: 'pointer',
+              fontSize: '12px',
+              textTransform: 'capitalize',
+            }}
+          >
+            {state}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 /**
  * Full status demonstration
  */
 export const FullDemo: Story = {
-  render: () => {
-    const [currentState, setCurrentState] = useState<StatusBarProps['state']>('idle');
-    const states: StatusBarProps['state'][] = [
-      'idle',
-      'connecting',
-      'hydrating',
-      'planning',
-      'web',
-      'executing',
-      'responding',
-      'compacting',
-    ];
-    
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        <StatusBar 
-          state={currentState}
-          pendingTools={currentState === 'executing' ? ['tool_a', 'tool_b'] : []}
-          startedAt={currentState !== 'idle' ? Date.now() - 30000 : undefined}
-          onInterrupt={currentState !== 'idle' ? () => setCurrentState('idle') : undefined}
-        />
-        <div style={{ padding: '0 16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {states.map((state) => (
-            <button
-              key={state}
-              onClick={() => setCurrentState(state)}
-              style={{
-                padding: '6px 12px',
-                borderRadius: '6px',
-                border: '1px solid var(--border-default)',
-                background: currentState === state ? 'var(--accent-chat)' : 'var(--bg-secondary)',
-                color: currentState === state ? 'white' : 'inherit',
-                cursor: 'pointer',
-                fontSize: '12px',
-                textTransform: 'capitalize',
-              }}
-            >
-              {state}
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  },
+  render: () => <FullDemoTemplate />,
 };
 
 /**

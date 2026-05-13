@@ -42,12 +42,12 @@ export function MilestoneProgress({ state, className }: MilestoneProgressProps) 
                       borderColor: isCompleted ? "var(--accent-primary)" : isActive ? "#fff" : "rgba(255,255,255,0.2)",
                     }}
                     className={cn(
-                      "h-3 w-3 rounded-full border-2 transition-shadow",
+                      "size-3  rounded-full border-2 transition-shadow",
                       isActive && "shadow-[0_0_10px_#fff]"
                     )}
                   />
                   {/* Label on Hover */}
-                  <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-black/90 px-2 py-1 rounded text-[10px] text-white/80 border border-white/10 z-50">
+                  <div className="absolute -bottom-8 left-1/2 -tranzinc-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-black/90 px-2 py-1 rounded text-xs text-white/80 border border-white/10 z-50">
                     {m.title}
                   </div>
                 </div>
@@ -70,11 +70,11 @@ export function MilestoneProgress({ state, className }: MilestoneProgressProps) 
         ) : (
           /* Fallback simple linear path */
           <div className="flex items-center w-full gap-2 px-2">
-             <div className="h-2 w-2 rounded-full bg-accent-primary" />
+             <div className="size-2  rounded-full bg-accent-primary" />
              <div className="flex-1 h-px bg-white/10" />
-             <div className="h-2 w-2 rounded-full border border-white/20" />
+             <div className="size-2  rounded-full border border-white/20" />
              <div className="flex-1 h-px bg-white/10" />
-             <div className="h-2 w-2 rounded-full border border-white/20" />
+             <div className="size-2  rounded-full border border-white/20" />
           </div>
         )}
       </div>
@@ -83,10 +83,10 @@ export function MilestoneProgress({ state, className }: MilestoneProgressProps) 
       {state.active_plan && (
         <div className="flex items-center justify-between px-4 py-1.5 bg-accent-primary/5 rounded-xl border border-accent-primary/10">
           <div className="flex flex-col">
-            <span className="text-[8px] font-bold uppercase tracking-widest text-accent-primary opacity-70">
+            <span className="text-xs font-bold uppercase tracking-widest text-accent-primary opacity-70">
               MISSION {state.active_plan.wave}
             </span>
-            <span className="text-[10px] text-white/90 font-medium truncate max-w-[180px]">
+            <span className="text-xs text-white/90 font-medium truncate max-w-[180px]">
               {state.active_plan.objective}
             </span>
           </div>
@@ -103,7 +103,7 @@ export function MilestoneProgress({ state, className }: MilestoneProgressProps) 
                     animate={isCurrent ? { scale: [1, 1.2, 1] } : {}}
                     transition={{ repeat: Infinity, duration: 2 }}
                     className={cn(
-                      "h-1.5 w-1.5 rounded-full",
+                      "size-1.5  rounded-full",
                       isDone ? "bg-accent-primary" : isCurrent ? "bg-white" : "bg-white/10"
                     )}
                   />

@@ -113,8 +113,8 @@ export const IconWithBadge = React.forwardRef<HTMLSpanElement, IconWithBadgeProp
       badgeVariants[badgeVariant],
       // Size (dot vs count)
       badgeDot 
-        ? 'w-2.5 h-2.5 rounded-full' 
-        : 'min-w-[18px] h-[18px] px-1 text-[10px] rounded-full',
+        ? 'size-2.5  rounded-full' 
+        : 'min-w-[18px] h-[18px] px-1 text-xs rounded-full',
       // Animation
       'animate-in zoom-in-75 duration-200',
     );

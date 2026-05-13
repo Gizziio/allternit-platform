@@ -15,7 +15,7 @@ try {
 export const db = new Proxy({} as any, {
   get(target, prop) {
     if (!target._initialized) {
-      console.log("[DB] Initializing SQLite connection...");
+      console.debug("[DB] Initializing SQLite connection...");
       const Database = require("better-sqlite3");
       
       let dbPath: string;
@@ -27,7 +27,7 @@ export const db = new Proxy({} as any, {
         dbPath = join(dataDir, "allternit.db");
       }
       
-      console.log(`[DB] Using database path: ${dbPath}`);
+      console.debug(`[DB] Using database path: ${dbPath}`);
       const sqlite = new Database(dbPath);
       target._db = drizzle(sqlite, { schema });
       target._initialized = true;

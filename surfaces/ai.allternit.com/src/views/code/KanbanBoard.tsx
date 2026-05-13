@@ -100,12 +100,12 @@ export function KanbanBoard() {
         await closeWih(wih.wih_id, 'failed');
       } else if (wih.status === 'blocked' && targetStatus === 'ready') {
         // Unblock - would need API endpoint for this
-        console.log('Unblocking WIH:', wih.wih_id);
+        console.debug('Unblocking WIH:', wih.wih_id);
         // For now, just refresh to get updated state
         await fetchWihs();
       } else {
         // For other transitions, just log (would need specific API endpoints)
-        console.log(`Transitioning WIH ${wih.wih_id} from ${wih.status} to ${targetStatus}`);
+        console.debug(`Transitioning WIH ${wih.wih_id} from ${wih.status} to ${targetStatus}`);
         // Refresh to get current state from server
         await fetchWihs();
       }
@@ -135,7 +135,7 @@ export function KanbanBoard() {
           style={{ 
             padding: '4px 12px', 
             borderRadius: 6, 
-            fontSize: 11, 
+            fontSize: 12, 
             fontWeight: 700, 
             cursor: 'pointer', 
             border: 'none', 
@@ -150,7 +150,7 @@ export function KanbanBoard() {
           style={{ 
             padding: '4px 12px', 
             borderRadius: 6, 
-            fontSize: 11, 
+            fontSize: 12, 
             fontWeight: 700, 
             cursor: 'pointer', 
             border: 'none', 
@@ -173,7 +173,7 @@ export function KanbanBoard() {
             display: 'flex',
             alignItems: 'center',
             gap: 6,
-            fontSize: 11,
+            fontSize: 12,
             opacity: isLoading ? 0.5 : 1
           }}
         >
@@ -181,7 +181,7 @@ export function KanbanBoard() {
           Refresh
         </button>
         {isUpdating && (
-          <span style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>Updating...</span>
+          <span style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>Updating…</span>
         )}
       </div>
       
@@ -212,7 +212,7 @@ export function KanbanBoard() {
               >
                 {/* Column Header */}
                 <div style={{ 
-                  fontSize: 11, 
+                  fontSize: 12, 
                   fontWeight: 800, 
                   textTransform: 'uppercase',
                   padding: '8px 12px',
@@ -236,7 +236,7 @@ export function KanbanBoard() {
                     padding: '2px 8px',
                     background: 'var(--bg-primary)',
                     borderRadius: 10,
-                    fontSize: 10
+                    fontSize: 12
                   }}>
                     {wihs.filter(n => n.status === col.id).length}
                   </span>
@@ -327,12 +327,12 @@ export function KanbanBoard() {
                 key={col.id}
                 onClick={() => {
                   // Status change would go here via API
-                  console.log('Change status to:', col.id);
+                  console.debug('Change status to:', col.id);
                 }}
                 style={{
                   padding: '4px 8px',
                   borderRadius: 6,
-                  fontSize: 10,
+                  fontSize: 12,
                   fontWeight: 700,
                   cursor: 'pointer',
                   border: '1px solid var(--border-subtle)',
@@ -360,7 +360,7 @@ export function KanbanBoard() {
               borderRadius: 6
             }}>
               <div style={{ 
-                fontSize: 11, 
+                fontSize: 12, 
                 fontWeight: 700, 
                 color: 'var(--status-error)',
                 marginBottom: 8,
@@ -387,7 +387,7 @@ export function KanbanBoard() {
           )}
 
           <div style={{ marginTop: 'auto', borderTop: '1px solid var(--border-subtle)', paddingTop: 16 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, opacity: 0.5, marginBottom: 8 }}>ACTIONS</div>
+            <div style={{ fontSize: 12, fontWeight: 700, opacity: 0.5, marginBottom: 8 }}>ACTIONS</div>
             <div style={{ display: 'flex', gap: 8 }}>
               {(selectedWih.status === 'open' || selectedWih.status === 'ready') && selectedWih.dag_id && (
                 <button
@@ -477,13 +477,13 @@ function TaskCard({ wih, isActive }: { wih: WihInfo; isActive: boolean }) {
     >
       <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8 }}>{wih.title || wih.wih_id}</div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4, opacity: 0.5, fontSize: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, opacity: 0.5, fontSize: 12 }}>
           <User size={12} />
           {wih.node_id}
         </div>
         {wih.blocked_by && wih.blocked_by.length > 0 && (
           <div style={{ 
-            fontSize: 10, 
+            fontSize: 12, 
             background: 'rgba(255,59,48,0.1)', 
             color: 'var(--status-error)', 
             padding: '2px 6px', 
@@ -495,7 +495,7 @@ function TaskCard({ wih, isActive }: { wih: WihInfo; isActive: boolean }) {
         )}
         {wih.assignee && (
           <div style={{ 
-            fontSize: 10, 
+            fontSize: 12, 
             background: 'rgba(16,185,129,0.1)', 
             color: 'var(--status-success)', 
             padding: '2px 6px', 

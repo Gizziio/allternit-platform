@@ -697,7 +697,7 @@ const RUST_EVENT_MAP: Record<RustEventType, RustEventHandler> = {
 
     // If we've already received deltas for this message, do NOT reset/overwrite
     if (ctx.hasStreamedDeltasByMessageId.get(messageId)) {
-      console.log("[rust-stream-adapter] Preserving live stream state, ignoring redundant message_start");
+      console.debug("[rust-stream-adapter] Preserving live stream state, ignoring redundant message_start");
       return;
     }
 
@@ -1242,7 +1242,7 @@ const RUST_EVENT_MAP: Record<RustEventType, RustEventHandler> = {
 
   finish: (event, ctx) => {
     // finish is strictly metadata-only. setIsLoading(false) happens in finally.
-    console.log("[rust-stream-adapter] Received finish metadata", event);
+    console.debug("[rust-stream-adapter] Received finish metadata", event);
     updateMessageMetadata(ctx.setMessages, ctx.assistantMessageId, {
       finishedAt: event.finishedAt,
       durationMs: event.durationMs,
@@ -1880,10 +1880,10 @@ export function useRustStreamAdapter(
       let lastErrorMessage = "";
       let terminalSessionId: string | null = null;
 
-      console.log('[rust-stream-adapter] Trying endpoints:', endpointAttempts.map(e => e.label));
+      console.debug('[rust-stream-adapter] Trying endpoints:', endpointAttempts.map(e => e.label));
       
       for (const attempt of endpointAttempts) {
-        console.log('[rust-stream-adapter] Attempting endpoint:', attempt.url);
+        console.debug('[rust-stream-adapter] Attempting endpoint:', attempt.url);
         
         // Check if this is a Terminal Server endpoint (either direct or via proxy)
         const isTerminalEndpoint = (attempt.url.includes("/session/") && attempt.url.includes("/message")) ||
@@ -1956,7 +1956,7 @@ export function useRustStreamAdapter(
           const detail = detailText.trim().slice(0, 240);
           
           // Detect specific error types for better user messages
-          console.log(`[rust-stream-adapter] HTTP Error ${candidate.status}:`, detail);
+          console.debug(`[rust-stream-adapter] HTTP Error ${candidate.status}:`, detail);
           if (candidate.status === 429) {
             lastErrorMessage = "Rate limit exceeded. The AI service is temporarily unavailable. Please wait a moment and try again.";
             console.error('[rust-stream-adapter] Rate limit detected (429)');
@@ -2074,7 +2074,7 @@ export function useRustStreamAdapter(
         if (parsed.info && parsed.parts && Array.isArray(parsed.parts)) {
           const syncId = parsed.info.id || assistantMessageIdRef.current || '';
           if (context.hasStreamedDeltasByMessageId.get(syncId)) {
-            console.log("[rust-stream-adapter] Ignoring DB full-sync object to preserve live streamed deltas");
+            console.debug("[rust-stream-adapter] Ignoring DB full-sync object to preserve live streamed deltas");
             return;
           }
 
@@ -2217,7 +2217,7 @@ export function useRustStreamAdapter(
             status: "error",
           },
         };
-        console.log('[rust-stream-adapter] Adding error message to chat:', assistantError);
+        console.debug('[rust-stream-adapter] Adding error message to chat:', assistantError);
         setMessages((prev: ChatMessage[]) => [...prev, assistantError]);
       }
     } finally {

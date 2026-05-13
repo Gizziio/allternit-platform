@@ -47,6 +47,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import type { Environment } from '@/api/infrastructure';
 
 export interface Backup {
@@ -87,6 +88,7 @@ export function BackupRestore({
   onBackupExport,
   className,
 }: BackupRestoreProps) {
+  const isClient = useIsClient();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showRestoreDialog, setShowRestoreDialog] = useState(false);
   const [selectedBackup, setSelectedBackup] = useState<Backup | null>(null);
@@ -177,6 +179,8 @@ export function BackupRestore({
   };
 
   const formatDate = (date: Date): string => {
+    if (!isClient) return '...';
+    
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const hours = Math.floor(diff / (1000 * 60 * 60));
@@ -191,12 +195,12 @@ export function BackupRestore({
   const getStatusIcon = (status: Backup['status']) => {
     switch (status) {
       case 'complete':
-        return <Check className="w-4 h-4 text-green-500" />;
+        return <Check className="size-4  text-green-500" />;
       case 'failed':
-        return <X className="w-4 h-4 text-red-500" />;
+        return <X className="size-4  text-red-500" />;
       case 'in-progress':
       case 'restoring':
-        return <CircleNotch className="w-4 h-4 text-primary animate-spin" />;
+        return <CircleNotch className="size-4  text-primary animate-spin" />;
       default:
         return null;
     }
@@ -238,9 +242,9 @@ export function BackupRestore({
 
       {/* Search */}
       <div className="relative">
-        <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 size-4  text-muted-foreground" />
         <Input
-          placeholder="Search backups..."
+          placeholder="Search backups…"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-9"
@@ -266,7 +270,7 @@ export function BackupRestore({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sm truncate">{backup.name}</span>
-                    <Badge variant="outline" className="text-[10px] capitalize">
+                    <Badge variant="outline" className="text-xs capitalize">
                       {backup.type}
                     </Badge>
                     {getStatusIcon(backup.status)}
@@ -285,7 +289,7 @@ export function BackupRestore({
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                    <Button size="sm" variant="ghost" className="size-8  p-0">
                       <DotsThreeVertical size={16} />
                     </Button>
                   </DropdownMenuTrigger>
@@ -296,18 +300,18 @@ export function BackupRestore({
                         setShowRestoreDialog(true);
                       }}
                     >
-                      <ArrowCounterClockwise className="w-4 h-4 mr-2" />
+                      <ArrowCounterClockwise className="size-4  mr-2" />
                       Restore
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => onBackupExport(backup.id)}>
-                      <DownloadSimple className="w-4 h-4 mr-2" />
+                      <DownloadSimple className="size-4  mr-2" />
                       Export
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => onBackupDelete(backup.id)}
                       className="text-red-600"
                     >
-                      <Trash className="w-4 h-4 mr-2" />
+                      <Trash className="size-4  mr-2" />
                       Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -317,7 +321,7 @@ export function BackupRestore({
           </AnimatePresence>
           {sortedBackups.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">
-              <Archive className="w-8 h-8 mx-auto mb-2" />
+              <Archive className="size-8  mx-auto mb-2" />
               <p className="text-sm">No backups found</p>
               <p className="text-xs">Create your first backup</p>
             </div>
@@ -343,7 +347,7 @@ export function BackupRestore({
                 onChange={(e) =>
                   setNewBackupConfig((prev) => ({ ...prev, name: e.target.value }))
                 }
-                placeholder={`Backup ${new Date().toLocaleDateString()}`}
+                placeholder={isClient ? `Backup ${new Date().toLocaleDateString()}` : 'Backup Name'}
               />
             </div>
 
@@ -426,12 +430,12 @@ export function BackupRestore({
             >
               {isProcessing ? (
                 <>
-                  <CircleNotch className="w-4 h-4 mr-2 animate-spin" />
+                  <CircleNotch className="size-4  mr-2 animate-spin" />
                   Creating...
                 </>
               ) : (
                 <>
-                  <Archive className="w-4 h-4 mr-2" />
+                  <Archive className="size-4  mr-2" />
                   Create Backup
                 </>
               )}
@@ -489,12 +493,12 @@ export function BackupRestore({
             >
               {isProcessing ? (
                 <>
-                  <CircleNotch className="w-4 h-4 mr-2 animate-spin" />
+                  <CircleNotch className="size-4  mr-2 animate-spin" />
                   Restoring...
                 </>
               ) : (
                 <>
-                  <ArrowCounterClockwise className="w-4 h-4 mr-2" />
+                  <ArrowCounterClockwise className="size-4  mr-2" />
                   Restore Backup
                 </>
               )}

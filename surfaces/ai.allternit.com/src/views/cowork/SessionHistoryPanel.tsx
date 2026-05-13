@@ -177,7 +177,7 @@ function SessionRow({
         <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {session.title ?? 'Untitled Session'}
         </div>
-        <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <span>{formatDate(session.startedAt ?? session.createdAt)}</span>
           <span>·</span>
           <span style={{ textTransform: 'capitalize' }}>{session.status}</span>

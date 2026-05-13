@@ -310,7 +310,7 @@ function HealthItem({ icon: Icon, label, status }: HealthItemProps) {
         </div>
         <div
           style={{
-            fontSize: 11,
+            fontSize: 12,
             color: status ? "#10b981" : "#ff3b30",
           }}
         >
@@ -362,7 +362,7 @@ function StatBox({ icon: Icon, label, value, color }: StatBoxProps) {
       </div>
       <div
         style={{
-          fontSize: 11,
+          fontSize: 12,
           color: "#888",
           textTransform: "uppercase",
         }}
@@ -455,7 +455,7 @@ function ExecutionCard({ execution, onCancel }: ExecutionCardProps) {
           </div>
           <div
             style={{
-              fontSize: 11,
+              fontSize: 12,
               color: "#888",
             }}
           >
@@ -489,7 +489,7 @@ function ExecutionCard({ execution, onCancel }: ExecutionCardProps) {
               border: "none",
               borderRadius: 6,
               color: "#fff",
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 600,
               cursor: "pointer",
               display: "flex",
@@ -529,7 +529,7 @@ function ExecutionCard({ execution, onCancel }: ExecutionCardProps) {
         style={{
           display: "flex",
           gap: 16,
-          fontSize: 11,
+          fontSize: 12,
           color: "#888",
         }}
       >
@@ -561,7 +561,7 @@ function LogItem({ log }: { log: { id: string; timestamp: number; level: string;
         padding: "8px 12px",
         background: "var(--bg-primary, #0a0a0a)",
         borderRadius: 6,
-        fontSize: 11,
+        fontSize: 12,
         fontFamily: "var(--font-mono)",
       }}
     >
@@ -588,7 +588,7 @@ function LogItem({ log }: { log: { id: string; timestamp: number; level: string;
         <span
           style={{
             color: "#666",
-            fontSize: 10,
+            fontSize: 12,
           }}
         >
           [{log.source}]

@@ -117,7 +117,7 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
           {status && (
             <span
               style={{
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: 600,
                 padding: '2px 8px',
                 borderRadius: 10,
@@ -226,7 +226,7 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
                 border: '1px solid var(--ui-border-muted)',
               }}
             >
-              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 8 }}>
                 AI FOOTPRINT
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -247,7 +247,7 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
                   <div style={{ fontSize: 24, fontWeight: 800, color: riskColor }}>
                     {result.aiRatio.toFixed(1)}%
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                     AI-generated code ratio
                   </div>
                 </div>
@@ -257,7 +257,7 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
             {/* Riskiest Files */}
             {result.riskiestFiles.length > 0 && (
               <div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>
                   RISKIEST FILES
                 </div>
                 {result.riskiestFiles.map((f, i) => (
@@ -289,7 +289,7 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
                   border: '1px solid rgba(239,68,68,0.2)',
                 }}
               >
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--status-error)', marginBottom: 6 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--status-error)', marginBottom: 6 }}>
                   LEAKED TOKENS DETECTED
                 </div>
                 {result.leakedTokens.map((t, i) => (
@@ -310,7 +310,7 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
                   border: '1px solid rgba(245,158,11,0.2)',
                 }}
               >
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--status-warning)', marginBottom: 6 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--status-warning)', marginBottom: 6 }}>
                   PROMPT INJECTION HITS
                 </div>
                 {result.promptInjectionHits.map((h, i) => (
@@ -324,7 +324,7 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
             {/* AI Directories */}
             {result.aiDirectories.length > 0 && (
               <div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>
                   AI-WRITTEN DIRECTORIES
                 </div>
                 {result.aiDirectories.map((d, i) => (
@@ -349,7 +349,7 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
             {/* Raw output toggle */}
             {raw && (
               <details>
-                <summary style={{ fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer' }}>
+                <summary style={{ fontSize: 12, color: 'var(--text-muted)', cursor: 'pointer' }}>
                   Raw h5i output
                 </summary>
                 <pre
@@ -358,7 +358,7 @@ export function H5iAuditPanel({ workspacePath, onClose }: H5iAuditPanelProps) {
                     padding: 10,
                     borderRadius: 8,
                     background: 'var(--surface-hover)',
-                    fontSize: 11,
+                    fontSize: 12,
                     fontFamily: 'var(--font-mono)',
                     color: 'var(--text-secondary)',
                     overflow: 'auto',

@@ -271,20 +271,20 @@ export function VpsBulkOperations({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                   <DropdownMenuItem onClick={() => handleOperationClick('start')}>
-                    <Play className="w-4 h-4 mr-2 text-green-500" />
+                    <Play className="size-4  mr-2 text-green-500" />
                     Start Environments
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleOperationClick('stop')}>
-                    <Square className="w-4 h-4 mr-2 text-red-500" />
+                    <Square className="size-4  mr-2 text-red-500" />
                     Stop Environments
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleOperationClick('restart')}>
-                    <ArrowClockwise className="w-4 h-4 mr-2 text-blue-500" />
+                    <ArrowClockwise className="size-4  mr-2 text-blue-500" />
                     Restart Environments
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => handleOperationClick('install-agent')}>
-                    <DownloadSimple className="w-4 h-4 mr-2" />
+                    <DownloadSimple className="size-4  mr-2" />
                     Install Allternit Agent
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
@@ -292,7 +292,7 @@ export function VpsBulkOperations({
                     onClick={() => handleOperationClick('delete')}
                     className="text-red-600"
                   >
-                    <Trash className="w-4 h-4 mr-2" />
+                    <Trash className="size-4  mr-2" />
                     Delete Connections
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -302,7 +302,7 @@ export function VpsBulkOperations({
         </div>
 
         <div className="flex items-center gap-2">
-          <Funnel className="w-4 h-4 text-muted-foreground" />
+          <Funnel className="size-4  text-muted-foreground" />
           <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
             <SelectTrigger className="w-[140px] h-8 text-xs">
               <SelectValue />
@@ -334,7 +334,7 @@ export function VpsBulkOperations({
             />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <HardDrives className="w-4 h-4 text-muted-foreground" />
+                <HardDrives className="size-4  text-muted-foreground" />
                 <span className="font-medium truncate">{vps.name}</span>
                 <Badge
                   variant={
@@ -344,7 +344,7 @@ export function VpsBulkOperations({
                       ? 'destructive'
                       : 'secondary'
                   }
-                  className="text-[10px]"
+                  className="text-xs"
                 >
                   {vps.status}
                 </Badge>
@@ -399,9 +399,9 @@ export function VpsBulkOperations({
                       )}
                     >
                       {result.success ? (
-                        <Check className="w-4 h-4 text-green-500" />
+                        <Check className="size-4  text-green-500" />
                       ) : (
-                        <X className="w-4 h-4 text-red-500" />
+                        <X className="size-4  text-red-500" />
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">
@@ -425,7 +425,7 @@ export function VpsBulkOperations({
             >
               {isOperating ? (
                 <>
-                  <CircleNotch className="w-4 h-4 mr-2 animate-spin" />
+                  <CircleNotch className="size-4  mr-2 animate-spin" />
                   Processing...
                 </>
               ) : (
@@ -454,7 +454,7 @@ export function VpsBulkOperations({
               Cancel
             </Button>
             <Button variant="destructive" onClick={confirmOperation}>
-              <Trash className="w-4 h-4 mr-2" />
+              <Trash className="size-4  mr-2" />
               Delete {selectedVps.size} VPS
             </Button>
           </DialogFooter>

@@ -419,7 +419,7 @@ export const TasksView: React.FC = () => {
                         <span
                           style={{
                             display: 'inline-block',
-                            fontSize: '11px',
+                            fontSize: '12px',
                             padding: '3px 8px',
                             borderRadius: '4px',
                             backgroundColor: getTagBg(task.tag),
@@ -442,7 +442,7 @@ export const TasksView: React.FC = () => {
                               borderRadius: '50%',
                               backgroundColor: 'var(--accent-cowork)',
                               color: 'var(--ui-text-primary)',
-                              fontSize: '10px',
+                              fontSize: '12px',
                               fontWeight: 700,
                             }}
                           >
@@ -456,7 +456,7 @@ export const TasksView: React.FC = () => {
                         {task.estimatedMinutes && (
                           <span
                             style={{
-                              fontSize: '11px',
+                              fontSize: '12px',
                               padding: '2px 8px',
                               borderRadius: '4px',
                               backgroundColor: 'var(--bg-secondary)',
@@ -470,7 +470,7 @@ export const TasksView: React.FC = () => {
                         {task.deadline && (
                           <span
                             style={{
-                              fontSize: '11px',
+                              fontSize: '12px',
                               padding: '2px 8px',
                               borderRadius: '4px',
                               backgroundColor: 'var(--bg-secondary)',
@@ -487,7 +487,7 @@ export const TasksView: React.FC = () => {
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: '3px',
-                              fontSize: '11px',
+                              fontSize: '12px',
                               padding: '2px 8px',
                               borderRadius: '4px',
                               backgroundColor: 'var(--bg-secondary)',
@@ -506,7 +506,7 @@ export const TasksView: React.FC = () => {
                         {/* Tags */}
                         {(task as any).tags?.map((tag: string) => (
                           <span key={tag} style={{
-                            fontSize: '10px',
+                            fontSize: '12px',
                             padding: '1px 6px',
                             borderRadius: '999px',
                             background: 'rgba(139, 92, 246, 0.15)',
@@ -519,7 +519,7 @@ export const TasksView: React.FC = () => {
                         {/* Actual time */}
                         {(task as any).actualMinutes ? (
                           <span style={{
-                            fontSize: '10px',
+                            fontSize: '12px',
                             padding: '1px 6px',
                             borderRadius: '4px',
                             background: 'rgba(16, 185, 129, 0.15)',
@@ -532,7 +532,7 @@ export const TasksView: React.FC = () => {
                         {/* Notes indicator */}
                         {(task as any).notes && (
                           <span style={{
-                            fontSize: '10px',
+                            fontSize: '12px',
                             padding: '1px 6px',
                             borderRadius: '4px',
                             background: 'rgba(245, 158, 11, 0.15)',
@@ -606,7 +606,7 @@ export const TasksView: React.FC = () => {
                               setEditMode(null);
                             }}
                             autoFocus
-                            placeholder="Add notes..."
+                            placeholder="Add notes…"
                             rows={3}
                             style={{
                               width: '100%',
@@ -644,7 +644,7 @@ export const TasksView: React.FC = () => {
                               border: 'none',
                               backgroundColor: 'rgba(239, 68, 68, 0.12)',
                               color: 'var(--status-error)',
-                              fontSize: '11px',
+                              fontSize: '12px',
                               fontWeight: 600,
                               cursor: 'pointer',
                               transition: 'all 0.15s ease',
@@ -676,7 +676,7 @@ export const TasksView: React.FC = () => {
                               border: 'none',
                               backgroundColor: 'rgba(34, 197, 94, 0.12)',
                               color: 'var(--status-success)',
-                              fontSize: '11px',
+                              fontSize: '12px',
                               fontWeight: 600,
                               cursor: 'pointer',
                               transition: 'all 0.15s ease',

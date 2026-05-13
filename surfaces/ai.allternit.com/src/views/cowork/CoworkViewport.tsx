@@ -37,7 +37,7 @@ const LabelOverlay = memo(function LabelOverlay({
     button: 'bg-blue-500/30 border-blue-400',
     input: 'bg-green-500/30 border-green-400',
     link: 'bg-purple-500/30 border-purple-400',
-    text: 'bg-gray-500/30 border-gray-400',
+    text: 'bg-zinc-500/30 border-zinc-400',
   };
   
   return (
@@ -56,11 +56,11 @@ const LabelOverlay = memo(function LabelOverlay({
       onMouseEnter={() => onHover(label.id)}
       onMouseLeave={() => onHover(null)}
     >
-      <span className="text-[10px] font-bold text-white drop-shadow-md whitespace-nowrap">
+      <span className="text-xs font-bold text-white drop-shadow-md whitespace-nowrap">
         {label.id}
       </span>
       {isHovered && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2 py-1 bg-black/80 rounded text-[10px] text-white whitespace-nowrap z-20">
+        <div className="absolute top-full left-1/2 -tranzinc-x-1/2 mt-1 px-2 py-1 bg-black/80 rounded text-xs text-white whitespace-nowrap z-20">
           {label.text}
         </div>
       )}
@@ -89,7 +89,7 @@ const OcrRegion = memo(function OcrRegion({
         height: region.height * scale,
       }}
     >
-      <div className="opacity-0 group-hover:opacity-100 absolute top-full left-0 mt-1 px-2 py-1 bg-black/80 rounded text-[10px] text-white whitespace-nowrap z-20 max-w-[200px] truncate">
+      <div className="opacity-0 group-hover:opacity-100 absolute top-full left-0 mt-1 px-2 py-1 bg-black/80 rounded text-xs text-white whitespace-nowrap z-20 max-w-[200px] truncate">
         {region.text}
       </div>
     </div>
@@ -122,12 +122,12 @@ const ClickMarker = memo(function ClickMarker({
     >
       <div className="relative">
         {/* Outer ring */}
-        <div className="absolute inset-0 w-6 h-6 -m-3 rounded-full border-2 border-green-400/50 animate-ping" />
+        <div className="absolute inset-0 size-6  -m-3 rounded-full border-2 border-green-400/50 animate-ping" />
         {/* Inner dot */}
-        <div className="w-3 h-3 -m-1.5 rounded-full bg-green-400 shadow-lg shadow-green-400/50" />
+        <div className="size-3  -m-1.5 rounded-full bg-green-400 shadow-lg shadow-green-400/50" />
         {/* Label */}
         {label && (
-          <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 px-1.5 py-0.5 bg-green-400 text-black text-[9px] font-bold rounded whitespace-nowrap">
+          <div className="absolute top-full left-1/2 -tranzinc-x-1/2 mt-1 px-1.5 py-0.5 bg-green-400 text-black text-xs font-bold rounded whitespace-nowrap">
             {label}
           </div>
         )}
@@ -190,7 +190,7 @@ export const CoworkViewport = memo(function CoworkViewport() {
   if (!session) {
     return (
       <div className="h-full flex flex-col items-center justify-center bg-[#0d0d0d] text-white/30">
-        <div className="w-16 h-16 rounded-full border-2 border-dashed border-white/20 flex items-center justify-center mb-4">
+        <div className="size-16  rounded-full border-2 border-dashed border-white/20 flex items-center justify-center mb-4">
           <Crosshair size={24} />
         </div>
         <p className="text-sm">No active session</p>
@@ -249,7 +249,7 @@ export const CoworkViewport = memo(function CoworkViewport() {
                 : "text-white/40 hover:text-white/60"
             )}
           >
-            <SquaresFour className="w-3.5 h-3.5" />
+            <SquaresFour className="size-3.5 " />
             Labels
           </button>
           
@@ -263,7 +263,7 @@ export const CoworkViewport = memo(function CoworkViewport() {
                 : "text-white/40 hover:text-white/60"
             )}
           >
-            {showOcr ? <Eye className="w-3.5 h-3.5" /> : <EyeSlash className="w-3.5 h-3.5" />}
+            {showOcr ? <Eye className="size-3.5 " /> : <EyeSlash className="size-3.5 " />}
             OCR
           </button>
           
@@ -342,8 +342,8 @@ export const CoworkViewport = memo(function CoworkViewport() {
           </div>
         ) : (
           <div className="text-center text-white/20">
-            <Cursor className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">Waiting for observation...</p>
+            <Cursor className="size-12  mx-auto mb-3 opacity-30" />
+            <p className="text-sm">Waiting for observation…</p>
             <p className="text-xs text-white/10 mt-1 max-w-[280px]">
               The agent will stream screenshots here. Ensure the backend is connected.
             </p>
@@ -352,7 +352,7 @@ export const CoworkViewport = memo(function CoworkViewport() {
       </div>
       
       {/* Status bar */}
-      <div className="px-3 py-2 border-t border-white/5 bg-[#161616] flex items-center justify-between text-[10px] text-white/30">
+      <div className="px-3 py-2 border-t border-white/5 bg-[#161616] flex items-center justify-between text-xs text-white/30">
         <div className="flex items-center gap-3">
           <span>Status: <span className={cn(
             "font-medium",

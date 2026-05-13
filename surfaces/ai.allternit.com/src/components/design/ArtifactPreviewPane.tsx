@@ -129,7 +129,7 @@ export function ArtifactPreviewPane({ html, title, identifier, className, height
                 display: 'flex', alignItems: 'center', gap: 4, padding: '4px 8px', borderRadius: 5, border: 'none',
                 background: viewport === v.id ? 'var(--surface-panel)' : 'transparent',
                 color: viewport === v.id ? 'var(--text-primary)' : 'var(--text-tertiary)',
-                fontSize: 11, fontWeight: 600, cursor: 'pointer', boxShadow: viewport === v.id ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
+                fontSize: 12, fontWeight: 600, cursor: 'pointer', boxShadow: viewport === v.id ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
               }}
             >
               {v.icon} {v.label}
@@ -141,7 +141,7 @@ export function ArtifactPreviewPane({ html, title, identifier, className, height
 
         {/* Zoom controls */}
         <button onClick={() => bumpZoom(-0.1)} style={iconBtn} title="Zoom out"><MagnifyingGlassMinus size={13} /></button>
-        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', minWidth: 36, textAlign: 'center' }}>{zoomPct}%</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', minWidth: 36, textAlign: 'center' }}>{zoomPct}%</span>
         <button onClick={() => bumpZoom(0.1)} style={iconBtn} title="Zoom in"><MagnifyingGlassPlus size={13} /></button>
         <button onClick={() => setZoom('fit')} style={{ ...iconBtn, color: zoom === 'fit' ? 'var(--accent-primary)' : 'var(--text-tertiary)' }} title="Fit to window"><ArrowsOut size={13} /></button>
 
@@ -197,12 +197,12 @@ export function ArtifactPreviewPane({ html, title, identifier, className, height
           background: 'var(--surface-panel)', display: 'flex', flexDirection: 'column', gap: 10,
           maxHeight: 220, overflowY: 'auto', flexShrink: 0,
         }}>
-          <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+          <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
             Live Tweaks
           </span>
           {editTokens.map(token => (
             <div key={token.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', minWidth: 120 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', minWidth: 120 }}>
                 {token.label}
               </span>
               {token.type === 'color' && (
@@ -228,7 +228,7 @@ export function ArtifactPreviewPane({ html, title, identifier, className, height
                 <select
                   value={String(token.value)}
                   onChange={e => updateToken(token.id, e.target.value)}
-                  style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 6, fontSize: 11, color: 'var(--text-primary)', padding: '3px 6px' }}
+                  style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 6, fontSize: 12, color: 'var(--text-primary)', padding: '3px 6px' }}
                 >
                   {(token.options ?? []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
                 </select>
@@ -238,11 +238,11 @@ export function ArtifactPreviewPane({ html, title, identifier, className, height
                   type="text"
                   value={String(token.value)}
                   onChange={e => updateToken(token.id, e.target.value)}
-                  style={{ flex: 1, background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 6, fontSize: 11, color: 'var(--text-primary)', padding: '4px 8px', outline: 'none' }}
+                  style={{ flex: 1, background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 6, fontSize: 12, color: 'var(--text-primary)', padding: '4px 8px', outline: 'none' }}
                 />
               )}
               {token.type === 'range' && (
-                <span style={{ fontSize: 10, color: 'var(--text-tertiary)', minWidth: 28, textAlign: 'right' }}>
+                <span style={{ fontSize: 12, color: 'var(--text-tertiary)', minWidth: 28, textAlign: 'right' }}>
                   {token.value}
                 </span>
               )}
@@ -253,9 +253,9 @@ export function ArtifactPreviewPane({ html, title, identifier, className, height
 
       {/* Status bar */}
       <div style={{ padding: '4px 12px', background: 'var(--surface-panel)', borderTop: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-        <span style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 600 }}>{vp.w} × {vp.h}px</span>
-        <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>·</span>
-        <span style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 600 }}>{zoomPct}% zoom</span>
+        <span style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 600 }}>{vp.w} × {vp.h}px</span>
+        <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>·</span>
+        <span style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 600 }}>{zoomPct}% zoom</span>
       </div>
     </div>
   );
@@ -273,5 +273,5 @@ const actionBtn: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 4,
   background: 'none', border: '1px solid var(--border-subtle)',
   borderRadius: 6, padding: '4px 8px', cursor: 'pointer',
-  color: 'var(--text-secondary)', fontSize: 11, fontWeight: 500,
+  color: 'var(--text-secondary)', fontSize: 12, fontWeight: 500,
 };

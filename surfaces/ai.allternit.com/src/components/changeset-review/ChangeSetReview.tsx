@@ -32,7 +32,7 @@ export function ChangeSetReview({ changeSetId }: ChangeSetReviewProps) {
           <GitDiff size={20} color="var(--accent-chat)" />
           <div>
             <div style={{ fontWeight: 600, fontSize: 14 }}>Review Changes</div>
-            <div style={{ fontSize: 11, opacity: 0.6 }}>{changeSet.changes.length} files modified</div>
+            <div style={{ fontSize: 12, opacity: 0.6 }}>{changeSet.changes.length} files modified</div>
           </div>
         </div>
         

@@ -129,7 +129,7 @@ export const TaskEstimateModal: React.FC<Props> = ({ task, onClose }) => {
                 onChange={(e) => setHours(Math.max(0, parseInt(e.target.value) || 0))}
                 style={{ ...inputStyle, textAlign: 'center' }}
               />
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textAlign: 'center', marginTop: '4px' }}>hours</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', textAlign: 'center', marginTop: '4px' }}>hours</div>
             </div>
             <span style={{ color: 'var(--text-secondary)', fontSize: '18px', marginTop: '-12px' }}>:</span>
             <div style={{ flex: 1 }}>
@@ -141,7 +141,7 @@ export const TaskEstimateModal: React.FC<Props> = ({ task, onClose }) => {
                 onChange={(e) => setMins(Math.min(59, Math.max(0, parseInt(e.target.value) || 0)))}
                 style={{ ...inputStyle, textAlign: 'center' }}
               />
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textAlign: 'center', marginTop: '4px' }}>minutes</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', textAlign: 'center', marginTop: '4px' }}>minutes</div>
             </div>
           </div>
         </div>
@@ -162,7 +162,7 @@ export const TaskEstimateModal: React.FC<Props> = ({ task, onClose }) => {
             onChange={(e) => setPriority(parseInt(e.target.value))}
             style={{ width: '100%', accentColor: priority >= 70 ? 'var(--status-error)' : priority >= 40 ? 'var(--status-warning)' : 'var(--status-info)' }}
           />
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
             <span>Low</span>
             <span>High</span>
           </div>
@@ -185,7 +185,7 @@ export const TaskEstimateModal: React.FC<Props> = ({ task, onClose }) => {
             <div style={labelStyle}><Link size={12} /> Blocked by (optional)</div>
             <input
               type="text"
-              placeholder="Search tasks..."
+              placeholder="Search tasks…"
               value={depInput}
               onChange={(e) => setDepInput(e.target.value)}
               style={{ ...inputStyle, marginBottom: '8px' }}

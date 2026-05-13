@@ -46,7 +46,7 @@ export function ModelSelectorButton() {
 
   return (
     <ModelPicker 
-      onSelect={(sel) => console.log("Selected:", sel)}
+      onSelect={(sel) => console.debug("Selected:", sel)}
       trigger={
         <Button variant="outline" size="sm" className="gap-1">
           <Sparkle size={12} />
@@ -89,7 +89,7 @@ export function ChatInputWithModel({ onSend, disabled }: ChatInputWithModelProps
           config.source,
           config.runtime_overrides
         );
-        console.log("Brain session created:", session);
+        console.debug("Brain session created:", session);
         
         // Send message to the brain session
         await api.sendMessage(session.id, message);
@@ -114,7 +114,7 @@ export function ChatInputWithModel({ onSend, disabled }: ChatInputWithModelProps
       {/* Selected Model Display */}
       {selection && (
         <div className="flex items-center gap-2 px-3 py-2 bg-muted rounded-lg">
-          <Sparkle className="h-4 w-4 text-primary" />
+          <Sparkle className="size-4  text-primary" />
           <span className="text-sm">
             Using <strong>{selection.modelName || selection.modelId}</strong>
             {" "}via {selection.profileId}
@@ -135,7 +135,7 @@ export function ChatInputWithModel({ onSend, disabled }: ChatInputWithModelProps
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          placeholder="Type your message..."
+          placeholder="Type your message…"
           className="flex-1 min-h-[60px] p-3 rounded-lg border bg-background resize-none"
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
@@ -149,7 +149,7 @@ export function ChatInputWithModel({ onSend, disabled }: ChatInputWithModelProps
         <div className="flex flex-col gap-2">
           {!selection && (
             <ModelPicker
-              onSelect={(sel) => console.log("Selected:", sel)}
+              onSelect={(sel) => console.debug("Selected:", sel)}
               trigger={
                 <Button variant="outline" size="icon">
                   <Sparkle size={16} />
@@ -164,7 +164,7 @@ export function ChatInputWithModel({ onSend, disabled }: ChatInputWithModelProps
             className="h-10"
           >
             {isCreatingSession ? (
-              <CircleNotch className="h-4 w-4 animate-spin" />
+              <CircleNotch className="size-4  animate-spin" />
             ) : (
               "Send"
             )}
@@ -187,7 +187,7 @@ export async function createChatWithModel(selection: ModelSelection) {
     { model_id: selection.modelId }
   );
 
-  console.log("Created session:", {
+  console.debug("Created session:", {
     sessionId: session.id,
     profileId: selection.profileId,
     modelId: selection.modelId,
@@ -205,19 +205,19 @@ export async function selectModelAndCreateSession() {
   const { providers } = await api.listProviderAuthStatus();
   const authenticated = providers.filter(p => p.authenticated);
   
-  console.log("Available providers:", authenticated);
+  console.debug("Available providers:", authenticated);
 
   // Step 2: For a provider, discover models
   const providerId = "kimi"; // or "opencode", "claude", etc.
   const discovery = await api.discoverProviderModels(providerId);
   
-  console.log("Model discovery:", discovery);
+  console.debug("Model discovery:", discovery);
 
   // Step 3: Validate the model ID
   const modelId = "kimi-k2";
   const validation = await api.validateProviderModel(providerId, modelId);
   
-  console.log("Validation:", validation);
+  console.debug("Validation:", validation);
 
   // Step 4: Create session with model
   if (validation.valid) {
@@ -263,7 +263,7 @@ import { ChatInputWithModel } from "@/components/model-picker-example";
 
 function ChatUI() {
   const handleSend = (message: string, config?: {...}) => {
-    console.log("Sending:", message, "with config:", config);
+    console.debug("Sending:", message, "with config:", config);
   };
 
   return (

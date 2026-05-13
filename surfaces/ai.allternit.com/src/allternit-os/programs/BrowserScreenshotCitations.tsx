@@ -344,9 +344,9 @@ export const CitationManager: React.FC<CitationManagerProps> = ({ programId }) =
   }, []);
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-gray-900">
+    <div className="h-full flex flex-col bg-white dark:bg-zinc-900">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-700">
         <div className="flex items-center gap-2">
           <span className="text-xl">📸</span>
           <h2 className="text-lg font-semibold">Citation Manager</h2>
@@ -359,7 +359,7 @@ export const CitationManager: React.FC<CitationManagerProps> = ({ programId }) =
               className={`px-3 py-1.5 rounded-lg text-sm ${
                 activeTab === tab
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+                  : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300'
               }`}
             >
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -384,7 +384,7 @@ export const CitationManager: React.FC<CitationManagerProps> = ({ programId }) =
                 value={url}
                 onChange={e => setUrl(e.target.value)}
                 placeholder="https://example.com/article"
-                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800"
+                className="flex-1 px-4 py-2 border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-800"
               />
               <button
                 onClick={handleCapture}
@@ -393,7 +393,7 @@ export const CitationManager: React.FC<CitationManagerProps> = ({ programId }) =
               >
                 {isCapturing ? (
                   <>
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span className="size-4  border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     Capturing...
                   </>
                 ) : (
@@ -406,7 +406,7 @@ export const CitationManager: React.FC<CitationManagerProps> = ({ programId }) =
 
             {/* Progress bar */}
             {isCapturing && captureProgress > 0 && (
-              <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div className="w-full h-2 bg-zinc-200 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-blue-600 transition-all duration-300"
                   style={{ width: `${captureProgress}%` }}
@@ -414,7 +414,7 @@ export const CitationManager: React.FC<CitationManagerProps> = ({ programId }) =
               </div>
             )}
 
-            <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400">
+            <div className="flex flex-wrap gap-4 text-sm text-zinc-600 dark:text-zinc-400">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input 
                   type="checkbox" 
@@ -437,11 +437,11 @@ export const CitationManager: React.FC<CitationManagerProps> = ({ programId }) =
 
             {/* Preview */}
             {selectedScreenshot && (
-              <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                <div className="flex items-center justify-between px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+              <div className="border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-2 bg-zinc-50 dark:bg-zinc-800 border-b border-zinc-200 dark:border-zinc-700">
                   <div>
                     <span className="font-medium">{selectedScreenshot.title}</span>
-                    <span className="text-xs text-gray-500 ml-2">
+                    <span className="text-xs text-zinc-500 ml-2">
                       {new Date(selectedScreenshot.timestamp).toLocaleTimeString()}
                     </span>
                   </div>
@@ -449,7 +449,7 @@ export const CitationManager: React.FC<CitationManagerProps> = ({ programId }) =
                     <button
                       onClick={() => setAnnotationMode(!annotationMode)}
                       className={`px-3 py-1 text-sm rounded ${
-                        annotationMode ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-700'
+                        annotationMode ? 'bg-blue-600 text-white' : 'bg-zinc-200 dark:bg-zinc-700'
                       }`}
                     >
                       ✏️ Annotate{annotations.length > 0 && ` (${annotations.length})`}
@@ -476,7 +476,7 @@ export const CitationManager: React.FC<CitationManagerProps> = ({ programId }) =
         {activeTab === 'library' && (
           <div className="grid grid-cols-2 gap-4">
             {capturedScreenshots.length === 0 ? (
-              <div className="col-span-2 text-center text-gray-400 py-8">
+              <div className="col-span-2 text-center text-zinc-400 py-8">
                 No screenshots captured yet. Go to the Capture tab to add some.
               </div>
             ) : (
@@ -490,7 +490,7 @@ export const CitationManager: React.FC<CitationManagerProps> = ({ programId }) =
                   className={`border rounded-lg overflow-hidden cursor-pointer transition-all hover:shadow-lg ${
                     selectedScreenshot?.id === screenshot.id
                       ? 'border-blue-500 ring-2 ring-blue-200'
-                      : 'border-gray-200 dark:border-gray-700'
+                      : 'border-zinc-200 dark:border-zinc-700'
                   }`}
                 >
                   <img
@@ -500,11 +500,11 @@ export const CitationManager: React.FC<CitationManagerProps> = ({ programId }) =
                   />
                   <div className="p-3">
                     <div className="font-medium text-sm truncate">{screenshot.title}</div>
-                    <div className="text-xs text-gray-500">
+                    <div className="text-xs text-zinc-500">
                       {new Date(screenshot.timestamp).toLocaleDateString()}
                     </div>
                     {screenshot.metadata && (
-                      <div className="text-xs text-gray-400 mt-1">
+                      <div className="text-xs text-zinc-400 mt-1">
                         {screenshot.metadata.viewport.width}×{screenshot.metadata.viewport.height}
                       </div>
                     )}
@@ -517,7 +517,7 @@ export const CitationManager: React.FC<CitationManagerProps> = ({ programId }) =
 
         {activeTab === 'verify' && (
           <div className="space-y-4">
-            <div className="text-gray-600 dark:text-gray-400">
+            <div className="text-zinc-600 dark:text-zinc-400">
               Verify that your citations are still accessible. Click "Check" to test each URL.
             </div>
             <div className="space-y-2">
@@ -526,7 +526,7 @@ export const CitationManager: React.FC<CitationManagerProps> = ({ programId }) =
                 return (
                   <div
                     key={screenshot.id}
-                    className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                    className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-800 rounded-lg"
                   >
                     <div className="flex items-center gap-3">
                       <img 
@@ -536,25 +536,25 @@ export const CitationManager: React.FC<CitationManagerProps> = ({ programId }) =
                       />
                       <div>
                         <div className="font-medium">{screenshot.title}</div>
-                        <div className="text-sm text-gray-500 truncate max-w-md">
+                        <div className="text-sm text-zinc-500 truncate max-w-md">
                           {screenshot.url}
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       {verification?.checking ? (
-                        <span className="text-gray-400 text-sm">Checking...</span>
+                        <span className="text-zinc-400 text-sm">Checking…</span>
                       ) : verification ? (
                         <span className={verification.accessible ? 'text-green-600 text-sm' : 'text-red-600 text-sm'}>
                           {verification.accessible ? '✓ Accessible' : '✗ Unreachable'}
                         </span>
                       ) : (
-                        <span className="text-gray-400 text-sm">Not checked</span>
+                        <span className="text-zinc-400 text-sm">Not checked</span>
                       )}
                       <button 
                         onClick={() => verifyUrl(screenshot)}
                         disabled={verification?.checking}
-                        className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded disabled:opacity-50"
+                        className="p-2 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded disabled:opacity-50"
                       >
                         🔄
                       </button>

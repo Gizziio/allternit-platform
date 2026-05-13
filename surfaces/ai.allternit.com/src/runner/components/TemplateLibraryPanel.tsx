@@ -106,9 +106,9 @@ export function TemplateLibraryPanel() {
       <div className="p-4 border-b space-y-4">
         {/* Search */}
         <div className="relative">
-          <MagnifyingGlass className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <MagnifyingGlass className="size-4  absolute left-3 top-1/2 -tranzinc-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Search templates by name, description, or tags..."
+            placeholder="Search templates by name, description, or tags…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
@@ -126,7 +126,7 @@ export function TemplateLibraryPanel() {
                 className="cursor-pointer text-xs"
                 onClick={() => setSelectedCategory(cat)}
               >
-                <Icon className="w-3 h-3 mr-1" />
+                <Icon className="size-3  mr-1" />
                 {cat === "all" ? "All Templates" : CATEGORY_LABELS[cat as TemplateCategory]}
               </Badge>
             );
@@ -161,7 +161,7 @@ export function TemplateLibraryPanel() {
                       onClick={() => selectTemplate(template.id)}
                     >
                       <div className="flex items-center gap-2">
-                        <Icon className="w-4 h-4 text-primary" />
+                        <Icon className="size-4  text-primary" />
                         <span className="font-medium text-sm flex-1">{template.name}</span>
                         <Badge variant="outline" className="text-xs">v{template.version}</Badge>
                       </div>
@@ -170,7 +170,7 @@ export function TemplateLibraryPanel() {
                       </p>
                       <div className="flex flex-wrap gap-1 mt-2">
                         {template.tags.map((tag) => (
-                          <Badge key={tag} variant="secondary" className="text-[10px]">{tag}</Badge>
+                          <Badge key={tag} variant="secondary" className="text-xs">{tag}</Badge>
                         ))}
                       </div>
                     </div>
@@ -190,11 +190,11 @@ export function TemplateLibraryPanel() {
                   <CardTitle className="text-base">{selectedTemplate.name}</CardTitle>
                   <div className="flex gap-2">
                     <Button size="sm" variant="outline" onClick={handleCopy}>
-                      {copied ? <Check className="w-4 h-4 mr-1" /> : <Copy className="w-4 h-4 mr-1" />}
+                      {copied ? <Check className="size-4  mr-1" /> : <Copy className="size-4  mr-1" />}
                       {copied ? "Copied" : "Copy"}
                     </Button>
                     <Button size="sm" onClick={handleExecute} disabled={isLoading}>
-                      <Play className="w-4 h-4 mr-1" /> Execute
+                      <Play className="size-4  mr-1" /> Execute
                     </Button>
                   </div>
                 </div>
@@ -212,7 +212,7 @@ export function TemplateLibraryPanel() {
                         <div key={variable.name}>
                           <label className="text-sm text-muted-foreground flex items-center gap-2">
                             {variable.name}
-                            {variable.required && <Badge variant="destructive" className="text-[10px]">Required</Badge>}
+                            {variable.required && <Badge variant="destructive" className="text-xs">Required</Badge>}
                           </label>
                           {variable.type === "string" && variable.name.length > 50 ? (
                             <Textarea
@@ -265,7 +265,7 @@ export function TemplateLibraryPanel() {
             </>
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-              <FileCode className="w-16 h-16 mb-4 opacity-30" />
+              <FileCode className="size-16  mb-4 opacity-30" />
               <p>Select a template to view and edit</p>
             </div>
           )}

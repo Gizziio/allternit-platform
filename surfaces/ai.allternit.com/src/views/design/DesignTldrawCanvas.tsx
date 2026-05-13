@@ -72,7 +72,7 @@ class FrameShapeUtil extends ShapeUtil<IFrameShape> {
           {/* Frame label */}
           <div style={{
             position: 'absolute', top: -22, left: 0,
-            fontSize: 11, fontWeight: 700, color: 'var(--accent-primary)',
+            fontSize: 12, fontWeight: 700, color: 'var(--accent-primary)',
             letterSpacing: '-0.01em', whiteSpace: 'nowrap',
             pointerEvents: 'none',
           }}>
@@ -157,11 +157,11 @@ class ComponentShapeUtil extends ShapeUtil<IComponentShape> {
               width: 8, height: 8, borderRadius: '50%',
               background: colors.stroke, opacity: 0.8,
             }} />
-            <span style={{ fontSize: 10, fontWeight: 700, color: colors.stroke, whiteSpace: 'nowrap' }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: colors.stroke, whiteSpace: 'nowrap' }}>
               {shape.props.label}
             </span>
           </div>
-          <div style={{ fontSize: 11, color: colors.stroke, fontWeight: 600, opacity: 0.6 }}>
+          <div style={{ fontSize: 12, color: colors.stroke, fontWeight: 600, opacity: 0.6 }}>
             {shape.props.componentType === 'custom' ? '◇' : shape.props.componentType}
           </div>
         </div>
@@ -221,7 +221,7 @@ function renderUIBlock(variant: IUIBlockShape['props']['variant'], w: number, h:
       return (
         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 20, padding: '3px 10px' }}>
-            <span style={{ color: '#3b82f6', fontSize: 11, fontWeight: 700 }}>Badge</span>
+            <span style={{ color: '#3b82f6', fontSize: 12, fontWeight: 700 }}>Badge</span>
           </div>
         </div>
       );
@@ -360,7 +360,7 @@ function DesignToolbar({ onAddFrame, onAddComponent, onAddUIBlock, onExportSVG, 
     background: active ? 'var(--accent-primary)' : 'var(--bg-secondary)',
     border: `1px solid ${active ? 'var(--accent-primary)' : 'var(--border-subtle)'}`,
     color: active ? '#fff' : 'var(--text-secondary)',
-    fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
+    fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
   });
 
   return (

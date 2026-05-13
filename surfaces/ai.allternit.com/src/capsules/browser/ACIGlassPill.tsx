@@ -337,7 +337,7 @@ export function ACIGlassPill({ placement = 'top-left', bottomOffset = 0 }: ACIGl
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
             <Monitor size={11} style={{ color: `${SAND[500]}8c`, flexShrink: 0 }} />
             <span style={{
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 700,
               letterSpacing: '0.1em',
               color: `${SAND[500]}a6`,
@@ -371,7 +371,7 @@ export function ACIGlassPill({ placement = 'top-left', bottomOffset = 0 }: ACIGl
             <>
               <span style={{ width: 1, height: 14, background: 'var(--ui-border-default)', flexShrink: 0 }} />
               <span style={{
-                fontSize: 11,
+                fontSize: 12,
                 color: `${SAND[500]}b2`,
                 fontFamily: 'var(--font-mono)',
                 fontWeight: 600,
@@ -386,7 +386,7 @@ export function ACIGlassPill({ placement = 'top-left', bottomOffset = 0 }: ACIGl
           {/* Fallback badge */}
           {fallbackCount > 0 && (
             <span style={{
-              fontSize: 9,
+              fontSize: 12,
               fontWeight: 700,
               color: `${STATUS.warning}cc`,
               background: `${STATUS.warning}1a`,
@@ -452,7 +452,7 @@ export function ACIGlassPill({ placement = 'top-left', bottomOffset = 0 }: ACIGl
           >
             {currentLayer && (
               <span style={{
-                fontSize: 9,
+                fontSize: 12,
                 fontWeight: 600,
                 color: `${SAND[500]}80`,
                 textTransform: 'uppercase',
@@ -463,11 +463,11 @@ export function ACIGlassPill({ placement = 'top-left', bottomOffset = 0 }: ACIGl
               </span>
             )}
             {currentLayer && adapter && (
-              <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.18)' }}>·</span>
+              <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.18)' }}>·</span>
             )}
             {adapter && (
               <span style={{
-                fontSize: 9,
+                fontSize: 12,
                 color: 'rgba(255,255,255,0.35)',
                 fontFamily: 'var(--font-mono)',
               }}>

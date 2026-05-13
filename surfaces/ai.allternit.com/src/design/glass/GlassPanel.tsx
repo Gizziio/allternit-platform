@@ -183,54 +183,6 @@ export function GlassPanel({
     setIsResizing(false);
   }, []);
 
-  // Render resize handle for resizable panels
-  const renderResizeHandle = () => {
-    if (!resizable) return null;
-
-    const handleStyles: React.CSSProperties = {
-      position: 'absolute',
-      background: 'transparent',
-      zIndex: zIndex + 1,
-      ...(position === 'left' && {
-        right: -4,
-        top: 0,
-        bottom: 0,
-        width: 8,
-        cursor: 'ew-resize',
-      }),
-      ...(position === 'right' && {
-        left: -4,
-        top: 0,
-        bottom: 0,
-        width: 8,
-        cursor: 'ew-resize',
-      }),
-      ...(position === 'top' && {
-        bottom: -4,
-        left: 0,
-        right: 0,
-        height: 8,
-        cursor: 'ns-resize',
-      }),
-      ...(position === 'bottom' && {
-        top: -4,
-        left: 0,
-        right: 0,
-        height: 8,
-        cursor: 'ns-resize',
-      }),
-    };
-
-    return (
-      <div
-        style={handleStyles}
-        onMouseDown={handleResizeStart}
-        onMouseUp={handleResizeEnd}
-        className="glass-panel-resize-handle"
-      />
-    );
-  };
-
   if (!open) return null;
 
   return (
@@ -241,8 +193,73 @@ export function GlassPanel({
       data-position={position}
     >
       {children}
-      {renderResizeHandle()}
+      <ResizeHandle
+        resizable={resizable}
+        position={position}
+        zIndex={zIndex}
+        onResizeStart={handleResizeStart}
+        onResizeEnd={handleResizeEnd}
+      />
     </div>
+  );
+}
+
+// ============================================================================
+// Internal Components
+// ============================================================================
+
+interface ResizeHandleProps {
+  resizable: boolean;
+  position: 'left' | 'right' | 'top' | 'bottom';
+  zIndex: number;
+  onResizeStart: () => void;
+  onResizeEnd: () => void;
+}
+
+function ResizeHandle({ resizable, position, zIndex, onResizeStart, onResizeEnd }: ResizeHandleProps) {
+  if (!resizable) return null;
+
+  const handleStyles: React.CSSProperties = {
+    position: 'absolute',
+    background: 'transparent',
+    zIndex: zIndex + 1,
+    ...(position === 'left' && {
+      right: -4,
+      top: 0,
+      bottom: 0,
+      width: 8,
+      cursor: 'ew-resize',
+    }),
+    ...(position === 'right' && {
+      left: -4,
+      top: 0,
+      bottom: 0,
+      width: 8,
+      cursor: 'ew-resize',
+    }),
+    ...(position === 'top' && {
+      bottom: -4,
+      left: 0,
+      right: 0,
+      height: 8,
+      cursor: 'ns-resize',
+    }),
+    ...(position === 'bottom' && {
+      top: -4,
+      left: 0,
+      right: 0,
+      height: 8,
+      cursor: 'ns-resize',
+    }),
+  };
+
+  return (
+    <div
+      style={handleStyles}
+      onMouseDown={onResizeStart}
+      onMouseUp={onResizeEnd}
+      className="glass-panel-resize-handle"
+    />
   );
 }
 

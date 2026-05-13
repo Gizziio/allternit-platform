@@ -37,12 +37,12 @@ const SectionRenderer: React.FC<{
   switch (section.type) {
     case 'hero':
       return (
-        <div className="relative py-12 px-8 mb-8 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-2xl">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4 leading-tight">
+        <div className="relative py-12 px-8 mb-8 bg-gradient-to-br from-blue-50 to-blue-50 dark:from-blue-950/30 dark:to-blue-950/30 rounded-2xl">
+          <h1 className="text-3xl md:text-4xl font-bold text-zinc-900 dark:text-white mb-4 leading-tight">
             {section.content}
           </h1>
           {section.metadata?.subtitle ? (
-            <p className="text-lg text-gray-600 dark:text-gray-300">
+            <p className="text-lg text-zinc-600 dark:text-zinc-300">
               {String(section.metadata.subtitle)}
             </p>
           ) : null}
@@ -59,7 +59,7 @@ const SectionRenderer: React.FC<{
           id={section.id}
           className={`
             ${sizeClasses[level - 1]} 
-            font-semibold text-gray-900 dark:text-white 
+            font-semibold text-zinc-900 dark:text-white 
             mt-8 mb-4 scroll-mt-20
           `}
         >
@@ -81,7 +81,7 @@ const SectionRenderer: React.FC<{
       });
 
       return (
-        <p className="text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
+        <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed mb-4">
           {textWithCitations}
           {isStreaming && <span className="animate-pulse">▊</span>}
         </p>
@@ -106,7 +106,7 @@ const SectionRenderer: React.FC<{
       return <EvidenceCard evidence={ev} />;
 
     case 'divider':
-      return <hr className="my-8 border-gray-200 dark:border-gray-700" />;
+      return <hr className="my-8 border-zinc-200 dark:border-zinc-700" />;
 
     default:
       return null;
@@ -153,20 +153,20 @@ const CitationPopover: React.FC<{
       
       {isOpen && citation && (
         <div className="
-          absolute bottom-full left-1/2 -translate-x-1/2 mb-2
+          absolute bottom-full left-1/2 -tranzinc-x-1/2 mb-2
           w-72 p-3 
-          bg-white dark:bg-gray-800 
+          bg-white dark:bg-zinc-800 
           rounded-lg shadow-xl 
-          border border-gray-200 dark:border-gray-700
+          border border-zinc-200 dark:border-zinc-700
           z-50
         ">
-          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+          <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">
             Source {number}
           </div>
-          <div className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+          <div className="text-sm font-medium text-zinc-900 dark:text-white mb-1">
             {citation.source}
           </div>
-          <p className="text-xs text-gray-600 dark:text-gray-300 mb-2 line-clamp-3">
+          <p className="text-xs text-zinc-600 dark:text-zinc-300 mb-2 line-clamp-3">
             "{citation.snippet}"
           </p>
           <a
@@ -179,8 +179,8 @@ const CitationPopover: React.FC<{
           </a>
           
           <div className="
-            absolute top-full left-1/2 -translate-x-1/2
-            border-4 border-transparent border-t-white dark:border-t-gray-800
+            absolute top-full left-1/2 -tranzinc-x-1/2
+            border-4 border-transparent border-t-white dark:border-t-zinc-800
           " />
         </div>
       )}
@@ -199,8 +199,8 @@ const EvidenceCard: React.FC<{ evidence: ResearchDocEvidence }> = ({ evidence })
     <figure className="my-6">
       <div 
         className={`
-          relative overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700
-          bg-gray-50 dark:bg-gray-800
+          relative overflow-hidden rounded-lg border border-zinc-200 dark:border-zinc-700
+          bg-zinc-50 dark:bg-zinc-800
           ${isExpanded ? 'fixed inset-4 z-50 bg-black/90 flex items-center justify-center' : ''}
         `}
         onClick={() => isExpanded && setIsExpanded(false)}
@@ -226,10 +226,10 @@ const EvidenceCard: React.FC<{ evidence: ResearchDocEvidence }> = ({ evidence })
           />
         ) : evidence.type === 'code' ? (
           <pre className="p-4 overflow-x-auto text-sm">
-            <code className="text-gray-800 dark:text-gray-200">{evidence.src}</code>
+            <code className="text-zinc-800 dark:text-zinc-200">{evidence.src}</code>
           </pre>
         ) : (
-          <blockquote className="p-4 italic text-gray-700 dark:text-gray-300">
+          <blockquote className="p-4 italic text-zinc-700 dark:text-zinc-300">
             "{evidence.src}"
           </blockquote>
         )}
@@ -243,7 +243,7 @@ const EvidenceCard: React.FC<{ evidence: ResearchDocEvidence }> = ({ evidence })
               className="text-xs text-white/90 hover:text-white flex items-center gap-1"
               onClick={(e) => e.stopPropagation()}
             >
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="size-3 " fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>
               {new URL(evidence.sourceUrl).hostname}
@@ -257,7 +257,7 @@ const EvidenceCard: React.FC<{ evidence: ResearchDocEvidence }> = ({ evidence })
         )}
       </div>
       
-      <figcaption className="mt-2 text-sm text-gray-600 dark:text-gray-400 text-center">
+      <figcaption className="mt-2 text-sm text-zinc-600 dark:text-zinc-400 text-center">
         {evidence.caption}
       </figcaption>
     </figure>
@@ -274,7 +274,7 @@ const TableOfContents: React.FC<{
 }> = ({ toc, activeId }) => {
   return (
     <nav className="sticky top-4">
-      <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+      <h4 className="text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-3">
         Contents
       </h4>
       <ul className="space-y-1">
@@ -287,7 +287,7 @@ const TableOfContents: React.FC<{
                 transition-colors duration-150
                 ${activeId === item.id
                   ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-medium'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800'
+                  : 'text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-800'
                 }
               `}
             >
@@ -309,19 +309,19 @@ const ProgressIndicator: React.FC<{
 }> = ({ progress }) => {
   return (
     <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg mb-6">
-      <div className="animate-spin w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full" />
+      <div className="animate-spin size-5  border-2 border-blue-500 border-t-transparent rounded-full" />
       <div className="flex-1">
-        <div className="text-sm font-medium text-gray-900 dark:text-white">
+        <div className="text-sm font-medium text-zinc-900 dark:text-white">
           {progress.currentStep}
         </div>
-        <div className="mt-1 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+        <div className="mt-1 h-1.5 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
           <div 
             className="h-full bg-blue-500 transition-all duration-300"
             style={{ width: `${progress.percentComplete}%` }}
           />
         </div>
       </div>
-      <span className="text-sm text-gray-500 dark:text-gray-400">
+      <span className="text-sm text-zinc-500 dark:text-zinc-400">
         {progress.percentComplete}%
       </span>
     </div>
@@ -541,36 +541,36 @@ const ExportMenu: React.FC<{ state: ResearchDocState }> = ({ state }) => {
       <button
         onClick={() => setIsOpen(!isOpen)}
         disabled={isExporting}
-        className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 disabled:opacity-50"
+        className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400 disabled:opacity-50"
         title="Export"
       >
         {isExporting ? (
-          <span className="w-5 h-5 block border-2 border-current border-t-transparent rounded-full animate-spin" />
+          <span className="size-5  block border-2 border-current border-t-transparent rounded-full animate-spin" />
         ) : (
-          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="size-5 " fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
           </svg>
         )}
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 z-50">
+        <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-zinc-800 rounded-lg shadow-xl border border-zinc-200 dark:border-zinc-700 z-50">
           <button
             onClick={handleMarkdownExport}
-            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 first:rounded-t-lg flex items-center gap-2"
+            className="w-full px-4 py-2 text-left text-sm hover:bg-zinc-50 dark:hover:bg-zinc-700 first:rounded-t-lg flex items-center gap-2"
           >
             <span>📄</span> Download Markdown
           </button>
           <button
             onClick={handleHTMLExport}
-            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+            className="w-full px-4 py-2 text-left text-sm hover:bg-zinc-50 dark:hover:bg-zinc-700 flex items-center gap-2"
           >
             <span>🌐</span> Download HTML
           </button>
           <button
             onClick={handlePDFExport}
             disabled={isExporting}
-            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-700 last:rounded-b-lg flex items-center gap-2 disabled:opacity-50"
+            className="w-full px-4 py-2 text-left text-sm hover:bg-zinc-50 dark:hover:bg-zinc-700 last:rounded-b-lg flex items-center gap-2 disabled:opacity-50"
           >
             <span>📑</span> Print / Save PDF
           </button>
@@ -593,10 +593,10 @@ const CitationManagerButton: React.FC<CitationManagerButtonProps> = ({ onOpen, p
   return (
     <button
       onClick={onOpen}
-      className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400"
+      className="p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
       title="Citation Manager"
     >
-      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <svg className="size-5 " fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
@@ -652,7 +652,7 @@ export const ResearchDocProgram: React.FC<ResearchDocProgramProps> = ({ program 
   const streamingBuffer = state?.streamingContent?.buffer || '';
 
   return (
-    <div className="h-full flex bg-white dark:bg-gray-900">
+    <div className="h-full flex bg-white dark:bg-zinc-900">
       <div 
         ref={contentRef}
         className="flex-1 overflow-y-auto p-6 scroll-smooth"
@@ -663,10 +663,10 @@ export const ResearchDocProgram: React.FC<ResearchDocProgramProps> = ({ program 
         {isGenerating && !progress && sections.length === 0 && liveAgentText && (
           <div className="max-w-2xl mx-auto mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
             <div className="flex items-center gap-2 mb-2">
-              <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+              <span className="size-2  bg-blue-500 rounded-full animate-pulse" />
               <span className="text-xs font-medium text-blue-700 dark:text-blue-300 uppercase tracking-wide">Researching</span>
             </div>
-            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
+            <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">
               {liveAgentText.split('<launch_utility')[0].trim().slice(0, 400)}<span className="animate-pulse">▊</span>
             </p>
           </div>
@@ -687,10 +687,10 @@ export const ResearchDocProgram: React.FC<ResearchDocProgramProps> = ({ program 
           {isProgramStreaming && streamingBuffer && (
             <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
               <div className="flex items-center gap-2 mb-2">
-                <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                <span className="size-2  bg-blue-500 rounded-full animate-pulse" />
                 <span className="text-xs font-medium text-blue-700 dark:text-blue-300 uppercase">Streaming</span>
               </div>
-              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+              <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed">
                 {streamingBuffer}
                 <span className="animate-pulse">▊</span>
               </p>
@@ -699,14 +699,14 @@ export const ResearchDocProgram: React.FC<ResearchDocProgramProps> = ({ program 
         </article>
 
         {citations.length > 0 && (
-          <footer className="max-w-2xl mx-auto mt-12 pt-8 border-t border-gray-200 dark:border-gray-700">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">
+          <footer className="max-w-2xl mx-auto mt-12 pt-8 border-t border-zinc-200 dark:border-zinc-700">
+            <h3 className="text-sm font-semibold text-zinc-900 dark:text-white mb-4">
               References
             </h3>
             <ol className="space-y-3">
               {citations.map((citation) => (
                 <li key={citation.id} className="text-sm">
-                  <span className="text-gray-500 dark:text-gray-400">[{citation.number}]</span>{' '}
+                  <span className="text-zinc-500 dark:text-zinc-400">[{citation.number}]</span>{' '}
                   <a
                     href={citation.url}
                     target="_blank"
@@ -715,7 +715,7 @@ export const ResearchDocProgram: React.FC<ResearchDocProgramProps> = ({ program 
                   >
                     {citation.source}
                   </a>
-                  <p className="mt-1 text-gray-600 dark:text-gray-400 text-xs">
+                  <p className="mt-1 text-zinc-600 dark:text-zinc-400 text-xs">
                     {citation.snippet}
                   </p>
                 </li>
@@ -725,7 +725,7 @@ export const ResearchDocProgram: React.FC<ResearchDocProgramProps> = ({ program 
         )}
 
         {sections.length === 0 && !isGenerating && (
-          <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+          <div className="flex flex-col items-center justify-center h-64 text-zinc-400">
             <span className="text-4xl mb-3">📝</span>
             <p className="text-sm">Research document will appear here</p>
           </div>
@@ -733,7 +733,7 @@ export const ResearchDocProgram: React.FC<ResearchDocProgramProps> = ({ program 
       </div>
 
       {toc.length > 0 && (
-        <aside className="hidden lg:block w-64 p-4 border-l border-gray-200 dark:border-gray-700 overflow-y-auto">
+        <aside className="hidden lg:block w-64 p-4 border-l border-zinc-200 dark:border-zinc-700 overflow-y-auto">
           <TableOfContents toc={toc} activeId={activeTocId} />
         </aside>
       )}

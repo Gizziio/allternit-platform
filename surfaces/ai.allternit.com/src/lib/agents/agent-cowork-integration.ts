@@ -42,7 +42,7 @@ export function syncHeartbeatToCoworkTask(
   // Check if task already exists
   const existingTask = coworkStore.tasks.find(t => t.id === taskId);
   if (existingTask) {
-    console.log(`[CoworkIntegration] Task ${taskId} already exists, updating`);
+    console.debug(`[CoworkIntegration] Task ${taskId} already exists, updating`);
     return existingTask;
   }
   
@@ -72,7 +72,7 @@ export function syncHeartbeatToCoworkTask(
     useCoworkStore.setState({ tasks: [...tasks] });
   }
   
-  console.log(`[CoworkIntegration] Created cowork task ${taskId} for HEARTBEAT task ${heartbeatTask.id}`);
+  console.debug(`[CoworkIntegration] Created cowork task ${taskId} for HEARTBEAT task ${heartbeatTask.id}`);
   
   // Auto-start session if configured
   if (fullConfig.autoStartSession && heartbeatTask.frequency === 'startup') {
@@ -134,7 +134,7 @@ export function updateCoworkTaskWithResult(
     }).catch(() => {});
   }
 
-  console.log(`[CoworkIntegration] Updated task ${taskId} with result: ${result.success ? 'success' : 'failed'}`);
+  console.debug(`[CoworkIntegration] Updated task ${taskId} with result: ${result.success ? 'success' : 'failed'}`);
 }
 
 /**
@@ -152,7 +152,7 @@ export function startCoworkSessionForTask(
   // Start a session
   const sessionId = coworkStore.startSession('desktop', context || 'HEARTBEAT task execution');
   
-  console.log(`[CoworkIntegration] Started cowork session ${sessionId} for task ${taskId}`);
+  console.debug(`[CoworkIntegration] Started cowork session ${sessionId} for task ${taskId}`);
   
   return sessionId;
 }
@@ -178,7 +178,7 @@ export function deleteAgentCoworkTasks(agentId: string): void {
     coworkStore.deleteTask(task.id);
   }
   
-  console.log(`[CoworkIntegration] Deleted ${tasks.length} cowork tasks for agent ${agentId}`);
+  console.debug(`[CoworkIntegration] Deleted ${tasks.length} cowork tasks for agent ${agentId}`);
 }
 
 /**
@@ -265,7 +265,7 @@ export class CoworkIntegrationManager {
       createdTasks.push(coworkTask);
     }
 
-    console.log(`[CoworkIntegration] Synced ${createdTasks.length} tasks for agent ${agentId}`);
+    console.debug(`[CoworkIntegration] Synced ${createdTasks.length} tasks for agent ${agentId}`);
     return createdTasks;
   }
 

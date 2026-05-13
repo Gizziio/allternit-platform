@@ -33,11 +33,11 @@ interface NodeCardProps {
 }
 
 const statusIcons: Record<NodeStatus, React.ReactNode> = {
-  online: <CheckCircle className="h-4 w-4 text-green-500" />,
-  offline: <XCircle className="h-4 w-4 text-gray-400" />,
-  busy: <Activity className="h-4 w-4 text-yellow-500" />,
-  maintenance: <Clock className="h-4 w-4 text-blue-500" />,
-  error: <Warning className="h-4 w-4 text-red-500" />,
+  online: <CheckCircle className="size-4  text-green-500" />,
+  offline: <XCircle className="size-4  text-zinc-400" />,
+  busy: <Activity className="size-4  text-yellow-500" />,
+  maintenance: <Clock className="size-4  text-blue-500" />,
+  error: <Warning className="size-4  text-red-500" />,
 };
 
 export function NodeCard({ node, isConnected, onDelete, onTerminal }: NodeCardProps) {
@@ -76,11 +76,11 @@ export function NodeCard({ node, isConnected, onDelete, onTerminal }: NodeCardPr
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <HardDrives className="h-8 w-8 text-muted-foreground" />
+              <HardDrives className="size-8  text-muted-foreground" />
               {/* Connection indicator */}
               <span
-                className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background ${
-                  isConnected ? 'bg-green-500' : 'bg-gray-400'
+                className={`absolute -bottom-0.5 -right-0.5 size-3  rounded-full border-2 border-background ${
+                  isConnected ? 'bg-green-500' : 'bg-zinc-400'
                 }`}
               />
             </div>
@@ -104,14 +104,14 @@ export function NodeCard({ node, isConnected, onDelete, onTerminal }: NodeCardPr
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => onTerminal(node.id)} disabled={!isConnected}>
-                  <Terminal className="mr-2 h-4 w-4" />
+                  <Terminal className="mr-2 size-4 " />
                   Open Terminal
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => onDelete(node.id)}
                   className="text-destructive focus:text-destructive"
                 >
-                  <Trash className="mr-2 h-4 w-4" />
+                  <Trash className="mr-2 size-4 " />
                   Remove Node
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -123,15 +123,15 @@ export function NodeCard({ node, isConnected, onDelete, onTerminal }: NodeCardPr
       <CardContent className="pt-0">
         <div className="grid grid-cols-3 gap-4 text-sm">
           <div className="flex items-center gap-2">
-            <Cpu className="h-4 w-4 text-muted-foreground" />
+            <Cpu className="size-4  text-muted-foreground" />
             <span className="text-muted-foreground">{node.cpu_cores} cores</span>
           </div>
           <div className="flex items-center gap-2">
-            <HardDrive className="h-4 w-4 text-muted-foreground" />
+            <HardDrive className="size-4  text-muted-foreground" />
             <span className="text-muted-foreground">{formatMemory(node.memory_gb)}</span>
           </div>
           <div className="flex items-center gap-2">
-            <HardDrive className="h-4 w-4 text-muted-foreground" />
+            <HardDrive className="size-4  text-muted-foreground" />
             <span className="text-muted-foreground">{formatDisk(node.disk_gb)}</span>
           </div>
         </div>

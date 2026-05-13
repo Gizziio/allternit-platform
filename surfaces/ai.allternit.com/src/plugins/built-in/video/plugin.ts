@@ -94,7 +94,7 @@ class VideoPlugin implements ModePlugin {
     
     this.isInitialized = true;
     this.emit({ type: 'initialized', timestamp: Date.now() });
-    console.log('[VideoPlugin] Initialized (BYOK)');
+    console.debug('[VideoPlugin] Initialized (BYOK)');
   }
 
   async destroy(): Promise<void> {

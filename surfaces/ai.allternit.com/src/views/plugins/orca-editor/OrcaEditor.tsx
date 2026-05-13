@@ -4,6 +4,7 @@
  * Block-based markdown editor inspired by Notion
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Block, BlockType, EditorProps, SlashCommand } from './types';
 import { BlockRenderer } from './BlockRenderer';
@@ -20,7 +21,7 @@ import {
 const generateId = () => `block-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
 export const OrcaEditor: React.FC<EditorProps> = ({
-  document,
+  document: docData,
   onChange,
   onSave,
   readOnly = false,
@@ -33,18 +34,18 @@ export const OrcaEditor: React.FC<EditorProps> = ({
   const editorRef = useRef<HTMLDivElement>(null);
 
   // Create new block
-  const createBlock = useCallback((type: BlockType = 'paragraph', content: string = ''): Block => ({
+  const createBlock = useCallback((type: BlockType = 'paragraph', content: string = ''): Block => ({isClient ? 
     id: generateId(),
     type,
     content,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-  }), []);
+   : "..."}), []);
 
   // Insert block after specific block
   const insertBlock = useCallback((type: BlockType, afterId?: string) => {
     const newBlock = createBlock(type);
-    const newBlocks = [...document.blocks];
+    const newBlocks = [...docData.blocks];
     
     if (afterId) {
       const index = newBlocks.findIndex(b => b.id === afterId);
@@ -57,7 +58,7 @@ export const OrcaEditor: React.FC<EditorProps> = ({
       newBlocks.push(newBlock);
     }
     
-    onChange({ ...document, blocks: newBlocks });
+    onChange({ ...docData, blocks: newBlocks });
     setActiveBlockId(newBlock.id);
     
     // Focus new block after render
@@ -65,42 +66,42 @@ export const OrcaEditor: React.FC<EditorProps> = ({
       const element = typeof window !== 'undefined' ? window.document.getElementById(`block-${newBlock.id}`) : null;
       element?.focus();
     }, 0);
-  }, [document, onChange, createBlock]);
+  }, [docData, onChange, createBlock]);
 
   // Delete block
   const deleteBlock = useCallback((id: string) => {
-    const index = document.blocks.findIndex(b => b.id === id);
-    const newBlocks = document.blocks.filter(b => b.id !== id);
+    const index = docData.blocks.findIndex(b => b.id === id);
+    const newBlocks = docData.blocks.filter(b => b.id !== id);
     
-    onChange({ ...document, blocks: newBlocks });
+    onChange({ ...docData, blocks: newBlocks });
     
     // Focus previous block or next block
     if (newBlocks.length > 0 && index > 0) {
       setActiveBlockId(newBlocks[Math.min(index, newBlocks.length - 1)].id);
     }
-  }, [document, onChange]);
+  }, [docData, onChange]);
 
   // Move block up/down
   const moveBlock = useCallback((id: string, direction: 'up' | 'down') => {
-    const index = document.blocks.findIndex(b => b.id === id);
+    const index = docData.blocks.findIndex(b => b.id === id);
     if (index === -1) return;
     
-    const newBlocks = [...document.blocks];
+    const newBlocks = [...docData.blocks];
     const newIndex = direction === 'up' ? index - 1 : index + 1;
     
     if (newIndex >= 0 && newIndex < newBlocks.length) {
       [newBlocks[index], newBlocks[newIndex]] = [newBlocks[newIndex], newBlocks[index]];
-      onChange({ ...document, blocks: newBlocks });
+      onChange({ ...docData, blocks: newBlocks });
     }
-  }, [document, onChange]);
+  }, [docData, onChange]);
 
   // Update block
-  const updateBlock = useCallback((id: string, updates: Partial<Block>) => {
-    const newBlocks = document.blocks.map(b =>
-      b.id === id ? { ...b, ...updates, updatedAt: new Date().toISOString() } : b
+  const updateBlock = useCallback((id: string, updates: Partial<Block>) => {isClient ? 
+    const newBlocks = docData.blocks.map(b =>
+      b.id === id ? { ...b, ...updates, updatedAt: new Date().toISOString()  : "..."} : b
     );
-    onChange({ ...document, blocks: newBlocks });
-  }, [document, onChange]);
+    onChange({ ...docData, blocks: newBlocks });
+  }, [docData, onChange]);
 
   // Convert block type
   const convertBlock = useCallback((id: string, type: BlockType) => {
@@ -109,8 +110,8 @@ export const OrcaEditor: React.FC<EditorProps> = ({
   }, [updateBlock]);
 
   // Duplicate block
-  const duplicateBlock = useCallback((id: string) => {
-    const block = document.blocks.find(b => b.id === id);
+  const duplicateBlock = useCallback((id: string) => {isClient ? 
+    const block = docData.blocks.find(b => b.id === id);
     if (!block) return;
     
     const newBlock: Block = {
@@ -118,18 +119,18 @@ export const OrcaEditor: React.FC<EditorProps> = ({
       id: generateId(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-    };
+     : "..."};
     
-    const index = document.blocks.findIndex(b => b.id === id);
-    const newBlocks = [...document.blocks];
+    const index = docData.blocks.findIndex(b => b.id === id);
+    const newBlocks = [...docData.blocks];
     newBlocks.splice(index + 1, 0, newBlock);
     
-    onChange({ ...document, blocks: newBlocks });
-  }, [document, onChange]);
+    onChange({ ...docData, blocks: newBlocks });
+  }, [docData, onChange]);
 
   // Handle key down in blocks
   const handleBlockKeyDown = useCallback((e: React.KeyboardEvent, blockId: string) => {
-    const block = document.blocks.find(b => b.id === blockId);
+    const block = docData.blocks.find(b => b.id === blockId);
     if (!block) return;
 
     // Handle slash command
@@ -152,7 +153,7 @@ export const OrcaEditor: React.FC<EditorProps> = ({
     }
 
     // Backspace on empty block deletes it
-    if (e.key === 'Backspace' && block.content === '' && document.blocks.length > 1) {
+    if (e.key === 'Backspace' && block.content === '' && docData.blocks.length > 1) {
       e.preventDefault();
       deleteBlock(blockId);
       return;
@@ -166,16 +167,16 @@ export const OrcaEditor: React.FC<EditorProps> = ({
     }
 
     // Arrow navigation
-    const index = document.blocks.findIndex(b => b.id === blockId);
+    const index = docData.blocks.findIndex(b => b.id === blockId);
     
     if (e.key === 'ArrowUp' && index > 0) {
-      setActiveBlockId(document.blocks[index - 1].id);
+      setActiveBlockId(docData.blocks[index - 1].id);
     }
     
-    if (e.key === 'ArrowDown' && index < document.blocks.length - 1) {
-      setActiveBlockId(document.blocks[index + 1].id);
+    if (e.key === 'ArrowDown' && index < docData.blocks.length - 1) {
+      setActiveBlockId(docData.blocks[index + 1].id);
     }
-  }, [document.blocks, deleteBlock, insertBlock]);
+  }, [docData.blocks, deleteBlock, insertBlock]);
 
   // Handle slash command selection
   const handleSlashCommandSelect = useCallback((command: SlashCommand) => {
@@ -188,9 +189,9 @@ export const OrcaEditor: React.FC<EditorProps> = ({
 
   // Export document to markdown
   const exportToMarkdown = useCallback(() => {
-    let markdown = `# ${document.title}\n\n`;
+    let markdown = `# ${docData.title}\n\n`;
     
-    document.blocks.forEach(block => {
+    docData.blocks.forEach(block => {
       switch (block.type) {
         case 'heading-1':
           markdown += `# ${block.content}\n\n`;
@@ -229,19 +230,19 @@ export const OrcaEditor: React.FC<EditorProps> = ({
     if (typeof window === 'undefined') return;
     const a = window.document.createElement('a');
     a.href = url;
-    a.download = `${document.title.replace(/\s+/g, '_')}.md`;
+    a.download = `${docData.title.replace(/\s+/g, '_')}.md`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [document]);
+  }, [docData]);
 
   // Auto-save
   useEffect(() => {
     const timer = setTimeout(() => {
-      onSave?.(document);
+      onSave?.(docData);
     }, 2000);
     
     return () => clearTimeout(timer);
-  }, [document, onSave]);
+  }, [docData, onSave]);
 
   return (
     <div className="flex h-full bg-zinc-950">
@@ -278,8 +279,8 @@ export const OrcaEditor: React.FC<EditorProps> = ({
             
             <input
               type="text"
-              value={document.title}
-              onChange={(e) => onChange({ ...document, title: e.target.value })}
+              value={docData.title}
+              onChange={(e) => onChange({ ...docData, title: e.target.value })}
               className="bg-transparent text-lg font-semibold text-zinc-200 outline-none placeholder-zinc-600"
               placeholder="Untitled Document"
             />
@@ -287,7 +288,7 @@ export const OrcaEditor: React.FC<EditorProps> = ({
           
           <div className="flex items-center gap-1">
             <span className="text-xs text-zinc-500 mr-2">
-              {document.blocks.length} blocks • Auto-saving
+              {docData.blocks.length} blocks • Auto-saving
             </span>
             <button
               onClick={exportToMarkdown}
@@ -304,7 +305,7 @@ export const OrcaEditor: React.FC<EditorProps> = ({
           <div className="flex-1 flex items-center gap-1 overflow-x-auto">
             <div className="flex items-center gap-1 px-3 py-1.5 bg-zinc-800/50 text-sm text-zinc-300 rounded-t border-t-2 border-blue-500">
               <FileText size={14} />
-              {document.title || 'Untitled'}
+              {docData.title || 'Untitled'}
             </div>
           </div>
         </div>
@@ -316,16 +317,16 @@ export const OrcaEditor: React.FC<EditorProps> = ({
           onClick={(e) => {
             if (e.target === editorRef.current) {
               // Clicked on empty area, focus last block or create new
-              if (document.blocks.length === 0) {
+              if (docData.blocks.length === 0) {
                 insertBlock('paragraph');
               } else {
-                setActiveBlockId(document.blocks[document.blocks.length - 1].id);
+                setActiveBlockId(docData.blocks[docData.blocks.length - 1].id);
               }
             }
           }}
         >
           <div className="max-w-3xl mx-auto px-8 py-8">
-            {document.blocks.map((block, index) => (
+            {docData.blocks.map((block, index) => (
               <div key={block.id} id={`block-${block.id}`}>
                 <BlockRenderer
                   block={block}
@@ -344,9 +345,9 @@ export const OrcaEditor: React.FC<EditorProps> = ({
             ))}
             
             {/* Empty state */}
-            {document.blocks.length === 0 && (
+            {docData.blocks.length === 0 && (
               <div className="text-center py-12 text-zinc-600">
-                <p className="text-lg mb-2">Start writing...</p>
+                <p className="text-lg mb-2">Start writing…</p>
                 <p className="text-sm">Type &apos;/&apos; for commands or just start typing</p>
               </div>
             )}

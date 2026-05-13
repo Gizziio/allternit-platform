@@ -9,6 +9,7 @@
  * - Export functionality
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useEffect } from "react";
 import {
   ClockCounterClockwise,
@@ -180,7 +181,7 @@ export function AuditTab() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search events..."
+                placeholder="Search events…"
                 style={{
                   flex: 1,
                   background: "transparent",
@@ -460,7 +461,7 @@ function EventCard({
           </span>
           <span
             style={{
-              fontSize: 10,
+              fontSize: 12,
               color: "#666",
             }}
           >
@@ -469,7 +470,7 @@ function EventCard({
         </div>
         <div
           style={{
-            fontSize: 11,
+            fontSize: 12,
             color: "#888",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -565,7 +566,7 @@ function DetailItem({ label, value }: { label: string; value: string }) {
       <label
         style={{
           display: "block",
-          fontSize: 11,
+          fontSize: 12,
           color: "#888",
           marginBottom: 4,
           textTransform: "uppercase",
@@ -637,7 +638,7 @@ function ContextPackDetail({
             </div>
             <div
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 color: "#888",
               }}
             >
@@ -674,7 +675,7 @@ function ContextPackDetail({
               <label
                 style={{
                   display: "block",
-                  fontSize: 11,
+                  fontSize: 12,
                   color: "#888",
                   marginBottom: 4,
                 }}
@@ -695,7 +696,7 @@ function ContextPackDetail({
                       padding: "4px 8px",
                       background: "var(--bg-secondary, #141414)",
                       borderRadius: 4,
-                      fontSize: 10,
+                      fontSize: 12,
                       fontFamily: "var(--font-mono)",
                       color: "#888",
                     }}
@@ -754,7 +755,7 @@ function ReceiptDetail({ receipt }: { receipt: Receipt }) {
               padding: "4px 8px",
               background: `${kindColors[receipt.kind] || "#888"}20`,
               borderRadius: 4,
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 600,
               color: kindColors[receipt.kind] || "#888",
               textTransform: "uppercase",
@@ -774,7 +775,7 @@ function ReceiptDetail({ receipt }: { receipt: Receipt }) {
         </div>
         <span
           style={{
-            fontSize: 11,
+            fontSize: 12,
             color: "#666",
           }}
         >
@@ -783,7 +784,7 @@ function ReceiptDetail({ receipt }: { receipt: Receipt }) {
       </div>
       <div
         style={{
-          fontSize: 11,
+          fontSize: 12,
           color: "#888",
           marginBottom: 8,
         }}
@@ -795,7 +796,7 @@ function ReceiptDetail({ receipt }: { receipt: Receipt }) {
           background: "var(--bg-primary, #0a0a0a)",
           padding: 12,
           borderRadius: 6,
-          fontSize: 11,
+          fontSize: 12,
           overflow: "auto",
           maxHeight: 150,
           margin: 0,

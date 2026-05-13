@@ -195,7 +195,7 @@ function CanvasTerminal({
     <div
       className={`
         relative flex flex-col rounded-lg border overflow-hidden
-        bg-[#0d1117] border-gray-700
+        bg-[#0d1117] border-zinc-700
         transition-all duration-200
         ${isDragging ? 'opacity-50' : 'opacity-100'}
         ${isDropTarget ? 'ring-2 ring-blue-500 border-blue-500' : ''}
@@ -207,40 +207,40 @@ function CanvasTerminal({
       data-terminal-index={index}
     >
       {/* Terminal Header */}
-      <div className="flex items-center justify-between px-3 py-2 bg-gray-800 border-b border-gray-700">
+      <div className="flex items-center justify-between px-3 py-2 bg-zinc-800 border-b border-zinc-700">
         <div className="flex items-center gap-2">
-          <GripVertical className="w-4 h-4 text-gray-500 cursor-grab active:cursor-grabbing" />
-          <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
-          <span className="text-sm font-medium text-gray-300">
+          <GripVertical className="size-4  text-zinc-500 cursor-grab active:cursor-grabbing" />
+          <span className={`size-2  rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+          <span className="text-sm font-medium text-zinc-300">
             Terminal {index + 1}
           </span>
         </div>
         <div className="flex items-center gap-1">
           <button
             onClick={() => setShowSearch(!showSearch)}
-            className="p-1.5 rounded hover:bg-gray-700 text-gray-400 hover:text-gray-200 transition-colors"
+            className="p-1.5 rounded hover:bg-zinc-700 text-zinc-400 hover:text-zinc-200 transition-colors"
             title="Search (Ctrl+F)"
           >
-            <Search className="w-4 h-4" />
+            <Search className="size-4 " />
           </button>
           <button
             onClick={() => onClose(terminal.id)}
-            className="p-1.5 rounded hover:bg-red-600/20 text-gray-400 hover:text-red-400 transition-colors"
+            className="p-1.5 rounded hover:bg-red-600/20 text-zinc-400 hover:text-red-400 transition-colors"
             title="Close terminal"
           >
-            <X className="w-4 h-4" />
+            <X className="size-4 " />
           </button>
         </div>
       </div>
 
       {/* Search Box */}
       {showSearch && (
-        <div className="flex items-center gap-2 px-3 py-2 bg-gray-900 border-b border-gray-700">
+        <div className="flex items-center gap-2 px-3 py-2 bg-zinc-900 border-b border-zinc-700">
           <input
             ref={searchInputRef}
             type="text"
-            placeholder="Search..."
-            className="flex-1 px-2 py-1 text-sm bg-gray-800 border border-gray-700 rounded text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+            placeholder="Search…"
+            className="flex-1 px-2 py-1 text-sm bg-zinc-800 border border-zinc-700 rounded text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-blue-500"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 handleSearch(e.shiftKey ? 'previous' : 'next');
@@ -251,19 +251,19 @@ function CanvasTerminal({
           />
           <button
             onClick={() => handleSearch('previous')}
-            className="px-2 py-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 rounded"
+            className="px-2 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded"
           >
             ↑
           </button>
           <button
             onClick={() => handleSearch('next')}
-            className="px-2 py-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 rounded"
+            className="px-2 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded"
           >
             ↓
           </button>
           <button
             onClick={() => setShowSearch(false)}
-            className="px-2 py-1 text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 rounded"
+            className="px-2 py-1 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded"
           >
             ✕
           </button>
@@ -296,7 +296,7 @@ function EmptySlot({ index, onAdd, onDrop, dragOverIndex }: EmptySlotProps) {
         transition-all duration-200
         ${isDropTarget 
           ? 'border-blue-500 bg-blue-500/10' 
-          : 'border-gray-700 hover:border-gray-600 hover:bg-gray-800/50'
+          : 'border-zinc-700 hover:border-zinc-600 hover:bg-zinc-800/50'
         }
       `}
       onDragOver={(e) => e.preventDefault()}
@@ -305,9 +305,9 @@ function EmptySlot({ index, onAdd, onDrop, dragOverIndex }: EmptySlotProps) {
     >
       <button
         onClick={onAdd}
-        className="flex flex-col items-center gap-2 p-4 text-gray-500 hover:text-gray-300 transition-colors"
+        className="flex flex-col items-center gap-2 p-4 text-zinc-500 hover:text-zinc-300 transition-colors"
       >
-        <Plus className="w-8 h-8" />
+        <Plus className="size-8 " />
         <span className="text-sm">Add Terminal</span>
       </button>
     </div>
@@ -450,10 +450,10 @@ export function TerminalCanvas({
   return (
     <div className={`flex flex-col h-full ${className}`}>
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-800 bg-gray-900/50">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 bg-zinc-900/50">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold text-gray-200">Terminal Canvas</h2>
-          <span className="px-2 py-0.5 text-sm bg-gray-800 text-gray-400 rounded-full">
+          <h2 className="text-lg font-semibold text-zinc-200">Terminal Canvas</h2>
+          <span className="px-2 py-0.5 text-sm bg-zinc-800 text-zinc-400 rounded-full">
             {activeCount}/{maxTerminals}
           </span>
         </div>
@@ -461,9 +461,9 @@ export function TerminalCanvas({
           <button
             onClick={addTerminal}
             disabled={isLoading || activeCount >= maxTerminals}
-            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium bg-blue-600 hover:bg-blue-500 disabled:bg-gray-700 disabled:text-gray-500 text-white rounded-lg transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium bg-blue-600 hover:bg-blue-500 disabled:bg-zinc-700 disabled:text-zinc-500 text-white rounded-lg transition-colors"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="size-4 " />
             Add Terminal
           </button>
           {activeCount > 0 && (
@@ -471,7 +471,7 @@ export function TerminalCanvas({
               onClick={closeAllTerminals}
               className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium bg-red-600/20 hover:bg-red-600/30 text-red-400 rounded-lg transition-colors"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="size-4 " />
               Close All
             </button>
           )}
@@ -529,7 +529,7 @@ export function TerminalCanvas({
       </div>
 
       {/* Help text */}
-      <div className="px-4 py-2 text-xs text-gray-500 border-t border-gray-800 bg-gray-900/30">
+      <div className="px-4 py-2 text-xs text-zinc-500 border-t border-zinc-800 bg-zinc-900/30">
         <span className="font-medium">Tips:</span> Drag terminals to rearrange • Ctrl+F to search • Ctrl+C/V for copy/paste
       </div>
     </div>

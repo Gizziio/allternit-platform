@@ -104,7 +104,7 @@ export class KernelElectronBridge implements KernelBridge {
 
   private log(...args: unknown[]): void {
     if (this.options.debug) {
-      console.log('[KernelElectronBridge]', ...args);
+      console.debug('[KernelElectronBridge]', ...args);
     }
   }
 
@@ -169,7 +169,7 @@ export class KernelWebSocketBridge implements KernelBridge {
 
   private log(...args: unknown[]): void {
     if (this.options.debug) {
-      console.log('[KernelWebSocketBridge]', ...args);
+      console.debug('[KernelWebSocketBridge]', ...args);
     }
   }
 
@@ -241,7 +241,7 @@ export class KernelWebSocketBridge implements KernelBridge {
     this.reconnectAttempts++;
     const delay = 1000 * Math.pow(2, this.reconnectAttempts - 1);
     
-    this.log(`Reconnecting in ${delay}ms... (attempt ${this.reconnectAttempts})`);
+    this.log(`Reconnecting in ${delay}ms… (attempt ${this.reconnectAttempts})`);
     
     this.reconnectTimer = setTimeout(() => this.connect(), delay);
   }
@@ -320,7 +320,7 @@ export class KernelMockBridge implements KernelBridge {
 
   private log(...args: unknown[]): void {
     if (this.options.debug) {
-      console.log('[KernelMockBridge]', ...args);
+      console.debug('[KernelMockBridge]', ...args);
     }
   }
 }

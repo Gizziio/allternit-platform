@@ -1,5 +1,6 @@
 'use client';
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useCallback, useEffect } from 'react';
 import { BookOpen, Plus, ChevronDown, Send, Loader2, WifiOff } from 'lucide-react';
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
@@ -277,7 +278,7 @@ export function ResearchTab() {
   if (apiAvailable === false) {
     return (
       <div className="research-empty-state">
-        <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center">
+        <div className="size-14  rounded-2xl bg-red-500/10 flex items-center justify-center">
           <WifiOff size={28} className="text-red-400" />
         </div>
         <div>
@@ -306,7 +307,7 @@ export function ResearchTab() {
   if (notebooks.length === 0 && apiAvailable === true) {
     return (
       <div className="research-empty-state">
-        <div className="w-14 h-14 rounded-2xl bg-purple-400/10 flex items-center justify-center">
+        <div className="size-14  rounded-2xl bg-purple-400/10 flex items-center justify-center">
           <BookOpen size={28} className="text-purple-400" />
         </div>
         <div>
@@ -410,7 +411,7 @@ export function ResearchTab() {
                 Tools
               </button>
             )}
-            <span className="text-[11px] text-[var(--text-muted,#a1a1aa)]">
+            <span className="text-[12px] text-[var(--text-muted,#a1a1aa)]">
               {sources.length} sources • {(activeNotebook?.token_count || 0).toLocaleString()} tokens
             </span>
           </div>

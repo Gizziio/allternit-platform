@@ -336,14 +336,14 @@ const techDetailsStyle: React.CSSProperties = {
 };
 
 const techTextStyle: React.CSSProperties = {
-  fontSize: '10px',
+  fontSize: '12px',
   color: `${SAND[500]}80`,
   letterSpacing: '0.1em',
   fontFamily: 'var(--font-code)',
 };
 
 const techDividerStyle: React.CSSProperties = {
-  fontSize: '10px',
+  fontSize: '12px',
   color: `${SAND[500]}4c`,
 };
 

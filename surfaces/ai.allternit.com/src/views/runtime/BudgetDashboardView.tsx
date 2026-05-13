@@ -106,7 +106,7 @@ export function BudgetDashboardView() {
   if (isLoading && !budget) {
     return (
       <div className="flex h-full items-center justify-center">
-        <CircleNotch className="h-8 w-8 animate-spin text-accent" />
+        <CircleNotch className="size-8  animate-spin text-accent" />
       </div>
     );
   }
@@ -114,7 +114,7 @@ export function BudgetDashboardView() {
   if (error && !budget) {
     return (
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
-        <Warning className="mb-4 h-12 w-12 text-red-500" />
+        <Warning className="mb-4 size-12  text-red-500" />
         <p className="mb-4">Failed to load runtime budget</p>
         <button
           onClick={() => void refetch()}
@@ -133,8 +133,8 @@ export function BudgetDashboardView() {
         <GlassSurface intensity="thick" className="rounded-3xl p-6">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
-                <Wallet className="h-3.5 w-3.5 text-amber-300" />
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[12px] uppercase tracking-[0.24em] text-muted-foreground">
+                <Wallet className="size-3.5  text-amber-300" />
                 Economic Model
               </div>
               <h2 className="text-3xl font-semibold tracking-tight text-foreground">Runtime Budget</h2>
@@ -153,9 +153,9 @@ export function BudgetDashboardView() {
                 <span>Last sync {formatTimestamp(lastUpdatedAt)}</span>
                 <button
                   onClick={() => void refetch()}
-                  className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/15 px-3 py-1 text-[11px] text-foreground transition hover:bg-black/25"
+                  className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/15 px-3 py-1 text-[12px] text-foreground transition hover:bg-black/25"
                 >
-                  <ArrowsClockwise className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                  <ArrowsClockwise className={`size-3.5  ${isLoading ? 'animate-spin' : ''}`} />
                   Refresh
                 </button>
               </div>
@@ -195,7 +195,7 @@ export function BudgetDashboardView() {
             <div className="flex flex-col gap-6">
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
-                  <Wallet className="h-5 w-5 text-amber-200" />
+                  <Wallet className="size-5  text-amber-200" />
                   <h3 className="text-lg font-medium text-foreground">Shared runtime quota</h3>
                 </div>
                 <p className="text-sm text-muted-foreground">
@@ -223,7 +223,7 @@ export function BudgetDashboardView() {
                   className="inline-flex items-center justify-center gap-2 rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm font-medium text-amber-100 transition hover:bg-amber-300/20 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isSaving ? (
-                    <CircleNotch className="h-4 w-4 animate-spin" />
+                    <CircleNotch className="size-4  animate-spin" />
                   ) : (
                     <CurrencyDollar size={16} />
                   )}
@@ -245,7 +245,7 @@ export function BudgetDashboardView() {
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl border border-white/5 bg-black/10 px-4 py-4">
-                  <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  <div className="text-[12px] uppercase tracking-[0.18em] text-muted-foreground">
                     Budget posture
                   </div>
                   <div className="mt-2 text-lg font-medium text-foreground">{pressureLabel}</div>
@@ -256,7 +256,7 @@ export function BudgetDashboardView() {
                   </div>
                 </div>
                 <div className="rounded-2xl border border-white/5 bg-black/10 px-4 py-4">
-                  <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  <div className="text-[12px] uppercase tracking-[0.18em] text-muted-foreground">
                     Headroom delta
                   </div>
                   <div className="mt-2 text-lg font-medium text-foreground">
@@ -280,7 +280,7 @@ export function BudgetDashboardView() {
 
           <GlassSurface intensity="base" className="rounded-3xl p-6">
             <div className="flex items-center gap-2">
-              <Warning className="h-5 w-5 text-emerald-200" />
+              <Warning className="size-5  text-emerald-200" />
               <h3 className="text-lg font-medium text-foreground">Resource pressure</h3>
             </div>
             <p className="mt-2 text-sm text-muted-foreground">
@@ -311,14 +311,14 @@ export function BudgetDashboardView() {
                     <div className="mb-3 flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2">
                         <div className="rounded-xl bg-white/5 p-2">
-                          <Icon className="h-4 w-4 text-foreground" />
+                          <Icon className="size-4  text-foreground" />
                         </div>
                         <div>
                           <div className="text-sm font-medium text-foreground">{metric.label}</div>
                           <div className="text-xs text-muted-foreground">{metric.detail}</div>
                         </div>
                       </div>
-                      <span className="rounded-full border border-white/10 px-2 py-1 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                      <span className="rounded-full border border-white/10 px-2 py-1 text-[12px] uppercase tracking-[0.16em] text-muted-foreground">
                         {metric.tone}
                       </span>
                     </div>
@@ -339,7 +339,7 @@ export function BudgetDashboardView() {
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           <GlassSurface intensity="thin" className="rounded-3xl p-6">
             <div className="flex items-center gap-2">
-              <Warning className="h-5 w-5 text-amber-200" />
+              <Warning className="size-5  text-amber-200" />
               <h3 className="text-lg font-medium text-foreground">Runtime signals</h3>
             </div>
             <div className="mt-4 space-y-3">
@@ -363,7 +363,7 @@ export function BudgetDashboardView() {
 
           <GlassSurface intensity="thin" className="rounded-3xl p-6">
             <div className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-sky-200" />
+              <Shield className="size-5  text-sky-200" />
               <h3 className="text-lg font-medium text-foreground">Current backend scope</h3>
             </div>
             <div className="mt-4 space-y-4 text-sm text-muted-foreground">

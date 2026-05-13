@@ -1,0 +1,16 @@
+<testsuites id="" name="" tests="6" failures="0" skipped="0" errors="0" time="23.527241999999998">
+<testsuite name="smoke-mode-switching.spec.ts" timestamp="2026-05-13T02:39:59.514Z" hostname="chromium" tests="6" failures="0" skipped="0" time="16.361" errors="0">
+<testcase name="Mode switching smoke tests › Chat mode renders" classname="smoke-mode-switching.spec.ts" time="3.19">
+</testcase>
+<testcase name="Mode switching smoke tests › Cowork mode renders" classname="smoke-mode-switching.spec.ts" time="2.102">
+</testcase>
+<testcase name="Mode switching smoke tests › Code mode renders" classname="smoke-mode-switching.spec.ts" time="2.17">
+</testcase>
+<testcase name="Mode switching smoke tests › Design mode renders" classname="smoke-mode-switching.spec.ts" time="2.14">
+</testcase>
+<testcase name="Mode switching smoke tests › Browser mode renders" classname="smoke-mode-switching.spec.ts" time="2.298">
+</testcase>
+<testcase name="Mode switching smoke tests › Rapid mode switching does not crash" classname="smoke-mode-switching.spec.ts" time="4.461">
+</testcase>
+</testsuite>
+</testsuites>

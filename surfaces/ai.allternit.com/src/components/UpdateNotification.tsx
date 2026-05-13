@@ -87,7 +87,7 @@ function SingleNotification({
 
   // Truncate release notes for preview
   const releaseNotesPreview = update.releaseNotes
-    ? update.releaseNotes.slice(0, 120) + (update.releaseNotes.length > 120 ? '...' : '')
+    ? update.releaseNotes.slice(0, 120) + (update.releaseNotes.length > 120 ? '…' : '')
     : null;
 
   return (
@@ -223,7 +223,7 @@ function SingleNotification({
               padding: '6px 10px',
               backgroundColor: 'rgba(239, 68, 68, 0.1)',
               borderRadius: 6,
-              fontSize: 11,
+              fontSize: 12,
               color: 'var(--status-error)',
               display: 'flex',
               alignItems: 'center',
@@ -293,7 +293,7 @@ function SingleNotification({
             marginTop: 12,
             paddingTop: 12,
             borderTop: `1px solid ${THEME.border}`,
-            fontSize: 11,
+            fontSize: 12,
             color: THEME.textTertiary,
             display: 'flex',
             alignItems: 'center',

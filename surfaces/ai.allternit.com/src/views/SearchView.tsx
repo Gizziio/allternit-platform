@@ -136,7 +136,7 @@ export function SearchView() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Search conversations, files, code, docs..."
+                placeholder="Search conversations, files, code, docs…"
                 className="flex-1 ml-3 bg-transparent outline-none text-base"
                 style={{
                   color: `var(--text-primary)`,

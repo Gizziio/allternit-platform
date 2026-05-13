@@ -10,7 +10,7 @@ interface InboxItem {
   link?: string;
 }
 
-export function InboxView() {
+export function InboxView(): JSX.Element {
   const [items, setItems] = useState<InboxItem[]>([
     {
       id: '1',
@@ -64,18 +64,18 @@ export function InboxView() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: 16, gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--ui-text-primary)' }}>
-          Inbox {unreadCount > 0 && <span style={{ background: 'var(--status-error)', color: '#fff', borderRadius: 10, padding: '1px 8px', fontSize: 11 }}>{unreadCount}</span>}
+          Inbox {unreadCount > 0 && <span style={{ background: 'var(--status-error)', color: '#fff', borderRadius: 10, padding: '1px 8px', fontSize: 12 }}>{unreadCount}</span>}
         </span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
           <button
             onClick={() => setFilter('all')}
-            style={{ background: filter === 'all' ? 'var(--ui-border-default)' : 'transparent', color: 'var(--ui-text-primary)', border: '1px solid #374151', borderRadius: 4, padding: '4px 10px', fontSize: 11, cursor: 'pointer' }}
+            style={{ background: filter === 'all' ? 'var(--ui-border-default)' : 'transparent', color: 'var(--ui-text-primary)', border: '1px solid #374151', borderRadius: 4, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}
           >
             All
           </button>
           <button
             onClick={() => setFilter('unread')}
-            style={{ background: filter === 'unread' ? 'var(--ui-border-default)' : 'transparent', color: 'var(--ui-text-primary)', border: '1px solid #374151', borderRadius: 4, padding: '4px 10px', fontSize: 11, cursor: 'pointer' }}
+            style={{ background: filter === 'unread' ? 'var(--ui-border-default)' : 'transparent', color: 'var(--ui-text-primary)', border: '1px solid #374151', borderRadius: 4, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}
           >
             Unread
           </button>
@@ -104,8 +104,8 @@ export function InboxView() {
             <div style={{ fontSize: 14, marginTop: 2 }}>{typeIcon(item.type)}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--ui-text-primary)', marginBottom: 2 }}>{item.title}</div>
-              <div style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>{item.body}</div>
-              <div style={{ fontSize: 10, color: 'var(--ui-text-muted)', marginTop: 4 }}>
+              <div style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>{item.body}</div>
+              <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', marginTop: 4 }}>
                 {new Date(item.createdAt).toLocaleString()}
               </div>
             </div>

@@ -93,7 +93,7 @@ export function OpenClawControlUI() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Warning className="h-5 w-5 text-red-500" />
+              <Warning className="size-5  text-red-500" />
               OpenClaw Not Available
             </CardTitle>
             <CardDescription>
@@ -117,7 +117,7 @@ export function OpenClawControlUI() {
             </div>
             
             <Button onClick={() => window.location.reload()} variant="outline">
-              <ArrowsClockwise className="mr-2 h-4 w-4" />
+              <ArrowsClockwise className="mr-2 size-4 " />
               Retry Connection
             </Button>
           </CardContent>
@@ -141,11 +141,11 @@ export function OpenClawControlUI() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={handleRefresh}>
-            <ArrowsClockwise className="mr-2 h-4 w-4" />
+            <ArrowsClockwise className="mr-2 size-4 " />
             Refresh
           </Button>
           <Button variant="outline" size="sm" onClick={handleOpenExternal}>
-            <ArrowSquareOut className="mr-2 h-4 w-4" />
+            <ArrowSquareOut className="mr-2 size-4 " />
             Open in New Tab
           </Button>
         </div>
@@ -156,8 +156,8 @@ export function OpenClawControlUI() {
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/50">
             <div className="flex flex-col items-center gap-2">
-              <ArrowsClockwise className="h-8 w-8 animate-spin text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Loading OpenClaw Control UI...</p>
+              <ArrowsClockwise className="size-8  animate-spin text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">Loading OpenClaw Control UI…</p>
             </div>
           </div>
         )}

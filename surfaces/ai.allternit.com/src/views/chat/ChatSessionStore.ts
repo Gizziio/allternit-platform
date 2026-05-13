@@ -40,13 +40,13 @@ export const useChatSessionStore = createModeSessionStore({
 // ---------------------------------------------------------------------------
 
 export function useChatSessions() {
-  return useChatSessionStore((state) => state.sessions);
+  return useChatSessionStore((state) => state.sessions ?? []);
 }
 
 export function useActiveChatSession() {
   return useChatSessionStore((state) => {
     if (!state.activeSessionId) return null;
-    return state.sessions.find((s) => s.id === state.activeSessionId) || null;
+    return (state.sessions ?? []).find((s) => s.id === state.activeSessionId) || null;
   });
 }
 
@@ -68,7 +68,7 @@ export function useChatSessionError() {
 
 export function useAgentChatSessions() {
   return useChatSessionStore((state) => 
-    state.sessions.filter((s) => s.metadata.sessionMode === 'agent')
+    (state.sessions ?? []).filter((s) => s.metadata.sessionMode === 'agent')
   );
 }
 
@@ -78,8 +78,9 @@ export function useAgentChatSessions() {
 
 export function useChatSessionsByProject(projectId: string | null) {
   return useChatSessionStore((state) => {
-    if (!projectId) return state.sessions;
-    return state.sessions.filter((s) => s.metadata.projectId === projectId);
+    const sessions = state.sessions ?? [];
+    if (!projectId) return sessions;
+    return sessions.filter((s) => s.metadata.projectId === projectId);
   });
 }
 

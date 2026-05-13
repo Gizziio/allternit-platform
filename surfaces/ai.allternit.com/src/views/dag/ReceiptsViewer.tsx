@@ -1,6 +1,6 @@
 import { ReceiptsViewerSurface } from "./DagRuntimeWorkspace";
 
-export function ReceiptsViewer() {
+export function ReceiptsViewer(): JSX.Element {
   return <ReceiptsViewerSurface />;
 }
 

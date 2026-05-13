@@ -93,7 +93,7 @@ export function SSHConnectionsPanel() {
         onConnectExisting={handleConnectExisting}
         onTestConnection={handleTestConnection}
         onSelectProvider={(providerId) => {
-          console.log('Selected provider:', providerId);
+          console.debug('Selected provider:', providerId);
           setIsModalOpen(false);
         }}
       />

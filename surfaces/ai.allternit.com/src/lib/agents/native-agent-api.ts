@@ -459,14 +459,14 @@ export const sessionApi = {
    */
   async deleteSession(sessionId: string): Promise<void> {
     const url = `${getAgentSessionBase()}/${encodeURIComponent(sessionId)}`;
-    console.log('[NativeAgentApi] DELETE request to:', url);
+    console.debug('[NativeAgentApi] DELETE request to:', url);
     const response = await fetch(
       url,
       {
         method: "DELETE",
       },
     );
-    console.log('[NativeAgentApi] DELETE response status:', response.status, response.statusText);
+    console.debug('[NativeAgentApi] DELETE response status:', response.status, response.statusText);
     if (!response.ok) {
       console.error('[NativeAgentApi] DELETE failed, throwing error');
       await handleResponse(response);
@@ -917,7 +917,7 @@ export const canvasApi = {
 
 export const sessionLifecycleApi = {
   async revertSession(sessionId: string, messageId: string): Promise<BackendSession> {
-    const response = await fetch(`/api/v1/sessions/${encodeURIComponent(sessionId)}/revert`, {
+    const response = await fetch(`${getAgentSessionBase()}/${encodeURIComponent(sessionId)}/revert`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messageId }),
@@ -927,7 +927,7 @@ export const sessionLifecycleApi = {
   },
 
   async unrevertSession(sessionId: string): Promise<BackendSession> {
-    const response = await fetch(`/api/v1/sessions/${encodeURIComponent(sessionId)}/unrevert`, {
+    const response = await fetch(`${getAgentSessionBase()}/${encodeURIComponent(sessionId)}/unrevert`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     });
@@ -936,7 +936,7 @@ export const sessionLifecycleApi = {
   },
 
   async compactSession(sessionId: string, modelId?: string): Promise<void> {
-    const response = await fetch(`/api/v1/sessions/${encodeURIComponent(sessionId)}/compact`, {
+    const response = await fetch(`${getAgentSessionBase()}/${encodeURIComponent(sessionId)}/compact`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ modelId }),
@@ -945,7 +945,7 @@ export const sessionLifecycleApi = {
   },
 
   async abortSession(sessionId: string): Promise<void> {
-    const response = await fetch(`/api/v1/sessions/${encodeURIComponent(sessionId)}/abort`, {
+    const response = await fetch(`${getAgentSessionBase()}/${encodeURIComponent(sessionId)}/abort`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
     });

@@ -10,7 +10,7 @@ const STATS = [
   { value: '0', label: 'Vendor lock-in' },
 ];
 
-export function TrustBar() {
+export function TrustBar(): JSX.Element {
   return (
     <section className="relative border-t border-white/[0.06] px-6 py-16">
       <div className="mx-auto max-w-5xl">

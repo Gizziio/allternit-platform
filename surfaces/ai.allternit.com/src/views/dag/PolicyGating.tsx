@@ -8,6 +8,7 @@
  * - Approve/reject requests
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   CheckCircle,
@@ -280,7 +281,7 @@ export function PolicyGating() {
               <MagnifyingGlass size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--ui-text-muted)' }} />
               <input
                 type="text"
-                placeholder="Search requests..."
+                placeholder="Search requests…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 style={{
@@ -438,7 +439,7 @@ function ApprovalCard({
             background: statusConfig.bgColor,
             color: statusConfig.color,
             borderRadius: 4,
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 600,
             display: 'flex',
             alignItems: 'center',
@@ -453,7 +454,7 @@ function ApprovalCard({
               background: 'var(--status-error-bg)',
               color: 'var(--status-error)',
               borderRadius: 4,
-              fontSize: 11,
+              fontSize: 12,
             }}>
               Expired
             </span>
@@ -477,7 +478,7 @@ function ApprovalCard({
               background: getRiskColor(approval.resource.riskLevel).bg,
               color: getRiskColor(approval.resource.riskLevel).text,
               borderRadius: 4,
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 500,
             }}>
               {approval.resource.riskLevel} risk
@@ -599,7 +600,7 @@ function ApprovalDetailModal({
                 background: statusConfig.bgColor,
                 color: statusConfig.color,
                 borderRadius: 4,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 600,
               }}>
                 {statusConfig.label}
@@ -681,7 +682,7 @@ function ApprovalDetailModal({
                   background: getRiskColor(approval.resource.riskLevel).bg,
                   color: getRiskColor(approval.resource.riskLevel).text,
                   borderRadius: 4,
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: 600,
                 }}>
                   {approval.resource.riskLevel.toUpperCase()}
@@ -721,7 +722,7 @@ function ApprovalDetailModal({
                         </div>
                       )}
                     </div>
-                    <span style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>
+                    <span style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>
                       {new Date(decision.timestamp).toLocaleString()}
                     </span>
                   </div>
@@ -740,7 +741,7 @@ function ApprovalDetailModal({
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  placeholder="Add a note about your decision..."
+                  placeholder="Add a note about your decision…"
                   rows={3}
                   style={{
                     width: '100%',
@@ -872,7 +873,7 @@ function WorkflowConfiguration() {
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
                 <div>
-                  <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+                  <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
                     Required Approvals
                   </div>
                   <div style={{ fontSize: 14, color: 'var(--ui-text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -881,7 +882,7 @@ function WorkflowConfiguration() {
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+                  <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
                     Auto-escalate
                   </div>
                   <div style={{ fontSize: 14, color: workflow.autoEscalate ? 'var(--status-success)' : 'var(--ui-text-muted)' }}>
@@ -889,7 +890,7 @@ function WorkflowConfiguration() {
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+                  <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
                     Timeout
                   </div>
                   <div style={{ fontSize: 14, color: 'var(--ui-text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -978,7 +979,7 @@ function LoadingState() {
   return (
     <div style={{ textAlign: 'center', padding: 60, color: 'var(--ui-text-muted)' }}>
       <ArrowsClockwise size={32} style={{ animation: 'spin 1s linear infinite' }} />
-      <p>Loading approvals...</p>
+      <p>Loading approvals…</p>
     </div>
   );
 }

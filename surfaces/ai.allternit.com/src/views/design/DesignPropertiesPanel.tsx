@@ -18,7 +18,7 @@ import type { PenpotLayout, PenpotFlexDirection, PenpotAlignItems, PenpotJustify
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-      <span style={{ fontSize: 10, color: 'var(--text-tertiary)', width: 72, flexShrink: 0, fontWeight: 600 }}>{label}</span>
+      <span style={{ fontSize: 12, color: 'var(--text-tertiary)', width: 72, flexShrink: 0, fontWeight: 600 }}>{label}</span>
       {children}
     </div>
   );
@@ -35,9 +35,9 @@ function NumberInput({ value, onChange, min = 0, max = 9999, step = 1, suffix }:
         value={value}
         min={min} max={max} step={step}
         onChange={e => onChange(Number(e.target.value))}
-        style={{ flex: 1, background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: 5, padding: '3px 6px', fontSize: 11, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', minWidth: 0 }}
+        style={{ flex: 1, background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: 5, padding: '3px 6px', fontSize: 12, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', minWidth: 0 }}
       />
-      {suffix && <span style={{ fontSize: 9, color: 'var(--text-tertiary)', flexShrink: 0 }}>{suffix}</span>}
+      {suffix && <span style={{ fontSize: 12, color: 'var(--text-tertiary)', flexShrink: 0 }}>{suffix}</span>}
     </div>
   );
 }
@@ -56,7 +56,7 @@ function ColorInput({ value, onChange }: { value: string; onChange: (v: string) 
         value={value || ''}
         onChange={e => onChange(e.target.value)}
         placeholder="#ffffff"
-        style={{ flex: 1, background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: 5, padding: '3px 6px', fontSize: 11, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', minWidth: 0 }}
+        style={{ flex: 1, background: 'var(--bg-tertiary)', border: '1px solid var(--border-subtle)', borderRadius: 5, padding: '3px 6px', fontSize: 12, color: 'var(--text-primary)', fontFamily: 'var(--font-mono)', minWidth: 0 }}
       />
     </div>
   );
@@ -64,7 +64,7 @@ function ColorInput({ value, onChange }: { value: string; onChange: (v: string) 
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-tertiary)', marginBottom: 8, marginTop: 12, borderBottom: '1px solid var(--border-subtle)', paddingBottom: 5 }}>
+    <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-tertiary)', marginBottom: 8, marginTop: 12, borderBottom: '1px solid var(--border-subtle)', paddingBottom: 5 }}>
       {children}
     </div>
   );
@@ -83,7 +83,7 @@ function SegmentedControl<T extends string>({ options, value, onChange }: {
             flex: 1, padding: '3px 4px', borderRadius: 4, border: 'none', cursor: 'pointer',
             background: value === opt.value ? 'var(--bg-primary)' : 'transparent',
             color: value === opt.value ? 'var(--text-primary)' : 'var(--text-tertiary)',
-            fontSize: 9, fontWeight: value === opt.value ? 700 : 400,
+            fontSize: 12, fontWeight: value === opt.value ? 700 : 400,
             boxShadow: value === opt.value ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
             transition: 'all 0.1s',
           }}>
@@ -108,7 +108,7 @@ export function DesignPropertiesPanel({ editorRef, selectedShapeId }: DesignProp
   if (!selectedShape || !selectedShapeId) {
     return (
       <div style={panelStyle}>
-        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', textAlign: 'center', padding: '20px 0' }}>
+        <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textAlign: 'center', padding: '20px 0' }}>
           Select a shape
         </div>
       </div>
@@ -139,10 +139,10 @@ export function DesignPropertiesPanel({ editorRef, selectedShapeId }: DesignProp
 
   return (
     <div style={panelStyle}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {selectedShape.name}
       </div>
-      <div style={{ fontSize: 9, color: 'var(--text-tertiary)', marginBottom: 12, marginTop: -8 }}>{selectedShape.type}</div>
+      <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 12, marginTop: -8 }}>{selectedShape.type}</div>
 
       {/* Geometry */}
       <SectionLabel>Size</SectionLabel>
@@ -324,11 +324,11 @@ export function DesignPropertiesPanel({ editorRef, selectedShapeId }: DesignProp
                 <Row label="Gap">
                   <NumberInput value={gap} onChange={v => updateLayout({ layoutGap: { rowGap: v, columnGap: v } })} min={0} max={128} suffix="px" />
                 </Row>
-                <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 4 }}>Padding</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-tertiary)', marginBottom: 4 }}>Padding</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, marginBottom: 8 }}>
                   {(['top','right','bottom','left'] as const).map(side => (
                     <div key={side} style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                      <span style={{ fontSize: 9, color: 'var(--text-tertiary)', width: 24, flexShrink: 0, textAlign: 'right' }}>{side[0].toUpperCase()}</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-tertiary)', width: 24, flexShrink: 0, textAlign: 'right' }}>{side[0].toUpperCase()}</span>
                       <NumberInput
                         value={pad[side]}
                         onChange={v => updateLayout({ layoutPadding: { ...pad, [side]: v } })}

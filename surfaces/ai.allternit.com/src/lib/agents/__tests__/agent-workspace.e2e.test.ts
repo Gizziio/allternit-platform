@@ -55,7 +55,7 @@ describe('Agent Workspace E2E', () => {
     if (!exists) {
       throw new Error(`Test workspace not found at ${TEST_WORKSPACE_PATH}. Run setup first.`);
     }
-    console.log(`[E2E Test] Using workspace at: ${TEST_WORKSPACE_PATH}`);
+    console.debug(`[E2E Test] Using workspace at: ${TEST_WORKSPACE_PATH}`);
   });
 
   describe('File System Integration', () => {
@@ -187,10 +187,10 @@ describe('Agent Workspace E2E', () => {
       const tasks = parseHeartbeatTasks(heartbeatContent!);
       expect(tasks.length).toBeGreaterThan(0);
       
-      console.log('✅ Full integration flow completed successfully');
-      console.log(`   - Workspace files: ${files.length}`);
-      console.log(`   - Trust tier rules: ${trustTiers['config'].tier1.length + trustTiers['config'].tier2.length + trustTiers['config'].tier3.length}`);
-      console.log(`   - HEARTBEAT tasks: ${tasks.length}`);
+      console.debug('✅ Full integration flow completed successfully');
+      console.debug(`   - Workspace files: ${files.length}`);
+      console.debug(`   - Trust tier rules: ${trustTiers['config'].tier1.length + trustTiers['config'].tier2.length + trustTiers['config'].tier3.length}`);
+      console.debug(`   - HEARTBEAT tasks: ${tasks.length}`);
     });
   });
 });
@@ -222,11 +222,11 @@ describe('Validation', () => {
       const identityContent = await readWorkspaceFile('IDENTITY.md');
       results.contextBuilding = !!identityContent && identityContent.length > 0;
       
-      console.log('\n📊 E2E Validation Results:');
-      console.log(`   File System: ${results.fileSystem ? '✅' : '❌'}`);
-      console.log(`   Workspace Loading: ${results.workspaceLoading ? '✅' : '❌'}`);
-      console.log(`   Trust Tier Parsing: ${results.trustTierParsing ? '✅' : '❌'}`);
-      console.log(`   Context Building: ${results.contextBuilding ? '✅' : '❌'}`);
+      console.debug('\n📊 E2E Validation Results:');
+      console.debug(`   File System: ${results.fileSystem ? '✅' : '❌'}`);
+      console.debug(`   Workspace Loading: ${results.workspaceLoading ? '✅' : '❌'}`);
+      console.debug(`   Trust Tier Parsing: ${results.trustTierParsing ? '✅' : '❌'}`);
+      console.debug(`   Context Building: ${results.contextBuilding ? '✅' : '❌'}`);
       
       expect(results.fileSystem).toBe(true);
       expect(results.workspaceLoading).toBe(true);

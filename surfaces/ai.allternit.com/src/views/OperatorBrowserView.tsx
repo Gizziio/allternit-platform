@@ -7,9 +7,10 @@
 
 'use client';
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useEffect } from 'react';
 import { GlassSurface } from '@/design/GlassSurface';
-import { GlassCard } from '@/design/GlassCard';
+import { GlassCard } from '@/design/glass/GlassCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -166,13 +167,13 @@ export function OperatorBrowserView() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle className="w-4 h-4 text-green-500" />;
+        return <CheckCircle className="size-4  text-green-500" />;
       case 'running':
-        return <Activity className="w-4 h-4 text-blue-500 animate-pulse" />;
+        return <Activity className="size-4  text-blue-500 animate-pulse" />;
       case 'failed':
-        return <Warning className="w-4 h-4 text-red-500" />;
+        return <Warning className="size-4  text-red-500" />;
       default:
-        return <Clock className="w-4 h-4 text-yellow-500" />;
+        return <Clock className="size-4  text-yellow-500" />;
     }
   };
 
@@ -194,7 +195,7 @@ export function OperatorBrowserView() {
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-[var(--border-subtle)]">
         <div className="flex items-center gap-3">
-          <Globe className="w-6 h-6 text-[var(--accent-primary)]" />
+          <Globe className="size-6  text-[var(--accent-primary)]" />
           <div>
             <h2 className="text-lg font-semibold">Operator Browser Control</h2>
             <p className="text-sm text-[var(--text-tertiary)]">
@@ -210,9 +211,9 @@ export function OperatorBrowserView() {
             )}
           >
             {operatorStatus.available ? (
-              <CheckCircle className="w-3 h-3 mr-1" />
+              <CheckCircle className="size-3  mr-1" />
             ) : (
-              <Warning className="w-3 h-3 mr-1" />
+              <Warning className="size-3  mr-1" />
             )}
             {operatorStatus.available ? 'Operator Online' : 'Operator Offline'}
           </Badge>
@@ -250,7 +251,7 @@ export function OperatorBrowserView() {
                   size="icon"
                 >
                   {isCreating ? (
-                    <ArrowsClockwise className="w-4 h-4 animate-spin" />
+                    <ArrowsClockwise className="size-4  animate-spin" />
                   ) : (
                     <Play size={16} />
                   )}
@@ -264,7 +265,7 @@ export function OperatorBrowserView() {
             <div className="p-2 space-y-1">
               {tasks.length === 0 ? (
                 <div className="text-center py-8 text-[var(--text-tertiary)] text-sm">
-                  <Globe className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <Globe className="size-8  mx-auto mb-2 opacity-50" />
                   <p>No browser tasks yet</p>
                   <p className="text-xs mt-1">
                     Enter a URL above to create a task
@@ -352,22 +353,22 @@ export function OperatorBrowserView() {
                           className="flex items-center gap-3 p-2 rounded bg-[var(--bg-secondary)]"
                         >
                           {action.type === 'navigate' && (
-                            <Globe className="w-4 h-4 text-blue-400" />
+                            <Globe className="size-4  text-blue-400" />
                           )}
                           {action.type === 'click' && (
-                            <Cursor className="w-4 h-4 text-green-400" />
+                            <Cursor className="size-4  text-green-400" />
                           )}
                           {action.type === 'type' && (
-                            <Keyboard className="w-4 h-4 text-yellow-400" />
+                            <Keyboard className="size-4  text-yellow-400" />
                           )}
                           {action.type === 'screenshot' && (
-                            <Camera className="w-4 h-4 text-purple-400" />
+                            <Camera className="size-4  text-purple-400" />
                           )}
                           {action.type === 'extract' && (
-                            <DownloadSimple className="w-4 h-4 text-cyan-400" />
+                            <DownloadSimple className="size-4  text-cyan-400" />
                           )}
                           {action.type === 'wait' && (
-                            <Clock className="w-4 h-4 text-gray-400" />
+                            <Clock className="size-4  text-zinc-400" />
                           )}
                           <span className="text-sm capitalize">
                             {action.type}
@@ -400,7 +401,7 @@ export function OperatorBrowserView() {
           ) : (
             <div className="flex-1 flex items-center justify-center text-[var(--text-tertiary)]">
               <div className="text-center">
-                <Globe className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <Globe className="size-12  mx-auto mb-3 opacity-30" />
                 <p className="text-sm">Select a task to view details</p>
                 <p className="text-xs mt-1">
                   Or create a new task from the left panel

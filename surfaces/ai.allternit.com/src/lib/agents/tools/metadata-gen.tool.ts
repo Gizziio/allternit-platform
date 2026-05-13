@@ -18,7 +18,7 @@ export const metadataGenTool = {
     required: ['projectName', 'description']
   },
   execute: async ({ projectName, description, brandColors = [], targetAudience }: any) => {
-    console.log(`[MetadataGen] Generating brand package for: ${projectName}...`);
+    console.debug(`[MetadataGen] Generating brand package for: ${projectName}...`);
 
     return {
       seo: {

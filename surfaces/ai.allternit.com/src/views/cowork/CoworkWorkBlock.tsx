@@ -86,8 +86,8 @@ const ActionBlock = memo(function ActionBlock({ event, isExpanded, onToggle }: B
         "transition-all duration-200"
       )}
     >
-      <div className="w-8 h-8 rounded-md bg-green-500/10 flex items-center justify-center shrink-0">
-        <MousePointerClick className="w-4 h-4 text-green-400" />
+      <div className="size-8  rounded-md bg-green-500/10 flex items-center justify-center shrink-0">
+        <MousePointerClick className="size-4  text-green-400" />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
@@ -108,9 +108,9 @@ const ActionBlock = memo(function ActionBlock({ event, isExpanded, onToggle }: B
         )}
       </div>
       {isExpanded ? (
-        <CaretUp className="w-4 h-4 text-white/30" />
+        <CaretUp className="size-4  text-white/30" />
       ) : (
-        <CaretDown className="w-4 h-4 text-white/30" />
+        <CaretDown className="size-4  text-white/30" />
       )}
     </div>
   );
@@ -139,8 +139,8 @@ const CommandBlock = memo(function CommandBlock({ event, isExpanded, onToggle }:
         onClick={onToggle}
         className="flex items-center gap-3 p-3 cursor-pointer hover:bg-white/5"
       >
-        <div className="w-8 h-8 rounded-md bg-blue-500/10 flex items-center justify-center shrink-0">
-          <Terminal className="w-4 h-4 text-blue-400" />
+        <div className="size-8  rounded-md bg-blue-500/10 flex items-center justify-center shrink-0">
+          <Terminal className="size-4  text-blue-400" />
         </div>
         <div className="flex-1 min-w-0">
           <span className="text-sm font-medium text-white/80">
@@ -148,9 +148,9 @@ const CommandBlock = memo(function CommandBlock({ event, isExpanded, onToggle }:
           </span>
         </div>
         {isExpanded ? (
-          <CaretUp className="w-4 h-4 text-white/30" />
+          <CaretUp className="size-4  text-white/30" />
         ) : (
-          <CaretDown className="w-4 h-4 text-white/30" />
+          <CaretDown className="size-4  text-white/30" />
         )}
       </div>
       
@@ -204,8 +204,8 @@ const FileBlock = memo(function FileBlock({ event, isExpanded, onToggle }: Block
         onClick={onToggle}
         className="flex items-center gap-3 p-3 cursor-pointer hover:bg-white/5"
       >
-        <div className={cn("w-8 h-8 rounded-md flex items-center justify-center shrink-0", config.bg)}>
-          <Icon className={cn("w-4 h-4", config.color)} />
+        <div className={cn("size-8  rounded-md flex items-center justify-center shrink-0", config.bg)}>
+          <Icon className={cn("size-4 ", config.color)} />
         </div>
         <div className="flex-1 min-w-0">
           <span className="text-sm font-medium text-white/80">
@@ -215,9 +215,9 @@ const FileBlock = memo(function FileBlock({ event, isExpanded, onToggle }: Block
           </span>
         </div>
         {isExpanded ? (
-          <CaretUp className="w-4 h-4 text-white/30" />
+          <CaretUp className="size-4  text-white/30" />
         ) : (
-          <CaretDown className="w-4 h-4 text-white/30" />
+          <CaretDown className="size-4  text-white/30" />
         )}
       </div>
       
@@ -226,7 +226,7 @@ const FileBlock = memo(function FileBlock({ event, isExpanded, onToggle }: Block
           <div className="space-y-1">
             {files.map((file, i: number) => (
               <div key={i} className="flex items-center gap-2 text-xs text-white/60">
-                <FileText className="w-3.5 h-3.5 text-white/30" />
+                <FileText className="size-3.5  text-white/30" />
                 <span className="font-mono">{file.path || file.name}</span>
                 {file.changes !== undefined && (
                   <span className="text-white/30">({file.changes} changes)</span>
@@ -261,8 +261,8 @@ const ObservationBlock = memo(function ObservationBlock({ event, isExpanded, onT
         onClick={onToggle}
         className="flex items-center gap-3 p-3 cursor-pointer hover:bg-white/5"
       >
-        <div className="w-8 h-8 rounded-md bg-cyan-500/10 flex items-center justify-center shrink-0">
-          <Camera className="w-4 h-4 text-cyan-400" />
+        <div className="size-8  rounded-md bg-cyan-500/10 flex items-center justify-center shrink-0">
+          <Camera className="size-4  text-cyan-400" />
         </div>
         <div className="flex-1 min-w-0">
           <span className="text-sm font-medium text-white/80">Viewed page</span>
@@ -273,9 +273,9 @@ const ObservationBlock = memo(function ObservationBlock({ event, isExpanded, onT
           )}
         </div>
         {isExpanded ? (
-          <CaretUp className="w-4 h-4 text-white/30" />
+          <CaretUp className="size-4  text-white/30" />
         ) : (
-          <CaretDown className="w-4 h-4 text-white/30" />
+          <CaretDown className="size-4  text-white/30" />
         )}
       </div>
       
@@ -308,8 +308,8 @@ const CheckpointBlock = memo(function CheckpointBlock({ event }: CheckpointBlock
   
   return (
     <div className="flex items-center gap-3 p-3 rounded-lg bg-[#1e1e1e] border border-purple-500/20">
-      <div className="w-8 h-8 rounded-md bg-purple-500/10 flex items-center justify-center shrink-0">
-        <Flag className="w-4 h-4 text-purple-400" />
+      <div className="size-8  rounded-md bg-purple-500/10 flex items-center justify-center shrink-0">
+        <Flag className="size-4  text-purple-400" />
       </div>
       <div className="flex-1 min-w-0">
         <span className="text-sm font-medium text-white/80">Checkpoint saved</span>
@@ -349,8 +349,8 @@ const ToolBlock = memo(function ToolBlock({ event, isExpanded, onToggle }: Block
         onClick={onToggle}
         className="flex items-center gap-3 p-3 cursor-pointer hover:bg-white/5"
       >
-        <div className="w-8 h-8 rounded-md bg-orange-500/10 flex items-center justify-center shrink-0">
-          <Code className="w-4 h-4 text-orange-400" />
+        <div className="size-8  rounded-md bg-orange-500/10 flex items-center justify-center shrink-0">
+          <Code className="size-4  text-orange-400" />
         </div>
         <div className="flex-1 min-w-0">
           <span className="text-sm font-medium text-white/80">
@@ -358,9 +358,9 @@ const ToolBlock = memo(function ToolBlock({ event, isExpanded, onToggle }: Block
           </span>
         </div>
         {isExpanded ? (
-          <CaretUp className="w-4 h-4 text-white/30" />
+          <CaretUp className="size-4  text-white/30" />
         ) : (
-          <CaretDown className="w-4 h-4 text-white/30" />
+          <CaretDown className="size-4  text-white/30" />
         )}
       </div>
       

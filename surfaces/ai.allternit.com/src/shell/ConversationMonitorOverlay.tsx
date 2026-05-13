@@ -62,7 +62,7 @@ export function ConversationMonitorOverlay({
             telemetry={monitor.telemetry}
           />
         </div>
-        <div className="mt-2 text-[10px] uppercase tracking-[0.4em] text-muted-foreground">
+        <div className="mt-2 text-xs uppercase tracking-[0.4em] text-muted-foreground">
           Shortcut: Ctrl+Shift+M / ⌘+Shift+M
         </div>
       </div>

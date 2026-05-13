@@ -21,6 +21,23 @@ use uuid::Uuid;
 use super::{AgentApiState, ApiError};
 use crate::api::chat::{StreamEvent, ToolCall, ToolResult};
 
+/// Maps tool_id to its showcase UI kind string, or None if it's a regular tool.
+fn get_showcase_kind(tool_id: &str) -> Option<&'static str> {
+    match tool_id {
+        "generate_email_draft" => Some("email-draft"),
+        "generate_sms_draft" => Some("sms-draft"),
+        "generate_recipe" => Some("recipe"),
+        "generate_image_search" => Some("image-search"),
+        "generate_app_recommendations" => Some("app-recommendations"),
+        "generate_model_comparison" => Some("model-comparison"),
+        "generate_mock_chat" => Some("mock-chat"),
+        "generate_levee_wizard" => Some("levee-wizard"),
+        "generate_map" => Some("map"),
+        "generate_image" => Some("image"),
+        _ => None,
+    }
+}
+
 /// Tool definition response
 #[derive(Debug, Serialize, Clone)]
 pub struct ToolDefinitionResponse {
@@ -48,7 +65,7 @@ pub struct ToolExecuteResponse {
 }
 
 /// List of built-in tools
-fn get_builtin_tools() -> Vec<ToolDefinitionResponse> {
+pub(crate) fn get_builtin_tools() -> Vec<ToolDefinitionResponse> {
     vec![
         ToolDefinitionResponse {
             id: "get_weather".to_string(),
@@ -190,6 +207,182 @@ fn get_builtin_tools() -> Vec<ToolDefinitionResponse> {
             }),
             category: "filesystem".to_string(),
         },
+        ToolDefinitionResponse {
+            id: "generate_email_draft".to_string(),
+            name: "generate_email_draft".to_string(),
+            description: "Draft a professional email".to_string(),
+            parameters: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "to": { "type": "string", "description": "Recipient email address" },
+                    "from": { "type": "string", "description": "Sender email address" },
+                    "subject": { "type": "string", "description": "Email subject" },
+                    "context": { "type": "string", "description": "Context or intent for the email body" }
+                },
+                "required": ["to", "subject", "context"]
+            }),
+            category: "showcase".to_string(),
+        },
+        ToolDefinitionResponse {
+            id: "generate_sms_draft".to_string(),
+            name: "generate_sms_draft".to_string(),
+            description: "Draft an SMS conversation thread".to_string(),
+            parameters: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "to": { "type": "string", "description": "Recipient name or number" },
+                    "context": { "type": "string", "description": "Context or topic for the messages" }
+                },
+                "required": ["to", "context"]
+            }),
+            category: "showcase".to_string(),
+        },
+        ToolDefinitionResponse {
+            id: "generate_recipe".to_string(),
+            name: "generate_recipe".to_string(),
+            description: "Generate a recipe with ingredients and steps".to_string(),
+            parameters: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "name": { "type": "string", "description": "Recipe name" },
+                    "servings": { "type": "integer", "description": "Number of servings", "default": 4 },
+                    "dietary": { "type": "string", "description": "Dietary restrictions (vegan, gluten-free, etc.)" }
+                },
+                "required": ["name"]
+            }),
+            category: "showcase".to_string(),
+        },
+        ToolDefinitionResponse {
+            id: "generate_image_search".to_string(),
+            name: "generate_image_search".to_string(),
+            description: "Search and return image results for a query".to_string(),
+            parameters: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "query": { "type": "string", "description": "Image search query" },
+                    "count": { "type": "integer", "description": "Number of images to return", "default": 6 }
+                },
+                "required": ["query"]
+            }),
+            category: "showcase".to_string(),
+        },
+        ToolDefinitionResponse {
+            id: "generate_app_recommendations".to_string(),
+            name: "generate_app_recommendations".to_string(),
+            description: "Recommend apps for a given category or use case".to_string(),
+            parameters: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "category": { "type": "string", "description": "App category (productivity, health, finance, etc.)" },
+                    "use_case": { "type": "string", "description": "Specific use case description" },
+                    "platform": { "type": "string", "enum": ["ios", "android", "both"], "default": "both" }
+                },
+                "required": ["category"]
+            }),
+            category: "showcase".to_string(),
+        },
+        ToolDefinitionResponse {
+            id: "generate_model_comparison".to_string(),
+            name: "generate_model_comparison".to_string(),
+            description: "Compare AI models across features and capabilities".to_string(),
+            parameters: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "models": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "description": "List of model names to compare"
+                    },
+                    "features": {
+                        "type": "array",
+                        "items": { "type": "string" },
+                        "description": "Features to compare across"
+                    }
+                },
+                "required": ["models"]
+            }),
+            category: "showcase".to_string(),
+        },
+        ToolDefinitionResponse {
+            id: "generate_mock_chat".to_string(),
+            name: "generate_mock_chat".to_string(),
+            description: "Generate a mock chat conversation for demonstration".to_string(),
+            parameters: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "style": { "type": "string", "enum": ["imessage", "whatsapp", "slack", "generic"], "default": "imessage" },
+                    "topic": { "type": "string", "description": "Conversation topic or scenario" },
+                    "participants": { "type": "integer", "description": "Number of participants", "default": 2 }
+                },
+                "required": ["topic"]
+            }),
+            category: "showcase".to_string(),
+        },
+        ToolDefinitionResponse {
+            id: "generate_levee_wizard".to_string(),
+            name: "generate_levee_wizard".to_string(),
+            description: "Generate a step-by-step wizard or onboarding flow".to_string(),
+            parameters: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "title": { "type": "string", "description": "Wizard title" },
+                    "topic": { "type": "string", "description": "What the wizard guides the user through" },
+                    "steps": { "type": "integer", "description": "Number of steps", "default": 4 }
+                },
+                "required": ["topic"]
+            }),
+            category: "showcase".to_string(),
+        },
+        ToolDefinitionResponse {
+            id: "generate_map".to_string(),
+            name: "generate_map".to_string(),
+            description: "Render an interactive map centered on a location with optional markers".to_string(),
+            parameters: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "title": { "type": "string", "description": "Map title" },
+                    "lat": { "type": "number", "description": "Center latitude" },
+                    "lng": { "type": "number", "description": "Center longitude" },
+                    "zoom": { "type": "integer", "description": "Zoom level 1-19", "default": 13 },
+                    "location": { "type": "string", "description": "Location name for the center marker label" },
+                    "markers": {
+                        "type": "array",
+                        "description": "Additional markers to place",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "lat": { "type": "number" },
+                                "lng": { "type": "number" },
+                                "label": { "type": "string" },
+                                "popup": { "type": "string" }
+                            },
+                            "required": ["lat", "lng"]
+                        }
+                    }
+                },
+                "required": ["lat", "lng"]
+            }),
+            category: "showcase".to_string(),
+        },
+        ToolDefinitionResponse {
+            id: "generate_image".to_string(),
+            name: "generate_image".to_string(),
+            description: "Generate an image from a text prompt".to_string(),
+            parameters: serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "prompt": { "type": "string", "description": "Image generation prompt" },
+                    "style": {
+                        "type": "string",
+                        "enum": ["photorealistic", "illustration", "painting", "sketch", "3d-render"],
+                        "default": "photorealistic"
+                    },
+                    "seed": { "type": "integer", "description": "Random seed for reproducibility" }
+                },
+                "required": ["prompt"]
+            }),
+            category: "showcase".to_string(),
+        },
     ]
 }
 
@@ -263,6 +456,16 @@ pub async fn stream_tool_execution(
 
         match result {
             Ok(value) => {
+                // Showcase tools emit a typed Ui event so the frontend renders a rich component.
+                if let Some(kind) = get_showcase_kind(&tool_id) {
+                    yield Ok(StreamEvent::Ui {
+                        session_id: session_id_clone.clone(),
+                        kind: kind.to_string(),
+                        payload: value.clone(),
+                        timestamp: Utc::now().to_rfc3339(),
+                    }.to_sse_event());
+                }
+
                 yield Ok(StreamEvent::ToolResult {
                     session_id: session_id_clone.clone(),
                     tool_result: ToolResult {
@@ -294,7 +497,7 @@ pub async fn stream_tool_execution(
 }
 
 /// Internal tool execution
-async fn execute_tool_internal(
+pub(crate) async fn execute_tool_internal(
     tool_id: &str,
     args: &HashMap<String, Value>,
 ) -> Result<Value, String> {
@@ -410,6 +613,270 @@ async fn execute_tool_internal(
                 "path": path,
                 "bytes_written": content.len(),
                 "success": true
+            }))
+        }
+
+        "generate_email_draft" => {
+            let to = args.get("to").and_then(|v| v.as_str()).unwrap_or("recipient@example.com");
+            let from = args.get("from").and_then(|v| v.as_str());
+            let subject = args.get("subject").and_then(|v| v.as_str()).unwrap_or("Hello");
+            let context = args.get("context").and_then(|v| v.as_str()).unwrap_or("");
+
+            let body = format!(
+                "Hi,\n\nI'm writing regarding: {}.\n\nPlease let me know if you have any questions or need additional information.\n\nBest regards",
+                context
+            );
+
+            let mut result = serde_json::json!({
+                "to": to,
+                "subject": subject,
+                "body": body,
+            });
+            if let Some(f) = from {
+                result["from"] = serde_json::Value::String(f.to_string());
+            }
+            Ok(result)
+        }
+
+        "generate_sms_draft" => {
+            let to = args.get("to").and_then(|v| v.as_str()).unwrap_or("Friend");
+            let context = args.get("context").and_then(|v| v.as_str()).unwrap_or("hello");
+
+            Ok(serde_json::json!({
+                "to": to,
+                "messages": [
+                    { "role": "user", "text": format!("Hey! {}", context) },
+                    { "role": "other", "text": "That sounds great! When works for you?" },
+                    { "role": "user", "text": "How about tomorrow afternoon?" },
+                    { "role": "other", "text": "Perfect, see you then!" }
+                ]
+            }))
+        }
+
+        "generate_recipe" => {
+            let name = args.get("name").and_then(|v| v.as_str()).unwrap_or("Pasta");
+            let servings = args.get("servings").and_then(|v| v.as_u64()).unwrap_or(4) as u32;
+            let dietary = args.get("dietary").and_then(|v| v.as_str()).unwrap_or("");
+
+            let description = if dietary.is_empty() {
+                format!("A delicious {} recipe", name)
+            } else {
+                format!("A {} {} recipe", dietary, name)
+            };
+
+            Ok(serde_json::json!({
+                "name": name,
+                "description": description,
+                "servings": servings,
+                "prepTimeMinutes": 15,
+                "cookTimeMinutes": 25,
+                "ingredients": [
+                    { "amount": "2 cups", "name": "main ingredient", "optional": false },
+                    { "amount": "1 tbsp", "name": "olive oil", "optional": false },
+                    { "amount": "2 cloves", "name": "garlic, minced", "optional": false },
+                    { "amount": "1 tsp", "name": "salt", "optional": false },
+                    { "amount": "1/2 tsp", "name": "black pepper", "optional": false },
+                    { "amount": "fresh herbs", "name": "to taste", "optional": true }
+                ],
+                "steps": [
+                    "Prepare all ingredients and bring to room temperature.",
+                    "Heat olive oil in a large pan over medium heat.",
+                    "Add garlic and cook until fragrant, about 1 minute.",
+                    "Add main ingredient and season with salt and pepper.",
+                    "Cook for 20–25 minutes until done, stirring occasionally.",
+                    "Garnish with fresh herbs and serve immediately."
+                ]
+            }))
+        }
+
+        "generate_image_search" => {
+            let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("nature");
+            let count = args.get("count").and_then(|v| v.as_u64()).unwrap_or(6) as usize;
+
+            let results: Vec<Value> = (0..count)
+                .map(|i| {
+                    serde_json::json!({
+                        "id": format!("img-{}", i),
+                        "title": format!("{} photo {}", query, i + 1),
+                        "url": format!("https://picsum.photos/seed/{}{}/800/600", query.replace(' ', ""), i),
+                        "thumbnail": format!("https://picsum.photos/seed/{}{}/400/300", query.replace(' ', ""), i),
+                        "width": 800,
+                        "height": 600,
+                    })
+                })
+                .collect();
+
+            Ok(serde_json::json!({
+                "query": query,
+                "results": results,
+            }))
+        }
+
+        "generate_app_recommendations" => {
+            let category = args.get("category").and_then(|v| v.as_str()).unwrap_or("productivity");
+            let platform = args.get("platform").and_then(|v| v.as_str()).unwrap_or("both");
+
+            Ok(serde_json::json!({
+                "title": format!("Top {} Apps", category),
+                "apps": [
+                    {
+                        "name": format!("{} Pro", category),
+                        "description": format!("The leading {} app with powerful features", category),
+                        "rating": 4.8,
+                        "reviews": 12500,
+                        "platform": platform,
+                        "category": category,
+                        "iconColor": "#6366f1",
+                        "price": "Free"
+                    },
+                    {
+                        "name": format!("{}Hub", category),
+                        "description": format!("All-in-one {} solution for teams and individuals", category),
+                        "rating": 4.6,
+                        "reviews": 8900,
+                        "platform": platform,
+                        "category": category,
+                        "iconColor": "#0ea5e9",
+                        "price": "$4.99/mo"
+                    },
+                    {
+                        "name": format!("Smart{}", category),
+                        "description": format!("AI-powered {} assistant", category),
+                        "rating": 4.5,
+                        "reviews": 5200,
+                        "platform": platform,
+                        "category": category,
+                        "iconColor": "#10b981",
+                        "price": "Free"
+                    }
+                ]
+            }))
+        }
+
+        "generate_model_comparison" => {
+            let models = args
+                .get("models")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>())
+                .unwrap_or_else(|| vec!["Claude 3.5 Sonnet", "GPT-4o", "Gemini 1.5 Pro"]);
+
+            let features = args
+                .get("features")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|v| v.as_str()).collect::<Vec<_>>())
+                .unwrap_or_else(|| vec!["Context window", "Reasoning", "Speed", "Cost", "Vision"]);
+
+            let ratings: Vec<Value> = models
+                .iter()
+                .enumerate()
+                .map(|(i, name)| {
+                    let scores: Vec<Value> = features
+                        .iter()
+                        .map(|_| serde_json::json!(((90 - i * 5) as f64) / 10.0))
+                        .collect();
+                    serde_json::json!({
+                        "model": name,
+                        "scores": scores,
+                    })
+                })
+                .collect();
+
+            Ok(serde_json::json!({
+                "title": "Model Comparison",
+                "models": models,
+                "features": features,
+                "ratings": ratings,
+                "variant": "table",
+            }))
+        }
+
+        "generate_mock_chat" => {
+            let style = args.get("style").and_then(|v| v.as_str()).unwrap_or("imessage");
+            let topic = args.get("topic").and_then(|v| v.as_str()).unwrap_or("catching up");
+
+            Ok(serde_json::json!({
+                "style": style,
+                "messages": [
+                    { "role": "other", "text": format!("Hey! Have you thought about {}?", topic) },
+                    { "role": "user", "text": "Yeah, I've been thinking about it a lot actually." },
+                    { "role": "other", "text": "What do you think we should do?" },
+                    { "role": "user", "text": "I think we should go for it. What's the worst that could happen?" },
+                    { "role": "other", "text": "You're right. Let's do it! 🎉" }
+                ]
+            }))
+        }
+
+        "generate_levee_wizard" => {
+            let title = args.get("title").and_then(|v| v.as_str());
+            let topic = args.get("topic").and_then(|v| v.as_str()).unwrap_or("getting started");
+            let step_count = args.get("steps").and_then(|v| v.as_u64()).unwrap_or(4) as usize;
+
+            let wizard_title = title.unwrap_or(topic).to_string();
+
+            let steps: Vec<Value> = (0..step_count)
+                .map(|i| {
+                    serde_json::json!({
+                        "id": format!("step-{}", i + 1),
+                        "title": format!("Step {}: {}", i + 1, match i {
+                            0 => "Getting started",
+                            1 => "Configuration",
+                            2 => "Customization",
+                            _ => "Complete setup",
+                        }),
+                        "description": format!("Complete step {} of {}", i + 1, step_count),
+                        "completed": false,
+                    })
+                })
+                .collect();
+
+            Ok(serde_json::json!({
+                "title": wizard_title,
+                "subtitle": format!("Follow these steps to complete your {} setup", topic),
+                "steps": steps,
+            }))
+        }
+
+        "generate_map" => {
+            let title = args.get("title").and_then(|v| v.as_str()).unwrap_or("Map");
+            let lat = args.get("lat").and_then(|v| v.as_f64()).unwrap_or(51.505);
+            let lng = args.get("lng").and_then(|v| v.as_f64()).unwrap_or(-0.09);
+            let zoom = args.get("zoom").and_then(|v| v.as_u64()).unwrap_or(13);
+            let location = args.get("location").and_then(|v| v.as_str()).unwrap_or("");
+
+            // Build markers from locations array if provided
+            let markers = if let Some(locs) = args.get("markers").and_then(|v| v.as_array()) {
+                locs.clone()
+            } else if !location.is_empty() {
+                vec![serde_json::json!({ "lat": lat, "lng": lng, "label": location })]
+            } else {
+                vec![]
+            };
+
+            Ok(serde_json::json!({
+                "title": title,
+                "lat": lat,
+                "lng": lng,
+                "zoom": zoom,
+                "markers": markers,
+            }))
+        }
+
+        "generate_image" => {
+            let prompt = args.get("prompt").and_then(|v| v.as_str()).unwrap_or("abstract art");
+            let style = args.get("style").and_then(|v| v.as_str()).unwrap_or("photorealistic");
+            let seed = args.get("seed").and_then(|v| v.as_u64()).unwrap_or(42);
+
+            // Use Picsum for placeholder images seeded by prompt hash
+            let seed_val = prompt.bytes().fold(seed, |acc, b| acc.wrapping_add(b as u64));
+            let url = format!("https://picsum.photos/seed/{}/1024/768", seed_val);
+
+            Ok(serde_json::json!({
+                "url": url,
+                "prompt": prompt,
+                "style": style,
+                "width": 1024,
+                "height": 768,
+                "alt": prompt,
             }))
         }
 

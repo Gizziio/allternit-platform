@@ -390,7 +390,7 @@ export function DebugView() {
               style={{
                 backgroundColor: `var(--bg-primary)`,
                 fontFamily: 'var(--font-code)',
-                fontSize: '11px',
+                fontSize: '12px',
               }}
             >
               {breakpoints.map((bp) => (
@@ -407,7 +407,7 @@ export function DebugView() {
                   </span>
                   <button
                     onClick={() => handleToggleBreakpoint(bp.id)}
-                    className="w-4 h-4 rounded flex-shrink-0 transition-all"
+                    className="size-4  rounded flex-shrink-0 transition-all"
                     style={{
                       backgroundColor: bp.enabled
                         ? `var(--accent-primary)`
@@ -444,7 +444,7 @@ export function DebugView() {
           type="text"
           value={consoleInput}
           onChange={(e) => setConsoleInput(e.target.value)}
-          placeholder="Enter debug command..."
+          placeholder="Enter debug command…"
           className="flex-1 bg-transparent outline-none"
           style={{
             color: `var(--text-primary)`,

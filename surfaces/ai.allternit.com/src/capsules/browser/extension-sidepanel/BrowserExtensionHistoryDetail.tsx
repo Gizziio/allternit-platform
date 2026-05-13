@@ -47,10 +47,10 @@ function ReflectionGrid({
       >
         {items.map((item) => (
           <React.Fragment key={item.label}>
-            <span style={{ fontSize: 11 }}>{item.icon}</span>
+            <span style={{ fontSize: 12 }}>{item.icon}</span>
             <span
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 color: TEXT.secondary,
                 lineHeight: 1.4,
               }}
@@ -79,7 +79,7 @@ function EventCard({ event }: { event: ExtensionSidepanelHistoricalEvent }) {
         <div
           style={{
             marginBottom: 8,
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: TYPOGRAPHY.weight.semibold,
             letterSpacing: "0.05em",
             color: TEXT.primary,
@@ -95,7 +95,7 @@ function EventCard({ event }: { event: ExtensionSidepanelHistoricalEvent }) {
             <div
               style={{
                 marginBottom: 4,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: TYPOGRAPHY.weight.semibold,
                 color: TEXT.primary,
               }}
@@ -126,7 +126,7 @@ function EventCard({ event }: { event: ExtensionSidepanelHistoricalEvent }) {
                 </p>
                 <p
                   style={{
-                    fontSize: 11,
+                    fontSize: 12,
                     color: TEXT.tertiary,
                     wordBreak: "break-all",
                   }}
@@ -154,7 +154,7 @@ function EventCard({ event }: { event: ExtensionSidepanelHistoricalEvent }) {
       >
         <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
           <span style={{ color: "#4ade80", fontSize: 14, marginTop: 2 }}>👁</span>
-          <span style={{ fontSize: 11, color: TEXT.secondary, lineHeight: 1.4 }}>
+          <span style={{ fontSize: 12, color: TEXT.secondary, lineHeight: 1.4 }}>
             {event.content}
           </span>
         </div>
@@ -210,7 +210,7 @@ function EventCard({ event }: { event: ExtensionSidepanelHistoricalEvent }) {
           padding: 10,
         }}
       >
-        <span style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em", color: TEXT.tertiary }}>
+        <span style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.05em", color: TEXT.tertiary }}>
           User Takeover
         </span>
         <p style={{ fontSize: 12, color: TEXT.secondary, marginTop: 4 }}>
@@ -292,7 +292,7 @@ export function BrowserExtensionHistoryDetail({
         </button>
         <div className="flex-1 min-w-0">
           <h2 className="text-sm font-medium truncate">{session.task}</h2>
-          <p className="text-[11px] opacity-50">
+          <p className="text-[12px] opacity-50">
             {session.status === "completed" ? "Completed" : "Failed"} ·{" "}
             {session.history.length} events
           </p>

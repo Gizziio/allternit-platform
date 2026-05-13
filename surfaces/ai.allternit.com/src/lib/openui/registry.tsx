@@ -10,7 +10,7 @@ import { Hyperframe } from '../../views/design/hyperframes/HyperframeRenderer';
 import { OrchestratorProgram } from '../../allternit-os/programs/OrchestratorProgram';
 
 // Stub for missing Evaluator component
-const Evaluator = () => <div className="p-4 text-sm text-muted-foreground">Evaluator view not available</div>;
+// registry.tsx
 const Orchestrator = OrchestratorProgram;
 
 // ============================================================================
@@ -108,7 +108,7 @@ export const schemas = {
 // ============================================================================
 
 const handleUIAction = (actionName: string, data?: any) => {
-  console.log(`[OpenUI Action] ${actionName}`, data);
+  console.debug(`[OpenUI Action] ${actionName}`, data);
   const event = new CustomEvent('allternit:ui-action', { 
     detail: { action: actionName, data } 
   });
@@ -199,7 +199,7 @@ const MetricDisplay = ({ label, val, trend, trendVal }: any) => (
     }}
   >
     <span 
-      className="text-[10px] font-bold uppercase tracking-wider"
+      className="text-xs font-bold uppercase tracking-wider"
       style={{ color: 'var(--design-color-muted, var(--ui-text-muted))' }}
     >
       {label}
@@ -254,14 +254,14 @@ const OpenUICard = ({ title, variant, elevation, children }: any) => (
 
 const VideoManifestPreview = ({ template, css, timeline }: any) => (
   <div className="w-full flex flex-col gap-4">
-    <div className="text-[10px] font-bold opacity-40 uppercase tracking-widest">HTML Manifestation Preview</div>
+    <div className="text-xs font-bold opacity-40 uppercase tracking-widest">HTML Manifestation Preview</div>
     <div 
       className="w-full aspect-video bg-black rounded-xl border border-white/10 overflow-hidden relative"
       dangerouslySetInnerHTML={{ __html: `<style>${css}</style>${template}` }}
     />
     <div className="grid grid-cols-2 gap-2">
       {timeline?.map((t: any) => (
-        <div key={t.id} className="p-2 bg-white/5 rounded border border-white/5 text-[9px]">
+        <div key={t.id} className="p-2 bg-white/5 rounded border border-white/5 text-xs">
            <span className="opacity-40">[{t.start}s]</span> {t.effect}
         </div>
       ))}
@@ -272,7 +272,7 @@ const VideoManifestPreview = ({ template, css, timeline }: any) => (
 const SkillGraph = ({ nodes, links }: any) => (
   <div className="w-full aspect-square bg-black/40 rounded-2xl border border-white/5 relative overflow-hidden">
     <div className="absolute top-4 left-4 flex flex-col gap-1">
-      <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Knowledge Graph</span>
+      <span className="text-xs font-bold text-white/40 uppercase tracking-widest">Knowledge Graph</span>
       <span className="text-xs text-white/80">Active Nodes: {nodes?.length}</span>
     </div>
     <svg className="w-full h-full">
@@ -284,7 +284,7 @@ const SkillGraph = ({ nodes, links }: any) => (
       })}
     </svg>
     {nodes?.map((n: any) => (
-      <div key={n.id} className="absolute p-2 bg-white/5 border border-white/10 rounded-lg text-[10px] font-bold text-white/70" style={{ left: n.x || 50, top: n.y || 50 }}>
+      <div key={n.id} className="absolute p-2 bg-white/5 border border-white/10 rounded-lg text-xs font-bold text-white/70" style={{ left: n.x || 50, top: n.y || 50 }}>
         {n.label}
       </div>
     ))}
@@ -295,10 +295,10 @@ const Pipeline = ({ items }: any) => (
   <div className="w-full flex flex-col gap-2">
     {items?.map((item: any, i: number) => (
       <div key={i} className="p-3 bg-white/5 border border-white/10 rounded-xl flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-[var(--accent-primary)]/20 flex items-center justify-center text-[10px] font-black" style={{ backgroundColor: 'var(--design-color-primary, var(--accent-chat))', color: '#000' }}>{item.platform[0]}</div>
+        <div className="size-8  rounded-lg bg-[var(--accent-primary)]/20 flex items-center justify-center text-xs font-black" style={{ backgroundColor: 'var(--design-color-primary, var(--accent-chat))', color: '#000' }}>{item.platform[0]}</div>
         <div className="flex-1">
           <div className="text-xs font-bold">{item.platform}</div>
-          <div className="text-[10px] opacity-40 uppercase">{item.status}</div>
+          <div className="text-xs opacity-40 uppercase">{item.status}</div>
         </div>
         <div className="w-24 h-1.5 bg-white/5 rounded-full overflow-hidden">
           <div className="h-full bg-[var(--accent-primary)]" style={{ width: item.status === 'Ready' ? '100%' : '40%', backgroundColor: 'var(--design-color-primary)' }} />
@@ -342,7 +342,7 @@ export const componentRegistry: Record<string, React.ComponentType<any>> = {
   'v:pipeline': Pipeline,
   'v:input': ({ label, name, ...props }: any) => (
     <div className="flex flex-col gap-1.5 w-full">
-      {label && <label className="text-[10px] font-bold uppercase text-[var(--ui-text-muted)] ml-1">{label}</label>}
+      {label && <label className="text-xs font-bold uppercase text-[var(--ui-text-muted)] ml-1">{label}</label>}
       <Input {...props} name={name} className="bg-white/5 border-white/10" />
     </div>
   ),

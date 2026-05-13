@@ -186,7 +186,7 @@ export const LoadingState: React.FC<{ message?: string }> = ({ message = "Loadin
       `}</style>
       ⏳
     </div>
-    <h3 style={titleStyle}>Loading...</h3>
+    <h3 style={titleStyle}>Loading…</h3>
     <p style={descriptionStyle}>{message}</p>
   </div>
 );

@@ -42,7 +42,7 @@ Use for:
       try {
         const requestId = generateUUID();
         // Log both requestId and messageId for traceability
-        console.log("DeepResearch start", { requestId, messageId });
+        console.debug("DeepResearch start", { requestId, messageId });
 
         // Open a Langfuse trace with id = requestId before the run
         const langfuse = new Langfuse();

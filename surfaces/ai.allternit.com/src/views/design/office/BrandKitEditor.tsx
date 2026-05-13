@@ -228,7 +228,7 @@ export function BrandKitEditor({ projectName }: { projectName: string }) {
             <div style={{ background: 'var(--bg-primary)', borderRadius: 10, border: '1px solid var(--border-subtle)', padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 14, justifyContent: 'center' }}>
               {[['Filename', fileInfo.name], ['Size', fileInfo.size], ['Dimensions', fileInfo.dims]].map(([label, val]) => (
                 <div key={label}>
-                  <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-tertiary)', marginBottom: 3 }}>{label}</div>
+                  <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-tertiary)', marginBottom: 3 }}>{label}</div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', wordBreak: 'break-all' }}>{val}</div>
                 </div>
               ))}
@@ -244,7 +244,7 @@ export function BrandKitEditor({ projectName }: { projectName: string }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 10, borderBottom: '1px solid var(--border-subtle)' }}>
               <svg style={{ width: 16, height: 16, color: 'var(--text-tertiary)', flexShrink: 0 }} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" /></svg>
               <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Select Formats</span>
-              <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-tertiary)' }}>{selected.size}/{FORMATS.length}</span>
+              <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-tertiary)' }}>{selected.size}/{FORMATS.length}</span>
             </div>
 
             <input
@@ -256,14 +256,14 @@ export function BrandKitEditor({ projectName }: { projectName: string }) {
             <div style={{ maxHeight: 260, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12, paddingRight: 4 }}>
               {Object.entries(groupedFiltered).map(([cat, items]) => (
                 <div key={cat}>
-                  <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-tertiary)', marginBottom: 5 }}>{cat}</div>
+                  <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-tertiary)', marginBottom: 5 }}>{cat}</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                     {items.map(fmt => (
                       <label key={fmt.key} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '3px 2px', borderRadius: 5 }} title={`${fmt.description} (${fmt.w}×${fmt.h})`}>
                         <input type="checkbox" checked={selected.has(fmt.key)} onChange={() => toggleFormat(fmt.key)}
                           style={{ width: 14, height: 14, accentColor: 'var(--accent-primary)', cursor: 'pointer', flexShrink: 0 }} />
                         <span style={{ fontSize: 12, color: 'var(--text-secondary)', flex: 1 }}>{fmt.label}</span>
-                        <span style={{ fontSize: 10, color: 'var(--text-tertiary)', flexShrink: 0 }}>{fmt.w}×{fmt.h}</span>
+                        <span style={{ fontSize: 12, color: 'var(--text-tertiary)', flexShrink: 0 }}>{fmt.w}×{fmt.h}</span>
                       </label>
                     ))}
                   </div>
@@ -288,7 +288,7 @@ export function BrandKitEditor({ projectName }: { projectName: string }) {
                 </button>
               ))}
             </div>
-            <p style={{ fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.5 }}>Click a preset to quickly select formats for common use cases.</p>
+            <p style={{ fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.5 }}>Click a preset to quickly select formats for common use cases.</p>
           </div>
         </div>
 
@@ -397,7 +397,7 @@ export function BrandKitEditor({ projectName }: { projectName: string }) {
             <div style={{ background: 'var(--bg-primary)', borderRadius: 10, border: '1px solid var(--border-subtle)', overflow: 'hidden' }}>
               <div style={{ background: 'var(--bg-secondary)', padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)' }}>
                 <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-primary)' }}>Generated Formats</div>
-                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>
                   {assets.length} assets generated from your image
                 </div>
               </div>
@@ -415,18 +415,18 @@ export function BrandKitEditor({ projectName }: { projectName: string }) {
                       </div>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{asset.format.label}</div>
-                        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>{asset.format.description}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>{asset.format.description}</div>
                       </div>
                     </div>
 
                     {/* Dimensions + download */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                      <span style={{ fontSize: 11, padding: '2px 7px', borderRadius: 5, background: 'var(--bg-tertiary, rgba(0,0,0,0.07))', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: 12, padding: '2px 7px', borderRadius: 5, background: 'var(--bg-tertiary, rgba(0,0,0,0.07))', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                         {asset.format.w}×{asset.format.h}
                       </span>
                       <button
                         onClick={() => { const slug = projectName.replace(/\s+/g, '_').toLowerCase(); triggerDownload(asset.blob, `${slug}_${asset.format.key}.${asset.format.ext}`); }}
-                        style={{ fontSize: 11, padding: '3px 9px', borderRadius: 5, border: '1px solid var(--border-subtle)', background: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)', color: 'var(--accent-primary)', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                        style={{ fontSize: 12, padding: '3px 9px', borderRadius: 5, border: '1px solid var(--border-subtle)', background: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)', color: 'var(--accent-primary)', cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}>
                         .{asset.format.ext}
                       </button>
                     </div>

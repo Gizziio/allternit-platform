@@ -59,11 +59,11 @@ export function CodeCanvasTilePreview({ url, filePath }: CodeCanvasTilePreviewPr
             background: 'transparent',
             border: 'none',
             color: 'var(--text-secondary)',
-            fontSize: 11,
+            fontSize: 12,
             fontFamily: 'var(--font-mono)',
             outline: 'none',
           }}
-          placeholder="Enter URL..."
+          placeholder="Enter URL…"
         />
         <button
           onClick={handleRefresh}

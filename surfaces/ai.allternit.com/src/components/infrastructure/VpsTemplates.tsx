@@ -7,6 +7,7 @@
  * - Template library with categories
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -131,13 +132,13 @@ export function VpsTemplates({
     usageCount: 0,
   });
 
-  const handleSave = () => {
+  const handleSave = () => {isClient ? 
     if (!editingTemplate) return;
 
     const updatedTemplate = {
       ...editingTemplate,
       updatedAt: new Date(),
-    };
+     : "..."};
 
     const existingIndex = templates.findIndex((t) => t.id === updatedTemplate.id);
     let newTemplates: VpsTemplate[];
@@ -220,9 +221,9 @@ export function VpsTemplates({
       {/* Search and Filter */}
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <MagnifyingGlass className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <MagnifyingGlass className="absolute left-3 top-1/2 -tranzinc-y-1/2 size-4  text-muted-foreground" />
           <Input
-            placeholder="Search templates..."
+            placeholder="Search templates…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
@@ -246,7 +247,7 @@ export function VpsTemplates({
       {filteredTemplates.length === 0 ? (
         <Card className="bg-muted/50">
           <CardContent className="py-8 text-center">
-            <Folder className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
+            <Folder className="size-8  text-muted-foreground mx-auto mb-3" />
             <p className="text-sm text-muted-foreground">
               {templates.length === 0
                 ? 'No templates created yet'
@@ -279,7 +280,7 @@ export function VpsTemplates({
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <HardDrives className="w-4 h-4 text-muted-foreground" />
+                      <HardDrives className="size-4  text-muted-foreground" />
                       <span className="font-medium truncate">
                         {template.name}
                       </span>
@@ -294,7 +295,7 @@ export function VpsTemplates({
                     <div className="flex flex-wrap items-center gap-2 mt-2">
                       <Badge
                         className={cn(
-                          'text-[10px]',
+                          'text-xs',
                           CATEGORIES[template.category].color
                         )}
                       >
@@ -305,13 +306,13 @@ export function VpsTemplates({
                         <Badge
                           key={tag}
                           variant="outline"
-                          className="text-[10px]"
+                          className="text-xs"
                         >
                           {tag}
                         </Badge>
                       ))}
                       {template.tags.length > 3 && (
-                        <Badge variant="outline" className="text-[10px]">
+                        <Badge variant="outline" className="text-xs">
                           +{template.tags.length - 3}
                         </Badge>
                       )}
@@ -354,7 +355,7 @@ export function VpsTemplates({
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-8 w-8 p-0"
+                          className="size-8  p-0"
                         >
                           <DotsThreeVertical size={16} />
                         </Button>
@@ -363,20 +364,20 @@ export function VpsTemplates({
                         <DropdownMenuItem
                           onClick={() => openEditTemplate(template)}
                         >
-                          <PencilSimple className="w-4 h-4 mr-2" />
+                          <PencilSimple className="size-4  mr-2" />
                           Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handleDuplicate(template)}
                         >
-                          <Copy className="w-4 h-4 mr-2" />
+                          <Copy className="size-4  mr-2" />
                           Duplicate
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => handleDelete(template.id)}
                           className="text-red-600"
                         >
-                          <Trash className="w-4 h-4 mr-2" />
+                          <Trash className="size-4  mr-2" />
                           Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -463,7 +464,7 @@ export function VpsTemplates({
                     value={newTag}
                     onChange={(e) => setNewTag(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && addTag()}
-                    placeholder="Add tag..."
+                    placeholder="Add tag…"
                   />
                   <Button size="sm" variant="outline" onClick={addTag}>
                     <Tag size={16} />
@@ -530,7 +531,7 @@ export function VpsTemplates({
               onClick={handleSave}
               disabled={!editingTemplate?.name.trim()}
             >
-              <FloppyDisk className="w-4 h-4 mr-2" />
+              <FloppyDisk className="size-4  mr-2" />
               Save Template
             </Button>
           </DialogFooter>

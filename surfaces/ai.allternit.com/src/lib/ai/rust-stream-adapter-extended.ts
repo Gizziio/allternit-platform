@@ -822,7 +822,7 @@ export function parseStructuredContent(text: string): ExtendedUIPart[] {
     },
     {
       type: "document",
-      // <document title="...">content</document> — long-form AI-created documents
+      // <document title="…">content</document> — long-form AI-created documents
       regex: /<document(?:\s+title="([^"]*)")?>([\s\S]*?)(?:<\/document>|$)/g,
       parse: (match: RegExpExecArray): ArtifactUIPart => ({
         type: "artifact",

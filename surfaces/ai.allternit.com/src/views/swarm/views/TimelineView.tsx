@@ -97,7 +97,7 @@ export function TimelineView({ tasks, metrics, modeColors }: TimelineViewProps) 
         </div>
         <div className="flex items-center gap-2">
           <button 
-            className="w-7 h-7 rounded flex items-center justify-center text-xs"
+            className="size-7  rounded flex items-center justify-center text-xs"
             style={{ 
               background: 'var(--surface-hover)',
               color: TEXT.tertiary,
@@ -107,7 +107,7 @@ export function TimelineView({ tasks, metrics, modeColors }: TimelineViewProps) 
           </button>
           <span className="text-xs" style={{ color: TEXT.secondary }}>100%</span>
           <button 
-            className="w-7 h-7 rounded flex items-center justify-center text-xs"
+            className="size-7  rounded flex items-center justify-center text-xs"
             style={{ 
               background: 'var(--surface-hover)',
               color: TEXT.tertiary,
@@ -148,7 +148,7 @@ export function TimelineView({ tasks, metrics, modeColors }: TimelineViewProps) 
               }}
             >
               <div 
-                className="absolute -top-1 -left-1 w-2 h-2 rounded-full"
+                className="absolute -top-1 -left-1 size-2  rounded-full"
                 style={{ background: modeColors.accent }}
               />
             </div>
@@ -175,7 +175,7 @@ export function TimelineView({ tasks, metrics, modeColors }: TimelineViewProps) 
                       {firstTask.agentName}
                     </div>
                     <div 
-                      className="text-[10px] uppercase tracking-wider"
+                      className="text-xs uppercase tracking-wider"
                       style={{ color: TEXT.tertiary }}
                     >
                       {firstTask.agentRole}
@@ -226,7 +226,7 @@ export function TimelineView({ tasks, metrics, modeColors }: TimelineViewProps) 
                         }}
                       >
                         <span 
-                          className="text-[10px] font-medium truncate"
+                          className="text-xs font-medium truncate"
                           style={{ color: TEXT.primary }}
                         >
                           {task.name}
@@ -257,14 +257,14 @@ export function TimelineView({ tasks, metrics, modeColors }: TimelineViewProps) 
           >
             <div className="flex items-center gap-2">
               <div 
-                className="w-3 h-3 rounded"
+                className="size-3  rounded"
                 style={{ background: modeColors.accent }}
               />
               <span style={{ color: TEXT.secondary }}>Active</span>
             </div>
             <div className="flex items-center gap-2">
               <div 
-                className="w-3 h-3 rounded"
+                className="size-3  rounded"
                 style={{ background: modeColors.accent, opacity: 0.5 }}
               />
               <span style={{ color: TEXT.secondary }}>Completed</span>

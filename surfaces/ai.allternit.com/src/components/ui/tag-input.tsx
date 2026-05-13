@@ -43,7 +43,7 @@ export function TagInput({ value = [], onChange, placeholder = "Add tag...", cla
           {tag}
           {!disabled && (
             <button type="button" onClick={() => removeTag(tag)} className="ml-1 hover:text-destructive">
-              <X className="h-3 w-3" />
+              <X className="size-3 " />
             </button>
           )}
         </Badge>

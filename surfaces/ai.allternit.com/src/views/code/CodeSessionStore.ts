@@ -35,13 +35,13 @@ export const useCodeSessionStore = createModeSessionStore({
 // ---------------------------------------------------------------------------
 
 export function useCodeSessions() {
-  return useCodeSessionStore((state) => state.sessions);
+  return useCodeSessionStore((state) => state.sessions ?? []);
 }
 
 export function useActiveCodeSession() {
   return useCodeSessionStore((state) => {
     if (!state.activeSessionId) return null;
-    return state.sessions.find((s) => s.id === state.activeSessionId) || null;
+    return (state.sessions ?? []).find((s) => s.id === state.activeSessionId) || null;
   });
 }
 

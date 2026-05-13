@@ -429,7 +429,7 @@ function UrlInput({ onLoad, loading }: UrlInputProps) {
           type="text"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://raw.githubusercontent.com/.../plugin.json"
+          placeholder="https://raw.githubusercontent.com/…/plugin.json"
           style={{
             width: '100%',
             padding: '10px 12px 10px 36px',
@@ -557,7 +557,7 @@ function ValidationResultPanel({
             borderRadius: 4,
             background: typeColor + '20',
             color: typeColor,
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 600,
             textTransform: 'uppercase',
           }}
@@ -592,7 +592,7 @@ function ValidationResultPanel({
                     {error.path}
                   </code>
                   {error.line && (
-                    <span style={{ fontSize: 11, color: THEME.textTertiary }}>
+                    <span style={{ fontSize: 12, color: THEME.textTertiary }}>
                       Line {error.line}
                     </span>
                   )}
@@ -668,7 +668,7 @@ function ValidationResultPanel({
                   border: `1px solid ${THEME.border}`,
                   background: 'transparent',
                   color: THEME.textSecondary,
-                  fontSize: 11,
+                  fontSize: 12,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -690,7 +690,7 @@ function ValidationResultPanel({
                 border: `1px solid ${THEME.border}`,
                 background: 'transparent',
                 color: THEME.textSecondary,
-                fontSize: 11,
+                fontSize: 12,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -789,7 +789,7 @@ function CollapsibleSection({
                 borderRadius: 10,
                 background: color + '20',
                 color: color,
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 600,
                 marginLeft: 8,
               }}
@@ -1136,7 +1136,7 @@ export function PluginManifestValidator({
                     border: `1px solid ${THEME.border}`,
                     background: 'transparent',
                     color: THEME.textSecondary,
-                    fontSize: 11,
+                    fontSize: 12,
                     cursor: content.trim() ? 'pointer' : 'not-allowed',
                     opacity: content.trim() ? 1 : 0.5,
                     display: 'flex',
@@ -1157,7 +1157,7 @@ export function PluginManifestValidator({
                     border: `1px solid ${THEME.border}`,
                     background: 'transparent',
                     color: THEME.textSecondary,
-                    fontSize: 11,
+                    fontSize: 12,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',

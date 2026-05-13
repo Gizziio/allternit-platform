@@ -95,7 +95,7 @@ export const DataExport = memo(function DataExport({
         )}
         title="Download CSV"
       >
-        <IconFileTypeCsv className="w-3.5 h-3.5 text-muted-foreground" />
+        <IconFileTypeCsv className="size-3.5  text-muted-foreground" />
         CSV
       </button>
       <button
@@ -107,7 +107,7 @@ export const DataExport = memo(function DataExport({
         )}
         title="Download TSV"
       >
-        <IconFileTypeCsv className="w-3.5 h-3.5 text-muted-foreground" />
+        <IconFileTypeCsv className="size-3.5  text-muted-foreground" />
         TSV
       </button>
       <button
@@ -119,7 +119,7 @@ export const DataExport = memo(function DataExport({
         )}
         title="Download JSON"
       >
-        <IconJson className="w-3.5 h-3.5 text-muted-foreground" />
+        <IconJson className="size-3.5  text-muted-foreground" />
         JSON
       </button>
     </div>
@@ -148,7 +148,7 @@ export const DataExportToolbar = memo(function DataExportToolbar({
       )}
     >
       <div className="flex items-center gap-2">
-        <IconDownload className="w-4 h-4 text-muted-foreground" />
+        <IconDownload className="size-4  text-muted-foreground" />
         <span className="text-sm font-medium text-foreground">{title}</span>
         <span className="text-xs text-muted-foreground">
           {data.length} row{data.length !== 1 ? "s" : ""}

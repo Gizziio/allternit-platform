@@ -1,3 +1,4 @@
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useEffect, useMemo, useState } from "react";
 import { filesApi } from "@/lib/agents/files-api";
 import {
@@ -160,7 +161,7 @@ function ActionChip({
         color: active ? palette.accent : "var(--ui-text-muted)",
         cursor: "pointer",
         padding: "6px 10px",
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: 700,
       }}
     >
@@ -190,7 +191,7 @@ function InfoChip({
         background: "var(--surface-hover)",
         border: `1px solid ${palette.border}`,
         color: "#eadfd4",
-        fontSize: 11,
+        fontSize: 12,
         lineHeight: 1,
       }}
     >
@@ -303,7 +304,7 @@ export function AgentContextStrip({
                 background: palette.soft,
                 color: palette.accent,
                 padding: "4px 8px",
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: 800,
                 letterSpacing: "0.08em",
                 textTransform: "uppercase",
@@ -319,7 +320,7 @@ export function AgentContextStrip({
                 background: "var(--surface-hover)",
                 color: "#d1c3b4",
                 padding: "4px 8px",
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: 700,
                 letterSpacing: "0.08em",
                 textTransform: "uppercase",
@@ -459,7 +460,7 @@ export function AgentContextStrip({
           >
             <div
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 800,
                 color: palette.accent,
                 textTransform: "uppercase",
@@ -470,7 +471,7 @@ export function AgentContextStrip({
             </div>
             <div
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 color: "#a8998c",
                 textAlign: "right",
               }}
@@ -529,7 +530,7 @@ function MetaCard({
     >
       <div
         style={{
-          fontSize: 10,
+          fontSize: 12,
           fontWeight: 800,
           color: accent,
           textTransform: "uppercase",
@@ -581,7 +582,7 @@ function ToolsDrawer({ tools, isLoading, toolsEnabled, palette, sessionId }: Too
   if (isLoading) {
     return (
       <div style={{ padding: 20, textAlign: "center", color: "#a8998c" }}>
-        <div style={{ fontSize: 13 }}>Loading tools...</div>
+        <div style={{ fontSize: 13 }}>Loading tools…</div>
       </div>
     );
   }
@@ -602,7 +603,7 @@ function ToolsDrawer({ tools, isLoading, toolsEnabled, palette, sessionId }: Too
             alignItems: "center",
             gap: 8,
             color: palette.accent,
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 800,
             textTransform: "uppercase",
             letterSpacing: "0.08em",
@@ -625,7 +626,7 @@ function ToolsDrawer({ tools, isLoading, toolsEnabled, palette, sessionId }: Too
             border: `1px solid ${palette.border}`,
             background: palette.soft,
             color: palette.accent,
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 600,
             cursor: "pointer",
           }}
@@ -648,7 +649,7 @@ function ToolsDrawer({ tools, isLoading, toolsEnabled, palette, sessionId }: Too
       >
         <div
           style={{
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 800,
             color: palette.accent,
             textTransform: "uppercase",
@@ -667,7 +668,7 @@ function ToolsDrawer({ tools, isLoading, toolsEnabled, palette, sessionId }: Too
               border: `1px solid ${palette.border}`,
               background: "transparent",
               color: palette.accent,
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 600,
               cursor: "pointer",
             }}
@@ -676,7 +677,7 @@ function ToolsDrawer({ tools, isLoading, toolsEnabled, palette, sessionId }: Too
           </button>
           <div
             style={{
-              fontSize: 10,
+              fontSize: 12,
               color: toolsEnabled ? "#79C47C" : "#a8998c",
               display: "flex",
               alignItems: "center",
@@ -711,7 +712,7 @@ function ToolsDrawer({ tools, isLoading, toolsEnabled, palette, sessionId }: Too
             border: `1px dashed ${palette.border}`,
             background: "transparent",
             color: "#7a6b5d",
-            fontSize: 11,
+            fontSize: 12,
             cursor: "pointer",
           }}
         >
@@ -726,7 +727,7 @@ function ToolsDrawer({ tools, isLoading, toolsEnabled, palette, sessionId }: Too
           borderRadius: 10,
           background: "var(--surface-hover)",
           border: `1px solid ${palette.border}`,
-          fontSize: 11,
+          fontSize: 12,
           color: "#a8998c",
           lineHeight: 1.5,
         }}
@@ -789,7 +790,7 @@ function ToolRegistryPanel({
             border: "1px solid var(--ui-border-default)",
             background: "transparent",
             color: "#a8998c",
-            fontSize: 11,
+            fontSize: 12,
             cursor: "pointer",
           }}
         >
@@ -798,7 +799,7 @@ function ToolRegistryPanel({
         <div style={{ fontSize: 12, fontWeight: 700, color: "#f6eee7" }}>
           Tool Registry
         </div>
-        <div style={{ marginLeft: "auto", fontSize: 11, color: "#7a6b5d" }}>
+        <div style={{ marginLeft: "auto", fontSize: 12, color: "#7a6b5d" }}>
           {enabledCount}/{tools.length} enabled
         </div>
       </div>
@@ -808,7 +809,7 @@ function ToolRegistryPanel({
         type="text"
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        placeholder="Search tools..."
+        placeholder="Search tools…"
         style={{
           padding: "8px 12px",
           borderRadius: 8,
@@ -830,7 +831,7 @@ function ToolRegistryPanel({
             border: "none",
             background: selectedCategory === null ? palette.soft : "var(--surface-hover)",
             color: selectedCategory === null ? palette.accent : "#a8998c",
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 600,
             cursor: "pointer",
           }}
@@ -847,7 +848,7 @@ function ToolRegistryPanel({
               border: "none",
               background: selectedCategory === cat ? palette.soft : "var(--surface-hover)",
               color: selectedCategory === cat ? palette.accent : "#a8998c",
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 600,
               cursor: "pointer",
               textTransform: "capitalize",
@@ -953,7 +954,7 @@ function RegistryToolItem({
           >
             {tool.name}
           </div>
-          <div style={{ fontSize: 10, color: "#7a6b5d" }}>{tool.category}</div>
+          <div style={{ fontSize: 12, color: "#7a6b5d" }}>{tool.category}</div>
         </div>
 
         {/* Confirmation Toggle */}
@@ -967,7 +968,7 @@ function RegistryToolItem({
               border: `1px solid ${tool.requiresConfirmation ? "#fbbf24" : "var(--ui-border-default)"}`,
               background: tool.requiresConfirmation ? "var(--status-warning-bg)" : "transparent",
               color: tool.requiresConfirmation ? "#fbbf24" : "#7a6b5d",
-              fontSize: 10,
+              fontSize: 12,
               cursor: "pointer",
             }}
           >
@@ -994,7 +995,7 @@ function RegistryToolItem({
 
       {expanded && (
         <div style={{ padding: "0 10px 10px", borderTop: "1px solid var(--surface-hover)" }}>
-          <div style={{ paddingTop: 8, fontSize: 11, color: "#a8998c", lineHeight: 1.4 }}>
+          <div style={{ paddingTop: 8, fontSize: 12, color: "#a8998c", lineHeight: 1.4 }}>
             {tool.description}
           </div>
         </div>
@@ -1023,11 +1024,11 @@ function ToolItem({ tool, palette }: { tool: Tool; palette: SurfacePalette }) {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 11, color: palette.accent }}>{tool.name}</span>
+          <span style={{ fontSize: 12, color: palette.accent }}>{tool.name}</span>
         </div>
         <div
           style={{
-            fontSize: 10,
+            fontSize: 12,
             color: palette.accent,
             transform: expanded ? "rotate(180deg)" : "none",
             transition: "transform 0.2s",
@@ -1045,14 +1046,14 @@ function ToolItem({ tool, palette }: { tool: Tool; palette: SurfacePalette }) {
           }}
         >
           <div style={{ paddingTop: 10 }}>
-            <div style={{ fontSize: 11, color: "#b3a395", lineHeight: 1.5, marginBottom: 8 }}>
+            <div style={{ fontSize: 12, color: "#b3a395", lineHeight: 1.5, marginBottom: 8 }}>
               {tool.description || "No description available."}
             </div>
             {tool.parameters && Object.keys(tool.parameters).length > 0 && (
               <div>
                 <div
                   style={{
-                    fontSize: 10,
+                    fontSize: 12,
                     fontWeight: 800,
                     color: "#9f8a78",
                     textTransform: "uppercase",
@@ -1070,7 +1071,7 @@ function ToolItem({ tool, palette }: { tool: Tool; palette: SurfacePalette }) {
                         display: "flex",
                         alignItems: "baseline",
                         gap: 8,
-                        fontSize: 11,
+                        fontSize: 12,
                       }}
                     >
                       <span style={{ color: palette.accent, fontFamily: "var(--font-mono)" }}>
@@ -1211,7 +1212,7 @@ function WorkspaceTab({
         border: "none",
         background: active ? palette.soft : "transparent",
         color: active ? palette.accent : "#a8998c",
-        fontSize: 11,
+        fontSize: 12,
         fontWeight: 700,
         cursor: "pointer",
         transition: "all 0.2s",
@@ -1237,7 +1238,7 @@ function FileBrowser({
   if (isLoading) {
     return (
       <div style={{ padding: 20, textAlign: "center", color: "#a8998c" }}>
-        <div style={{ fontSize: 13 }}>Loading workspace files...</div>
+        <div style={{ fontSize: 13 }}>Loading workspace files…</div>
       </div>
     );
   }
@@ -1272,7 +1273,7 @@ function FileBrowser({
           padding: "8px 10px",
           background: "var(--surface-hover)",
           borderRadius: 8,
-          fontSize: 11,
+          fontSize: 12,
           color: "#a8998c",
           fontFamily: "var(--font-mono)",
           overflow: "hidden",
@@ -1347,9 +1348,9 @@ function FileNodeItem({
         }}
       >
         {isDirectory ? (
-          <span style={{ color: palette.accent, fontSize: 10 }}>{expanded ? "▼" : "▶"}</span>
+          <span style={{ color: palette.accent, fontSize: 12 }}>{expanded ? "▼" : "▶"}</span>
         ) : (
-          <span style={{ color: "#7a6b5d", fontSize: 10 }}>•</span>
+          <span style={{ color: "#7a6b5d", fontSize: 12 }}>•</span>
         )}
         <span style={{ color: isDirectory ? palette.accent : "#d1c3b4" }}>{node.name}</span>
       </button>
@@ -1401,7 +1402,7 @@ function CanvasesView({ canvasCount, palette }: { canvasCount: number; palette: 
               <FileText size={16} style={{ color: palette.accent }} />
               <div style={{ flex: 1 }}>
                 <div style={{ fontSize: 12, color: "#f6eee7" }}>Canvas {i + 1}</div>
-                <div style={{ fontSize: 10, color: "#7a6b5d" }}>Session artifact</div>
+                <div style={{ fontSize: 12, color: "#7a6b5d" }}>Session artifact</div>
               </div>
             </div>
           ))}
@@ -1437,7 +1438,7 @@ function WorkspaceInfo({
       >
         <div
           style={{
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 800,
             color: palette.accent,
             textTransform: "uppercase",
@@ -1457,7 +1458,7 @@ function WorkspaceInfo({
                   borderRadius: 999,
                   background: palette.soft,
                   color: palette.accent,
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: 600,
                 }}
               >
@@ -1667,10 +1668,10 @@ function AutomationDrawer({ automationEnabled, palette }: AutomationDrawerProps)
           style={{ color: palette.accent }}
         />
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: "#f6eee7" }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: "#f6eee7" }}>
             Runtime-Managed Session
           </div>
-          <div style={{ fontSize: 10, color: "#a8998c" }}>
+          <div style={{ fontSize: 12, color: "#a8998c" }}>
             {automationEnabled
               ? `Automation hooks are active • ${jobs.length} job${jobs.length !== 1 ? "s" : ""}`
               : "Enable automation to schedule jobs"}
@@ -1682,7 +1683,7 @@ function AutomationDrawer({ automationEnabled, palette }: AutomationDrawerProps)
             borderRadius: 999,
             background: automationEnabled ? "rgba(121,196,124,0.2)" : "var(--ui-border-muted)",
             color: automationEnabled ? "#79C47C" : "#a8998c",
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 700,
           }}
         >
@@ -1729,7 +1730,7 @@ function AutomationDrawer({ automationEnabled, palette }: AutomationDrawerProps)
           }}
         >
           <X size={14} style={{ color: "#ef4444" }} />
-          <span style={{ fontSize: 11, color: "#fca5a5", flex: 1 }}>{error}</span>
+          <span style={{ fontSize: 12, color: "#fca5a5", flex: 1 }}>{error}</span>
           <button
             type="button"
             onClick={() => setError(null)}
@@ -1739,7 +1740,7 @@ function AutomationDrawer({ automationEnabled, palette }: AutomationDrawerProps)
               border: "none",
               background: "transparent",
               color: "#fca5a5",
-              fontSize: 10,
+              fontSize: 12,
               cursor: "pointer",
             }}
           >
@@ -1799,7 +1800,7 @@ function ScheduledJobsView({
   if (isLoading) {
     return (
       <div style={{ padding: 20, textAlign: "center", color: "#a8998c" }}>
-        <div style={{ fontSize: 13 }}>Loading scheduled jobs...</div>
+        <div style={{ fontSize: 13 }}>Loading scheduled jobs…</div>
       </div>
     );
   }
@@ -1832,7 +1833,7 @@ function ScheduledJobsView({
             border: `1px solid ${palette.border}`,
             background: automationEnabled ? palette.soft : "var(--surface-hover)",
             color: automationEnabled ? palette.accent : "#666",
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 700,
             cursor: automationEnabled ? "pointer" : "not-allowed",
           }}
@@ -1841,7 +1842,7 @@ function ScheduledJobsView({
           Create Job
         </button>
         {!automationEnabled && (
-          <div style={{ fontSize: 10, color: "#888", marginTop: 8 }}>
+          <div style={{ fontSize: 12, color: "#888", marginTop: 8 }}>
             Enable automation to create scheduled jobs
           </div>
         )}
@@ -1853,7 +1854,7 @@ function ScheduledJobsView({
     <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
       {/* Header with create button */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 11, color: "#a8998c" }}>
+        <span style={{ fontSize: 12, color: "#a8998c" }}>
           {jobs.filter((j) => j.status === "active").length} active
         </span>
         <div style={{ display: "flex", gap: 6 }}>
@@ -1869,7 +1870,7 @@ function ScheduledJobsView({
               border: `1px solid ${palette.border}`,
               background: "transparent",
               color: "#a8998c",
-              fontSize: 10,
+              fontSize: 12,
               cursor: "pointer",
             }}
           >
@@ -1889,7 +1890,7 @@ function ScheduledJobsView({
               border: `1px solid ${palette.border}`,
               background: automationEnabled ? palette.soft : "var(--surface-hover)",
               color: automationEnabled ? palette.accent : "#666",
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 600,
               cursor: automationEnabled ? "pointer" : "not-allowed",
             }}
@@ -1980,7 +1981,7 @@ function JobCard({ job, palette, automationEnabled, onEdit, onDelete, onRunNow, 
                 borderRadius: 999,
                 background: `${statusColors[job.status]}20`,
                 color: statusColors[job.status],
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: 700,
                 border: "none",
                 cursor: automationEnabled ? "pointer" : "not-allowed",
@@ -2003,7 +2004,7 @@ function JobCard({ job, palette, automationEnabled, onEdit, onDelete, onRunNow, 
             padding: "6px 8px",
             background: "var(--surface-hover)",
             borderRadius: 6,
-            fontSize: 11,
+            fontSize: 12,
             marginBottom: 8,
           }}
         >
@@ -2013,7 +2014,7 @@ function JobCard({ job, palette, automationEnabled, onEdit, onDelete, onRunNow, 
         </div>
 
         {/* Run Info */}
-        <div style={{ display: "flex", gap: 12, fontSize: 10, color: "#a8998c", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 12, fontSize: 12, color: "#a8998c", flexWrap: "wrap" }}>
           {job.runCount > 0 && (
             <span title="Total runs">{job.runCount} run{job.runCount !== 1 ? "s" : ""}</span>
           )}
@@ -2036,7 +2037,7 @@ function JobCard({ job, palette, automationEnabled, onEdit, onDelete, onRunNow, 
 
         {/* Description */}
         {job.description && (
-          <div style={{ marginTop: 8, fontSize: 10, color: "#888", lineHeight: 1.4 }}>
+          <div style={{ marginTop: 8, fontSize: 12, color: "#888", lineHeight: 1.4 }}>
             {job.description}
           </div>
         )}
@@ -2099,7 +2100,7 @@ function ActionButton({
         border: `1px solid ${danger ? "rgba(239,68,68,0.3)" : palette.border}`,
         background: danger ? "var(--status-error-bg)" : "transparent",
         color: disabled ? "#666" : danger ? "#ef4444" : "#a8998c",
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: 500,
         cursor: disabled ? "not-allowed" : "pointer",
         opacity: disabled ? 0.6 : 1,
@@ -2148,7 +2149,7 @@ function JobHistoryView({ palette }: { palette: SurfacePalette }) {
   if (isLoading) {
     return (
       <div style={{ padding: 20, textAlign: "center", color: "#a8998c" }}>
-        <div style={{ fontSize: 13 }}>Loading execution history...</div>
+        <div style={{ fontSize: 13 }}>Loading execution history…</div>
       </div>
     );
   }
@@ -2168,7 +2169,7 @@ function JobHistoryView({ palette }: { palette: SurfacePalette }) {
         <div style={{ fontSize: 12, color: "#b3a395" }}>
           No execution history yet
         </div>
-        <div style={{ fontSize: 10, color: "#888", marginTop: 4 }}>
+        <div style={{ fontSize: 12, color: "#888", marginTop: 4 }}>
           Job runs will be recorded here
         </div>
       </div>
@@ -2185,7 +2186,7 @@ function JobHistoryView({ palette }: { palette: SurfacePalette }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span style={{ fontSize: 11, color: "#a8998c" }}>
+        <span style={{ fontSize: 12, color: "#a8998c" }}>
           Last {history.length} execution{history.length !== 1 ? "s" : ""}
         </span>
         <button
@@ -2195,7 +2196,7 @@ function JobHistoryView({ palette }: { palette: SurfacePalette }) {
             setHistory([]);
           }}
           style={{
-            fontSize: 10,
+            fontSize: 12,
             color: "#888",
             background: "transparent",
             border: "none",
@@ -2227,10 +2228,10 @@ function JobHistoryView({ palette }: { palette: SurfacePalette }) {
             }}
           />
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 11, color: "#f6eee7", fontWeight: 500 }}>
+            <div style={{ fontSize: 12, color: "#f6eee7", fontWeight: 500 }}>
               {execution.jobId}
             </div>
-            <div style={{ fontSize: 10, color: "#888" }}>
+            <div style={{ fontSize: 12, color: "#888" }}>
               {new Date(execution.startedAt).toLocaleString()}
             </div>
           </div>
@@ -2240,7 +2241,7 @@ function JobHistoryView({ palette }: { palette: SurfacePalette }) {
               borderRadius: 999,
               background: `${statusColors[execution.status]}20`,
               color: statusColors[execution.status],
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 600,
               textTransform: "uppercase",
             }}
@@ -2292,7 +2293,7 @@ function AutomationConfigView({ palette }: { palette: SurfacePalette }) {
             border: "1px solid rgba(121,196,124,0.3)",
             background: isRunning ? "var(--surface-hover)" : "rgba(121,196,124,0.15)",
             color: isRunning ? "#666" : "#79C47C",
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 600,
             cursor: isRunning ? "not-allowed" : "pointer",
           }}
@@ -2310,7 +2311,7 @@ function AutomationConfigView({ palette }: { palette: SurfacePalette }) {
             border: "1px solid rgba(239,68,68,0.3)",
             background: !isRunning ? "var(--surface-hover)" : "var(--status-error-bg)",
             color: !isRunning ? "#666" : "#ef4444",
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 600,
             cursor: !isRunning ? "not-allowed" : "pointer",
           }}
@@ -2326,7 +2327,7 @@ function AutomationConfigView({ palette }: { palette: SurfacePalette }) {
           borderRadius: 10,
           background: "var(--surface-hover)",
           border: `1px solid ${palette.border}`,
-          fontSize: 11,
+          fontSize: 12,
           color: "#a8998c",
           lineHeight: 1.5,
         }}

@@ -165,7 +165,7 @@ function AgentCard({
             border: '1px solid rgba(212,149,106,0.3)',
             borderRadius: 20,
             padding: '3px 9px',
-            fontSize: 11,
+            fontSize: 12,
             color: 'var(--accent-primary)',
             fontWeight: 500,
           }}
@@ -274,7 +274,7 @@ function ActiveCard({ workspace }: { workspace: ActiveWorkspace }) {
         marginBottom: 24,
       }}
     >
-      <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
+      <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 10 }}>
         Active in gizzi-code sessions
       </div>
       <div className="flex items-center gap-3">
@@ -305,7 +305,7 @@ function ActiveCard({ workspace }: { workspace: ActiveWorkspace }) {
           <div className="flex items-center gap-3 mt-2">
             <span
               style={{
-                fontSize: 11,
+                fontSize: 12,
                 background: 'color-mix(in srgb, var(--accent-primary) 12%, transparent)',
                 border: '1px solid rgba(212,149,106,0.2)',
                 borderRadius: 20,
@@ -316,19 +316,19 @@ function ActiveCard({ workspace }: { workspace: ActiveWorkspace }) {
               {workspace.format === 'layered' ? '5-layer' : 'flat'}
             </span>
             {workspace.hasSoul && (
-              <span style={{ fontSize: 11, color: 'var(--status-success)' }}>
+              <span style={{ fontSize: 12, color: 'var(--status-success)' }}>
                 <CheckCircle size={11} className="inline mr-1" />soul
               </span>
             )}
             {workspace.hasMemory && (
-              <span style={{ fontSize: 11, color: 'var(--status-success)' }}>
+              <span style={{ fontSize: 12, color: 'var(--status-success)' }}>
                 <CheckCircle size={11} className="inline mr-1" />memory
               </span>
             )}
           </div>
         </div>
       </div>
-      <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', marginTop: 10, fontFamily: 'var(--font-mono)' }}>
+      <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', marginTop: 10, fontFamily: 'var(--font-mono)' }}>
         {workspace.path}
       </div>
     </div>
@@ -506,7 +506,7 @@ export function WorkspaceTab({ onSwitchToRegistry }: WorkspaceTabProps = {}) {
       </AnimatePresence>
 
       {/* Agent list */}
-      <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
+      <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>
         Your Agents
       </div>
 

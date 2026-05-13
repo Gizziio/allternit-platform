@@ -6,6 +6,7 @@
 
 "use client";
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useCallback, useMemo } from "react";
 import { format, parseISO, isBefore, isAfter, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, getDate } from "date-fns";
 
@@ -338,7 +339,7 @@ export function DatePickerRenderer({
           onClick={() => !isDisabled && setIsOpen(!isOpen)}
           disabled={isDisabled}
         >
-          <Calendar className="mr-2 h-4 w-4" />
+          <Calendar className="mr-2 size-4 " />
           {selectedDate ? (
             format(
               selectedDate,
@@ -377,13 +378,13 @@ function SimpleCalendar({
   onSelect: (date: Date) => void;
   minDate?: Date;
   maxDate?: Date;
-}) {
+}) {isClient ? 
   const [currentMonth, setCurrentMonth] = useState(selected || new Date());
 
   const days = useMemo(() => {
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
-    return eachDayOfInterval({ start, end });
+    return eachDayOfInterval({ start, end  : "..."});
   }, [currentMonth]);
 
   const isDisabled = (date: Date) => {
@@ -429,7 +430,7 @@ function SimpleCalendar({
               onClick={() => !disabled && onSelect(day)}
               disabled={disabled}
               className={cn(
-                "h-8 w-8 rounded-md text-sm transition-colors",
+                "size-8  rounded-md text-sm transition-colors",
                 isSelected && "bg-primary text-primary-foreground",
                 !isSelected && !disabled && "hover:bg-muted",
                 disabled && "opacity-50 cursor-not-allowed"
@@ -454,7 +455,7 @@ export function CalendarRenderer({
 }: {
   props: CalendarProps;
   context: RenderContext;
-}) {
+}) {isClient ? 
   if (!isVisible(props, context.dataModel)) return null;
 
   const value = resolvePath(context.dataModel, props.valuePath) as string;
@@ -471,7 +472,7 @@ export function CalendarRenderer({
   const days = useMemo(() => {
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
-    return eachDayOfInterval({ start, end });
+    return eachDayOfInterval({ start, end  : "..."});
   }, [currentMonth]);
 
   const getEventsForDay = (day: Date) => {
@@ -678,7 +679,7 @@ export function FileUploadRenderer({
             multiple={props.multiple !== false}
             disabled={isDisabled}
           />
-          <UploadSimple className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+          <UploadSimple className="mx-auto size-8  text-muted-foreground mb-2" />
           <p className="text-sm text-muted-foreground">
             {isDragging
               ? "Drop files here..."
@@ -710,12 +711,12 @@ export function FileUploadRenderer({
             <Card key={idx} className="p-3">
               <div className="flex items-center gap-3">
                 {props.preview && file.type?.startsWith("image/") ? (
-                  <div className="h-10 w-10 rounded bg-muted flex items-center justify-center">
-                    <Image className="h-5 w-5 text-muted-foreground" />
+                  <div className="size-10  rounded bg-muted flex items-center justify-center">
+                    <Image className="size-5  text-muted-foreground" />
                   </div>
                 ) : (
-                  <div className="h-10 w-10 rounded bg-muted flex items-center justify-center">
-                    <FileIcon className="h-5 w-5 text-muted-foreground" />
+                  <div className="size-10  rounded bg-muted flex items-center justify-center">
+                    <FileIcon className="size-5  text-muted-foreground" />
                   </div>
                 )}
 

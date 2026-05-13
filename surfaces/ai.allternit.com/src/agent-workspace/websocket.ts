@@ -144,7 +144,7 @@ export class WorkspaceWebSocket {
       }
 
       this.setStatus('connecting');
-      console.log('[WebSocket] Connecting to:', this.url);
+      console.debug('[WebSocket] Connecting to:', this.url);
 
       try {
         this.ws = new WebSocket(this.url);
@@ -169,7 +169,7 @@ export class WorkspaceWebSocket {
           // Start heartbeat
           this.startHeartbeat();
 
-          console.log('[WebSocket] Connected');
+          console.debug('[WebSocket] Connected');
           resolve();
         };
 
@@ -182,7 +182,7 @@ export class WorkspaceWebSocket {
           this.setStatus('disconnected');
           this.stopHeartbeat();
           
-          console.log('[WebSocket] Disconnected');
+          console.debug('[WebSocket] Disconnected');
           
           if (this.options.autoReconnect) {
             this.scheduleReconnect();
@@ -317,7 +317,7 @@ export class WorkspaceWebSocket {
         message.timestamp = new Date().toISOString();
       }
 
-      console.log('[WebSocket] Received:', message.type);
+      console.debug('[WebSocket] Received:', message.type);
       
       this.messageHandlers.forEach(handler => {
         try {
@@ -333,13 +333,13 @@ export class WorkspaceWebSocket {
 
   private scheduleReconnect(): void {
     if (this.reconnectAttempts >= this.options.maxReconnectAttempts) {
-      console.log('[WebSocket] Max reconnect attempts reached');
+      console.debug('[WebSocket] Max reconnect attempts reached');
       this.setStatus('error');
       return;
     }
 
     this.reconnectAttempts++;
-    console.log(`[WebSocket] Reconnecting in ${this.options.reconnectInterval}ms (attempt ${this.reconnectAttempts})`);
+    console.debug(`[WebSocket] Reconnecting in ${this.options.reconnectInterval}ms (attempt ${this.reconnectAttempts})`);
 
     this.reconnectTimer = setTimeout(() => {
       this.connect().catch(() => {

@@ -1,6 +1,6 @@
 import { DirectiveCompilerSurface } from "./DagRuntimeWorkspace";
 
-export function DirectiveCompiler() {
+export function DirectiveCompiler(): JSX.Element {
   return <DirectiveCompilerSurface />;
 }
 

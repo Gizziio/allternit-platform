@@ -99,7 +99,7 @@ export function MemoryEditor({ api }: MemoryEditorProps) {
         <div className="memory-editor__search">
           <input
             type="text"
-            placeholder="Search memories..."
+            placeholder="Search memories…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />

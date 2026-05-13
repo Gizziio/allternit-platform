@@ -40,9 +40,9 @@ export function createModuleLogger(module: string): Logger {
     info: (context: LogContext | string, message?: string) => {
       if (!isInfoEnabled) return;
       if (typeof context === 'string') {
-        console.info(`${prefix} ${context}`);
+        console.debug(`${prefix} ${context}`);
       } else {
-        console.info(`${prefix} ${message || ''}`, context);
+        console.debug(`${prefix} ${message || ''}`, context);
       }
     },
     warn: (context: LogContext | string, message?: string) => {

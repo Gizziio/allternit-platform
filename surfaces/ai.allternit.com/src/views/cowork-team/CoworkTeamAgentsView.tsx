@@ -99,7 +99,7 @@ export const CoworkTeamAgentsView: React.FC = () => {
                 <span
                   style={{
                     marginLeft: '6px',
-                    fontSize: '11px',
+                    fontSize: '12px',
                     fontWeight: 700,
                     background: isActive ? `${accent}33` : 'var(--bg-secondary)',
                     color: isActive ? accent : 'var(--text-secondary)',

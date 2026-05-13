@@ -19,7 +19,7 @@ export async function POST(
   try {
     ptyProcess.kill();
     terminalSessions.delete(id);
-    console.log(`[Terminal API] Closed session ${id}`);
+    console.debug(`[Terminal API] Closed session ${id}`);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error(`[Terminal API] Error closing session ${id}:`, error);

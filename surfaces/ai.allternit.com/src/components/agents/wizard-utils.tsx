@@ -436,7 +436,7 @@ export const BrowserCompatibilityWarning: React.FC<BrowserCompatibilityWarningPr
         <ul className="text-xs space-y-1 mb-3" style={{ color: TEXT.tertiary }}>
           {compatibility.unsupportedFeatures.map((feature) => (
             <li key={feature} className="flex items-center gap-2">
-              <span className="w-1 h-1 rounded-full" style={{ background: 'var(--status-warning)' }} />
+              <span className="size-1  rounded-full" style={{ background: 'var(--status-warning)' }} />
               {feature} - Some features may be unavailable
             </li>
           ))}

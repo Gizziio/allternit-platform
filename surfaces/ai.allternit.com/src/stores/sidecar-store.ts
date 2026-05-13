@@ -23,7 +23,7 @@ export const useSidecarStore = create<SidecarState & SidecarActions>()(
   persist(
     (set) => ({
       isOpen: false,
-      activePanel: 'artifact',
+      activePanel: 'context',
       width: 350,
       isResizing: false,
 

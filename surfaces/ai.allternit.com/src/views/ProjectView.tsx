@@ -4,6 +4,7 @@
  * Shows sessions list with real ChatComposer, tabs, and wired functionality
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState } from 'react';
 import { InputModal } from '@/components/InputModal';
 import { useChatStore } from './chat/ChatStore';
@@ -22,10 +23,17 @@ import {
   Trash,
   FileText,
   Robot,
+  Cpu,
+  Globe,
+  Lightning,
+  PlugsConnected,
+  Plus,
+  X,
 } from '@phosphor-icons/react';
 import { useNav } from '@/nav/useNav';
+import { useMiniAppDiscovery } from './aci/use-mini-app-discovery';
 
-export function ProjectView() {
+export function ProjectView(): JSX.Element {
   const { 
     projects, 
     activeProjectId, 
@@ -35,6 +43,8 @@ export function ProjectView() {
     setActiveProject,
     addFileToProject,
     removeFileFromProject,
+    addConnectorToProject,
+    removeConnectorFromProject,
     renameProject,
     deleteProject,
     createThread,
@@ -51,6 +61,8 @@ export function ProjectView() {
   const [showAddInstruction, setShowAddInstruction] = useState(false);
   const [instructionText, setInstructionText] = useState('');
   const [projectInstructions, setProjectInstructions] = useState<string[]>([]);
+  const [showAddConnector, setShowAddConnector] = useState(false);
+  const { all: allMiniApps } = useMiniAppDiscovery();
   
   const project = activeProjectLocalKey
     ? projects.find((p) => p.localKey === activeProjectLocalKey) || projects.find((p) => p.id === activeProjectId)
@@ -71,12 +83,16 @@ export function ProjectView() {
   const projectThreads = threads.filter(t => t.projectId === project.id && t.mode !== 'agent');
   const projectAgentSessions = threads.filter(t => t.projectId === project.id && t.mode === 'agent');
   const projectFiles = project.files || [];
+  const projectConnectorIds = project.connectors || [];
+  const attachedConnectors = allMiniApps.filter((app) => projectConnectorIds.includes(app.id));
+  const availableConnectors = allMiniApps.filter((app) => !projectConnectorIds.includes(app.id));
   
   const hasContent = (() => {
     switch (activeTab) {
       case 'chats': return projectThreads.length > 0;
       case 'agent-sessions': return projectAgentSessions.length > 0;
       case 'sources': return projectFiles.length > 0;
+      case 'connectors': return attachedConnectors.length > 0;
       default: return false;
     }
   })();
@@ -87,11 +103,11 @@ export function ProjectView() {
 
   const handleSend = async (text: string) => {
     // Create a new thread in this project
-    console.log('Creating new session in project:', project.id, 'with text:', text);
+    console.debug('Creating new session in project:', project.id, 'with text:', text);
     setComposerInput('');
     
     // Create the thread and navigate to it
-    const threadId = await createThread(text.slice(0, 50) || 'New Chat', project.id);
+    await createThread(text.slice(0, 50) || 'New Chat', project.id);
     dispatch({ type: 'OPEN_VIEW', viewType: 'chat' });
   };
 
@@ -115,6 +131,17 @@ export function ProjectView() {
     }
   };
 
+  const handleAddConnector = (connectorId: string) => {
+    addConnectorToProject(project.id, connectorId);
+    setShowAddConnector(false);
+  };
+
+  const handleRemoveConnector = (connectorId: string) => {
+    if (confirm('Remove this connector from the project?')) {
+      removeConnectorFromProject(project.id, connectorId);
+    }
+  };
+
   const handleAddInstruction = () => {
     if (instructionText.trim()) {
       setProjectInstructions([...projectInstructions, instructionText.trim()]);
@@ -132,37 +159,13 @@ export function ProjectView() {
     <ProjectMenuButton>
       <button
         onClick={() => setShowRenameModal(true)}
-        style={{
-          width: '100%',
-          padding: '10px 16px',
-          border: 'none',
-          background: 'transparent',
-          color: 'var(--ui-text-secondary)',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          fontSize: 13,
-          textAlign: 'left',
-        }}
+        className="w-full p-2.5 px-4 border-none bg-transparent text-[var(--ui-text-secondary)] cursor-pointer flex items-center gap-2.5 text-sm text-left hover:bg-[var(--surface-hover)] transition-colors"
       >
         <PencilSimple size={16} />
         Edit details
       </button>
       <button
-        style={{
-          width: '100%',
-          padding: '10px 16px',
-          border: 'none',
-          background: 'transparent',
-          color: 'var(--ui-text-secondary)',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          fontSize: 13,
-          textAlign: 'left',
-        }}
+        className="w-full p-2.5 px-4 border-none bg-transparent text-[var(--ui-text-secondary)] cursor-pointer flex items-center gap-2.5 text-sm text-left hover:bg-[var(--surface-hover)] transition-colors"
       >
         <Archive size={16} />
         Archive
@@ -174,19 +177,7 @@ export function ProjectView() {
             setActiveProject(null);
           }
         }}
-        style={{
-          width: '100%',
-          padding: '10px 16px',
-          border: 'none',
-          background: 'transparent',
-          color: 'var(--status-error)',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          fontSize: 13,
-          textAlign: 'left',
-        }}
+        className="w-full p-2.5 px-4 border-none bg-transparent text-[var(--status-error)] cursor-pointer flex items-center gap-2.5 text-sm text-left hover:bg-[var(--status-error-bg)] transition-colors"
       >
         <Trash size={16} />
         Delete
@@ -247,6 +238,7 @@ export function ProjectView() {
           { id: 'chats', label: 'Chats', count: projectThreads.length },
           { id: 'agent-sessions', label: 'Agent Sessions', count: projectAgentSessions.length },
           { id: 'sources', label: 'Sources', count: projectFiles.length },
+          { id: 'connectors', label: 'Connectors', count: attachedConnectors.length },
         ]}
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -261,11 +253,15 @@ export function ProjectView() {
             ? 'Chats will appear here.' 
             : activeTab === 'agent-sessions'
             ? 'Agent sessions will appear here.'
+            : activeTab === 'connectors'
+            ? 'Connectors will appear here.'
             : 'Sources will appear here.',
           subMessage: activeTab === 'chats'
             ? 'Start a chat to keep conversations organized and re-use project knowledge.'
             : activeTab === 'agent-sessions'
             ? 'Start an agent session to get autonomous assistance with this project.'
+            : activeTab === 'connectors'
+            ? 'Attach OpenClaw, Hermes, and other mini-apps to this project.'
             : 'Add files to reference them in this project.',
         }}
       >
@@ -308,6 +304,53 @@ export function ProjectView() {
             ))}
           </div>
         )}
+        {activeTab === 'connectors' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {attachedConnectors.map((connector) => (
+              <ProjectItemCard
+                key={connector.id}
+                title={connector.name}
+                subtitle={connector.description}
+                icon={getConnectorIcon(connector.category)}
+                actions={
+                  <button
+                    onClick={() => handleRemoveConnector(connector.id)}
+                    className="p-1 rounded text-[var(--text-tertiary)] hover:text-[var(--status-error)] transition-colors"
+                    title="Remove connector"
+                  >
+                    <X size={14} />
+                  </button>
+                }
+              />
+            ))}
+            {availableConnectors.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <button
+                  onClick={() => setShowAddConnector((value) => !value)}
+                  className="flex items-center gap-2 rounded-lg border border-[var(--ui-border-default)] px-3 py-2 text-sm text-[var(--ui-text-secondary)] hover:text-[var(--ui-text-primary)]"
+                >
+                  <Plus size={14} />
+                  Add connector
+                </button>
+                {showAddConnector && (
+                  <div className="rounded-lg border border-[var(--ui-border-default)] bg-[var(--surface-hover)] p-2 flex flex-col gap-1">
+                    {availableConnectors.map((connector) => (
+                      <button
+                        key={connector.id}
+                        onClick={() => handleAddConnector(connector.id)}
+                        className="flex items-center gap-2 rounded px-2 py-2 text-left text-sm text-[var(--ui-text-secondary)] hover:bg-[var(--surface-active)]"
+                      >
+                        {getConnectorIcon(connector.category)}
+                        <span style={{ flex: 1 }}>{connector.name}</span>
+                        <Plus size={12} />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
       </BaseProjectView>
 
       {/* Rename Modal */}
@@ -345,6 +388,19 @@ export function ProjectView() {
       )}
     </>
   );
+}
+
+function getConnectorIcon(category: string) {
+  switch (category) {
+    case 'runtime':
+      return <Cpu size={18} />;
+    case 'connector':
+      return <PlugsConnected size={18} />;
+    case 'data':
+      return <Lightning size={18} />;
+    default:
+      return <Globe size={18} />;
+  }
 }
 
 // Add File Modal
@@ -493,30 +549,11 @@ function AddInstructionModal({
   return (
     <>
       <div
-        style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'var(--shell-overlay-backdrop)',
-          backdropFilter: 'blur(4px)',
-          zIndex: 10000,
-        }}
+        className="fixed inset-0 bg-[var(--shell-overlay-backdrop)] backdrop-blur-[4px] z-[10000]"
         onClick={onClose}
       />
       <div
-        style={{
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          background: 'var(--surface-floating)',
-          borderRadius: 16,
-          border: '1px solid var(--ui-border-default)',
-          padding: '24px',
-          width: '90%',
-          maxWidth: 480,
-          zIndex: 10001,
-          boxShadow: 'var(--shadow-xl)',
-        }}
+        className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[var(--surface-floating)] rounded-2xl border border-[var(--ui-border-default)] p-6 w-[90%] max-w-[480px] z-[10001] shadow-xl"
       >
         <h3 style={{
           margin: '0 0 8px 0',

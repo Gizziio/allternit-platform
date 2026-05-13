@@ -117,7 +117,7 @@ export function PanelHeader(props: PanelHeaderProps) {
             key={action.id}
             variant="ghost"
             size="icon"
-            className="h-6 w-6 text-muted-foreground hover:text-foreground"
+            className="size-6  text-muted-foreground hover:text-foreground"
             onClick={action.onClick}
             title={action.label}
             disabled={action.disabled}
@@ -130,7 +130,7 @@ export function PanelHeader(props: PanelHeaderProps) {
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 text-muted-foreground hover:text-foreground"
+          className="size-6  text-muted-foreground hover:text-foreground"
           onClick={onToggleCollapse}
           title={isCollapsed ? 'Expand panel' : 'Collapse panel'}
         >
@@ -167,7 +167,7 @@ function TabButton({ tab, isActive, onClick }: TabButtonProps) {
       <span className="max-w-24 truncate">{tab.label}</span>
       {tab.badge !== undefined && tab.badge > 0 && (
         <span className={cn(
-          "ml-0.5 min-w-[16px] h-4 px-1 rounded-full text-[10px] flex items-center justify-center",
+          "ml-0.5 min-w-[16px] h-4 px-1 rounded-full text-xs flex items-center justify-center",
           isActive ? "bg-white/20" : "bg-red-500/80 text-white"
         )}>
           {tab.badge > 99 ? '99+' : tab.badge}

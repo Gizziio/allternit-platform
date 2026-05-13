@@ -139,8 +139,8 @@ export function DesignLayersPanel({
         <span style={{ color: 'var(--text-tertiary)' }}>
           {collapsed ? <CaretRight size={11} /> : <CaretDown size={11} />}
         </span>
-        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)' }}>Layers</span>
-        <span style={{ fontSize: 9, color: 'var(--text-tertiary)', marginLeft: 'auto' }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>Layers</span>
+        <span style={{ fontSize: 12, color: 'var(--text-tertiary)', marginLeft: 'auto' }}>
           {shapes.length}
         </span>
       </button>
@@ -149,7 +149,7 @@ export function DesignLayersPanel({
       {!collapsed && (
         <div style={{ overflowY: 'auto', flex: 1 }}>
           {shapes.length === 0 && (
-            <div style={{ padding: '16px 12px', fontSize: 11, color: 'var(--text-tertiary)', textAlign: 'center' }}>
+            <div style={{ padding: '16px 12px', fontSize: 12, color: 'var(--text-tertiary)', textAlign: 'center' }}>
               No shapes yet
             </div>
           )}
@@ -158,7 +158,7 @@ export function DesignLayersPanel({
             <div key={group.label}>
               <div style={{
                 padding: '5px 12px 3px',
-                fontSize: 9, fontWeight: 800, textTransform: 'uppercase',
+                fontSize: 12, fontWeight: 800, textTransform: 'uppercase',
                 letterSpacing: '0.08em', color: 'var(--text-tertiary)',
               }}>
                 {group.label}
@@ -194,7 +194,7 @@ export function DesignLayersPanel({
                       {typeIcon(shape.type)}
                     </span>
                     <span style={{
-                      flex: 1, fontSize: 11, color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
+                      flex: 1, fontSize: 12, color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)',
                       fontWeight: isSelected ? 600 : 400,
                       overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       minWidth: 0,
@@ -203,7 +203,7 @@ export function DesignLayersPanel({
                     </span>
                     <span
                       title={`${Math.round(shape.w)}×${Math.round(shape.h)}`}
-                      style={{ fontSize: 8, color: 'var(--text-tertiary)', flexShrink: 0, fontFamily: 'var(--font-mono)' }}
+                      style={{ fontSize: 12, color: 'var(--text-tertiary)', flexShrink: 0, fontFamily: 'var(--font-mono)' }}
                     >
                       {Math.round(shape.w)}×{Math.round(shape.h)}
                     </span>

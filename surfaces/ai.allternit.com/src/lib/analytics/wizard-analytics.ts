@@ -183,7 +183,7 @@ class WizardAnalyticsService {
     this.initialized = true;
 
     if (this.config.debug) {
-      console.log('[WizardAnalytics] Initialized with config:', this.config);
+      console.debug('[WizardAnalytics] Initialized with config:', this.config);
     }
   }
 
@@ -211,7 +211,7 @@ class WizardAnalyticsService {
     });
 
     if (this.config.debug) {
-      console.log('[WizardAnalytics] Session started:', sessionId);
+      console.debug('[WizardAnalytics] Session started:', sessionId);
     }
   }
 
@@ -248,7 +248,7 @@ class WizardAnalyticsService {
     }
 
     if (this.config.debug) {
-      console.log('[WizardAnalytics] Session ended:', {
+      console.debug('[WizardAnalytics] Session ended:', {
         sessionId: this.session.sessionId,
         completed,
       });
@@ -424,7 +424,7 @@ class WizardAnalyticsService {
     this.eventQueue.push(event);
 
     if (this.config.debug) {
-      console.log('[WizardAnalytics] Event tracked:', event);
+      console.debug('[WizardAnalytics] Event tracked:', event);
     }
 
     // Flush if batch is full
@@ -454,7 +454,7 @@ class WizardAnalyticsService {
       }
 
       if (this.config.debug) {
-        console.log('[WizardAnalytics] Flushed', eventsToSend.length, 'events');
+        console.debug('[WizardAnalytics] Flushed', eventsToSend.length, 'events');
       }
     } catch (error) {
       console.error('[WizardAnalytics] Flush error:', error);

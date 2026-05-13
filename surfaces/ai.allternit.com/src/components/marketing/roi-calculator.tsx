@@ -89,8 +89,8 @@ export function ROICalculator({ className }: ROICalculatorProps) {
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[var(--ui-border-muted)] px-6 py-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--accent-primary)]/10">
-            <IconCalculator className="h-5 w-5 text-[var(--accent-primary)]" />
+          <div className="flex size-9  items-center justify-center rounded-lg bg-[var(--accent-primary)]/10">
+            <IconCalculator className="size-5  text-[var(--accent-primary)]" />
           </div>
           <div>
             <h3 className="text-sm font-semibold text-[var(--text-primary)]">AI ROI Calculator</h3>
@@ -101,7 +101,7 @@ export function ROICalculator({ className }: ROICalculatorProps) {
           onClick={handleReset}
           className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
         >
-          <IconRefresh className={cn('h-3.5 w-3.5', isAnimating && 'animate-spin')} />
+          <IconRefresh className={cn('size-3.5 ', isAnimating && 'animate-spin')} />
           Reset
         </button>
       </div>
@@ -110,7 +110,7 @@ export function ROICalculator({ className }: ROICalculatorProps) {
         {/* Inputs */}
         <div className="space-y-5 p-6">
           <InputField
-            icon={<IconUsers className="h-4 w-4" />}
+            icon={<IconUsers className="size-4 " />}
             label="Team Size"
             value={inputs.teamSize}
             onChange={(v) => updateInput('teamSize', v)}
@@ -120,7 +120,7 @@ export function ROICalculator({ className }: ROICalculatorProps) {
             suffix="people"
           />
           <InputField
-            icon={<IconClock className="h-4 w-4" />}
+            icon={<IconClock className="size-4 " />}
             label="Hours per Week"
             value={inputs.hoursPerWeek}
             onChange={(v) => updateInput('hoursPerWeek', v)}
@@ -130,7 +130,7 @@ export function ROICalculator({ className }: ROICalculatorProps) {
             suffix="hrs/week"
           />
           <InputField
-            icon={<IconCurrencyDollar className="h-4 w-4" />}
+            icon={<IconCurrencyDollar className="size-4 " />}
             label="Hourly Rate"
             value={inputs.hourlyRate}
             onChange={(v) => updateInput('hourlyRate', v)}
@@ -141,7 +141,7 @@ export function ROICalculator({ className }: ROICalculatorProps) {
             suffix="/hr"
           />
           <InputField
-            icon={<IconTrendingUp className="h-4 w-4" />}
+            icon={<IconTrendingUp className="size-4 " />}
             label="AI Speedup"
             value={inputs.aiSpeedup}
             onChange={(v) => updateInput('aiSpeedup', v)}
@@ -151,7 +151,7 @@ export function ROICalculator({ className }: ROICalculatorProps) {
             suffix="%"
           />
           <InputField
-            icon={<IconCurrencyDollar className="h-4 w-4" />}
+            icon={<IconCurrencyDollar className="size-4 " />}
             label="AI Cost / Month"
             value={inputs.aiCostPerMonth}
             onChange={(v) => updateInput('aiCostPerMonth', v)}
@@ -320,7 +320,7 @@ function ResultCard({
       )}
     >
       <div>
-        <div className="text-[11px] font-medium text-[var(--text-muted)]">{label}</div>
+        <div className="text-[12px] font-medium text-[var(--text-muted)]">{label}</div>
         <div
           className={cn(
             'text-sm font-bold tabular-nums',
@@ -333,7 +333,7 @@ function ResultCard({
         </div>
       </div>
       <div className="text-right">
-        <div className="text-[10px] text-[var(--text-muted)]">{subtitle}</div>
+        <div className="text-xs text-[var(--text-muted)]">{subtitle}</div>
       </div>
     </motion.div>
   );

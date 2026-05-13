@@ -120,15 +120,15 @@ export function MentionAutocomplete({ query, onSelect, onClose }: MentionAutocom
           onClick={() => onSelect(option)}
           onMouseEnter={() => setSelectedIndex(index)}
         >
-          <div className={`w-7 h-7 rounded-md bg-gradient-to-br ${option.color} 
+          <div className={`size-7  rounded-md bg-gradient-to-br ${option.color} 
             flex items-center justify-center text-xs`}>
             {option.icon}
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-[13px] font-medium">{option.name}</div>
-            <div className="text-[11px] text-gray-400">{option.description}</div>
+            <div className="text-[12px] text-zinc-400">{option.description}</div>
           </div>
-          <code className="text-[11px] text-[#667eea] bg-[#667eea]/15 px-1.5 py-0.5 rounded">
+          <code className="text-[12px] text-[#667eea] bg-[#667eea]/15 px-1.5 py-0.5 rounded">
             {option.shortcut}
           </code>
         </div>

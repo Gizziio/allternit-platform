@@ -26,7 +26,7 @@ export const AttachmentButton = memo(function AttachmentButton({
   icon = "plus",
   ...props
 }: AttachmentButtonProps) {
-  const iconClassName = "w-4 h-4 text-neutral-400 dark:text-neutral-600";
+  const iconClassName = "size-4  text-neutral-400 dark:text-neutral-600";
   let iconNode: ReactNode;
   if (isIconName(icon)) {
     iconNode =

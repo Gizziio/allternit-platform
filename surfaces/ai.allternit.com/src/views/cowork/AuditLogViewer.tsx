@@ -161,7 +161,7 @@ export function AuditLogViewer({ taskId, taskTitle, onClose }: AuditLogViewerPro
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-sm)', flexWrap: 'wrap', marginBottom: 4 }}>
                         <span style={{
-                          fontSize: '11px',
+                          fontSize: '12px',
                           padding: '2px 8px',
                           borderRadius: '4px',
                           backgroundColor: `${actionColor(log.action)}20`,
@@ -174,14 +174,14 @@ export function AuditLogViewer({ taskId, taskTitle, onClose }: AuditLogViewerPro
                         <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                           {log.actorType === 'human' ? 'User' : log.actorType === 'agent' ? 'Agent' : 'System'}
                         </span>
-                        <span style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                        <span style={{ fontSize: '12px', color: 'var(--text-tertiary)' }}>
                           {formatTime(log.createdAt)}
                         </span>
                       </div>
                       {payload && (
                         <pre style={{
                           margin: 0,
-                          fontSize: '11px',
+                          fontSize: '12px',
                           color: 'var(--text-tertiary)',
                           backgroundColor: 'var(--surface-hover)',
                           padding: '6px 10px',

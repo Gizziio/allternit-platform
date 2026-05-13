@@ -92,7 +92,7 @@ class WebsitePlugin implements ModePlugin {
     
     this.isInitialized = true;
     this.emit({ type: 'initialized', timestamp: Date.now() });
-    console.log('[WebsitePlugin] Initialized');
+    console.debug('[WebsitePlugin] Initialized');
   }
 
   async destroy(): Promise<void> {
@@ -249,7 +249,7 @@ Format as JSON:
   "files": [
     {
       "path": "app/page.tsx",
-      "content": "...",
+      "content": "…",
       "type": "tsx"
     }
   ],
@@ -286,12 +286,12 @@ Format as JSON:
           path: isNextJs ? 'app/page.tsx' : 'src/App.tsx',
           content: `export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <main className="min-h-screen bg-gradient-to-b from-zinc-50 to-white">
       <div className="max-w-6xl mx-auto px-4 py-20">
-        <h1 className="text-5xl font-bold text-gray-900 mb-6">
+        <h1 className="text-5xl font-bold text-zinc-900 mb-6">
           ${description.split(' ').slice(0, 5).join(' ')}
         </h1>
-        <p className="text-xl text-gray-600">
+        <p className="text-xl text-zinc-600">
           ${description}
         </p>
       </div>
@@ -349,10 +349,10 @@ Format as JSON:
 <body>
   <div id="root">
     <!-- Preview placeholder - actual component needs React runtime -->
-    <div class="min-h-screen bg-gradient-to-b from-gray-50 to-white flex items-center justify-center p-8">
+    <div class="min-h-screen bg-gradient-to-b from-zinc-50 to-white flex items-center justify-center p-8">
       <div class="max-w-2xl text-center">
-        <h1 class="text-4xl font-bold text-gray-900 mb-4">${project.name}</h1>
-        <p class="text-gray-600 mb-8">${project.description}</p>
+        <h1 class="text-4xl font-bold text-zinc-900 mb-4">${project.name}</h1>
+        <p class="text-zinc-600 mb-8">${project.description}</p>
         
         <div class="bg-white rounded-lg shadow-lg p-6 text-left">
           <h2 class="text-xl font-semibold mb-4">Generated Files</h2>
@@ -360,15 +360,15 @@ Format as JSON:
             ${project.files.map(f => `
               <li class="flex items-center text-sm">
                 <span class="text-blue-500 mr-2">📄</span>
-                <code class="bg-gray-100 px-2 py-1 rounded">${f.path}</code>
-                <span class="ml-2 text-gray-500">(${f.type})</span>
+                <code class="bg-zinc-100 px-2 py-1 rounded">${f.path}</code>
+                <span class="ml-2 text-zinc-500">(${f.type})</span>
               </li>
             `).join('')}
           </ul>
           
           <div class="mt-6 pt-6 border-t">
             <h3 class="font-semibold mb-2">To Preview Locally:</h3>
-            <pre class="bg-gray-900 text-green-400 p-4 rounded text-sm overflow-x-auto">${project.previewInstructions}</pre>
+            <pre class="bg-zinc-900 text-green-400 p-4 rounded text-sm overflow-x-auto">${project.previewInstructions}</pre>
           </div>
         </div>
       </div>

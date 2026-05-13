@@ -23,7 +23,7 @@ export const getLanguageModel = async (modelId: ModelId) => {
 
   // Add reasoning middleware if the model supports reasoning
   if (model.reasoning && model.owned_by === "xai") {
-    console.log("Wrapping reasoning middleware for", model.id);
+    console.debug("Wrapping reasoning middleware for", model.id);
     return wrapLanguageModel({
       model: languageProvider,
       middleware: extractReasoningMiddleware({ tagName: "think" }),

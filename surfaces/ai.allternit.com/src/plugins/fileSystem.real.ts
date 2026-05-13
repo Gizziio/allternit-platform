@@ -62,30 +62,14 @@ export class RealFileSystem implements FileSystemAPI {
 
   private async detectEnvironment() {
     if (this.tryRequireNodeModules()) {
-      console.log('[RealFileSystem] Using Node.js fs APIs via require');
+      console.debug('[RealFileSystem] Using Node.js fs APIs via require');
       return;
     }
 
-    try {
-      // Avoid literal import(...) tokens so Vite doesn't try to resolve Node builtins in renderer bundles.
-      const dynamicImport = (specifier: string) =>
-        eval(`im${'port'}(${JSON.stringify(specifier)})`);
-
-      const fsModule = await dynamicImport('fs/promises');
-      const pathModule = await dynamicImport('path');
-      const osModule = await dynamicImport('os');
-      const cpModule = await dynamicImport('child_process');
-
-      this.hydrateNodeModules(fsModule, pathModule, osModule, cpModule);
-      if (this.isNode) {
-        console.log('[RealFileSystem] Using Node.js fs APIs via dynamic import');
-        return;
-      }
-    } catch (e) {
-      // Silent fail - Node.js fs not available in browser, using fallback
-      if (process.env.NODE_ENV === 'development') {
-        console.debug('[RealFileSystem] Browser environment detected, using API-backed filesystem');
-      }
+    // In browser bundles, fall back quietly instead of trying to smuggle
+    // Node builtins through eval-based dynamic imports.
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('[RealFileSystem] Browser environment detected, using API-backed filesystem');
     }
 
     this.isNode = false;
@@ -133,7 +117,7 @@ export class RealFileSystem implements FileSystemAPI {
         });
       }
     } catch {
-      console.log(`[RealFileSystem] Cannot read directory: ${dirPath}`);
+      console.debug(`[RealFileSystem] Cannot read directory: ${dirPath}`);
     }
 
     return entries;

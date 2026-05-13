@@ -177,7 +177,7 @@ export function AskUserQuestion({
             {question}
             {required && <span style={{ color: "#ef4444", marginLeft: 4 }}>*</span>}
           </div>
-          <div style={{ fontSize: 11, color: "#7a6b5d", marginTop: 2 }}>
+          <div style={{ fontSize: 12, color: "#7a6b5d", marginTop: 2 }}>
             {type === "text" && "Type your answer"}
             {type === "number" && "Enter a number"}
             {type === "select" && "Select one option"}
@@ -445,7 +445,7 @@ function SelectInput({
               {option.label}
             </div>
             {option.description && (
-              <div style={{ fontSize: 11, color: "#7a6b5d", marginTop: 1 }}>
+              <div style={{ fontSize: 12, color: "#7a6b5d", marginTop: 1 }}>
                 {option.description}
               </div>
             )}
@@ -524,7 +524,7 @@ function MultiSelectInput({
                 {option.label}
               </div>
               {option.description && (
-                <div style={{ fontSize: 11, color: "#7a6b5d", marginTop: 1 }}>
+                <div style={{ fontSize: 12, color: "#7a6b5d", marginTop: 1 }}>
                   {option.description}
                 </div>
               )}
@@ -682,7 +682,7 @@ export function QuestionWizard({
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
           <ChatCircle size={16} style={{ color: accentColor }} />
           <span style={{ fontSize: 13, fontWeight: 700, color: "#f6eee7" }}>{title}</span>
-          <span style={{ fontSize: 11, color: "#7a6b5d", marginLeft: "auto" }}>
+          <span style={{ fontSize: 12, color: "#7a6b5d", marginLeft: "auto" }}>
             Step {currentIndex + 1} of {questions.length}
           </span>
         </div>

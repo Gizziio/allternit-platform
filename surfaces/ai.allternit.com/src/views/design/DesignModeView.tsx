@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { lazy, Suspense, useState, useEffect, useMemo, useCallback } from "react";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -15,31 +15,41 @@ import { NewProjectScreen } from './NewProjectScreen';
 
 // Imports for built features
 import { DesignMdRenderer } from "../../lib/openui/DesignMdRenderer";
-import { VideoEditorView } from "./video/VideoEditorView";
-import { OfficeWorkspace } from "./office/OfficeWorkspace";
 import { StudioOnboardingWizard } from "./StudioOnboardingWizard";
 import { DesignTeamWorkspace } from "./DesignTeamWorkspace";
 import { DesignSystemView } from "./DesignSystemView";
 import { DesignHandoffView } from "./DesignHandoffView";
-import { MobilePreviewView } from "./mobile/MobilePreviewView";
-import { DesignRegistryView } from "./DesignRegistryView";
 import type { DesignSystem } from "../../lib/design/design-registry";
-import { BrandKitEditor } from "./office/BrandKitEditor";
 import { DesignImportModal } from "./DesignImportModal";
-import { ContentSkillGraphView } from "./graph/ContentSkillGraphView";
-import { ContentPipelineView } from "./ContentPipelineView";
 import { StudioMessageRenderer } from "../../components/design/StudioMessageRenderer";
 import { composeStudioSystemPrompt } from "../../lib/design/studio-system-prompt";
-import { DesignTldrawCanvas } from "./DesignTldrawCanvas";
-import { LiveArtifactEditor } from "./LiveArtifactEditor";
-import { OrbitView } from "./OrbitView";
 import { ErrorBoundary } from "../../components/design/ErrorBoundary";
+
+const VideoEditorView = lazy(() => import("./video/VideoEditorView").then((m) => ({ default: m.VideoEditorView })));
+const OfficeWorkspace = lazy(() => import("./office/OfficeWorkspace").then((m) => ({ default: m.OfficeWorkspace })));
+const MobilePreviewView = lazy(() => import("./mobile/MobilePreviewView").then((m) => ({ default: m.MobilePreviewView })));
+const DesignRegistryView = lazy(() => import("./DesignRegistryView").then((m) => ({ default: m.DesignRegistryView })));
+const BrandKitEditor = lazy(() => import("./office/BrandKitEditor").then((m) => ({ default: m.BrandKitEditor })));
+const ContentSkillGraphView = lazy(() => import("./graph/ContentSkillGraphView").then((m) => ({ default: m.ContentSkillGraphView })));
+const ContentPipelineView = lazy(() => import("./ContentPipelineView").then((m) => ({ default: m.ContentPipelineView })));
+const DesignTldrawCanvas = lazy(() => import("./DesignTldrawCanvas").then((m) => ({ default: m.DesignTldrawCanvas })));
+const LiveArtifactEditor = lazy(() => import("./LiveArtifactEditor").then((m) => ({ default: m.LiveArtifactEditor })));
+const OrbitView = lazy(() => import("./OrbitView").then((m) => ({ default: m.OrbitView })));
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-type ProjectType = 'prototype' | 'slides' | 'content-engine' | 'template' | 'other';
+type ProjectType =
+  | 'prototype'
+  | 'slides'
+  | 'mobile'
+  | 'brand'
+  | 'dashboard'
+  | 'content-engine'
+  | 'template'
+  | 'other';
 type CanvasTab = 'system' | 'files' | 'questions' | 'sketch' | 'mobile' | 'video' | 'docs' | 'handoff' | 'graph' | 'pipeline' | 'team' | 'market' | 'brand' | 'live' | 'orbit';
 type Specialist = 'architect' | 'growth' | 'purist' | 'creative';
+type OfficeDocType = 'slides' | 'spreadsheet' | 'document';
 
 interface Project {
   id: string;
@@ -55,6 +65,17 @@ interface DesignModeViewProps {
   initialTab?: CanvasTab;
   initialDesignMd?: string;
   initialStream?: string;
+}
+
+function getOfficeDocTypeForProject(type: ProjectType): OfficeDocType {
+  switch (type) {
+    case 'slides':
+      return 'slides';
+    case 'dashboard':
+      return 'spreadsheet';
+    default:
+      return 'document';
+  }
 }
 
 function buildDirectProject(initialTab: CanvasTab): Project {
@@ -240,6 +261,14 @@ function StudioOnboarding({ onComplete }: { onComplete: () => void }) {
   );
 }
 
+function TabLoadingState({ label = "Loading workspace…" }: { label?: string }) {
+  return (
+    <div style={{ height: "100%", width: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-primary)", color: "var(--text-secondary)", fontSize: 13, fontWeight: 600 }}>
+      {label}
+    </div>
+  );
+}
+
 // ─── Main Studio Component ───────────────────────────────────────────────────
 
 export default function DesignModeView({ initialTab, initialDesignMd, initialStream }: DesignModeViewProps) {
@@ -274,7 +303,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
 
   const { createSession, sendMessageStream, loadSessions } = useDesignSessionActions();
   const activeSessionId = useDesignSessionStore(s => s.activeSessionId);
-  const activeSession = useDesignSessionStore(s => s.sessions.find(x => x.id === activeSessionId));
+  const activeSession = useDesignSessionStore((s) => (s.sessions ?? []).find((x) => x.id === activeSessionId));
   const backendMessages = activeSession?.messages || [];
   const isStreaming = useDesignSessionStore(s => s.streamingBySession[activeSessionId || '']?.isStreaming);
 
@@ -427,7 +456,9 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
                   {/* Full-bleed tabs — no padding wrapper */}
                   {activeTab === 'sketch' && (
                     <div style={{ flex: 1, height: '100%', overflow: 'hidden' }}>
-                      <DesignTldrawCanvas projectName={activeProject?.name} />
+                      <Suspense fallback={<TabLoadingState label="Loading canvas…" />}>
+                        <DesignTldrawCanvas projectName={activeProject?.name} />
+                      </Suspense>
                     </div>
                   )}
                   {activeTab === 'system' && (
@@ -442,51 +473,72 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
                   )}
                   {activeTab === 'mobile' && (
                     <div style={{ flex: 1, height: '100%', overflow: 'hidden' }}>
-                      <MobilePreviewView projectName={activeProject.name} />
+                      <Suspense fallback={<TabLoadingState label="Loading mobile preview…" />}>
+                        <MobilePreviewView projectName={activeProject.name} />
+                      </Suspense>
                     </div>
                   )}
                   {activeTab === 'video' && (
                     <div style={{ flex: 1, height: '100%', overflow: 'hidden' }}>
-                      <VideoEditorView />
+                      <Suspense fallback={<TabLoadingState label="Loading video editor…" />}>
+                        <VideoEditorView />
+                      </Suspense>
                     </div>
                   )}
                   {activeTab === 'docs' && (
                     <div style={{ flex: 1, height: '100%', overflow: 'hidden' }}>
-                      <OfficeWorkspace projectName={activeProject.name} />
+                      <Suspense fallback={<TabLoadingState label="Loading documents…" />}>
+                        <OfficeWorkspace
+                          projectName={activeProject.name}
+                          initialDocType={getOfficeDocTypeForProject(activeProject.type)}
+                        />
+                      </Suspense>
                     </div>
                   )}
                   {activeTab === 'market' && (
                     <div style={{ flex: 1, height: '100%', overflowY: 'auto' }}>
-                      <DesignRegistryView onInstall={handleInstallDesign} installedId={installedDesignId ?? undefined} />
+                      <Suspense fallback={<TabLoadingState label="Loading marketplace…" />}>
+                        <DesignRegistryView onInstall={handleInstallDesign} installedId={installedDesignId ?? undefined} />
+                      </Suspense>
                     </div>
                   )}
                   {activeTab === 'brand' && (
                     <div style={{ flex: 1, height: '100%', overflowY: 'auto' }}>
-                      <BrandKitEditor projectName={activeProject.name} />
+                      <Suspense fallback={<TabLoadingState label="Loading brand kit…" />}>
+                        <BrandKitEditor projectName={activeProject.name} />
+                      </Suspense>
                     </div>
                   )}
                   {activeTab === 'graph' && (
                     <div style={{ flex: 1, height: '100%', overflow: 'hidden' }}>
-                      <ContentSkillGraphView />
+                      <Suspense fallback={<TabLoadingState label="Loading skill graph…" />}>
+                        <ContentSkillGraphView />
+                      </Suspense>
                     </div>
                   )}
                   {activeTab === 'pipeline' && (
                     <div style={{ flex: 1, height: '100%', overflow: 'hidden' }}>
-                      <ContentPipelineView projectName={activeProject?.name} />
+                      <Suspense fallback={<TabLoadingState label="Loading pipeline…" />}>
+                        <ContentPipelineView projectName={activeProject?.name} />
+                      </Suspense>
                     </div>
                   )}
                   {activeTab === 'live' && (
                     <div style={{ flex: 1, height: '100%', overflow: 'hidden' }}>
-                      <LiveArtifactEditor />
+                      <Suspense fallback={<TabLoadingState label="Loading live editor…" />}>
+                        <LiveArtifactEditor />
+                      </Suspense>
                     </div>
                   )}
                   {activeTab === 'orbit' && (
                     <div style={{ flex: 1, height: '100%', overflowY: 'auto' }}>
-                      <OrbitView
-                        projectName={activeProject?.name}
-                        sessionSendMessage={activeSessionId ? (text) => sendMessageStream(activeSessionId, { text }) : undefined}
-                        messages={backendMessages}
-                      />
+                      <Suspense fallback={<TabLoadingState label="Loading orbit…" />}>
+                        <OrbitView
+                          projectName={activeProject?.name}
+                          sessionSendMessage={activeSessionId ? (text) => sendMessageStream(activeSessionId, { text }) : undefined}
+                          messages={backendMessages}
+                        />
+                      </Suspense>
                     </div>
                   )}
                   </ErrorBoundary>
@@ -576,7 +628,7 @@ export default function DesignModeView({ initialTab, initialDesignMd, initialStr
             </div>
             <div style={{ padding: "24px" }}>
               <div style={{ background: "var(--surface-panel)", border: "1px solid var(--border-default)", borderRadius: "16px", padding: "8px" }}>
-                <textarea value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Message studio agent..." style={{ width: "100%", border: "none", outline: "none", resize: "none", fontSize: "13px", minHeight: "60px", fontFamily: "inherit", background: "transparent", color: "var(--text-primary)" }} />
+                <textarea value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Message studio agent…" style={{ width: "100%", border: "none", outline: "none", resize: "none", fontSize: "13px", minHeight: "60px", fontFamily: "inherit", background: "transparent", color: "var(--text-primary)" }} />
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <button style={{ background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer" }}><Paperclip size={18} /></button>
                   <button onClick={() => { if (chatInput.trim() && activeSessionId) { sendMessageStream(activeSessionId, { text: chatInput }); setChatInput(''); } }} style={{ padding: "8px 20px", borderRadius: "10px", background: "var(--text-primary)", color: "var(--bg-primary)", fontWeight: 700, border: "none", fontSize: "12px", cursor: "pointer" }}>Send</button>

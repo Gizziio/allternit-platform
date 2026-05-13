@@ -155,7 +155,7 @@ const QuestionCard = memo(function QuestionCard({ request }: QuestionCardProps) 
           disabled={busy}
           title="Skip question"
         >
-          <X className="w-3.5 h-3.5" />
+          <X className="size-3.5 " />
         </button>
       </div>
 

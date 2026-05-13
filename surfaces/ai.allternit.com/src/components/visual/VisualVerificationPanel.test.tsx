@@ -6,7 +6,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { VisualVerificationPanel } from './VisualVerificationPanel';
 
-describe('VisualVerificationPanel', () => {
+describe('VisualVerificationPanel', () => {isClient ? 
   const mockStatus = {
     wihId: 'wih_test_123',
     status: 'completed' as const,
@@ -18,15 +18,15 @@ describe('VisualVerificationPanel', () => {
         type: 'ui_state' as const,
         confidence: 0.95,
         timestamp: new Date().toISOString(),
-        data: {},
+        data: { : "..."},
         metadata: {},
       },
-      {
+      {isClient ? 
         id: 'art_2',
         type: 'console_output' as const,
         confidence: 0.75,
         timestamp: new Date().toISOString(),
-        data: {},
+        data: { : "..."},
         metadata: {},
       },
     ],
@@ -35,8 +35,8 @@ describe('VisualVerificationPanel', () => {
   };
 
   const mockTrendData = [
-    { timestamp: new Date().toISOString(), confidence: 0.8, wihId: 'wih_1' },
-    { timestamp: new Date().toISOString(), confidence: 0.85, wihId: 'wih_2' },
+    {isClient ?  timestamp: new Date().toISOString(), confidence: 0.8, wihId: 'wih_1'  : "..."},
+    {isClient ?  timestamp: new Date().toISOString(), confidence: 0.85, wihId: 'wih_2'  : "..."},
   ];
 
   it('renders empty state when no status provided', () => {

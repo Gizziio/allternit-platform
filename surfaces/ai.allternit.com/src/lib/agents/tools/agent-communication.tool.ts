@@ -208,7 +208,7 @@ export const useAgentCommunicationStore = create<AgentCommunicationState & Agent
       }
       
       // In production, would broadcast via WebSocket or event bus
-      console.log("[AgentCommunication] Message sent:", message);
+      console.debug("[AgentCommunication] Message sent:", message);
       
       return message;
     },

@@ -16,7 +16,7 @@ import { useReplay } from '@/hooks/useReplay';
 import { StatCard } from '../components/StatCard';
 import { StatusBadge } from '../components/StatusBadge';
 
-export function ReplayManagerView() {
+export function ReplayManagerView(): JSX.Element {
   const { manifests, isLoading, error, refetch, replayExecution } = useReplay();
   const [searchQuery, setSearchQuery] = useState('');
   const [captureFilter, setCaptureFilter] = useState<'all' | 'minimal' | 'full'>('all');
@@ -51,7 +51,7 @@ export function ReplayManagerView() {
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <ArrowsClockwise className="h-8 w-8 animate-spin text-accent" />
+        <ArrowsClockwise className="size-8  animate-spin text-accent" />
       </div>
     );
   }
@@ -59,7 +59,7 @@ export function ReplayManagerView() {
   if (error) {
     return (
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
-        <Warning className="mb-4 h-12 w-12 text-red-500" />
+        <Warning className="mb-4 size-12  text-red-500" />
         <p className="mb-4">Failed to load replay sessions</p>
         <button
           onClick={() => void refetch()}
@@ -78,8 +78,8 @@ export function ReplayManagerView() {
         <GlassSurface intensity="thick" className="rounded-3xl p-6">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
-                <Planet className="h-3.5 w-3.5 text-sky-300" />
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[12px] uppercase tracking-[0.24em] text-muted-foreground">
+                <Planet className="size-3.5  text-sky-300" />
                 Deterministic Runtime
               </div>
               <h2 className="text-3xl font-semibold tracking-tight text-foreground">Replay Manager</h2>
@@ -90,10 +90,10 @@ export function ReplayManagerView() {
 
             <div className="flex w-full max-w-xl flex-col gap-3 sm:flex-row">
               <div className="relative flex-1">
-                <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 size-4  -tranzinc-y-1/2 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder="Search by run ID..."
+                  placeholder="Search by run ID…"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full rounded-2xl border border-white/10 bg-black/20 py-3 pl-10 pr-4 text-sm text-foreground outline-none transition focus:border-accent/50 focus:bg-black/30"
@@ -151,15 +151,15 @@ export function ReplayManagerView() {
 
                   <div className="mt-4 grid grid-cols-1 gap-3 text-sm text-muted-foreground sm:grid-cols-3">
                     <div className="rounded-2xl border border-white/5 bg-black/10 px-4 py-3">
-                      <div className="text-[11px] uppercase tracking-[0.18em]">Outputs</div>
+                      <div className="text-[12px] uppercase tracking-[0.18em]">Outputs</div>
                       <div className="mt-1 text-lg font-medium text-foreground">{manifest.output_count}</div>
                     </div>
                     <div className="rounded-2xl border border-white/5 bg-black/10 px-4 py-3">
-                      <div className="text-[11px] uppercase tracking-[0.18em]">Timestamps</div>
+                      <div className="text-[12px] uppercase tracking-[0.18em]">Timestamps</div>
                       <div className="mt-1 text-lg font-medium text-foreground">{manifest.timestamp_count}</div>
                     </div>
                     <div className="rounded-2xl border border-white/5 bg-black/10 px-4 py-3">
-                      <div className="text-[11px] uppercase tracking-[0.18em]">Readiness</div>
+                      <div className="text-[12px] uppercase tracking-[0.18em]">Readiness</div>
                       <div className="mt-1 text-lg font-medium text-foreground">
                         {manifest.capture_level === 'none' ? 'Metadata Only' : 'Replayable'}
                       </div>
@@ -174,7 +174,7 @@ export function ReplayManagerView() {
                     className="inline-flex items-center gap-2 rounded-2xl border border-sky-300/20 bg-sky-300/10 px-4 py-3 text-sm font-medium text-sky-100 transition hover:bg-sky-300/20 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {replaying === manifest.run_id ? (
-                      <ArrowsClockwise className="h-4 w-4 animate-spin" />
+                      <ArrowsClockwise className="size-4  animate-spin" />
                     ) : (
                       <Play size={16} />
                     )}
@@ -188,7 +188,7 @@ export function ReplayManagerView() {
 
         {filteredManifests.length === 0 && (
           <GlassSurface intensity="thin" className="rounded-3xl p-10 text-center">
-            <ClockCounterClockwise className="mx-auto h-12 w-12 text-muted-foreground/50" />
+            <ClockCounterClockwise className="mx-auto size-12  text-muted-foreground/50" />
             <h3 className="mt-4 text-lg font-medium text-foreground">No replay sessions found</h3>
             <p className="mt-2 text-sm text-muted-foreground">
               {searchQuery || captureFilter !== 'all'

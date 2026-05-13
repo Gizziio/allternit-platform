@@ -81,7 +81,7 @@ export function H5iContextPanel({ workspacePath, sessionId, onClose }: H5iContex
           <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)' }}>
             Session Context Trace
           </span>
-          <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
             {sessionId.slice(0, 8)}...
           </span>
         </div>
@@ -135,10 +135,10 @@ export function H5iContextPanel({ workspacePath, sessionId, onClose }: H5iContex
                 <div style={{ color: config.color, flexShrink: 0, marginTop: 2 }}>{config.icon}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: config.color, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: config.color, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       {entry.type}
                     </span>
-                    <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>{entry.timestamp}</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{entry.timestamp}</span>
                   </div>
                   <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                     {entry.content}

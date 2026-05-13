@@ -32,7 +32,7 @@ export class ResearchErrorBoundary extends React.Component<Props, State> {
       if (this.props.fallback) return this.props.fallback;
       return (
         <div className="research-empty-state">
-          <div className="w-14 h-14 rounded-2xl bg-red-500/10 flex items-center justify-center">
+          <div className="size-14  rounded-2xl bg-red-500/10 flex items-center justify-center">
             <AlertCircle size={28} className="text-red-400" />
           </div>
           <div>

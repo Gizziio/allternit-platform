@@ -245,7 +245,7 @@ function AttachmentCard({ item, onRemove, onPreview, variant }: AttachmentCardPr
             </div>
             <span
               style={{
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: 700,
                 color: `${color}CC`,
                 letterSpacing: '0.05em',
@@ -353,7 +353,7 @@ function AttachmentCard({ item, onRemove, onPreview, variant }: AttachmentCardPr
             padding: '2px 6px',
             borderRadius: 4,
             background: color,
-            fontSize: 9,
+            fontSize: 12,
             fontWeight: 700,
             color: 'var(--ui-text-inverse)',
             textTransform: 'uppercase',
@@ -381,7 +381,7 @@ function AttachmentCard({ item, onRemove, onPreview, variant }: AttachmentCardPr
           {item.name}
         </p>
         {size && (
-          <p style={{ margin: 0, fontSize: 10, color: 'rgba(245,240,232,0.4)' }}>
+          <p style={{ margin: 0, fontSize: 12, color: 'rgba(245,240,232,0.4)' }}>
             {size}
           </p>
         )}
@@ -460,7 +460,7 @@ function CompactCard({ item, isImage, color, Icon, size, onRemove, imageError, s
       </span>
 
       {size && (
-        <span style={{ fontSize: 10, color: 'rgba(245,240,232,0.4)', flexShrink: 0 }}>
+        <span style={{ fontSize: 12, color: 'rgba(245,240,232,0.4)', flexShrink: 0 }}>
           {size}
         </span>
       )}
@@ -649,7 +649,7 @@ export function AttachmentPreviewModal({ item, isOpen, onClose }: AttachmentPrev
                 overflow: 'auto',
               }}
             >
-              <code>{item.extractedText.slice(0, 5000)}{item.extractedText.length > 5000 ? '\n\n... (truncated)' : ''}</code>
+              <code>{item.extractedText.slice(0, 5000)}{item.extractedText.length > 5000 ? '\n\n… (truncated)' : ''}</code>
             </pre>
           ) : item.extractedText ? (
             <div

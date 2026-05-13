@@ -178,7 +178,7 @@ export class PlatformMeshService {
         connected: status.peers.length > 0,
         meshIp: peerConfig.meshIp,
         latency,
-        peers: status.peers.map((p) => p.publicKey.slice(0, 16) + '...'),
+        peers: status.peers.map((p) => p.publicKey.slice(0, 16) + '…'),
       };
     } catch {
       return { connected: false };

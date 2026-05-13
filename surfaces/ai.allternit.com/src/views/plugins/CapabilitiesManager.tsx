@@ -18,6 +18,7 @@
  * - Error boundaries and toast notifications
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import JSZip from 'jszip';
 import {
@@ -2272,7 +2273,7 @@ function LeftPane({
 
       <div
         style={{
-          fontSize: 10,
+          fontSize: 12,
           fontWeight: 600,
           color: THEME.textTertiary,
           textTransform: 'uppercase',
@@ -2335,7 +2336,7 @@ function LeftPane({
           marginTop: 10,
         }}
       >
-        <div style={{ fontSize: 11, color: THEME.textTertiary, lineHeight: 1.4, marginBottom: 8 }}>
+        <div style={{ fontSize: 12, color: THEME.textTertiary, lineHeight: 1.4, marginBottom: 8 }}>
           Discover installable capabilities and manage your active toolset.
         </div>
         <button
@@ -2383,7 +2384,7 @@ function LeftPane({
                   padding: '2px 6px',
                   backgroundColor: THEME.accent,
                   borderRadius: 10,
-                  fontSize: 10,
+                  fontSize: 12,
                   color: 'var(--surface-canvas)',
                   marginLeft: 4,
                 }}
@@ -2540,7 +2541,7 @@ function MiddlePane({
           <input
             ref={searchInputRef}
             type="text"
-            placeholder="Search..."
+            placeholder="Search…"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             style={{
@@ -2710,7 +2711,7 @@ function MiddlePane({
             {group.label && (
               <div
                 style={{
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: 600,
                   color: THEME.textTertiary,
                   textTransform: 'uppercase',
@@ -2785,7 +2786,7 @@ function MiddlePane({
                           padding: '2px 6px',
                           borderRadius: 999,
                           border: `1px solid ${THEME.borderStrong}`,
-                          fontSize: 9,
+                          fontSize: 12,
                           letterSpacing: '0.05em',
                           color: THEME.textSecondary,
                           textTransform: 'uppercase',
@@ -2878,7 +2879,7 @@ function MiddlePane({
             }}
           >
             <CircleNotch size={24} style={{ animation: 'spin 1s linear infinite', marginBottom: 8 }} />
-            <div style={{ fontSize: 13 }}>Scanning...</div>
+            <div style={{ fontSize: 13 }}>Scanning…</div>
           </div>
         )}
       </div>
@@ -3645,7 +3646,7 @@ function ConnectorContent({
               borderRadius: 999,
               border: `1px solid ${THEME.borderStrong}`,
               color: THEME.textSecondary,
-              fontSize: 10,
+              fontSize: 12,
               letterSpacing: '0.05em',
               textTransform: 'uppercase',
             }}
@@ -3717,7 +3718,7 @@ function ConnectorContent({
               style={{
                 padding: '4px 10px',
                 borderRadius: 999,
-                fontSize: 11,
+                fontSize: 12,
                 color: THEME.success,
                 backgroundColor: 'color-mix(in srgb, var(--status-success) 12%, transparent)',
                 border: '1px solid color-mix(in srgb, var(--status-success) 32%, transparent)',

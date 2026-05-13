@@ -4,7 +4,7 @@ export async function connectMCP(serverId: string) {
   execEvents.emit('onLog', {
     runId: 'system',
     level: 'INFO',
-    message: 'Connecting to MCP server: ' + serverId + '...',
+    message: 'Connecting to MCP server: ' + serverId + '…',
     timestamp: Date.now()
   });
 

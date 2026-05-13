@@ -93,7 +93,7 @@ export function registerClaudeDesktopCommands(): void {
         description: command.description,
         handler: async () => {
           // In a real implementation, this would load and execute the command
-          console.log(`[Claude Desktop] Executing ${command.trigger}`);
+          console.debug(`[Claude Desktop] Executing ${command.trigger}`);
           // TODO: Load command markdown and execute
         },
       });
@@ -274,7 +274,7 @@ export function initializeVendorPlugins(): void {
   
   registerClaudeDesktopCommands();
   
-  console.log(`[Vendor Plugins] Initialized with ${commandRegistry.size} commands from ${ALL_CLAUDE_DESKTOP_PLUGINS.length} Claude Desktop plugins`);
+  console.debug(`[Vendor Plugins] Initialized with ${commandRegistry.size} commands from ${ALL_CLAUDE_DESKTOP_PLUGINS.length} Claude Desktop plugins`);
   
   isInitialized = true;
 }

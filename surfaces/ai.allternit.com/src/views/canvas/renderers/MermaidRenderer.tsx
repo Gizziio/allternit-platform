@@ -190,7 +190,7 @@ export function MermaidRenderer({
       {/* Toolbar */}
       <div className="h-12 border-b border-[var(--border-subtle)] flex items-center justify-between px-4 bg-[var(--bg-secondary)]">
         <div className="flex items-center gap-3">
-          <svg className="w-4 h-4 text-[var(--accent-primary)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg className="size-4  text-[var(--accent-primary)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M12 2L2 7l10 5 10-5-10-5z" />
             <path d="M2 17l10 5 10-5" />
             <path d="M2 12l10 5 10-5" />
@@ -257,8 +257,8 @@ export function MermaidRenderer({
           /* Loading state */
           <div className="h-full flex items-center justify-center">
             <div className="text-center text-[var(--text-tertiary)]">
-              <ArrowsClockwise className="w-8 h-8 animate-spin mx-auto mb-2" />
-              <p className="text-sm">Rendering diagram...</p>
+              <ArrowsClockwise className="size-8  animate-spin mx-auto mb-2" />
+              <p className="text-sm">Rendering diagram…</p>
             </div>
           </div>
         ) : renderError ? (
@@ -272,7 +272,7 @@ export function MermaidRenderer({
                 onClick={() => setShowSource(true)}
                 className="text-[var(--accent-primary)]"
               >
-                <Code className="w-4 h-4 mr-2" />
+                <Code className="size-4  mr-2" />
                 View Source
               </Button>
             </div>

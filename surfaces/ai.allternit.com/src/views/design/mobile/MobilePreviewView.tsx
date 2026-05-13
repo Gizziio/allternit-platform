@@ -106,7 +106,7 @@ function DeviceFrame({ device, children, scale }: { device: DeviceSpec; children
           position: 'relative',
         }}>
           {/* Time */}
-          <span style={{ fontSize: 11, fontWeight: 700, color: statusBarColor, letterSpacing: '-0.01em' }}>9:41</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: statusBarColor, letterSpacing: '-0.01em' }}>9:41</span>
 
           {/* Dynamic Island */}
           {device.notch === 'dynamic-island' && (
@@ -203,7 +203,7 @@ function PreviewContent({ url, projectName }: { url: string; projectName: string
 
       {/* Hero card */}
       <div style={{ borderRadius: 16, background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', padding: '20px 18px', marginBottom: 14, color: '#fff' }}>
-        <div style={{ fontSize: 11, fontWeight: 600, opacity: 0.8, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Overview</div>
+        <div style={{ fontSize: 12, fontWeight: 600, opacity: 0.8, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Overview</div>
         <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', marginBottom: 4 }}>Welcome back</div>
         <div style={{ fontSize: 12, opacity: 0.75 }}>Your project is ready to preview.</div>
       </div>
@@ -212,7 +212,7 @@ function PreviewContent({ url, projectName }: { url: string; projectName: string
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
         {[['Screens', '12'], ['Components', '48']].map(([label, val]) => (
           <div key={label} style={{ borderRadius: 12, background: '#f5f5f7', padding: '14px 14px' }}>
-            <div style={{ fontSize: 10, color: '#888', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>{label}</div>
+            <div style={{ fontSize: 12, color: '#888', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>{label}</div>
             <div style={{ fontSize: 22, fontWeight: 800, color: '#111' }}>{val}</div>
           </div>
         ))}
@@ -257,14 +257,14 @@ export function MobilePreviewView({ projectName = 'My App' }: { projectName?: st
         <div style={{ display: 'flex', padding: '10px 10px 0', gap: 4, flexShrink: 0 }}>
           {(['preview', 'snack'] as const).map(m => (
             <button key={m} onClick={() => setMode(m)}
-              style={{ flex: 1, padding: '6px 0', borderRadius: 7, border: `1px solid ${mode === m ? 'var(--accent-primary)' : 'var(--border-subtle)'}`, background: mode === m ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'transparent', color: mode === m ? 'var(--accent-primary)' : 'var(--text-tertiary)', fontSize: 10, fontWeight: 700, cursor: 'pointer', textTransform: 'capitalize' }}>
+              style={{ flex: 1, padding: '6px 0', borderRadius: 7, border: `1px solid ${mode === m ? 'var(--accent-primary)' : 'var(--border-subtle)'}`, background: mode === m ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'transparent', color: mode === m ? 'var(--accent-primary)' : 'var(--text-tertiary)', fontSize: 12, fontWeight: 700, cursor: 'pointer', textTransform: 'capitalize' }}>
               {m === 'snack' ? 'Expo IDE' : 'Preview'}
             </button>
           ))}
         </div>
 
         <div style={{ padding: '12px 12px 8px', borderBottom: '1px solid var(--border-subtle)', marginTop: 8 }}>
-          <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-tertiary)', marginBottom: 8 }}>Device</div>
+          <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-tertiary)', marginBottom: 8 }}>Device</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             {DEVICES.map(d => {
               const active = d.id === activeDeviceId;
@@ -272,7 +272,7 @@ export function MobilePreviewView({ projectName = 'My App' }: { projectName?: st
                 <button key={d.id} onClick={() => setActiveDeviceId(d.id)}
                   style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', borderRadius: 8, border: `1px solid ${active ? 'var(--accent-primary)' : 'transparent'}`, background: active ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'transparent', cursor: 'pointer', textAlign: 'left' }}>
                   {d.brand === 'tablet' ? <DeviceTablet size={13} color={active ? 'var(--accent-primary)' : 'var(--text-tertiary)'} /> : <DeviceMobile size={13} color={active ? 'var(--accent-primary)' : 'var(--text-tertiary)'} />}
-                  <span style={{ fontSize: 11, fontWeight: active ? 700 : 400, color: active ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>{d.label}</span>
+                  <span style={{ fontSize: 12, fontWeight: active ? 700 : 400, color: active ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>{d.label}</span>
                 </button>
               );
             })}
@@ -281,11 +281,11 @@ export function MobilePreviewView({ projectName = 'My App' }: { projectName?: st
 
         {/* Scale */}
         <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
-          <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-tertiary)', marginBottom: 8 }}>Scale</div>
+          <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-tertiary)', marginBottom: 8 }}>Scale</div>
           <div style={{ display: 'flex', gap: 4 }}>
             {[0.7, 0.85, 1.0].map(s => (
               <button key={s} onClick={() => setScale(s)}
-                style={{ flex: 1, padding: '5px 0', borderRadius: 6, border: `1px solid ${scale === s ? 'var(--accent-primary)' : 'var(--border-subtle)'}`, background: scale === s ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'transparent', color: scale === s ? 'var(--accent-primary)' : 'var(--text-tertiary)', fontSize: 10, fontWeight: 700, cursor: 'pointer' }}>
+                style={{ flex: 1, padding: '5px 0', borderRadius: 6, border: `1px solid ${scale === s ? 'var(--accent-primary)' : 'var(--border-subtle)'}`, background: scale === s ? 'color-mix(in srgb, var(--accent-primary) 10%, transparent)' : 'transparent', color: scale === s ? 'var(--accent-primary)' : 'var(--text-tertiary)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
                 {Math.round(s * 100)}%
               </button>
             ))}
@@ -294,22 +294,22 @@ export function MobilePreviewView({ projectName = 'My App' }: { projectName?: st
 
         {/* URL input */}
         <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--border-subtle)' }}>
-          <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-tertiary)', marginBottom: 8 }}>Preview URL</div>
+          <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-tertiary)', marginBottom: 8 }}>Preview URL</div>
           <input
             value={inputUrl}
             onChange={e => setInputUrl(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && loadUrl()}
             placeholder="localhost:3000"
-            style={{ width: '100%', boxSizing: 'border-box', padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border-default)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 11, outline: 'none', marginBottom: 6 }}
+            style={{ width: '100%', boxSizing: 'border-box', padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border-default)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 12, outline: 'none', marginBottom: 6 }}
           />
           <div style={{ display: 'flex', gap: 4 }}>
             <button onClick={loadUrl}
-              style={{ flex: 1, padding: '5px 0', borderRadius: 6, border: 'none', background: 'var(--accent-primary)', color: '#fff', fontSize: 10, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+              style={{ flex: 1, padding: '5px 0', borderRadius: 6, border: 'none', background: 'var(--accent-primary)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
               <Globe size={10} /> Load
             </button>
             {url && (
               <button onClick={() => { setUrl(''); setInputUrl(''); }}
-                style={{ padding: '5px 8px', borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'transparent', color: 'var(--text-tertiary)', fontSize: 10, cursor: 'pointer' }}>
+                style={{ padding: '5px 8px', borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'transparent', color: 'var(--text-tertiary)', fontSize: 12, cursor: 'pointer' }}>
                 <ArrowCounterClockwise size={10} />
               </button>
             )}
@@ -318,8 +318,8 @@ export function MobilePreviewView({ projectName = 'My App' }: { projectName?: st
 
         {/* Dimensions info */}
         <div style={{ padding: '10px 12px', marginTop: 'auto' }}>
-          <div style={{ fontSize: 9, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-tertiary)', marginBottom: 6 }}>Screen</div>
-          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{device.screenW}×{device.screenH}px</div>
+          <div style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-tertiary)', marginBottom: 6 }}>Screen</div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{device.screenW}×{device.screenH}px</div>
         </div>
       </div>
 
@@ -334,12 +334,12 @@ export function MobilePreviewView({ projectName = 'My App' }: { projectName?: st
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--border-subtle)', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-primary)' }}>Expo Snack — React Native IDE</div>
-            <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>Write React Native code and preview on iOS, Android, or Web</div>
+            <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Write React Native code and preview on iOS, Android, or Web</div>
             <a
               href="https://snack.expo.dev"
               target="_blank"
               rel="noopener noreferrer"
-              style={{ marginLeft: 'auto', padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 10, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}
+              style={{ marginLeft: 'auto', padding: '4px 10px', borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'transparent', color: 'var(--text-secondary)', fontSize: 12, fontWeight: 600, cursor: 'pointer', textDecoration: 'none' }}
             >
               Open full screen ↗
             </a>

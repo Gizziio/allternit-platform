@@ -83,7 +83,7 @@ class AssetsPlugin implements ModePlugin {
     
     this.isInitialized = true;
     this.emit({ type: 'initialized', timestamp: Date.now() });
-    console.log('[AssetsPlugin] Initialized');
+    console.debug('[AssetsPlugin] Initialized');
   }
 
   async destroy(): Promise<void> {

@@ -91,8 +91,8 @@ function CoworkPluginsView({
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 'auto' }}>
-                {plugin.author && <span style={{ fontSize: 11, color: THEME.textTertiary }}>by {plugin.author}</span>}
-                <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--status-info)', backgroundColor: 'var(--status-info-bg)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>cowork</span>
+                {plugin.author && <span style={{ fontSize: 12, color: THEME.textTertiary }}>by {plugin.author}</span>}
+                <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--status-info)', backgroundColor: 'var(--status-info-bg)', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>cowork</span>
               </div>
 
               <div style={{ display: 'flex', gap: 8 }}>
@@ -237,7 +237,7 @@ export function BrowsePluginsOverlay({
             {t === 'cowork' && <UsersThree size={16} weight="bold" color={activeTab === t ? 'var(--status-info)' : THEME.textSecondary} />}
             {t}
             {t === 'cowork' && (
-              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 16, borderRadius: 9999, backgroundColor: 'var(--status-info)', color: 'var(--ui-text-inverse)', fontSize: 10, fontWeight: 600, padding: '0 6px' }}>NEW</span>
+              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 16, borderRadius: 9999, backgroundColor: 'var(--status-info)', color: 'var(--ui-text-inverse)', fontSize: 12, fontWeight: 600, padding: '0 6px' }}>NEW</span>
             )}
           </button>
         ))}

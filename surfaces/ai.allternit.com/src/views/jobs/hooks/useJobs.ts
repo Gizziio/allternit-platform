@@ -43,13 +43,13 @@ export function useJobs() {
     wsRef.current = new WebSocket(wsUrl);
 
     wsRef.current.onopen = () => {
-      console.log('Job events WebSocket connected');
+      console.debug('Job events WebSocket connected');
     };
 
     wsRef.current.onmessage = (event) => {
       try {
         const jobEvent: JobEvent = JSON.parse(event.data);
-        console.log('Job event received:', jobEvent);
+        console.debug('Job event received:', jobEvent);
         
         // Refresh jobs list on job events
         if (['job_started', 'job_completed', 'job_failed'].includes(jobEvent.event_type)) {
@@ -65,7 +65,7 @@ export function useJobs() {
     };
 
     wsRef.current.onclose = () => {
-      console.log('Job events WebSocket disconnected');
+      console.debug('Job events WebSocket disconnected');
       // Attempt reconnect after 5 seconds
       setTimeout(() => {
         if (wsRef.current?.readyState === WebSocket.CLOSED) {

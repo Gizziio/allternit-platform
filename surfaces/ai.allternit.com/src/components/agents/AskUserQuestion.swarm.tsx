@@ -217,7 +217,7 @@ function SwarmSuggestionCard({
           marginBottom: 16,
         }}
       >
-        <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', marginBottom: 4 }}>TASK</div>
+        <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', marginBottom: 4 }}>TASK</div>
         <div style={{ fontSize: 14, color: 'var(--ui-text-primary)', lineHeight: 1.5 }}>
           {suggestion.task}
         </div>
@@ -378,7 +378,7 @@ export function SwarmAwareWizard({
             </span>
           </div>
           {swarmTriggers.map((trigger, i) => (
-            <div key={i} style={{ fontSize: 11, color: 'var(--ui-text-secondary)' }}>
+            <div key={i} style={{ fontSize: 12, color: 'var(--ui-text-secondary)' }}>
               Step {trigger.step + 1}: {trigger.mode} mode
             </div>
           ))}

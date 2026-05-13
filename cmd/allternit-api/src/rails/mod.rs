@@ -14,6 +14,7 @@ use axum::{
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::sync::Arc;
 use tracing::{debug, error, info};
 
@@ -149,12 +150,13 @@ impl RailsState {
 
 pub fn rails_router() -> Router<Arc<AppState>> {
     Router::new()
+        .route("/", get(rails_status))
         // Health
         .route("/health", get(health_check))
         // Ledger
         .route("/ledger/events", get(query_ledger))
         // WIHs (compatibility surface used by platform cowork/chat views)
-        .route("/wihs", post(list_wihs))
+        .route("/wihs", get(list_wihs_get).post(list_wihs))
         .route("/wihs/pickup", post(pickup_wih))
         .route("/wihs/:wih_id/context", get(get_wih_context))
         .route("/wihs/:wih_id/sign", post(sign_wih))
@@ -177,6 +179,13 @@ pub fn rails_router() -> Router<Arc<AppState>> {
 // ============================================================================
 // Handlers
 // ============================================================================
+
+async fn rails_status() -> impl IntoResponse {
+    Json(json!({
+        "status": "ok",
+        "service": "rails",
+    }))
+}
 
 async fn health_check(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     let _ = state;
@@ -329,6 +338,15 @@ async fn list_wihs(
 ) -> impl IntoResponse {
     info!(dag_id = ?req.dag_id, ready_only = ?req.ready_only, "Listing WIHs");
 
+    (
+        StatusCode::OK,
+        Json(WihListResponse {
+            wihs: Vec::new(),
+        }),
+    )
+}
+
+async fn list_wihs_get(State(_state): State<Arc<AppState>>) -> impl IntoResponse {
     (
         StatusCode::OK,
         Json(WihListResponse {

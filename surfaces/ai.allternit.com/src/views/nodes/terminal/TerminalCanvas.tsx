@@ -228,7 +228,7 @@ function CanvasTerminal({
             size={14} 
             className="text-zinc-600 cursor-grab active:cursor-grabbing" 
           />
-          <div className={cn("w-2 h-2 rounded-full", isConnected ? "bg-green-500" : "bg-red-500")} />
+          <div className={cn("size-2  rounded-full", isConnected ? "bg-green-500" : "bg-red-500")} />
           <span className="text-xs text-zinc-400 font-mono truncate max-w-[120px]">
             {terminal.title}
           </span>
@@ -237,7 +237,7 @@ function CanvasTerminal({
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 text-zinc-500 hover:text-zinc-300"
+            className="size-6  text-zinc-500 hover:text-zinc-300"
             onClick={() => setShowSearch(!showSearch)}
             title="Search (Ctrl+F)"
           >
@@ -246,7 +246,7 @@ function CanvasTerminal({
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6 text-zinc-500 hover:text-red-400"
+            className="size-6  text-zinc-500 hover:text-red-400"
             onClick={onClose}
             title="Close Terminal"
           >
@@ -260,7 +260,7 @@ function CanvasTerminal({
         <div className="flex items-center gap-2 px-2 py-1.5 bg-zinc-800 border-b border-zinc-700">
           <input
             type="text"
-            placeholder="Search..."
+            placeholder="Search…"
             className="flex-1 bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-300 focus:outline-none focus:border-blue-500"
             onChange={(e) => {
               if (e.target.value) {
@@ -320,7 +320,7 @@ export function TerminalCanvas({
       try {
         const pendingSessions = nodeTerminalService.getPendingRestoredSessions();
         if (pendingSessions.length > 0) {
-          console.log(`[TerminalCanvas] Restoring ${pendingSessions.length} sessions...`);
+          console.debug(`[TerminalCanvas] Restoring ${pendingSessions.length} sessions...`);
           const restoredTerminals: TerminalInstance[] = [];
           let maxNum = 0;
 
@@ -548,10 +548,10 @@ export function TerminalCanvas({
         // Loading State
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <div className="w-16 h-16 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <div className="size-16  rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto mb-4 animate-pulse">
               <SquaresFour size={32} className="text-zinc-600" />
             </div>
-            <p className="text-zinc-400 font-medium mb-2">Restoring sessions...</p>
+            <p className="text-zinc-400 font-medium mb-2">Restoring sessions…</p>
             <p className="text-zinc-600 text-sm">Reconnecting to previous terminals</p>
           </div>
         </div>
@@ -559,7 +559,7 @@ export function TerminalCanvas({
         // Empty State
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <div className="w-16 h-16 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto mb-4">
+            <div className="size-16  rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto mb-4">
               <Plus size={32} className="text-zinc-600" />
             </div>
             <p className="text-zinc-400 font-medium mb-2">No active terminals</p>

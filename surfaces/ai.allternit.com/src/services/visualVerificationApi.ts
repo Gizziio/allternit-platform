@@ -282,7 +282,7 @@ export class VerificationWebSocketClient {
     this.ws = new WebSocket(wsUrl);
 
     this.ws.onopen = () => {
-      console.log('[VerificationWebSocket] Connected');
+      console.debug('[VerificationWebSocket] Connected');
       this.reconnectAttempts = 0;
       this.emit('connected', { wihId });
     };
@@ -297,7 +297,7 @@ export class VerificationWebSocketClient {
     };
 
     this.ws.onclose = () => {
-      console.log('[VerificationWebSocket] Disconnected');
+      console.debug('[VerificationWebSocket] Disconnected');
       this.emit('disconnected', {});
       this.attemptReconnect();
     };
@@ -360,7 +360,7 @@ export class VerificationWebSocketClient {
     
     setTimeout(() => {
       if (this.wihId) {
-        console.log(`[VerificationWebSocket] Reconnecting (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
+        console.debug(`[VerificationWebSocket] Reconnecting (${this.reconnectAttempts}/${this.maxReconnectAttempts})...`);
         this.connect(this.wihId);
       }
     }, this.reconnectInterval * this.reconnectAttempts);

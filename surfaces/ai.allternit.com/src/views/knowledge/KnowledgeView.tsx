@@ -4,21 +4,57 @@
  * Connects to the Allternit AI backend retrieval API.
  */
 
-import React, { useState, useRef } from 'react';
+import React, { useReducer, useRef, useCallback } from 'react';
 import { Brain, Upload, MagnifyingGlass, X, FileText } from '@phosphor-icons/react';
 import GlassSurface from '@/design/GlassSurface';
 
+interface State {
+  query: string;
+  results: Array<{ source: string; text: string; score?: number }>;
+  uploadStatus: string | null;
+  searchStatus: string | null;
+  uploadedFiles: string[];
+  isLoading: boolean;
+}
+
+type Action =
+  | { type: 'SET_QUERY'; payload: string }
+  | { type: 'SET_RESULTS'; payload: State['results'] }
+  | { type: 'SET_UPLOAD_STATUS'; payload: string | null }
+  | { type: 'SET_SEARCH_STATUS'; payload: string | null }
+  | { type: 'ADD_UPLOADED_FILES'; payload: string[] }
+  | { type: 'REMOVE_UPLOADED_FILE'; payload: number }
+  | { type: 'SET_LOADING'; payload: boolean };
+
+const initialState: State = {
+  query: '',
+  results: [],
+  uploadStatus: null,
+  searchStatus: null,
+  uploadedFiles: [],
+  isLoading: false,
+};
+
+function reducer(state: State, action: Action): State {
+  switch (action.type) {
+    case 'SET_QUERY': return { ...state, query: action.payload };
+    case 'SET_RESULTS': return { ...state, results: action.payload };
+    case 'SET_UPLOAD_STATUS': return { ...state, uploadStatus: action.payload };
+    case 'SET_SEARCH_STATUS': return { ...state, searchStatus: action.payload };
+    case 'ADD_UPLOADED_FILES': return { ...state, uploadedFiles: [...state.uploadedFiles, ...action.payload] };
+    case 'REMOVE_UPLOADED_FILE': return { ...state, uploadedFiles: state.uploadedFiles.filter((_, i) => i !== action.payload) };
+    case 'SET_LOADING': return { ...state, isLoading: action.payload };
+    default: return state;
+  }
+}
+
 export const KnowledgeView: React.FC = () => {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Array<{ source: string; text: string; score?: number }>>([]);
-  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
-  const [searchStatus, setSearchStatus] = useState<string | null>(null);
-  const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
+  const [state, dispatch] = useReducer(reducer, initialState);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
-    setUploadStatus('Uploading…');
+    dispatch({ type: 'SET_UPLOAD_STATUS', payload: 'Uploading…' });
 
     const form = new FormData();
     for (const file of Array.from(files)) {
@@ -32,94 +68,93 @@ export const KnowledgeView: React.FC = () => {
       });
       const data = await res.json();
       if (res.ok) {
-        setUploadStatus(`Uploaded ${files.length} document(s)`);
-        setUploadedFiles((prev) => [...prev, ...Array.from(files).map((f) => f.name)]);
+        dispatch({ type: 'SET_UPLOAD_STATUS', payload: `Uploaded ${files.length} document(s)` });
+        dispatch({ type: 'ADD_UPLOADED_FILES', payload: Array.from(files).map((f) => f.name) });
       } else {
-        setUploadStatus(data.error || 'Upload failed');
+        dispatch({ type: 'SET_UPLOAD_STATUS', payload: data.error || 'Upload failed' });
       }
     } catch (err) {
-      setUploadStatus(err instanceof Error ? err.message : 'Upload failed');
+      dispatch({ type: 'SET_UPLOAD_STATUS', payload: err instanceof Error ? err.message : 'Upload failed' });
     }
   };
 
   const handleSearch = async () => {
-    if (!query.trim()) return;
-    setSearchStatus('Searching…');
-    setResults([]);
+    if (!state.query.trim()) return;
+    dispatch({ type: 'SET_SEARCH_STATUS', payload: 'Searching…' });
+    dispatch({ type: 'SET_RESULTS', payload: [] });
 
     try {
       const res = await fetch('/api/v1/ai/rag/query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: query.trim(), collection: 'default' }),
+        body: JSON.stringify({ query: state.query.trim(), collection: 'default' }),
       });
       const data = await res.json();
       if (res.ok && data.documents) {
         const docs = data.documents as Array<{ source?: string; text?: string; score?: number }>;
-        setResults(docs.map((d) => ({ source: d.source || 'Unknown', text: d.text || '', score: d.score })));
-        setSearchStatus(null);
+        dispatch({ type: 'SET_RESULTS', payload: docs.map((d) => ({ source: d.source || 'Unknown', text: d.text || '', score: d.score })) });
+        dispatch({ type: 'SET_SEARCH_STATUS', payload: null });
       } else {
-        setSearchStatus(data.error || 'Query failed');
+        dispatch({ type: 'SET_SEARCH_STATUS', payload: data.error || 'Query failed' });
       }
     } catch (err) {
-      setSearchStatus(err instanceof Error ? err.message : 'Query failed');
+      dispatch({ type: 'SET_SEARCH_STATUS', payload: err instanceof Error ? err.message : 'Query failed' });
     }
   };
 
   return (
-    <div style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-lg)', height: '100%' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--spacing-md)' }}>
+    <div className="p-[var(--spacing-lg)] flex flex-col gap-[var(--spacing-lg)] h-full">
+      <div className="flex items-center gap-[var(--spacing-md)]">
         <Brain size={24} color="#af52de" />
-        <h1 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '24px', fontWeight: 600 }}>Knowledge</h1>
+        <h1 className="m-0 text-[var(--text-primary)] text-2xl font-semibold">Knowledge</h1>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--spacing-lg)', flex: 1, minHeight: 0 }}>
+      <div className="grid grid-cols-2 gap-[var(--spacing-lg)] flex-1 min-h-0">
         {/* Upload Panel */}
-        <GlassSurface style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-          <div style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <GlassSurface className="p-[var(--spacing-lg)] flex flex-col gap-[var(--spacing-md)]">
+          <div className="text-[var(--text-primary)] text-base font-semibold flex items-center gap-2">
             <Upload size={18} />
             Upload Documents
           </div>
           <div
+            role="button"
+            tabIndex={0}
             onClick={() => fileInputRef.current?.click()}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click(); }}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
               e.preventDefault();
               void handleUpload(e.dataTransfer.files);
             }}
-            style={{
-              border: '2px dashed var(--border-subtle)',
-              borderRadius: 12,
-              padding: 'var(--spacing-xl)',
-              textAlign: 'center',
-              cursor: 'pointer',
-              color: 'var(--text-secondary)',
-              fontSize: 14,
-            }}
+            className="border-2 border-dashed border-[var(--border-subtle)] rounded-xl p-[var(--spacing-xl)] text-center cursor-pointer text-[var(--text-secondary)] text-sm transition-colors hover:bg-white/5"
           >
-            <Upload size={32} style={{ marginBottom: 8 }} />
+            <Upload size={32} className="mx-auto mb-2" />
             <div>Drop files here or click to upload</div>
-            <div style={{ fontSize: 12, marginTop: 4, opacity: 0.7 }}>PDF, TXT, MD supported</div>
+            <div className="text-xs mt-1 opacity-70">PDF, TXT, MD supported</div>
           </div>
           <input
             ref={fileInputRef}
             type="file"
             multiple
-            style={{ display: 'none' }}
+            className="hidden"
             onChange={(e) => void handleUpload(e.target.files)}
           />
-          {uploadStatus && (
-            <div style={{ padding: '8px 12px', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-secondary)', fontSize: 12 }}>
-              {uploadStatus}
+          {state.uploadStatus && (
+            <div className="p-2 px-3 rounded-md bg-[var(--bg-secondary)] text-[var(--text-secondary)] text-xs">
+              {state.uploadStatus}
             </div>
           )}
-          {uploadedFiles.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 200, overflow: 'auto' }}>
-              {uploadedFiles.map((name, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 6, background: 'var(--bg-secondary)' }}>
+          {state.uploadedFiles.length > 0 && (
+            <div className="flex flex-col gap-1.5 max-h-[200px] overflow-auto">
+              {state.uploadedFiles.map((name, i) => (
+                <div key={i} className="flex items-center gap-2 p-1.5 px-2.5 rounded-md bg-[var(--bg-secondary)]">
                   <FileText size={14} />
-                  <span style={{ fontSize: 13, color: 'var(--text-primary)', flex: 1 }}>{name}</span>
-                  <button onClick={() => setUploadedFiles((prev) => prev.filter((_, idx) => idx !== i))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                  <span className="text-[13px] text-[var(--text-primary)] flex-1 truncate">{name}</span>
+                  <button 
+                    onClick={() => dispatch({ type: 'REMOVE_UPLOADED_FILE', payload: i })} 
+                    className="bg-transparent border-none cursor-pointer text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
+                    aria-label={`Remove ${name}`}
+                  >
                     <X size={12} />
                   </button>
                 </div>
@@ -129,63 +164,50 @@ export const KnowledgeView: React.FC = () => {
         </GlassSurface>
 
         {/* Search Panel */}
-        <GlassSurface style={{ padding: 'var(--spacing-lg)', display: 'flex', flexDirection: 'column', gap: 'var(--spacing-md)' }}>
-          <div style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <GlassSurface className="p-[var(--spacing-lg)] flex flex-col gap-[var(--spacing-md)]">
+          <div className="text-[var(--text-primary)] text-base font-semibold flex items-center gap-2">
             <MagnifyingGlass size={18} />
             Query Knowledge
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="flex gap-2">
             <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              value={state.query}
+              onChange={(e) => dispatch({ type: 'SET_QUERY', payload: e.target.value })}
               onKeyDown={(e) => { if (e.key === 'Enter') void handleSearch(); }}
               placeholder="Ask anything about your documents…"
-              style={{
-                flex: 1,
-                padding: '10px 12px',
-                borderRadius: 8,
-                border: '1px solid var(--border-subtle)',
-                background: 'var(--bg-secondary)',
-                color: 'var(--text-primary)',
-                fontSize: 14,
-              }}
+              className="flex-1 p-2.5 px-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--text-primary)] text-sm outline-none focus:border-[var(--accent-cowork)] transition-colors"
             />
             <button
               onClick={() => void handleSearch()}
-              disabled={!query.trim()}
-              style={{
-                padding: '10px 16px',
-                borderRadius: 8,
-                border: 'none',
-                background: 'var(--accent-cowork)',
-                color: '#fff',
-                cursor: query.trim() ? 'pointer' : 'not-allowed',
-                fontSize: 13,
-                fontWeight: 600,
-              }}
+              disabled={!state.query.trim()}
+              className={`p-2.5 px-4 rounded-lg border-none text-white text-[13px] font-semibold transition-all ${
+                state.query.trim() 
+                  ? 'bg-[var(--accent-cowork)] cursor-pointer hover:brightness-110 active:scale-95' 
+                  : 'bg-[var(--bg-tertiary)] cursor-not-allowed opacity-50'
+              }`}
             >
               Search
             </button>
           </div>
-          {searchStatus && (
-            <div style={{ padding: '8px 12px', borderRadius: 6, background: 'var(--bg-secondary)', color: 'var(--text-secondary)', fontSize: 12 }}>
-              {searchStatus}
+          {state.searchStatus && (
+            <div className="p-2 px-3 rounded-md bg-[var(--bg-secondary)] text-[var(--text-secondary)] text-xs">
+              {state.searchStatus}
             </div>
           )}
-          <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {results.map((r, i) => (
-              <div key={i} style={{ padding: '10px 12px', borderRadius: 8, background: 'var(--bg-secondary)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-cowork)' }}>{r.source}</span>
+          <div className="flex-1 overflow-auto flex flex-col gap-2">
+            {state.results.map((r, i) => (
+              <div key={i} className="p-2.5 px-3 rounded-lg bg-[var(--bg-secondary)]">
+                <div className="flex justify-between mb-1">
+                  <span className="text-xs font-semibold text-[var(--accent-cowork)]">{r.source}</span>
                   {r.score !== undefined && (
-                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{(r.score * 100).toFixed(1)}% match</span>
+                    <span className="text-[12px] text-[var(--text-tertiary)]">{(r.score * 100).toFixed(1)}% match</span>
                   )}
                 </div>
-                <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>{r.text}</div>
+                <div className="text-[13px] text-[var(--text-primary)] leading-relaxed">{r.text}</div>
               </div>
             ))}
-            {results.length === 0 && !searchStatus && (
-              <div style={{ textAlign: 'center', padding: 'var(--spacing-xl)', color: 'var(--text-secondary)', fontSize: 14 }}>
+            {state.results.length === 0 && !state.searchStatus && (
+              <div className="text-center p-[var(--spacing-xl)] text-[var(--text-secondary)] text-sm">
                 Upload documents and ask a question to see RAG results
               </div>
             )}

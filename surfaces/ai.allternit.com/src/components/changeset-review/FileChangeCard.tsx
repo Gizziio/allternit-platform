@@ -1,7 +1,7 @@
 import React from 'react';
 import { FileChange, DiffHunk } from '../../core/contracts';
 import { useChangeSetStore } from '../../stores/changeset-store';
-import { GlassCard } from '../../design/GlassCard';
+import { GlassCard } from '../../design/glass/GlassCard';
 import { FileCode, Check, X, CaretDown, CaretRight } from '@phosphor-icons/react';
 
 interface FileChangeCardProps {
@@ -30,7 +30,7 @@ export function FileChangeCard({ change, changeSetId }: FileChangeCardProps) {
         {expanded ? <CaretDown size={14} /> : <CaretRight size={14} />}
         <FileCode size={16} color="var(--accent-code)" />
         {change.filePath}
-        <div style={{ fontSize: 10, opacity: 0.4, fontWeight: 400 }}>
+        <div style={{ fontSize: 12, opacity: 0.4, fontWeight: 400 }}>
           +{change.additions} -{change.deletions}
         </div>
       </div>
@@ -60,7 +60,7 @@ function DiffHunkView({ hunk, fileChangeId, changeSetId }: { hunk: DiffHunk, fil
         padding: '4px 12px', 
         background: 'var(--surface-hover)', 
         borderBottom: '1px solid var(--border-subtle)',
-        fontSize: 10,
+        fontSize: 12,
         fontFamily: 'var(--font-mono)',
         opacity: 0.5
       }}>
@@ -114,7 +114,7 @@ function DiffHunkView({ hunk, fileChangeId, changeSetId }: { hunk: DiffHunk, fil
             borderRight: '1px solid var(--border-subtle)', 
             cursor: 'pointer', 
             color: 'var(--text-tertiary)', 
-            fontSize: 11, 
+            fontSize: 12, 
             fontWeight: 600, 
             display: 'flex', 
             alignItems: 'center', 
@@ -133,7 +133,7 @@ function DiffHunkView({ hunk, fileChangeId, changeSetId }: { hunk: DiffHunk, fil
             border: 'none', 
             cursor: 'pointer', 
             color: 'var(--accent-chat)', 
-            fontSize: 11, 
+            fontSize: 12, 
             fontWeight: 600, 
             display: 'flex', 
             alignItems: 'center', 

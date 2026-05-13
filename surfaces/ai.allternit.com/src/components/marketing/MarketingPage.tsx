@@ -1,5 +1,6 @@
 'use client';
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React from 'react';
 import { HeroSection } from '@/components/marketing/HeroSection';
 import { TemplateGrid } from '@/components/marketing/TemplateGrid';
@@ -30,7 +31,7 @@ export default function MarketingPage() {
             rel="noreferrer"
             className="rounded-lg p-2 text-white/30 transition-colors hover:text-white/60"
           >
-            <Github className="h-4 w-4" />
+            <Github className="size-4 " />
           </a>
           <a
             href="/sign-in"
@@ -76,7 +77,7 @@ export default function MarketingPage() {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
           <div className="flex items-center gap-2 text-white/20">
             <MatrixLogo state="idle" size={16} />
-            <span className="text-xs">© {new Date().getFullYear()} Allternit</span>
+            <span className="text-xs">© {isClient ? new Date().getFullYear() : "..."} Allternit</span>
           </div>
           <div className="flex items-center gap-6 text-xs text-white/25">
             <a href="/terms" className="transition-colors hover:text-white/50">Terms</a>
@@ -87,7 +88,7 @@ export default function MarketingPage() {
               rel="noreferrer"
               className="transition-colors hover:text-white/50"
             >
-              <Twitter className="h-3.5 w-3.5" />
+              <Twitter className="size-3.5 " />
             </a>
           </div>
         </div>

@@ -47,7 +47,7 @@ function RatingStars({ rating, count }: { rating?: number; count?: number }) {
         ))}
       </div>
       {count !== undefined && (
-        <span style={{ fontSize: 11, color: "var(--ui-text-muted)" }}>
+        <span style={{ fontSize: 12, color: "var(--ui-text-muted)" }}>
           ({count})
         </span>
       )}
@@ -96,7 +96,7 @@ export function AgentStorefrontCard({ agent, onClick, onMention, compact, style 
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ui-text-primary)" }}>{agent.name}</span>
             {isSwarm && (
-              <span style={{ fontSize: 10, padding: "1px 5px", borderRadius: 4, background: "#8b5cf620", color: "#8b5cf6", fontWeight: 600 }}>
+              <span style={{ fontSize: 12, padding: "1px 5px", borderRadius: 4, background: "#8b5cf620", color: "#8b5cf6", fontWeight: 600 }}>
                 SWARM
               </span>
             )}
@@ -115,7 +115,7 @@ export function AgentStorefrontCard({ agent, onClick, onMention, compact, style 
               background: "var(--accent-chat)",
               color: "#000",
               border: "none",
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 700,
               cursor: "pointer",
               flexShrink: 0,
@@ -166,13 +166,13 @@ export function AgentStorefrontCard({ agent, onClick, onMention, compact, style 
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <span style={{ fontSize: 15, fontWeight: 700, color: "var(--ui-text-primary)" }}>{agent.name}</span>
             {isSwarm && (
-              <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, background: "#8b5cf620", color: "#8b5cf6", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
+              <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 6, background: "#8b5cf620", color: "#8b5cf6", fontWeight: 600, display: "flex", alignItems: "center", gap: 4 }}>
                 <Users size={10} />
                 SWARM
               </span>
             )}
             {agent.category && (
-              <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 6, background: "var(--chat-composer-soft)", color: "var(--ui-text-secondary)", fontWeight: 500 }}>
+              <span style={{ fontSize: 12, padding: "2px 8px", borderRadius: 6, background: "var(--chat-composer-soft)", color: "var(--ui-text-secondary)", fontWeight: 500 }}>
                 {CATEGORY_LABELS[agent.category] || agent.category}
               </span>
             )}
@@ -218,7 +218,7 @@ export function AgentStorefrontCard({ agent, onClick, onMention, compact, style 
       {agent.tags && agent.tags.length > 0 && (
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {agent.tags.map((tag) => (
-            <span key={tag} style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, background: "var(--chat-composer-soft)", color: "var(--ui-text-secondary)" }}>
+            <span key={tag} style={{ fontSize: 12, padding: "3px 8px", borderRadius: 6, background: "var(--chat-composer-soft)", color: "var(--ui-text-secondary)" }}>
               {tag}
             </span>
           ))}

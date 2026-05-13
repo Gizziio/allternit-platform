@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { execEvents } from '../integration/execution/exec.events';
-import { GlassCard } from '../design/GlassCard';
+import { GlassCard } from '../design/glass/GlassCard';
 import { Globe } from '@phosphor-icons/react';
 
-export function BrowserSurface() {
+export function BrowserSurface(): JSX.Element {
   const [url, setUrl] = useState<string>('about:blank');
   const [isVisible, setIsVisible] = useState(false);
 

@@ -35,7 +35,7 @@ export function EmptyAgentState({ onCreate, onCreateFromTemplate }: EmptyAgentSt
 
   return (
     <div className="flex flex-col items-center justify-center p-12 text-center">
-      <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-6 border border-white/10">
+      <div className="size-20  rounded-full bg-white/5 flex items-center justify-center mb-6 border border-white/10">
         <Sparkle size={40} className="text-muted-foreground opacity-50" />
       </div>
       <h3 className="text-xl font-medium mb-2" style={{ color: STUDIO_THEME.textPrimary }}>No Agents Found</h3>

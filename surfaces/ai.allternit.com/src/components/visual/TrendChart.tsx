@@ -114,15 +114,15 @@ export const TrendChart: React.FC<TrendChartProps> = ({
             <span style={{ fontSize: '16px', fontWeight: 600, color: stats.trend === 'up' ? 'var(--status-success)' : stats.trend === 'down' ? 'var(--status-error)' : 'var(--ui-text-primary)', fontVariantNumeric: 'tabular-nums' }}>
               {stats.trend === 'up' && '↑ '}{stats.trend === 'down' && '↓ '}{Math.round(stats.avg * 100)}%
             </span>
-            <span style={{ fontSize: '11px', color: 'var(--ui-text-muted)' }}>Average</span>
+            <span style={{ fontSize: '12px', color: 'var(--ui-text-muted)' }}>Average</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
             <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ui-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{Math.round(stats.min * 100)}%</span>
-            <span style={{ fontSize: '11px', color: 'var(--ui-text-muted)' }}>Min</span>
+            <span style={{ fontSize: '12px', color: 'var(--ui-text-muted)' }}>Min</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
             <span style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ui-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{Math.round(stats.max * 100)}%</span>
-            <span style={{ fontSize: '11px', color: 'var(--ui-text-muted)' }}>Max</span>
+            <span style={{ fontSize: '12px', color: 'var(--ui-text-muted)' }}>Max</span>
           </div>
         </div>
       </div>
@@ -197,7 +197,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
             minWidth: '140px',
           }}>
-            <div style={{ fontSize: '11px', color: 'var(--ui-text-muted)', marginBottom: '4px' }}>
+            <div style={{ fontSize: '12px', color: 'var(--ui-text-muted)', marginBottom: '4px' }}>
               {formatDate(data[hoveredIndex].timestamp)} at {formatTime(data[hoveredIndex].timestamp)}
             </div>
             <div style={{ 
@@ -209,7 +209,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({
               {Math.round(data[hoveredIndex].confidence * 100)}% Confidence
             </div>
             {data[hoveredIndex].wihId && (
-              <div style={{ fontSize: '11px', color: 'var(--ui-text-muted)', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>{data[hoveredIndex].wihId}</div>
+              <div style={{ fontSize: '12px', color: 'var(--ui-text-muted)', marginTop: '4px', fontFamily: 'var(--font-mono)' }}>{data[hoveredIndex].wihId}</div>
             )}
           </div>
         )}

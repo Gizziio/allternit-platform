@@ -50,7 +50,7 @@ export function useAgentRuntime(options: AgentRuntimeOptions): AgentRuntime {
   const bridge = useKernelBridge({
     endpoint: kernelEndpoint,
     onConnectionChange: (connected) => {
-      console.log(`[AgentRuntime] Kernel ${connected ? 'connected' : 'disconnected'}`);
+      console.debug(`[AgentRuntime] Kernel ${connected ? 'connected' : 'disconnected'}`);
     },
     onError: options.onError,
   });

@@ -1,9 +1,9 @@
 import React from 'react';
 import { TerminalTabs } from './nodes/terminal';
-import { GlassCard } from '@/design/GlassCard';
+import { GlassCard } from '@/design/glass/GlassCard';
 import { tokens } from '@/design/tokens';
 
-export function TerminalView({ noPadding = false }: { noPadding?: boolean }) {
+export function TerminalView({ noPadding = false }: { noPadding?: boolean }): JSX.Element {
   return (
     <div
       style={{

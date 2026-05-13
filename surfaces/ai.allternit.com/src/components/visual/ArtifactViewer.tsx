@@ -306,12 +306,12 @@ export const ArtifactViewer: React.FC<ArtifactViewerProps> = ({
               </h4>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontSize: '11px', color: 'var(--ui-text-muted)' }}>Captured</span>
+                  <span style={{ fontSize: '12px', color: 'var(--ui-text-muted)' }}>Captured</span>
                   <span style={{ fontSize: '13px', color: 'var(--ui-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{formatTimestamp(artifact.timestamp)}</span>
                 </div>
                 {Object.entries(artifact.metadata).slice(0, 3).map(([key, value]) => (
                   <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    <span style={{ fontSize: '11px', color: 'var(--ui-text-muted)' }}>{key}</span>
+                    <span style={{ fontSize: '12px', color: 'var(--ui-text-muted)' }}>{key}</span>
                     <span style={{ fontSize: '13px', color: 'var(--ui-text-primary)', fontVariantNumeric: 'tabular-nums' }}>{String(value)}</span>
                   </div>
                 ))}

@@ -102,7 +102,7 @@ class CoworkClient {
     const eventSource = new EventSource(`${this.baseUrl}/api/cowork/${sessionId}/stream`);
     
     eventSource.onopen = () => {
-      console.log('[CoworkClient] Connected to session:', sessionId);
+      console.debug('[CoworkClient] Connected to session:', sessionId);
       onStatusChange?.('running');
     };
     
@@ -144,7 +144,7 @@ class CoworkClient {
         }
       },
       disconnect: () => {
-        console.log('[CoworkClient] Disconnecting from session:', sessionId);
+        console.debug('[CoworkClient] Disconnecting from session:', sessionId);
         eventSource.close();
         onStatusChange?.('paused');
       },

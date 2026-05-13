@@ -106,8 +106,8 @@ export function DataCard({
       {/* Header */}
       <div className="px-4 py-3 border-b border-[#333] bg-[#1e1e1e] flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#D4956A]/10 flex items-center justify-center">
-            <Table2 className="w-4 h-4 text-[#D4956A]" />
+          <div className="size-8  rounded-lg bg-[#D4956A]/10 flex items-center justify-center">
+            <Table2 className="size-4  text-[#D4956A]" />
           </div>
           <div>
             <h3 className="text-sm font-semibold text-[#ECECEC]">
@@ -147,7 +147,7 @@ export function DataCard({
                 onClick={onExport}
                 className="h-7 text-[#888] hover:text-[#ECECEC] hover:bg-[#333]"
               >
-                <DownloadSimple className="w-3.5 h-3.5 mr-1" />
+                <DownloadSimple className="size-3.5  mr-1" />
                 <span className="text-xs">Export</span>
               </Button>
             )}
@@ -157,7 +157,7 @@ export function DataCard({
               onClick={onOpenFull}
               className="h-7 text-[#888] hover:text-[#ECECEC] hover:bg-[#333]"
             >
-              <ArrowsOut className="w-3.5 h-3.5 mr-1" />
+              <ArrowsOut className="size-3.5  mr-1" />
               <span className="text-xs">Open Full</span>
             </Button>
           </div>
@@ -225,8 +225,8 @@ export function DataCard({
         {/* Summary Stats */}
         {summaryStat && (
           <div className="flex items-center gap-4 p-3 rounded-lg bg-[#1e1e1e] border border-[#333] mb-4">
-            <div className="w-10 h-10 rounded-lg bg-[#D4956A]/10 flex items-center justify-center">
-              <TrendUp className="w-5 h-5 text-[#D4956A]" />
+            <div className="size-10  rounded-lg bg-[#D4956A]/10 flex items-center justify-center">
+              <TrendUp className="size-5  text-[#D4956A]" />
             </div>
             <div>
               <p className="text-xs text-[#666] uppercase tracking-wide">
@@ -243,7 +243,7 @@ export function DataCard({
         {visualization && (
           <div className="p-3 rounded-lg bg-[#1e1e1e] border border-[#333] mb-4">
             <div className="flex items-center gap-2 mb-2">
-              <ChartBar className="w-4 h-4 text-[#D4956A]" />
+              <ChartBar className="size-4  text-[#D4956A]" />
               <span className="text-xs font-medium text-[#888]">
                 {visualization.title || 'Visualization Preview'}
               </span>

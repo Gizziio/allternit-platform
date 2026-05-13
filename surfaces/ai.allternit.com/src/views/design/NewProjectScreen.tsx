@@ -98,7 +98,7 @@ export function NewProjectScreen({ onStart }: NewProjectScreenProps) {
                   }}>
                     <span style={{ color: active ? 'var(--accent-primary)' : 'var(--text-tertiary)' }}>{pt.icon}</span>
                     <span style={{ fontSize: 12, fontWeight: 700, color: active ? 'var(--accent-primary)' : 'var(--text-primary)' }}>{pt.label}</span>
-                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)', lineHeight: 1.4 }}>{pt.description}</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.4 }}>{pt.description}</span>
                   </button>
                 );
               })}
@@ -123,7 +123,7 @@ export function NewProjectScreen({ onStart }: NewProjectScreenProps) {
                 style={{
                   marginTop: 10, display: 'flex', alignItems: 'center', gap: 5,
                   padding: '8px 14px', borderRadius: 8, border: '1px solid var(--border-subtle)',
-                  background: 'transparent', color: 'var(--text-tertiary)', fontSize: 11,
+                  background: 'transparent', color: 'var(--text-tertiary)', fontSize: 12,
                   fontWeight: 700, cursor: 'pointer',
                 }}
               >
@@ -160,7 +160,7 @@ export function NewProjectScreen({ onStart }: NewProjectScreenProps) {
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 28 }}>
-      <label style={{ display: 'block', fontSize: 11, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-tertiary)', marginBottom: 12 }}>
+      <label style={{ display: 'block', fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--text-tertiary)', marginBottom: 12 }}>
         {label}
       </label>
       {children}
@@ -200,7 +200,7 @@ function DirectionCard({ direction, active, onSelect }: { direction: DesignDirec
             {direction.label.split(' — ')[0]}
           </span>
           {direction.label.includes(' — ') && (
-            <span style={{ fontSize: 11, color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <span style={{ fontSize: 12, color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {direction.label.split(' — ')[1]}
             </span>
           )}
@@ -214,7 +214,7 @@ function DirectionCard({ direction, active, onSelect }: { direction: DesignDirec
             Body text
           </span>
           {direction.monoFont && (
-            <span style={{ fontFamily: direction.monoFont, fontSize: 11, color: 'var(--text-tertiary)' }}>
+            <span style={{ fontFamily: direction.monoFont, fontSize: 12, color: 'var(--text-tertiary)' }}>
               mono()
             </span>
           )}
@@ -222,7 +222,7 @@ function DirectionCard({ direction, active, onSelect }: { direction: DesignDirec
         {/* References */}
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
           {direction.references.slice(0, 3).map(ref => (
-            <span key={ref} style={{ fontSize: 10, color: 'var(--text-tertiary)', background: 'var(--surface-hover)', borderRadius: 4, padding: '2px 6px', fontWeight: 600 }}>
+            <span key={ref} style={{ fontSize: 12, color: 'var(--text-tertiary)', background: 'var(--surface-hover)', borderRadius: 4, padding: '2px 6px', fontWeight: 600 }}>
               {ref}
             </span>
           ))}

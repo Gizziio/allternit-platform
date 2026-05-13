@@ -145,7 +145,7 @@ export class KernelProtocolHandler {
       launchOptions: payload.options,
     });
 
-    console.log(`[KernelProtocol] Launched ${payload.type}: ${programId}`);
+    console.debug(`[KernelProtocol] Launched ${payload.type}: ${programId}`);
   }
 
   private handleProgramUpdate(msg: KernelMessage): void {

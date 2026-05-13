@@ -303,7 +303,7 @@ export const CapsuleFrame: React.FC<CapsuleFrameProps> = ({
           break;
 
         case 'ui:log':
-          console.log(`[Capsule ${capsuleId}]`, ...data.payload?.args);
+          console.debug(`[Capsule ${capsuleId}]`, ...data.payload?.args);
           break;
 
         default:
@@ -359,7 +359,7 @@ export const CapsuleFrame: React.FC<CapsuleFrameProps> = ({
       {isLoading && (
         <div className={styles.loadingOverlay}>
           <div className={styles.spinner} />
-          <span className={styles.loadingText}>Loading capsule...</span>
+          <span className={styles.loadingText}>Loading capsule…</span>
         </div>
       )}
 

@@ -304,7 +304,7 @@ function CreateMenuButton({
       onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
     >
       <span style={{ fontSize: 13, fontWeight: 600 }}>{label}</span>
-      <span style={{ fontSize: 11, color: 'var(--shell-item-muted)', lineHeight: 1.4 }}>{description}</span>
+      <span style={{ fontSize: 12, color: 'var(--shell-item-muted)', lineHeight: 1.4 }}>{description}</span>
     </button>
   );
 }

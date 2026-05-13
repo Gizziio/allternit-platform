@@ -160,7 +160,7 @@ export function WorkspacePanel({ agents, modeColors }: WorkspacePanelProps) {
           title="Drag to resize, double-click to collapse"
         >
           <div
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-0.5 h-10 rounded transition-all"
+            className="absolute left-1/2 top-1/2 -tranzinc-x-1/2 -tranzinc-y-1/2 w-0.5 h-10 rounded transition-all"
             style={{
               background: isResizing ? modeColors.accent : 'var(--ui-text-muted)',
               opacity: isResizing ? 1 : 0,

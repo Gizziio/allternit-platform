@@ -80,13 +80,13 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
 
       {/* Icon Container */}
       <div 
-        className="w-16 h-16 rounded-2xl flex items-center justify-center relative z-10"
+        className="size-16  rounded-2xl flex items-center justify-center relative z-10"
         style={{ background: `${color}15`, border: `1px solid ${color}30` }}
       >
         <img 
           src={`/assets/runtime-logos/${icon}`} 
           alt={name}
-          className="w-10 h-10 object-contain"
+          className="size-10  object-contain"
           onError={(e) => {
             // Fallback for missing icons
             (e.target as HTMLImageElement).style.display = 'none';
@@ -95,8 +95,8 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
         />
         
         {authenticated && (
-          <div className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-green-500 flex items-center justify-center border-2 border-[#1a1a1a]">
-            <Check className="w-3.5 h-3.5 text-white" />
+          <div className="absolute -top-2 -right-2 size-6  rounded-full bg-green-500 flex items-center justify-center border-2 border-[#1a1a1a]">
+            <Check className="size-3.5  text-white" />
           </div>
         )}
       </div>
@@ -111,7 +111,7 @@ const ProviderCard: React.FC<ProviderCardProps> = ({
 
       {/* Action hint */}
       <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <CaretRight className="w-4 h-4 text-white/40" />
+        <CaretRight className="size-4  text-white/40" />
       </div>
     </button>
   );
@@ -168,8 +168,8 @@ export const ProviderGallery: React.FC = () => {
 
       {providersLoading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-4">
-          <CircleNotch className="w-8 h-8 text-white/20 animate-spin" />
-          <p className="text-white/40 text-sm">Loading providers...</p>
+          <CircleNotch className="size-8  text-white/20 animate-spin" />
+          <p className="text-white/40 text-sm">Loading providers…</p>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
@@ -191,8 +191,8 @@ export const ProviderGallery: React.FC = () => {
           
           {/* Add Others Placeholder */}
           <button className="flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border border-dashed border-white/10 bg-white/[0.02] hover:bg-white/[0.04] transition-all group">
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center bg-white/5 border border-white/10 group-hover:border-white/20">
-              <Plus className="w-6 h-6 text-white/40" />
+            <div className="size-16  rounded-2xl flex items-center justify-center bg-white/5 border border-white/10 group-hover:border-white/20">
+              <Plus className="size-6  text-white/40" />
             </div>
             <div className="text-center">
               <h3 className="font-semibold text-white/40 text-sm italic">Coming Soon</h3>
@@ -209,10 +209,10 @@ export const ProviderGallery: React.FC = () => {
               <DialogHeader className="p-6 pb-0">
                 <div className="flex items-center gap-4 mb-4">
                   <div 
-                    className="w-12 h-12 rounded-xl flex items-center justify-center"
+                    className="size-12  rounded-xl flex items-center justify-center"
                     style={{ background: `${currentMeta.color}20`, border: `1px solid ${currentMeta.color}40` }}
                   >
-                    <img src={`/assets/runtime-logos/${currentMeta.icon}`} alt="" className="w-8 h-8 object-contain" />
+                    <img src={`/assets/runtime-logos/${currentMeta.icon}`} alt="" className="size-8  object-contain" />
                   </div>
                   <div>
                     <DialogTitle className="text-xl">Connect {currentMeta.name}</DialogTitle>
@@ -226,7 +226,7 @@ export const ProviderGallery: React.FC = () => {
               <div className="p-6 space-y-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-white/60 flex items-center gap-2">
-                    <Key className="w-3.5 h-3.5" />
+                    <Key className="size-3.5 " />
                     API Key
                   </label>
                   <input
@@ -236,7 +236,7 @@ export const ProviderGallery: React.FC = () => {
                     onChange={(e) => setApiKey(e.target.value)}
                     className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-white/20 outline-none focus:border-white/20 focus:bg-white/[0.07] transition-all"
                   />
-                  <p className="text-[11px] text-white/30 flex items-center gap-1.5 mt-1.5 px-1">
+                  <p className="text-[12px] text-white/30 flex items-center gap-1.5 mt-1.5 px-1">
                     <Shield size={12} />
                     Your key is stored locally and never sent to our servers.
                   </p>
@@ -244,7 +244,7 @@ export const ProviderGallery: React.FC = () => {
 
                 {error && (
                   <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 flex items-start gap-3">
-                    <Warning className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+                    <Warning className="size-4  text-red-400 mt-0.5 shrink-0" />
                     <p className="text-xs text-red-400/90 leading-normal">{error}</p>
                   </div>
                 )}
@@ -269,7 +269,7 @@ export const ProviderGallery: React.FC = () => {
                 >
                   {isConnecting ? (
                     <div className="flex items-center gap-2">
-                      <CircleNotch className="w-4 h-4 animate-spin" />
+                      <CircleNotch className="size-4  animate-spin" />
                       Connecting...
                     </div>
                   ) : "Connect Account"}

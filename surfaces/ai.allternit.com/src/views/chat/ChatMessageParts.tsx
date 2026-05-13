@@ -191,8 +191,8 @@ export function RichMessageParts({
 
       {isLoading && (
         <div className="flex items-center gap-2 text-muted-foreground">
-          <CircleNotch className="w-4 h-4 animate-spin" />
-          <span className="text-sm">Thinking...</span>
+          <CircleNotch className="size-4  animate-spin" />
+          <span className="text-sm">Thinking…</span>
         </div>
       )}
     </div>
@@ -319,7 +319,7 @@ function MiniappRenderer({
     <Card className="border-primary/20">
       <CardContent className="p-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+          <div className="size-10  rounded-lg bg-primary/10 flex items-center justify-center">
             🧩
           </div>
           <div className="flex-1">

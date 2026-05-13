@@ -62,7 +62,7 @@ export const ColorsCustomizationTab: React.FC = () => {
             </h4>
             <p
               style={{
-                fontSize: '11px',
+                fontSize: '12px',
                 color: STUDIO_THEME.textSecondary,
                 marginTop: '2px',
               }}
@@ -191,7 +191,7 @@ export const ColorsCustomizationTab: React.FC = () => {
                 </div>
                 <span
                   style={{
-                    fontSize: '11px',
+                    fontSize: '12px',
                     fontWeight: 500,
                     color: STUDIO_THEME.textPrimary,
                     textTransform: 'capitalize',

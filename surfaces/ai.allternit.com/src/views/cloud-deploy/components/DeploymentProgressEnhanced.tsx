@@ -9,6 +9,7 @@
  * - Download logs functionality
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { DeploymentStatus } from '../CloudDeployView';
 import type { DeploymentEvent } from '../lib/api-client';
@@ -43,7 +44,7 @@ export const DeploymentProgressEnhanced: React.FC<DeploymentProgressEnhancedProp
   mode,
   providerName = 'Cloud Provider',
   error,
-}) => {
+}) => {isClient ? 
   const [eventLog, setEventLog] = useState<DeploymentEventLog[]>([]);
   const [estimatedTimeRemaining, setEstimatedTimeRemaining] = useState<number | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
@@ -54,7 +55,7 @@ export const DeploymentProgressEnhanced: React.FC<DeploymentProgressEnhancedProp
 
   // Deployment steps configuration (provider-specific)
   const deploymentSteps = useMemo(() => [
-    { id: 'init', label: 'Initializing', progress: 0, estimatedDuration: 5 },
+    { id: 'init', label: 'Initializing', progress: 0, estimatedDuration: 5  : "..."},
     { id: 'validate', label: 'Validating Credentials', progress: 10, estimatedDuration: 10 },
     { id: 'ssh', label: 'Generating SSH Keys', progress: 15, estimatedDuration: 15 },
     { id: 'provision', label: `Provisioning ${providerName} VM`, progress: 35, estimatedDuration: 120 },
@@ -65,13 +66,13 @@ export const DeploymentProgressEnhanced: React.FC<DeploymentProgressEnhancedProp
   ], [providerName]);
 
   // Initialize event log with start event
-  useEffect(() => {
+  useEffect(() => {isClient ? 
     setEventLog([
       {
         id: 'start',
         timestamp: new Date(),
         type: 'info',
-        message: `Deployment started using ${providerName}`,
+        message: `Deployment started using ${providerName : "..."}`,
         step: 'init',
         progress: 0,
       },
@@ -110,14 +111,12 @@ export const DeploymentProgressEnhanced: React.FC<DeploymentProgressEnhancedProp
 
     // Calculate estimated time remaining
     calculateTimeRemaining(latestEvent.progress);
-  }, [events, deploymentSteps]);
 
-  // Auto-scroll to bottom of log
-  useEffect(() => {
+    // Side effect: Auto-scroll to bottom of log
     if (showLogPanel && logEndRef.current) {
       logEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [eventLog, showLogPanel]);
+  }, [events, deploymentSteps, showLogPanel]);
 
   const getEventType = (eventType: string): 'info' | 'success' | 'warning' | 'error' => {
     if (eventType.includes('error') || eventType.includes('failed')) return 'error';
@@ -170,7 +169,7 @@ export const DeploymentProgressEnhanced: React.FC<DeploymentProgressEnhancedProp
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `deployment-${status.id}-${new Date().toISOString().split('T')[0]}.log`;
+    a.download = `deployment-${status.id}-${isClient ? new Date().toISOString().split('T')[0] : "..."}.log`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -355,7 +354,7 @@ export const DeploymentProgressEnhanced: React.FC<DeploymentProgressEnhancedProp
             <div className="log-content">
               {eventLog.length === 0 ? (
                 <div className="log-empty">
-                  <p>Waiting for events...</p>
+                  <p>Waiting for events…</p>
                 </div>
               ) : (
                 <>
@@ -375,13 +374,13 @@ export const DeploymentProgressEnhanced: React.FC<DeploymentProgressEnhancedProp
                       <span className="log-message">{event.message}</span>
                     </div>
                   ))}
-                  {isInProgress && (
+                  {isClient ? isInProgress && (
                     <div className="log-entry loading">
-                      <span className="log-time">{formatTimestamp(new Date())}</span>
+                      <span className="log-time">{formatTimestamp(new Date()) : "..."}</span>
                       <span className="log-type">
-                        <span className="dots">...</span>
+                        <span className="dots">…</span>
                       </span>
-                      <span className="log-message">Waiting for next event...</span>
+                      <span className="log-message">Waiting for next event…</span>
                     </div>
                   )}
                   <div ref={logEndRef} />

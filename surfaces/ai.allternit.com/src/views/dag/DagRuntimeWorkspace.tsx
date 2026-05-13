@@ -247,7 +247,7 @@ function SurfaceHeader({
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
       <Button variant="outline" onClick={() => void onRefresh()} disabled={refreshing}>
-        <ArrowsClockwise className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+        <ArrowsClockwise className={`mr-2 size-4  ${refreshing ? "animate-spin" : ""}`} />
         Refresh
       </Button>
     </div>
@@ -298,7 +298,7 @@ function StatusCards({
         <Card key={card.label}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{card.label}</CardTitle>
-            <card.icon className={`h-4 w-4 ${card.tone}`} />
+            <card.icon className={`size-4  ${card.tone}`} />
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${card.tone}`}>{card.value}</div>
@@ -318,7 +318,7 @@ function ErrorBanner({ error }: { error: string | null }) {
     <Card className="border-destructive">
       <CardContent className="pt-6">
         <div className="flex items-center gap-2 text-destructive">
-          <Warning className="h-4 w-4" />
+          <Warning className="size-4 " />
           <span>{error}</span>
         </div>
       </CardContent>
@@ -440,9 +440,9 @@ export function EvaluationHarnessSurface() {
                 </div>
               </div>
               {runtime.gateVerify?.ledger_chain_ok ? (
-                <CheckCircle className="h-5 w-5 text-green-600" />
+                <CheckCircle className="size-5  text-green-600" />
               ) : (
-                <Warning className="h-5 w-5 text-amber-600" />
+                <Warning className="size-5  text-amber-600" />
               )}
             </div>
             <div className="flex items-center justify-between rounded-lg border p-4">
@@ -710,7 +710,7 @@ export function DirectiveCompilerSurface() {
                 onChange={(event) => setPlanText(event.target.value)}
               />
               <Button onClick={() => void handleCreate()} disabled={!planText.trim() || runtime.isLoading}>
-                <GitBranch className="mr-2 h-4 w-4" />
+                <GitBranch className="mr-2 size-4 " />
                 Compile Directive
               </Button>
             </CardContent>
@@ -745,7 +745,7 @@ export function DirectiveCompilerSurface() {
                   onChange={(event) => setRefineDelta(event.target.value)}
                 />
                 <Button onClick={() => void handleRefine()} disabled={!selectedDag || !refineDelta.trim()}>
-                  <FileCode className="mr-2 h-4 w-4" />
+                  <FileCode className="mr-2 size-4 " />
                   Apply Refinement
                 </Button>
               </div>
@@ -1122,7 +1122,7 @@ export function DagWihSurface() {
                       </div>
                       <div className="mt-3 flex flex-wrap gap-2 text-xs">
                         <Badge variant="outline">{receiptCount} receipts</Badge>
-                        {pack && <Badge variant="outline">{pack.contextPackId.slice(0, 12)}...</Badge>}
+                        {pack && <Badge variant="outline">{pack.contextPackId.slice(0, 12)}…</Badge>}
                       </div>
                       {!pack && (
                         <Button variant="outline" className="mt-3" onClick={() => void handleSeal(wih)}>

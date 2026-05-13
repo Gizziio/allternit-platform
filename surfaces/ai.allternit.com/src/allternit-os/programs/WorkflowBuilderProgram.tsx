@@ -66,7 +66,7 @@ const DagNodeComponent: React.FC<{
   const dragStartRef = useRef({ x: 0, y: 0 });
 
   const statusColors = {
-    NEW: 'bg-gray-200 border-gray-300',
+    NEW: 'bg-zinc-200 border-zinc-300',
     READY: 'bg-blue-100 border-blue-300',
     RUNNING: 'bg-yellow-100 border-yellow-300',
     DONE: 'bg-green-100 border-green-300',
@@ -116,24 +116,24 @@ const DagNodeComponent: React.FC<{
     >
       <div className="flex items-center gap-2 mb-1">
         <span className={`
-          w-2 h-2 rounded-full
+          size-2  rounded-full
           ${node.status === 'DONE' ? 'bg-green-500' : ''}
           ${node.status === 'RUNNING' ? 'bg-yellow-500 animate-pulse' : ''}
           ${node.status === 'READY' ? 'bg-blue-500' : ''}
           ${node.status === 'FAILED' ? 'bg-red-500' : ''}
-          ${node.status === 'NEW' ? 'bg-gray-400' : ''}
+          ${node.status === 'NEW' ? 'bg-zinc-400' : ''}
         `} />
-        <span className="text-xs font-medium text-gray-500 uppercase">
+        <span className="text-xs font-medium text-zinc-500 uppercase">
           {node.execution_mode}
         </span>
       </div>
-      <h4 className="font-semibold text-gray-900 text-sm">{node.name}</h4>
-      <p className="text-xs text-gray-600 mt-1 line-clamp-2">{node.description}</p>
+      <h4 className="font-semibold text-zinc-900 text-sm">{node.name}</h4>
+      <p className="text-xs text-zinc-600 mt-1 line-clamp-2">{node.description}</p>
       
       {node.blocked_by.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
           {node.blocked_by.map(dep => (
-            <span key={dep} className="text-xs bg-gray-200 px-1.5 py-0.5 rounded">
+            <span key={dep} className="text-xs bg-zinc-200 px-1.5 py-0.5 rounded">
               → {dep}
             </span>
           ))}
@@ -217,37 +217,37 @@ const BusMessagePanel: React.FC<{
                 {msg.status}
               </span>
             </div>
-            <div className="text-gray-600">{msg.kind}</div>
-            <pre className="text-xs text-gray-500 mt-1 overflow-x-auto">
+            <div className="text-zinc-600">{msg.kind}</div>
+            <pre className="text-xs text-zinc-500 mt-1 overflow-x-auto">
               {JSON.stringify(msg.payload, null, 2)}
             </pre>
           </div>
         ))}
         {messages.length === 0 && (
-          <div className="text-center text-gray-400 py-8">No messages</div>
+          <div className="text-center text-zinc-400 py-8">No messages</div>
         )}
       </div>
 
-      <div className="border-t border-gray-200 p-4 space-y-2">
+      <div className="border-t border-zinc-200 p-4 space-y-2">
         <input
           type="text"
           placeholder="Recipient (agent_id)"
           value={recipient}
           onChange={e => setRecipient(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+          className="w-full px-3 py-2 border border-zinc-300 rounded text-sm"
         />
         <input
           type="text"
           placeholder="Message kind"
           value={kind}
           onChange={e => setKind(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
+          className="w-full px-3 py-2 border border-zinc-300 rounded text-sm"
         />
         <textarea
           placeholder="Payload (JSON)"
           value={payload}
           onChange={e => setPayload(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded text-sm font-mono"
+          className="w-full px-3 py-2 border border-zinc-300 rounded text-sm font-mono"
           rows={3}
         />
         <button
@@ -432,18 +432,18 @@ export const WorkflowBuilderProgram: React.FC<WorkflowBuilderProgramProps> = ({ 
   }
 
   return (
-    <div className="h-full flex flex-col bg-gray-50">
+    <div className="h-full flex flex-col bg-zinc-50">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-gray-200">
+      <div className="flex items-center justify-between px-4 py-2 bg-white border-b border-zinc-200">
         <div className="flex items-center gap-3">
           <span className="text-xl">🌊</span>
           <div>
-            <h2 className="text-sm font-semibold text-gray-900">
+            <h2 className="text-sm font-semibold text-zinc-900">
               {currentDag ? `DAG: ${currentDag.dag_id}` : 'Workflow Builder'}
             </h2>
-            <div className="flex items-center gap-2 text-xs text-gray-500">
+            <div className="flex items-center gap-2 text-xs text-zinc-500">
               <span className={`
-                w-2 h-2 rounded-full
+                size-2  rounded-full
                 ${rails.isConnected ? 'bg-green-500' : 'bg-red-500'}
               `} />
               {rails.isConnected ? 'Connected to Allternit Rails' : 'Disconnected'}
@@ -456,7 +456,7 @@ export const WorkflowBuilderProgram: React.FC<WorkflowBuilderProgramProps> = ({ 
             onClick={() => setActiveTab('canvas')}
             className={`
               px-3 py-1.5 rounded text-sm
-              ${activeTab === 'canvas' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}
+              ${activeTab === 'canvas' ? 'bg-blue-100 text-blue-700' : 'text-zinc-600 hover:bg-zinc-100'}
             `}
           >
             Canvas
@@ -465,12 +465,12 @@ export const WorkflowBuilderProgram: React.FC<WorkflowBuilderProgramProps> = ({ 
             onClick={() => setActiveTab('messages')}
             className={`
               px-3 py-1.5 rounded text-sm relative
-              ${activeTab === 'messages' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}
+              ${activeTab === 'messages' ? 'bg-blue-100 text-blue-700' : 'text-zinc-600 hover:bg-zinc-100'}
             `}
           >
             Messages
             {rails.messages.length > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 size-4  bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
                 {rails.messages.length}
               </span>
             )}
@@ -479,7 +479,7 @@ export const WorkflowBuilderProgram: React.FC<WorkflowBuilderProgramProps> = ({ 
             onClick={() => setActiveTab('logs')}
             className={`
               px-3 py-1.5 rounded text-sm
-              ${activeTab === 'logs' ? 'bg-blue-100 text-blue-700' : 'text-gray-600 hover:bg-gray-100'}
+              ${activeTab === 'logs' ? 'bg-blue-100 text-blue-700' : 'text-zinc-600 hover:bg-zinc-100'}
             `}
           >
             Logs
@@ -489,16 +489,16 @@ export const WorkflowBuilderProgram: React.FC<WorkflowBuilderProgramProps> = ({ 
         <div className="flex items-center gap-2">
           <button
             onClick={() => setScale(s => Math.max(0.5, s - 0.1))}
-            className="p-1.5 rounded hover:bg-gray-100"
+            className="p-1.5 rounded hover:bg-zinc-100"
           >
             −
           </button>
-          <span className="text-sm text-gray-600 w-12 text-center">
+          <span className="text-sm text-zinc-600 w-12 text-center">
             {Math.round(scale * 100)}%
           </span>
           <button
             onClick={() => setScale(s => Math.min(2, s + 0.1))}
-            className="p-1.5 rounded hover:bg-gray-100"
+            className="p-1.5 rounded hover:bg-zinc-100"
           >
             +
           </button>
@@ -518,7 +518,7 @@ export const WorkflowBuilderProgram: React.FC<WorkflowBuilderProgramProps> = ({ 
             {/* Canvas */}
             <div
               ref={canvasRef}
-              className="flex-1 relative overflow-auto bg-gray-50"
+              className="flex-1 relative overflow-auto bg-zinc-50"
               style={{
                 backgroundImage: `
                   linear-gradient(to right, #e5e7eb 1px, transparent 1px),
@@ -573,12 +573,12 @@ export const WorkflowBuilderProgram: React.FC<WorkflowBuilderProgramProps> = ({ 
 
             {/* Properties Panel */}
             {selectedNodeId && visualNodes[selectedNodeId] && (
-              <div className="w-72 bg-white border-l border-gray-200 p-4 overflow-auto">
+              <div className="w-72 bg-white border-l border-zinc-200 p-4 overflow-auto">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-semibold text-gray-900">Node Properties</h3>
+                  <h3 className="font-semibold text-zinc-900">Node Properties</h3>
                   <button
                     onClick={() => setSelectedNodeId(null)}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="text-zinc-400 hover:text-zinc-600"
                   >
                     ✕
                   </button>
@@ -589,42 +589,42 @@ export const WorkflowBuilderProgram: React.FC<WorkflowBuilderProgramProps> = ({ 
                   return (
                     <div className="space-y-4">
                       <div>
-                        <label className="text-xs font-medium text-gray-500 uppercase">Name</label>
-                        <p className="text-sm text-gray-900">{node.name}</p>
+                        <label className="text-xs font-medium text-zinc-500 uppercase">Name</label>
+                        <p className="text-sm text-zinc-900">{node.name}</p>
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-gray-500 uppercase">ID</label>
-                        <p className="text-xs font-mono text-gray-600">{node.id}</p>
+                        <label className="text-xs font-medium text-zinc-500 uppercase">ID</label>
+                        <p className="text-xs font-mono text-zinc-600">{node.id}</p>
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-gray-500 uppercase">Status</label>
+                        <label className="text-xs font-medium text-zinc-500 uppercase">Status</label>
                         <span className={`
                           inline-block px-2 py-1 rounded text-xs mt-1
                           ${node.status === 'DONE' ? 'bg-green-100 text-green-800' : ''}
                           ${node.status === 'RUNNING' ? 'bg-yellow-100 text-yellow-800' : ''}
                           ${node.status === 'READY' ? 'bg-blue-100 text-blue-800' : ''}
                           ${node.status === 'FAILED' ? 'bg-red-100 text-red-800' : ''}
-                          ${node.status === 'NEW' ? 'bg-gray-100 text-gray-800' : ''}
+                          ${node.status === 'NEW' ? 'bg-zinc-100 text-zinc-800' : ''}
                         `}>
                           {node.status}
                         </span>
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-gray-500 uppercase">Execution Mode</label>
-                        <p className="text-sm text-gray-900">{node.execution_mode}</p>
+                        <label className="text-xs font-medium text-zinc-500 uppercase">Execution Mode</label>
+                        <p className="text-sm text-zinc-900">{node.execution_mode}</p>
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-gray-500 uppercase">Description</label>
-                        <p className="text-sm text-gray-700">{node.description}</p>
+                        <label className="text-xs font-medium text-zinc-500 uppercase">Description</label>
+                        <p className="text-sm text-zinc-700">{node.description}</p>
                       </div>
                       
                       {node.terminal_context ? (
                         <div>
-                          <label className="text-xs font-medium text-gray-500 uppercase">Terminal</label>
-                          <p className="text-xs font-mono text-gray-600">
+                          <label className="text-xs font-medium text-zinc-500 uppercase">Terminal</label>
+                          <p className="text-xs font-mono text-zinc-600">
                             Session: {node.terminal_context.session_id}
                           </p>
-                          <p className="text-xs font-mono text-gray-600">
+                          <p className="text-xs font-mono text-zinc-600">
                             Pane: {node.terminal_context.pane_id}
                           </p>
                         </div>
@@ -656,26 +656,26 @@ export const WorkflowBuilderProgram: React.FC<WorkflowBuilderProgramProps> = ({ 
         {activeTab === 'logs' && (
           <div className="flex-1 overflow-auto p-4 font-mono text-xs">
             {rails.events.map((event, i) => (
-              <div key={i} className="mb-2 p-2 bg-gray-100 rounded">
-                <div className="flex items-center gap-2 text-gray-600">
+              <div key={i} className="mb-2 p-2 bg-zinc-100 rounded">
+                <div className="flex items-center gap-2 text-zinc-600">
                   <span>{new Date(event.ts).toLocaleTimeString()}</span>
                   <span className="font-semibold text-blue-600">{event.type}</span>
-                  <span className="text-gray-400">({event.actor.type}: {event.actor.id})</span>
+                  <span className="text-zinc-400">({event.actor.type}: {event.actor.id})</span>
                 </div>
-                <pre className="mt-1 text-gray-700 overflow-x-auto">
+                <pre className="mt-1 text-zinc-700 overflow-x-auto">
                   {JSON.stringify(event.payload, null, 2)}
                 </pre>
               </div>
             ))}
             {rails.events.length === 0 && (
-              <div className="text-center text-gray-400 py-8">No events</div>
+              <div className="text-center text-zinc-400 py-8">No events</div>
             )}
           </div>
         )}
       </div>
 
       {/* Status Bar */}
-      <div className="flex items-center justify-between px-4 py-2 bg-white border-t border-gray-200 text-xs text-gray-500">
+      <div className="flex items-center justify-between px-4 py-2 bg-white border-t border-zinc-200 text-xs text-zinc-500">
         <div className="flex items-center gap-4">
           <span>{Object.keys(visualNodes).length} nodes</span>
           <span>{edges.length} edges</span>

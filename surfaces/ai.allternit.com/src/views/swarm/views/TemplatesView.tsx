@@ -9,6 +9,7 @@
  * - Quick-apply templates to create agents
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useMemo, useCallback } from 'react';
 import {
   Brain, Robot, Cpu, ClipboardText,
@@ -127,7 +128,7 @@ export function TemplatesView({ modeColors, onApplyTemplate }: TemplatesViewProp
     
     const link = document.createElement('a');
     link.href = url;
-    link.download = `agent-templates-${new Date().toISOString().split('T')[0]}.json`;
+    link.download = `agent-templates-${isClient ? new Date().toISOString().split('T')[0] : "..."}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -182,13 +183,13 @@ export function TemplatesView({ modeColors, onApplyTemplate }: TemplatesViewProp
             <MagnifyingGlass
               size={13}
               color={TEXT.tertiary}
-              className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
+              className="absolute left-3 top-1/2 -tranzinc-y-1/2 pointer-events-none"
             />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search templates..."
+              placeholder="Search templates…"
               className="pl-9 pr-4 py-2 rounded-lg text-sm outline-none w-64"
               style={{
                 background: 'var(--surface-hover)',
@@ -256,7 +257,7 @@ export function TemplatesView({ modeColors, onApplyTemplate }: TemplatesViewProp
         {filteredTemplates.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center">
             <div 
-              className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
+              className="size-16  rounded-2xl flex items-center justify-center mb-4"
               style={{ background: 'var(--surface-hover)' }}
             >
               <Stack size={28} color={TEXT.tertiary} weight="duotone" />
@@ -331,7 +332,7 @@ function TemplateCard({ template, modeColors, onApply, onEdit, onDuplicate, onDe
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div 
-          className="w-10 h-10 rounded-xl flex items-center justify-center"
+          className="size-10  rounded-xl flex items-center justify-center"
           style={{ background: `${roleColor}20` }}
         >
           <RoleIcon icon={ROLE_ICONS[template.role]} color={roleColor} size={16} />
@@ -339,7 +340,7 @@ function TemplateCard({ template, modeColors, onApply, onEdit, onDuplicate, onDe
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={() => onEdit(template)}
-            className="w-7 h-7 rounded flex items-center justify-center text-xs hover:bg-white/5"
+            className="size-7  rounded flex items-center justify-center text-xs hover:bg-white/5"
             style={{ color: TEXT.tertiary }}
             title="Edit"
           >
@@ -347,7 +348,7 @@ function TemplateCard({ template, modeColors, onApply, onEdit, onDuplicate, onDe
           </button>
           <button
             onClick={() => onDuplicate(template.id)}
-            className="w-7 h-7 rounded flex items-center justify-center text-xs hover:bg-white/5"
+            className="size-7  rounded flex items-center justify-center text-xs hover:bg-white/5"
             style={{ color: TEXT.tertiary }}
             title="Duplicate"
           >
@@ -355,7 +356,7 @@ function TemplateCard({ template, modeColors, onApply, onEdit, onDuplicate, onDe
           </button>
           <button
             onClick={() => onDelete(template.id)}
-            className="w-7 h-7 rounded flex items-center justify-center text-xs hover:bg-white/5"
+            className="size-7  rounded flex items-center justify-center text-xs hover:bg-white/5"
             style={{ color: TEXT.tertiary }}
             title="Delete"
           >
@@ -373,12 +374,12 @@ function TemplateCard({ template, modeColors, onApply, onEdit, onDuplicate, onDe
       {/* Meta */}
       <div className="flex items-center gap-2 mb-3">
         <span 
-          className="text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wider"
+          className="text-xs px-2 py-0.5 rounded-full uppercase tracking-wider"
           style={{ background: `${roleColor}20`, color: roleColor }}
         >
           {template.role}
         </span>
-        <span className="text-[10px]" style={{ color: TEXT.tertiary }}>
+        <span className="text-xs" style={{ color: TEXT.tertiary }}>
           {template.model}
         </span>
       </div>
@@ -388,14 +389,14 @@ function TemplateCard({ template, modeColors, onApply, onEdit, onDuplicate, onDe
         {template.capabilities.slice(0, 3).map(cap => (
           <span 
             key={cap}
-            className="text-[10px] px-1.5 py-0.5 rounded"
+            className="text-xs px-1.5 py-0.5 rounded"
             style={{ background: 'var(--surface-hover)', color: TEXT.tertiary }}
           >
             {cap}
           </span>
         ))}
         {template.capabilities.length > 3 && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded" style={{ color: TEXT.tertiary }}>
+          <span className="text-xs px-1.5 py-0.5 rounded" style={{ color: TEXT.tertiary }}>
             +{template.capabilities.length - 3}
           </span>
         )}
@@ -403,7 +404,7 @@ function TemplateCard({ template, modeColors, onApply, onEdit, onDuplicate, onDe
 
       {/* Footer */}
       <div className="flex items-center justify-between pt-3 border-t" style={{ borderColor: 'var(--surface-hover)' }}>
-        <span className="text-[10px]" style={{ color: TEXT.tertiary }}>
+        <span className="text-xs" style={{ color: TEXT.tertiary }}>
           Used {template.usageCount} times
         </span>
         <button

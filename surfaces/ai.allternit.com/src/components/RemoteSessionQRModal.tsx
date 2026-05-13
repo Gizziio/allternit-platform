@@ -19,7 +19,7 @@ import {
 } from '@phosphor-icons/react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/design/Button'
-import { GlassCard } from '@/design/GlassCard'
+import { GlassCard } from '@/design/glass/GlassCard'
 import { openInBrowser } from '@/lib/openInBrowser';
 
 export interface RemoteSessionQRModalProps {
@@ -73,15 +73,15 @@ export function RemoteSessionQRModal({
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b border-white/10">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                    <DeviceMobile className="w-5 h-5 text-white" />
+                  <div className="size-10  rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                    <DeviceMobile className="size-5  text-white" />
                   </div>
                   <div>
                     <h2 className="text-lg font-semibold text-white">
                       Remote Session
                     </h2>
                     {sessionName && (
-                      <p className="text-xs text-gray-400 truncate max-w-[200px]">
+                      <p className="text-xs text-zinc-400 truncate max-w-[200px]">
                         {sessionName}
                       </p>
                     )}
@@ -89,9 +89,9 @@ export function RemoteSessionQRModal({
                 </div>
                 <button
                   onClick={onClose}
-                  className="p-2 rounded-lg hover:bg-white/5 transition-colors text-gray-400"
+                  className="p-2 rounded-lg hover:bg-white/5 transition-colors text-zinc-400"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="size-5 " />
                 </button>
               </div>
 
@@ -99,18 +99,18 @@ export function RemoteSessionQRModal({
               <div className="p-6 space-y-4">
                 {/* QR Code */}
                 <div className="aspect-square bg-white rounded-xl p-4 mb-4">
-                  <div className="w-full h-full bg-gradient-to-br from-gray-900 to-gray-700 rounded-lg flex items-center justify-center">
-                    <QrCode className="w-32 h-32 text-white" />
+                  <div className="w-full h-full bg-gradient-to-br from-zinc-900 to-zinc-700 rounded-lg flex items-center justify-center">
+                    <QrCode className="size-32  text-white" />
                   </div>
                 </div>
 
                 {/* Session URL */}
                 <div>
-                  <label className="text-xs text-gray-400 mb-2 block">
+                  <label className="text-xs text-zinc-400 mb-2 block">
                     Session URL
                   </label>
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 text-sm bg-black/30 px-3 py-2 rounded-lg block truncate text-gray-300">
+                    <code className="flex-1 text-sm bg-black/30 px-3 py-2 rounded-lg block truncate text-zinc-300">
                       {sessionUrl}
                     </code>
                     <Button
@@ -122,9 +122,9 @@ export function RemoteSessionQRModal({
                       )}
                     >
                       {copied ? (
-                        <Check className="w-4 h-4" />
+                        <Check className="size-4 " />
                       ) : (
-                        <Copy className="w-4 h-4" />
+                        <Copy className="size-4 " />
                       )}
                     </Button>
                     <Button
@@ -132,24 +132,24 @@ export function RemoteSessionQRModal({
                       size="sm"
                       onClick={() => openInBrowser(sessionUrl)}
                     >
-                      <ArrowSquareOut className="w-4 h-4" />
+                      <ArrowSquareOut className="size-4 " />
                     </Button>
                   </div>
                 </div>
 
                 {/* Instructions */}
-                <div className="text-sm text-gray-400 space-y-2 pt-2">
+                <div className="text-sm text-zinc-400 space-y-2 pt-2">
                   <p className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                    <Check className="size-4  text-green-500 mt-0.5 flex-shrink-0" />
                     Open camera app and scan QR code
                   </p>
                   <p className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                    <Check className="size-4  text-green-500 mt-0.5 flex-shrink-0" />
                     Or copy URL and paste in mobile browser
                   </p>
                   {expiresAt && (
                     <p className="flex items-start gap-2">
-                      <Clock className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+                      <Clock className="size-4  text-yellow-500 mt-0.5 flex-shrink-0" />
                       Session expires {new Date(expiresAt).toLocaleString()}
                     </p>
                   )}
@@ -158,7 +158,7 @@ export function RemoteSessionQRModal({
                 {/* Warning */}
                 <GlassCard className="p-3 bg-yellow-500/10 border-yellow-500/20">
                   <p className="text-xs text-yellow-400 flex items-start gap-2">
-                    <Warning className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                    <Warning className="size-4  mt-0.5 flex-shrink-0" />
                     Anyone with this URL can view the session. Share carefully.
                   </p>
                 </GlassCard>

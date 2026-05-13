@@ -71,10 +71,10 @@ function TabButton({ tab, isActive, onClick }: TabButtonProps) {
           : "border-white/5 bg-white/[0.03] text-muted-foreground hover:border-white/10 hover:bg-white/[0.05] hover:text-foreground"
       }`}
     >
-      <Icon className={`h-4 w-4 ${isActive ? "text-emerald-200" : ""}`} />
+      <Icon className={`size-4  ${isActive ? "text-emerald-200" : ""}`} />
       <span>{tab.label}</span>
       {tab.badge ? (
-        <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-semibold text-white">
+        <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">
           {tab.badge > 99 ? "99+" : tab.badge}
         </span>
       ) : null}

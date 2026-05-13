@@ -9,6 +9,7 @@ import type { UIRoot, UIComponent, UIAction, UIState } from '../types';
 import type { StateStore } from '../state/store';
 import type { ComponentCatalog } from '../catalog/registry';
 import type { JSONPatch } from '../state/patch';
+import { evaluateRuntimeExpression } from '../../../../src/lib/expression/safe-runtime-expression';
 
 export interface UIRendererConfig {
   /** Component catalog */
@@ -302,9 +303,7 @@ function evaluateValue(value: unknown, context: Record<string, unknown>): unknow
   if ('$expr' in (value as object)) {
     const expr = (value as { $expr: string }).$expr;
     try {
-      // Simple expression evaluation
-      const fn = new Function('context', `with(context) { return ${expr}; }`);
-      return fn(context);
+      return evaluateRuntimeExpression(expr, context);
     } catch {
       return undefined;
     }

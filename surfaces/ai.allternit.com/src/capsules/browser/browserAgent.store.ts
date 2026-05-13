@@ -919,14 +919,14 @@ export const useBrowserAgentStore = create<BrowserAgentState>()(
     
     // Capture screenshot
     captureScreenshot: () => {
-      console.log('Capturing screenshot...');
+      console.debug('Capturing screenshot...');
       // @placeholder APPROVED - Browser runtime integration pending
       // @ticket GAP-56
     },
 
     // Open drawer
     openDrawer: () => {
-      console.log('Opening drawer...');
+      console.debug('Opening drawer...');
       // @placeholder APPROVED - Drawer event dispatch pending
       // @ticket GAP-56
       // Stub: dispatch drawer open event

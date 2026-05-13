@@ -9,7 +9,7 @@
 import { createPortal } from 'react-dom';
 import { OnboardingFlow } from './OnboardingFlow';
 
-export function OnboardingPortal() {
+export function OnboardingPortal(): void {
   // Render onboarding at document.body level, outside any parent containers
   if (typeof document === 'undefined') return null;
   

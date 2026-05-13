@@ -102,7 +102,7 @@ export function AgentTemplateSelector({
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search templates..."
+          placeholder="Search templates…"
           style={{
             flex: 1,
             background: `${STUDIO_THEME.textPrimary}05`,

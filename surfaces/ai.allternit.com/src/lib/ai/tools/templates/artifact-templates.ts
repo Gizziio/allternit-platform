@@ -76,17 +76,17 @@ h1{font-size:18px;font-weight:600;margin-bottom:20px;color:#f1f5f9}
   <div class="col todo" id="todo">
     <div class="col-header"><span class="col-title">To Do</span><span class="col-count" id="cnt-todo">0</span></div>
     <div class="cards" id="cards-todo"></div>
-    <div class="add-row"><input class="add-input" id="inp-todo" placeholder="Add task..." /><button class="add-btn" onclick="addCard('todo')">Add</button></div>
+    <div class="add-row"><input class="add-input" id="inp-todo" placeholder="Add task…" /><button class="add-btn" onclick="addCard('todo')">Add</button></div>
   </div>
   <div class="col inprog" id="inprog">
     <div class="col-header"><span class="col-title">In Progress</span><span class="col-count" id="cnt-inprog">0</span></div>
     <div class="cards" id="cards-inprog"></div>
-    <div class="add-row"><input class="add-input" id="inp-inprog" placeholder="Add task..." /><button class="add-btn" onclick="addCard('inprog')">Add</button></div>
+    <div class="add-row"><input class="add-input" id="inp-inprog" placeholder="Add task…" /><button class="add-btn" onclick="addCard('inprog')">Add</button></div>
   </div>
   <div class="col done" id="done">
     <div class="col-header"><span class="col-title">Done</span><span class="col-count" id="cnt-done">0</span></div>
     <div class="cards" id="cards-done"></div>
-    <div class="add-row"><input class="add-input" id="inp-done" placeholder="Add task..." /><button class="add-btn" onclick="addCard('done')">Add</button></div>
+    <div class="add-row"><input class="add-input" id="inp-done" placeholder="Add task…" /><button class="add-btn" onclick="addCard('done')">Add</button></div>
   </div>
 </div>
 <script>
@@ -421,7 +421,7 @@ body{font-family:'Allternit Sans',Inter,ui-sans-serif,system-ui,-apple-system,Bl
   <span class="status idle" id="status">Paste JSON to begin</span>
 </div>
 <div class="panes">
-  <div class="pane"><div class="pane-label">Input</div><textarea id="input" spellcheck="false" placeholder="Paste JSON here..."></textarea></div>
+  <div class="pane"><div class="pane-label">Input</div><textarea id="input" spellcheck="false" placeholder="Paste JSON here…"></textarea></div>
   <div class="divider"></div>
   <div class="pane"><div class="pane-label">Formatted Output</div><div id="output"></div></div>
 </div>
@@ -446,14 +446,14 @@ function renderNode(v,depth){
     if(v.length===0)return '[]';
     const id='n'+Math.random().toString(36).slice(2);
     const items=v.map((item,i)=>'<div style="padding-left:18px">'+renderNode(item,depth+1)+(i<v.length-1?',':'')+'</div>').join('');
-    return '<span class="toggle" onclick="tog(\''+id+'\')">&#9660;</span>[<span class="ellipsis">...]</span><span class="collapsible" id="'+id+'">'+items+'</span>]';
+    return '<span class="toggle" onclick="tog(\''+id+'\')">&#9660;</span>[<span class="ellipsis">…]</span><span class="collapsible" id="'+id+'">'+items+'</span>]';
   }
   if(typeof v==='object'){
     const keys=Object.keys(v);
     if(keys.length===0)return '{}';
     const id='n'+Math.random().toString(36).slice(2);
     const items=keys.map((k,i)=>'<div style="padding-left:18px"><span class="jkey">"'+esc(k)+'"</span>: '+renderNode(v[k],depth+1)+(i<keys.length-1?',':'')+'</div>').join('');
-    return '<span class="toggle" onclick="tog(\''+id+'\')">&#9660;</span>{<span class="ellipsis">...}</span><span class="collapsible" id="'+id+'">'+items+'</span>}';
+    return '<span class="toggle" onclick="tog(\''+id+'\')">&#9660;</span>{<span class="ellipsis">…}</span><span class="collapsible" id="'+id+'">'+items+'</span>}';
   }
   return String(v);
 }
@@ -765,7 +765,7 @@ tbody td{padding:10px 14px;font-size:13px;color:#cbd5e1}
 <body>
 <div class="toolbar">
   <h1>Users</h1>
-  <input id="search" placeholder="Search name, email, role..." />
+  <input id="search" placeholder="Search name, email, role…" />
   <select class="col-filter" id="sf"><option value="">All Status</option><option value="Active">Active</option><option value="Inactive">Inactive</option><option value="Pending">Pending</option></select>
   <select class="col-filter" id="rf"><option value="">All Roles</option><option value="admin">Admin</option><option value="editor">Editor</option><option value="user">User</option></select>
   <span class="meta" id="meta"></span>

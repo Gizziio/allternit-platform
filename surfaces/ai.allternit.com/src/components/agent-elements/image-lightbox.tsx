@@ -125,7 +125,7 @@ export function ImageLightbox({
           type="button"
           onClick={goToPrevious}
           aria-label="Previous image (←)"
-          className="absolute left-4 top-1/2 z-10 inline-flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+          className="absolute left-4 top-1/2 z-10 inline-flex size-10 -tranzinc-y-1/2 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
         >
           <IconChevronLeft className="size-6" />
         </button>
@@ -144,14 +144,14 @@ export function ImageLightbox({
           type="button"
           onClick={goToNext}
           aria-label="Next image (→)"
-          className="absolute right-4 top-1/2 z-10 inline-flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+          className="absolute right-4 top-1/2 z-10 inline-flex size-10 -tranzinc-y-1/2 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
         >
           <IconChevronRight className="size-6" />
         </button>
       )}
 
       {hasMultipleImages && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">
+        <div className="absolute bottom-6 left-1/2 -tranzinc-x-1/2 flex flex-col items-center gap-3">
           <div className="flex gap-2">
             {images.map((_, idx) => (
               <button

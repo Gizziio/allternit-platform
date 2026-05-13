@@ -83,7 +83,7 @@ export const toolRegistry: Record<string, ToolMeta> = {
     },
     subtitle: (part) => {
       const desc = part.input?.description || "";
-      return desc.length > 50 ? desc.slice(0, 47) + "..." : desc;
+      return desc.length > 50 ? desc.slice(0, 47) + "…" : desc;
     },
     variant: "simple",
   },
@@ -100,7 +100,7 @@ export const toolRegistry: Record<string, ToolMeta> = {
     },
     subtitle: (part) => {
       const desc = part.input?.description || "";
-      return desc.length > 50 ? desc.slice(0, 47) + "..." : desc;
+      return desc.length > 50 ? desc.slice(0, 47) + "…" : desc;
     },
     variant: "simple",
   },
@@ -124,9 +124,9 @@ export const toolRegistry: Record<string, ToolMeta> = {
       const path = part.input?.path || "";
       if (path) {
         const combined = `${pattern} in ${getDisplayPath(path)}`;
-        return combined.length > 40 ? combined.slice(0, 37) + "..." : combined;
+        return combined.length > 40 ? combined.slice(0, 37) + "…" : combined;
       }
-      return pattern.length > 40 ? pattern.slice(0, 37) + "..." : pattern;
+      return pattern.length > 40 ? pattern.slice(0, 37) + "…" : pattern;
     },
     variant: "simple",
   },
@@ -141,7 +141,7 @@ export const toolRegistry: Record<string, ToolMeta> = {
     },
     subtitle: (part) => {
       const pattern = part.input?.pattern || "";
-      return pattern.length > 40 ? pattern.slice(0, 37) + "..." : pattern;
+      return pattern.length > 40 ? pattern.slice(0, 37) + "…" : pattern;
     },
     variant: "simple",
   },
@@ -210,7 +210,7 @@ export const toolRegistry: Record<string, ToolMeta> = {
         (match: string) => getDisplayPath(match),
       );
       return normalized.length > 50
-        ? normalized.slice(0, 47) + "..."
+        ? normalized.slice(0, 47) + "…"
         : normalized;
     },
     variant: "simple",
@@ -241,7 +241,7 @@ export const toolRegistry: Record<string, ToolMeta> = {
     },
     subtitle: (part) => {
       const query = part.input?.query || "";
-      return query.length > 40 ? query.slice(0, 37) + "..." : query;
+      return query.length > 40 ? query.slice(0, 37) + "…" : query;
     },
     variant: "collapsible",
   },
@@ -321,7 +321,7 @@ export const toolRegistry: Record<string, ToolMeta> = {
         (match: string) => getDisplayPath(match),
       );
       return normalized.length > 50
-        ? normalized.slice(0, 47) + "..."
+        ? normalized.slice(0, 47) + "…"
         : normalized;
     },
     variant: "simple",
@@ -367,7 +367,7 @@ export const toolRegistry: Record<string, ToolMeta> = {
     },
     subtitle: (part) => {
       const title = part.input?.title || "";
-      return title.length > 40 ? title.slice(0, 37) + "..." : title;
+      return title.length > 40 ? title.slice(0, 37) + "…" : title;
     },
     variant: "simple",
   },
@@ -380,7 +380,7 @@ export const toolRegistry: Record<string, ToolMeta> = {
     },
     subtitle: (part) => {
       const query = part.input?.query || "";
-      return query.length > 40 ? query.slice(0, 37) + "..." : query;
+      return query.length > 40 ? query.slice(0, 37) + "…" : query;
     },
     variant: "collapsible",
   },

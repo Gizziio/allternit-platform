@@ -267,7 +267,7 @@ export function AddSSHConnectionForm({
       outline: 'none',
     },
     hint: {
-      fontSize: '11px',
+      fontSize: '12px',
       color: TEXT.tertiary,
       marginTop: '4px',
     },
@@ -600,7 +600,7 @@ export function AddSSHConnectionForm({
                 <div>
                   <h4 style={{ fontSize: '13px', fontWeight: 500, color: TEXT.primary, marginBottom: '4px' }}>Generate SSH keys</h4>
                   <p style={{ fontSize: '12px', color: TEXT.secondary }}>If needed, run:</p>
-                  <div style={{ marginTop: '8px', padding: '10px 12px', background: 'var(--surface-panel)', borderRadius: '6px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: SAND[500] }}>
+                  <div style={{ marginTop: '8px', padding: '10px 12px', background: 'var(--surface-panel)', borderRadius: '6px', fontFamily: 'var(--font-mono)', fontSize: '12px', color: SAND[500] }}>
                     ssh-keygen -t ed25519 -C "allternit-email.com"
                   </div>
                 </div>
@@ -610,7 +610,7 @@ export function AddSSHConnectionForm({
                 <div>
                   <h4 style={{ fontSize: '13px', fontWeight: 500, color: TEXT.primary, marginBottom: '4px' }}>Copy your public key</h4>
                   <p style={{ fontSize: '12px', color: TEXT.secondary }}>Run this to authorize your key:</p>
-                  <div style={{ marginTop: '8px', padding: '10px 12px', background: 'var(--surface-panel)', borderRadius: '6px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: SAND[500] }}>
+                  <div style={{ marginTop: '8px', padding: '10px 12px', background: 'var(--surface-panel)', borderRadius: '6px', fontFamily: 'var(--font-mono)', fontSize: '12px', color: SAND[500] }}>
                     ssh-copy-id -i ~/.ssh/id_ed25519.pub user@server
                   </div>
                 </div>
@@ -619,7 +619,7 @@ export function AddSSHConnectionForm({
                 <Warning size={20} color={STATUS.warning} style={{ flexShrink: 0 }} />
                 <div>
                   <p style={{ fontSize: '13px', fontWeight: 500, color: STATUS.warning }}>Security tip</p>
-                  <p style={{ fontSize: '11px', color: TEXT.secondary, marginTop: '2px' }}>Allternit stores keys encrypted and only uses them for SSH connections.</p>
+                  <p style={{ fontSize: '12px', color: TEXT.secondary, marginTop: '2px' }}>Allternit stores keys encrypted and only uses them for SSH connections.</p>
                 </div>
               </div>
             </div>

@@ -281,20 +281,32 @@ fn resolve_bind_address() -> String {
         .or_else(|| std::env::var("Allternit_PORT").ok())
         .or_else(|| std::env::var("OPENCLAW_PORT").ok())
         .or(port_from_file)
-        .unwrap_or_else(|| "8080".to_string());
+        .unwrap_or_else(|| "18789".to_string());
 
     let port = match raw_port.parse::<u16>() {
         Ok(value) => value,
         Err(_) => {
             warn!(
-                "Invalid OpenClaw host port '{}', falling back to 8080",
+                "Invalid OpenClaw host port '{}', falling back to 18789",
                 raw_port
             );
-            8080
+            18789
         }
     };
 
     format!("{}:{}", host.trim(), port)
+}
+
+// Mini-app manifest endpoint for Allternit ACI discovery
+async fn well_known_allternit_app() -> impl IntoResponse {
+    AxumJson(serde_json::json!({
+        "id": "openclaw",
+        "name": "OpenClaw",
+        "description": "Agent coding runtime — native skill execution, session management, and tool registry",
+        "version": env!("CARGO_PKG_VERSION"),
+        "category": "runtime",
+        "pinnable": true
+    }))
 }
 
 // Health check endpoint
@@ -1125,6 +1137,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create API routes
     let app = Router::new()
+        .route("/.well-known/allternit-app.json", get(well_known_allternit_app))
         .route("/ws", get(gateway_ws))
         .route("/api/v1/ws", get(gateway_ws))
         .route("/health", get(health_check))

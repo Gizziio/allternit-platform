@@ -157,7 +157,7 @@ function FormSchemaCard({ schema, isActive, onClick }: { schema: FormSchema; isA
         <h3 className="font-semibold text-sm text-[var(--text-primary)]">
           {schema.name}
         </h3>
-        <CaretRight className={`w-4 h-4 transition-colors ${
+        <CaretRight className={`size-4  transition-colors ${
           isActive ? 'text-[var(--accent-primary)]' : 'text-[var(--text-tertiary)]'
         }`} />
       </div>
@@ -271,7 +271,7 @@ function FormRenderer({ fields }: { fields: FormField[] }) {
                         : current.filter((x: string) => x !== opt);
                       handleChange(field.name, updated);
                     }}
-                    className="w-4 h-4 rounded border-[var(--border-subtle)] text-[var(--accent-primary)]"
+                    className="size-4  rounded border-[var(--border-subtle)] text-[var(--accent-primary)]"
                   />
                   <span className="text-sm text-[var(--text-primary)]">{opt}</span>
                 </label>
@@ -289,7 +289,7 @@ function FormRenderer({ fields }: { fields: FormField[] }) {
                     value={opt}
                     defaultChecked={opt === field.defaultValue}
                     onChange={(e) => handleChange(field.name, e.target.value)}
-                    className="w-4 h-4 text-[var(--accent-primary)]"
+                    className="size-4  text-[var(--accent-primary)]"
                   />
                   <span className="text-sm text-[var(--text-primary)]">{opt}</span>
                 </label>
@@ -307,8 +307,8 @@ function FormRenderer({ fields }: { fields: FormField[] }) {
               } border border-[var(--border-subtle)]`}
             >
               <span
-                className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
-                  formData[field.name] || field.defaultValue ? 'translate-x-7' : 'translate-x-1'
+                className={`inline-block size-6  transform rounded-full bg-white transition-transform ${
+                  formData[field.name] || field.defaultValue ? 'tranzinc-x-7' : 'tranzinc-x-1'
                 }`}
               />
             </button>
@@ -330,7 +330,7 @@ export function FormSurfacesView() {
       <div className="p-6 border-b border-[var(--border-subtle)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <FileText className="w-7 h-7 text-[var(--accent-primary)]" />
+            <FileText className="size-7  text-[var(--accent-primary)]" />
             <div>
               <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
                 Form Surfaces
@@ -385,7 +385,7 @@ export function FormSurfacesView() {
 
           <div className="p-4 border-t border-[var(--border-subtle)] bg-[var(--bg-secondary)]">
             <button className="w-full px-3 py-2 rounded-lg text-xs font-medium text-[var(--accent-primary)] border border-[var(--border-subtle)] hover:bg-[var(--bg-primary)] transition-colors">
-              <Plus className="w-3 h-3 inline mr-2" />
+              <Plus className="size-3  inline mr-2" />
               New Schema
             </button>
           </div>
@@ -424,7 +424,7 @@ export function FormSurfacesView() {
             {/* Form info */}
             <div className="mt-6 p-4 rounded-xl bg-[var(--bg-secondary)] border border-[var(--border-subtle)] text-xs text-[var(--text-tertiary)]">
               <div className="flex items-start gap-2">
-                <Lightning className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <Lightning className="size-4  flex-shrink-0 mt-0.5" />
                 <div>
                   <p className="font-medium mb-1">Real form rendering</p>
                   <p>

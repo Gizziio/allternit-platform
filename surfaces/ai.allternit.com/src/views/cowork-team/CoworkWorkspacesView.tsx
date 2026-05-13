@@ -4,7 +4,7 @@ import GlassSurface from '@/design/GlassSurface';
 import { Briefcase, Trash, ArrowRight } from '@phosphor-icons/react';
 import { useWorkspaceStore } from '@/stores/workspace.store';
 import { useBoardStore } from '@/stores/board.store';
-import Link from 'next/link';
+import { Link } from 'react-router-dom';
 
 export function CoworkWorkspacesView(): JSX.Element {
   const { workspaces, createWorkspace, fetchWorkspaces, members } = useWorkspaceStore();
@@ -137,7 +137,7 @@ function Stat({ label, value }: { label: string; value: number }): JSX.Element {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <span style={{ color: 'var(--text-primary)', fontWeight: 700, fontSize: 18 }}>{value}</span>
-      <span style={{ color: 'var(--text-secondary)', fontSize: 11 }}>{label}</span>
+      <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{label}</span>
     </div>
   );
 }

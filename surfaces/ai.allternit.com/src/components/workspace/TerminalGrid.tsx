@@ -10,7 +10,7 @@ import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import 'xterm/css/xterm.css';
 import { workspaceClient, Pane } from '../../services/workspace/client';
-import { GlassCard } from '../../design/GlassCard';
+import { GlassCard } from '../../design/glass/GlassCard';
 
 interface TerminalPaneProps {
   pane: Pane;
@@ -97,7 +97,7 @@ function TerminalPane({ pane, isActive, onClick, onClose }: TerminalPaneProps) {
     fitAddonRef.current = fitAddon;
 
     // Fit after delay
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       try {
         fitAddon.fit();
       } catch (e) {
@@ -106,48 +106,32 @@ function TerminalPane({ pane, isActive, onClick, onClose }: TerminalPaneProps) {
     }, 100);
 
     return () => {
+      clearTimeout(timer);
       socket.close();
       term.dispose();
     };
   }, [pane.id]);
 
   return (
-    <div onClick={onClick} style={{ flex: 1, minWidth: 300, minHeight: 200 }}>
+    <div onClick={onClick} className="flex-1 min-w-[300px] min-h-[200px]">
       <GlassCard
-        style={{
-          height: '100%',
-          background: '#1f2937',
-          border: isActive ? '2px solid #3b82f6' : '1px solid #374151',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          cursor: 'pointer',
-        }}
+        className={cn(
+          "h-full bg-[#1f2937] border-solid flex flex-col overflow-hidden cursor-pointer",
+          isActive ? "border-2 border-[#3b82f6]" : "border border-[#374151]"
+        )}
       >
         {/* Header */}
         <div
-          style={{
-            padding: '6px 12px',
-            background: isActive ? '#2563eb' : '#161b22',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flex: '0 0 auto',
-          }}
+          className={cn(
+            "p-1.5 px-3 flex justify-between items-center shrink-0",
+            isActive ? "bg-[#2563eb]" : "bg-[#161b22]"
+          )}
         >
-          <span style={{ fontSize: 11, color: '#f3f4f6', fontWeight: 500 }}>
+          <span className="text-[12px] text-[#f3f4f6] font-medium">
             {pane.title || `Pane ${pane.pane_index}`}
           </span>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <span
-              style={{
-                fontSize: 10,
-                color: '#10b981',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-              }}
-            >
+          <div className="flex gap-2 items-center">
+            <span className="text-[12px] text-[#10b981] flex items-center gap-1">
               ● {pane.id}
             </span>
             <button
@@ -155,14 +139,7 @@ function TerminalPane({ pane, isActive, onClick, onClose }: TerminalPaneProps) {
                 e.stopPropagation();
                 onClose();
               }}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#9ca3af',
-                cursor: 'pointer',
-                fontSize: 14,
-                padding: '0 4px',
-              }}
+              className="bg-transparent border-none text-[#9ca3af] cursor-pointer text-sm p-0 px-1 hover:text-white transition-colors"
             >
               ×
             </button>
@@ -172,12 +149,7 @@ function TerminalPane({ pane, isActive, onClick, onClose }: TerminalPaneProps) {
         {/* Terminal */}
         <div
           ref={terminalRef}
-          style={{
-            flex: 1,
-            padding: 8,
-            backgroundColor: '#1f2937',
-            overflow: 'hidden',
-          }}
+          className="flex-1 p-2 bg-[#1f2937] overflow-hidden"
         />
       </GlassCard>
     </div>
@@ -246,102 +218,43 @@ export function TerminalGrid({ sessionId }: TerminalGridProps) {
 
   if (!sessionId) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          color: '#9ca3af',
-        }}
-      >
+      <div className="flex items-center justify-center h-full text-[#9ca3af] text-sm">
         No session selected
       </div>
     );
   }
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div className="h-full flex flex-col">
       {/* Toolbar */}
-      <div
-        style={{
-          padding: '8px 12px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          borderBottom: '1px solid #374151',
-          background: '#111827',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontSize: 12, fontWeight: 600, color: '#f3f4f6' }}>
+      <div className="p-2 px-3 flex justify-between items-center border-b border-solid border-[#374151] bg-[#111827] shrink-0">
+        <div className="flex items-center gap-3">
+          <span className="text-[12px] font-semibold text-[#f3f4f6]">
             Session: {sessionId}
           </span>
-          <span
-            style={{
-              fontSize: 10,
-              color: isConnected ? '#10b981' : '#ef4444',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-            }}
-          >
+          <span className={cn(
+            "text-[12px] flex items-center gap-1",
+            isConnected ? "text-[#10b981]" : "text-[#ef4444]"
+          )}>
             ● {isConnected ? 'Connected' : 'Disconnected'}
           </span>
         </div>
         <button
           onClick={handleCreatePane}
-          style={{
-            padding: '6px 12px',
-            background: '#2563eb',
-            color: 'white',
-            border: 'none',
-            borderRadius: 6,
-            fontSize: 12,
-            cursor: 'pointer',
-          }}
+          className="p-1.5 px-3 bg-[#2563eb] text-white border-none rounded-md text-[12px] font-bold cursor-pointer transition-all hover:bg-[#1d4ed8] active:scale-95"
         >
           + New Pane
         </button>
       </div>
 
       {/* Grid */}
-      <div
-        style={{
-          flex: 1,
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 12,
-          padding: 12,
-          overflow: 'auto',
-          alignContent: 'flex-start',
-        }}
-      >
+      <div className="flex-1 flex flex-wrap gap-3 p-3 overflow-auto align-content-start">
         {panes.length === 0 ? (
-          <div
-            style={{
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#6b7280',
-              flexDirection: 'column',
-              gap: 12,
-            }}
-          >
-            <span>No panes yet</span>
+          <div className="size-full flex flex-col items-center justify-center text-[#6b7280] gap-3">
+            <span className="text-sm">No panes yet</span>
             <button
               onClick={handleCreatePane}
-              style={{
-                padding: '8px 16px',
-                background: '#374151',
-                color: 'white',
-                border: 'none',
-                borderRadius: 6,
-                fontSize: 12,
-                cursor: 'pointer',
-              }}
+              className="p-2 px-4 bg-[#374151] text-white border-none rounded-md text-[12px] font-bold cursor-pointer transition-all hover:bg-[#4b5563] active:scale-95"
             >
               Create First Pane
             </button>

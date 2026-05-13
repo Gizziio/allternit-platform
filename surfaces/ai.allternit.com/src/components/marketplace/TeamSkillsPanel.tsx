@@ -83,7 +83,7 @@ export function TeamSkillsPanel() {
           onChange={(e) => setActiveWorkspace(e.target.value || null)}
           className="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2 text-sm text-zinc-200"
         >
-          <option value="">Select workspace...</option>
+          <option value="">Select workspace…</option>
           {workspaces.map((ws) => (
             <option key={ws.id} value={ws.id}>{ws.name}</option>
           ))}
@@ -111,7 +111,7 @@ export function TeamSkillsPanel() {
                 className="bg-zinc-950 border-zinc-800 text-zinc-200 flex-1"
               />
               <Button onClick={installSkill} size="sm" className="bg-violet-600 hover:bg-violet-700">
-                <Plus className="w-4 h-4" />
+                <Plus className="size-4 " />
               </Button>
             </div>
           </CardContent>
@@ -120,10 +120,10 @@ export function TeamSkillsPanel() {
 
       {/* Skills list */}
       {loading ? (
-        <div className="text-center py-12 text-zinc-500">Loading team skills...</div>
+        <div className="text-center py-12 text-zinc-500">Loading team skills…</div>
       ) : skills.length === 0 ? (
         <div className="text-center py-12 text-zinc-500">
-          <Package className="w-12 h-12 mx-auto mb-3 text-zinc-700" />
+          <Package className="size-12  mx-auto mb-3 text-zinc-700" />
           <p className="text-sm">No team skills installed yet.</p>
           <p className="text-xs mt-1">Select a workspace and add your first skill.</p>
         </div>
@@ -137,10 +137,10 @@ export function TeamSkillsPanel() {
                     <h4 className="font-semibold text-zinc-100 text-sm">{skill.name}</h4>
                     <p className="text-xs text-zinc-500 mt-1">{skill.description || 'No description'}</p>
                     <div className="flex items-center gap-2 mt-3">
-                      <Badge variant="outline" className="text-[10px] border-zinc-700 text-zinc-400">
+                      <Badge variant="outline" className="text-xs border-zinc-700 text-zinc-400">
                         v{skill.version}
                       </Badge>
-                      <span className="text-[10px] text-zinc-600">
+                      <span className="text-xs text-zinc-600">
                         {new Date(skill.installedAt).toLocaleDateString()}
                       </span>
                     </div>
@@ -151,7 +151,7 @@ export function TeamSkillsPanel() {
                     className="text-zinc-600 hover:text-red-400"
                     onClick={() => uninstallSkill(skill.id)}
                   >
-                    <Trash2 className="w-3 h-3" />
+                    <Trash2 className="size-3 " />
                   </Button>
                 </div>
               </CardContent>

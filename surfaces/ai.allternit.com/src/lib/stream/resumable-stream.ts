@@ -70,13 +70,13 @@ export async function storeStreamChunk(
       timestamp: Date.now(),
     };
 
-    // Store chunk in sorted set by index
-    await redis.zadd(chunkKey, index, JSON.stringify(chunkData));
-    await redis.expire(chunkKey, STREAM_CHUNK_TTL);
-
-    // Update last chunk index
-    await redis.hset(`stream:${streamId}:state`, 'lastChunkIndex', index.toString());
-    await redis.hset(`stream:${streamId}:state`, 'updatedAt', Date.now().toString());
+    // Store chunk and update indices in parallel
+    await Promise.all([
+      redis.zadd(chunkKey, index, JSON.stringify(chunkData)),
+      redis.expire(chunkKey, STREAM_CHUNK_TTL),
+      redis.hset(`stream:${streamId}:state`, 'lastChunkIndex', index.toString()),
+      redis.hset(`stream:${streamId}:state`, 'updatedAt', Date.now().toString())
+    ]);
 
     log.debug({ streamId, index }, 'Stream chunk stored');
   } catch (error) {
@@ -95,27 +95,31 @@ export async function storeStreamState(state: StreamState): Promise<void> {
 
   try {
     const key = `stream:${state.streamId}:state`;
-    await redis.hset(key, {
-      ...state,
-      metadata: JSON.stringify(state.metadata || {}),
-    });
-    await redis.expire(key, STREAM_CHUNK_TTL);
+    const ops = [
+      redis.hset(key, {
+        ...state,
+        metadata: JSON.stringify(state.metadata || {}),
+      }),
+      redis.expire(key, STREAM_CHUNK_TTL)
+    ];
 
-    // Index by chat and message for lookup
+    // Index by chat and message for lookup in parallel
     if (state.chatId) {
-      await redis.setex(
+      ops.push(redis.setex(
         `stream:chat:${state.chatId}:active`,
         STREAM_CHUNK_TTL,
         state.streamId
-      );
+      ));
     }
     if (state.messageId) {
-      await redis.setex(
+      ops.push(redis.setex(
         `stream:message:${state.messageId}`,
         STREAM_CHUNK_TTL,
         state.streamId
-      );
+      ));
     }
+
+    await Promise.all(ops);
 
     log.debug({ streamId: state.streamId, status: state.status }, 'Stream state stored');
   } catch (error) {
@@ -205,8 +209,11 @@ export async function getActiveStreamForChat(chatId: string): Promise<string | n
  * Mark stream as completed
  */
 export async function completeStream(streamId: string): Promise<void> {
+  const state = await getStreamState(streamId);
+  if (!state) return;
+
   await storeStreamState({
-    ...(await getStreamState(streamId))!,
+    ...state,
     status: 'completed',
     updatedAt: Date.now(),
   });
@@ -245,20 +252,20 @@ export async function deleteStream(streamId: string): Promise<void> {
 
   try {
     const state = await getStreamState(streamId);
-    
-    // Remove chunk data
-    await redis.del(`stream:${streamId}:chunks`);
-    
-    // Remove state
-    await redis.del(`stream:${streamId}:state`);
+    const deleteOps = [
+      redis.del(`stream:${streamId}:chunks`),
+      redis.del(`stream:${streamId}:state`)
+    ];
 
     // Remove indices
     if (state?.chatId) {
-      await redis.del(`stream:chat:${state.chatId}:active`);
+      deleteOps.push(redis.del(`stream:chat:${state.chatId}:active`));
     }
     if (state?.messageId) {
-      await redis.del(`stream:message:${state.messageId}`);
+      deleteOps.push(redis.del(`stream:message:${state.messageId}`));
     }
+
+    await Promise.all(deleteOps);
 
     log.debug({ streamId }, 'Stream deleted');
   } catch (error) {
@@ -273,10 +280,12 @@ export async function resumeStream(streamId: string): Promise<{
   state: StreamState;
   chunks: StreamChunk[];
 } | null> {
-  const state = await getStreamState(streamId);
-  if (!state) return null;
+  const [state, chunks] = await Promise.all([
+    getStreamState(streamId),
+    getStreamChunks(streamId)
+  ]);
 
-  const chunks = await getStreamChunks(streamId);
+  if (!state) return null;
 
   log.info({ 
     streamId, 
@@ -301,13 +310,14 @@ export async function getStreamStats(): Promise<{
 
   try {
     const keys = await redis.keys('stream:*:state');
-    let totalChunks = 0;
+    const chunkCounts = await Promise.all(
+      keys.map(async (key: string) => {
+        const streamId = key.split(':')[1];
+        return await redis.zcard(`stream:${streamId}:chunks`);
+      })
+    );
 
-    for (const key of keys) {
-      const streamId = key.split(':')[1];
-      const chunkCount = await redis.zcard(`stream:${streamId}:chunks`);
-      totalChunks += chunkCount;
-    }
+    const totalChunks = chunkCounts.reduce((sum, count) => sum + (count as number), 0);
 
     return {
       activeStreams: keys.length,

@@ -41,7 +41,7 @@ export interface SwipeOptions {
  * 
  * @example
  * const { ref, controls, direction } = useSwipe({
- *   onSwipe: (dir) => console.log('Swiped:', dir),
+ *   onSwipe: (dir) => console.debug('Swiped:', dir),
  *   threshold: 50
  * });
  * 

@@ -37,11 +37,11 @@ export interface LoadingSpinnerProps {
 }
 
 const sizeMap = {
-  xs: 'w-3 h-3',
-  sm: 'w-4 h-4',
-  md: 'w-6 h-6',
-  lg: 'w-8 h-8',
-  xl: 'w-12 h-12',
+  xs: 'size-3 ',
+  sm: 'size-4 ',
+  md: 'size-6 ',
+  lg: 'size-8 ',
+  xl: 'size-12 ',
 };
 
 const variantMap = {
@@ -98,11 +98,11 @@ LoadingSpinner.Dots = function LoadingDots({
   label = 'Loading...',
 }: LoadingSpinnerProps) {
   const dotSize = {
-    xs: 'w-1 h-1',
-    sm: 'w-1.5 h-1.5',
-    md: 'w-2 h-2',
-    lg: 'w-2.5 h-2.5',
-    xl: 'w-3 h-3',
+    xs: 'size-1 ',
+    sm: 'size-1.5 ',
+    md: 'size-2 ',
+    lg: 'size-2.5 ',
+    xl: 'size-3 ',
   }[size];
 
   const colorClass = variantMap[variant];
@@ -146,11 +146,11 @@ LoadingSpinner.Pulse = function LoadingPulse({
   label = 'Loading...',
 }: LoadingSpinnerProps) {
   const sizeClass = {
-    xs: 'w-4 h-4',
-    sm: 'w-6 h-6',
-    md: 'w-8 h-8',
-    lg: 'w-12 h-12',
-    xl: 'w-16 h-16',
+    xs: 'size-4 ',
+    sm: 'size-6 ',
+    md: 'size-8 ',
+    lg: 'size-12 ',
+    xl: 'size-16 ',
   }[size];
 
   const colorClass = variantMap[variant];

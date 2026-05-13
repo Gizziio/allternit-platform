@@ -81,13 +81,9 @@ export function PanelContainer({ position, panels: panelConfigs = [] }: PanelCon
     <div
       ref={containerRef}
       className={cn(
-        'panel-container flex shrink-0',
+        'panel-container flex shrink-0 shadow-lg',
         'bg-background/95 backdrop-blur-sm',
-        'border-white/10',
-        isHorizontal ? 'flex-row' : 'flex-col',
-        position === 'left' && 'border-r',
-        position === 'right' && 'border-l',
-        position === 'bottom' && 'border-t'
+        isHorizontal ? 'flex-row' : 'flex-col'
       )}
       style={{
         [isHorizontal ? 'width' : 'height']: `${size}%`,
@@ -200,9 +196,9 @@ function ResizeHandle({ position, onResize, onDoubleClick }: ResizeHandleProps) 
       onDoubleClick={onDoubleClick}
     >
       {isHorizontal ? (
-        <DotsSixVertical className="w-3 h-3 text-muted-foreground/50" />
+        <DotsSixVertical className="size-3  text-muted-foreground/50" />
       ) : (
-        <DotsNine className="w-3 h-3 text-muted-foreground/50" />
+        <DotsNine className="size-3  text-muted-foreground/50" />
       )}
     </div>
   );
@@ -247,9 +243,9 @@ function Panel({ config, isFirst, isLast, onClose }: PanelProps) {
             title={isMaximized ? 'Restore' : 'Maximize'}
           >
             {isMaximized ? (
-              <ArrowsIn className="w-3.5 h-3.5 text-muted-foreground" />
+              <ArrowsIn className="size-3.5  text-muted-foreground" />
             ) : (
-              <ArrowsOut className="w-3.5 h-3.5 text-muted-foreground" />
+              <ArrowsOut className="size-3.5  text-muted-foreground" />
             )}
           </button>
           <button
@@ -257,7 +253,7 @@ function Panel({ config, isFirst, isLast, onClose }: PanelProps) {
             className="p-1 rounded hover:bg-accent transition-colors"
             title="Close"
           >
-            <X className="w-3.5 h-3.5 text-muted-foreground" />
+            <X className="size-3.5  text-muted-foreground" />
           </button>
         </div>
       </div>
@@ -297,7 +293,7 @@ function DefaultPanelContent({ position }: { position: 'left' | 'right' | 'botto
 
   return (
     <div className="h-full flex flex-col items-center justify-center text-center p-4 text-muted-foreground">
-      <Icon className="w-12 h-12 mb-4 opacity-50" />
+      <Icon className="size-12  mb-4 opacity-50" />
       <h3 className="text-lg font-medium text-foreground mb-2">{title}</h3>
       <p className="text-sm max-w-xs">{description}</p>
     </div>

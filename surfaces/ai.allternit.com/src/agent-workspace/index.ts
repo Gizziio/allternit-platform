@@ -196,37 +196,37 @@ export async function createWorkspace(
     discoveryTimeout = 10000,
   } = options;
 
-  console.log('[Workspace] Creating workspace for path:', path);
+  console.debug('[Workspace] Creating workspace for path:', path);
 
   // Strategy 1: Manual server URL provided
   if (manualServerUrl) {
-    console.log('[Workspace] Using manual server URL:', manualServerUrl);
+    console.debug('[Workspace] Using manual server URL:', manualServerUrl);
     return createHttpWorkspace(path, manualServerUrl, manualAuth);
   }
 
   // Strategy 2: HTTP preferred - try to discover server
   if (preferHttp && preferredBackend !== Backend.WASM) {
-    console.log('[Workspace] Attempting HTTP backend...');
+    console.debug('[Workspace] Attempting HTTP backend...');
     
     const server = await discoverServer({ timeout: discoveryTimeout });
     
     if (server) {
-      console.log('[Workspace] Using HTTP backend:', server.url);
+      console.debug('[Workspace] Using HTTP backend:', server.url);
       return createHttpWorkspace(path, server.url, server.password ? {
         username: server.username || 'allternit',
         password: server.password,
       } : undefined);
     }
     
-    console.log('[Workspace] No HTTP server available');
+    console.debug('[Workspace] No HTTP server available');
   }
 
   // Strategy 3: WASM backend
-  console.log('[Workspace] Attempting WASM backend...');
+  console.debug('[Workspace] Attempting WASM backend...');
   
   try {
     const wasmWorkspace = await createWasmWorkspace(path);
-    console.log('[Workspace] Using WASM backend');
+    console.debug('[Workspace] Using WASM backend');
     return wasmWorkspace;
   } catch (error) {
     console.error('[Workspace] WASM backend failed:', error);

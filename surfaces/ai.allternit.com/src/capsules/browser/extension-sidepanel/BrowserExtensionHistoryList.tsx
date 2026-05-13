@@ -77,7 +77,7 @@ export function BrowserExtensionHistoryList({
                 />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm truncate">{session.task}</p>
-                  <p className="text-[11px] opacity-50 mt-0.5">
+                  <p className="text-[12px] opacity-50 mt-0.5">
                     {session.history.length} events · {timeAgo(session.createdAt)}
                   </p>
                 </div>

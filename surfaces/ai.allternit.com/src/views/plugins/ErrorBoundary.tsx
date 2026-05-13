@@ -153,7 +153,7 @@ export class ErrorBoundary extends Component<Props, State> {
                     paddingTop: 12,
                     borderTop: `1px solid ${THEME.border}`,
                     fontFamily: 'var(--font-mono)',
-                    fontSize: 11,
+                    fontSize: 12,
                     color: THEME.textTertiary,
                     whiteSpace: 'pre-wrap',
                     maxHeight: 200,

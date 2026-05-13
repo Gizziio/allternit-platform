@@ -331,7 +331,7 @@ export function parseLaunchCommands(message: string): LaunchCommand[] {
   // Strip outer markdown code fences that may wrap the entire XML block
   const normalised = stripCodeFence(message);
 
-  // Matches <launch_utility type="..." title="...">...</launch_utility>
+  // Matches <launch_utility type="…" title="…">…</launch_utility>
   // - type/title can appear in either order and other attrs are tolerated
   // - content is captured non-greedy, allowing multiple tags per message
   const tagRe = /<launch_utility\b([^>]*)>([\s\S]*?)<\/launch_utility>/gi;

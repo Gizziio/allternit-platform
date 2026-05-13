@@ -44,6 +44,9 @@ pub fn terminal_router() -> Router<Arc<AppState>> {
     Router::new()
         .route("/message", post(handle_terminal_message))
         .route("/input", post(handle_terminal_input))
+        .route("/create", post(create_terminal))
+        .route("/close", post(close_terminal))
+        .route("/resize", post(resize_terminal))
 }
 
 fn gizzi_base_url() -> String {
@@ -203,4 +206,40 @@ async fn handle_terminal_input(
             )
         }
     }
+}
+
+
+// ─── Terminal lifecycle stubs ────────────────────────────────────────────────
+
+async fn create_terminal(
+    State(_state): State<Arc<AppState>>,
+    Json(_body): Json<serde_json::Value>,
+) -> impl IntoResponse {
+    Json(TerminalMessageResponse {
+        success: true,
+        message: "Terminal created (stub)".to_string(),
+        data: Some(serde_json::json!({ "session_id": "stub-session" })),
+    })
+}
+
+async fn close_terminal(
+    State(_state): State<Arc<AppState>>,
+    Json(_body): Json<serde_json::Value>,
+) -> impl IntoResponse {
+    Json(TerminalMessageResponse {
+        success: true,
+        message: "Terminal closed (stub)".to_string(),
+        data: None,
+    })
+}
+
+async fn resize_terminal(
+    State(_state): State<Arc<AppState>>,
+    Json(_body): Json<serde_json::Value>,
+) -> impl IntoResponse {
+    Json(TerminalMessageResponse {
+        success: true,
+        message: "Terminal resized (stub)".to_string(),
+        data: None,
+    })
 }

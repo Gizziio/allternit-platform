@@ -42,6 +42,7 @@ import {
 } from '@phosphor-icons/react';
 import { GATEWAY_BASE_URL } from '@/integration/api-client';
 import { useToast } from '@/hooks/use-toast';
+import { useIsClient } from '@/lib/hooks/use-is-client';
 
 // =============================================================================
 // TYPES
@@ -400,11 +401,11 @@ const MetricCard: React.FC<MetricCardProps> = ({ icon, label, value, subtext }) 
   >
     <div style={{ color: 'var(--ui-text-secondary)' }}>{icon}</div>
     <div>
-      <div style={{ fontSize: '11px', color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+      <div style={{ fontSize: '12px', color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
         {label}
       </div>
       <div style={{ fontSize: '16px', fontWeight: '600', color: 'var(--ui-text-primary)' }}>{value}</div>
-      {subtext && <div style={{ fontSize: '11px', color: 'var(--ui-text-secondary)' }}>{subtext}</div>}
+      {subtext && <div style={{ fontSize: '12px', color: 'var(--ui-text-secondary)' }}>{subtext}</div>}
     </div>
   </div>
 );
@@ -893,7 +894,7 @@ const NodeDetailModal: React.FC<NodeDetailModalProps> = ({
                           color:
                             log.level === 'error' ? 'var(--status-error)' : log.level === 'warn' ? 'var(--status-warning)' : 'var(--status-success)',
                           textTransform: 'uppercase',
-                          fontSize: '10px',
+                          fontSize: '12px',
                           minWidth: '40px',
                         }}
                       >
@@ -1169,7 +1170,7 @@ const AddNodeModal: React.FC<AddNodeModalProps> = ({ onClose, onDeployCloud }) =
                       </div>
                       <code
                         style={{
-                          fontSize: '11px',
+                          fontSize: '12px',
                           background: 'var(--surface-hover)',
                           padding: '8px',
                           borderRadius: '4px',
@@ -1187,7 +1188,7 @@ const AddNodeModal: React.FC<AddNodeModalProps> = ({ onClose, onDeployCloud }) =
                     <div style={{ position: 'relative' }}>
                       <pre
                         style={{
-                          fontSize: '11px',
+                          fontSize: '12px',
                           background: 'var(--surface-panel)',
                           padding: '16px',
                           borderRadius: '8px',
@@ -1283,6 +1284,7 @@ const AddNodeModal: React.FC<AddNodeModalProps> = ({ onClose, onDeployCloud }) =
 // =============================================================================
 
 export const NodeManagementPanel: React.FC = () => {
+  const isClient = useIsClient();
   const {
     nodes,
     connected,
@@ -1346,6 +1348,7 @@ export const NodeManagementPanel: React.FC = () => {
 
   const formatLastSeen = (date?: string) => {
     if (!date) return 'Never';
+    if (!isClient) return '...';
     const lastSeen = new Date(date);
     const now = new Date();
     const diff = Math.floor((now.getTime() - lastSeen.getTime()) / 1000);
@@ -1433,7 +1436,7 @@ export const NodeManagementPanel: React.FC = () => {
           />
           <input
             type="text"
-            placeholder="Search nodes..."
+            placeholder="Search nodes…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
@@ -1607,7 +1610,7 @@ export const NodeManagementPanel: React.FC = () => {
                             borderRadius: '4px',
                             background: status.bg,
                             color: status.color,
-                            fontSize: '11px',
+                            fontSize: '12px',
                             fontWeight: '500',
                             display: 'flex',
                             alignItems: 'center',
@@ -1624,7 +1627,7 @@ export const NodeManagementPanel: React.FC = () => {
                               borderRadius: '4px',
                               background: 'var(--status-success-bg)',
                               color: 'var(--status-success)',
-                              fontSize: '11px',
+                              fontSize: '12px',
                               fontWeight: '500',
                             }}
                           >

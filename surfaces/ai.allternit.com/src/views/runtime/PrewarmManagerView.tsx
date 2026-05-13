@@ -17,7 +17,7 @@ import { StatCard } from '../components/StatCard';
 import { ProgressBar } from '../components/ProgressBar';
 import { PoolHealth } from '@/types/runtime';
 
-export function PrewarmManagerView() {
+export function PrewarmManagerView(): JSX.Element {
   const {
     pools,
     activities,
@@ -67,7 +67,7 @@ export function PrewarmManagerView() {
   if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center">
-        <ArrowsClockwise className="h-8 w-8 animate-spin text-accent" />
+        <ArrowsClockwise className="size-8  animate-spin text-accent" />
       </div>
     );
   }
@@ -75,7 +75,7 @@ export function PrewarmManagerView() {
   if (error) {
     return (
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
-        <Warning className="mb-4 h-12 w-12 text-red-500" />
+        <Warning className="mb-4 size-12  text-red-500" />
         <p className="mb-4">Failed to load prewarm status</p>
         <button
           onClick={() => void refetch()}
@@ -94,8 +94,8 @@ export function PrewarmManagerView() {
         <GlassSurface intensity="thick" className="rounded-3xl p-6">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
-              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
-                <Fire className="h-3.5 w-3.5 text-amber-300" />
+              <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[12px] uppercase tracking-[0.24em] text-muted-foreground">
+                <Fire className="size-3.5  text-amber-300" />
                 Launch Latency Control
               </div>
               <h2 className="text-3xl font-semibold tracking-tight text-foreground">Prewarm Pool Manager</h2>
@@ -118,7 +118,7 @@ export function PrewarmManagerView() {
                 className="inline-flex items-center justify-center gap-2 rounded-2xl border border-amber-300/20 bg-amber-300/10 px-4 py-3 text-sm font-medium text-amber-100 transition hover:bg-amber-300/20 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isWarming ? (
-                  <ArrowsClockwise className="h-4 w-4 animate-spin" />
+                  <ArrowsClockwise className="size-4  animate-spin" />
                 ) : (
                   <Thermometer size={16} />
                 )}
@@ -190,7 +190,7 @@ export function PrewarmManagerView() {
                   className="inline-flex items-center gap-2 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 px-4 py-3 text-sm font-medium text-emerald-100 transition hover:bg-emerald-300/20 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isSaving ? (
-                    <ArrowsClockwise className="h-4 w-4 animate-spin" />
+                    <ArrowsClockwise className="size-4  animate-spin" />
                   ) : (
                     <CheckCircle size={16} />
                   )}
@@ -228,11 +228,11 @@ export function PrewarmManagerView() {
                       </div>
                       <div className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-xs">
                         {health === PoolHealth.Healthy ? (
-                          <CheckCircle className="h-3.5 w-3.5 text-green-400" />
+                          <CheckCircle className="size-3.5  text-green-400" />
                         ) : health === PoolHealth.Degraded ? (
-                          <Warning className="h-3.5 w-3.5 text-yellow-400" />
+                          <Warning className="size-3.5  text-yellow-400" />
                         ) : (
-                          <Thermometer className="h-3.5 w-3.5 text-sky-400" />
+                          <Thermometer className="size-3.5  text-sky-400" />
                         )}
                         <span className="capitalize text-foreground">{health}</span>
                       </div>
@@ -257,7 +257,7 @@ export function PrewarmManagerView() {
 
               {pools.length === 0 && (
                 <div className="rounded-3xl border border-dashed border-white/10 p-8 text-center">
-                  <Thermometer className="mx-auto h-10 w-10 text-muted-foreground/50" />
+                  <Thermometer className="mx-auto size-10  text-muted-foreground/50" />
                   <h4 className="mt-4 text-sm font-medium text-foreground">No prewarm pools reported</h4>
                   <p className="mt-2 text-sm text-muted-foreground">
                     Increase the pool size to initialize the default pool.
@@ -280,9 +280,9 @@ export function PrewarmManagerView() {
                   className="flex flex-col gap-2 rounded-2xl border border-white/5 bg-black/10 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="flex items-center gap-3">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <Clock className="size-4  text-muted-foreground" />
                     <span className="font-medium text-foreground">{activity.pool_name}</span>
-                    <span className="rounded-full border border-white/10 px-2 py-0.5 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                    <span className="rounded-full border border-white/10 px-2 py-0.5 text-[12px] uppercase tracking-[0.16em] text-muted-foreground">
                       {activity.activity_type}
                     </span>
                   </div>
@@ -343,7 +343,7 @@ function MetricCard({
   return (
     <div className={`rounded-2xl px-3 py-3 ${styles}`}>
       <div className="text-lg font-semibold">{value}</div>
-      <div className="mt-1 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+      <div className="mt-1 text-[12px] uppercase tracking-[0.16em] text-muted-foreground">
         {label}
       </div>
     </div>

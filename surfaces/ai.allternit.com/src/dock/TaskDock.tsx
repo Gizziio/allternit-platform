@@ -114,7 +114,7 @@ export function TaskDock({
                 <div style={{ flex: 1, height: 4, borderRadius: 2, background: 'rgba(0,0,0,0.06)', overflow: 'hidden' }}>
                   <div style={{ width: '45%', height: '100%', background: tokens.colors.chat.primary, boxShadow: '0 0 8px ' + tokens.colors.chat.primary }} />
                 </div>
-                <span style={{ fontSize: 10, fontWeight: 700, color: mutedText, textTransform: 'uppercase' }}>45%</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: mutedText, textTransform: 'uppercase' }}>45%</span>
               </div>
             </div>
           ))}

@@ -49,7 +49,7 @@ export function AgentSelector({ surface, compact = false }: AgentSelectorProps) 
           color: 'var(--ui-text-secondary)',
         }}
       >
-        <span className="animate-pulse">Loading agents...</span>
+        <span className="animate-pulse">Loading agents…</span>
       </div>
     );
   }
@@ -84,7 +84,7 @@ export function AgentSelector({ surface, compact = false }: AgentSelectorProps) 
           paddingRight: '32px',
         }}
       >
-        <option value="">Choose Agent...</option>
+        <option value="">Choose Agent…</option>
         {agents.map((agent) => (
           <option key={agent.id} value={agent.id}>
             {agent.name} {agent.model ? `(${agent.model})` : ''}
@@ -95,7 +95,7 @@ export function AgentSelector({ surface, compact = false }: AgentSelectorProps) 
       {/* Custom dropdown arrow */}
       <CaretDown
         size={14}
-        className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none"
+        className="absolute right-2 top-1/2 -tranzinc-y-1/2 pointer-events-none"
         style={{ color: selectedAgent ? 'var(--accent-primary)' : 'var(--ui-text-secondary)' }}
       />
     </div>

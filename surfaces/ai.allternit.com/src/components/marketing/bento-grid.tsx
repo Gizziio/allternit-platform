@@ -41,7 +41,7 @@ export function BentoGrid({ items, className }: BentoGridProps) {
                 className={cn(
                   'group relative overflow-hidden rounded-2xl border transition-all duration-300',
                   'border-[var(--ui-border-muted)] bg-[var(--surface-panel)]',
-                  'hover:-translate-y-1 hover:border-[var(--accent-primary)]/40 hover:shadow-lg',
+                  'hover:-tranzinc-y-1 hover:border-[var(--accent-primary)]/40 hover:shadow-lg',
                   isWide ? 'sm:col-span-2' : ''
                 )}
                 style={{
@@ -71,14 +71,14 @@ export function BentoGrid({ items, className }: BentoGridProps) {
 
                 <div className={cn('relative p-6', item.imageUrl ? '-mt-12' : '')}>
                   <div
-                    className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-xl"
+                    className="mb-4 inline-flex size-10  items-center justify-center rounded-xl"
                     style={{
                       background:
                         'color-mix(in srgb, var(--accent-primary) 12%, var(--surface-panel-muted))',
                       color: 'var(--accent-primary)',
                     }}
                   >
-                    <IconComponent className="h-5 w-5" />
+                    <IconComponent className="size-5 " />
                   </div>
 
                   <h3

@@ -15,6 +15,7 @@ import {
   MicrosoftWordLogo,
   MicrosoftExcelLogo,
   FilePpt,
+  AppWindow,
 } from '@phosphor-icons/react';
 import { RailConfigSection } from './rail.config';
 
@@ -53,7 +54,24 @@ export const BROWSER_RAIL_CONFIG: RailConfigSection[] = [
     ],
   },
 
-  // Allternit Extensions
+  // Mini-apps
+  {
+    id: 'mini-apps',
+    title: 'Mini-apps',
+    icon: AppWindow,
+    collapsible: true,
+    defaultExpanded: true,
+    items: [
+      {
+        id: 'br-mini-apps-store',
+        label: 'Mini-apps Store',
+        icon: AppWindow,
+        payload: 'mini-apps-store',
+      },
+    ],
+  },
+
+  // Allternit Extensions (Office add-ins)
   {
     id: 'extensions',
     title: 'Extensions',
@@ -65,19 +83,19 @@ export const BROWSER_RAIL_CONFIG: RailConfigSection[] = [
         id: 'br-addin-word',
         label: 'Word',
         icon: MicrosoftWordLogo,
-        payload: 'browser-extensions',
+        payload: 'addin-word',
       },
       {
         id: 'br-addin-excel',
         label: 'Excel',
         icon: MicrosoftExcelLogo,
-        payload: 'browser-extensions',
+        payload: 'addin-excel',
       },
       {
         id: 'br-addin-ppt',
         label: 'PowerPoint',
         icon: FilePpt,
-        payload: 'browser-extensions',
+        payload: 'addin-ppt',
       },
     ],
   },

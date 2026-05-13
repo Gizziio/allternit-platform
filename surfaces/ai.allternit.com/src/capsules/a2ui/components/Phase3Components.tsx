@@ -66,42 +66,42 @@ const statusConfig: Record<
     color: "var(--muted-foreground)",
   },
   reasoning: {
-    icon: <Brain className="w-5 h-5 animate-pulse" />,
+    icon: <Brain className="size-5  animate-pulse" />,
     label: "Thinking",
     color: "var(--primary)",
   },
   searching: {
-    icon: <MagnifyingGlass className="w-5 h-5 animate-pulse" />,
+    icon: <MagnifyingGlass className="size-5  animate-pulse" />,
     label: "Searching",
     color: "var(--primary)",
   },
   coding: {
-    icon: <Code className="w-5 h-5 animate-pulse" />,
+    icon: <Code className="size-5  animate-pulse" />,
     label: "Coding",
     color: "var(--primary)",
   },
   waiting: {
-    icon: <CircleNotch className="w-5 h-5 animate-spin" />,
+    icon: <CircleNotch className="size-5  animate-spin" />,
     label: "Waiting",
     color: "var(--primary)",
   },
   planning: {
-    icon: <Sparkle className="w-5 h-5 animate-pulse" />,
+    icon: <Sparkle className="size-5  animate-pulse" />,
     label: "Planning",
     color: "var(--primary)",
   },
   executing: {
-    icon: <Play className="w-5 h-5 animate-pulse" />,
+    icon: <Play className="size-5  animate-pulse" />,
     label: "Executing",
     color: "var(--primary)",
   },
 };
 
 const stepStatusIcons = {
-  pending: <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />,
-  active: <CircleNotch className="w-3 h-3 animate-spin text-primary" />,
-  completed: <CheckCircle className="w-3 h-3 text-green-500" />,
-  error: <Warning className="w-3 h-3 text-destructive" />,
+  pending: <div className="size-2  rounded-full bg-muted-foreground/30" />,
+  active: <CircleNotch className="size-3  animate-spin text-primary" />,
+  completed: <CheckCircle className="size-3  text-green-500" />,
+  error: <Warning className="size-3  text-destructive" />,
 };
 
 export function AgentThinkingRenderer({
@@ -249,7 +249,7 @@ export function AgentThinkingRenderer({
 
       {props.showSparkles && (
         <div className="absolute top-2 right-2 opacity-50">
-          <Sparkle className="w-4 h-4 text-primary animate-pulse" />
+          <Sparkle className="size-4  text-primary animate-pulse" />
         </div>
       )}
     </Card>
@@ -312,14 +312,14 @@ export function ToolCallRenderer({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div
-              className="w-2 h-2 rounded-full"
+              className="size-2  rounded-full"
               style={{ backgroundColor: statusColors[props.status] }}
             />
             <div className="flex items-center gap-2">
               {props.toolIcon ? (
                 <span>{props.toolIcon}</span>
               ) : (
-                <Code className="w-4 h-4 text-muted-foreground" />
+                <Code className="size-4  text-muted-foreground" />
               )}
               <CardTitle className="text-sm font-medium">
                 {props.toolName || props.tool}
@@ -329,7 +329,7 @@ export function ToolCallRenderer({
 
           <div className="flex items-center gap-2">
             {props.status === "running" && (
-              <CircleNotch className="w-4 h-4 animate-spin" />
+              <CircleNotch className="size-4  animate-spin" />
             )}
 
             {props.duration && (

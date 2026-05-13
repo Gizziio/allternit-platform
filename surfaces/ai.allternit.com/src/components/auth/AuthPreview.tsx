@@ -82,7 +82,7 @@ function ChatMockup({ accent }: { accent: string }) {
             maxWidth: '78%', padding: '9px 13px',
             borderRadius: '14px 14px 3px 14px',
             background: '#1A1612', color: '#F5EDE3',
-            fontSize: 11.5, lineHeight: 1.55,
+            fontSize: 12.5, lineHeight: 1.55,
           }}>
             Can you analyze this research and write a structured summary?
           </div>
@@ -93,13 +93,13 @@ function ChatMockup({ accent }: { accent: string }) {
           <div style={{
             width: 24, height: 24, borderRadius: '50%', background: accent,
             flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 9, fontWeight: 800, color: 'var(--ui-text-primary)', fontFamily: 'var(--font-mono)',
+            fontSize: 12, fontWeight: 800, color: 'var(--ui-text-primary)', fontFamily: 'var(--font-mono)',
           }}>G</div>
           <div style={{
             maxWidth: '80%', padding: '9px 13px',
             borderRadius: '3px 14px 14px 14px',
             background: '#fff', border: '1px solid rgba(0,0,0,0.07)',
-            fontSize: 11.5, lineHeight: 1.6, color: '#1A1612',
+            fontSize: 12.5, lineHeight: 1.6, color: '#1A1612',
           }}>
             <div style={{ marginBottom: 4, fontWeight: 600 }}>Here&apos;s the structured summary:</div>
             <div style={{ color: accent }}>→ <span style={{ color: '#4a3628' }}>Key finding: methodology validated</span></div>
@@ -134,7 +134,7 @@ function ChatMockup({ accent }: { accent: string }) {
         background: '#fff', border: '1px solid rgba(0,0,0,0.1)',
         boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
       }}>
-        <span style={{ flex: 1, fontSize: 11.5, color: '#9B8070' }}>Ask Gizzi anything…</span>
+        <span style={{ flex: 1, fontSize: 12.5, color: '#9B8070' }}>Ask Gizzi anything…</span>
         <div style={{
           width: 26, height: 26, borderRadius: 8, background: accent,
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
@@ -156,7 +156,7 @@ function CoworkMockup({ accent }: { accent: string }) {
         width: '38%', borderRight: '1px solid rgba(0,0,0,0.08)',
         display: 'flex', flexDirection: 'column', padding: '16px 14px',
       }}>
-        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', color: '#9B8070', textTransform: 'uppercase', marginBottom: 12 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', color: '#9B8070', textTransform: 'uppercase', marginBottom: 12 }}>
           Conversation
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
@@ -165,7 +165,7 @@ function CoworkMockup({ accent }: { accent: string }) {
             { user: false, text: 'Building your GTM now…' },
           ].map((m, i) => (
             <div key={i} style={{
-              padding: '7px 10px', borderRadius: 10, fontSize: 11,
+              padding: '7px 10px', borderRadius: 10, fontSize: 12,
               background: m.user ? '#1A1612' : '#fff',
               color: m.user ? '#F5EDE3' : '#1A1612',
               border: m.user ? 'none' : '1px solid rgba(0,0,0,0.07)',
@@ -174,22 +174,22 @@ function CoworkMockup({ accent }: { accent: string }) {
           ))}
         </div>
         <div style={{
-          marginTop: 10, padding: '7px 10px', borderRadius: 10, fontSize: 11,
+          marginTop: 10, padding: '7px 10px', borderRadius: 10, fontSize: 12,
           background: '#fff', border: '1px solid rgba(0,0,0,0.1)', color: '#9B8070',
         }}>Reply…</div>
       </div>
 
       {/* Right — artifact pane */}
       <div style={{ flex: 1, padding: '16px 14px', overflowY: 'hidden' }}>
-        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', color: '#9B8070', textTransform: 'uppercase', marginBottom: 12 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', color: '#9B8070', textTransform: 'uppercase', marginBottom: 12 }}>
           Artifact · GTM Plan
         </div>
-        <div style={{ fontSize: 11.5, color: '#1A1612', lineHeight: 1.7 }}>
+        <div style={{ fontSize: 12.5, color: '#1A1612', lineHeight: 1.7 }}>
           <div style={{ fontWeight: 700, marginBottom: 6 }}>Go-to-Market Strategy</div>
-          <div style={{ color: accent, fontWeight: 600, marginBottom: 3, fontSize: 10.5 }}>Phase 1 — Positioning</div>
-          <div style={{ color: '#5a4030', marginBottom: 8, fontSize: 10.5 }}>Define ICP and core value prop across segments…</div>
-          <div style={{ color: 'var(--status-success)', fontWeight: 600, marginBottom: 3, fontSize: 10.5 }}>Phase 2 — Channels</div>
-          <div style={{ color: '#5a4030', fontSize: 10.5 }}>Identify top 3 acquisition loops with lowest CAC…</div>
+          <div style={{ color: accent, fontWeight: 600, marginBottom: 3, fontSize: 12.5 }}>Phase 1 — Positioning</div>
+          <div style={{ color: '#5a4030', marginBottom: 8, fontSize: 12.5 }}>Define ICP and core value prop across segments…</div>
+          <div style={{ color: 'var(--status-success)', fontWeight: 600, marginBottom: 3, fontSize: 12.5 }}>Phase 2 — Channels</div>
+          <div style={{ color: '#5a4030', fontSize: 12.5 }}>Identify top 3 acquisition loops with lowest CAC…</div>
         </div>
         <motion.div
           animate={{ opacity: [0.4, 1, 0.4] }}
@@ -216,11 +216,11 @@ function CodeMockup({ accent }: { accent: string }) {
         {['●', '●', '●'].map((d, i) => (
           <div key={i} style={{ width: 9, height: 9, borderRadius: '50%', background: ['#ff5f56','#ffbd2e','#27c93f'][i] }} />
         ))}
-        <div style={{ marginLeft: 8, fontSize: 10.5, color: '#8a7060', fontFamily: 'var(--font-mono)' }}>agent.ts</div>
+        <div style={{ marginLeft: 8, fontSize: 12.5, color: '#8a7060', fontFamily: 'var(--font-mono)' }}>agent.ts</div>
       </div>
 
       {/* Code */}
-      <div style={{ flex: 1, padding: '14px 16px', fontFamily: 'var(--font-mono)', fontSize: 11, lineHeight: 1.75, overflowY: 'hidden' }}>
+      <div style={{ flex: 1, padding: '14px 16px', fontFamily: 'var(--font-mono)', fontSize: 12, lineHeight: 1.75, overflowY: 'hidden' }}>
         <div><span style={{ color: '#9b8070' }}>1 </span><span style={{ color: '#6366f1' }}>async function</span> <span style={{ color: accent }}>createAgent</span><span style={{ color: '#4a3628' }}>(config: AgentConfig) {'{'}</span></div>
         <div><span style={{ color: '#9b8070' }}>2 </span><span style={{ color: '#4a3628' }}>  </span><span style={{ color: '#6366f1' }}>const</span><span style={{ color: '#4a3628' }}> agent = </span><span style={{ color: '#6366f1' }}>await</span><span style={{ color: '#4a3628' }}> Gizzi.spawn(config)</span></div>
         <div><span style={{ color: '#9b8070' }}>3 </span><span style={{ color: '#4a3628' }}>  </span><span style={{ color: '#6366f1' }}>await</span><span style={{ color: '#4a3628' }}> agent.run()</span></div>
@@ -245,10 +245,10 @@ function CodeMockup({ accent }: { accent: string }) {
           width: 18, height: 18, borderRadius: 5, background: accent,
           display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
         }}>
-          <span style={{ color: 'var(--ui-text-primary)', fontSize: 9, fontWeight: 800 }}>AI</span>
+          <span style={{ color: 'var(--ui-text-primary)', fontSize: 12, fontWeight: 800 }}>AI</span>
         </div>
-        <span style={{ fontSize: 11, color: '#1A1612' }}>Add error handling for network timeouts</span>
-        <span style={{ marginLeft: 'auto', fontSize: 10, color: accent, fontWeight: 600, cursor: 'pointer' }}>Apply →</span>
+        <span style={{ fontSize: 12, color: '#1A1612' }}>Add error handling for network timeouts</span>
+        <span style={{ marginLeft: 'auto', fontSize: 12, color: accent, fontWeight: 600, cursor: 'pointer' }}>Apply →</span>
       </motion.div>
     </div>
   );
@@ -267,12 +267,12 @@ function BrowserMockup({ accent }: { accent: string }) {
         background: 'rgba(0,0,0,0.02)',
       }}>
         {['←', '→', '⟳'].map((a, i) => (
-          <div key={i} style={{ fontSize: 11, color: '#9B8070', cursor: 'pointer', width: 16, textAlign: 'center' }}>{a}</div>
+          <div key={i} style={{ fontSize: 12, color: '#9B8070', cursor: 'pointer', width: 16, textAlign: 'center' }}>{a}</div>
         ))}
         <div style={{
           flex: 1, padding: '4px 10px', borderRadius: 8,
           background: '#fff', border: '1px solid rgba(0,0,0,0.1)',
-          fontSize: 10.5, color: '#4a3628', fontFamily: 'var(--font-mono)',
+          fontSize: 12.5, color: '#4a3628', fontFamily: 'var(--font-mono)',
         }}>
           docs.allternit.com/agents
         </div>
@@ -281,13 +281,13 @@ function BrowserMockup({ accent }: { accent: string }) {
       {/* Page content */}
       <div style={{ flex: 1, padding: '14px 16px', position: 'relative', overflowY: 'hidden' }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: '#1A1612', marginBottom: 6 }}>Agent Documentation</div>
-        <div style={{ fontSize: 11, color: '#5a4030', lineHeight: 1.65, marginBottom: 10 }}>
+        <div style={{ fontSize: 12, color: '#5a4030', lineHeight: 1.65, marginBottom: 10 }}>
           Gizzi agents are autonomous workers that can execute multi-step tasks, call tools, and report back results without human intervention…
         </div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {['Spawning', 'Tools', 'Memory', 'Delegation'].map(tag => (
             <div key={tag} style={{
-              padding: '3px 9px', borderRadius: 6, fontSize: 10,
+              padding: '3px 9px', borderRadius: 6, fontSize: 12,
               background: '#fff', border: '1px solid rgba(0,0,0,0.1)', color: '#5a4030',
             }}>{tag}</div>
           ))}
@@ -310,14 +310,14 @@ function BrowserMockup({ accent }: { accent: string }) {
           <div style={{
             width: 22, height: 22, borderRadius: 6, background: accent, flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: 9, fontWeight: 800, color: 'var(--ui-text-primary)',
+            fontSize: 12, fontWeight: 800, color: 'var(--ui-text-primary)',
           }}>G</div>
-          <span style={{ fontSize: 11, color: '#C4A78A', flex: 1 }}>
+          <span style={{ fontSize: 12, color: '#C4A78A', flex: 1 }}>
             Found the agent API docs. Want me to extract the key endpoints?
           </span>
           <div style={{
             padding: '4px 10px', borderRadius: 7, background: accent,
-            fontSize: 10, fontWeight: 700, color: 'var(--ui-text-primary)', cursor: 'pointer',
+            fontSize: 12, fontWeight: 700, color: 'var(--ui-text-primary)', cursor: 'pointer',
           }}>Yes →</div>
         </motion.div>
       </div>
@@ -451,7 +451,7 @@ export function AuthPreview() {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
             <div style={{ width: 44, height: 1, background: `linear-gradient(90deg, ${slide.accent}, transparent)` }} />
-            <span style={{ fontSize: 11, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#A78672', fontWeight: 700 }}>
+            <span style={{ fontSize: 12, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#A78672', fontWeight: 700 }}>
               {slide.promoKicker}
             </span>
           </div>
@@ -478,7 +478,7 @@ export function AuthPreview() {
                 background: 'var(--surface-hover)',
                 border: '1px solid var(--ui-border-muted)',
               }}>
-                <div style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#7F6656', marginBottom: 14 }}>
+                <div style={{ fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#7F6656', marginBottom: 14 }}>
                   Why teams choose it
                 </div>
                 <div style={{ display: 'grid', gap: 14 }}>
@@ -502,7 +502,7 @@ export function AuthPreview() {
                 minHeight: 216,
               }}>
                 <div>
-                  <div style={{ fontSize: 11, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#7F6656', marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#7F6656', marginBottom: 12 }}>
                     Branded experience
                   </div>
                   <p style={{ margin: 0, fontSize: 13, lineHeight: 1.72, color: '#CDB9AA' }}>
@@ -518,7 +518,7 @@ export function AuthPreview() {
                   gap: 8,
                 }}>
                   <div style={{ color: '#F2E4D6', fontSize: 12, fontWeight: 700 }}>Gizzi keeps the product feeling guided, not generic.</div>
-                  <div style={{ color: '#876D5D', fontSize: 11.5, lineHeight: 1.6 }}>
+                  <div style={{ color: '#876D5D', fontSize: 12.5, lineHeight: 1.6 }}>
                     A clearer voice, a stronger brand surface, and a workflow that reads like a finished product.
                   </div>
                 </div>

@@ -5,12 +5,14 @@
 use axum::{
     extract::State,
     http::StatusCode,
+    response::IntoResponse,
     Json,
-    routing::post,
+    routing::{get, post},
     Router,
 };
 use image::ImageEncoder;
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use std::sync::Arc;
 
 use crate::AppState;
@@ -81,9 +83,18 @@ pub struct VizErrorResponse {
 /// Create the visualization router
 pub fn viz_router() -> Router<Arc<AppState>> {
     Router::new()
+        .route("/", get(viz_status))
         .route("/render/svg", post(render_svg_handler))
         .route("/render/png", post(render_png_handler))
         .route("/render/pdf", post(render_pdf_handler))
+}
+
+async fn viz_status() -> impl IntoResponse {
+    Json(json!({
+        "status": "ok",
+        "service": "viz",
+        "renders": ["svg", "png", "pdf"],
+    }))
 }
 
 /// Handler for SVG rendering endpoint

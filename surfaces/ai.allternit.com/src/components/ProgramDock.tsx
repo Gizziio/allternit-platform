@@ -74,7 +74,7 @@ export const ProgramDock: React.FC<ProgramDockProps> = ({
       'llm'
     );
 
-    console.log(`[ProgramDock] Launched ${programId} in thread ${threadId}`);
+    console.debug(`[ProgramDock] Launched ${programId} in thread ${threadId}`);
   }, [onLaunchProgram, chatStore, threadId]);
 
   // Keyboard shortcuts
@@ -111,7 +111,7 @@ export const ProgramDock: React.FC<ProgramDockProps> = ({
             onClick={() => handleLaunch(program.id)}
             className={`
               group relative flex items-center justify-center
-              w-9 h-9 rounded-lg transition-all duration-200
+              size-9  rounded-lg transition-all duration-200
               hover:scale-110 active:scale-95
               ${isActive 
                 ? 'bg-white/20 ring-1 ring-white/40' 
@@ -128,21 +128,21 @@ export const ProgramDock: React.FC<ProgramDockProps> = ({
 
             {/* Tooltip */}
             <span className="
-              absolute -top-9 left-1/2 -translate-x-1/2 
-              px-2 py-1 bg-slate-800 text-white text-xs rounded-md
+              absolute -top-9 left-1/2 -tranzinc-x-1/2 
+              px-2 py-1 bg-zinc-800 text-white text-xs rounded-md
               opacity-0 group-hover:opacity-100 transition-opacity
               pointer-events-none whitespace-nowrap z-50
-              border border-slate-700 shadow-lg
+              border border-zinc-700 shadow-lg
             ">
               {program.name}
-              <span className="ml-1 text-slate-400">⌘⇧{program.shortcut}</span>
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-800 rotate-45 border-r border-b border-slate-700" />
+              <span className="ml-1 text-zinc-400">⌘⇧{program.shortcut}</span>
+              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 size-2 bg-zinc-800 rotate-45 border-none shadow-sm" />
             </span>
 
             {/* Active indicator dot */}
             {isActive && (
               <span 
-                className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full"
+                className="absolute -top-0.5 -right-0.5 size-2  rounded-full"
                 style={{ backgroundColor: program.color }}
               />
             )}

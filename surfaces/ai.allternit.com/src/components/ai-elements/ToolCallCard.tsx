@@ -29,13 +29,13 @@ export function ToolCallCard({ toolCall, onApprove, onReject }: ToolCallCardProp
     <Card className="overflow-hidden border-border/50 shadow-sm">
       <CardHeader className="py-3 px-4 bg-muted/30 flex flex-row items-center justify-between space-y-0">
         <div className="flex items-center gap-2">
-          <Wrench className="w-4 h-4 text-muted-foreground" />
+          <Wrench className="size-4  text-muted-foreground" />
           <CardTitle className="text-sm font-medium">{toolCall.displayName || toolCall.name}</CardTitle>
           <StatusBadge status={toolCall.status} />
         </div>
         {!!toolCall.approval?.riskTier && (
           <div className={cn(
-            "text-[10px] px-2 py-0.5 rounded-full font-bold uppercase",
+            "text-xs px-2 py-0.5 rounded-full font-bold uppercase",
             toolCall.approval.riskTier === 'safe' && "bg-green-500/10 text-green-600",
             toolCall.approval.riskTier === 'low' && "bg-blue-500/10 text-blue-600",
             toolCall.approval.riskTier === 'medium' && "bg-yellow-500/10 text-yellow-600",
@@ -50,7 +50,7 @@ export function ToolCallCard({ toolCall, onApprove, onReject }: ToolCallCardProp
       <CardContent className="p-0">
         {/* Arguments Section */}
         <div className="p-4 space-y-2">
-          <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Arguments</div>
+          <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Arguments</div>
           <div className="rounded-md overflow-hidden border">
             <CodeBlock code={String(JSON.stringify(toolCall.arguments, null, 2))} language="json" />
           </div>
@@ -62,9 +62,9 @@ export function ToolCallCard({ toolCall, onApprove, onReject }: ToolCallCardProp
         {/* Running State */}
         {toolCall.status === 'running' && (
           <div className="px-4 py-3 border-t bg-blue-500/5 flex items-center gap-3">
-            <Clock className="w-4 h-4 text-blue-500 animate-pulse" />
+            <Clock className="size-4  text-blue-500 animate-pulse" />
             <div className="flex-1">
-              <div className="text-xs font-medium text-blue-600">Executing...</div>
+              <div className="text-xs font-medium text-blue-600">Executing…</div>
               <Shimmer className="h-1.5 w-full mt-2" />
             </div>
           </div>
@@ -73,7 +73,7 @@ export function ToolCallCard({ toolCall, onApprove, onReject }: ToolCallCardProp
         {/* Result Section */}
         {toolCall.status === 'completed' && toolCall.result && (
           <div className="p-4 border-t bg-green-500/5 space-y-2">
-            <div className="text-[10px] font-bold text-green-600 uppercase tracking-wider">Result</div>
+            <div className="text-xs font-bold text-green-600 uppercase tracking-wider">Result</div>
             <div className="rounded-md overflow-hidden border border-green-200/50">
               <CodeBlock code={`${JSON.stringify(toolCall.result, null, 2)}`} language="json" />
             </div>
@@ -83,7 +83,7 @@ export function ToolCallCard({ toolCall, onApprove, onReject }: ToolCallCardProp
         {/* Error Section */}
         {toolCall.status === 'error' && toolCall.error && (
           <div className="p-4 border-t bg-red-500/5 space-y-2">
-            <div className="flex items-center gap-2 text-red-600 text-[10px] font-bold uppercase tracking-wider">
+            <div className="flex items-center gap-2 text-red-600 text-xs font-bold uppercase tracking-wider">
               <XCircle size={12} />
               Execution Failed
             </div>
@@ -120,14 +120,14 @@ function ApprovalSection({ show, onApprove, onReject }: any) {
           className="flex-1 h-8 text-xs border-red-200 hover:bg-red-50"
           onClick={onReject}
         >
-          <X className="w-3.5 h-3.5 mr-1.5" /> Reject
+          <X className="size-3.5  mr-1.5" /> Reject
         </Button>
         <Button 
           size="sm" 
           className="flex-1 h-8 text-xs bg-accent-chat hover:bg-accent-chat/90"
           onClick={onApprove}
         >
-          <Check className="w-3.5 h-3.5 mr-1.5" /> Approve & Run
+          <Check className="size-3.5  mr-1.5" /> Approve & Run
         </Button>
       </div>
     </div>
@@ -148,7 +148,7 @@ function StatusBadge({ status }: { status: ToolCall['status'] }) {
   const Icon = config.icon;
 
   return (
-    <div className={cn("flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-muted border text-[10px] font-medium", config.color)}>
+    <div className={cn("flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-muted border text-xs font-medium", config.color)}>
       <Icon size={12} />
       {config.label}
     </div>

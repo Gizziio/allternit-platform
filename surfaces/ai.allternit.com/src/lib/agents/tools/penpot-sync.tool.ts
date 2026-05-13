@@ -17,7 +17,7 @@ export const penpotSyncTool = {
     required: ['projectName', 'content']
   },
   execute: async ({ projectName, format, content }: any) => {
-    console.log(`[PenpotSync] Pushing ${format} to project: ${projectName}...`);
+    console.debug(`[PenpotSync] Pushing ${format} to project: ${projectName}...`);
 
     // Simulate Penpot API interaction
     await new Promise(r => setTimeout(r, 1500));

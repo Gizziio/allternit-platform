@@ -395,10 +395,10 @@ export function ArtifactDetailView({
                   {revisions.map((revision) => (
                     <div key={revision.id} style={{ padding: '10px 12px', borderRadius: 8, background: 'var(--bg-secondary)' }}>
                       <div style={{ color: 'var(--text-primary)', fontSize: '12px', fontWeight: 600 }}>{revision.reason}</div>
-                      <div style={{ color: 'var(--text-secondary)', fontSize: '11px', marginTop: 4 }}>
+                      <div style={{ color: 'var(--text-secondary)', fontSize: '12px', marginTop: 4 }}>
                         {new Date(revision.createdAt).toLocaleString()}
                       </div>
-                      <div style={{ color: 'var(--text-tertiary)', fontSize: '11px', marginTop: 6 }}>
+                      <div style={{ color: 'var(--text-tertiary)', fontSize: '12px', marginTop: 6 }}>
                         {revision.snapshot.title} · {revision.snapshot.status} · {revision.snapshot.sections.length} sections
                       </div>
                     </div>
@@ -443,7 +443,7 @@ function ArtifactSectionEditor({
     return (
       <div style={{ padding: '10px 12px', borderRadius: 10, background: 'var(--bg-secondary)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <div style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>{kind}</div>
+          <div style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>{kind}</div>
           <button
             onClick={() => onSave(sectionId, draftBody, draftHeading)}
             style={{
@@ -456,7 +456,7 @@ function ArtifactSectionEditor({
               background: 'var(--accent-cowork)',
               color: '#fff',
               cursor: 'pointer',
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 600,
             }}
           >
@@ -491,7 +491,7 @@ function ArtifactSectionEditor({
   return (
     <div style={{ padding: '10px 12px', borderRadius: 10, background: 'var(--bg-secondary)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <div style={{ color: 'var(--text-secondary)', fontSize: '11px' }}>{kind}</div>
+        <div style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>{kind}</div>
         <button
           onClick={() => {
             if (isEditing) {
@@ -509,7 +509,7 @@ function ArtifactSectionEditor({
             background: 'transparent',
             color: 'var(--text-secondary)',
             cursor: 'pointer',
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 600,
           }}
         >

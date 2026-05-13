@@ -275,7 +275,7 @@ function WizardHeader({
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
-          <div style={{ fontSize: 11, color: accentColor, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
+          <div style={{ fontSize: 12, color: accentColor, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
             Step {stepNumber} of {totalSteps}
           </div>
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#f6eee7" }}>{title}</h2>
@@ -618,7 +618,7 @@ function SelectOption({
             <div style={{ fontSize: 12, color: "#7a6b5d", marginTop: 2 }}>{option.description}</div>
           )}
           {option.disabled && option.disabledReason && (
-            <div style={{ fontSize: 11, color: "#ef4444", marginTop: 4 }}>{option.disabledReason}</div>
+            <div style={{ fontSize: 12, color: "#ef4444", marginTop: 4 }}>{option.disabledReason}</div>
           )}
 
           {/* Option Annotations */}
@@ -644,7 +644,7 @@ function SelectOption({
               border: "none",
               background: "var(--surface-hover)",
               color: "#7a6b5d",
-              fontSize: 11,
+              fontSize: 12,
               cursor: "pointer",
               display: "flex",
               alignItems: "center",
@@ -716,7 +716,7 @@ function MultiSelectOption({
           {option.label}
         </div>
         {option.description && (
-          <div style={{ fontSize: 11, color: "#7a6b5d", marginTop: 1 }}>{option.description}</div>
+          <div style={{ fontSize: 12, color: "#7a6b5d", marginTop: 1 }}>{option.description}</div>
         )}
       </div>
     </button>
@@ -742,7 +742,7 @@ function OptionPreview({ preview }: { preview: QuestionOptionPreview }) {
             padding: 10,
             borderRadius: 6,
             background: "rgba(0,0,0,0.4)",
-            fontSize: 11,
+            fontSize: 12,
             fontFamily: "var(--font-mono)",
             color: "#d1c3b4",
             overflow: "auto",
@@ -768,7 +768,7 @@ function OptionPreview({ preview }: { preview: QuestionOptionPreview }) {
             }}
           />
           {preview.caption && (
-            <div style={{ marginTop: 8, fontSize: 11, color: "#7a6b5d", textAlign: "center" }}>
+            <div style={{ marginTop: 8, fontSize: 12, color: "#7a6b5d", textAlign: "center" }}>
               {preview.caption}
             </div>
           )}
@@ -826,7 +826,7 @@ function MiniAnnotation({ annotation }: { annotation: QuestionAnnotation }) {
   };
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: colors[annotation.type] }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: colors[annotation.type] }}>
       {annotation.type === "info" && <Info size={12} />}
       {annotation.type === "warning" && <Warning size={12} />}
       {annotation.type === "tip" && <Sparkle size={12} />}
@@ -965,7 +965,7 @@ function ReviewView({
           background: `linear-gradient(90deg, ${accentColor}08, transparent)`,
         }}
       >
-        <div style={{ fontSize: 11, color: accentColor, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
+        <div style={{ fontSize: 12, color: accentColor, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 4 }}>
           Review Your Answers
         </div>
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "#f6eee7" }}>Almost Done!</h2>
@@ -1018,7 +1018,7 @@ function ReviewView({
                   border: "none",
                   background: "var(--surface-hover)",
                   color: "#7a6b5d",
-                  fontSize: 11,
+                  fontSize: 12,
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
@@ -1167,7 +1167,7 @@ function formatAnswer(value: unknown, step: WizardStep): string {
 
   if (typeof value === "boolean") return value ? "Yes" : "No";
   if (typeof value === "string") {
-    if (value.length > 100) return value.slice(0, 100) + "...";
+    if (value.length > 100) return value.slice(0, 100) + "…";
     return value;
   }
   if (typeof value === "number") return String(value);
@@ -1177,7 +1177,7 @@ function formatAnswer(value: unknown, step: WizardStep): string {
     const labels = value
       .map((v) => step.options?.find((o) => o.value === v)?.label || v)
       .join(", ");
-    if (labels.length > 100) return labels.slice(0, 100) + "...";
+    if (labels.length > 100) return labels.slice(0, 100) + "…";
     return labels;
   }
 

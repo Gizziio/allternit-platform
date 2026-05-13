@@ -21,6 +21,7 @@
  * @version 2.0.0
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, {
   useState,
   useCallback,
@@ -508,7 +509,7 @@ const AgentNodeComponent: React.FC<NodeProps<AgentNodeData>> = ({
       {/* Header */}
       <div className="flex items-center gap-3 mb-3">
         <div
-          className="w-10 h-10 rounded-lg flex items-center justify-center"
+          className="size-10  rounded-lg flex items-center justify-center"
           style={{ background: `${roleConfig.color}30` }}
         >
           <Icon size={20} style={{ color: roleConfig.color }} />
@@ -526,7 +527,7 @@ const AgentNodeComponent: React.FC<NodeProps<AgentNodeData>> = ({
           >
             {data.role}
             {data.executionStatus === 'active' && (
-              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+              <span className="size-2  rounded-full bg-green-400 animate-pulse" />
             )}
             {data.executionStatus === 'error' && (
               <Warning size={10} className="text-red-400" />
@@ -541,7 +542,7 @@ const AgentNodeComponent: React.FC<NodeProps<AgentNodeData>> = ({
           {data.capabilities.slice(0, 3).map((cap) => (
             <span
               key={cap}
-              className="text-[10px] px-2 py-0.5 rounded-full"
+              className="text-xs px-2 py-0.5 rounded-full"
               style={{
                 background: 'var(--bg-tertiary)',
                 color: TEXT.secondary,
@@ -553,7 +554,7 @@ const AgentNodeComponent: React.FC<NodeProps<AgentNodeData>> = ({
           ))}
           {data.capabilities.length > 3 && (
             <span
-              className="text-[10px] px-2 py-0.5 rounded-full"
+              className="text-xs px-2 py-0.5 rounded-full"
               style={{
                 background: 'var(--bg-tertiary)',
                 color: TEXT.tertiary,
@@ -566,7 +567,7 @@ const AgentNodeComponent: React.FC<NodeProps<AgentNodeData>> = ({
       )}
 
       {/* Status Indicators */}
-      <div className="flex items-center justify-between text-[10px]" style={{ color: TEXT.tertiary }}>
+      <div className="flex items-center justify-between text-xs" style={{ color: TEXT.tertiary }}>
         <span>{data.connections.length} connections</span>
         {data.priority !== undefined && data.priority > 0 && (
           <span style={{ color: roleConfig.color }}>P{data.priority}</span>
@@ -1510,7 +1511,7 @@ function OrchestratorHeader({
       {/* Left Section */}
       <div className="flex items-center gap-4">
         <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center"
+          className="size-10  rounded-xl flex items-center justify-center"
           style={{
             background: modeColors.soft,
             border: `1px solid ${modeColors.border}`,
@@ -1718,12 +1719,12 @@ function AgentPalette({
         <div className="relative">
           <MagnifyingGlass
             size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2"
+            className="absolute left-3 top-1/2 -tranzinc-y-1/2"
             style={{ color: TEXT.tertiary }}
           />
           <input
             type="text"
-            placeholder="Search agents..."
+            placeholder="Search agents…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-3 py-2 rounded-lg text-sm outline-none"
@@ -1746,7 +1747,7 @@ function AgentPalette({
             <button
               key={role}
               onClick={() => setSelectedRole(role)}
-              className="px-2 py-1.5 rounded text-[10px] font-medium capitalize transition-all"
+              className="px-2 py-1.5 rounded text-xs font-medium capitalize transition-all"
               style={{
                 background:
                   selectedRole === role
@@ -1829,7 +1830,7 @@ function AgentPalette({
                           {agent.capabilities.slice(0, 3).map((cap) => (
                             <span
                               key={cap}
-                              className="text-[10px] px-1.5 py-0.5 rounded"
+                              className="text-xs px-1.5 py-0.5 rounded"
                               style={{
                                 background: modeColors.soft,
                                 color: modeColors.accent,
@@ -2028,12 +2029,12 @@ function NodeConfigPanel({
           <button
             onClick={() => onUpdate({ enabled: !node.data.enabled })}
             className={`w-10 h-5 rounded-full transition-colors relative ${
-              node.data.enabled !== false ? 'bg-green-500' : 'bg-gray-600'
+              node.data.enabled !== false ? 'bg-green-500' : 'bg-zinc-600'
             }`}
           >
             <span
-              className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
-                node.data.enabled !== false ? 'translate-x-5' : 'translate-x-0.5'
+              className={`absolute top-0.5 size-4  rounded-full bg-white transition-transform ${
+                node.data.enabled !== false ? 'tranzinc-x-5' : 'tranzinc-x-0.5'
               }`}
             />
           </button>
@@ -2234,7 +2235,7 @@ function ConfigurationPanel({
                     }}
                   >
                     <div
-                      className="w-10 h-10 rounded-lg flex items-center justify-center"
+                      className="size-10  rounded-lg flex items-center justify-center"
                       style={{
                         background:
                           executionMode === mode
@@ -2449,7 +2450,7 @@ function MonitoringPanel({
         </button>
         
         <div
-          className="w-20 h-20 rounded-2xl flex items-center justify-center mb-6"
+          className="size-20  rounded-2xl flex items-center justify-center mb-6"
           style={{
             background: modeColors.soft,
             border: `1px solid ${modeColors.border}`,
@@ -2645,7 +2646,7 @@ function MonitoringPanel({
                     >
                       <div className="flex items-center gap-3">
                         <div
-                          className="w-3 h-3 rounded-full"
+                          className="size-3  rounded-full"
                           style={{
                             background: isActive ? 'var(--status-success)' : 'var(--ui-text-muted)',
                             boxShadow: isActive ? '0 0 10px #4ade80' : 'none',
@@ -2975,7 +2976,7 @@ function InfoCard({ label, value, subvalue, modeColors }: InfoCardProps) {
         {value}
       </div>
       {subvalue && (
-        <div className="text-[10px] mt-1 line-clamp-2" style={{ color: TEXT.tertiary }}>
+        <div className="text-xs mt-1 line-clamp-2" style={{ color: TEXT.tertiary }}>
           {subvalue}
         </div>
       )}

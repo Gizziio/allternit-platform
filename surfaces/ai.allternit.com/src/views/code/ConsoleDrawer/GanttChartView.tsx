@@ -1,3 +1,4 @@
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useMemo } from 'react';
 import { useBoardStore } from '@/stores/board.store';
 import { useWorkspaceStore } from '@/stores/workspace.store';
@@ -78,7 +79,7 @@ export function GanttChartView() {
   }
 
   if (!schedule) {
-    return <div style={{ padding: 24, color: 'var(--ui-text-muted)' }}>Scheduling...</div>;
+    return <div style={{ padding: 24, color: 'var(--ui-text-muted)' }}>Scheduling…</div>;
   }
 
   const chartWidth = days.length * DAY_WIDTH + 180;
@@ -93,9 +94,9 @@ export function GanttChartView() {
       <div style={{ position: 'relative', minWidth: chartWidth, flex: 1 }}>
         {/* Day headers */}
         <div style={{ display: 'flex', position: 'sticky', top: 0, zIndex: 2, background: 'var(--surface-canvas)', height: HEADER_HEIGHT, borderBottom: '1px solid #374151' }}>
-          <div style={{ width: 160, flexShrink: 0, borderRight: '1px solid #374151', padding: '6px 8px', fontSize: 11, fontWeight: 600, color: 'var(--ui-text-muted)' }}>Task</div>
+          <div style={{ width: 160, flexShrink: 0, borderRight: '1px solid #374151', padding: '6px 8px', fontSize: 12, fontWeight: 600, color: 'var(--ui-text-muted)' }}>Task</div>
           {days.map((d) => (
-            <div key={d.toISOString()} style={{ width: DAY_WIDTH, flexShrink: 0, borderRight: '1px solid #1f2937', padding: '6px 4px', fontSize: 10, color: 'var(--ui-text-muted)', textAlign: 'center' }}>
+            <div key={d.toISOString()} style={{ width: DAY_WIDTH, flexShrink: 0, borderRight: '1px solid #1f2937', padding: '6px 4px', fontSize: 12, color: 'var(--ui-text-muted)', textAlign: 'center' }}>
               {d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
             </div>
           ))}
@@ -126,7 +127,7 @@ export function GanttChartView() {
                     display: 'flex',
                     alignItems: 'center',
                     padding: '0 6px',
-                    fontSize: 10,
+                    fontSize: 12,
                     color: 'var(--ui-text-inverse)',
                     overflow: 'hidden',
                     whiteSpace: 'nowrap',

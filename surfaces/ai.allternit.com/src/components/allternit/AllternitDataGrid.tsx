@@ -191,7 +191,7 @@ export function AllternitDataGrid({
       {showToolbar && (
         <div className="h-12 border-b border-[#333] flex items-center justify-between px-4 bg-[#1e1e1e]">
           <div className="flex items-center gap-3">
-            <FileSpreadsheet className="w-4 h-4 text-[#10b981]" />
+            <FileSpreadsheet className="size-4  text-[#10b981]" />
             <span className="text-sm font-medium text-[#ECECEC]">
               {title}
             </span>

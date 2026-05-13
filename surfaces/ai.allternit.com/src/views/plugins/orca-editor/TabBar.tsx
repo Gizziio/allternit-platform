@@ -42,7 +42,7 @@ export const TabBar: React.FC<TabBarProps> = ({
             onClick={() => onTabSelect(tab.id)}
             onContextMenu={(e) => handleContextMenu(e, tab)}
             className={cn(
-              'group flex items-center gap-2 px-3 py-2 min-w-[120px] max-w-[200px] text-sm transition-colors border-r border-zinc-800',
+              'group flex items-center gap-2 px-3 py-2 min-w-[120px] max-w-[200px] text-sm transition-colors border-none rounded-t-md mx-0.5',
               tab.isActive
                 ? 'bg-zinc-800/50 text-zinc-200'
                 : 'bg-transparent text-zinc-500 hover:bg-zinc-800/30 hover:text-zinc-300'

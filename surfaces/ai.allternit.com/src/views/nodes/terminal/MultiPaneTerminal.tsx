@@ -13,6 +13,7 @@
  * - Export logs
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Terminal } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
@@ -462,7 +463,7 @@ function TerminalCard({
     >
       {/* Resize Overlay */}
       {showResizeOverlay && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 px-3 py-1.5 bg-zinc-900/90 border border-zinc-700 rounded-lg shadow-xl">
+        <div className="absolute top-1/2 left-1/2 -tranzinc-x-1/2 -tranzinc-y-1/2 z-50 px-3 py-1.5 bg-zinc-900/90 border border-zinc-700 rounded-lg shadow-xl">
           <span className="text-xs font-mono text-zinc-300">{dimensions.cols} × {dimensions.rows}</span>
         </div>
       )}
@@ -482,7 +483,7 @@ function TerminalCard({
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <GripVertical size={14} className="text-zinc-600 flex-shrink-0" />
           <div className={cn(
-            "w-2 h-2 rounded-full flex-shrink-0",
+            "size-2  rounded-full flex-shrink-0",
             isConnected ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-red-500"
           )} />
           
@@ -509,26 +510,26 @@ function TerminalCard({
         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
           <ProfileSelector currentProfile={profile} onSelect={onChangeProfile} />
           
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-600 hover:text-zinc-300" onClick={() => setFontSize(prev => Math.max(10, prev - 1))}>
+          <Button variant="ghost" size="icon" className="size-7  text-zinc-600 hover:text-zinc-300" onClick={() => setFontSize(prev => Math.max(10, prev - 1))}>
             <span className="text-xs font-bold">A-</span>
           </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-600 hover:text-zinc-300" onClick={() => setFontSize(prev => Math.min(20, prev + 1))}>
+          <Button variant="ghost" size="icon" className="size-7  text-zinc-600 hover:text-zinc-300" onClick={() => setFontSize(prev => Math.min(20, prev + 1))}>
             <span className="text-xs font-bold">A+</span>
           </Button>
           
           <div className="w-px h-4 bg-zinc-800 mx-1" />
           
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-500 hover:text-blue-400" onClick={() => onSplit('horizontal')} title="Split Below">
+          <Button variant="ghost" size="icon" className="size-7  text-zinc-500 hover:text-blue-400" onClick={() => onSplit('horizontal')} title="Split Below">
             <SplitHorizontal size={14} />
           </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-500 hover:text-blue-400" onClick={() => onSplit('vertical')} title="Split Right">
+          <Button variant="ghost" size="icon" className="size-7  text-zinc-500 hover:text-blue-400" onClick={() => onSplit('vertical')} title="Split Right">
             <SplitVertical size={14} />
           </Button>
-          <Button variant="ghost" size="icon" className={cn("h-7 w-7", showSearch ? "text-blue-400 bg-blue-500/10" : "text-zinc-500 hover:text-zinc-300")} onClick={() => setShowSearch(!showSearch)}>
+          <Button variant="ghost" size="icon" className={cn("size-7 ", showSearch ? "text-blue-400 bg-blue-500/10" : "text-zinc-500 hover:text-zinc-300")} onClick={() => setShowSearch(!showSearch)}>
             <Search size={14} />
           </Button>
           {!isOnlyPane && (
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-zinc-500 hover:text-red-400" onClick={onClose}>
+            <Button variant="ghost" size="icon" className="size-7  text-zinc-500 hover:text-red-400" onClick={onClose}>
               <X size={14} />
             </Button>
           )}
@@ -539,7 +540,7 @@ function TerminalCard({
       <div className={cn("overflow-hidden transition-all", showSearch ? "max-h-12" : "max-h-0")}>
         <div className="flex items-center gap-2 px-3 py-2 bg-zinc-950 border-b border-zinc-800">
           <Search size={14} className="text-zinc-500" />
-          <input type="text" placeholder="Search..." className="flex-1 bg-transparent text-sm text-zinc-300 placeholder-zinc-600 focus:outline-none"
+          <input type="text" placeholder="Search…" className="flex-1 bg-transparent text-sm text-zinc-300 placeholder-zinc-600 focus:outline-none"
             onChange={(e) => e.target.value && searchAddonRef.current?.findNext(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
@@ -548,10 +549,10 @@ function TerminalCard({
               }
             }}
           />
-          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-zinc-500" onClick={() => searchAddonRef.current?.findPrevious((document.querySelector('input[placeholder="Search..."]') as HTMLInputElement)?.value || '')}>
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-zinc-500" onClick={() => searchAddonRef.current?.findPrevious((document.querySelector('input[placeholder="Search…"]') as HTMLInputElement)?.value || '')}>
             <ChevronUp size={14} />
           </Button>
-          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-zinc-500" onClick={() => searchAddonRef.current?.findNext((document.querySelector('input[placeholder="Search..."]') as HTMLInputElement)?.value || '')}>
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-xs text-zinc-500" onClick={() => searchAddonRef.current?.findNext((document.querySelector('input[placeholder="Search…"]') as HTMLInputElement)?.value || '')}>
             <ChevronDown size={14} />
           </Button>
         </div>
@@ -567,10 +568,10 @@ function TerminalCard({
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-900/50 border-t border-zinc-800/50 text-[10px] text-zinc-600 font-mono">
+      <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-900/50 border-t border-zinc-800/50 text-xs text-zinc-600 font-mono">
         <span>{fontSize}px • {dimensions.cols}×{dimensions.rows}</span>
         <span className="flex items-center gap-1">
-          <span className={cn("w-1.5 h-1.5 rounded-full", isConnected ? "bg-green-500/50" : "bg-red-500/50")} />
+          <span className={cn("size-1.5  rounded-full", isConnected ? "bg-green-500/50" : "bg-red-500/50")} />
           {profile}
         </span>
       </div>
@@ -630,7 +631,7 @@ function SplitContainer({ direction, children, defaultSplit = 50 }: SplitContain
         {children[0]}
       </div>
       <div className={cn("relative flex items-center justify-center transition-colors rounded-full", isHorizontal ? "h-3 cursor-row-resize" : "w-3 cursor-col-resize")} onMouseDown={() => setIsDragging(true)}>
-        <div className={cn("bg-zinc-700/50 rounded-full transition-all", isHorizontal ? "w-12 h-1" : "w-1 h-12", isDragging && "bg-blue-500 scale-110")} />
+        <div className={cn("bg-zinc-700/50 rounded-full transition-all", isHorizontal ? "w-12 h-1" : "size-12", isDragging && "bg-blue-500 scale-110")} />
       </div>
       <div className="overflow-hidden" style={{ [isHorizontal ? 'height' : 'width']: `calc(${100 - split}% - ${gap/2}px)` }}>
         {children[1]}
@@ -689,7 +690,7 @@ export function MultiPaneTerminal({ nodeId, className }: MultiPaneTerminalProps)
   }, [nodeId]);
 
   // Save sessions on change
-  useEffect(() => {
+  useEffect(() => {isClient ? 
     if (isInitializing) return;
     const persistData: PersistedSession[] = [{
       id: rootPane.id,
@@ -700,7 +701,7 @@ export function MultiPaneTerminal({ nodeId, className }: MultiPaneTerminalProps)
       createdAt: new Date().toISOString(),
       lastActivity: new Date().toISOString(),
       profile: rootPane.profile,
-    }];
+     : "..."}];
     terminalPersistence.saveSessions(persistData);
   }, [rootPane, nodeId, isInitializing]);
 
@@ -801,8 +802,8 @@ export function MultiPaneTerminal({ nodeId, className }: MultiPaneTerminalProps)
       if (!node.session) return (
         <div className="h-full flex items-center justify-center bg-zinc-900/50 rounded-2xl border border-zinc-800">
           <div className="flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-2 border-zinc-700 border-t-blue-500 rounded-full animate-spin" />
-            <span className="text-sm text-zinc-500">{isRestoring ? 'Restoring session...' : 'Initializing...'}</span>
+            <div className="size-8  border-2 border-zinc-700 border-t-blue-500 rounded-full animate-spin" />
+            <span className="text-sm text-zinc-500">{isRestoring ? 'Restoring session…' : 'Initializing…'}</span>
           </div>
         </div>
       );
@@ -826,7 +827,7 @@ export function MultiPaneTerminal({ nodeId, className }: MultiPaneTerminalProps)
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-3.5 bg-zinc-900 border-b border-zinc-800">
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/20">
+          <div className="flex items-center justify-center size-9  rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-blue-500/20">
             <TerminalIcon size={18} className="text-blue-400" />
           </div>
           <div>
@@ -851,10 +852,10 @@ export function MultiPaneTerminal({ nodeId, className }: MultiPaneTerminalProps)
           <div className="h-full flex items-center justify-center">
             <div className="flex flex-col items-center gap-4">
               <div className="relative">
-                <div className="w-12 h-12 border-2 border-zinc-800 border-t-blue-500 rounded-full animate-spin" />
-                <div className="absolute inset-0 w-12 h-12 border-2 border-transparent border-t-purple-500 rounded-full animate-spin" style={{ animationDuration: '1.5s' }} />
+                <div className="size-12  border-2 border-zinc-800 border-t-blue-500 rounded-full animate-spin" />
+                <div className="absolute inset-0 size-12  border-2 border-transparent border-t-purple-500 rounded-full animate-spin" style={{ animationDuration: '1.5s' }} />
               </div>
-              <span className="text-sm text-zinc-500">{isRestoring ? 'Restoring sessions...' : 'Starting terminal session...'}</span>
+              <span className="text-sm text-zinc-500">{isRestoring ? 'Restoring sessions…' : 'Starting terminal session…'}</span>
             </div>
           </div>
         ) : (

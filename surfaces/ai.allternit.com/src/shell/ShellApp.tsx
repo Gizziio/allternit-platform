@@ -1,6 +1,5 @@
-import dynamic from 'next/dynamic';
-import React, { useMemo, useReducer, useEffect, useCallback, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useMemo, useReducer, useEffect, useCallback, useRef, useReducer } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { usePlatformUser, isPlatformAuthDisabled } from '../lib/platform-auth-client';
 
 // ── Lazy-loaded view components ────────────────────────────────────────────────
@@ -9,11 +8,10 @@ import { usePlatformUser, isPlatformAuthDisabled } from '../lib/platform-auth-cl
 const lazy = <T extends React.ComponentType<any>>(
   factory: () => Promise<{ default: T } | { [key: string]: T }>,
   key?: string
-) => dynamic(
+) => React.lazy(
   key
     ? () => (factory() as Promise<Record<string, T>>).then(m => ({ default: m[key] }))
-    : factory as () => Promise<{ default: T }>,
-  { ssr: false, loading: () => null }
+    : factory as () => Promise<{ default: T }>
 );
 
 const SkillsRegistryView   = lazy(() => import('../views/code/SkillsRegistryView'), 'SkillsRegistryView');
@@ -62,6 +60,9 @@ import { useCoworkSessionStore } from '../views/cowork/CoworkSessionStore';
 import { useDesignSessionStore } from '../views/design/DesignSessionStore';
 import { useBrowserStore } from '../capsules/browser';
 const BrowserCapsuleEnhanced = lazy(() => import('../capsules/browser/BrowserCapsuleEnhanced'), 'BrowserCapsuleEnhanced');
+const AciMiniAppsView = lazy(() => import('../views/aci/AciMiniAppsView'), 'AciMiniAppsView');
+const AciMiniAppFrameView = lazy(() => import('../views/aci/AciMiniAppFrameView'), 'AciMiniAppFrameView');
+const AciAddinView = lazy(() => import('../views/aci/AciAddinView'), 'AciAddinView');
 import { useBrowserAgentStore } from '../capsules/browser/browserAgent.store';
 import { useBrowserShortcutsStore, getFaviconUrl } from '../capsules/browser/browserShortcuts.store';
 import {
@@ -137,7 +138,7 @@ const DagIntegrationPage   = lazy(() => import('../views/DagIntegrationPage'), '
 const ControlCenter        = lazy(() => import('./ControlCenter'), 'ControlCenter');
 const CloudDeployView      = lazy(() => import('../views/cloud-deploy/CloudDeployView'), 'CloudDeployView');
 import { usePermissionGuide } from '../lib/usePermissionGuide';
-const DesignModeView         = dynamic(() => import('../views/design/DesignModeView'), { ssr: false, loading: () => null });
+const DesignModeView         = lazy(() => import('../views/design/DesignModeView'));
 const NodesView              = lazy(() => import('../views/nodes'), 'NodesView');
 const CapsuleManagerView     = lazy(() => import('../views/CapsuleManagerView'), 'CapsuleManagerView');
 const OperatorBrowserView    = lazy(() => import('../views/OperatorBrowserView'), 'OperatorBrowserView');
@@ -192,7 +193,7 @@ const DocumentsView          = lazy(() => import('../views/cowork/DocumentsView'
 const TablesView             = lazy(() => import('../views/cowork/TablesView'), 'TablesView');
 const FilesView              = lazy(() => import('../views/cowork/FilesView'), 'FilesView');
 const ExportsView            = lazy(() => import('../views/cowork/ExportsView'), 'ExportsView');
-const ProductsDiscoveryView  = dynamic(() => import('../views/products/ProductsDiscoveryView'), { ssr: false, loading: () => null });
+const ProductsDiscoveryView  = lazy(() => import('../views/products/ProductsDiscoveryView'), 'ProductsDiscoveryView');
 const LabsView               = lazy(() => import('../views/LabsView'), 'LabsView');
 const CatalogView            = lazy(() => import('../views/CatalogView'), 'CatalogView');
 const ExplorerView           = lazy(() => import('../views/code/ExplorerView'), 'ExplorerView');
@@ -288,6 +289,16 @@ const ChatViewWrapper = React.memo(function ChatViewWrapper({
     </ErrorBoundary>
   );
 });
+
+const BROWSER_MODE_VIEW_TYPES = new Set<ViewType>([
+  'browser',
+  'browserview',
+  'mini-apps-store',
+  'mini-app',
+  'addin-word',
+  'addin-excel',
+  'addin-ppt',
+]);
 
 // Error fallback for chat
 function ChatErrorFallback({ error }: { error?: Error }): JSX.Element {
@@ -514,15 +525,15 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
   const { shortcuts, addShortcut, removeShortcut, reorderShortcuts } = useBrowserShortcutsStore();
   const { mode: agentMode, setMode: setAgentMode } = useBrowserAgentStore();
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const [topOffset, setTopOffset] = useState(108);
+  const [topOffset, setTopOffset] = useReducer(108);
   const isDragging = useRef(false);
   const dragStartY = useRef(0);
   const dragStartOffset = useRef(0);
   const hasTabs = tabs.length > 0;
 
   // Smooth transition state
-  const [showLanding, setShowLanding] = useState(!hasTabs);
-  const [landingAnim, setLandingAnim] = useState<'in' | 'out' | null>(null);
+  const [showLanding, setShowLanding] = useReducer(!hasTabs);
+  const [landingAnim, setLandingAnim] = useReducer<'in' | 'out' | null>(null);
   const prevHadTabs = useRef(hasTabs);
 
   useEffect(() => {
@@ -548,8 +559,8 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
   }, [hasTabs]);
 
   // Gizzi mascot state
-  const [mascotEmotion, setMascotEmotion] = useState<GizziEmotion>('steady');
-  const [isHovering, setIsHovering] = useState(false);
+  const [mascotEmotion, setMascotEmotion] = useReducer<GizziEmotion>('steady');
+  const [isHovering, setIsHovering] = useReducer(false);
 
   // Randomized greeting (stable per mount)
   const greeting = useMemo(() => ({
@@ -560,16 +571,16 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
   }), []);
 
   // Shortcut editing + drag reorder
-  const [editMode, setEditMode] = useState(false);
-  const [addingShortcut, setAddingShortcut] = useState(false);
-  const [newLabel, setNewLabel] = useState('');
-  const [newUrl, setNewUrl] = useState('');
-  const [newIcon, setNewIcon] = useState('');
-  const [dragIdx, setDragIdx] = useState<number | null>(null);
-  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const [editMode, setEditMode] = useReducer(false);
+  const [addingShortcut, setAddingShortcut] = useReducer(false);
+  const [newLabel, setNewLabel] = useReducer('');
+  const [newUrl, setNewUrl] = useReducer('');
+  const [newIcon, setNewIcon] = useReducer('');
+  const [dragIdx, setDragIdx] = useReducer<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useReducer<number | null>(null);
 
   // Favicon load error tracking
-  const [faviconErrors, setFaviconErrors] = useState<Set<string>>(new Set());
+  const [faviconErrors, setFaviconErrors] = useReducer<Set<string>>(new Set());
 
   const agentActive = agentMode !== 'Human';
 
@@ -749,7 +760,7 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
                   input.value = '';
                 }
               }} style={{ position: 'relative' }}>
-                <input type="text" placeholder="Search the web or enter a URL..."
+                <input type="text" placeholder="Search the web or enter a URL…"
                   style={{
                     width: '100%', height: 56, paddingLeft: 24, paddingRight: 56,
                     background: BACKGROUND.secondary, border: `1px solid ${BORDER.subtle}`,
@@ -792,7 +803,7 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
                   onClick={() => setEditMode(!editMode)}
                   style={{
                     background: 'none', border: 'none', color: editMode ? browserTokens.accent : TEXT.secondary,
-                    fontSize: 11, cursor: 'pointer', textDecoration: 'underline', padding: '2px 4px',
+                    fontSize: 12, cursor: 'pointer', textDecoration: 'underline', padding: '2px 4px',
                   }}
                 >
                   {editMode ? 'Done' : 'Customize'}
@@ -920,12 +931,12 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
                       <button onClick={handleAddShortcut} style={{
                         flex: 1, padding: '4px 8px', borderRadius: RADIUS.md,
                         background: browserTokens.accent, border: 'none', color: BACKGROUND.primary,
-                        fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                        fontSize: 12, fontWeight: 600, cursor: 'pointer',
                       }}>Save</button>
                       <button onClick={() => setAddingShortcut(false)} style={{
                         padding: '4px 8px', borderRadius: RADIUS.md,
                         background: BACKGROUND.primary, border: 'none', color: TEXT.secondary,
-                        fontSize: 11, cursor: 'pointer',
+                        fontSize: 12, cursor: 'pointer',
                       }}>Cancel</button>
                     </div>
                   </div>
@@ -936,7 +947,7 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
             {/* ── Recently Visited ── */}
             {recentVisits.length > 0 && (
               <div style={{ width: '100%', maxWidth: 560, marginTop: 32 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, color: TEXT.tertiary, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10, color: TEXT.tertiary, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                   <Clock style={{ width: 12, height: 12 }} />
                   <span>Recently Visited</span>
                 </div>
@@ -967,7 +978,7 @@ function BrowserPaneWrapper({ children }: { children: React.ReactNode }): JSX.El
                         <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {visit.title}
                         </span>
-                        <span style={{ fontSize: 10, color: TEXT.tertiary, flexShrink: 0 }}>
+                        <span style={{ fontSize: 12, color: TEXT.tertiary, flexShrink: 0 }}>
                           {new URL(visit.url).hostname}
                         </span>
                       </button>
@@ -1028,11 +1039,11 @@ function ShellAppInner(): JSX.Element {
   const themePreference = useThemeStore((state) => state.theme);
   const setThemePreference = useThemeStore((state) => state.setTheme);
   const theme = useResolvedTheme(themePreference);
-  const [isRailCollapsed, setIsRailCollapsed] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isRailCollapsed, setIsRailCollapsed] = useReducer(false);
+  const [isSearchOpen, setIsSearchOpen] = useReducer(false);
   const { railWidth, setRailWidth } = usePanelLayout();
 
-  const { isOpen: sidecarOpen, toggle: toggleSidecar, setOpen: setSidecarOpen } = useSidecarStore();
+  const { isOpen: sidecarOpen, toggle: toggleSidecar, setOpen: setSidecarOpen, setActivePanel: setSidecarPanel } = useSidecarStore();
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -1080,13 +1091,13 @@ function ShellAppInner(): JSX.Element {
     };
   }, []);
 
-  // Close the sidecar when leaving browser view so it doesn't leak into other modes
-  const isBrowserView = active.viewType === 'browser' || active.viewType === 'browserview';
+  // Cowork keeps a standard resting workspace panel available.
   useEffect(() => {
-    if (!isBrowserView && sidecarOpen) {
-      setSidecarOpen(false);
+    if (activeMode === 'cowork' && !sidecarOpen) {
+      setSidecarPanel('context');
+      setSidecarOpen(true);
     }
-  }, [isBrowserView]);
+  }, [activeMode, sidecarOpen, setSidecarOpen, setSidecarPanel]);
 
   // Sync view to persisted mode once mode is loaded from localStorage
   useEffect(() => {
@@ -1209,6 +1220,31 @@ function ShellAppInner(): JSX.Element {
           <BrowserCapsuleEnhanced />
         </ErrorBoundary>
       </BrowserPaneWrapper>
+    ),
+    'mini-apps-store': () => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Mini-apps" />}>
+        <AciMiniAppsView />
+      </ErrorBoundary>
+    ),
+    'mini-app': ({ context }: { context?: ViewContext }) => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Mini-app" />}>
+        <AciMiniAppFrameView context={context} />
+      </ErrorBoundary>
+    ),
+    'addin-word': () => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Word Add-in" />}>
+        <AciAddinView host="word" />
+      </ErrorBoundary>
+    ),
+    'addin-excel': () => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="Excel Add-in" />}>
+        <AciAddinView host="excel" />
+      </ErrorBoundary>
+    ),
+    'addin-ppt': () => (
+      <ErrorBoundary fallback={<ErrorFallbackWrapper viewName="PowerPoint Add-in" />}>
+        <AciAddinView host="powerpoint" />
+      </ErrorBoundary>
     ),
     studio: ({ context }: { context?: ViewContext }) => (
       <ErrorBoundary
@@ -2255,7 +2291,7 @@ function ShellAppInner(): JSX.Element {
 
   // Bidirectional sync: browser viewType ↔ browser mode
   useEffect(() => {
-    if (active.viewType === 'browser' || active.viewType === 'browserview') {
+    if (BROWSER_MODE_VIEW_TYPES.has(active.viewType)) {
       if (activeMode !== 'browser') setActiveMode('browser');
     } else if (activeMode === 'browser') {
       setActiveMode('chat');
@@ -2265,9 +2301,9 @@ function ShellAppInner(): JSX.Element {
   // Get session from auth (will be passed from server component wrapper)
   const session = null; // TODO: Get from auth context
 
-  const [monitorOverlayOpen, setMonitorOverlayOpen] = useState(false);
-  const [isControlCenterOpen, setIsControlCenterOpen] = useState(false);
-  const [pluginPanelOpen, setPluginPanelOpen] = useState(false);
+  const [monitorOverlayOpen, setMonitorOverlayOpen] = useReducer(false);
+  const [isControlCenterOpen, setIsControlCenterOpen] = useReducer(false);
+  const [pluginPanelOpen, setPluginPanelOpen] = useReducer(false);
   const permissions = usePermissionGuide();
 
   const shouldHideRail = active.viewType === 'labs';
@@ -2388,7 +2424,6 @@ function ShellAppInner(): JSX.Element {
                         : null;
                     try {
                       if (originSurface === 'browser') {
-                        setSidecarOpen(true);
                         open('browser');
                         return;
                       }
@@ -2496,9 +2531,9 @@ function OnboardingGate(): JSX.Element | null {
 // Auth gate: redirect unauthenticated users to /sign-in before the shell renders.
 // In Electron (auth disabled) or dev (no publishable key) this is a no-op.
 function AuthGate({ children }: { children: React.ReactNode }): JSX.Element | null {
-  const router = useRouter();
+  const navigate = useNavigate();
   const { isLoaded, isSignedIn } = usePlatformUser();
-  const [allowed, setAllowed] = useState(isPlatformAuthDisabled());
+  const [allowed, setAllowed] = useReducer(isPlatformAuthDisabled());
 
   useEffect(() => {
     if (!isLoaded) return;
@@ -2508,9 +2543,9 @@ function AuthGate({ children }: { children: React.ReactNode }): JSX.Element | nu
       // Guard: if already on /sign-in, don't re-redirect (prevents encode loop)
       if (window.location.pathname.startsWith('/sign-in')) return;
       const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
-      router.replace(`/sign-in?redirect_url=${returnUrl}`);
+      navigate(`/sign-in?redirect_url=${returnUrl}`, { replace: true });
     }
-  }, [isLoaded, isSignedIn, router]);
+  }, [isLoaded, isSignedIn, navigate]);
 
   if (!allowed) return null;
 

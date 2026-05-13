@@ -71,22 +71,22 @@ export const AllternitCommandProvider: React.FC<{
 // Render function for KBarResults
 const renderResult = ({ item, active }: { item: any; active: boolean }) => {
   if (typeof item === 'string') {
-    return <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">{item}</div>;
+    return <div className="px-4 py-2 text-sm text-zinc-500 dark:text-zinc-400">{item}</div>;
   }
   return (
     <div
       className={`px-4 py-2 cursor-pointer flex items-center justify-between ${
         active 
-          ? 'bg-gray-100 dark:bg-gray-800' 
+          ? 'bg-zinc-100 dark:bg-zinc-800' 
           : 'bg-transparent'
       }`}
     >
       <div className="flex items-center gap-3">
-        {item.icon && <span className="text-gray-600 dark:text-gray-300">{item.icon}</span>}
+        {item.icon && <span className="text-zinc-600 dark:text-zinc-300">{item.icon}</span>}
         <div>
-          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{item.name}</div>
+          <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{item.name}</div>
           {item.subtitle && (
-            <div className="text-xs text-gray-500 dark:text-gray-400">{item.subtitle}</div>
+            <div className="text-xs text-zinc-500 dark:text-zinc-400">{item.subtitle}</div>
           )}
         </div>
       </div>
@@ -95,7 +95,7 @@ const renderResult = ({ item, active }: { item: any; active: boolean }) => {
           {item.shortcut.map((key: string) => (
             <kbd
               key={key}
-              className="px-2 py-1 text-xs font-mono bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded"
+              className="px-2 py-1 text-xs font-mono bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded"
             >
               {key}
             </kbd>
@@ -113,7 +113,7 @@ export const AllternitCommandPalette: React.FC = () => {
   return (
     <KBarPortal>
       <KBarPositioner style={{ zIndex: 10000 }}>
-        <KBarAnimator className="max-w-[600px] w-full bg-white dark:bg-gray-900 rounded-lg shadow-xl overflow-hidden border border-gray-200 dark:border-gray-700">
+        <KBarAnimator className="max-w-[600px] w-full bg-white dark:bg-zinc-900 rounded-lg shadow-xl overflow-hidden border border-zinc-200 dark:border-zinc-700">
           <KBarSearch className="w-full px-4 py-3 outline-none bg-transparent" />
           <div className="max-h-[400px] overflow-y-auto px-2 pb-2">
             <KBarResults 

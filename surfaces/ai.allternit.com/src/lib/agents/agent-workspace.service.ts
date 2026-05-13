@@ -94,36 +94,35 @@ async function loadWorkspace(agentId: string): Promise<AgentWorkspace> {
   }
 
   const path = getWorkspacePath(agentId);
-  const agent = await getAgent(agentId);
+  
+  const [agent, manifestRes, fileTreeRes] = await Promise.all([
+    getAgent(agentId),
+    filesApi.readFile({ path: `${path}/.allternit/manifest.json` }).catch(() => null),
+    filesApi.listDirectory({ path }).catch(() => null),
+  ]);
   
   if (!agent) {
     throw new Error(`Agent ${agentId} not found`);
   }
 
-  // Try to load manifest
+  // Parse manifest
   let manifest: any = {};
-  try {
-    const response = await filesApi.readFile({ path: `${path}/.allternit/manifest.json` });
-    manifest = JSON.parse(response.content);
-  } catch {
-    // No manifest, create minimal workspace
+  if (manifestRes) {
+    try {
+      manifest = JSON.parse(manifestRes.content);
+    } catch {
+      // Ignore parse error
+    }
   }
 
-  // Load or build file tree
-  let fileTree: FileNode[];
-  try {
-    const response = await filesApi.listDirectory({ path });
-    fileTree = response.entries.map(e => ({
-      name: e.name,
-      path: e.path,
-      type: e.type,
-      size: e.size,
-      modifiedAt: e.modifiedAt,
-    }));
-  } catch {
-    // Directory doesn't exist yet
-    fileTree = [];
-  }
+  // Build file tree
+  const fileTree: FileNode[] = fileTreeRes?.entries.map(e => ({
+    name: e.name,
+    path: e.path,
+    type: e.type,
+    size: e.size,
+    modifiedAt: e.modifiedAt,
+  })) || [];
 
   const workspace: AgentWorkspace = {
     id: agent.workspaceId || generateWorkspaceId(agent.name),

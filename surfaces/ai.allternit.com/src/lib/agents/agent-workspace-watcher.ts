@@ -58,7 +58,7 @@ export class WorkspaceFileWatcher {
    */
   async start(): Promise<void> {
     if (this.isWatching) {
-      console.log(`[WorkspaceWatcher] Already watching ${this.agentId}`);
+      console.debug(`[WorkspaceWatcher] Already watching ${this.agentId}`);
       return;
     }
 
@@ -80,7 +80,7 @@ export class WorkspaceFileWatcher {
       });
     }, this.options.pollIntervalMs);
 
-    console.log(`[WorkspaceWatcher] Started watching ${this.agentId} (${this.options.pollIntervalMs}ms interval)`);
+    console.debug(`[WorkspaceWatcher] Started watching ${this.agentId} (${this.options.pollIntervalMs}ms interval)`);
   }
 
   /**
@@ -92,7 +92,7 @@ export class WorkspaceFileWatcher {
       this.intervalId = null;
     }
     this.isWatching = false;
-    console.log(`[WorkspaceWatcher] Stopped watching ${this.agentId}`);
+    console.debug(`[WorkspaceWatcher] Stopped watching ${this.agentId}`);
   }
 
   /**
@@ -211,7 +211,7 @@ export class WorkspaceFileWatcher {
 
     // Notify if changes detected
     if (changes.length > 0) {
-      console.log(`[WorkspaceWatcher] Detected ${changes.length} changes in ${this.agentId}:`,
+      console.debug(`[WorkspaceWatcher] Detected ${changes.length} changes in ${this.agentId}:`,
         changes.map(c => `${c.type}:${c.path}`).join(', '));
       this.options.onChange(changes);
     }
@@ -373,7 +373,7 @@ export function setupSessionAutoRefresh(
       }
 
       debounceTimer = setTimeout(() => {
-        console.log(`[AutoRefresh] Workspace changed for session ${session.id}, refreshing context`);
+        console.debug(`[AutoRefresh] Workspace changed for session ${session.id}, refreshing context`);
         fullConfig.onRefreshNeeded(session, changes);
       }, fullConfig.debounceMs);
     },

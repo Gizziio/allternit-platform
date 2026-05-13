@@ -62,11 +62,11 @@ export function SwarmMonitorLayout({
             <MagnifyingGlass
               size={12}
               color={TEXT_SUBTLE}
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+              className="absolute left-2.5 top-1/2 -tranzinc-y-1/2 pointer-events-none"
             />
             <input
               type="text"
-              placeholder="Search agents..."
+              placeholder="Search agents…"
               className="pl-7 pr-3 py-1.5 rounded text-xs outline-none transition-colors"
               style={{
                 background: BG_SURFACE,
@@ -80,7 +80,7 @@ export function SwarmMonitorLayout({
           {/* Quick Stats */}
           <div className="flex items-center gap-4 text-xs" style={{ color: TEXT_MUTED }}>
             <span className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: GREEN, boxShadow: `0 0 6px ${GREEN}` }} />
+              <span className="size-1.5  rounded-full" style={{ background: GREEN, boxShadow: `0 0 6px ${GREEN}` }} />
               {activeCount} active
             </span>
             <span className="font-mono">${totalCost.toFixed(2)}</span>
@@ -92,13 +92,13 @@ export function SwarmMonitorLayout({
         <div className="flex items-center gap-2 w-48 justify-end">
           {/* Live Status */}
           <div className="flex items-center gap-1.5 px-2 py-1 rounded text-xs" style={{ color: GREEN }}>
-            <span className="w-1.5 h-1.5 rounded-full" style={{ background: GREEN, boxShadow: `0 0 6px ${GREEN}` }} />
+            <span className="size-1.5  rounded-full" style={{ background: GREEN, boxShadow: `0 0 6px ${GREEN}` }} />
             Live
           </div>
 
           {/* Add Agent Button */}
           <button
-            className="flex items-center justify-center w-7 h-7 rounded transition-colors"
+            className="flex items-center justify-center size-7  rounded transition-colors"
             style={{
               background: ACCENT_DIM,
               border: `1px solid ${ACCENT}`,
@@ -114,7 +114,7 @@ export function SwarmMonitorLayout({
 
           {/* More Actions */}
           <button
-            className="flex items-center justify-center w-7 h-7 rounded transition-colors"
+            className="flex items-center justify-center size-7  rounded transition-colors"
             style={{
               background: BG_SURFACE,
               border: `1px solid ${BORDER_COLOR}`,

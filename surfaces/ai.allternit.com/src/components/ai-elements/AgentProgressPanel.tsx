@@ -12,7 +12,7 @@
 
 "use client";
 
-import React, { memo, useMemo, useState } from "react";
+import React, { memo, useMemo, useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CheckCircle,
@@ -180,42 +180,27 @@ const TaskRow = memo(function TaskRow({
       transition={{ duration: 0.18 }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "7px",
-        padding: "5px 0",
-        borderBottom: "1px solid var(--surface-hover)",
-        position: "relative",
-      }}
+      className="flex items-center gap-2 py-1.5 border-b border-[var(--surface-hover)] relative"
     >
       {/* State icon */}
-      <div style={{ flexShrink: 0, width: 14, display: "flex", justifyContent: "center" }}>
+      <div className="shrink-0 size-4 flex justify-center items-center">
         {task.state === "running" ? (
           <InlineSpinner size={12} color="rgba(212,176,140,0.9)" />
         ) : task.state === "error" ? (
-          <Warning size={11} style={{ color: "rgba(248,113,113,0.75)" }} />
+          <Warning className="size-3.5 text-[rgba(248,113,113,0.75)]" />
         ) : (
-          <CheckCircle size={11} style={{ color: "rgba(74,222,128,0.55)" }} />
+          <CheckCircle className="size-3.5 text-[rgba(74,222,128,0.55)]" />
         )}
       </div>
 
       {/* Label */}
-      <span style={{
-        flex: 1,
-        fontWeight: task.state === "running" ? 500 : 400,
-        color: task.state === "running"
-          ? "rgba(212,176,140,0.88)"
+      <span className={`flex-1 truncate font-mono text-[12px] tracking-tight transition-colors duration-200 ${
+        task.state === "running"
+          ? "font-medium text-[rgba(212,176,140,0.88)]"
           : task.state === "error"
-          ? "rgba(248,113,113,0.7)"
-          : "rgba(255,255,255,0.38)",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
-        whiteSpace: "nowrap",
-        fontFamily: "var(--font-mono, 'Allternit Mono', monospace)",
-        fontSize: "11px",
-        letterSpacing: "0.005em",
-      }}>
+          ? "text-[rgba(248,113,113,0.7)]"
+          : "text-white/40"
+      }`}>
         {task.label}
       </span>
 
@@ -228,21 +213,9 @@ const TaskRow = memo(function TaskRow({
             exit={{ opacity: 0, scale: 0.8 }}
             transition={{ duration: 0.1 }}
             onClick={() => onAskAbout(task)}
-            style={{
-              background: "color-mix(in srgb, var(--accent-primary) 12%, transparent)",
-              border: "1px solid var(--ui-border-default)",
-              borderRadius: "4px",
-              width: 16,
-              height: 16,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              flexShrink: 0,
-              color: "rgba(212,176,140,0.8)",
-            }}
+            className="size-5 rounded-md border border-[var(--ui-border-default)] bg-[color-mix(in_srgb,var(--accent-primary)_12%,transparent)] flex items-center justify-center cursor-pointer shrink-0 text-[rgba(212,176,140,0.8)]"
           >
-            <Plus size={9} />
+            <Plus className="size-3" />
           </motion.button>
         )}
       </AnimatePresence>
@@ -254,15 +227,7 @@ const TaskRow = memo(function TaskRow({
 
 function SectionHeader({ label }: { label: string }) {
   return (
-    <div style={{
-      fontSize: "9px",
-      fontWeight: 700,
-      letterSpacing: "0.1em",
-      textTransform: "uppercase",
-      color: "rgba(255,255,255,0.2)",
-      marginBottom: "8px",
-      marginTop: "2px",
-    }}>
+    <div className="text-[12px] font-bold tracking-widest uppercase text-white/20 mb-2 mt-0.5">
       {label}
     </div>
   );
@@ -290,54 +255,29 @@ export const AgentProgressPanel = memo(function AgentProgressPanel({
   return (
     <motion.div
       initial={{ opacity: 0, x: 20, width: 0 }}
-      animate={{ opacity: 1, x: 0, width: 252 }}
+      animate={{ opacity: 1, x: 0, width: 260 }}
       exit={{ opacity: 0, x: 20, width: 0 }}
       transition={{ type: "spring", stiffness: 320, damping: 32 }}
-      style={{
-        height: "100%",
-        width: 252,
-        minWidth: 252,
-        flexShrink: 0,
-        borderLeft: "1px solid var(--ui-border-muted)",
-        background: "rgba(6,6,8,0.6)",
-        backdropFilter: "blur(16px)",
-        display: "flex",
-        flexDirection: "column",
-        overflow: "hidden",
-      }}
+      className="h-full w-[260px] min-w-[260px] shrink-0 border-l border-[var(--ui-border-muted)] bg-[rgba(6,6,8,0.6)] backdrop-blur-2xl flex flex-col overflow-hidden"
     >
       {/* ── Panel header ── */}
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "8px",
-        padding: "12px 14px 10px",
-        borderBottom: "1px solid var(--surface-hover)",
-        flexShrink: 0,
-      }}>
+      <div className="flex items-center gap-2 p-3 px-4 border-b border-[var(--surface-hover)] shrink-0">
         {runningCount > 0 ? (
           <InlineSpinner size={12} color="rgba(212,176,140,0.75)" />
         ) : (
-          <CheckCircle size={12} style={{ color: "rgba(74,222,128,0.5)" }} />
+          <CheckCircle className="size-3.5 text-[rgba(74,222,128,0.5)]" />
         )}
-        <span style={{
-          flex: 1,
-          fontSize: "10px",
-          fontWeight: 700,
-          letterSpacing: "0.09em",
-          textTransform: "uppercase",
-          color: "rgba(212,176,140,0.6)",
-        }}>
+        <span className="flex-1 text-[12px] font-bold tracking-widest uppercase text-[rgba(212,176,140,0.6)]">
           {runningCount > 0 ? "Running" : "Complete"}
         </span>
-        <div style={{ display: "flex", gap: "5px", alignItems: "center" }}>
+        <div className="flex gap-1.5 items-center">
           {completeCount > 0 && (
-            <span style={{ fontSize: "10px", color: "rgba(74,222,128,0.5)", fontWeight: 600 }}>
+            <span className="text-[12px] text-[rgba(74,222,128,0.5)] font-semibold">
               {completeCount}✓
             </span>
           )}
           {errorCount > 0 && (
-            <span style={{ fontSize: "10px", color: "rgba(248,113,113,0.65)", fontWeight: 600 }}>
+            <span className="text-[12px] text-[rgba(248,113,113,0.65)] font-semibold">
               {errorCount}✗
             </span>
           )}
@@ -345,28 +285,21 @@ export const AgentProgressPanel = memo(function AgentProgressPanel({
         {onClose && (
           <button
             onClick={onClose}
-            style={{
-              background: "none", border: "none", cursor: "pointer",
-              padding: "2px", color: "rgba(255,255,255,0.2)",
-              display: "flex", alignItems: "center",
-            }}
+            className="bg-transparent border-none p-0.5 text-white/20 cursor-pointer flex items-center"
           >
-            <X size={11} />
+            <X className="size-3.5" />
           </button>
         )}
       </div>
 
       {/* ── Scrollable body ── */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "12px 14px" }}>
+      <div className="flex-1 overflow-y-auto p-3 px-4">
 
         {/* ── Section 1: Progress (task list) ── */}
         <SectionHeader label="Progress" />
         {tasks.length === 0 && isStreaming ? (
-          <div style={{
-            display: "flex", alignItems: "center", gap: "7px",
-            padding: "6px 0", color: "rgba(255,255,255,0.2)", fontSize: "11px",
-          }}>
-            <InlineSpinner size={11} color="rgba(212,176,140,0.5)" />
+          <div className="flex items-center gap-2 py-2 text-white/20 text-[12px]">
+            <InlineSpinner size={12} color="rgba(212,176,140,0.5)" />
             Preparing…
           </div>
         ) : (
@@ -379,22 +312,11 @@ export const AgentProgressPanel = memo(function AgentProgressPanel({
 
         {/* ── Section 2: Working Folder ── */}
         {workingFolder && (
-          <div style={{ marginTop: "18px" }}>
+          <div className="mt-5">
             <SectionHeader label="Working Folder" />
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-            }}>
-              <FolderOpen size={11} style={{ color: "rgba(255,255,255,0.2)", flexShrink: 0 }} />
-              <span style={{
-                fontSize: "11px",
-                color: "rgba(255,255,255,0.35)",
-                fontFamily: "var(--font-mono, 'Allternit Mono', monospace)",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}>
+            <div className="flex items-center gap-2">
+              <FolderOpen className="size-3.5 text-white/20 shrink-0" />
+              <span className="text-[12px] text-white/40 font-mono truncate">
                 {workingFolder}
               </span>
             </div>
@@ -403,24 +325,13 @@ export const AgentProgressPanel = memo(function AgentProgressPanel({
 
         {/* ── Section 3: Context files ── */}
         {contextFiles.length > 0 && (
-          <div style={{ marginTop: "18px" }}>
+          <div className="mt-5">
             <SectionHeader label="Context" />
-            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <div className="flex flex-col gap-1">
               {contextFiles.map((file, i) => (
-                <div key={i} style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "5px",
-                }}>
-                  <FileText size={10} style={{ color: "rgba(74,222,128,0.35)", flexShrink: 0 }} />
-                  <span style={{
-                    fontSize: "11px",
-                    color: "rgba(255,255,255,0.32)",
-                    fontFamily: "var(--font-mono, 'Allternit Mono', monospace)",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}>
+                <div key={i} className="flex items-center gap-2">
+                  <FileText className="size-3 text-[rgba(74,222,128,0.35)] shrink-0" />
+                  <span className="text-[12px] text-white/30 font-mono truncate">
                     {file}
                   </span>
                 </div>

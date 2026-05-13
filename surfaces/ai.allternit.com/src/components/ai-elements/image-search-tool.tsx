@@ -25,14 +25,14 @@ export function ImageSearchTool({ query, results, className }: ImageSearchToolPr
       <div className={cn("rounded-xl border border-border bg-card overflow-hidden", className)}>
         {/* Header */}
         <div className="flex items-center gap-2.5 border-b border-border px-4 py-3 bg-muted/30">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10">
-            <MagnifyingGlass className="h-4 w-4 text-primary" />
+          <div className="flex size-7  items-center justify-center rounded-md bg-primary/10">
+            <MagnifyingGlass className="size-4  text-primary" />
           </div>
           <div className="flex-1 min-w-0">
             <span className="text-sm font-medium">Image Search</span>
             <span className="ml-2 text-xs text-muted-foreground">"{query}"</span>
           </div>
-          <span className="text-[10px] text-muted-foreground tabular-nums">{results.length} results</span>
+          <span className="text-xs text-muted-foreground tabular-nums">{results.length} results</span>
         </div>
 
         {/* Grid */}
@@ -50,8 +50,8 @@ export function ImageSearchTool({ query, results, className }: ImageSearchToolPr
                 className="w-full h-full object-cover transition-transform group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-end">
-                <div className="translate-y-full group-hover:translate-y-0 transition-transform w-full p-1.5 bg-black/60">
-                  <p className="text-[9px] text-white line-clamp-1">{result.title}</p>
+                <div className="tranzinc-y-full group-hover:tranzinc-y-0 transition-transform w-full p-1.5 bg-black/60">
+                  <p className="text-xs text-white line-clamp-1">{result.title}</p>
                 </div>
               </div>
             </button>
@@ -74,7 +74,7 @@ export function ImageSearchTool({ query, results, className }: ImageSearchToolPr
               onClick={() => setLightbox(null)}
               className="absolute -top-10 right-0 text-white/80 hover:text-white"
             >
-              <X className="h-5 w-5" />
+              <X className="size-5 " />
             </button>
             <img
               src={lightbox.url}
@@ -92,7 +92,7 @@ export function ImageSearchTool({ query, results, className }: ImageSearchToolPr
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/20 transition-colors"
               >
-                <ArrowSquareOut className="h-3 w-3" />
+                <ArrowSquareOut className="size-3 " />
                 Open
               </a>
             </div>

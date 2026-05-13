@@ -31,7 +31,7 @@ import {
 // WebSocket base URL
 const WS_BASE = `ws://${window.location.host}/api/v1/multimodal/ws`;
 
-export function MultimodalInput() {
+export function MultimodalInput(): JSX.Element {
   // Stream states
   const [visionEnabled, setVisionEnabled] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(false);
@@ -253,18 +253,18 @@ export function MultimodalInput() {
           <Badge variant={connected ? 'default' : 'secondary'}>
             {connected ? (
               <>
-                <WifiHigh className="h-3 w-3 mr-1" />
+                <WifiHigh className="size-3  mr-1" />
                 Connected
               </>
             ) : (
               <>
-                <WifiSlash className="h-3 w-3 mr-1" />
+                <WifiSlash className="size-3  mr-1" />
                 Disconnected
               </>
             )}
           </Badge>
           <Badge variant={syncStatus === 'synced' ? 'default' : syncStatus === 'drifting' ? 'destructive' : 'secondary'}>
-            <Activity className="h-3 w-3 mr-1" />
+            <Activity className="size-3  mr-1" />
             {syncStatus === 'synced' ? 'Synced' : syncStatus === 'drifting' ? 'Drifting' : 'Offline'}
           </Badge>
         </div>
@@ -279,7 +279,7 @@ export function MultimodalInput() {
           <div className="grid gap-4 md:grid-cols-3">
             {/* Vision Control */}
             <div className="flex flex-col items-center gap-4 p-4 border rounded-lg">
-              <Camera className={`h-12 w-12 ${visionEnabled ? 'text-blue-500' : 'text-muted-foreground'}`} />
+              <Camera className={`size-12  ${visionEnabled ? 'text-blue-500' : 'text-muted-foreground'}`} />
               <div className="flex items-center gap-2">
                 <Switch
                   checked={visionEnabled}
@@ -293,9 +293,9 @@ export function MultimodalInput() {
             {/* Audio Control */}
             <div className="flex flex-col items-center gap-4 p-4 border rounded-lg">
               {audioEnabled ? (
-                <Microphone className="h-12 w-12 text-green-500" />
+                <Microphone className="size-12  text-green-500" />
               ) : (
-                <MicrophoneSlash className="h-12 w-12 text-muted-foreground" />
+                <MicrophoneSlash className="size-12  text-muted-foreground" />
               )}
               <div className="flex items-center gap-2">
                 <Switch
@@ -320,9 +320,9 @@ export function MultimodalInput() {
             {/* Multimodal Control */}
             <div className="flex flex-col items-center gap-4 p-4 border rounded-lg">
               {multimodalEnabled ? (
-                <Video className="h-12 w-12 text-purple-500" />
+                <Video className="size-12  text-purple-500" />
               ) : (
-                <VideoCamera className="h-12 w-12 text-muted-foreground" />
+                <VideoCamera className="size-12  text-muted-foreground" />
               )}
               <div className="flex gap-2">
                 <Button
@@ -331,12 +331,12 @@ export function MultimodalInput() {
                 >
                   {multimodalEnabled ? (
                     <>
-                      <Square className="h-4 w-4 mr-2" />
+                      <Square className="size-4  mr-2" />
                       Stop All
                     </>
                   ) : (
                     <>
-                      <Circle className="h-4 w-4 mr-2" />
+                      <Circle className="size-4  mr-2" />
                       Start All
                     </>
                   )}

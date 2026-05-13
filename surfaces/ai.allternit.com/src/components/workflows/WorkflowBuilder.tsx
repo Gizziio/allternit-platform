@@ -30,35 +30,35 @@ const NODE_TYPES: NodeTypeConfig[] = [
   { 
     type: 'trigger', 
     label: 'Trigger', 
-    icon: <Zap className="w-4 h-4" />, 
+    icon: <Zap className="size-4 " />, 
     color: 'amber',
     description: 'Start the workflow'
   },
   { 
     type: 'mode', 
     label: 'Agent Mode', 
-    icon: <Settings className="w-4 h-4" />, 
+    icon: <Settings className="size-4 " />, 
     color: 'violet',
     description: 'Execute an agent mode'
   },
   { 
     type: 'condition', 
     label: 'Condition', 
-    icon: <GitBranch className="w-4 h-4" />, 
+    icon: <GitBranch className="size-4 " />, 
     color: 'blue',
     description: 'Branch based on condition'
   },
   { 
     type: 'action', 
     label: 'Action', 
-    icon: <MousePointer2 className="w-4 h-4" />, 
+    icon: <MousePointer2 className="size-4 " />, 
     color: 'emerald',
     description: 'Perform an action'
   },
   { 
     type: 'output', 
     label: 'Output', 
-    icon: <ArrowRight className="w-4 h-4" />, 
+    icon: <ArrowRight className="size-4 " />, 
     color: 'rose',
     description: 'End with output'
   },
@@ -299,7 +299,7 @@ export function WorkflowBuilder() {
                       {nodeType.icon}
                     </span>
                     {nodeType.label}
-                    <Plus className="w-3 h-3 ml-auto" />
+                    <Plus className="size-3  ml-auto" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -355,7 +355,7 @@ export function WorkflowBuilder() {
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" className="border-zinc-800">
-                <Save className="w-4 h-4 mr-2" /> Save
+                <Save className="size-4  mr-2" /> Save
               </Button>
               <Button
                 size="sm"
@@ -363,7 +363,7 @@ export function WorkflowBuilder() {
                 onClick={handleRun}
                 disabled={isRunning}
               >
-                <Play className="w-4 h-4 mr-2" /> {isRunning ? 'Running…' : 'Run'}
+                <Play className="size-4  mr-2" /> {isRunning ? 'Running…' : 'Run'}
               </Button>
             </div>
           </div>
@@ -390,7 +390,7 @@ export function WorkflowBuilder() {
                   className="text-red-400 hover:text-red-300"
                   onClick={() => removeNode(selectedNodeData.id)}
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="size-4 " />
                 </Button>
               </div>
               
@@ -429,7 +429,7 @@ export function WorkflowBuilder() {
                   <label className="text-xs text-zinc-500 block mb-1">Description</label>
                   <Input
                     className="bg-zinc-900 border-zinc-800 text-sm"
-                    placeholder="Node description..."
+                    placeholder="Node description…"
                     value={String(selectedNodeData.config?.description || '')}
                     onChange={(e) => {
                       setWorkflow(prev => ({
@@ -458,7 +458,7 @@ export function WorkflowBuilder() {
                             className="w-full justify-start border-zinc-800 text-xs"
                             onClick={() => connectNodes(selectedNodeData.id, targetNode.id)}
                           >
-                            <ArrowRight className="w-3 h-3 mr-2" />
+                            <ArrowRight className="size-3  mr-2" />
                             {targetNode.id}
                           </Button>
                         ))}

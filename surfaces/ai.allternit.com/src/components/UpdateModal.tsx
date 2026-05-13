@@ -208,7 +208,7 @@ function UpdateItem({
                 padding: '2px 6px',
                 backgroundColor: 'rgba(239, 68, 68, 0.15)',
                 borderRadius: 4,
-                fontSize: 10,
+                fontSize: 12,
                 fontWeight: 600,
                 color: THEME.danger,
                 textTransform: 'uppercase',

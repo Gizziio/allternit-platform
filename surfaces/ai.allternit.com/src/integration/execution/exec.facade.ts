@@ -5,7 +5,7 @@
  * 
  * OLD (deprecated):
  *   import { execFacade } from './execution/exec.facade';
- *   await execFacade.startRun({ input: '...', modelId: '...' });
+ *   await execFacade.startRun({ input: '…', modelId: '…' });
  * 
  * NEW (recommended):
  *   import { api } from '@allternit/platform';

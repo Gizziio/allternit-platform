@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { telemetryApi } from "./telemetry.service";
 import type { TelemetrySnapshot } from "./schema";
 
-export function useTelemetrySnapshot(sessionId: string | null) {
+export function useTelemetrySnapshot(sessionId: string | null): void {
   const [snapshot, setSnapshot] = useState<TelemetrySnapshot | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -25,7 +25,7 @@ export async function initializeSessionWithWorkspace(
   contextPack: string;
   systemPrompt: string;
 }> {
-  console.log('[Desktop] Initializing session with workspace:', {
+  console.debug('[Desktop] Initializing session with workspace:', {
     sessionId,
     workspacePath,
     surface,
@@ -104,7 +104,7 @@ export function watchWorkspaceFiles(
   // ]);
   
   // watcher.on('change', async (filePath) => {
-  //   console.log('[WorkspaceWatcher] File changed:', filePath);
+  //   console.debug('[WorkspaceWatcher] File changed:', filePath);
   //   const context = await loadWorkspaceContext({ workspacePath });
   //   onChange(context);
   // });

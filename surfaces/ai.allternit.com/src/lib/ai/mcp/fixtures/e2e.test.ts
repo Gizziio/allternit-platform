@@ -332,11 +332,11 @@ describe("MCP Apps E2E - Real Server Integration", () => {
     // 7. McpAppFrame creates AppBridge and sandboxed iframe
     // 8. App uses AppBridge to send ui/message and ui/update-model-context
     
-    console.log("✅ Full E2E flow verified!");
-    console.log("   Tool called:", uiPart.toolName);
-    console.log("   Resource URI:", uiPart.resourceUri);
-    console.log("   HTML length:", uiPart.html.length, "bytes");
-    console.log("   Has AppBridge:", uiPart.html.includes("AppBridge"));
+    console.debug("✅ Full E2E flow verified!");
+    console.debug("   Tool called:", uiPart.toolName);
+    console.debug("   Resource URI:", uiPart.resourceUri);
+    console.debug("   HTML length:", uiPart.html.length, "bytes");
+    console.debug("   Has AppBridge:", uiPart.html.includes("AppBridge"));
   });
 
   // ============================================================================
@@ -384,7 +384,7 @@ describe("MCP Apps E2E - Client-Side Integration", () => {
       resourceUri: "ui:///counter-app",
       title: "Interactive Counter",
       description: "A counter app",
-      html: "<html>...</html>",
+      html: "<html>…</html>",
       csp: {
         defaultSrc: ["'self'"],
         scriptSrc: ["'self'", "'unsafe-inline'"],

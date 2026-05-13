@@ -43,7 +43,7 @@ export const IntelliSchedulePanel: React.FC = () => {
           </span>
           {scheduled.length > 0 && (
             <span style={{
-              fontSize: '11px',
+              fontSize: '12px',
               padding: '2px 8px',
               borderRadius: '20px',
               backgroundColor: '#06b6d420',
@@ -98,7 +98,7 @@ export const IntelliSchedulePanel: React.FC = () => {
                 borderRadius: '50%',
                 backgroundColor: 'var(--status-info)',
                 color: '#fff',
-                fontSize: '11px',
+                fontSize: '12px',
                 fontWeight: 700,
                 flexShrink: 0,
               }}>
@@ -119,7 +119,7 @@ export const IntelliSchedulePanel: React.FC = () => {
                   </span>
                 )}
                 {task.risk && (
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--text-secondary)' }}>
                     {riskIcon(task.risk)}
                     {riskLabel(task.risk)}
                   </span>

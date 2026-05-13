@@ -590,7 +590,7 @@
              ondragend="handleDragEnd(event)">
           <div class="flex items-center justify-between mb-2">
             <div class="flex gap-1">
-              ${task.tags.map(tag => `<span class="text-[10px] px-1.5 py-0.5 rounded" style="background: rgba(255,255,255,0.05); color: var(--text-subtle);">${tag}</span>`).join('')}
+              ${task.tags.map(tag => `<span class="text-[12px] px-1.5 py-0.5 rounded" style="background: rgba(255,255,255,0.05); color: var(--text-subtle);">${tag}</span>`).join('')}
             </div>
             <span class="w-1.5 h-1.5 rounded-full" style="background: ${priorityColors[task.priority]};" title="Priority: ${task.priority}"></span>
           </div>
@@ -599,16 +599,16 @@
             ${agent ? `
               <div class="flex items-center gap-1.5">
                 <div class="w-5 h-5 rounded flex items-center justify-center" style="background: ${agent.color}20;">
-                  <i class="fas fa-${agent.icon} text-[10px]" style="color: ${agent.color};"></i>
+                  <i class="fas fa-${agent.icon} text-[12px]" style="color: ${agent.color};"></i>
                 </div>
-                <span class="text-[10px] truncate max-w-[80px]" style="color: var(--text-muted);">${agent.name.split(' ')[0]}</span>
+                <span class="text-[12px] truncate max-w-[80px]" style="color: var(--text-muted);">${agent.name.split(' ')[0]}</span>
               </div>
             ` : `
-              <button onclick="assignTask('${task.id}')" class="text-[10px] px-2 py-1 rounded hover:bg-white/5" style="color: var(--text-subtle);">
+              <button onclick="assignTask('${task.id}')" class="text-[12px] px-2 py-1 rounded hover:bg-white/5" style="color: var(--text-subtle);">
                 <i class="fas fa-user-plus mr-1"></i> Assign
               </button>
             `}
-            <button onclick="deleteTask('${task.id}')" class="text-[10px] p-1 rounded hover:bg-white/5" style="color: var(--text-subtle);">
+            <button onclick="deleteTask('${task.id}')" class="text-[12px] p-1 rounded hover:bg-white/5" style="color: var(--text-subtle);">
               <i class="fas fa-ellipsis-h"></i>
             </button>
           </div>
@@ -731,9 +731,9 @@
       `).join('');
       
       document.getElementById('console-metrics').innerHTML = `
-        <div><div class="text-[10px] mb-1" style="color: var(--text-subtle);">THROUGHPUT</div><div class="text-xl mono font-semibold" style="color: var(--accent);">4.2 <span class="text-xs">t/s</span></div></div>
-        <div><div class="text-[10px] mb-1" style="color: var(--text-subtle);">LATENCY</div><div class="text-xl mono font-semibold">234 <span class="text-xs">ms</span></div></div>
-        <div><div class="text-[10px] mb-1" style="color: var(--text-subtle);">COST/HR</div><div class="text-xl mono font-semibold" style="color: var(--green);">$0.14</div></div>
+        <div><div class="text-[12px] mb-1" style="color: var(--text-subtle);">THROUGHPUT</div><div class="text-xl mono font-semibold" style="color: var(--accent);">4.2 <span class="text-xs">t/s</span></div></div>
+        <div><div class="text-[12px] mb-1" style="color: var(--text-subtle);">LATENCY</div><div class="text-xl mono font-semibold">234 <span class="text-xs">ms</span></div></div>
+        <div><div class="text-[12px] mb-1" style="color: var(--text-subtle);">COST/HR</div><div class="text-xl mono font-semibold" style="color: var(--green);">$0.14</div></div>
       `;
     }
 
@@ -782,8 +782,8 @@
       ctx.stroke();
       
       document.getElementById('history-stats').innerHTML = `
-        <div class="p-3 rounded" style="background: var(--bg);"><div class="text-[10px] mb-1" style="color: var(--text-subtle);">Active Agents</div><div class="text-lg mono" style="color: var(--accent);">4</div></div>
-        <div class="p-3 rounded" style="background: var(--bg);"><div class="text-[10px] mb-1" style="color: var(--text-subtle);">Total Cost</div><div class="text-lg mono" style="color: var(--green);">$5.73</div></div>
+        <div class="p-3 rounded" style="background: var(--bg);"><div class="text-[12px] mb-1" style="color: var(--text-subtle);">Active Agents</div><div class="text-lg mono" style="color: var(--accent);">4</div></div>
+        <div class="p-3 rounded" style="background: var(--bg);"><div class="text-[12px] mb-1" style="color: var(--text-subtle);">Total Cost</div><div class="text-lg mono" style="color: var(--green);">$5.73</div></div>
       `;
     }
 
@@ -797,7 +797,7 @@
     function renderWorkspace() {
       const tasks = state.kanbanTasks.filter(t => t.status !== 'done');
       document.getElementById('workspace-tasks').innerHTML = `
-        <div class="text-[10px] uppercase tracking-wider mb-2" style="color: var(--text-subtle);">Active Tasks</div>
+        <div class="text-[12px] uppercase tracking-wider mb-2" style="color: var(--text-subtle);">Active Tasks</div>
         <div class="space-y-2">
           ${tasks.map(task => {
             const agent = state.agents.find(a => a.id === task.agentId);
@@ -807,12 +807,12 @@
                   <i class="fas fa-circle text-[8px]" style="color: ${agent?.color || 'var(--text-subtle)'};"></i>
                   <span class="text-xs font-medium truncate">${task.title}</span>
                 </div>
-                ${agent ? `<span class="text-[10px] px-1.5 rounded ml-4" style="background: ${agent.color}20; color: ${agent.color};">${agent.id.toUpperCase()}</span>` : '<span class="text-[10px] ml-4" style="color: var(--text-subtle);">Unassigned</span>'}
+                ${agent ? `<span class="text-[12px] px-1.5 rounded ml-4" style="background: ${agent.color}20; color: ${agent.color};">${agent.id.toUpperCase()}</span>` : '<span class="text-[12px] ml-4" style="color: var(--text-subtle);">Unassigned</span>'}
               </div>
             `;
           }).join('')}
         </div>
-        <div class="mt-6 text-[10px] uppercase tracking-wider mb-2" style="color: var(--text-subtle);">Unassigned</div>
+        <div class="mt-6 text-[12px] uppercase tracking-wider mb-2" style="color: var(--text-subtle);">Unassigned</div>
         <div class="p-3 rounded border border-dashed text-center cursor-pointer hover:border-solid" style="border-color: var(--border); color: var(--text-subtle);">
           <i class="fas fa-plus mb-1"></i>
           <div class="text-xs">Drag tasks here</div>

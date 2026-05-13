@@ -3,7 +3,7 @@ import { useTaskStore } from '../views/code/TaskStore';
 import { useAgentStore } from '../views/code/AgentStore';
 
 export function runCodeModeSmokeTests() {
-  console.log('[smoke] Starting Code Mode tests...');
+  console.debug('[smoke] Starting Code Mode tests...');
 
   // 1. Kanban CRUD & DAG Rules
   const taskStore = useTaskStore.getState();
@@ -48,7 +48,7 @@ export function runCodeModeSmokeTests() {
   // Try to move blocked task to Done
   const res2 = taskStore.updateTaskStatus(blocked.id, 'Done');
   if (res2.success) throw new Error('DAG validation failed: Blocked task allowed to complete');
-  console.log('[smoke] Kanban DAG validation passed');
+  console.debug('[smoke] Kanban DAG validation passed');
 
   // 2. Agent Assignment
   const agentStore = useAgentStore.getState();
@@ -60,9 +60,9 @@ export function runCodeModeSmokeTests() {
   if (updatedArchitect.currentTaskId !== newTask.id || updatedArchitect.status !== 'Working') {
     throw new Error('Agent assignment failed');
   }
-  console.log('[smoke] Agent assignment passed');
+  console.debug('[smoke] Agent assignment passed');
 
-  console.log('[smoke] All Code Mode tests passed ✓');
+  console.debug('[smoke] All Code Mode tests passed ✓');
 }
 
 // Auto-run if executed directly (mocking browser env for zustand persistence)

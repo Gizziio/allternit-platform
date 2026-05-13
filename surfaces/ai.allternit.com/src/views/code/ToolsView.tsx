@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 import { getAllToolDefinitions } from '@/lib/agents/tools';
 
 interface Tool {
@@ -13,6 +13,7 @@ interface Tool {
 }
 
 export function ToolsView() {
+  const isClient = useSyncExternalStore(() => () => {}, () => true, () => false);
   const [tools, setTools] = useState<Tool[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,16 +50,16 @@ export function ToolsView() {
 
   if (loading) {
     return (
-      <div style={{ padding: 20, textAlign: 'center', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div>Loading tools from registry...</div>
+      <div className="p-5 text-center h-full flex items-center justify-center">
+        <div className="text-sm opacity-60 italic">Loading tools from registry…</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div style={{ padding: 20, textAlign: 'center', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: 'var(--status-error)' }}>
+      <div className="p-5 text-center h-full flex items-center justify-center">
+        <div className="text-[var(--status-error)] font-medium">
           Error: {error}
         </div>
       </div>
@@ -66,21 +67,15 @@ export function ToolsView() {
   }
 
   return (
-    <div style={{ padding: 20, height: '100%', overflow: 'auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <h2 style={{ margin: 0, fontWeight: 600 }}>Available Tools</h2>
+    <div className="p-5 h-full overflow-auto flex flex-col gap-5">
+      <div className="flex justify-between items-center">
+        <h2 className="m-0 text-xl font-bold tracking-tight">Available Tools</h2>
         
-        <div style={{ display: 'flex', gap: 12 }}>
+        <div className="flex gap-3">
           <select 
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            style={{ 
-              padding: '6px 12px', 
-              border: '1px solid var(--border-default)', 
-              borderRadius: 4,
-              backgroundColor: 'var(--bg-tertiary)',
-              color: 'var(--text-primary)'
-            }}
+            className="p-1.5 px-3 border border-[var(--border-default)] rounded-md bg-[var(--bg-tertiary)] text-[var(--text-primary)] text-[13px] outline-none focus:border-[var(--accent-primary)] transition-colors"
           >
             <option value="all">All Tools</option>
             <option value="enabled">Enabled</option>
@@ -89,13 +84,7 @@ export function ToolsView() {
           </select>
           
           <button 
-            style={{ 
-              padding: '6px 12px', 
-              border: '1px solid var(--border-default)', 
-              borderRadius: 4,
-              backgroundColor: 'var(--bg-tertiary)',
-              cursor: 'pointer'
-            }}
+            className="p-1.5 px-3 border border-[var(--border-default)] rounded-md bg-[var(--bg-tertiary)] text-[var(--text-primary)] text-[13px] font-semibold cursor-pointer hover:bg-[var(--surface-hover)] transition-colors"
             onClick={() => {
               setLoading(true);
               loadTools();
@@ -106,104 +95,63 @@ export function ToolsView() {
         </div>
       </div>
       
-      <div style={{ display: 'grid', gap: 12 }}>
+      <div className="grid gap-3">
         {filteredTools.map(tool => (
           <div 
             key={tool.id} 
-            style={{ 
-              padding: 16, 
-              border: '1px solid var(--border-default)', 
-              borderRadius: 8,
-              backgroundColor: 'var(--bg-secondary)',
-              position: 'relative'
-            }}
+            className="p-4 border border-[var(--border-default)] rounded-xl bg-[var(--bg-secondary)] relative group transition-all duration-150 hover:border-[var(--ui-border-default)]"
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+            <div className="flex justify-between items-start mb-2">
               <div>
-                <h3 style={{ margin: 0, fontWeight: 600, fontSize: 16 }}>{tool.name}</h3>
-                <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-                  <span style={{ 
-                    padding: '2px 6px', 
-                    borderRadius: 4, 
-                    fontSize: 11,
-                    backgroundColor: 
-                      tool.status === 'enabled' ? 'rgba(52, 199, 89, 0.1)' :
-                      tool.status === 'disabled' ? 'rgba(88, 86, 91, 0.1)' : 'rgba(255, 149, 0, 0.1)',
-                    color:
-                      tool.status === 'enabled' ? 'var(--status-success)' :
-                      tool.status === 'disabled' ? '#58565B' : '#FF9500'
-                  }}>
-                    {tool.status.toUpperCase()}
+                <h3 className="m-0 font-bold text-base">{tool.name}</h3>
+                <div className="flex gap-2 mt-1.5">
+                  <span className={`px-2 py-0.5 rounded text-[12px] font-bold uppercase tracking-wider ${
+                    tool.status === 'enabled' ? 'bg-emerald-500/10 text-emerald-500' :
+                    tool.status === 'disabled' ? 'bg-zinc-500/10 text-zinc-500' : 
+                    'bg-amber-500/10 text-amber-500'
+                  }`}>
+                    {tool.status}
                   </span>
                   
-                  <span style={{ 
-                    padding: '2px 6px', 
-                    borderRadius: 4, 
-                    fontSize: 11,
-                    backgroundColor: 
-                      tool.riskLevel === 'low' ? 'rgba(52, 199, 89, 0.1)' :
-                      tool.riskLevel === 'medium' ? 'rgba(255, 149, 0, 0.1)' : 'rgba(255, 59, 48, 0.1)',
-                    color:
-                      tool.riskLevel === 'low' ? 'var(--status-success)' :
-                      tool.riskLevel === 'medium' ? '#FF9500' : '#FF3B30'
-                  }}>
-                    {tool.riskLevel.toUpperCase()} RISK
+                  <span className={`px-2 py-0.5 rounded text-[12px] font-bold uppercase tracking-wider ${
+                    tool.riskLevel === 'low' ? 'bg-emerald-500/10 text-emerald-500' :
+                    tool.riskLevel === 'medium' ? 'bg-amber-500/10 text-amber-500' : 
+                    'bg-rose-500/10 text-rose-500'
+                  }`}>
+                    {tool.riskLevel} risk
                   </span>
                   
-                  <span style={{ 
-                    padding: '2px 6px', 
-                    borderRadius: 4, 
-                    fontSize: 11,
-                    backgroundColor: 'rgba(88, 86, 91, 0.1)',
-                    color: '#58565B'
-                  }}>
-                    {tool.category.toUpperCase()}
+                  <span className="px-2 py-0.5 rounded bg-zinc-500/10 text-zinc-500 text-[12px] font-bold uppercase tracking-wider">
+                    {tool.category}
                   </span>
                 </div>
               </div>
               
-              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textAlign: 'right' }}>
-                <div>Used: {tool.usageCount || 0}</div>
-                {tool.lastUsed && <div>Last: {new Date(tool.lastUsed).toLocaleDateString()}</div>}
+              <div className="text-[12px] text-[var(--text-tertiary)] text-right">
+                <div className="font-medium">Used: <span className="text-[var(--text-secondary)]">{tool.usageCount || 0}</span></div>
+                {tool.lastUsed && <div>Last: <span className="text-[var(--text-secondary)]">{isClient ? new Date(tool.lastUsed).toLocaleDateString() : '—'}</span></div>}
               </div>
             </div>
             
-            <p style={{ margin: '8px 0 12px 0', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+            <p className="m-0 mb-4 text-[var(--text-secondary)] text-[13px] leading-relaxed">
               {tool.description}
             </p>
             
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div className="flex gap-2">
               <button 
-                style={{ 
-                  padding: '6px 12px', 
-                  border: '1px solid var(--border-default)', 
-                  borderRadius: 4,
-                  backgroundColor: 'var(--bg-tertiary)',
-                  cursor: tool.status === 'disabled' ? 'not-allowed' : 'pointer',
-                  opacity: tool.status === 'disabled' ? 0.6 : 1
-                }}
+                className={`p-1.5 px-4 border border-[var(--border-default)] rounded-lg bg-[var(--bg-tertiary)] text-[12px] font-bold transition-all ${
+                  tool.status === 'disabled' 
+                    ? 'cursor-not-allowed opacity-50' 
+                    : 'cursor-pointer hover:bg-[var(--surface-hover)]'
+                }`}
                 disabled={tool.status === 'disabled'}
               >
                 Execute
               </button>
-              <button 
-                style={{ 
-                  padding: '6px 12px', 
-                  border: '1px solid var(--border-default)', 
-                  borderRadius: 4,
-                  backgroundColor: 'var(--bg-tertiary)'
-                }}
-              >
+              <button className="p-1.5 px-4 border border-[var(--border-default)] rounded-lg bg-[var(--bg-tertiary)] text-[12px] font-bold cursor-pointer hover:bg-[var(--surface-hover)] transition-all">
                 View Details
               </button>
-              <button 
-                style={{ 
-                  padding: '6px 12px', 
-                  border: '1px solid var(--border-default)', 
-                  borderRadius: 4,
-                  backgroundColor: 'var(--bg-tertiary)'
-                }}
-              >
+              <button className="p-1.5 px-4 border border-[var(--border-default)] rounded-lg bg-[var(--bg-tertiary)] text-[12px] font-bold cursor-pointer hover:bg-[var(--surface-hover)] transition-all">
                 Permissions
               </button>
             </div>

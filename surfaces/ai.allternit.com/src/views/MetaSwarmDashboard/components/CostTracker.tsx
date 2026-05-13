@@ -50,7 +50,7 @@ function CostBreakdown({ agents }: CostBreakdownProps) {
                 ${agent.stats.total_cost.estimated_usd.toFixed(2)}
               </span>
             </div>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-2 bg-zinc-100 rounded-full overflow-hidden">
               <div
                 className="h-full bg-blue-500 rounded-full transition-all"
                 style={{ width: `${percentage}%` }}

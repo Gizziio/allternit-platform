@@ -237,18 +237,25 @@ interface MoodDecorationsProps {
 const MoodDecorations: React.FC<MoodDecorationsProps> = ({ mood, intensity }) => {
   const decorationCount = Math.ceil(intensity / 3);
 
+  const sparkles = useMemo(() => {
+    return Array.from({ length: decorationCount }).map((_, i) => ({
+      left: `${20 + Math.random() * 60}%`,
+      top: `${20 + Math.random() * 60}%`,
+    }));
+  }, [decorationCount]);
+
   switch (mood) {
     case 'celebrating':
       return (
         <>
-          {Array.from({ length: decorationCount }).map((_, i) => (
+          {sparkles.map((pos, i) => (
             <span
               key={i}
               className={styles.sparkle}
               style={{
                 animationDelay: `${i * 0.2}s`,
-                left: `${20 + Math.random() * 60}%`,
-                top: `${20 + Math.random() * 60}%`,
+                left: pos.left,
+                top: pos.top,
               }}
             >
               ✨

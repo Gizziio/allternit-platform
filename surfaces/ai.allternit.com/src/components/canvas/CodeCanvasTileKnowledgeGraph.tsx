@@ -239,11 +239,11 @@ export function CodeCanvasTileKnowledgeGraph({ workspacePath }: CodeCanvasTileKn
               strokeWidth={1}
             />
             <text x={60} y={18} textAnchor="middle" fill="#fff" fontSize={10} fontWeight={600}>
-              {n.label.length > 18 ? n.label.slice(0, 18) + '...' : n.label}
+              {n.label.length > 18 ? n.label.slice(0, 18) + '…' : n.label}
             </text>
             {n.sublabel && (
               <text x={60} y={32} textAnchor="middle" fill="#888" fontSize={8}>
-                {n.sublabel.length > 22 ? n.sublabel.slice(0, 22) + '...' : n.sublabel}
+                {n.sublabel.length > 22 ? n.sublabel.slice(0, 22) + '…' : n.sublabel}
               </text>
             )}
           </g>

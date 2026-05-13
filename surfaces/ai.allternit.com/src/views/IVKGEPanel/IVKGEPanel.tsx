@@ -266,7 +266,7 @@ export function IVKGEPanel() {
                   htmlFor="image-upload"
                   className="cursor-pointer flex flex-col items-center gap-2"
                 >
-                  <UploadSimple className="h-12 w-12 text-muted-foreground" />
+                  <UploadSimple className="size-12  text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">
                     {selectedFile ? selectedFile.name : 'Click to upload or drag and drop'}
                   </span>
@@ -303,7 +303,7 @@ export function IVKGEPanel() {
                     'Extracting...'
                   ) : (
                     <>
-                      <MagnifyingGlass className="h-4 w-4 mr-2" />
+                      <MagnifyingGlass className="size-4  mr-2" />
                       Extract Entities
                     </>
                   )}
@@ -336,7 +336,7 @@ export function IVKGEPanel() {
                 <CardContent>
                   {(extraction.entities?.length ?? 0) === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
-                      <Image className="h-12 w-12 mx-auto mb-4" />
+                      <Image className="size-12  mx-auto mb-4" />
                       <p>No entities detected</p>
                     </div>
                   ) : (
@@ -365,7 +365,7 @@ export function IVKGEPanel() {
                                 variant="outline"
                                 onClick={() => setEditingEntity(entity)}
                               >
-                                <PencilSimple className="h-3 w-3 mr-1" />
+                                <PencilSimple className="size-3  mr-1" />
                                 Edit
                               </Button>
                             </div>
@@ -445,7 +445,7 @@ export function IVKGEPanel() {
                   <Card key={ambiguity.ambiguity_id}>
                     <CardHeader>
                       <div className="flex items-center gap-2">
-                        <Warning className="h-5 w-5 text-yellow-500" />
+                        <Warning className="size-5  text-yellow-500" />
                         <CardTitle className="text-base">
                           {ambiguity.ambiguity_type}
                         </CardTitle>
@@ -504,7 +504,7 @@ export function IVKGEPanel() {
                     handleCorrection(editingEntity.entity_id, { name, entity_type: type });
                   }}
                 >
-                  <FloppyDisk className="h-4 w-4 mr-2" />
+                  <FloppyDisk className="size-4  mr-2" />
                   Save
                 </Button>
                 <Button

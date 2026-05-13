@@ -33,7 +33,7 @@ async function loadPyodide(): Promise<any> {
     const { loadPyodide } = await import("pyodide");
     const pyodide = await loadPyodide({
       indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/",
-      stdout: (text: string) => console.log(text),
+      stdout: (text: string) => console.debug(text),
       stderr: (text: string) => console.error(text),
     });
     

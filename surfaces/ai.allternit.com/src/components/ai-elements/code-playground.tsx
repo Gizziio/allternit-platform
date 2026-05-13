@@ -101,10 +101,10 @@ export function CodePlayground({
     const startTime = performance.now();
     const logs: string[] = [];
 
-    const originalLog = console.log;
+    const originalLog = console.debug;
     const originalError = console.error;
 
-    console.log = (...args: any[]) => {
+    console.debug = (...args: any[]) => {
       logs.push(
         args
           .map((a) => (typeof a === 'object' ? JSON.stringify(a, null, 2) : String(a)))
@@ -124,7 +124,7 @@ export function CodePlayground({
       const fn = new Function(source);
       fn();
 
-      console.log = originalLog;
+      console.debug = originalLog;
       console.error = originalError;
 
       return {
@@ -132,7 +132,7 @@ export function CodePlayground({
         duration: performance.now() - startTime,
       };
     } catch (err: any) {
-      console.log = originalLog;
+      console.debug = originalLog;
       console.error = originalError;
 
       return {
@@ -179,11 +179,11 @@ export function CodePlayground({
       {/* Header */}
       <div className="flex items-center justify-between border-b border-[var(--ui-border-muted)] px-4 py-2.5">
         <div className="flex items-center gap-2.5">
-          <IconTerminal className="h-4 w-4 text-[var(--accent-primary)]" />
+          <IconTerminal className="size-4  text-[var(--accent-primary)]" />
           <span className="text-sm font-semibold text-[var(--text-primary)]">{title}</span>
           <span
             className={cn(
-              'rounded-md px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider',
+              'rounded-md px-2 py-0.5 text-xs font-medium uppercase tracking-wider',
               language === 'python'
                 ? 'bg-blue-500/10 text-blue-400'
                 : 'bg-yellow-500/10 text-yellow-400'
@@ -198,7 +198,7 @@ export function CodePlayground({
             className="rounded-md p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--text-primary)]"
             title="Copy code"
           >
-            {copied ? <IconCheck className="h-3.5 w-3.5 text-green-400" /> : <IconCopy className="h-3.5 w-3.5" />}
+            {copied ? <IconCheck className="size-3.5  text-green-400" /> : <IconCopy className="size-3.5 " />}
           </button>
           <button
             onClick={handleExecute}
@@ -211,9 +211,9 @@ export function CodePlayground({
             )}
           >
             {isExecuting ? (
-              <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
+              <IconLoader2 className="size-3.5  animate-spin" />
             ) : (
-              <IconPlayerPlay className="h-3.5 w-3.5" />
+              <IconPlayerPlay className="size-3.5 " />
             )}
             {isExecuting ? 'Running…' : 'Run'}
           </button>
@@ -230,7 +230,7 @@ export function CodePlayground({
               {lines.map((_, i) => (
                 <div
                   key={i}
-                  className="h-[22px] text-[11px] leading-[22px] text-[var(--text-muted)]"
+                  className="h-[22px] text-[12px] leading-[22px] text-[var(--text-muted)]"
                 >
                   {i + 1}
                 </div>
@@ -267,14 +267,14 @@ export function CodePlayground({
             >
               <div className="max-h-48 overflow-auto bg-[var(--surface-elevated)] px-4 py-3">
                 <div className="mb-1.5 flex items-center gap-1.5">
-                  <IconTerminal className="h-3 w-3 text-[var(--text-muted)]" />
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+                  <IconTerminal className="size-3  text-[var(--text-muted)]" />
+                  <span className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">
                     Output
                   </span>
                 </div>
                 {isExecuting && !output && !error && (
                   <div className="flex items-center gap-2 py-2 text-xs text-[var(--text-muted)]">
-                    <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
+                    <IconLoader2 className="size-3.5  animate-spin" />
                     Executing…
                   </div>
                 )}
@@ -285,7 +285,7 @@ export function CodePlayground({
                 )}
                 {error && (
                   <div className="flex items-start gap-2 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2">
-                    <IconAlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-400" />
+                    <IconAlertTriangle className="mt-0.5 size-3.5  shrink-0 text-red-400" />
                     <pre className="whitespace-pre-wrap font-mono text-xs leading-relaxed text-red-400">
                       {error}
                     </pre>

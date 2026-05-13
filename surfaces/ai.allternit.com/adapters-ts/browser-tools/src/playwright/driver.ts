@@ -117,10 +117,12 @@ class SessionRegistry {
     const active = this.sessions.get(sessionId);
     if (!active) return;
 
-    // Close in reverse order
-    await active.page.close().catch(() => {});
-    await active.context.close().catch(() => {});
-    await active.browser.close().catch(() => {});
+    // Close resources in parallel
+    await Promise.all([
+      active.page.close().catch(() => {}),
+      active.context.close().catch(() => {}),
+      active.browser.close().catch(() => {}),
+    ]);
 
     // Clean up
     this.sessions.delete(sessionId);
@@ -203,13 +205,15 @@ export async function navigateWithPlaywright(
   sessionRegistry.incrementNavigationDepth(sessionId);
   sessionRegistry.updateLastActivity(sessionId);
 
-  // Get page info
-  const title = await active.page.title().catch(() => undefined);
-  const finalUrl = active.page.url();
+  // Get page info in parallel
+  const [title, finalUrl] = await Promise.all([
+    active.page.title().catch(() => ''),
+    Promise.resolve(active.page.url())
+  ]);
 
   return {
     url: finalUrl,
-    title: title || '',
+    title,
     loadTime: Date.now() - startTime,
     status: response.status(),
   };
@@ -228,12 +232,14 @@ export async function goBackWithPlaywright(
 
   sessionRegistry.updateLastActivity(sessionId);
 
-  const title = await active.page.title().catch(() => undefined);
-  const url = active.page.url();
+  const [title, url] = await Promise.all([
+    active.page.title().catch(() => ''),
+    Promise.resolve(active.page.url())
+  ]);
 
   return {
     url,
-    title: title || '',
+    title,
     loadTime: Date.now() - startTime,
     status: 200,
   };
@@ -252,12 +258,14 @@ export async function goForwardWithPlaywright(
 
   sessionRegistry.updateLastActivity(sessionId);
 
-  const title = await active.page.title().catch(() => undefined);
-  const url = active.page.url();
+  const [title, url] = await Promise.all([
+    active.page.title().catch(() => ''),
+    Promise.resolve(active.page.url())
+  ]);
 
   return {
     url,
-    title: title || '',
+    title,
     loadTime: Date.now() - startTime,
     status: 200,
   };
@@ -279,12 +287,14 @@ export async function reloadWithPlaywright(
 
   sessionRegistry.updateLastActivity(sessionId);
 
-  const title = await active.page.title().catch(() => undefined);
-  const url = active.page.url();
+  const [title, url] = await Promise.all([
+    active.page.title().catch(() => ''),
+    Promise.resolve(active.page.url())
+  ]);
 
   return {
     url,
-    title: title || '',
+    title,
     loadTime: Date.now() - startTime,
     status: 200,
   };

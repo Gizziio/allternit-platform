@@ -104,7 +104,7 @@ export const FilesView: React.FC = () => {
                  fileType === 'CSV' ? 'var(--status-success)' : 
                  fileType === 'TS' ? 'var(--status-info)' : 
                  'var(--ui-text-muted)',
-          fontSize: '10px',
+          fontSize: '12px',
           fontWeight: 600,
         }}
       >

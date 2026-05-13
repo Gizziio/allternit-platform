@@ -287,7 +287,7 @@ function SuccessContent() {
             padding: '14px 36px',
             textAlign: 'center',
           }}>
-            <p style={{ fontSize: 11.5, color: 'rgba(255,255,255,0.2)', margin: 0, lineHeight: 1.6 }}>
+            <p style={{ fontSize: 12.5, color: 'rgba(255,255,255,0.2)', margin: 0, lineHeight: 1.6 }}>
               You can revoke access any time from{' '}
               <a href="/shell/settings/connections" style={{ color: 'var(--accent-primary)', textDecoration: 'underline' }}>
                 Settings → Connections

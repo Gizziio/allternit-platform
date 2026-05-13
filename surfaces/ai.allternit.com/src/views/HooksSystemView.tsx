@@ -125,7 +125,7 @@ function ExecutionLogEntry({ execution }: { execution: HookExecution }) {
   return (
     <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-subtle)] last:border-0 text-sm">
       <div className="flex items-center gap-3 flex-1">
-        <Clock className="w-4 h-4 text-[var(--text-tertiary)] flex-shrink-0" />
+        <Clock className="size-4  text-[var(--text-tertiary)] flex-shrink-0" />
         <span className="text-[var(--text-tertiary)] font-mono text-xs w-16">
           {execution.time}
         </span>
@@ -178,7 +178,7 @@ export function HooksSystemView() {
       <div className="p-6 border-b border-[var(--border-subtle)]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Anchor className="w-7 h-7 text-[var(--accent-primary)]" />
+            <Anchor className="size-7  text-[var(--accent-primary)]" />
             <div>
               <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
                 Hooks System

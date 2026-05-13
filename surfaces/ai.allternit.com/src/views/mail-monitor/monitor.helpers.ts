@@ -7,7 +7,7 @@ import { useTelemetrySnapshot } from "@/lib/telemetry/useTelemetrySnapshot";
 
 const BASE_URL = typeof window !== "undefined" ? window.location.origin : "https://app.allternit.dev";
 
-export function useMonitorData(threadId: string | null) {
+export function useMonitorData(threadId: string | null): void {
   const mailMessages = useUnifiedStore((state) => state.mailMessages);
   const ledgerEvents = useUnifiedStore((state) => state.ledgerEvents);
   const logs = useUnifiedStore((state) => state.logs);
@@ -42,7 +42,7 @@ export function useMonitorData(threadId: string | null) {
   return { analytics, messages, relevantEvents, relevantLogs, telemetry };
 }
 
-export function useMonitorShare(threadId: string | null) {
+export function useMonitorShare(threadId: string | null): void {
   const [shareId, setShareId] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
 
@@ -68,7 +68,7 @@ export function useMonitorShare(threadId: string | null) {
   return { shareId, isSharing, shareMonitor, monitorLink };
 }
 
-export function buildMonitorLink(threadId: string, shareId: string | null) {
+export function buildMonitorLink(threadId: string, shareId: string | null): void {
   if (shareId) {
     return `${BASE_URL}/mail/share/${shareId}`;
   }

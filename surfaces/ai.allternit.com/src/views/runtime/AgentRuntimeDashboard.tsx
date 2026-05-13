@@ -299,7 +299,7 @@ export function AgentRuntimeDashboard() {
                       </div>
                     )}
                     {rt.lastHeartbeat && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'var(--text-tertiary)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', color: 'var(--text-tertiary)' }}>
                         <ClockCounterClockwise size={11} />
                         Last heartbeat: {new Date(rt.lastHeartbeat).toLocaleString()}
                       </div>
@@ -307,7 +307,7 @@ export function AgentRuntimeDashboard() {
                     {parseClis(rt.agentClis).length > 0 && (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
                         {parseClis(rt.agentClis).map((cli) => (
-                          <span key={cli} style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '999px', background: 'rgba(59, 130, 246, 0.15)', color: 'var(--status-info)', fontWeight: 500 }}>
+                          <span key={cli} style={{ fontSize: '12px', padding: '2px 8px', borderRadius: '999px', background: 'rgba(59, 130, 246, 0.15)', color: 'var(--status-info)', fontWeight: 500 }}>
                             {cli}
                           </span>
                         ))}

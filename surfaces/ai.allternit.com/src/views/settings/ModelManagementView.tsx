@@ -3,7 +3,7 @@ import { GlassCard } from "../../design/GlassCard";
 import { OpenAIIcon, AnthropicIcon, OllamaIcon } from "../../components/icons/ModelIcons";
 import { CheckCircle, Warning, Gear, TerminalWindow, DownloadSimple, ChartBar } from "@phosphor-icons/react";
 
-export function ModelManagementView() {
+export function ModelManagementView(): JSX.Element {
   const [engines] = useState([
     { id: 'codex', name: 'OpenAI Codex', type: 'CLI', status: 'installed', version: 'v0.93.0', provider: 'OpenAI' },
     { id: 'claude-code', name: 'Claude Code', type: 'CLI', status: 'missing', version: '-', provider: 'Anthropic' },
@@ -37,13 +37,13 @@ export function ModelManagementView() {
                 width: 40, height: 40, borderRadius: 10, background: 'rgba(0,0,0,0.05)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}>
-                {engine.provider === 'OpenAI' && <OpenAIIcon className="w-6 h-6" />}
-                {engine.provider === 'Anthropic' && <AnthropicIcon className="w-6 h-6" />}
-                {engine.provider === 'Local' && <OllamaIcon className="w-6 h-6" />}
+                {engine.provider === 'OpenAI' && <OpenAIIcon className="size-6 " />}
+                {engine.provider === 'Anthropic' && <AnthropicIcon className="size-6 " />}
+                {engine.provider === 'Local' && <OllamaIcon className="size-6 " />}
                 {engine.provider === 'Aider' && <TerminalWindow size={24} />}
               </div>
               <div style={{ 
-                padding: '4px 8px', borderRadius: 6, fontSize: 10, fontWeight: 800,
+                padding: '4px 8px', borderRadius: 6, fontSize: 12, fontWeight: 800,
                 background: engine.status === 'installed' || engine.status === 'ready' ? 'rgba(52,199,89,0.1)' : 'rgba(255,59,48,0.1)',
                 color: engine.status === 'installed' || engine.status === 'ready' ? 'var(--status-success)' : 'var(--status-error)',
                 display: 'flex', alignItems: 'center', gap: 4
@@ -56,16 +56,16 @@ export function ModelManagementView() {
             <div>
               <h3 style={{ margin: '0 0 4px 0', fontSize: 18, fontWeight: 700 }}>{engine.name}</h3>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <span style={{ fontSize: 11, opacity: 0.5, fontWeight: 600 }}>{engine.type}</span>
+                <span style={{ fontSize: 12, opacity: 0.5, fontWeight: 600 }}>{engine.type}</span>
                 <div style={{ width: 3, height: 3, borderRadius: '50%', background: 'currentColor', opacity: 0.2 }} />
-                <span style={{ fontSize: 11, opacity: 0.5, fontWeight: 600 }}>{engine.version}</span>
+                <span style={{ fontSize: 12, opacity: 0.5, fontWeight: 600 }}>{engine.version}</span>
               </div>
             </div>
 
             <div style={{ marginTop: 'auto', display: 'flex', gap: 8 }}>
               <button style={{ 
                 flex: 1, background: 'rgba(0,0,0,0.05)', border: 'none', borderRadius: 6,
-                padding: '8px', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                padding: '8px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6
               }}>
                 <Gear size={14} />

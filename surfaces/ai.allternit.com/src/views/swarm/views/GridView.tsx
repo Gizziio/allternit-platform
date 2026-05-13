@@ -31,7 +31,7 @@ export function GridView({ agents, modeColors, onAgentSelect }: GridViewProps) {
         style={{ color: TEXT_MUTED }}
       >
         <div
-          className="w-16 h-16 rounded-2xl flex items-center justify-center"
+          className="size-16  rounded-2xl flex items-center justify-center"
           style={{ background: BG_SURFACE, opacity: 0.4 }}
         >
           <Robot size={28} color={TEXT_SUBTLE} weight="duotone" />

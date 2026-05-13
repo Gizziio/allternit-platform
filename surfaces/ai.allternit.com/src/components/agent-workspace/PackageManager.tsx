@@ -155,7 +155,7 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
         const content = await zipEntry.async('text');
         files.push({
           path,
-          content: content.slice(0, 200) + (content.length > 200 ? '...' : ''),
+          content: content.slice(0, 200) + (content.length > 200 ? '…' : ''),
           size: content.length,
         });
       }
@@ -613,7 +613,7 @@ export function PackageManager({ agentId, onClose, onImport, theme = STUDIO_THEM
                                 {file.path}
                               </span>
                             </div>
-                            <span style={{ fontSize: '11px', color: theme.textMuted }}>
+                            <span style={{ fontSize: '12px', color: theme.textMuted }}>
                               {formatSize(file.size)}
                             </span>
                           </div>

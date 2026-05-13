@@ -140,7 +140,7 @@ class SpeechToTextService {
     //   this.useNative = true;
     //   this.setupNativeRecognition();
     // }
-    console.log('[SpeechToText] Using MediaRecorder + backend STT (native disabled for Electron reliability)');
+    console.debug('[SpeechToText] Using MediaRecorder + backend STT (native disabled for Electron reliability)');
   }
 
   private setupNativeRecognition(): void {
@@ -153,13 +153,13 @@ class SpeechToTextService {
     this.recognition.lang = this.options.language ?? 'en-US';
 
     this.recognition.onstart = () => {
-      console.log('[SpeechToText] Native recognition started');
+      console.debug('[SpeechToText] Native recognition started');
       this.isRecording = true;
       this.notify({ type: 'start' });
     };
 
     this.recognition.onend = () => {
-      console.log('[SpeechToText] Native recognition ended');
+      console.debug('[SpeechToText] Native recognition ended');
       this.isRecording = false;
       this.notify({ type: 'end' });
     };
@@ -246,23 +246,23 @@ class SpeechToTextService {
   }
 
   async start(): Promise<boolean> {
-    console.log('[SpeechToText] Starting recording...');
-    console.log('[SpeechToText] isRecording:', this.isRecording);
-    console.log('[SpeechToText] useNative:', this.useNative);
-    console.log('[SpeechToText] recognition:', this.recognition);
-    console.log('[SpeechToText] MediaRecorder supported:', this.isMediaRecorderSupported());
+    console.debug('[SpeechToText] Starting recording...');
+    console.debug('[SpeechToText] isRecording:', this.isRecording);
+    console.debug('[SpeechToText] useNative:', this.useNative);
+    console.debug('[SpeechToText] recognition:', this.recognition);
+    console.debug('[SpeechToText] MediaRecorder supported:', this.isMediaRecorderSupported());
     
     if (this.isRecording) {
-      console.log('[SpeechToText] Already recording');
+      console.debug('[SpeechToText] Already recording');
       return false;
     }
 
     // Prefer native recognition
     if (this.useNative && this.recognition) {
-      console.log('[SpeechToText] Using native speech recognition');
+      console.debug('[SpeechToText] Using native speech recognition');
       try {
         this.recognition.start();
-        console.log('[SpeechToText] Native recognition.start() called');
+        console.debug('[SpeechToText] Native recognition.start() called');
         return true;
       } catch (err) {
         console.warn('[SpeechToText] Native speech recognition failed:', err);
@@ -270,11 +270,11 @@ class SpeechToTextService {
     }
 
     // Fallback to MediaRecorder + backend
-    console.log('[SpeechToText] Trying MediaRecorder fallback...');
+    console.debug('[SpeechToText] Trying MediaRecorder fallback...');
     if (this.isMediaRecorderSupported()) {
       try {
         const result = await this.startMediaRecorder();
-        console.log('[SpeechToText] MediaRecorder result:', result);
+        console.debug('[SpeechToText] MediaRecorder result:', result);
         return result;
       } catch (err) {
         console.error('[SpeechToText] MediaRecorder failed:', err);

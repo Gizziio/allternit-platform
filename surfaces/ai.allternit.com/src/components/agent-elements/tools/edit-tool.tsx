@@ -154,7 +154,7 @@ export function EditToolDiffCard({
       >
         <div className="flex items-center gap-1.5 min-w-0">
           {hasFileName && (
-            <FileExtIcon filename={fileName ?? ""} className="w-3 h-3 shrink-0" />
+            <FileExtIcon filename={fileName ?? ""} className="size-3  shrink-0" />
           )}
           {isPending && !diffFiles ? (
             <TextShimmer as="span" duration={1.2} className="text-xs">
@@ -171,7 +171,7 @@ export function EditToolDiffCard({
           )}
         </div>
         {step.diffStats && !isPending && (
-          <span className="text-[11px] font-mono text-an-tool-color-muted inline-flex gap-2">
+          <span className="text-[12px] font-mono text-an-tool-color-muted inline-flex gap-2">
             {step.diffStats.split(" ").map((token) => (
               <span
                 key={token}
@@ -231,7 +231,7 @@ export function EditToolDiffCard({
                 >
                   <IconChevronDown
                     className={
-                      "w-4 h-4 transition-opacity duration-150 opacity-0 group-hover:opacity-100 " +
+                      "size-4  transition-opacity duration-150 opacity-0 group-hover:opacity-100 " +
                       (isExpanded ? "rotate-180" : "rotate-0")
                     }
                   />

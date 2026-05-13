@@ -164,7 +164,7 @@ const ToolBlock = memo(function ToolBlock({ part }: { part: ToolPart }) {
 const SubtaskBlock = memo(function SubtaskBlock({ part }: { part: SubtaskPart }) {
   return (
     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1a1a1a] border border-white/5 text-sm text-white/60">
-      <ListBullets className="w-4 h-4 text-blue-400/60 shrink-0" />
+      <ListBullets className="size-4  text-blue-400/60 shrink-0" />
       <span>{part.title || 'Subtask'}</span>
     </div>
   );
@@ -177,7 +177,7 @@ const SubtaskBlock = memo(function SubtaskBlock({ part }: { part: SubtaskPart })
 const FileRefBlock = memo(function FileRefBlock({ part }: { part: FilePart }) {
   return (
     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1a1a1a] border border-white/5 text-sm text-white/60">
-      <FileText className="w-4 h-4 text-purple-400/60 shrink-0" />
+      <FileText className="size-4  text-purple-400/60 shrink-0" />
       <span className="font-mono text-xs truncate">{part.filename || part.url || 'File'}</span>
     </div>
   );
@@ -192,7 +192,7 @@ const PatchBlock = memo(function PatchBlock({ part }: { part: PatchPart }) {
   const dels = part.deletions ?? 0;
   return (
     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1a1a1a] border border-white/5 text-sm">
-      <GitDiff className="w-4 h-4 text-yellow-400/60 shrink-0" />
+      <GitDiff className="size-4  text-yellow-400/60 shrink-0" />
       <span className="text-white/60 font-mono text-xs truncate">{part.file || 'patch'}</span>
       {(adds > 0 || dels > 0) && (
         <span className="ml-auto text-xs">
@@ -212,7 +212,7 @@ const StepDivider = memo(function StepDivider() {
   return (
     <div className="flex items-center gap-2 py-1">
       <div className="flex-1 h-px bg-white/5" />
-      <span className="text-[10px] text-white/20 uppercase tracking-widest">Step</span>
+      <span className="text-xs text-white/20 uppercase tracking-widest">Step</span>
       <div className="flex-1 h-px bg-white/5" />
     </div>
   );
@@ -225,7 +225,7 @@ const StepDivider = memo(function StepDivider() {
 const RetryBanner = memo(function RetryBanner({ part }: { part: RetryPart }) {
   return (
     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500/5 border border-yellow-500/10 text-xs text-yellow-400/70">
-      <ArrowClockwise className="w-3.5 h-3.5 shrink-0" />
+      <ArrowClockwise className="size-3.5  shrink-0" />
       <span>{part.error || 'Retrying…'}</span>
     </div>
   );
@@ -238,7 +238,7 @@ const RetryBanner = memo(function RetryBanner({ part }: { part: RetryPart }) {
 const CompactionNotice = memo(function CompactionNotice({ part }: { part: CompactionPart }) {
   return (
     <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.02] border border-white/5 text-xs text-white/30">
-      <Funnel className="w-3.5 h-3.5 shrink-0" />
+      <Funnel className="size-3.5  shrink-0" />
       <span>
         Context compacted
         {part.inputTokens != null && ` · ${part.inputTokens.toLocaleString()} → ${(part.outputTokens ?? 0).toLocaleString()} tokens`}

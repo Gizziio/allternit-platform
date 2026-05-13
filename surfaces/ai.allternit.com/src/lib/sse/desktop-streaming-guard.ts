@@ -65,5 +65,5 @@ export function installDesktopStreamingGuard(): void {
     return originalFetch(input, init);
   }) as typeof window.fetch;
 
-  console.log('[DesktopStreamingGuard] Installed SSE bypass for desktop webview');
+  console.debug('[DesktopStreamingGuard] Installed SSE bypass for desktop webview');
 }

@@ -99,6 +99,6 @@ export function getVoiceEngineStyle(engine: string): { color: string; label: str
     case 'piper':
       return { color: 'bg-green-500', label: 'Piper' };
     default:
-      return { color: 'bg-gray-500', label: engine };
+      return { color: 'bg-zinc-500', label: engine };
   }
 }

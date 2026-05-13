@@ -108,7 +108,7 @@ export function CodeThreadView({ workspace }: CodeThreadViewProps) {
               border: '1px solid rgba(255, 255, 255, 0.08)',
               background: 'rgba(11, 14, 16, 0.54)',
               color: 'var(--text-secondary)',
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 700,
               cursor: 'pointer',
               backdropFilter: 'blur(14px)',

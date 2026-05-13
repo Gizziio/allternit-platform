@@ -36,7 +36,7 @@ export const PERFORMANCE_THRESHOLDS: Record<string, { good: number; poor: number
 export function reportWebVitals(metric: WebVitalMetric): void {
   // Log to console in development
   if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') {
-    console.log(`[Web Vitals] ${metric.name}:`, {
+    console.debug(`[Web Vitals] ${metric.name}:`, {
       value: metric.value,
       rating: metric.rating,
       delta: metric.delta,
@@ -67,7 +67,7 @@ export function useRenderCount(componentName: string): number {
 
   useEffect(() => {
     if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') {
-      console.log(`[RenderCount] ${componentName}: ${renderCount.current} renders`);
+      console.debug(`[RenderCount] ${componentName}: ${renderCount.current} renders`);
     }
   });
 
@@ -86,7 +86,7 @@ export function useMountTiming(componentName: string): void {
     return () => {
       const duration = performance.now() - startTime.current;
       if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') {
-        console.log(`[MountTime] ${componentName}: ${duration.toFixed(2)}ms`);
+        console.debug(`[MountTime] ${componentName}: ${duration.toFixed(2)}ms`);
       }
     };
   }, [componentName]);
@@ -253,7 +253,7 @@ export function trackBundleSize(): BundleSizeReport | null {
   };
 
   if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'development') {
-    console.log('[BundleSize]', {
+    console.debug('[BundleSize]', {
       initial: `${(initial / 1024).toFixed(2)} KB`,
       lazy: `${(lazy / 1024).toFixed(2)} KB`,
       total: `${((initial + lazy) / 1024).toFixed(2)} KB`,

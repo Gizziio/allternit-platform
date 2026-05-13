@@ -40,7 +40,7 @@ export function StreamingMessage({ message, className }: StreamingMessageProps) 
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className={cn(
-            "w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold uppercase",
+            "size-6  rounded-full flex items-center justify-center text-xs font-bold uppercase",
             message.role === 'user' ? "bg-primary text-primary-foreground" : "bg-accent-chat text-white"
           )}>
             {message.role[0]}
@@ -51,8 +51,8 @@ export function StreamingMessage({ message, className }: StreamingMessageProps) 
         </div>
         
         {isStreaming && (
-          <div className="flex items-center gap-1.5 text-[10px] text-accent-chat font-medium animate-pulse">
-            <CircleNotch className="w-3 h-3 animate-spin" />
+          <div className="flex items-center gap-1.5 text-xs text-accent-chat font-medium animate-pulse">
+            <CircleNotch className="size-3  animate-spin" />
             STREAMING
           </div>
         )}

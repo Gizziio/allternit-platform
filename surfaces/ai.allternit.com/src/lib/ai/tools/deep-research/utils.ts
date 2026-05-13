@@ -40,7 +40,7 @@ async function loadMcpTools(
     for (const [toolName, tool] of Object.entries(tools)) {
       // Skip if tool already exists
       if (existingToolNames.has(toolName)) {
-        console.log(
+        console.debug(
           `Skipping tool ${toolName} because a tool with that name already exists`
         );
         continue;
@@ -52,7 +52,7 @@ async function loadMcpTools(
         config.mcp_config.tools.length > 0 &&
         !config.mcp_config.tools.includes(toolName)
       ) {
-        console.log(`Skipping tool ${toolName} because it's not in the config`);
+        console.debug(`Skipping tool ${toolName} because it's not in the config`);
         continue;
       }
 

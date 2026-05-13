@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useIsClient } from "@/lib/hooks/use-is-client";
 import {
   ChevronLeft,
   ChevronRight,
@@ -21,6 +22,7 @@ import { GenerativeCover } from './components/GenerativeCover';
 import { LiveFeed } from './components/LiveFeed';
 import type { Publication } from '@/types/publication';
 import ReactMarkdown from 'react-markdown';
+import { useIsClient } from "@/lib/hooks/use-is-client";
 import remarkGfm from 'remark-gfm';
 import { openInBrowser } from '@/lib/openInBrowser';
 
@@ -60,7 +62,7 @@ function LoadingState() {
       style={{ height: 420, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}
     >
       <Loader2 size={24} color={ACCENT} className="animate-spin" />
-      <Text variant="body" style={{ fontSize: 14, color: TEXT_MUTED }}>Research pipeline connecting...</Text>
+      <Text variant="body" style={{ fontSize: 14, color: TEXT_MUTED }}>Research pipeline connecting…</Text>
     </GlassSurfaceBase>
   );
 }
@@ -70,7 +72,7 @@ function ErrorState({ message }: { message: string }) {
     <GlassSurfaceBase
       style={{ height: 420, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}
     >
-      <Text variant="body" style={{ fontSize: 14, color: STATUS_ERROR }}>Research pipeline connecting...</Text>
+      <Text variant="body" style={{ fontSize: 14, color: STATUS_ERROR }}>Research pipeline connecting…</Text>
       <Text variant="caption" style={{ fontSize: 12, color: TEXT_MUTED }}>{message}</Text>
     </GlassSurfaceBase>
   );
@@ -132,11 +134,11 @@ function BriefingReader({ briefing, onClose }: { briefing: BriefingData; onClose
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
               <GlassSurfaceThin style={{ padding: '4px 10px', borderRadius: 4, background: 'var(--status-success-bg)', border: '1px solid var(--status-success-bg)' }}>
-                <Text variant="label" style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: STATUS_SUCCESS }}>Daily Brief</Text>
+                <Text variant="label" style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: STATUS_SUCCESS }}>Daily Brief</Text>
               </GlassSurfaceThin>
               {briefing.issueNumber && (
                 <GlassSurfaceThin style={{ padding: '4px 10px', borderRadius: 4 }}>
-                  <Text variant="label" style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.03em', color: TEXT_MUTED }}>{briefing.issueNumber}</Text>
+                  <Text variant="label" style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.03em', color: TEXT_MUTED }}>{briefing.issueNumber}</Text>
                 </GlassSurfaceThin>
               )}
             </div>
@@ -164,7 +166,7 @@ function BriefingReader({ briefing, onClose }: { briefing: BriefingData; onClose
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 20 }}>
             {briefing.tags.map(tag => (
               <GlassSurfaceThin key={tag} style={{ padding: '3px 10px', borderRadius: 4, background: 'color-mix(in srgb, var(--accent-primary) 6%, transparent)', border: `1px solid color-mix(in srgb, var(--accent-primary) 12%, transparent)` }}>
-                <Text variant="label" style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em', color: ACCENT }}>{tag}</Text>
+                <Text variant="label" style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em', color: ACCENT }}>{tag}</Text>
               </GlassSurfaceThin>
             ))}
           </div>
@@ -222,7 +224,7 @@ function BriefingReader({ briefing, onClose }: { briefing: BriefingData; onClose
         {/* Source Provenance */}
         {briefing.content.sources && briefing.content.sources.length > 0 && (
           <div style={{ marginTop: 24, paddingTop: 16, borderTop: `1px solid ${BORDER_SUBTLE}` }}>
-            <Text variant="label" style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: TEXT_MUTED, margin: '0 0 10px', display: 'block' }}>
+            <Text variant="label" style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: TEXT_MUTED, margin: '0 0 10px', display: 'block' }}>
               Sources
             </Text>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -244,7 +246,7 @@ function BriefingReader({ briefing, onClose }: { briefing: BriefingData; onClose
                     hover="glow"
                   >
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '80%' }}>
-                      <Text variant="label" style={{ color: ACCENT, fontWeight: 600, textTransform: 'uppercase', fontSize: 10, marginRight: 8 }}>
+                      <Text variant="label" style={{ color: ACCENT, fontWeight: 600, textTransform: 'uppercase', fontSize: 12, marginRight: 8 }}>
                         {src.source}
                       </Text>
                       {src.title}
@@ -473,7 +475,7 @@ export function DiscoveryFeed() {
               }}>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 16 }}>
                   <GlassSurfaceThin style={{ padding: '4px 10px', borderRadius: 4, background: `${currentItem.badgeColor}15` }}>
-                    <Text variant="label" style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: currentItem.badgeColor }}>
+                    <Text variant="label" style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: currentItem.badgeColor }}>
                       {currentItem.badge}
                     </Text>
                   </GlassSurfaceThin>
@@ -596,7 +598,7 @@ export function DiscoveryFeed() {
                     Latest from the Pipeline
                   </Text>
                   <Text variant="caption" style={{ fontSize: 12, color: TEXT_MUTED }}>
-                    Updated {new Date().toLocaleDateString()}
+                    Updated {isClient ? new Date().toLocaleDateString() : "..."}
                   </Text>
                 </div>
 
@@ -618,7 +620,7 @@ export function DiscoveryFeed() {
                           onMouseLeave={e => { e.currentTarget.style.opacity = isActive ? '1' : '0.85'; }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                            <Text variant="label" style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: item.badgeColor }}>
+                            <Text variant="label" style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: item.badgeColor }}>
                               {item.badge}
                             </Text>
                             <TypeIcon type={item.type} color={item.badgeColor} />
@@ -632,7 +634,7 @@ export function DiscoveryFeed() {
                             {item.excerpt}
                           </Text>
 
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, fontSize: 11, color: TEXT_MUTED }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, fontSize: 12, color: TEXT_MUTED }}>
                             <Text variant="caption">{item.date}</Text>
                             <span style={{ color: BORDER_DEFAULT }}>•</span>
                             <Text variant="caption">{item.readTime}</Text>

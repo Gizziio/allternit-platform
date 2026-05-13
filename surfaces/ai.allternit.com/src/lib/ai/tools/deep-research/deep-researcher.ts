@@ -343,7 +343,7 @@ class ResearcherAgent extends Agent {
   private async research(
     state: ResearcherInput
   ): Promise<CompressResearchInput> {
-    console.log("=== RESEARCHER START ===", {
+    console.debug("=== RESEARCHER START ===", {
       research_topic: state.research_topic,
       messages_count: state.researcher_messages?.length || 0,
     });
@@ -551,7 +551,7 @@ class SupervisorAgent extends Agent {
   }
 
   private async supervise(state: SupervisorInput): Promise<SupervisorOutput> {
-    console.log("=== SUPERVISOR START ===", {
+    console.debug("=== SUPERVISOR START ===", {
       research_iterations: state.research_iterations,
       max_iterations: this.config.max_researcher_iterations,
       messages_count: state.supervisor_messages?.length || 0,
@@ -700,7 +700,7 @@ class SupervisorAgent extends Agent {
     | { status: "complete"; data: { notes: string[] } }
     | { status: "continue"; data: SupervisorToolsOutput }
   > {
-    console.log("=== SUPERVISOR TOOLS START ===", {
+    console.debug("=== SUPERVISOR TOOLS START ===", {
       research_iterations: state.research_iterations,
       max_iterations: this.config.max_researcher_iterations,
       tool_calls_count: state.tool_calls?.length || 0,
@@ -1010,7 +1010,7 @@ export async function runDeepResearcher(
   }
 ): Promise<DeepResearchResult> {
   const { session, costAccumulator } = options;
-  console.log("runDeepResearcher invoked", {
+  console.debug("runDeepResearcher invoked", {
     requestId: input.requestId,
     messageId: input.messageId,
   });

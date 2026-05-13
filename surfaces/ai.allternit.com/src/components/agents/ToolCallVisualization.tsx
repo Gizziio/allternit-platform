@@ -145,7 +145,7 @@ export function ToolCallVisualization({
             border: "none",
             background: "transparent",
             color: "#7a6b5d",
-            fontSize: 11,
+            fontSize: 12,
             cursor: "pointer",
             alignSelf: "flex-end",
           }}
@@ -284,7 +284,7 @@ function SingleToolCallView({
             </span>
             <span
               style={{
-                fontSize: 9,
+                fontSize: 12,
                 padding: "2px 6px",
                 borderRadius: 4,
                 background: "var(--ui-border-muted)",
@@ -296,7 +296,7 @@ function SingleToolCallView({
               {meta.category}
             </span>
           </div>
-          <div style={{ fontSize: 10, color: "#a8998c", marginTop: 2 }}>
+          <div style={{ fontSize: 12, color: "#a8998c", marginTop: 2 }}>
             {isLoading ? (
               <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
                 <CircleNotch size={10} style={{ animation: "spin 1s linear infinite" }} />
@@ -340,7 +340,7 @@ function SingleToolCallView({
                 background: copied ? "rgba(121,196,124,0.2)" : "transparent",
                 color: copied ? "#79C47C" : "#7a6b5d",
                 cursor: "pointer",
-                fontSize: 11,
+                fontSize: 12,
                 display: "flex",
                 alignItems: "center",
                 gap: 4,
@@ -364,7 +364,7 @@ function SingleToolCallView({
                 background: "var(--status-error-bg)",
                 color: "#ef4444",
                 cursor: "pointer",
-                fontSize: 11,
+                fontSize: 12,
                 display: "flex",
                 alignItems: "center",
                 gap: 4,
@@ -439,7 +439,7 @@ function SectionHeader({
     >
       <div
         style={{
-          fontSize: 10,
+          fontSize: 12,
           fontWeight: 800,
           color: accentColor,
           textTransform: "uppercase",
@@ -451,7 +451,7 @@ function SectionHeader({
       {count !== undefined && (
         <span
           style={{
-            fontSize: 9,
+            fontSize: 12,
             padding: "1px 5px",
             borderRadius: 4,
             background: "var(--ui-border-muted)",
@@ -476,7 +476,7 @@ function CodeBlock({ content, maxHeight = 150 }: { content: string; maxHeight?: 
         padding: 10,
         borderRadius: 8,
         background: "var(--surface-panel)",
-        fontSize: 11,
+        fontSize: 12,
         fontFamily: 'var(--font-mono)',
         color: "#d1c3b4",
         overflow: "auto",
@@ -510,7 +510,7 @@ function ErrorBlock({ error }: { error: string }) {
         <pre
           style={{
             margin: 0,
-            fontSize: 11,
+            fontSize: 12,
             fontFamily: 'var(--font-mono)',
             color: "#ef4444",
             whiteSpace: "pre-wrap",
@@ -609,7 +609,7 @@ function ResultViewer({ result }: { result: unknown }) {
             >
               <div
                 style={{
-                  fontSize: 10,
+                  fontSize: 12,
                   color: "#a8998c",
                   marginBottom: 4,
                   fontFamily: "var(--font-mono)",
@@ -620,7 +620,7 @@ function ResultViewer({ result }: { result: unknown }) {
               <pre
                 style={{
                   margin: 0,
-                  fontSize: 11,
+                  fontSize: 12,
                   fontFamily: "var(--font-mono)",
                   color: "#d1c3b4",
                   overflow: "auto",
@@ -631,7 +631,7 @@ function ResultViewer({ result }: { result: unknown }) {
             </div>
           ))}
           {result.length > 5 && (
-            <div style={{ textAlign: "center", color: "#7a6b5d", fontSize: 11 }}>
+            <div style={{ textAlign: "center", color: "#7a6b5d", fontSize: 12 }}>
               ... and {result.length - 5} more results
             </div>
           )}
@@ -659,7 +659,7 @@ function ResultViewer({ result }: { result: unknown }) {
                 padding: "6px 8px",
                 borderRadius: 6,
                 background: "var(--surface-hover)",
-                fontSize: 11,
+                fontSize: 12,
                 color: item.type === "directory" ? "#a8998c" : "#d1c3b4",
               }}
             >

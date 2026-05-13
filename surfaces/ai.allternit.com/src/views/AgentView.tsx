@@ -101,8 +101,8 @@ export function AgentView({ hideCreateButton = false, forceListMode = false, tit
       return (
         <div className="flex h-full items-center justify-center">
           <div className="text-center">
-            <CircleNotch className="w-8 h-8 animate-spin mx-auto mb-4 text-muted-foreground" />
-            <p className="text-muted-foreground">Loading agent...</p>
+            <CircleNotch className="size-8  animate-spin mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground">Loading agent…</p>
           </div>
         </div>
       );
@@ -195,14 +195,14 @@ export function AgentView({ hideCreateButton = false, forceListMode = false, tit
       }}>
         {error && error !== 'API_OFFLINE' && (
           <Alert variant="destructive" className="mb-4 bg-red-900/50 border-red-500/50">
-            <Warning className="h-4 w-4 text-red-400" />
+            <Warning className="size-4  text-red-400" />
             <AlertDescription className="text-red-200">{error}</AlertDescription>
           </Alert>
         )}
 
         {isLoadingAgents ? (
           <div className="flex items-center justify-center h-64">
-            <CircleNotch className="w-8 h-8 animate-spin text-amber-400" />
+            <CircleNotch className="size-8  animate-spin text-amber-400" />
           </div>
         ) : agents.length === 0 ? (
           <EmptyAgentState 

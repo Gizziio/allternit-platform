@@ -24,7 +24,7 @@ Use this tool to:
 
 Examples:
 - GET request: method="GET", url="https://api.example.com/users"
-- POST with JSON: method="POST", url="...", headers={"Content-Type":"application/json"}, body={"key":"value"}
+- POST with JSON: method="POST", url="…", headers={"Content-Type":"application/json"}, body={"key":"value"}
 - With auth: headers={"Authorization":"Bearer token"}
 
 Security note: Be careful with sensitive data in URLs or headers.`,
@@ -186,7 +186,7 @@ This is a convenience wrapper around http_request for JSON APIs.
 Examples:
 - Fetch user data: url="https://api.github.com/users/octocat"
 - Fetch with query params: url="https://api.example.com/search?q=term"
-- With auth: url="...", headers={"Authorization":"token"}`,
+- With auth: url="…", headers={"Authorization":"token"}`,
   parameters: {
     type: "object",
     properties: {
@@ -263,7 +263,7 @@ Use this tool to:
 
 Examples:
 - Slack notification: url="https://hooks.slack.com/...", payload={"text":"Build complete"}
-- Generic webhook: url="...", payload={"event":"user.signup","data":{...}}`,
+- Generic webhook: url="…", payload={"event":"user.signup","data":{...}}`,
   parameters: {
     type: "object",
     properties: {

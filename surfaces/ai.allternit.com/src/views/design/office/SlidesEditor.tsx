@@ -172,7 +172,7 @@ export function SlidesEditor({ projectName }: { projectName: string }) {
                 <Trash size={9} weight="bold" />
               </button>
             )}
-            <div style={{ fontSize: 8, color: 'var(--text-tertiary)', textAlign: 'center', marginTop: 2 }}>{i + 1}</div>
+            <div style={{ fontSize: 12, color: 'var(--text-tertiary)', textAlign: 'center', marginTop: 2 }}>{i + 1}</div>
           </div>
         ))}
         <button
@@ -199,7 +199,7 @@ export function SlidesEditor({ projectName }: { projectName: string }) {
           <button
             onClick={exportPptx}
             disabled={exportState === 'working'}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, border: 'none', background: exportState === 'done' ? '#22c55e' : exportState === 'error' ? 'var(--surface-hover)' : 'var(--accent-primary)', color: exportState === 'error' ? 'var(--text-secondary)' : '#fff', fontSize: 11, fontWeight: 700, cursor: exportState === 'working' ? 'default' : 'pointer', opacity: exportState === 'working' ? 0.7 : 1 }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, border: 'none', background: exportState === 'done' ? '#22c55e' : exportState === 'error' ? 'var(--surface-hover)' : 'var(--accent-primary)', color: exportState === 'error' ? 'var(--text-secondary)' : '#fff', fontSize: 12, fontWeight: 700, cursor: exportState === 'working' ? 'default' : 'pointer', opacity: exportState === 'working' ? 0.7 : 1 }}
           >
             {exportState === 'working' && <CircleNotch size={12} style={{ animation: 'spin 1s linear infinite' }} />}
             {exportState === 'done' && <CheckCircle size={12} weight="fill" />}
@@ -220,7 +220,7 @@ export function SlidesEditor({ projectName }: { projectName: string }) {
             onClick={() => setEditingBlock(null)}
           >
             {/* Slide number */}
-            <div style={{ position: 'absolute', bottom: 8, right: 12, fontSize: 9, color: isDarkBg(activeSlide?.bg) ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.25)', fontWeight: 600 }}>
+            <div style={{ position: 'absolute', bottom: 8, right: 12, fontSize: 12, color: isDarkBg(activeSlide?.bg) ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.25)', fontWeight: 600 }}>
               {activeIdx + 1} / {slides.length}
             </div>
 

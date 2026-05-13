@@ -111,7 +111,7 @@ function CheckpointTimelineItem({
 
         {/* Status Icon */}
         <div
-          className="w-8 h-8 rounded flex items-center justify-center flex-shrink-0"
+          className="size-8  rounded flex items-center justify-center flex-shrink-0"
           style={{ background: reasonConfig.bg }}
         >
           {checkpoint.metadata.reason === 'error' ? (
@@ -128,7 +128,7 @@ function CheckpointTimelineItem({
               {checkpoint.name}
             </span>
             <span
-              className="text-[10px] px-1.5 py-0.5 rounded font-medium uppercase tracking-wider"
+              className="text-xs px-1.5 py-0.5 rounded font-medium uppercase tracking-wider"
               style={{
                 background: reasonConfig.bg,
                 color: reasonConfig.color,
@@ -189,7 +189,7 @@ function CheckpointTimelineItem({
             <div className="p-3 space-y-3">
               {/* State Preview */}
               <div>
-                <h4 className="text-[10px] font-bold uppercase tracking-wider text-white/40 mb-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-white/40 mb-2">
                   State Summary
                 </h4>
                 <div className="grid grid-cols-2 gap-2">
@@ -216,7 +216,7 @@ function CheckpointTimelineItem({
                   <span>Cost: ${checkpoint.metadata.costCents / 100}</span>
                 )}
                 {checkpoint.runId && (
-                  <span>Run: {checkpoint.runId.slice(0, 8)}...</span>
+                  <span>Run: {checkpoint.runId.slice(0, 8)}…</span>
                 )}
               </div>
             </div>
@@ -306,7 +306,7 @@ function ExecutionTraceViewer({
               </button>
 
               <div
-                className="w-8 h-8 rounded flex items-center justify-center flex-shrink-0"
+                className="size-8  rounded flex items-center justify-center flex-shrink-0"
                 style={{ background: `${config.color}22` }}
               >
                 <Icon size={16} style={{ color: config.color }} />
@@ -324,7 +324,7 @@ function ExecutionTraceViewer({
 
               {isRunning && stepId === 'current' && (
                 <div className="flex items-center gap-2 text-xs text-green-400">
-                  <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                  <div className="size-2  rounded-full bg-green-400 animate-pulse" />
                   Running
                 </div>
               )}
@@ -454,7 +454,7 @@ export function CheckpointViewer({
               type="text"
               value={checkpointName}
               onChange={(e) => setCheckpointName(e.target.value)}
-              placeholder="Checkpoint name..."
+              placeholder="Checkpoint name…"
               className="flex-1 px-3 py-1.5 bg-white/5 border border-white/10 rounded text-sm text-white/90 placeholder-white/30 outline-none"
               autoFocus
               onKeyDown={(e) => {

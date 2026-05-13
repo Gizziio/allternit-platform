@@ -56,24 +56,18 @@ jobs:
         run: pnpm install --frozen-lockfile
         working-directory: surfaces/ai.allternit.com
 
-      - name: Build Next.js platform (standalone)
-        run: ALLTERNIT_BUILD_MODE=desktop pnpm build
+      - name: Build platform static export for desktop
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build:cloudflare
         working-directory: surfaces/ai.allternit.com
 
-      - name: Copy standalone server to desktop resources
+      - name: Copy static export to desktop resources
         run: |
-          DEST=surfaces/allternit-desktop/resources/platform-server
+          DEST=surfaces/allternit-desktop/resources/platform
           rm -rf "$DEST"
           mkdir -p "$DEST"
-          cp -r surfaces/ai.allternit.com/.next/standalone/. "$DEST/"
-          if [ -d surfaces/ai.allternit.com/.next/static ]; then
-            mkdir -p "$DEST/.next/static"
-            cp -r surfaces/ai.allternit.com/.next/static/. "$DEST/.next/static/"
-          fi
-          if [ -d surfaces/ai.allternit.com/public ]; then
-            mkdir -p "$DEST/public"
-            cp -r surfaces/ai.allternit.com/public/. "$DEST/public/"
-          fi
+          cp -r surfaces/ai.allternit.com/dist/. "$DEST/"
 
       # ── Step 2: Build gizzi-code (AI runtime — the brain) ───────────────────
       - name: Setup Bun
@@ -84,11 +78,11 @@ jobs:
         working-directory: cmd/gizzi-code
 
       - name: Build gizzi-code (arm64)
-        run: bun run script/build-production.ts --target=darwin-arm64
+        run: bun run script/build-production.js --target=darwin-arm64
         working-directory: cmd/gizzi-code
 
       - name: Build gizzi-code (x64)
-        run: bun run script/build-production.ts --target=darwin-x64
+        run: bun run script/build-production.js --target=darwin-x64
         working-directory: cmd/gizzi-code
 
       - name: Create universal gizzi-code binary
@@ -103,10 +97,10 @@ jobs:
 
       # ── Step 3: Build Rust allternit-api for both architectures ─────────────
       - name: Build allternit-api (x86_64)
-        run: cargo build --release --target x86_64-apple-darwin --manifest-path api/core/allternit-api/Cargo.toml
+        run: cargo build --release --target x86_64-apple-darwin --manifest-path cmd/allternit-api/Cargo.toml
 
       - name: Build allternit-api (aarch64)
-        run: cargo build --release --target aarch64-apple-darwin --manifest-path api/core/allternit-api/Cargo.toml
+        run: cargo build --release --target aarch64-apple-darwin --manifest-path cmd/allternit-api/Cargo.toml
 
       - name: Create universal allternit-api binary
         run: |
@@ -207,7 +201,7 @@ jobs:
         working-directory: cmd/gizzi-code
 
       - name: Build gizzi-code (Windows x64)
-        run: bun run script/build-production.ts --target=windows-x64
+        run: bun run script/build-production.js --target=windows-x64
         working-directory: cmd/gizzi-code
 
       - name: Copy gizzi-code binary
@@ -220,25 +214,23 @@ jobs:
         run: pnpm install --frozen-lockfile
         working-directory: surfaces/ai.allternit.com
 
-      - name: Build Next.js platform (standalone)
-        shell: bash
-        run: ALLTERNIT_BUILD_MODE=desktop pnpm build
-        working-directory: surfaces/ai.allternit.com
-
-      - name: Copy standalone server to desktop resources
+      - name: Build platform static export for desktop
         shell: bash
         run: |
-          DEST=surfaces/allternit-desktop/resources/platform-server
+          pnpm install --frozen-lockfile
+          pnpm build:cloudflare
+        working-directory: surfaces/ai.allternit.com
+
+      - name: Copy static export to desktop resources
+        shell: bash
+        run: |
+          DEST=surfaces/allternit-desktop/resources/platform
           rm -rf "$DEST"
           mkdir -p "$DEST"
-          cp -r surfaces/ai.allternit.com/.next/standalone/. "$DEST/"
-          if [ -d surfaces/ai.allternit.com/.next/static ]; then
-            mkdir -p "$DEST/.next/static"
-            cp -r surfaces/ai.allternit.com/.next/static/. "$DEST/.next/static/"
-          fi
+          cp -r surfaces/ai.allternit.com/dist/. "$DEST/"
 
       - name: Build allternit-api (Windows)
-        run: cargo build --release --target x86_64-pc-windows-msvc --manifest-path api/core/allternit-api/Cargo.toml
+        run: cargo build --release --target x86_64-pc-windows-msvc --manifest-path cmd/allternit-api/Cargo.toml
 
       - name: Copy allternit-api binary
         shell: bash
@@ -312,9 +304,9 @@ jobs:
             Fully bundled desktop app — no internet required after install.
 
             ### What's included
-            - Allternit Platform UI (Next.js standalone server)
-            - Allternit API backend (Rust)
-            - VM Manager for Apple Virtualization.framework (macOS)
+            - Allternit Platform UI (Next.js static — loads https://ai.allternit.com)
+            - Allternit API backend (Rust, runs locally on :8013)
+            - Gizzi AI runtime (Bun, runs locally on :4096)
 
             ### Downloads
             | Platform | File |

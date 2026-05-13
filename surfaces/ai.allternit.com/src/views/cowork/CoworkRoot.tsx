@@ -9,6 +9,7 @@
  * - Viewport (screenshots) appear inline as expandable cards, not permanent left pane
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { getAgentSessionDescriptor, getAgentSessionStatusLabel } from '@/lib/agents';
@@ -392,7 +393,7 @@ function CoworkRootContent() {
                                 borderBottom: '1px solid var(--ui-border-muted)',
                               }}>
                                 <span style={{
-                                  fontSize: 11,
+                                  fontSize: 12,
                                   fontWeight: 600,
                                   color: 'var(--accent-cowork)',
                                   textTransform: 'uppercase',
@@ -403,7 +404,7 @@ function CoworkRootContent() {
                                 <button
                                   onClick={() => setDroppedFiles([])}
                                   style={{
-                                    fontSize: 10,
+                                    fontSize: 12,
                                     color: 'rgba(245,240,232,0.5)',
                                     background: 'transparent',
                                     border: 'none',
@@ -1039,7 +1040,7 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
             }}
             style={{
               padding: '3px 10px', borderRadius: 4, border: '1px solid #fbbf24',
-              background: 'transparent', color: 'var(--status-warning)', fontSize: 11,
+              background: 'transparent', color: 'var(--status-warning)', fontSize: 12,
               fontWeight: 600, cursor: 'pointer'
             }}
           >
@@ -1110,7 +1111,7 @@ function CoworkChat({ sessionId, initialMessage, onInitialMessageSent }: CoworkC
             onOpenModelPicker={startSelection}
             onSelectModel={selectModel}
             inputValue={composerInputValue}
-            placeholder="Reply..."
+            placeholder="Reply…"
             showTopActions={false}
             agentModeSurface="cowork"
           />
@@ -1228,7 +1229,7 @@ function EmbeddedCoworkAgentRail() {
       >
         <div
           style={{
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 800,
             letterSpacing: '0.08em',
             textTransform: 'uppercase',
@@ -1376,7 +1377,7 @@ function LifecycleButton({
       }}
     >
       {loading ? (
-        <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+        <div className="size-3  animate-spin rounded-full border-2 border-current border-t-transparent" />
       ) : (
         icon
       )}
@@ -1430,7 +1431,7 @@ function EmbeddedRailCard({
         >
           <div
             style={{
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: 800,
               letterSpacing: '0.08em',
               textTransform: 'uppercase',

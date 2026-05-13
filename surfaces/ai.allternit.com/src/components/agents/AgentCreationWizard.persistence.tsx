@@ -238,6 +238,7 @@ export function useWizardPersistence(
 // Draft Saved Indicator Component
 // ============================================================================
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React from 'react';
 
 interface DraftSavedIndicatorProps {
@@ -277,7 +278,7 @@ export const DraftSavedIndicator: React.FC<DraftSavedIndicatorProps> = ({
               <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
             </svg>
           </span>
-          <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Saving...</span>
+          <span style={{ color: 'rgba(255, 255, 255, 0.6)' }}>Saving…</span>
         </>
       )}
       
@@ -368,7 +369,7 @@ export const BrowserCompatibilityWarning: React.FC<BrowserCompatibilityWarningPr
           {compatibility.unsupportedFeatures.map((feature) => (
             <li key={feature} className="flex items-center gap-2">
               <span 
-                className="w-1 h-1 rounded-full" 
+                className="size-1  rounded-full" 
                 style={{ background: severityColor }}
                 aria-hidden="true"
               />
@@ -579,7 +580,7 @@ export const PluginConflictWarning: React.FC<PluginConflictWarningProps> = ({
           {conflictResult.conflicts.map((conflict, idx) => (
             <li key={idx} className="flex items-center gap-2">
               <span 
-                className="w-1.5 h-1.5 rounded-full" 
+                className="size-1.5  rounded-full" 
                 style={{ background: colors.text }}
                 aria-hidden="true"
               />

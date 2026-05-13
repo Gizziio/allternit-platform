@@ -1,5 +1,6 @@
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useEffect } from 'react';
-import { GlassCard } from '../../design/GlassCard';
+import { GlassCard } from '../../design/glass/GlassCard';
 import {
   Clock,
   Play,
@@ -234,7 +235,7 @@ export function SchedulerView() {
           <h4 style={{ margin: '0 0 12px 0', fontSize: 14 }}>Create New Scheduled Job</h4>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
-              <label style={{ display: 'block', fontSize: 11, color: 'var(--ui-text-muted)', marginBottom: 4 }}>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--ui-text-muted)', marginBottom: 4 }}>
                 Select DAG
               </label>
               <select
@@ -250,7 +251,7 @@ export function SchedulerView() {
                   fontSize: 13
                 }}
               >
-                <option value="">Select a DAG...</option>
+                <option value="">Select a DAG…</option>
                 {dags.map(dag => (
                   <option key={dag.dagId} value={dag.dagId}>
                     {dag.metadata?.title || dag.dagId}
@@ -259,7 +260,7 @@ export function SchedulerView() {
               </select>
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 11, color: 'var(--ui-text-muted)', marginBottom: 4 }}>
+              <label style={{ display: 'block', fontSize: 12, color: 'var(--ui-text-muted)', marginBottom: 4 }}>
                 Schedule (Cron Expression)
               </label>
               <input
@@ -278,7 +279,7 @@ export function SchedulerView() {
                   fontFamily: 'var(--font-mono)'
                 }}
               />
-              <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', marginTop: 4 }}>
+              <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', marginTop: 4 }}>
                 Examples: 0 * * * * (hourly), 0 0 * * * (daily), 0 12 * * 0 (weekly)
               </div>
             </div>
@@ -372,7 +373,7 @@ export function SchedulerView() {
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>{job.title}</div>
                   <div style={{ 
-                    fontSize: 11, 
+                    fontSize: 12, 
                     opacity: 0.6, 
                     fontFamily: 'var(--font-mono)',
                     marginTop: 4
@@ -381,7 +382,7 @@ export function SchedulerView() {
                   </div>
                   {job.isDemo && (
                     <div style={{
-                      fontSize: 10,
+                      fontSize: 12,
                       color: 'var(--status-warning)',
                       marginTop: 4
                     }}>
@@ -398,7 +399,7 @@ export function SchedulerView() {
                     padding: '4px 8px', 
                     cursor: 'pointer',
                     color: job.status === 'active' ? 'var(--status-error)' : 'var(--status-success)',
-                    fontSize: 10, 
+                    fontSize: 12, 
                     fontWeight: 800
                   }}
                 >
@@ -411,7 +412,7 @@ export function SchedulerView() {
                 alignItems: 'center', 
                 gap: 12, 
                 marginTop: 'auto',
-                fontSize: 11
+                fontSize: 12
               }}>
                 {job.lastRun && (
                   <div style={{ 
@@ -439,7 +440,7 @@ export function SchedulerView() {
                   onClick={() => runJobNow(job.dagId)}
                   style={{
                     marginLeft: 'auto',
-                    fontSize: 11,
+                    fontSize: 12,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 4,
@@ -473,7 +474,7 @@ function StatBox({ label, value, color }: { label: string; value: number; color:
       borderLeft: `3px solid ${color}`
     }}>
       <div style={{ fontSize: 20, fontWeight: 700, color }}>{value}</div>
-      <div style={{ fontSize: 11, color: 'var(--ui-text-muted)', marginTop: 2 }}>{label}</div>
+      <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', marginTop: 2 }}>{label}</div>
     </div>
   );
 }

@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+'use client'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 
 import { ResourceUsageDashboard } from '@/components/usage/ResourceUsageDashboard';
 import {
@@ -40,252 +41,37 @@ import {
   ShieldCheck,
   FileText,
   CircleNotch,
+  Globe,
+  Question,
+  ArrowUpRight,
+  DownloadSimple,
+  Gift,
 } from '@phosphor-icons/react';
 import { VPSConnectionsPanel } from './VPSConnectionsPanel';
 import { ToastProvider } from '@/components/ui/toast-provider';
 import { usePlatformUser, usePlatformSignOut, usePlatformSessions, PlatformSignIn, isPlatformAuthDisabled } from '@/lib/platform-auth-client';
 import { useThemeStore } from '@/design/ThemeStore';
 import { LocalModelManager } from '@/components/models/LocalModelManager';
-
-function ClerkAuthPanel() {
-  const { isLoaded, isSignedIn, user: _user } = usePlatformUser();
-  const { sessions } = usePlatformSessions();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const user = _user as any;
-  const signOut = usePlatformSignOut();
-  const [backendSummary, setBackendSummary] = useState<{ mode: string; url: string } | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
-  const [restarting, setRestarting] = useState(false);
-
-  const isElectron = typeof window !== 'undefined' && !!(window as any).allternit?.backend;
-
-  const handleRestartBackend = async () => {
-    if (!isElectron) return;
-    setRestarting(true);
-    try {
-      await (window as any).allternit.backend.restart();
-    } catch (err) {
-      console.error('Failed to restart backend:', err);
-    } finally {
-      setRestarting(false);
-    }
-  };
-
-  const label: React.CSSProperties = { fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 };
-  const card: React.CSSProperties = { background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 10, padding: '20px 24px', marginBottom: 16 };
-  const btn: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 7, border: '1px solid var(--border-subtle)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' };
-  const btnDanger: React.CSSProperties = { ...btn, border: '1px solid color-mix(in srgb, var(--status-error) 35%, transparent)', background: 'var(--status-error-bg)', color: 'var(--status-error)' };
-  const btnPrimary: React.CSSProperties = { ...btn, background: 'var(--accent-primary)', color: 'var(--ui-text-inverse)', border: '1px solid transparent', fontWeight: 600 };
-
-  const refreshBackendSummary = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      const backend = await window.allternit?.connection?.getBackend?.();
-      if (!backend) {
-        setBackendSummary(null);
-      } else {
-        setBackendSummary({ mode: backend.mode, url: backend.url });
-      }
-    } catch {
-      setBackendSummary(null);
-    } finally {
-      setRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void refreshBackendSummary();
-  }, [refreshBackendSummary]);
-
-  const openSettingsSection = useCallback((section: SettingsSection, tab?: string) => {
-    window.dispatchEvent(new CustomEvent('allternit:open-settings', {
-      detail: { section, tab },
-    }));
-  }, []);
-
-  const backendLabel = backendSummary
-    ? backendSummary.mode === 'remote'
-      ? 'BYOC / Remote backend connected'
-      : backendSummary.mode === 'bundled'
-        ? 'Bundled local backend connected'
-        : 'Development backend connected'
-    : null;
-
-  const backendHelp = backendSummary
-    ? backendSummary.mode === 'remote'
-      ? 'This account is signed in while using a remote BYOC backend. Signing out ends the desktop session without changing the connected backend target.'
-      : backendSummary.mode === 'bundled'
-        ? 'This account is signed in against the bundled local stack. Signing out ends the desktop session without changing the bundled backend.'
-        : 'This account is signed in while the desktop shell points at a development backend. Signing out only affects the desktop account session.'
-    : 'Backend selection is managed separately from desktop OAuth and can be changed without signing out.';
-
-  const manageBackendTab: 'overview' | 'connections' =
-    backendSummary?.mode === 'remote' ? 'connections' : 'overview';
-
-  const manageBackendLabel =
-    backendSummary?.mode === 'remote' ? 'Manage remote backend' : 'Manage backend';
-
-  if (!isLoaded) {
-    return <div style={{ padding: 24, color: 'var(--text-tertiary)', fontSize: 13 }}>Loading…</div>;
-  }
-
-  if (isPlatformAuthDisabled()) {
-    return (
-      <div style={{ padding: 24 }}>
-        <div style={card}>
-          <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-            Authentication is unavailable in this build. No signed-in user is active.
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isSignedIn) {
-    return (
-      <div style={{ padding: 24 }}>
-        <div style={{ ...label, marginBottom: 16 }}>Sign in to your Allternit account</div>
-        <PlatformSignIn />
-        <div style={{ ...card, marginTop: 16, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-          Desktop OAuth and backend selection are separate.
-          Use Infrastructure or VPS Connections to change the active backend without resetting auth.
-        </div>
-      </div>
-    );
-  }
-
-  const name = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'Allternit User';
-  const email =
-    user?.emailAddresses?.[0]?.emailAddress
-    ?? user?.primaryEmailAddress?.emailAddress
-    ?? user?.userEmail
-    ?? '';
-  const initials = name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase();
-
-  return (
-    <div style={{ padding: 24 }}>
-      <div style={label}>Account</div>
-      <div style={{ ...card, display: 'flex', alignItems: 'center', gap: 16 }}>
-        {user?.imageUrl ? (
-          <img src={user.imageUrl} alt={name} style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-        ) : (
-          <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 600, color: 'var(--ui-text-inverse)', flexShrink: 0 }}>
-            {initials}
-          </div>
-        )}
-        <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 2 }}>{name}</div>
-          {email && <div style={{ fontSize: 12, color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</div>}
-        </div>
-      </div>
-
-      <div style={card}>
-        <div style={{ marginBottom: 4, fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-          Session
-        </div>
-        <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 14 }}>
-          Sign out of the current Allternit account session. Backend routing stays managed separately in infrastructure settings.
-        </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button style={btnDanger} onClick={() => void signOut()}>
-            <User size={14} /> Sign out
-          </button>
-          <button style={btn} onClick={() => void refreshBackendSummary()} disabled={refreshing}>
-            <ArrowsClockwise size={14} /> {refreshing ? 'Refreshing…' : 'Refresh status'}
-          </button>
-          {isElectron && (
-            <button style={btn} onClick={handleRestartBackend} disabled={restarting}>
-              <Cpu size={14} /> {restarting ? 'Restarting…' : 'Restart Backend'}
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div style={card}>
-        <div style={label}>Active Platform Sessions</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {sessions.map((sess: any) => (
-            <div key={sess.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--surface-hover)', borderRadius: 8, border: '1px solid var(--ui-border-muted)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 6, height: 6, borderRadius: '50%', background: sess.status === 'active' ? 'var(--status-success)' : 'var(--ui-text-muted)' }} />
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)' }}>
-                    {sess.latestActivityAt ? new Date(sess.latestActivityAt).toLocaleDateString() : 'Active Session'}
-                    {sess.id === (user as any)?.lastActiveSessionId && <span style={{ marginLeft: 8, fontSize: 10, color: 'var(--accent-primary)', textTransform: 'uppercase' }}>(Current)</span>}
-                  </div>
-                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>ID: {sess.id}</div>
-                </div>
-              </div>
-              {sess.id !== (user as any)?.lastActiveSessionId && (
-                <button style={{ ...btn, padding: '4px 10px', fontSize: 11 }} onClick={() => sess.revoke()}>Revoke</button>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ ...card, background: 'var(--status-success-bg)', border: '1px solid color-mix(in srgb, var(--status-success) 18%, transparent)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-          <Shield size={18} color="var(--status-success)" />
-          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--status-success)' }}>Offline-First Sovereignty</div>
-        </div>
-        <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
-          Your Private Brain remains 100% functional without internet. All neural memories, local models (Ollama), and tool schemas are stored securely on this device.
-        </p>
-      </div>
-
-      <div style={{ ...card, fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-        <div style={{ marginBottom: 4, fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-          Backend Routing
-        </div>
-        <div style={{ color: 'var(--text-primary)', marginBottom: 2 }}>
-          {backendLabel ?? 'Backend state unavailable'}
-        </div>
-        {backendSummary?.url && <div style={{ wordBreak: 'break-all', marginBottom: 8 }}>{backendSummary.url}</div>}
-        <div style={{ marginBottom: 14, color: 'var(--text-tertiary)' }}>
-          {backendHelp}
-        </div>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button style={btnPrimary} onClick={() => openSettingsSection('infrastructure', manageBackendTab)}>
-            <Cloud size={14} /> {manageBackendLabel}
-          </button>
-          <button style={btn} onClick={() => openSettingsSection('infrastructure', 'connections')}>
-            <HardDrives size={14} /> BYOC connections
-          </button>
-        </div>
-      </div>
-
-    </div>
-  );
-}
 import { InfrastructureSettings } from './InfrastructureSettings';
-
 import { SETTINGS_NAV_ITEMS, SETTINGS_SECTION_MAP, type SettingsSection } from './settings.config';
+import { cn } from '@/lib/utils';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
 type FontSize = 'small' | 'medium' | 'large';
 type DefaultMode = 'chat' | 'cowork' | 'code';
 type AgentOpsTab = 'evaluation' | 'factory' | 'gc';
 
-const SHORTCUTS = [
-  { action: 'New Chat', shortcut: '⌘N' },
-  { action: 'Toggle Sidebar', shortcut: '⌘\\' },
-  { action: 'Search', shortcut: '⌘K' },
-  { action: 'Close View', shortcut: '⌘W' },
-  { action: 'Switch Mode (Chat)', shortcut: '⌘1' },
-  { action: 'Switch Mode (Cowork)', shortcut: '⌘2' },
-  { action: 'Switch Mode (Code)', shortcut: '⌘3' },
-  { action: 'Run Agent', shortcut: '⌘R' },
-  { action: 'Toggle Theme', shortcut: '⌘Shift+T' },
-  { action: 'Open Settings', shortcut: '⌘,' },
-];
+interface MenuItem {
+  id: string;
+  label: string;
+  icon?: React.ReactNode;
+  shortcut?: string;
+  hasSubmenu?: boolean;
+  onClick?: () => void;
+  children?: MenuItem[];
+}
 
-const API_PROVIDERS = [
-  { name: 'OpenAI', letter: 'O' },
-  { name: 'Anthropic', letter: 'A' },
-  { name: 'Mistral', letter: 'M' },
-  { name: 'Google', letter: 'G' },
-];
-
-// GC Agent Types
 interface GcIssue {
   id: string;
   agent: string;
@@ -331,7 +117,6 @@ interface GcHistoryEntry {
   runId?: string;
 }
 
-// Toast Types
 interface Toast {
   id: string;
   message: string;
@@ -339,7 +124,28 @@ interface Toast {
   agentName?: string;
 }
 
-// GC Agent Information
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+const SHORTCUTS = [
+  { action: 'New Chat', shortcut: '⌘N' },
+  { action: 'Toggle Sidebar', shortcut: '⌘\\' },
+  { action: 'Search', shortcut: '⌘K' },
+  { action: 'Close View', shortcut: '⌘W' },
+  { action: 'Switch Mode (Chat)', shortcut: '⌘1' },
+  { action: 'Switch Mode (Cowork)', shortcut: '⌘2' },
+  { action: 'Switch Mode (Code)', shortcut: '⌘3' },
+  { action: 'Run Agent', shortcut: '⌘R' },
+  { action: 'Toggle Theme', shortcut: '⌘Shift+T' },
+  { action: 'Open Settings', shortcut: '⌘,' },
+];
+
+const API_PROVIDERS = [
+  { name: 'OpenAI', letter: 'O' },
+  { name: 'Anthropic', letter: 'A' },
+  { name: 'Mistral', letter: 'M' },
+  { name: 'Google', letter: 'G' },
+];
+
 const GC_AGENT_INFO: Record<string, { description: string; icon: React.ReactNode }> = {
   duplicate_detector: { description: 'Finds duplicate code using AST analysis', icon: <Copy size={16} /> },
   boundary_type_checker: { description: 'Checks for untyped boundaries (unwrap, expect)', icon: <ShieldCheck size={16} /> },
@@ -349,7 +155,8 @@ const GC_AGENT_INFO: Record<string, { description: string; icon: React.ReactNode
   test_coverage_checker: { description: 'Identifies test coverage gaps', icon: <CheckCircle size={16} /> },
 };
 
-// API Client for Agent Operations
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
 const api = {
   async getEvaluations() {
     const res = await fetch(`/api/v1/agents/operations/evaluations`);
@@ -440,10 +247,489 @@ const api = {
   },
 };
 
-interface SettingsViewProps {
-  initialSection?: SettingsSection;
-  initialTab?: string;
+// ─── Sub-components (extracted to module scope) ───────────────────────────────
+
+const SectionDivider = (): JSX.Element => (
+  <div className="h-px bg-[var(--border-subtle)] my-3" />
+);
+
+const ToggleItem: React.FC<{ label: string; value: boolean; onChange: (v: boolean) => void; description?: string }> = ({ label, value, onChange, description }) => (
+  <div className="flex items-center justify-between py-3 mb-3">
+    <div>
+      <div className="text-[13px] font-medium text-[var(--text-primary)] mb-0.5">{label}</div>
+      {description && <div className="text-[12px] text-[var(--text-secondary)]">{description}</div>}
+    </div>
+    <button 
+      onClick={() => onChange(!value)} 
+      className={cn(
+        "w-12 h-7 rounded-full border-none relative transition-all duration-300 cursor-pointer p-0",
+        value ? "bg-[var(--accent-primary)]" : "bg-[var(--border-subtle)]"
+      )}
+    >
+      <div className={cn(
+        "size-6 rounded-full bg-white absolute top-0.5 transition-all duration-300 shadow-sm",
+        value ? "left-[22px]" : "left-0.5"
+      )} />
+    </button>
+  </div>
+);
+
+const NavButton: React.FC<{ item: any; activeSection: SettingsSection; onClick: () => void }> = ({ item, activeSection, onClick }) => {
+  const isActive = activeSection === item.id;
+  return (
+    <button 
+      onClick={onClick} 
+      className={cn(
+        "w-full p-2 px-3 border-none flex items-center gap-2.5 transition-all duration-150 text-sm rounded-lg relative text-left cursor-pointer",
+        isActive 
+          ? "bg-[var(--bg-secondary)] text-[var(--text-primary)]" 
+          : "bg-transparent text-[var(--text-secondary)] hover:bg-[var(--bg-secondary)] hover:text-[var(--text-primary)]"
+      )}
+    >
+      {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 bg-[var(--accent-primary)] rounded-r-sm" />}
+      {item.label}
+    </button>
+  );
+};
+
+const StatCard = ({ label, value, color }: { label: string; value: string | number; color: string }) => (
+  <div className="p-5 bg-[var(--bg-secondary)] rounded-lg border border-solid border-[var(--border-subtle)] text-center">
+    <div className="text-3xl font-bold tabular-nums" style={{ color }}>{value}</div>
+    <div className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wider mt-1">{label}</div>
+  </div>
+);
+
+const DiagnosticRow = ({ label, value, status }: { label: string, value: string, status?: 'success' | 'warning' | 'error' }) => (
+  <div className="flex justify-between p-3 px-4 border-b border-solid border-[var(--border-subtle)] last:border-b-0">
+    <span className="text-[13px] text-[var(--text-secondary)]">{label}</span>
+    <div className="flex items-center gap-2">
+      {status && (
+        <div className={cn(
+          "size-1.5 rounded-full",
+          status === 'success' ? "bg-[var(--status-success)]" : status === 'warning' ? "bg-[var(--status-warning)]" : "bg-[var(--status-error)]"
+        )} />
+      )}
+      <span className="text-[13px] font-medium text-[var(--text-primary)] font-mono">{value}</span>
+    </div>
+  </div>
+);
+
+const MetricBar = ({ label, value, suffix = '%', inverse = false }: { label: string, value: number, suffix?: string, inverse?: boolean }) => {
+  const color = inverse 
+    ? (value < 50 ? 'var(--status-success)' : value < 100 ? 'var(--status-warning)' : 'var(--status-error)')
+    : (value > 80 ? 'var(--status-success)' : value > 50 ? 'var(--status-warning)' : 'var(--status-error)');
+  
+  return (
+    <div className="mb-4">
+      <div className="flex justify-between mb-1.5">
+        <span className="text-[12px] text-[var(--text-secondary)]">{label}</span>
+        <span className="text-[12px] font-semibold text-[var(--text-primary)] tabular-nums">{value}{suffix}</span>
+      </div>
+      <div className="h-1 bg-[var(--bg-primary)] rounded-full overflow-hidden">
+        <div 
+          className="h-full transition-all duration-500 ease-out" 
+          style={{ width: `${Math.min(100, value)}%`, backgroundColor: color }} 
+        />
+      </div>
+    </div>
+  );
+};
+
+const PermissionRow: React.FC<{
+  label: string;
+  description: string;
+  status?: 'granted' | 'denied' | 'unknown' | 'not-applicable';
+  onGrant: () => void;
+}> = ({ label, description, status, onGrant }) => {
+  const granted = status === 'granted';
+  const denied = status === 'denied';
+
+  return (
+    <div className="flex items-center gap-3 p-3.5 px-4 bg-[var(--bg-secondary)] rounded-lg border border-solid border-[var(--border-subtle)]">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          {granted ? <CheckCircle size={16} className="text-[var(--status-success)]" /> : denied ? <Warning size={16} className="text-[var(--status-error)]" /> : <CircleNotch size={16} className="text-[var(--ui-text-muted)] animate-spin" />}
+          <span className={cn("text-sm font-medium", granted ? "text-[var(--status-success)]" : "text-[var(--text-primary)]")}>{label}</span>
+        </div>
+        <p className="text-[12px] text-[var(--text-secondary)] m-0 leading-relaxed truncate">{description}</p>
+      </div>
+      {denied && (
+        <button
+          onClick={onGrant}
+          className="p-1.5 px-3.5 rounded-lg border-none bg-[var(--status-warning)] text-[var(--ui-text-inverse)] text-[13px] font-bold cursor-pointer transition-transform active:scale-95"
+        >
+          Grant
+        </button>
+      )}
+      {granted && (
+        <span className="text-[12px] text-[var(--status-success)] font-semibold uppercase tracking-wider shrink-0">Granted</span>
+      )}
+    </div>
+  );
+};
+
+const ToastContainer = ({ toasts, onRemove }: { toasts: Toast[]; onRemove: (id: string) => void }) => (
+  <div className="fixed top-5 right-5 z-[160] flex flex-col gap-2 pointer-events-none">
+    <AnimatePresence>
+      {toasts.map(toast => (
+        <motion.div
+          key={toast.id}
+          initial={{ opacity: 0, x: 20, scale: 0.95 }}
+          animate={{ opacity: 1, x: 0, scale: 1 }}
+          exit={{ opacity: 0, x: 20, scale: 0.95 }}
+          className={cn(
+            "p-3 px-4 rounded-xl text-[13px] font-semibold shadow-xl flex items-center gap-2.5 pointer-events-auto min-w-[280px] max-w-[400px]",
+            toast.type === 'error' ? "bg-[var(--status-error)]" : toast.type === 'success' ? "bg-[var(--status-success)]" : "bg-[var(--status-info)]",
+            "text-[var(--ui-text-inverse)]"
+          )}
+        >
+          {toast.type === 'error' && <XCircle size={18} weight="fill" />}
+          {toast.type === 'success' && <CheckCircle size={18} weight="fill" />}
+          {toast.type === 'info' && <Info size={18} weight="fill" />}
+          <span className="flex-1">{toast.message}</span>
+          <button 
+            onClick={() => onRemove(toast.id)}
+            className="bg-transparent border-none text-[var(--ui-text-inverse)] cursor-pointer opacity-70 hover:opacity-100 transition-opacity p-0.5"
+          >
+            <X size={14} weight="bold" />
+          </button>
+        </motion.div>
+      ))}
+    </AnimatePresence>
+  </div>
+);
+
+// ─── Main View Component ──────────────────────────────────────────────────────
+
+function ClerkAuthPanel() {
+  const { isLoaded, isSignedIn, user: _user } = usePlatformUser();
+  const { sessions } = usePlatformSessions();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const user = _user as any;
+  const signOut = usePlatformSignOut();
+  const [backendSummary, setBackendSummary] = useState<{ mode: string; url: string } | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [restarting, setRestarting] = useState(false);
+
+  const isElectron = typeof window !== 'undefined' && !!(window as any).allternit?.backend;
+
+  const handleRestartBackend = async () => {
+    if (!isElectron) return;
+    setRestarting(true);
+    try {
+      await (window as any).allternit.backend.restart();
+    } catch (err) {
+      console.error('Failed to restart backend:', err);
+    } finally {
+      setRestarting(false);
+    }
+  };
+
+  const refreshBackendSummary = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const backend = await window.allternit?.connection?.getBackend?.();
+      if (!backend) {
+        setBackendSummary(null);
+      } else {
+        setBackendSummary({ mode: backend.mode, url: backend.url });
+      }
+    } catch {
+      setBackendSummary(null);
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshBackendSummary();
+  }, [refreshBackendSummary]);
+
+  const openSettingsSection = useCallback((section: SettingsSection, tab?: string) => {
+    window.dispatchEvent(new CustomEvent('allternit:open-settings', {
+      detail: { section, tab },
+    }));
+  }, []);
+
+  const backendLabel = backendSummary
+    ? backendSummary.mode === 'remote'
+      ? 'BYOC / Remote backend connected'
+      : backendSummary.mode === 'bundled'
+        ? 'Bundled local backend connected'
+        : 'Development backend connected'
+    : null;
+
+  const backendHelp = backendSummary
+    ? backendSummary.mode === 'remote'
+      ? 'This account is signed in while using a remote BYOC backend. Signing out ends the desktop session without changing the connected backend target.'
+      : backendSummary.mode === 'bundled'
+        ? 'This account is signed in against the bundled local stack. Signing out ends the desktop session without changing the bundled backend.'
+        : 'This account is signed in while the desktop shell points at a development backend. Signing out only affects the desktop account session.'
+    : 'Backend selection is managed separately from desktop OAuth and can be changed without signing out.';
+
+  const manageBackendTab: 'overview' | 'connections' =
+    backendSummary?.mode === 'remote' ? 'connections' : 'overview';
+
+  const manageBackendLabel =
+    backendSummary?.mode === 'remote' ? 'Manage remote backend' : 'Manage backend';
+
+  if (!isLoaded) {
+    return <div className="p-6 text-[var(--text-tertiary)] text-[13px]">Loading…</div>;
+  }
+
+  if (isPlatformAuthDisabled()) {
+    return (
+      <div className="p-6">
+        <div className="bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)] rounded-xl p-5 px-6">
+          <div className="text-[13px] text-[var(--text-secondary)] leading-relaxed">
+            Authentication is unavailable in this build. No signed-in user is active.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isSignedIn) {
+    return (
+      <div className="p-6">
+        <div className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-widest font-bold mb-4">Sign in to your Allternit account</div>
+        <PlatformSignIn />
+        <div className="bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)] rounded-xl p-5 px-6 mt-4 text-[12px] text-[var(--text-secondary)] leading-relaxed">
+          Desktop OAuth and backend selection are separate.
+          Use Infrastructure or VPS Connections to change the active backend without resetting auth.
+        </div>
+      </div>
+    );
+  }
+
+  const name = [user?.firstName, user?.lastName].filter(Boolean).join(' ') || 'Allternit User';
+  const email =
+    user?.emailAddresses?.[0]?.emailAddress
+    ?? user?.primaryEmailAddress?.emailAddress
+    ?? user?.userEmail
+    ?? '';
+  const initials = name.split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase();
+
+  return (
+    <div className="p-6">
+      <div className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-widest font-bold mb-2">Account</div>
+      <div className="bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)] rounded-xl p-5 px-6 mb-4 flex items-center gap-4">
+        {user?.imageUrl ? (
+          <img src={user.imageUrl} alt={name} className="size-12 rounded-full object-cover shrink-0" />
+        ) : (
+          <div className="size-12 rounded-full bg-[var(--accent-primary)] flex items-center justify-center text-lg font-bold text-[var(--ui-text-inverse)] shrink-0">
+            {initials}
+          </div>
+        )}
+        <div className="min-w-0">
+          <div className="text-[15px] font-bold text-[var(--text-primary)] mb-0.5">{name}</div>
+          {email && <div className="text-[12px] text-[var(--text-tertiary)] truncate">{email}</div>}
+        </div>
+      </div>
+
+      <div className="bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)] rounded-xl p-5 px-6 mb-4">
+        <div className="mb-1 text-[12px] text-[var(--text-tertiary)] uppercase tracking-widest font-bold">
+          Session
+        </div>
+        <div className="text-[13px] text-[var(--text-secondary)] leading-relaxed mb-4">
+          Sign out of the current Allternit account session. Backend routing stays managed separately in infrastructure settings.
+        </div>
+        <div className="flex gap-2.5 flex-wrap">
+          <button className="inline-flex items-center gap-2 p-2 px-4 rounded-lg border border-solid border-rose-500/30 bg-[var(--status-error-bg)] text-[var(--status-error)] text-[13px] font-semibold cursor-pointer active:scale-95" onClick={() => void signOut()}>
+            <User size={14} weight="bold" /> Sign out
+          </button>
+          <button className="inline-flex items-center gap-2 p-2 px-4 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--text-primary)] text-[13px] font-semibold cursor-pointer hover:bg-[var(--surface-hover)] disabled:opacity-50 active:scale-95" onClick={() => void refreshBackendSummary()} disabled={refreshing}>
+            <ArrowsClockwise size={14} className={refreshing ? 'animate-spin' : ''} /> {refreshing ? 'Refreshing…' : 'Refresh status'}
+          </button>
+          {isElectron && (
+            <button className="inline-flex items-center gap-2 p-2 px-4 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--text-primary)] text-[13px] font-semibold cursor-pointer hover:bg-[var(--surface-hover)] disabled:opacity-50 active:scale-95" onClick={handleRestartBackend} disabled={restarting}>
+              <Cpu size={14} className={restarting ? 'animate-spin' : ''} /> {restarting ? 'Restarting…' : 'Restart Backend'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)] rounded-xl p-5 px-6 mb-4">
+        <div className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-widest font-bold mb-3">Active Platform Sessions</div>
+        <div className="flex flex-col gap-3">
+          {sessions.map((sess: any) => (
+            <div key={sess.id} className="flex items-center justify-between p-2.5 px-3.5 bg-[var(--surface-hover)] rounded-lg border border-solid border-[var(--ui-border-muted)]">
+              <div className="flex items-center gap-2.5">
+                <div className={cn("size-1.5 rounded-full", sess.status === 'active' ? "bg-[var(--status-success)]" : "bg-[var(--ui-text-muted)]")} />
+                <div>
+                  <div className="text-[13px] font-bold text-[var(--text-primary)]">
+                    {sess.latestActivityAt ? new Date(sess.latestActivityAt).toLocaleDateString() : 'Active Session'}
+                    {sess.id === (user as any)?.lastActiveSessionId && <span className="ml-2 text-[11px] text-[var(--accent-primary)] uppercase tracking-widest font-black">(Current)</span>}
+                  </div>
+                  <div className="text-[12px] text-[var(--text-tertiary)] font-mono opacity-60">ID: {sess.id}</div>
+                </div>
+              </div>
+              {sess.id !== (user as any)?.lastActiveSessionId && (
+                <button className="p-1 px-3 rounded-md border border-solid border-[var(--border-subtle)] bg-transparent text-[var(--text-primary)] text-[12px] font-bold cursor-pointer hover:bg-white/5 active:scale-95" onClick={() => sess.revoke()}>Revoke</button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-[var(--status-success-bg)] border border-solid border-emerald-500/20 rounded-xl p-5 px-6 mb-4">
+        <div className="flex items-center gap-2.5 mb-2">
+          <Shield size={18} className="text-[var(--status-success)]" weight="fill" />
+          <div className="text-[14px] font-black text-[var(--status-success)] uppercase tracking-wider">Offline-First Sovereignty</div>
+        </div>
+        <p className="text-[12px] text-[var(--text-secondary)] leading-relaxed m-0">
+          Your Private Brain remains 100% functional without internet. All neural memories, local models (Ollama), and tool schemas are stored securely on this device.
+        </p>
+      </div>
+
+      <div className="bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)] rounded-xl p-5 px-6 text-[12px] text-[var(--text-secondary)] leading-relaxed">
+        <div className="mb-1 text-[12px] text-[var(--text-tertiary)] uppercase tracking-widest font-bold">
+          Backend Routing
+        </div>
+        <div className="text-[var(--text-primary)] font-bold mb-0.5">
+          {backendLabel ?? 'Backend state unavailable'}
+        </div>
+        {backendSummary?.url && <div className="break-all mb-2 font-mono opacity-60">{backendSummary.url}</div>}
+        <div className="mb-4 text-[var(--text-tertiary)]">
+          {backendHelp}
+        </div>
+        <div className="flex gap-2.5 flex-wrap">
+          <button className="inline-flex items-center gap-2 p-2 px-4 rounded-lg border-none bg-[var(--accent-primary)] text-[var(--ui-text-inverse)] text-[13px] font-bold cursor-pointer hover:opacity-90 active:scale-95" onClick={() => openSettingsSection('infrastructure', manageBackendTab)}>
+            <Cloud size={14} weight="bold" /> {manageBackendLabel}
+          </button>
+          <button className="inline-flex items-center gap-2 p-2 px-4 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--text-primary)] text-[13px] font-semibold cursor-pointer hover:bg-[var(--surface-hover)] active:scale-95" onClick={() => openSettingsSection('infrastructure', 'connections')}>
+            <HardDrives size={14} weight="bold" /> BYOC connections
+          </button>
+        </div>
+      </div>
+
+    </div>
+  );
 }
+
+import { AnimatePresence } from 'framer-motion';
+
+
+
+
+const PermissionsPanel = () => {
+  const [permStatus, setPermStatus] = useState<any>(null);
+  const [permChecking, setPermChecking] = useState(false);
+
+  useEffect(() => {
+    const api = (window as any).allternit?.permissionGuide;
+    if (!api) return;
+    const unsub = api.onStatusChanged((status: any) => setPermStatus(status));
+    api.check().then(setPermStatus).catch(() => {});
+    return unsub;
+  }, []);
+
+  const checkPermissions = async () => {
+    setPermChecking(true);
+    try {
+      const result = await (window as any).allternit!.permissionGuide!.requestCheck();
+      setPermStatus(result);
+    } finally {
+      setPermChecking(false);
+    }
+  };
+
+  const presentGuide = async (panel: any) => {
+    await (window as any).allternit!.permissionGuide!.present(panel);
+  };
+
+  const hasApi = typeof window !== 'undefined' && !!(window as any).allternit?.permissionGuide;
+
+  if (!hasApi) {
+    return (
+      <div style={{ maxWidth: 500 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>System Permissions</h3>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+          Permission guide is only available in the Allternit Desktop app.
+        </p>
+      </div>
+    );
+  }
+
+  const allGranted = permStatus?.accessibility === 'granted' && permStatus?.screenRecording === 'granted';
+
+  return (
+    <div style={{ maxWidth: 500 }}>
+      <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>System Permissions</h3>
+      <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 24 }}>
+        Allternit needs Accessibility and Screen Recording permissions to control your desktop and capture screenshots.
+      </p>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
+        <PermissionRow
+          label="Accessibility"
+          description="Allows Allternit to click and type on your behalf"
+          status={permStatus?.accessibility}
+          onGrant={() => presentGuide('accessibility')}
+        />
+        <PermissionRow
+          label="Screen Recording"
+          description="Allows Allternit to see your screen and take screenshots"
+          status={permStatus?.screenRecording}
+          onGrant={() => presentGuide('screen-recording')}
+        />
+      </div>
+
+      <div style={{ display: 'flex', gap: 12 }}>
+        <button
+          onClick={checkPermissions}
+          disabled={permChecking}
+          style={{
+            padding: '8px 16px', borderRadius: 6, border: 'none',
+            background: 'var(--accent)', color: 'var(--ui-text-inverse)', fontSize: 13,
+            cursor: permChecking ? 'not-allowed' : 'pointer', opacity: permChecking ? 0.6 : 1
+          }}
+        >
+          {permChecking ? 'Checking...' : 'Refresh Status'}
+        </button>
+        {allGranted && (
+          <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--status-success)' }}>
+            <CheckCircle size={16} /> All permissions granted
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const DiagnosticsPanel = () => {
+  const [, setSysInfo] = useState<any>(null);
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (window as any).allternit?.connection?.getSystemInfo) {
+      (window as any).allternit.connection.getSystemInfo().then(setSysInfo);
+    }
+  }, []);
+
+  return (
+    <div style={{ maxWidth: '600px' }}>
+      <section style={{ marginBottom: '32px' }}>
+        <h3 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--ui-text-primary)', marginBottom: '16px' }}>Telemetry & System</h3>
+        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '10px', overflow: 'hidden' }}>
+          <DiagnosticRow label="App Version" value="v0.9.1-beta" />
+          <DiagnosticRow label="Platform" value={typeof window !== 'undefined' && (window as any).allternit?.backend ? 'Desktop (Native)' : 'Web'} />
+          <DiagnosticRow label="Kernel State" value="Operational (Port 3004)" status="success" />
+          <DiagnosticRow label="Memory Bridge" value="Connected (Port 3201)" status="success" />
+          <DiagnosticRow label="Gateway Sync" value="Healthy (Port 8013)" status="success" />
+        </div>
+      </section>
+
+      <section>
+        <h3 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--ui-text-primary)', marginBottom: '16px' }}>Session Metrics</h3>
+        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '16px' }}>
+           <MetricBar label="Active Memory Ingestion" value={92} />
+           <MetricBar label="Tool Execution Success" value={98} />
+           <MetricBar label="Context Recall Latency" value={15} suffix="ms" inverse />
+        </div>
+      </section>
+    </div>
+  );
+};
+
 
 export const SettingsView: React.FC<SettingsViewProps> = ({ 
   initialSection = 'signin',
@@ -489,7 +775,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const setTheme = useThemeStore((state) => state.setTheme);
   const [, _setFontSize] = useState<FontSize>('medium');
   const [compactDensity, setCompactDensity] = useState(false);
-  const [showSidebarLabels, setShowSidebarLabels] = useState(true);
+  const [showSidebarLabels, setTwoSidebarLabels] = useState(true);
   const [, _setAnimateTransitions] = useState(true);
   const [, _setAccentColor] = useState('var(--accent-primary)');
   const [, _setChatModel] = useState('GPT-4o');
@@ -692,21 +978,19 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     catch (e) { setFactoryTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'rejected' } : t)); }
   };
 
-  // Fixed GC Handlers with proper error handling
   const handleTriggerCleanup = async () => {
     setIsRunningGC(true);
-    setGcErrors(prev => ({ ...prev, cleanup: '' })); // Clear previous errors
+    setGcErrors(prev => ({ ...prev, cleanup: '' }));
     
     try {
       const result = await api.triggerGCCleanup();
       const entropyReduced = result.entropyReduction?.toFixed(1) || '0.0';
       addToast(`Full cleanup completed: ${entropyReduced} entropy reduced`, 'success');
-      await fetchGCData(); // Refresh the data
+      await fetchGCData();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to trigger cleanup';
       setGcErrors(prev => ({ ...prev, cleanup: errorMessage }));
       addToast(`Cleanup failed: ${errorMessage}`, 'error');
-      console.error('[GC] Cleanup failed:', error);
     } finally {
       setIsRunningGC(false);
     }
@@ -718,24 +1002,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     
     try {
       const result: GcAgentResult = await api.runGCAgent(agentName);
-      
-      // Build detailed success message
       const issuesFound = result.issuesFound?.length || 0;
       const issuesFixed = result.issuesFixed || 0;
       const entropyReduced = result.entropyReduction?.toFixed(1) || '0.0';
-      
-      addToast(
-        `${agentName}: Found ${issuesFound} issues, fixed ${issuesFixed}, reduced ${entropyReduced} entropy`,
-        'success',
-        agentName
-      );
-      
+      addToast(`${agentName}: Found ${issuesFound} issues, fixed ${issuesFixed}, reduced ${entropyReduced} entropy`, 'success', agentName);
       await fetchGCData();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : `Failed to run ${agentName}`;
       setGcErrors(prev => ({ ...prev, [agentName]: errorMessage }));
       addToast(`${agentName} failed: ${errorMessage}`, 'error', agentName);
-      console.error(`[GC] Agent ${agentName} failed:`, error);
     } finally {
       setRunningAgents(prev => {
         const next = new Set(prev);
@@ -748,100 +1023,42 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const handleUpdateGCPolicy = async (policyId: string, updates: Partial<GcPolicy>) => {
     const policy = gcPolicies.find(p => p.id === policyId);
     if (!policy) return;
-    
-    // Optimistic update for UI responsiveness
     const previousPolicy = { ...policy };
     setGcPolicies(prev => prev.map(p => p.id === policyId ? { ...p, ...updates } : p));
-    
     try {
       await api.updateGCPolicy(policyId, updates);
       addToast(`Policy "${policy.name}" updated successfully`, 'success');
-      await fetchGCData(); // Refresh to get server state
+      await fetchGCData();
     } catch (error) {
-      // Revert optimistic update on error
       setGcPolicies(prev => prev.map(p => p.id === policyId ? previousPolicy : p));
       const errorMessage = error instanceof Error ? error.message : 'Failed to update policy';
       addToast(`Failed to update policy: ${errorMessage}`, 'error');
-      console.error('[GC] Policy update failed:', error);
     }
   };
 
-  // Toast Container Component
-  const ToastContainer = () => (
-    <div style={{ 
-      position: 'fixed', 
-      top: '20px', 
-      right: '20px', 
-      zIndex: 160, 
-      display: 'flex', 
-      flexDirection: 'column', 
-      gap: '8px',
-      pointerEvents: 'none'
-    }}>
-      {toasts.map(toast => (
-        <div
-          key={toast.id}
-          style={{
-            padding: '12px 16px',
-            borderRadius: '8px',
-            backgroundColor: toast.type === 'error' ? 'var(--status-error)' : toast.type === 'success' ? 'var(--status-success)' : 'var(--status-info)',
-            color: 'var(--ui-text-inverse)',
-            fontSize: '13px',
-            fontWeight: 500,
-            boxShadow: 'var(--shadow-lg)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            animation: 'slideIn 0.3s ease-out',
-            pointerEvents: 'auto',
-            minWidth: '280px',
-            maxWidth: '400px'
-          }}
-        >
-          {toast.type === 'error' && <XCircle size={18} />}
-          {toast.type === 'success' && <CheckCircle size={18} />}
-          {toast.type === 'info' && <Info size={18} />}
-          <span style={{ flex: 1 }}>{toast.message}</span>
-          <button 
-            onClick={() => removeToast(toast.id)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: 'var(--ui-text-inverse)',
-              cursor: 'pointer',
-              opacity: 0.7
-            }}
-          >
-            <X size={14} />
-          </button>
-        </div>
-      ))}
-    </div>
-  );
-
   // Agent Operations Render Functions
   const renderEvaluationTab = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="flex flex-col gap-6">
+      <div className="flex justify-between items-center">
         <div>
-          <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--ui-text-primary)', margin: 0 }}>Evaluation Tests</h3>
-          <p style={{ fontSize: '13px', color: 'var(--ui-text-muted)', margin: '4px 0 0 0' }}>{evaluations.length} tests configured</p>
+          <h3 className="text-base font-bold text-[var(--ui-text-primary)] m-0">Evaluation Tests</h3>
+          <p className="text-[13px] text-[var(--ui-text-muted)] m-0 mt-1">{evaluations.length} tests configured</p>
         </div>
-        <button onClick={() => setShowCreateEval(true)} style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: 'var(--accent-primary)', color: 'var(--ui-text-inverse)', fontSize: '13px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Plus size={16} /> New Evaluation
+        <button onClick={() => setShowCreateEval(true)} className="p-2 px-4 rounded-lg border-none bg-[var(--accent-primary)] text-[var(--ui-text-inverse)] text-[13px] font-semibold cursor-pointer flex items-center gap-1.5 active:scale-95 transition-transform">
+          <Plus size={16} weight="bold" /> New Evaluation
         </button>
       </div>
 
       {showCreateEval && (
-        <div style={{ padding: '20px', background: 'var(--surface-panel)', borderRadius: '8px', border: '1px solid var(--ui-border-default)' }}>
-          <h4 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--ui-text-primary)', margin: '0 0 16px 0' }}>Create New Evaluation</h4>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '12px', color: 'var(--ui-text-muted)', marginBottom: '6px' }}>Name</label>
-            <input type="text" value={newEvalName} onChange={(e) => setNewEvalName(e.target.value)} placeholder="e.g., Agent Response Quality" style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--ui-border-default)', background: 'var(--surface-hover)', color: 'var(--ui-text-primary)', fontSize: '14px' }} />
+        <div className="p-5 bg-[var(--surface-panel)] rounded-xl border border-solid border-[var(--ui-border-default)]">
+          <h4 className="text-[14px] font-bold text-[var(--ui-text-primary)] m-0 mb-4">Create New Evaluation</h4>
+          <div className="mb-4">
+            <label className="block text-[12px] text-[var(--ui-text-muted)] mb-1.5 font-semibold uppercase tracking-wider">Name</label>
+            <input type="text" value={newEvalName} onChange={(e) => setNewEvalName(e.target.value)} placeholder="e.g., Agent Response Quality" className="w-full p-2.5 px-3 rounded-lg border border-solid border-[var(--ui-border-default)] bg-[var(--surface-hover)] text-[var(--ui-text-primary)] text-[14px] outline-none focus:border-[var(--accent-primary)]" />
           </div>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '12px', color: 'var(--ui-text-muted)', marginBottom: '6px' }}>Type</label>
-            <select value={newEvalType} onChange={(e) => setNewEvalType(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--ui-border-default)', background: 'var(--surface-hover)', color: 'var(--ui-text-primary)', fontSize: '14px' }}>
+          <div className="mb-4">
+            <label className="block text-[12px] text-[var(--ui-text-muted)] mb-1.5 font-semibold uppercase tracking-wider">Type</label>
+            <select value={newEvalType} onChange={(e) => setNewEvalType(e.target.value)} className="w-full p-2.5 px-3 rounded-lg border border-solid border-[var(--ui-border-default)] bg-[var(--surface-hover)] text-[var(--ui-text-primary)] text-[14px] outline-none cursor-pointer">
               <option value="unit">Unit Test</option>
               <option value="integration">Integration Test</option>
               <option value="benchmark">Benchmark</option>
@@ -849,64 +1066,77 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               <option value="ontology">Ontology</option>
             </select>
           </div>
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-            <button onClick={() => setShowCreateEval(false)} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid var(--ui-border-default)', background: 'transparent', color: 'var(--ui-text-secondary)', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
-            <button onClick={handleCreateEvaluation} style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: 'var(--accent-primary)', color: 'var(--ui-text-inverse)', fontSize: '13px', fontWeight: '500', cursor: 'pointer' }}>Create</button>
+          <div className="flex gap-3 justify-end">
+            <button onClick={() => setShowCreateEval(false)} className="p-2 px-4 rounded-lg border border-solid border-[var(--ui-border-default)] bg-transparent text-[var(--ui-text-secondary)] text-[13px] font-bold cursor-pointer hover:bg-white/5 transition-colors">Cancel</button>
+            <button onClick={handleCreateEvaluation} className="p-2 px-4 rounded-lg border-none bg-[var(--accent-primary)] text-[var(--ui-text-inverse)] text-[13px] font-bold cursor-pointer active:scale-95 transition-transform">Create</button>
           </div>
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div className="flex flex-col gap-2">
         {evaluations.map((evalItem) => (
-          <div key={evalItem.id} style={{ padding: '16px', background: 'var(--surface-panel)', borderRadius: '8px', border: selectedEval === evalItem.id ? '1px solid var(--accent-primary)' : '1px solid var(--ui-border-muted)', cursor: 'pointer' }} onClick={() => setSelectedEval(selectedEval === evalItem.id ? null : evalItem.id)}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                {evalItem.status === 'passed' && <CheckCircle size={20} color="var(--status-success)" />}
-                {evalItem.status === 'failed' && <XCircle size={20} color="var(--status-error)" />}
-                {evalItem.status === 'pending' && <Clock size={20} color="var(--ui-text-muted)" />}
+          <div key={evalItem.id} className={cn(
+            "p-4 bg-[var(--surface-panel)] rounded-xl border border-solid cursor-pointer transition-all",
+            selectedEval === evalItem.id ? "border-[var(--accent-primary)] shadow-md" : "border-[var(--ui-border-muted)] hover:border-[var(--ui-border-default)]"
+          )} onClick={() => setSelectedEval(selectedEval === evalItem.id ? null : evalItem.id)}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {evalItem.status === 'passed' && <CheckCircle size={20} className="text-[var(--status-success)]" weight="fill" />}
+                {evalItem.status === 'failed' && <XCircle size={20} className="text-[var(--status-error)]" weight="fill" />}
+                {evalItem.status === 'pending' && <Clock size={20} className="text-[var(--ui-text-muted)]" />}
                 <div>
-                  <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--ui-text-primary)' }}>{evalItem.name}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--ui-text-muted)', marginTop: '2px' }}>{evalItem.type} • Last run: {evalItem.lastRun ? new Date(evalItem.lastRun).toLocaleDateString() : 'Never'}</div>
+                  <div className="text-[14px] font-bold text-[var(--ui-text-primary)]">{evalItem.name}</div>
+                  <div className="text-[12px] text-[var(--ui-text-muted)] mt-0.5 uppercase font-semibold tracking-wider opacity-70">{evalItem.type} • Last run: {evalItem.lastRun ? new Date(evalItem.lastRun).toLocaleDateString() : 'Never'}</div>
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '18px', fontWeight: '600', color: evalItem.score >= 80 ? 'var(--status-success)' : evalItem.score >= 60 ? 'var(--status-warning)' : 'var(--status-error)' }}>{evalItem.score}%</div>
-                  <div style={{ fontSize: '11px', color: 'var(--ui-text-muted)' }}>Score</div>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <div className={cn(
+                    "text-[18px] font-black tabular-nums",
+                    evalItem.score >= 80 ? "text-[var(--status-success)]" : evalItem.score >= 60 ? "text-[var(--status-warning)]" : "text-[var(--status-error)]"
+                  )}>{evalItem.score}%</div>
+                  <div className="text-[10px] text-[var(--ui-text-muted)] uppercase tracking-widest font-bold">Score</div>
                 </div>
-                <button onClick={(e) => { e.stopPropagation(); handleRunEvaluation(evalItem.id); }} disabled={isRunningEval} style={{ padding: '8px 12px', borderRadius: '6px', border: 'none', background: isRunningEval ? 'var(--surface-active)' : 'var(--accent-primary)', color: isRunningEval ? 'var(--ui-text-muted)' : 'var(--ui-text-inverse)', fontSize: '12px', fontWeight: '500', cursor: isRunningEval ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  {isRunningEval ? <ArrowsClockwise size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Play size={14} />} Run
+                <button 
+                  onClick={(e) => { e.stopPropagation(); handleRunEvaluation(evalItem.id); }} 
+                  disabled={isRunningEval} 
+                  className={cn(
+                    "p-2 px-3.5 rounded-lg border-none text-[12px] font-bold cursor-pointer flex items-center gap-1.5 transition-all active:scale-95",
+                    isRunningEval ? "bg-[var(--surface-active)] text-[var(--ui-text-muted)]" : "bg-[var(--accent-primary)] text-[var(--ui-text-inverse)]"
+                  )}
+                >
+                  {isRunningEval ? <ArrowsClockwise size={14} className="animate-spin" /> : <Play size={14} weight="fill" />} Run
                 </button>
               </div>
             </div>
 
             {selectedEval === evalItem.id && evalResults && (
-              <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--ui-border-muted)' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '16px' }}>
-                  <div style={{ padding: '12px', background: 'var(--surface-hover)', borderRadius: '6px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '20px', fontWeight: '600', color: 'var(--status-success)' }}>{evalResults.summary.passed}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--ui-text-muted)' }}>Passed</div>
+              <div className="mt-4 pt-4 border-t border-solid border-[var(--ui-border-muted)]">
+                <div className="grid grid-cols-4 gap-3 mb-4">
+                  <div className="p-3 bg-[var(--surface-hover)] rounded-lg text-center">
+                    <div className="text-xl font-bold text-[var(--status-success)] tabular-nums">{evalResults.summary.passed}</div>
+                    <div className="text-[10px] text-[var(--ui-text-muted)] uppercase font-black">Passed</div>
                   </div>
-                  <div style={{ padding: '12px', background: 'var(--surface-hover)', borderRadius: '6px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '20px', fontWeight: '600', color: 'var(--status-error)' }}>{evalResults.summary.failed}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--ui-text-muted)' }}>Failed</div>
+                  <div className="p-3 bg-[var(--surface-hover)] rounded-lg text-center">
+                    <div className="text-xl font-bold text-[var(--status-error)] tabular-nums">{evalResults.summary.failed}</div>
+                    <div className="text-[10px] text-[var(--ui-text-muted)] uppercase font-black">Failed</div>
                   </div>
-                  <div style={{ padding: '12px', background: 'var(--surface-hover)', borderRadius: '6px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '20px', fontWeight: '600', color: 'var(--status-warning)' }}>{evalResults.summary.skipped}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--ui-text-muted)' }}>Skipped</div>
+                  <div className="p-3 bg-[var(--surface-hover)] rounded-lg text-center">
+                    <div className="text-xl font-bold text-[var(--status-warning)] tabular-nums">{evalResults.summary.skipped}</div>
+                    <div className="text-[10px] text-[var(--ui-text-muted)] uppercase font-black">Skipped</div>
                   </div>
-                  <div style={{ padding: '12px', background: 'var(--surface-hover)', borderRadius: '6px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '20px', fontWeight: '600', color: 'var(--accent-primary)' }}>{(evalResults.duration / 1000).toFixed(1)}s</div>
-                    <div style={{ fontSize: '11px', color: 'var(--ui-text-muted)' }}>Duration</div>
+                  <div className="p-3 bg-[var(--surface-hover)] rounded-lg text-center">
+                    <div className="text-xl font-bold text-[var(--accent-primary)] tabular-nums">{(evalResults.duration / 1000).toFixed(1)}s</div>
+                    <div className="text-[10px] text-[var(--ui-text-muted)] uppercase font-black">Duration</div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div className="flex flex-col gap-2">
                   {evalResults.details?.map((detail: any, idx: number) => (
-                    <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px', background: 'var(--surface-hover)', borderRadius: '6px' }}>
-                      {detail.status === 'passed' ? <CheckCircle size={16} color="var(--status-success)" /> : <XCircle size={16} color="var(--status-error)" />}
-                      <span style={{ flex: 1, fontSize: '13px', color: 'var(--ui-text-primary)' }}>{detail.test}</span>
-                      <span style={{ fontSize: '12px', color: 'var(--ui-text-muted)' }}>{detail.duration}ms</span>
-                      {detail.error && <span style={{ fontSize: '11px', color: 'var(--status-error)' }}>{detail.error}</span>}
+                    <div key={idx} className="flex items-center gap-3 p-2.5 bg-[var(--surface-hover)] rounded-lg border border-solid border-transparent hover:border-[var(--ui-border-muted)] transition-colors">
+                      {detail.status === 'passed' ? <CheckCircle size={16} className="text-[var(--status-success)]" /> : <XCircle size={16} className="text-[var(--status-error)]" />}
+                      <span className="flex-1 text-[13px] text-[var(--ui-text-primary)] font-medium">{detail.test}</span>
+                      <span className="text-[12px] text-[var(--ui-text-muted)] font-mono tabular-nums">{detail.duration}ms</span>
+                      {detail.error && <span className="text-[11px] text-[var(--status-error)] font-bold italic ml-2">{detail.error}</span>}
                     </div>
                   ))}
                 </div>
@@ -916,13 +1146,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         ))}
       </div>
 
-      <div style={{ padding: '20px', background: 'var(--surface-panel)', borderRadius: '8px' }}>
-        <h4 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--ui-text-primary)', margin: '0 0 16px 0' }}>Benchmark History</h4>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px', height: '120px' }}>
+      <div className="p-5 bg-[var(--surface-panel)] rounded-xl border border-solid border-[var(--ui-border-muted)]">
+        <h4 className="text-[14px] font-bold text-[var(--ui-text-primary)] m-0 mb-4 uppercase tracking-widest opacity-60">Benchmark History</h4>
+        <div className="flex items-end gap-2 h-32 px-2">
           {benchmarkHistory.map((item, idx) => (
-            <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-              <div style={{ width: '100%', height: `${item.score}%`, background: item.score >= 80 ? 'var(--status-success)' : item.score >= 60 ? 'var(--status-warning)' : 'var(--status-error)', borderRadius: '4px 4px 0 0', minHeight: '20px' }} />
-              <span style={{ fontSize: '10px', color: 'var(--ui-text-muted)' }}>{item.date.slice(5)}</span>
+            <div key={idx} className="flex-1 flex flex-col items-center gap-2 group">
+              <div 
+                className={cn(
+                  "w-full rounded-t-md transition-all duration-300 relative",
+                  item.score >= 80 ? "bg-[var(--status-success)]" : item.score >= 60 ? "bg-[var(--status-warning)]" : "bg-[var(--status-error)]"
+                )} 
+                style={{ height: `${item.score}%`, minHeight: '12px' }} 
+              >
+                <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-zinc-800 text-white text-[10px] p-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10">
+                  {item.score}%
+                </div>
+              </div>
+              <span className="text-[10px] font-bold text-[var(--ui-text-muted)] uppercase tracking-tighter tabular-nums">{item.date.slice(5)}</span>
             </div>
           ))}
         </div>
@@ -931,100 +1171,112 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   );
 
   const renderFactoryTab = () => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="flex flex-col gap-6">
+      <div className="flex justify-between items-center">
         <div>
-          <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--ui-text-primary)', margin: 0 }}>Autonomous Tasks</h3>
-          <p style={{ fontSize: '13px', color: 'var(--ui-text-muted)', margin: '4px 0 0 0' }}>{factoryTasks.length} tasks in queue</p>
+          <h3 className="text-base font-bold text-[var(--ui-text-primary)] m-0">Autonomous Tasks</h3>
+          <p className="text-[13px] text-[var(--ui-text-muted)] m-0 mt-1">{factoryTasks.length} tasks in queue</p>
         </div>
-        <button onClick={() => setShowCreateTask(true)} style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: 'var(--accent-primary)', color: 'var(--ui-text-inverse)', fontSize: '13px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Plus size={16} /> New Task
+        <button onClick={() => setShowCreateTask(true)} className="p-2 px-4 rounded-lg border-none bg-[var(--accent-primary)] text-[var(--ui-text-inverse)] text-[13px] font-semibold cursor-pointer flex items-center gap-1.5 active:scale-95 transition-transform">
+          <Plus size={16} weight="bold" /> New Task
         </button>
       </div>
 
       {showCreateTask && (
-        <div style={{ padding: '20px', background: 'var(--surface-panel)', borderRadius: '8px', border: '1px solid var(--ui-border-muted)' }}>
-          <h4 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--ui-text-primary)', margin: '0 0 16px 0' }}>Create Autonomous Task</h4>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '12px', color: 'var(--ui-text-muted)', marginBottom: '6px' }}>Spec Reference</label>
-            <input type="text" value={newTaskSpec} onChange={(e) => setNewTaskSpec(e.target.value)} placeholder="e.g., spec/auth-refactor" style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--ui-border-default)', background: 'var(--surface-hover)', color: 'var(--ui-text-primary)', fontSize: '14px' }} />
+        <div className="p-5 bg-[var(--surface-panel)] rounded-xl border border-solid border-[var(--ui-border-default)]">
+          <h4 className="text-[14px] font-bold text-[var(--ui-text-primary)] m-0 mb-4">Create Autonomous Task</h4>
+          <div className="mb-4">
+            <label className="block text-[12px] text-[var(--ui-text-muted)] mb-1.5 font-semibold uppercase tracking-wider">Spec Reference</label>
+            <input type="text" value={newTaskSpec} onChange={(e) => setNewTaskSpec(e.target.value)} placeholder="e.g., spec/auth-refactor" className="w-full p-2.5 px-3 rounded-lg border border-solid border-[var(--ui-border-default)] bg-[var(--surface-hover)] text-[var(--ui-text-primary)] text-[14px] outline-none focus:border-[var(--accent-primary)]" />
           </div>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '12px', color: 'var(--ui-text-muted)', marginBottom: '6px' }}>Requirements (one per line)</label>
-            <textarea value={newTaskRequirements} onChange={(e) => setNewTaskRequirements(e.target.value)} placeholder="e.g., Refactor auth middleware..." rows={4} style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--ui-border-default)', background: 'var(--surface-hover)', color: 'var(--ui-text-primary)', fontSize: '14px', resize: 'vertical' }} />
+          <div className="mb-4">
+            <label className="block text-[12px] text-[var(--ui-text-muted)] mb-1.5 font-semibold uppercase tracking-wider">Requirements (one per line)</label>
+            <textarea value={newTaskRequirements} onChange={(e) => setNewTaskRequirements(e.target.value)} placeholder="e.g., Refactor auth middleware..." rows={4} className="w-full p-2.5 px-3 rounded-lg border border-solid border-[var(--ui-border-default)] bg-[var(--surface-hover)] text-[var(--ui-text-primary)] text-[14px] outline-none focus:border-[var(--accent-primary)] resize-y font-sans" />
           </div>
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-            <button onClick={() => setShowCreateTask(false)} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid var(--ui-border-default)', background: 'transparent', color: 'var(--ui-text-muted)', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
-            <button onClick={handleCreateTask} style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: 'var(--accent-primary)', color: 'var(--ui-text-inverse)', fontSize: '13px', fontWeight: '500', cursor: 'pointer' }}>Create Task</button>
+          <div className="flex gap-3 justify-end">
+            <button onClick={() => setShowCreateTask(false)} className="p-2 px-4 rounded-lg border border-solid border-[var(--ui-border-default)] bg-transparent text-[var(--ui-text-secondary)] text-[13px] font-bold cursor-pointer hover:bg-white/5 transition-colors">Cancel</button>
+            <button onClick={handleCreateTask} className="p-2 px-4 rounded-lg border-none bg-[var(--accent-primary)] text-[var(--ui-text-inverse)] text-[13px] font-bold cursor-pointer active:scale-95 transition-transform">Create Task</button>
           </div>
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      <div className="flex flex-col gap-2">
         {factoryTasks.map((task) => (
-          <div key={task.id} style={{ padding: '16px', background: 'var(--surface-panel)', borderRadius: '8px', border: selectedTask === task.id ? '1px solid var(--accent-primary)' : '1px solid transparent' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => setSelectedTask(selectedTask === task.id ? null : task.id)}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                {task.status === 'completed' && <CheckCircle size={20} color="var(--status-success)" />}
-                {task.status === 'generating' && <ArrowsClockwise size={20} color="var(--accent-primary)" style={{ animation: 'spin 2s linear infinite' }} />}
-                {task.status === 'validating' && <FileCheck size={20} color="var(--status-info)" />}
-                {task.status === 'pending_approval' && <Clock size={20} color="var(--status-warning)" />}
+          <div key={task.id} className={cn(
+            "p-4 bg-[var(--surface-panel)] rounded-xl border border-solid transition-all",
+            selectedTask === task.id ? "border-[var(--accent-primary)] shadow-md" : "border-transparent hover:border-[var(--ui-border-muted)]"
+          )}>
+            <div className="flex items-center justify-between cursor-pointer" onClick={() => setSelectedTask(selectedTask === task.id ? null : task.id)}>
+              <div className="flex items-center gap-3">
+                {task.status === 'completed' && <CheckCircle size={20} className="text-[var(--status-success)]" weight="fill" />}
+                {task.status === 'generating' && <ArrowsClockwise size={20} className="text-[var(--accent-primary)] animate-spin" />}
+                {task.status === 'validating' && <FileCheck size={20} className="text-[var(--status-info)]" weight="fill" />}
+                {task.status === 'pending_approval' && <Clock size={20} className="text-[var(--status-warning)]" weight="fill" />}
                 <div>
-                  <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--ui-text-primary)' }}>{task.specRef}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--ui-text-muted)', marginTop: '2px' }}>{task.status} • Created {new Date(task.createdAt).toLocaleDateString()}</div>
+                  <div className="text-[14px] font-bold text-[var(--ui-text-primary)]">{task.specRef}</div>
+                  <div className="text-[12px] text-[var(--ui-text-muted)] mt-0.5 uppercase font-semibold tracking-wider opacity-70">{task.status.replace('_', ' ')} • Created {new Date(task.createdAt).toLocaleDateString()}</div>
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '100px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--ui-text-muted)', marginBottom: '4px' }}><span>Progress</span><span>{task.progress}%</span></div>
-                  <div style={{ width: '100%', height: '6px', background: 'var(--surface-hover)', borderRadius: '3px', overflow: 'hidden' }}>
-                    <div style={{ width: `${task.progress}%`, height: '100%', background: task.status === 'completed' ? 'var(--status-success)' : 'var(--accent-primary)', borderRadius: '3px', transition: 'width 0.3s' }} />
+              <div className="flex items-center gap-3">
+                <div className="w-24">
+                  <div className="flex justify-between text-[10px] font-black text-[var(--ui-text-muted)] mb-1 uppercase tracking-widest">
+                    <span>Progress</span>
+                    <span className="tabular-nums">{task.progress}%</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-[var(--surface-hover)] rounded-full overflow-hidden">
+                    <div 
+                      className={cn(
+                        "h-full rounded-full transition-all duration-300",
+                        task.status === 'completed' ? "bg-[var(--status-success)]" : "bg-[var(--accent-primary)]"
+                      )} 
+                      style={{ width: `${task.progress}%` }} 
+                    />
                   </div>
                 </div>
-                {selectedTask === task.id ? <CaretDown size={16} color="#888" /> : <CaretRight size={16} color="#888" />}
+                {selectedTask === task.id ? <CaretDown size={16} className="text-white/30" /> : <CaretRight size={16} className="text-white/30" />}
               </div>
             </div>
 
             {selectedTask === task.id && (
-              <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--ui-border-muted)' }}>
+              <div className="mt-4 pt-4 border-t border-solid border-[var(--ui-border-muted)]">
                 {task.status === 'pending_approval' && (
-                  <div style={{ marginBottom: '16px' }}>
-                    <h5 style={{ fontSize: '13px', fontWeight: '600', color: 'var(--ui-text-primary)', margin: '0 0 12px 0' }}>Generated Changes Pending Approval</h5>
-                    <div style={{ padding: '12px', background: 'var(--surface-hover)', borderRadius: '6px', marginBottom: '12px' }}>
-                      <code style={{ fontSize: '12px', color: 'var(--accent-primary)', fontFamily: 'var(--font-mono)' }}>
-                        // Generated code example<br/>fn optimized_auth() {'{'}<br/>&nbsp;&nbsp;validate_jwt_token()?;<br/>{'}'}
+                  <div className="mb-5 p-4 bg-[var(--surface-hover)] rounded-xl border border-solid border-[var(--ui-border-muted)]">
+                    <h5 className="text-[13px] font-bold text-[var(--ui-text-primary)] m-0 mb-3 uppercase tracking-widest opacity-60">Changes Pending Approval</h5>
+                    <div className="p-3 bg-black/20 rounded-lg mb-4 overflow-x-auto">
+                      <code className="text-[12px] text-[var(--accent-primary)] font-mono leading-relaxed whitespace-pre">
+                        // Generated code example<br/>fn optimized_auth() {"{"}<br/>&nbsp;&nbsp;validate_jwt_token()?;<br/>{"}"}
                       </code>
                     </div>
-                    <div style={{ display: 'flex', gap: '12px' }}>
-                      <button onClick={() => handleApproveChange(task.id, 'change-1')} style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: 'var(--status-success)', color: 'var(--ui-text-primary)', fontSize: '13px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <ThumbsUp size={14} /> Approve & Merge
+                    <div className="flex gap-3">
+                      <button onClick={() => handleApproveChange(task.id, 'change-1')} className="flex-1 p-2 px-4 rounded-lg border-none bg-[var(--status-success)] text-[var(--ui-text-primary)] text-[13px] font-bold cursor-pointer flex items-center justify-center gap-2 active:scale-95 transition-transform">
+                        <ThumbsUp size={16} weight="fill" /> Approve & Merge
                       </button>
-                      <button onClick={() => handleRejectChange(task.id, 'change-1')} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid var(--status-error)', background: 'transparent', color: 'var(--status-error)', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <ThumbsDown size={14} /> Reject
+                      <button onClick={() => handleRejectChange(task.id, 'change-1')} className="flex-1 p-2 px-4 rounded-lg border border-solid border-rose-500/30 bg-transparent text-[var(--status-error)] text-[13px] font-bold cursor-pointer flex items-center justify-center gap-2 hover:bg-[var(--status-error-bg)] active:scale-95 transition-all">
+                        <ThumbsDown size={16} weight="fill" /> Reject
                       </button>
                     </div>
                   </div>
                 )}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
-                  <div style={{ padding: '12px', background: 'var(--surface-hover)', borderRadius: '6px', textAlign: 'center' }}>
-                    <GitBranch size={16} color="var(--accent-primary)" style={{ margin: '0 auto 8px' }} />
-                    <div style={{ fontSize: '12px', color: 'var(--ui-text-muted)' }}>Branch</div>
-                    <div style={{ fontSize: '13px', color: 'var(--ui-text-primary)' }}>auto/{task.specRef.split('/')[1]}</div>
+                <div className="grid grid-cols-4 gap-3">
+                  <div className="p-3 bg-[var(--surface-hover)] rounded-lg text-center flex flex-col items-center gap-1.5">
+                    <GitBranch size={18} className="text-[var(--accent-primary)]" />
+                    <div className="text-[10px] text-[var(--ui-text-muted)] font-black uppercase tracking-widest">Branch</div>
+                    <div className="text-[12px] text-[var(--ui-text-primary)] font-mono truncate w-full">auto/{task.specRef.split('/').pop()}</div>
                   </div>
-                  <div style={{ padding: '12px', background: 'var(--surface-hover)', borderRadius: '6px', textAlign: 'center' }}>
-                    <FileCode size={16} color="var(--accent-primary)" style={{ margin: '0 auto 8px' }} />
-                    <div style={{ fontSize: '12px', color: 'var(--ui-text-muted)' }}>Files Changed</div>
-                    <div style={{ fontSize: '13px', color: 'var(--ui-text-primary)' }}>12 files</div>
+                  <div className="p-3 bg-[var(--surface-hover)] rounded-lg text-center flex flex-col items-center gap-1.5">
+                    <FileCode size={18} className="text-[var(--accent-primary)]" />
+                    <div className="text-[10px] text-[var(--ui-text-muted)] font-black uppercase tracking-widest">Modified</div>
+                    <div className="text-[12px] text-[var(--ui-text-primary)] font-bold">12 files</div>
                   </div>
-                  <div style={{ padding: '12px', background: 'var(--surface-hover)', borderRadius: '6px', textAlign: 'center' }}>
-                    <Stack size={16} color="var(--accent-primary)" style={{ margin: '0 auto 8px' }} />
-                    <div style={{ fontSize: '12px', color: 'var(--ui-text-muted)' }}>Risk Tier</div>
-                    <div style={{ fontSize: '13px', color: 'var(--ui-text-primary)' }}>Medium</div>
+                  <div className="p-3 bg-[var(--surface-hover)] rounded-lg text-center flex flex-col items-center gap-1.5">
+                    <Stack size={18} className="text-[var(--accent-primary)]" />
+                    <div className="text-[10px] text-[var(--ui-text-muted)] font-black uppercase tracking-widest">Risk</div>
+                    <div className="text-[12px] text-[var(--ui-text-primary)] font-bold">Medium</div>
                   </div>
-                  <div style={{ padding: '12px', background: 'var(--surface-hover)', borderRadius: '6px', textAlign: 'center' }}>
-                    <Shield size={16} color="var(--accent-primary)" style={{ margin: '0 auto 8px' }} />
-                    <div style={{ fontSize: '12px', color: 'var(--ui-text-muted)' }}>Compliance</div>
-                    <div style={{ fontSize: '13px', color: 'var(--status-success)' }}>Passing</div>
+                  <div className="p-3 bg-[var(--surface-hover)] rounded-lg text-center flex flex-col items-center gap-1.5">
+                    <Shield size={18} className="text-[var(--accent-primary)]" />
+                    <div className="text-[10px] text-[var(--ui-text-muted)] font-black uppercase tracking-widest">CI</div>
+                    <div className="text-[12px] text-[var(--status-success)] font-black uppercase tracking-tighter">Passing</div>
                   </div>
                 </div>
               </div>
@@ -1033,221 +1285,236 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
-        <div style={{ padding: '20px', background: 'var(--surface-panel)', borderRadius: '8px', textAlign: 'center' }}>
-          <div style={{ fontSize: '28px', fontWeight: '600', color: 'var(--accent-primary)' }}>127</div>
-          <div style={{ fontSize: '12px', color: 'var(--ui-text-muted)', marginTop: '4px' }}>Tasks Completed</div>
-        </div>
-        <div style={{ padding: '20px', background: 'var(--surface-panel)', borderRadius: '8px', textAlign: 'center' }}>
-          <div style={{ fontSize: '28px', fontWeight: '600', color: 'var(--status-success)' }}>94%</div>
-          <div style={{ fontSize: '12px', color: 'var(--ui-text-muted)', marginTop: '4px' }}>Approval Rate</div>
-        </div>
-        <div style={{ padding: '20px', background: 'var(--surface-panel)', borderRadius: '8px', textAlign: 'center' }}>
-          <div style={{ fontSize: '28px', fontWeight: '600', color: 'var(--status-info)' }}>3.2k</div>
-          <div style={{ fontSize: '12px', color: 'var(--ui-text-muted)', marginTop: '4px' }}>Lines Generated</div>
-        </div>
-        <div style={{ padding: '20px', background: 'var(--surface-panel)', borderRadius: '8px', textAlign: 'center' }}>
-          <div style={{ fontSize: '28px', fontWeight: '600', color: 'var(--accent-cowork)' }}>12</div>
-          <div style={{ fontSize: '12px', color: 'var(--ui-text-muted)', marginTop: '4px' }}>Active Tasks</div>
-        </div>
+      <div className="grid grid-cols-4 gap-4">
+        {[
+          { label: 'Tasks Completed', value: '127', color: 'var(--accent-primary)' },
+          { label: 'Approval Rate', value: '94%', color: 'var(--status-success)' },
+          { label: 'Lines Generated', value: '3.2k', color: 'var(--status-info)' },
+          { label: 'Active Tasks', value: '12', color: 'var(--accent-cowork)' },
+        ].map((stat, i) => (
+          <div key={i} className="p-5 bg-[var(--surface-panel)] rounded-xl border border-solid border-transparent hover:border-[var(--ui-border-muted)] text-center transition-colors">
+            <div className="text-3xl font-black tabular-nums" style={{ color: stat.color }}>{stat.value}</div>
+            <div className="text-[11px] text-[var(--ui-text-muted)] mt-1 uppercase font-bold tracking-widest opacity-60">{stat.label}</div>
+          </div>
+        ))}
       </div>
     </div>
   );
 
-  // Fixed GC Tab with proper error handling and UI feedback
   const renderGCTab = () => {
     const entropyColor = getEntropyColor(entropyScore);
     const entropyStatus = getEntropyStatus(entropyScore);
 
     return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      {/* Toast Container */}
-      <ToastContainer />
+      <div className="flex flex-col gap-6">
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
 
-      {/* Entropy Score Card */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px', background: 'var(--surface-panel)', borderRadius: '8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          <div style={{ width: '80px', height: '80px', borderRadius: '50%', border: `8px solid ${entropyColor}`, display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-            <span style={{ fontSize: '24px', fontWeight: '600', color: 'var(--ui-text-primary)' }}>{entropyScore}</span>
+        {/* Entropy Score Card */}
+        <div className="flex justify-between items-center p-6 bg-[var(--surface-panel)] rounded-xl border border-solid border-[var(--ui-border-muted)]">
+          <div className="flex items-center gap-6">
+            <div 
+              className="size-20 rounded-full border-8 border-solid flex items-center justify-center relative transition-colors duration-500" 
+              style={{ borderColor: entropyColor }}
+            >
+              <span className="text-2xl font-black text-[var(--ui-text-primary)] tabular-nums">{entropyScore}</span>
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-[var(--ui-text-primary)] m-0">Entropy Score</h3>
+              <p className="text-[13px] m-0 mt-1 font-semibold" style={{ color: entropyColor }}>{entropyStatus}</p>
+              {gcErrors.cleanup && (
+                <p className="text-[12px] text-[var(--status-error)] m-0 mt-2 flex items-center gap-1.5 font-medium">
+                  <Warning size={14} weight="bold" /> {gcErrors.cleanup}
+                </p>
+              )}
+            </div>
           </div>
-          <div>
-            <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--ui-text-primary)', margin: 0 }}>Entropy Score</h3>
-            <p style={{ fontSize: '13px', color: entropyColor, margin: '4px 0 0 0' }}>{entropyStatus}</p>
-            {gcErrors.cleanup && (
-              <p style={{ fontSize: '12px', color: 'var(--status-error)', margin: '4px 0 0 0', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Warning size={12} /> {gcErrors.cleanup}
-              </p>
+          <button 
+            onClick={handleTriggerCleanup} 
+            disabled={isRunningGC} 
+            className={cn(
+              "p-3 px-6 rounded-lg border-none text-[var(--ui-text-inverse)] text-[14px] font-bold cursor-pointer flex items-center gap-2 transition-all active:scale-95",
+              isRunningGC ? "bg-[var(--surface-active)] text-[var(--ui-text-muted)]" : "bg-[var(--accent-primary)] hover:opacity-90"
+            )}
+          >
+            {isRunningGC ? <ArrowsClockwise size={18} className="animate-spin" /> : <Lightning size={18} weight="fill" />}
+            {isRunningGC ? 'Running Cleanup…' : 'Run Full Cleanup'}
+          </button>
+        </div>
+
+        {/* Cleanup Queue */}
+        <div>
+          <h4 className="text-[12px] font-black text-[var(--ui-text-muted)] m-0 mb-3 uppercase tracking-widest opacity-60">Cleanup Queue</h4>
+          <div className="flex flex-col gap-2">
+            {gcQueue.map((item) => (
+              <div key={item.id} className="p-3.5 px-4 bg-[var(--surface-panel)] rounded-xl border border-solid border-[var(--ui-border-muted)] flex items-center justify-between hover:border-[var(--ui-border-default)] transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="size-9 rounded-lg bg-[var(--accent-primary)]/10 flex items-center justify-center">
+                    <Recycle size={18} className="text-[var(--accent-primary)]" weight="bold" />
+                  </div>
+                  <div>
+                    <div className="text-[14px] font-bold text-[var(--ui-text-primary)] capitalize">{item.agent.replace(/_/g, ' ')}</div>
+                    <div className="text-[12px] text-[var(--ui-text-muted)] mt-0.5">{item.items} items queued • {item.status || 'pending'}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className={cn(
+                    "p-1 px-2.5 rounded-md text-[10px] font-black uppercase tracking-widest",
+                    item.priority === 'high' ? "bg-rose-500/20 text-rose-500" : item.priority === 'medium' ? "bg-amber-500/20 text-amber-500" : "bg-emerald-500/20 text-emerald-500"
+                  )}>{item.priority}</span>
+                  <button 
+                    onClick={() => handleRunGCAgent(item.agent)} 
+                    disabled={runningAgents.has(item.agent)}
+                    className={cn(
+                      "p-1.5 px-3.5 rounded-lg border border-solid text-[12px] font-bold transition-all active:scale-95 flex items-center gap-1.5",
+                      runningAgents.has(item.agent) 
+                        ? "bg-zinc-800/50 border-zinc-700 text-zinc-500 cursor-not-allowed" 
+                        : "bg-transparent border-[var(--ui-border-default)] text-[var(--accent-primary)] cursor-pointer hover:bg-[var(--accent-primary)]/5"
+                    )}
+                  >
+                    {runningAgents.has(item.agent) ? (
+                      <><ArrowsClockwise size={12} className="animate-spin" /> Running…</>
+                    ) : (
+                      'Run Now'
+                    )}
+                  </button>
+                </div>
+              </div>
+            ))}
+            {gcQueue.length === 0 && (
+              <div className="p-8 text-center bg-black/5 rounded-xl border border-dashed border-[var(--ui-border-muted)] text-[13px] text-[var(--ui-text-muted)] italic">
+                No items in cleanup queue
+              </div>
             )}
           </div>
         </div>
-        <button 
-          onClick={handleTriggerCleanup} 
-          disabled={isRunningGC} 
-          style={{ padding: '12px 24px', borderRadius: '6px', border: 'none', background: isRunningGC ? 'var(--surface-active)' : 'var(--accent-primary)', color: 'var(--ui-text-inverse)', fontSize: '14px', fontWeight: '500', cursor: isRunningGC ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-        >
-          {isRunningGC ? <ArrowsClockwise size={18} style={{ animation: 'spin 1s linear infinite' }} /> : <Lightning size={18} />}
-          {isRunningGC ? 'Running Cleanup...' : 'Run Full Cleanup'}
-        </button>
-      </div>
 
-      {/* Cleanup Queue */}
-      <div>
-        <h4 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--ui-text-primary)', margin: '0 0 12px 0' }}>Cleanup Queue</h4>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {gcQueue.map((item) => (
-            <div key={item.id} style={{ padding: '14px 16px', background: 'var(--surface-panel)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Recycle size={18} color="var(--accent-primary)" />
-                <div>
-                  <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--ui-text-primary)', textTransform: 'capitalize' }}>{item.agent.replace(/_/g, ' ')}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--ui-text-muted)', marginTop: '2px' }}>{item.items} items queued</div>
+        {/* Cleanup Policies */}
+        <div>
+          <h4 className="text-[12px] font-black text-[var(--ui-text-muted)] m-0 mb-3 uppercase tracking-widest opacity-60">Cleanup Policies</h4>
+          <div className="flex flex-col gap-2">
+            {gcPolicies.map((policy) => (
+              <div key={policy.id} className="p-3.5 px-4 bg-[var(--surface-panel)] rounded-xl border border-solid border-[var(--ui-border-muted)] flex items-center justify-between hover:border-[var(--ui-border-default)] transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="size-9 rounded-lg bg-zinc-500/10 flex items-center justify-center">
+                    <GearSix size={18} className="text-zinc-500" />
+                  </div>
+                  <div>
+                    <div className="text-[14px] font-bold text-[var(--ui-text-primary)]">{policy.name}</div>
+                    <div className="text-[12px] text-[var(--ui-text-muted)] mt-0.5">Automatic threshold: <span className="text-[var(--text-primary)] font-mono">{(policy.threshold * 100).toFixed(0)}%</span></div>
+                  </div>
                 </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '500', background: item.priority === 'high' ? 'rgba(239, 68, 68, 0.2)' : item.priority === 'medium' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(34, 197, 94, 0.2)', color: item.priority === 'high' ? 'var(--status-error)' : item.priority === 'medium' ? 'var(--status-warning)' : 'var(--status-success)', textTransform: 'uppercase' }}>{item.priority}</span>
                 <button 
-                  onClick={() => handleRunGCAgent(item.agent)} 
-                  disabled={runningAgents.has(item.agent)}
-                  style={{ 
-                    padding: '6px 12px', 
-                    borderRadius: '6px', 
-                    border: runningAgents.has(item.agent) ? '1px solid #333' : '1px solid #444', 
-                    background: 'transparent', 
-                    color: runningAgents.has(item.agent) ? 'var(--ui-text-muted)' : 'var(--accent-primary)', 
-                    fontSize: '12px', 
-                    cursor: runningAgents.has(item.agent) ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  {runningAgents.has(item.agent) ? (
-                    <><ArrowsClockwise size={12} style={{ animation: 'spin 1s linear infinite' }} /> Running...</>
-                  ) : (
-                    'Run Now'
+                  onClick={() => handleUpdateGCPolicy(policy.id, { enabled: !policy.enabled })} 
+                  className={cn(
+                    "w-11 h-6 rounded-full border-none relative transition-all duration-300 cursor-pointer p-0",
+                    policy.enabled ? "bg-[var(--accent-primary)]" : "bg-zinc-700"
                   )}
+                >
+                  <div className={cn(
+                    "size-5 rounded-full bg-white absolute top-0.5 transition-all duration-300 shadow-sm",
+                    policy.enabled ? "left-[22px]" : "left-0.5"
+                  )} />
                 </button>
               </div>
-            </div>
-          ))}
-          {gcQueue.length === 0 && (
-            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--ui-text-muted)', fontSize: '13px' }}>
-              No items in cleanup queue
-            </div>
-          )}
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Cleanup Policies */}
-      <div>
-        <h4 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--ui-text-primary)', margin: '0 0 12px 0' }}>Cleanup Policies</h4>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {gcPolicies.map((policy) => (
-            <div key={policy.id} style={{ padding: '14px 16px', background: 'var(--surface-panel)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <GearSix size={18} color="#888" />
-                <div>
-                  <div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--ui-text-primary)' }}>{policy.name}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--ui-text-muted)', marginTop: '2px' }}>Threshold: {(policy.threshold * 100).toFixed(0)}%</div>
+        {/* Cleanup History */}
+        <div>
+          <h4 className="text-[12px] font-black text-[var(--ui-text-muted)] m-0 mb-3 uppercase tracking-widest opacity-60">Cleanup History</h4>
+          <div className="flex flex-col gap-2">
+            {gcHistory.map((record, idx) => (
+              <div key={idx} className="p-4 bg-[var(--surface-panel)] rounded-xl border border-solid border-[var(--ui-border-muted)] flex items-center justify-between hover:bg-white/[0.02] transition-colors">
+                <div className="flex items-center gap-3">
+                  <ClockCounterClockwise size={18} className="text-[var(--text-tertiary)]" />
+                  <span className="text-[14px] font-bold text-[var(--ui-text-primary)] tabular-nums">{record.date}</span>
+                </div>
+                <div className="flex gap-6">
+                  {[
+                    { label: 'Agents', value: record.agentsRun, color: 'var(--accent-primary)' },
+                    { label: 'Issues', value: record.issuesFound, color: 'var(--status-error)' },
+                    { label: 'Fixed', value: record.issuesFixed, color: 'var(--status-success)' },
+                    { label: 'Entropy', value: `-${record.entropyReduction.toFixed(1)}%`, color: 'var(--status-info)' },
+                  ].map((item, i) => (
+                    <div key={i} className="text-center">
+                      <div className="text-[14px] font-black tabular-nums" style={{ color: item.color }}>{item.value}</div>
+                      <div className="text-[9px] text-[var(--ui-text-muted)] font-black uppercase tracking-widest">{item.label}</div>
+                    </div>
+                  ))}
                 </div>
               </div>
-              <button onClick={() => handleUpdateGCPolicy(policy.id, { enabled: !policy.enabled })} style={{ width: '48px', height: '28px', borderRadius: '14px', border: 'none', backgroundColor: policy.enabled ? 'var(--accent-primary)' : 'var(--border-subtle)', cursor: 'pointer', position: 'relative', transition: 'all 0.3s ease', padding: '0' }}>
-                <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: 'var(--ui-text-inverse)', position: 'absolute', left: policy.enabled ? '2px' : '22px', top: '2px', transition: 'all 0.3s ease', boxShadow: 'var(--shadow-xs)' }} />
-              </button>
-            </div>
-          ))}
-          {gcPolicies.length === 0 && (
-            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--ui-text-muted)', fontSize: '13px' }}>
-              No policies configured
-            </div>
-          )}
+            ))}
+            {gcHistory.length === 0 && (
+              <div className="p-8 text-center bg-black/5 rounded-xl border border-dashed border-[var(--ui-border-muted)] text-[13px] text-[var(--ui-text-muted)] italic">
+                No cleanup history available
+              </div>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Cleanup History */}
-      <div>
-        <h4 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--ui-text-primary)', margin: '0 0 12px 0' }}>Cleanup History</h4>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {gcHistory.map((record, idx) => (
-            <div key={idx} style={{ padding: '14px 16px', background: 'var(--surface-panel)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <ClockCounterClockwise size={18} color="#888" />
-                <span style={{ fontSize: '14px', color: 'var(--ui-text-primary)' }}>{record.date}</span>
-              </div>
-              <div style={{ display: 'flex', gap: '24px' }}>
-                <div style={{ textAlign: 'center' }}><div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--accent-primary)' }}>{record.agentsRun}</div><div style={{ fontSize: '11px', color: 'var(--ui-text-muted)' }}>Agents</div></div>
-                <div style={{ textAlign: 'center' }}><div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--status-error)' }}>{record.issuesFound}</div><div style={{ fontSize: '11px', color: 'var(--ui-text-muted)' }}>Issues</div></div>
-                <div style={{ textAlign: 'center' }}><div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--status-success)' }}>{record.issuesFixed}</div><div style={{ fontSize: '11px', color: 'var(--ui-text-muted)' }}>Fixed</div></div>
-                <div style={{ textAlign: 'center' }}><div style={{ fontSize: '14px', fontWeight: '500', color: 'var(--status-info)' }}>-{record.entropyReduction.toFixed(1)}%</div><div style={{ fontSize: '11px', color: 'var(--ui-text-muted)' }}>Entropy</div></div>
-              </div>
-            </div>
-          ))}
-          {gcHistory.length === 0 && (
-            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--ui-text-muted)', fontSize: '13px' }}>
-              No cleanup history available
-            </div>
-          )}
+        {/* Available GC Agents */}
+        <div>
+          <h4 className="text-[12px] font-black text-[var(--ui-text-muted)] m-0 mb-3 uppercase tracking-widest opacity-60">Available GC Agents</h4>
+          <div className="grid grid-cols-3 gap-3">
+            {Object.entries(GC_AGENT_INFO).map(([agentName, info]) => {
+              const isRunning = runningAgents.has(agentName);
+              const error = gcErrors[agentName];
+              return (
+                <button 
+                  key={agentName} 
+                  onClick={() => handleRunGCAgent(agentName)} 
+                  disabled={isRunning}
+                  className={cn(
+                    "p-4 rounded-xl border border-solid text-left transition-all duration-200 flex flex-col gap-2 group",
+                    error ? "border-rose-500/40 bg-rose-500/5" : isRunning ? "border-[var(--accent-primary)] bg-[var(--accent-primary)]/5" : "border-transparent bg-[var(--surface-panel)] hover:border-[var(--ui-border-default)]",
+                    isRunning && "opacity-70 cursor-not-allowed"
+                  )}
+                >
+                  <div className={cn(
+                    "size-9 rounded-lg flex items-center justify-center transition-colors",
+                    error ? "text-rose-500 bg-rose-500/10" : "text-[var(--accent-primary)] bg-[var(--accent-primary)]/10 group-hover:bg-[var(--accent-primary)]/20"
+                  )}>
+                    {isRunning ? <ArrowsClockwise size={18} className="animate-spin" /> : error ? <Warning size={18} weight="fill" /> : info.icon}
+                  </div>
+                  <div>
+                    <div className="text-[13px] font-bold text-[var(--ui-text-primary)] capitalize mb-0.5">
+                      {agentName.replace(/_/g, ' ')}
+                    </div>
+                    <div className={cn(
+                      "text-[11px] leading-snug line-clamp-2",
+                      error ? "text-rose-500 font-medium italic" : "text-[var(--ui-text-muted)]"
+                    )}>
+                      {error || info.description}
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
-
-      {/* Available GC Agents */}
-      <div>
-        <h4 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--ui-text-primary)', margin: '0 0 12px 0' }}>Available GC Agents</h4>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-          {Object.entries(GC_AGENT_INFO).map(([agentName, info]) => (
-            <button 
-              key={agentName} 
-              onClick={() => handleRunGCAgent(agentName)} 
-              disabled={runningAgents.has(agentName)}
-              style={{ 
-                padding: '16px', 
-                background: runningAgents.has(agentName) ? 'var(--surface-hover)' : 'var(--surface-panel)',
-                borderRadius: '8px', 
-                border: gcErrors[agentName] ? '1px solid var(--status-error)' : runningAgents.has(agentName) ? '1px solid var(--accent-primary)' : '1px solid transparent', 
-                cursor: runningAgents.has(agentName) ? 'not-allowed' : 'pointer', 
-                textAlign: 'left', 
-                transition: 'all 0.2s',
-                opacity: runningAgents.has(agentName) ? 0.7 : 1
-              }} 
-              onMouseEnter={(e) => { 
-                if (!runningAgents.has(agentName)) {
-                  e.currentTarget.style.borderColor = 'var(--accent-primary)'; 
-                }
-              }} 
-              onMouseLeave={(e) => { 
-                if (!gcErrors[agentName] && !runningAgents.has(agentName)) {
-                  e.currentTarget.style.borderColor = 'transparent'; 
-                }
-              }}
-            >
-              <div style={{ color: gcErrors[agentName] ? 'var(--status-error)' : 'var(--accent-primary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                {runningAgents.has(agentName) ? <ArrowsClockwise size={16} style={{ animation: 'spin 1s linear infinite' }} /> : info.icon}
-                {gcErrors[agentName] && <Warning size={14} />}
-              </div>
-              <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--ui-text-primary)', textTransform: 'capitalize', marginBottom: '4px' }}>
-                {agentName.replace(/_/g, ' ')}
-              </div>
-              <div style={{ fontSize: '11px', color: gcErrors[agentName] ? 'var(--status-error)' : 'var(--ui-text-muted)' }}>
-                {gcErrors[agentName] || info.description}
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+    );
   };
 
-  // Main render functions
   const renderAgentsPanel = () => (
-    <div style={{ maxWidth: '800px' }}>
-      <div style={{ display: 'flex', gap: '4px', padding: '4px', background: 'var(--bg-secondary)', borderRadius: '8px', marginBottom: '24px' }}>
+    <div className="max-w-3xl">
+      <div className="flex gap-1 p-1 bg-[var(--bg-secondary)] rounded-xl border border-solid border-[var(--border-subtle)] mb-6">
         {[
           { id: 'evaluation', label: 'Evaluation Harness', icon: <ChartBar size={16} /> },
           { id: 'factory', label: 'Code Factory', icon: <Code size={16} /> },
           { id: 'gc', label: 'GC Agents', icon: <Recycle size={16} /> },
         ].map((tab) => (
-          <button key={tab.id} onClick={() => setAgentOpsTab(tab.id as AgentOpsTab)} style={{ flex: 1, padding: '10px 16px', borderRadius: '6px', border: 'none', background: agentOpsTab === tab.id ? 'var(--accent-primary)' : 'transparent', color: agentOpsTab === tab.id ? 'var(--ui-text-inverse)' : 'var(--text-tertiary)', fontSize: '13px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}>
+          <button 
+            key={tab.id} 
+            onClick={() => setAgentOpsTab(tab.id as AgentOpsTab)} 
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 p-2.5 rounded-lg border-none text-[13px] font-bold transition-all cursor-pointer",
+              agentOpsTab === tab.id 
+                ? "bg-[var(--accent-primary)] text-[var(--ui-text-inverse)] shadow-sm" 
+                : "bg-transparent text-[var(--text-tertiary)] hover:bg-white/5 hover:text-[var(--text-primary)]"
+            )}
+          >
             {tab.icon} {tab.label}
           </button>
         ))}
@@ -1258,162 +1525,20 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     </div>
   );
 
-  const ToggleItem: React.FC<{ label: string; value: boolean; onChange: (v: boolean) => void; description?: string }> = ({ label, value, onChange, description }) => (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', marginBottom: '12px' }}>
-      <div>
-        <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-primary)', marginBottom: '2px' }}>{label}</div>
-        {description && <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{description}</div>}
-      </div>
-      <button onClick={() => onChange(!value)} style={{ width: '48px', height: '28px', borderRadius: '14px', border: 'none', backgroundColor: value ? 'var(--accent-primary)' : 'var(--border-subtle)', cursor: 'pointer', position: 'relative', transition: 'all 0.3s ease', padding: '0' }}>
-        <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: 'var(--bg-elevated)', position: 'absolute', left: value ? '2px' : '22px', transition: 'all 0.3s ease', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)' }} />
-      </button>
-    </div>
-  );
-
-  const NavButton: React.FC<{ item: any; activeSection: SettingsSection; onClick: () => void }> = ({ item, activeSection, onClick }) => (
-    <button onClick={onClick} style={{ width: '100%', padding: '8px 12px', border: 'none', backgroundColor: activeSection === item.id ? 'var(--bg-secondary)' : 'transparent', color: activeSection === item.id ? 'var(--text-primary)' : 'var(--text-secondary)', fontSize: '13px', fontWeight: '400', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', transition: 'all 0.15s ease', textAlign: 'left', borderRadius: '6px', position: 'relative' }} onMouseEnter={(e) => { if (activeSection !== item.id) { e.currentTarget.style.backgroundColor = 'var(--bg-secondary)'; e.currentTarget.style.color = 'var(--text-primary)'; } }} onMouseLeave={(e) => { if (activeSection !== item.id) { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}>
-      {activeSection === item.id && <span style={{ position: 'absolute', left: '0', top: '50%', transform: 'translateY(-50%)', width: '3px', height: '16px', backgroundColor: 'var(--accent-primary)', borderRadius: '0 2px 2px 0' }} />}
-      {item.label}
-    </button>
-  );
-
-  // Other panels (abbreviated for space)
-  const renderPermissionsPanel = () => {
-    const [permStatus, setPermStatus] = useState<AppPermissionStatus | null>(null);
-    const [permChecking, setPermChecking] = useState(false);
-
-    useEffect(() => {
-      const api = window.allternit?.permissionGuide;
-      if (!api) return;
-      const unsub = api.onStatusChanged((status) => setPermStatus(status));
-      api.check().then(setPermStatus).catch(() => {});
-      return unsub;
-    }, []);
-
-    const checkPermissions = async () => {
-      setPermChecking(true);
-      try {
-        const result = await window.allternit!.permissionGuide!.requestCheck();
-        setPermStatus(result);
-      } finally {
-        setPermChecking(false);
-      }
-    };
-
-    const presentGuide = async (panel: PermissionPanel) => {
-      await window.allternit!.permissionGuide!.present(panel);
-    };
-
-    const hasApi = typeof window !== 'undefined' && !!window.allternit?.permissionGuide;
-
-    if (!hasApi) {
-      return (
-        <div style={{ maxWidth: 500 }}>
-          <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>System Permissions</h3>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-            Permission guide is only available in the Allternit Desktop app.
-          </p>
-        </div>
-      );
-    }
-
-    const allGranted = permStatus?.accessibility === 'granted' && permStatus?.screenRecording === 'granted';
-
-    return (
-      <div style={{ maxWidth: 500 }}>
-        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>System Permissions</h3>
-        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 24 }}>
-          Allternit needs Accessibility and Screen Recording permissions to control your desktop and capture screenshots.
-        </p>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
-          <PermissionRow
-            label="Accessibility"
-            description="Allows Allternit to click and type on your behalf"
-            status={permStatus?.accessibility}
-            onGrant={() => presentGuide('accessibility')}
-          />
-          <PermissionRow
-            label="Screen Recording"
-            description="Allows Allternit to see your screen and take screenshots"
-            status={permStatus?.screenRecording}
-            onGrant={() => presentGuide('screen-recording')}
-          />
-        </div>
-
-        <div style={{ display: 'flex', gap: 12 }}>
-          <button
-            onClick={checkPermissions}
-            disabled={permChecking}
-            style={{
-              padding: '8px 16px', borderRadius: 6, border: 'none',
-              background: 'var(--accent)', color: 'var(--ui-text-inverse)', fontSize: 13,
-              cursor: permChecking ? 'not-allowed' : 'pointer', opacity: permChecking ? 0.6 : 1
-            }}
-          >
-            {permChecking ? 'Checking...' : 'Refresh Status'}
-          </button>
-          {allGranted && (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--status-success)' }}>
-              <CheckCircle size={16} /> All permissions granted
-            </span>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  const PermissionRow: React.FC<{
-    label: string;
-    description: string;
-    status?: 'granted' | 'denied' | 'unknown' | 'not-applicable';
-    onGrant: () => void;
-  }> = ({ label, description, status, onGrant }) => {
-    const granted = status === 'granted';
-    const denied = status === 'denied';
-
-    return (
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 12,
-        padding: '14px 16px', background: 'var(--bg-secondary)',
-        borderRadius: 8, border: '1px solid var(--border-subtle)'
-      }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            {granted ? <CheckCircle size={16} color="var(--status-success)" /> : denied ? <Warning size={16} color="var(--status-error)" /> : <CircleNotch size={16} color="var(--ui-text-muted)" />}
-            <span style={{ fontSize: 14, fontWeight: 500, color: granted ? 'var(--status-success)' : 'var(--text-primary)' }}>{label}</span>
-          </div>
-          <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>{description}</p>
-        </div>
-        {denied && (
-          <button
-            onClick={onGrant}
-            style={{
-              padding: '6px 14px', borderRadius: 6, border: 'none',
-              background: 'var(--status-warning)', color: 'var(--ui-text-inverse)', fontSize: 13, cursor: 'pointer'
-            }}
-          >
-            Grant
-          </button>
-        )}
-        {granted && (
-          <span style={{ fontSize: 12, color: 'var(--status-success)', fontWeight: 500 }}>Granted</span>
-        )}
-      </div>
-    );
-  };
+  // Other panels
+  
 
   const renderGeneralPanel = () => (
-    <div style={{ maxWidth: '500px' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '8px', color: 'var(--ui-text-primary)' }}>Language</label>
-        <select value={language} onChange={(e) => setLanguage(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-secondary)', color: 'var(--ui-text-primary)', fontSize: '14px', cursor: 'pointer' }}>
+    <div className="max-w-lg">
+      <div className="mb-6">
+        <label className="block text-[13px] font-bold text-[var(--ui-text-primary)] mb-2 uppercase tracking-widest opacity-60">Language</label>
+        <select value={language} onChange={(e) => setLanguage(e.target.value)} className="w-full p-2.5 px-3.5 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--ui-text-primary)] text-[14px] font-medium outline-none cursor-pointer focus:border-[var(--accent-primary)]">
           <option>English</option><option>Spanish</option><option>French</option><option>German</option><option>Japanese</option>
         </select>
       </div>
-      <div style={{ marginBottom: '24px' }}>
-        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '8px', color: 'var(--ui-text-primary)' }}>Timezone</label>
-        <select value={timezone} onChange={(e) => setTimezone(e.target.value)} style={{ width: '100%', padding: '10px 12px', borderRadius: '6px', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-secondary)', color: 'var(--ui-text-primary)', fontSize: '14px', cursor: 'pointer' }}>
+      <div className="mb-6">
+        <label className="block text-[13px] font-bold text-[var(--ui-text-primary)] mb-2 uppercase tracking-widest opacity-60">Timezone</label>
+        <select value={timezone} onChange={(e) => setTimezone(e.target.value)} className="w-full p-2.5 px-3.5 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-[var(--ui-text-primary)] text-[14px] font-medium outline-none cursor-pointer focus:border-[var(--accent-primary)]">
           <option>UTC</option><option>EST</option><option>CST</option><option>PST</option><option>GMT</option>
         </select>
       </div>
@@ -1424,43 +1549,56 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   );
 
   const renderAppearancePanel = () => (
-    <div style={{ maxWidth: '500px' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '12px', color: 'var(--ui-text-primary)' }}>Theme</label>
-        <div style={{ display: 'flex', gap: '8px' }}>
+    <div className="max-w-lg">
+      <div className="mb-8">
+        <label className="block text-[13px] font-bold text-[var(--ui-text-primary)] mb-3 uppercase tracking-widest opacity-60">Theme</label>
+        <div className="flex gap-2">
           {(['light', 'dark', 'system'] as const).map((t) => (
-            <button key={t} onClick={() => setTheme(t)} style={{ padding: '8px 16px', borderRadius: '6px', border: theme === t ? '2px solid #d4b08c' : '1px solid var(--border-subtle)', backgroundColor: theme === t ? 'rgba(212, 176, 140, 0.1)' : 'var(--bg-secondary)', color: 'var(--ui-text-primary)', fontSize: '13px', fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              {t === 'light' && <Sun size={16} />}{t === 'dark' && <Moon size={16} />}{t === 'system' && <DeviceMobile size={16} />}{t.charAt(0).toUpperCase() + t.slice(1)}
+            <button 
+              key={t} 
+              onClick={() => setTheme(t)} 
+              className={cn(
+                "flex-1 flex items-center justify-center gap-2 p-2.5 px-4 rounded-xl border border-solid text-[13px] font-bold cursor-pointer transition-all active:scale-95",
+                theme === t 
+                  ? "bg-[var(--accent-primary)]/10 border-[var(--accent-primary)] text-[var(--text-primary)]" 
+                  : "bg-[var(--bg-secondary)] border-[var(--border-subtle)] text-[var(--text-secondary)] hover:bg-white/5"
+              )}
+            >
+              {t === 'light' && <Sun size={18} weight={theme === t ? "fill" : "regular"} />}
+              {t === 'dark' && <Moon size={18} weight={theme === t ? "fill" : "regular"} />}
+              {t === 'system' && <DeviceMobile size={18} weight={theme === t ? "fill" : "regular"} />}
+              <span className="capitalize">{t}</span>
             </button>
           ))}
         </div>
       </div>
       <ToggleItem label="Compact density" value={compactDensity} onChange={setCompactDensity} description="Use less vertical spacing" />
-      <ToggleItem label="Show sidebar labels" value={showSidebarLabels} onChange={setShowSidebarLabels} description="Display text labels in sidebar" />
+      <ToggleItem label="Show sidebar labels" value={showSidebarLabels} onChange={setTwoSidebarLabels} description="Display text labels in sidebar" />
     </div>
   );
 
   const renderModelsPanel = () => (
-    <div style={{ maxWidth: '600px' }}>
+    <div className="max-w-2xl">
       <LocalModelManager />
       
-      <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid var(--border-subtle)' }}>
-        <h3 style={{ fontSize: '13px', fontWeight: '600', color: 'var(--ui-text-primary)', marginBottom: '16px' }}>Configuration</h3>
+      <div className="mt-10 pt-8 border-t border-solid border-[var(--border-subtle)]">
+        <h3 className="text-sm font-bold text-[var(--ui-text-primary)] mb-4 uppercase tracking-widest opacity-60">Session Controls</h3>
         <ToggleItem label="Streaming" value={streaming} onChange={setStreaming} description="Stream responses in real-time" />
       </div>
     </div>
   );
 
   const renderApiKeysPanel = () => (
-    <div style={{ maxWidth: '600px' }}>
-      <div style={{ marginBottom: '24px' }}>
+    <div className="max-w-2xl">
+      <div className="flex flex-col gap-3">
         {API_PROVIDERS.map((provider) => (
-          <div key={provider.name} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', marginBottom: '12px', borderRadius: '8px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '8px', backgroundColor: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ui-text-inverse)', fontWeight: '600' }}>{provider.letter}</div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '13px', fontWeight: '500', color: 'var(--ui-text-primary)' }}>{provider.name}</div>
+          <div key={provider.name} className="flex items-center gap-4 p-4 rounded-xl bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)] hover:border-[var(--ui-border-default)] transition-colors">
+            <div className="size-11 rounded-xl bg-[var(--accent-primary)] flex items-center justify-center text-[var(--ui-text-inverse)] text-xl font-black shadow-lg shadow-[var(--accent-primary)]/10">{provider.letter}</div>
+            <div className="flex-1">
+              <div className="text-[14px] font-bold text-[var(--text-primary)]">{provider.name}</div>
+              <div className="text-[11px] text-[var(--text-tertiary)] uppercase font-bold tracking-widest mt-0.5">Connected • Tier 2</div>
             </div>
-            <button style={{ padding: '6px 12px', borderRadius: '4px', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-primary)', color: 'var(--ui-text-primary)', fontSize: '12px', cursor: 'pointer' }}>Edit</button>
+            <button className="p-2 px-4 rounded-lg border border-solid border-[var(--border-subtle)] bg-[var(--bg-primary)] text-[var(--text-primary)] text-[12px] font-bold cursor-pointer hover:bg-white/5 active:scale-95 transition-all">Manage</button>
           </div>
         ))}
       </div>
@@ -1468,31 +1606,43 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   );
 
   const renderShortcutsPanel = () => (
-    <div style={{ maxWidth: '600px' }}>
-      <div style={{ borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-subtle)' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', backgroundColor: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-subtle)' }}>
-          <div style={{ padding: '12px 16px', fontSize: '12px', fontWeight: '600', color: 'var(--ui-text-primary)', borderRight: '1px solid var(--border-subtle)' }}>Action</div>
-          <div style={{ padding: '12px 16px', fontSize: '12px', fontWeight: '600', color: 'var(--ui-text-primary)' }}>Shortcut</div>
+    <div className="max-w-2xl">
+      <div className="rounded-xl overflow-hidden border border-solid border-[var(--border-subtle)] bg-[var(--bg-secondary)] shadow-lg">
+        <div className="grid grid-cols-2 bg-white/5 border-b border-solid border-[var(--border-subtle)]">
+          <div className="p-3 px-5 text-[11px] font-black text-[var(--ui-text-muted)] uppercase tracking-widest border-r border-solid border-[var(--border-subtle)]">Action</div>
+          <div className="p-3 px-5 text-[11px] font-black text-[var(--ui-text-muted)] uppercase tracking-widest">Shortcut</div>
         </div>
-        {SHORTCUTS.map((item, index) => (
-          <div key={index} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: index !== SHORTCUTS.length - 1 ? '1px solid var(--border-subtle)' : 'none' }}>
-            <div style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--ui-text-primary)', borderRight: '1px solid var(--border-subtle)' }}>{item.action}</div>
-            <div style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--ui-text-primary)', fontFamily: 'var(--font-mono)', backgroundColor: 'var(--bg-secondary)' }}>{item.shortcut}</div>
-          </div>
-        ))}
+        <div className="flex flex-col">
+          {SHORTCUTS.map((item, index) => (
+            <div key={index} className={cn(
+              "grid grid-cols-2",
+              index !== SHORTCUTS.length - 1 ? "border-b border-solid border-[var(--border-subtle)]" : ""
+            )}>
+              <div className="p-3 px-5 text-[13px] font-medium text-[var(--ui-text-primary)] border-r border-solid border-[var(--border-subtle)]">{item.action}</div>
+              <div className="p-3 px-5 text-[12px] text-[var(--ui-text-primary)] font-mono bg-white/[0.02] flex items-center tracking-tighter uppercase">{item.shortcut}</div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
 
   const renderAboutPanel = () => (
-    <div style={{ maxWidth: '600px', textAlign: 'center' }}>
-      <div style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', width: '160px', height: '160px', margin: '0 auto' }}>
-          {Array.from({ length: 16 }).map((_, i) => <div key={i} style={{ backgroundColor: 'var(--accent-primary)', borderRadius: '4px', opacity: i % 3 === 0 ? 0.3 : i % 2 === 0 ? 0.6 : 1 }} />)}
+    <div className="max-w-2xl text-center py-10">
+      <div className="mb-10">
+        <div className="grid grid-cols-4 gap-2 size-40 mx-auto transform hover:rotate-3 transition-transform duration-500">
+          {Array.from({ length: 16 }).map((_, i) => (
+            <div key={i} className="bg-[var(--accent-primary)] rounded-md transition-opacity duration-300" style={{ opacity: i % 3 === 0 ? 0.3 : i % 2 === 0 ? 0.6 : 1 }} />
+          ))}
         </div>
       </div>
-      <h1 style={{ fontSize: '32px', margin: '0 0 8px 0', color: 'var(--ui-text-primary)' }}>Allternit & <span style={{ color: 'var(--accent-primary)' }}>Coffee</span></h1>
-      <p style={{ fontSize: '14px', color: 'var(--ui-text-muted)' }}>v0.9.1-beta</p>
+      <h1 className="text-4xl font-black m-0 mb-2 text-[var(--ui-text-primary)] tracking-tight">Allternit & <span className="text-[var(--accent-primary)]">Coffee</span></h1>
+      <p className="text-base text-[var(--ui-text-muted)] font-mono font-bold tracking-widest opacity-60">v0.9.1-beta</p>
+      <div className="mt-12 flex justify-center gap-6">
+        <button className="bg-transparent border-none text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors text-sm font-bold uppercase tracking-widest cursor-pointer">Terms</button>
+        <button className="bg-transparent border-none text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors text-sm font-bold uppercase tracking-widest cursor-pointer">Privacy</button>
+        <button className="bg-transparent border-none text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors text-sm font-bold uppercase tracking-widest cursor-pointer">GitHub</button>
+      </div>
     </div>
   );
 
@@ -1505,13 +1655,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [complianceStatus, setComplianceStatus] = useState<any>(null);
   const [securityLoading, setSecurityLoading] = useState(false);
 
-  // Fetch security data
   const fetchSecurityData = useCallback(async () => {
     setSecurityLoading(true);
     try {
-      // Import dynamically to avoid circular dependencies
       const { listPolicies, listViolations, listApprovals, listSecurityEvents, getComplianceStatus } = await import('@/lib/governance/policy.service');
-      
       const [policiesRes, violationsRes, approvalsRes, eventsRes, complianceRes] = await Promise.all([
         listPolicies(),
         listViolations({ status: 'open' }),
@@ -1519,36 +1666,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         listSecurityEvents({ pageSize: 20 }),
         getComplianceStatus(),
       ]);
-
       setPolicies(policiesRes.policies);
       setViolations(violationsRes.violations);
       setApprovals(approvalsRes.requests);
       setSecurityEvents(eventsRes.events);
       setComplianceStatus(complianceRes);
     } catch (e) {
-      setPolicies([]);
-      setViolations([]);
-      setApprovals([]);
-      setSecurityEvents([]);
-      setComplianceStatus(null);
-      addToast(
-        `Security governance data unavailable: ${e instanceof Error ? e.message : 'Unknown error'}`,
-        'error'
-      );
+      setPolicies([]); setViolations([]); setApprovals([]); setSecurityEvents([]); setComplianceStatus(null);
     }
     setSecurityLoading(false);
   }, []);
 
   useEffect(() => {
-    if (activeSection === 'security') {
-      fetchSecurityData();
-    }
+    if (activeSection === 'security') fetchSecurityData();
   }, [activeSection, fetchSecurityData]);
 
   const renderSecurityPanel = () => (
-    <div style={{ maxWidth: '900px' }}>
-      {/* Security Tabs */}
-      <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid #333', marginBottom: 24 }}>
+    <div className="max-w-4xl">
+      <div className="flex gap-0 border-b border-solid border-white/10 mb-8 overflow-x-auto no-scrollbar">
         {[
           { id: 'overview', label: 'Overview', icon: Shield },
           { id: 'policies', label: 'Policies', icon: FileCheck, count: policies.filter((p: any) => p.status === 'active').length },
@@ -1559,24 +1694,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <button
             key={tab.id}
             onClick={() => setSecurityTab(tab.id)}
-            style={{
-              padding: '12px 20px',
-              border: 'none',
-              borderBottom: securityTab === tab.id ? '2px solid var(--accent-primary)' : '2px solid transparent',
-              background: 'transparent',
-              color: securityTab === tab.id ? 'var(--accent-primary)' : 'var(--ui-text-muted)',
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-            }}
+            className={cn(
+              "p-4 px-6 border-none bg-transparent text-[13px] font-bold cursor-pointer flex items-center gap-2.5 transition-all whitespace-nowrap relative border-b-2 border-solid",
+              securityTab === tab.id ? "text-[var(--accent-primary)] border-[var(--accent-primary)]" : "text-[var(--ui-text-muted)] border-transparent hover:text-[var(--text-secondary)]"
+            )}
           >
-            <tab.icon size={16} />
+            <tab.icon size={18} weight={securityTab === tab.id ? "fill" : "regular"} />
             {tab.label}
             {tab.count > 0 && (
-              <span style={{ padding: '2px 8px', background: securityTab === tab.id ? 'color-mix(in srgb, var(--accent-primary) 12%, transparent)' : 'var(--status-error)', borderRadius: 10, fontSize: 11, color: securityTab === tab.id ? 'var(--accent-primary)' : 'var(--ui-text-inverse)' }}>
+              <span className={cn(
+                "p-0.5 px-2 rounded-full text-[11px] font-black tabular-nums",
+                securityTab === tab.id ? "bg-[var(--accent-primary)]/10 text-[var(--accent-primary)]" : "bg-rose-500 text-white"
+              )}>
                 {tab.count}
               </span>
             )}
@@ -1584,49 +1713,53 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         ))}
       </div>
 
-      {/* Security Content */}
       {securityLoading ? (
-        <div style={{ textAlign: 'center', padding: 60 }}>
-          <ArrowsClockwise size={32} color="#666" style={{ animation: 'spin 1s linear infinite' }} />
-          <p style={{ color: 'var(--ui-text-muted)', marginTop: 16 }}>Loading security data...</p>
+        <div className="text-center py-20">
+          <ArrowsClockwise size={40} className="text-white/20 animate-spin mx-auto mb-4" />
+          <p className="text-[13px] text-[var(--ui-text-muted)] font-bold uppercase tracking-widest">Hardening Core…</p>
         </div>
       ) : (
         <>
           {securityTab === 'overview' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-              {/* Threat Level */}
-              <div style={{ padding: 24, background: 'var(--surface-panel)', borderRadius: 12, border: '1px solid var(--ui-border-muted)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                  <div style={{ width: 60, height: 60, borderRadius: 12, background: 'var(--status-warning)20', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--status-warning)' }}>
-                    <Shield size={28} />
+            <div className="flex flex-col gap-6">
+              <div className="p-8 bg-[var(--surface-panel)] rounded-2xl border border-solid border-[var(--ui-border-muted)] shadow-xl relative overflow-hidden group">
+                <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity duration-500">
+                  <Shield size={120} weight="fill" />
+                </div>
+                <div className="flex items-center gap-6 relative z-10">
+                  <div className="size-16 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 shadow-lg shadow-amber-500/10">
+                    <Shield size={32} weight="bold" />
                   </div>
                   <div>
-                    <div style={{ fontSize: 12, color: 'var(--ui-text-muted)', textTransform: 'uppercase', letterSpacing: 1 }}>Threat Level</div>
-                    <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--status-warning)' }}>Medium</div>
+                    <div className="text-[12px] text-[var(--ui-text-muted)] font-black uppercase tracking-widest opacity-60">Active Threat Level</div>
+                    <div className="text-3xl font-black text-amber-500 tracking-tight mt-1">MODERATE_RISK</div>
                   </div>
                 </div>
               </div>
 
-              {/* Quick Stats */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+              <div className="grid grid-cols-4 gap-4">
                 <StatCard label="Active Policies" value={policies.filter((p: any) => p.status === 'active').length} color="var(--status-success)" />
                 <StatCard label="Open Violations" value={violations.filter((v: any) => v.status === 'open').length} color="var(--status-error)" />
                 <StatCard label="Pending Approvals" value={approvals.filter((a: any) => a.status === 'pending').length} color="var(--status-warning)" />
-                <StatCard label="Compliance Score" value={`${complianceStatus?.score || 0}%`} color="var(--status-info)" />
+                <StatCard label="Compliance" value={`${complianceStatus?.score || 0}%`} color="var(--status-info)" />
               </div>
 
-              {/* Recent Events */}
-              <div>
-                <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--ui-text-inverse)', margin: '0 0 12px 0' }}>Recent Security Events</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="mt-4">
+                <h3 className="text-xs font-black text-[var(--ui-text-inverse)] m-0 mb-4 uppercase tracking-widest opacity-60">Security Audit Log</h3>
+                <div className="flex flex-col gap-2">
                   {securityEvents.slice(0, 5).map((event: any) => (
-                    <div key={event.id} style={{ padding: 14, background: 'var(--surface-panel)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <Warning size={18} color={event.severity === 'critical' ? 'var(--status-error)' : event.severity === 'high' ? 'var(--status-warning)' : 'var(--status-warning)'} />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 14, color: 'var(--ui-text-inverse)' }}>{event.title}</div>
-                        <div style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>{event.description}</div>
+                    <div key={event.id} className="p-4 bg-[var(--surface-panel)] rounded-xl border border-solid border-transparent hover:border-[var(--ui-border-muted)] transition-all flex items-center gap-4 group">
+                      <div className={cn(
+                        "size-9 rounded-lg flex items-center justify-center transition-colors",
+                        event.severity === 'critical' ? "bg-rose-500/10 text-rose-500" : "bg-amber-500/10 text-amber-500"
+                      )}>
+                        <Warning size={18} weight="fill" />
                       </div>
-                      <span style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>{new Date(event.createdAt).toLocaleTimeString()}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-bold text-[var(--ui-text-inverse)] truncate">{event.title}</div>
+                        <div className="text-[12px] text-[var(--ui-text-muted)] mt-0.5 truncate">{event.description}</div>
+                      </div>
+                      <span className="text-[11px] font-mono text-[var(--ui-text-muted)] tabular-nums opacity-60 group-hover:opacity-100">{new Date(event.timestamp || event.createdAt).toLocaleTimeString()}</span>
                     </div>
                   ))}
                 </div>
@@ -1635,31 +1768,37 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           )}
 
           {securityTab === 'policies' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--ui-text-inverse)', margin: 0 }}>Governance Policies</h3>
-                <button style={{ padding: '8px 16px', borderRadius: 6, border: 'none', background: 'var(--accent-primary)', color: 'var(--ui-text-inverse)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}>
+            <div className="flex flex-col gap-4">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-base font-bold text-[var(--ui-text-inverse)] m-0">Governance Policies</h3>
+                <button className="p-2 px-4 rounded-lg border-none bg-[var(--accent-primary)] text-[var(--ui-text-inverse)] text-[13px] font-bold cursor-pointer active:scale-95 transition-transform">
                   + New Policy
                 </button>
               </div>
               {policies.map((policy: any) => (
-                <div key={policy.id} style={{ padding: 16, background: 'var(--surface-panel)', borderRadius: 8, border: '1px solid var(--ui-border-muted)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 8, background: policy.status === 'active' ? 'var(--status-success)20' : 'var(--surface-active)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: policy.status === 'active' ? 'var(--status-success)' : 'var(--ui-text-muted)' }}>
-                        <Shield size={18} />
+                <div key={policy.id} className="p-4 bg-[var(--surface-panel)] rounded-xl border border-solid border-[var(--ui-border-muted)] hover:border-[var(--ui-border-default)] transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={cn(
+                        "size-11 rounded-xl flex items-center justify-center shadow-lg transition-colors",
+                        policy.status === 'active' ? "bg-emerald-500/10 text-emerald-500 shadow-emerald-500/5" : "bg-zinc-800 text-zinc-500"
+                      )}>
+                        <Shield size={22} weight={policy.status === 'active' ? "fill" : "regular"} />
                       </div>
                       <div>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ui-text-inverse)' }}>{policy.name}</div>
-                        <div style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>{policy.type} • {policy.enforcementMode}</div>
+                        <div className="text-[15px] font-bold text-[var(--ui-text-inverse)]">{policy.name}</div>
+                        <div className="text-[12px] text-[var(--ui-text-muted)] mt-0.5 font-semibold uppercase tracking-wider opacity-70">{policy.type} • {policy.enforcementMode}</div>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <span style={{ padding: '4px 10px', background: policy.severity === 'critical' ? 'var(--status-error)20' : policy.severity === 'high' ? 'var(--status-warning-bg)' : 'var(--status-warning)20', color: policy.severity === 'critical' ? 'var(--status-error)' : policy.severity === 'high' ? 'var(--status-warning)' : 'var(--status-warning)', borderRadius: 4, fontSize: 12 }}>
+                    <div className="flex items-center gap-3">
+                      <span className={cn(
+                        "p-1 px-3 rounded-full text-[10px] font-black uppercase tracking-widest",
+                        policy.severity === 'critical' ? "bg-rose-500/20 text-rose-500" : "bg-amber-500/20 text-amber-500"
+                      )}>
                         {policy.severity}
                       </span>
                       {policy.violationCount > 0 && (
-                        <span style={{ padding: '4px 10px', background: 'var(--status-error)20', color: 'var(--status-error)', borderRadius: 4, fontSize: 12 }}>
+                        <span className="p-1 px-3 bg-rose-500/20 text-rose-500 rounded-full text-[10px] font-black uppercase tracking-widest border border-solid border-rose-500/20">
                           {policy.violationCount} violations
                         </span>
                       )}
@@ -1671,52 +1810,66 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           )}
 
           {securityTab === 'gating' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--ui-text-inverse)', margin: 0 }}>Pending Approvals</h3>
+            <div className="flex flex-col gap-4">
+              <h3 className="text-base font-bold text-[var(--ui-text-inverse)] m-0 mb-2">Pending Approvals</h3>
               {approvals.filter((a: any) => a.status === 'pending').map((approval: any) => (
-                <div key={approval.id} style={{ padding: 16, background: 'var(--surface-panel)', borderRadius: 8, border: '1px solid var(--ui-border-muted)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ui-text-inverse)' }}>{approval.title}</div>
-                      <div style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>Requested by {approval.requester?.agentName}</div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid var(--status-error)', background: 'transparent', color: 'var(--status-error)', fontSize: 12, cursor: 'pointer' }}>Reject</button>
-                      <button style={{ padding: '6px 12px', borderRadius: 6, border: 'none', background: 'var(--status-success)', color: 'var(--ui-text-inverse)', fontSize: 12, cursor: 'pointer' }}>Approve</button>
-                    </div>
+                <div key={approval.id} className="p-4 bg-[var(--surface-panel)] rounded-xl border border-solid border-[var(--ui-border-muted)] flex items-center justify-between group hover:border-[var(--ui-border-default)] transition-colors">
+                  <div>
+                    <div className="text-[15px] font-bold text-[var(--ui-text-inverse)]">{approval.title}</div>
+                    <div className="text-[12px] text-[var(--ui-text-muted)] mt-1">Requested by <span className="text-[var(--accent-primary)] font-bold">{approval.requester?.agentName}</span> • {new Date(approval.createdAt).toLocaleDateString()}</div>
+                  </div>
+                  <div className="flex gap-2 opacity-80 group-hover:opacity-100 transition-opacity">
+                    <button className="p-2 px-4 rounded-lg border border-solid border-rose-500/30 bg-transparent text-rose-500 text-[12px] font-bold cursor-pointer hover:bg-rose-500/10 active:scale-95 transition-all">Reject</button>
+                    <button className="p-2 px-4 rounded-lg border-none bg-emerald-600 text-white text-[12px] font-bold cursor-pointer hover:bg-emerald-500 active:scale-95 transition-all shadow-lg shadow-emerald-600/20">Approve</button>
                   </div>
                 </div>
               ))}
+              {approvals.filter((a: any) => a.status === 'pending').length === 0 && (
+                <div className="p-12 text-center bg-black/5 rounded-2xl border border-dashed border-white/10 text-[13px] text-[var(--ui-text-muted)] font-medium">
+                  Queue is clear. All agent actions are compliant.
+                </div>
+              )}
             </div>
           )}
 
           {securityTab === 'purpose' && (
-            <div style={{ textAlign: 'center', padding: 60 }}>
-              <Target size={48} color="#444" style={{ marginBottom: 16 }} />
-              <h3 style={{ fontSize: 16, fontWeight: 600, color: 'var(--ui-text-inverse)', margin: '0 0 8px 0' }}>Purpose Binding</h3>
-              <p style={{ fontSize: 14, color: 'var(--ui-text-muted)', margin: 0 }}>Configure agent purpose alignment controls in the DAG view.</p>
+            <div className="text-center py-24 bg-[var(--surface-panel)] rounded-2xl border border-solid border-[var(--ui-border-muted)]">
+              <Target size={64} className="text-white/10 mx-auto mb-6" weight="thin" />
+              <h3 className="text-lg font-bold text-[var(--ui-text-inverse)] m-0 mb-2">Purpose Binding Architecture</h3>
+              <p className="text-[14px] text-[var(--ui-text-muted)] max-w-sm mx-auto leading-relaxed">Agent goals are restricted to verified project scopes. Configure binding levels in the DAG / Project view.</p>
+              <button className="mt-8 p-2 px-6 rounded-lg border border-solid border-[var(--ui-border-default)] bg-transparent text-[var(--text-primary)] text-sm font-bold cursor-pointer hover:bg-white/5 transition-all">Open DAG Workspace</button>
             </div>
           )}
 
           {securityTab === 'compliance' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-              <div style={{ padding: 32, background: 'var(--surface-panel)', borderRadius: 12, textAlign: 'center' }}>
-                <div style={{ fontSize: 48, fontWeight: 700, color: complianceStatus?.score >= 80 ? 'var(--status-success)' : complianceStatus?.score >= 60 ? 'var(--status-warning)' : 'var(--status-error)' }}>
+            <div className="flex flex-col gap-6">
+              <div className="p-10 bg-[var(--surface-panel)] rounded-2xl border border-solid border-[var(--ui-border-muted)] text-center shadow-2xl relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-[var(--accent-primary)]/5 to-transparent pointer-events-none" />
+                <div className={cn(
+                  "text-6xl font-black tabular-nums tracking-tighter",
+                  complianceStatus?.score >= 80 ? "text-[var(--status-success)]" : complianceStatus?.score >= 60 ? "text-[var(--status-warning)]" : "text-[var(--status-error)]"
+                )}>
                   {complianceStatus?.score || 0}%
                 </div>
-                <div style={{ fontSize: 14, color: 'var(--ui-text-muted)', marginTop: 8 }}>Overall Compliance Score</div>
+                <div className="text-[11px] font-black text-[var(--ui-text-muted)] uppercase tracking-[0.2em] mt-3 opacity-60">System Compliance Rating</div>
               </div>
               <div>
-                <h3 style={{ fontSize: 14, fontWeight: 600, color: 'var(--ui-text-inverse)', margin: '0 0 12px 0' }}>Frameworks</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <h3 className="text-xs font-black text-[var(--ui-text-inverse)] m-0 mb-4 uppercase tracking-widest opacity-60">Enforced Frameworks</h3>
+                <div className="flex flex-col gap-2">
                   {complianceStatus?.frameworks?.map((fw: any) => (
-                    <div key={fw.id} style={{ padding: 16, background: 'var(--surface-panel)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ fontSize: 14, color: 'var(--ui-text-inverse)' }}>{fw.name}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div style={{ width: 100, height: 6, background: 'var(--surface-hover)', borderRadius: 3 }}>
-                          <div style={{ width: `${fw.score}%`, height: '100%', background: fw.score >= 80 ? 'var(--status-success)' : fw.score >= 60 ? 'var(--status-warning)' : 'var(--status-error)', borderRadius: 3 }} />
+                    <div key={fw.id} className="p-4 bg-[var(--surface-panel)] rounded-xl border border-solid border-[var(--ui-border-muted)] flex items-center justify-between hover:bg-white/[0.02] transition-colors">
+                      <div className="text-sm font-bold text-[var(--ui-text-inverse)]">{fw.name}</div>
+                      <div className="flex items-center gap-6">
+                        <div className="w-32 h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                          <div className={cn(
+                            "h-full rounded-full transition-all duration-1000 ease-in-out",
+                            fw.score >= 80 ? "bg-[var(--status-success)]" : fw.score >= 60 ? "bg-[var(--status-warning)]" : "bg-[var(--status-error)]"
+                          )} style={{ width: `${fw.score}%` }} />
                         </div>
-                        <span style={{ fontSize: 14, fontWeight: 600, color: fw.score >= 80 ? 'var(--status-success)' : fw.score >= 60 ? 'var(--status-warning)' : 'var(--status-error)' }}>{fw.score}%</span>
+                        <span className={cn(
+                          "text-sm font-black tabular-nums min-w-[3ch] text-right",
+                          fw.score >= 80 ? "text-[var(--status-success)]" : fw.score >= 60 ? "text-[var(--status-warning)]" : "text-[var(--status-error)]"
+                        )}>{fw.score}%</span>
                       </div>
                     </div>
                   ))}
@@ -1741,165 +1894,112 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   };
 
   const renderGizziioCodePanel = () => (
-    <div style={{ maxWidth: '600px' }}>
-      <section style={{ marginBottom: '32px' }}>
-        <ToggleItem label="Allow bypass permissions mode" value={bypassPermissions} onChange={setBypassPermissions} description="Bypass all permission checks" />
-        <ToggleItem label="Draw attention on notifications" value={drawAttentionNotifications} onChange={setDrawAttentionNotifications} description="Bounce dock icon on notifications" />
+    <div className="max-w-xl">
+      <section className="mb-10">
+        <ToggleItem label="Allow bypass permissions mode" value={bypassPermissions} onChange={setBypassPermissions} description="Bypass all permission checks (Developer only)" />
+        <ToggleItem label="Draw attention on notifications" value={drawAttentionNotifications} onChange={setDrawAttentionNotifications} description="Bounce dock icon on important agent notifications" />
       </section>
 
-      {/* Authorized Apps */}
-      <section style={{ marginBottom: '32px' }}>
-        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 16 }}>
-          Authorized Apps
+      <section className="mb-10">
+        <div className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-widest font-black mb-4 opacity-60">
+          Authorized API Access
         </div>
-        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: 10, overflow: 'hidden' }}>
-          <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--surface-canvas)', border: '1px solid var(--ui-border-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Code size={18} color="var(--accent-primary)" />
+        <div className="bg-[var(--bg-secondary)] border border-solid border-[var(--border-subtle)] rounded-xl overflow-hidden shadow-lg">
+          <div className="p-5 px-6 flex items-center gap-4">
+            <div className="size-11 rounded-xl bg-[var(--surface-canvas)] border border-solid border-[var(--ui-border-muted)] flex items-center justify-center shadow-inner shrink-0">
+              <Code size={22} className="text-[var(--accent-primary)]" weight="bold" />
             </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>Gizzi Code</div>
-              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 2 }}>
-                CLI access — reads and writes on your behalf
+            <div className="flex-1 min-w-0">
+              <div className="text-[14px] font-black text-[var(--text-primary)] uppercase tracking-tight">Gizzi Code CLI</div>
+              <div className="text-[12px] text-[var(--text-tertiary)] mt-0.5 leading-snug">
+                Full repository access — reads, writes, and deploys on your behalf.
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div className="flex items-center gap-3">
               {gizziRevokeState === 'done' && (
-                <span style={{ fontSize: 12, color: 'var(--status-success)' }}>Access revoked</span>
+                <span className="text-[11px] font-bold text-[var(--status-success)] uppercase tracking-widest animate-pulse">Revoked</span>
               )}
               {gizziRevokeState === 'error' && (
-                <span style={{ fontSize: 12, color: 'var(--status-error)' }}>Failed — try again</span>
+                <span className="text-[11px] font-bold text-[var(--status-error)] uppercase tracking-widest">Failed</span>
               )}
               <button
                 onClick={handleRevokeGizziAccess}
                 disabled={gizziRevokeState === 'loading' || gizziRevokeState === 'done'}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: 6,
-                  border: '1px solid color-mix(in srgb, var(--status-error) 38%, transparent)',
-                  background: 'var(--status-error-bg)',
-                  color: gizziRevokeState === 'done' ? 'var(--ui-text-muted)' : 'var(--status-error)',
-                  fontSize: 13,
-                  cursor: (gizziRevokeState === 'loading' || gizziRevokeState === 'done') ? 'not-allowed' : 'pointer',
-                  opacity: (gizziRevokeState === 'loading' || gizziRevokeState === 'done') ? 0.6 : 1,
-                  fontFamily: 'inherit',
-                  transition: 'all 0.15s',
-                }}
+                className={cn(
+                  "p-2 px-4 rounded-lg border border-solid text-[13px] font-bold font-sans transition-all active:scale-95",
+                  gizziRevokeState === 'done' 
+                    ? "border-zinc-800 text-zinc-600 cursor-not-allowed bg-transparent" 
+                    : "border-rose-500/30 bg-[var(--status-error-bg)] text-[var(--status-error)] cursor-pointer hover:bg-rose-500/10",
+                  gizziRevokeState === 'loading' && "opacity-50 cursor-wait"
+                )}
               >
                 {gizziRevokeState === 'loading' ? 'Revoking…' : 'Revoke Access'}
               </button>
             </div>
           </div>
         </div>
-        <p style={{ fontSize: 12, color: 'var(--text-tertiary)', margin: '10px 0 0', lineHeight: 1.5 }}>
+        <p className="text-[12px] text-[var(--text-tertiary)] m-0 mt-3 leading-relaxed opacity-60">
           Revoking access signs Gizzi Code out on all machines. Re-authorize by running{' '}
-          <code style={{ fontFamily: 'var(--font-mono)', background: 'var(--bg-secondary)', padding: '1px 5px', borderRadius: 3 }}>gizzi login</code>.
+          <code className="font-mono bg-[var(--bg-secondary)] p-0.5 px-1.5 rounded border border-solid border-[var(--border-subtle)] text-[var(--text-primary)]">gizzi login</code>.
         </p>
       </section>
     </div>
   );
 
   const renderCoworkPanel = () => (
-    <div style={{ maxWidth: '600px' }}>
-      <section style={{ marginBottom: '32px' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--ui-text-primary)' }}>Cowork</h3>
-        <p style={{ fontSize: '13px', color: 'var(--ui-text-muted)' }}>Manage Cowork settings</p>
+    <div className="max-w-xl">
+      <section className="mb-10">
+        <h3 className="text-base font-bold text-[var(--ui-text-primary)] m-0">Collaborative Workspace</h3>
+        <p className="text-[13px] text-[var(--ui-text-muted)] m-0 mt-1">Configure real-time agent coordination and shared task state settings.</p>
+        <div className="mt-8 p-12 text-center bg-black/5 rounded-2xl border border-dashed border-white/10 text-[13px] text-[var(--ui-text-muted)] italic">
+          Cowork settings are managed per-project.
+        </div>
       </section>
     </div>
   );
 
   const renderExtensionsPanel = () => (
-    <div style={{ maxWidth: '600px' }}>
-      <section style={{ marginBottom: '32px' }}>
-        <ToggleItem label="Enable auto-updates for extensions" value={autoUpdateExtensions} onChange={setAutoUpdateExtensions} description="Automatically update extensions" />
-        <ToggleItem label="Use Built-in Node.js for MCP" value={useBuiltinNode} onChange={setUseBuiltinNode} description="Use bundled Node.js runtime" />
+    <div className="max-w-xl">
+      <section className="mb-10">
+        <ToggleItem label="Enable auto-updates for extensions" value={autoUpdateExtensions} onChange={setAutoUpdateExtensions} description="Background update all marketplace and sidecar extensions" />
+        <ToggleItem label="Use Built-in Node.js for MCP" value={useBuiltinNode} onChange={setUseBuiltinNode} description="Ensure stability by using Allternit's verified runtime" />
       </section>
     </div>
   );
 
   const renderBillingPanel = () => (
-    <div style={{ maxWidth: '600px' }}>
-      <section style={{ marginBottom: '32px' }}>
-        <h3 style={{ fontSize: '16px', fontWeight: '600', color: 'var(--ui-text-primary)' }}>Current Plan</h3>
-        <div style={{ padding: '24px', background: 'linear-gradient(135deg, #252525 0%, #1f1f1f 100%)', borderRadius: '12px', border: '1px solid var(--ui-border-muted)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ fontSize: '13px', color: 'var(--accent-primary)', fontWeight: '500' }}>Pro Plan</div>
-              <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--ui-text-primary)' }}>$20 <span style={{ fontSize: '14px', color: 'var(--ui-text-muted)' }}>/ month</span></div>
-            </div>
-            <span style={{ padding: '4px 12px', background: 'var(--status-success)20', borderRadius: '12px', fontSize: '12px', color: 'var(--status-success)' }}>Active</span>
+    <div className="max-w-xl">
+      <section className="mb-10">
+        <h3 className="text-base font-bold text-[var(--ui-text-primary)] m-0 mb-6">Subscription & Usage</h3>
+        <div className="p-8 bg-gradient-to-br from-zinc-800 to-black rounded-2xl border border-solid border-white/10 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-10">
+             <ChartBar size={100} weight="thin" />
           </div>
+          <div className="flex items-center justify-between relative z-10">
+            <div>
+              <div className="text-[11px] font-black text-[var(--accent-primary)] uppercase tracking-[0.2em] mb-1">Active Tier</div>
+              <div className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                Allternit Pro <ShieldCheck size={20} weight="fill" className="text-[var(--accent-primary)]" />
+              </div>
+              <div className="text-sm text-white/50 mt-4 font-medium">$20.00 / month • Renews June 12</div>
+            </div>
+            <span className="p-1.5 px-4 bg-emerald-500/20 text-emerald-400 rounded-full text-[12px] font-black uppercase tracking-widest border border-solid border-emerald-500/20 shadow-lg shadow-emerald-500/5">
+              Active
+            </span>
+          </div>
+          <button className="mt-8 w-full p-2.5 rounded-lg border-none bg-white text-black text-[13px] font-black cursor-pointer hover:bg-zinc-200 active:scale-[0.98] transition-all">Manage Billing Portal</button>
         </div>
       </section>
     </div>
   );
 
   const renderUsagePanel = () => (
-    <div style={{ maxWidth: '800px' }}>
+    <div className="max-w-3xl">
       <ResourceUsageDashboard />
     </div>
   );
 
-  const renderDiagnosticsPanel = () => {
-    const [, setSysInfo] = useState<any>(null);
-    useEffect(() => {
-      if (typeof window !== 'undefined' && (window as any).allternit?.connection?.getSystemInfo) {
-        (window as any).allternit.connection.getSystemInfo().then(setSysInfo);
-      }
-    }, []);
-
-    return (
-      <div style={{ maxWidth: '600px' }}>
-        <section style={{ marginBottom: '32px' }}>
-          <h3 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--ui-text-primary)', marginBottom: '16px' }}>Telemetry & System</h3>
-          <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '10px', overflow: 'hidden' }}>
-            <DiagnosticRow label="App Version" value="v0.9.1-beta" />
-            <DiagnosticRow label="Platform" value={typeof window !== 'undefined' && (window as any).allternit?.backend ? 'Desktop (Native)' : 'Web'} />
-            <DiagnosticRow label="Kernel State" value="Operational (Port 3004)" status="success" />
-            <DiagnosticRow label="Memory Bridge" value="Connected (Port 3201)" status="success" />
-            <DiagnosticRow label="Gateway Sync" value="Healthy (Port 8013)" status="success" />
-          </div>
-        </section>
-
-        <section>
-          <h3 style={{ fontSize: '14px', fontWeight: '600', color: 'var(--ui-text-primary)', marginBottom: '16px' }}>Session Metrics</h3>
-          <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-subtle)', borderRadius: '10px', padding: '16px' }}>
-             <MetricBar label="Active Memory Ingestion" value={92} />
-             <MetricBar label="Tool Execution Success" value={98} />
-             <MetricBar label="Context Recall Latency" value={15} suffix="ms" inverse />
-          </div>
-        </section>
-      </div>
-    );
-  };
-
-  const DiagnosticRow = ({ label, value, status }: { label: string, value: string, status?: 'success' | 'warning' | 'error' }) => (
-    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--border-subtle)' }}>
-      <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{label}</span>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        {status && <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: status === 'success' ? 'var(--status-success)' : status === 'warning' ? 'var(--status-warning)' : 'var(--status-error)' }} />}
-        <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>{value}</span>
-      </div>
-    </div>
-  );
-
-  const MetricBar = ({ label, value, suffix = '%', inverse = false }: { label: string, value: number, suffix?: string, inverse?: boolean }) => {
-    const color = inverse 
-      ? (value < 50 ? 'var(--status-success)' : value < 100 ? 'var(--status-warning)' : 'var(--status-error)')
-      : (value > 80 ? 'var(--status-success)' : value > 50 ? 'var(--status-warning)' : 'var(--status-error)');
-    
-    return (
-      <div style={{ marginBottom: '16px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-          <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{label}</span>
-          <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-primary)' }}>{value}{suffix}</span>
-        </div>
-        <div style={{ height: '4px', background: 'var(--bg-primary)', borderRadius: '2px', overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${Math.min(100, value)}%`, backgroundColor: color, transition: 'width 0.5s ease-out' }} />
-        </div>
-      </div>
-    );
-  };
+  
 
   const renderContent = () => {
     switch (activeSection) {
@@ -1908,14 +2008,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       case 'models': return renderModelsPanel();
       case 'api-keys': return renderApiKeysPanel();
       case 'shortcuts': return renderShortcutsPanel();
-      case 'permissions': return renderPermissionsPanel();
+      case 'permissions': return <PermissionsPanel />;
       case 'gizziio-code': return renderGizziioCodePanel();
       case 'cowork': return renderCoworkPanel();
       case 'extensions': return renderExtensionsPanel();
       case 'billing': return renderBillingPanel();
       case 'usage': return renderUsagePanel();
-      case 'diagnostics': return renderDiagnosticsPanel();
-      case 'infrastructure': return <ToastProvider><InfrastructureSettings initialTab={infrastructureTab as 'overview' | 'providers' | 'connections' | 'environments' | 'nodes' | undefined} /></ToastProvider>;
+      case 'diagnostics': return <DiagnosticsPanel />;
+      case 'infrastructure': return <ToastProvider><InfrastructureSettings initialTab={infrastructureTab as any} /></ToastProvider>;
       case 'security': return <ToastProvider>{renderSecurityPanel()}</ToastProvider>;
       case 'agents': return <ToastProvider>{renderAgentsPanel()}</ToastProvider>;
       case 'about': return renderAboutPanel();
@@ -1925,77 +2025,70 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   };
 
-  const StatCard = ({ label, value, color }: { label: string; value: string | number; color: string }) => (
-    <div style={{ padding: 20, background: 'var(--bg-secondary)', borderRadius: 8, textAlign: 'center' }}>
-      <div style={{ fontSize: 28, fontWeight: 700, color }}>{value}</div>
-      <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 4 }}>{label}</div>
-    </div>
-  );
-
   const navigationItems = SETTINGS_NAV_ITEMS;
 
   return (
-    <div style={{ height: '100vh', backgroundColor: 'var(--view-settings-bg, var(--surface-canvas))', overflow: 'hidden', position: 'relative', color: 'var(--text-primary)' }}>
-
-      <div style={{ display: 'flex', justifyContent: 'center', height: '100%', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', width: '100%', maxWidth: '1200px', minWidth: '600px', height: '100%', margin: '0 auto' }}>
-        <div style={{ width: '220px', minWidth: '180px', height: '100%', backgroundColor: 'transparent', padding: '16px 16px 32px', overflowY: 'auto', flexShrink: 0 }}>
-          <div style={{ padding: '0 4px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: 10 }}>
-            <button
-              onClick={() => window.dispatchEvent(new CustomEvent('allternit:close-settings'))}
-              style={{
-                width: 28,
-                height: 28,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: 6,
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--text-tertiary)',
-                cursor: 'pointer',
-                flexShrink: 0,
-              }}
-              aria-label="Back"
-            >
-              <CaretRight size={16} style={{ transform: 'rotate(180deg)' }} />
-            </button>
-            <span style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>Settings</span>
+    <div className="h-screen bg-[var(--view-settings-bg,var(--surface-canvas))] overflow-hidden relative text-[var(--text-primary)] font-sans">
+      <div className="flex justify-center h-full overflow-hidden">
+        <div className="flex w-full max-w-[1200px] min-w-[600px] h-full mx-auto">
+          {/* Sidebar Nav */}
+          <div className="w-[220px] min-w-[180px] h-full bg-transparent p-4 pb-8 overflow-y-auto shrink-0 no-scrollbar border-r border-solid border-white/[0.03]">
+            <div className="px-1 mb-6 flex items-center gap-2.5">
+              <button
+                onClick={() => window.dispatchEvent(new CustomEvent('allternit:close-settings'))}
+                className="size-7 flex items-center justify-center rounded-lg bg-transparent border-none text-[var(--text-tertiary)] cursor-pointer shrink-0 hover:bg-white/5 active:scale-95 transition-all"
+                aria-label="Back"
+              >
+                <CaretRight size={16} className="rotate-180" weight="bold" />
+              </button>
+              <span className="text-[15px] font-black text-[var(--text-primary)] uppercase tracking-tight">System Settings</span>
+            </div>
+            
+            <nav className="flex flex-col gap-0.5">
+              <div className="mb-2">
+                {navigationItems.filter((i: any) => i.group === 'account').map((item: any) => (
+                  <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />
+                ))}
+              </div>
+              <div className="h-px bg-white/5 my-3 mx-2" />
+              <div className="mb-2">
+                {navigationItems.filter((i: any) => i.group === 'platform').map((item: any) => (
+                  <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />
+                ))}
+              </div>
+              <div className="h-px bg-white/5 my-3 mx-2" />
+              <div className="mb-2">
+                <div className="p-2 px-3 text-[10px] font-black text-[var(--text-tertiary)] uppercase tracking-[0.2em] opacity-40 mb-1">Products</div>
+                {navigationItems.filter((i: any) => i.group === 'products').map((item: any) => (
+                  <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />
+                ))}
+              </div>
+              <div className="h-px bg-white/5 my-3 mx-2" />
+              <div className="mb-2">
+                <div className="p-2 px-3 text-[10px] font-black text-[var(--text-tertiary)] uppercase tracking-[0.2em] opacity-40 mb-1">Infrastructure</div>
+                {navigationItems.filter((i: any) => i.group === 'infrastructure').map((item: any) => (
+                  <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />
+                ))}
+              </div>
+              <div className="h-px bg-white/5 my-3 mx-2" />
+              <div>
+                {navigationItems.filter((i: any) => i.group === 'about').map((item: any) => (
+                  <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />
+                ))}
+              </div>
+            </nav>
           </div>
-          <nav style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-            <div style={{ marginBottom: '8px' }}>
-              {navigationItems.filter((i: any) => i.group === 'account').map((item: any) => <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />)}
-            </div>
-            <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '12px 0' }} />
-            <div style={{ marginBottom: '8px' }}>
-              {navigationItems.filter((i: any) => i.group === 'platform').map((item: any) => <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />)}
-            </div>
-            <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '12px 0' }} />
-            <div style={{ marginBottom: '8px' }}>
-              <div style={{ padding: '8px 12px', fontSize: '11px', color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Products</div>
-              {navigationItems.filter((i: any) => i.group === 'products').map((item: any) => <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />)}
-            </div>
-            <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '12px 0' }} />
-            <div style={{ marginBottom: '8px' }}>
-              <div style={{ padding: '8px 12px', fontSize: '11px', color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Infrastructure</div>
-              {navigationItems.filter((i: any) => i.group === 'infrastructure').map((item: any) => <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />)}
-            </div>
-            <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '12px 0' }} />
-            <div>
-              {navigationItems.filter((i: any) => i.group === 'about').map((item: any) => <NavButton key={item.id} item={item} activeSection={activeSection} onClick={() => setActiveSection(item.id)} />)}
-            </div>
-          </nav>
-        </div>
 
-        <div style={{ flex: 1, minWidth: '0', height: '100%', overflowY: 'auto' }}>
-          <div style={{ padding: '32px 48px 120px', width: '100%', maxWidth: '800px' }}>
-            <h1 style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)', margin: '0 0 32px 0' }}>
-              {navigationItems.find((item: any) => item.id === activeSection)?.label}
-            </h1>
-            {renderContent()}
+          {/* Content Area */}
+          <div className="flex-1 min-w-0 h-full overflow-y-auto bg-[radial-gradient(circle_at_top_right,rgba(212,176,140,0.03),transparent_600px)]">
+            <div className="p-8 px-12 pb-32 w-full max-w-3xl">
+              <h1 className="text-xl font-black text-[var(--text-primary)] m-0 mb-8 uppercase tracking-widest opacity-80">
+                {navigationItems.find((item: any) => item.id === activeSection)?.label}
+              </h1>
+              {renderContent()}
+            </div>
           </div>
         </div>
-      </div>
       </div>
     </div>
   );

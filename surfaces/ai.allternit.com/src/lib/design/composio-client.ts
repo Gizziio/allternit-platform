@@ -14,9 +14,9 @@ async function getComposioSDK() {
   try {
     const mod = await import('@composio/core');
     sdkModule = mod;
-    console.log('[Composio] SDK loaded');
+    console.debug('[Composio] SDK loaded');
   } catch {
-    console.log('[Composio] SDK not installed, using fetch fallback');
+    console.debug('[Composio] SDK not installed, using fetch fallback');
     sdkModule = null;
   }
   return sdkModule;

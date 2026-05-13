@@ -48,7 +48,7 @@ function gradeStyle(grade: string): React.CSSProperties {
     background: style.bg,
     border: `1px solid ${style.border}`,
     color: style.color,
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: 700,
     fontFamily: 'var(--font-mono)',
     letterSpacing: '0.06em',
@@ -136,7 +136,7 @@ export function ConformanceDashboard() {
     }}>
       {/* Header row */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-        <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(212,176,140,0.7)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(212,176,140,0.7)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
           Conformance
         </span>
         <div style={{ display: 'flex', gap: 4 }}>
@@ -147,7 +147,7 @@ export function ConformanceDashboard() {
               disabled={running !== null}
               style={{
                 padding: '2px 7px',
-                fontSize: 9,
+                fontSize: 12,
                 fontFamily: 'var(--font-mono)',
                 fontWeight: 700,
                 background: running === `suite-${s}` ? 'rgba(99,252,241,0.15)' : 'var(--surface-hover)',
@@ -167,7 +167,7 @@ export function ConformanceDashboard() {
             disabled={loading}
             style={{
               padding: '2px 7px',
-              fontSize: 9,
+              fontSize: 12,
               fontFamily: 'var(--font-mono)',
               background: 'var(--surface-hover)',
               border: '1px solid var(--ui-border-default)',
@@ -188,7 +188,7 @@ export function ConformanceDashboard() {
           background: 'var(--status-error-bg)',
           border: '1px solid rgba(239,68,68,0.2)',
           borderRadius: 5,
-          fontSize: 9,
+          fontSize: 12,
           color: 'rgba(239,68,68,0.75)',
           marginBottom: 8,
         }}>
@@ -198,14 +198,14 @@ export function ConformanceDashboard() {
 
       {/* Loading state */}
       {loading && grades.length === 0 && (
-        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)', padding: '6px 0' }}>
+        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.2)', padding: '6px 0' }}>
           Loading…
         </div>
       )}
 
       {/* Empty state */}
       {!loading && grades.length === 0 && !error && (
-        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.2)', padding: '6px 0' }}>
+        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.2)', padding: '6px 0' }}>
           No conformance results yet. Run a suite to generate data.
         </div>
       )}
@@ -216,7 +216,7 @@ export function ConformanceDashboard() {
           <table style={{
             width: '100%',
             borderCollapse: 'collapse',
-            fontSize: 9,
+            fontSize: 12,
           }}>
             <thead>
               <tr style={{ borderBottom: '1px solid color-mix(in srgb, var(--accent-primary) 10%, transparent)' }}>

@@ -77,7 +77,7 @@ class TerminalNotifications {
         ? `✅ Command Complete` 
         : `❌ Command Failed`;
       
-      const body = `"${tracker.command.slice(0, 50)}${tracker.command.length > 50 ? '...' : ''}" ${exitCode === 0 ? 'finished' : `exited with code ${exitCode}`} in ${this.formatDuration(duration)}`;
+      const body = `"${tracker.command.slice(0, 50)}${tracker.command.length > 50 ? '…' : ''}" ${exitCode === 0 ? 'finished' : `exited with code ${exitCode}`} in ${this.formatDuration(duration)}`;
       
       this.show(title, body);
       this.playSound(exitCode === 0 ? 'success' : 'error');

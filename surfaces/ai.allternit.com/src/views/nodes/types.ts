@@ -55,7 +55,7 @@ export type NodeStatus = 'online' | 'offline' | 'busy' | 'maintenance' | 'error'
 
 export const statusColors: Record<NodeStatus, string> = {
   online: 'bg-green-500',
-  offline: 'bg-gray-400',
+  offline: 'bg-zinc-400',
   busy: 'bg-yellow-500',
   maintenance: 'bg-blue-500',
   error: 'bg-red-500',

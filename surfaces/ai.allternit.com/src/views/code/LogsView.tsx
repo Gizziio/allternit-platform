@@ -80,7 +80,7 @@ export function LogsView() {
             type="text"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            placeholder="Filter logs..."
+            placeholder="Filter logs…"
             style={{
               flex: 1,
               background: 'transparent',
@@ -194,7 +194,7 @@ export function LogsView() {
               <span style={{ 
                 opacity: 0.5, 
                 minWidth: 80,
-                fontSize: 11
+                fontSize: 12
               }}>
                 {new Date(log.timestamp).toLocaleTimeString()}
               </span>
@@ -209,7 +209,7 @@ export function LogsView() {
               <span style={{ 
                 color: getSourceColor(log.source),
                 width: 50,
-                fontSize: 10,
+                fontSize: 12,
                 opacity: 0.7
               }}>
                 [{log.source}]

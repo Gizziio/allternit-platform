@@ -1,6 +1,6 @@
 import { GCAgentsSurface } from "./DagRuntimeWorkspace";
 
-export function GCAgents() {
+export function GCAgents(): JSX.Element {
   return <GCAgentsSurface />;
 }
 

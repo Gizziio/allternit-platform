@@ -287,7 +287,7 @@ RED='\\033[0;31m'
 GREEN='\\033[0;32m'
 NC='\\033[0m'
 
-echo -e "\${RED}Uninstalling Allternit Agent...\${NC}"
+echo -e "\${RED}Uninstalling Allternit Agent…\${NC}"
 
 # Stop services
 systemctl stop allternit-agent 2>/dev/null || true

@@ -1,5 +1,6 @@
 "use client";
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useMemo, useState } from "react";
 import { X } from "@phosphor-icons/react";
 import { useCodeSessionStore } from "./CodeSessionStore";
@@ -375,12 +376,12 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
                 borderTop: "1px solid var(--ui-border-muted, rgba(154,118,88,0.1))",
               }}
             >
-              <span style={{ fontSize: 11, color: "var(--ui-text-muted, #9A7658)" }}>
+              <span style={{ fontSize: 12, color: "var(--ui-text-muted, #9A7658)" }}>
                 You&apos;ve used ~{Math.max(1, Math.round(metrics.tokens / 576_000))}× more tokens than{" "}
                 <em>The Lord of the Rings</em>.
               </span>
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ fontSize: 10, color: "var(--ui-text-muted, #9A7658)" }}>Less</span>
+                <span style={{ fontSize: 12, color: "var(--ui-text-muted, #9A7658)" }}>Less</span>
                 {[0.15, 0.4, 0.65, 1].map((r) => (
                   <div
                     key={r}
@@ -395,7 +396,7 @@ export function CodeUsageDashboard({ onClose }: { onClose?: () => void }) {
                     }}
                   />
                 ))}
-                <span style={{ fontSize: 10, color: "var(--ui-text-muted, #9A7658)" }}>More</span>
+                <span style={{ fontSize: 12, color: "var(--ui-text-muted, #9A7658)" }}>More</span>
               </div>
             </div>
           </div>
@@ -473,7 +474,7 @@ function MetricCard({ label, value }: { label: string; value: string }) {
     >
       <div
         style={{
-          fontSize: 11,
+          fontSize: 12,
           color: "var(--ui-text-muted, #9A7658)",
           lineHeight: 1.2,
           fontWeight: 500,

@@ -92,10 +92,10 @@ export function LiveArtifactEditor() {
           onChange={e => setName(e.target.value)}
           style={{ background: 'transparent', border: 'none', fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', outline: 'none', flex: 1 }}
         />
-        <button onClick={handleNew} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'transparent', fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', cursor: 'pointer' }}>
+        <button onClick={handleNew} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border-subtle)', background: 'transparent', fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', cursor: 'pointer' }}>
           <Plus size={12} /> New
         </button>
-        <button onClick={handleSave} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', borderRadius: 6, border: 'none', background: 'var(--accent-primary)', color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+        <button onClick={handleSave} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '6px 12px', borderRadius: 6, border: 'none', background: 'var(--accent-primary)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
           <FloppyDisk size={12} /> Save
         </button>
       </div>
@@ -104,7 +104,7 @@ export function LiveArtifactEditor() {
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
         {/* Left: Template editor */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border-subtle)', minWidth: 0 }}>
-          <div style={{ padding: '6px 12px', fontSize: 10, fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em', background: 'var(--bg-secondary)' }}>Template</div>
+          <div style={{ padding: '6px 12px', fontSize: 12, fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em', background: 'var(--bg-secondary)' }}>Template</div>
           <textarea
             value={template}
             onChange={e => setTemplate(e.target.value)}
@@ -114,7 +114,7 @@ export function LiveArtifactEditor() {
 
         {/* Right: Preview */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          <div style={{ padding: '6px 12px', fontSize: 10, fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em', background: 'var(--bg-secondary)' }}>Live Preview</div>
+          <div style={{ padding: '6px 12px', fontSize: 12, fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em', background: 'var(--bg-secondary)' }}>Live Preview</div>
           <div style={{ flex: 1, padding: 12, display: 'flex', flexDirection: 'column' }}>
             <ArtifactPreviewPane html={renderedHtml} title="Live Preview" identifier="live-preview" height="100%" />
           </div>
@@ -124,7 +124,7 @@ export function LiveArtifactEditor() {
       {/* Bottom: Data editor + saved list */}
       <div style={{ height: 180, borderTop: '1px solid var(--border-subtle)', display: 'flex', flexShrink: 0 }}>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', borderRight: '1px solid var(--border-subtle)', minWidth: 0 }}>
-          <div style={{ padding: '6px 12px', fontSize: 10, fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em', background: 'var(--bg-secondary)' }}>Data (JSON)</div>
+          <div style={{ padding: '6px 12px', fontSize: 12, fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em', background: 'var(--bg-secondary)' }}>Data (JSON)</div>
           <textarea
             value={dataJson}
             onChange={e => setDataJson(e.target.value)}
@@ -132,12 +132,12 @@ export function LiveArtifactEditor() {
           />
         </div>
         <div style={{ width: 220, display: 'flex', flexDirection: 'column', background: 'var(--bg-secondary)', overflowY: 'auto' }}>
-          <div style={{ padding: '6px 12px', fontSize: 10, fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Saved ({artifacts.length})</div>
+          <div style={{ padding: '6px 12px', fontSize: 12, fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Saved ({artifacts.length})</div>
           {artifacts.map(a => (
             <button
               key={a.id}
               onClick={() => handleLoad(a)}
-              style={{ padding: '8px 12px', textAlign: 'left', border: 'none', background: 'transparent', borderBottom: '1px solid var(--border-subtle)', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer' }}
+              style={{ padding: '8px 12px', textAlign: 'left', border: 'none', background: 'transparent', borderBottom: '1px solid var(--border-subtle)', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', cursor: 'pointer' }}
             >
               {a.name}
             </button>

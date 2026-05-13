@@ -236,7 +236,7 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       },
       onCustom: {
         connected: () => {
-          console.log('[BoardStream] Connected to', workspaceId);
+          console.debug('[BoardStream] Connected to', workspaceId);
         },
         heartbeat: () => {
           // keepalive

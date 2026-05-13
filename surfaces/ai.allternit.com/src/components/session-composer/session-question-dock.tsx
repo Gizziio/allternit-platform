@@ -129,7 +129,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
             Question
           </span>
           {!isSingle && (
-            <span className="text-[11px] text-[var(--text-tertiary)]">
+            <span className="text-[12px] text-[var(--text-tertiary)]">
               {answeredCount} / {questions.length} answered
             </span>
           )}
@@ -137,7 +137,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
         <button
           data-slot="dismiss"
           onClick={onReject}
-          className="flex items-center gap-1 text-[11px] text-[var(--text-tertiary)] hover:text-[var(--status-error)] transition-colors"
+          className="flex items-center gap-1 text-[12px] text-[var(--text-tertiary)] hover:text-[var(--status-error)] transition-colors"
         >
           <X size={12} />
           dismiss
@@ -156,7 +156,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
                 data-slot={`tab-${i}`}
                 onClick={() => setTab(i)}
                 className={cn(
-                  "shrink-0 px-3 h-7 rounded-[8px] text-[11px] font-medium transition-colors",
+                  "shrink-0 px-3 h-7 rounded-[8px] text-[12px] font-medium transition-colors",
                   isActive
                     ? "bg-[var(--accent-chat)] text-white"
                     : isAnswered
@@ -172,7 +172,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
             data-slot="tab-confirm"
             onClick={() => setTab(questions.length)}
             className={cn(
-              "shrink-0 px-3 h-7 rounded-[8px] text-[11px] font-medium transition-colors",
+              "shrink-0 px-3 h-7 rounded-[8px] text-[12px] font-medium transition-colors",
               isConfirmTab
                 ? "bg-[var(--accent-chat)] text-white"
                 : "bg-transparent text-[var(--text-tertiary)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-secondary)]",
@@ -201,7 +201,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
               const answer = st.answers[i]?.join(", ") ?? "";
               return (
                 <div key={i} className="flex flex-col gap-0.5">
-                  <span className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-wide">
+                  <span className="text-[12px] text-[var(--text-tertiary)] uppercase tracking-wide">
                     {q.header}
                   </span>
                   <span
@@ -228,7 +228,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
             <p className="text-[13px] text-[var(--text-primary)] leading-snug">
               {currentQuestion.question}
               {isMulti && (
-                <span className="ml-1.5 text-[11px] text-[var(--text-tertiary)]">
+                <span className="ml-1.5 text-[12px] text-[var(--text-tertiary)]">
                   (select multiple)
                 </span>
               )}
@@ -253,7 +253,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
                       <span className="flex items-center gap-2">
                         <span
                           className={cn(
-                            "text-[11px] font-mono shrink-0",
+                            "text-[12px] font-mono shrink-0",
                             isPicked
                               ? "text-[var(--accent-chat)]"
                               : "text-[var(--text-tertiary)]",
@@ -273,7 +273,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
                             <span className="inline-flex items-center gap-1.5">
                               <span
                                 className={cn(
-                                  "inline-flex items-center justify-center w-3.5 h-3.5 rounded-sm border text-[9px]",
+                                  "inline-flex items-center justify-center size-3.5  rounded-sm border text-xs",
                                   isPicked
                                     ? "bg-[var(--accent-chat)] border-[var(--accent-chat)] text-white"
                                     : "border-[var(--border-strong)] text-transparent",
@@ -293,7 +293,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
                       )}
                     </div>
                     {opt.description && (
-                      <p className="mt-0.5 ml-5 text-[11px] text-[var(--text-tertiary)] leading-snug">
+                      <p className="mt-0.5 ml-5 text-[12px] text-[var(--text-tertiary)] leading-snug">
                         {opt.description}
                       </p>
                     )}
@@ -337,13 +337,13 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
                       <div className="flex justify-end gap-2 mt-1">
                         <button
                           onClick={() => setSt((prev) => ({ ...prev, editingCustom: false }))}
-                          className="text-[11px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
+                          className="text-[12px] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors"
                         >
                           cancel
                         </button>
                         <button
                           onClick={() => confirmCustom(st.customInputs[st.tab] ?? "")}
-                          className="text-[11px] text-[var(--accent-chat)] font-medium hover:opacity-80 transition-opacity"
+                          className="text-[12px] text-[var(--accent-chat)] font-medium hover:opacity-80 transition-opacity"
                         >
                           confirm
                         </button>
@@ -362,7 +362,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
                       )}
                     >
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-mono text-[var(--text-tertiary)]">
+                        <span className="text-[12px] font-mono text-[var(--text-tertiary)]">
                           {options.length + 1}.
                         </span>
                         <span className="text-[13px] text-[var(--text-secondary)] flex items-center gap-1.5">
@@ -370,7 +370,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
                           <CaretRight size={11} className="opacity-50" />
                         </span>
                         {st.customInputs[st.tab] && (
-                          <span className="ml-auto text-[11px] text-[var(--text-tertiary)] font-mono truncate max-w-[120px]">
+                          <span className="ml-auto text-[12px] text-[var(--text-tertiary)] font-mono truncate max-w-[120px]">
                             {st.customInputs[st.tab]}
                           </span>
                         )}
@@ -387,7 +387,7 @@ export function SessionQuestionDock({ request, onReply, onReject }: SessionQuest
       {/* Footer */}
       {(!isSingle || isMulti) && (
         <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--border-subtle)] bg-[var(--bg-hover)]">
-          <div className="flex items-center gap-3 text-[11px] text-[var(--text-tertiary)]">
+          <div className="flex items-center gap-3 text-[12px] text-[var(--text-tertiary)]">
             {!isSingle && (
               <span>
                 <span className="text-[var(--text-primary)]">⇆</span> switch tab

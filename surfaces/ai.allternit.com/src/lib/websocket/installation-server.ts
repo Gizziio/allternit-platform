@@ -24,13 +24,13 @@ export function createInstallationServer(server: HTTPServer): SocketIOServer {
   });
 
   io.on('connection', (socket: InstallationSocket) => {
-    console.log('[Socket.IO] Client connected:', socket.id);
+    console.debug('[Socket.IO] Client connected:', socket.id);
 
     // Subscribe to installation progress
     socket.on('subscribe', ({ installation_id }: { installation_id: string }) => {
       socket.installationId = installation_id;
       socket.join(`install:${installation_id}`);
-      console.log(`[Socket.IO] Client subscribed to: ${installation_id}`);
+      console.debug(`[Socket.IO] Client subscribed to: ${installation_id}`);
     });
 
     // Start installation
@@ -45,7 +45,7 @@ export function createInstallationServer(server: HTTPServer): SocketIOServer {
       const { installation_id, host, port, username, private_key, password } = data;
       
       socket.join(`install:${installation_id}`);
-      console.log(`[Socket.IO] Starting installation: ${installation_id}`);
+      console.debug(`[Socket.IO] Starting installation: ${installation_id}`);
 
       try {
         const result = await backendInstaller.installBackend(
@@ -74,14 +74,14 @@ export function createInstallationServer(server: HTTPServer): SocketIOServer {
 
     // Abort installation
     socket.on('abort', ({ installation_id }: { installation_id: string }) => {
-      console.log(`[Socket.IO] Aborting installation: ${installation_id}`);
+      console.debug(`[Socket.IO] Aborting installation: ${installation_id}`);
       backendInstaller.abortInstallation(installation_id);
       socket.to(`install:${installation_id}`).emit('aborted');
     });
 
     // Disconnect
     socket.on('disconnect', () => {
-      console.log('[Socket.IO] Client disconnected:', socket.id);
+      console.debug('[Socket.IO] Client disconnected:', socket.id);
     });
   });
 

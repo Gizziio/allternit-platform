@@ -39,8 +39,8 @@ export function EmailDraft({ to, from, subject, body, cc, className, onCopy }: E
     <div className={cn("rounded-xl border border-border bg-card overflow-hidden", className)}>
       {/* Header */}
       <div className="flex items-center gap-2.5 border-b border-border px-4 py-3 bg-muted/30">
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/10">
-          <Envelope className="h-4 w-4 text-primary" />
+        <div className="flex size-7  items-center justify-center rounded-md bg-primary/10">
+          <Envelope className="size-4  text-primary" />
         </div>
         <span className="text-sm font-medium">Email Draft</span>
       </div>
@@ -48,23 +48,23 @@ export function EmailDraft({ to, from, subject, body, cc, className, onCopy }: E
       {/* Fields */}
       <div className="border-b border-border/50 divide-y divide-border/50">
         <div className="flex items-center gap-3 px-4 py-2.5">
-          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground w-12 shrink-0">To</span>
+          <span className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground w-12 shrink-0">To</span>
           <span className="text-sm text-foreground">{to}</span>
         </div>
         {cc && (
           <div className="flex items-center gap-3 px-4 py-2.5">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground w-12 shrink-0">Cc</span>
+            <span className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground w-12 shrink-0">Cc</span>
             <span className="text-sm text-foreground">{cc}</span>
           </div>
         )}
         {from && (
           <div className="flex items-center gap-3 px-4 py-2.5">
-            <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground w-12 shrink-0">From</span>
+            <span className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground w-12 shrink-0">From</span>
             <span className="text-sm text-foreground">{from}</span>
           </div>
         )}
         <div className="flex items-center gap-3 px-4 py-2.5">
-          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground w-12 shrink-0">Re</span>
+          <span className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground w-12 shrink-0">Re</span>
           <span className="text-sm font-medium text-foreground">{subject}</span>
         </div>
       </div>
@@ -81,7 +81,7 @@ export function EmailDraft({ to, from, subject, body, cc, className, onCopy }: E
           onClick={handleOpenGmail}
           className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/20 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/15 transition-colors"
         >
-          <ArrowSquareOut className="h-3 w-3" />
+          <ArrowSquareOut className="size-3 " />
           Open in Gmail
         </button>
         <button
@@ -89,7 +89,7 @@ export function EmailDraft({ to, from, subject, body, cc, className, onCopy }: E
           onClick={handleMailto}
           className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
         >
-          <PaperPlaneTilt className="h-3 w-3" />
+          <PaperPlaneTilt className="size-3 " />
           Mail App
         </button>
         <button
@@ -97,7 +97,7 @@ export function EmailDraft({ to, from, subject, body, cc, className, onCopy }: E
           onClick={handleCopy}
           className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors ml-auto"
         >
-          <Copy className="h-3 w-3" />
+          <Copy className="size-3 " />
           {copied ? 'Copied!' : 'Copy'}
         </button>
       </div>

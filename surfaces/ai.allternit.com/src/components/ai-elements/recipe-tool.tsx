@@ -56,8 +56,8 @@ export function RecipeDraft({
         </div>
       ) : (
         <div className="border-b border-border px-4 py-3 bg-muted/30 flex items-center gap-2.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-orange-500/10">
-            <ForkKnife className="h-4 w-4 text-orange-500" />
+          <div className="flex size-7  items-center justify-center rounded-md bg-orange-500/10">
+            <ForkKnife className="size-4  text-orange-500" />
           </div>
           <div>
             <h3 className="text-sm font-semibold">{name}</h3>
@@ -70,13 +70,13 @@ export function RecipeDraft({
       <div className="flex items-center gap-4 border-b border-border px-4 py-3 bg-muted/10">
         {totalTime > 0 && (
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Clock className="h-3.5 w-3.5" />
+            <Clock className="size-3.5 " />
             <span>{totalTime} min</span>
           </div>
         )}
         {servings && (
           <div className="flex items-center gap-2 ml-auto">
-            <Users className="h-3.5 w-3.5 text-muted-foreground" />
+            <Users className="size-3.5  text-muted-foreground" />
             <button
               type="button"
               onClick={() => setServingMultiplier(m => Math.max(0.5, m - 0.5))}
@@ -99,7 +99,7 @@ export function RecipeDraft({
       <div className="grid grid-cols-[1fr_1.4fr] divide-x divide-border">
         {/* Ingredients */}
         <div className="p-4">
-          <h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2.5">
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2.5">
             Ingredients
           </h4>
           <ul className="space-y-1.5">
@@ -125,10 +125,10 @@ export function RecipeDraft({
         {/* Steps */}
         <div className="p-4">
           <div className="flex items-center justify-between mb-2.5">
-            <h4 className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Steps
             </h4>
-            <span className="text-[10px] text-muted-foreground tabular-nums">
+            <span className="text-xs text-muted-foreground tabular-nums">
               {activeStep + 1}/{steps.length}
             </span>
           </div>
@@ -137,8 +137,8 @@ export function RecipeDraft({
               <p className="text-xs leading-relaxed text-foreground/80">{steps[activeStep].description}</p>
             )}
             {steps[activeStep]?.durationMinutes != null && (
-              <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] text-primary">
-                <Clock className="h-3 w-3" />
+              <div className="mt-2 inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
+                <Clock className="size-3 " />
                 {steps[activeStep]!.durationMinutes} min
               </div>
             )}
@@ -148,9 +148,9 @@ export function RecipeDraft({
               type="button"
               disabled={activeStep === 0}
               onClick={() => setActiveStep(s => s - 1)}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border bg-background hover:bg-muted disabled:opacity-30 transition-colors"
+              className="inline-flex size-7  items-center justify-center rounded-full border border-border bg-background hover:bg-muted disabled:opacity-30 transition-colors"
             >
-              <CaretLeft className="h-3.5 w-3.5" />
+              <CaretLeft className="size-3.5 " />
             </button>
             <div className="flex gap-1 flex-1 justify-center">
               {steps.map((_, i) => (
@@ -169,9 +169,9 @@ export function RecipeDraft({
               type="button"
               disabled={activeStep === steps.length - 1}
               onClick={() => setActiveStep(s => s + 1)}
-              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-border bg-background hover:bg-muted disabled:opacity-30 transition-colors"
+              className="inline-flex size-7  items-center justify-center rounded-full border border-border bg-background hover:bg-muted disabled:opacity-30 transition-colors"
             >
-              <CaretRight className="h-3.5 w-3.5" />
+              <CaretRight className="size-3.5 " />
             </button>
           </div>
         </div>

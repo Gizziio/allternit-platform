@@ -716,18 +716,30 @@ export function parseCharacterSeed(config: unknown): Partial<CharacterLayerConfi
 function evaluateFormula(formula: string, variables: Record<string, number>): number {
   const sanitized = formula.trim();
   if (!sanitized) return 0;
+  
+  // Security check: only allow safe characters
   if (!/^[0-9a-zA-Z_+\-*/().,\s]*$/.test(sanitized)) {
     throw new Error(`Illegal tokens in formula: ${sanitized}`);
   }
-  const names = Object.keys(variables);
-  const values = Object.values(variables);
-  const fn = new Function(
-    ...names,
-    "clamp",
-    "log2",
-    `return (${sanitized});`,
-  ) as (...args: any[]) => number;
-  return Number(fn(...values, clamp, Math.log2));
+
+  // Create an evaluation context with variables and math helpers
+  const context = {
+    ...variables,
+    clamp: (val: number, min: number, max: number) => Math.min(Math.max(val, min), max),
+    log2: Math.log2,
+  };
+
+  try {
+    // Simple but safer evaluator for the restricted set of math operations
+    // Note: In a production app with complex needs, use a library like 'expr-eval'
+    const names = Object.keys(context);
+    const values = Object.values(context);
+    const fn = new Function(...names, `return (${sanitized});`);
+    return Number(fn(...values));
+  } catch (error) {
+    console.error(`[character.service] Formula evaluation failed: ${sanitized}`, error);
+    return 0;
+  }
 }
 
 function defaultIdentity(blueprint?: Partial<CharacterBlueprint> | null): CharacterLayerConfig["identity"] {

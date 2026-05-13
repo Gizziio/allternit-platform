@@ -9,7 +9,7 @@
  *   model?   string   — AI Gateway model slug (default: google/gemini-3.1-flash-image-preview)
  *
  * Response:
- *   { url: string }  — data:image/... base64 URL ready for <img src="">
+ *   { url: string }  — data:image/… base64 URL ready for <img src="">
  */
 
 import { NextRequest, NextResponse } from "next/server";

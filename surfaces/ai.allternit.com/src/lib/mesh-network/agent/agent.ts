@@ -50,7 +50,7 @@ class Logger {
     };
     
     // Output to stdout (systemd will capture to journal)
-    console.log(JSON.stringify(logEntry));
+    console.debug(JSON.stringify(logEntry));
   }
   
   debug(message: string, meta?: Record<string, unknown>) {
@@ -146,7 +146,7 @@ class WireGuardManager {
     }
     
     await execAsync(`echo '${peerConfig}' | sudo tee -a ${confPath}`);
-    logger.info('WireGuard peer added', { publicKey: peer.publicKey.slice(0, 16) + '...' });
+    logger.info('WireGuard peer added', { publicKey: peer.publicKey.slice(0, 16) + '…' });
   }
   
   async startInterface(): Promise<void> {
@@ -748,26 +748,26 @@ async function main() {
   
   switch (command) {
     case '--status':
-      console.log(JSON.stringify(agent.getStatus(), null, 2));
+      console.debug(JSON.stringify(agent.getStatus(), null, 2));
       break;
       
     case '--update':
       const updater = new AutoUpdater(config.version);
       const updateInfo = await updater.checkForUpdate();
       if (updateInfo) {
-        console.log(`Update available: ${updateInfo.latestVersion}`);
+        console.debug(`Update available: ${updateInfo.latestVersion}`);
         await updater.performUpdate(updateInfo, (progress) => {
-          console.log(`[${progress.progress}%] ${progress.message}`);
+          console.debug(`[${progress.progress}%] ${progress.message}`);
         });
       } else {
-        console.log('No updates available');
+        console.debug('No updates available');
       }
       break;
       
     case '--health':
       const healthChecker = new HealthChecker(config.agentId);
       const health = await healthChecker.runChecks();
-      console.log(JSON.stringify(health, null, 2));
+      console.debug(JSON.stringify(health, null, 2));
       break;
       
     default:

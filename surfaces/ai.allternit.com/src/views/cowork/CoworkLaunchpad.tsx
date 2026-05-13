@@ -390,7 +390,7 @@ export function CoworkLaunchpad({ onStartChat, onResumeThread }: CoworkLaunchpad
               marginTop: '24px', 
               background: 'none', 
               border: 'none', 
-              fontSize: '11px',
+              fontSize: '12px',
               color: 'var(--ui-text-secondary)',
               fontWeight: 700,
               textTransform: 'uppercase',
@@ -586,7 +586,7 @@ function PluginsOverlay({ onClose, onStartChat }: PluginsOverlayProps) {
             <MagnifyingGlass size={18} color="var(--ui-text-muted)" />
             <input
               type="text"
-              placeholder="Search plugins..."
+              placeholder="Search plugins…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
@@ -669,7 +669,7 @@ function PluginsOverlay({ onClose, onStartChat }: PluginsOverlayProps) {
                   <h3 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--ui-text-primary)', margin: 0 }}>
                     {plugin.name}
                   </h3>
-                  <span style={{ fontSize: '11px', color: 'var(--ui-text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--ui-text-muted)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.05em' }}>
                     {plugin.category}
                   </span>
                 </div>

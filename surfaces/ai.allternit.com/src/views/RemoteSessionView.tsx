@@ -33,7 +33,7 @@ import { WebLinksAddon } from 'xterm-addon-web-links'
 import 'xterm/css/xterm.css'
 import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
-import { GlassCard } from '@/design/GlassCard'
+import { GlassCard } from '@/design/glass/GlassCard'
 import { Button } from '@/design/Button'
 import {
   ArrowSquareOut,
@@ -255,16 +255,16 @@ export function RemoteSessionView() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-900 text-white">
+    <div className="flex flex-col h-screen bg-zinc-900 text-white">
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-3 bg-gray-800 border-b border-gray-700">
+      <header className="flex items-center justify-between px-4 py-3 bg-zinc-800 border-b border-zinc-700">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+          <div className="size-10  rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
             <Monitor className="text-white" size={24} />
           </div>
           <div>
             <h1 className="text-lg font-semibold">Remote Sessions</h1>
-            <p className="text-xs text-gray-400">View terminal sessions from any device</p>
+            <p className="text-xs text-zinc-400">View terminal sessions from any device</p>
           </div>
         </div>
 
@@ -275,7 +275,7 @@ export function RemoteSessionView() {
             onClick={refreshSessions}
             disabled={loading}
           >
-            <ArrowsClockwise className={cn("w-4 h-4", loading && "animate-spin")} />
+            <ArrowsClockwise className={cn("size-4 ", loading && "animate-spin")} />
           </Button>
           <Button
             variant="ghost"
@@ -291,9 +291,9 @@ export function RemoteSessionView() {
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden">
         {/* Session List Sidebar */}
-        <div className="w-80 border-r border-gray-700 overflow-y-auto">
+        <div className="w-80 border-r border-zinc-700 overflow-y-auto">
           <div className="p-4">
-            <h2 className="text-sm font-medium text-gray-400 mb-3">Remote Sessions</h2>
+            <h2 className="text-sm font-medium text-zinc-400 mb-3">Remote Sessions</h2>
 
             {/* Mode Filter */}
             <div className="flex gap-1 mb-3 overflow-x-auto pb-2">
@@ -305,7 +305,7 @@ export function RemoteSessionView() {
                     "px-2 py-1 rounded text-xs whitespace-nowrap transition-colors",
                     filterMode === mode
                       ? "bg-blue-600 text-white"
-                      : "bg-gray-800 text-gray-400 hover:text-white"
+                      : "bg-zinc-800 text-zinc-400 hover:text-white"
                   )}
                 >
                   {mode.charAt(0).toUpperCase() + mode.slice(1)}
@@ -314,15 +314,15 @@ export function RemoteSessionView() {
             </div>
 
             {loading ? (
-              <div className="text-center py-8 text-gray-500">Loading sessions...</div>
+              <div className="text-center py-8 text-zinc-500">Loading sessions…</div>
             ) : filteredSessions.length === 0 ? (
               <GlassCard className="p-4 text-center">
-                <TerminalIcon className="mx-auto mb-2 text-gray-500" size={32} />
-                <p className="text-sm text-gray-400">
+                <TerminalIcon className="mx-auto mb-2 text-zinc-500" size={32} />
+                <p className="text-sm text-zinc-400">
                   {filterMode === 'all' ? 'No active sessions' : `No ${filterMode} sessions`}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Enable remote control in any session with <code className="bg-gray-800 px-1 rounded">/remote</code>
+                <p className="text-xs text-zinc-500 mt-1">
+                  Enable remote control in any session with <code className="bg-zinc-800 px-1 rounded">/remote</code>
                 </p>
               </GlassCard>
             ) : (
@@ -335,7 +335,7 @@ export function RemoteSessionView() {
                       "w-full p-3 rounded-lg text-left transition-colors",
                       selectedSession?.id === session.id
                         ? "bg-blue-600/20 border border-blue-500/50"
-                        : "bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700"
+                        : "bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700"
                     )}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
@@ -346,21 +346,21 @@ export function RemoteSessionView() {
                       </span>
                       <div className="flex items-center gap-1">
                         <span className={cn(
-                          "text-[10px] px-1.5 py-0.5 rounded uppercase font-bold",
+                          "text-xs px-1.5 py-0.5 rounded uppercase font-bold",
                           session.mode === 'code' ? "bg-purple-600/30 text-purple-400" :
                           session.mode === 'cowork' ? "bg-green-600/30 text-green-400" :
                           session.mode === 'chat' ? "bg-blue-600/30 text-blue-400" :
-                          "bg-gray-600/30 text-gray-400"
+                          "bg-zinc-600/30 text-zinc-400"
                         )}>
                           {session.mode}
                         </span>
                         <div className={cn(
-                          "w-2 h-2 rounded-full",
-                          session.status === 'active' ? "bg-green-500 animate-pulse" : "bg-gray-500"
+                          "size-2  rounded-full",
+                          session.status === 'active' ? "bg-green-500 animate-pulse" : "bg-zinc-500"
                         )} />
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-gray-400">
+                    <div className="flex items-center gap-2 text-xs text-zinc-400">
                       <Users size={12} />
                       <span>{session.client_count} viewers</span>
                       <span className="ml-auto flex items-center gap-1">
@@ -379,10 +379,10 @@ export function RemoteSessionView() {
         <div className="flex-1 flex flex-col">
           {/* Terminal Header */}
           {selectedSession && (
-            <div className="flex items-center justify-between px-4 py-2 bg-gray-800/50 border-b border-gray-700">
+            <div className="flex items-center justify-between px-4 py-2 bg-zinc-800/50 border-b border-zinc-700">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-400">Session:</span>
-                <code className="text-sm bg-gray-800 px-2 py-1 rounded">
+                <span className="text-sm text-zinc-400">Session:</span>
+                <code className="text-sm bg-zinc-800 px-2 py-1 rounded">
                   {selectedSession.id.slice(0, 8)}
                 </code>
               </div>
@@ -396,7 +396,7 @@ export function RemoteSessionView() {
                     </>
                   ) : (
                     <>
-                      <WifiSlash className="w-4 h-4 text-red-500" />
+                      <WifiSlash className="size-4  text-red-500" />
                       <span className="text-sm text-red-400">Disconnected</span>
                     </>
                   )}
@@ -414,7 +414,7 @@ export function RemoteSessionView() {
                 </Button>
                 
                 <Button variant="ghost" size="sm" onClick={() => openInBrowser(selectedSession.http_url)}>
-                  <ArrowSquareOut className="w-4 h-4" />
+                  <ArrowSquareOut className="size-4 " />
                 </Button>
               </div>
             </div>
@@ -425,7 +425,7 @@ export function RemoteSessionView() {
             {selectedSession ? (
               <div ref={terminalRef} className="h-full" />
             ) : (
-              <div className="h-full flex items-center justify-center text-gray-500">
+              <div className="h-full flex items-center justify-center text-zinc-500">
                 <div className="text-center">
                   <Monitor className="mx-auto mb-4 opacity-50" size={64} />
                   <p className="text-lg">Select a session to view</p>
@@ -444,7 +444,7 @@ export function RemoteSessionView() {
           onClick={() => setShowQR(false)}
         >
           <div 
-            className="bg-gray-800 rounded-xl p-6 max-w-md w-full"
+            className="bg-zinc-800 rounded-xl p-6 max-w-md w-full"
             onClick={e => e.stopPropagation()}
           >
             <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
@@ -454,21 +454,21 @@ export function RemoteSessionView() {
             
             {/* QR Code Placeholder */}
             <div className="aspect-square bg-white rounded-lg p-4 mb-4">
-              <div className="w-full h-full bg-gradient-to-br from-gray-900 to-gray-700 rounded flex items-center justify-center">
+              <div className="w-full h-full bg-gradient-to-br from-zinc-900 to-zinc-700 rounded flex items-center justify-center">
                 <QrCode className="text-white" size={128} />
               </div>
             </div>
             
             {/* URL */}
             <div className="mb-4">
-              <label className="text-xs text-gray-400 mb-1 block">Session URL</label>
-              <code className="text-sm bg-gray-900 px-3 py-2 rounded block truncate">
+              <label className="text-xs text-zinc-400 mb-1 block">Session URL</label>
+              <code className="text-sm bg-zinc-900 px-3 py-2 rounded block truncate">
                 {selectedSession.http_url}
               </code>
             </div>
             
             {/* Instructions */}
-            <div className="text-sm text-gray-400 space-y-2">
+            <div className="text-sm text-zinc-400 space-y-2">
               <p className="flex items-start gap-2">
                 <CheckCircle className="text-green-500 mt-0.5 flex-shrink-0" size={16} />
                 Open camera app and scan QR code
@@ -478,7 +478,7 @@ export function RemoteSessionView() {
                 Or copy URL and paste in mobile browser
               </p>
               <p className="flex items-start gap-2">
-                <Warning className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
+                <Warning className="size-4  text-yellow-500 mt-0.5 flex-shrink-0" />
                 Session expires in {new Date(selectedSession.expires_at).toLocaleString()}
               </p>
             </div>

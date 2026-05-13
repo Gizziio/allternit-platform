@@ -652,7 +652,7 @@ export function ApiHealthIndicator({ modeColors, onClick }: ApiHealthIndicatorPr
     return (
       <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: 'var(--surface-hover)' }}>
         <ArrowsClockwise size={14} className="animate-spin" style={{ color: TEXT.tertiary }} />
-        <span className="text-xs" style={{ color: TEXT.tertiary }}>Checking API...</span>
+        <span className="text-xs" style={{ color: TEXT.tertiary }}>Checking API…</span>
       </div>
     );
   }
@@ -721,7 +721,7 @@ export function AnalyticsConsentBanner({ onAccept, onDecline, modeColors }: Anal
       >
         <div className="flex items-start gap-4">
           <div
-            className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+            className="size-10  rounded-lg flex items-center justify-center flex-shrink-0"
             style={{ background: 'rgba(59, 130, 246, 0.1)' }}
           >
             <ChartBar size={20} style={{ color: 'var(--status-info)' }} />

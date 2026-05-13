@@ -1,214 +1,128 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { useBoardStore, type BoardItem } from '@/stores/board.store';
-import { useWorkspaceStore } from '@/stores/workspace.store';
+'use client';
 
-const COLUMNS: { id: BoardItem['status']; label: string; color: string }[] = [
-  { id: 'backlog', label: 'Backlog', color: 'var(--ui-text-muted)' },
-  { id: 'todo', label: 'Todo', color: 'var(--status-info)' },
-  { id: 'in_progress', label: 'In Progress', color: 'var(--status-warning)' },
-  { id: 'in_review', label: 'In Review', color: '#8b5cf6' },
-  { id: 'done', label: 'Done', color: 'var(--status-success)' },
-  { id: 'blocked', label: 'Blocked', color: 'var(--status-error)' },
-];
+import React, { useReducer, useMemo } from 'react';
+import { useIsClient } from '@/lib/hooks/use-is-client';
 
-export function WorkspaceBoardView() {
-  const { workspaces, activeWorkspaceId, fetchWorkspaces } = useWorkspaceStore();
-  const { items, fetchItems, moveItem, createItem, isLoading, activeItemId, setActiveItem, comments, addComment } = useBoardStore();
-  const [draggedId, setDraggedId] = useState<string | null>(null);
-  const [dropTarget, setDropTarget] = useState<string | null>(null);
-  const [newTitle, setNewTitle] = useState('');
-  const [commentText, setCommentText] = useState('');
-  const [showDetail, setShowDetail] = useState(false);
+export interface BoardItem {
+  id: string;
+  title: string;
+  status: 'todo' | 'in-progress' | 'review' | 'done';
+  priority: number;
+  estimatedMinutes?: number;
+  assigneeName?: string;
+  deadline?: string;
+}
 
-  useEffect(() => {
-    fetchWorkspaces();
-  }, [fetchWorkspaces]);
+export interface WorkspaceBoardViewProps {
+  initialItems?: BoardItem[];
+}
 
-  useEffect(() => {
-    if (activeWorkspaceId) {
-      fetchItems(activeWorkspaceId);
-    }
-  }, [activeWorkspaceId, fetchItems]);
+interface State {
+  items: BoardItem[];
+  draggedId: string | null;
+  draggedOverColumn: string | null;
+}
 
-  const activeItem = useMemo(() => items.find((i) => i.id === activeItemId), [items, activeItemId]);
+type Action = 
+  | { type: 'SET_DRAGGED'; id: string | null }
+  | { type: 'SET_DRAGGED_OVER'; column: string | null }
+  | { type: 'MOVE_ITEM'; itemId: string; targetColumn: string };
 
-  const handleDragStart = (e: React.DragEvent, id: string) => {
-    setDraggedId(id);
-    e.dataTransfer.effectAllowed = 'move';
-  };
+const reducer = (state: State, action: Action): State => {
+  switch (action.type) {
+    case 'SET_DRAGGED': return { ...state, draggedId: action.id };
+    case 'SET_DRAGGED_OVER': return { ...state, draggedOverColumn: action.column };
+    case 'MOVE_ITEM':
+      return {
+        ...state,
+        items: state.items.map(item => 
+          item.id === action.itemId ? { ...item, status: action.targetColumn as any } : item
+        )
+      };
+    default: return state;
+  }
+};
 
-  const handleDragOver = (e: React.DragEvent, columnId: string) => {
-    e.preventDefault();
-    setDropTarget(columnId);
-  };
+export const WorkspaceBoardView: React.FC<WorkspaceBoardViewProps> = ({ 
+  initialItems = [] 
+}) => {
+  const isClient = useIsClient();
+  const [state, dispatch] = useReducer(reducer, {
+    items: initialItems,
+    draggedId: null,
+    draggedOverColumn: null,
+  });
 
-  const handleDrop = async (e: React.DragEvent, status: BoardItem['status']) => {
-    e.preventDefault();
-    setDropTarget(null);
-    if (!draggedId) return;
-    await moveItem(draggedId, status);
-    setDraggedId(null);
-  };
+  const { items, draggedId, draggedOverColumn } = state;
 
-  const handleCreate = async () => {
-    if (!activeWorkspaceId || !newTitle.trim()) return;
-    await createItem(activeWorkspaceId, { title: newTitle.trim() });
-    setNewTitle('');
-  };
-
-  const handleAddComment = async () => {
-    if (!activeItemId || !commentText.trim()) return;
-    await addComment(activeItemId, commentText.trim());
-    setCommentText('');
-  };
+  const columns = useMemo(() => [
+    { id: 'todo', label: 'To Do' },
+    { id: 'in-progress', label: 'In Progress' },
+    { id: 'review', label: 'Review' },
+    { id: 'done', label: 'Done' },
+  ], []);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: 16, gap: 12 }}>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-        <select
-          value={activeWorkspaceId ?? ''}
-          onChange={(e) => useWorkspaceStore.getState().setActiveWorkspace(e.target.value || null)}
-          style={{ background: 'var(--surface-panel)', color: 'var(--ui-text-primary)', border: '1px solid #374151', borderRadius: 6, padding: '6px 12px' }}
-        >
-          <option value="">Select workspace...</option>
-          {workspaces.map((ws) => (
-            <option key={ws.id} value={ws.id}>{ws.name}</option>
-          ))}
-        </select>
-        <div style={{ flex: 1, display: 'flex', gap: 8 }}>
-          <input
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-            placeholder="New board item..."
-            style={{ flex: 1, background: 'var(--surface-panel)', color: 'var(--ui-text-primary)', border: '1px solid #374151', borderRadius: 6, padding: '6px 12px' }}
-          />
-          <button onClick={handleCreate} style={{ background: 'var(--status-info)', color: 'var(--ui-text-inverse)', border: 'none', borderRadius: 6, padding: '6px 16px', cursor: 'pointer' }}>
-            Add
-          </button>
-        </div>
-      </div>
+    <div className="flex gap-4 h-full p-4 overflow-x-auto bg-zinc-900/50">
+      {columns.map(col => {
+        const colItems = items.filter(i => i.status === col.id);
+        const isTarget = draggedOverColumn === col.id;
 
-      {/* Kanban Columns */}
-      <div style={{ display: 'flex', gap: 12, flex: 1, overflowX: 'auto' }}>
-        {COLUMNS.map((col) => {
-          const colItems = items.filter((i) => i.status === col.id);
-          return (
-            <div
-              key={col.id}
-              onDragOver={(e) => handleDragOver(e, col.id)}
-              onDrop={(e) => handleDrop(e, col.id)}
-              onDragLeave={() => setDropTarget(null)}
-              style={{
-                minWidth: 220,
-                maxWidth: 280,
-                background: dropTarget === col.id ? 'var(--status-info-bg)' : 'var(--surface-panel)',
-                border: `1px solid ${dropTarget === col.id ? 'var(--status-info)' : 'var(--ui-border-default)'}`,
-                borderRadius: 8,
-                display: 'flex',
-                flexDirection: 'column',
-                padding: 8,
-                transition: 'all 0.2s',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, padding: '4px 8px' }}>
-                <div style={{ width: 10, height: 10, borderRadius: '50%', background: col.color }} />
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--ui-text-secondary)', textTransform: 'uppercase' }}>{col.label}</span>
-                <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--ui-text-muted)', background: 'var(--ui-border-default)', padding: '2px 6px', borderRadius: 10 }}>{colItems.length}</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, overflowY: 'auto', flex: 1 }}>
-                {colItems.map((item) => (
-                  <div
-                    key={item.id}
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, item.id)}
-                    onClick={() => { setActiveItem(item.id); setShowDetail(true); }}
-                    style={{
-                      background: activeItemId === item.id ? 'var(--ui-border-default)' : 'var(--surface-canvas)',
-                      border: '1px solid #374151',
-                      borderRadius: 6,
-                      padding: 10,
-                      cursor: 'grab',
-                      opacity: draggedId === item.id ? 0.5 : 1,
-                    }}
-                  >
-                    <div style={{ fontSize: 13, color: 'var(--ui-text-primary)', marginBottom: 4 }}>{item.title}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                      {item.priority > 50 && (
-                        <span style={{ fontSize: 10, color: 'var(--status-warning)', background: 'rgba(245,158,11,0.15)', padding: '1px 6px', borderRadius: 4 }}>High</span>
-                      )}
-                      {item.estimatedMinutes && (
-                        <span style={{ fontSize: 10, color: 'var(--ui-text-muted)' }}>{item.estimatedMinutes}m</span>
-                      )}
-                      {item.assigneeName && (
-                        <span style={{ fontSize: 10, color: 'var(--status-info)' }}>@{item.assigneeName}</span>
-                      )}
-                      {item.deadline && (
-                        <span style={{ fontSize: 10, color: new Date(item.deadline) < new Date() ? 'var(--status-error)' : 'var(--ui-text-muted)' }}>
-                          {new Date(item.deadline).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+        return (
+          <div 
+            key={col.id}
+            onDragOver={(e) => { e.preventDefault(); dispatch({ type: 'SET_DRAGGED_OVER', column: col.id }); }}
+            onDrop={() => {
+              if (draggedId) dispatch({ type: 'MOVE_ITEM', itemId: draggedId, targetColumn: col.id });
+              dispatch({ type: 'SET_DRAGGED_OVER', column: null });
+              dispatch({ type: 'SET_DRAGGED', id: null });
+            }}
+            className={`flex-1 min-w-[280px] flex flex-col gap-3 p-3 rounded-xl transition-colors ${
+              isTarget ? 'bg-white/5 border border-dashed border-blue-500/50' : 'bg-transparent border border-transparent'
+            }`}
+          >
+            <div className="flex items-center justify-between px-1">
+              <h3 className="text-xs font-bold uppercase tracking-widest text-zinc-500">{col.label}</h3>
+              <span className="text-[11px] font-mono bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-full">{colItems.length}</span>
             </div>
-          );
-        })}
-      </div>
 
-      {/* Detail Panel */}
-      {showDetail && activeItem && (
-        <div style={{
-          position: 'absolute',
-          right: 16,
-          top: 16,
-          bottom: 16,
-          width: 340,
-          background: 'var(--surface-panel)',
-          border: '1px solid #374151',
-          borderRadius: 8,
-          padding: 16,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 12,
-          zIndex: 10,
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ margin: 0, fontSize: 15, color: 'var(--ui-text-primary)' }}>{activeItem.title}</h3>
-            <button onClick={() => setShowDetail(false)} style={{ background: 'none', border: 'none', color: 'var(--ui-text-muted)', cursor: 'pointer' }}>✕</button>
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>{activeItem.description || 'No description'}</div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {activeItem.labels?.map((l) => (
-              <span key={l} style={{ fontSize: 10, background: 'var(--ui-border-default)', color: 'var(--ui-text-secondary)', padding: '2px 8px', borderRadius: 4 }}>{l}</span>
-            ))}
-          </div>
-          <div style={{ borderTop: '1px solid #374151', paddingTop: 8 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--ui-text-muted)', marginBottom: 6 }}>Comments</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 200, overflowY: 'auto' }}>
-              {(comments[activeItem.id] || []).map((c) => (
-                <div key={c.id} style={{ fontSize: 12, color: 'var(--ui-text-secondary)' }}>
-                  <span style={{ color: 'var(--status-info)' }}>{c.authorType === 'agent' ? '🤖' : '👤'} {c.authorId.slice(0, 8)}</span>: {c.body}
+            <div className="flex-1 flex flex-col gap-2.5">
+              {colItems.map(item => (
+                <div
+                  key={item.id}
+                  draggable
+                  onDragStart={() => dispatch({ type: 'SET_DRAGGED', id: item.id })}
+                  className={`bg-zinc-800 border border-zinc-700 p-3.5 rounded-lg cursor-grab active:cursor-grabbing transition-all hover:border-zinc-500 ${
+                    draggedId === item.id ? 'opacity-40 grayscale scale-[0.98]' : 'opacity-100'
+                  }`}
+                >
+                  <div className="text-sm font-medium text-zinc-100 mb-2 leading-snug">{item.title}</div>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    {item.priority > 50 && (
+                      <span className="text-[11px] font-bold text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-md uppercase tracking-wider border border-orange-500/20">High</span>
+                    )}
+                    {item.estimatedMinutes && (
+                      <span className="text-[11px] text-zinc-500 flex items-center gap-1">
+                         {item.estimatedMinutes}m
+                      </span>
+                    )}
+                    {item.assigneeName && (
+                      <span className="text-[11px] font-semibold text-blue-400">@{item.assigneeName}</span>
+                    )}
+                    {item.deadline && (
+                      <span className={`text-[11px] font-medium ${(isClient && new Date(item.deadline) < new Date()) ? 'text-red-400' : 'text-zinc-500'}`}>
+                        {isClient ? new Date(item.deadline).toLocaleDateString() : '...'}
+                      </span>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <input
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
-                placeholder="Add comment..."
-                style={{ flex: 1, background: 'var(--surface-canvas)', color: 'var(--ui-text-primary)', border: '1px solid #374151', borderRadius: 6, padding: '4px 8px', fontSize: 12 }}
-              />
-              <button onClick={handleAddComment} style={{ background: 'var(--status-info)', color: 'var(--ui-text-inverse)', border: 'none', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontSize: 12 }}>Post</button>
-            </div>
           </div>
-        </div>
-      )}
-
-      {isLoading && <div style={{ position: 'absolute', top: 8, right: 16, fontSize: 11, color: 'var(--ui-text-muted)' }}>Loading...</div>}
+        );
+      })}
     </div>
   );
-}
+};
+
+export default WorkspaceBoardView;

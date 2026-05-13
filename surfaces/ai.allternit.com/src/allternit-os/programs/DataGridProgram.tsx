@@ -117,10 +117,10 @@ const Cell: React.FC<{
   return (
     <div
       onClick={onEdit}
-      className="px-2 py-1 text-sm truncate cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800"
+      className="px-2 py-1 text-sm truncate cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800"
     >
       {column.type === 'boolean' ? (
-        <span className={value ? 'text-green-600' : 'text-gray-400'}>
+        <span className={value ? 'text-green-600' : 'text-zinc-400'}>
           {value ? '✓' : '○'}
         </span>
       ) : (
@@ -231,19 +231,19 @@ const QuickChartPanel: React.FC<{
   return (
     <div className="flex flex-col h-full bg-[#0f172a]">
       <div className="flex items-center justify-between px-3 py-2 border-b border-white/10">
-        <span className="text-xs font-medium text-slate-300">{viz.title}</span>
+        <span className="text-xs font-medium text-zinc-300">{viz.title}</span>
         <div className="flex items-center gap-2">
           <select
             value={chartType}
             onChange={e => setChartType(e.target.value as 'bar' | 'line' | 'pie')}
-            className="text-xs bg-slate-700 border border-white/10 rounded px-2 py-0.5 text-slate-200"
+            className="text-xs bg-zinc-700 border border-white/10 rounded px-2 py-0.5 text-zinc-200"
           >
             <option value="bar">Bar</option>
             <option value="line">Line</option>
             <option value="pie">Pie</option>
           </select>
-          <button onClick={onClose} className="p-1 hover:bg-white/10 rounded text-slate-400 hover:text-slate-200">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <button onClick={onClose} className="p-1 hover:bg-white/10 rounded text-zinc-400 hover:text-zinc-200">
+            <svg className="size-3.5 " fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
@@ -290,18 +290,18 @@ const VisualizationPanel: React.FC<{
   }, [activeViz, data, generateCode, selectedLibrary]);
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-gray-900">
+    <div className="flex flex-col h-full bg-white dark:bg-zinc-900">
       {/* Header */}
-      <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between p-3 border-b border-zinc-200 dark:border-zinc-700">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          <span className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
             Visualization
           </span>
           {visualizations.length > 1 && (
             <select
               value={activeVizId}
               onChange={(e) => setActiveVizId(e.target.value)}
-              className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800"
+              className="text-sm border border-zinc-300 dark:border-zinc-600 rounded px-2 py-1 bg-white dark:bg-zinc-800"
             >
               {visualizations.map(v => (
                 <option key={v.id} value={v.id}>{v.title}</option>
@@ -311,22 +311,22 @@ const VisualizationPanel: React.FC<{
         </div>
         <button
           onClick={onClose}
-          className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+          className="p-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="size-4 " fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
 
       {/* Controls */}
-      <div className="p-3 border-b border-gray-200 dark:border-gray-700 space-y-2">
+      <div className="p-3 border-b border-zinc-200 dark:border-zinc-700 space-y-2">
         <div className="flex items-center gap-2">
-          <label className="text-xs text-gray-500">Library:</label>
+          <label className="text-xs text-zinc-500">Library:</label>
           <select
             value={selectedLibrary}
             onChange={(e) => setSelectedLibrary(e.target.value as VisualizationLibrary)}
-            className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800"
+            className="text-sm border border-zinc-300 dark:border-zinc-600 rounded px-2 py-1 bg-white dark:bg-zinc-800"
           >
             <option value="matplotlib">Matplotlib</option>
             <option value="plotly">Plotly</option>
@@ -339,12 +339,12 @@ const VisualizationPanel: React.FC<{
           >
             {activeViz?.status === 'rendering' ? (
               <>
-                <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span className="size-3  border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 Rendering...
               </>
             ) : (
               <>
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="size-4 " fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -356,10 +356,10 @@ const VisualizationPanel: React.FC<{
       </div>
 
       {/* Chart area */}
-      <div className="flex-1 p-4 bg-gray-50 dark:bg-gray-900 overflow-auto">
+      <div className="flex-1 p-4 bg-zinc-50 dark:bg-zinc-900 overflow-auto">
         {activeViz?.status === 'complete' && activeViz.resultUrl ? (
           <div className="h-full flex flex-col">
-            <div className="flex-1 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="flex-1 bg-white dark:bg-zinc-800 rounded-lg shadow-sm border border-zinc-200 dark:border-zinc-700 overflow-hidden">
               {activeViz.resultUrl.startsWith('data:image') ? (
                 <img 
                   src={activeViz.resultUrl} 
@@ -374,7 +374,7 @@ const VisualizationPanel: React.FC<{
                   sandbox="allow-scripts allow-same-origin"
                 />
               ) : (
-                <div className="flex items-center justify-center h-full text-gray-400">
+                <div className="flex items-center justify-center h-full text-zinc-400">
                   <a 
                     href={activeViz.resultUrl} 
                     target="_blank" 
@@ -389,16 +389,16 @@ const VisualizationPanel: React.FC<{
           </div>
         ) : activeViz?.status === 'error' ? (
           <div className="h-full flex flex-col items-center justify-center text-red-500 p-4">
-            <svg className="w-12 h-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="size-12  mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
             <p className="text-sm font-medium">Rendering failed</p>
             <p className="text-xs mt-1 max-w-xs text-center">{activeViz.errorMessage}</p>
           </div>
         ) : (
-          <div className="h-full flex items-center justify-center text-gray-400">
+          <div className="h-full flex items-center justify-center text-zinc-400">
             <div className="text-center">
-              <svg className="w-16 h-16 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="size-16  mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
               <p className="text-sm">Click "Render" to generate visualization</p>
@@ -410,9 +410,9 @@ const VisualizationPanel: React.FC<{
 
       {/* Python code preview */}
       {activeViz && (
-        <div className="p-3 border-t border-gray-200 dark:border-gray-700 max-h-48 overflow-auto">
-          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Python Code</div>
-          <pre className="text-xs bg-gray-900 text-gray-300 p-3 rounded overflow-x-auto">
+        <div className="p-3 border-t border-zinc-200 dark:border-zinc-700 max-h-48 overflow-auto">
+          <div className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">Python Code</div>
+          <pre className="text-xs bg-zinc-900 text-zinc-300 p-3 rounded overflow-x-auto">
             <code>{handlePreviewCode()}</code>
           </pre>
         </div>
@@ -447,12 +447,12 @@ const Toolbar: React.FC<{
   selectedCount 
 }) => {
   return (
-    <div className="flex items-center gap-2 p-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex-wrap">
+    <div className="flex items-center gap-2 p-2 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 flex-wrap">
       <button
         onClick={onAddRow}
-        className="flex items-center gap-1 px-2 py-1 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700"
+        className="flex items-center gap-1 px-2 py-1 text-sm bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded hover:bg-zinc-50 dark:hover:bg-zinc-700"
       >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="size-4 " fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
         </svg>
         Row
@@ -460,9 +460,9 @@ const Toolbar: React.FC<{
       
       <button
         onClick={onAddColumn}
-        className="flex items-center gap-1 px-2 py-1 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700"
+        className="flex items-center gap-1 px-2 py-1 text-sm bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded hover:bg-zinc-50 dark:hover:bg-zinc-700"
       >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="size-4 " fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
         </svg>
         Column
@@ -471,22 +471,22 @@ const Toolbar: React.FC<{
       {selectedCount > 0 && (
         <button
           onClick={onDeleteSelected}
-          className="flex items-center gap-1 px-2 py-1 text-sm text-red-600 bg-white dark:bg-gray-800 border border-red-300 dark:border-red-700 rounded hover:bg-red-50 dark:hover:bg-red-900/30"
+          className="flex items-center gap-1 px-2 py-1 text-sm text-red-600 bg-white dark:bg-zinc-800 border border-red-300 dark:border-red-700 rounded hover:bg-red-50 dark:hover:bg-red-900/30"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="size-4 " fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
           </svg>
           Delete ({selectedCount})
         </button>
       )}
 
-      <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 mx-1" />
+      <div className="w-px h-6 bg-zinc-300 dark:bg-zinc-700 mx-1" />
 
       <button
         onClick={onImport}
-        className="flex items-center gap-1 px-2 py-1 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700"
+        className="flex items-center gap-1 px-2 py-1 text-sm bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded hover:bg-zinc-50 dark:hover:bg-zinc-700"
       >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="size-4 " fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
         </svg>
         Import CSV
@@ -494,19 +494,19 @@ const Toolbar: React.FC<{
 
       <select
         onChange={(e) => e.target.value && onExport(e.target.value as 'csv' | 'json')}
-        className="text-sm border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-800"
+        className="text-sm border border-zinc-300 dark:border-zinc-600 rounded px-2 py-1 bg-white dark:bg-zinc-800"
         defaultValue=""
       >
-        <option value="" disabled>Export...</option>
+        <option value="" disabled>Export…</option>
         <option value="csv">Export CSV</option>
         <option value="json">Export JSON</option>
       </select>
 
       <button
         onClick={onSaveToDrive}
-        className="flex items-center gap-1 px-2 py-1 text-sm bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700"
+        className="flex items-center gap-1 px-2 py-1 text-sm bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-600 rounded hover:bg-zinc-50 dark:hover:bg-zinc-700"
       >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="size-4 " fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-4 4m0 0l-4-4m4 4V4" />
         </svg>
         Save to Drive
@@ -521,11 +521,11 @@ const Toolbar: React.FC<{
           flex items-center gap-1 px-2 py-1 text-sm rounded
           ${hasViz 
             ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-900/50' 
-            : 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
+            : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-400 cursor-not-allowed'
           }
         `}
       >
-        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="size-4 " fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
         Visualize
@@ -696,7 +696,7 @@ export const DataGridProgram: React.FC<DataGridProgramProps> = ({ program }) => 
   };
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-gray-900">
+    <div className="h-full flex flex-col bg-white dark:bg-zinc-900">
       {/* Hidden file input for CSV import */}
       <input
         ref={fileInputRef}
@@ -711,20 +711,20 @@ export const DataGridProgram: React.FC<DataGridProgramProps> = ({ program }) => 
       />
 
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-700">
         <div className="flex items-center gap-2">
           <span className="text-xl">📊</span>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">
             {title}
           </h2>
           {isGenerating && (
             <span className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400">
-              <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+              <span className="size-2  bg-blue-500 rounded-full animate-pulse" />
               Generating...
             </span>
           )}
         </div>
-        <div className="text-xs text-gray-500 dark:text-gray-400">
+        <div className="text-xs text-zinc-500 dark:text-zinc-400">
           {rows.length} rows × {columns.length} columns
         </div>
       </div>
@@ -760,15 +760,15 @@ export const DataGridProgram: React.FC<DataGridProgramProps> = ({ program }) => 
         {/* Data grid */}
         <div className="flex-1 overflow-auto">
           {columns.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-gray-400 p-6">
+            <div className="flex flex-col items-center justify-center h-full text-zinc-400 p-6">
               <span className="text-4xl mb-2">📊</span>
               {isGenerating && liveAgentText ? (
                 <div className="w-full max-w-sm text-left mt-2">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" />
+                    <span className="size-2  bg-blue-500 rounded-full animate-pulse" />
                     <span className="text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wide">Generating data</span>
                   </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed whitespace-pre-wrap">
                     {liveAgentText.split('<launch_utility')[0].trim().slice(0, 300)}<span className="animate-pulse">▊</span>
                   </p>
                 </div>
@@ -784,9 +784,9 @@ export const DataGridProgram: React.FC<DataGridProgramProps> = ({ program }) => 
             </div>
           ) : (
             <table className="w-full text-left border-collapse">
-              <thead className="sticky top-0 bg-gray-50 dark:bg-gray-800 z-10">
+              <thead className="sticky top-0 bg-zinc-50 dark:bg-zinc-800 z-10">
                 <tr>
-                  <th className="w-8 p-2 border-b border-gray-200 dark:border-gray-700">
+                  <th className="w-8 p-2 border-b border-zinc-200 dark:border-zinc-700">
                     <input 
                       type="checkbox" 
                       className="rounded"
@@ -803,10 +803,10 @@ export const DataGridProgram: React.FC<DataGridProgramProps> = ({ program }) => 
                   {columns.map(col => (
                     <th 
                       key={col.id}
-                      className="px-3 py-2 text-xs font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700 min-w-[120px]"
+                      className="px-3 py-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300 border-b border-zinc-200 dark:border-zinc-700 min-w-[120px]"
                     >
                       {col.header}
-                      <span className="ml-1 text-gray-400 font-normal">
+                      <span className="ml-1 text-zinc-400 font-normal">
                         {col.type === 'number' ? '#' : col.type === 'formula' ? 'ƒ' : 'T'}
                       </span>
                     </th>
@@ -818,11 +818,11 @@ export const DataGridProgram: React.FC<DataGridProgramProps> = ({ program }) => 
                   <tr 
                     key={row.id}
                     className={`
-                      hover:bg-gray-50 dark:hover:bg-gray-800/50
+                      hover:bg-zinc-50 dark:hover:bg-zinc-800/50
                       ${selectedRows.has(row.id) ? 'bg-blue-50 dark:bg-blue-900/20' : ''}
                     `}
                   >
-                    <td className="p-2 border-b border-gray-100 dark:border-gray-800">
+                    <td className="p-2 border-b border-zinc-100 dark:border-zinc-800">
                       <input 
                         type="checkbox" 
                         className="rounded"
@@ -833,7 +833,7 @@ export const DataGridProgram: React.FC<DataGridProgramProps> = ({ program }) => 
                     {columns.map(col => (
                       <td 
                         key={col.id}
-                        className="border-b border-gray-100 dark:border-gray-800"
+                        className="border-b border-zinc-100 dark:border-zinc-800"
                       >
                         <Cell
                           value={row.cells[col.id]}
@@ -868,7 +868,7 @@ export const DataGridProgram: React.FC<DataGridProgramProps> = ({ program }) => 
             );
           }
           return (
-            <div className="w-96 border-l border-gray-200 dark:border-gray-700">
+            <div className="w-96 border-l border-zinc-200 dark:border-zinc-700">
               <VisualizationPanel
                 programId={program.id}
                 visualizations={visualizations}

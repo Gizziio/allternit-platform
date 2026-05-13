@@ -112,7 +112,7 @@ export function IntegrationsShowcase({
 
           {/* Hub node */}
           <div
-            className="relative z-10 flex h-24 w-24 items-center justify-center rounded-full border-2 text-lg font-bold"
+            className="relative z-10 flex size-24  items-center justify-center rounded-full border-2 text-lg font-bold"
             style={{
               background: 'var(--surface-panel)',
               borderColor: 'var(--accent-primary)',
@@ -153,7 +153,7 @@ export function IntegrationsShowcase({
               >
                 <div
                   className={cn(
-                    'relative flex h-14 w-14 cursor-pointer items-center justify-center rounded-2xl border transition-all duration-300',
+                    'relative flex size-14  cursor-pointer items-center justify-center rounded-2xl border transition-all duration-300',
                     isHovered
                       ? 'scale-110 border-[var(--accent-primary)]/50 shadow-xl'
                       : 'border-[var(--ui-border-muted)] shadow-md',
@@ -168,7 +168,7 @@ export function IntegrationsShowcase({
                   }}
                 >
                   <IconComponent
-                    className="h-6 w-6"
+                    className="size-6 "
                     style={{
                       color: isConnected
                         ? 'var(--accent-primary)'
@@ -179,7 +179,7 @@ export function IntegrationsShowcase({
                   {/* Connected status dot */}
                   {isConnected && (
                     <div
-                      className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2"
+                      className="absolute -right-1 -top-1 size-3  rounded-full border-2"
                       style={{
                         background: 'var(--status-success)',
                         borderColor: 'var(--surface-panel)',
@@ -196,7 +196,7 @@ export function IntegrationsShowcase({
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: 6, scale: 0.95 }}
                       transition={{ duration: 0.2 }}
-                      className="absolute left-1/2 top-full z-20 mt-3 w-48 -translate-x-1/2 rounded-xl border p-3"
+                      className="absolute left-1/2 top-full z-20 mt-3 w-48 -tranzinc-x-1/2 rounded-xl border p-3"
                       style={{
                         background: 'var(--surface-floating)',
                         borderColor: 'var(--ui-border-muted)',
@@ -211,7 +211,7 @@ export function IntegrationsShowcase({
                           {integration.name}
                         </span>
                         <span
-                          className="rounded-full px-1.5 py-0.5 text-[10px] font-medium uppercase"
+                          className="rounded-full px-1.5 py-0.5 text-xs font-medium uppercase"
                           style={{
                             background:
                               integration.status === 'connected'
@@ -246,7 +246,7 @@ export function IntegrationsShowcase({
         <div className="mt-8 flex flex-wrap items-center justify-center gap-6">
           <div className="flex items-center gap-2">
             <div
-              className="h-2 w-2 rounded-full"
+              className="size-2  rounded-full"
               style={{ background: 'var(--status-success)' }}
             />
             <span className="text-xs text-[var(--ui-text-muted)]">
@@ -255,7 +255,7 @@ export function IntegrationsShowcase({
           </div>
           <div className="flex items-center gap-2">
             <div
-              className="h-2 w-2 rounded-full"
+              className="size-2  rounded-full"
               style={{ background: 'var(--ui-text-muted)', opacity: 0.4 }}
             />
             <span className="text-xs text-[var(--ui-text-muted)]">

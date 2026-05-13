@@ -69,7 +69,7 @@ export class InfrastructureWebSocket {
       this.ws.close();
       this.ws = null;
     }
-    console.log('[InfrastructureWebSocket] Disconnected');
+    console.debug('[InfrastructureWebSocket] Disconnected');
   }
 
   onEvent(handler: EventHandler): void {
@@ -106,7 +106,7 @@ export class InfrastructureWebSocket {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
       const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
-      console.log(`[InfrastructureWebSocket] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
+      console.debug(`[InfrastructureWebSocket] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
       setTimeout(() => this.connect(), delay);
     }
   }

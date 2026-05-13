@@ -8,7 +8,7 @@ use allternit_cowork_runtime::{
     CreateJobSpec, CreateRunSpec, CoworkEvent, JobId, JobState, RunId, RunState,
 };
 use std::sync::Arc;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info};
 
 /// HTTP client for Rails service communication
 pub struct RailsHttpClient {

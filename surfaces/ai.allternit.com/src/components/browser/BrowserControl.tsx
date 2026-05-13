@@ -46,7 +46,7 @@ export function BrowserControl({
     });
 
     if (result.success) {
-      console.log('Navigation successful');
+      console.debug('Navigation successful');
       // Optionally get snapshot after navigation
       await handleSnapshot();
     }
@@ -75,7 +75,7 @@ export function BrowserControl({
     });
 
     if (result.success) {
-      console.log(`Clicked: ${selector}`);
+      console.debug(`Clicked: ${selector}`);
     }
   };
 
@@ -103,7 +103,7 @@ export function BrowserControl({
     });
 
     if (result.success) {
-      console.log(`Text from ${selector}:`, result.data);
+      console.debug(`Text from ${selector}:`, result.data);
       return result.data;
     }
   };

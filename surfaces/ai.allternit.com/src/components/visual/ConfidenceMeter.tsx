@@ -138,7 +138,7 @@ export const ConfidenceMeter: React.FC<ConfidenceMeterProps> = ({
     display: 'flex',
     alignItems: 'center',
     gap: '6px',
-    fontSize: '11px',
+    fontSize: '12px',
     color: 'var(--ui-text-muted)',
   };
 

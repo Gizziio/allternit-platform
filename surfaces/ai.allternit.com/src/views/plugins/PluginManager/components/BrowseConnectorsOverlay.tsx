@@ -327,7 +327,7 @@ export function BrowseConnectorsOverlay({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: 700,
                         flexShrink: 0,
                       }}

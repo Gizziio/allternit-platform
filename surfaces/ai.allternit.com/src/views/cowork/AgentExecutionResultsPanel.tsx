@@ -152,8 +152,8 @@ function AgentResultCard({ result }: { result: import('@/lib/cowork/useTeamSessi
           ? <CheckCircle size={15} color="#4ade80" weight="fill" />
           : <XCircle size={15} color="#f87171" weight="fill" />}
         <span style={{ fontWeight: 600, fontSize: 13, flex: 1 }}>{result.personaName}</span>
-        <span style={{ fontSize: 11, color: 'var(--ui-text-muted)' }}>{(result.durationMs / 1000).toFixed(1)}s</span>
-        <span style={{ fontSize: 11, color: 'var(--ui-text-muted)', marginLeft: 4 }}>{expanded ? '▲' : '▼'}</span>
+        <span style={{ fontSize: 12, color: 'var(--ui-text-muted)' }}>{(result.durationMs / 1000).toFixed(1)}s</span>
+        <span style={{ fontSize: 12, color: 'var(--ui-text-muted)', marginLeft: 4 }}>{expanded ? '▲' : '▼'}</span>
       </button>
 
       {expanded && (

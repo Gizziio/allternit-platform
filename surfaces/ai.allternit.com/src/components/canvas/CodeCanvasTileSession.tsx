@@ -70,7 +70,7 @@ export function CodeCanvasTileSession({ sessionId, workspacePath }: CodeCanvasTi
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: 11,
+            fontSize: 12,
           }}
         >
           <Brain size={13} />
@@ -115,7 +115,7 @@ export function CodeCanvasTileSession({ sessionId, workspacePath }: CodeCanvasTi
         onSend={handleSend}
         isLoading={isStreaming}
         onStop={handleStop}
-        placeholder="Ask anything..."
+        placeholder="Ask anything…"
       />
 
       {/* Context Panel */}

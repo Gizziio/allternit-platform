@@ -69,7 +69,7 @@ export function AgentCard({
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <div
-            className="w-8 h-8 rounded flex items-center justify-center"
+            className="size-8  rounded flex items-center justify-center"
             style={{ background: isWorking ? `${agent.color}20` : BG_HOVER }}
           >
             <AgentIcon icon={agent.icon} color={agent.color} size={14} />
@@ -82,7 +82,7 @@ export function AgentCard({
           </div>
         </div>
         <span 
-          className="w-1.5 h-1.5 rounded-full"
+          className="size-1.5  rounded-full"
           style={{ 
             background: isWorking ? GREEN : TEXT_SUBTLE,
             boxShadow: isWorking ? `0 0 6px ${GREEN}` : 'none',

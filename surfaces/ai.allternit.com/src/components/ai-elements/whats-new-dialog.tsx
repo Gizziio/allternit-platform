@@ -75,7 +75,7 @@ export function WhatsNewDialog({
         />
         <DialogPrimitive.Content
           className={cn(
-            "fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%]",
+            "fixed left-[50%] top-[50%] z-50 tranzinc-x-[-50%] tranzinc-y-[-50%]",
             "w-full max-w-lg gap-0 p-0 shadow-2xl",
             "bg-background border border-border rounded-2xl",
             "focus:outline-none focus:ring-0",
@@ -89,15 +89,15 @@ export function WhatsNewDialog({
           {/* Header */}
           <div className="flex items-center justify-between px-5 pt-5 pb-3">
             <div className="flex items-center gap-2">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
-                <IconBulb className="w-4 h-4 text-primary" />
+              <div className="flex items-center justify-center size-8  rounded-lg bg-primary/10">
+                <IconBulb className="size-4  text-primary" />
               </div>
               <div>
                 <DialogPrimitive.Title className="text-base font-semibold text-foreground">
                   What&apos;s New
                 </DialogPrimitive.Title>
                 {hasUnread && (
-                  <span className="text-[11px] text-muted-foreground">
+                  <span className="text-[12px] text-muted-foreground">
                     {entries.filter((e) =>
                       lastSeenEntryId
                         ? entries.indexOf(e) <
@@ -110,7 +110,7 @@ export function WhatsNewDialog({
               </div>
             </div>
             <DialogPrimitive.Close className="rounded-full p-1.5 hover:bg-muted transition-colors">
-              <IconX className="w-4 h-4 text-muted-foreground" />
+              <IconX className="size-4  text-muted-foreground" />
             </DialogPrimitive.Close>
           </div>
 
@@ -143,16 +143,16 @@ export function WhatsNewDialog({
                     return (
                       <span
                         className={cn(
-                          "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium border",
+                          "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[12px] font-medium border",
                           config.className
                         )}
                       >
-                        <Icon className="w-3 h-3" />
+                        <Icon className="size-3 " />
                         {config.label}
                       </span>
                     );
                   })()}
-                  <span className="text-[11px] text-muted-foreground">
+                  <span className="text-[12px] text-muted-foreground">
                     {activeEntry.version} · {activeEntry.date}
                   </span>
                 </div>
@@ -178,7 +178,7 @@ export function WhatsNewDialog({
                     onMarkAsSeen?.(entry.id);
                   }}
                   className={cn(
-                    "w-2 h-2 rounded-full transition-all duration-200",
+                    "size-2  rounded-full transition-all duration-200",
                     idx === activeIndex
                       ? "bg-primary w-5"
                       : entries.indexOf(entry) <
@@ -203,7 +203,7 @@ export function WhatsNewDialog({
                 disabled={activeIndex === 0}
                 className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-30 disabled:pointer-events-none transition-colors"
               >
-                <IconChevronRight className="w-4 h-4 text-muted-foreground rotate-180" />
+                <IconChevronRight className="size-4  text-muted-foreground rotate-180" />
               </button>
               <button
                 onClick={() => {
@@ -214,7 +214,7 @@ export function WhatsNewDialog({
                 disabled={activeIndex === entries.length - 1}
                 className="p-1.5 rounded-lg hover:bg-muted disabled:opacity-30 disabled:pointer-events-none transition-colors"
               >
-                <IconChevronRight className="w-4 h-4 text-muted-foreground" />
+                <IconChevronRight className="size-4  text-muted-foreground" />
               </button>
             </div>
           </div>

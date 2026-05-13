@@ -43,12 +43,8 @@ async function loadHeartbeatShellModule(): Promise<typeof import('./agent-heartb
     throw new Error('Shell-based HEARTBEAT tasks are only available on the server.');
   }
 
-  const runtimeImport = new Function(
-    'modulePath',
-    'return import(modulePath)',
-  ) as (modulePath: string) => Promise<typeof import('./agent-heartbeat-shell.server')>;
-
-  return runtimeImport('./agent-heartbeat-shell.server');
+  // Standard dynamic import is safer than new Function()
+  return import('./agent-heartbeat-shell.server');
 }
 
 /**

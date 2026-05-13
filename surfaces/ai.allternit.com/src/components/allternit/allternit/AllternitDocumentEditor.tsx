@@ -5,6 +5,7 @@
  * Rich, Notion-style block editor with Allternit theming.
  */
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useEffect, useState } from 'react';
 import { BlockNoteEditor, PartialBlock } from "@blocknote/core";
 import { BlockNoteView } from "@blocknote/mantine";
@@ -129,7 +130,7 @@ export function AllternitDocumentEditor({
   if (!editor) {
     return (
       <div className="flex items-center justify-center h-64 bg-[#1a1a1a] rounded-lg">
-        <div className="text-[var(--text-tertiary)]">Loading Allternit Document...</div>
+        <div className="text-[var(--text-tertiary)]">Loading Allternit Document…</div>
       </div>
     );
   }
@@ -145,7 +146,7 @@ export function AllternitDocumentEditor({
       {showToolbar && (
         <div className="h-12 border-b border-[#333] flex items-center justify-between px-4 bg-[#1e1e1e]">
           <div className="flex items-center gap-3">
-            <FileText className="w-4 h-4 text-[#D4956A]" />
+            <FileText className="size-4  text-[#D4956A]" />
             
             {/* Editable title */}
             {isEditingTitle ? (
@@ -166,7 +167,7 @@ export function AllternitDocumentEditor({
                 className="text-sm font-medium text-[#ECECEC] hover:text-[#D4956A] transition-colors flex items-center gap-2"
               >
                 {documentTitle}
-                {!readOnly && <PencilSimple className="w-3 h-3 opacity-50" />}
+                {!readOnly && <PencilSimple className="size-3  opacity-50" />}
               </button>
             )}
 
@@ -377,7 +378,7 @@ function flushList(blocks: PartialBlock[], currentList: PartialBlock[]) {
   }
 }
 
-function formatTime(date: Date): string {
+function formatTime(date: Date): string {isClient ? 
   const now = new Date();
   const diff = now.getTime() - new Date(date).getTime();
   const minutes = Math.floor(diff / 60000);
@@ -385,7 +386,7 @@ function formatTime(date: Date): string {
   const days = Math.floor(diff / 86400000);
 
   if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) return `${minutes : "..."}m ago`;
   if (hours < 24) return `${hours}h ago`;
   return `${days}d ago`;
 }

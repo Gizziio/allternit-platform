@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { PromptBar } from '@/components/aura/PromptBar';
 import { ArrowRight, Sparkles } from 'lucide-react';
 
-export function HeroSection() {
+export function HeroSection(): JSX.Element {
   return (
     <section className="relative flex min-h-[90vh] flex-col items-center justify-center px-6 pb-20 pt-32">
       {/* Animated grid background */}
@@ -22,7 +22,7 @@ export function HeroSection() {
 
       {/* Subtle radial glow */}
       <div
-        className="pointer-events-none absolute left-1/2 top-1/3 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-20"
+        className="pointer-events-none absolute left-1/2 top-1/3 h-[600px] w-[600px] -tranzinc-x-1/2 -tranzinc-y-1/2 rounded-full opacity-20"
         style={{
           background: 'radial-gradient(circle, rgba(212,176,140,0.15) 0%, transparent 70%)',
         }}
@@ -36,7 +36,7 @@ export function HeroSection() {
           transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
           className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-1.5 text-xs font-medium text-[#D97757] backdrop-blur-sm"
         >
-          <Sparkles className="h-3.5 w-3.5" />
+          <Sparkles className="size-3.5 " />
           AI-native platform for builders
         </motion.div>
 
@@ -73,9 +73,9 @@ export function HeroSection() {
           className="mx-auto mb-12 max-w-xl"
         >
           <PromptBar
-            placeholder="Describe what you want to build..."
-            icon={<Sparkles className="h-4 w-4" />}
-            actionIcon={<ArrowRight className="h-4 w-4" />}
+            placeholder="Describe what you want to build…"
+            icon={<Sparkles className="size-4 " />}
+            actionIcon={<ArrowRight className="size-4 " />}
             onSubmit={(value) => {
               if (typeof window !== 'undefined') {
                 window.location.href = `/sign-up?prompt=${encodeURIComponent(value)}`;
@@ -96,7 +96,7 @@ export function HeroSection() {
             className="inline-flex items-center gap-2 rounded-full bg-[#D97757] px-6 py-3 text-sm font-semibold text-[#1A1612] transition-all hover:scale-105 hover:shadow-lg hover:shadow-[#D97757]/20 active:scale-95"
           >
             Get started free
-            <ArrowRight className="h-4 w-4" />
+            <ArrowRight className="size-4 " />
           </a>
           <a
             href="/sign-in"

@@ -192,7 +192,7 @@ export function OptimizedImage({
         style={{ width, height, aspectRatio: width && height ? `${width}/${height}` : undefined }}
       >
         <svg
-          className="w-8 h-8 text-muted-foreground/50"
+          className="size-8  text-muted-foreground/50"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

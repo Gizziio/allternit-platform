@@ -114,7 +114,7 @@ export const BodyCustomizationTab: React.FC = () => {
         <p style={{ fontSize: '12px', color: STUDIO_THEME.textSecondary }}>
           {currentConfig.baseShape ? BODY_SHAPE_METADATA[currentConfig.baseShape]?.description : ''}
         </p>
-        <p style={{ fontSize: '11px', color: STUDIO_THEME.accent, marginTop: '8px' }}>
+        <p style={{ fontSize: '12px', color: STUDIO_THEME.accent, marginTop: '8px' }}>
           Best for: {currentConfig.baseShape ? BODY_SHAPE_METADATA[currentConfig.baseShape]?.idealSetup : 'general'} agents
         </p>
       </div>

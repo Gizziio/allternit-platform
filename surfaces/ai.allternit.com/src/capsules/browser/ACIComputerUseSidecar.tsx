@@ -135,7 +135,7 @@ function ElementHighlight({
           background: 'rgba(10,9,8,0.92)',
           border: `1px solid ${color.replace('0.85)', '0.4)')}`,
           borderRadius: 4,
-          fontSize: 9, fontWeight: 700,
+          fontSize: 12, fontWeight: 700,
           color,
           fontFamily: 'var(--font-mono)',
           textTransform: 'uppercase',
@@ -173,12 +173,12 @@ function ApprovalCard() {
       borderRadius: 10,
       boxShadow: 'var(--shadow-lg)',
     }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent-primary)', marginBottom: 3 }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent-primary)', marginBottom: 3 }}>
         Approval Required
       </div>
       {approvalRiskTier && (
         <div style={{
-          fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.15em',
+          fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.15em',
           color: riskColor, marginBottom: 10, fontFamily: 'var(--font-mono)',
         }}>
           ⚠ Risk: {approvalRiskTier}
@@ -190,7 +190,7 @@ function ApprovalCard() {
           border: '1px solid var(--ui-border-muted)',
           borderRadius: 6,
           padding: '8px 10px',
-          fontSize: 10,
+          fontSize: 12,
           color: 'var(--ui-text-muted)',
           lineHeight: 1.5,
           marginBottom: 12,
@@ -207,7 +207,7 @@ function ApprovalCard() {
             background: 'color-mix(in srgb, var(--accent-primary) 12%, var(--surface-panel))',
             border: '1px solid color-mix(in srgb, var(--accent-primary) 28%, transparent)',
             borderRadius: 6,
-            fontSize: 10, fontWeight: 700,
+            fontSize: 12, fontWeight: 700,
             color: 'var(--accent-primary)',
             letterSpacing: '0.08em', textTransform: 'uppercase',
             cursor: 'pointer',
@@ -222,7 +222,7 @@ function ApprovalCard() {
             background: 'var(--status-error-bg)',
             border: '1px solid color-mix(in srgb, var(--status-error) 30%, transparent)',
             borderRadius: 6,
-            fontSize: 10, fontWeight: 700,
+            fontSize: 12, fontWeight: 700,
             color: 'var(--status-error)',
             letterSpacing: '0.08em', textTransform: 'uppercase',
             cursor: 'pointer',
@@ -539,7 +539,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
           <ContextWindowCard>
             <button style={{
               background: 'transparent', border: 'none', padding: 0, cursor: 'pointer',
-              fontSize: 9, fontWeight: 700,
+              fontSize: 12, fontWeight: 700,
               color: 'rgba(212,176,140,0.45)',
               textTransform: 'uppercase', letterSpacing: '0.12em',
               fontFamily: 'var(--font-mono)', flexShrink: 0,
@@ -553,7 +553,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
           {/* Message */}
           <span style={{
             flex: 1,
-            fontSize: 11,
+            fontSize: 12,
             color: status === 'WaitingApproval' ? 'var(--status-warning)' : 'rgba(212,176,140,0.7)',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -566,7 +566,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
           {/* Step counter */}
           {currentAction?.stepIndex != null && currentAction?.totalSteps != null && currentAction.totalSteps > 1 && (
             <span style={{
-              fontSize: 10, color: 'rgba(212,176,140,0.5)',
+              fontSize: 12, color: 'rgba(212,176,140,0.5)',
               fontFamily: 'var(--font-mono)', fontWeight: 700, flexShrink: 0,
             }}>
               {currentAction.stepIndex}/{currentAction.totalSteps}
@@ -576,7 +576,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
           {/* Adapter chip */}
           {adapterLabel && (
             <span style={{
-              fontSize: 9, color: 'rgba(255,255,255,0.22)',
+              fontSize: 12, color: 'rgba(255,255,255,0.22)',
               fontFamily: 'var(--font-mono)', flexShrink: 0,
             }}>
               {adapterLabel}{currentLayer ? ` · ${currentLayer}` : ''}
@@ -612,25 +612,25 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
 
           {/* AX Tree toggle */}
           <button onClick={() => setShowAxTree((v) => !v)} title="Accessibility Tree"
-            style={{ padding: '2px 5px', fontSize: 9, background: showAxTree ? 'rgba(168,85,247,0.2)' : 'var(--surface-hover)', border: `1px solid ${showAxTree ? 'rgba(168,85,247,0.4)' : 'var(--ui-border-muted)'}`, borderRadius: 4, color: showAxTree ? '#a855f7' : 'rgba(255,255,255,0.3)', cursor: 'pointer', flexShrink: 0 }}>
+            style={{ padding: '2px 5px', fontSize: 12, background: showAxTree ? 'rgba(168,85,247,0.2)' : 'var(--surface-hover)', border: `1px solid ${showAxTree ? 'rgba(168,85,247,0.4)' : 'var(--ui-border-muted)'}`, borderRadius: 4, color: showAxTree ? '#a855f7' : 'rgba(255,255,255,0.3)', cursor: 'pointer', flexShrink: 0 }}>
             AX
           </button>
 
           {/* Windows toggle */}
           <button onClick={() => { setShowWindows((v) => !v); if (!showWindows) void fetchWindows(); }} title="Open Windows"
-            style={{ padding: '2px 5px', fontSize: 9, background: showWindows ? 'rgba(59,130,246,0.2)' : 'var(--surface-hover)', border: `1px solid ${showWindows ? 'rgba(59,130,246,0.4)' : 'var(--ui-border-muted)'}`, borderRadius: 4, color: showWindows ? 'var(--status-info)' : 'rgba(255,255,255,0.3)', cursor: 'pointer', flexShrink: 0 }}>
+            style={{ padding: '2px 5px', fontSize: 12, background: showWindows ? 'rgba(59,130,246,0.2)' : 'var(--surface-hover)', border: `1px solid ${showWindows ? 'rgba(59,130,246,0.4)' : 'var(--ui-border-muted)'}`, borderRadius: 4, color: showWindows ? 'var(--status-info)' : 'rgba(255,255,255,0.3)', cursor: 'pointer', flexShrink: 0 }}>
             ⊞
           </button>
 
           {/* Notifications toggle */}
           <button onClick={() => { setShowNotifications((v) => !v); if (!showNotifications) void fetchNotifications(); }} title="Notifications"
-            style={{ padding: '2px 5px', fontSize: 9, background: showNotifications ? 'rgba(251,191,36,0.2)' : 'var(--surface-hover)', border: `1px solid ${showNotifications ? 'rgba(251,191,36,0.4)' : 'var(--ui-border-muted)'}`, borderRadius: 4, color: showNotifications ? 'var(--status-warning)' : 'rgba(255,255,255,0.3)', cursor: 'pointer', flexShrink: 0 }}>
+            style={{ padding: '2px 5px', fontSize: 12, background: showNotifications ? 'rgba(251,191,36,0.2)' : 'var(--surface-hover)', border: `1px solid ${showNotifications ? 'rgba(251,191,36,0.4)' : 'var(--ui-border-muted)'}`, borderRadius: 4, color: showNotifications ? 'var(--status-warning)' : 'rgba(255,255,255,0.3)', cursor: 'pointer', flexShrink: 0 }}>
             🔔
           </button>
 
           {/* Direct control toggle */}
           <button onClick={() => setDirectControlMode((v) => !v)} title="Direct click control"
-            style={{ padding: '2px 5px', fontSize: 9,
+            style={{ padding: '2px 5px', fontSize: 12,
               background: directControlMode ? 'rgba(99,252,241,0.2)' : 'var(--surface-hover)',
               border: `1px solid ${directControlMode ? 'rgba(99,252,241,0.4)' : 'var(--ui-border-muted)'}`,
               borderRadius: 4, color: directControlMode ? '#63fcf1' : 'rgba(255,255,255,0.3)',
@@ -640,7 +640,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
 
           {/* Conformance dashboard toggle */}
           <button onClick={() => setShowConformance((v) => !v)} title="Conformance Dashboard"
-            style={{ padding: '2px 5px', fontSize: 9,
+            style={{ padding: '2px 5px', fontSize: 12,
               background: showConformance ? 'rgba(34,197,94,0.2)' : 'var(--surface-hover)',
               border: `1px solid ${showConformance ? 'rgba(34,197,94,0.4)' : 'var(--ui-border-muted)'}`,
               borderRadius: 4, color: showConformance ? 'var(--status-success)' : 'rgba(255,255,255,0.3)',
@@ -713,7 +713,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
                       borderRadius: '50%',
                       animation: 'aci-sidecar-spin 0.9s linear infinite',
                     }} />
-                    <span style={{ fontSize: 10, color: 'rgba(212,176,140,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
+                    <span style={{ fontSize: 12, color: 'rgba(212,176,140,0.3)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
                       CONNECTING…
                     </span>
                   </div>
@@ -724,10 +724,10 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
                     alignItems: 'center', justifyContent: 'center', gap: 8,
                     padding: 20,
                   }}>
-                    <span style={{ fontSize: 10, color: 'rgba(239,68,68,0.7)', fontFamily: 'var(--font-mono)', textAlign: 'center' }}>
+                    <span style={{ fontSize: 12, color: 'rgba(239,68,68,0.7)', fontFamily: 'var(--font-mono)', textAlign: 'center' }}>
                       {serviceError}
                     </span>
-                    <span style={{ fontSize: 9, color: 'rgba(212,176,140,0.3)', fontFamily: 'var(--font-mono)', textAlign: 'center' }}>
+                    <span style={{ fontSize: 12, color: 'rgba(212,176,140,0.3)', fontFamily: 'var(--font-mono)', textAlign: 'center' }}>
                       Check the agent logs for details.
                     </span>
                   </div>
@@ -737,7 +737,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
                     background: 'linear-gradient(135deg, #0a0908 0%, #111010 100%)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                   }}>
-                    <span style={{ fontSize: 10, color: 'var(--ui-border-default)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
+                    <span style={{ fontSize: 12, color: 'var(--ui-border-default)', fontFamily: 'var(--font-mono)', letterSpacing: '0.1em' }}>
                       NO SIGNAL
                     </span>
                   </div>
@@ -759,7 +759,7 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
                     padding: '2px 8px', borderRadius: 4,
                     background: lastVerification.verified_success ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)',
                     border: `1px solid ${lastVerification.verified_success ? 'var(--status-success)' : 'var(--status-error)'}`,
-                    fontSize: 10, color: lastVerification.verified_success ? 'var(--status-success)' : 'var(--status-error)',
+                    fontSize: 12, color: lastVerification.verified_success ? 'var(--status-success)' : 'var(--status-error)',
                     fontWeight: 600, pointerEvents: 'none', zIndex: 10,
                   }}>
                     {lastVerification.verified_success ? '✓ Verified' : '✗ Unverified'} {Math.round(lastVerification.confidence * 100)}%
@@ -807,20 +807,20 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
             {/* AX Tree panel */}
             {showAxTree && axTree && (
               <div style={{ borderTop: '1px solid var(--surface-hover)', padding: 8, maxHeight: 200, overflowY: 'auto', flexShrink: 0 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginBottom: 4, fontFamily: 'var(--font-mono)' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginBottom: 4, fontFamily: 'var(--font-mono)' }}>
                   AX · {(axSurface ?? 'WINDOW').toUpperCase()}
                 </div>
                 {axDiff.size > 0 && (
                   <div style={{ display: 'flex', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 9, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>
                       <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--status-success)', display: 'inline-block', flexShrink: 0 }} />
                       Added
                     </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 9, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>
                       <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--status-error)', display: 'inline-block', flexShrink: 0 }} />
                       Removed
                     </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 9, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>
                       <span style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--status-warning)', display: 'inline-block', flexShrink: 0 }} />
                       Modified
                     </span>
@@ -833,16 +833,16 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
             {/* Windows panel */}
             {showWindows && (
               <div style={{ borderTop: '1px solid var(--surface-hover)', padding: 8, maxHeight: 150, overflowY: 'auto', flexShrink: 0 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>OPEN WINDOWS</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>OPEN WINDOWS</div>
                 {windows.length === 0
-                  ? <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>None found</div>
+                  ? <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)' }}>None found</div>
                   : windows.map((w) => (
-                    <div key={w.window_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 0', fontSize: 10 }}>
+                    <div key={w.window_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 0', fontSize: 12 }}>
                       <span style={{ color: 'rgba(255,255,255,0.5)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>
                         {w.app_name} — {w.title}
                       </span>
                       <button onClick={() => useBrowserAgentStore.getState().focusWindow(w.window_id)}
-                        style={{ fontSize: 9, padding: '1px 6px', background: 'rgba(168,85,247,0.15)', border: '1px solid rgba(168,85,247,0.3)', borderRadius: 3, color: '#a855f7', cursor: 'pointer' }}>
+                        style={{ fontSize: 12, padding: '1px 6px', background: 'rgba(168,85,247,0.15)', border: '1px solid rgba(168,85,247,0.3)', borderRadius: 3, color: '#a855f7', cursor: 'pointer' }}>
                         Focus
                       </button>
                     </div>
@@ -854,15 +854,15 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
             {/* Notifications panel */}
             {showNotifications && (
               <div style={{ borderTop: '1px solid var(--surface-hover)', padding: 8, maxHeight: 150, overflowY: 'auto', flexShrink: 0 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>NOTIFICATIONS</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>NOTIFICATIONS</div>
                 {notifications.length === 0
-                  ? <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>None</div>
+                  ? <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)' }}>None</div>
                   : notifications.map((n: NotificationEntry) => (
                     <div key={n.notification_id} style={{ marginBottom: 6, padding: '4px 6px', background: 'var(--surface-hover)', borderRadius: 4 }}>
-                      <div style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.75)' }}>{n.title}</div>
-                      {n.body && <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>{n.body}</div>}
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.75)' }}>{n.title}</div>
+                      {n.body && <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', marginBottom: 2 }}>{n.body}</div>}
                       <button onClick={() => void dismissNotification(n.notification_id)}
-                        style={{ fontSize: 9, padding: '1px 6px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 3, color: 'var(--status-error)', cursor: 'pointer' }}>
+                        style={{ fontSize: 12, padding: '1px 6px', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 3, color: 'var(--status-error)', cursor: 'pointer' }}>
                         Dismiss
                       </button>
                     </div>
@@ -893,8 +893,8 @@ export function ACIComputerUseSidecar({ suppressInBrowserMode = true }: ACICompu
                   <path d="M3 8l3 3 7-7" stroke="rgba(16,185,129,0.8)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(16,185,129,0.85)', marginBottom: 1 }}>Task Complete</div>
-                  <div style={{ fontSize: 9, color: 'rgba(16,185,129,0.5)', fontFamily: 'var(--font-mono)' }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(16,185,129,0.85)', marginBottom: 1 }}>Task Complete</div>
+                  <div style={{ fontSize: 12, color: 'rgba(16,185,129,0.5)', fontFamily: 'var(--font-mono)' }}>
                     {lastEventMessage || goal}
                   </div>
                 </div>
@@ -940,11 +940,11 @@ function AXTreeDisplay({
 
   return (
     <div style={diffStyle}>
-      <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: node.is_interactive ? '#a855f7' : 'rgba(255,255,255,0.3)' }}>
+      <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: node.is_interactive ? '#a855f7' : 'rgba(255,255,255,0.3)' }}>
         {refLabel}<span style={{ color: 'rgba(255,255,255,0.5)' }}>{node.role}</span>
       </span>
       {nameLabel && (
-        <span style={{ fontSize: 10, fontFamily: 'var(--font-mono)', color: 'rgba(255,255,255,0.55)', marginLeft: 4 }}>
+        <span style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'rgba(255,255,255,0.55)', marginLeft: 4 }}>
           {nameLabel.slice(0, 40)}
         </span>
       )}
@@ -1041,7 +1041,7 @@ export function ACIComputerUseBar({ suppressInBrowserMode = true, className }: A
         <ContextWindowCard>
           <button style={{
             background: 'transparent', border: 'none', padding: 0, cursor: 'pointer',
-            fontSize: 9, fontWeight: 700,
+            fontSize: 12, fontWeight: 700,
             color: 'rgba(212,176,140,0.4)',
             textTransform: 'uppercase', letterSpacing: '0.12em',
             fontFamily: 'var(--font-mono)', flexShrink: 0,
@@ -1055,7 +1055,7 @@ export function ACIComputerUseBar({ suppressInBrowserMode = true, className }: A
         {/* Message */}
         <span style={{
           flex: 1,
-          fontSize: 11,
+          fontSize: 12,
           color: status === 'WaitingApproval' ? 'var(--status-warning)' : 'rgba(212,176,140,0.65)',
           overflow: 'hidden',
           textOverflow: 'ellipsis',
@@ -1068,7 +1068,7 @@ export function ACIComputerUseBar({ suppressInBrowserMode = true, className }: A
         {/* Step counter */}
         {stepIndex != null && totalSteps != null && totalSteps > 1 && (
           <span style={{
-            fontSize: 9, fontFamily: 'var(--font-mono)', fontWeight: 700,
+            fontSize: 12, fontFamily: 'var(--font-mono)', fontWeight: 700,
             color: 'rgba(212,176,140,0.4)', flexShrink: 0,
           }}>
             {stepIndex}/{totalSteps}
@@ -1078,7 +1078,7 @@ export function ACIComputerUseBar({ suppressInBrowserMode = true, className }: A
         {/* Adapter */}
         {adapterLabel && (
           <span style={{
-            fontSize: 9, fontFamily: 'var(--font-mono)',
+            fontSize: 12, fontFamily: 'var(--font-mono)',
             color: 'rgba(255,255,255,0.18)', flexShrink: 0,
           }}>
             {adapterLabel}
@@ -1093,7 +1093,7 @@ export function ACIComputerUseBar({ suppressInBrowserMode = true, className }: A
               padding: '3px 9px', borderRadius: 4,
               background: 'color-mix(in srgb, var(--accent-primary) 12%, transparent)',
               border: '1px solid rgba(212,176,140,0.28)',
-              fontSize: 9, fontWeight: 700,
+              fontSize: 12, fontWeight: 700,
               color: 'rgba(212,176,140,0.85)',
               letterSpacing: '0.08em', textTransform: 'uppercase',
               cursor: 'pointer', flexShrink: 0,
@@ -1111,7 +1111,7 @@ export function ACIComputerUseBar({ suppressInBrowserMode = true, className }: A
               padding: '3px 8px', borderRadius: 4,
               background: 'var(--status-error-bg)',
               border: '1px solid rgba(239,68,68,0.18)',
-              fontSize: 9, fontWeight: 700,
+              fontSize: 12, fontWeight: 700,
               color: 'rgba(239,68,68,0.65)',
               letterSpacing: '0.08em', textTransform: 'uppercase',
               cursor: 'pointer', flexShrink: 0,

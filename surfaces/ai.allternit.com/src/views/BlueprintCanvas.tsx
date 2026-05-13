@@ -7,6 +7,7 @@
 
 'use client';
 
+import { useIsClient } from '@/lib/hooks/use-is-client';
 import React, { useState, useMemo, useEffect } from 'react';
 import { GlassSurface } from '@/design/GlassSurface';
 import { AllternitOpenUIRenderer } from '@/lib/openui/AllternitOpenUIRenderer';
@@ -65,7 +66,7 @@ export function BlueprintCanvas({ context }: { context?: ViewContext }) {
   ]);
   const [selectedVersionId, setSelectedVersionId] = useState('1');
 
-  useEffect(() => {
+  useEffect(() => {isClient ? 
     if (ctx.stream) {
       const newStream = ctx.stream;
       setInputText(newStream);
@@ -77,7 +78,7 @@ export function BlueprintCanvas({ context }: { context?: ViewContext }) {
         timestamp: new Date().toLocaleTimeString(),
         content: newStream,
         summary: 'Incoming Stream Update'
-      };
+       : "..."};
       setVersions(prev => [newVersion, ...prev]);
       setSelectedVersionId(newVersion.id);
     }
@@ -85,7 +86,7 @@ export function BlueprintCanvas({ context }: { context?: ViewContext }) {
 
   const masterPrompt = useMemo(() => getFullArchitectInstructions(), []);
 
-  const handleRender = () => {
+  const handleRender = () => {isClient ? 
     const start = performance.now();
     setActiveStream(inputText);
     const end = performance.now();
@@ -97,7 +98,7 @@ export function BlueprintCanvas({ context }: { context?: ViewContext }) {
       timestamp: new Date().toLocaleTimeString(),
       content: inputText,
       summary: 'Manual Edit'
-    };
+     : "..."};
     setVersions(prev => [newVersion, ...prev]);
     setSelectedVersionId(newVersion.id);
   };
@@ -114,17 +115,17 @@ export function BlueprintCanvas({ context }: { context?: ViewContext }) {
       <div className="p-4 border-b border-white/[0.05] flex items-center justify-between bg-black/20">
         <div className="flex items-center gap-4">
           <div className="p-2 bg-[var(--accent-primary)]/10 rounded-lg">
-            <Cpu className="w-5 h-5 text-[var(--accent-primary)]" />
+            <Cpu className="size-5  text-[var(--accent-primary)]" />
           </div>
           <div>
             <h2 className="text-base font-bold text-white tracking-tight flex items-center gap-2">
               Allternit Design
-              <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full uppercase tracking-widest font-black">Pro</span>
+              <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full uppercase tracking-widest font-black">Pro</span>
             </h2>
-            <div className="flex items-center gap-3 text-[10px] text-[var(--text-tertiary)] uppercase font-bold tracking-widest">
+            <div className="flex items-center gap-3 text-xs text-[var(--text-tertiary)] uppercase font-bold tracking-widest">
               <span className="flex items-center gap-1"><Terminal size={12} /> Model Context: MCP-Active</span>
-              <span className="w-1 h-1 rounded-full bg-white/20" />
-              <span className="flex items-center gap-1 text-green-500"><div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" /> Live Rendering</span>
+              <span className="size-1  rounded-full bg-white/20" />
+              <span className="flex items-center gap-1 text-green-500"><div className="size-1.5  rounded-full bg-green-500 animate-pulse" /> Live Rendering</span>
             </div>
           </div>
         </div>
@@ -133,7 +134,7 @@ export function BlueprintCanvas({ context }: { context?: ViewContext }) {
           <div className="flex bg-black/40 p-1 rounded-lg border border-white/5 mr-2">
             <button
               onClick={() => setMode('openui')}
-              className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
+              className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
                 mode === 'openui' 
                   ? 'bg-white/10 text-white shadow-sm' 
                   : 'text-white/40 hover:text-white/60'
@@ -143,7 +144,7 @@ export function BlueprintCanvas({ context }: { context?: ViewContext }) {
             </button>
             <button
               onClick={() => setMode('json')}
-              className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
+              className={`px-3 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-2 ${
                 mode === 'json' 
                   ? 'bg-white/10 text-white shadow-sm' 
                   : 'text-white/40 hover:text-white/60'
@@ -177,7 +178,7 @@ export function BlueprintCanvas({ context }: { context?: ViewContext }) {
         <div className="w-[260px] border-r border-white/5 flex flex-col bg-black/10">
           <div className="p-4 border-b border-white/5 flex items-center gap-2 text-white/40">
             <ClockCounterClockwise size={16} />
-            <span className="text-[10px] font-black uppercase tracking-tighter">Artifact Versioning</span>
+            <span className="text-xs font-black uppercase tracking-tighter">Artifact Versioning</span>
           </div>
           <div className="flex-1 overflow-auto p-2 space-y-1">
             {versions.map(v => (
@@ -191,10 +192,10 @@ export function BlueprintCanvas({ context }: { context?: ViewContext }) {
                 }`}
               >
                 <div className="flex justify-between items-center mb-1">
-                   <span className={`text-[10px] font-bold ${selectedVersionId === v.id ? 'text-[var(--accent-primary)]' : 'text-white/60'}`}>{v.timestamp}</span>
-                   {selectedVersionId === v.id && <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent-primary)] shadow-[0_0_8px_var(--accent-primary)]" />}
+                   <span className={`text-xs font-bold ${selectedVersionId === v.id ? 'text-[var(--accent-primary)]' : 'text-white/60'}`}>{v.timestamp}</span>
+                   {selectedVersionId === v.id && <div className="size-1.5  rounded-full bg-[var(--accent-primary)] shadow-[0_0_8px_var(--accent-primary)]" />}
                 </div>
-                <div className="text-[11px] text-white/80 font-medium truncate">{v.summary}</div>
+                <div className="text-[12px] text-white/80 font-medium truncate">{v.summary}</div>
               </button>
             ))}
           </div>
@@ -215,7 +216,7 @@ export function BlueprintCanvas({ context }: { context?: ViewContext }) {
           <div className="p-3 border-b border-white/5 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Code size={16} className="text-blue-400" />
-              <span className="text-[10px] font-black uppercase tracking-tighter text-white/40">Live Specification</span>
+              <span className="text-xs font-black uppercase tracking-tighter text-white/40">Live Specification</span>
             </div>
             <button onClick={handleRender} className="p-1 hover:bg-white/10 rounded transition-colors text-[var(--accent-primary)]">
                <Play size={16} weight="fill" />
@@ -225,22 +226,22 @@ export function BlueprintCanvas({ context }: { context?: ViewContext }) {
           <textarea
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            className="flex-1 p-4 bg-transparent text-[var(--text-primary)] font-mono text-[11px] leading-relaxed resize-none outline-none border-0 selection:bg-blue-500/30"
+            className="flex-1 p-4 bg-transparent text-[var(--text-primary)] font-mono text-[12px] leading-relaxed resize-none outline-none border-0 selection:bg-blue-500/30"
             spellCheck="false"
           />
 
           {showPrompt && (
             <div className="h-1/2 border-t border-white/10 bg-black/40 flex flex-col overflow-hidden">
                <div className="p-3 border-b border-white/5 flex items-center justify-between">
-                <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Architect's Protocol</span>
+                <span className="text-xs font-bold text-white/40 uppercase tracking-widest">Architect's Protocol</span>
                 <button 
                   onClick={() => navigator.clipboard.writeText(masterPrompt)} 
-                  className="text-[10px] text-[var(--accent-primary)] hover:underline flex items-center gap-1 font-bold"
+                  className="text-xs text-[var(--accent-primary)] hover:underline flex items-center gap-1 font-bold"
                 >
                   <Copy size={12} /> COPY PROTOCOL
                 </button>
               </div>
-              <div className="p-4 overflow-auto font-mono text-[10px] text-white/40 whitespace-pre-wrap leading-tight">
+              <div className="p-4 overflow-auto font-mono text-xs text-white/40 whitespace-pre-wrap leading-tight">
                 {masterPrompt}
               </div>
             </div>

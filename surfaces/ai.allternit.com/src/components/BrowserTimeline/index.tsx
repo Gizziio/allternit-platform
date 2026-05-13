@@ -116,7 +116,7 @@ export const BrowserTimeline: React.FC<BrowserTimelineProps> = ({
     <div className={styles.timeline} data-testid="browser-timeline">
       {/* Header */}
       <div className={styles.header}>
-        <h3>Browser Session: {sessionId.slice(0, 8)}...</h3>
+        <h3>Browser Session: {sessionId.slice(0, 8)}…</h3>
         <div className={styles.stats}>
           <span>Step {currentStep + 1} of {actions.length}</span>
           <span className={styles.duration}>

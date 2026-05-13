@@ -102,18 +102,18 @@ export function CoworkModeTabs({
               key={tab.id}
               onClick={() => handleSelect(tab.id)}
               className={cn(
-                "relative flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200",
+                "relative flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border",
                 isActive 
-                  ? "text-white" 
-                  : "text-[#9B9B9B] hover:text-[#ECECEC] hover:bg-white/5"
+                  ? "text-white border-transparent" 
+                  : "text-[#9B9B9B] border-[var(--ui-border-muted)] hover:text-[#ECECEC] hover:bg-white/5"
               )}
               style={{
                 background: isActive 
                   ? `linear-gradient(135deg, ${surfaceTheme?.soft || 'rgba(167,139,250,0.2)'} 0%, ${surfaceTheme?.glow || 'rgba(167,139,250,0.1)'} 100%)`
                   : 'transparent',
-                border: isActive 
-                  ? `1px solid ${surfaceTheme?.accent || '#A78BFA'}` 
-                  : '1px solid var(--ui-border-muted)',
+                borderColor: isActive 
+                  ? (surfaceTheme?.accent || '#A78BFA') 
+                  : undefined,
                 boxShadow: isActive 
                   ? `0 0 20px ${surfaceTheme?.glow || 'rgba(167,139,250,0.2)'}` 
                   : 'none',
@@ -126,10 +126,7 @@ export function CoworkModeTabs({
               {isActive && (
                 <motion.div
                   layoutId="cowork-mode-indicator"
-                  className="absolute inset-0 rounded-full"
-                  style={{
-                    background: `linear-gradient(135deg, ${surfaceTheme?.soft || 'rgba(167,139,250,0.2)'} 0%, transparent 100%)`,
-                  }}
+                  className="absolute inset-0 rounded-full bg-gradient-to-br from-white/10 to-transparent"
                   transition={{ type: "spring", stiffness: 500, damping: 30 }}
                 />
               )}
@@ -155,7 +152,7 @@ export function CoworkModeTabs({
             key={tab.id}
             onClick={() => handleSelect(tab.id)}
             className={cn(
-              "relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200",
+              "relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[13px] font-medium transition-all duration-200",
               isActive 
                 ? "text-white" 
                 : "text-[#666] hover:text-[#b8b8b8] hover:bg-white/5"
@@ -168,14 +165,14 @@ export function CoworkModeTabs({
             whileTap={{ scale: 0.95 }}
           >
             <Icon className={cn(
-              "w-3.5 h-3.5",
+              "size-3.5",
               isActive && "text-[#A78BFA]"
             )} />
             <span>{tab.label}</span>
             {isActive && (
               <motion.div
                 layoutId="cowork-dock-indicator"
-                className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full"
+                className="absolute bottom-0 left-1/2 -translate-x-1/2 size-1 rounded-full"
                 style={{ background: surfaceTheme?.accent || '#A78BFA' }}
                 transition={{ type: "spring", stiffness: 500, damping: 30 }}
               />

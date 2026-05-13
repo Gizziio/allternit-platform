@@ -379,7 +379,7 @@ function IdentityTab({
             type="text"
             value={newValue}
             onChange={(e) => setNewValue(e.target.value)}
-            placeholder="Add a value..."
+            placeholder="Add a value…"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 onAddItem('values', newValue);
@@ -414,7 +414,7 @@ function IdentityTab({
             type="text"
             value={newBoundary}
             onChange={(e) => setNewBoundary(e.target.value)}
-            placeholder="Add a boundary..."
+            placeholder="Add a boundary…"
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 onAddItem('boundaries', newBoundary);

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useIsClient } from "@/lib/hooks/use-is-client";
 import {
   GitBranch,
   Square,
@@ -73,7 +74,7 @@ export function WorkflowMonitorView() {
           <div className="flex items-center gap-4">
             <div>
               <h2 className="font-medium flex items-center gap-2">
-                <GitBranch className="w-5 h-5 text-accent" />
+                <GitBranch className="size-5  text-accent" />
                 {execution.workflow_name}
               </h2>
               <p className="text-xs text-muted-foreground">
@@ -112,11 +113,11 @@ export function WorkflowMonitorView() {
               Elapsed: {elapsedTime()}
             </span>
             <span className="flex items-center gap-1">
-              <CheckCircle className="w-3 h-3 text-green-500" />
+              <CheckCircle className="size-3  text-green-500" />
               {execution.nodes.filter(n => n.status === 'completed').length} completed
             </span>
             <span className="flex items-center gap-1">
-              <CircleNotch className="w-3 h-3 text-blue-500" />
+              <CircleNotch className="size-3  text-blue-500" />
               {execution.nodes.filter(n => n.status === 'running').length} running
             </span>
             <span className="flex items-center gap-1">
@@ -146,16 +147,16 @@ export function WorkflowMonitorView() {
                   }`}
                 >
                   <div className="flex items-center justify-center mb-2">
-                    {node.status === 'completed' && <CheckCircle className="w-6 h-6 text-green-500" />}
-                    {node.status === 'failed' && <XCircle className="w-6 h-6 text-red-500" />}
-                    {node.status === 'running' && <CircleNotch className="w-6 h-6 text-blue-500 animate-spin" />}
-                    {node.status === 'pending' && <Clock className="w-6 h-6 text-muted-foreground" />}
+                    {node.status === 'completed' && <CheckCircle className="size-6  text-green-500" />}
+                    {node.status === 'failed' && <XCircle className="size-6  text-red-500" />}
+                    {node.status === 'running' && <CircleNotch className="size-6  text-blue-500 animate-spin" />}
+                    {node.status === 'pending' && <Clock className="size-6  text-muted-foreground" />}
                   </div>
                   <p className="text-sm font-medium text-center">{node.name}</p>
                   <p className="text-xs text-muted-foreground text-center mt-1 capitalize">{node.status}</p>
                 </button>
                 {idx < execution.nodes.length - 1 && (
-                  <CaretRight className="w-5 h-5 text-muted-foreground" />
+                  <CaretRight className="size-5  text-muted-foreground" />
                 )}
               </React.Fragment>
             ))}
@@ -215,7 +216,7 @@ export function WorkflowMonitorView() {
               {selectedNodeData.logs.length > 0 ? (
                 selectedNodeData.logs.map((log, idx) => (
                   <div key={idx} className="text-xs font-mono p-2 rounded bg-primary border border-border">
-                    <span className="text-muted-foreground">[{new Date().toLocaleTimeString()}]</span>{' '}
+                    <span className="text-muted-foreground">[{isClient ? new Date().toLocaleTimeString() : "..."}]</span>{' '}
                     <span>{log}</span>
                   </div>
                 ))
