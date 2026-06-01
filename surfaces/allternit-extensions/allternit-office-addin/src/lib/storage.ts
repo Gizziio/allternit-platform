@@ -26,19 +26,27 @@ export const officeStorage = {
   },
 
   async set<T>(key: string, value: T): Promise<void> {
-    const serialized = JSON.stringify(value)
-    if (isOfficeRuntimeAvailable()) {
-      await OfficeRuntime.storage.setItem(key, serialized)
-      return
+    try {
+      const serialized = JSON.stringify(value)
+      if (isOfficeRuntimeAvailable()) {
+        await OfficeRuntime.storage.setItem(key, serialized)
+        return
+      }
+      localStorage.setItem(key, serialized)
+    } catch (err) {
+      console.warn(`[officeStorage] set("${key}") failed:`, err)
     }
-    localStorage.setItem(key, serialized)
   },
 
   async remove(key: string): Promise<void> {
-    if (isOfficeRuntimeAvailable()) {
-      await OfficeRuntime.storage.removeItem(key)
-      return
+    try {
+      if (isOfficeRuntimeAvailable()) {
+        await OfficeRuntime.storage.removeItem(key)
+        return
+      }
+      localStorage.removeItem(key)
+    } catch (err) {
+      console.warn(`[officeStorage] remove("${key}") failed:`, err)
     }
-    localStorage.removeItem(key)
   },
 }

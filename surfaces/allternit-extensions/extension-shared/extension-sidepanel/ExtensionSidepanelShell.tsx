@@ -85,6 +85,17 @@ const EXTENSION_SIDEPANEL_ANIMATIONS = `
     box-shadow: inset 0 0 0 1px rgba(179, 96, 255, 0.34), 0 0 32px rgba(69, 201, 255, 0.18);
   }
 }
+
+@keyframes extension-sidepanel-card-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 `;
 
 const DEFAULT_COPY: ExtensionSidepanelCopy = {
@@ -343,6 +354,65 @@ function Zap({ className }: IconProps) {
   );
 }
 
+function Table({ className }: IconProps) {
+  return (
+    <SvgIcon className={className}>
+      <rect width="18" height="18" x="3" y="3" rx="2" />
+      <path d="M3 9h18" />
+      <path d="M3 15h18" />
+      <path d="M9 3v18" />
+      <path d="M15 3v18" />
+    </SvgIcon>
+  );
+}
+
+function FileText({ className }: IconProps) {
+  return (
+    <SvgIcon className={className}>
+      <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.7.7l4.6 4.6a2.4 2.4 0 0 1 .7 1.7V20a2 2 0 0 1-2 2Z" />
+      <path d="M14 2v6h6" />
+      <path d="M10 9H8" />
+      <path d="M16 13H8" />
+      <path d="M16 17H8" />
+    </SvgIcon>
+  );
+}
+
+function Presentation({ className }: IconProps) {
+  return (
+    <SvgIcon className={className}>
+      <rect width="18" height="12" x="3" y="4" rx="2" />
+      <path d="M8 20h8" />
+      <path d="M12 16v4" />
+    </SvgIcon>
+  );
+}
+
+function ChevronDown({ className }: IconProps) {
+  return (
+    <SvgIcon className={className}>
+      <path d="m6 9 6 6 6-6" />
+    </SvgIcon>
+  );
+}
+
+function ChevronUp({ className }: IconProps) {
+  return (
+    <SvgIcon className={className}>
+      <path d="m18 15-6-6-6 6" />
+    </SvgIcon>
+  );
+}
+
+function Clock({ className }: IconProps) {
+  return (
+    <SvgIcon className={className}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </SvgIcon>
+  );
+}
+
 function usePrefersDarkMode() {
   const [isDark, setIsDark] = useState(false);
 
@@ -521,6 +591,22 @@ function StatusDot({ status }: { status: ExtensionSidepanelAdapter["status"] }) 
     <div className="flex items-center gap-1.5">
       <span className={cn("size-2 rounded-full", colorClass, status === "running" && "animate-pulse")} />
       <span className="text-xs text-muted-foreground">{label}</span>
+    </div>
+  );
+}
+
+function ConnectivityDot({ state }: { state?: ExtensionSidepanelAdapter["connectivity"] }) {
+  if (!state) return null;
+
+  const config = {
+    online: { color: "bg-green-500", label: "Connected" },
+    offline: { color: "bg-destructive", label: "Offline" },
+    checking: { color: "bg-amber-500", label: "Checking…" },
+  }[state];
+
+  return (
+    <div className="flex items-center gap-1" title={config.label}>
+      <span className={cn("size-1.5 rounded-full", config.color, state === "checking" && "animate-pulse")} />
     </div>
   );
 }
@@ -804,7 +890,7 @@ function RawSection({ rawRequest, rawResponse }: { rawRequest?: unknown; rawResp
 
 function StepCard({ event }: { event: Extract<ExtensionSidepanelHistoricalEvent, { type: "step" }> }) {
   return (
-    <div className="rounded-lg border border-border bg-muted/40 p-2.5 border-l-2 border-l-blue-500/50">
+    <div className="rounded-lg border border-border bg-muted/40 p-2.5 border-l-2 border-l-blue-500/50" style={{ animation: "extension-sidepanel-card-enter 0.25s ease-out both" }}>
       <div className="mb-2 text-[11px] font-semibold tracking-wide text-foreground">
         Step #{(event.stepIndex ?? 0) + 1}
       </div>
@@ -850,7 +936,7 @@ function ObservationCard({
   event: Extract<ExtensionSidepanelHistoricalEvent, { type: "observation" }>;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-muted/40 p-2.5 border-l-2 border-l-green-500/50">
+    <div className="rounded-lg border border-border bg-muted/40 p-2.5 border-l-2 border-l-green-500/50" style={{ animation: "extension-sidepanel-card-enter 0.25s ease-out both" }}>
       <div className="flex items-start gap-2">
         <Eye className="mt-0.5 size-3.5 shrink-0 text-green-500" />
         <span className="text-[11px] text-muted-foreground">{event.content}</span>
@@ -861,7 +947,7 @@ function ObservationCard({
 
 function RetryCard({ event }: { event: Extract<ExtensionSidepanelHistoricalEvent, { type: "retry" }> }) {
   return (
-    <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5">
+    <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5" style={{ animation: "extension-sidepanel-card-enter 0.25s ease-out both" }}>
       <div className="flex items-start gap-1.5">
         <RefreshCw className="mt-0.5 size-3 shrink-0 text-amber-500" />
         <span className="text-xs text-amber-600 dark:text-amber-400">
@@ -874,7 +960,7 @@ function RetryCard({ event }: { event: Extract<ExtensionSidepanelHistoricalEvent
 
 function ErrorCard({ event }: { event: Extract<ExtensionSidepanelHistoricalEvent, { type: "error" }> }) {
   return (
-    <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-2.5">
+    <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-2.5" style={{ animation: "extension-sidepanel-card-enter 0.25s ease-out both" }}>
       <div className="flex items-start gap-1.5">
         <XCircle className="mt-0.5 size-3 shrink-0 text-destructive" />
         <span className="text-xs text-destructive">{event.message}</span>
@@ -890,7 +976,7 @@ function UserTakeoverCard({
   event: Extract<ExtensionSidepanelHistoricalEvent, { type: "user_takeover" }>;
 }) {
   return (
-    <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5">
+    <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5" style={{ animation: "extension-sidepanel-card-enter 0.25s ease-out both" }}>
       <span className="text-xs text-amber-700 dark:text-amber-300">
         {event.message ?? "User takeover requested."}
       </span>
@@ -898,7 +984,79 @@ function UserTakeoverCard({
   );
 }
 
-export function EventCard({ event }: { event: ExtensionSidepanelHistoricalEvent }) {
+function ToolExecutionCard({
+  event,
+}: {
+  event: Extract<ExtensionSidepanelHistoricalEvent, { type: "tool_execution" }>;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  const statusConfig = {
+    pending: { label: "Pending", color: "text-amber-500", dot: "bg-amber-500", border: "border-l-amber-500/50" },
+    awaiting_approval: { label: "Awaiting approval", color: "text-amber-500", dot: "bg-amber-500", border: "border-l-amber-500/50" },
+    running: { label: "Running", color: "text-blue-500", dot: "bg-blue-500", border: "border-l-blue-500/50" },
+    completed: { label: "Done", color: "text-green-500", dot: "bg-green-500", border: "border-l-green-500/50" },
+    error: { label: "Error", color: "text-destructive", dot: "bg-destructive", border: "border-l-destructive/50" },
+    rejected: { label: "Rejected", color: "text-muted-foreground", dot: "bg-muted-foreground", border: "border-l-muted-foreground/50" },
+  };
+  const cfg = statusConfig[event.status];
+
+  const ToolIcon =
+    event.tool.startsWith("excel_")
+      ? Table
+      : event.tool.startsWith("word_")
+        ? FileText
+        : event.tool.startsWith("ppt_")
+          ? Presentation
+          : Zap;
+
+  return (
+    <div
+      className={cn(
+        "rounded-lg border border-border bg-muted/40 p-2.5 transition-colors",
+        "border-l-2",
+        cfg.border,
+      )}
+      style={{ animation: "extension-sidepanel-card-enter 0.25s ease-out both" }}
+    >
+      <div className="flex items-start gap-2">
+        <ToolIcon className={cn("mt-0.5 size-3.5 shrink-0", cfg.color)} />
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-medium text-foreground/90">{event.description}</p>
+          <div className="mt-1 flex items-center gap-2">
+            <span className="flex items-center gap-1">
+              <span className={cn("size-1.5 rounded-full", cfg.dot, event.status === "running" && "animate-pulse")} />
+              <span className={cn("text-[10px]", cfg.color)}>{cfg.label}</span>
+            </span>
+            {typeof event.duration === "number" && (
+              <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+                <Clock className="size-2.5" />
+                {event.duration}ms
+              </span>
+            )}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
+          aria-label={expanded ? "Collapse details" : "Expand details"}
+        >
+          {expanded ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
+        </button>
+      </div>
+      {expanded && (
+        <div className="mt-2 space-y-1.5 border-t border-border/60 pt-2">
+          <pre className="max-h-32 overflow-auto rounded bg-background/60 p-1.5 text-[10px] text-foreground/70">
+            {JSON.stringify({ tool: event.tool, input: event.input, output: event.output }, null, 2)}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EventCardInner({ event }: { event: ExtensionSidepanelHistoricalEvent }) {
   if (event.type === "step" && event.action?.name === "done") {
     const input = event.action.input as { text?: string; success?: boolean } | undefined;
     return (
@@ -911,13 +1069,45 @@ export function EventCard({ event }: { event: ExtensionSidepanelHistoricalEvent 
 
   if (event.type === "step") return <StepCard event={event} />;
   if (event.type === "observation") return <ObservationCard event={event} />;
+  if (event.type === "tool_execution") return <ToolExecutionCard event={event} />;
   if (event.type === "retry") return <RetryCard event={event} />;
   if (event.type === "error") return <ErrorCard event={event} />;
   if (event.type === "user_takeover") return <UserTakeoverCard event={event} />;
   return null;
 }
 
-export function ActivityCard({ activity }: { activity: ExtensionSidepanelActivity }) {
+function StreamingCard({ text }: { text: string }) {
+  return (
+    <div
+      className="rounded-lg border border-border/80 bg-muted/40 p-3"
+      style={{ animation: "extension-sidepanel-card-enter 0.25s ease-out both" }}
+    >
+      <div className="flex items-start gap-2">
+        <div className="relative mt-0.5">
+          <Sparkles className="size-3.5 text-blue-500" />
+          <span className="absolute -right-0.5 -top-0.5 size-1.5 rounded-full animate-ping bg-blue-500" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="whitespace-pre-wrap text-xs leading-relaxed text-foreground/90">
+            {text}
+            <span
+              className="ml-0.5 inline-block text-blue-500"
+              style={{ animation: "extension-sidepanel-blink-cursor 1s step-end infinite" }}
+            >
+              |
+            </span>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ActivityCardInner({ activity }: { activity: ExtensionSidepanelActivity }) {
+  if (activity.type === "streaming") {
+    return <StreamingCard text={activity.text} />;
+  }
+
   const info =
     activity.type === "thinking"
       ? { text: "Thinking...", color: "text-blue-500", dot: "bg-blue-500" }
@@ -1209,6 +1399,10 @@ export function ExtensionSidepanelShell({
       : null;
   }, [adapter.sessions, view]);
 
+  const historyDetailSessionId = useMemo(() => {
+    return view.name === "history-detail" ? view.sessionId : "";
+  }, [view]);
+
   const isRunning = adapter.status === "running";
   const showEmptyState =
     adapter.currentTask.length === 0 && adapter.history.length === 0 && !isRunning;
@@ -1252,17 +1446,118 @@ export function ExtensionSidepanelShell({
     [handleSubmit],
   );
 
-  if (view.name === "config") {
-    return (
-      <section
-        data-testid={testId}
-        className={cn(
-          "relative flex flex-col overflow-hidden bg-background text-foreground",
-          prefersDark && "dark",
-          containerClassName ?? "h-dvh",
-        )}
-        style={themeStyle}
-      >
+  return (
+    <section
+      data-testid={testId}
+      className={cn(
+        "relative flex min-h-0 flex-col bg-transparent p-2 text-foreground",
+        prefersDark && "dark",
+        containerClassName ?? "h-dvh",
+      )}
+      style={themeStyle}
+    >
+      {/* Chat view — always mounted, hidden via CSS when inactive */}
+      <div className={cn("h-full", view.name !== "chat" && "hidden")}>
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[18px] border border-border/80 bg-card shadow-2xl">
+          <MotionOverlay active={isRunning} />
+
+          <header className="flex items-center justify-between border-b border-border/80 px-4 py-3">
+            <div className="flex items-center gap-2.5">
+              {brandIcon ?? <Logo className="size-5" />}
+              <span className="text-sm font-semibold">{shellCopy.title}</span>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <ConnectivityDot state={adapter.connectivity} />
+              <StatusDot status={adapter.status} />
+              <button
+                type="button"
+                aria-label="Open history"
+                onClick={() => setView({ name: "history" })}
+                className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <HistoryIcon className="size-3.5" />
+              </button>
+              <button
+                type="button"
+                aria-label="Open settings"
+                onClick={() => setView({ name: "config" })}
+                className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <SettingsIcon className="size-3.5" />
+              </button>
+            </div>
+          </header>
+
+          <main className="flex min-h-0 flex-1 flex-col">
+            {adapter.currentTask && (
+              <div className="border-b bg-muted/20 px-4 py-2.5">
+                <div className="text-[10px] text-muted-foreground">Task</div>
+                <div className="truncate text-xs font-medium" title={adapter.currentTask}>
+                  {adapter.currentTask}
+                </div>
+              </div>
+            )}
+
+            <div ref={historyRef} className="flex-1 space-y-3 overflow-y-auto p-4">
+              {showEmptyState && <EmptyState copy={shellCopy} brandIcon={brandIcon} />}
+              {adapter.history.map((event, index) => (
+                <EventCard key={`extension-event-${index}`} event={event} />
+              ))}
+              {adapter.activity && <ActivityCard activity={adapter.activity} />}
+            </div>
+          </main>
+
+          <footer className="border-t border-border/80 p-3.5">
+            {renderComposer ? (
+              renderComposer({
+                isRunning,
+                value: inputValue,
+                placeholder: composerPlaceholder,
+                onValueChange: setInputValue,
+                onSubmit: (taskValue) => handleSubmit(taskValue),
+                onStop: handleStop,
+              })
+            ) : (
+              <form
+                onSubmit={handleSubmit}
+                className="relative rounded-[14px] border border-input bg-background/80 shadow-sm"
+              >
+                <textarea
+                  ref={textareaRef}
+                  rows={1}
+                  value={inputValue}
+                  disabled={isRunning}
+                  placeholder={composerPlaceholder}
+                  onChange={(event) => setInputValue(event.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="min-h-12 w-full resize-none bg-transparent px-4 py-3 pr-14 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
+                />
+
+                <button
+                  type={isRunning ? "button" : "submit"}
+                  onClick={isRunning ? handleStop : undefined}
+                  disabled={!isRunning && inputValue.trim().length === 0}
+                  aria-label={isRunning ? "Stop task" : "Send task"}
+                  className={cn(
+                    "absolute bottom-1.5 right-1.5 inline-flex size-10 items-center justify-center rounded-xl transition-colors",
+                    isRunning
+                      ? "bg-destructive text-white hover:opacity-90"
+                      : inputValue.trim().length > 0
+                        ? "bg-zinc-300 text-zinc-950 hover:bg-zinc-200"
+                        : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {isRunning ? <Square className="size-3.5 fill-current" /> : <Send className="size-3.5" />}
+                </button>
+              </form>
+            )}
+          </footer>
+        </div>
+      </div>
+
+      {/* Config view — always mounted, hidden via CSS when inactive */}
+      <div className={cn("h-full overflow-hidden bg-background", view.name !== "config" && "hidden")}>
         {renderConfigView ? (
           renderConfigView({
             config: adapter.config,
@@ -1286,21 +1581,10 @@ export function ExtensionSidepanelShell({
             }}
           />
         )}
-      </section>
-    );
-  }
+      </div>
 
-  if (view.name === "history") {
-    return (
-      <section
-        data-testid={testId}
-        className={cn(
-          "relative flex flex-col overflow-hidden bg-background text-foreground",
-          prefersDark && "dark",
-          containerClassName ?? "h-dvh",
-        )}
-        style={themeStyle}
-      >
+      {/* History view — always mounted, hidden via CSS when inactive */}
+      <div className={cn("h-full overflow-hidden bg-background", view.name !== "history" && "hidden")}>
         {renderHistoryListView ? (
           renderHistoryListView({
             sessions: adapter.sessions,
@@ -1318,145 +1602,29 @@ export function ExtensionSidepanelShell({
             onClearSessions={adapter.clearSessions}
           />
         )}
-      </section>
-    );
-  }
+      </div>
 
-  if (view.name === "history-detail") {
-    return (
-      <section
-        data-testid={testId}
-        className={cn(
-          "relative flex flex-col overflow-hidden bg-background text-foreground",
-          prefersDark && "dark",
-          containerClassName ?? "h-dvh",
-        )}
-        style={themeStyle}
-      >
+      {/* History detail view — always mounted, hidden via CSS when inactive */}
+      <div className={cn("h-full overflow-hidden bg-background", view.name !== "history-detail" && "hidden")}>
         {renderHistoryDetailView ? (
           renderHistoryDetailView({
             session: selectedSession,
-            sessionId: view.sessionId,
+            sessionId: historyDetailSessionId,
             onBack: () => setView({ name: "history" }),
           })
         ) : (
           <DefaultHistoryDetailView
             session={selectedSession}
-            sessionId={view.sessionId}
+            sessionId={historyDetailSessionId}
             onBack={() => setView({ name: "history" })}
           />
         )}
-      </section>
-    );
-  }
-
-  return (
-    <section
-      data-testid={testId}
-      className={cn(
-        "relative flex min-h-0 flex-col bg-transparent p-2 text-foreground",
-        prefersDark && "dark",
-        containerClassName ?? "h-dvh",
-      )}
-      style={themeStyle}
-    >
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-[18px] border border-border/80 bg-card shadow-2xl">
-        <MotionOverlay active={isRunning} />
-
-        <header className="flex items-center justify-between border-b border-border/80 px-4 py-3">
-          <div className="flex items-center gap-2.5">
-            {brandIcon ?? <Logo className="size-5" />}
-            <span className="text-sm font-semibold">{shellCopy.title}</span>
-          </div>
-
-          <div className="flex items-center gap-1.5">
-            <StatusDot status={adapter.status} />
-            <button
-              type="button"
-              aria-label="Open history"
-              onClick={() => setView({ name: "history" })}
-              className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            >
-              <HistoryIcon className="size-3.5" />
-            </button>
-            <button
-              type="button"
-              aria-label="Open settings"
-              onClick={() => setView({ name: "config" })}
-              className="inline-flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            >
-              <SettingsIcon className="size-3.5" />
-            </button>
-          </div>
-        </header>
-
-        <main className="flex min-h-0 flex-1 flex-col">
-          {adapter.currentTask && (
-            <div className="border-b bg-muted/20 px-4 py-2.5">
-              <div className="text-[10px] text-muted-foreground">Task</div>
-              <div className="truncate text-xs font-medium" title={adapter.currentTask}>
-                {adapter.currentTask}
-              </div>
-            </div>
-          )}
-
-          <div ref={historyRef} className="flex-1 space-y-3 overflow-y-auto p-4">
-            {showEmptyState && <EmptyState copy={shellCopy} brandIcon={brandIcon} />}
-            {adapter.history.map((event, index) => (
-              <EventCard key={`extension-event-${index}`} event={event} />
-            ))}
-            {adapter.activity && <ActivityCard activity={adapter.activity} />}
-          </div>
-        </main>
-
-        <footer className="border-t border-border/80 p-3.5">
-          {renderComposer ? (
-            renderComposer({
-              isRunning,
-              value: inputValue,
-              placeholder: composerPlaceholder,
-              onValueChange: setInputValue,
-              onSubmit: (taskValue) => handleSubmit(taskValue),
-              onStop: handleStop,
-            })
-          ) : (
-            <form
-              onSubmit={handleSubmit}
-              className="relative rounded-[14px] border border-input bg-background/80 shadow-sm"
-            >
-              <textarea
-                ref={textareaRef}
-                rows={1}
-                value={inputValue}
-                disabled={isRunning}
-                placeholder={composerPlaceholder}
-                onChange={(event) => setInputValue(event.target.value)}
-                onKeyDown={handleKeyDown}
-                className="min-h-12 w-full resize-none bg-transparent px-4 py-3 pr-14 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
-              />
-
-              <button
-                type={isRunning ? "button" : "submit"}
-                onClick={isRunning ? handleStop : undefined}
-                disabled={!isRunning && inputValue.trim().length === 0}
-                aria-label={isRunning ? "Stop task" : "Send task"}
-                className={cn(
-                  "absolute bottom-1.5 right-1.5 inline-flex size-10 items-center justify-center rounded-xl transition-colors",
-                  isRunning
-                    ? "bg-destructive text-white hover:opacity-90"
-                    : inputValue.trim().length > 0
-                      ? "bg-zinc-300 text-zinc-950 hover:bg-zinc-200"
-                      : "bg-muted text-muted-foreground",
-                )}
-              >
-                {isRunning ? <Square className="size-3.5 fill-current" /> : <Send className="size-3.5" />}
-              </button>
-            </form>
-          )}
-        </footer>
       </div>
     </section>
   );
 }
+
+export const EventCard = React.memo(EventCardInner);
+export const ActivityCard = React.memo(ActivityCardInner);
 
 export default ExtensionSidepanelShell;

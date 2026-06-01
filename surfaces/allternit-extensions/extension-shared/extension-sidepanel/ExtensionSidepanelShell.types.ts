@@ -2,6 +2,7 @@ export type ExtensionSidepanelStatus = "idle" | "running" | "completed" | "error
 
 export type ExtensionSidepanelActivity =
   | { type: "thinking" }
+  | { type: "streaming"; text: string }
   | { type: "executing"; tool: string; input?: unknown }
   | { type: "executed"; tool: string; input?: unknown; output?: string; duration?: number }
   | { type: "retrying"; attempt: number; maxAttempts: number }
@@ -27,6 +28,17 @@ export type ExtensionSidepanelHistoricalEvent =
   | {
       type: "observation";
       content: string;
+    }
+  | {
+      type: "tool_execution";
+      id?: string;
+      tool: string;
+      description: string;
+      input: unknown;
+      output?: string;
+      status: "pending" | "awaiting_approval" | "running" | "completed" | "error" | "rejected";
+      duration?: number;
+      stepIndex?: number;
     }
   | {
       type: "retry";
@@ -78,6 +90,8 @@ export interface ExtensionSidepanelAdapter {
   configure: (config: Partial<ExtensionSidepanelConfig>) => void | Promise<void>;
   deleteSession?: (id: string) => void | Promise<void>;
   clearSessions?: () => void | Promise<void>;
+  /** Backend connectivity state — online / offline / checking */
+  connectivity?: 'online' | 'offline' | 'checking';
 }
 
 export interface ExtensionSidepanelCopy {

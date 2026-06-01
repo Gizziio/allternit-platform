@@ -12,6 +12,48 @@
 
 import type { ParsedToolCall } from './tool-schemas'
 
+// ── Validation ───────────────────────────────────────────────────────────────
+
+export interface ToolValidationResult {
+  valid: boolean
+  errors: string[]
+}
+
+const TOOL_REQUIRED_ARGS: Record<string, string[]> = {
+  excel_write_range: ['address', 'values'],
+  excel_create_chart: ['dataAddress'],
+  excel_apply_format: ['address'],
+  excel_add_data_validation: ['address'],
+  excel_run_formula: ['formula'],
+  excel_add_worksheet: ['name'],
+  word_replace_text: ['searchText', 'replacementText'],
+  word_fill_content_control: ['value'],
+  word_insert_table: ['data'],
+  word_set_track_changes: ['enabled'],
+  ppt_write_slide_text: ['slideIndex'],
+  ppt_delete_slide: ['slideIndex'],
+  ppt_add_textbox: ['slideIndex', 'text'],
+  ppt_set_notes: ['slideIndex', 'notes'],
+  ppt_read_notes: ['slideIndex'],
+}
+
+export function validateToolCall(call: ParsedToolCall): ToolValidationResult {
+  const required = TOOL_REQUIRED_ARGS[call.name]
+  if (!required) {
+    return { valid: true, errors: [] }
+  }
+
+  const errors: string[] = []
+  for (const key of required) {
+    const value = call.arguments[key]
+    if (value === undefined || value === null || value === '') {
+      errors.push(`Missing required argument: "${key}"`)
+    }
+  }
+
+  return { valid: errors.length === 0, errors }
+}
+
 // ── Safety helper ────────────────────────────────────────────────────────────
 
 /** Escape a string for safe interpolation into a double-quoted JS string literal */
@@ -34,6 +76,89 @@ function boolArg(args: Record<string, unknown>, key: string, fallback = false): 
 
 function numArg(args: Record<string, unknown>, key: string, fallback = 0): number {
   return typeof args[key] === 'number' ? (args[key] as number) : fallback
+}
+
+// ── Human-readable descriptions ──────────────────────────────────────────────
+
+/**
+ * Returns a concise, human-readable sentence describing what a tool call will do.
+ */
+export function describeToolCall(name: string, args: Record<string, unknown>): string {
+  const a = args ?? {}
+  switch (name) {
+    // Excel
+    case 'excel_read_range':
+      return `Read Excel range ${a.address ?? 'used range'}${a.includeFormulas ? ' (with formulas)' : ''}`
+    case 'excel_write_range': {
+      const rows = Array.isArray(a.values) ? a.values.length : '?'
+      return `Write ${rows} rows to Excel range ${a.address ?? ''}`
+    }
+    case 'excel_get_sheet_names':
+      return `Get Excel worksheet names${a.includeHidden ? '' : ' (visible only)'}`
+    case 'excel_create_chart':
+      return `Create ${a.chartType ?? 'column'} chart from ${a.dataAddress ?? ''}${a.title ? `: "${a.title}"` : ''}`
+    case 'excel_create_table':
+      return `Format ${a.address ?? 'used range'} as table "${a.tableName ?? 'Table1'}"`
+    case 'excel_apply_format':
+      return `Apply formatting to Excel range ${a.address ?? ''}`
+    case 'excel_add_data_validation':
+      return `Add ${a.type ?? 'list'} data validation to ${a.address ?? ''}`
+    case 'excel_run_formula':
+      return `Run formula "${a.formula ?? ''}" in Excel`
+    case 'excel_add_worksheet':
+      return `Add worksheet "${a.name ?? ''}" to Excel`
+    case 'excel_delete_rows':
+      return `Delete ${a.condition ?? 'blank'} rows from Excel`
+
+    // PowerPoint
+    case 'ppt_get_slide_count':
+      return 'Get PowerPoint slide count'
+    case 'ppt_read_slide_text':
+      return `Read text from PowerPoint slide ${a.slideIndex ?? 0}`
+    case 'ppt_write_slide_text':
+      return `Write text to PowerPoint slide ${a.slideIndex ?? 0}${a.title ? ` (title: "${a.title}")` : ''}`
+    case 'ppt_add_slide':
+      return `Add slide to PowerPoint${a.title ? `: "${a.title}"` : ''}`
+    case 'ppt_delete_slide':
+      return `Delete PowerPoint slide ${a.slideIndex ?? 0}`
+    case 'ppt_read_all_titles':
+      return 'Read all slide titles in PowerPoint'
+    case 'ppt_set_notes':
+      return `Set speaker notes for slide ${a.slideIndex ?? 0}`
+    case 'ppt_read_notes':
+      return `Read speaker notes for slide ${a.slideIndex ?? 'all'}`
+    case 'ppt_add_textbox':
+      return `Add text box to PowerPoint slide ${a.slideIndex ?? 0}`
+
+    // Word
+    case 'word_read_body':
+      return `Read Word document body${a.fullText ? '' : ' (preview)'}`
+    case 'word_read_selection':
+      return 'Read current selection in Word'
+    case 'word_insert_text':
+      return `Insert text in Word (${a.location ?? 'end'})`
+    case 'word_replace_text': {
+      const scope = a.replaceAll ? 'all' : 'first'
+      return `Replace "${a.searchText ?? ''}" with "${a.replacementText ?? ''}" in Word (${scope})`
+    }
+    case 'word_get_document_outline':
+      return `Get Word document outline (level ${a.maxLevel ?? 3})`
+    case 'word_get_document_properties':
+      return 'Get Word document properties'
+    case 'word_insert_table': {
+      const rows = Array.isArray(a.data) ? a.data.length : '?'
+      return `Insert ${rows}-row table in Word`
+    }
+    case 'word_set_track_changes':
+      return `${a.enabled ? 'Enable' : 'Disable'} track changes in Word`
+    case 'word_get_content_controls':
+      return 'List content controls in Word'
+    case 'word_fill_content_control':
+      return `Fill content control "${a.tag ?? a.title ?? ''}" in Word`
+
+    default:
+      return `Run ${name}`
+  }
 }
 
 // ── Dispatcher ───────────────────────────────────────────────────────────────

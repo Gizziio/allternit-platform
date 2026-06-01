@@ -6,6 +6,8 @@
  * and structured retry metadata.
  */
 
+import { validateCode } from './code-validator'
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export interface ExecutionResult {
@@ -154,6 +156,23 @@ function categorizeError(err: unknown): CodeExecutionError {
  */
 export async function executeCode(code: string): Promise<ExecutionResult> {
   const start = performance.now()
+
+  // Security validation: block dangerous patterns before execution
+  const validation = validateCode(code)
+  if (!validation.safe) {
+    return {
+      success: false,
+      error: {
+        category: 'syntax',
+        message: 'Code failed security validation: ' + validation.violations.join('; '),
+        raw: validation.violations.join('\n'),
+        retryable: false,
+        suggestion: 'This code contains patterns that are not allowed for security reasons.',
+      },
+      durationMs: performance.now() - start,
+      codeExecuted: code,
+    }
+  }
 
   try {
     // Wrap code in async IIFE to support top-level await

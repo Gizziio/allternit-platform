@@ -6,7 +6,13 @@
 export type OfficeHostType = 'excel' | 'word' | 'powerpoint' | 'unknown'
 
 export function getOfficeHost(): OfficeHostType {
-  if (typeof Office === 'undefined' || !Office.context) return 'unknown'
+  if (
+    typeof Office === 'undefined' ||
+    !Office.context ||
+    !Office.HostType
+  ) {
+    return 'unknown'
+  }
 
   switch (Office.context.host) {
     case Office.HostType.Excel:       return 'excel'
