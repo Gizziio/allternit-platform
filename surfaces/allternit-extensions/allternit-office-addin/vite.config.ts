@@ -20,25 +20,43 @@ function getHttpsConfig() {
   }
 }
 
-export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  resolve: {
-    alias: {
-      '@': resolve(__dirname, 'src'),
-    },
-  },
-  server: {
-    port: 3000,
-    https: getHttpsConfig(),
-  },
-  build: {
-    outDir: 'dist',
-    rollupOptions: {
-      input: {
-        taskpane: resolve(__dirname, 'src/taskpane/index.html'),
+export default defineConfig(({ mode }) => {
+  const isProduction = mode === 'production'
+
+  // Validate required production env vars in CI so bad builds fail fast
+  if (isProduction && process.env.CI) {
+    const missing: string[] = []
+    if (!process.env.VITE_ALLTERNIT_GATEWAY_URL) missing.push('VITE_ALLTERNIT_GATEWAY_URL')
+    if (!process.env.VITE_ALLTERNIT_PLATFORM_URL) missing.push('VITE_ALLTERNIT_PLATFORM_URL')
+    if (missing.length > 0) {
+      throw new Error(
+        `Production build missing required environment variables: ${missing.join(', ')}\n` +
+        `These must be set at build time so the add-in knows where to connect.`
+      )
+    }
+  }
+
+  return {
+    plugins: [react(), tailwindcss()],
+    resolve: {
+      alias: {
+        '@': resolve(__dirname, 'src'),
       },
     },
-    minify: false,
-    sourcemap: true,
-  },
+    server: {
+      port: 3000,
+      strictPort: true,
+      https: getHttpsConfig(),
+    },
+    build: {
+      outDir: 'dist',
+      rollupOptions: {
+        input: {
+          taskpane: resolve(__dirname, 'src/taskpane/index.html'),
+        },
+      },
+      minify: isProduction ? 'esbuild' : false,
+      sourcemap: !isProduction,
+    },
+  }
 })
