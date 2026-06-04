@@ -5,6 +5,13 @@
   "description": "Allternit Office Add-ins — Excel, PowerPoint, Word task pane",
   "type": "module",
   "scripts": {
+    "manifest:generate": "node ./scripts/build-manifest.mjs",
+    "predev": "npm run manifest:generate && node ./scripts/copy-plugin-skills.mjs",
+    "predev:excel": "npm run manifest:generate && node ./scripts/copy-plugin-skills.mjs",
+    "predev:powerpoint": "npm run manifest:generate && node ./scripts/copy-plugin-skills.mjs",
+    "predev:word": "npm run manifest:generate && node ./scripts/copy-plugin-skills.mjs",
+    "prebuild": "npm run manifest:generate && node ./scripts/copy-plugin-skills.mjs",
+    "prepreview": "npm run manifest:generate && node ./scripts/copy-plugin-skills.mjs",
     "dev": "vite --port 3000",
     "dev:excel": "concurrently \"npm run dev\" \"office-addin-debugging start manifest.xml --app excel --dev-server-port 3000\"",
     "dev:powerpoint": "concurrently \"npm run dev\" \"office-addin-debugging start manifest.xml --app powerpoint --dev-server-port 3000\"",

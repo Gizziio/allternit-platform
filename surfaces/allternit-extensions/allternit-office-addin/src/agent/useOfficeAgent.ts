@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { officeStorage } from '@/lib/storage'
-import { loadPlugin, buildPluginSystemPromptPrefix } from '@/lib/plugin-loader'
+import { loadPlugin, buildPluginSystemPromptPrefix, loadPluginSkillContent } from '@/lib/plugin-loader'
 import { extractCode, executeCode, executeWithRetry, type RetryContext } from '@/lib/code-executor'
 import { getToolsForHost, mergeToolCallDelta, finalizeToolCalls, type OpenAITool, type ParsedToolCall } from '@/lib/tool-schemas'
 import { buildToolCallCode, describeToolCall, validateToolCall } from '@/lib/tool-dispatcher'
@@ -354,7 +354,7 @@ export function useOfficeAgent(): UseOfficeAgentResult {
 
       try {
         // Build system prompt: plugin prefix + document context + custom instruction
-        const systemPrompt = buildSystemPrompt(context, config)
+        const systemPrompt = await buildSystemPrompt(context, config)
 
         // Build multi-turn message history from accumulated events
         const historyMessages: ApiMessage[] = historyRef.current.flatMap((event): ApiMessage[] => {
@@ -618,23 +618,32 @@ export function useOfficeAgent(): UseOfficeAgentResult {
 // ── System prompt builder ─────────────────────────────────────────────────────
 
 /**
- * Builds the AI system prompt by composing three layers:
+ * Builds the AI system prompt by composing layers:
  * 1. Plugin prefix — commands, execution rules, forbidden ops (from plugin-loader)
- * 2. Document context — current sheet/slide/document state (from bridge)
- * 3. Custom instruction — user-set override appended at end (never replaces #1)
+ * 2. Skill content — system prompt + skills + cookbooks (fetched once, cached)
+ * 3. Document context — current sheet/slide/document state (from bridge)
+ * 4. Custom instruction — user-set override appended at end (never replaces #1)
  */
-function buildSystemPrompt(documentContext: string, config: OfficeAgentConfig | null): string {
+async function buildSystemPrompt(documentContext: string, config: OfficeAgentConfig | null): Promise<string> {
   const plugin = loadPlugin()
   const pluginPrefix = plugin ? buildPluginSystemPromptPrefix(plugin) : ''
+  const skillContent = plugin ? await loadPluginSkillContent(plugin) : ''
 
   const parts: string[] = [
     pluginPrefix,
+  ]
+
+  if (skillContent) {
+    parts.push('', '## Plugin Knowledge', skillContent)
+  }
+
+  parts.push(
     '',
     '## Document Context',
     documentContext,
     '',
     'When your response includes executable Office.js code (in a ```javascript block), it will be automatically executed in the document. Use the Office.js API patterns from your skills. Return code blocks only when direct document manipulation is needed.',
-  ]
+  )
 
   if (config?.systemInstruction?.trim()) {
     parts.push('', '## Custom Instructions', config.systemInstruction.trim())

@@ -233,3 +233,71 @@ export function buildPluginSystemPromptPrefix(plugin: PluginConfig): string {
 
   return lines.join('\n')
 }
+
+// ── Skill Content Loading ─────────────────────────────────────────────────────
+
+const skillContentCache = new Map<string, string>()
+
+function pluginDirName(host: string): string {
+  return `office-${host}`
+}
+
+/**
+ * Loads the full skill content for a plugin: system prompt + all skills + all cookbooks.
+ * Results are cached per plugin ID. Same-origin fetch — works in both dev and production.
+ */
+export async function loadPluginSkillContent(plugin: PluginConfig): Promise<string> {
+  const cacheKey = plugin.id
+  const cached = skillContentCache.get(cacheKey)
+  if (cached !== undefined) return cached
+
+  const dir = pluginDirName(plugin.host)
+  const parts: string[] = []
+
+  // System prompt
+  try {
+    const resp = await fetch(`/plugins/${dir}/system-prompt.md`)
+    if (resp.ok) {
+      parts.push(await resp.text())
+    }
+  } catch {
+    // Dev server may not have copied files yet — graceful fallback
+  }
+
+  // Skills
+  for (const skill of plugin.skills) {
+    try {
+      const resp = await fetch(`/plugins/${dir}/skills/${skill.name}.md`)
+      if (resp.ok) {
+        const text = await resp.text()
+        parts.push(`\n## Skill: ${skill.name}\n\n${text}`)
+      }
+    } catch {
+      // Graceful fallback per skill
+    }
+  }
+
+  // Cookbooks
+  for (const cb of plugin.cookbooks) {
+    try {
+      const resp = await fetch(`/plugins/${dir}/cookbooks/${cb.name}.md`)
+      if (resp.ok) {
+        const text = await resp.text()
+        parts.push(`\n## Cookbook: ${cb.name}\n\n${text}`)
+      }
+    } catch {
+      // Graceful fallback per cookbook
+    }
+  }
+
+  const content = parts.join('\n\n')
+  skillContentCache.set(cacheKey, content)
+  return content
+}
+
+/**
+ * Clears the skill content cache. Useful when switching hosts or after updates.
+ */
+export function clearSkillContentCache(): void {
+  skillContentCache.clear()
+}
