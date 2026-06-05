@@ -20,13 +20,15 @@
     "certs": "office-addin-dev-certs install",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --port 3000",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
     "@types/office-js": "^1.0.508",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@tailwindcss/vite": "^4.0.0",
     "@vitejs/plugin-react": "^4.3.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -37,7 +39,8 @@
     "tailwind-merge": "^3.0.0",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.7.0",
-    "vite": "^6.0.0"
+    "vite": "^6.0.0",
+    "vitest": "^4.1.8"
   },
   "dependencies": {
     "@radix-ui/react-hover-card": "^1.1.15",
