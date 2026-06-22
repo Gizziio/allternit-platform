@@ -47,6 +47,7 @@ use allternit_openclaw_host::{
     TuiService,
     VectorMemoryService,
 };
+use futures::TryStreamExt;
 use axum::{
     extract::{Path, Query, State},
     http::{
@@ -1277,7 +1278,7 @@ async fn operator_events(
             let data = String::from_utf8_lossy(&chunk).to_string();
             yield Event::default().data(data);
         }
-    }.map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>);
+    }.map_err(|e: anyhow::Error| -> Box<dyn std::error::Error + Send + Sync + 'static> { Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())) });
 
     Sse::new(stream).keep_alive(axum::response::sse::KeepAlive::default())
 }

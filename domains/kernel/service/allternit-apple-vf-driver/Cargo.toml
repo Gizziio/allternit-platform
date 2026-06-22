@@ -42,6 +42,7 @@ tempfile = "3"
 dirs = "5"
 
 # macOS-specific frameworks
+[target.'cfg(target_os = "macos")'.dependencies]
 objc = "0.2"
 cocoa = "0.25"
 core-foundation = "0.9"

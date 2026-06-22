@@ -401,6 +401,7 @@ async fn main() -> Result<()> {
         receipts: receipts.clone(),
         index: Some(index.clone()),
         vault: Some(vault.clone()),
+        oauth_vault: None,
         root_dir: Some(root.clone()),
         actor_id: Some("gate".to_string()),
         strict_provenance: None,
