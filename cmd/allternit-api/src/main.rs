@@ -11,6 +11,7 @@
 //! - SSH, Swarm, Workflows, Boards
 
 use axum::Router;
+use axum::http::{HeaderName, Method, header};
 use std::path::PathBuf;
 use std::sync::Arc;
 use tower_http::cors::{Any, CorsLayer};
@@ -35,7 +36,6 @@ use allternit_api::audit_log_routes::audit_log_router;
 use allternit_api::backend_install_routes::backend_install_router;
 use allternit_api::board_routes::board_router;
 use allternit_api::board_stream_routes::board_stream_router;
-use allternit_api::chat_routes::chat_router;
 use allternit_api::checkpoints_routes::checkpoints_router;
 use allternit_api::conversation_routes::conversation_router;
 use allternit_api::design_connector_routes::design_connector_router;
@@ -53,6 +53,7 @@ use allternit_api::memory_routes::memory_router;
 use allternit_api::metrics::metrics_router;
 use allternit_api::mcp_routes::mcp_router;
 use allternit_api::oauth_routes::oauth_router;
+use allternit_api::office_routes::office_router;
 use allternit_api::onboarding_routes::onboarding_router;
 use allternit_api::platform_static::platform_router;
 use allternit_api::playground_routes::playground_router;
@@ -74,6 +75,7 @@ use allternit_api::v1_routes::{agent_chat_router, v1_router};
 use allternit_api::viz_routes::viz_router;
 use allternit_api::vm_session_routes::{new_vm_session_store, vm_session_router};
 use allternit_api::webhook_routes::webhook_router;
+use allternit_api::web_proxy_routes::web_proxy_router;
 use allternit_api::workflow_routes::workflow_router;
 use allternit_api::workspace_routes::workspace_router;
 use allternit_cowork_scheduler::{Scheduler, api::ApiState as SchedulerApiState};
@@ -129,6 +131,11 @@ async fn main() {
     // Initialize cowork background service
     let (cowork_background, bg_state) = initialize_cowork_background(&data_dir).await;
 
+    // Initialize office runtime state (load from disk or start empty)
+    let office_runtime = Arc::new(tokio::sync::RwLock::new(
+        allternit_api::office_routes::load_runtime_file()
+    ));
+
     // Create application state
     let state = Arc::new(AppState {
         db,
@@ -139,6 +146,7 @@ async fn main() {
         cowork_scheduler,
         cowork_background,
         webhook_secret,
+        office_runtime,
     });
 
     // ── Build V1 API routes (all merged, then nested under /api/v1) ───────────
@@ -170,13 +178,13 @@ async fn main() {
         .merge(workspace_router())
         .merge(artifact_router())
         .merge(conversation_router())
+        .merge(office_router())
         .merge(alabs_router());
 
     // ── Protected routes (require authentication) ─────────────────────────────
     let protected = Router::new()
         .nest("/api/v1", v1_routes)
         // API routes (not under /v1)
-        .nest("/api", chat_router())
         .nest("/api", agent_chat_router())
         .nest("/api", tool_routes::tool_router())
         .nest("/api", local_brain_router())
@@ -209,6 +217,7 @@ async fn main() {
     // ── Public routes (no authentication required) ────────────────────────────
     let public = Router::new()
         .route("/health", axum::routing::get(health_check))
+        .nest("/api", web_proxy_router())
         .merge(status_router())
         .merge(webhook_router())
         .merge(fallback_router());
@@ -230,8 +239,25 @@ async fn main() {
     let app = app.layer(
         CorsLayer::new()
             .allow_origin(Any)
-            .allow_methods(Any)
-            .allow_headers(Any),
+            .allow_methods([
+                Method::GET,
+                Method::POST,
+                Method::PUT,
+                Method::PATCH,
+                Method::DELETE,
+                Method::OPTIONS,
+            ])
+            .allow_headers([
+                header::ACCEPT,
+                header::AUTHORIZATION,
+                header::CONTENT_TYPE,
+                header::ORIGIN,
+                HeaderName::from_static("x-client-version"),
+                HeaderName::from_static("x-allternit-desktop-access-token"),
+                HeaderName::from_static("x-allternit-user-id"),
+                HeaderName::from_static("x-allternit-user-email"),
+                HeaderName::from_static("x-allternit-user-name"),
+            ]),
     );
 
     // Start server — port from ALLTERNIT_API_PORT env var, default 8013
@@ -336,20 +362,12 @@ async fn initialize_vm_driver() -> Option<Box<dyn allternit_driver_interface::Ex
         
         // Use packaged VM directory if available
         if let Some(dir) = vm_dir {
-            config.images_dir = std::path::PathBuf::from(dir);
+            config.vm_root_dir = std::path::PathBuf::from(dir);
         }
 
-        match FirecrackerDriver::new(config).await {
-            Ok(driver) => {
-                info!("Firecracker driver initialized");
-                return Some(Box::new(driver));
-            }
-            Err(e) => {
-                warn!("Failed to initialize Firecracker driver: {}", e);
-                info!("Running without VM execution (visualization only)");
-                return None;
-            }
-        }
+        let driver = FirecrackerDriver::with_config(config);
+        info!("Firecracker driver initialized");
+        return Some(Box::new(driver));
     }
 
     #[cfg(target_os = "macos")]

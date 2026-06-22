@@ -11,10 +11,6 @@ allternit-driver-interface = { path = "../../drivers/allternit-driver-interface"
 allternit-process-driver = { path = "../allternit-process-driver" }
 allternit-firecracker-driver = { path = "../allternit-firecracker-driver" }
 
-# Apple Virtualization.framework driver (macOS only)
-[target.'cfg(target_os = "macos")'.dependencies]
-allternit-apple-vf-driver = { path = "../allternit-apple-vf-driver" }
-
 # Core async
 tokio = { version = "1", features = ["full"] }
 async-trait = "0.1"
@@ -44,6 +40,10 @@ dashmap = "5"
 
 # Utils
 dirs = "5"
+
+# Apple Virtualization.framework driver (macOS only)
+[target.'cfg(target_os = "macos")'.dependencies]
+allternit-apple-vf-driver = { path = "../allternit-apple-vf-driver" }
 
 [dev-dependencies]
 tokio-test = "0.4"
