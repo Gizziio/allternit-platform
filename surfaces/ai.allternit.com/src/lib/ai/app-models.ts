@@ -1,4 +1,3 @@
-import { unstable_cache as cache } from "next/cache";
 import { config } from "@/lib/config";
 import type { AnyImageModelId } from "@/lib/models/image-model-id";
 import type { AppModelId, ModelId } from "./app-model-id";
@@ -116,23 +115,18 @@ function buildChatModels(
     });
 }
 
-const fetchAllAppModels = cache(
-  async (): Promise<AppModelDefinition[]> => {
-    const models = await fetchModels();
-    return buildAppModels(models);
-  },
-  ["all-app-models"],
-  { revalidate: 3600, tags: ["ai-gateway-models"] }
-);
+// Model data is generated at build time, so caching via next/cache is not
+// appropriate for the browser/Vite build. These helpers simply transform the
+// static generated model list on demand.
+async function fetchAllAppModels(): Promise<AppModelDefinition[]> {
+  const models = await fetchModels();
+  return buildAppModels(models);
+}
 
-export const fetchChatModels = cache(
-  async (): Promise<AppModelDefinition[]> => {
-    const appModels = await fetchAllAppModels();
-    return buildChatModels(appModels);
-  },
-  ["chat-models"],
-  { revalidate: 3600, tags: ["ai-gateway-models"] }
-);
+async function fetchChatModels(): Promise<AppModelDefinition[]> {
+  const appModels = await fetchAllAppModels();
+  return buildChatModels(appModels);
+}
 
 export async function getAppModelDefinition(
   modelId: AppModelId
@@ -145,24 +139,24 @@ export async function getAppModelDefinition(
   return model;
 }
 
-export const DEFAULT_CHAT_MODEL: ModelId = "kimi/kimi-for-coding";
-export const DEFAULT_PDF_MODEL: ModelId = "kimi/kimi-for-coding";
-export const DEFAULT_TITLE_MODEL: ModelId = "kimi/kimi-for-coding";
-export const DEFAULT_ARTIFACT_MODEL: ModelId = "kimi/kimi-for-coding";
-export const DEFAULT_FOLLOWUP_SUGGESTIONS_MODEL: ModelId =
+const DEFAULT_CHAT_MODEL: ModelId = "kimi/kimi-for-coding";
+const DEFAULT_PDF_MODEL: ModelId = "kimi/kimi-for-coding";
+const DEFAULT_TITLE_MODEL: ModelId = "kimi/kimi-for-coding";
+const DEFAULT_ARTIFACT_MODEL: ModelId = "kimi/kimi-for-coding";
+const DEFAULT_FOLLOWUP_SUGGESTIONS_MODEL: ModelId =
   "kimi/kimi-for-coding";
-export const DEFAULT_IMAGE_MODEL: AnyImageModelId = "google/gemini-3-pro-image";
-export const DEFAULT_CHAT_IMAGE_COMPATIBLE_MODEL: ModelId =
+const DEFAULT_IMAGE_MODEL: AnyImageModelId = "google/gemini-3-pro-image";
+const DEFAULT_CHAT_IMAGE_COMPATIBLE_MODEL: ModelId =
   "openai/gpt-4o-mini";
-export const DEFAULT_POLISH_TEXT_MODEL: ModelId = "kimi/kimi-for-coding";
-export const DEFAULT_FORMAT_AND_CLEAN_SHEET_MODEL: ModelId =
+const DEFAULT_POLISH_TEXT_MODEL: ModelId = "kimi/kimi-for-coding";
+const DEFAULT_FORMAT_AND_CLEAN_SHEET_MODEL: ModelId =
   "kimi/kimi-for-coding";
-export const DEFAULT_ANALYZE_AND_VISUALIZE_SHEET_MODEL: ModelId =
+const DEFAULT_ANALYZE_AND_VISUALIZE_SHEET_MODEL: ModelId =
   "kimi/kimi-for-coding";
 
-export const DEFAULT_CODE_EDITS_MODEL: ModelId = "kimi/kimi-for-coding";
+const DEFAULT_CODE_EDITS_MODEL: ModelId = "kimi/kimi-for-coding";
 
-export const ANONYMOUS_AVAILABLE_MODELS: AppModelId[] = [
+const ANONYMOUS_AVAILABLE_MODELS: AppModelId[] = [
   "kimi/kimi-for-coding",
   "kimi/kimi-for-coding",
   "kimi/kimi-for-coding",
@@ -178,7 +172,7 @@ const KNOWN_MODEL_IDS = new Set<string>(typedModels.map((m) => m.id));
  * Returns the default enabled models for a given list of app models.
  * Includes curated defaults + any new models from the API not in models.generated.ts
  */
-export function getDefaultEnabledModels(
+function getDefaultEnabledModels(
   appModels: AppModelDefinition[]
 ): Set<AppModelId> {
   const enabled = new Set<AppModelId>(config.models.curatedDefaults);

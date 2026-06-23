@@ -81,11 +81,7 @@ export default defineConfig({
         target: 'http://127.0.0.1:8013',
         changeOrigin: true,
       },
-      '/status': {
-        target: 'http://127.0.0.1:8013',
-        changeOrigin: true,
-      },
-      '/health': {
+      '/webhooks': {
         target: 'http://127.0.0.1:8013',
         changeOrigin: true,
       },

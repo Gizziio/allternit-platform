@@ -365,9 +365,16 @@ async fn initialize_vm_driver() -> Option<Box<dyn allternit_driver_interface::Ex
             config.vm_root_dir = std::path::PathBuf::from(dir);
         }
 
-        let driver = FirecrackerDriver::with_config(config);
-        info!("Firecracker driver initialized");
-        return Some(Box::new(driver));
+        match FirecrackerDriver::with_config(config).await {
+            Ok(driver) => {
+                info!("Firecracker driver initialized");
+                return Some(Box::new(driver));
+            }
+            Err(e) => {
+                warn!("Failed to initialize Firecracker driver: {} — running without VM execution", e);
+                return None;
+            }
+        }
     }
 
     #[cfg(target_os = "macos")]

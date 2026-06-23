@@ -32,6 +32,37 @@ packages:
   - '!packages/@allternit/adapters/src/**'
   - '!surfaces/ai.allternit.com/adapters-ts/**'
 
+allowBuilds:
+  '@azure/msal-node-extensions': true
+  '@azure/msal-node-runtime': true
+  '@clerk/shared': true
+  '@microsoft/m365agentstoolkit-cli': true
+  '@nestjs/core': true
+  '@parcel/watcher': true
+  '@prisma/client': true
+  '@prisma/engines': true
+  bcrypt: true
+  better-sqlite3: true
+  canvas: true
+  core-js: true
+  core-js-pure: true
+  cpu-features: true
+  electron: true
+  esbuild: true
+  keytar: true
+  msgpackr-extract: true
+  node-pty: true
+  nx: true
+  prisma: true
+  protobufjs: true
+  puppeteer: true
+  sharp: true
+  spawn-sync: true
+  sqlite3: true
+  ssh2: true
+  tree-sitter-bash: true
+  unrs-resolver: true
+
 onlyBuiltDependencies:
   - '@whiskeysockets/baileys'
   - better-sqlite3
@@ -40,3 +71,15 @@ onlyBuiltDependencies:
   - protobufjs
   - sharp
   - sqlite3
+
+overrides:
+  '@types/react': ^18.3.28
+  '@types/react-dom': ^18.3.1
+  '@reduxjs/toolkit': ^2.2.7
+  react-redux: ^9.1.2
+  redux: ^5.0.1
+
+patchedDependencies:
+  '@blocksuite/affine-components@0.19.5': patches/@blocksuite__affine-components@0.19.5.patch
+  '@blocksuite/data-view@0.19.5': patches/@blocksuite__data-view@0.19.5.patch
+  '@blocksuite/icons@2.2.17': patches/@blocksuite__icons@2.2.17.patch
