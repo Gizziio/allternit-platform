@@ -14,8 +14,8 @@ include_dir = "0.7"
 tokio = { version = "1.35", features = ["full", "process"] }
 
 # For HTTP server to serve UI
-axum = "0.7"
-tower-http = { version = "0.5", features = ["fs"] }
+axum = { version = "0.7", features = ["http1", "http2"] }
+tower-http = { version = "0.6", features = ["fs"] }
 
 # For notifications/indicatif
 dialoguer = "0.11"
@@ -35,7 +35,7 @@ tracing-subscriber = "0.3"
 dirs = "5.0"
 
 # For HTTP client (health checks)
-reqwest = { version = "0.11", default-features = false, features = ["rustls-tls"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 
 # OS-specific
 [target.'cfg(target_os = "macos")'.dependencies]
@@ -49,4 +49,7 @@ opt-level = 3
 lto = true
 strip = true
 codegen-units = 1
+
+# Standalone crate: not part of the root workspace (embed pipeline is not ready).
+[workspace]
 

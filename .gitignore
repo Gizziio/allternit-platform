@@ -3,6 +3,7 @@ dist/
 target/
 rails/reference/beads/
 .DS_Store
+.beads/
 *.log
 *.png
 *.mov
