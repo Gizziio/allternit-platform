@@ -15,13 +15,25 @@ The monorepo contains everything needed to build, test, and deploy the full Allt
 
 ```
 allternit-platform/
-├── cmd/gizzi-code/           # Gizzi Code CLI source
-├── packages/@allternit/      # Internal SDK packages
+├── cmd/                      # CLI binaries and API servers
+│   ├── allternit-api/        # Main API server
+│   ├── allternit-cloud-api/  # Cloud deployment API
+│   ├── allternit-cloud-wizard/
+│   └── gizzi-code/           # Gizzi Code CLI source
+├── packages/@allternit/      # Internal SDK packages (being consolidated into platform/)
+├── platform/                 # Contracts, protocols, SDK, and shared platform packages
 ├── plugins/                  # Card plugins
-├── sdk/allternit-sdk/        # Public SDK build target
+├── sdk/                      # Public SDK build target (sdk/allternit-sdk)
 ├── surfaces/                 # Web apps and desktop surfaces
-├── domains/                  # Domain logic
-├── api/                      # Backend services
+│   ├── ai.allternit.com/     # Main web surface
+│   └── allternit-desktop/    # Desktop shell
+├── domains/                  # Domain logic (kernel, governance)
+├── api/                      # Backend API services (gateway, cloud, workspace)
+├── services/                 # Long-running services (memory, voice, registry, orchestration)
+├── infrastructure/           # Cloud providers, executors, bridges
+├── mcp/                      # Model Context Protocol crates (moved from domains/mcp/)
+├── drivers/                  # VM and hardware drivers (firecracker, apple-vf)
+├── rails/                    # Agent Rails execution engine
 └── ...
 ```
 

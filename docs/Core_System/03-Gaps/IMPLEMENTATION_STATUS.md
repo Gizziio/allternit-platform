@@ -41,7 +41,7 @@
 - `rails/` - Rails execution engine
 - `domains/kernel/allternit-presentation-kernel/` - UI rendering
 - `services/gateway/browser/` - Browser gateway
-- `services/gateway/routing/` - IO service
+- `api/gateway/routing/` - IO service (consolidated from `services/gateway/routing/`)
 
 **Services (services/):**
 - `services/orchestration/` - Orchestration services

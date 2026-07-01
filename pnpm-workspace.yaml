@@ -1,34 +1,59 @@
 packages:
-  # Shallow packages
-  - 'agents/*'
+  # Top-level command / API packages
   - 'api/*'
+  - 'api/*/*'
+  - 'api/*/*/*'
   - 'bin/*'
   - 'cmd/*'
+  - 'cmd/*/*'
+  - 'cmd/*/*/*'
+
+  # Domain packages (connectors, kernels, agents are nested)
   - 'domains/*'
   - 'domains/*/*'
+  - 'domains/*/*/*'
+  - 'domains/*/*/*/*'
+
+  # MCP packages
   - 'mcp/*'
   - 'mcp/*/*'
+
+  # Infrastructure packages
   - 'infrastructure/*'
+  - 'infrastructure/*/*'
+  - 'infrastructure/*/*/*'
+
+  # Internal SDK packages (being consolidated to platform/)
   - 'packages/*'
   - 'packages/@allternit/*'
-  - 'platform/*'
-  - 'platform/*/*'
-  - 'plugins/*'
-  - 'sdk/*'
-  - 'services/*'
-  - 'services/*/*'
-  - 'surfaces/*'
-  - 'surfaces/*/*'
-  # Deeper nested packages (reorganization artifacts)
-  - 'cmd/*/*/*'
   - 'packages/@allternit/*/*'
   - 'packages/@allternit/*/*/*'
   - 'packages/@allternit/*/*/*/*'
+
+  # Platform packages
+  - 'platform/*'
+  - 'platform/*/*'
+  - 'platform/*/*/*'
+
+  # Plugins
+  - 'plugins/*'
+
+  # Public SDK packages
+  - 'sdk/*'
+
+  # Services (heavily nested)
+  - 'services/*'
+  - 'services/*/*'
   - 'services/*/*/*'
   - 'services/*/*/*/*'
+
+  # Web / desktop surfaces
+  - 'surfaces/*'
+  - 'surfaces/*/*'
   - 'surfaces/*/*/*'
   - 'surfaces/*/*/*/*'
   - 'surfaces/allternit-extensions/allternit-extension/packages/*'
+
   # Exclusions
   - '!cmd/*/sdks'
   - '!packages/@allternit/adapters/src/**'

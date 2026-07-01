@@ -4,6 +4,10 @@
 >
 > **LAST UPDATED:** 2026-04-17
 
+## Agent creation checklist
+
+If you are spinning up a new agent or agent type, see [`AGENT_CREATION_CHECKLIST.md`](./AGENT_CREATION_CHECKLIST.md) for the canonical schema, harness wiring, workspace artifacts, mode surfaces, and verification steps that every agent must satisfy.
+
 ## What Is This?
 
 A://Labs is Allternit's learning platform. It turns the Allternit codebase into interactive, self-contained HTML course modules that are synced to Canvas LMS. The entire pipeline is automated — from code analysis → module generation → Canvas publishing → progress tracking.

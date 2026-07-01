@@ -151,7 +151,7 @@ services/operator/computer-use/vision/src/
 
 **What We Have:**
 ```
-domains/mcp/connectors/src/connectors/
+mcp/connectors/src/connectors/
 ├── github.ts              ✅ Created (stub)
 ├── slack.ts               ✅ Created (stub)
 └── postgresql.ts          ✅ Created (stub)
