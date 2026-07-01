@@ -36,7 +36,7 @@ allternit-firecracker-driver = { path = "../../drivers/firecracker" }
 allternit-session-manager = { path = "../../services/session-manager" }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-allternit-apple-vf-driver = { path = "../../domains/kernel/service/allternit-apple-vf-driver" }
+allternit-apple-vf-driver = { path = "../../drivers/apple-vf" }
 
 # WebSocket
 tokio-tungstenite = "0.21"

@@ -7,7 +7,7 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 # Internal dependencies
-allternit-driver-interface = { path = "../../drivers/allternit-driver-interface" }
+allternit-driver-interface = { path = "../../domains/kernel/drivers/allternit-driver-interface" }
 
 # Core async
 tokio = { version = "1", features = ["full"] }
@@ -42,7 +42,6 @@ tempfile = "3"
 dirs = "5"
 
 # macOS-specific frameworks
-[target.'cfg(target_os = "macos")'.dependencies]
 objc = "0.2"
 cocoa = "0.25"
 core-foundation = "0.9"

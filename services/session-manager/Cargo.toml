@@ -13,7 +13,7 @@ allternit-firecracker-driver = { path = "../../drivers/firecracker" }
 
 # Apple Virtualization.framework driver (macOS only)
 [target.'cfg(target_os = "macos")'.dependencies]
-allternit-apple-vf-driver = { path = "../../domains/kernel/service/allternit-apple-vf-driver" }
+allternit-apple-vf-driver = { path = "../../drivers/apple-vf" }
 
 # Core async
 tokio = { version = "1", features = ["full"] }
