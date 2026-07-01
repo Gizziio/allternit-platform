@@ -550,9 +550,7 @@ pub async fn create_test_driver() -> (FirecrackerDriver, TestDirs, FirecrackerCo
         metrics_port: None,
     };
 
-    let driver = FirecrackerDriver::with_config(config.clone())
-        .await
-        .expect("Failed to create test Firecracker driver");
+    let driver = FirecrackerDriver::with_config(config.clone());
 
     let test_dirs = TestDirs {
         temp_base,

@@ -158,6 +158,60 @@ impl IpamState {
         Ok(state)
     }
 
+    /// Synchronous version of load_or_create for use in non-async contexts
+    ///
+    /// This uses tokio::runtime::Handle::block_on if in async context,
+    /// or creates a temporary runtime for the operation.
+    pub fn load_or_create_sync(subnet: &str, persistence_path: PathBuf) -> Self {
+        // Try to use the current runtime if available
+        match tokio::runtime::Handle::try_current() {
+            Ok(handle) => {
+                // We're in an async context, block on the current runtime
+                let subnet_str = subnet.to_string();
+                let persistence_path_clone = persistence_path.clone();
+                handle.block_on(async {
+                    Self::load_or_create(&subnet_str, persistence_path_clone)
+                        .await
+                        .unwrap_or_else(|e| {
+                            warn!("Failed to load IPAM state: {}. Using empty state.", e);
+                            // Create minimal fallback state
+                            let subnet = subnet_str.parse().unwrap_or_else(|_| {
+                                "172.16.0.0/24".parse().expect("valid default subnet")
+                            });
+                            Self {
+                                subnet,
+                                gateway: Self::calculate_gateway(&subnet),
+                                allocated: HashMap::new(),
+                                persistence_path,
+                            }
+                        })
+                })
+            }
+            Err(_) => {
+                // Not in async context, create a temporary runtime
+                let subnet_str = subnet.to_string();
+                let persistence_path_clone = persistence_path.clone();
+                let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+                rt.block_on(async {
+                    Self::load_or_create(&subnet_str, persistence_path_clone)
+                        .await
+                        .unwrap_or_else(|e| {
+                            warn!("Failed to load IPAM state: {}. Using empty state.", e);
+                            let subnet = subnet_str.parse().unwrap_or_else(|_| {
+                                "172.16.0.0/24".parse().expect("valid default subnet")
+                            });
+                            Self {
+                                subnet,
+                                gateway: Self::calculate_gateway(&subnet),
+                                allocated: HashMap::new(),
+                                persistence_path,
+                            }
+                        })
+                })
+            }
+        }
+    }
+
     /// Allocate an IP address for a VM
     ///
     /// Finds the next available IP in the subnet, skipping:

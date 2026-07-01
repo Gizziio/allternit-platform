@@ -32,7 +32,7 @@ allternit-cowork-scheduler = { path = "../../infrastructure/executor/cowork/cowo
 
 # Internal crates - Execution
 allternit-driver-interface = { path = "../../domains/kernel/drivers/allternit-driver-interface" }
-allternit-firecracker-driver = { path = "../../domains/kernel/service/allternit-firecracker-driver" }
+allternit-firecracker-driver = { path = "../../drivers/firecracker" }
 allternit-session-manager = { path = "../../services/session-manager" }
 
 [target.'cfg(target_os = "macos")'.dependencies]

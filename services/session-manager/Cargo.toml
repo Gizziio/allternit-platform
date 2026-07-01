@@ -9,7 +9,7 @@ license = "MIT OR Apache-2.0"
 # Internal dependencies
 allternit-driver-interface = { path = "../../domains/kernel/drivers/allternit-driver-interface" }
 allternit-process-driver = { path = "../../domains/kernel/service/allternit-process-driver" }
-allternit-firecracker-driver = { path = "../../domains/kernel/service/allternit-firecracker-driver" }
+allternit-firecracker-driver = { path = "../../drivers/firecracker" }
 
 # Apple Virtualization.framework driver (macOS only)
 [target.'cfg(target_os = "macos")'.dependencies]
