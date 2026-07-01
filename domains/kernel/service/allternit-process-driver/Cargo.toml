@@ -6,7 +6,7 @@ license.workspace = true
 description = "Allternit Process Driver - OS process-based execution driver for dev/testing"
 
 [dependencies]
-allternit-driver-interface = { path = "../../drivers/allternit-driver-interface" }
+allternit-driver-interface = { path = "../../../../platform/contracts/driver-interface" }
 async-trait = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }

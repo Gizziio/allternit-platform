@@ -44,7 +44,7 @@ chrono = { workspace = true }
 uuid = { workspace = true }
 
 # Integration example dependencies
-allternit-driver-interface = { path = "../allternit-driver-interface" }
+allternit-driver-interface = { path = "../../../../platform/contracts/driver-interface" }
 allternit-process-driver = { path = "../../execution/allternit-process-driver" }
 allternit-budget-metering = { path = "../../../4-services/orchestration/budget-metering" }
 allternit-replay = { path = "../../../2-governance/allternit-replay" }

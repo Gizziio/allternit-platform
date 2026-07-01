@@ -7,7 +7,7 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 # Internal dependencies
-allternit-driver-interface = { path = "../../domains/kernel/drivers/allternit-driver-interface" }
+allternit-driver-interface = { path = "../../platform/contracts/driver-interface" }
 allternit-process-driver = { path = "../../domains/kernel/service/allternit-process-driver" }
 allternit-firecracker-driver = { path = "../../drivers/firecracker" }
 
