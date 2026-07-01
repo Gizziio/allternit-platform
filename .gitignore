@@ -10,11 +10,12 @@ rails/reference/beads/
 *.tgz
 *.db
 *.jsonl
+*.bak
+*.tsbuildinfo*
 .env
 .env.*
 !.env.example
 !.env.production
-target/
 debug/
 release/
 .aider/
@@ -33,9 +34,6 @@ out/
 
 # SDK dist is needed for CI builds
 !sdk/allternit-sdk/dist/
-.env*.local
-.env.local
-
 # Lima bundled binary (downloaded at build time)
 surfaces/allternit-desktop/resources/lima/
 
@@ -59,5 +57,4 @@ tools/mcp-servers/superpowers
 .cache/
 .tmp-*
 services/allternit-ai
-services/docmost/node_modules
 services/docmost
