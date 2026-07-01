@@ -104,6 +104,6 @@ bun run -e "
 
 ## What Stayed
 
-- `domains/kernel/service/allternit-vm-executor/` (Rust guest agent)
+- `services/vm-executor/` (Rust guest agent)
 - `domains/kernel/drivers/allternit-guest-agent-protocol/` (shared protocol)
 - `.github/workflows/vm-images.yml` (CI builds images with guest agent embedded)
