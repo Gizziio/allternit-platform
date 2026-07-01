@@ -37,8 +37,8 @@ reqwest = { workspace = true, features = ['json'] }
 urlencoding = "2.1"
 
 # HTTP server for API
-axum = "0.7"
-tower = "0.4"
+axum = { workspace = true }
+tower = { workspace = true }
 
 # Database
 sqlx = { workspace = true, features = ['chrono', 'uuid'] }

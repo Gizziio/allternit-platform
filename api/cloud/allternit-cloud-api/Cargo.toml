@@ -45,24 +45,24 @@ uuid = { workspace = true }
 sqlx = { workspace = true, features = ['chrono', 'uuid'] }
 
 # WebSocket
-tokio-tungstenite = "0.21"
-futures-util = "0.3"
-async-trait = "0.1"
-tokio-stream = { version = "0.1", features = ["sync"] }
-futures = "0.3"
-rand = "0.8"
+tokio-tungstenite = { workspace = true }
+futures-util = { workspace = true }
+async-trait = { workspace = true }
+tokio-stream = { workspace = true, features = ["sync"] }
+futures = { workspace = true }
+rand = { workspace = true }
 md5 = "0.7"
 cron = "0.12"
-tempfile = "3.14"
-regex = "1.10"
-lazy_static = "1.4"
+tempfile = { workspace = true }
+regex = { workspace = true }
+lazy_static = { workspace = true }
 
 [dev-dependencies]
-tokio-test = "0.4"
-reqwest = { version = "0.11", features = ["json"] }
+tokio-test = { workspace = true }
+reqwest = { workspace = true, features = ['json'] }
 assert_matches = "1.5"
 serial_test = "3.2"
-tempfile = "3.14"
+tempfile = { workspace = true }
 tower = { workspace = true, features = ["util"] }
-http-body-util = "0.1"
-hyper = { version = "1.0", features = ["full"] }
+http-body-util = { workspace = true }
+hyper = { workspace = true }

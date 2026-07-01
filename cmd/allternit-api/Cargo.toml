@@ -9,21 +9,21 @@ path = "src/main.rs"
 
 [dependencies]
 # Web framework
-axum = { version = "0.7", features = ["ws"] }
-tokio = { version = "1", features = ["full"] }
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-tower = "0.4"
+axum = { workspace = true, features = ["ws"] }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+tower = { workspace = true }
 reqwest = { workspace = true, features = ['json', 'stream'] }
-async-stream = "0.3"
+async-stream = { workspace = true }
 axum-extra = { version = "0.9", features = ["typed-header"] }
-urlencoding = "2.1"
-tokio-util = { version = "0.7", features = ["io"] }
-http-body-util = "0.1"
-bytes = "1"
-regex = "1"
+urlencoding = { workspace = true }
+tokio-util = { workspace = true }
+http-body-util = { workspace = true }
+bytes = { workspace = true }
+regex = { workspace = true }
 
 # Internal crates - Rails & Cowork
 allternit-agent-system-rails = { path = "../../rails" }
@@ -39,7 +39,7 @@ allternit-session-manager = { path = "../../services/session-manager" }
 allternit-apple-vf-driver = { path = "../../drivers/apple-vf" }
 
 # WebSocket
-tokio-tungstenite = "0.21"
+tokio-tungstenite = { workspace = true }
 futures = "0.3"
 
 # SQLite
@@ -58,7 +58,7 @@ hostname = "0.4"
 hex = "0.4"
 
 # HTTP middleware
-tower-http = { version = "0.5", features = ["fs", "cors"] }
+tower-http = { workspace = true, features = ["fs", "cors"] }
 
 # Crypto
 hmac = "0.12"

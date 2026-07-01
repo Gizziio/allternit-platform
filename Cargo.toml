@@ -92,8 +92,9 @@ axum = { version = "0.7", features = ["ws", "http1", "http2"] }
 reqwest = { version = "0.12", features = ["json", "stream", "blocking"] }
 urlencoding = "2.1"
 tokio-stream = { version = "0.1", features = ["sync"] }
-tokio-tungstenite = "0.20"
+tokio-tungstenite = "0.21"
 http = "1.0"
+http-body-util = "0.1"
 hyper = { version = "1.0", features = ["full"] }
 
 # Docker

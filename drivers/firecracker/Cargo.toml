@@ -21,8 +21,8 @@ ipnet = "2.9"
 nix = { version = "0.27", features = ["signal", "process"] }
 metrics = "0.22"
 metrics-exporter-prometheus = "0.13"
-axum = "0.7"
-tower = "0.4"
+axum = { workspace = true }
+tower = { workspace = true }
 
 tempfile = "3.9"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
