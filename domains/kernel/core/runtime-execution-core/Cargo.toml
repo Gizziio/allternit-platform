@@ -18,7 +18,7 @@ async-trait = "0.1"
 futures = "0.3"
 sha2 = "0.10"
 hex = "0.4"
-allternit-substrate = { version = "0.1.0", path = "../../../../packages/@allternit/types/allternit-substrate" }
+allternit-substrate = { version = "0.1.0", path = "../../../../platform/types/allternit-substrate" }
 
 [dev-dependencies]
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }

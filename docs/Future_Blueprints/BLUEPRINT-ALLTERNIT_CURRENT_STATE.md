@@ -198,7 +198,7 @@ cmd/gizzi-code/src/cowork/ → CLI (NEW)
 ## External Dependencies
 
 ### Rails System (EXISTS)
-**Location:** `api/kernel/rails-service/`
+**Location:** `rails/`
 
 ```
 Components:
@@ -279,7 +279,7 @@ Components:
 
 **Key Finding:** The workspace exists at `~/Desktop/allternit-workspace/allternit/` with:
 - Kernel drivers (domains/kernel/)
-- Rails service (api/kernel/rails-service/)
+- Rails service (rails/)
 - API layer (api/)
 - Services (services/)
 

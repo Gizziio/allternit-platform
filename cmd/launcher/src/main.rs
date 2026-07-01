@@ -16,7 +16,7 @@ use tower_http::services::ServeDir;
 
 // Embed the API binary and UI assets at compile time
 // These are compressed and embedded into the final binary
-static EMBEDDED_API: &[u8] = include_bytes!("../../../api/embed/allternit-api");
+static EMBEDDED_API: &[u8] = include_bytes!("../../api/embed/allternit-api");
 static UI_ASSETS: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../shell-ui/dist");
 
 const API_PORT: u16 = 3010;
@@ -102,7 +102,7 @@ async fn main() -> Result<()> {
 fn create_temp_dir() -> Result<PathBuf> {
     // Use a consistent directory name so we don't re-extract every time
     let cache_dir = dirs::cache_dir()
-        .unwrap_or_else(|| std::env::temp_dir())
+        .or_else(|| std::env::temp_dir().into())
         .join("allternit-platform");
     
     std::fs::create_dir_all(&cache_dir)?;
@@ -167,8 +167,8 @@ fn extract_ui_assets(temp_dir: &PathBuf) -> Result<()> {
 /// Start the Rust API server
 fn start_api_server(api_path: &PathBuf) -> Result<Child> {
     let child = Command::new(api_path)
-        .env("Allternit_OPERATOR_URL", format!("http://127.0.0.1:{}", API_PORT))
-        .env("Allternit_DATA_DIR", api_path.parent().unwrap().join("data"))
+        .env("ALLTERNIT_OPERATOR_URL", format!("http://127.0.0.1:{}", API_PORT))
+        .env("ALLTERNIT_DATA_DIR", api_path.parent().unwrap().join("data"))
         .env("RUST_LOG", "info")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -233,10 +233,11 @@ fn open_browser(url: String) {
 /// Cleanup on shutdown
 async fn cleanup(state: Arc<LauncherState>) {
     // Kill API process
-    let mut guard = state.api_process.lock().await;
-    if let Some(mut child) = guard.take() {
-        let _ = child.kill();
-        let _ = child.wait();
+    if let Ok(mut guard) = state.api_process.lock().await {
+        if let Some(mut child) = guard.take() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
     }
     
     // Note: We don't delete temp dir on purpose - 

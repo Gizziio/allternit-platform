@@ -38,10 +38,10 @@
 - `allternit-process-driver/` - Process-based driver
 
 **API Layer (api/):**
-- `api/kernel/rails-service/` - Rails execution engine
-- `api/kernel/presentation-kernel/` - UI rendering
-- `api/gateway/browser/` - Browser gateway
-- `api/gateway/routing/` - IO service
+- `rails/` - Rails execution engine
+- `domains/kernel/allternit-presentation-kernel/` - UI rendering
+- `services/gateway/browser/` - Browser gateway
+- `services/gateway/routing/` - IO service
 
 **Services (services/):**
 - `services/orchestration/` - Orchestration services
@@ -142,7 +142,7 @@ cmd/gizzi-code/src/cowork/        # NEW
 - `gizzi cowork ls` - List runs
 
 ### Phase 4: Integrate with Rails (Week 3-4)
-- Connect to `api/kernel/rails-service/`
+- Connect to `rails/`
 - Add event streaming
 - Implement WebSocket gateway
 
@@ -153,7 +153,7 @@ cmd/gizzi-code/src/cowork/        # NEW
 1. **Use Existing Workspace:** Add to `~/Desktop/allternit-workspace/allternit/`
 2. **Follow Existing Patterns:** Place in `services/` like other services
 3. **Integrate with Kernel:** Use existing kernel drivers from `domains/kernel/`
-4. **Reuse Rails:** Connect to existing `api/kernel/rails-service/`
+4. **Reuse Rails:** Connect to existing `rails/`
 
 ---
 

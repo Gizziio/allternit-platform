@@ -47,7 +47,6 @@ use allternit_openclaw_host::{
     TuiService,
     VectorMemoryService,
 };
-use futures::TryStreamExt;
 use axum::{
     extract::{Path, Query, State},
     http::{
@@ -1261,7 +1260,7 @@ async fn operator_events(
     Path(request_id): Path<String>,
 ) -> impl IntoResponse {
     use axum::response::sse::{Event, Sse};
-    use futures::stream::StreamExt;
+    use futures::stream::{StreamExt, TryStreamExt};
 
     info!("[Operator] Opening stream: {}", request_id);
 
@@ -1278,7 +1277,7 @@ async fn operator_events(
             let data = String::from_utf8_lossy(&chunk).to_string();
             yield Event::default().data(data);
         }
-    }.map_err(|e: anyhow::Error| -> Box<dyn std::error::Error + Send + Sync + 'static> { Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string())) });
+    }.map_err(|e: anyhow::Error| Box::<dyn std::error::Error + Send + Sync>::from(e));
 
     Sse::new(stream).keep_alive(axum::response::sse::KeepAlive::default())
 }

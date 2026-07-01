@@ -17,6 +17,11 @@ make dev
 # Or start the platform surfaces explicitly
 pnpm dev:platform                # Next.js platform app on :3013
 pnpm dev:platform-stack          # Platform app + Rust API on :8013
+
+# Rails CLI (ticket/DAG workflow)
+cargo build -p rails
+./target/debug/rails init
+./target/debug/rails ticket new "Example task" --priority P1
 ```
 
 ---
@@ -270,7 +275,7 @@ cargo run -p allternit-api
 
 ## Migration Notes
 
-The project has undergone significant restructuring. See [MIGRATION.md](./MIGRATION.md) for details on:
+The project has undergone significant restructuring. See [MIGRATION_PLAN.md](./MIGRATION_PLAN.md) for details on:
 - What moved and where
 - How to update imports
 - Path mapping changes
@@ -280,10 +285,10 @@ The project has undergone significant restructuring. See [MIGRATION.md](./MIGRAT
 
 ## Architecture Documentation
 
-- [ARCHITECTURE.md](./ARCHITECTURE.md) - Platform-wide architecture
-- [6-ui/ARCHITECTURE.md](./6-ui/ARCHITECTURE.md) - UI layer architecture
-- [docs/SERVICES.md](./docs/SERVICES.md) - Service documentation
-- [CONSOLIDATION_COMPLETE.md](./CONSOLIDATION_COMPLETE.md) - Consolidation summary
+- [REPO_STRUCTURE.md](./REPO_STRUCTURE.md) - Monorepo layout and satellite repo architecture
+- [DESIGN.md](./DESIGN.md) - Design system v2.0 (tokens, typography, colors, animation, accessibility)
+- [docs/IMPLEMENTATION_DAG.md](./docs/IMPLEMENTATION_DAG.md) - Implementation DAG and service documentation
+- [docs/MASTER_INDEX.md](./docs/MASTER_INDEX.md) - Documentation index
 
 ---
 

@@ -11,10 +11,10 @@ Communication with the kernel and services occurs through four primary transport
 
 | Gateway | Location | Target Environment |
 |---------|----------|--------------------|
-| **Stdio** | `api/gateway/stdio/` | CLI-first (Gizzi) |
-| **HTTP** | `api/gateway/http/` | Web & Third-party integrations |
-| **AGUI** | `api/gateway/agui/` | Desktop Application (Electron) |
-| **Browser** | `api/gateway/browser/` | Browser Extension / WebVM |
+| **Stdio** | `services/gateway/stdio/` | CLI-first (Gizzi) |
+| **HTTP** | `services/gateway/http/` | Web & Third-party integrations |
+| **AGUI** | `services/gateway/agui/` | Desktop Application (Electron) |
+| **Browser** | `services/gateway/browser/` | Browser Extension / WebVM |
 
 ## 3. Orchestration & Execution (Control/Execution Plane)
 Logic is distributed between orchestration services and physical executors.
