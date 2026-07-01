@@ -165,6 +165,25 @@ pub enum JobState {
     Cancelled,
 }
 
+impl std::fmt::Display for JobState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            JobState::Scheduled => write!(f, "scheduled"),
+            JobState::Queued => write!(f, "queued"),
+            JobState::Leased => write!(f, "leased"),
+            JobState::Starting => write!(f, "starting"),
+            JobState::Running => write!(f, "running"),
+            JobState::Checkpointing => write!(f, "checkpointing"),
+            JobState::AwaitingApproval => write!(f, "awaiting_approval"),
+            JobState::RetryBackoff => write!(f, "retry_backoff"),
+            JobState::Completed => write!(f, "completed"),
+            JobState::Failed => write!(f, "failed"),
+            JobState::DeadLetter => write!(f, "dead_letter"),
+            JobState::Cancelled => write!(f, "cancelled"),
+        }
+    }
+}
+
 impl JobState {
     /// Check if the job is in a terminal state
     pub fn is_terminal(self) -> bool {
