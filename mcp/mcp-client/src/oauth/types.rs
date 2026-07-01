@@ -1,5 +1,6 @@
 //! OAuth types for MCP authentication
 
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use serde::{Deserialize, Serialize};
 
 /// OAuth tokens
@@ -43,7 +44,7 @@ impl Pkce {
         // Generate 128-byte random verifier
         let verifier = {
             let random_bytes: Vec<u8> = (0..128).map(|_| rand::thread_rng().gen()).collect();
-            base64::encode_config(random_bytes, base64::URL_SAFE_NO_PAD)
+            URL_SAFE_NO_PAD.encode(random_bytes)
         };
 
         // Compute S256 challenge
@@ -51,7 +52,7 @@ impl Pkce {
             let mut hasher = Sha256::new();
             hasher.update(verifier.as_bytes());
             let hash = hasher.finalize();
-            base64::encode_config(hash, base64::URL_SAFE_NO_PAD)
+            URL_SAFE_NO_PAD.encode(hash)
         };
 
         Self {

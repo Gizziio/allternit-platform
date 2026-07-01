@@ -28,6 +28,7 @@ use pqcrypto_traits::sign::{
 };
 use rand::rngs::OsRng;
 use serde::{Deserialize, Serialize};
+use base64::{Engine as _, engine::general_purpose::STANDARD};
 
 const ED25519_PUBLIC_KEY_BYTES: usize = 32;
 const ED25519_SECRET_KEY_BYTES: usize = 32;
@@ -395,7 +396,7 @@ impl SigningKey {
             algorithm: self.algorithm,
             publisher_id: self.publisher_id.clone(),
             public_key,
-            signature: base64::encode(&signature_bytes),
+            signature: STANDARD.encode(&signature_bytes),
             timestamp: Utc::now(),
         }
     }
@@ -508,7 +509,7 @@ impl VerifyingKey {
         publisher_id: impl Into<String>,
         algorithm: SignatureAlgorithm,
     ) -> CapsuleResult<Self> {
-        let bytes = base64::decode(b64)
+        let bytes = STANDARD.decode(b64)
             .map_err(|e| CapsuleError::CryptoError(format!("Invalid base64: {}", e)))?;
 
         Self::from_bytes_with_algorithm(&bytes, publisher_id, algorithm)
@@ -598,7 +599,7 @@ impl VerifyingKey {
         }
 
         // Decode and verify signature
-        let sig_bytes = base64::decode(&signature.signature)
+        let sig_bytes = STANDARD.decode(&signature.signature)
             .map_err(|e| CapsuleError::CryptoError(format!("Invalid signature encoding: {}", e)))?;
 
         self.verify(content_hash.as_bytes(), &sig_bytes)
@@ -612,13 +613,13 @@ impl VerifyingKey {
     /// Get as base64 string.
     pub fn to_base64(&self) -> String {
         match &self.inner {
-            VerifyingKeyInner::Ed25519(key) => base64::encode(key.as_bytes()),
-            VerifyingKeyInner::MlDsa65(key) => base64::encode(key.as_bytes()),
-            VerifyingKeyInner::SlhDsa128s(key) => base64::encode(key.as_bytes()),
+            VerifyingKeyInner::Ed25519(key) => STANDARD.encode(key.as_bytes()),
+            VerifyingKeyInner::MlDsa65(key) => STANDARD.encode(key.as_bytes()),
+            VerifyingKeyInner::SlhDsa128s(key) => STANDARD.encode(key.as_bytes()),
             VerifyingKeyInner::Hybrid { ed25519, pqc } => {
                 let mut bytes = ed25519.as_bytes().to_vec();
                 bytes.extend_from_slice(pqc.as_bytes());
-                base64::encode(bytes)
+                STANDARD.encode(bytes)
             }
         }
     }
@@ -690,8 +691,8 @@ impl CapsuleSignature {
         Self {
             algorithm: SignatureAlgorithm::Ed25519,
             publisher_id: "placeholder".into(),
-            public_key: base64::encode([0u8; 32]),
-            signature: base64::encode([0u8; 64]),
+            public_key: STANDARD.encode([0u8; 32]),
+            signature: STANDARD.encode([0u8; 64]),
             timestamp: Utc::now(),
         }
     }

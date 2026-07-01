@@ -20,6 +20,7 @@ use uuid::Uuid;
 
 use allternit_policy::{PolicyEffect, PolicyEngine, PolicyRequest, SafetyTier};
 use registry_server::{
+use base64::{Engine as _, engine::general_purpose::STANDARD};
     IndexRequest, InstallRequest, Registry, RegistryId, RegistryItem, RegistryType,
     RollbackRequest, SearchQuery,
 };
@@ -329,7 +330,7 @@ async fn pull_item_handler(
 
     // In a real implementation, this would retrieve the actual content
     // For now, we'll return a placeholder
-    let content = base64::encode(format!("content_for_{}", id));
+    let content = STANDARD.encode(format!("content_for_{}", id));
 
     Ok(Json(PullItemResponse { item, content }))
 }
@@ -642,7 +643,7 @@ mod tests {
             version: "1.0.0".to_string(),
             description: Some("A test skill".to_string()),
             tags: vec!["test".to_string(), "example".to_string()],
-            content: base64::encode("test content"),
+            content: STANDARD.encode("test content"),
             metadata: serde_json::json!({}),
         };
 

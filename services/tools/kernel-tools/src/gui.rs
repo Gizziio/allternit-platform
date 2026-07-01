@@ -14,6 +14,7 @@
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use base64::{Engine as _, engine::general_purpose::STANDARD};
 
 /// GUI tool execution result
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -92,7 +93,7 @@ impl GuiTool for MacGuiTool {
         match output {
             Ok(output) => {
                 if output.status.success() {
-                    let base64 = base64::encode(&tokio::fs::read("/tmp/screenshot.png")
+                    let base64 = STANDARD.encode(&tokio::fs::read("/tmp/screenshot.png")
                         .await
                         .map_err(|e| e.to_string())?);
 

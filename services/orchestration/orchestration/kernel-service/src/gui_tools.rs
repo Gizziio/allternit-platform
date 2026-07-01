@@ -19,6 +19,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::{broadcast, RwLock};
 use uuid::Uuid;
+use base64::{Engine as _, engine::general_purpose::STANDARD};
 
 // Configuration for Allternit Vision operator (via gateway)
 const VISION_OPERATOR_DEFAULT_URL: &str = "http://localhost:3000/api/v1/vision";
@@ -330,7 +331,7 @@ async fn capture_screenshot(output_path: &str) -> Result<String, String> {
         .await
         .map_err(|e| format!("Failed to read screenshot: {}", e))?;
 
-    Ok(base64::encode(&image_data))
+    Ok(STANDARD.encode(&image_data))
 }
 
 async fn execute_click(x: u32, y: u32, button: Option<&str>) -> Result<(), String> {
