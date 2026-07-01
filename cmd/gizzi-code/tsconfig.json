@@ -12,7 +12,7 @@
       "@/*": ["./src/*"],
       "@tui/*": ["./src/cli/ui/tui/*"],
       "@allternit/util": ["../../packages/@allternit/util/src"],
-      "@allternit/sdk": ["../../packages/@allternit/sdk/src"]
+      "@allternit/sdk": ["../../sdk/allternit-sdk/src"]
     }
   },
   "include": [

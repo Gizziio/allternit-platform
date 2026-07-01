@@ -22,5 +22,5 @@ tower = { version = "0.5", features = ["util"] }
 tower-http = { workspace = true }
 uuid = { workspace = true, features = ["v4", "serde"] }
 sqlx = { workspace = true }
-allternit-memory-provider = { path = "../../1-kernel/data/allternit-memory-provider", features = [] }
+allternit-memory-provider = { path = "data/allternit-memory-provider", features = [] }
 async-trait = { workspace = true }
