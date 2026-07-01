@@ -159,7 +159,7 @@ The platform has **extensive documentation** but **minimal implementation**:
 
 The platform depends on an external Rails system:
 ```
-Location: ~/Desktop/allternit-workspace/allternit/0-substrate/allternit-agent-system-rails/
+Location: ~/Desktop/allternit-workspace/allternit/0-substrate/rails/
 ```
 
 **Risks:**

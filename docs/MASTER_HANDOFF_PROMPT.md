@@ -18,7 +18,7 @@ Before you write code, know where you are.
 
 ### Active Codebase Domains:
 *   `api/gateway/`: The routing endpoints (Stdio, HTTP, AGUI) bridging the outside world to the kernel.
-*   `domains/kernel/allternit-agent-system-rails/`: The core execution engine (The Rails system). Handles bus, ledger, gate, and WIH.
+*   `rails/`: The core execution engine (The Rails system). Handles bus, ledger, gate, and WIH.
 *   `services/memory/data/ars-contexta/`: The active memory engine (Knowledge Graph, Vector Store, Decay).
 *   `services/tools/`: The ToolABI implementations (Kernel tools in Rust, Gateway tools in TypeScript).
 *   `services/orchestration/`: Workflow DAG compiler and Policy Engine.
@@ -61,6 +61,6 @@ When you complete a task:
 ## 4. ⚠️ KNOWN PITFALLS TO AVOID
 *   **Do not re-implement OpenClaw from scratch:** Phase 0 embeds it. Phase 1 builds it natively as GizziClaw. Check the DAG to see which phase the user wants.
 *   **Do not build standard chat UIs:** Phase 18 mandates A2UI (Agent-to-User Interface) where agents emit JSON and the renderer builds GenTabs.
-*   **Do not bypass the Gate:** All agent actions must route through `domains/kernel/allternit-agent-system-rails/src/gate/` for policy enforcement.
+*   **Do not bypass the Gate:** All agent actions must route through `rails/src/gate/` for policy enforcement.
 
 **Proceed to `docs/IMPLEMENTATION_DAG.md` to begin execution.**

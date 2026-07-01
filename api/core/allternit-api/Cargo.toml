@@ -23,7 +23,7 @@ tower = "0.4"
 tower-http = { version = "0.5", features = ["cors", "fs", "redirect"] }
 
 # Internal crates - Rails & Cowork
-allternit-agent-system-rails = { path = "../../domains/kernel/allternit-agent-system-rails" }
+allternit-agent-system-rails = { path = "../../rails" }
 allternit-cowork-runtime = { path = "../../infrastructure/executor/cowork/cowork/allternit-cowork-runtime" }
 allternit-driver-interface = { path = "../../domains/kernel/drivers/allternit-driver-interface" }
 

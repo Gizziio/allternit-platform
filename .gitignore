@@ -1,6 +1,7 @@
 node_modules/
 dist/
 target/
+rails/reference/beads/
 .DS_Store
 *.log
 *.png
@@ -60,6 +61,3 @@ tools/mcp-servers/superpowers
 services/allternit-ai
 services/docmost/node_modules
 services/docmost
-
-# Built platform UI assets served by allternit-api
-resources/platform/

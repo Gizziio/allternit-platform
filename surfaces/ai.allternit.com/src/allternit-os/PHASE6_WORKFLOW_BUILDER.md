@@ -286,7 +286,7 @@ The workspace ID connects the UI to a specific Rails workspace:
 
 ## References
 
-- Allternit Rails System: `/Users/macbook/Desktop/allternit-workspace/allternit/0-substrate/allternit-agent-system-rails`
+- Allternit Rails System: `/Users/macbook/Desktop/allternit-workspace/allternit/0-substrate/rails`
 - Workspace Service: Port 3021
 - Bus Queue: `.allternit/bus/queue.db` (SQLite)
 - Work DAGs: `.allternit/work/dags/*.json`

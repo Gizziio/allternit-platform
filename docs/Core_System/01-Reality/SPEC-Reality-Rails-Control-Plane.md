@@ -1,6 +1,6 @@
 # Allternit Reality Spec: Rails Control Plane
 
-**Location:** `domains/kernel/allternit-agent-system-rails/`  
+**Location:** `rails/`  
 **Status:** ACTIVE / OPERATIONAL  
 **Date:** April 14, 2026
 

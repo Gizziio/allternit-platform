@@ -19,7 +19,7 @@ This audit maps the DAG N1-N20 tasks to the **existing** allternit 8-layer archi
 | DAG Task | Description | Existing Location | Status |
 |----------|-------------|-------------------|--------|
 | **N6** | Policy Engine + Credential Broker | `2-governance/identity-access-control/policy-engine/` | ✅ Complete |
-| **N7** | Swarm Scheduler + DAG Runtime | `0-substrate/allternit-agent-system-rails/` | ✅ Complete |
+| **N7** | Swarm Scheduler + DAG Runtime | `0-substrate/rails/` | ✅ Complete |
 | **N8** | Provenance + Observability | `2-governance/evidence-management/` | ✅ Complete |
 | **N11** | Economic Model + Cost Attribution | `4-services/orchestration/budget-metering/` | ✅ Complete |
 | **N15** | State Storage + Event/Run Ledger | `1-kernel/data/history-ledger/` | ✅ Complete |
@@ -76,7 +76,7 @@ This audit maps the DAG N1-N20 tasks to the **existing** allternit 8-layer archi
 
 ### N7: Swarm Scheduler ✅ ALREADY EXISTS
 
-**Location:** `0-substrate/allternit-agent-system-rails/`
+**Location:** `0-substrate/rails/`
 
 **Existing Features:**
 - DAG execution
@@ -193,7 +193,7 @@ pub trait ExecutionDriver {
 ```
 4-services/orchestration/budget-metering/     -> N11 Economic Model
 2-governance/identity-access-control/         -> N6 Policy
-0-substrate/allternit-agent-system-rails/           -> N7 Scheduler
+0-substrate/rails/           -> N7 Scheduler
 1-kernel/data/history-ledger/                 -> N15 Ledger
 2-governance/evidence-management/             -> N8 Provenance
 2-governance/audit-logging/                   -> N18 Compliance

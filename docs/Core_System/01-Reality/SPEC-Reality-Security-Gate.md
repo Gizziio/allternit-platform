@@ -1,6 +1,6 @@
 # Allternit Reality Spec: Governance & Security (The Gate)
 
-**Location:** `domains/kernel/allternit-agent-system-rails/` & `services/orchestration/`  
+**Location:** `rails/` & `services/orchestration/`  
 **Status:** ACTIVE / OPERATIONAL  
 **Date:** April 14, 2026
 
@@ -8,7 +8,7 @@
 Governance and Security in Allternit are enforced through a strictly gated execution model. Every action taken by an agent must pass through the **Gate**, which validates the request against active policies, provenance requirements, and safety tiers.
 
 ## 2. The Gate (Enforcement Boundary)
-Implementation: `domains/kernel/allternit-agent-system-rails/src/gate/`
+Implementation: `rails/src/gate/`
 The Gate coordinates several key security subsystems:
 - **Ledger:** Ensures every event is recorded and cannot be tampered with (Immutable audit trail).
 - **Leases:** Manages temporary permissions for resources and tool execution.

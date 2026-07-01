@@ -1,6 +1,6 @@
 # Allternit Reality Spec: Workflow Engine & Orchestration
 
-**Location:** `services/orchestration/control-plane/allternit-agent-orchestration/workflows/` & `domains/kernel/allternit-agent-system-rails/src/work/`  
+**Location:** `services/orchestration/control-plane/allternit-agent-orchestration/workflows/` & `rails/src/work/`  
 **Status:** IMPLEMENTED / PARTIALLY INTEGRATED  
 **Date:** April 14, 2026
 
@@ -15,7 +15,7 @@ The system provides a robust toolchain for declarative workflows:
 - **Compiler:** Translates valid templates into a deterministic Directed Acyclic Graph (DAG) of execution nodes.
 
 ## 3. DAG Execution & Tracking
-Implementation: `domains/kernel/allternit-agent-system-rails/src/work/`
+Implementation: `rails/src/work/`
 The execution of the DAG is managed by the Rails system's "Work-In-Hand" (WIH) state tracking:
 - **Cycle Detection:** `graph.rs` ensures that compiled DAGs are acyclic before execution.
 - **Node Readiness:** Nodes are dynamically scheduled as their dependencies (`blocked_by` edges) are resolved.

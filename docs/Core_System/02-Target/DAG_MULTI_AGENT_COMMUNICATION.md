@@ -575,7 +575,7 @@ blocked_by: [n_012]
 **Subtasks:**
 ```
 node_id: n_013_01
-title: Extend 0-substrate/allternit-agent-system-rails/spec/EVENT_TAXONOMY.md
+title: Extend 0-substrate/rails/spec/EVENT_TAXONOMY.md
 parent_node_id: n_013
 kind: subtask
 execution_mode: ACCEPT_EDITS
@@ -1378,7 +1378,7 @@ blocked_by: []
 **Subtasks:**
 ```
 node_id: n_028_01
-title: Update 0-substrate/allternit-agent-system-rails/spec/EVENT_TAXONOMY.md
+title: Update 0-substrate/rails/spec/EVENT_TAXONOMY.md
 parent_node_id: n_028
 kind: subtask
 execution_mode: ACCEPT_EDITS
@@ -1447,7 +1447,7 @@ blocked_by: [n_028]
 **Subtasks:**
 ```
 node_id: n_030_01
-title: Update 0-substrate/allternit-agent-system-rails/spec/RECEIPTS.md
+title: Update 0-substrate/rails/spec/RECEIPTS.md
 parent_node_id: n_030
 kind: subtask
 execution_mode: ACCEPT_EDITS
@@ -1477,7 +1477,7 @@ blocked_by: [n_028]
 **Subtasks:**
 ```
 node_id: n_031_01
-title: Create 0-substrate/allternit-agent-system-rails/cli/commands/mention.ts
+title: Create 0-substrate/rails/cli/commands/mention.ts
 parent_node_id: n_031
 kind: subtask
 execution_mode: ACCEPT_EDITS
@@ -1486,7 +1486,7 @@ owner_role: builder
 
 ```
 node_id: n_031_02
-title: Create 0-substrate/allternit-agent-system-rails/cli/commands/room.ts
+title: Create 0-substrate/rails/cli/commands/room.ts
 parent_node_id: n_031
 kind: subtask
 execution_mode: ACCEPT_EDITS
@@ -1495,7 +1495,7 @@ owner_role: builder
 
 ```
 node_id: n_031_03
-title: Create 0-substrate/allternit-agent-system-rails/cli/commands/webhook.ts
+title: Create 0-substrate/rails/cli/commands/webhook.ts
 parent_node_id: n_031
 kind: subtask
 execution_mode: ACCEPT_EDITS

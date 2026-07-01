@@ -26,7 +26,7 @@ bytes = "1"
 regex = "1"
 
 # Internal crates - Rails & Cowork
-allternit-agent-system-rails = { path = "../../domains/kernel/allternit-agent-system-rails" }
+allternit-agent-system-rails = { path = "../../rails" }
 allternit-cowork-runtime = { path = "../../infrastructure/executor/cowork/cowork/allternit-cowork-runtime" }
 allternit-cowork-scheduler = { path = "../../infrastructure/executor/cowork/cowork/allternit-cowork-scheduler" }
 
@@ -34,6 +34,9 @@ allternit-cowork-scheduler = { path = "../../infrastructure/executor/cowork/cowo
 allternit-driver-interface = { path = "../../domains/kernel/drivers/allternit-driver-interface" }
 allternit-firecracker-driver = { path = "../../domains/kernel/service/allternit-firecracker-driver" }
 allternit-session-manager = { path = "../../domains/kernel/service/allternit-session-manager" }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+allternit-apple-vf-driver = { path = "../../domains/kernel/service/allternit-apple-vf-driver" }
 
 # WebSocket
 tokio-tungstenite = "0.21"
@@ -75,10 +78,7 @@ base64 = "0.22"
 # PDF Rendering dependencies
 printpdf = "0.6"
 
-# Apple Virtualization.framework driver (macOS only)
-[target.'cfg(target_os = "macos")'.dependencies]
-allternit-apple-vf-driver = { path = "../../domains/kernel/service/allternit-apple-vf-driver" }
-
+# Testing
 [dev-dependencies]
 axum-test = "14"
 

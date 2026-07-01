@@ -37,7 +37,7 @@ Integration Points:
 
 ### 2. Allternit Autoland System (Rust)
 
-**Location:** `0-substrate/allternit-agent-system-rails/src/gate/gate.rs`
+**Location:** `0-substrate/rails/src/gate/gate.rs`
 
 **Components:**
 ```

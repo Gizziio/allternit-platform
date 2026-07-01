@@ -69,7 +69,7 @@ mcp = { path = "../../3-adapters/mcp" }
 # Common dependencies used across OSs
 sqlx = { workspace = true, features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
 allternit-openclaw-host = { path = "../../1-kernel/infrastructure/allternit-openclaw-host" }
-allternit_agent_system_rails = { package = "allternit-agent-system-rails", path = "../../../../domains/kernel/allternit-agent-system-rails" }
+allternit_agent_system_rails = { package = "allternit-agent-system-rails", path = "../../../../rails" }
 allternit-process-driver = { path = "../../1-kernel/execution/allternit-process-driver" }
 allternit-budget-metering = { path = "../../4-services/orchestration/budget-metering" }
 allternit-replay = { path = "../../2-governance/allternit-replay" }
