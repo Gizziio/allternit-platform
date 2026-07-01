@@ -86,7 +86,7 @@ allternit/
 │   ├── analyze-packages.ts               ← Codebase → topics/challenges
 │   ├── platform-as-course.ts             ← Platform → course outline
 │   └── fix-unpublished-modules.ts        ← Publishes + sets prerequisites
-├── surfaces/allternit-platform/
+├── surfaces/ai.allternit.com/
 │   └── src/views/
 │       ├── LabsView.tsx                  ← Platform UI (shows all courses)
 │       └── CertificationsPanel.tsx       ← Certification badge gallery
@@ -336,7 +336,7 @@ Output: /Users/macbook/Desktop/allternit-workspace/allternit/alabs-generated-cou
 - **Canvas Instance:** Free For Teacher, `canvas.instructure.com`
 - **Node Version:** v25.6.1 with `tsx`
 - **Database:** SQLite (`better-sqlite3`) + PostgreSQL (Prisma)
-- **Platform:** Next.js in `surfaces/allternit-platform/`
+- **Platform:** Next.js in `surfaces/ai.allternit.com/`
 - **Course IDs:** See catalog table above
 - **Generated modules:** Stored in `alabs-generated-courses/`
 - **Demo site:** `alabs-demos/index.html` — works offline
@@ -354,7 +354,7 @@ Output: /Users/macbook/Desktop/allternit-workspace/allternit/alabs-generated-cou
 Demo HTML files must be copied to the platform's public directory to be served:
 
 ```bash
-cp alabs-demos/*.html surfaces/allternit-platform/public/demos/
+cp alabs-demos/*.html surfaces/ai.allternit.com/public/demos/
 ```
 
 The `LabsView.tsx` "Try Demo" buttons link to `/demos/ALABS-ADV-{COURSE}-module1.html` which resolves to `public/demos/` in Next.js.
@@ -363,13 +363,13 @@ The `LabsView.tsx` "Try Demo" buttons link to `/demos/ALABS-ADV-{COURSE}-module1
 
 After generating new modules:
 1. Copy to `alabs-demos/`
-2. Copy to `surfaces/allternit-platform/public/demos/`
+2. Copy to `surfaces/ai.allternit.com/public/demos/`
 3. Regenerate index: `npx tsx scripts/generate-demo-index.ts`
 4. Copy updated index to both locations
 
 ### Platform UI Updates
 
 When adding new courses/modules, update:
-- `surfaces/allternit-platform/src/views/LabsView.tsx` — `ALABS_COURSES` array
+- `surfaces/ai.allternit.com/src/views/LabsView.tsx` — `ALABS_COURSES` array
 - Module counts, descriptions, demo URLs
 - Ensure `ADV` tier is included in the rendering loop
