@@ -33,7 +33,7 @@ utoipa = "4.2"
 allternit-history = { workspace = true }
 allternit-messaging = { workspace = true }
 allternit-policy = { workspace = true }
-mcp-client = { path = "../../crates/mcp-client" }
+mcp-client = { path = "../../../mcp/mcp-client" }
 async-trait = "0.1"
 futures = "0.3"
 tempfile = "3.0"

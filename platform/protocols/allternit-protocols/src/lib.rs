@@ -36,7 +36,7 @@ pub use allternit_guest_agent_protocol as guest_agent;
 pub use mcp;
 
 #[cfg(feature = "mcp")]
-pub use allternit_mcp_client as mcp_client;
+pub use mcp_client;
 
 #[cfg(feature = "sms")]
 pub use allternit_transport_sms as sms;

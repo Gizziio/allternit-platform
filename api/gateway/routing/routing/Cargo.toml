@@ -75,7 +75,7 @@ allternit-budget-metering = { path = "../../services/orchestration/budget-meteri
 allternit-replay = { path = "../../domains/governance/allternit-replay" }
 allternit-prewarm = { path = "../../services/orchestration/allternit-prewarm" }
 allternit-environment-spec = { path = "../../domains/kernel/infrastructure/allternit-environment-spec" }
-allternit-mcp-client = { path = "../../../../domains/mcp/mcp-client" }
+mcp-client = { path = "../../../../mcp/mcp-client" }
 allternit-terminal = { path = "../../../../domains/governance/security-network/terminal" }
 allternit-node-protocol = { path = "../../../../platform/protocols/allternit-protocol" }
 walkdir = "2.5"
