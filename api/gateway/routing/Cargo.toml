@@ -19,7 +19,7 @@ anyhow = "1.0"
 tracing = "0.1"
 tracing-subscriber = "0.3"
 chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite"] }
+sqlx = { workspace = true }
 
 # HTTP
 axum = { workspace = true }
@@ -41,4 +41,4 @@ tokio-util = { version = "0.7", features = ["codec"] }
 sha2 = "0.10"
 
 [dev-dependencies]
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
+sqlx = { workspace = true, features = ['chrono', 'uuid'] }

@@ -23,7 +23,7 @@ futures-util = "0.3"
 uuid = { version = "1.6", features = ["v4"] }
 
 # Specific dependencies
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite"] }
+sqlx = { workspace = true }
 bytes = "1.5"
 
 # Allternit SDK dependencies

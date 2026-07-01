@@ -16,5 +16,5 @@ allternit-history = { workspace = true }
 allternit-messaging = { workspace = true }
 
 [dev-dependencies]
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
+sqlx = { workspace = true, features = ['chrono', 'uuid'] }
 tempfile = "3.0"

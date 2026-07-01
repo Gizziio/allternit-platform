@@ -42,7 +42,7 @@ chrono-tz = "0.9"
 uuid = { workspace = true }
 
 # Database (SQLite for now)
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
+sqlx = { workspace = true, features = ['chrono', 'uuid'] }
 
 # WebSocket
 tokio-tungstenite = "0.21"

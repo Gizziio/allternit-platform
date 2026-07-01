@@ -17,7 +17,7 @@ async-trait = "0.1"
 chrono = { version = "0.4", features = ["serde"] }
 allternit-history = { workspace = true }
 tempfile = "3.0"
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
+sqlx = { workspace = true, features = ['chrono', 'uuid'] }
 
 [dev-dependencies]
 reqwest = { workspace = true, features = ["json"] }

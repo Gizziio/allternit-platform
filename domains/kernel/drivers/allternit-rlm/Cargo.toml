@@ -18,7 +18,7 @@ allternit-tools-gateway = { workspace = true }
 allternit-providers = { workspace = true }
 allternit-runtime-core = { workspace = true }
 allternit-context-router = { workspace = true }
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite", "chrono", "uuid"] }
+sqlx = { workspace = true, features = ['chrono', 'uuid'] }
 thiserror = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { workspace = true }

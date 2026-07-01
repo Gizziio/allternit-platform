@@ -26,7 +26,7 @@ sha2 = "0.10"
 hex = "0.4"
 
 # Storage / Database
-sqlx = { version = "0.7", features = ["runtime-tokio", "sqlite", "migrate", "chrono"] }
+sqlx = { workspace = true, features = ['migrate', 'chrono'] }
 
 # Error handling
 thiserror = "1.0"
