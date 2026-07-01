@@ -48,7 +48,7 @@ tonic = { workspace = true }
 prost = { workspace = true }
 prost-types = { workspace = true }
 serde_bytes = { workspace = true }
-worktree-manager = { path = "../domains/governance/worktree-manager" }
+worktree-manager = { path = "../worktree-manager" }
 
 [build-dependencies]
 tonic-build = { workspace = true }
