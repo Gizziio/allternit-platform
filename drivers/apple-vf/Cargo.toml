@@ -22,7 +22,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 # HTTP client for management API
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { workspace = true, features = ['json'] }
 
 # Time
 chrono = { version = "0.4", features = ["serde"] }
