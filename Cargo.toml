@@ -55,6 +55,7 @@ allternit-cowork-runtime = { path = "infrastructure/executor/cowork/cowork/allte
 allternit-cowork-scheduler = { path = "infrastructure/executor/cowork/cowork/allternit-cowork-scheduler" }
 allternit-workspace-service = { path = "api/services/workspace-service" }
 allternit-capsule = { path = "platform/contracts/capsule/capsule-system/allternit-capsule" }
+allternit-capsule-sdk = { path = "platform/contracts/capsule/capsule-system/allternit-capsule-sdk" }
 allternit-canvas-protocol = { path = "platform/protocols/canvas-protocol" }
 allternit-history = { path = "services/memory/data/history-ledger" }
 allternit-policy = { path = "domains/governance/identity-access-control/policy-engine" }
