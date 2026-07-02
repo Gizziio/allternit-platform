@@ -59,3 +59,7 @@ tools/mcp-servers/superpowers
 .tmp-*
 services/allternit-ai
 services/docmost
+
+# Built desktop shell assets and temp analysis output
+surfaces/allternit-desktop/resources/platform/
+surfaces/ai.allternit.com/tmp/
