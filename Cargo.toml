@@ -2,7 +2,7 @@
 resolver = "2"
 
 members = [
-    "bin",
+    "services/orchestration/orchestration/platform-orchestration-service",
     "cmd/allternit-api",
     "cmd/allternit-cloud-api",
     "cmd/allternit-cloud-wizard",
