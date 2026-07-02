@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://allternit.com/schemas/Dependency.json",
+  "title": "DependencyEdge",
+  "description": "A typed directed edge between two Rails tickets.",
+  "type": "object",
+  "required": ["from", "to", "kind"],
+  "properties": {
+    "from": {
+      "type": "string",
+      "description": "Source ticket ID",
+      "pattern": "^T-[0-9a-f]{32}$"
+    },
+    "to": {
+      "type": "string",
+      "description": "Target ticket ID",
+      "pattern": "^T-[0-9a-f]{32}$"
+    },
+    "kind": {
+      "type": "string",
+      "description": "Semantic kind of the dependency edge",
+      "enum": ["blocks", "tracks", "related", "duplicate_of", "supersedes", "derived_from"]
+    }
+  }
+}
