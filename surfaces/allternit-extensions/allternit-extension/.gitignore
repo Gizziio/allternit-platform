@@ -1,0 +1,5 @@
+# Build outputs
+.output/
+
+# WXT dev browser profile data
+.wxt/chrome-data/
