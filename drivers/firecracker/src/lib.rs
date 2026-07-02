@@ -269,49 +269,17 @@ pub struct FirecrackerDriver {
     metrics_render: Option<Arc<dyn Fn() -> String + Send + Sync>>,
 }
 
-impl Default for FirecrackerDriver {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl FirecrackerDriver {
-    pub fn new() -> Self {
-        Self::with_config(FirecrackerConfig::default())
-    }
-
-    /// Create a new driver with metrics enabled on the specified port
-    pub fn with_metrics(port: u16) -> Self {
-        let mut config = FirecrackerConfig::default();
-        config.metrics_port = Some(port);
-        Self::with_config(config)
-    }
-
-    /// Get Prometheus-formatted metrics
-    ///
-    /// Returns the current metrics in Prometheus format if the metrics server
-    /// is enabled. If metrics are disabled, returns an informational message.
-    pub fn metrics_endpoint(&self) -> String {
-        if let Some(ref render) = self.metrics_render {
-            render()
-        } else if self.fc_config.metrics_port.is_some() {
-            "# Metrics server enabled but recorder not initialized\n".to_string()
-        } else {
-            "# Prometheus metrics disabled - set metrics_port in FirecrackerConfig to enable\n"
-                .to_string()
-        }
-    }
-
-    pub fn with_config(fc_config: FirecrackerConfig) -> Self {
+    /// Create a new driver with the provided configuration.
+    pub async fn with_config(fc_config: FirecrackerConfig) -> Result<Self, DriverError> {
         let cache_dir = fc_config.vm_root_dir.join("cache");
         let rootfs_builder = RootfsBuilder::new(cache_dir);
 
         // Initialize IPAM with persistence path
         let ipam_path = fc_config.vm_root_dir.join("ipam-state.json");
-        let ipam = Arc::new(Mutex::new(IpamState::load_or_create_sync(
-            &fc_config.vm_subnet,
-            ipam_path,
-        )));
+        let ipam = Arc::new(Mutex::new(
+            IpamState::load_or_create(&fc_config.vm_subnet, ipam_path).await?,
+        ));
 
         // Start metrics server if port is configured
         let metrics_render: Option<Arc<dyn Fn() -> String + Send + Sync>> = if let Some(port) =
@@ -334,7 +302,7 @@ impl FirecrackerDriver {
             None
         };
 
-        Self {
+        Ok(Self {
             vms: RwLock::new(HashMap::new()),
             _config: DriverConfig {
                 driver_type: DriverType::MicroVM,
@@ -350,6 +318,33 @@ impl FirecrackerDriver {
             ipam,
             rootfs_builder,
             metrics_render,
+        })
+    }
+
+    /// Create a new driver with the default configuration.
+    pub async fn new(fc_config: FirecrackerConfig) -> Result<Self, DriverError> {
+        Self::with_config(fc_config).await
+    }
+
+    /// Create a new driver with metrics enabled on the specified port.
+    pub async fn with_metrics(port: u16) -> Result<Self, DriverError> {
+        let mut config = FirecrackerConfig::default();
+        config.metrics_port = Some(port);
+        Self::with_config(config).await
+    }
+
+    /// Get Prometheus-formatted metrics
+    ///
+    /// Returns the current metrics in Prometheus format if the metrics server
+    /// is enabled. If metrics are disabled, returns an informational message.
+    pub fn metrics_endpoint(&self) -> String {
+        if let Some(ref render) = self.metrics_render {
+            render()
+        } else if self.fc_config.metrics_port.is_some() {
+            "# Metrics server enabled but recorder not initialized\n".to_string()
+        } else {
+            "# Prometheus metrics disabled - set metrics_port in FirecrackerConfig to enable\n"
+                .to_string()
         }
     }
 

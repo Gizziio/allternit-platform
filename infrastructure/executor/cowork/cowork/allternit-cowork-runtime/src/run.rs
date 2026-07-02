@@ -159,6 +159,15 @@ impl RunManager {
         Ok(run)
     }
 
+    /// Load a persisted run into the in-memory registry
+    pub async fn load_run(&self, run: Run) -> Result<()> {
+        let run_id = run.id;
+        let run_arc = Arc::new(RwLock::new(run));
+        let mut runs = self.runs.write().await;
+        runs.insert(run_id, run_arc);
+        Ok(())
+    }
+
     /// Get a run by ID
     pub async fn get_run(&self, run_id: RunId) -> Result<Run> {
         let runs = self.runs.read().await;
@@ -293,6 +302,79 @@ impl RunManager {
         Ok(job)
     }
 
+    /// Get a job by ID
+    pub async fn get_job(&self, job_id: JobId) -> Result<Job> {
+        let jobs = self.jobs.read().await;
+        match jobs.get(&job_id) {
+            Some(job) => Ok(job.read().await.clone()),
+            None => Err(CoworkError::JobNotFound(job_id.to_string())),
+        }
+    }
+
+    /// List jobs for a run
+    pub async fn list_jobs(&self, run_id: RunId) -> Vec<Job> {
+        let jobs = self.jobs.read().await;
+        let mut result = Vec::new();
+        for job_arc in jobs.values() {
+            let job = job_arc.read().await;
+            if job.run_id == run_id {
+                result.push(job.clone());
+            }
+        }
+        result.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        result
+    }
+
+    /// Transition a job to a new state
+    pub async fn transition_job_state(&self, job_id: JobId, to: JobState) -> Result<()> {
+        let jobs = self.jobs.read().await;
+        let job_arc = jobs.get(&job_id)
+            .ok_or_else(|| CoworkError::JobNotFound(job_id.to_string()))?
+            .clone();
+        drop(jobs);
+
+        let mut job = job_arc.write().await;
+        let from = job.state;
+
+        if to.is_terminal() {
+            job.completed_at = Some(Utc::now());
+        }
+        if to == JobState::Running && job.started_at.is_none() {
+            job.started_at = Some(Utc::now());
+        }
+        job.state = to;
+        job.updated_at = Utc::now();
+
+        self.rails_client.update_job_state(&job.dag_node_id, to).await
+            .map_err(|e| CoworkError::Rails(e))?;
+
+        drop(job);
+
+        let _ = self.event_tx.send(CoworkEvent::JobStateChanged {
+            run_id: job_arc.read().await.run_id,
+            job_id,
+            from,
+            to,
+        }).await;
+
+        info!(job_id = %job_id, from = %from, to = %to, "Job state transition");
+        Ok(())
+    }
+
+    /// Set the currently active job for a run
+    pub async fn set_current_job(&self, run_id: RunId, job_id: Option<JobId>) -> Result<()> {
+        let runs = self.runs.read().await;
+        let run_arc = runs.get(&run_id)
+            .ok_or_else(|| CoworkError::RunNotFound(run_id.to_string()))?
+            .clone();
+        drop(runs);
+
+        let mut run = run_arc.write().await;
+        run.current_job_id = job_id;
+        run.updated_at = Utc::now();
+        Ok(())
+    }
+
     /// Attach a client to a run
     pub async fn attach(
         &self,
@@ -384,6 +466,11 @@ impl RunManager {
         }).await;
 
         Ok(checkpoint)
+    }
+
+    /// List checkpoints for a run
+    pub async fn list_checkpoints(&self, run_id: RunId) -> Result<Vec<crate::types::Checkpoint>> {
+        self.checkpoints.list(run_id).await
     }
 
     /// Recover a run from its latest checkpoint

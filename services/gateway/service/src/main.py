@@ -59,6 +59,7 @@ UI_REGISTRY_SCHEMA_PATH = _first_existing_path([
 GIZZI_DEV_SESSION_PATH = Path.home() / ".allternit" / "gizzi-dev-session.json"
 AGENT_SESSIONS_STORE_PATH = Path.home() / ".allternit" / "gateway-agent-sessions.json"
 AGENTS_STORE_PATH = Path.home() / ".allternit" / "gateway-agents.json"
+OFFICE_RUNTIME_STORE_PATH = Path.home() / ".allternit" / "gateway-office-runtime.json"
 AGENT_WORKSPACES_DIR = Path.home() / ".allternit" / "gateway-agent-workspaces"
 COMPAT_HTTP_EXACT_PATHS = {
     "/global/event",
@@ -166,6 +167,7 @@ AGENT_SESSION_LOCAL_PREFIXES = (
     "/api/v1/agent-sessions",
     "/api/v1/agents",
     "/api/v1/openclaw/agents/discovery",
+    "/api/v1/office",
 )
 
 
@@ -283,6 +285,50 @@ class UpdateAgentRequest(BaseModel):
 
 class InitializeWorkspaceRequest(BaseModel):
     documents: Dict[str, Any]
+
+
+class OfficeDocumentRequest(BaseModel):
+    host: str
+    title: Optional[str] = None
+    label: Optional[str] = None
+    summary: Optional[str] = None
+    document_url: Optional[str] = None
+    document_id: Optional[str] = None
+    fingerprint: Optional[str] = None
+
+
+class OfficePlatformRequest(BaseModel):
+    taskpane_origin: Optional[str] = None
+    taskpane_url: Optional[str] = None
+    manifest_url: Optional[str] = None
+    platform_origin: Optional[str] = None
+
+
+class OfficeRuntimeStateRequest(BaseModel):
+    status: Optional[str] = None
+    page_label: Optional[str] = None
+    current_task: Optional[str] = None
+    history_count: Optional[int] = None
+    connected: Optional[bool] = None
+
+
+class OfficeBootstrapRequest(BaseModel):
+    session_id: Optional[str] = None
+    project_id: Optional[str] = None
+    workspace_id: Optional[str] = None
+    document: OfficeDocumentRequest
+    platform: Optional[OfficePlatformRequest] = None
+    runtime_state: Optional[OfficeRuntimeStateRequest] = None
+
+
+class OfficeRuntimeSyncRequest(BaseModel):
+    binding_id: str
+    session_id: str
+    project_id: Optional[str] = None
+    workspace_id: Optional[str] = None
+    document: Optional[OfficeDocumentRequest] = None
+    platform: Optional[OfficePlatformRequest] = None
+    runtime_state: Optional[OfficeRuntimeStateRequest] = None
 
 
 class AgentSessionStore:
@@ -676,6 +722,260 @@ class AgentStore:
         self._workspace_path(agent_id).write_text(json.dumps(payload, indent=2))
         return payload
 
+
+class OfficeRuntimeStore:
+    def __init__(self, path: Path):
+        self.path = path
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._lock = asyncio.Lock()
+        self._bindings: Dict[str, Dict[str, Any]] = {}
+        self._sessions: Dict[str, Dict[str, Any]] = {}
+        self._load_from_disk()
+
+    def _load_from_disk(self) -> None:
+        if not self.path.exists():
+            self._bindings = {}
+            self._sessions = {}
+            return
+        try:
+            payload = json.loads(self.path.read_text())
+            bindings = payload.get("bindings", [])
+            sessions = payload.get("sessions", [])
+            self._bindings = {
+                binding["id"]: binding
+                for binding in bindings
+                if isinstance(binding, dict) and binding.get("id")
+            }
+            self._sessions = {
+                session["id"]: session
+                for session in sessions
+                if isinstance(session, dict) and session.get("id")
+            }
+        except Exception as e:
+            logger.warning(f"Failed to load office runtime store from {self.path}: {e}")
+            self._bindings = {}
+            self._sessions = {}
+
+    def _persist(self) -> None:
+        payload = {
+            "bindings": list(self._bindings.values()),
+            "sessions": list(self._sessions.values()),
+            "updated_at": utc_now_iso(),
+        }
+        self.path.write_text(json.dumps(payload, indent=2))
+
+    def _document_key(self, document: OfficeDocumentRequest) -> str:
+        primary = (
+            document.document_id
+            or document.document_url
+            or document.fingerprint
+            or f"{document.host}:{document.title or ''}:{document.label or ''}"
+        )
+        return hashlib.sha256(primary.encode("utf-8")).hexdigest()
+
+    def _serialize_binding(self, binding: Dict[str, Any]) -> Dict[str, Any]:
+        sessions = [
+            self._serialize_session(session)
+            for session in self._sessions.values()
+            if session.get("binding_id") == binding["id"]
+        ]
+        sessions.sort(key=lambda item: item.get("last_seen_at") or "", reverse=True)
+        return {
+            "id": binding["id"],
+            "document_key": binding.get("document_key"),
+            "host": binding.get("host"),
+            "title": binding.get("title"),
+            "label": binding.get("label"),
+            "summary": binding.get("summary"),
+            "document_url": binding.get("document_url"),
+            "document_id": binding.get("document_id"),
+            "fingerprint": binding.get("fingerprint"),
+            "project_id": binding.get("project_id"),
+            "workspace_id": binding.get("workspace_id"),
+            "taskpane_origin": binding.get("taskpane_origin"),
+            "taskpane_url": binding.get("taskpane_url"),
+            "manifest_url": binding.get("manifest_url"),
+            "platform_origin": binding.get("platform_origin"),
+            "last_runtime_status": binding.get("last_runtime_status"),
+            "last_page_label": binding.get("last_page_label"),
+            "last_current_task": binding.get("last_current_task"),
+            "last_history_count": binding.get("last_history_count"),
+            "connected": binding.get("connected", False),
+            "created_at": binding.get("created_at"),
+            "updated_at": binding.get("updated_at"),
+            "last_seen_at": binding.get("last_seen_at"),
+            "active_sessions": sessions,
+            "active_session_count": len(sessions),
+        }
+
+    def _serialize_session(self, session: Dict[str, Any]) -> Dict[str, Any]:
+        return {
+            "id": session["id"],
+            "binding_id": session.get("binding_id"),
+            "status": session.get("status"),
+            "page_label": session.get("page_label"),
+            "current_task": session.get("current_task"),
+            "history_count": session.get("history_count", 0),
+            "connected": session.get("connected", False),
+            "created_at": session.get("created_at"),
+            "updated_at": session.get("updated_at"),
+            "last_seen_at": session.get("last_seen_at"),
+        }
+
+    async def bootstrap(self, request: OfficeBootstrapRequest) -> Dict[str, Any]:
+        async with self._lock:
+            document_key = self._document_key(request.document)
+            binding = next(
+                (item for item in self._bindings.values() if item.get("document_key") == document_key),
+                None,
+            )
+            now = utc_now_iso()
+            if binding is None:
+                binding = {
+                    "id": str(uuid.uuid4()),
+                    "document_key": document_key,
+                    "created_at": now,
+                }
+                self._bindings[binding["id"]] = binding
+
+            binding.update(
+                {
+                    "host": request.document.host,
+                    "title": request.document.title,
+                    "label": request.document.label,
+                    "summary": request.document.summary,
+                    "document_url": request.document.document_url,
+                    "document_id": request.document.document_id,
+                    "fingerprint": request.document.fingerprint,
+                    "project_id": request.project_id,
+                    "workspace_id": request.workspace_id,
+                    "taskpane_origin": request.platform.taskpane_origin if request.platform else binding.get("taskpane_origin"),
+                    "taskpane_url": request.platform.taskpane_url if request.platform else binding.get("taskpane_url"),
+                    "manifest_url": request.platform.manifest_url if request.platform else binding.get("manifest_url"),
+                    "platform_origin": request.platform.platform_origin if request.platform else binding.get("platform_origin"),
+                    "last_runtime_status": request.runtime_state.status if request.runtime_state else binding.get("last_runtime_status"),
+                    "last_page_label": request.runtime_state.page_label if request.runtime_state else binding.get("last_page_label"),
+                    "last_current_task": request.runtime_state.current_task if request.runtime_state else binding.get("last_current_task"),
+                    "last_history_count": request.runtime_state.history_count if request.runtime_state else binding.get("last_history_count"),
+                    "connected": request.runtime_state.connected if request.runtime_state and request.runtime_state.connected is not None else True,
+                    "updated_at": now,
+                    "last_seen_at": now,
+                }
+            )
+
+            session_id = request.session_id or str(uuid.uuid4())
+            session = self._sessions.get(session_id)
+            if session is None:
+                session = {
+                    "id": session_id,
+                    "binding_id": binding["id"],
+                    "created_at": now,
+                }
+                self._sessions[session_id] = session
+            session.update(
+                {
+                    "binding_id": binding["id"],
+                    "status": request.runtime_state.status if request.runtime_state else session.get("status", "idle"),
+                    "page_label": request.runtime_state.page_label if request.runtime_state else session.get("page_label"),
+                    "current_task": request.runtime_state.current_task if request.runtime_state else session.get("current_task"),
+                    "history_count": request.runtime_state.history_count if request.runtime_state else session.get("history_count", 0),
+                    "connected": request.runtime_state.connected if request.runtime_state and request.runtime_state.connected is not None else True,
+                    "updated_at": now,
+                    "last_seen_at": now,
+                }
+            )
+
+            self._persist()
+            return {
+                "binding": self._serialize_binding(binding),
+                "session": self._serialize_session(session),
+            }
+
+    async def update_runtime_state(self, request: OfficeRuntimeSyncRequest) -> Optional[Dict[str, Any]]:
+        async with self._lock:
+            binding = self._bindings.get(request.binding_id)
+            if binding is None:
+                return None
+            now = utc_now_iso()
+            if request.document:
+                binding.update(
+                    {
+                        "host": request.document.host,
+                        "title": request.document.title,
+                        "label": request.document.label,
+                        "summary": request.document.summary,
+                        "document_url": request.document.document_url,
+                        "document_id": request.document.document_id,
+                        "fingerprint": request.document.fingerprint,
+                    }
+                )
+            if request.platform:
+                binding.update(
+                    {
+                        "taskpane_origin": request.platform.taskpane_origin,
+                        "taskpane_url": request.platform.taskpane_url,
+                        "manifest_url": request.platform.manifest_url,
+                        "platform_origin": request.platform.platform_origin,
+                    }
+                )
+            if request.project_id is not None:
+                binding["project_id"] = request.project_id
+            if request.workspace_id is not None:
+                binding["workspace_id"] = request.workspace_id
+            if request.runtime_state:
+                binding.update(
+                    {
+                        "last_runtime_status": request.runtime_state.status,
+                        "last_page_label": request.runtime_state.page_label,
+                        "last_current_task": request.runtime_state.current_task,
+                        "last_history_count": request.runtime_state.history_count,
+                        "connected": request.runtime_state.connected if request.runtime_state.connected is not None else binding.get("connected", False),
+                    }
+                )
+            binding["updated_at"] = now
+            binding["last_seen_at"] = now
+
+            session = self._sessions.get(request.session_id)
+            if session is None:
+                session = {
+                    "id": request.session_id,
+                    "binding_id": binding["id"],
+                    "created_at": now,
+                }
+                self._sessions[request.session_id] = session
+            if request.runtime_state:
+                session.update(
+                    {
+                        "status": request.runtime_state.status,
+                        "page_label": request.runtime_state.page_label,
+                        "current_task": request.runtime_state.current_task,
+                        "history_count": request.runtime_state.history_count,
+                        "connected": request.runtime_state.connected if request.runtime_state.connected is not None else session.get("connected", False),
+                    }
+                )
+            session["binding_id"] = binding["id"]
+            session["updated_at"] = now
+            session["last_seen_at"] = now
+
+            self._persist()
+            return {
+                "binding": self._serialize_binding(binding),
+                "session": self._serialize_session(session),
+            }
+
+    async def list_bindings(self) -> List[Dict[str, Any]]:
+        async with self._lock:
+            bindings = list(self._bindings.values())
+        bindings.sort(key=lambda item: item.get("last_seen_at") or item.get("updated_at") or "", reverse=True)
+        return [self._serialize_binding(binding) for binding in bindings]
+
+    async def get_binding(self, binding_id: str) -> Optional[Dict[str, Any]]:
+        async with self._lock:
+            binding = self._bindings.get(binding_id)
+            if binding is None:
+                return None
+            return self._serialize_binding(binding)
+
 class GatewayRuntime:
     def __init__(self):
         self.registry: Dict[str, Any] = {}
@@ -889,6 +1189,7 @@ def rewrite_upstream_path(path: str) -> str:
 runtime = GatewayRuntime()
 agent_session_store = AgentSessionStore(AGENT_SESSIONS_STORE_PATH)
 agent_store = AgentStore(AGENTS_STORE_PATH, AGENT_WORKSPACES_DIR)
+office_runtime_store = OfficeRuntimeStore(OFFICE_RUNTIME_STORE_PATH)
 app = FastAPI()
 
 app.add_middleware(
@@ -1439,6 +1740,67 @@ async def discover_agents(request: Request):
         "gateway_port": 8013,
     }
     return apply_cors_headers(JSONResponse(content=payload), request)
+
+
+@app.post("/api/v1/office/bootstrap")
+async def office_bootstrap(request: Request, payload: OfficeBootstrapRequest):
+    auth_response = await ensure_authorized(request)
+    if auth_response is not None:
+        return auth_response
+    runtime_state = await office_runtime_store.bootstrap(payload)
+    return apply_cors_headers(
+        JSONResponse(
+            content={
+                "ok": True,
+                **runtime_state,
+                "gateway": {
+                    "base_url": "/api/v1",
+                    "supports_runtime_sync": True,
+                },
+            }
+        ),
+        request,
+    )
+
+
+@app.post("/api/v1/office/runtime/state")
+async def office_runtime_state(request: Request, payload: OfficeRuntimeSyncRequest):
+    auth_response = await ensure_authorized(request)
+    if auth_response is not None:
+        return auth_response
+    runtime_state = await office_runtime_store.update_runtime_state(payload)
+    if runtime_state is None:
+        return apply_cors_headers(
+            JSONResponse(status_code=404, content={"error": "Office binding not found"}),
+            request,
+        )
+    return apply_cors_headers(JSONResponse(content={"ok": True, **runtime_state}), request)
+
+
+@app.get("/api/v1/office/bindings")
+async def list_office_bindings(request: Request):
+    auth_response = await ensure_authorized(request)
+    if auth_response is not None:
+        return auth_response
+    bindings = await office_runtime_store.list_bindings()
+    return apply_cors_headers(
+        JSONResponse(content={"ok": True, "bindings": bindings, "count": len(bindings)}),
+        request,
+    )
+
+
+@app.get("/api/v1/office/bindings/{binding_id}")
+async def get_office_binding(binding_id: str, request: Request):
+    auth_response = await ensure_authorized(request)
+    if auth_response is not None:
+        return auth_response
+    binding = await office_runtime_store.get_binding(binding_id)
+    if binding is None:
+        return apply_cors_headers(
+            JSONResponse(status_code=404, content={"error": "Office binding not found"}),
+            request,
+        )
+    return apply_cors_headers(JSONResponse(content={"ok": True, "binding": binding}), request)
 
 
 @app.get("/api/v1/agents")

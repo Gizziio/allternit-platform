@@ -77,6 +77,19 @@ impl std::fmt::Display for RunMode {
     }
 }
 
+impl std::str::FromStr for RunMode {
+    type Err = crate::error::CoworkError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "interactive" => Ok(RunMode::Interactive),
+            "cowork" => Ok(RunMode::Cowork),
+            "scheduled" => Ok(RunMode::Scheduled),
+            _ => Err(crate::error::CoworkError::Initialization(format!("Invalid run mode: {s}"))),
+        }
+    }
+}
+
 /// Run state
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -131,6 +144,26 @@ impl std::fmt::Display for RunState {
             RunState::Completed => write!(f, "completed"),
             RunState::Failed => write!(f, "failed"),
             RunState::Cancelled => write!(f, "cancelled"),
+        }
+    }
+}
+
+impl std::str::FromStr for RunState {
+    type Err = crate::error::CoworkError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "created" => Ok(RunState::Created),
+            "planned" => Ok(RunState::Planned),
+            "queued" => Ok(RunState::Queued),
+            "running" => Ok(RunState::Running),
+            "paused" => Ok(RunState::Paused),
+            "awaiting_approval" => Ok(RunState::AwaitingApproval),
+            "recovering" => Ok(RunState::Recovering),
+            "completed" => Ok(RunState::Completed),
+            "failed" => Ok(RunState::Failed),
+            "cancelled" => Ok(RunState::Cancelled),
+            _ => Err(crate::error::CoworkError::Initialization(format!("Invalid run state: {s}"))),
         }
     }
 }

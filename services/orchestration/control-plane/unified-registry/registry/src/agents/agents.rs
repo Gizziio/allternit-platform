@@ -11,13 +11,51 @@ pub struct AgentDefinition {
     pub description: String,
     pub version: String,
 
+    // Agent classification
+    #[serde(default = "default_agent_type")]
+    pub agent_type: String, // orchestrator | sub-agent | worker | specialist | reviewer
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub parent_agent_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub category: Option<String>,
+    #[serde(default)]
+    pub tags: Vec<String>,
+
     // Cognitive configuration
     pub system_prompt: String,
     pub model_config: ModelConfig,
 
-    // Capabilities
-    pub allowed_skills: Vec<String>, // Skill IDs
+    // Character layer
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub character: Option<CharacterLayer>,
+
+    // Avatar
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub avatar: Option<AvatarConfig>,
+
+    // Capabilities & Tools
+    pub allowed_skills: Vec<String>,
+    #[serde(default)]
+    pub allowed_tools: Vec<String>,
     pub expertise_domains: Vec<String>,
+    #[serde(default)]
+    pub capabilities: Vec<String>, // e.g. "file_read", "bash", "browser", "code_edit"
+
+    // Trust & Policy
+    #[serde(default = "default_trust_tier")]
+    pub trust_tier: String, // sandbox | standard | elevated | admin
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub write_scope: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data_classification: Option<String>,
+
+    // Harness configuration (per-agent model routing)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub harness_config: Option<HarnessConfig>,
+
+    // Enabled mode surfaces
+    #[serde(default = "default_enabled_modes")]
+    pub enabled_modes: Vec<String>, // chat | cowork | code | browser | design
 
     // Metadata
     pub tenant_id: String,
@@ -25,13 +63,100 @@ pub struct AgentDefinition {
     pub updated_at: i64,
 }
 
+fn default_agent_type() -> String { "worker".to_string() }
+fn default_trust_tier() -> String { "standard".to_string() }
+fn default_enabled_modes() -> Vec<String> { vec!["chat".to_string()] }
+
 #[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ModelConfig {
-    pub provider: String, // e.g. "anthropic", "openai"
-    pub model_name: String, // e.g. "claude-3-opus"
+    pub provider: String,   // e.g. "anthropic", "openai", "google", "local"
+    pub model_name: String, // e.g. "claude-3-opus", "gpt-4o"
     pub temperature: f32,
     pub max_tokens: Option<i32>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct CharacterLayer {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub setup: Option<String>,       // character setup name
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub temperament: Option<String>, // analytical | creative | pragmatic
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub personality: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub role_card: Option<String>,   // freeform role card text
+    #[serde(default)]
+    pub hard_bans: Vec<String>,      // categories the agent must never touch
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub voice_rules: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct AvatarConfig {
+    #[serde(default = "default_avatar_type")]
+    pub avatar_type: String, // emoji | image | mascot
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub uri: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub emoji: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mascot_template: Option<String>,
+}
+
+fn default_avatar_type() -> String { "emoji".to_string() }
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct HarnessByokProviderConfig {
+    pub api_key: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub base_url: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct HarnessByokConfig {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub anthropic: Option<HarnessByokProviderConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub openai: Option<HarnessByokProviderConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub google: Option<HarnessByokProviderConfig>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct HarnessCloudConfig {
+    pub base_url: String,
+    pub access_token: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub refresh_token: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct HarnessLocalConfig {
+    pub base_url: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default, utoipa::ToSchema)]
+pub struct HarnessSubprocessConfig {
+    pub command: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cwd: Option<String>,
+    #[serde(default)]
+    pub env: std::collections::HashMap<String, String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, utoipa::ToSchema)]
+pub struct HarnessConfig {
+    pub mode: String, // byok | cloud | local | subprocess
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub byok: Option<HarnessByokConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cloud: Option<HarnessCloudConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub local: Option<HarnessLocalConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subprocess: Option<HarnessSubprocessConfig>,
+}
+
 
 pub struct AgentRegistry {
     pool: AnyPool,
@@ -56,6 +181,10 @@ impl AgentRegistry {
                 updated_at INTEGER NOT NULL
             );
             CREATE INDEX IF NOT EXISTS idx_agents_tenant ON agents(tenant_id);
+            CREATE INDEX IF NOT EXISTS idx_agents_type ON agents(agent_type);
+            CREATE INDEX IF NOT EXISTS idx_agents_trust_tier ON agents(trust_tier);
+            CREATE INDEX IF NOT EXISTS idx_agents_parent ON agents(parent_agent_id);
+            CREATE INDEX IF NOT EXISTS idx_agents_modes ON agents(enabled_modes);
             "#
         )
         .execute(&self.pool)

@@ -32,7 +32,7 @@ impl AttachmentRegistry {
         let db_path = data_dir.join("attachments.db");
         let pool = SqlitePoolOptions::new()
             .max_connections(5)
-            .connect(&format!("sqlite:{}", db_path.display()))
+            .connect(&format!("sqlite:{}?mode=rwc", db_path.display()))
             .await?;
 
         let registry = Self {
