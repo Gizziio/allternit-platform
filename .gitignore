@@ -63,3 +63,4 @@ services/docmost
 # Built desktop shell assets and temp analysis output
 surfaces/allternit-desktop/resources/platform/
 surfaces/ai.allternit.com/tmp/
+surfaces/ai.allternit.com/test-results/

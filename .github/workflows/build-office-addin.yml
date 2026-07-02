@@ -1,0 +1,74 @@
+name: Build Office Add-in
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'surfaces/allternit-extensions/allternit-office-addin/**'
+      - '.github/workflows/build-office-addin.yml'
+      - 'extension-shared/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'surfaces/allternit-extensions/allternit-office-addin/**'
+      - 'extension-shared/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Install dependencies
+        working-directory: surfaces/allternit-extensions/allternit-office-addin
+        run: pnpm install --ignore-scripts
+
+      - name: TypeScript type check
+        working-directory: surfaces/allternit-extensions/allternit-office-addin
+        run: pnpm run typecheck
+
+      - name: Build add-in
+        working-directory: surfaces/allternit-extensions/allternit-office-addin
+        run: pnpm run build
+        env:
+          VITE_ALLTERNIT_GATEWAY_URL: ${{ secrets.VITE_ALLTERNIT_GATEWAY_URL || 'http://127.0.0.1:8013' }}
+          VITE_ALLTERNIT_PLATFORM_URL: ${{ secrets.VITE_ALLTERNIT_PLATFORM_URL || 'http://127.0.0.1:3013' }}
+
+      - name: Verify manifest
+        working-directory: surfaces/allternit-extensions/allternit-office-addin
+        run: |
+          echo "=== Manifest GUID ==="
+          grep -oP '(?<=<Id>)[^<]+' manifest.xml
+          echo ""
+          echo "=== Manifest Requirements ==="
+          grep -A2 '<Requirements>' manifest.xml
+          echo ""
+          echo "=== Manifest AppDomains ==="
+          grep -A3 '<AppDomains>' manifest.xml
+          echo ""
+          echo "=== Manifest SourceLocation ==="
+          grep -A1 '<DefaultSettings>' manifest.xml
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: office-addin-dist
+          path: surfaces/allternit-extensions/allternit-office-addin/dist/
+          retention-days: 7
+
+      - name: Upload manifest artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: office-addin-manifest
+          path: surfaces/allternit-extensions/allternit-office-addin/manifest.xml
+          retention-days: 7
