@@ -32,15 +32,15 @@ import type {
   MCPServerConnection,
   ConnectedMCPServer,
 } from '@/services/mcp/types.js'
-import { GLOB_TOOL_NAME } from '../../tools/GlobTool/prompt.js'
-import { GREP_TOOL_NAME } from '../../tools/GrepTool/prompt.js'
-import { hasEmbeddedSearchTools } from '../../utils/embeddedTools.js'
+import { GLOB_TOOL_NAME } from '../tools/GlobTool/prompt.js'
+import { GREP_TOOL_NAME } from '../tools/GrepTool/prompt.js'
+import { hasEmbeddedSearchTools } from '../utils/embeddedTools.js'
 import { ASK_USER_QUESTION_TOOL_NAME } from '../tools/AskUserQuestionTool/prompt.js'
 import {
   EXPLORE_AGENT,
   EXPLORE_AGENT_MIN_QUERIES,
-} from '../../tools/AgentTool/built-in/exploreAgent.js'
-import { areExplorePlanAgentsEnabled } from '../../tools/AgentTool/builtInAgents.js'
+} from '../tools/AgentTool/built-in/exploreAgent.js'
+import { areExplorePlanAgentsEnabled } from '../tools/AgentTool/builtInAgents.js'
 import {
   isScratchpadEnabled,
   getScratchpadDir,
