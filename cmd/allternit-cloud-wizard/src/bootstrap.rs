@@ -111,9 +111,9 @@ chown -R allternit:allternit /opt/allternit
 chown -R allternit:allternit /var/log/allternit
 
 # Download Allternit binary
-Allternit_VERSION="${Allternit_VERSION:-latest}"
-log "Downloading Allternit $Allternit_VERSION..."
-RELEASE_URL="https://releases.allternit.sh/${Allternit_VERSION}/allternit-agent-x86_64-unknown-linux-gnu.tar.gz"
+ALLTERNIT_VERSION="${ALLTERNIT_VERSION:-latest}"
+log "Downloading Allternit $ALLTERNIT_VERSION..."
+RELEASE_URL="https://releases.allternit.sh/${ALLTERNIT_VERSION}/allternit-agent-x86_64-unknown-linux-gnu.tar.gz"
 
 if curl -sLf "$RELEASE_URL" | tar xz -C /opt/allternit/bin --strip-components=1; then
     log "Allternit downloaded successfully"
@@ -222,9 +222,9 @@ chown -R allternit:allternit /opt/allternit
 chown -R allternit:allternit /var/log/allternit
 
 # Download Allternit binary
-Allternit_VERSION="${Allternit_VERSION:-latest}"
-log "Downloading Allternit $Allternit_VERSION..."
-RELEASE_URL="https://releases.allternit.sh/${Allternit_VERSION}/allternit-agent-x86_64-unknown-linux-gnu.tar.gz"
+ALLTERNIT_VERSION="${ALLTERNIT_VERSION:-latest}"
+log "Downloading Allternit $ALLTERNIT_VERSION..."
+RELEASE_URL="https://releases.allternit.sh/${ALLTERNIT_VERSION}/allternit-agent-x86_64-unknown-linux-gnu.tar.gz"
 
 if curl -sLf "$RELEASE_URL" | tar xz -C /opt/allternit/bin --strip-components=1; then
     log "Allternit downloaded successfully"
@@ -336,9 +336,9 @@ mkdir -p /opt/allternit/bin /opt/allternit/config /var/log/allternit
 chown -R allternit:allternit /opt/allternit /var/log/allternit 2>/dev/null || true
 
 # Download Allternit binary
-Allternit_VERSION="${Allternit_VERSION:-latest}"
-log "Downloading Allternit $Allternit_VERSION..."
-RELEASE_URL="https://releases.allternit.sh/${Allternit_VERSION}/allternit-agent-x86_64-unknown-linux-gnu.tar.gz"
+ALLTERNIT_VERSION="${ALLTERNIT_VERSION:-latest}"
+log "Downloading Allternit $ALLTERNIT_VERSION..."
+RELEASE_URL="https://releases.allternit.sh/${ALLTERNIT_VERSION}/allternit-agent-x86_64-unknown-linux-gnu.tar.gz"
 
 if curl -sLf "$RELEASE_URL" | tar xz -C /opt/allternit/bin --strip-components=1; then
     log "Allternit downloaded successfully"

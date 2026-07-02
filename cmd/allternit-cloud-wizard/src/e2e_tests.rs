@@ -5,8 +5,8 @@
 //!
 //! Usage:
 //! ```bash
-//! export Allternit_HETZNER_TOKEN=your_token
-//! export Allternit_DO_TOKEN=your_token
+//! export ALLTERNIT_HETZNER_TOKEN=your_token
+//! export ALLTERNIT_DO_TOKEN=your_token
 //! cargo test e2e -- --ignored --nocapture
 //! ```
 
@@ -20,8 +20,8 @@ use std::time::Duration;
 #[tokio::test]
 #[ignore]  // Requires real API token
 async fn e2e_hetzner_provisioning() {
-    let api_token = std::env::var("Allternit_HETZNER_TOKEN")
-        .expect("Allternit_HETZNER_TOKEN must be set for e2e tests");
+    let api_token = std::env::var("ALLTERNIT_HETZNER_TOKEN")
+        .expect("ALLTERNIT_HETZNER_TOKEN must be set for e2e tests");
 
     println!("Starting Hetzner e2e test...");
 
@@ -82,8 +82,8 @@ async fn e2e_hetzner_provisioning() {
 #[tokio::test]
 #[ignore]  // Requires real API token
 async fn e2e_digitalocean_provisioning() {
-    let api_token = std::env::var("Allternit_DO_TOKEN")
-        .expect("Allternit_DO_TOKEN must be set for e2e tests");
+    let api_token = std::env::var("ALLTERNIT_DO_TOKEN")
+        .expect("ALLTERNIT_DO_TOKEN must be set for e2e tests");
 
     println!("Starting DigitalOcean e2e test...");
 
