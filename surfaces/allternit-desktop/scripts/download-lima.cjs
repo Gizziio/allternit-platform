@@ -14,9 +14,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
-const zlib = require('zlib');
-
-const LIMA_VERSION = '1.0.3'; // pin — update when you want a newer Lima release
+const LIMA_VERSION = '2.1.2'; // pin — update when you want a newer Lima release
 
 const ARCH_MAP = {
   arm64: 'arm64',
@@ -32,7 +30,7 @@ if (!arch) {
   process.exit(1);
 }
 
-const tarballName = `lima-${LIMA_VERSION}-macOS-${arch}.tar.gz`;
+const tarballName = `lima-${LIMA_VERSION}-Darwin-${arch}.tar.gz`;
 const url = `https://github.com/lima-vm/lima/releases/download/v${LIMA_VERSION}/${tarballName}`;
 const outDir = path.join(__dirname, '..', 'resources', 'lima');
 const tarballPath = path.join(outDir, tarballName);

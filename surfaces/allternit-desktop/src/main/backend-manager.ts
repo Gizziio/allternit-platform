@@ -42,6 +42,7 @@ export class BackendManager {
   private kernelProc: ChildProcess | null = null;
   private apiKey: string | null = null;
   private lastConfig: BackendLaunchConfig | null = null;
+  private resolvedBinaryPath: string | null | undefined;
 
   static getInstance(): BackendManager {
     if (!BackendManager.instance) {
@@ -55,6 +56,14 @@ export class BackendManager {
     this.lastConfig = config;
     if (this.kernelProc) {
       return this.getUrl();
+    }
+
+    try {
+      await this.waitForUrl(`${this.getUrl()}/health`, 'existing allternit-api');
+      log.info(`[BackendManager] Reusing existing allternit-api at ${this.getUrl()}`);
+      return this.getUrl();
+    } catch {
+      // No existing backend on the target port; continue with normal startup.
     }
 
     let binaryPath = this.resolveBinaryPath();
@@ -160,7 +169,7 @@ export class BackendManager {
   }
 
   async getStatus(): Promise<BackendStatus> {
-    const binaryPath = this.resolveBinaryPath();
+    const binaryPath = this.resolveBinaryPath(false);
     const installed = binaryPath !== null;
     let running = false;
     let version: string | undefined;
@@ -345,7 +354,11 @@ export class BackendManager {
     }
   }
 
-  private resolveBinaryPath(): string | null {
+  private resolveBinaryPath(logDiscovery = true): string | null {
+    if (this.resolvedBinaryPath !== undefined) {
+      return this.resolvedBinaryPath;
+    }
+
     const binaryName = process.platform === 'win32' ? 'allternit-api.exe' : 'allternit-api';
 
     const candidates = app.isPackaged
@@ -353,19 +366,24 @@ export class BackendManager {
           path.join(process.resourcesPath ?? '', 'bin', binaryName),
         ]
       : [
-          path.join(process.resourcesPath ?? '', 'bin', binaryName),
+          path.join(app.getAppPath(), '..', '..', '..', 'target', 'debug', binaryName),
           path.join(app.getAppPath(), '..', '..', '..', 'target', 'release', binaryName),
+          path.join(process.resourcesPath ?? '', 'bin', binaryName),
           path.join(__dirname, '..', '..', 'resources', 'bin', binaryName),
         ];
 
     for (const candidate of candidates) {
       if (fs.existsSync(candidate)) {
-        log.info(`[BackendManager] Found binary at: ${candidate}`);
+        this.resolvedBinaryPath = candidate;
+        if (logDiscovery) {
+          log.info(`[BackendManager] Found binary at: ${candidate}`);
+        }
         return candidate;
       }
     }
 
     log.error('[BackendManager] allternit-api binary not found. Searched:', candidates);
+    this.resolvedBinaryPath = null;
     return null;
   }
 

@@ -191,6 +191,11 @@ const authAPI = {
 
 const shellAPI = {
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('shell:open-external', url),
+  getOfficeHostStatus: (): Promise<Record<'word' | 'excel' | 'powerpoint', {
+    installed: boolean;
+    running: boolean;
+    bundlePath: string | null;
+  }>> => ipcRenderer.invoke('shell:get-office-host-status'),
   showSave: (options: unknown): Promise<unknown> => ipcRenderer.invoke('dialog:show-save', options),
   showOpen: (options: unknown): Promise<unknown> => ipcRenderer.invoke('dialog:show-open', options),
 };
@@ -396,6 +401,28 @@ const mcpAPI = {
   },
 };
 
+// ─── Mini-apps (install / start / stop / status) ─────────────────────────────
+
+type MiniAppInstallProgress = { id: string; line: string; type: 'stdout' | 'stderr' | 'info' };
+type MiniAppInstallResult  = { success: boolean; error?: string };
+type MiniAppStatus         = { managed: boolean; running: boolean; port: number | null };
+
+const miniAppsAPI = {
+  install: (id: string): Promise<MiniAppInstallResult> =>
+    ipcRenderer.invoke('miniApps:install', id),
+  start: (id: string): Promise<MiniAppInstallResult> =>
+    ipcRenderer.invoke('miniApps:start', id),
+  stop: (id: string): Promise<{ success: boolean }> =>
+    ipcRenderer.invoke('miniApps:stop', id),
+  getStatus: (id: string): Promise<MiniAppStatus> =>
+    ipcRenderer.invoke('miniApps:getStatus', id),
+  onProgress: (handler: (p: MiniAppInstallProgress) => void): (() => void) => {
+    const listener = (_: IpcRendererEvent, p: MiniAppInstallProgress) => handler(p);
+    ipcRenderer.on('miniApps:install-progress', listener);
+    return () => ipcRenderer.removeListener('miniApps:install-progress', listener);
+  },
+};
+
 // ─── Worker Bus (renderer → main → worker round-trip) ────────────────────────
 
 const workerAPI = {
@@ -448,6 +475,7 @@ const allternitDesktopAPI = {
   research: researchAPI,
   worker: workerAPI,
   hyperframes: hyperframesAPI,
+  miniApps: miniAppsAPI,
 };
 
 contextBridge.exposeInMainWorld('allternit', allternitDesktopAPI);

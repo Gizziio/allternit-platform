@@ -27,7 +27,8 @@
     "electron-log": "^5.2.0",
     "electron-store": "^8.2.0",
     "fix-path": "^4.0.0",
-    "update-electron-app": "^3.0.0"
+    "update-electron-app": "^3.0.0",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@electron/notarize": "^2.3.2",
@@ -47,16 +48,18 @@
     "type": "git",
     "url": "https://github.com/allternit/desktop"
   },
-    "build": {
-      "appId": "com.allternit.desktop",
-      "productName": "Allternit Desktop",
-      "protocols": [
-        {
-          "name": "Allternit Protocol",
-          "schemes": ["allternit"]
-        }
-      ],
-      "npmRebuild": false,
+  "build": {
+    "appId": "com.allternit.desktop",
+    "productName": "Allternit Desktop",
+    "protocols": [
+      {
+        "name": "Allternit Protocol",
+        "schemes": [
+          "allternit"
+        ]
+      }
+    ],
+    "npmRebuild": false,
     "nodeGypRebuild": false,
     "copyright": "Copyright © 2026 Allternit",
     "directories": {
@@ -73,20 +76,26 @@
       {
         "from": "resources/bin/",
         "to": "bin/",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       },
       {
         "from": "resources/platform/",
         "to": "platform/",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       },
       {
         "from": "resources/lima/",
         "to": "lima/",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       },
       {
-        "from": "cmd/gizzi-code/src/runtime/vm/allternit.yaml",
+        "from": "../../cmd/gizzi-code/src/runtime/vm/allternit.yaml",
         "to": "allternit.yaml"
       }
     ],
@@ -96,8 +105,20 @@
     ],
     "mac": {
       "target": [
-        { "target": "dmg", "arch": ["arm64", "x64"] },
-        { "target": "zip", "arch": ["arm64", "x64"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
       ],
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
@@ -111,15 +132,30 @@
       "title": "Allternit ${version}",
       "icon": "build/icon.icns",
       "background": "build/dmg-background.png",
-      "window": { "width": 540, "height": 380 },
+      "window": {
+        "width": 540,
+        "height": 380
+      },
       "contents": [
-        { "x": 130, "y": 200, "name": "Allternit" },
-        { "x": 410, "y": 200, "type": "link", "path": "/Applications" }
+        {
+          "x": 130,
+          "y": 200,
+          "name": "Allternit"
+        },
+        {
+          "x": 410,
+          "y": 200,
+          "type": "link",
+          "path": "/Applications"
+        }
       ],
       "internetEnabled": false
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "icon": "build/icon.png",
       "category": "Development",
       "synopsis": "Your AI Platform",
@@ -135,10 +171,17 @@
     },
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "icon": "build/icon.ico",
-      "signingHashAlgorithms": ["sha256"],
+      "signingHashAlgorithms": [
+        "sha256"
+      ],
       "publisherName": "Allternit"
     },
     "nsis": {
@@ -164,11 +207,12 @@
     "publish": [
       {
         "provider": "github",
-        "owner": "allternit",
+        "owner": "Gizziio",
         "repo": "desktop",
         "releaseType": "release"
       }
     ],
-    "afterSign": "scripts/notarize.cjs"
+    "afterSign": "scripts/notarize.cjs",
+    "artifactName": "Allternit-Desktop-${version}-${arch}.${ext}"
   }
 }

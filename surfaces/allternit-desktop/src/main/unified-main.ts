@@ -21,6 +21,7 @@ import { updateElectronApp } from 'update-electron-app';
 import fixPath from 'fix-path';
 import { backendManager } from './backend-manager.js';
 import { gizziManager } from './gizzi-manager.js';
+import { installMiniApp, startMiniApp, stopMiniApp, getMiniAppStatus } from './mini-apps-manager.js';
 
 import { tunnelManager } from './tunnel-manager.js';
 import { authManager } from './auth-manager.js';
@@ -102,10 +103,86 @@ const MINI_WINDOW_HEIGHT = 600;
 let activeBackendUrl: string = 'http://localhost:8013';
 /** Active TCP connection from the native messaging host (Chrome extension bridge) */
 let extensionSocket: net.Socket | null = null;
-/** In-session sidecar config — set after gizziManager starts, cleared on stop. */
-let persistedSidecarConfig: { apiUrl: string; password: string; port: number } | null = null;
+function updateSidecarConfig(gizziUrl: string) {
+  const config = {
+    apiUrl: gizziUrl,
+    password: gizziManager.getPassword()!,
+    port: new URL(gizziUrl).port ? Number(new URL(gizziUrl).port) : 4096,
+  };
+  persistedState.set('sidecar', config);
+}
 /** If set, the permission onboarding flow should start when the renderer signals readiness. */
 let permissionOnboardingResolver: (() => void) | null = null;
+
+type OfficeHostId = 'word' | 'excel' | 'powerpoint';
+
+type OfficeHostRuntimeStatus = {
+  installed: boolean;
+  running: boolean;
+  bundlePath: string | null;
+};
+
+const OFFICE_HOSTS: Record<OfficeHostId, { appName: string; bundleId: string; commonPaths: string[] }> = {
+  word: {
+    appName: 'Microsoft Word',
+    bundleId: 'com.microsoft.Word',
+    commonPaths: [
+      '/Applications/Microsoft Word.app',
+      join(os.homedir(), 'Applications/Microsoft Word.app'),
+    ],
+  },
+  excel: {
+    appName: 'Microsoft Excel',
+    bundleId: 'com.microsoft.Excel',
+    commonPaths: [
+      '/Applications/Microsoft Excel.app',
+      join(os.homedir(), 'Applications/Microsoft Excel.app'),
+    ],
+  },
+  powerpoint: {
+    appName: 'Microsoft PowerPoint',
+    bundleId: 'com.microsoft.Powerpoint',
+    commonPaths: [
+      '/Applications/Microsoft PowerPoint.app',
+      join(os.homedir(), 'Applications/Microsoft PowerPoint.app'),
+    ],
+  },
+};
+
+function execFileText(file: string, args: string[]): Promise<string> {
+  return new Promise((resolve) => {
+    execFile(file, args, { timeout: 2500 }, (error, stdout) => {
+      if (error) {
+        resolve('');
+        return;
+      }
+      resolve(String(stdout ?? '').trim());
+    });
+  });
+}
+
+async function detectOfficeHostStatus(): Promise<Record<OfficeHostId, OfficeHostRuntimeStatus>> {
+  const result = {} as Record<OfficeHostId, OfficeHostRuntimeStatus>;
+
+  await Promise.all((Object.entries(OFFICE_HOSTS) as Array<[OfficeHostId, typeof OFFICE_HOSTS[OfficeHostId]]>).map(async ([host, meta]) => {
+    let bundlePath = meta.commonPaths.find((candidate) => fs.existsSync(candidate)) ?? null;
+
+    if (!bundlePath) {
+      const found = await execFileText('/usr/bin/mdfind', [`kMDItemCFBundleIdentifier == "${meta.bundleId}"`]);
+      bundlePath = found.split('\n').map((line) => line.trim()).find(Boolean) ?? null;
+    }
+
+    const runningOutput = await execFileText('/usr/bin/pgrep', ['-x', meta.appName]);
+
+    result[host] = {
+      installed: Boolean(bundlePath),
+      running: runningOutput.length > 0,
+      bundlePath,
+    };
+  }));
+
+  return result;
+}
 
 interface StoreSchema {
   windowBounds: { width: number; height: number; x?: number; y?: number };
@@ -746,11 +823,7 @@ async function initializeBundledMode(): Promise<void> {
     try {
       gizziUrl = await gizziManager.start();
       activeBackendUrl = gizziUrl;
-      persistedSidecarConfig = {
-        apiUrl: gizziUrl,
-        password: gizziManager.getPassword()!,
-        port: new URL(gizziUrl).port ? Number(new URL(gizziUrl).port) : 4096,
-      };
+      updateSidecarConfig(gizziUrl);
       log.info('[Main] Gizzi-code started successfully');
       serviceState.gizzi = { status: 'up', detail: `Connected on ${gizziUrl}` };
       pushServiceState();
@@ -1565,8 +1638,9 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', async () => {
-  globalShortcut.unregisterAll();
-  persistedSidecarConfig = null;
+  if (app.isReady()) {
+    globalShortcut.unregisterAll();
+  }
   persistedState.flush();
   featureFlagManager.destroy();
   mcpHostManager.shutdown();
@@ -1635,6 +1709,7 @@ ipcMain.handle('app:get-info', () => ({
 ipcMain.handle('shell:open-external', (_event, url: string) => {
   shell.openExternal(url);
 });
+ipcMain.handle('shell:get-office-host-status', async () => detectOfficeHostStatus());
 
 // Desktop auth
 ipcMain.handle('auth:get-session', async () => {
@@ -1762,7 +1837,10 @@ ipcMain.handle('dialog:show-open', async (_event, options: Electron.OpenDialogOp
 ipcMain.handle('sidecar:get-status', async (): Promise<'running' | 'stopped' | 'error'> => {
   if (!gizziManager.isRunning()) return 'stopped';
   try {
-    const res = await fetch(`${gizziManager.getUrl()}/api/app/health`, {
+    const res = await fetch(`${gizziManager.getUrl()}/v1/global/health`, {
+      headers: gizziManager.getAuthHeader()
+        ? { Authorization: gizziManager.getAuthHeader()! }
+        : undefined,
       signal: AbortSignal.timeout(1000),
     });
     return res.ok || res.status === 401 || res.status === 404 ? 'running' : 'error';
@@ -1782,14 +1860,20 @@ ipcMain.handle('sidecar:get-basic-auth', () => {
   return { username: 'gizzi', password, header: `Basic ${encoded}` };
 });
 
-ipcMain.handle('sidecar:get-persisted-config', () => persistedSidecarConfig);
+ipcMain.handle('sidecar:get-persisted-config', () => persistedState.get('sidecar'));
 ipcMain.handle('sidecar:clear-persisted-config', () => {
-  persistedSidecarConfig = null;
+  persistedState.set('sidecar', null);
   return true;
 });
 
 ipcMain.handle('sidecar:start', async () => {
-  try { await gizziManager.start(); return true; } catch { return false; }
+  try {
+    const url = await gizziManager.start();
+    updateSidecarConfig(url);
+    return true;
+  } catch {
+    return false;
+  }
 });
 
 ipcMain.handle('sidecar:stop', () => { gizziManager.stop(); return true; });
@@ -1797,9 +1881,12 @@ ipcMain.handle('sidecar:stop', () => { gizziManager.stop(); return true; });
 ipcMain.handle('sidecar:restart', async () => {
   try {
     gizziManager.stop();
-    await gizziManager.start();
+    const url = await gizziManager.start();
+    updateSidecarConfig(url);
     return true;
-  } catch { return false; }
+  } catch {
+    return false;
+  }
 });
 
 // ============================================================================
@@ -2070,9 +2157,10 @@ ipcMain.handle('state:patch', (_event, key: string, partial: unknown) => {
 // IPC: Find in Page
 // ============================================================================
 
-ipcMain.handle('window:find-in-page', (_event, text: string, options?: Electron.FindInPageOptions) => {
-  if (!mainWindow || !text) return;
-  mainWindow.webContents.findInPage(text, options);
+ipcMain.handle('window:find-in-page', (_event, text: string | undefined, options?: Electron.FindInPageOptions) => {
+  if (!mainWindow) return;
+  if (!text && !options?.findNext) return;
+  mainWindow.webContents.findInPage(text ?? '', options);
 });
 
 ipcMain.handle('window:find-stop', (_event, keepSelection?: boolean) => {
@@ -2310,3 +2398,24 @@ ipcMain.handle('hyperframes:render', async (event, html: string, options: {
     return { success: false, error: (err as Error).message };
   }
 });
+
+// ─── Mini-apps: install / start / stop / status ───────────────────────────────
+
+ipcMain.handle('miniApps:install', async (event, id: string) => {
+  return installMiniApp(id, (progress) => {
+    event.sender.send('miniApps:install-progress', progress);
+  });
+});
+
+ipcMain.handle('miniApps:start', async (event, id: string) => {
+  return startMiniApp(id, (progress) => {
+    event.sender.send('miniApps:install-progress', progress);
+  });
+});
+
+ipcMain.handle('miniApps:stop', (_event, id: string) => {
+  stopMiniApp(id);
+  return { success: true };
+});
+
+ipcMain.handle('miniApps:getStatus', (_event, id: string) => getMiniAppStatus(id));

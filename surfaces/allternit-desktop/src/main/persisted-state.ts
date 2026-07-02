@@ -9,48 +9,63 @@
 
 import Store from 'electron-store';
 import log from 'electron-log';
+import { z } from 'zod';
 
 // ── Schema version — bump when adding/removing/renaming fields ───────────────
 const SCHEMA_VERSION = 1;
 
-// ── State shape ──────────────────────────────────────────────────────────────
+// ── Zod Schemas ──────────────────────────────────────────────────────────────
 
-export interface WindowState {
-  width: number;
-  height: number;
-  x?: number;
-  y?: number;
-  maximized: boolean;
-}
+export const WindowStateSchema = z.object({
+  width: z.number().default(1400),
+  height: z.number().default(900),
+  x: z.number().optional(),
+  y: z.number().optional(),
+  maximized: z.boolean().default(false),
+});
 
-export interface BackendState {
-  mode: 'bundled' | 'remote' | 'development';
-  remoteUrl?: string;
-  lastLocalVersion?: string;
-}
+export const BackendStateSchema = z.object({
+  mode: z.enum(['bundled', 'remote', 'development']).default('bundled'),
+  remoteUrl: z.string().optional(),
+  lastLocalVersion: z.string().optional(),
+});
 
-export interface SessionState {
-  lastSessionId?: string;
-  lastProjectPath?: string;
-  recentSessionIds: string[];
-}
+export const SessionStateSchema = z.object({
+  lastSessionId: z.string().optional(),
+  lastProjectPath: z.string().optional(),
+  recentSessionIds: z.array(z.string()).default([]),
+});
 
-export interface AppPrefs {
-  theme: 'light' | 'dark' | 'system';
-  locale?: string;
-  menuBarMode: boolean;
-  startupOnLogin: boolean;
-  viewMode: 'verbose' | 'normal' | 'summary';
-}
+export const AppPrefsSchema = z.object({
+  theme: z.enum(['light', 'dark', 'system']).default('system'),
+  locale: z.string().optional(),
+  menuBarMode: z.boolean().default(false),
+  startupOnLogin: z.boolean().default(false),
+  viewMode: z.enum(['verbose', 'normal', 'summary']).default('normal'),
+});
 
-export interface PersistedStateSchema {
-  _version: number;
-  window: WindowState;
-  backend: BackendState;
-  session: SessionState;
-  prefs: AppPrefs;
-  onboardingComplete: boolean;
-}
+export const SidecarStateSchema = z.object({
+  apiUrl: z.string(),
+  password: z.string(),
+  port: z.number(),
+}).nullable();
+
+export const StateSchema = z.object({
+  _version: z.number().default(SCHEMA_VERSION),
+  window: WindowStateSchema,
+  backend: BackendStateSchema,
+  session: SessionStateSchema,
+  prefs: AppPrefsSchema,
+  onboardingComplete: z.boolean().default(false),
+  sidecar: SidecarStateSchema,
+});
+
+export type WindowState = z.infer<typeof WindowStateSchema>;
+export type BackendState = z.infer<typeof BackendStateSchema>;
+export type SessionState = z.infer<typeof SessionStateSchema>;
+export type AppPrefs = z.infer<typeof AppPrefsSchema>;
+export type SidecarState = z.infer<typeof SidecarStateSchema>;
+export type PersistedStateSchema = z.infer<typeof StateSchema>;
 
 // ── Defaults ─────────────────────────────────────────────────────────────────
 
@@ -66,6 +81,7 @@ const DEFAULTS: PersistedStateSchema = {
     viewMode: 'normal',
   },
   onboardingComplete: false,
+  sidecar: null,
 };
 
 // ── Migrations ───────────────────────────────────────────────────────────────
@@ -83,6 +99,15 @@ const MIGRATIONS: Record<number, Migration> = {
 type SliceKey = keyof Omit<PersistedStateSchema, '_version'>;
 type SliceValue<K extends SliceKey> = PersistedStateSchema[K];
 type ChangeHandler<K extends SliceKey> = (value: SliceValue<K>) => void;
+
+const SCHEMAS: Record<SliceKey, z.ZodTypeAny> = {
+  window: WindowStateSchema,
+  backend: BackendStateSchema,
+  session: SessionStateSchema,
+  prefs: AppPrefsSchema,
+  onboardingComplete: z.boolean(),
+  sidecar: SidecarStateSchema,
+};
 
 class PersistedStateManager {
   private store: Store<PersistedStateSchema>;
@@ -103,6 +128,15 @@ class PersistedStateManager {
   }
 
   set<K extends SliceKey>(key: K, value: SliceValue<K>): void {
+    const schema = SCHEMAS[key];
+    if (schema) {
+      const parsed = schema.safeParse(value);
+      if (!parsed.success) {
+        log.error(`[PersistedState] Validation failed for key "${key}":`, parsed.error.format());
+        throw new Error(`Validation failed for key "${key}": ${parsed.error.message}`);
+      }
+      value = parsed.data as SliceValue<K>;
+    }
     this.pending[key] = value as never;
     this.scheduleFLush();
     this.emit(key, value);

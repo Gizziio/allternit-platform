@@ -31,6 +31,7 @@ export class GizziManager {
   private proc: ChildProcess | null = null;
   private password: string | null = null;
   private lastConfig: any = null;
+  private resolvedBinaryPath: string | null | undefined;
 
   static getInstance(): GizziManager {
     if (!GizziManager.instance) {
@@ -146,12 +147,15 @@ export class GizziManager {
   private async waitUntilReady(): Promise<void> {
     const deadline = Date.now() + HEALTH_TIMEOUT_MS;
     const url = `http://127.0.0.1:${GIZZI_PORT}/v1/global/health`;
+    const authHeader = this.getAuthHeader();
 
     while (Date.now() < deadline) {
       try {
-        const res = await fetch(url, { signal: AbortSignal.timeout(2000) });
-        if (res.ok || res.status === 401 || res.status === 404) {
-          // 401 = server up but auth required (good)
+        const res = await fetch(url, {
+          signal: AbortSignal.timeout(2000),
+          headers: authHeader ? { Authorization: authHeader } : undefined,
+        });
+        if (res.ok || res.status === 404) {
           // 404 = server up, no health route (fine)
           return;
         }
@@ -164,6 +168,10 @@ export class GizziManager {
   }
 
   private resolveBinaryPath(): string | null {
+    if (this.resolvedBinaryPath !== undefined) {
+      return this.resolvedBinaryPath;
+    }
+
     const binaryName = process.platform === 'win32' ? 'gizzi-code.exe' : 'gizzi-code';
 
     const candidates = app.isPackaged
@@ -178,12 +186,14 @@ export class GizziManager {
 
     for (const p of candidates) {
       if (fs.existsSync(p)) {
+        this.resolvedBinaryPath = p;
         log.info(`[GizziManager] Found binary at: ${p}`);
         return p;
       }
     }
 
     log.error('[GizziManager] gizzi-code binary not found. Searched:', candidates);
+    this.resolvedBinaryPath = null;
     return null;
   }
 }
