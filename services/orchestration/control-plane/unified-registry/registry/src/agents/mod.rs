@@ -3,9 +3,9 @@
 //! This module re-exports the canonical agent definitions from `agents.rs` so
 //! there is a single source of truth for the registry contract.
 
-pub use super::RegistryError;
+mod agents;
 
-pub use super::agents::{
+pub use self::agents::{
     AgentDefinition,
     AgentRegistry,
     AvatarConfig,
@@ -20,3 +20,5 @@ pub use super::agents::{
     RoleCard,
     VoiceConfig,
 };
+
+pub use super::RegistryError;
