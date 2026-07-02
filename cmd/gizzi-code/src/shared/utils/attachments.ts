@@ -183,7 +183,7 @@ import type {
 import {
   checkForAsyncHookResponses,
   removeDeliveredAsyncHooks,
-} from '@/hooks/AsyncHookRegistry.js'
+} from './hooks/AsyncHookRegistry.js'
 import {
   checkForLSPDiagnostics,
   clearAllLSPDiagnostics,

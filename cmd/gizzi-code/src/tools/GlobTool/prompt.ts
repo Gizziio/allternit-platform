@@ -1,1 +1,1 @@
-export * from '../../cli/ui/ink-app/tools/GlobTool/prompt.ts'
+export * from '../../cli/ui/ink-app/tools/GlobTool/prompt.js'
