@@ -64,3 +64,14 @@ services/docmost
 surfaces/allternit-desktop/resources/platform/
 surfaces/ai.allternit.com/tmp/
 surfaces/ai.allternit.com/test-results/
+
+# AI surface temporary analysis/cleanup artifacts
+surfaces/ai.allternit.com/*.txt
+surfaces/ai.allternit.com/*.py
+surfaces/ai.allternit.com/*.cjs
+surfaces/ai.allternit.com/*.sh
+surfaces/ai.allternit.com/*doctor*
+surfaces/ai.allternit.com/*report*
+surfaces/ai.allternit.com/*cleanup*
+surfaces/ai.allternit.com/*-report.json
+surfaces/ai.allternit.com/knip-exports.json
